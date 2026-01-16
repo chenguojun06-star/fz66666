@@ -1,0 +1,1137 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Button, Card, Input, Select, Space, Tag, Form, Row, Col, DatePicker, Timeline, InputNumber, message, Modal } from 'antd';
+import { PlusOutlined, SearchOutlined, EyeOutlined, ScanOutlined, DownloadOutlined } from '@ant-design/icons';
+import Layout from '../../components/Layout';
+import ResizableModal from '../../components/ResizableModal';
+import { ProductionOrder, ProductionQueryParams, ScanRecord } from '../../types/production';
+import api, { generateRequestId, isDuplicateScanMessage, isOrderFrozenByStatusOrStock, withQuery } from '../../utils/api';
+import { useAuth } from '../../utils/authContext';
+import './styles.css';
+import dayjs from 'dayjs';
+import ResizableTable from '../../components/ResizableTable';
+import RowActions from '../../components/RowActions';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { QRCodeCanvas } from 'qrcode.react';
+import { StyleAttachmentsButton, StyleCoverThumb } from '../../components/StyleAssets';
+import { formatDateTime } from '../../utils/datetime';
+
+const { Option } = Select;
+
+const ProductionList: React.FC = () => {
+  // 状态管理
+  const [visible, setVisible] = useState(false);
+  const [currentOrder, setCurrentOrder] = useState<ProductionOrder | null>(null);
+  const [form] = Form.useForm();
+  const [scanForm] = Form.useForm();
+  const [queryParams, setQueryParams] = useState<ProductionQueryParams>({
+    page: 1,
+    pageSize: 10
+  });
+
+  // 真实数据状态
+  const [productionList, setProductionList] = useState<ProductionOrder[]>([]);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [selectedRows, setSelectedRows] = useState<ProductionOrder[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [total, setTotal] = useState(0);
+  const [submitLoading, setSubmitLoading] = useState(false);
+
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const [scanVisible, setScanVisible] = useState(false);
+  const [scanOrder, setScanOrder] = useState<ProductionOrder | null>(null);
+  const [scanSubmitting, setScanSubmitting] = useState(false);
+  const [scanHistoryLoading, setScanHistoryLoading] = useState(false);
+  const [scanHistory, setScanHistory] = useState<ScanRecord[]>([]);
+  const [scanProcessOptions, setScanProcessOptions] = useState<{ label: string; value: string }[]>([
+    { label: '裁剪', value: '裁剪' },
+    { label: '车缝', value: '车缝' },
+    { label: '整烫', value: '整烫' },
+    { label: '包装', value: '包装' },
+    { label: '质检', value: '质检' },
+  ]);
+  const scanInputRef = useRef<any>(null);
+  const scanSubmittingRef = useRef(false);
+  const lastFailedRequestRef = useRef<{ key: string; requestId: string } | null>(null);
+
+  // 获取生产订单列表
+  const fetchProductionList = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get<any>('/production/order/list', { params: queryParams });
+      const result = response as any;
+      if (result.code === 200) {
+        setProductionList(result.data.records || []);
+        setTotal(result.data.total || 0);
+      } else {
+        message.error(result.message || '获取生产订单列表失败');
+      }
+    } catch (error) {
+      message.error('获取生产订单列表失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 页面加载时获取生产订单列表
+  useEffect(() => {
+    setSelectedRowKeys([]);
+    setSelectedRows([]);
+    fetchProductionList();
+  }, [queryParams]);
+
+  const formatCsvCell = (value: any) => {
+    const v = value == null ? '' : String(value);
+    const escaped = v.replace(/"/g, '""');
+    return `"${escaped}"`;
+  };
+
+  const downloadTextFile = (filename: string, content: string) => {
+    const blob = new Blob(["\uFEFF", content], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const buildOrdersCsv = (rows: ProductionOrder[]) => {
+    const headers = [
+      '订单号',
+      '款号',
+      '款名',
+      '加工厂',
+      '订单数量',
+      '下单人',
+      '下单时间',
+      '采购时间',
+      '采购完成',
+      '采购员',
+      '采购完成率',
+      '裁剪时间',
+      '裁剪完成',
+      '裁剪员',
+      '裁剪完成率',
+      '缝制开始',
+      '缝制完成',
+      '缝制完成率',
+      '质检时间',
+      '质检完成',
+      '质检员',
+      '质检完成率',
+      '入库时间',
+      '入库完成',
+      '入库员',
+      '入库完成率',
+      '生产进度',
+      '状态',
+    ];
+
+    const lines = [headers.map(formatCsvCell).join(',')];
+    for (const r of rows) {
+      const line = [
+        r.orderNo,
+        r.styleNo,
+        r.styleName,
+        r.factoryName,
+        r.orderQuantity,
+        (r as any).orderOperatorName || '',
+        formatDateTime((r as any).createTime),
+        formatDateTime((r as any).procurementStartTime),
+        formatDateTime((r as any).procurementEndTime),
+        (r as any).procurementOperatorName || '',
+        (r as any).procurementCompletionRate == null ? '' : `${(r as any).procurementCompletionRate}%`,
+        formatDateTime((r as any).cuttingStartTime),
+        formatDateTime((r as any).cuttingEndTime),
+        (r as any).cuttingOperatorName || '',
+        (r as any).cuttingCompletionRate == null ? '' : `${(r as any).cuttingCompletionRate}%`,
+        formatDateTime((r as any).sewingStartTime),
+        formatDateTime((r as any).sewingEndTime),
+        (r as any).sewingCompletionRate == null ? '' : `${(r as any).sewingCompletionRate}%`,
+        formatDateTime((r as any).qualityStartTime),
+        formatDateTime((r as any).qualityEndTime),
+        (r as any).qualityOperatorName || '',
+        (r as any).qualityCompletionRate == null ? '' : `${(r as any).qualityCompletionRate}%`,
+        formatDateTime((r as any).warehousingStartTime),
+        formatDateTime((r as any).warehousingEndTime),
+        (r as any).warehousingOperatorName || '',
+        (r as any).warehousingCompletionRate == null ? '' : `${(r as any).warehousingCompletionRate}%`,
+        r.productionProgress == null ? '' : `${r.productionProgress}%`,
+        getStatusConfig(r.status).text,
+      ].map(formatCsvCell).join(',');
+      lines.push(line);
+    }
+    return lines.join('\n');
+  };
+
+  const exportSelected = () => {
+    if (!selectedRows.length) {
+      message.warning('请先勾选要导出的订单');
+      return;
+    }
+    const csv = buildOrdersCsv(selectedRows);
+    const filename = `我的订单_勾选_${dayjs().format('YYYYMMDDHHmmss')}.csv`;
+    downloadTextFile(filename, csv);
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const styleNo = (params.get('styleNo') || '').trim();
+    const orderNo = (params.get('orderNo') || '').trim();
+    if (styleNo || orderNo) {
+      setQueryParams((prev) => ({
+        ...prev,
+        page: 1,
+        styleNo: styleNo || prev.styleNo,
+        orderNo: orderNo || prev.orderNo,
+      }));
+    }
+  }, [location.search]);
+
+  // 打开弹窗
+  const openDialog = (order?: ProductionOrder) => {
+    setCurrentOrder(order || null);
+    if (order) {
+      form.setFieldsValue({
+        ...order,
+        plannedStartDate: order.plannedStartDate ? dayjs(order.plannedStartDate) : null,
+        plannedEndDate: order.plannedEndDate ? dayjs(order.plannedEndDate) : null,
+        actualStartDate: order.actualStartDate ? dayjs(order.actualStartDate) : null,
+        actualEndDate: order.actualEndDate ? dayjs(order.actualEndDate) : null,
+      });
+    } else {
+      form.resetFields();
+    }
+    setVisible(true);
+  };
+
+  // 关闭弹窗
+  const closeDialog = () => {
+    setVisible(false);
+    setCurrentOrder(null);
+    form.resetFields();
+  };
+
+  const fetchScanHistory = async (order: ProductionOrder) => {
+    if (!order.id) {
+      setScanHistory([]);
+      return;
+    }
+
+    setScanHistoryLoading(true);
+    try {
+      const response = await api.get<any>(`/production/scan/order/${order.id}`, { params: { page: 1, pageSize: 10 } });
+      const result = response as any;
+      if (result.code === 200) {
+        setScanHistory(result.data.records || []);
+      } else {
+        message.error(result.message || '获取扫码记录失败');
+      }
+    } catch (error) {
+      message.error('获取扫码记录失败');
+    } finally {
+      setScanHistoryLoading(false);
+    }
+  };
+
+  const openScanDialog = (order: ProductionOrder) => {
+    if (isOrderFrozen(order)) {
+      message.error('订单已完成，无法操作');
+      return;
+    }
+    setScanOrder(order);
+    setScanVisible(true);
+    setScanProcessOptions([
+      { label: '裁剪', value: '裁剪' },
+      { label: '车缝', value: '车缝' },
+      { label: '整烫', value: '整烫' },
+      { label: '包装', value: '包装' },
+      { label: '质检', value: '质检' },
+    ]);
+    scanForm.resetFields();
+    scanForm.setFieldsValue({
+      scanCode: order.orderNo,
+      scanType: 'production',
+      processName: undefined,
+      processCode: '',
+      color: '',
+      quantity: 1,
+      warehouse: undefined,
+    });
+    fetchScanHistory(order);
+    setTimeout(() => {
+      scanInputRef.current?.focus?.();
+    }, 0);
+  };
+
+  const closeScanDialog = () => {
+    setScanVisible(false);
+    setScanOrder(null);
+    setScanHistory([]);
+    scanForm.resetFields();
+  };
+
+  const handleScanTypeChange = (value: string) => {
+    const t = String(value || '').trim() || 'production';
+    scanForm.setFieldsValue({ processName: undefined, processCode: '', warehouse: undefined, quantity: 1 });
+    if (t === 'sewing') {
+      setScanProcessOptions([
+        { label: '自动按工序顺序', value: '' },
+      ]);
+    } else {
+      setScanProcessOptions([
+        { label: '裁剪', value: '裁剪' },
+        { label: '车缝', value: '车缝' },
+        { label: '整烫', value: '整烫' },
+        { label: '包装', value: '包装' },
+        { label: '质检', value: '质检' },
+      ]);
+    }
+  };
+
+  const handleScanSubmit = async () => {
+    if (!scanOrder) return;
+    if (isOrderFrozen(scanOrder)) {
+      message.error('订单已完成，无法操作');
+      return;
+    }
+    if (!user?.id || !user?.name) {
+      message.error('未获取到当前登录人员信息');
+      return;
+    }
+
+    if (scanSubmittingRef.current) return;
+    scanSubmittingRef.current = true;
+
+    let attemptKey = '';
+    let attemptRequestId = '';
+
+    try {
+      const values = await scanForm.validateFields();
+      setScanSubmitting(true);
+
+      const payloadBase: any = {
+        scanCode: values.scanCode,
+        orderId: scanOrder.id,
+        orderNo: scanOrder.orderNo,
+        styleId: scanOrder.styleId,
+        styleNo: scanOrder.styleNo,
+        processCode: values.processCode,
+        processName: values.processName,
+        color: values.color,
+        quantity: values.quantity,
+        operatorId: user.id,
+        operatorName: user.name,
+        scanType: values.scanType || 'production',
+        warehouse: values.warehouse,
+      };
+
+      const requestKey = JSON.stringify(payloadBase);
+      const requestId = lastFailedRequestRef.current?.key === requestKey
+        ? lastFailedRequestRef.current.requestId
+        : generateRequestId();
+      attemptKey = requestKey;
+      attemptRequestId = requestId;
+      const payload = { ...payloadBase, requestId };
+
+      const response = await api.post<any>('/production/scan/execute', payload);
+      const result = response as any;
+      if (result.code === 200) {
+        lastFailedRequestRef.current = null;
+
+        const cuttingBundle = result?.data?.cuttingBundle;
+        const serverMsg = String(result?.data?.message || '').trim();
+        const isDuplicate = isDuplicateScanMessage(serverMsg);
+        if (isDuplicate) {
+          message.info(serverMsg || '重复扫码已忽略');
+        } else if (cuttingBundle) {
+          message.success(serverMsg || `裁剪扎号扫码成功：${cuttingBundle.qrCode}`);
+          scanForm.setFieldsValue({
+            color: cuttingBundle.color || values.color,
+            quantity: cuttingBundle.quantity || values.quantity,
+          });
+        } else {
+          message.success(serverMsg || '扫码领取成功');
+        }
+        fetchProductionList();
+        fetchScanHistory(scanOrder);
+        scanForm.setFieldsValue({ scanCode: '' });
+        setTimeout(() => scanInputRef.current?.focus?.(), 0);
+      } else {
+        message.error(result.message || '扫码失败');
+      }
+    } catch (error) {
+      if ((error as any).errorFields) {
+        const firstError = (error as any).errorFields[0];
+        message.error(firstError.errors[0] || '表单验证失败');
+      } else {
+        const anyErr: any = error;
+        if (anyErr?.status == null) {
+          if (attemptKey && attemptRequestId) {
+            lastFailedRequestRef.current = { key: attemptKey, requestId: attemptRequestId };
+          }
+        } else {
+          lastFailedRequestRef.current = null;
+        }
+        message.error((error as Error).message || '扫码失败');
+      }
+    } finally {
+      setScanSubmitting(false);
+      scanSubmittingRef.current = false;
+    }
+  };
+
+  // 表单提交
+  const handleSubmit = async () => {
+    try {
+      setSubmitLoading(true);
+      const values = await form.validateFields();
+
+      const payload = {
+        ...values,
+        plannedStartDate: values.plannedStartDate ? values.plannedStartDate.toISOString() : undefined,
+        plannedEndDate: values.plannedEndDate ? values.plannedEndDate.toISOString() : undefined,
+        actualStartDate: values.actualStartDate ? values.actualStartDate.toISOString() : undefined,
+        actualEndDate: values.actualEndDate ? values.actualEndDate.toISOString() : undefined,
+      };
+
+      let response;
+      if (currentOrder?.id) {
+        // 编辑生产订单
+        response = await api.put('/production/order', { ...payload, id: currentOrder.id });
+      } else {
+        // 新增生产订单
+        response = await api.post('/production/order', payload);
+      }
+
+      const result = response as any;
+      if (result.code === 200) {
+        message.success(currentOrder?.id ? '编辑生产订单成功' : '新增生产订单成功');
+        // 关闭弹窗
+        closeDialog();
+        // 刷新生产订单列表
+        fetchProductionList();
+      } else {
+        message.error(result.message || '保存失败');
+      }
+    } catch (error) {
+      // 处理表单验证错误
+      if ((error as any).errorFields) {
+        const firstError = (error as any).errorFields[0];
+        message.error(firstError.errors[0] || '表单验证失败');
+      } else {
+        message.error((error as Error).message || '保存失败');
+      }
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
+  // 获取状态文本和标签颜色
+  const getStatusConfig = (status: ProductionOrder['status'] | string | undefined | null) => {
+    const statusMap: Record<string, { text: string; color: string }> = {
+      pending: { text: '待生产', color: 'blue' },
+      production: { text: '生产中', color: 'green' },
+      completed: { text: '已完成', color: 'success' },
+      delayed: { text: '已逾期', color: 'error' },
+    };
+    const key = String(status || '').trim();
+    return statusMap[key] || { text: '未知', color: 'default' };
+  };
+
+  const getCloseMinRequired = (cuttingQuantity: number) => {
+    const cq = Number(cuttingQuantity ?? 0);
+    if (!Number.isFinite(cq) || cq <= 0) return 0;
+    return Math.ceil(cq * 0.9);
+  };
+
+  const isOrderFrozen = (order?: ProductionOrder | null) => {
+    return isOrderFrozenByStatusOrStock(order);
+  };
+
+  const handleCloseOrder = (order: ProductionOrder) => {
+    const orderId = String((order as any)?.id || '').trim();
+    if (!orderId) {
+      message.error('订单ID为空，无法关单');
+      return;
+    }
+
+    const cuttingQty = Number((order as any)?.cuttingQuantity ?? 0) || 0;
+    const minRequired = getCloseMinRequired(cuttingQty);
+    const orderQty = Number((order as any)?.orderQuantity ?? 0) || 0;
+    const warehousingQualified = Number((order as any)?.warehousingQualifiedQuantity ?? 0) || 0;
+
+    if ((order as any)?.status === 'completed') {
+      message.info('该订单已完成，无需关单');
+      return;
+    }
+
+    if (minRequired <= 0) {
+      message.warning('裁剪数量异常，无法关单');
+      return;
+    }
+
+    if (warehousingQualified < minRequired) {
+      message.warning(`关单条件未满足：合格入库${warehousingQualified}/${minRequired}（裁剪${cuttingQty}，允许差异10%）`);
+      return;
+    }
+
+    Modal.confirm({
+      title: `确认关单：${String((order as any)?.orderNo || '').trim() || '-'}`,
+      okText: '确认关单',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      content: (
+        <div>
+          <div>订单数量：{orderQty}</div>
+          <div>关单阈值（裁剪数90%）：{minRequired}</div>
+          <div>当前裁剪数：{cuttingQty}</div>
+          <div>当前合格入库：{warehousingQualified}</div>
+          <div style={{ marginTop: 8 }}>关单后订单状态将变为“已完成”，并自动生成对账记录。</div>
+        </div>
+      ),
+      onOk: async () => {
+        const result = await api.post<any>('/production/order/close', { id: orderId });
+        if ((result as any)?.code !== 200) {
+          throw new Error((result as any)?.message || '关单失败');
+        }
+        message.success('关单成功');
+        fetchProductionList();
+      },
+    });
+  };
+
+  // 表格列定义
+  const renderStageTime = (value: any) => {
+    const s = String(value ?? '').trim();
+    return s ? formatDateTime(value) : '-';
+  };
+
+  const renderStageText = (value: any) => {
+    return String(value ?? '').trim() || '-';
+  };
+
+  const renderStageRate = (value: any) => {
+    if (value === null || value === undefined || String(value).trim() === '') return '-';
+    const n = Number(value);
+    return Number.isFinite(n) ? `${n}%` : '-';
+  };
+
+  const stageColumns = (
+    prefix: string,
+    titles: { start: string; end: string; operator: string; rate: string },
+    options?: { includeOperator?: boolean }
+  ) => {
+    const includeOperator = options?.includeOperator !== false;
+    return [
+      {
+        title: titles.start,
+        dataIndex: `${prefix}StartTime`,
+        key: `${prefix}StartTime`,
+        width: 170,
+        render: renderStageTime,
+      },
+      {
+        title: titles.end,
+        dataIndex: `${prefix}EndTime`,
+        key: `${prefix}EndTime`,
+        width: 170,
+        render: renderStageTime,
+      },
+      ...(includeOperator
+        ? [
+          {
+            title: titles.operator,
+            dataIndex: `${prefix}OperatorName`,
+            key: `${prefix}OperatorName`,
+            width: 120,
+            render: renderStageText,
+          },
+        ]
+        : []),
+      {
+        title: titles.rate,
+        dataIndex: `${prefix}CompletionRate`,
+        key: `${prefix}CompletionRate`,
+        width: 110,
+        align: 'right' as const,
+        render: renderStageRate,
+      },
+    ];
+  };
+
+  const columns = [
+    {
+      title: '图片',
+      dataIndex: 'styleCover',
+      key: 'styleCover',
+      width: 72,
+      render: (_: any, record: any) => (
+        <StyleCoverThumb styleId={record.styleId} styleNo={record.styleNo} src={record.styleCover || null} size={48} borderRadius={6} />
+      )
+    },
+    {
+      title: '订单号',
+      dataIndex: 'orderNo',
+      key: 'orderNo',
+      width: 120,
+      render: (v: any, record: ProductionOrder) => {
+        const orderNo = String(v || '').trim();
+        const styleNo = String((record as any)?.styleNo || '').trim();
+        const orderId = String((record as any)?.id || '').trim();
+        return (
+          <a
+            style={{ cursor: 'pointer' }}
+            onClick={(e) => {
+              e.preventDefault();
+              navigate(withQuery('/production/order-flow', { orderId, orderNo, styleNo }));
+            }}
+          >
+            {orderNo || '-'}
+          </a>
+        );
+      },
+    },
+    {
+      title: '款号',
+      dataIndex: 'styleNo',
+      key: 'styleNo',
+      width: 100,
+    },
+    {
+      title: '款名',
+      dataIndex: 'styleName',
+      key: 'styleName',
+      ellipsis: true,
+    },
+    {
+      title: '附件',
+      key: 'attachments',
+      width: 100,
+      render: (_: any, record: any) => (
+        <StyleAttachmentsButton styleId={record.styleId} styleNo={record.styleNo} modalTitle={record.styleNo ? `附件（${record.styleNo}）` : '附件'} />
+      )
+    },
+    {
+      title: '加工厂',
+      dataIndex: 'factoryName',
+      key: 'factoryName',
+      width: 120,
+    },
+    {
+      title: '订单数量',
+      dataIndex: 'orderQuantity',
+      key: 'orderQuantity',
+      width: 100,
+      align: 'right' as const,
+    },
+    {
+      title: '下单人',
+      dataIndex: 'orderOperatorName',
+      key: 'orderOperatorName',
+      width: 120,
+      render: renderStageText,
+    },
+    {
+      title: '下单时间',
+      dataIndex: 'createTime',
+      key: 'createTime',
+      width: 170,
+      render: renderStageTime,
+    },
+    ...stageColumns('procurement', { start: '采购时间', end: '采购完成', operator: '采购员', rate: '采购完成率' }),
+    ...stageColumns('cutting', { start: '裁剪时间', end: '裁剪完成', operator: '裁剪员', rate: '裁剪完成率' }),
+    ...stageColumns('sewing', { start: '缝制开始', end: '缝制完成', operator: '缝制员', rate: '缝制完成率' }, { includeOperator: false }),
+    ...stageColumns('quality', { start: '质检时间', end: '质检完成', operator: '质检员', rate: '质检完成率' }),
+    ...stageColumns('warehousing', { start: '入库时间', end: '入库完成', operator: '入库员', rate: '入库完成率' }),
+    {
+      title: '裁剪数量',
+      dataIndex: 'cuttingQuantity',
+      key: 'cuttingQuantity',
+      width: 90,
+      align: 'right' as const,
+      render: (v: any) => Number(v ?? 0) || 0,
+    },
+    {
+      title: '扎数',
+      dataIndex: 'cuttingBundleCount',
+      key: 'cuttingBundleCount',
+      width: 80,
+      align: 'right' as const,
+      render: (v: any) => Number(v ?? 0) || 0,
+    },
+    {
+      title: '完成数量',
+      dataIndex: 'completedQuantity',
+      key: 'completedQuantity',
+      width: 100,
+      align: 'right' as const,
+    },
+    {
+      title: '合格入库',
+      dataIndex: 'warehousingQualifiedQuantity',
+      key: 'warehousingQualifiedQuantity',
+      width: 100,
+      align: 'right' as const,
+      render: (v: any) => Number(v ?? 0) || 0,
+    },
+    {
+      title: '库存',
+      dataIndex: 'inStockQuantity',
+      key: 'inStockQuantity',
+      width: 90,
+      align: 'right' as const,
+      render: (v: any) => Number(v ?? 0) || 0,
+    },
+    {
+      title: '生产进度',
+      dataIndex: 'productionProgress',
+      key: 'productionProgress',
+      width: 100,
+      render: (value: number) => `${value}%`,
+      align: 'right' as const,
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      width: 100,
+      render: (status: ProductionOrder['status']) => {
+        const { text, color } = getStatusConfig(status);
+        return <Tag color={color}>{text}</Tag>;
+      },
+    },
+    {
+      title: '计划完成日期',
+      dataIndex: 'plannedEndDate',
+      key: 'plannedEndDate',
+      width: 120,
+      render: (value: any) => formatDateTime(value),
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 110,
+      render: (_: any, record: ProductionOrder) => {
+        const frozen = isOrderFrozen(record);
+        return (
+          <RowActions
+            className="table-actions"
+            actions={[
+              {
+                key: 'detail',
+                label: '详情',
+                title: '详情',
+                icon: <EyeOutlined />,
+                onClick: () => openDialog(record),
+                primary: true,
+              },
+              {
+                key: 'scan',
+                label: '扫码领取',
+                title: frozen ? '扫码领取(已完成)' : '扫码领取',
+                icon: <ScanOutlined />,
+                disabled: frozen,
+                onClick: () => openScanDialog(record),
+                primary: true,
+              },
+              {
+                key: 'close',
+                label: frozen ? '关单(已完成)' : '关单',
+                disabled: frozen,
+                onClick: () => handleCloseOrder(record),
+              },
+              {
+                key: 'cutting',
+                label: frozen ? '裁剪管理(已完成)' : '裁剪管理',
+                disabled: frozen,
+                onClick: () =>
+                  navigate(
+                    withQuery('/production/cutting', {
+                      orderId: (record as any)?.id,
+                      orderNo: (record as any)?.orderNo,
+                      styleNo: (record as any)?.styleNo,
+                    })
+                  ),
+              },
+            ]}
+          />
+        );
+      },
+    },
+  ];
+
+  return (
+    <Layout>
+      <div className="production-list-page">
+        <Card className="page-card">
+          {/* 页面标题和操作区 */}
+          <div className="page-header">
+            <h2 className="page-title">我的订单</h2>
+            <Space wrap>
+              <Button icon={<DownloadOutlined />} onClick={exportSelected} disabled={!selectedRowKeys.length}>
+                导出
+              </Button>
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => openDialog()}>
+                新增生产订单
+              </Button>
+            </Space>
+          </div>
+
+          {/* 筛选区 */}
+          <Card size="small" className="filter-card mb-sm">
+            <Form layout="inline" size="small">
+              <Form.Item label="订单号">
+                <Input
+                  placeholder="请输入订单号"
+                  onChange={(e) => setQueryParams({ ...queryParams, orderNo: e.target.value })}
+                  style={{ width: 150 }}
+                />
+              </Form.Item>
+              <Form.Item label="款号">
+                <Input
+                  placeholder="请输入款号"
+                  onChange={(e) => setQueryParams({ ...queryParams, styleNo: e.target.value })}
+                  style={{ width: 120 }}
+                />
+              </Form.Item>
+              <Form.Item label="加工厂">
+                <Input
+                  placeholder="请输入加工厂名称"
+                  onChange={(e) => setQueryParams({ ...queryParams, factoryName: e.target.value })}
+                  style={{ width: 150 }}
+                />
+              </Form.Item>
+              <Form.Item label="状态">
+                <Select
+                  placeholder="请选择状态"
+                  onChange={(value) => setQueryParams({ ...queryParams, status: value })}
+                  style={{ width: 100 }}
+                >
+                  <Option value="">全部</Option>
+                  <Option value="pending">待生产</Option>
+                  <Option value="production">生产中</Option>
+                  <Option value="completed">已完成</Option>
+                  <Option value="delayed">已逾期</Option>
+                </Select>
+              </Form.Item>
+              <Form.Item className="filter-actions">
+                <Space>
+                  <Button type="primary" icon={<SearchOutlined />} onClick={() => fetchProductionList()}>
+                    查询
+                  </Button>
+                  <Button onClick={() => {
+                    setQueryParams({ page: 1, pageSize: 10 });
+                    fetchProductionList();
+                  }}>
+                    重置
+                  </Button>
+                </Space>
+              </Form.Item>
+            </Form>
+          </Card>
+
+          {/* 表格区 */}
+          <ResizableTable<ProductionOrder>
+            storageKey="production-order-table"
+            columns={columns as any}
+            dataSource={productionList}
+            rowKey="id"
+            loading={loading}
+            rowSelection={{
+              selectedRowKeys,
+              onChange: (keys: React.Key[], rows: ProductionOrder[]) => {
+                setSelectedRowKeys(keys);
+                setSelectedRows(rows);
+              },
+            }}
+            rowClassName={() => 'clickable-row'}
+            onRow={(record) => {
+              return {
+                onClick: (e) => {
+                  const target = e.target as HTMLElement | null;
+                  if (!target) return;
+
+                  const interactive = target.closest(
+                    'a,button,input,textarea,select,option,[role="button"],[role="menuitem"],.ant-dropdown-trigger,.ant-btn'
+                  );
+                  if (interactive) return;
+
+                  const orderNo = String((record as any)?.orderNo || '').trim();
+                  const styleNo = String((record as any)?.styleNo || '').trim();
+                  const orderId = String((record as any)?.id || '').trim();
+                  navigate(withQuery('/production/order-flow', { orderId, orderNo, styleNo }));
+                },
+              };
+            }}
+            pagination={{
+              current: queryParams.page,
+              pageSize: queryParams.pageSize,
+              total: total,
+              onChange: (page, pageSize) => setQueryParams({ ...queryParams, page, pageSize }),
+            }}
+          />
+        </Card>
+
+        {/* 生产订单详情弹窗 */}
+        <ResizableModal
+          title={currentOrder ? '生产订单详情' : '新增生产订单'}
+          open={visible}
+          onCancel={closeDialog}
+          footer={currentOrder ? null : [
+            <Button key="cancel" onClick={closeDialog}>
+              取消
+            </Button>,
+            <Button key="submit" type="primary" onClick={handleSubmit} loading={submitLoading}>
+              保存
+            </Button>
+          ]}
+          width="60vw"
+        >
+          <Form form={form} layout="vertical">
+            {currentOrder ? (
+              <>
+                <div className="modal-detail-header">
+                  <div className="modal-detail-cover" style={{ flexDirection: 'column', gap: 10, padding: 10 }}>
+                    <StyleCoverThumb styleNo={String((currentOrder as any).styleNo || '').trim()} size={140} borderRadius={10} />
+                    {currentOrder?.qrCode ? <QRCodeCanvas value={String(currentOrder.qrCode)} size={96} includeMargin /> : null}
+                  </div>
+                  <div className="modal-detail-grid">
+                    <div className="modal-detail-item"><span className="modal-detail-label">订单号：</span><span className="modal-detail-value">{String((currentOrder as any).orderNo || '').trim() || '-'}</span></div>
+                    <div className="modal-detail-item"><span className="modal-detail-label">款号：</span><span className="modal-detail-value">{String((currentOrder as any).styleNo || '').trim() || '-'}</span></div>
+                    <div className="modal-detail-item"><span className="modal-detail-label">款名：</span><span className="modal-detail-value">{String((currentOrder as any).styleName || '').trim() || '-'}</span></div>
+                    <div className="modal-detail-item"><span className="modal-detail-label">加工厂：</span><span className="modal-detail-value">{String((currentOrder as any).factoryName || '').trim() || '-'}</span></div>
+                    <div className="modal-detail-item"><span className="modal-detail-label">订单数量：</span><span className="modal-detail-value">{String((currentOrder as any).orderQuantity ?? '-')}</span></div>
+                    <div className="modal-detail-item"><span className="modal-detail-label">完成数量：</span><span className="modal-detail-value">{String((currentOrder as any).completedQuantity ?? '-')}</span></div>
+                    <div className="modal-detail-item"><span className="modal-detail-label">生产进度：</span><span className="modal-detail-value">{String((currentOrder as any).productionProgress ?? '-')}%</span></div>
+                    <div className="modal-detail-item"><span className="modal-detail-label">状态：</span><span className="modal-detail-value">{getStatusConfig((currentOrder as any).status).text}</span></div>
+                    <div className="modal-detail-item"><span className="modal-detail-label">计划开始：</span><span className="modal-detail-value">{formatDateTime((currentOrder as any).plannedStartDate)}</span></div>
+                    <div className="modal-detail-item"><span className="modal-detail-label">计划完成：</span><span className="modal-detail-value">{formatDateTime((currentOrder as any).plannedEndDate)}</span></div>
+                    <div className="modal-detail-item"><span className="modal-detail-label">实际开始：</span><span className="modal-detail-value">{formatDateTime((currentOrder as any).actualStartDate)}</span></div>
+                    <div className="modal-detail-item"><span className="modal-detail-label">实际完成：</span><span className="modal-detail-value">{formatDateTime((currentOrder as any).actualEndDate)}</span></div>
+                  </div>
+                </div>
+
+                <h3 style={{ marginTop: 12 }}>生产节点时间线</h3>
+                <Timeline style={{ marginTop: 8 }}>
+                  <Timeline.Item>计划开始：{formatDateTime(currentOrder.plannedStartDate)}</Timeline.Item>
+                  {currentOrder.actualStartDate ? <Timeline.Item>实际开始：{formatDateTime(currentOrder.actualStartDate)}</Timeline.Item> : null}
+                  <Timeline.Item>计划完成：{formatDateTime(currentOrder.plannedEndDate)}</Timeline.Item>
+                  {currentOrder.actualEndDate ? <Timeline.Item>实际完成：{formatDateTime(currentOrder.actualEndDate)}</Timeline.Item> : null}
+                </Timeline>
+              </>
+            ) : (
+              <Row gutter={16}>
+                <Col span={8}>
+                  <Form.Item name="orderNo" label="订单号" rules={[{ required: true, message: '请输入订单号' }]}>
+                    <Input placeholder="自动生成" disabled />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name="styleId" label="款号" rules={[{ required: true, message: '请选择款号' }]}>
+                    <Select placeholder="请选择款号">
+                      <Option value="1">ST2024001 - 时尚连衣裙</Option>
+                      <Option value="2">ST2024002 - 休闲牛仔裤</Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name="factoryId" label="加工厂" rules={[{ required: true, message: '请选择加工厂' }]}>
+                    <Select placeholder="请选择加工厂">
+                      <Option value="1">广州服装厂</Option>
+                      <Option value="2">深圳服装厂</Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name="orderQuantity" label="订单数量" rules={[{ required: true, message: '请输入订单数量' }]}>
+                    <InputNumber placeholder="请输入订单数量" style={{ width: '100%' }} min={1} />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name="plannedStartDate" label="计划开始日期" rules={[{ required: true, message: '请选择计划开始日期' }]}>
+                    <DatePicker style={{ width: '100%' }} />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name="plannedEndDate" label="计划完成日期" rules={[{ required: true, message: '请选择计划完成日期' }]}>
+                    <DatePicker style={{ width: '100%' }} />
+                  </Form.Item>
+                </Col>
+              </Row>
+            )}
+          </Form>
+        </ResizableModal>
+
+        <ResizableModal
+          title={scanOrder ? `扫码领取 - ${scanOrder.orderNo}` : '扫码领取'}
+          open={scanVisible}
+          onCancel={closeScanDialog}
+          footer={[
+            <Button key="cancel" onClick={closeScanDialog}>
+              关闭
+            </Button>,
+            <Button key="submit" type="primary" icon={<ScanOutlined />} onClick={handleScanSubmit} loading={scanSubmitting}>
+              扫码领取
+            </Button>
+          ]}
+          width="60vw"
+        >
+          {scanOrder && (
+            <>
+              <Card size="small" style={{ marginBottom: 12 }}>
+                <Row gutter={16}>
+                  <Col span={6}>订单号：{scanOrder.orderNo}</Col>
+                  <Col span={6}>款号：{scanOrder.styleNo}</Col>
+                  <Col span={6}>加工厂：{scanOrder.factoryName}</Col>
+                  <Col span={6}>进度：{scanOrder.productionProgress}%</Col>
+                </Row>
+              </Card>
+
+              <Card size="small" style={{ marginBottom: 12 }}>
+                <Form form={scanForm} layout="inline">
+                  <Form.Item name="scanCode" label="扫码内容" rules={[{ required: true, message: '请扫码或输入条码' }]}>
+                    <Input ref={scanInputRef} placeholder="扫码枪输入后回车" style={{ width: 240 }} onPressEnter={handleScanSubmit} />
+                  </Form.Item>
+                  <Form.Item name="scanType" label="扫码类型" rules={[{ required: true, message: '请选择扫码类型' }]}>
+                    <Select
+                      style={{ width: 130 }}
+                      options={[
+                        { label: '生产', value: 'production' },
+                        { label: '缝制(计件)', value: 'sewing' },
+                        { label: '裁剪', value: 'cutting' },
+                        { label: '入库', value: 'warehouse' },
+                      ]}
+                      onChange={handleScanTypeChange}
+                    />
+                  </Form.Item>
+                  <Form.Item shouldUpdate={(prev, cur) => prev.scanType !== cur.scanType} noStyle>
+                    {({ getFieldValue }) => {
+                      const type = String(getFieldValue('scanType') || '').trim() || 'production';
+                      const disabled = type === 'warehouse' || type === 'sewing';
+                      return (
+                        <Form.Item
+                          name="processName"
+                          label="生产环节"
+                          rules={[{ required: type !== 'warehouse' && type !== 'sewing', message: '请选择或填写生产环节' }]}
+                        >
+                          <Select
+                            style={{ width: 180 }}
+                            placeholder={type === 'sewing' ? '自动按工序顺序' : '选择环节'}
+                            options={type === 'sewing' ? [{ label: '自动按工序顺序', value: '' }] : scanProcessOptions}
+                            showSearch
+                            allowClear
+                            disabled={disabled}
+                          />
+                        </Form.Item>
+                      );
+                    }}
+                  </Form.Item>
+                  <Form.Item shouldUpdate={(prev, cur) => prev.scanType !== cur.scanType} noStyle>
+                    {({ getFieldValue }) => {
+                      const type = getFieldValue('scanType');
+                      if (type !== 'warehouse') return null;
+                      return (
+                        <Form.Item name="warehouse" label="仓库" rules={[{ required: true, message: '请选择仓库' }]}>
+                          <Select
+                            style={{ width: 120 }}
+                            placeholder="选择仓库"
+                            options={[
+                              { label: 'A仓', value: 'A仓' },
+                              { label: 'B仓', value: 'B仓' },
+                            ]}
+                          />
+                        </Form.Item>
+                      );
+                    }}
+                  </Form.Item>
+                  <Form.Item shouldUpdate={(prev, cur) => prev.scanType !== cur.scanType} noStyle>
+                    {({ getFieldValue }) => {
+                      const type = getFieldValue('scanType');
+                      return (
+                        <Form.Item name="processCode" label="环节编码">
+                          <Input placeholder="可选" style={{ width: 140 }} disabled={String(type || '').trim() === 'sewing'} />
+                        </Form.Item>
+                      );
+                    }}
+                  </Form.Item>
+                  <Form.Item name="color" label="颜色">
+                    <Input placeholder="可选" style={{ width: 140 }} />
+                  </Form.Item>
+                  <Form.Item shouldUpdate={(prev, cur) => prev.scanType !== cur.scanType} noStyle>
+                    {({ getFieldValue }) => {
+                      const type = String(getFieldValue('scanType') || '').trim() || 'production';
+                      return (
+                        <Form.Item name="quantity" label="数量" rules={[{ required: type !== 'sewing', message: '请输入数量' }]}>
+                          <InputNumber min={1} style={{ width: 120 }} disabled={type === 'sewing'} />
+                        </Form.Item>
+                      );
+                    }}
+                  </Form.Item>
+                </Form>
+              </Card>
+
+              <Card size="small" title="最近扫码记录">
+                <ResizableTable
+                  size="small"
+                  rowKey={(record: ScanRecord) => record.id || `${record.scanTime}-${record.operatorId}`}
+                  loading={scanHistoryLoading}
+                  dataSource={scanHistory}
+                  pagination={false}
+                  columns={[
+                    {
+                      title: '时间',
+                      dataIndex: 'scanTime',
+                      key: 'scanTime',
+                      width: 170,
+                      render: (value: string) => formatDateTime(value),
+                    },
+                    { title: '环节', dataIndex: 'processName', key: 'processName', width: 120 },
+                    { title: '颜色', dataIndex: 'color', key: 'color', width: 100 },
+                    { title: '尺码', dataIndex: 'size', key: 'size', width: 90 },
+                    { title: '扎号', dataIndex: 'cuttingBundleNo', key: 'cuttingBundleNo', width: 80 },
+                    { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 90, align: 'right' as const },
+                    {
+                      title: '单价',
+                      dataIndex: 'unitPrice',
+                      key: 'unitPrice',
+                      width: 90,
+                      align: 'right' as const,
+                      render: (v: any) => (v == null ? '-' : Number(v).toFixed(2)),
+                    },
+                    {
+                      title: '金额',
+                      dataIndex: 'totalAmount',
+                      key: 'totalAmount',
+                      width: 90,
+                      align: 'right' as const,
+                      render: (v: any) => (v == null ? '-' : Number(v).toFixed(2)),
+                    },
+                    { title: '人员', dataIndex: 'operatorName', key: 'operatorName', width: 120 },
+                    {
+                      title: '结果',
+                      dataIndex: 'scanResult',
+                      key: 'scanResult',
+                      width: 90,
+                      render: (value: ScanRecord['scanResult']) => (
+                        <Tag color={value === 'success' ? 'green' : 'red'}>{value === 'success' ? '成功' : '失败'}</Tag>
+                      )
+                    },
+                    { title: '备注', dataIndex: 'remark', key: 'remark', ellipsis: true },
+                  ]}
+                />
+              </Card>
+            </>
+          )}
+        </ResizableModal>
+      </div>
+    </Layout>
+  );
+};
+
+export default ProductionList;

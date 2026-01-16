@@ -1,0 +1,5 @@
+com/fashion/supplychain/datacenter/orchestration/DataCenterOrchestratorTest.class
+com/fashion/supplychain/dashboard/orchestration/DashboardOrchestratorTest.class
+com/fashion/supplychain/production/service/impl/ProductWarehousingServiceImplRuleTest.class
+com/fashion/supplychain/template/orchestration/TemplateLibraryOrchestratorTest.class
+com/fashion/supplychain/finance/orchestration/ReconciliationStatusOrchestratorTest.class

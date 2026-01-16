@@ -1,0 +1,14 @@
+{
+  "miniprogramRoot": "./",
+  "projectname": "fashion-supplychain-scan",
+  "description": "",
+  "appid": "touristappid",
+  "setting": {
+    "urlCheck": true,
+    "es6": true,
+    "enhance": true,
+    "compileHotReLoad": true,
+    "postcss": true,
+    "minified": true
+  }
+}

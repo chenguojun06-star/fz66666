@@ -1,0 +1,80 @@
+package com.fashion.supplychain.production.controller;
+
+import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.production.entity.MaterialPurchase;
+import com.fashion.supplychain.production.orchestration.MaterialPurchaseOrchestrator;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping({ "/api/production/purchase", "/api/production/material" })
+public class MaterialPurchaseController {
+
+    @Autowired
+    private MaterialPurchaseOrchestrator materialPurchaseOrchestrator;
+
+    @GetMapping("/list")
+    public Result<?> list(@RequestParam Map<String, Object> params) {
+        IPage<MaterialPurchase> page = materialPurchaseOrchestrator.list(params);
+        return Result.success(page);
+    }
+
+    @GetMapping("/{id}")
+    public Result<MaterialPurchase> getById(@PathVariable String id) {
+        return Result.success(materialPurchaseOrchestrator.getById(id));
+    }
+
+    @PostMapping
+    public Result<Boolean> save(@RequestBody MaterialPurchase materialPurchase) {
+        return Result.success(materialPurchaseOrchestrator.save(materialPurchase));
+    }
+
+    @PutMapping
+    public Result<Boolean> update(@RequestBody MaterialPurchase materialPurchase) {
+        return Result.success(materialPurchaseOrchestrator.update(materialPurchase));
+    }
+
+    @PostMapping("/batch")
+    public Result<Boolean> batch(@RequestBody List<MaterialPurchase> purchases) {
+        return Result.success(materialPurchaseOrchestrator.batch(purchases));
+    }
+
+    @PostMapping("/update-arrived-quantity")
+    public Result<Boolean> updateArrivedQuantity(@RequestBody Map<String, Object> params) {
+        return Result.success(materialPurchaseOrchestrator.updateArrivedQuantity(params));
+    }
+
+    @GetMapping("/demand/preview")
+    public Result<?> previewDemand(@RequestParam String orderId) {
+        return Result.success(materialPurchaseOrchestrator.previewDemand(orderId));
+    }
+
+    @PostMapping("/demand/generate")
+    public Result<?> generateDemand(@RequestBody Map<String, Object> params) {
+        return Result.success(materialPurchaseOrchestrator.generateDemand(params));
+    }
+
+    @PostMapping("/receive")
+    public Result<?> receive(@RequestBody Map<String, Object> body) {
+        return Result.success(materialPurchaseOrchestrator.receive(body));
+    }
+
+    @PostMapping({ "/return-confirm", "/returnConfirm" })
+    public Result<?> returnConfirm(@RequestBody Map<String, Object> body) {
+        return Result.success(materialPurchaseOrchestrator.returnConfirm(body));
+    }
+
+    @PostMapping({ "/return-confirm/reset", "/returnConfirm/reset" })
+    public Result<?> resetReturnConfirm(@RequestBody Map<String, Object> body) {
+        return Result.success(materialPurchaseOrchestrator.resetReturnConfirm(body));
+    }
+
+    @DeleteMapping("/{id}")
+    public Result<Boolean> delete(@PathVariable String id) {
+        return Result.success(materialPurchaseOrchestrator.delete(id));
+    }
+}

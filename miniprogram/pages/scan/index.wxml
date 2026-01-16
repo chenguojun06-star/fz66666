@@ -1,0 +1,50 @@
+<view class="container">
+  <view class="card">
+    <view class="title">车间扫码</view>
+
+    <view class="row">
+      <view class="col field">
+        <view class="label">类型</view>
+        <picker mode="selector" range="{{scanTypeOptions}}" range-key="label" value="{{scanTypeIndex}}" bindchange="onScanTypeChange">
+          <view class="input">{{scanTypeOptions[scanTypeIndex].label}}</view>
+        </picker>
+      </view>
+      <view class="col field">
+        <view class="label">数量</view>
+        <input class="input" type="number" value="{{quantity}}" bindinput="onQuantityInput" />
+      </view>
+    </view>
+
+    <view wx:if="{{scanTypeOptions[scanTypeIndex].value === 'quality'}}" class="field">
+      <view class="label">质检结果</view>
+      <picker mode="selector" range="{{qualityOptions}}" range-key="label" value="{{qualityIndex}}" bindchange="onQualityChange">
+        <view class="input">{{qualityOptions[qualityIndex].label}}</view>
+      </picker>
+    </view>
+
+    <view wx:if="{{scanTypeOptions[scanTypeIndex].value === 'warehouse'}}" class="field">
+      <view class="label">仓库</view>
+      <input class="input" placeholder="请输入仓库" value="{{warehouse}}" bindinput="onWarehouseInput" />
+    </view>
+
+    <view class="btn">
+      <view class="btn-primary {{loading ? 'btn-disabled' : ''}}" bindtap="onScan">{{loading ? '处理中...' : '开始扫码'}}</view>
+    </view>
+
+    <view class="btn">
+      <view class="btn-primary" bindtap="onLogout">退出登录</view>
+    </view>
+
+    <view wx:if="{{lastResult}}" class="result">
+      <view>
+        <text class="tag {{lastResult.success ? 'tag-ok' : 'tag-bad'}}">{{lastResult.success ? '成功' : '失败'}}</text>
+      </view>
+      <view>二维码：{{lastResult.scanCode}}</view>
+      <view>消息：{{lastResult.message}}</view>
+      <view wx:if="{{lastResult.orderNo}}">订单号：{{lastResult.orderNo}}</view>
+      <view wx:if="{{lastResult.styleNo}}">款号：{{lastResult.styleNo}}</view>
+      <view wx:if="{{lastResult.processName}}">工序：{{lastResult.processName}}</view>
+    </view>
+  </view>
+</view>
+

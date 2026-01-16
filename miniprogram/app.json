@@ -1,0 +1,11 @@
+{
+  "pages": ["pages/login/index", "pages/scan/index"],
+  "window": {
+    "navigationBarTitleText": "车间扫码",
+    "navigationBarBackgroundColor": "#1677ff",
+    "navigationBarTextStyle": "white",
+    "backgroundTextStyle": "light"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

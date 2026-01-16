@@ -1,0 +1,22 @@
+<view class="container">
+  <view class="card">
+    <view class="title">登录</view>
+
+    <view class="field">
+      <view class="label">账号</view>
+      <input class="input" placeholder="请输入账号" value="{{username}}" bindinput="onUsernameInput" />
+    </view>
+
+    <view class="field">
+      <view class="label">密码</view>
+      <input class="input" placeholder="请输入密码" password="true" value="{{password}}" bindinput="onPasswordInput" />
+    </view>
+
+    <view class="btn">
+      <view class="btn-primary {{loading ? 'btn-disabled' : ''}}" bindtap="onLogin">{{loading ? '登录中...' : '登录'}}</view>
+    </view>
+
+    <view class="hint">登录成功后进入扫码页</view>
+  </view>
+</view>
+

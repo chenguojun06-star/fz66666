@@ -1,0 +1,89 @@
+package com.fashion.supplychain.auth;
+
+import cn.hutool.jwt.JWT;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+@Service
+public class AuthTokenService {
+
+    private final byte[] secret;
+
+    public AuthTokenService(@Value("${app.auth.jwt-secret:}") String secret) {
+        String s = secret == null ? "" : secret.trim();
+        if (!StringUtils.hasText(s)) {
+            throw new IllegalStateException("app.auth.jwt-secret 未配置");
+        }
+        if ("dev-secret-change-me".equals(s)) {
+            throw new IllegalStateException("app.auth.jwt-secret 不能使用默认占位值");
+        }
+        if (s.length() < 32) {
+            throw new IllegalStateException("app.auth.jwt-secret 长度过短，至少 32 位");
+        }
+        this.secret = s.getBytes(StandardCharsets.UTF_8);
+    }
+
+    public String issueToken(TokenSubject subject, Duration ttl) {
+        if (subject == null) {
+            return null;
+        }
+        Duration safeTtl = ttl == null ? Duration.ofHours(12) : ttl;
+        long nowMillis = System.currentTimeMillis();
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("uid", subject.getUserId());
+        payload.put("uname", subject.getUsername());
+        payload.put("roleId", subject.getRoleId());
+        payload.put("roleName", subject.getRoleName());
+        payload.put("openid", subject.getOpenid());
+        payload.put("iat", new Date(nowMillis));
+        payload.put("exp", new Date(nowMillis + safeTtl.toMillis()));
+
+        return JWT.create().addPayloads(payload).setKey(secret).sign();
+    }
+
+    public TokenSubject verifyAndParse(String token) {
+        String t = token == null ? "" : token.trim();
+        if (!StringUtils.hasText(t)) {
+            return null;
+        }
+
+        JWT jwt;
+        try {
+            jwt = JWT.of(t).setKey(secret);
+        } catch (Exception e) {
+            return null;
+        }
+
+        boolean ok;
+        try {
+            ok = jwt.verify() && jwt.validate(0);
+        } catch (Exception e) {
+            ok = false;
+        }
+        if (!ok) {
+            return null;
+        }
+
+        Object uid = jwt.getPayload("uid");
+        Object uname = jwt.getPayload("uname");
+        Object roleId = jwt.getPayload("roleId");
+        Object roleName = jwt.getPayload("roleName");
+        Object openid = jwt.getPayload("openid");
+
+        TokenSubject subject = new TokenSubject();
+        subject.setUserId(uid == null ? null : String.valueOf(uid));
+        subject.setUsername(uname == null ? null : String.valueOf(uname));
+        subject.setRoleId(roleId == null ? null : String.valueOf(roleId));
+        subject.setRoleName(roleName == null ? null : String.valueOf(roleName));
+        subject.setOpenid(openid == null ? null : String.valueOf(openid));
+        return subject;
+    }
+}

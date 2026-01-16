@@ -1,0 +1,26 @@
+.DS_Store
+
+# Backend (Maven)
+backend/target/
+
+# Frontend (Vite)
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.eslintcache
+
+# Env / local run files
+.env
+.env.*
+.run/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Logs
+*.log
+
+# Deployment / platform
+.vercel/

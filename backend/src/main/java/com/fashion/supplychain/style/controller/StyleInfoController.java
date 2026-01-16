@@ -1,0 +1,104 @@
+package com.fashion.supplychain.style.controller;
+
+import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.style.entity.StyleInfo;
+import com.fashion.supplychain.style.orchestration.StyleInfoOrchestrator;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+import java.util.Map;
+
+/**
+ * 款号资料Controller
+ */
+@RestController
+@RequestMapping("/api/style/info")
+public class StyleInfoController {
+
+    @Autowired
+    private StyleInfoOrchestrator styleInfoOrchestrator;
+
+    /**
+     * 分页查询款号资料列表
+     */
+    @GetMapping("/list")
+    public Result<?> list(@RequestParam Map<String, Object> params) {
+        IPage<StyleInfo> page = styleInfoOrchestrator.list(params);
+        return Result.success(page);
+    }
+
+    /**
+     * 根据ID查询款号资料详情
+     */
+    @GetMapping("/{id}")
+    public Result<?> detail(@PathVariable Long id) {
+        return Result.success(styleInfoOrchestrator.detail(id));
+    }
+
+    /**
+     * 新增款号资料
+     */
+    @PostMapping
+    public Result<?> save(@RequestBody StyleInfo styleInfo) {
+        styleInfoOrchestrator.save(styleInfo);
+        return Result.successMessage("操作成功");
+    }
+
+    /**
+     * 更新款号资料
+     */
+    @PutMapping
+    public Result<?> update(@RequestBody StyleInfo styleInfo) {
+        styleInfoOrchestrator.update(styleInfo);
+        return Result.successMessage("操作成功");
+    }
+
+    @PutMapping("/{id}/production-requirements")
+    public Result<?> updateProductionRequirements(@PathVariable Long id,
+            @RequestBody(required = false) Map<String, Object> body) {
+        return Result.success(styleInfoOrchestrator.updateProductionRequirements(id, body));
+    }
+
+    @PostMapping("/{id}/pattern/start")
+    public Result<?> startPattern(@PathVariable Long id) {
+        return Result.success(styleInfoOrchestrator.startPattern(id));
+    }
+
+    @PostMapping("/{id}/pattern/complete")
+    public Result<?> completePattern(@PathVariable Long id) {
+        return Result.success(styleInfoOrchestrator.completePattern(id));
+    }
+
+    @PostMapping("/{id}/pattern/reset")
+    public Result<?> resetPattern(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
+        return Result.success(styleInfoOrchestrator.resetPattern(id, body));
+    }
+
+    @PostMapping("/{id}/sample/start")
+    public Result<?> startSample(@PathVariable Long id) {
+        return Result.success(styleInfoOrchestrator.startSample(id));
+    }
+
+    @PostMapping("/{id}/sample/progress")
+    public Result<?> updateSampleProgress(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        return Result.success(styleInfoOrchestrator.updateSampleProgress(id, body));
+    }
+
+    @PostMapping("/{id}/sample/complete")
+    public Result<?> completeSample(@PathVariable Long id) {
+        return Result.success(styleInfoOrchestrator.completeSample(id));
+    }
+
+    @PostMapping("/{id}/sample/reset")
+    public Result<?> resetSample(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
+        return Result.success(styleInfoOrchestrator.resetSample(id, body));
+    }
+
+    /**
+     * 根据ID删除款号资料
+     */
+    @DeleteMapping("/{id}")
+    public Result<?> delete(@PathVariable Long id) {
+        return Result.success(styleInfoOrchestrator.delete(id));
+    }
+}
