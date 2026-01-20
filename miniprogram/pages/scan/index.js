@@ -428,6 +428,13 @@ Page({
         ],
         // 处理方式选项
         handleMethods: ['返修', '报废'],
+        // 物料采购处理弹窗
+        procurementModal: {
+            show: false,
+            orderNo: '',
+            scanId: '', // 扫码记录ID
+            materials: [], // 物料列表
+        },
     },
 
     onShow() {
@@ -1620,6 +1627,142 @@ Page({
 
             // 关闭弹窗
             this.closeQualityModal();
+
+            // 刷新扫码记录
+            await this.loadHistoryRecords();
+
+        } catch (e) {
+            wx.hideLoading();
+            const msg = errorHandler.getDisplayMessage(e);
+            wx.showToast({ title: msg, icon: 'none', duration: 2000 });
+        }
+    },
+
+    // ==================== 物料采购处理相关 ====================
+    
+    /**
+     * 打开物料采购处理弹窗
+     */
+    async onHandleProcurement(e) {
+        const item = e.currentTarget.dataset.item;
+        if (!item || !item.orderNo) {
+            wx.showToast({ title: '订单信息不完整', icon: 'none' });
+            return;
+        }
+
+        wx.showLoading({ title: '加载中...', mask: true });
+
+        try {
+            // 获取订单的物料采购信息
+            const orderDetail = await api.production.orderDetail(item.orderNo);
+            const materials = Array.isArray(orderDetail.materialPurchases) 
+                ? orderDetail.materialPurchases.map(m => ({
+                    ...m,
+                    purchaseInput: m.purchaseQuantity || m.demandQuantity || '',
+                    remarkInput: m.remark || '',
+                }))
+                : [];
+
+            if (materials.length === 0) {
+                wx.hideLoading();
+                wx.showToast({ title: '未找到物料采购信息', icon: 'none' });
+                return;
+            }
+
+            wx.hideLoading();
+
+            this.setData({
+                procurementModal: {
+                    show: true,
+                    orderNo: item.orderNo,
+                    scanId: item.id,
+                    materials: materials,
+                }
+            });
+        } catch (e) {
+            wx.hideLoading();
+            const msg = errorHandler.getDisplayMessage(e);
+            wx.showToast({ title: msg, icon: 'none', duration: 2000 });
+        }
+    },
+
+    /**
+     * 关闭物料采购处理弹窗
+     */
+    closeProcurementModal() {
+        this.setData({
+            'procurementModal.show': false
+        });
+    },
+
+    /**
+     * 采购数量输入
+     */
+    onProcurementQuantityInput(e) {
+        const idx = e.currentTarget.dataset.idx;
+        this.setData({
+            [`procurementModal.materials[${idx}].purchaseInput`]: e.detail.value
+        });
+    },
+
+    /**
+     * 采购备注输入
+     */
+    onProcurementRemarkInput(e) {
+        const idx = e.currentTarget.dataset.idx;
+        this.setData({
+            [`procurementModal.materials[${idx}].remarkInput`]: e.detail.value
+        });
+    },
+
+    /**
+     * 提交物料采购结果
+     */
+    async submitProcurementResult() {
+        const { procurementModal } = this.data;
+        
+        // 验证至少有一个物料填写了采购数量
+        const hasValid = procurementModal.materials.some(m => {
+            const qty = m.purchaseInput;
+            return qty && Number(qty) > 0;
+        });
+
+        if (!hasValid) {
+            wx.showToast({ title: '请至少填写一个物料的采购数量', icon: 'none' });
+            return;
+        }
+
+        wx.showLoading({ title: '提交中...', mask: true });
+
+        try {
+            // 构建提交数据
+            const purchases = procurementModal.materials
+                .filter(m => m.purchaseInput && Number(m.purchaseInput) > 0)
+                .map(m => ({
+                    id: m.id,
+                    materialCode: m.materialCode,
+                    materialName: m.materialName,
+                    purchaseQuantity: Number(m.purchaseInput),
+                    remark: m.remarkInput || '',
+                }));
+
+            // 调用API更新采购数量
+            for (const purchase of purchases) {
+                await api.production.updateArrivedQuantity({
+                    id: purchase.id,
+                    arrivedQuantity: purchase.purchaseQuantity,
+                    remark: purchase.remark,
+                });
+            }
+
+            wx.hideLoading();
+            wx.showToast({ title: '提交成功', icon: 'success' });
+
+            // 移除提醒
+            reminderManager.removeRemindersByOrder(procurementModal.orderNo, '采购');
+
+            // 关闭弹窗
+            this.closeProcurementModal();
 
             // 刷新扫码记录
             await this.loadHistoryRecords();

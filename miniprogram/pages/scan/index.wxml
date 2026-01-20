@@ -127,9 +127,10 @@
         <text class="hist-detail">{{item.styleNo || '-'}} · {{item.color || '-'}} · {{item.size || '-'}}</text>
       </view>
       <view class="hist-right">
-        <text class="hist-tag {{item.scanType === 'quality' && item.qualityResult === 'pending' ? 'pending' : ''}}">{{item.processName || item.progressStage || '-'}}</text>
+        <text class="hist-tag {{(item.scanType === 'quality' && item.qualityResult === 'pending') || (item.isProcurement && !item.procurementCompleted) ? 'pending' : ''}}">{{item.processName || item.progressStage || (item.isProcurement ? '物料采购' : '-')}}</text>
         <text class="hist-qty">×{{item.quantity || 0}}</text>
         <view wx:if="{{item.scanType === 'quality' && item.qualityResult === 'pending'}}" class="hist-action" bindtap="onHandleQuality" data-item="{{item}}">处理</view>
+        <view wx:if="{{item.isProcurement && !item.procurementCompleted}}" class="hist-action" bindtap="onHandleProcurement" data-item="{{item}}">处理</view>
       </view>
     </view>
     <view class="load-more" bindtap="loadMoreMyHistory">
@@ -271,6 +272,55 @@
     <view class="modal-footer">
       <button class="modal-btn cancel" bindtap="closeQualityModal">取消</button>
       <button class="modal-btn confirm" bindtap="submitQualityResult">提交</button>
+    </view>
+  </view>
+</view>
+
+<!-- 物料采购处理弹窗 -->
+<view class="modal-backdrop" wx:if="{{procurementModal.show}}" catchtap="closeProcurementModal"></view>
+<view class="modal-wrap procurement-modal {{procurementModal.show ? 'show' : ''}}">
+  <view class="modal-container" catchtap="stopPropagation">
+    <view class="modal-header">
+      <text class="modal-title">物料采购</text>
+      <view class="modal-close" catchtap="closeProcurementModal">×</view>
+    </view>
+    
+    <view class="modal-body">
+      <!-- 订单信息 -->
+      <view class="pm-info">
+        <text class="pm-label">订单号：</text>
+        <text class="pm-value">{{procurementModal.orderNo}}</text>
+      </view>
+
+      <!-- 物料列表 -->
+      <view wx:if="{{procurementModal.materials && procurementModal.materials.length}}" class="pm-list">
+        <view wx:for="{{procurementModal.materials}}" wx:key="id" class="pm-item">
+          <view class="pm-item-header">
+            <text class="pm-item-name">{{item.materialName || item.materialCode || '物料'}}</text>
+            <text class="pm-item-unit">{{item.unit || '米'}}</text>
+          </view>
+          
+          <view class="pm-field">
+            <text class="pm-field-label">需求数量</text>
+            <text class="pm-field-value demand">{{item.demandQuantity || item.purchaseQuantity || 0}}</text>
+          </view>
+          
+          <view class="pm-field">
+            <text class="pm-field-label">采购数量</text>
+            <input class="pm-input" type="digit" placeholder="请填写实际采购数量" value="{{item.purchaseInput}}" bindinput="onProcurementQuantityInput" data-idx="{{index}}" />
+          </view>
+          
+          <view class="pm-field">
+            <text class="pm-field-label">备注</text>
+            <input class="pm-input" placeholder="选填" value="{{item.remarkInput}}" bindinput="onProcurementRemarkInput" data-idx="{{index}}" />
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="modal-footer">
+      <button class="modal-btn cancel" bindtap="closeProcurementModal">取消</button>
+      <button class="modal-btn confirm" bindtap="submitProcurementResult">提交</button>
     </view>
   </view>
 </view>
