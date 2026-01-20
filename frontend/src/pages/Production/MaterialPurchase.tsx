@@ -2368,6 +2368,7 @@ const MaterialPurchase: React.FC = () => {
           destroyOnHidden
           autoFontSize={false}
           initialHeight={720}
+          scaleWithViewport
         >
           <Form form={returnConfirmForm} layout="vertical" preserve={false}>
             <div style={{ marginBottom: 12, color: '#1f1f1f' }}>
@@ -2451,6 +2452,7 @@ const MaterialPurchase: React.FC = () => {
           destroyOnHidden
           autoFontSize={false}
           initialHeight={720}
+          scaleWithViewport
         >
           <Form form={returnResetForm} layout="vertical" preserve={false}>
             <Form.Item

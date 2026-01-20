@@ -93,7 +93,7 @@ page {
 
 .home-stat-label {
   font-size: 12px;
-  color: #8e8e93;
+  color: #6b7280;
 }
 
 .home-entries {
@@ -137,7 +137,7 @@ page {
 
 .home-activity-time {
   font-size: 12px;
-  color: #9ca3af;
+  color: #8b8b94;
   white-space: nowrap;
 }
 
@@ -190,7 +190,7 @@ page {
   width: 100%;
   margin-top: 6px;
   font-size: 12px;
-  color: #4b5563;
+  color: #374151;
   line-height: 1.5;
 }
 

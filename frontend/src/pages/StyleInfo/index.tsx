@@ -1189,6 +1189,7 @@ const StyleInfoPage: React.FC = () => {
         initialHeight={720}
         minHeight={280}
         autoFontSize={false}
+        scaleWithViewport
       >
         <div style={{ marginBottom: 12, color: 'var(--neutral-text-lighter)' }}>
           维护会将已完成步骤回退到上一步，并记录维护人。
