@@ -176,18 +176,14 @@
           </view>
         </view>
         
-        <!-- 质检选项 - 在确认弹窗中选择 -->
+        <!-- 质检次品数量 -->
         <view wx:if="{{scanTypeOptions[scanTypeIndex].value === 'quality' && !scanConfirm.detail.isProcurement}}" class="qc-modal-bar">
-          <text class="qc-modal-label">质检结果</text>
-          <view class="qc-modal-opts">
-            <view class="qc-modal-opt {{qualityIndex === 0 ? 'on pass' : ''}}" bindtap="onQuickQuality" data-idx="0">✓ 合格</view>
-            <view class="qc-modal-opt {{qualityIndex === 1 ? 'on fail' : ''}}" bindtap="onQuickQuality" data-idx="1">✗ 次品</view>
-            <view class="qc-modal-opt {{qualityIndex === 2 ? 'on fix' : ''}}" bindtap="onQuickQuality" data-idx="2">↻ 返修</view>
-          </view>
+          <text class="qc-modal-label">次品数量</text>
+          <input class="qc-defect-input" type="number" placeholder="默认全部合格，填写次品数" value="{{defectQuantity}}" bindinput="onDefectQuantityInput" />
         </view>
         
         <!-- 次品详情 -->
-        <view wx:if="{{scanTypeOptions[scanTypeIndex].value === 'quality' && qualityOptions[qualityIndex].value === 'unqualified' && !scanConfirm.detail.isProcurement}}" class="defect-modal-box">
+        <view wx:if="{{scanTypeOptions[scanTypeIndex].value === 'quality' && defectQuantity > 0 && !scanConfirm.detail.isProcurement}}" class="defect-modal-box">
           <view class="df-row">
             <text class="df-label">类型</text>
             <picker class="df-picker" mode="selector" range="{{defectCategoryOptions}}" range-key="label" value="{{defectCategoryIndex}}" bindchange="onDefectCategoryChange">

@@ -370,6 +370,7 @@ Page({
             { label: '返修完成', value: 'repaired' },
         ],
         qualityIndex: 0,
+        defectQuantity: '', // 次品数量
         defectCategoryOptions: [
             { label: '外观完整性问题', value: 'appearance_integrity' },
             { label: '尺寸精度问题', value: 'size_accuracy' },
@@ -546,7 +547,10 @@ Page({
             clearInterval(confirmTickTimer);
             confirmTickTimer = null;
         }
-        this.setData({ scanConfirm: { ...this.data.scanConfirm, visible: false, expireAt: 0, remain: 0, payload: null, detail: null, loading: false, materialPurchases: [] } });
+        this.setData({ 
+            scanConfirm: { ...this.data.scanConfirm, visible: false, expireAt: 0, remain: 0, payload: null, detail: null, loading: false, materialPurchases: [] },
+            defectQuantity: '', // 清空次品数量
+        });
         if (!silent) {
             wx.showToast({ title: '已取消', icon: 'none' });
         }
@@ -921,6 +925,18 @@ Page({
             patch.defectUploading = false;
         }
         this.setData(patch);
+    },
+
+    onDefectQuantityInput(e) {
+        const value = e && e.detail && e.detail.value != null ? String(e.detail.value) : '';
+        const num = Number(value);
+        // 自动根据次品数量设置qualityIndex
+        // 如果次品数>0，设置为次品(1)，否则设置为合格(0)
+        const qualityIndex = num > 0 ? 1 : 0;
+        this.setData({ 
+            defectQuantity: value,
+            qualityIndex,
+        });
     },
 
     onDefectCategoryChange(e) {
