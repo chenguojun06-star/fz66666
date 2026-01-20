@@ -961,14 +961,9 @@ Page({
     groupScanHistory(records) {
         if (!Array.isArray(records) || records.length === 0) return [];
         
-        // 调试：查看第一条记录的结构
-        if (records.length > 0) {
-            console.log('=== 扫码记录数据结构分析 ===');
-            console.log('第一条记录完整数据:', JSON.stringify(records[0], null, 2));
-            console.log('所有字段名:', Object.keys(records[0]));
-            console.log('scanType字段值:', records[0].scanType);
-            console.log('scanResult字段值:', records[0].scanResult);
-            console.log('isProcurement字段值:', records[0].isProcurement);
+        // 调试：查看第一条记录的结构（开发调试用）
+        if (records.length > 0 && false) {
+            console.log('扫码记录第一条:', records[0]);
         }
         
         const groups = new Map();
@@ -1763,34 +1758,16 @@ Page({
         const groupId = e.currentTarget.dataset.groupId;
         const recordIdx = e.currentTarget.dataset.recordIdx;
         
-        console.log('=== 质检处理开始 ===');
-        console.log('groupId:', groupId);
-        console.log('recordIdx:', recordIdx);
-        
         // 从groupedHistory中找到对应的记录
         const groupedHistory = this.data.my.groupedHistory || [];
-        console.log('groupedHistory总数:', groupedHistory.length);
-        
         const group = groupedHistory.find(g => g.id === groupId);
         
-        if (!group) {
-            console.error('找不到分组，groupId:', groupId);
-            wx.showToast({ title: '记录不存在', icon: 'none' });
-            return;
-        }
-        
-        console.log('找到分组:', group);
-        console.log('分组内记录数:', group.items?.length);
-        
-        if (!Array.isArray(group.items) || recordIdx >= group.items.length) {
-            console.error('记录索引越界，recordIdx:', recordIdx, 'items长度:', group.items?.length);
+        if (!group || !Array.isArray(group.items) || recordIdx >= group.items.length) {
             wx.showToast({ title: '记录不存在', icon: 'none' });
             return;
         }
         
         const item = group.items[recordIdx];
-        console.log('记录完整数据:', JSON.stringify(item, null, 2));
-        console.log('记录所有字段名:', Object.keys(item));
 
         const detailData = {
             orderNo: item.orderNo || item.order_no || '(无)',
@@ -1801,8 +1778,6 @@ Page({
             scanId: item.id || item.scanId || '',
         };
         
-        console.log('构造的detailData:', JSON.stringify(detailData, null, 2));
-
         this.setData({
             qualityModal: {
                 show: true,
@@ -1814,14 +1789,7 @@ Page({
                 handleMethod: 0,
                 remark: '',
             }
-        }, () => {
-            // setData 回调，确保数据已更新
-            console.log('setData完成 - qualityModal.show:', this.data.qualityModal.show);
-            console.log('setData完成 - qualityModal.detail:', this.data.qualityModal.detail);
         });
-        
-        // 立即检查数据
-        console.log('setData后立即检查 - qualityModal:', this.data.qualityModal);
     },
 
     /**
