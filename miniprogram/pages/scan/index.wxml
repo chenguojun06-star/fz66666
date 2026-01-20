@@ -43,32 +43,6 @@
 
   <!-- 质检选项 - 扫码后在确认弹窗中选择，不要提前显示 -->
 
-  <!-- 次品详情 - 移至确认弹窗 -->
-  <view wx:if="false" class="defect-box">
-    <view class="df-row">
-      <text class="df-label">类型</text>
-      <picker class="df-picker" mode="selector" range="{{defectCategoryOptions}}" range-key="label" value="{{defectCategoryIndex}}" bindchange="onDefectCategoryChange">
-        <text class="df-val">{{defectCategoryOptions[defectCategoryIndex].label}} ›</text>
-      </picker>
-    </view>
-    <view class="df-row">
-      <text class="df-label">处理</text>
-      <picker class="df-picker" mode="selector" range="{{defectRemarkOptions}}" range-key="label" value="{{defectRemarkIndex}}" bindchange="onDefectRemarkChange">
-        <text class="df-val">{{defectRemarkOptions[defectRemarkIndex].label}} ›</text>
-      </picker>
-    </view>
-    <view class="df-row">
-      <text class="df-label">照片</text>
-      <view class="df-photos">
-        <view wx:for="{{defectImageFullUrls}}" wx:key="*this" class="df-photo">
-          <image mode="aspectFill" src="{{item}}" bindtap="onPreviewDefectPhoto" data-idx="{{index}}" />
-          <text class="df-del" bindtap="onRemoveDefectPhoto" data-idx="{{index}}">×</text>
-        </view>
-        <view wx:if="{{defectImageFullUrls.length < 4}}" class="df-add {{defectUploading ? 'off' : ''}}" bindtap="onAddDefectPhoto">+</view>
-      </view>
-    </view>
-  </view>
-
   <!-- 入库仓库 -->
   <view wx:if="{{scanTypeOptions[scanTypeIndex].value === 'warehouse'}}" class="wh-box">
     <text class="wh-label">仓库</text>
