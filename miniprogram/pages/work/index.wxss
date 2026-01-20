@@ -34,12 +34,19 @@ page {
   font-size: 12px;
 }
 
+.tabbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
 .tabbar {
+  flex: 1;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
   padding: 6px;
-  margin-bottom: 12px;
   background: rgba(255, 255, 255, 0.55);
   border: 1px solid rgba(255, 255, 255, 0.7);
   border-radius: 999px;
@@ -60,10 +67,9 @@ page {
   font-weight: 600;
 }
 
-.actions {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 12px;
+.tabbar-scan {
+  padding: 8px 14px;
+  white-space: nowrap;
 }
 
 .home-section-title {
