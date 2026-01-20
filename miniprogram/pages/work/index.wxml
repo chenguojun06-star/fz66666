@@ -2,15 +2,14 @@
   <view class="card">
     <view class="title">生产</view>
 
-    <view class="tabbar">
-      <view class="tab {{activeTab === 'orders_production' ? 'tab-active' : ''}}" data-tab="orders_production" bindtap="onTab">生产中</view>
-      <view class="tab {{activeTab === 'orders_all' ? 'tab-active' : ''}}" data-tab="orders_all" bindtap="onTab">全部订单</view>
-      <view class="tab {{activeTab === 'warehousing' ? 'tab-active' : ''}}" data-tab="warehousing" bindtap="onTab">入库</view>
-      <view class="tab {{activeTab === 'exceptions' ? 'tab-active' : ''}}" data-tab="exceptions" bindtap="onTab">异常</view>
-    </view>
-
-    <view class="actions">
-      <view class="btn-primary" bindtap="goScan">进入扫码</view>
+    <view class="tabbar-actions">
+      <view class="tabbar">
+        <view class="tab {{activeTab === 'orders_production' ? 'tab-active' : ''}}" data-tab="orders_production" bindtap="onTab">生产</view>
+        <view class="tab {{activeTab === 'orders_all' ? 'tab-active' : ''}}" data-tab="orders_all" bindtap="onTab">订单</view>
+        <view class="tab {{activeTab === 'warehousing' ? 'tab-active' : ''}}" data-tab="warehousing" bindtap="onTab">入库</view>
+        <view class="tab {{activeTab === 'exceptions' ? 'tab-active' : ''}}" data-tab="exceptions" bindtap="onTab">异常</view>
+      </view>
+      <view class="btn-primary tabbar-scan" bindtap="goScan">扫码</view>
     </view>
 
     <view wx:if="{{activeTab === 'orders_all' || activeTab === 'orders_production'}}">
