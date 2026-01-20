@@ -423,6 +423,7 @@ Page({
             defectTypesText: '', // 问题类型显示文本
             handleMethod: 0, // 处理方式索引
             remark: '', // 备注
+            images: [], // 次品图片列表
         },
         // 次品问题类型选项
         defectTypes: [
@@ -1788,6 +1789,7 @@ Page({
                 defectTypesText: '',
                 handleMethod: 0,
                 remark: '',
+                images: [],
             }
         });
     },
@@ -1855,6 +1857,44 @@ Page({
     onRemarkInput(e) {
         this.setData({
             'qualityModal.remark': e.detail.value
+        });
+    },
+
+    /**
+     * 上传次品图片
+     */
+    onUploadQualityImage() {
+        const currentImages = this.data.qualityModal.images || [];
+        const maxCount = 5 - currentImages.length;
+        
+        if (maxCount <= 0) {
+            wx.showToast({ title: '最多上传5张图片', icon: 'none' });
+            return;
+        }
+
+        wx.chooseImage({
+            count: maxCount,
+            sizeType: ['compressed'],
+            sourceType: ['album', 'camera'],
+            success: (res) => {
+                const tempFilePaths = res.tempFilePaths;
+                const newImages = [...currentImages, ...tempFilePaths];
+                this.setData({
+                    'qualityModal.images': newImages
+                });
+            }
+        });
+    },
+
+    /**
+     * 删除次品图片
+     */
+    onDeleteQualityImage(e) {
+        const index = e.currentTarget.dataset.index;
+        const images = this.data.qualityModal.images || [];
+        images.splice(index, 1);
+        this.setData({
+            'qualityModal.images': images
         });
     },
 

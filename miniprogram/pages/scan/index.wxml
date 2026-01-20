@@ -352,6 +352,20 @@
           <text class="qm-field-label">备注</text>
           <textarea class="qm-textarea" placeholder="请输入备注信息（选填）" value="{{qualityModal.remark}}" bindinput="onRemarkInput" maxlength="200"></textarea>
         </view>
+
+        <view class="qm-field">
+          <text class="qm-field-label">上传图片</text>
+          <view class="qm-images">
+            <view wx:for="{{qualityModal.images}}" wx:key="index" class="qm-image-item">
+              <image src="{{item}}" mode="aspectFill" class="qm-image" />
+              <view class="qm-image-del" catchtap="onDeleteQualityImage" data-index="{{index}}">×</view>
+            </view>
+            <view wx:if="{{qualityModal.images.length < 5}}" class="qm-image-upload" bindtap="onUploadQualityImage">
+              <text class="qm-upload-icon">+</text>
+              <text class="qm-upload-text">上传图片</text>
+            </view>
+          </view>
+        </view>
       </view>
     </view>
 
