@@ -101,6 +101,7 @@ public class ProductionOrderQueryService {
         fillCurrentProcessName(resultPage.getRecords());
         fillStockSummary(resultPage.getRecords());
         fillFlowStageFields(resultPage.getRecords());
+        fillQualityStats(resultPage.getRecords()); // 新增：填充质量统计字段
         fixProductionProgressByCompletedQuantity(resultPage.getRecords());
         fillFactoryUnitPrice(resultPage.getRecords());
         fillQuotationUnitPrice(resultPage.getRecords());
@@ -119,6 +120,7 @@ public class ProductionOrderQueryService {
             fillCurrentProcessName(List.of(productionOrder));
             fillStockSummary(List.of(productionOrder));
             fillFlowStageFields(List.of(productionOrder));
+            fillQualityStats(List.of(productionOrder)); // 新增：填充质量统计字段
             fixProductionProgressByCompletedQuantity(List.of(productionOrder));
             fillFactoryUnitPrice(List.of(productionOrder));
             fillQuotationUnitPrice(List.of(productionOrder));
@@ -869,6 +871,30 @@ public class ProductionOrderQueryService {
                 String sewingOperator = flow == null ? null
                         : ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(flow, "sewingOperatorName"));
 
+                // 车缝环节（新增）
+                LocalDateTime carSewingStart = flow == null ? null
+                        : toLocalDateTime(ParamUtils.getIgnoreCase(flow, "carSewingStartTime"));
+                LocalDateTime carSewingEnd = flow == null ? null
+                        : toLocalDateTime(ParamUtils.getIgnoreCase(flow, "carSewingEndTime"));
+                String carSewingOperator = flow == null ? null
+                        : ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(flow, "carSewingOperatorName"));
+
+                // 大烫环节（新增）
+                LocalDateTime ironingStart = flow == null ? null
+                        : toLocalDateTime(ParamUtils.getIgnoreCase(flow, "ironingStartTime"));
+                LocalDateTime ironingEnd = flow == null ? null
+                        : toLocalDateTime(ParamUtils.getIgnoreCase(flow, "ironingEndTime"));
+                String ironingOperator = flow == null ? null
+                        : ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(flow, "ironingOperatorName"));
+
+                // 包装环节（新增）
+                LocalDateTime packagingStart = flow == null ? null
+                        : toLocalDateTime(ParamUtils.getIgnoreCase(flow, "packagingStartTime"));
+                LocalDateTime packagingEnd = flow == null ? null
+                        : toLocalDateTime(ParamUtils.getIgnoreCase(flow, "packagingEndTime"));
+                String packagingOperator = flow == null ? null
+                        : ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(flow, "packagingOperatorName"));
+
                 LocalDateTime qualityStart = flow == null ? null
                         : toLocalDateTime(ParamUtils.getIgnoreCase(flow, "qualityStartTime"));
                 LocalDateTime qualityEnd = flow == null ? null
@@ -923,6 +949,33 @@ public class ProductionOrderQueryService {
                         : scanRecordDomainService.clampPercent(
                                 (int) Math.round(Math.max(0, wareQtyForRate) * 100.0 / Math.max(1, cuttingQtyForRate)));
                 o.setSewingCompletionRate(sewingRate);
+
+                // 设置车缝环节（新增）
+                o.setCarSewingStartTime(carSewingStart);
+                o.setCarSewingEndTime(carSewingEnd);
+                o.setCarSewingOperatorName(carSewingOperator);
+                Integer carSewingRate = (o.getOrderQuantity() == null || o.getOrderQuantity() <= 0) ? 0
+                        : scanRecordDomainService.clampPercent(
+                                (int) Math.round(Math.max(0, wareQtyForRate) * 100.0 / o.getOrderQuantity()));
+                o.setCarSewingCompletionRate(carSewingRate);
+
+                // 设置大烫环节（新增）
+                o.setIroningStartTime(ironingStart);
+                o.setIroningEndTime(ironingEnd);
+                o.setIroningOperatorName(ironingOperator);
+                Integer ironingRate = (o.getOrderQuantity() == null || o.getOrderQuantity() <= 0) ? 0
+                        : scanRecordDomainService.clampPercent(
+                                (int) Math.round(Math.max(0, wareQtyForRate) * 100.0 / o.getOrderQuantity()));
+                o.setIroningCompletionRate(ironingRate);
+
+                // 设置包装环节（新增）
+                o.setPackagingStartTime(packagingStart);
+                o.setPackagingEndTime(packagingEnd);
+                o.setPackagingOperatorName(packagingOperator);
+                Integer packagingRate = (o.getOrderQuantity() == null || o.getOrderQuantity() <= 0) ? 0
+                        : scanRecordDomainService.clampPercent(
+                                (int) Math.round(Math.max(0, wareQtyForRate) * 100.0 / o.getOrderQuantity()));
+                o.setPackagingCompletionRate(packagingRate);
 
                 o.setQualityStartTime(qualityStart);
                 o.setQualityEndTime(qualityEnd);
@@ -1021,6 +1074,15 @@ public class ProductionOrderQueryService {
             LocalDateTime sewingStart = null, sewingEnd = null;
             String sewingOperator = null;
 
+            LocalDateTime carSewingStart = null, carSewingEnd = null;
+            String carSewingOperator = null;
+
+            LocalDateTime ironingStart = null, ironingEnd = null;
+            String ironingOperator = null;
+
+            LocalDateTime packagingStart = null, packagingEnd = null;
+            String packagingOperator = null;
+
             LocalDateTime qualityStart = null, qualityEnd = null;
             String qualityOperator = null;
             int qualityQty = 0;
@@ -1078,10 +1140,29 @@ public class ProductionOrderQueryService {
                     cuttingEnd = t;
                     cuttingOperator = op;
                     cuttingQty += Math.max(0, q);
+                } else if ("production".equals(st) && "车缝".equals(pn)) {
+                    if (carSewingStart == null) {
+                        carSewingStart = t;
+                    }
+                    carSewingEnd = t;
+                    carSewingOperator = op;
+                } else if ("production".equals(st) && "大烫".equals(pn)) {
+                    if (ironingStart == null) {
+                        ironingStart = t;
+                    }
+                    ironingEnd = t;
+                    ironingOperator = op;
+                } else if ("production".equals(st) && "包装".equals(pn)) {
+                    if (packagingStart == null) {
+                        packagingStart = t;
+                    }
+                    packagingEnd = t;
+                    packagingOperator = op;
                 } else if ("production".equals(st)
                         && !isBaseStageName(pn)
                         && !"quality_warehousing".equals(pc)
-                        && !templateLibraryService.isProgressQualityStageName(pn)) {
+                        && !templateLibraryService.isProgressQualityStageName(pn)
+                        && !"车缝".equals(pn) && !"大烫".equals(pn) && !"包装".equals(pn)) {
                     if (sewingStart == null) {
                         sewingStart = t;
                     }
@@ -1172,6 +1253,33 @@ public class ProductionOrderQueryService {
                             (int) Math.round(Math.max(0, wareQtyForRate) * 100.0 / Math.max(1, cuttingQtyForRate)));
             o.setSewingCompletionRate(sewingRate);
 
+            // 设置车缝环节（新增 - fallback分支）
+            o.setCarSewingStartTime(carSewingStart);
+            o.setCarSewingEndTime(carSewingEnd);
+            o.setCarSewingOperatorName(carSewingOperator);
+            Integer carSewingRate = (o.getOrderQuantity() == null || o.getOrderQuantity() <= 0) ? 0
+                    : scanRecordDomainService.clampPercent(
+                            (int) Math.round(Math.max(0, wareQtyForRate) * 100.0 / o.getOrderQuantity()));
+            o.setCarSewingCompletionRate(carSewingRate);
+
+            // 设置大烫环节（新增 - fallback分支）
+            o.setIroningStartTime(ironingStart);
+            o.setIroningEndTime(ironingEnd);
+            o.setIroningOperatorName(ironingOperator);
+            Integer ironingRate = (o.getOrderQuantity() == null || o.getOrderQuantity() <= 0) ? 0
+                    : scanRecordDomainService.clampPercent(
+                            (int) Math.round(Math.max(0, wareQtyForRate) * 100.0 / o.getOrderQuantity()));
+            o.setIroningCompletionRate(ironingRate);
+
+            // 设置包装环节（新增 - fallback分支）
+            o.setPackagingStartTime(packagingStart);
+            o.setPackagingEndTime(packagingEnd);
+            o.setPackagingOperatorName(packagingOperator);
+            Integer packagingRate = (o.getOrderQuantity() == null || o.getOrderQuantity() <= 0) ? 0
+                    : scanRecordDomainService.clampPercent(
+                            (int) Math.round(Math.max(0, wareQtyForRate) * 100.0 / o.getOrderQuantity()));
+            o.setPackagingCompletionRate(packagingRate);
+
             o.setQualityStartTime(qualityStart);
             o.setQualityEndTime(qualityEnd);
             o.setQualityOperatorName(qualityOperator);
@@ -1188,6 +1296,61 @@ public class ProductionOrderQueryService {
                     : scanRecordDomainService.clampPercent(
                             (int) Math.round(Math.max(0, wareQtyForRate) * 100.0 / o.getOrderQuantity()));
             o.setWarehousingCompletionRate(wareRate);
+        }
+    }
+
+    /**
+     * 填充质量统计字段（次品数量、返修数量）
+     * 从t_product_warehousing表聚合
+     */
+    private void fillQualityStats(List<ProductionOrder> records) {
+        if (records == null || records.isEmpty()) {
+            return;
+        }
+
+        List<String> orderIds = records.stream()
+                .map(r -> r == null ? null : r.getId())
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .distinct()
+                .collect(Collectors.toList());
+        if (orderIds.isEmpty()) {
+            return;
+        }
+
+        Map<String, Integer> unqualifiedAgg = new HashMap<>();
+        try {
+            List<ProductWarehousing> list = productWarehousingMapper
+                    .selectList(new LambdaQueryWrapper<ProductWarehousing>()
+                            .select(ProductWarehousing::getOrderId, ProductWarehousing::getUnqualifiedQuantity)
+                            .in(ProductWarehousing::getOrderId, orderIds)
+                            .eq(ProductWarehousing::getDeleteFlag, 0));
+            if (list != null) {
+                for (ProductWarehousing w : list) {
+                    if (w == null || !StringUtils.hasText(w.getOrderId())) {
+                        continue;
+                    }
+                    String oid = w.getOrderId().trim();
+                    int q = w.getUnqualifiedQuantity() == null ? 0 : w.getUnqualifiedQuantity();
+                    if (q > 0) {
+                        unqualifiedAgg.put(oid, unqualifiedAgg.getOrDefault(oid, 0) + q);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to aggregate unqualified quantities for orders: orderIdsCount={}", orderIds.size(), e);
+        }
+
+        // 注意：返修数量字段在t_product_warehousing表中不存在，
+        // 这里假设返修数量等于次品数量（实际业务可能需要调整）
+        for (ProductionOrder o : records) {
+            if (o == null || !StringUtils.hasText(o.getId())) {
+                continue;
+            }
+            String oid = o.getId().trim();
+            Integer unqualifiedQty = unqualifiedAgg.getOrDefault(oid, 0);
+            o.setUnqualifiedQuantity(unqualifiedQty);
+            o.setRepairQuantity(unqualifiedQty); // 暂时使用相同的值
         }
     }
 
