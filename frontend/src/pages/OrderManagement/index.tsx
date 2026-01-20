@@ -1175,23 +1175,6 @@ const OrderManagement: React.FC = () => {
                           modalTitle={selectedStyle?.styleNo ? `附件（${selectedStyle.styleNo}）` : '附件'}
                         />
                       </div>
-                      <div style={{ border: '1px solid rgba(0,0,0,0.06)', borderRadius: 10, padding: 12 }}>
-                        <div style={{ fontWeight: 600, marginBottom: 10 }}>信息</div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '72px 1fr', rowGap: 8, columnGap: 8, color: 'rgba(0,0,0,0.65)' }}>
-                          <div>款号</div>
-                          <div style={{ color: 'rgba(0,0,0,0.88)' }}>{selectedStyle?.styleNo || '-'}</div>
-                          <div>款名</div>
-                          <div style={{ color: 'rgba(0,0,0,0.88)' }}>{selectedStyle?.styleName || '-'}</div>
-                          <div>颜色</div>
-                          <div style={{ color: 'rgba(0,0,0,0.88)' }}>{styleColorText}</div>
-                          <div>码数</div>
-                          <div style={{ color: 'rgba(0,0,0,0.88)' }}>{styleSizeText}</div>
-                          <div>下单色</div>
-                          <div style={{ color: 'rgba(0,0,0,0.88)' }}>{orderColorText}</div>
-                          <div>下单码</div>
-                          <div style={{ color: 'rgba(0,0,0,0.88)' }}>{orderSizeText}</div>
-                        </div>
-                      </div>
                     </div>
 
                     <div style={{ minWidth: 0 }}>
@@ -1251,6 +1234,24 @@ const OrderManagement: React.FC = () => {
                           </Form.Item>
                         </Col>
                       </Row>
+
+                      <div style={{ border: '1px solid rgba(0,0,0,0.06)', borderRadius: 10, padding: 12 }}>
+                        <div style={{ fontWeight: 600, marginBottom: 10 }}>信息</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '72px 1fr', rowGap: 8, columnGap: 8, color: 'rgba(0,0,0,0.65)' }}>
+                          <div>款号</div>
+                          <div style={{ color: 'rgba(0,0,0,0.88)' }}>{selectedStyle?.styleNo || '-'}</div>
+                          <div>款名</div>
+                          <div style={{ color: 'rgba(0,0,0,0.88)' }}>{selectedStyle?.styleName || '-'}</div>
+                          <div>颜色</div>
+                          <div style={{ color: 'rgba(0,0,0,0.88)' }}>{styleColorText}</div>
+                          <div>码数</div>
+                          <div style={{ color: 'rgba(0,0,0,0.88)' }}>{styleSizeText}</div>
+                          <div>下单色</div>
+                          <div style={{ color: 'rgba(0,0,0,0.88)' }}>{orderColorText}</div>
+                          <div>下单码</div>
+                          <div style={{ color: 'rgba(0,0,0,0.88)' }}>{orderSizeText}</div>
+                        </div>
+                      </div>
 
                     </div>
                   </div>

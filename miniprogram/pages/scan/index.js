@@ -559,6 +559,15 @@ Page({
     onConfirmScan() {
         const confirm = this.data.scanConfirm;
         if (!confirm || !confirm.visible || confirm.loading || !confirm.payload) return;
+        
+        // 检查数量是否有效
+        const quantity = confirm.payload.quantity;
+        if (!Number.isFinite(Number(quantity)) || Number(quantity) <= 0) {
+            wx.showToast({ title: '请填写有效数量', icon: 'none' });
+            this.setData({ scanConfirm: { ...confirm, loading: false } });
+            return;
+        }
+        
         if (confirmTimer) {
             clearTimeout(confirmTimer);
             confirmTimer = null;
@@ -1043,6 +1052,16 @@ Page({
         this.setData({ [`scanConfirm.materialPurchases[${idx}].purchaseInput`]: q });
     },
 
+    onModalQuantityInput(e) {
+        const value = e && e.detail && e.detail.value != null ? String(e.detail.value) : '';
+        const quantity = Number(value);
+        // 更新detail和payload中的数量
+        this.setData({
+            'scanConfirm.detail.quantity': value,
+            'scanConfirm.payload.quantity': Number.isFinite(quantity) ? quantity : 0,
+        });
+    },
+
     onModalPurchaseRemarkInput(e) {
         const idx = Number((e && e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.idx) || 0);
         const v = (e && e.detail && e.detail.value) || '';
@@ -1298,29 +1317,6 @@ Page({
             if (allowQrAutofill) {
                 quantity = recognizedQty;
                 this.setData({ quantity: String(quantity), qtyHint: `已从二维码识别数量：${quantity}（可手动修改）` });
-            } else if (recognizedQty != null) {
-                this.setData({ qtyHint: `已识别二维码数量：${recognizedQty}；当前录入：${quantity}（可手动修改）` });
-            } else {
-                this.setData({ qtyHint: '未识别到数量，请手动填写' });
-            }
-
-            if (scanType === 'quality' && qualityResult === 'repaired') {
-                const stats = await api.production.repairStats({ cuttingBundleQrCode: finalScanCode });
-                const remaining = stats && stats.remaining != null ? Number(stats.remaining) : NaN;
-                if (!Number.isFinite(remaining) || remaining <= 0) {
-                    wx.showToast({ title: '该菲号无可返修入库数量', icon: 'none' });
-                    return;
-                }
-                if (quantity > remaining) {
-                    quantity = remaining;
-                }
-                this.setData({ quantity: String(quantity), qtyHint: `该菲号只可返修入库数量：${remaining}（可手动修改）` });
-            }
-
-            if (!Number.isFinite(Number(quantity)) || Number(quantity) <= 0) {
-                wx.showToast({ title: '请填写数量', icon: 'none' });
-                return;
-            }
 
             const stage = {
                 scanType,
