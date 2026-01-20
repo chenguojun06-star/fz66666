@@ -29,4 +29,6 @@ public interface ScanRecordService extends IService<ScanRecord> {
      * 根据款号查询扫码记录
      */
     IPage<ScanRecord> queryByStyleNo(String styleNo, int page, int pageSize);
+
+    Map<String, Object> getPersonalStats(String operatorId, String scanType);
 }

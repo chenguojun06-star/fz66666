@@ -1,10 +1,8 @@
 package com.fashion.supplychain.finance.orchestration;
 
 import com.fashion.supplychain.common.UserContext;
-import com.fashion.supplychain.finance.entity.FactoryReconciliation;
 import com.fashion.supplychain.finance.entity.MaterialReconciliation;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
-import com.fashion.supplychain.finance.service.FactoryReconciliationService;
 import com.fashion.supplychain.finance.service.MaterialReconciliationService;
 import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
 import java.time.LocalDateTime;
@@ -18,24 +16,16 @@ import org.springframework.stereotype.Service;
 public class ReconciliationStatusOrchestrator {
 
     private enum Scope {
-        FACTORY,
         MATERIAL,
         SHIPMENT,
         AUTO
     }
 
     @Autowired
-    private FactoryReconciliationService factoryReconciliationService;
-
-    @Autowired
     private MaterialReconciliationService materialReconciliationService;
 
     @Autowired
     private ShipmentReconciliationService shipmentReconciliationService;
-
-    public String updateFactoryStatus(String id, String status) {
-        return updateStatus(Scope.FACTORY, id, status);
-    }
 
     public String updateMaterialStatus(String id, String status) {
         return updateStatus(Scope.MATERIAL, id, status);
@@ -47,10 +37,6 @@ public class ReconciliationStatusOrchestrator {
 
     public String updateStatusCompat(String id, String status) {
         return updateStatus(Scope.AUTO, id, status);
-    }
-
-    public String returnFactoryToPrevious(String id, String reason) {
-        return returnToPrevious(Scope.FACTORY, id, reason);
     }
 
     public String returnMaterialToPrevious(String id, String reason) {
@@ -74,45 +60,6 @@ public class ReconciliationStatusOrchestrator {
         String to = status.trim();
         LocalDateTime now = LocalDateTime.now();
 
-        if (scope == Scope.FACTORY || scope == Scope.AUTO) {
-            FactoryReconciliation fr = factoryReconciliationService.getById(rid);
-            if (fr != null) {
-                guardTransition(fr.getStatus(), to);
-                if ("rejected".equals(to) && !UserContext.isSupervisorOrAbove()) {
-                    throw new AccessDeniedException("仅主管级别及以上可执行驳回");
-                }
-
-                String from = fr.getStatus() == null ? "" : fr.getStatus().trim();
-                fr.setStatus(to);
-                fr.setUpdateTime(now);
-
-                if ("rejected".equals(from) && "pending".equals(to)) {
-                    fr.setVerifiedAt(null);
-                    fr.setApprovedAt(null);
-                    fr.setPaidAt(null);
-                }
-
-                if ("verified".equals(to) && fr.getVerifiedAt() == null) {
-                    fr.setVerifiedAt(now);
-                }
-                if ("approved".equals(to) && fr.getApprovedAt() == null) {
-                    fr.setApprovedAt(now);
-                }
-                if ("paid".equals(to)) {
-                    fr.setPaidAt(now);
-                }
-
-                boolean ok = factoryReconciliationService.updateById(fr);
-                if (!ok) {
-                    throw new IllegalStateException("状态更新失败");
-                }
-                return "状态更新成功";
-            }
-            if (scope == Scope.FACTORY) {
-                throw new NoSuchElementException("对账单不存在");
-            }
-        }
-
         if (scope == Scope.MATERIAL || scope == Scope.AUTO) {
             MaterialReconciliation mr = materialReconciliationService.getById(rid);
             if (mr != null) {
@@ -123,6 +70,23 @@ public class ReconciliationStatusOrchestrator {
                 String from = mr.getStatus() == null ? "" : mr.getStatus().trim();
                 mr.setStatus(to);
                 mr.setUpdateTime(now);
+                String uid = null;
+                try {
+                    UserContext ctx = UserContext.get();
+                    uid = ctx == null ? null : ctx.getUserId();
+                    uid = (uid == null || uid.trim().isEmpty()) ? null : uid.trim();
+                } catch (Exception ignored) {
+                    uid = null;
+                }
+                if (uid != null) {
+                    mr.setUpdateBy(uid);
+                    if ((mr.getCreateBy() == null || mr.getCreateBy().trim().isEmpty())) {
+                        mr.setCreateBy(uid);
+                    }
+                }
+                if (!from.equals(to)) {
+                    mr.setRemark(appendAuditRemark(mr.getRemark(), "STATUS", from + " -> " + to));
+                }
 
                 if ("rejected".equals(from) && "pending".equals(to)) {
                     mr.setVerifiedAt(null);
@@ -159,6 +123,23 @@ public class ReconciliationStatusOrchestrator {
                 String from = sr.getStatus() == null ? "" : sr.getStatus().trim();
                 sr.setStatus(to);
                 sr.setUpdateTime(now);
+                String uid = null;
+                try {
+                    UserContext ctx = UserContext.get();
+                    uid = ctx == null ? null : ctx.getUserId();
+                    uid = (uid == null || uid.trim().isEmpty()) ? null : uid.trim();
+                } catch (Exception ignored) {
+                    uid = null;
+                }
+                if (uid != null) {
+                    sr.setUpdateBy(uid);
+                    if ((sr.getCreateBy() == null || sr.getCreateBy().trim().isEmpty())) {
+                        sr.setCreateBy(uid);
+                    }
+                }
+                if (!from.equals(to)) {
+                    sr.setRemark(appendAuditRemark(sr.getRemark(), "STATUS", from + " -> " + to));
+                }
 
                 if ("rejected".equals(from) && "pending".equals(to)) {
                     sr.setVerifiedAt(null);
@@ -199,41 +180,6 @@ public class ReconciliationStatusOrchestrator {
         String rid = id.trim();
         LocalDateTime now = LocalDateTime.now();
 
-        if (scope == Scope.FACTORY || scope == Scope.AUTO) {
-            FactoryReconciliation fr = factoryReconciliationService.getById(rid);
-            if (fr != null) {
-                String from = fr.getStatus();
-                String to = previousStatus(fr.getStatus());
-                if (to == null) {
-                    throw new IllegalStateException("当前状态不允许退回");
-                }
-                fr.setStatus(to);
-                fr.setUpdateTime(now);
-                fr.setRemark(appendAuditRemark(fr.getRemark(), "RETURN", reason));
-
-                if ("verified".equals(from)) {
-                    fr.setVerifiedAt(null);
-                } else if ("approved".equals(from)) {
-                    fr.setApprovedAt(null);
-                } else if ("paid".equals(from)) {
-                    fr.setPaidAt(null);
-                }
-
-                if ("paid".equals(from)) {
-                    fr.setReReviewAt(now);
-                    fr.setReReviewReason(reason);
-                }
-                boolean ok = factoryReconciliationService.updateById(fr);
-                if (!ok) {
-                    throw new IllegalStateException("退回失败");
-                }
-                return "退回成功";
-            }
-            if (scope == Scope.FACTORY) {
-                throw new NoSuchElementException("对账单不存在");
-            }
-        }
-
         if (scope == Scope.MATERIAL || scope == Scope.AUTO) {
             MaterialReconciliation mr = materialReconciliationService.getById(rid);
             if (mr != null) {
@@ -245,6 +191,20 @@ public class ReconciliationStatusOrchestrator {
                 mr.setStatus(to);
                 mr.setUpdateTime(now);
                 mr.setRemark(appendAuditRemark(mr.getRemark(), "RETURN", reason));
+                String uid = null;
+                try {
+                    UserContext ctx = UserContext.get();
+                    uid = ctx == null ? null : ctx.getUserId();
+                    uid = (uid == null || uid.trim().isEmpty()) ? null : uid.trim();
+                } catch (Exception ignored) {
+                    uid = null;
+                }
+                if (uid != null) {
+                    mr.setUpdateBy(uid);
+                    if ((mr.getCreateBy() == null || mr.getCreateBy().trim().isEmpty())) {
+                        mr.setCreateBy(uid);
+                    }
+                }
 
                 if ("verified".equals(from)) {
                     mr.setVerifiedAt(null);
@@ -280,6 +240,20 @@ public class ReconciliationStatusOrchestrator {
                 sr.setStatus(to);
                 sr.setUpdateTime(now);
                 sr.setRemark(appendAuditRemark(sr.getRemark(), "RETURN", reason));
+                String uid = null;
+                try {
+                    UserContext ctx = UserContext.get();
+                    uid = ctx == null ? null : ctx.getUserId();
+                    uid = (uid == null || uid.trim().isEmpty()) ? null : uid.trim();
+                } catch (Exception ignored) {
+                    uid = null;
+                }
+                if (uid != null) {
+                    sr.setUpdateBy(uid);
+                    if ((sr.getCreateBy() == null || sr.getCreateBy().trim().isEmpty())) {
+                        sr.setCreateBy(uid);
+                    }
+                }
 
                 if ("verified".equals(from)) {
                     sr.setVerifiedAt(null);

@@ -3,6 +3,7 @@ package com.fashion.supplychain.config;
 import com.fashion.supplychain.auth.AuthTokenService;
 import com.fashion.supplychain.auth.TokenAuthFilter;
 import com.fashion.supplychain.common.UserContext;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationRunner;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,6 +23,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.http.HttpMethod;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -41,6 +43,7 @@ import java.util.UUID;
 
 @Configuration
 @EnableWebSecurity
+@Slf4j
 public class SecurityConfig implements WebMvcConfigurer {
 
     @Value("${app.auth.header-auth-enabled:false}")
@@ -52,11 +55,14 @@ public class SecurityConfig implements WebMvcConfigurer {
                 .cors().and()
                 .csrf().disable()
                 .authorizeRequests()
+                .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .antMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .antMatchers("/api/system/user/login").permitAll()
+                .antMatchers("/api/common/download/**").permitAll()
                 .antMatchers("/api/system/user/me*", "/api/system/user/me/**").authenticated()
                 .antMatchers("/api/system/user/permissions*", "/api/system/user/permissions/**").authenticated()
                 .antMatchers("/api/wechat/mini-program/login").permitAll()
+                .antMatchers("/actuator/health", "/actuator/health/**", "/actuator/info", "/actuator/info/**").permitAll()
                 .antMatchers("/actuator/**").hasAnyAuthority(
                         "ROLE_admin",
                         "ROLE_ADMIN",
@@ -99,10 +105,10 @@ public class SecurityConfig implements WebMvcConfigurer {
             String dsUser = environment == null ? null : environment.getProperty("spring.datasource.username");
             String dsPass = environment == null ? null : environment.getProperty("spring.datasource.password");
             if (!org.springframework.util.StringUtils.hasText(dsUser)) {
-                System.err.println("数据库用户名未配置，将使用默认配置尝试连接");
+                log.warn("数据库用户名未配置，将使用默认配置尝试连接");
             }
             if (!org.springframework.util.StringUtils.hasText(dsPass)) {
-                System.err.println("数据库密码未配置，将使用空密码尝试连接");
+                log.warn("数据库密码未配置，将使用空密码尝试连接");
             }
         };
     }

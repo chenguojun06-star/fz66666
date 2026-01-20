@@ -1,49 +1,13 @@
 import React, { ReactNode, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Avatar, Button, Drawer, Dropdown, message } from 'antd';
-import {
-  AccountBookOutlined,
-  AppstoreOutlined,
-  BookOutlined,
-  BuildOutlined,
-  CloseOutlined,
-  DashboardOutlined,
-  DatabaseOutlined,
-  DownOutlined,
-  FileSearchOutlined,
-  FileTextOutlined,
-  InboxOutlined,
-  LogoutOutlined,
-  MenuOutlined,
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
-  RightOutlined,
-  SafetyCertificateOutlined,
-  SettingOutlined,
-  TeamOutlined,
-  UserSwitchOutlined,
-  ShoppingCartOutlined,
-  ScissorOutlined,
-} from '@ant-design/icons';
-import { routeToPermissionCode, useAuth } from '../../utils/authContext';
+import { CloseOutlined, DownOutlined, LogoutOutlined, MenuOutlined, MenuFoldOutlined, MenuUnfoldOutlined, RightOutlined, SettingOutlined } from '@ant-design/icons';
+import { isAdminUser as isAdminUserFn, useAuth } from '../../utils/authContext';
+import { menuConfig, resolvePermissionCode } from '../../routeConfig';
 import './styles.css';
 
 interface LayoutProps {
   children: ReactNode;
-}
-
-interface MenuItem {
-  label: string;
-  path: string;
-  icon?: ReactNode;
-}
-
-interface MenuSection {
-  title: string;
-  key: string;
-  icon?: ReactNode;
-  items?: MenuItem[];
-  path?: string;
 }
 
 type RecentPage = {
@@ -52,61 +16,6 @@ type RecentPage = {
   title: string;
   ts: number;
 };
-
-const menuConfig: MenuSection[] = [
-  {
-    title: '仪表盘',
-    key: 'dashboard',
-    icon: <DashboardOutlined />,
-    path: '/dashboard'
-  },
-  {
-    title: '基础资料',
-    key: 'basic',
-    icon: <AppstoreOutlined />,
-    items: [
-      { label: '款号资料', path: '/style-info', icon: <FileTextOutlined /> },
-      { label: '下单管理', path: '/order-management', icon: <FileTextOutlined /> },
-      { label: '资料中心', path: '/data-center', icon: <DatabaseOutlined /> },
-      { label: '单价流程', path: '/basic/template-center', icon: <BookOutlined /> }
-    ]
-  },
-  {
-    title: '生产管理',
-    key: 'production',
-    icon: <BuildOutlined />,
-    items: [
-      { label: '我的订单', path: '/production', icon: <BuildOutlined /> },
-      { label: '物料采购', path: '/production/material', icon: <ShoppingCartOutlined /> },
-      { label: '裁剪管理', path: '/production/cutting', icon: <ScissorOutlined /> },
-      { label: '生产进度', path: '/production/progress-detail', icon: <FileSearchOutlined /> },
-      { label: '质检入库', path: '/production/warehousing', icon: <InboxOutlined /> }
-    ]
-  },
-  {
-    title: '财务管理',
-    key: 'finance',
-    icon: <AccountBookOutlined />,
-    items: [
-      { label: '工厂对账', path: '/finance/factory-reconciliation', icon: <AccountBookOutlined /> },
-      { label: '物料对账', path: '/finance/material-reconciliation', icon: <AccountBookOutlined /> },
-      { label: '成品结算', path: '/finance/shipment-reconciliation', icon: <AccountBookOutlined /> },
-      { label: '审批付款', path: '/finance/payment-approval', icon: <AccountBookOutlined /> }
-    ]
-  },
-  {
-    title: '系统设置',
-    key: 'system',
-    icon: <SafetyCertificateOutlined />,
-    items: [
-      { label: '个人中心', path: '/system/profile', icon: <SettingOutlined /> },
-      { label: '人员管理', path: '/system/user', icon: <TeamOutlined /> },
-      { label: '角色管理', path: '/system/role', icon: <UserSwitchOutlined /> },
-      { label: '加工厂管理', path: '/system/factory', icon: <DatabaseOutlined /> },
-      { label: '登录日志', path: '/system/login-log', icon: <FileSearchOutlined /> }
-    ]
-  }
-];
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
@@ -279,14 +188,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const isExpanded = (key: string) => expandedKeys.includes(key);
 
-  const isAdmin = (() => {
-    const r = user?.role?.toLowerCase() || '';
-    return r.includes('admin') || r.includes('管理员');
-  })();
+  const isAdmin = useMemo(() => isAdminUserFn(user), [user]);
 
   const hasPermissionForPath = (path: string) => {
     if (isAdmin) return true;
-    const code = routeToPermissionCode[normalizePath(path)];
+    const code = resolvePermissionCode(normalizePath(path));
     if (!code) return true;
     return Array.isArray(user?.permissions) && (user!.permissions.includes('all') || user!.permissions.includes(code));
   };
@@ -299,6 +205,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (base === '/style-info' && pathname !== base) return '款号详情';
     if (base === '/order-management' && pathname !== base) return '下单详情';
     if (base === '/production/cutting' && pathname.startsWith('/production/cutting/task/')) return '裁剪任务';
+    if (base === '/production/warehousing' && pathname.startsWith('/production/warehousing/detail/')) return '质检入库详情';
 
     for (const section of menuConfig) {
       if (section.path && normalizePath(section.path) === base) return section.title;
@@ -489,7 +396,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             </nav>
           </aside>
         ) : (
-          <Drawer title="菜单" placement="left" size={260} open={mobileNavOpen} onClose={() => setMobileNavOpen(false)}>
+          <Drawer
+            title="菜单"
+            placement="left"
+            size={260}
+            className="mobile-nav-drawer"
+            open={mobileNavOpen}
+            onClose={() => setMobileNavOpen(false)}
+          >
             <nav className="sidebar-nav sidebar-nav-drawer">
               {menuConfig.map((section) => (
                 <div key={section.key} className={`nav-section ${isExpanded(section.key) ? 'expanded' : ''}`}>

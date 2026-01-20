@@ -1,6 +1,5 @@
 package com.fashion.supplychain.dashboard.service;
 
-import com.fashion.supplychain.finance.entity.FactoryReconciliation;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
@@ -14,13 +13,9 @@ public interface DashboardQueryService {
 
     long countProductionOrders();
 
-    long countPendingFactoryReconciliations();
-
     long countPendingMaterialReconciliations();
 
     long countPendingShipmentReconciliations();
-
-    long countApprovedFactoryReconciliations();
 
     long countApprovedMaterialReconciliations();
 
@@ -37,8 +32,6 @@ public interface DashboardQueryService {
     List<StyleInfo> listRecentStyles(int limit);
 
     List<ProductionOrder> listRecentOrders(int limit);
-
-    List<FactoryReconciliation> listRecentFactoryReconciliations(int limit);
 
     List<ScanRecord> listRecentScans(int limit);
 

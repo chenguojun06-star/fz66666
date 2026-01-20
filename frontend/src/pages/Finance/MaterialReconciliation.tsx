@@ -1,124 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Card, Input, Select, Space, Tag, Form, Row, Col, message } from 'antd';
-import { CheckOutlined, PlusOutlined, RollbackOutlined, SearchOutlined, SendOutlined } from '@ant-design/icons';
+import { Button, Card, Dropdown, Input, Select, Space, Tag, Form, message } from 'antd';
+import { CheckOutlined, DownloadOutlined, MoreOutlined, PlusOutlined, RollbackOutlined, SearchOutlined, SendOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
-import ResizableModal from '../../components/ResizableModal';
-import ResizableTable from '../../components/ResizableTable';
-import RowActions from '../../components/RowActions';
+import ResizableModal from '../../components/common/ResizableModal';
+import ResizableTable from '../../components/common/ResizableTable';
+import RowActions from '../../components/common/RowActions';
+import MaterialReconModalContent from '../../components/Finance/MaterialReconModalContent';
 import { MaterialReconciliation as MaterialReconType, MaterialReconQueryParams } from '../../types/finance';
-import api, { updateFinanceReconciliationStatus } from '../../utils/api';
+import materialReconciliationApi from '../../services/finance/materialReconciliationApi';
+import errorHandler from '../../utils/errorHandler';
 import { formatDateTime } from '../../utils/datetime';
-import './styles.css';
+import { unwrapApiData } from '../../utils/api';
+import { getMaterialReconStatusConfig, materialReconStatusTransitions } from '../../constants/finance';
+import { isSupervisorOrAboveUser, useAuth } from '../../utils/authContext';
 
 const { Option } = Select;
 
-const getMaterialReconStatusConfig = (status: any) => {
-  const statusMap: Record<string, { text: string; color: string }> = {
-    pending: { text: '待审核', color: 'blue' },
-    verified: { text: '已验证', color: 'green' },
-    approved: { text: '已批准', color: 'cyan' },
-    paid: { text: '已付款', color: 'success' },
-    rejected: { text: '已拒绝', color: 'error' },
-  };
-  const key = String(status || '').trim();
-  return statusMap[key] || { text: '未知', color: 'default' };
-};
-
-// 物料对账弹窗内容组件
-interface MaterialReconModalContentProps {
-  currentRecon: MaterialReconType | null;
-  onSubmit: (values: any) => Promise<void>;
-  onSave: (saveFn: () => Promise<void>) => void;
-}
-
-const MaterialReconModalContent: React.FC<MaterialReconModalContentProps> = ({
-  currentRecon,
-  onSubmit,
-  onSave
-}) => {
-  const [form] = Form.useForm();
-
-  // 当前对账单变化时，更新表单数据
-  useEffect(() => {
-    if (currentRecon) {
-      form.setFieldsValue(currentRecon);
-    } else {
-      form.resetFields();
-    }
-  }, [currentRecon, form]);
-
-  // 暴露保存方法给父组件
-  useEffect(() => {
-    if (onSave) {
-      onSave(() => {
-        return form.validateFields().then(values => {
-          return onSubmit(values);
-        });
-      });
-    }
-  }, [form, onSubmit, onSave]);
-
-  return (
-    <Form form={form} layout="vertical">
-      {currentRecon ? (
-        <div className="modal-detail-header">
-          <div className="modal-detail-cover" />
-          <div className="modal-detail-grid">
-            <div className="modal-detail-item"><span className="modal-detail-label">对账单号：</span><span className="modal-detail-value">{String(currentRecon.reconciliationNo || '').trim() || '-'}</span></div>
-            <div className="modal-detail-item"><span className="modal-detail-label">供应商：</span><span className="modal-detail-value">{String((currentRecon as any).supplierName || '').trim() || '-'}</span></div>
-            <div className="modal-detail-item"><span className="modal-detail-label">订单号：</span><span className="modal-detail-value">{String((currentRecon as any).orderNo || '').trim() || '-'}</span></div>
-            <div className="modal-detail-item"><span className="modal-detail-label">款号：</span><span className="modal-detail-value">{String((currentRecon as any).styleNo || '').trim() || '-'}</span></div>
-            <div className="modal-detail-item"><span className="modal-detail-label">采购单号：</span><span className="modal-detail-value">{String((currentRecon as any).purchaseNo || '').trim() || '-'}</span></div>
-            <div className="modal-detail-item"><span className="modal-detail-label">物料编码：</span><span className="modal-detail-value">{String((currentRecon as any).materialCode || '').trim() || '-'}</span></div>
-            <div className="modal-detail-item"><span className="modal-detail-label">物料名称：</span><span className="modal-detail-value">{String((currentRecon as any).materialName || '').trim() || '-'}</span></div>
-            <div className="modal-detail-item"><span className="modal-detail-label">数量：</span><span className="modal-detail-value">{String((currentRecon as any).quantity ?? '-')}</span></div>
-            <div className="modal-detail-item"><span className="modal-detail-label">生产完成数：</span><span className="modal-detail-value">{String((currentRecon as any).productionCompletedQuantity ?? '-')}</span></div>
-            <div className="modal-detail-item"><span className="modal-detail-label">单价：</span><span className="modal-detail-value">{Number((currentRecon as any).unitPrice || 0).toFixed(2)} 元</span></div>
-            <div className="modal-detail-item"><span className="modal-detail-label">总金额：</span><span className="modal-detail-value">{Number((currentRecon as any).totalAmount || 0).toFixed(2)} 元</span></div>
-            <div className="modal-detail-item"><span className="modal-detail-label">扣款项：</span><span className="modal-detail-value">{Number((currentRecon as any).deductionAmount || 0).toFixed(2)} 元</span></div>
-            <div className="modal-detail-item"><span className="modal-detail-label">最终金额：</span><span className="modal-detail-value">{Number((currentRecon as any).finalAmount || 0).toFixed(2)} 元</span></div>
-            <div className="modal-detail-item"><span className="modal-detail-label">对账日期：</span><span className="modal-detail-value">{formatDateTime((currentRecon as any).reconciliationDate)}</span></div>
-            <div className="modal-detail-item"><span className="modal-detail-label">状态：</span><span className="modal-detail-value">{getMaterialReconStatusConfig((currentRecon as any).status).text}</span></div>
-          </div>
-        </div>
-      ) : (
-        <Row gutter={16}>
-          <Col span={8}>
-            <Form.Item name="reconciliationNo" label="对账单号">
-              <Input placeholder="自动生成" disabled />
-            </Form.Item>
-            <Form.Item name="supplierId" label="供应商" rules={[{ required: true, message: '请选择供应商' }]}>
-              <Select placeholder="请选择供应商">
-                <Option value="1">纺织有限公司</Option>
-                <Option value="2">拉链厂</Option>
-              </Select>
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item name="purchaseId" label="采购单号" rules={[{ required: true, message: '请选择采购单号' }]}>
-              <Select placeholder="请选择采购单号">
-                <Option value="1">MC2024001</Option>
-                <Option value="2">MC2024002</Option>
-              </Select>
-            </Form.Item>
-            <Form.Item name="reconciliationDate" label="对账日期" rules={[{ required: true, message: '请选择对账日期' }]}>
-              <Input type="date" style={{ width: '100%' }} />
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item name="remark" label="备注">
-              <Input placeholder="请输入备注" />
-            </Form.Item>
-          </Col>
-        </Row>
-      )}
-    </Form>
-  );
-};
-
 const MaterialReconciliation: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth(); // 获取当前用户信息
+  const [viewportWidth, setViewportWidth] = useState<number>(() => (typeof window === 'undefined' ? 1200 : window.innerWidth));
   const [visible, setVisible] = useState(false);
   const [currentRecon, setCurrentRecon] = useState<MaterialReconType | null>(null);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
@@ -129,23 +31,212 @@ const MaterialReconciliation: React.FC = () => {
   const [filterForm] = Form.useForm();
   const saveFormRef = React.useRef<(() => Promise<void>) | null>(null);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  const isMobile = viewportWidth < 768;
+  const isTablet = viewportWidth >= 768 && viewportWidth < 1024;
+  const modalWidth = isMobile ? '96vw' : isTablet ? '66vw' : '60vw';
+  const modalInitialHeight = 720;
+
   // 真实数据状态
   const [reconciliationList, setReconciliationList] = useState<MaterialReconType[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false); // 列表加载状态
+  const [queryLoading, setQueryLoading] = useState(false); // 查询按钮加载状态
   const [total, setTotal] = useState(0);
-  const [submitLoading, setSubmitLoading] = useState(false);
-  const [approvalSubmitting, setApprovalSubmitting] = useState(false);
+  const [submitLoading, setSubmitLoading] = useState(false); // 表单提交加载状态
+  const [approvalSubmitting, setApprovalSubmitting] = useState(false); // 状态更新加载状态
+  const [exporting, setExporting] = useState(false);
 
+  const escapeCsvCell = (value: any) => {
+    const text = String(value ?? '');
+    if (/[\r\n",]/.test(text)) {
+      return `"${text.replace(/"/g, '""')}"`;
+    }
+    return text;
+  };
+
+  const downloadTextFile = (filename: string, content: string, mime: string) => {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const fileStamp = () => {
+    const d = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+  };
+
+  const buildMaterialReconCsv = (rows: MaterialReconType[]) => {
+    const header = ['对账单号', '供应商', '物料编码', '物料名称', '采购单号', '订单号', '款号', '数量', '单价(元)', '总金额(元)', '对账日期', '状态'];
+    const lines = [header.map(escapeCsvCell).join(',')];
+    for (const r of rows) {
+      const st = getMaterialReconStatusConfig((r as any)?.status);
+      const row = [
+        String((r as any)?.reconciliationNo || '').trim(),
+        String((r as any)?.supplierName || '').trim(),
+        String((r as any)?.materialCode || '').trim(),
+        String((r as any)?.materialName || '').trim(),
+        String((r as any)?.purchaseNo || '').trim(),
+        String((r as any)?.orderNo || '').trim(),
+        String((r as any)?.styleNo || '').trim(),
+        String(Number((r as any)?.quantity ?? 0) || 0),
+        (r as any)?.unitPrice == null ? '' : String(Number((r as any)?.unitPrice || 0).toFixed(2)),
+        (r as any)?.totalAmount == null ? '' : String(Number((r as any)?.totalAmount || 0).toFixed(2)),
+        String(formatDateTime((r as any)?.reconciliationDate) || ''),
+        String(st?.text || ''),
+      ];
+      lines.push(row.map(escapeCsvCell).join(','));
+    }
+    return `\ufeff${lines.join('\n')}`;
+  };
+
+  const fetchAllForExport = async () => {
+    const pageSize = 200;
+    let page = 1;
+    let total = Infinity;
+    const all: MaterialReconType[] = [];
+    while (all.length < total) {
+      const res = await materialReconciliationApi.getMaterialReconciliationList({ ...queryParams, page, pageSize });
+      const data = unwrapApiData<any>(res, '获取物料对账列表失败');
+      const records = (data?.records || []) as MaterialReconType[];
+      total = Number(data?.total ?? records.length ?? 0);
+      all.push(...records);
+      if (!records.length) break;
+      if (records.length < pageSize) break;
+      page += 1;
+      if (page > 200) break;
+    }
+    return all;
+  };
+
+  const exportSelectedCsv = () => {
+    const picked = reconciliationList.filter((r) => selectedRowKeys.includes(String((r as any)?.id)));
+    if (!picked.length) {
+      message.warning('请先勾选要导出的对账单');
+      return;
+    }
+    const csv = buildMaterialReconCsv(picked);
+    downloadTextFile(`物料对账_勾选_${fileStamp()}.csv`, csv, 'text/csv;charset=utf-8');
+  };
+
+  const exportFilteredCsv = async () => {
+    setExporting(true);
+    try {
+      const rows = await fetchAllForExport();
+      if (!rows.length) {
+        message.info('暂无记录可导出');
+        return;
+      }
+      const csv = buildMaterialReconCsv(rows);
+      downloadTextFile(`物料对账_筛选_${fileStamp()}.csv`, csv, 'text/csv;charset=utf-8');
+    } catch (e: any) {
+      errorHandler.handleApiError(e, '导出失败');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const exportCsv = () => {
+    if (selectedRowKeys.length) {
+      exportSelectedCsv();
+      return;
+    }
+    exportFilteredCsv();
+  };
+
+  const batchAudit = () => {
+    const ids = reconciliationList
+      .filter((r) => selectedRowKeys.includes(String(r.id)) && r.status === 'pending')
+      .map((r) => String(r.id || ''));
+    if (!ids.length) return;
+    if (ids.length !== selectedRowKeys.length) message.warning('仅可批量审核状态为“待审核”的对账单');
+    updateStatusBatch(ids.map((id) => ({ id, status: 'verified' })), '审核成功');
+  };
+
+  const batchSubmit = async () => {
+    const picked = reconciliationList.filter((r) => selectedRowKeys.includes(String(r.id)));
+    const eligible = picked.filter((r) => r.status === 'verified' || r.status === 'rejected');
+    if (!eligible.length) return;
+    if (eligible.length !== picked.length) message.warning('仅可批量提交状态为“已验证/已拒绝”的对账单');
+    const pairs = eligible.map((r) => ({ id: String(r.id || ''), status: r.status === 'verified' ? 'approved' : 'pending' }));
+    await updateStatusBatch(pairs, '提交成功');
+    navigate('/finance/payment-approval', { state: { defaultTab: 'material' } });
+  };
+
+  const batchReturn = () => {
+    const picked = reconciliationList.filter((r) => selectedRowKeys.includes(String(r.id)));
+    const eligible = picked.filter((r) => r.status === 'pending' || r.status === 'verified' || r.status === 'approved');
+    if (!eligible.length) return;
+    if (eligible.length !== picked.length) message.warning('仅可批量退回状态为“待审核/已验证/已批准”的对账单');
+    updateStatusBatch(eligible.map((r) => ({ id: String(r.id || ''), status: 'rejected' })), '退回成功');
+  };
+
+  // 权限判断函数
+  const canPerformAction = (action: string) => {
+    const permissions = user?.permissions || [];
+    if (isSupervisorOrAboveUser(user)) return true;
+
+    // 根据具体操作判断权限
+    switch (action) {
+      case 'audit':
+      case 'submit':
+        // 审核和提交操作需要特定权限
+        return permissions.includes('FINANCE_RECON_AUDIT') || permissions.includes('all');
+      case 'return':
+        return false;
+      default:
+        return true;
+    }
+  };
+
+  // 使用常量文件中的状态流转规则
+  const statusTransitions = materialReconStatusTransitions;
+
+  /**
+   * 批量更新物料对账状态
+   * @param pairs 状态更新列表，包含id和目标状态
+   * @param successText 操作成功提示文本
+   */
   const updateStatusBatch = async (pairs: Array<{ id: string; status: string }>, successText: string) => {
+    // 标准化处理参数，确保id和status的有效性
     const normalized = pairs
       .map((p) => ({ id: String(p.id || '').trim(), status: String(p.status || '').trim() }))
       .filter((p) => p.id && p.status);
     if (!normalized.length) return;
+
+    // 状态流转校验：检查是否允许从当前状态转换到目标状态
+    const invalidTransitions = normalized.filter(p => {
+      const record = reconciliationList.find(r => String(r.id) === p.id);
+      if (!record) return true; // 找不到记录，视为无效
+      const currentStatus = String(record.status || '').trim();
+      const allowedTargets = statusTransitions[currentStatus] || [];
+      return !allowedTargets.includes(p.status);
+    });
+
+    if (invalidTransitions.length) {
+      message.error('存在不允许的状态转换，请检查后重试');
+      return;
+    }
+
     setApprovalSubmitting(true);
     try {
+      // 批量更新状态，使用Promise.allSettled处理部分失败情况
       const settled = await Promise.allSettled(
-        normalized.map((p) => updateFinanceReconciliationStatus(p.id, p.status)),
+        normalized.map((p) => materialReconciliationApi.updateMaterialReconciliationStatus(p.id, p.status)),
       );
+      // 统计成功和失败数量
       const okCount = settled.filter((r) => r.status === 'fulfilled' && (r.value as any)?.code === 200).length;
       const failed = normalized.length - okCount;
       if (okCount <= 0) {
@@ -154,60 +245,81 @@ const MaterialReconciliation: React.FC = () => {
       }
       if (failed) message.error(`部分操作失败（${failed}/${normalized.length}）`);
       else message.success(successText);
+      // 清除选中的行
       setSelectedRowKeys([]);
+      // 刷新物料对账列表
       fetchReconciliationList();
     } catch (e: any) {
-      message.error(e?.message || '操作失败');
+      errorHandler.handleApiError(e, '操作失败');
     } finally {
       setApprovalSubmitting(false);
     }
   };
 
-  // 获取物料对账列表
+  /**
+   * 获取物料对账列表
+   * 从后端API获取物料对账数据，并更新列表状态
+   */
   const fetchReconciliationList = async () => {
+    setQueryLoading(true);
     setLoading(true);
     try {
-      const response = await api.get<any>('/finance/material-reconciliation/list', { params: queryParams });
-      const result = response as any;
-      if (result.code === 200) {
-        setReconciliationList(result.data.records || []);
-        setTotal(result.data.total || 0);
-      } else {
-        message.error(result.message || '获取物料对账列表失败');
-      }
+      const res = await materialReconciliationApi.getMaterialReconciliationList(queryParams);
+      const data = unwrapApiData<any>(res, '获取物料对账列表失败');
+      setReconciliationList(data.records || []);
+      setTotal(data.total || 0);
     } catch (error) {
-      message.error('获取物料对账列表失败');
+      const err = error as any;
+      if (err instanceof Error && err.message) {
+        message.error(err.message);
+      } else {
+        errorHandler.handleApiError(error, '获取物料对账列表失败');
+      }
     } finally {
       setLoading(false);
+      setQueryLoading(false);
     }
   };
 
-  // 页面加载时获取物料对账列表
+  /**
+   * 页面加载或查询参数变化时，获取物料对账列表
+   */
   useEffect(() => {
     fetchReconciliationList();
   }, [queryParams]);
 
+  /**
+   * 打开物料对账弹窗
+   * @param recon 可选，要编辑的物料对账记录，不传则为新增
+   */
   const openDialog = (recon?: MaterialReconType) => {
     setCurrentRecon(recon || null);
     setVisible(true);
   };
 
+  /**
+   * 关闭物料对账弹窗
+   */
   const closeDialog = () => {
     setVisible(false);
     setCurrentRecon(null);
   };
 
-  // 表单提交
+  /**
+   * 表单提交处理
+   * 处理新增或编辑物料对账的表单提交逻辑
+   * @param values 表单提交的值
+   */
   const handleSubmit = async (values: any) => {
     try {
       setSubmitLoading(true);
       let response;
       if (currentRecon?.id) {
-        // 编辑物料对账
-        response = await api.put('/finance/material-reconciliation', { ...values, id: currentRecon.id });
+        // 编辑物料对账：调用PUT接口更新现有记录
+        response = await materialReconciliationApi.updateMaterialReconciliation({ ...values, id: currentRecon.id });
       } else {
-        // 新增物料对账
-        response = await api.post('/finance/material-reconciliation', values);
+        // 新增物料对账：调用POST接口创建新记录
+        response = await materialReconciliationApi.createMaterialReconciliation(values);
       }
 
       const result = response as any;
@@ -221,27 +333,28 @@ const MaterialReconciliation: React.FC = () => {
         message.error(result.message || '保存失败');
       }
     } catch (error) {
-      // 处理表单验证错误
-      if ((error as any).errorFields) {
-        const firstError = (error as any).errorFields[0];
-        message.error(firstError.errors[0] || '表单验证失败');
-      } else {
-        message.error((error as Error).message || '保存失败');
-      }
+      errorHandler.handleError(error, '保存失败');
     } finally {
       setSubmitLoading(false);
     }
   };
 
+  /**
+   * 物料缩略图组件
+   * 用于表格中显示物料图片，无图片时显示默认占位符
+   */
   const MaterialThumb: React.FC = () => {
     return (
-      <div style={{ width: 40, height: 40, borderRadius: 6, overflow: 'hidden', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ width: 48, height: 48, borderRadius: 6, overflow: 'hidden', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <span style={{ color: '#ccc', fontSize: 12 }}>无图</span>
       </div>
     );
   };
 
-  // 表格列定义
+  /**
+   * 表格列定义
+   * 定义物料对账列表的所有列配置
+   */
   const columns = [
     {
       title: '图片',
@@ -310,6 +423,7 @@ const MaterialReconciliation: React.FC = () => {
       width: 110,
       align: 'right' as const,
       render: (v: any) => {
+        // 将值转换为数字，非数字显示为'-'
         const n = typeof v === 'number' ? v : Number(v);
         return Number.isFinite(n) ? n : '-';
       },
@@ -367,17 +481,18 @@ const MaterialReconciliation: React.FC = () => {
       title: '操作',
       key: 'action',
       width: 110,
+      fixed: 'right' as const,
       render: (_: any, record: MaterialReconType) => {
         const id = String(record.id || '').trim();
-        const st = String(record.status || '').trim();
-        const canAudit = Boolean(id) && st === 'pending';
-        const canSubmit = Boolean(id) && (st === 'verified' || st === 'rejected');
-        const canReturn = Boolean(id) && (st === 'pending' || st === 'verified' || st === 'approved');
+        const status = String(record.status || '').trim();
+        const canAudit = Boolean(id) && status === 'pending' && canPerformAction('audit');
+        const canSubmit = Boolean(id) && (status === 'verified' || status === 'rejected') && canPerformAction('submit');
+        const canReturn = Boolean(id) && (status === 'pending' || status === 'verified' || status === 'approved') && canPerformAction('return');
 
         return (
           <RowActions
             className="table-actions"
-            maxInline={3}
+            maxInline={0}
             actions={[
               {
                 key: 'audit',
@@ -395,20 +510,25 @@ const MaterialReconciliation: React.FC = () => {
                 icon: <SendOutlined />,
                 disabled: !canSubmit,
                 onClick: async () => {
-                  const target = st === 'verified' ? 'approved' : 'pending';
-                  await updateStatusBatch([{ id, status: target }], '提交成功');
-                  navigate('/finance/payment-approval', { state: { defaultTab: 'material', defaultStatus: target } });
+                  const targetStatus = status === 'verified' ? 'approved' : 'pending';
+                  await updateStatusBatch([{ id, status: targetStatus }], '提交成功');
+                  navigate('/finance/payment-approval', { state: { defaultTab: 'material', defaultStatus: targetStatus } });
                 },
                 primary: true,
               },
               {
-                key: 'return',
-                label: '退回',
-                title: canReturn ? '退回' : '退回(不可用)',
-                icon: <RollbackOutlined />,
-                disabled: !canReturn,
-                onClick: () => updateStatusBatch([{ id, status: 'rejected' }], '退回成功'),
-                danger: true,
+                key: 'more',
+                label: '更多',
+                children: [
+                  {
+                    key: 'return',
+                    label: '退回',
+                    title: canReturn ? '退回' : '退回(不可用)',
+                    disabled: !canReturn,
+                    onClick: () => updateStatusBatch([{ id, status: 'rejected' }], '退回成功'),
+                    danger: true,
+                  },
+                ] as any,
               },
             ]}
           />
@@ -419,56 +539,67 @@ const MaterialReconciliation: React.FC = () => {
 
   return (
     <Layout>
-      <div className="material-recon-page">
+      <div>
         <Card className="page-card">
           {/* 页面标题和操作区 */}
           <div className="page-header">
             <h2 className="page-title">物料对账</h2>
             <Space>
-              <Button
-                disabled={!selectedRowKeys.length || !reconciliationList.some((r) => selectedRowKeys.includes(String(r.id)) && r.status === 'pending')}
-                loading={approvalSubmitting}
-                onClick={() => {
-                  const ids = reconciliationList
-                    .filter((r) => selectedRowKeys.includes(String(r.id)) && r.status === 'pending')
-                    .map((r) => String(r.id || ''));
-                  if (ids.length !== selectedRowKeys.length) message.warning('仅可批量审核状态为“待审核”的对账单');
-                  updateStatusBatch(ids.map((id) => ({ id, status: 'verified' })), '审核成功');
+              <Dropdown
+                trigger={['click']}
+                menu={{
+                  items: [
+                    {
+                      key: 'export',
+                      label: exporting ? '导出中...' : '导出',
+                      icon: <DownloadOutlined />,
+                      disabled: exporting,
+                      onClick: exportCsv,
+                    },
+                    { type: 'divider' as const },
+                    {
+                      key: 'batchAudit',
+                      label: approvalSubmitting ? '处理中...' : '批量审核',
+                      icon: <CheckOutlined />,
+                      disabled:
+                        approvalSubmitting ||
+                        !selectedRowKeys.length ||
+                        !reconciliationList.some((r) => selectedRowKeys.includes(String(r.id)) && r.status === 'pending'),
+                      onClick: batchAudit,
+                    },
+                    {
+                      key: 'batchSubmit',
+                      label: approvalSubmitting ? '处理中...' : '批量提交',
+                      icon: <SendOutlined />,
+                      disabled:
+                        approvalSubmitting ||
+                        !selectedRowKeys.length ||
+                        !reconciliationList.some((r) => selectedRowKeys.includes(String(r.id)) && (r.status === 'verified' || r.status === 'rejected')),
+                      onClick: batchSubmit,
+                    },
+                    {
+                      key: 'batchReturn',
+                      label: approvalSubmitting ? '处理中...' : '批量退回',
+                      icon: <RollbackOutlined />,
+                      disabled:
+                        approvalSubmitting ||
+                        !selectedRowKeys.length ||
+                        !reconciliationList.some((r) => selectedRowKeys.includes(String(r.id)) && (r.status === 'pending' || r.status === 'verified' || r.status === 'approved')),
+                      onClick: batchReturn,
+                      danger: true,
+                    },
+                    { type: 'divider' as const },
+                    {
+                      key: 'create',
+                      label: '新增物料对账',
+                      icon: <PlusOutlined />,
+                      onClick: () => openDialog(),
+                    },
+                  ],
                 }}
               >
-                批量审核
-              </Button>
-              <Button
-                disabled={!selectedRowKeys.length || !reconciliationList.some((r) => selectedRowKeys.includes(String(r.id)) && (r.status === 'verified' || r.status === 'rejected'))}
-                loading={approvalSubmitting}
-                onClick={async () => {
-                  const picked = reconciliationList.filter((r) => selectedRowKeys.includes(String(r.id)));
-                  const eligible = picked.filter((r) => r.status === 'verified' || r.status === 'rejected');
-                  if (!eligible.length) return;
-                  if (eligible.length !== picked.length) message.warning('仅可批量提交状态为“已验证/已拒绝”的对账单');
-                  const pairs = eligible.map((r) => ({ id: String(r.id || ''), status: r.status === 'verified' ? 'approved' : 'pending' }));
-                  await updateStatusBatch(pairs, '提交成功');
-                  navigate('/finance/payment-approval', { state: { defaultTab: 'material' } });
-                }}
-              >
-                批量提交
-              </Button>
-              <Button
-                disabled={!selectedRowKeys.length || !reconciliationList.some((r) => selectedRowKeys.includes(String(r.id)) && (r.status === 'pending' || r.status === 'verified' || r.status === 'approved'))}
-                loading={approvalSubmitting}
-                onClick={() => {
-                  const picked = reconciliationList.filter((r) => selectedRowKeys.includes(String(r.id)));
-                  const eligible = picked.filter((r) => r.status === 'pending' || r.status === 'verified' || r.status === 'approved');
-                  if (!eligible.length) return;
-                  if (eligible.length !== picked.length) message.warning('仅可批量退回状态为“待审核/已验证/已批准”的对账单');
-                  updateStatusBatch(eligible.map((r) => ({ id: String(r.id || ''), status: 'rejected' })), '退回成功');
-                }}
-              >
-                批量退回
-              </Button>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => openDialog()}>
-                新增物料对账
-              </Button>
+                <Button icon={<MoreOutlined />}>操作</Button>
+              </Dropdown>
             </Space>
           </div>
 
@@ -512,13 +643,13 @@ const MaterialReconciliation: React.FC = () => {
               </Form.Item>
               <Form.Item className="filter-actions">
                 <Space>
-                  <Button type="primary" icon={<SearchOutlined />} onClick={() => fetchReconciliationList()}>
+                  <Button type="primary" icon={<SearchOutlined />} onClick={() => fetchReconciliationList()} loading={queryLoading}>
                     查询
                   </Button>
                   <Button onClick={() => {
                     setQueryParams({ page: 1, pageSize: 10 });
                     fetchReconciliationList();
-                  }}>
+                  }} loading={queryLoading}>
                     重置
                   </Button>
                 </Space>
@@ -533,6 +664,7 @@ const MaterialReconciliation: React.FC = () => {
             rowKey="id"
             loading={loading}
             allowFixedColumns
+            scroll={{ x: 'max-content', y: isMobile ? 360 : 560 }} // 启用横向滚动，避免列宽挤压
             rowSelection={{
               selectedRowKeys,
               onChange: (keys) => setSelectedRowKeys(keys),
@@ -544,7 +676,9 @@ const MaterialReconciliation: React.FC = () => {
               current: queryParams.page,
               pageSize: queryParams.pageSize,
               total: total,
-              onChange: (page, pageSize) => setQueryParams({ ...queryParams, page, pageSize })
+              onChange: (page, pageSize) => setQueryParams({ ...queryParams, page, pageSize }),
+              showSizeChanger: true, // 允许用户调整每页条数
+              pageSizeOptions: ['10', '20', '50', '100'] // 提供多种分页选项
             }}
           />
         </Card>
@@ -554,23 +688,19 @@ const MaterialReconciliation: React.FC = () => {
           title={currentRecon ? '物料对账详情' : '新增物料对账'}
           open={visible}
           onCancel={closeDialog}
-          onOk={() => { }}
+          onOk={() => {
+            if (!currentRecon && saveFormRef.current) {
+              saveFormRef.current();
+            }
+          }}
           okText="保存"
           cancelText="取消"
-          footer={currentRecon ? null : [
-            <Button key="cancel" onClick={closeDialog}>
-              取消
-            </Button>,
-            <Button key="submit" type="primary" onClick={() => {
-              if (saveFormRef.current) {
-                saveFormRef.current();
-              }
-            }}
-              loading={submitLoading}>
-              保存
-            </Button>
-          ]}
-          width="60vw"
+          footer={currentRecon ? null : undefined} // 当是新增模式时，使用默认页脚
+          okButtonProps={{ loading: submitLoading }}
+          width={modalWidth}
+          initialHeight={modalInitialHeight}
+          minWidth={isMobile ? 320 : 520}
+          scaleWithViewport
         >
           <MaterialReconModalContent
             currentRecon={currentRecon}

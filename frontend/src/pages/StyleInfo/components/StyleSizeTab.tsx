@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Input, InputNumber, Popconfirm, message, Space, Select } from 'antd';
+import { Button, Input, InputNumber, message, Space, Select, Modal } from 'antd';
 import { DeleteOutlined, EditOutlined, PlusOutlined, SaveOutlined } from '@ant-design/icons';
 import { StyleSize, TemplateLibrary } from '../../../types/style';
-import api from '../../../utils/api';
-import ResizableTable from '../../../components/ResizableTable';
-import ResizableModal from '../../../components/ResizableModal';
+import api, { sortSizeNames, toNumberSafe } from '../../../utils/api';
+import ResizableTable from '../../../components/common/ResizableTable';
+import ResizableModal from '../../../components/common/ResizableModal';
+import RowActions from '../../../components/common/RowActions';
 
 interface Props {
   styleId: string | number;
@@ -34,43 +35,6 @@ const splitSizeNames = (name: string) => {
     .filter(Boolean);
   if (!parts.length) return [];
   return parts;
-};
-
-const toNumber = (v: any, fallback = 0) => {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : fallback;
-};
-
-const sizeSortKey = (name: string) => {
-  const t = String(name || '').trim();
-  const order = ['XXXS', 'XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'XXXXL'];
-  const upper = t.toUpperCase();
-  const idx = order.indexOf(upper);
-  if (idx >= 0) return { group: 0, a: idx, b: upper };
-  const m = upper.match(/^(\d+(?:\.\d+)?)(?:\s*[-~–—]\s*(\d+(?:\.\d+)?))?([A-Z]*)$/);
-  if (m) {
-    const a = toNumber(m[1], 0);
-    const b = toNumber(m[2], a);
-    const unit = m[3] || '';
-    return { group: 1, a, b, unit };
-  }
-  return { group: 2, a: 0, b: upper };
-};
-
-const sortSizes = (sizes: string[]) => {
-  const list = [...sizes];
-  list.sort((a, b) => {
-    const ka: any = sizeSortKey(a);
-    const kb: any = sizeSortKey(b);
-    if (ka.group !== kb.group) return ka.group - kb.group;
-    if (ka.a !== kb.a) return ka.a - kb.a;
-    if (ka.b !== kb.b) return ka.b < kb.b ? -1 : 1;
-    const ua = ka.unit || '';
-    const ub = kb.unit || '';
-    if (ua !== ub) return ua < ub ? -1 : 1;
-    return 0;
-  });
-  return list;
 };
 
 const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
@@ -199,7 +163,7 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
         combinedSizeIdsRef.current = Array.from(new Set(combinedIds.map((x) => (typeof x === 'string' ? x : x))));
         originalRef.current = normalizedList;
 
-        const sizes = sortSizes(
+        const sizes = sortSizeNames(
           Array.from(
             new Set(
               normalizedList
@@ -221,19 +185,19 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
           .map(([partName, items]) => {
             const key = partName || (items.map((x) => String(x.id || '')).filter(Boolean)[0] || `tmp-${Date.now()}-${Math.random()}`);
             const measureMethod = items.length ? String((items[0] as any).measureMethod || '') : '';
-            const tolerance = items.length ? toNumber((items[0] as any).tolerance, 0) : 0;
-            const sort = Math.min(...items.map((x) => toNumber((x as any).sort, 0)), 0);
+            const tolerance = items.length ? toNumberSafe((items[0] as any).tolerance) : 0;
+            const sort = Math.min(...items.map((x) => toNumberSafe((x as any).sort)), 0);
             const cells: Record<string, MatrixCell> = {};
             sizes.forEach((sn) => {
               const cell = items.find((x) => String(x.sizeName || '').trim() === sn);
               cells[sn] = {
                 id: cell?.id,
-                value: cell?.standardValue != null ? toNumber(cell.standardValue, 0) : 0,
+                value: cell?.standardValue != null ? toNumberSafe(cell.standardValue) : 0,
               };
             });
             return { key, partName, measureMethod, tolerance, sort, cells };
           })
-          .sort((a, b) => (toNumber(a.sort, 0) || 0) - (toNumber(b.sort, 0) || 0));
+          .sort((a, b) => (toNumberSafe(a.sort) || 0) - (toNumberSafe(b.sort) || 0));
 
         setSizeColumns(sizes);
         setRows(nextRows);
@@ -286,7 +250,7 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
   };
 
   const updateTolerance = (rowKey: string, tolerance: number) => {
-    setRows((prev) => prev.map((r) => (r.key === rowKey ? { ...r, tolerance: toNumber(tolerance, 0) } : r)));
+    setRows((prev) => prev.map((r) => (r.key === rowKey ? { ...r, tolerance: toNumberSafe(tolerance) } : r)));
   };
 
   const updateCellValue = (rowKey: string, sizeName: string, value: number) => {
@@ -297,7 +261,7 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
             ...r,
             cells: {
               ...r.cells,
-              [sizeName]: { ...(r.cells[sizeName] || { value: 0 }), value: toNumber(value, 0) },
+              [sizeName]: { ...(r.cells[sizeName] || { value: 0 }), value: toNumberSafe(value) },
             },
           }
           : r,
@@ -307,7 +271,7 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
 
   const handleAddPart = () => {
     if (readOnly) return;
-    const nextSort = rows.length ? Math.max(...rows.map((r) => toNumber(r.sort, 0))) + 1 : 1;
+    const nextSort = rows.length ? Math.max(...rows.map((r) => toNumberSafe(r.sort))) + 1 : 1;
     const key = `tmp-part-${Date.now()}-${Math.random()}`;
     const cells: Record<string, MatrixCell> = {};
     sizeColumns.forEach((sn) => {
@@ -354,7 +318,7 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
       return;
     }
 
-    const merged = sortSizes([...sizeColumns, ...nextToAdd]);
+    const merged = sortSizeNames([...sizeColumns, ...nextToAdd]);
     setSizeColumns(merged);
     setRows((prev) =>
       prev.map((r) => {
@@ -466,9 +430,9 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
             sizeName: sn,
             partName: r.partName,
             measureMethod: r.measureMethod,
-            standardValue: toNumber(cell?.value, 0),
-            tolerance: toNumber(r.tolerance, 0),
-            sort: toNumber(r.sort, 0),
+            standardValue: toNumberSafe(cell?.value),
+            tolerance: toNumberSafe(r.tolerance),
+            sort: toNumberSafe(r.sort),
           };
 
           if (id != null && String(id).trim() !== '') {
@@ -478,9 +442,9 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
               String(old.sizeName || '').trim() !== sn ||
               String(old.partName || '').trim() !== String(r.partName || '').trim() ||
               String((old as any).measureMethod || '').trim() !== String(r.measureMethod || '').trim() ||
-              toNumber(old.standardValue, 0) !== toNumber(payload.standardValue, 0) ||
-              toNumber(old.tolerance, 0) !== toNumber(payload.tolerance, 0) ||
-              toNumber((old as any).sort, 0) !== toNumber(payload.sort, 0);
+              toNumberSafe(old.standardValue) !== toNumberSafe(payload.standardValue) ||
+              toNumberSafe(old.tolerance) !== toNumberSafe(payload.tolerance) ||
+              toNumberSafe((old as any).sort) !== toNumberSafe(payload.sort);
             if (changed) {
               tasks.push(api.put('/style/size', payload));
             }
@@ -544,9 +508,18 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           <span>{sn}</span>
           {editableMode ? (
-            <Popconfirm title={`确定删除尺码“${sn}”？`} onConfirm={() => handleDeleteSize(sn)}>
-              <Button size="small" type="text" danger icon={<DeleteOutlined />} />
-            </Popconfirm>
+            <Button
+              size="small"
+              type="text"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => {
+                Modal.confirm({
+                  title: `确定删除尺码“${sn}”？`,
+                  onOk: () => handleDeleteSize(sn),
+                });
+              }}
+            />
           ) : null}
         </span>
       ),
@@ -561,7 +534,7 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
             min={0}
             step={0.1}
             style={{ width: '100%' }}
-            onChange={(val) => updateCellValue(record.key, sn, toNumber(val, 0))}
+            onChange={(val) => updateCellValue(record.key, sn, toNumberSafe(val))}
           />
         ) : (
           v
@@ -582,7 +555,7 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
               min={0}
               step={0.1}
               style={{ width: '100%' }}
-              onChange={(val) => updateTolerance(record.key, toNumber(val, 0))}
+              onChange={(val) => updateTolerance(record.key, toNumberSafe(val))}
             />
           ) : (
             record.tolerance
@@ -595,9 +568,24 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
         resizable: false,
         render: (_: any, record: MatrixRow) =>
           editableMode ? (
-            <Popconfirm title="确定删除该部位？" onConfirm={() => handleDeletePart(record)}>
-              <Button type="link" danger icon={<DeleteOutlined />} />
-            </Popconfirm>
+            <RowActions
+              maxInline={1}
+              actions={[
+                {
+                  key: 'delete',
+                  label: '删除',
+                  title: '删除',
+                  icon: <DeleteOutlined />,
+                  danger: true,
+                  onClick: () => {
+                    Modal.confirm({
+                      title: '确定删除该部位？',
+                      onOk: () => handleDeletePart(record),
+                    });
+                  },
+                },
+              ]}
+            />
           ) : null,
       },
     ];
@@ -680,9 +668,17 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
               <Button icon={<SaveOutlined />} type="primary" onClick={saveAll} loading={saving}>
                 保存
               </Button>
-              <Popconfirm title="放弃未保存的修改？" onConfirm={exitEdit}>
-                <Button disabled={saving}>取消</Button>
-              </Popconfirm>
+              <Button
+                disabled={saving}
+                onClick={() => {
+                  Modal.confirm({
+                    title: '放弃未保存的修改？',
+                    onOk: exitEdit,
+                  });
+                }}
+              >
+                取消
+              </Button>
             </>
           )}
         </Space>
@@ -695,7 +691,7 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
         pagination={false}
         loading={loading}
         rowKey="key"
-        scroll={{ x: 'max-content' }}
+        scroll={{ x: 'max-content', y: typeof window === 'undefined' ? 420 : window.innerWidth < 768 ? 260 : 420 }}
         tableLayout="auto"
         storageKey={`style-size-v2-${String(styleId)}`}
         minColumnWidth={70}
@@ -713,7 +709,7 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
         cancelText="取消"
         confirmLoading={saving}
         width={560}
-        initialHeight={240}
+        initialHeight={720}
         minHeight={240}
         autoFontSize={false}
       >

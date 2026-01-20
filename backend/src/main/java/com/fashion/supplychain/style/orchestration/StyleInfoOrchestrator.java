@@ -82,7 +82,8 @@ public class StyleInfoOrchestrator {
                     tryCreateTemplateFromStyle(styleNo);
                 } catch (Exception e) {
                     log.warn("Failed to sync templates after style update: styleId={}, styleNo={}",
-                            styleInfo == null ? null : styleInfo.getId(), styleInfo == null ? null : styleInfo.getStyleNo(), e);
+                            styleInfo == null ? null : styleInfo.getId(),
+                            styleInfo == null ? null : styleInfo.getStyleNo(), e);
                 }
                 return true;
             }
@@ -104,6 +105,10 @@ public class StyleInfoOrchestrator {
             throw new NoSuchElementException("款号不存在");
         }
 
+        if (isProductionRequirementsLocked(id)) {
+            throw new IllegalStateException("生产要求已保存，无法修改，请联系管理员退回");
+        }
+
         String desc = body == null ? null
                 : (body.get("description") == null ? null : String.valueOf(body.get("description")));
         boolean ok = styleInfoService.lambdaUpdate()
@@ -120,6 +125,47 @@ public class StyleInfoOrchestrator {
             throw new IllegalStateException("保存失败");
         }
         return true;
+    }
+
+    public boolean rollbackProductionRequirements(Long id, Map<String, Object> body) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            throw new AccessDeniedException("无权限操作");
+        }
+
+        StyleInfo current = styleInfoService.getById(id);
+        if (current == null) {
+            throw new NoSuchElementException("款号不存在");
+        }
+
+        String reason = body == null ? null : (body.get("reason") == null ? null : String.valueOf(body.get("reason")));
+        saveMaintenanceLog(id, "PRODUCTION_REQUIREMENTS_ROLLBACK", reason);
+        return true;
+    }
+
+    private boolean isProductionRequirementsLocked(Long styleId) {
+        if (styleId == null) {
+            return false;
+        }
+
+        StyleOperationLog saved = styleOperationLogService.lambdaQuery()
+                .eq(StyleOperationLog::getStyleId, styleId)
+                .eq(StyleOperationLog::getAction, "PRODUCTION_REQUIREMENTS_SAVE")
+                .orderByDesc(StyleOperationLog::getCreateTime)
+                .last("limit 1")
+                .one();
+        if (saved == null || saved.getCreateTime() == null) {
+            return false;
+        }
+
+        StyleOperationLog rollback = styleOperationLogService.lambdaQuery()
+                .eq(StyleOperationLog::getStyleId, styleId)
+                .eq(StyleOperationLog::getAction, "PRODUCTION_REQUIREMENTS_ROLLBACK")
+                .orderByDesc(StyleOperationLog::getCreateTime)
+                .last("limit 1")
+                .one();
+
+        return rollback == null || rollback.getCreateTime() == null
+                || rollback.getCreateTime().isBefore(saved.getCreateTime());
     }
 
     public boolean startPattern(Long id) {

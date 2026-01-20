@@ -26,6 +26,16 @@ public class ScanRecordController {
         return Result.success(scanRecordOrchestrator.execute(params));
     }
 
+    @PostMapping("/unit-price")
+    public Result<?> resolveUnitPrice(@RequestBody Map<String, Object> params) {
+        return Result.success(scanRecordOrchestrator.resolveUnitPrice(params));
+    }
+
+    @PostMapping("/undo")
+    public Result<?> undo(@RequestBody Map<String, Object> params) {
+        return Result.success(scanRecordOrchestrator.undo(params));
+    }
+
     /**
      * 分页查询扫码记录
      */
@@ -62,6 +72,19 @@ public class ScanRecordController {
     public Result<?> getHistory(@RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int pageSize) {
         return Result.success(scanRecordOrchestrator.getHistory(page, pageSize));
+    }
+
+    @GetMapping("/my-history")
+    public Result<?> getMyHistory(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(required = false) String scanType) {
+        return Result.success(scanRecordOrchestrator.getMyHistory(page, pageSize, scanType));
+    }
+
+    @GetMapping("/personal-stats")
+    public Result<?> personalStats(@RequestParam(required = false) String scanType) {
+        return Result.success(scanRecordOrchestrator.getPersonalStats(scanType));
     }
 
     @PostMapping("/cleanup")

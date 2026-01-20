@@ -1,7 +1,8 @@
 package com.fashion.supplychain.dashboard.orchestration;
 
+import com.fashion.supplychain.dashboard.dto.DashboardActivityDto;
+import com.fashion.supplychain.dashboard.dto.DashboardResponse;
 import com.fashion.supplychain.dashboard.service.DashboardQueryService;
-import com.fashion.supplychain.finance.entity.FactoryReconciliation;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
@@ -12,19 +13,19 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class DashboardOrchestrator {
 
-    @Autowired
-    private DashboardQueryService dashboardQueryService;
+    private final DashboardQueryService dashboardQueryService;
 
-    public Map<String, Object> dashboard(String startDate, String endDate, String brand, String factory) {
+    public DashboardOrchestrator(DashboardQueryService dashboardQueryService) {
+        this.dashboardQueryService = dashboardQueryService;
+    }
+
+    public DashboardResponse dashboard(String startDate, String endDate, String brand, String factory) {
         LocalDate rangeStart = parseDateOrNull(startDate);
         LocalDate rangeEnd = parseDateOrNull(endDate);
         LocalDateTime rangeStartTime = rangeStart == null ? null : rangeStart.atStartOfDay();
@@ -33,12 +34,10 @@ public class DashboardOrchestrator {
         long styleCount = dashboardQueryService.countEnabledStyles();
         long productionCount = dashboardQueryService.countProductionOrders();
 
-        long pendingReconciliationCount = dashboardQueryService.countPendingFactoryReconciliations()
-                + dashboardQueryService.countPendingMaterialReconciliations()
+        long pendingReconciliationCount = dashboardQueryService.countPendingMaterialReconciliations()
                 + dashboardQueryService.countPendingShipmentReconciliations();
 
-        long paymentApprovalCount = dashboardQueryService.countApprovedFactoryReconciliations()
-                + dashboardQueryService.countApprovedMaterialReconciliations()
+        long paymentApprovalCount = dashboardQueryService.countApprovedMaterialReconciliations()
                 + dashboardQueryService.countApprovedShipmentReconciliations();
 
         LocalDate today = LocalDate.now();
@@ -73,16 +72,6 @@ public class DashboardOrchestrator {
                     o.getCreateTime() == null ? "" : o.getCreateTime().format(timeFormatter)));
         }
 
-        List<FactoryReconciliation> recentFactoryRecs = dashboardQueryService.listRecentFactoryReconciliations(5);
-        for (FactoryReconciliation r : recentFactoryRecs) {
-            activities.add(Activity.of(
-                    r.getCreateTime(),
-                    r.getId(),
-                    "reconciliation",
-                    "加工厂对账 " + r.getReconciliationNo() + " 已生成",
-                    r.getCreateTime() == null ? "" : r.getCreateTime().format(timeFormatter)));
-        }
-
         List<ScanRecord> recentScans = dashboardQueryService.listRecentScans(5);
         for (ScanRecord sr : recentScans) {
             activities.add(Activity.of(
@@ -105,21 +94,21 @@ public class DashboardOrchestrator {
 
         activities.sort(Comparator.comparing(Activity::getSortTime, Comparator.nullsLast(Comparator.naturalOrder()))
                 .reversed());
-        List<Map<String, Object>> recentActivities = new ArrayList<>();
+        List<DashboardActivityDto> recentActivities = new ArrayList<>();
         for (int i = 0; i < Math.min(5, activities.size()); i++) {
-            recentActivities.add(activities.get(i).toMap());
+            recentActivities.add(activities.get(i).toDto());
         }
 
-        Map<String, Object> data = new HashMap<>();
-        data.put("styleCount", styleCount);
-        data.put("productionCount", productionCount);
-        data.put("pendingReconciliationCount", pendingReconciliationCount);
-        data.put("paymentApprovalCount", paymentApprovalCount);
-        data.put("todayScanCount", todayScanCount);
-        data.put("warehousingOrderCount", warehousingOrderCount);
-        data.put("unqualifiedQuantity", unqualifiedQuantity);
-        data.put("urgentEventCount", urgentEventCount);
-        data.put("recentActivities", recentActivities);
+        DashboardResponse data = new DashboardResponse();
+        data.setStyleCount(styleCount);
+        data.setProductionCount(productionCount);
+        data.setPendingReconciliationCount(pendingReconciliationCount);
+        data.setPaymentApprovalCount(paymentApprovalCount);
+        data.setTodayScanCount(todayScanCount);
+        data.setWarehousingOrderCount(warehousingOrderCount);
+        data.setUnqualifiedQuantity(unqualifiedQuantity);
+        data.setUrgentEventCount(urgentEventCount);
+        data.setRecentActivities(recentActivities);
         return data;
     }
 
@@ -161,13 +150,13 @@ public class DashboardOrchestrator {
             return sortTime;
         }
 
-        public Map<String, Object> toMap() {
-            Map<String, Object> m = new HashMap<>();
-            m.put("id", id);
-            m.put("type", type);
-            m.put("content", content);
-            m.put("time", time);
-            return m;
+        public DashboardActivityDto toDto() {
+            DashboardActivityDto dto = new DashboardActivityDto();
+            dto.setId(id);
+            dto.setType(type);
+            dto.setContent(content);
+            dto.setTime(time);
+            return dto;
         }
     }
 }

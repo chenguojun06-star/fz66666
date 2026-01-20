@@ -68,6 +68,7 @@ export interface ProductionOrder {
   warehousingCompletionRate?: number;
 
   factoryUnitPrice?: number;
+  quotationUnitPrice?: number;
 }
 
 export interface ScanRecord {
@@ -210,10 +211,16 @@ export interface ProductWarehousing {
   cuttingBundleNo?: number;
   cuttingBundleQrCode?: string;
   unqualifiedImageUrls?: string;
+  defectCategory?: string;
+  defectRemark?: string;
   repairRemark?: string;
   createTime?: string;
   updateTime?: string;
   deleteFlag?: number;
+  // 入库人员和时间信息
+  warehousingOperatorName?: string;
+  warehousingStartTime?: string;
+  warehousingEndTime?: string;
 }
 
 export interface ProductOutstock {
@@ -282,4 +289,53 @@ export interface ScanResult {
     scanRecord: ScanRecord;
     cuttingBundle?: CuttingBundle;
   };
+}
+
+// 面辅料数据库类型
+export interface MaterialDatabase {
+  id?: string;
+  materialCode: string;
+  materialName: string;
+  styleNo?: string;
+  materialType:
+  | 'fabric'
+  | 'fabricA'
+  | 'fabricB'
+  | 'fabricC'
+  | 'fabricD'
+  | 'fabricE'
+  | 'lining'
+  | 'liningA'
+  | 'liningB'
+  | 'liningC'
+  | 'liningD'
+  | 'liningE'
+  | 'accessory'
+  | 'accessoryA'
+  | 'accessoryB'
+  | 'accessoryC'
+  | 'accessoryD'
+  | 'accessoryE';
+  specifications?: string;
+  unit?: string;
+  supplierName?: string;
+  unitPrice?: number;
+  description?: string;
+  image?: string;
+  remark?: string;
+  status?: 'pending' | 'completed';
+  completedTime?: string;
+  createTime?: string;
+  updateTime?: string;
+}
+
+// 面辅料数据库查询参数
+export interface MaterialDatabaseQueryParams {
+  materialCode?: string;
+  materialName?: string;
+  materialType?: string;
+  supplierName?: string;
+  styleNo?: string;
+  page: number;
+  pageSize: number;
 }

@@ -17,8 +17,8 @@ public class StyleOperationLogController {
 
     @GetMapping("/list")
     public Result<List<StyleOperationLog>> list(@RequestParam Long styleId,
-            @RequestParam(required = false) String bizType) {
-        return Result.success(styleOperationLogService.listByStyleId(styleId, bizType));
+            @RequestParam(required = false) String bizType,
+            @RequestParam(required = false) String action) {
+        return Result.success(styleOperationLogService.listByStyleId(styleId, bizType, action));
     }
 }
-

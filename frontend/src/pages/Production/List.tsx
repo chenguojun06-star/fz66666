@@ -1,15 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Button, Card, Input, Select, Space, Tag, Form, Row, Col, DatePicker, Timeline, InputNumber, message, Modal } from 'antd';
+import { Button, Card, Input, Select, Space, Tag, Form, Row, Col, DatePicker, Timeline, InputNumber, message, Modal, Table } from 'antd';
 import { PlusOutlined, SearchOutlined, EyeOutlined, ScanOutlined, DownloadOutlined } from '@ant-design/icons';
 import Layout from '../../components/Layout';
-import ResizableModal from '../../components/ResizableModal';
+import ResizableModal from '../../components/common/ResizableModal';
 import { ProductionOrder, ProductionQueryParams, ScanRecord } from '../../types/production';
-import api, { generateRequestId, isDuplicateScanMessage, isOrderFrozenByStatusOrStock, withQuery } from '../../utils/api';
+import api, {
+  generateRequestId,
+  isDuplicateScanMessage,
+  isOrderFrozenByStatusOrStock,
+  parseProductionOrderLines,
+  toNumberSafe,
+  withQuery,
+} from '../../utils/api';
 import { useAuth } from '../../utils/authContext';
 import './styles.css';
 import dayjs from 'dayjs';
-import ResizableTable from '../../components/ResizableTable';
-import RowActions from '../../components/RowActions';
+import ResizableTable from '../../components/common/ResizableTable';
+import RowActions from '../../components/common/RowActions';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { QRCodeCanvas } from 'qrcode.react';
 import { StyleAttachmentsButton, StyleCoverThumb } from '../../components/StyleAssets';
@@ -19,6 +26,7 @@ const { Option } = Select;
 
 const ProductionList: React.FC = () => {
   // 状态管理
+  const [viewportWidth, setViewportWidth] = useState<number>(() => (typeof window === 'undefined' ? 1200 : window.innerWidth));
   const [visible, setVisible] = useState(false);
   const [currentOrder, setCurrentOrder] = useState<ProductionOrder | null>(null);
   const [form] = Form.useForm();
@@ -40,9 +48,126 @@ const ProductionList: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  const isMobile = viewportWidth < 768;
+  const isTablet = viewportWidth >= 768 && viewportWidth < 1024;
+  const modalWidth = isMobile ? '96vw' : isTablet ? '66vw' : '60vw';
+  const modalInitialHeight = 720;
+
+  const orderDetailLines = currentOrder ? parseProductionOrderLines(currentOrder, { includeWarehousedQuantity: true }) : [];
+  const detailColors = (() => {
+    const s = new Set(
+      orderDetailLines
+        .map((l) => String(l?.color || '').trim())
+        .filter((v) => v)
+    );
+    const joined = Array.from(s).join('、');
+    if (joined) return joined;
+    return String((currentOrder as any)?.color || '').trim() || '-';
+  })();
+
+  const detailSizes = (() => {
+    const s = new Set(
+      orderDetailLines
+        .map((l) => String(l?.size || '').trim())
+        .filter((v) => v)
+    );
+    const joined = Array.from(s).join('、');
+    if (joined) return joined;
+    return String((currentOrder as any)?.size || '').trim() || '-';
+  })();
+
+  const detailQuantity = (() => {
+    const sum = orderDetailLines.reduce((acc, l) => acc + (Number(l?.quantity) || 0), 0);
+    if (sum > 0) return sum;
+    const q = Number((currentOrder as any)?.orderQuantity);
+    return Number.isFinite(q) && q > 0 ? q : 0;
+  })();
+
+  const detailWarehousedQuantity = (() => {
+    const sum = orderDetailLines.reduce((acc, l) => acc + (Number(l?.warehousedQuantity) || 0), 0);
+    if (sum > 0) return sum;
+    const q = toNumberSafe((currentOrder as any)?.warehousingQualifiedQuantity);
+    return q > 0 ? q : 0;
+  })();
+
+  const detailSkuRows = (() => {
+    const map = new Map<string, { color: string; size: string; orderQuantity: number; warehousedQuantity?: number }>();
+    for (const l of orderDetailLines) {
+      const color = String(l?.color || '').trim();
+      const size = String(l?.size || '').trim();
+      const orderQuantity = Number(l?.quantity) || 0;
+      const warehousedQuantity = Number(l?.warehousedQuantity) || 0;
+      if (!color || !size) continue;
+      if (orderQuantity <= 0 && warehousedQuantity <= 0) continue;
+      const key = `${color}|||${size}`;
+      const prev = map.get(key);
+      map.set(key, {
+        color,
+        size,
+        orderQuantity: (prev?.orderQuantity || 0) + orderQuantity,
+        warehousedQuantity: (prev?.warehousedQuantity || 0) + warehousedQuantity,
+      });
+    }
+
+    const rows = Array.from(map.values())
+      .map((r) => {
+        const w = Number(r.warehousedQuantity) || 0;
+        const hasW = w > 0;
+        return {
+          key: `${r.color}|||${r.size}`,
+          color: r.color,
+          size: r.size,
+          orderQuantity: Math.max(0, Number(r.orderQuantity) || 0),
+          warehousedQuantity: hasW ? w : undefined,
+          unwarehousedQuantity: hasW ? Math.max(0, (Number(r.orderQuantity) || 0) - w) : undefined,
+        };
+      })
+      .filter((r) => r.orderQuantity > 0 || (Number(r.warehousedQuantity) || 0) > 0);
+
+    if (rows.length) return rows;
+
+    const color = String((currentOrder as any)?.color || '').trim() || '-';
+    const size = String((currentOrder as any)?.size || '').trim() || '-';
+    const orderQuantity = Math.max(0, toNumberSafe((currentOrder as any)?.orderQuantity) || detailQuantity);
+    const w = detailWarehousedQuantity;
+    return [
+      {
+        key: '_single',
+        color,
+        size,
+        orderQuantity,
+        warehousedQuantity: w > 0 ? w : undefined,
+        unwarehousedQuantity: w > 0 ? Math.max(0, orderQuantity - w) : undefined,
+      },
+    ];
+  })();
+
+  const detailSkuHasWarehoused = detailSkuRows.some((r) => (Number((r as any)?.warehousedQuantity) || 0) > 0);
+  const detailSkuTotals = (() => {
+    const totalOrder = detailSkuRows.reduce((acc, r) => acc + (Number((r as any)?.orderQuantity) || 0), 0);
+    const totalWarehoused = detailSkuHasWarehoused
+      ? detailSkuRows.reduce((acc, r) => acc + (Number((r as any)?.warehousedQuantity) || 0), 0)
+      : detailWarehousedQuantity;
+    const totalUnwarehoused = Math.max(0, totalOrder - totalWarehoused);
+    return { totalOrder, totalWarehoused, totalUnwarehoused };
+  })();
+
   const [scanVisible, setScanVisible] = useState(false);
   const [scanOrder, setScanOrder] = useState<ProductionOrder | null>(null);
   const [scanSubmitting, setScanSubmitting] = useState(false);
+  const [scanConfirmVisible, setScanConfirmVisible] = useState(false);
+  const [scanConfirmRemain, setScanConfirmRemain] = useState(0);
+  const [scanConfirmLoading, setScanConfirmLoading] = useState(false);
+  const [scanConfirmPayload, setScanConfirmPayload] = useState<any | null>(null);
+  const [scanConfirmDetail, setScanConfirmDetail] = useState<any | null>(null);
+  const [scanConfirmMeta, setScanConfirmMeta] = useState<any | null>(null);
   const [scanHistoryLoading, setScanHistoryLoading] = useState(false);
   const [scanHistory, setScanHistory] = useState<ScanRecord[]>([]);
   const [scanProcessOptions, setScanProcessOptions] = useState<{ label: string; value: string }[]>([
@@ -55,6 +180,8 @@ const ProductionList: React.FC = () => {
   const scanInputRef = useRef<any>(null);
   const scanSubmittingRef = useRef(false);
   const lastFailedRequestRef = useRef<{ key: string; requestId: string } | null>(null);
+  const scanConfirmTimerRef = useRef<number | null>(null);
+  const scanConfirmTickRef = useRef<number | null>(null);
 
   // 获取生产订单列表
   const fetchProductionList = async () => {
@@ -217,6 +344,34 @@ const ProductionList: React.FC = () => {
     form.resetFields();
   };
 
+  const clearScanConfirmTimers = () => {
+    if (scanConfirmTimerRef.current) {
+      window.clearTimeout(scanConfirmTimerRef.current);
+      scanConfirmTimerRef.current = null;
+    }
+    if (scanConfirmTickRef.current) {
+      window.clearInterval(scanConfirmTickRef.current);
+      scanConfirmTickRef.current = null;
+    }
+  };
+
+  useEffect(() => () => {
+    clearScanConfirmTimers();
+  }, []);
+
+  const closeScanConfirm = (silent?: boolean) => {
+    clearScanConfirmTimers();
+    setScanConfirmVisible(false);
+    setScanConfirmRemain(0);
+    setScanConfirmLoading(false);
+    setScanConfirmPayload(null);
+    setScanConfirmDetail(null);
+    setScanConfirmMeta(null);
+    if (!silent) {
+      message.info('已取消');
+    }
+  };
+
   const fetchScanHistory = async (order: ProductionOrder) => {
     if (!order.id) {
       setScanHistory([]);
@@ -240,7 +395,7 @@ const ProductionList: React.FC = () => {
   };
 
   const openScanDialog = (order: ProductionOrder) => {
-    if (isOrderFrozen(order)) {
+    if (isOrderFrozenByStatusOrStock(order)) {
       message.error('订单已完成，无法操作');
       return;
     }
@@ -260,7 +415,9 @@ const ProductionList: React.FC = () => {
       processName: undefined,
       processCode: '',
       color: '',
-      quantity: 1,
+      size: '',
+      quantity: undefined,
+      unitPrice: undefined,
       warehouse: undefined,
     });
     fetchScanHistory(order);
@@ -269,7 +426,95 @@ const ProductionList: React.FC = () => {
     }, 0);
   };
 
+  const openScanConfirm = (payload: any, detail: any, meta: any) => {
+    clearScanConfirmTimers();
+    setScanConfirmPayload(payload || null);
+    setScanConfirmDetail(detail || null);
+    setScanConfirmMeta(meta || null);
+    setScanConfirmVisible(true);
+    setScanConfirmRemain(15);
+    const expireAt = Date.now() + 15000;
+    scanConfirmTimerRef.current = window.setTimeout(() => {
+      closeScanConfirm(true);
+    }, 15000);
+    scanConfirmTickRef.current = window.setInterval(() => {
+      const remain = Math.max(0, Math.ceil((expireAt - Date.now()) / 1000));
+      setScanConfirmRemain((prev) => (prev === remain ? prev : remain));
+    }, 500);
+  };
+
+  const submitConfirmedScan = async () => {
+    if (!scanConfirmPayload || scanConfirmLoading) return;
+    setScanConfirmLoading(true);
+    const meta = scanConfirmMeta || {};
+    const attemptKey = meta.attemptKey || '';
+    const attemptRequestId = meta.attemptRequestId || '';
+    const values = meta.values || {};
+    try {
+      const response = await api.post<any>('/production/scan/execute', scanConfirmPayload);
+      const result = response as any;
+      if (result.code === 200) {
+        lastFailedRequestRef.current = null;
+
+        const cuttingBundle = result?.data?.cuttingBundle;
+        const serverMsg = String(result?.data?.message || '').trim();
+        const exceed = serverMsg.includes('裁剪') && serverMsg.includes('超出');
+        if (exceed) {
+          message.error('数量超出无法入库');
+          closeScanConfirm(true);
+          return;
+        }
+        const isDuplicate = isDuplicateScanMessage(serverMsg);
+        if (isDuplicate) {
+          message.info('已处理');
+        } else if (cuttingBundle) {
+          message.success(serverMsg || `裁剪扎号扫码成功：${cuttingBundle.qrCode}`);
+          scanForm.setFieldsValue({
+            color: cuttingBundle.color || values.color,
+            size: (cuttingBundle as any)?.size || values.size,
+            quantity: cuttingBundle.quantity || values.quantity,
+          });
+        } else {
+          message.success(serverMsg || '扫码领取成功');
+        }
+        fetchProductionList();
+        fetchScanHistory(scanOrder as ProductionOrder);
+        scanForm.setFieldsValue({ scanCode: '' });
+        setTimeout(() => scanInputRef.current?.focus?.(), 0);
+      } else {
+        const msg = String(result.message || '').trim();
+        const exceed = msg.includes('裁剪') && msg.includes('超出');
+        if (exceed) {
+          message.error('数量超出无法入库');
+        } else if (msg) {
+          message.error(msg);
+        } else {
+          message.error('系统繁忙');
+        }
+      }
+    } catch (error) {
+      const anyErr: any = error;
+      const hasStatus = anyErr?.status != null || anyErr?.response?.status != null;
+      if (!hasStatus) {
+        if (attemptKey && attemptRequestId) {
+          lastFailedRequestRef.current = { key: attemptKey, requestId: attemptRequestId };
+        }
+        message.error('连接失败');
+      } else {
+        lastFailedRequestRef.current = null;
+        console.error('scan_execute_failed', error);
+        message.error('系统繁忙');
+      }
+    } finally {
+      setScanConfirmLoading(false);
+      closeScanConfirm(true);
+      setScanSubmitting(false);
+      scanSubmittingRef.current = false;
+    }
+  };
+
   const closeScanDialog = () => {
+    closeScanConfirm(true);
     setScanVisible(false);
     setScanOrder(null);
     setScanHistory([]);
@@ -278,7 +523,8 @@ const ProductionList: React.FC = () => {
 
   const handleScanTypeChange = (value: string) => {
     const t = String(value || '').trim() || 'production';
-    scanForm.setFieldsValue({ processName: undefined, processCode: '', warehouse: undefined, quantity: 1 });
+    scanForm.setFieldsValue({ processName: undefined, processCode: '', warehouse: undefined, quantity: undefined });
+    scanForm.setFieldsValue({ color: '', size: '', unitPrice: undefined });
     if (t === 'sewing') {
       setScanProcessOptions([
         { label: '自动按工序顺序', value: '' },
@@ -296,7 +542,7 @@ const ProductionList: React.FC = () => {
 
   const handleScanSubmit = async () => {
     if (!scanOrder) return;
-    if (isOrderFrozen(scanOrder)) {
+    if (isOrderFrozenByStatusOrStock(scanOrder)) {
       message.error('订单已完成，无法操作');
       return;
     }
@@ -307,13 +553,11 @@ const ProductionList: React.FC = () => {
 
     if (scanSubmittingRef.current) return;
     scanSubmittingRef.current = true;
-
-    let attemptKey = '';
-    let attemptRequestId = '';
-
     try {
       const values = await scanForm.validateFields();
-      setScanSubmitting(true);
+
+      let attemptKey = '';
+      let attemptRequestId = '';
 
       const payloadBase: any = {
         scanCode: values.scanCode,
@@ -324,7 +568,9 @@ const ProductionList: React.FC = () => {
         processCode: values.processCode,
         processName: values.processName,
         color: values.color,
+        size: values.size,
         quantity: values.quantity,
+        unitPrice: values.unitPrice,
         operatorId: user.id,
         operatorName: user.name,
         scanType: values.scanType || 'production',
@@ -339,50 +585,29 @@ const ProductionList: React.FC = () => {
       attemptRequestId = requestId;
       const payload = { ...payloadBase, requestId };
 
-      const response = await api.post<any>('/production/scan/execute', payload);
-      const result = response as any;
-      if (result.code === 200) {
-        lastFailedRequestRef.current = null;
-
-        const cuttingBundle = result?.data?.cuttingBundle;
-        const serverMsg = String(result?.data?.message || '').trim();
-        const isDuplicate = isDuplicateScanMessage(serverMsg);
-        if (isDuplicate) {
-          message.info(serverMsg || '重复扫码已忽略');
-        } else if (cuttingBundle) {
-          message.success(serverMsg || `裁剪扎号扫码成功：${cuttingBundle.qrCode}`);
-          scanForm.setFieldsValue({
-            color: cuttingBundle.color || values.color,
-            quantity: cuttingBundle.quantity || values.quantity,
-          });
-        } else {
-          message.success(serverMsg || '扫码领取成功');
-        }
-        fetchProductionList();
-        fetchScanHistory(scanOrder);
-        scanForm.setFieldsValue({ scanCode: '' });
-        setTimeout(() => scanInputRef.current?.focus?.(), 0);
-      } else {
-        message.error(result.message || '扫码失败');
-      }
+      const detail = {
+        scanCode: values.scanCode,
+        quantity: values.quantity,
+        processName: values.processName,
+        processCode: values.processCode,
+        progressStage: values.processName || values.processCode,
+        orderNo: scanOrder.orderNo,
+        styleNo: scanOrder.styleNo,
+        color: values.color,
+        size: values.size,
+        warehouse: values.warehouse,
+        unitPrice: values.unitPrice,
+      };
+      setScanSubmitting(true);
+      openScanConfirm(payload, detail, { attemptKey, attemptRequestId, values });
     } catch (error) {
+      scanSubmittingRef.current = false;
       if ((error as any).errorFields) {
         const firstError = (error as any).errorFields[0];
         message.error(firstError.errors[0] || '表单验证失败');
       } else {
-        const anyErr: any = error;
-        if (anyErr?.status == null) {
-          if (attemptKey && attemptRequestId) {
-            lastFailedRequestRef.current = { key: attemptKey, requestId: attemptRequestId };
-          }
-        } else {
-          lastFailedRequestRef.current = null;
-        }
-        message.error((error as Error).message || '扫码失败');
+        message.error('系统繁忙');
       }
-    } finally {
-      setScanSubmitting(false);
-      scanSubmittingRef.current = false;
     }
   };
 
@@ -450,10 +675,6 @@ const ProductionList: React.FC = () => {
     return Math.ceil(cq * 0.9);
   };
 
-  const isOrderFrozen = (order?: ProductionOrder | null) => {
-    return isOrderFrozenByStatusOrStock(order);
-  };
-
   const handleCloseOrder = (order: ProductionOrder) => {
     const orderId = String((order as any)?.id || '').trim();
     if (!orderId) {
@@ -496,7 +717,7 @@ const ProductionList: React.FC = () => {
         </div>
       ),
       onOk: async () => {
-        const result = await api.post<any>('/production/order/close', { id: orderId });
+        const result = await api.post<any>('/production/order/close', { id: orderId, sourceModule: 'myOrders' });
         if ((result as any)?.code !== 200) {
           throw new Error((result as any)?.message || '关单失败');
         }
@@ -718,7 +939,7 @@ const ProductionList: React.FC = () => {
       key: 'action',
       width: 110,
       render: (_: any, record: ProductionOrder) => {
-        const frozen = isOrderFrozen(record);
+        const frozen = isOrderFrozenByStatusOrStock(record);
         return (
           <RowActions
             className="table-actions"
@@ -891,7 +1112,11 @@ const ProductionList: React.FC = () => {
               保存
             </Button>
           ]}
-          width="60vw"
+          width={modalWidth}
+          initialHeight={modalInitialHeight}
+          minWidth={isMobile ? 320 : 520}
+          scaleWithViewport
+          tableDensity={isMobile ? 'dense' : 'auto'}
         >
           <Form form={form} layout="vertical">
             {currentOrder ? (
@@ -905,25 +1130,115 @@ const ProductionList: React.FC = () => {
                     <div className="modal-detail-item"><span className="modal-detail-label">订单号：</span><span className="modal-detail-value">{String((currentOrder as any).orderNo || '').trim() || '-'}</span></div>
                     <div className="modal-detail-item"><span className="modal-detail-label">款号：</span><span className="modal-detail-value">{String((currentOrder as any).styleNo || '').trim() || '-'}</span></div>
                     <div className="modal-detail-item"><span className="modal-detail-label">款名：</span><span className="modal-detail-value">{String((currentOrder as any).styleName || '').trim() || '-'}</span></div>
+                    <div className="modal-detail-item"><span className="modal-detail-label">颜色：</span><span className="modal-detail-value">{detailColors}</span></div>
+                    <div className="modal-detail-item"><span className="modal-detail-label">码数：</span><span className="modal-detail-value">{detailSizes}</span></div>
+                    <div className="modal-detail-item"><span className="modal-detail-label">数量：</span><span className="modal-detail-value">{detailQuantity || '-'}</span></div>
                     <div className="modal-detail-item"><span className="modal-detail-label">加工厂：</span><span className="modal-detail-value">{String((currentOrder as any).factoryName || '').trim() || '-'}</span></div>
                     <div className="modal-detail-item"><span className="modal-detail-label">订单数量：</span><span className="modal-detail-value">{String((currentOrder as any).orderQuantity ?? '-')}</span></div>
                     <div className="modal-detail-item"><span className="modal-detail-label">完成数量：</span><span className="modal-detail-value">{String((currentOrder as any).completedQuantity ?? '-')}</span></div>
+                    <div className="modal-detail-item"><span className="modal-detail-label">入库数量：</span><span className="modal-detail-value">{detailWarehousedQuantity || '-'}</span></div>
                     <div className="modal-detail-item"><span className="modal-detail-label">生产进度：</span><span className="modal-detail-value">{String((currentOrder as any).productionProgress ?? '-')}%</span></div>
                     <div className="modal-detail-item"><span className="modal-detail-label">状态：</span><span className="modal-detail-value">{getStatusConfig((currentOrder as any).status).text}</span></div>
                     <div className="modal-detail-item"><span className="modal-detail-label">计划开始：</span><span className="modal-detail-value">{formatDateTime((currentOrder as any).plannedStartDate)}</span></div>
                     <div className="modal-detail-item"><span className="modal-detail-label">计划完成：</span><span className="modal-detail-value">{formatDateTime((currentOrder as any).plannedEndDate)}</span></div>
                     <div className="modal-detail-item"><span className="modal-detail-label">实际开始：</span><span className="modal-detail-value">{formatDateTime((currentOrder as any).actualStartDate)}</span></div>
                     <div className="modal-detail-item"><span className="modal-detail-label">实际完成：</span><span className="modal-detail-value">{formatDateTime((currentOrder as any).actualEndDate)}</span></div>
+                    <div className="modal-detail-item"><span className="modal-detail-label">采购时间：</span><span className="modal-detail-value">{formatDateTime((currentOrder as any).procurementStartTime)}</span></div>
+                    <div className="modal-detail-item"><span className="modal-detail-label">采购完成：</span><span className="modal-detail-value">{formatDateTime((currentOrder as any).procurementEndTime)}</span></div>
+                    <div className="modal-detail-item"><span className="modal-detail-label">采购员：</span><span className="modal-detail-value">{String((currentOrder as any).procurementOperatorName || '').trim() || '-'}</span></div>
+                    <div className="modal-detail-item"><span className="modal-detail-label">采购完成率：</span><span className="modal-detail-value">{((currentOrder as any).procurementCompletionRate ?? '-') + '%'}</span></div>
+                    <div className="modal-detail-item"><span className="modal-detail-label">裁剪时间：</span><span className="modal-detail-value">{formatDateTime((currentOrder as any).cuttingStartTime)}</span></div>
+                    <div className="modal-detail-item"><span className="modal-detail-label">裁剪完成：</span><span className="modal-detail-value">{formatDateTime((currentOrder as any).cuttingEndTime)}</span></div>
+                    <div className="modal-detail-item"><span className="modal-detail-label">裁剪员：</span><span className="modal-detail-value">{String((currentOrder as any).cuttingOperatorName || '').trim() || '-'}</span></div>
+                    <div className="modal-detail-item"><span className="modal-detail-label">裁剪完成率：</span><span className="modal-detail-value">{((currentOrder as any).cuttingCompletionRate ?? '-') + '%'}</span></div>
                   </div>
                 </div>
 
-                <h3 style={{ marginTop: 12 }}>生产节点时间线</h3>
-                <Timeline style={{ marginTop: 8 }}>
-                  <Timeline.Item>计划开始：{formatDateTime(currentOrder.plannedStartDate)}</Timeline.Item>
-                  {currentOrder.actualStartDate ? <Timeline.Item>实际开始：{formatDateTime(currentOrder.actualStartDate)}</Timeline.Item> : null}
-                  <Timeline.Item>计划完成：{formatDateTime(currentOrder.plannedEndDate)}</Timeline.Item>
-                  {currentOrder.actualEndDate ? <Timeline.Item>实际完成：{formatDateTime(currentOrder.actualEndDate)}</Timeline.Item> : null}
-                </Timeline>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '360px minmax(0, 1fr)', gap: 16, marginTop: 12, alignItems: 'start' }}>
+                  <div>
+                    <h3 style={{ marginTop: 0 }}>生产节点时间线</h3>
+                    <Timeline
+                      style={{ marginTop: 8 }}
+                      items={[
+                        { children: <>计划开始：{formatDateTime(currentOrder.plannedStartDate)}</> },
+                        currentOrder.actualStartDate
+                          ? { children: <>实际开始：{formatDateTime(currentOrder.actualStartDate)}</> }
+                          : null,
+                        { children: <>计划完成：{formatDateTime(currentOrder.plannedEndDate)}</> },
+                        currentOrder.actualEndDate ? { children: <>实际完成：{formatDateTime(currentOrder.actualEndDate)}</> } : null,
+                      ].filter(Boolean) as any}
+                    />
+                  </div>
+
+                  <div>
+                    <h3 style={{ marginTop: 0 }}>详细</h3>
+                    <div style={{ border: '1px solid rgba(0,0,0,0.06)', borderRadius: 10, padding: 12 }}>
+                      <Table
+                        size="small"
+                        bordered
+                        pagination={false}
+                        dataSource={detailSkuRows as any}
+                        rowKey="key"
+                        columns={[
+                          {
+                            title: '颜色',
+                            dataIndex: 'color',
+                            key: 'color',
+                            ellipsis: true,
+                          },
+                          {
+                            title: '码数',
+                            dataIndex: 'size',
+                            key: 'size',
+                            ellipsis: true,
+                          },
+                          {
+                            title: '下单',
+                            dataIndex: 'orderQuantity',
+                            key: 'orderQuantity',
+                            width: 88,
+                            align: 'right' as const,
+                            render: (v: any) => Math.max(0, Number(v) || 0),
+                          },
+                          {
+                            title: '入库',
+                            dataIndex: 'warehousedQuantity',
+                            key: 'warehousedQuantity',
+                            width: 88,
+                            align: 'right' as const,
+                            render: (v: any) => (detailSkuHasWarehoused ? Math.max(0, Number(v) || 0) : '-'),
+                          },
+                          {
+                            title: '未入库',
+                            dataIndex: 'unwarehousedQuantity',
+                            key: 'unwarehousedQuantity',
+                            width: 98,
+                            align: 'right' as const,
+                            render: (v: any) => (detailSkuHasWarehoused ? Math.max(0, Number(v) || 0) : '-'),
+                          },
+                        ]}
+                        summary={() => (
+                          <Table.Summary>
+                            <Table.Summary.Row>
+                              <Table.Summary.Cell index={0} colSpan={2}>
+                                合计
+                              </Table.Summary.Cell>
+                              <Table.Summary.Cell index={2} align="right">
+                                {detailSkuTotals.totalOrder || '-'}
+                              </Table.Summary.Cell>
+                              <Table.Summary.Cell index={3} align="right">
+                                {detailSkuTotals.totalWarehoused > 0 ? detailSkuTotals.totalWarehoused : '-'}
+                              </Table.Summary.Cell>
+                              <Table.Summary.Cell index={4} align="right">
+                                {detailSkuTotals.totalUnwarehoused > 0 ? detailSkuTotals.totalUnwarehoused : '-'}
+                              </Table.Summary.Cell>
+                            </Table.Summary.Row>
+                          </Table.Summary>
+                        )}
+                      />
+                    </div>
+                  </div>
+                </div>
               </>
             ) : (
               <Row gutter={16}>
@@ -980,7 +1295,11 @@ const ProductionList: React.FC = () => {
               扫码领取
             </Button>
           ]}
-          width="60vw"
+          width={modalWidth}
+          initialHeight={modalInitialHeight}
+          minWidth={isMobile ? 320 : 520}
+          scaleWithViewport
+          tableDensity={isMobile ? 'dense' : 'auto'}
         >
           {scanOrder && (
             <>
@@ -1063,15 +1382,14 @@ const ProductionList: React.FC = () => {
                   <Form.Item name="color" label="颜色">
                     <Input placeholder="可选" style={{ width: 140 }} />
                   </Form.Item>
-                  <Form.Item shouldUpdate={(prev, cur) => prev.scanType !== cur.scanType} noStyle>
-                    {({ getFieldValue }) => {
-                      const type = String(getFieldValue('scanType') || '').trim() || 'production';
-                      return (
-                        <Form.Item name="quantity" label="数量" rules={[{ required: type !== 'sewing', message: '请输入数量' }]}>
-                          <InputNumber min={1} style={{ width: 120 }} disabled={type === 'sewing'} />
-                        </Form.Item>
-                      );
-                    }}
+                  <Form.Item name="size" label="码数">
+                    <Input placeholder="可选" style={{ width: 120 }} />
+                  </Form.Item>
+                  <Form.Item name="quantity" label="数量" rules={[{ required: true, message: '请输入数量' }]}>
+                    <InputNumber min={1} style={{ width: 120 }} />
+                  </Form.Item>
+                  <Form.Item name="unitPrice" label="单价">
+                    <InputNumber min={0} precision={2} style={{ width: 120 }} />
                   </Form.Item>
                 </Form>
               </Card>
@@ -1083,6 +1401,7 @@ const ProductionList: React.FC = () => {
                   loading={scanHistoryLoading}
                   dataSource={scanHistory}
                   pagination={false}
+                  scroll={{ x: 'max-content', y: 260 }}
                   columns={[
                     {
                       title: '时间',
@@ -1129,6 +1448,36 @@ const ProductionList: React.FC = () => {
             </>
           )}
         </ResizableModal>
+
+        <Modal
+          title="扫码确认"
+          open={scanConfirmVisible}
+          onCancel={() => closeScanConfirm()}
+          footer={[
+            <Button key="cancel" onClick={() => closeScanConfirm()} disabled={scanConfirmLoading}>
+              取消
+            </Button>,
+            <Button key="submit" type="primary" onClick={submitConfirmedScan} loading={scanConfirmLoading}>
+              领取
+            </Button>,
+          ]}
+        >
+          <div style={{ marginBottom: 8, color: '#6b7280' }}>请在 {scanConfirmRemain} 秒内完成操作</div>
+          {scanConfirmDetail && (
+            <div style={{ display: 'grid', gap: 6 }}>
+              <div>二维码：{scanConfirmDetail.scanCode || '-'}</div>
+              <div>数量：{scanConfirmDetail.quantity || '-'}</div>
+              <div>环节：{scanConfirmDetail.progressStage || scanConfirmDetail.processName || '-'}</div>
+              <div>工序：{scanConfirmDetail.processName || '-'}</div>
+              <div>订单号：{scanConfirmDetail.orderNo || '-'}</div>
+              <div>款号：{scanConfirmDetail.styleNo || '-'}</div>
+              <div>颜色：{scanConfirmDetail.color || '-'}</div>
+              <div>尺码：{scanConfirmDetail.size || '-'}</div>
+              <div>单价：{scanConfirmDetail.unitPrice ?? '-'}</div>
+              <div>仓库：{scanConfirmDetail.warehouse || '-'}</div>
+            </div>
+          )}
+        </Modal>
       </div>
     </Layout>
   );

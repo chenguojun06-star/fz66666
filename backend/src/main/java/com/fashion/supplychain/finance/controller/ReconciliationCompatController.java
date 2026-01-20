@@ -1,9 +1,8 @@
 package com.fashion.supplychain.finance.controller;
 
 import com.fashion.supplychain.common.Result;
-import com.fashion.supplychain.finance.entity.FactoryReconciliation;
+import com.fashion.supplychain.common.dto.IdReasonRequest;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
-import com.fashion.supplychain.finance.service.FactoryReconciliationService;
 import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
 import com.fashion.supplychain.finance.orchestration.ReconciliationStatusOrchestrator;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
@@ -16,7 +15,9 @@ import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleQuotation;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.StyleQuotationService;
+import com.fashion.supplychain.template.service.TemplateLibraryService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,8 +28,10 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 @RestController
@@ -48,9 +51,6 @@ public class ReconciliationCompatController {
     private ProductWarehousingService productWarehousingService;
 
     @Autowired
-    private FactoryReconciliationService factoryReconciliationService;
-
-    @Autowired
     private ShipmentReconciliationService shipmentReconciliationService;
 
     @Autowired
@@ -59,6 +59,9 @@ public class ReconciliationCompatController {
     @Autowired
     private StyleQuotationService styleQuotationService;
 
+    @Autowired
+    private TemplateLibraryService templateLibraryService;
+
     @PutMapping("/status")
     public Result<?> updateStatus(@RequestParam("id") String id, @RequestParam("status") String status) {
         String message = reconciliationStatusOrchestrator.updateStatusCompat(id, status);
@@ -66,10 +69,8 @@ public class ReconciliationCompatController {
     }
 
     @PostMapping("/return")
-    public Result<?> returnToPrevious(@RequestBody Map<String, Object> params) {
-        String id = params == null ? null : (String) params.get("id");
-        String reason = params == null ? null : (String) params.get("reason");
-        String message = reconciliationStatusOrchestrator.returnCompat(id, reason);
+    public Result<?> returnToPrevious(@Valid @RequestBody IdReasonRequest body) {
+        String message = reconciliationStatusOrchestrator.returnCompat(body.getId(), body.getReason());
         return Result.successMessage(message);
     }
 
@@ -130,11 +131,6 @@ public class ReconciliationCompatController {
                         .eq(MaterialPurchase::getDeleteFlag, 0)
                         .orderByDesc(MaterialPurchase::getCreateTime));
 
-        java.util.List<FactoryReconciliation> factoryRecs = factoryReconciliationService
-                .list(new LambdaQueryWrapper<FactoryReconciliation>()
-                        .eq(FactoryReconciliation::getOrderId, resolvedOrderId)
-                        .orderByDesc(FactoryReconciliation::getCreateTime));
-
         java.util.List<ShipmentReconciliation> shipmentRecs = shipmentReconciliationService
                 .list(new LambdaQueryWrapper<ShipmentReconciliation>()
                         .eq(ShipmentReconciliation::getOrderId, resolvedOrderId)
@@ -150,19 +146,6 @@ public class ReconciliationCompatController {
 
         BigDecimal processingCost = BigDecimal.ZERO;
         BigDecimal processingCostPaid = BigDecimal.ZERO;
-        if (factoryRecs != null) {
-            for (FactoryReconciliation r : factoryRecs) {
-                if (r == null) {
-                    continue;
-                }
-                BigDecimal amt = nonNeg(amountPreferFinal(r.getFinalAmount(), r.getTotalAmount()));
-                processingCost = processingCost.add(amt);
-                String st = r.getStatus() == null ? "" : r.getStatus().trim();
-                if ("paid".equalsIgnoreCase(st)) {
-                    processingCostPaid = processingCostPaid.add(amt);
-                }
-            }
-        }
 
         BigDecimal shipmentRevenue = BigDecimal.ZERO;
         BigDecimal shipmentRevenueTotal = BigDecimal.ZERO;
@@ -222,10 +205,40 @@ public class ReconciliationCompatController {
             }
         }
 
+        if (quotationUnitPrice.compareTo(BigDecimal.ZERO) <= 0 && styleId != null && styleQuotationService != null) {
+            try {
+                Set<Long> one = new HashSet<>();
+                one.add(styleId);
+                Map<Long, String> styleNoByStyleId = new HashMap<>();
+                String styleNo = order.getStyleNo() == null ? null : order.getStyleNo().trim();
+                if (styleNo != null && !styleNo.isEmpty()) {
+                    styleNoByStyleId.put(styleId, styleNo);
+                }
+                BigDecimal fallback = styleQuotationService.resolveFinalUnitPriceByStyleIds(one, styleNoByStyleId)
+                        .get(styleId);
+                if (fallback != null && fallback.compareTo(BigDecimal.ZERO) > 0) {
+                    quotationUnitPrice = nonNeg(fallback);
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
         boolean hasQuotationPrice = quotationUnitPrice.compareTo(BigDecimal.ZERO) > 0;
         boolean hasWarehousing = warehousingQty > 0;
         String calcBasis = hasWarehousing ? "warehousing" : "order";
         int baseQty = hasWarehousing ? warehousingQty : Math.max(0, orderQty);
+
+        BigDecimal processingUnitPrice = BigDecimal.ZERO;
+        try {
+            if (templateLibraryService != null && order.getStyleNo() != null && !order.getStyleNo().trim().isEmpty()) {
+                BigDecimal v = templateLibraryService.resolveTotalUnitPriceFromProgressTemplate(order.getStyleNo().trim());
+                if (v != null && v.compareTo(BigDecimal.ZERO) > 0) {
+                    processingUnitPrice = v;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        processingCost = nonNeg(processingUnitPrice).multiply(BigDecimal.valueOf(Math.max(0, baseQty)));
 
         BigDecimal warehousingRevenue = hasQuotationPrice
                 ? quotationUnitPrice.multiply(BigDecimal.valueOf(Math.max(0, warehousingQty)))
@@ -289,19 +302,12 @@ public class ReconciliationCompatController {
             }
         }
 
-        if (factoryRecs != null) {
-            for (FactoryReconciliation r : factoryRecs) {
-                if (r == null) {
-                    continue;
-                }
-                LocalDateTime t = firstTime(r.getPaidAt(), r.getUpdateTime(), r.getCreateTime());
-                LocalDate d = (t == null ? null : t.toLocalDate());
-                if (d == null) {
-                    continue;
-                }
-                BigDecimal amt = nonNeg(amountPreferFinal(r.getFinalAmount(), r.getTotalAmount()));
+        if (processingCost.compareTo(BigDecimal.ZERO) > 0) {
+            LocalDateTime t = firstTime(order.getCreateTime(), order.getUpdateTime(), null);
+            LocalDate d = (t == null ? null : t.toLocalDate());
+            if (d != null) {
                 DayAgg agg = byDay.computeIfAbsent(d, k -> new DayAgg());
-                agg.processing = agg.processing.add(amt);
+                agg.processing = agg.processing.add(processingCost);
             }
         }
 
@@ -369,6 +375,7 @@ public class ReconciliationCompatController {
         orderInfo.put("orderNo", order.getOrderNo());
         orderInfo.put("styleNo", order.getStyleNo());
         orderInfo.put("styleName", order.getStyleName());
+        orderInfo.put("color", order.getColor());
         orderInfo.put("factoryName", order.getFactoryName());
         orderInfo.put("quantity", orderQty);
         orderInfo.put("completedQuantity", order.getCompletedQuantity() == null ? 0 : order.getCompletedQuantity());
@@ -406,7 +413,7 @@ public class ReconciliationCompatController {
         data.put("order", orderInfo);
         data.put("summary", summary);
         data.put("materials", purchases == null ? new ArrayList<>() : purchases);
-        data.put("factories", factoryRecs == null ? new ArrayList<>() : factoryRecs);
+        data.put("factories", new ArrayList<>());
         data.put("shipments", shipmentRecs == null ? new ArrayList<>() : shipmentRecs);
         data.put("timeline", timeline);
 

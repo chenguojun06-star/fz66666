@@ -1,9 +1,9 @@
 package com.fashion.supplychain.production.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.fashion.supplychain.finance.entity.FactoryReconciliation;
+import com.fashion.supplychain.finance.entity.MaterialReconciliation;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
-import com.fashion.supplychain.finance.service.FactoryReconciliationService;
+import com.fashion.supplychain.finance.service.MaterialReconciliationService;
 import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.CuttingTask;
@@ -36,6 +36,82 @@ import org.springframework.util.StringUtils;
 @Slf4j
 public class ProductionOrderFlowOrchestrationService {
 
+    public static class OrderFlowResponse {
+        private final ProductionOrder order;
+        private final List<Map<String, Object>> stages;
+        private final List<ScanRecord> records;
+        private final List<MaterialPurchase> materialPurchases;
+        private final List<CuttingTask> cuttingTasks;
+        private final List<CuttingBundle> cuttingBundles;
+        private final List<ProductWarehousing> warehousings;
+        private final List<ProductOutstock> outstocks;
+        private final List<ShipmentReconciliation> shipmentReconciliations;
+        private final List<MaterialReconciliation> materialReconciliations;
+
+        public OrderFlowResponse(
+                ProductionOrder order,
+                List<Map<String, Object>> stages,
+                List<ScanRecord> records,
+                List<MaterialPurchase> materialPurchases,
+                List<CuttingTask> cuttingTasks,
+                List<CuttingBundle> cuttingBundles,
+                List<ProductWarehousing> warehousings,
+                List<ProductOutstock> outstocks,
+                List<ShipmentReconciliation> shipmentReconciliations,
+                List<MaterialReconciliation> materialReconciliations) {
+            this.order = order;
+            this.stages = stages;
+            this.records = records;
+            this.materialPurchases = materialPurchases;
+            this.cuttingTasks = cuttingTasks;
+            this.cuttingBundles = cuttingBundles;
+            this.warehousings = warehousings;
+            this.outstocks = outstocks;
+            this.shipmentReconciliations = shipmentReconciliations;
+            this.materialReconciliations = materialReconciliations;
+        }
+
+        public ProductionOrder getOrder() {
+            return order;
+        }
+
+        public List<Map<String, Object>> getStages() {
+            return stages;
+        }
+
+        public List<ScanRecord> getRecords() {
+            return records;
+        }
+
+        public List<MaterialPurchase> getMaterialPurchases() {
+            return materialPurchases;
+        }
+
+        public List<CuttingTask> getCuttingTasks() {
+            return cuttingTasks;
+        }
+
+        public List<CuttingBundle> getCuttingBundles() {
+            return cuttingBundles;
+        }
+
+        public List<ProductWarehousing> getWarehousings() {
+            return warehousings;
+        }
+
+        public List<ProductOutstock> getOutstocks() {
+            return outstocks;
+        }
+
+        public List<ShipmentReconciliation> getShipmentReconciliations() {
+            return shipmentReconciliations;
+        }
+
+        public List<MaterialReconciliation> getMaterialReconciliations() {
+            return materialReconciliations;
+        }
+    }
+
     @Autowired
     private ProductionOrderService productionOrderService;
 
@@ -58,15 +134,15 @@ public class ProductionOrderFlowOrchestrationService {
     private ProductOutstockService productOutstockService;
 
     @Autowired
-    private FactoryReconciliationService factoryReconciliationService;
+    private ShipmentReconciliationService shipmentReconciliationService;
 
     @Autowired
-    private ShipmentReconciliationService shipmentReconciliationService;
+    private MaterialReconciliationService materialReconciliationService;
 
     @Autowired
     private TemplateLibraryService templateLibraryService;
 
-    public Map<String, Object> getOrderFlow(String orderId) {
+    public OrderFlowResponse getOrderFlow(String orderId) {
         String oid = StringUtils.hasText(orderId) ? orderId.trim() : null;
         if (!StringUtils.hasText(oid)) {
             throw new IllegalArgumentException("参数错误");
@@ -110,28 +186,28 @@ public class ProductionOrderFlowOrchestrationService {
                 .eq(ProductOutstock::getDeleteFlag, 0)
                 .orderByDesc(ProductOutstock::getCreateTime));
 
-        List<FactoryReconciliation> factoryReconciliations = factoryReconciliationService.lambdaQuery()
-                .eq(FactoryReconciliation::getOrderId, oid)
-                .orderByDesc(FactoryReconciliation::getCreateTime)
-                .list();
-
         List<ShipmentReconciliation> shipmentReconciliations = shipmentReconciliationService.lambdaQuery()
                 .eq(ShipmentReconciliation::getOrderId, oid)
                 .orderByDesc(ShipmentReconciliation::getCreateTime)
                 .list();
 
-        Map<String, Object> data = new HashMap<>();
-        data.put("order", order);
-        data.put("stages", stages);
-        data.put("records", records);
-        data.put("materialPurchases", materialPurchases);
-        data.put("cuttingTasks", cuttingTasks);
-        data.put("cuttingBundles", cuttingBundles);
-        data.put("warehousings", warehousings);
-        data.put("outstocks", outstocks);
-        data.put("factoryReconciliations", factoryReconciliations);
-        data.put("shipmentReconciliations", shipmentReconciliations);
-        return data;
+        List<MaterialReconciliation> materialReconciliations = materialReconciliationService.lambdaQuery()
+                .eq(MaterialReconciliation::getOrderId, oid)
+                .eq(MaterialReconciliation::getDeleteFlag, 0)
+                .orderByDesc(MaterialReconciliation::getCreateTime)
+                .list();
+
+        return new OrderFlowResponse(
+                order,
+                stages,
+                records,
+                materialPurchases,
+                cuttingTasks,
+                cuttingBundles,
+                warehousings,
+                outstocks,
+                shipmentReconciliations,
+                materialReconciliations);
     }
 
     private List<Map<String, Object>> buildProductionStageFlow(ProductionOrder order, List<ScanRecord> records) {

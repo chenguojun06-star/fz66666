@@ -15,6 +15,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
@@ -102,7 +103,19 @@ public class MaterialReconciliationOrchestrator {
         if (materialReconciliation == null) {
             throw new IllegalArgumentException("参数错误");
         }
+        LocalDateTime now = LocalDateTime.now();
+        UserContext ctx = UserContext.get();
+        String uid = ctx == null ? null : ctx.getUserId();
+        uid = (uid == null || uid.trim().isEmpty()) ? null : uid.trim();
+
         materialReconciliation.setStatus("pending");
+        materialReconciliation.setDeleteFlag(0);
+        materialReconciliation.setCreateTime(now);
+        materialReconciliation.setUpdateTime(now);
+        if (StringUtils.hasText(uid)) {
+            materialReconciliation.setCreateBy(uid);
+            materialReconciliation.setUpdateBy(uid);
+        }
         boolean ok = materialReconciliationService.save(materialReconciliation);
         if (!ok) {
             throw new IllegalStateException("保存失败");
@@ -114,13 +127,40 @@ public class MaterialReconciliationOrchestrator {
         if (materialReconciliation == null || !StringUtils.hasText(materialReconciliation.getId())) {
             throw new IllegalArgumentException("参数错误");
         }
-        MaterialReconciliation current = materialReconciliationService.getById(materialReconciliation.getId());
+        String id = materialReconciliation.getId().trim();
+        materialReconciliation.setId(id);
+        MaterialReconciliation current = materialReconciliationService.getById(id);
         if (current == null) {
             throw new NoSuchElementException("对账单不存在");
         }
         String st = current.getStatus() == null ? "" : current.getStatus().trim();
         if (StringUtils.hasText(st) && !"pending".equalsIgnoreCase(st) && !UserContext.isTopAdmin()) {
             throw new IllegalStateException("当前状态不允许修改，请先退回到上一个环节");
+        }
+
+        materialReconciliation.setReconciliationNo(current.getReconciliationNo());
+        materialReconciliation.setPurchaseId(current.getPurchaseId());
+        materialReconciliation.setStatus(current.getStatus());
+        materialReconciliation.setVerifiedAt(current.getVerifiedAt());
+        materialReconciliation.setApprovedAt(current.getApprovedAt());
+        materialReconciliation.setPaidAt(current.getPaidAt());
+        materialReconciliation.setReReviewAt(current.getReReviewAt());
+        materialReconciliation.setReReviewReason(current.getReReviewReason());
+        materialReconciliation.setCreateTime(current.getCreateTime());
+        materialReconciliation.setDeleteFlag(current.getDeleteFlag());
+
+        LocalDateTime now = LocalDateTime.now();
+        materialReconciliation.setUpdateTime(now);
+        UserContext ctx = UserContext.get();
+        String uid = ctx == null ? null : ctx.getUserId();
+        uid = (uid == null || uid.trim().isEmpty()) ? null : uid.trim();
+        if (StringUtils.hasText(uid)) {
+            materialReconciliation.setUpdateBy(uid);
+            materialReconciliation
+                    .setCreateBy(StringUtils.hasText(current.getCreateBy()) ? current.getCreateBy() : uid);
+        } else {
+            materialReconciliation.setCreateBy(current.getCreateBy());
+            materialReconciliation.setUpdateBy(current.getUpdateBy());
         }
         boolean ok = materialReconciliationService.updateById(materialReconciliation);
         if (!ok) {
@@ -146,6 +186,15 @@ public class MaterialReconciliationOrchestrator {
         patch.setId(key);
         patch.setDeleteFlag(1);
         patch.setUpdateTime(LocalDateTime.now());
+        UserContext ctx = UserContext.get();
+        String uid = ctx == null ? null : ctx.getUserId();
+        uid = (uid == null || uid.trim().isEmpty()) ? null : uid.trim();
+        if (StringUtils.hasText(uid)) {
+            patch.setUpdateBy(uid);
+            if (!StringUtils.hasText(current.getCreateBy())) {
+                patch.setCreateBy(uid);
+            }
+        }
         boolean ok = materialReconciliationService.updateById(patch);
         if (!ok) {
             throw new IllegalStateException("删除失败");
@@ -191,8 +240,7 @@ public class MaterialReconciliationOrchestrator {
         if ("cancelled".equalsIgnoreCase(status)) {
             return true;
         }
-        int qty = purchase.getArrivedQuantity() == null ? 0 : purchase.getArrivedQuantity();
-        return qty <= 0;
+        return resolveEffectiveQuantity(purchase) <= 0;
     }
 
     private void cleanupPendingByPurchaseId(String purchaseId, LocalDateTime now) {
@@ -262,14 +310,28 @@ public class MaterialReconciliationOrchestrator {
             return false;
         }
 
-        int qty = purchase.getArrivedQuantity() == null ? 0 : purchase.getArrivedQuantity();
+        int qty = resolveEffectiveQuantity(purchase);
         if (qty <= 0) {
             return false;
         }
 
         LocalDateTime t = now == null ? LocalDateTime.now() : now;
-        BigDecimal unitPrice = purchase.getUnitPrice() == null ? BigDecimal.ZERO : purchase.getUnitPrice();
-        BigDecimal totalAmount = unitPrice.multiply(BigDecimal.valueOf(qty));
+        UserContext ctx = UserContext.get();
+        String uid = ctx == null ? null : ctx.getUserId();
+        uid = (uid == null || uid.trim().isEmpty()) ? null : uid.trim();
+        BigDecimal unitPrice = purchase.getUnitPrice();
+        BigDecimal totalAmount = purchase.getTotalAmount();
+        if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
+            if (qty > 0 && totalAmount != null && totalAmount.compareTo(BigDecimal.ZERO) > 0) {
+                totalAmount = totalAmount.setScale(2, RoundingMode.HALF_UP);
+                unitPrice = totalAmount.divide(BigDecimal.valueOf(qty), 2, RoundingMode.HALF_UP);
+            } else {
+                unitPrice = BigDecimal.ZERO;
+            }
+        }
+        if (totalAmount == null || totalAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            totalAmount = unitPrice.multiply(BigDecimal.valueOf(qty)).setScale(2, RoundingMode.HALF_UP);
+        }
 
         MaterialReconciliation existed = materialReconciliationService.lambdaQuery()
                 .eq(MaterialReconciliation::getPurchaseId, purchase.getId())
@@ -343,6 +405,9 @@ public class MaterialReconciliationOrchestrator {
                 }
 
                 patch.setUpdateTime(t);
+                if (StringUtils.hasText(uid)) {
+                    patch.setUpdateBy(uid);
+                }
                 return materialReconciliationService.updateById(patch);
             }
 
@@ -380,6 +445,12 @@ public class MaterialReconciliationOrchestrator {
                 patch.setStatus("pending");
             }
             patch.setUpdateTime(t);
+            if (StringUtils.hasText(uid)) {
+                patch.setUpdateBy(uid);
+                if (!StringUtils.hasText(existed.getCreateBy())) {
+                    patch.setCreateBy(uid);
+                }
+            }
             return materialReconciliationService.updateById(patch);
         }
 
@@ -412,7 +483,27 @@ public class MaterialReconciliationOrchestrator {
         mr.setDeleteFlag(0);
         mr.setCreateTime(t);
         mr.setUpdateTime(t);
+        if (StringUtils.hasText(uid)) {
+            mr.setCreateBy(uid);
+            mr.setUpdateBy(uid);
+        }
         return materialReconciliationService.save(mr);
+    }
+
+    private int resolveEffectiveQuantity(MaterialPurchase purchase) {
+        if (purchase == null) {
+            return 0;
+        }
+        int aq = purchase.getArrivedQuantity() == null ? 0 : purchase.getArrivedQuantity();
+        int pq = purchase.getPurchaseQuantity() == null ? 0 : purchase.getPurchaseQuantity();
+        if (pq > 0) {
+            try {
+                return Math.max(0, materialPurchaseService.computeEffectiveArrivedQuantity(pq, aq));
+            } catch (Exception e) {
+                return Math.max(0, Math.min(Math.max(0, aq), pq));
+            }
+        }
+        return Math.max(0, aq);
     }
 
     private String resolveNotBlank(String v, String fallback) {

@@ -12,6 +12,7 @@
       <view class="col field">
         <view class="label">数量</view>
         <input class="input" type="number" value="{{quantity}}" bindinput="onQuantityInput" />
+        <view wx:if="{{qtyHint}}" class="qty-hint">{{qtyHint}}</view>
       </view>
     </view>
 
@@ -20,6 +21,35 @@
       <picker mode="selector" range="{{qualityOptions}}" range-key="label" value="{{qualityIndex}}" bindchange="onQualityChange">
         <view class="input">{{qualityOptions[qualityIndex].label}}</view>
       </picker>
+    </view>
+
+    <view wx:if="{{scanTypeOptions[scanTypeIndex].value === 'quality' && qualityOptions[qualityIndex].value === 'unqualified'}}" class="field">
+      <view class="label">次品类别</view>
+      <picker mode="selector" range="{{defectCategoryOptions}}" range-key="label" value="{{defectCategoryIndex}}" bindchange="onDefectCategoryChange">
+        <view class="input">{{defectCategoryOptions[defectCategoryIndex].label}}</view>
+      </picker>
+    </view>
+
+    <view wx:if="{{scanTypeOptions[scanTypeIndex].value === 'quality' && qualityOptions[qualityIndex].value === 'unqualified'}}" class="field">
+      <view class="label">处理方式（必选）</view>
+      <picker mode="selector" range="{{defectRemarkOptions}}" range-key="label" value="{{defectRemarkIndex}}" bindchange="onDefectRemarkChange">
+        <view class="input">{{defectRemarkOptions[defectRemarkIndex].label}}</view>
+      </picker>
+    </view>
+
+    <view wx:if="{{scanTypeOptions[scanTypeIndex].value === 'quality' && qualityOptions[qualityIndex].value === 'unqualified'}}" class="field">
+      <view class="label">问题点照片（可选）</view>
+      <view class="img-grid">
+        <view wx:for="{{defectImageFullUrls}}" wx:key="*this" class="img-item">
+          <image class="img" mode="aspectFill" src="{{item}}" bindtap="onPreviewDefectPhoto" data-idx="{{index}}" />
+          <view class="img-del" bindtap="onRemoveDefectPhoto" data-idx="{{index}}">×</view>
+        </view>
+        <view wx:if="{{defectImageFullUrls.length < 4}}" class="img-add {{defectUploading ? 'btn-disabled' : ''}}" bindtap="onAddDefectPhoto">
+          <view class="img-add-plus">+</view>
+          <view class="img-add-text">拍照/相册</view>
+        </view>
+      </view>
+      <view wx:if="{{defectUploading}}" class="qty-hint">图片上传中...</view>
     </view>
 
     <view wx:if="{{scanTypeOptions[scanTypeIndex].value === 'warehouse'}}" class="field">
@@ -31,8 +61,8 @@
       <view class="btn-primary {{loading ? 'btn-disabled' : ''}}" bindtap="onScan">{{loading ? '处理中...' : '开始扫码'}}</view>
     </view>
 
-    <view class="btn">
-      <view class="btn-primary" bindtap="onLogout">退出登录</view>
+    <view class="btn" wx:if="{{lastResult && lastResult.success && undo.canUndo}}">
+      <view class="btn-danger {{undo.loading ? 'btn-disabled' : ''}}" bindtap="onUndoLast">{{undo.loading ? '撤销中...' : '撤销本次扫码'}}</view>
     </view>
 
     <view wx:if="{{lastResult}}" class="result">
@@ -43,8 +73,117 @@
       <view>消息：{{lastResult.message}}</view>
       <view wx:if="{{lastResult.orderNo}}">订单号：{{lastResult.orderNo}}</view>
       <view wx:if="{{lastResult.styleNo}}">款号：{{lastResult.styleNo}}</view>
+      <view wx:if="{{lastResult.color}}">颜色：{{lastResult.color}}</view>
+      <view wx:if="{{lastResult.size}}">尺码：{{lastResult.size}}</view>
+      <view wx:if="{{lastResult.unitPrice != null && lastResult.unitPrice !== ''}}">单价：{{lastResult.unitPrice}}</view>
       <view wx:if="{{lastResult.processName}}">工序：{{lastResult.processName}}</view>
+      <view wx:if="{{lastResult.success && undo.canUndo}}" class="scan-tip">如果刚刚扫错，可在 15 秒内点“撤销本次扫码”（离开页面后撤销会失效）。</view>
+      <view wx:if="{{!lastResult.success}}" class="scan-tip">失败不会提交记录；检查网络/权限或重试扫码。</view>
     </view>
+
+    <view wx:if="{{materialPurchases.length}}" class="purchase-panel">
+      <view class="my-head">
+        <view class="my-title">面辅料信息</view>
+      </view>
+      <view wx:for="{{materialPurchases}}" wx:key="id" class="purchase-item">
+        <view class="item-head">
+          <view class="item-title">{{item.materialName || item.materialCode || '-'}} </view>
+          <text class="tag">{{item.materialType || '-'}}</text>
+        </view>
+        <view class="item-sub">物料编码：{{item.materialCode || '-'}}</view>
+        <view class="item-sub">规格：{{item.specifications || '-'}}</view>
+        <view class="item-sub">供应商：{{item.supplierName || '-'}}</view>
+        <view class="item-sub">需求数量：{{item.demandQuantity != null ? item.demandQuantity : (item.purchaseQuantity || 0)}}{{item.unit || ''}}</view>
+        <view class="item-sub">采购数量：{{item.purchaseQuantity || 0}}{{item.unit || ''}}</view>
+        <view class="item-sub">已到货：{{item.arrivedQuantity || 0}}{{item.unit || ''}}</view>
+        <view class="item-sub">领取状态：{{item.status === 'completed' ? '已领取' : (item.status === 'cancelled' ? '已取消' : '待领取')}}</view>
+        <view wx:if="{{item.receiverName}}" class="item-sub">领取人：{{item.receiverName}}</view>
+        <view wx:if="{{item.receivedTime}}" class="item-sub">领取时间：{{item.receivedTime}}</view>
+        <view class="field">
+          <view class="label">到货米数</view>
+          <input class="input" type="number" value="{{item.arrivedInput}}" bindinput="onPurchaseArrivedInput" data-idx="{{index}}" />
+        </view>
+        <view class="field">
+          <view class="label">备注</view>
+          <textarea class="input textarea" placeholder="请输入备注" value="{{item.remarkInput}}" bindinput="onPurchaseRemarkInput" data-idx="{{index}}" />
+        </view>
+        <view class="btn" wx:if="{{item.status !== 'completed' && item.status !== 'cancelled'}}">
+          <view class="btn-secondary" bindtap="onReceivePurchase" data-idx="{{index}}">领取</view>
+        </view>
+        <view class="btn">
+          <view class="btn-primary" bindtap="onConfirmPurchaseArrived" data-idx="{{index}}">确认到货</view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{scanConfirm.visible}}" class="confirm-mask">
+      <view class="confirm-card">
+        <view class="confirm-title">扫码确认</view>
+        <view class="confirm-sub">请在 {{scanConfirm.remain}} 秒内完成操作</view>
+        <view wx:if="{{scanConfirm.detail}}" class="confirm-body">
+          <view class="confirm-row">二维码：{{scanConfirm.detail.scanCode}}</view>
+          <view class="confirm-row">数量：{{scanConfirm.detail.quantity}}</view>
+          <view wx:if="{{scanConfirm.detail.scanType}}" class="confirm-row">类型：{{scanConfirm.detail.scanType}}</view>
+          <view wx:if="{{scanConfirm.detail.progressStage}}" class="confirm-row">环节：{{scanConfirm.detail.progressStage}}</view>
+          <view wx:if="{{scanConfirm.detail.processName}}" class="confirm-row">工序：{{scanConfirm.detail.processName}}</view>
+          <view wx:if="{{scanConfirm.detail.orderNo}}" class="confirm-row">订单号：{{scanConfirm.detail.orderNo}}</view>
+          <view wx:if="{{scanConfirm.detail.styleNo}}" class="confirm-row">款号：{{scanConfirm.detail.styleNo}}</view>
+          <view wx:if="{{scanConfirm.detail.color}}" class="confirm-row">颜色：{{scanConfirm.detail.color}}</view>
+          <view wx:if="{{scanConfirm.detail.size}}" class="confirm-row">尺码：{{scanConfirm.detail.size}}</view>
+          <view wx:if="{{scanConfirm.detail.warehouse}}" class="confirm-row">仓库：{{scanConfirm.detail.warehouse}}</view>
+          <view wx:if="{{scanConfirm.detail.qualityResult}}" class="confirm-row">质检：{{scanConfirm.detail.qualityResult}}</view>
+        </view>
+        <view class="confirm-actions">
+          <view class="btn-secondary {{scanConfirm.loading ? 'btn-disabled' : ''}}" bindtap="onCancelScan">取消</view>
+          <view class="btn-primary {{scanConfirm.loading ? 'btn-disabled' : ''}}" bindtap="onConfirmScan">领取</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="my-panel">
+      <view class="my-head">
+        <view class="my-title">我的记录</view>
+        <view class="btn-secondary my-refresh {{my.loadingStats || my.loadingHistory ? 'btn-disabled' : ''}}" bindtap="refreshMy">刷新</view>
+      </view>
+
+      <view wx:if="{{my.stats}}" class="my-stats">
+        <view class="my-stat">
+          <view class="my-stat-value">{{my.stats.scanCount || 0}}</view>
+          <view class="my-stat-label">次数</view>
+        </view>
+        <view class="my-stat">
+          <view class="my-stat-value">{{my.stats.orderCount || 0}}</view>
+          <view class="my-stat-label">订单</view>
+        </view>
+        <view class="my-stat">
+          <view class="my-stat-value">{{my.stats.totalQuantity || 0}}</view>
+          <view class="my-stat-label">数量</view>
+        </view>
+        <view class="my-stat">
+          <view class="my-stat-value">{{my.stats.totalAmount || 0}}</view>
+          <view class="my-stat-label">金额</view>
+        </view>
+      </view>
+
+      <view wx:if="{{my.history.list.length === 0 && !my.loadingHistory}}" class="hint">暂无个人记录</view>
+      <view wx:for="{{my.history.list}}" wx:key="id" class="list-item">
+        <view class="item-head">
+          <view class="item-title">{{item.orderNo || '-'}} </view>
+          <text class="tag">{{item.processName || item.progressStage || item.scanType || '-'}}</text>
+        </view>
+        <view class="item-sub">款号：{{item.styleNo || '-'}}</view>
+        <view class="item-sub">颜色：{{item.color || '-'}}</view>
+        <view class="item-sub">尺码：{{item.size || '-'}}</view>
+        <view class="item-sub">数量：{{item.quantity || 0}}</view>
+        <view class="item-sub">单价：{{item.unitPrice == null || item.unitPrice === '' ? '-' : item.unitPrice}}</view>
+        <view wx:if="{{item.scanTime}}" class="item-sub">时间：{{item.scanTime}}</view>
+        <view wx:if="{{item.remark}}" class="item-sub">备注：{{item.remark}}</view>
+      </view>
+
+      <view class="btn">
+        <view class="btn-secondary {{my.loadingHistory || !my.history.hasMore ? 'btn-disabled' : ''}}" bindtap="loadMoreMyHistory">{{my.loadingHistory ? '加载中...' : (my.history.hasMore ? '加载更多' : '没有更多了')}}</view>
+      </view>
+    </view>
+
   </view>
 </view>
-

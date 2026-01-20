@@ -59,6 +59,12 @@ public class StyleInfoController {
         return Result.success(styleInfoOrchestrator.updateProductionRequirements(id, body));
     }
 
+    @PostMapping("/{id}/production-requirements/rollback")
+    public Result<?> rollbackProductionRequirements(@PathVariable Long id,
+            @RequestBody(required = false) Map<String, Object> body) {
+        return Result.success(styleInfoOrchestrator.rollbackProductionRequirements(id, body));
+    }
+
     @PostMapping("/{id}/pattern/start")
     public Result<?> startPattern(@PathVariable Long id) {
         return Result.success(styleInfoOrchestrator.startPattern(id));

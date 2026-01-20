@@ -18,7 +18,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -33,7 +33,7 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
         implements ProductionOrderService {
 
     @Autowired
-    private StyleInfoService styleInfoService;
+    private ObjectProvider<StyleInfoService> styleInfoServiceProvider;
 
     @Autowired
     private CuttingTaskService cuttingTaskService;
@@ -48,12 +48,10 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
     private ProductionOrderQueryService productionOrderQueryService;
 
     @Autowired
-    @Lazy
-    private ProductionOrderProgressOrchestrationService progressOrchestrationService;
+    private ObjectProvider<ProductionOrderProgressOrchestrationService> progressOrchestrationServiceProvider;
 
     @Autowired
-    @Lazy
-    private ProductionOrderFinanceOrchestrationService financeOrchestrationService;
+    private ObjectProvider<ProductionOrderFinanceOrchestrationService> financeOrchestrationServiceProvider;
 
     @Override
     public IPage<ProductionOrder> queryPage(Map<String, Object> params) {
@@ -80,6 +78,10 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
             String styleId = StringUtils.hasText(styleIdRaw) ? styleIdRaw.trim() : null;
             String styleNo = StringUtils.hasText(styleNoRaw) ? styleNoRaw.trim() : null;
 
+            StyleInfoService styleInfoService = styleInfoServiceProvider.getIfAvailable();
+            if (styleInfoService == null) {
+                throw new IllegalStateException("款号服务不可用");
+            }
             com.fashion.supplychain.style.entity.StyleInfo style = styleInfoService.getValidatedForOrderCreate(styleId,
                     styleNo);
             productionOrder.setStyleId(String.valueOf(style.getId()));
@@ -165,8 +167,11 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
     public boolean updateProductionProgress(String id, Integer progress, String rollbackRemark,
             String rollbackToProcessName) {
         try {
-            return progressOrchestrationService.updateProductionProgress(id, progress, rollbackRemark,
-                    rollbackToProcessName);
+            ProductionOrderProgressOrchestrationService svc = progressOrchestrationServiceProvider.getIfAvailable();
+            if (svc == null) {
+                throw new IllegalStateException("进度服务不可用");
+            }
+            return svc.updateProductionProgress(id, progress, rollbackRemark, rollbackToProcessName);
         } catch (Exception e) {
             log.warn("Failed to update production progress: orderId={}, progress={}, rollbackTo={}", id, progress,
                     rollbackToProcessName, e);
@@ -177,19 +182,31 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
     @Transactional
     @Override
     public boolean completeProduction(String id, BigDecimal tolerancePercent) {
-        return financeOrchestrationService.completeProduction(id, tolerancePercent);
+        ProductionOrderFinanceOrchestrationService svc = financeOrchestrationServiceProvider.getIfAvailable();
+        if (svc == null) {
+            throw new IllegalStateException("财务结单服务不可用");
+        }
+        return svc.completeProduction(id, tolerancePercent);
     }
 
     @Transactional
     @Override
     public ProductionOrder closeOrder(String id) {
-        return financeOrchestrationService.closeOrder(id);
+        ProductionOrderFinanceOrchestrationService svc = financeOrchestrationServiceProvider.getIfAvailable();
+        if (svc == null) {
+            throw new IllegalStateException("财务关单服务不可用");
+        }
+        return svc.closeOrder(id);
     }
 
     @Override
     public boolean updateMaterialArrivalRate(String id, Integer rate) {
         try {
-            return progressOrchestrationService.updateMaterialArrivalRate(id, rate);
+            ProductionOrderProgressOrchestrationService svc = progressOrchestrationServiceProvider.getIfAvailable();
+            if (svc == null) {
+                throw new IllegalStateException("进度服务不可用");
+            }
+            return svc.updateMaterialArrivalRate(id, rate);
         } catch (Exception e) {
             log.warn("Failed to update material arrival rate: orderId={}, rate={}", id, rate, e);
             return false;

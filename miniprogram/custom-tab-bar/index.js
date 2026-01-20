@@ -1,0 +1,26 @@
+Component({
+    data: {
+        selected: 0,
+        list: [
+            { pagePath: '/pages/home/index', text: '首页' },
+            { pagePath: '/pages/work/index', text: '生产' },
+            { pagePath: '/pages/scan/index', text: '扫码' },
+            { pagePath: '/pages/admin/index', text: '个人' },
+        ],
+    },
+
+    methods: {
+        onTap(e) {
+            const idx = Number(e && e.currentTarget && e.currentTarget.dataset ? e.currentTarget.dataset.index : -1);
+            if (!Number.isFinite(idx) || idx < 0 || idx >= this.data.list.length) return;
+            const item = this.data.list[idx];
+            if (!item || !item.pagePath) return;
+            const pages = getCurrentPages();
+            const current = pages && pages.length ? pages[pages.length - 1] : null;
+            const currentRoute = current && current.route ? `/${current.route}` : '';
+            this.setData({ selected: idx });
+            if (currentRoute === item.pagePath) return;
+            wx.switchTab({ url: item.pagePath });
+        },
+    },
+});

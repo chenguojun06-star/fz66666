@@ -18,6 +18,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.ObjectProvider;
 
 @ExtendWith(MockitoExtension.class)
 class ProductionOrderServiceImplFacadeTest {
@@ -30,6 +31,12 @@ class ProductionOrderServiceImplFacadeTest {
 
     @Mock
     private ProductionOrderFinanceOrchestrationService financeOrchestrationService;
+
+    @Mock
+    private ObjectProvider<ProductionOrderProgressOrchestrationService> progressOrchestrationServiceProvider;
+
+    @Mock
+    private ObjectProvider<ProductionOrderFinanceOrchestrationService> financeOrchestrationServiceProvider;
 
     @Mock
     private ProductionOrderProgressRecomputeService progressRecomputeService;
@@ -63,6 +70,7 @@ class ProductionOrderServiceImplFacadeTest {
 
     @Test
     void updateProductionProgress_returnsFalseOnException() {
+        when(progressOrchestrationServiceProvider.getIfAvailable()).thenReturn(progressOrchestrationService);
         when(progressOrchestrationService.updateProductionProgress("o1", 10, null, null))
                 .thenThrow(new RuntimeException("boom"));
 
@@ -71,6 +79,7 @@ class ProductionOrderServiceImplFacadeTest {
 
     @Test
     void updateProductionProgress_withRollback_delegates() {
+        when(progressOrchestrationServiceProvider.getIfAvailable()).thenReturn(progressOrchestrationService);
         when(progressOrchestrationService.updateProductionProgress("o1", 10, "r", "p")).thenReturn(true);
 
         service.updateProductionProgress("o1", 10, "r", "p");
@@ -80,6 +89,7 @@ class ProductionOrderServiceImplFacadeTest {
 
     @Test
     void updateMaterialArrivalRate_returnsFalseOnException() {
+        when(progressOrchestrationServiceProvider.getIfAvailable()).thenReturn(progressOrchestrationService);
         when(progressOrchestrationService.updateMaterialArrivalRate("o1", 20)).thenThrow(new RuntimeException());
 
         assertFalse(service.updateMaterialArrivalRate("o1", 20));
@@ -87,6 +97,7 @@ class ProductionOrderServiceImplFacadeTest {
 
     @Test
     void completeProduction_delegates() {
+        when(financeOrchestrationServiceProvider.getIfAvailable()).thenReturn(financeOrchestrationService);
         when(financeOrchestrationService.completeProduction("o1", BigDecimal.ONE)).thenReturn(true);
 
         service.completeProduction("o1", BigDecimal.ONE);
@@ -97,6 +108,7 @@ class ProductionOrderServiceImplFacadeTest {
     @Test
     void closeOrder_delegates() {
         ProductionOrder expected = new ProductionOrder();
+        when(financeOrchestrationServiceProvider.getIfAvailable()).thenReturn(financeOrchestrationService);
         when(financeOrchestrationService.closeOrder("o1")).thenReturn(expected);
 
         ProductionOrder actual = service.closeOrder("o1");
@@ -116,4 +128,3 @@ class ProductionOrderServiceImplFacadeTest {
         verify(progressRecomputeService).recomputeProgressFromRecords("o1");
     }
 }
-

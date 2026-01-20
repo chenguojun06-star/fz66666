@@ -16,15 +16,18 @@ public class WeChatMiniProgramClient {
 
     private final String appid;
     private final String secret;
+    private final boolean mockEnabled;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
     public WeChatMiniProgramClient(
             @Value("${wechat.mini-program.appid:}") String appid,
             @Value("${wechat.mini-program.secret:}") String secret,
+            @Value("${wechat.mini-program.mock-enabled:false}") boolean mockEnabled,
             ObjectMapper objectMapper) {
         this.appid = appid == null ? "" : appid.trim();
         this.secret = secret == null ? "" : secret.trim();
+        this.mockEnabled = mockEnabled;
         this.restTemplate = new RestTemplate();
         this.objectMapper = objectMapper;
     }
@@ -35,6 +38,14 @@ public class WeChatMiniProgramClient {
             return Code2SessionResult.fail("code不能为空");
         }
         if (!StringUtils.hasText(appid) || !StringUtils.hasText(secret)) {
+            if (mockEnabled) {
+                String openid = code.length() > 96 ? code.substring(0, 96) : code;
+                Code2SessionResult ok = Code2SessionResult.ok();
+                ok.setOpenid("mock_" + openid);
+                ok.setSessionKey("");
+                ok.setUnionid(null);
+                return ok;
+            }
             return Code2SessionResult.fail("小程序appid/secret未配置");
         }
 

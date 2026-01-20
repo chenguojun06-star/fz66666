@@ -1,10 +1,8 @@
 package com.fashion.supplychain.dashboard.service.impl;
 
 import com.fashion.supplychain.dashboard.service.DashboardQueryService;
-import com.fashion.supplychain.finance.entity.FactoryReconciliation;
 import com.fashion.supplychain.finance.entity.MaterialReconciliation;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
-import com.fashion.supplychain.finance.service.FactoryReconciliationService;
 import com.fashion.supplychain.finance.service.MaterialReconciliationService;
 import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
@@ -23,38 +21,38 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class DashboardQueryServiceImpl implements DashboardQueryService {
 
-    @Autowired
-    private StyleInfoService styleInfoService;
+    private final StyleInfoService styleInfoService;
+    private final ProductionOrderService productionOrderService;
+    private final MaterialReconciliationService materialReconciliationService;
+    private final ShipmentReconciliationService shipmentReconciliationService;
+    private final ScanRecordService scanRecordService;
+    private final MaterialPurchaseService materialPurchaseService;
+    private final ProductWarehousingService productWarehousingService;
+    private final ProductWarehousingMapper productWarehousingMapper;
 
-    @Autowired
-    private ProductionOrderService productionOrderService;
-
-    @Autowired
-    private FactoryReconciliationService factoryReconciliationService;
-
-    @Autowired
-    private MaterialReconciliationService materialReconciliationService;
-
-    @Autowired
-    private ShipmentReconciliationService shipmentReconciliationService;
-
-    @Autowired
-    private ScanRecordService scanRecordService;
-
-    @Autowired
-    private MaterialPurchaseService materialPurchaseService;
-
-    @Autowired
-    private ProductWarehousingService productWarehousingService;
-
-    @Autowired
-    private ProductWarehousingMapper productWarehousingMapper;
+    public DashboardQueryServiceImpl(
+            StyleInfoService styleInfoService,
+            ProductionOrderService productionOrderService,
+            MaterialReconciliationService materialReconciliationService,
+            ShipmentReconciliationService shipmentReconciliationService,
+            ScanRecordService scanRecordService,
+            MaterialPurchaseService materialPurchaseService,
+            ProductWarehousingService productWarehousingService,
+            ProductWarehousingMapper productWarehousingMapper) {
+        this.styleInfoService = styleInfoService;
+        this.productionOrderService = productionOrderService;
+        this.materialReconciliationService = materialReconciliationService;
+        this.shipmentReconciliationService = shipmentReconciliationService;
+        this.scanRecordService = scanRecordService;
+        this.materialPurchaseService = materialPurchaseService;
+        this.productWarehousingService = productWarehousingService;
+        this.productWarehousingMapper = productWarehousingMapper;
+    }
 
     @Override
     public long countEnabledStyles() {
@@ -64,11 +62,6 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
     @Override
     public long countProductionOrders() {
         return productionOrderService.lambdaQuery().eq(ProductionOrder::getDeleteFlag, 0).count();
-    }
-
-    @Override
-    public long countPendingFactoryReconciliations() {
-        return factoryReconciliationService.lambdaQuery().eq(FactoryReconciliation::getStatus, "pending").count();
     }
 
     @Override
@@ -82,11 +75,6 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
     @Override
     public long countPendingShipmentReconciliations() {
         return shipmentReconciliationService.lambdaQuery().eq(ShipmentReconciliation::getStatus, "pending").count();
-    }
-
-    @Override
-    public long countApprovedFactoryReconciliations() {
-        return factoryReconciliationService.lambdaQuery().eq(FactoryReconciliation::getStatus, "approved").count();
     }
 
     @Override
@@ -168,15 +156,6 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         return productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .orderByDesc(ProductionOrder::getCreateTime)
-                .page(new Page<>(1, lim))
-                .getRecords();
-    }
-
-    @Override
-    public List<FactoryReconciliation> listRecentFactoryReconciliations(int limit) {
-        int lim = Math.max(1, limit);
-        return factoryReconciliationService.lambdaQuery()
-                .orderByDesc(FactoryReconciliation::getCreateTime)
                 .page(new Page<>(1, lim))
                 .getRecords();
     }

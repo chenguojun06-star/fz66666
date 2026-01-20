@@ -13,7 +13,7 @@ import lombok.Data;
  */
 @Data
 @TableName("t_material_reconciliation")
-public class MaterialReconciliation {
+public class MaterialReconciliation implements com.fashion.supplychain.finance.service.impl.BaseReconciliationServiceImpl.ReconciliationEntity {
     
     @TableId(type = IdType.ASSIGN_UUID)
     private String id;
@@ -76,6 +76,10 @@ public class MaterialReconciliation {
     private LocalDateTime createTime;
     
     private LocalDateTime updateTime;
+
+    private String createBy;
+
+    private String updateBy;
     
     private Integer deleteFlag;
 }

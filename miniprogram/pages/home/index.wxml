@@ -1,0 +1,98 @@
+<view class="container">
+  <view class="card">
+    <view class="title">首页</view>
+    <view class="home-actions">
+      <view class="btn-secondary {{loading ? 'btn-disabled' : ''}}" bindtap="refresh">刷新</view>
+    </view>
+    <view class="home-section-title">筛选</view>
+    <view class="home-filter">
+      <view class="filter-row">
+        <view class="filter-field">
+          <view class="filter-label">开始日期</view>
+          <picker mode="date" value="{{filters.startDate}}" bindchange="onStartDateChange">
+            <view class="filter-input">{{filters.startDate || '选择开始日期'}}</view>
+          </picker>
+        </view>
+        <view class="filter-field">
+          <view class="filter-label">结束日期</view>
+          <picker mode="date" value="{{filters.endDate}}" bindchange="onEndDateChange">
+            <view class="filter-input">{{filters.endDate || '选择结束日期'}}</view>
+          </picker>
+        </view>
+      </view>
+      <view class="filter-row">
+        <view class="filter-field">
+          <view class="filter-label">品牌</view>
+          <input class="filter-text" placeholder="品牌" value="{{filters.brand}}" bindinput="onBrandInput" />
+        </view>
+        <view class="filter-field">
+          <view class="filter-label">加工厂</view>
+          <input class="filter-text" placeholder="加工厂" value="{{filters.factory}}" bindinput="onFactoryInput" />
+        </view>
+      </view>
+      <view class="filter-actions">
+        <view class="btn-secondary {{loading ? 'btn-disabled' : ''}}" bindtap="loadStats">查询</view>
+        <view class="btn-secondary {{loading ? 'btn-disabled' : ''}}" bindtap="resetFilters">重置</view>
+      </view>
+    </view>
+    <view wx:if="{{loading}}" class="hint">加载中...</view>
+    <view wx:if="{{!loading && !statsLoaded}}" class="hint">暂无统计</view>
+    <view class="home-section-title">数据概览</view>
+    <view class="home-stats">
+      <view class="home-stat stat-order">
+        <view class="home-stat-head">
+          <view class="home-stat-icon-wrap icon-order">
+            <image class="home-stat-icon" src="/assets/icons/order.svg" mode="aspectFit" />
+          </view>
+          <view class="home-stat-label">订单数量</view>
+        </view>
+        <view class="home-stat-value">{{stats.productionOrders}}</view>
+      </view>
+      <view class="home-stat stat-stock">
+        <view class="home-stat-head">
+          <view class="home-stat-icon-wrap icon-stock">
+            <image class="home-stat-icon" src="/assets/icons/stock.svg" mode="aspectFit" />
+          </view>
+          <view class="home-stat-label">当天入库</view>
+        </view>
+        <view class="home-stat-value">{{stats.warehousingToday}}</view>
+      </view>
+      <view class="home-stat stat-purchase">
+        <view class="home-stat-head">
+          <view class="home-stat-icon-wrap icon-purchase">
+            <image class="home-stat-icon" src="/assets/icons/purchase.svg" mode="aspectFit" />
+          </view>
+          <view class="home-stat-label">物料采购</view>
+        </view>
+        <view class="home-stat-value">{{stats.materialPurchase}}</view>
+      </view>
+      <view class="home-stat stat-defect">
+        <view class="home-stat-head">
+          <view class="home-stat-icon-wrap icon-defect">
+            <image class="home-stat-icon" src="/assets/icons/defect.svg" mode="aspectFit" />
+          </view>
+          <view class="home-stat-label">次品数量</view>
+        </view>
+        <view class="home-stat-value">{{stats.defectCount}}</view>
+      </view>
+    </view>
+
+    <view class="home-section-title">快捷入口</view>
+    <view class="home-entries">
+      <view class="home-entry" data-tab="orders_production" bindtap="goWork">生产中</view>
+      <view class="home-entry" data-tab="warehousing" bindtap="goWork">入库</view>
+      <view class="home-entry" data-tab="exceptions" bindtap="goWork">异常</view>
+      <view class="home-entry" bindtap="goScan">扫码</view>
+      <view class="home-entry" bindtap="goAdmin">个人</view>
+    </view>
+
+    <view class="home-section-title">最近动态</view>
+    <view wx:if="{{activities.length === 0}}" class="hint">暂无动态</view>
+    <view wx:for="{{activities}}" wx:key="id" class="home-activity">
+      <view class="home-activity-row">
+        <view class="home-activity-content">{{item.content}}</view>
+        <view class="home-activity-time">{{item.time}}</view>
+      </view>
+    </view>
+  </view>
+</view>

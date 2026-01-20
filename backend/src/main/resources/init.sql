@@ -255,7 +255,13 @@ CREATE TABLE IF NOT EXISTS t_product_warehousing (
     cutting_bundle_no INT COMMENT '裁剪扎号序号',
     cutting_bundle_qr_code VARCHAR(200) COMMENT '裁剪扎号二维码内容',
     unqualified_image_urls VARCHAR(2000) COMMENT '不合格图片URL列表(JSON)',
+    defect_category VARCHAR(64) COMMENT '次品类别',
+    defect_remark VARCHAR(500) COMMENT '次品备注',
     repair_remark VARCHAR(500) COMMENT '返修备注',
+    receiver_id VARCHAR(36) COMMENT '领取人ID',
+    receiver_name VARCHAR(50) COMMENT '领取人名称',
+    received_time DATETIME COMMENT '领取时间',
+    inspection_status VARCHAR(20) COMMENT '验收状态',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     delete_flag INT NOT NULL DEFAULT 0 COMMENT '删除标识：0-未删除，1-已删除',
@@ -280,6 +286,8 @@ CREATE TABLE IF NOT EXISTS t_scan_record (
     quantity INT NOT NULL DEFAULT 0 COMMENT '数量',
     unit_price DECIMAL(10,2) COMMENT '单价',
     total_amount DECIMAL(10,2) COMMENT '金额',
+    settlement_status VARCHAR(20) COMMENT '核算状态',
+    payroll_settlement_id VARCHAR(36) COMMENT '工资结算单ID',
     process_code VARCHAR(50) COMMENT '工序编码',
     progress_stage VARCHAR(100) COMMENT '进度环节',
     process_name VARCHAR(100) COMMENT '工序名称',
@@ -301,8 +309,54 @@ CREATE TABLE IF NOT EXISTS t_scan_record (
     INDEX idx_order_no (order_no),
     INDEX idx_style_no (style_no),
     INDEX idx_request_id (request_id),
-    INDEX idx_scan_time (scan_time)
+    INDEX idx_scan_time (scan_time),
+    INDEX idx_payroll_settlement_id (payroll_settlement_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='扫码记录表';
+
+CREATE TABLE IF NOT EXISTS t_payroll_settlement (
+    id VARCHAR(36) PRIMARY KEY COMMENT '结算ID',
+    settlement_no VARCHAR(50) NOT NULL COMMENT '结算单号',
+    order_id VARCHAR(36) COMMENT '订单ID',
+    order_no VARCHAR(50) COMMENT '订单号',
+    style_id VARCHAR(36) COMMENT '款号ID',
+    style_no VARCHAR(50) COMMENT '款号',
+    style_name VARCHAR(100) COMMENT '款名',
+    start_time DATETIME COMMENT '开始时间',
+    end_time DATETIME COMMENT '结束时间',
+    total_quantity INT DEFAULT 0 COMMENT '总数量',
+    total_amount DECIMAL(10,2) DEFAULT 0.00 COMMENT '总金额',
+    status VARCHAR(20) COMMENT '状态',
+    remark VARCHAR(255) COMMENT '备注',
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    create_by VARCHAR(36) COMMENT '创建人',
+    update_by VARCHAR(36) COMMENT '更新人',
+    UNIQUE KEY uk_payroll_settlement_no (settlement_no),
+    INDEX idx_payroll_order_no (order_no),
+    INDEX idx_payroll_style_no (style_no),
+    INDEX idx_payroll_create_time (create_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='工资结算单表';
+
+CREATE TABLE IF NOT EXISTS t_payroll_settlement_item (
+    id VARCHAR(36) PRIMARY KEY COMMENT '明细ID',
+    settlement_id VARCHAR(36) NOT NULL COMMENT '结算单ID',
+    operator_id VARCHAR(36) COMMENT '人员ID',
+    operator_name VARCHAR(50) COMMENT '人员名称',
+    process_name VARCHAR(100) COMMENT '工序名称',
+    quantity INT DEFAULT 0 COMMENT '数量',
+    unit_price DECIMAL(10,2) COMMENT '单价',
+    total_amount DECIMAL(10,2) COMMENT '总金额',
+    order_id VARCHAR(36) COMMENT '订单ID',
+    order_no VARCHAR(50) COMMENT '订单号',
+    style_no VARCHAR(50) COMMENT '款号',
+    scan_type VARCHAR(20) COMMENT '扫码类型',
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    INDEX idx_payroll_item_settlement_id (settlement_id),
+    INDEX idx_payroll_item_operator_id (operator_id),
+    INDEX idx_payroll_item_order_no (order_no),
+    INDEX idx_payroll_item_style_no (style_no)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='工资结算明细表';
 
 -- 16.1 裁剪扎号表
 CREATE TABLE IF NOT EXISTS t_cutting_bundle (
@@ -323,22 +377,6 @@ CREATE TABLE IF NOT EXISTS t_cutting_bundle (
     INDEX idx_order_no (production_order_no),
     INDEX idx_style_no (style_no)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='裁剪扎号表';
-
--- 17. 加工厂对账单表
-CREATE TABLE IF NOT EXISTS t_factory_reconciliation (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '对账ID',
-    reconciliation_no VARCHAR(50) NOT NULL UNIQUE COMMENT '对账单号',
-    factory_id BIGINT NOT NULL COMMENT '工厂ID',
-    factory_name VARCHAR(100) NOT NULL COMMENT '工厂名称',
-    reconciliation_date DATE NOT NULL COMMENT '对账日期',
-    total_amount DECIMAL(10,2) DEFAULT 0.00 COMMENT '总金额',
-    deduction_amount DECIMAL(10,2) DEFAULT 0.00 COMMENT '扣款金额',
-    actual_amount DECIMAL(10,2) DEFAULT 0.00 COMMENT '实际金额',
-    status VARCHAR(20) DEFAULT 'PENDING' COMMENT '状态：PENDING-待对账，CONFIRMED-已确认，SETTLED-已结算',
-    create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    INDEX idx_factory_id (factory_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='加工厂对账单表';
 
 -- 18. 加工厂扣款项表
 CREATE TABLE IF NOT EXISTS t_deduction_item (

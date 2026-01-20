@@ -3,14 +3,12 @@ import { Button, Card, Col, Collapse, Descriptions, Form, Input, Modal, Row, Sel
 import { CheckOutlined, CloseCircleOutlined, DollarOutlined, RollbackOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { useLocation } from 'react-router-dom';
 import Layout from '../../components/Layout';
-import ResizableTable from '../../components/ResizableTable';
-import RowActions from '../../components/RowActions';
+import ResizableTable from '../../components/common/ResizableTable';
+import ResizableModal from '../../components/common/ResizableModal';
+import RowActions from '../../components/common/RowActions';
 import api from '../../utils/api';
 import { returnFinanceReconciliation, updateFinanceReconciliationStatus } from '../../utils/api';
-import { Factory, FactoryQueryParams } from '../../types/system';
 import {
-  FactoryReconciliation,
-  FinanceQueryParams,
   MaterialReconQueryParams,
   MaterialReconciliation,
   OrderProfitMaterialItem,
@@ -23,10 +21,19 @@ import { formatDateTime } from '../../utils/datetime';
 import { StyleCoverThumb } from '../../components/StyleAssets';
 import { useAuth } from '../../utils/authContext';
 
-type ApprovalTab = 'factory' | 'material' | 'shipment' | 'orderProfit';
+type ApprovalTab = 'material' | 'shipment' | 'orderProfit';
 type ReconStatus = 'pending' | 'verified' | 'approved' | 'paid' | 'rejected';
 
 const { Option } = Select;
+
+const isAdminUser = (user?: { role?: string; roleName?: string; username?: string } | null) => {
+  const role = String(user?.role ?? user?.roleName ?? '').trim();
+  const username = String(user?.username ?? '').trim();
+  if (username === 'admin') return true;
+  if (role === '1') return true;
+  const lower = role.toLowerCase();
+  return lower.includes('admin') || role.includes('管理员');
+};
 
 const toArray = <T,>(value: any): T[] => {
   if (Array.isArray(value)) return value as T[];
@@ -194,16 +201,43 @@ const SimpleLineChart = <T extends { date?: string }>(
 const PaymentApproval: React.FC = () => {
   const location = useLocation();
   const { user } = useAuth();
-  const [tab, setTab] = useState<ApprovalTab>('factory');
+  const [tab, setTab] = useState<ApprovalTab>('shipment');
+
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailKind, setDetailKind] = useState<ApprovalTab>('shipment');
+  const [detailRecord, setDetailRecord] = useState<any | null>(null);
+
+  const openDetail = (kind: ApprovalTab, record: any) => {
+    setDetailKind(kind);
+    setDetailRecord(record || null);
+    setDetailOpen(true);
+  };
+
+  const closeDetail = () => {
+    setDetailOpen(false);
+    setDetailRecord(null);
+  };
+
+  const ignoreRowClick = (e: any) => {
+    const el = e?.target as HTMLElement | null;
+    if (!el) return false;
+    return Boolean(
+      el.closest('button,a,.ant-checkbox-wrapper,.ant-checkbox,.table-actions,.ant-dropdown,.ant-select,.ant-input,.ant-picker')
+    );
+  };
+
+  const detailModalWidth = useMemo(() => {
+    if (typeof window === 'undefined') return '60vw';
+    const w = window.innerWidth;
+    if (w < 768) return '96vw';
+    if (w < 1024) return '66vw';
+    return '60vw';
+  }, []);
+  const detailModalInitialHeight = 720;
 
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [selectedRows, setSelectedRows] = useState<any[]>([]);
   const [batchLoading, setBatchLoading] = useState<ReconStatus | null>(null);
-
-  const [factoryList, setFactoryList] = useState<FactoryReconciliation[]>([]);
-  const [factoryTotal, setFactoryTotal] = useState(0);
-  const [factoryLoading, setFactoryLoading] = useState(false);
-  const [factoryQuery, setFactoryQuery] = useState<FinanceQueryParams>({ page: 1, pageSize: 10, status: 'pending' });
 
   const [materialList, setMaterialList] = useState<MaterialReconciliation[]>([]);
   const [materialTotal, setMaterialTotal] = useState(0);
@@ -218,11 +252,9 @@ const PaymentApproval: React.FC = () => {
   const [orderProfitOrderNo, setOrderProfitOrderNo] = useState<string>('');
   const [orderProfitLoading, setOrderProfitLoading] = useState(false);
   const [orderProfitData, setOrderProfitData] = useState<OrderProfitResponse | null>(null);
-
-  const [factoriesById, setFactoriesById] = useState<Record<string, Factory>>({});
   const [modalApi, modalContextHolder] = Modal.useModal();
 
-  const isAdmin = String(user?.role || '').toLowerCase().includes('admin') || String(user?.role || '').includes('管理员');
+  const isAdmin = useMemo(() => isAdminUser(user), [user]);
 
   const buildActionItems = (kind: ApprovalTab, status: ReconStatus, id: string) => {
     return [
@@ -295,9 +327,8 @@ const PaymentApproval: React.FC = () => {
 
   useEffect(() => {
     const desired = (location.state as any)?.defaultTab;
-    if (desired === 'factory' || desired === 'material' || desired === 'shipment' || desired === 'orderProfit') {
-      setTab(desired);
-    }
+    if (desired === 'material' || desired === 'shipment' || desired === 'orderProfit') setTab(desired);
+    else if (desired === 'factory') setTab('material');
   }, [location.state]);
 
   useEffect(() => {
@@ -311,48 +342,12 @@ const PaymentApproval: React.FC = () => {
     const desiredStatus = String(desiredStatusRaw || '').trim();
     const allowed: ReconStatus[] = ['pending', 'verified', 'approved', 'paid', 'rejected'];
     if (!allowed.includes(desiredStatus as any)) return;
-    if (desiredTab === 'factory') {
-      setFactoryQuery((prev) => ({ ...prev, status: desiredStatus, page: 1 }));
-    } else if (desiredTab === 'material') {
+    if (desiredTab === 'material') {
       setMaterialQuery((prev) => ({ ...prev, status: desiredStatus, page: 1 }));
     } else if (desiredTab === 'shipment') {
       setShipmentQuery((prev) => ({ ...prev, status: desiredStatus, page: 1 }));
     }
   }, [location.state]);
-
-  const fetchFactories = async () => {
-    try {
-      const params: FactoryQueryParams = { page: 1, pageSize: 1000 };
-      const res = await api.get<any>('/system/factory/list', { params });
-      const result = res as any;
-      if (result.code !== 200) return;
-      const list = toArray<Factory>(result.data?.records);
-      const next: Record<string, Factory> = {};
-      for (const f of list) {
-        if (f.id) next[String(f.id)] = f;
-      }
-      setFactoriesById(next);
-    } catch {
-    }
-  };
-
-  const fetchFactoryApprovals = async () => {
-    setFactoryLoading(true);
-    try {
-      const res = await api.get<any>('/finance/factory-reconciliation/list', { params: factoryQuery });
-      const result = res as any;
-      if (result.code === 200) {
-        setFactoryList(toArray<FactoryReconciliation>(result.data?.records));
-        setFactoryTotal(Number(result.data?.total || 0));
-      } else {
-        message.error(result.message || '获取工厂审批付款列表失败');
-      }
-    } catch (e: any) {
-      message.error(e?.message || '获取工厂审批付款列表失败');
-    } finally {
-      setFactoryLoading(false);
-    }
-  };
 
   const fetchMaterialApprovals = async () => {
     setMaterialLoading(true);
@@ -417,14 +412,6 @@ const PaymentApproval: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchFactories();
-  }, []);
-
-  useEffect(() => {
-    if (tab === 'factory') fetchFactoryApprovals();
-  }, [tab, factoryQuery]);
-
-  useEffect(() => {
     if (tab === 'material') fetchMaterialApprovals();
   }, [tab, materialQuery]);
 
@@ -445,8 +432,14 @@ const PaymentApproval: React.FC = () => {
       const result = res as any;
       if (result.code === 200) {
         message.success('操作成功');
-        if (kind === 'factory') fetchFactoryApprovals();
-        else if (kind === 'material') fetchMaterialApprovals();
+        if (detailOpen && detailRecord && String((detailRecord as any)?.id || '') === String(id || '')) {
+          setDetailRecord((prev: any | null) => {
+            if (!prev) return prev;
+            if (String((prev as any)?.id || '') !== String(id || '')) return prev;
+            return { ...(prev as any), status };
+          });
+        }
+        if (kind === 'material') fetchMaterialApprovals();
         else fetchShipmentApprovals();
       } else {
         message.error(result.message || '操作失败');
@@ -518,9 +511,8 @@ const PaymentApproval: React.FC = () => {
         setSelectedRowKeys([]);
         setSelectedRows([]);
 
-        if (tab === 'factory') fetchFactoryApprovals();
-        else if (tab === 'material') fetchMaterialApprovals();
-        else fetchShipmentApprovals();
+        if (tab === 'material') fetchMaterialApprovals();
+        else if (tab === 'shipment') fetchShipmentApprovals();
 
         if (!okCount && !failCount && skippedCount) {
           message.warning(`无可操作记录（已跳过 ${skippedCount} 条）`);
@@ -541,8 +533,7 @@ const PaymentApproval: React.FC = () => {
       const result = res as any;
       if (result.code === 200) {
         message.success('退回成功');
-        if (kind === 'factory') fetchFactoryApprovals();
-        else if (kind === 'material') fetchMaterialApprovals();
+        if (kind === 'material') fetchMaterialApprovals();
         else fetchShipmentApprovals();
       } else {
         message.error(result.message || '退回失败');
@@ -620,8 +611,7 @@ const PaymentApproval: React.FC = () => {
       const result = res as any;
       if (result.code === 200) {
         message.success('已重审');
-        if (kind === 'factory') fetchFactoryApprovals();
-        else if (kind === 'material') fetchMaterialApprovals();
+        if (kind === 'material') fetchMaterialApprovals();
         else fetchShipmentApprovals();
       } else {
         message.error(result.message || '重审失败');
@@ -630,143 +620,6 @@ const PaymentApproval: React.FC = () => {
       message.error(e?.message || '重审失败');
     }
   };
-
-  const factoryColumns = useMemo(() => {
-    return [
-      {
-        title: '对账单号',
-        dataIndex: 'reconciliationNo',
-        key: 'reconciliationNo',
-        width: 140,
-      },
-      {
-        title: '加工厂',
-        dataIndex: 'factoryName',
-        key: 'factoryName',
-        width: 160,
-      },
-      {
-        title: '联系人',
-        key: 'contactPerson',
-        width: 100,
-        render: (_: any, record: FactoryReconciliation) => {
-          const f = record.factoryId ? factoriesById[String(record.factoryId)] : undefined;
-          return f?.contactPerson || '-';
-        },
-      },
-      {
-        title: '电话',
-        key: 'contactPhone',
-        width: 120,
-        render: (_: any, record: FactoryReconciliation) => {
-          const f = record.factoryId ? factoriesById[String(record.factoryId)] : undefined;
-          return f?.contactPhone || '-';
-        },
-      },
-      {
-        title: '订单号',
-        dataIndex: 'orderNo',
-        key: 'orderNo',
-        width: 120,
-      },
-      {
-        title: '款号',
-        dataIndex: 'styleNo',
-        key: 'styleNo',
-        width: 110,
-      },
-      {
-        title: '数量',
-        dataIndex: 'quantity',
-        key: 'quantity',
-        width: 80,
-        align: 'right' as const,
-      },
-      {
-        title: '生产完成数',
-        dataIndex: 'productionCompletedQuantity',
-        key: 'productionCompletedQuantity',
-        width: 110,
-        align: 'right' as const,
-        render: (v: any) => {
-          const n = typeof v === 'number' ? v : Number(v);
-          return Number.isFinite(n) ? n : '-';
-        },
-      },
-      {
-        title: '最终金额(元)',
-        dataIndex: 'finalAmount',
-        key: 'finalAmount',
-        width: 130,
-        align: 'right' as const,
-        render: (v: any) => {
-          const n = typeof v === 'number' ? v : Number(v);
-          return Number.isFinite(n) ? n.toFixed(2) : '-';
-        },
-      },
-      {
-        title: '对账日期',
-        dataIndex: 'reconciliationDate',
-        key: 'reconciliationDate',
-        width: 140,
-        render: (v: any) => formatDateTime(v),
-      },
-      {
-        title: '状态',
-        dataIndex: 'status',
-        key: 'status',
-        width: 110,
-        render: (status: ReconStatus) => {
-          const { text, color } = getStatusConfig(status);
-          return <Tag color={color}>{text}</Tag>;
-        },
-      },
-      {
-        title: '上环节时间',
-        key: 'prevStageTime',
-        width: 160,
-        render: (_: any, record: FactoryReconciliation) => {
-          const status = record.status as ReconStatus;
-          const id = String(record.id || '');
-          if (!id) return '-';
-          return getPrevStageTime(status, record);
-        },
-      },
-      {
-        title: '付款时间',
-        key: 'paidAt',
-        width: 160,
-        render: (_: any, record: FactoryReconciliation) => {
-          const status = record.status as ReconStatus;
-          return getPaidAtTime(status, record);
-        },
-      },
-      {
-        title: '重审时间',
-        key: 'reReviewAt',
-        width: 160,
-        render: (_: any, record: FactoryReconciliation) => formatDateTime((record as any).reReviewAt) || '-',
-      },
-      {
-        title: '重审原因',
-        key: 'reReviewReason',
-        width: 180,
-        render: (_: any, record: FactoryReconciliation) => String((record as any).reReviewReason || '').trim() || '-',
-      },
-      {
-        title: '操作',
-        key: 'action',
-        width: 110,
-        fixed: 'right' as const,
-        render: (_: any, record: FactoryReconciliation) => {
-          const status = record.status as ReconStatus;
-          const id = String(record.id || '');
-          const items = buildActionItems('factory', status, id);
-          return <RowActions actions={[{ key: 'more', label: '更多', children: items as any }]} maxInline={0} />;
-        },
-      },
-    ];
-  }, [factoriesById, isAdmin, modalApi]);
 
   const materialColumns = useMemo(() => {
     return [
@@ -1200,69 +1053,6 @@ const PaymentApproval: React.FC = () => {
     ];
   }, []);
 
-  const factoryExtraFilters = (
-    <Card size="small" className="filter-card mb-sm">
-      <Form layout="inline" size="small" onSubmitCapture={(e) => e.preventDefault()}>
-        <Form.Item label="对账单号">
-          <Input
-            placeholder="请输入对账单号"
-            onChange={(e) => setFactoryQuery((prev) => ({ ...prev, reconciliationNo: e.target.value, page: 1 }))}
-            style={{ width: 160 }}
-            allowClear
-          />
-        </Form.Item>
-        <Form.Item label="加工厂">
-          <Input
-            placeholder="请输入加工厂名称"
-            onChange={(e) => setFactoryQuery((prev) => ({ ...prev, factoryName: e.target.value, page: 1 }))}
-            style={{ width: 160 }}
-            allowClear
-          />
-        </Form.Item>
-        <Form.Item label="款号">
-          <Input
-            placeholder="请输入款号"
-            onChange={(e) => setFactoryQuery((prev) => ({ ...prev, styleNo: e.target.value, page: 1 }))}
-            style={{ width: 140 }}
-            allowClear
-          />
-        </Form.Item>
-        <Form.Item label="状态">
-          <Select
-            value={factoryQuery.status || ''}
-            style={{ width: 140 }}
-            onChange={(v) => setFactoryQuery((prev) => ({ ...prev, status: v || undefined, page: 1 }))}
-          >
-            <Option value="">全部</Option>
-            <Option value="pending">待审核</Option>
-            <Option value="verified">已验证</Option>
-            <Option value="approved">已批准</Option>
-            <Option value="paid">已付款</Option>
-            <Option value="rejected">已拒绝</Option>
-          </Select>
-        </Form.Item>
-        <Form.Item className="filter-actions">
-          <Space>
-            <Button type="primary" onClick={fetchFactoryApprovals} loading={factoryLoading}>
-              刷新
-            </Button>
-            <Button
-              onClick={() =>
-                setFactoryQuery({
-                  page: 1,
-                  pageSize: 10,
-                  status: 'pending',
-                })
-              }
-            >
-              重置
-            </Button>
-          </Space>
-        </Form.Item>
-      </Form>
-    </Card>
-  );
-
   const materialExtraFilters = (
     <Card size="small" className="filter-card mb-sm">
       <Form layout="inline" size="small" onSubmitCapture={(e) => e.preventDefault()}>
@@ -1491,7 +1281,7 @@ const PaymentApproval: React.FC = () => {
   return (
     <Layout>
       {modalContextHolder}
-      <div className="finance-reconciliation-page">
+      <div>
         <Card className="page-card">
           <div className="page-header">
             <h2 className="page-title">审批付款</h2>
@@ -1502,46 +1292,27 @@ const PaymentApproval: React.FC = () => {
             activeKey={tab}
             onChange={(k) => setTab(k as ApprovalTab)}
             items={[
-              { key: 'factory', label: '工厂付款' },
               { key: 'material', label: '物料付款' },
               { key: 'shipment', label: '成品结算付款' },
               { key: 'orderProfit', label: '订单成本与盈利' },
             ]}
           />
 
-          {tab === 'factory'
-            ? factoryExtraFilters
-            : tab === 'material'
-              ? materialExtraFilters
-              : tab === 'shipment'
-                ? shipmentExtraFilters
-                : orderProfitExtraFilters}
+          {tab === 'material' ? materialExtraFilters : tab === 'shipment' ? shipmentExtraFilters : orderProfitExtraFilters}
 
-          {tab === 'factory' ? (
-            <ResizableTable
-              columns={factoryColumns as any}
-              dataSource={factoryList}
-              rowKey={(r: any) => String(r.id)}
-              rowSelection={{
-                selectedRowKeys,
-                onChange: (keys, rows) => {
-                  setSelectedRowKeys(keys);
-                  setSelectedRows(rows as any[]);
-                },
-              }}
-              loading={factoryLoading}
-              pagination={{
-                current: factoryQuery.page,
-                pageSize: factoryQuery.pageSize,
-                total: factoryTotal,
-                onChange: (page, pageSize) => setFactoryQuery((prev) => ({ ...prev, page, pageSize })),
-              }}
-            />
-          ) : tab === 'material' ? (
+          {tab === 'material' ? (
             <ResizableTable
               columns={materialColumns as any}
               dataSource={materialList}
               rowKey={(r: any) => String(r.id)}
+              onRow={(record: any) => {
+                return {
+                  onClick: (e: any) => {
+                    if (ignoreRowClick(e)) return;
+                    openDetail('material', record);
+                  },
+                } as any;
+              }}
               rowSelection={{
                 selectedRowKeys,
                 onChange: (keys, rows) => {
@@ -1562,6 +1333,14 @@ const PaymentApproval: React.FC = () => {
               columns={shipmentColumns as any}
               dataSource={shipmentList}
               rowKey={(r: any) => String(r.id)}
+              onRow={(record: any) => {
+                return {
+                  onClick: (e: any) => {
+                    if (ignoreRowClick(e)) return;
+                    openDetail('shipment', record);
+                  },
+                } as any;
+              }}
               rowSelection={{
                 selectedRowKeys,
                 onChange: (keys, rows) => {
@@ -1748,7 +1527,7 @@ const PaymentApproval: React.FC = () => {
                   dataSource={timeline as any}
                   rowKey="date"
                   pagination={false}
-                  scroll={{ x: 'max-content' }}
+                  scroll={{ x: 'max-content', y: typeof window === 'undefined' ? 360 : window.innerWidth < 768 ? 260 : 360 }}
                 />
               </Card>
 
@@ -1766,12 +1545,109 @@ const PaymentApproval: React.FC = () => {
                     return [purchaseNo, materialCode, materialName, receivedTime].filter(Boolean).join('|') || 'row';
                   }}
                   pagination={false}
-                  scroll={{ x: 'max-content' }}
+                  scroll={{ x: 'max-content', y: typeof window === 'undefined' ? 360 : window.innerWidth < 768 ? 260 : 360 }}
                 />
               </Card>
             </>
           )}
         </Card>
+
+        <ResizableModal
+          open={detailOpen}
+          title={detailKind === 'material' ? '物料付款详情' : '成品结算付款详情'}
+          onCancel={closeDetail}
+          footer={
+            <div className="modal-footer-actions">
+              <Button onClick={closeDetail}>关闭</Button>
+            </div>
+          }
+          width={detailModalWidth}
+          initialHeight={detailModalInitialHeight}
+          scaleWithViewport
+          destroyOnHidden
+        >
+          {detailRecord ? (
+            <>
+              <Card size="small" className="mb-sm">
+                <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                  {detailKind === 'shipment' ? (
+                    <StyleCoverThumb
+                      styleId={(detailRecord as any)?.styleId}
+                      styleNo={String((detailRecord as any)?.styleNo || '').trim() || undefined}
+                      size={84}
+                      borderRadius={12}
+                    />
+                  ) : (
+                    <div style={{ width: 84, height: 84, borderRadius: 12, background: '#f5f5f5' }} />
+                  )}
+
+                  <div style={{ flex: 1, minWidth: 260 }}>
+                    <Space wrap style={{ marginBottom: 8 }}>
+                      <Tag color="blue">{String((detailRecord as any)?.reconciliationNo || '').trim() || '-'}</Tag>
+                      <Tag>
+                        状态：{(() => {
+                          const cfg = getStatusConfig((detailRecord as any)?.status as any);
+                          return cfg.text;
+                        })()}
+                      </Tag>
+                      <Tag>对账日期：{formatDateTime((detailRecord as any)?.reconciliationDate)}</Tag>
+                    </Space>
+
+                    <Descriptions size="small" column={{ xs: 1, sm: 2, md: 3, lg: 3 }}>
+                      {detailKind === 'material' ? (
+                        <>
+                          <Descriptions.Item label="供应商">{String((detailRecord as any)?.supplierName || '').trim() || '-'}</Descriptions.Item>
+                          <Descriptions.Item label="订单号">{String((detailRecord as any)?.orderNo || '').trim() || '-'}</Descriptions.Item>
+                          <Descriptions.Item label="款号">{String((detailRecord as any)?.styleNo || '').trim() || '-'}</Descriptions.Item>
+                          <Descriptions.Item label="采购单号">{String((detailRecord as any)?.purchaseNo || '').trim() || '-'}</Descriptions.Item>
+                          <Descriptions.Item label="物料编码">{String((detailRecord as any)?.materialCode || '').trim() || '-'}</Descriptions.Item>
+                          <Descriptions.Item label="物料名称">{String((detailRecord as any)?.materialName || '').trim() || '-'}</Descriptions.Item>
+                        </>
+                      ) : (
+                        <>
+                          <Descriptions.Item label="客户">{String((detailRecord as any)?.customerName || '').trim() || '-'}</Descriptions.Item>
+                          <Descriptions.Item label="订单号">{String((detailRecord as any)?.orderNo || '').trim() || '-'}</Descriptions.Item>
+                          <Descriptions.Item label="款号">{String((detailRecord as any)?.styleNo || '').trim() || '-'}</Descriptions.Item>
+                          <Descriptions.Item label="数量">{Number((detailRecord as any)?.quantity ?? 0) || 0}</Descriptions.Item>
+                          <Descriptions.Item label="生产完成数">{Number((detailRecord as any)?.productionCompletedQuantity ?? 0) || 0}</Descriptions.Item>
+                        </>
+                      )}
+                      <Descriptions.Item label="总金额(元)">{formatMoney2((detailRecord as any)?.totalAmount)}</Descriptions.Item>
+                      <Descriptions.Item label="扣款(元)">{formatMoney2((detailRecord as any)?.deductionAmount)}</Descriptions.Item>
+                      <Descriptions.Item label="最终金额(元)">{formatMoney2((detailRecord as any)?.finalAmount)}</Descriptions.Item>
+                      <Descriptions.Item label="上环节时间">{getPrevStageTime((detailRecord as any)?.status as any, detailRecord)}</Descriptions.Item>
+                      <Descriptions.Item label="付款时间">{getPaidAtTime((detailRecord as any)?.status as any, detailRecord)}</Descriptions.Item>
+                    </Descriptions>
+                  </div>
+                </div>
+              </Card>
+
+              <Card size="small" title="审核动作">
+                <Space wrap>
+                  {buildActionItems(
+                    detailKind,
+                    ((detailRecord as any)?.status || 'pending') as ReconStatus,
+                    String((detailRecord as any)?.id || '')
+                  ).map((a: any) => {
+                    return (
+                      <Button
+                        key={String(a.key)}
+                        icon={a.icon}
+                        danger={Boolean(a.danger)}
+                        disabled={Boolean(a.disabled)}
+                        onClick={a.onClick}
+                      >
+                        {a.label}
+                      </Button>
+                    );
+                  })}
+                </Space>
+              </Card>
+            </>
+          ) : (
+            <div style={{ color: '#999' }}>未选择记录</div>
+          )}
+        </ResizableModal>
       </div>
     </Layout>
   );

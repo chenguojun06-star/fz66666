@@ -1,9 +1,16 @@
 package com.fashion.supplychain.system.controller;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.system.entity.LoginLog;
 import com.fashion.supplychain.system.entity.User;
 import com.fashion.supplychain.system.orchestration.UserOrchestrator;
+import com.fashion.supplychain.system.service.LoginLogService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import javax.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +24,9 @@ public class UserController {
 
     @Autowired
     private UserOrchestrator userOrchestrator;
+
+    @Autowired
+    private LoginLogService loginLogService;
 
     /**
      * 分页查询用户列表
@@ -151,6 +161,25 @@ public class UserController {
                     e.getMessage());
             throw e;
         }
+    }
+
+    @GetMapping("/online-count")
+    public Result<?> onlineCount() {
+        LocalDateTime since = LocalDateTime.now().minusMinutes(10);
+        List<LoginLog> logs = loginLogService.list(new LambdaQueryWrapper<LoginLog>()
+                .select(LoginLog::getUsername, LoginLog::getLoginTime, LoginLog::getLoginStatus)
+                .eq(LoginLog::getLoginStatus, "SUCCESS")
+                .ge(LoginLog::getLoginTime, since));
+        Set<String> users = new HashSet<>();
+        if (logs != null) {
+            for (LoginLog log : logs) {
+                String u = log == null ? null : safeTrim(log.getUsername());
+                if (u != null) {
+                    users.add(u);
+                }
+            }
+        }
+        return Result.success(users.size());
     }
 
     private static String resolveClientIp(HttpServletRequest request) {

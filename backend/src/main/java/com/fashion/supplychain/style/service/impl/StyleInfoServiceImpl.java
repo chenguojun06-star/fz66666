@@ -3,19 +3,23 @@ package com.fashion.supplychain.style.service.impl;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleOperationLog;
+import com.fashion.supplychain.style.entity.StyleQuotation;
 import com.fashion.supplychain.style.mapper.StyleInfoMapper;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.StyleOperationLogService;
+import com.fashion.supplychain.style.service.StyleQuotationService;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.ParamUtils;
+import java.math.BigDecimal;
 import java.util.NoSuchElementException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Lazy;
 import java.util.List;
 import java.util.Map;
@@ -35,8 +39,11 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
     private StyleOperationLogService styleOperationLogService;
 
     @Autowired
+    private ObjectProvider<ProductionOrderService> productionOrderServiceProvider;
+
+    @Autowired
     @Lazy
-    private ProductionOrderService productionOrderService;
+    private StyleQuotationService styleQuotationService;
 
     @Override
     public IPage<StyleInfo> queryPage(Map<String, Object> params) {
@@ -68,6 +75,7 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
                         .eq(StyleInfo::getStatus, "ENABLED")
                         .orderByDesc(StyleInfo::getCreateTime));
 
+        fillQuotationPriceFields(resultPage.getRecords());
         fillProgressFields(resultPage.getRecords());
         fillOrderCountFields(resultPage.getRecords());
 
@@ -97,6 +105,10 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
         Map<String, Integer> countByStyleNo = new HashMap<>();
 
         if (!styleIds.isEmpty() || !styleNos.isEmpty()) {
+            ProductionOrderService productionOrderService = productionOrderServiceProvider.getIfAvailable();
+            if (productionOrderService == null) {
+                return;
+            }
             QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
             qw.select("style_id as styleId", "style_no as styleNo", "count(1) as cnt")
                     .and(w -> {
@@ -152,6 +164,61 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
             }
             String sno = StringUtils.hasText(s.getStyleNo()) ? s.getStyleNo().trim() : null;
             s.setOrderCount(StringUtils.hasText(sno) ? countByStyleNo.getOrDefault(sno, 0) : 0);
+        }
+    }
+
+    private void fillQuotationPriceFields(List<StyleInfo> records) {
+        if (records == null || records.isEmpty()) {
+            return;
+        }
+
+        Set<Long> ids = new HashSet<>();
+        for (StyleInfo s : records) {
+            if (s != null && s.getId() != null) {
+                ids.add(s.getId());
+            }
+        }
+
+        if (styleQuotationService == null) {
+            return;
+        }
+
+        Map<Long, String> styleNoByStyleId = new HashMap<>();
+        for (StyleInfo s : records) {
+            if (s == null || s.getId() == null) {
+                continue;
+            }
+            if (StringUtils.hasText(s.getStyleNo())) {
+                styleNoByStyleId.put(s.getId(), s.getStyleNo().trim());
+            }
+        }
+
+        Map<Long, BigDecimal> unitPriceByStyleId = styleQuotationService.resolveFinalUnitPriceByStyleIds(ids,
+                styleNoByStyleId);
+
+        for (StyleInfo s : records) {
+            if (s == null || s.getId() == null) {
+                continue;
+            }
+
+            BigDecimal target = unitPriceByStyleId.get(s.getId());
+            if (target == null || target.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+
+            BigDecimal p = s.getPrice();
+
+            if (p == null || p.compareTo(target) != 0) {
+                s.setPrice(target);
+                try {
+                    StyleInfo patch = new StyleInfo();
+                    patch.setId(s.getId());
+                    patch.setPrice(target);
+                    patch.setUpdateTime(LocalDateTime.now());
+                    this.updateById(patch);
+                } catch (Exception ignored) {
+                }
+            }
         }
     }
 
@@ -257,6 +324,44 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
                 .last("limit 1")
                 .one();
         style.setPatternStartTime(start != null ? start.getCreateTime() : null);
+
+        try {
+            Set<Long> one = new HashSet<>();
+            one.add(id);
+            Map<Long, String> styleNoByStyleId = new HashMap<>();
+            if (StringUtils.hasText(style.getStyleNo())) {
+                styleNoByStyleId.put(id, style.getStyleNo().trim());
+            }
+            BigDecimal target = null;
+
+            StyleQuotation quotation = styleQuotationService == null ? null : styleQuotationService.getByStyleId(id);
+            BigDecimal qp = quotation == null ? null : quotation.getTotalPrice();
+            boolean fromQuotation = qp != null && qp.compareTo(BigDecimal.ZERO) > 0;
+            if (fromQuotation) {
+                target = qp;
+            }
+
+            BigDecimal current = style.getPrice();
+            boolean needFallback = (current == null || current.compareTo(BigDecimal.ZERO) <= 0);
+            if (target == null && needFallback && styleQuotationService != null) {
+                target = styleQuotationService.resolveFinalUnitPriceByStyleIds(one, styleNoByStyleId).get(id);
+            }
+
+            if (target != null) {
+                BigDecimal p = style.getPrice();
+                if (p == null || p.compareTo(target) != 0) {
+                    style.setPrice(target);
+                    if (fromQuotation || p == null || p.compareTo(BigDecimal.ZERO) <= 0) {
+                        StyleInfo patch = new StyleInfo();
+                        patch.setId(id);
+                        patch.setPrice(target);
+                        patch.setUpdateTime(LocalDateTime.now());
+                        this.updateById(patch);
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
         return style;
     }
 

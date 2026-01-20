@@ -21,6 +21,7 @@ frontend/.eslintcache
 
 # Logs
 *.log
+backend/logs/
 
 # Deployment / platform
 .vercel/

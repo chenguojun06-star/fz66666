@@ -57,7 +57,8 @@ public class CommonController {
 
     @GetMapping("/download/{fileName:.+}")
     @SuppressWarnings("null")
-    public ResponseEntity<Resource> downloadFile(@PathVariable String fileName) {
+    public ResponseEntity<Resource> downloadFile(@PathVariable String fileName,
+            @RequestParam(value = "download", required = false, defaultValue = "0") String download) {
         try {
             Path baseDir = Paths.get(uploadPath).toAbsolutePath().normalize();
             Path filePath = baseDir.resolve(fileName).normalize();
@@ -87,6 +88,13 @@ public class CommonController {
                                 || contentType.startsWith("text/")
                                 || "application/pdf".equalsIgnoreCase(contentType)
                 );
+
+                boolean forceDownload = download != null && ("1".equals(download.trim())
+                        || "true".equalsIgnoreCase(download.trim())
+                        || "yes".equalsIgnoreCase(download.trim()));
+                if (forceDownload) {
+                    inline = false;
+                }
 
                 return ResponseEntity.ok()
                         .contentType(mediaType)

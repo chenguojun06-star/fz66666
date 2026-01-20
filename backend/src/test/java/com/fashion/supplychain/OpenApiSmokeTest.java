@@ -25,4 +25,8 @@ public class OpenApiSmokeTest {
                 .andExpect(status().isOk())
                 .andExpect(result -> assertTrue(result.getResponse().getContentAsString().contains("\"openapi\"")));
     }
+
+    @Test
+    void contextLoads() {
+    }
 }

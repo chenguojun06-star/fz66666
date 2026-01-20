@@ -51,4 +51,14 @@ public class ProductWarehousingController {
     public Result<?> rollbackByBundle(@RequestBody Map<String, Object> body) {
         return Result.success(productWarehousingOrchestrator.rollbackByBundle(body));
     }
+
+    @GetMapping("/repair-stats")
+    public Result<?> repairStats(@RequestParam Map<String, Object> params) {
+        return Result.success(productWarehousingOrchestrator.repairStats(params));
+    }
+
+    @PostMapping("/repair-stats/batch")
+    public Result<?> batchRepairStats(@RequestBody Map<String, Object> body) {
+        return Result.success(productWarehousingOrchestrator.batchRepairStats(body));
+    }
 }
