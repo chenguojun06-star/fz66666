@@ -1033,20 +1033,22 @@ page {
 .qm-info {
   display: flex;
   align-items: center;
-  padding: 8px 0;
-  font-size: 13px;
+  padding: 10px 0;
+  font-size: 14px; /* 正文字体 */
   border-bottom: 1px solid #f5f5f5;
 }
 
 .qm-label {
-  color: #999;
-  width: 70px;
+  color: #6b7280;
+  width: 80px;
   flex-shrink: 0;
+  font-size: 14px; /* 正文字体 */
 }
 
 .qm-value {
-  color: #333;
+  color: #1f2937;
   font-weight: 500;
+  font-size: 14px; /* 正文字体 */
 }
 
 .qm-section {
@@ -1057,9 +1059,9 @@ page {
 
 .qm-section-title {
   display: block;
-  font-size: 14px;
-  font-weight: 500;
-  color: #333;
+  font-size: 16px; /* 二级标题 */
+  font-weight: 600;
+  color: #1f2937;
   margin-bottom: 12px;
 }
 
@@ -1117,9 +1119,10 @@ page {
 
 .qm-field-label {
   display: block;
-  font-size: 13px;
-  color: #666;
+  font-size: 14px; /* 正文字体 */
+  color: #4b5563;
   margin-bottom: 8px;
+  font-weight: 500;
 }
 
 .qm-input {
