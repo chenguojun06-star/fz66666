@@ -9,6 +9,7 @@ import ResizableTable from '../../components/common/ResizableTable';
 import RowActions from '../../components/common/RowActions';
 import { MaterialPurchase as MaterialPurchaseType, MaterialQueryParams, MaterialDatabase, MaterialDatabaseQueryParams } from '../../types/production';
 import api, { parseProductionOrderLines, sortSizeNames, unwrapApiData, useProductionOrderFrozenCache } from '../../utils/api';
+import { formatDateTime } from '../../utils/datetime';
 import { getMaterialTypeCategory, getMaterialTypeLabel, getMaterialTypeSortKey, normalizeMaterialType } from '../../utils/materialType';
 import { StyleAttachmentsButton, StyleCoverThumb } from '../../components/StyleAssets';
 import { useLocation } from 'react-router-dom';
@@ -601,16 +602,6 @@ const MaterialPurchase: React.FC = () => {
       if (!ok) return;
     }
     openDialog(mode, purchase);
-  };
-
-  const formatDateTime = (v: any) => {
-    const s = String(v || '').trim();
-    if (!s) return '';
-    if (s.includes('T')) {
-      const cleaned = s.replace('T', ' ').replace(/\.\d+Z?$/, '').replace('Z', '');
-      return cleaned.length > 16 ? cleaned.slice(0, 16) : cleaned;
-    }
-    return s.length > 16 ? s.slice(0, 16) : s;
   };
 
   const escapeHtml = (v: any) => {
