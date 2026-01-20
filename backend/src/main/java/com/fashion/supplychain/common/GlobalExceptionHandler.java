@@ -57,7 +57,7 @@ public class GlobalExceptionHandler {
         }
 
         String message = e.getBindingResult().getFieldErrors().isEmpty() ? "参数错误"
-                : e.getBindingResult().getFieldErrors().get(0).getDefaultMessage();
+                : e.getBindingResult().getFieldErrors().getFirst().getDefaultMessage();
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Result.fail(400, message, errors));
     }
@@ -74,7 +74,7 @@ public class GlobalExceptionHandler {
                 request == null ? "" : request.getRequestURI(), e.getMessage());
 
         String message = e.getBindingResult().getFieldErrors().isEmpty() ? "参数错误"
-                : e.getBindingResult().getFieldErrors().get(0).getDefaultMessage();
+                : e.getBindingResult().getFieldErrors().getFirst().getDefaultMessage();
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Result.fail(400, message));
     }

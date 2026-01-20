@@ -196,7 +196,7 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
         }
 
         List<Map<String, Object>> rows = baseMapper.selectMaps(qw);
-        Map<String, Object> first = (rows == null || rows.isEmpty()) ? null : rows.get(0);
+        Map<String, Object> first = (rows == null || rows.isEmpty()) ? null : rows.getFirst();
 
         int totalQuantity = 0;
         int bundleCount = 0;

@@ -4,6 +4,8 @@
 
 import { message } from 'antd';
 
+declare const process: { env?: { NODE_ENV?: string } };
+
 // 错误类型
 export enum ErrorType {
   Validation = 'VALIDATION',      // 表单验证错误
@@ -64,7 +66,7 @@ class Logger {
     }
 
     // 开发环境打印到控制台
-    if (process.env.NODE_ENV === 'development') {
+    if (process?.env?.NODE_ENV === 'development') {
       const prefix = `[${level}${traceId ? ` ${traceId}` : ''}] ${message}`;
       switch (level) {
         case LogLevel.Debug:
@@ -143,10 +145,10 @@ class ErrorHandler {
     const errorFields = (error as any)?.errorFields;
     if (errorFields && errorFields.length > 0) {
       const messages = errorFields.map((f: any) => f.errors[0]).filter(Boolean);
-      const errorMsg = messages.length === 1 
-        ? messages[0] 
+      const errorMsg = messages.length === 1
+        ? messages[0]
         : `表单验证失败：${messages.join('；')}`;
-      
+
       logger.warn('表单验证失败', { errorFields: messages });
       message.error(errorMsg);
       return errorMsg;
@@ -159,9 +161,9 @@ class ErrorHandler {
    */
   handleNetworkError(error: any): string {
     const traceId = logger.error('网络请求失败', error);
-    
+
     let errorMsg = '网络请求失败，请检查您的网络连接';
-    
+
     if (error?.code === 'ECONNABORTED') {
       errorMsg = '请求超时，请稍后重试';
     } else if (error?.response?.status === 0) {
@@ -217,10 +219,10 @@ class ErrorHandler {
       errorType = ErrorType.Unknown;
     }
 
-    const traceId = logger.error('API 请求错误', { 
+    const traceId = logger.error('API 请求错误', {
       status: error?.response?.status,
       message: errorMsg,
-      type: errorType 
+      type: errorType
     });
 
     message.error(`${errorMsg} (${traceId})`);
@@ -230,10 +232,10 @@ class ErrorHandler {
   /**
    * 处理业务错误
    */
-  handleBusinessError(message: string, data?: any): string {
+  handleBusinessError(msg: string, data?: any): string {
     const traceId = logger.error('业务错误', data);
-    message.error(`${message} (${traceId})`);
-    return message;
+    message.error(`${msg} (${traceId})`);
+    return msg;
   }
 
   /**
@@ -315,7 +317,7 @@ class OperationLogger {
       action,
       module,
       startTime,
-      
+
       /**
        * 记录操作成功
        */
@@ -331,7 +333,7 @@ class OperationLogger {
       failure: (error: any) => {
         const duration = Date.now() - startTime;
         this.logOperation(action, module, 'failure', duration, traceId, error);
-        logger.error(`操作失败: ${module}.${action}`, { traceId, duration: `${duration}ms`, error }, traceId);
+        logger.error(`操作失败: ${module}.${action}`, { traceId, duration: `${duration}ms`, error });
       }
     };
   }
@@ -420,7 +422,7 @@ export async function executeWithErrorHandling<T>(
   module: string
 ): Promise<T | null> {
   const opLogger = operationLogger.startOperation(action, module);
-  
+
   try {
     const result = await operation();
     opLogger.success();

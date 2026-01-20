@@ -117,13 +117,13 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
                 .ge(start != null, "create_time", start)
                 .le(end != null, "create_time", end);
         List<Map<String, Object>> rows = productWarehousingMapper.selectMaps(qw);
-        Map<String, Object> first = (rows == null || rows.isEmpty()) ? null : rows.get(0);
+        Map<String, Object> first = (rows == null || rows.isEmpty()) ? null : rows.getFirst();
         Object v = first == null ? null : (first.get("total") == null ? first.get("TOTAL") : first.get("total"));
         if (v == null) {
             return 0;
         }
-        if (v instanceof Number) {
-            return ((Number) v).longValue();
+        if (v instanceof Number number) {
+            return number.longValue();
         }
         try {
             return Long.parseLong(String.valueOf(v));

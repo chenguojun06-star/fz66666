@@ -442,7 +442,7 @@ public class ProductWarehousingOrchestrator {
         }
 
         Object qrsRaw = body == null ? null : body.get("qrs");
-        List<?> qrsList = qrsRaw instanceof List ? (List<?>) qrsRaw : Collections.emptyList();
+        List<?> qrsList = qrsRaw instanceof List<?> l ? l : Collections.emptyList();
         List<String> qrs = new ArrayList<>();
         for (Object v : qrsList) {
             String s = v == null ? null : String.valueOf(v).trim();
@@ -817,8 +817,8 @@ public class ProductWarehousingOrchestrator {
     }
 
     private Integer parseInt(Object v) {
-        if (v instanceof Number) {
-            return ((Number) v).intValue();
+        if (v instanceof Number number) {
+            return number.intValue();
         }
         if (v == null) {
             return null;

@@ -28,7 +28,6 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.text.Collator;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -470,7 +469,7 @@ public class ProductionOrderOrchestrator {
             return "";
         }
         try {
-            Path baseDir = Paths.get(uploadPath).toAbsolutePath().normalize();
+            Path baseDir = Path.of(uploadPath).toAbsolutePath().normalize();
             Path filePath = baseDir.resolve(fileName).normalize();
             if (!filePath.startsWith(baseDir) || !Files.exists(filePath) || !Files.isRegularFile(filePath)) {
                 return "";
@@ -764,8 +763,8 @@ public class ProductionOrderOrchestrator {
         if (v == null) {
             return 0;
         }
-        if (v instanceof Number) {
-            return ((Number) v).intValue();
+        if (v instanceof Number number) {
+            return number.intValue();
         }
         try {
             return Integer.parseInt(String.valueOf(v).trim());

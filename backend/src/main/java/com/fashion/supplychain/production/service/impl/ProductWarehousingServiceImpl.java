@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import org.springframework.util.StringUtils;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.concurrent.ThreadLocalRandom;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -1113,7 +1114,7 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
 
     private String buildWarehousingNo(LocalDateTime now) {
         String ts = now.format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
-        int rand = (int) (Math.random() * 900) + 100;
+        int rand = (int) (ThreadLocalRandom.current().nextDouble() * 900) + 100;
         return "WH" + ts + rand;
     }
 }

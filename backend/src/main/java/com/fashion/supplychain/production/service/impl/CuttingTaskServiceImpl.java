@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -179,17 +180,51 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
             return false;
         }
 
-        if (!"pending".equals(task.getStatus())) {
-            return true;
+        String status = task.getStatus() == null ? "" : task.getStatus().trim();
+        String rid = StringUtils.hasText(receiverId) ? receiverId.trim() : null;
+        String rname = StringUtils.hasText(receiverName) ? receiverName.trim() : null;
+
+        if (!"pending".equals(status)) {
+            return isSameReceiver(task, rid, rname);
         }
 
         LocalDateTime now = LocalDateTime.now();
-        task.setStatus("received");
-        task.setReceiverId(receiverId);
-        task.setReceiverName(receiverName);
-        task.setReceivedTime(now);
-        task.setUpdateTime(now);
-        return this.updateById(task);
+        LambdaUpdateWrapper<CuttingTask> uw = new LambdaUpdateWrapper<CuttingTask>()
+                .eq(CuttingTask::getId, taskId)
+                .eq(CuttingTask::getStatus, "pending")
+                .set(CuttingTask::getStatus, "received")
+                .set(CuttingTask::getReceiverId, rid)
+                .set(CuttingTask::getReceiverName, rname)
+                .set(CuttingTask::getReceivedTime, now)
+                .set(CuttingTask::getUpdateTime, now);
+
+        boolean updated = this.update(uw);
+        if (updated) {
+            return true;
+        }
+
+        CuttingTask latest = this.getById(taskId);
+        if (latest == null) {
+            return false;
+        }
+        return isSameReceiver(latest, rid, rname);
+    }
+
+    private boolean isSameReceiver(CuttingTask task, String receiverId, String receiverName) {
+        if (task == null) {
+            return false;
+        }
+        String existingId = task.getReceiverId() == null ? null : task.getReceiverId().trim();
+        String existingName = task.getReceiverName() == null ? null : task.getReceiverName().trim();
+        if (StringUtils.hasText(receiverId) && StringUtils.hasText(existingId)) {
+            if (receiverId.trim().equals(existingId)) {
+                return true;
+            }
+        }
+        if (StringUtils.hasText(receiverName) && StringUtils.hasText(existingName)) {
+            return receiverName.trim().equals(existingName);
+        }
+        return false;
     }
 
     @Override

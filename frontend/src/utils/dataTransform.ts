@@ -220,7 +220,7 @@ export function deepClone<T>(obj: T): T {
   if (obj instanceof Object) {
     const cloned = {} as T;
     for (const key in obj) {
-      if (obj.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
         (cloned as any)[key] = deepClone((obj as any)[key]);
       }
     }

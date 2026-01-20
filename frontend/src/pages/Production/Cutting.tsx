@@ -848,8 +848,9 @@ const CuttingManagement: React.FC = () => {
       } else {
         message.error(result.message || '领取任务失败');
       }
-    } catch {
-      message.error('领取任务失败');
+    } catch (err: any) {
+      const errMsg = err?.response?.data?.message || err?.message || '领取任务失败';
+      message.error(errMsg);
     } finally {
       setReceiveTaskLoading(false);
     }

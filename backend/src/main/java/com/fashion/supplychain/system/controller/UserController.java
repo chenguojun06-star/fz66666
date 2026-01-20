@@ -135,10 +135,10 @@ public class UserController {
         try {
             Object payloadObj = userOrchestrator.loginWithToken(loginData);
             User user = null;
-            if (payloadObj instanceof java.util.Map) {
-                Object u = ((java.util.Map<?, ?>) payloadObj).get("user");
-                if (u instanceof User) {
-                    user = (User) u;
+            if (payloadObj instanceof java.util.Map<?, ?> map) {
+                Object u = map.get("user");
+                if (u instanceof User user1) {
+                    user = user1;
                 }
             }
             userOrchestrator.recordLoginAttempt(

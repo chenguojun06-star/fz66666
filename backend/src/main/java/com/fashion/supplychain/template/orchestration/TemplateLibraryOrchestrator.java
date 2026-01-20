@@ -315,8 +315,8 @@ public class TemplateLibraryOrchestrator {
                 : (body.get("sourceStyleNo") == null ? null : String.valueOf(body.get("sourceStyleNo")));
         Object typesRaw = body == null ? null : body.get("templateTypes");
         List<String> types;
-        if (typesRaw instanceof List) {
-            types = ((List<?>) typesRaw).stream().map(v -> v == null ? null : String.valueOf(v))
+        if (typesRaw instanceof List<?> list) {
+            types = list.stream().map(v -> v == null ? null : String.valueOf(v))
                     .collect(java.util.stream.Collectors.toList());
         } else {
             types = List.of();

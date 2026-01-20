@@ -198,9 +198,9 @@ class ProductionOrderFlowOrchestrationServiceTest {
         List<Map<String, Object>> stages = out.getStages();
         assertEquals(3, stages.size());
 
-        assertEquals("下单", stages.get(0).get("processName"));
-        assertEquals("not_started", stages.get(0).get("status"));
-        assertEquals(0, stages.get(0).get("totalQuantity"));
+        assertEquals("下单", stages.getFirst().get("processName"));
+        assertEquals("not_started", stages.getFirst().get("status"));
+        assertEquals(0, stages.getFirst().get("totalQuantity"));
 
         assertEquals("裁剪", stages.get(1).get("processName"));
         assertEquals("in_progress", stages.get(1).get("status"));

@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import org.springframework.beans.factory.ObjectProvider;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +36,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.util.StringUtils;
 import java.util.NoSuchElementException;
 import java.time.format.DateTimeFormatter;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.UUID;
@@ -776,22 +778,62 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
             return false;
         }
 
+        String rid = StringUtils.hasText(receiverId) ? receiverId.trim() : null;
+        String rname = StringUtils.hasText(receiverName) ? receiverName.trim() : null;
+        boolean pending = "pending".equals(status) || !StringUtils.hasText(status);
+        if (!pending) {
+            return isSameReceiver(existed, rid, rname);
+        }
+
         String who = StringUtils.hasText(receiverName) ? receiverName.trim()
                 : (StringUtils.hasText(receiverId) ? receiverId.trim() : "");
         if (!StringUtils.hasText(who)) {
             who = "未命名";
         }
 
-        MaterialPurchase patch = new MaterialPurchase();
-        patch.setId(purchaseId);
-        patch.setReceiverId(StringUtils.hasText(receiverId) ? receiverId.trim() : null);
-        patch.setReceiverName(StringUtils.hasText(receiverName) ? receiverName.trim() : who);
-        patch.setReceivedTime(LocalDateTime.now());
-        patch.setUpdateTime(LocalDateTime.now());
-        if ("pending".equals(status)) {
-            patch.setStatus("received");
+        LocalDateTime now = LocalDateTime.now();
+        String finalReceiverName = StringUtils.hasText(rname) ? rname : who;
+        LambdaUpdateWrapper<MaterialPurchase> uw = new LambdaUpdateWrapper<MaterialPurchase>()
+                .eq(MaterialPurchase::getId, purchaseId)
+                .eq(MaterialPurchase::getDeleteFlag, 0)
+                .and(w -> w.eq(MaterialPurchase::getStatus, "pending")
+                        .or()
+                        .isNull(MaterialPurchase::getStatus)
+                        .or()
+                        .eq(MaterialPurchase::getStatus, ""))
+                .set(MaterialPurchase::getReceiverId, rid)
+                .set(MaterialPurchase::getReceiverName, finalReceiverName)
+                .set(MaterialPurchase::getReceivedTime, now)
+                .set(MaterialPurchase::getUpdateTime, now)
+                .set(MaterialPurchase::getStatus, "received");
+
+        boolean updated = this.update(uw);
+        if (updated) {
+            return true;
         }
-        return this.updateById(patch);
+
+        MaterialPurchase latest = this.getById(purchaseId);
+        if (latest == null) {
+            return false;
+        }
+        return isSameReceiver(latest, rid, rname);
+    }
+
+    private boolean isSameReceiver(MaterialPurchase purchase, String receiverId, String receiverName) {
+        if (purchase == null) {
+            return false;
+        }
+        String existingId = purchase.getReceiverId() == null ? null : purchase.getReceiverId().trim();
+        String existingName = purchase.getReceiverName() == null ? null : purchase.getReceiverName().trim();
+        if (StringUtils.hasText(receiverId) && StringUtils.hasText(existingId)) {
+            if (receiverId.trim().equals(existingId)) {
+                return true;
+            }
+        }
+        if (StringUtils.hasText(receiverName) && StringUtils.hasText(existingName)) {
+            return receiverName.trim().equals(existingName);
+        }
+        return false;
     }
 
     @Override
@@ -1087,7 +1129,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         LocalDateTime now = LocalDateTime.now();
         String ts = now.format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
         for (int i = 0; i < 6; i++) {
-            int rand = (int) (Math.random() * 900) + 100;
+            int rand = (int) (ThreadLocalRandom.current().nextDouble() * 900) + 100;
             String candidate = "PUR" + ts + rand;
             long cnt = this
                     .count(new LambdaQueryWrapper<MaterialPurchase>().eq(MaterialPurchase::getPurchaseNo, candidate));

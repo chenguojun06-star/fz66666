@@ -1439,8 +1439,8 @@ public class ScanRecordOrchestrator {
     }
 
     private Integer parseInt(Object v) {
-        if (v instanceof Number) {
-            return ((Number) v).intValue();
+        if (v instanceof Number number) {
+            return number.intValue();
         }
         if (v == null) {
             return null;
@@ -1456,11 +1456,11 @@ public class ScanRecordOrchestrator {
         if (v == null) {
             return false;
         }
-        if (v instanceof Boolean) {
-            return (Boolean) v;
+        if (v instanceof Boolean boolean1) {
+            return boolean1;
         }
-        if (v instanceof Number) {
-            return ((Number) v).intValue() != 0;
+        if (v instanceof Number number) {
+            return number.intValue() != 0;
         }
         String s = String.valueOf(v).trim();
         if (!hasText(s)) {
@@ -1474,11 +1474,11 @@ public class ScanRecordOrchestrator {
         if (v == null) {
             return null;
         }
-        if (v instanceof BigDecimal) {
-            return (BigDecimal) v;
+        if (v instanceof BigDecimal decimal) {
+            return decimal;
         }
-        if (v instanceof Number) {
-            return BigDecimal.valueOf(((Number) v).doubleValue());
+        if (v instanceof Number number) {
+            return BigDecimal.valueOf(number.doubleValue());
         }
         try {
             String s = String.valueOf(v).trim();

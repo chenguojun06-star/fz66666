@@ -198,8 +198,42 @@ public class CuttingTaskOrchestrator {
             }
         }
 
+        // 检查是否已被他人领取
+        String status = task.getStatus() == null ? "" : task.getStatus().trim();
+        String existingReceiverId = task.getReceiverId() == null ? null : task.getReceiverId().trim();
+        String existingReceiverName = task.getReceiverName() == null ? null : task.getReceiverName().trim();
+        
+        if (!"pending".equals(status) && StringUtils.hasText(status)) {
+            // 已被领取，检查是否是同一个人
+            boolean isSame = false;
+            if (StringUtils.hasText(receiverId) && StringUtils.hasText(existingReceiverId)) {
+                isSame = receiverId.trim().equals(existingReceiverId);
+            } else if (StringUtils.hasText(receiverName) && StringUtils.hasText(existingReceiverName)) {
+                isSame = receiverName.trim().equals(existingReceiverName);
+            }
+            if (!isSame) {
+                String otherName = StringUtils.hasText(existingReceiverName) ? existingReceiverName : "他人";
+                throw new IllegalStateException("该任务已被「" + otherName + "」领取，无法重复领取");
+            }
+        }
+
         boolean ok = cuttingTaskService.receiveTask(taskId, receiverId, receiverName);
         if (!ok) {
+            // 再次检查最新状态
+            CuttingTask latest = cuttingTaskService.getById(taskId);
+            if (latest != null) {
+                String latestReceiverName = latest.getReceiverName() == null ? null : latest.getReceiverName().trim();
+                String latestReceiverId = latest.getReceiverId() == null ? null : latest.getReceiverId().trim();
+                boolean isSameNow = false;
+                if (StringUtils.hasText(receiverId) && StringUtils.hasText(latestReceiverId)) {
+                    isSameNow = receiverId.trim().equals(latestReceiverId);
+                } else if (StringUtils.hasText(receiverName) && StringUtils.hasText(latestReceiverName)) {
+                    isSameNow = receiverName.trim().equals(latestReceiverName);
+                }
+                if (!isSameNow && StringUtils.hasText(latestReceiverName)) {
+                    throw new IllegalStateException("该任务已被「" + latestReceiverName + "」领取，无法重复领取");
+                }
+            }
             throw new IllegalStateException("领取失败");
         }
 

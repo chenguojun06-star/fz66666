@@ -941,7 +941,7 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
             b.setUsageAmount(usageAmount);
             b.setLossRate(lossRate);
             b.setUnitPrice(unitPrice);
-            b.setMaterialCode(codePrefix + "-" + suffix + "-" + String.format("%02d", i));
+            b.setMaterialCode(codePrefix + "-" + suffix + "-" + "%02d".formatted(i));
             b.setTotalPrice(calcBomTotal(usageAmount, lossRate, unitPrice));
             b.setCreateTime(LocalDateTime.now());
             b.setUpdateTime(LocalDateTime.now());
@@ -1123,8 +1123,7 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
     }
 
     private static Map<String, Object> coerceMap(Object v) {
-        if (v instanceof Map) {
-            Map<?, ?> m = (Map<?, ?>) v;
+        if (v instanceof Map<?, ?> m) {
             Map<String, Object> out = new LinkedHashMap<>();
             for (Map.Entry<?, ?> e : m.entrySet()) {
                 if (e.getKey() == null)
@@ -1169,8 +1168,8 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
     private static BigDecimal toBigDecimal(Object v) {
         if (v == null)
             return BigDecimal.ZERO;
-        if (v instanceof BigDecimal)
-            return (BigDecimal) v;
+        if (v instanceof BigDecimal decimal)
+            return decimal;
         try {
             return new BigDecimal(String.valueOf(v));
         } catch (Exception e) {
