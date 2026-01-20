@@ -2,7 +2,6 @@ const api = require('../../utils/api');
 const { getBaseUrl } = require('../../config');
 const { getToken } = require('../../utils/storage');
 const { errorHandler } = require('../../utils/errorHandler');
-const { validateScanRecord } = require('../../utils/dataValidator');
 const reminderManager = require('../../utils/reminderManager');
 
 let undoTimer = null;
@@ -10,67 +9,6 @@ let confirmTimer = null;
 let confirmTickTimer = null;
 
 const recentScanExpires = new Map();
-
-// ==================== 验证函数 ====================
-
-/**
- * 验证二维码格式
- */
-function validateQrCode(qrCode) {
-    const v = String(qrCode || '').trim();
-    if (!v) return '二维码不能为空';
-    if (v.length < 5) return '二维码格式不正确（长度过短）';
-    if (v.length > 500) return '二维码格式不正确（长度过长）';
-    return '';
-}
-
-/**
- * 验证扫码数量
- */
-function validateQuantity(qty) {
-    if (qty === null || qty === undefined || qty === '') return '数量不能为空';
-    const v = Number(qty);
-    if (!Number.isInteger(v) || v <= 0) return '数量必须是正整数';
-    if (v > 999999) return '数量不能超过 999999';
-    return '';
-}
-
-/**
- * 验证订单号
- */
-function validateOrderNo(orderNo) {
-    const v = String(orderNo || '').trim();
-    if (!v) return '订单号不能为空';
-    if (v.length < 3) return '订单号长度过短';
-    if (v.length > 50) return '订单号长度过长';
-    return '';
-}
-
-/**
- * 验证款号
- */
-function validateStyleNo(styleNo) {
-    const v = String(styleNo || '').trim();
-    if (!v) return '款号不能为空';
-    if (v.length < 3) return '款号长度过短';
-    if (v.length > 50) return '款号长度过长';
-    return '';
-}
-
-/**
- * 防重复扫码检查
- */
-function isDuplicateScan(qrCode, timeWindow = 2000) {
-    return isRecentDuplicate(qrCode);
-}
-
-/**
- * 安全的数量转换
- */
-function toQuantity(v) {
-    const n = Number(v);
-    return Number.isInteger(n) && n > 0 ? Math.floor(Math.min(n, 999999)) : null;
-}
 
 function readStorage(key, fallback) {
     try {
@@ -794,7 +732,6 @@ Page({
             } else {
                 // 质检领取成功后添加提醒
                 const orderNo = oi.orderNo || sr.orderNo || (detail && detail.orderNo) || '';
-                const processName = sr.processName || (detail && detail.processName) || '';
                 if (!isDuplicate && payload.scanType === 'quality' && orderNo) {
                     const styleNo = oi.styleNo || sr.styleNo || (detail && detail.styleNo) || '';
                     const type = '质检';
@@ -971,11 +908,6 @@ Page({
      */
     groupScanHistory(records) {
         if (!Array.isArray(records) || records.length === 0) return [];
-
-        // 调试：查看第一条记录的结构（开发调试用）
-        if (records.length > 0 && false) {
-            console.log('扫码记录第一条:', records[0]);
-        }
 
         const groups = new Map();
 
@@ -1312,15 +1244,16 @@ Page({
         this.setData({ defectUploading: true });
         try {
             const choose = await new Promise((resolve, reject) => {
-                wx.chooseImage({
+                wx.chooseMedia({
                     count: remain,
-                    sizeType: ['compressed'],
+                    mediaType: ['image'],
                     sourceType: ['album', 'camera'],
                     success: resolve,
                     fail: reject,
                 });
             });
-            const tempFilePaths = choose && Array.isArray(choose.tempFilePaths) ? choose.tempFilePaths : [];
+            const tempFiles = choose && Array.isArray(choose.tempFiles) ? choose.tempFiles : [];
+            const tempFilePaths = tempFiles.map(item => item && item.tempFilePath).filter(Boolean);
             if (tempFilePaths.length === 0) return;
 
             const baseUrl = getBaseUrl();
@@ -1539,7 +1472,6 @@ Page({
             undo: { ...this.data.undo, canUndo: false, loading: false, expireAt: 0, payload: null },
             materialPurchases: [],
         });
-        let lastDedupKey = '';
         try {
             const scanRes = await new Promise((resolve, reject) => {
                 wx.scanCode({
@@ -1635,11 +1567,11 @@ Page({
             if (stage.processCode) payload.processCode = stage.processCode;
 
             if (scanType === 'warehouse') payload.warehouse = warehouse;
-            
+
             // 质检环节：直接弹出质检确认对话框
             if (finalScanType === 'quality') {
                 this.setData({ loading: false });
-                
+
                 const qualityDetail = {
                     scanCode: payload.scanCode,
                     orderNo: payload.orderNo || '',
@@ -1648,7 +1580,7 @@ Page({
                     size: payload.size || '',
                     quantity: quantity || 0,
                 };
-                
+
                 wx.showModal({
                     title: '质检确认',
                     content: `订单：${qualityDetail.orderNo}\n款号：${qualityDetail.styleNo}\n${qualityDetail.color ? '颜色：' + qualityDetail.color + '\n' : ''}${qualityDetail.size ? '尺码：' + qualityDetail.size + '\n' : ''}数量：${qualityDetail.quantity}\n\n是否全部合格？`,
@@ -1676,7 +1608,7 @@ Page({
                         }
                     }
                 });
-                
+
                 return; // 不走原有提交逻辑
             }
 
@@ -1887,22 +1819,23 @@ Page({
             return;
         }
 
-        wx.chooseImage({
+        wx.chooseMedia({
             count: maxCount,
-            sizeType: ['compressed'],
+            mediaType: ['image'],
             sourceType: ['album', 'camera'],
             success: async (res) => {
-                const tempFilePaths = res.tempFilePaths;
-                
+                const tempFiles = res && Array.isArray(res.tempFiles) ? res.tempFiles : [];
+                const tempFilePaths = tempFiles.map(item => item && item.tempFilePath).filter(Boolean);
+
                 if (tempFilePaths.length === 0) return;
-                
+
                 // 显示上传进度
                 wx.showLoading({ title: `上传中 0/${tempFilePaths.length}`, mask: true });
-                
+
                 try {
                     const baseUrl = getBaseUrl();
                     const token = getToken();
-                    
+
                     // 并发上传所有图片
                     const uploads = tempFilePaths.map((filePath, index) => {
                         return new Promise((resolve, reject) => {
@@ -1913,15 +1846,15 @@ Page({
                                 header: token ? { Authorization: `Bearer ${token}` } : {},
                                 success: (uploadRes) => {
                                     // 更新进度
-                                    wx.showLoading({ 
+                                    wx.showLoading({
                                         title: `上传中 ${index + 1}/${tempFilePaths.length}`,
                                         mask: true
                                     });
-                                    
+
                                     const statusCode = uploadRes.statusCode;
                                     const raw = uploadRes.data;
                                     const parsed = typeof raw === 'string' ? safeJsonParse(raw) : raw;
-                                    
+
                                     if (statusCode === 200 && parsed && parsed.code === 200) {
                                         const path = parsed.data ? String(parsed.data).trim() : '';
                                         if (!path) {
@@ -1929,8 +1862,8 @@ Page({
                                             return;
                                         }
                                         // 返回完整URL
-                                        const fullUrl = path.startsWith('http://') || path.startsWith('https://') 
-                                            ? path 
+                                        const fullUrl = path.startsWith('http://') || path.startsWith('https://')
+                                            ? path
                                             : `${baseUrl}${path}`;
                                         resolve(fullUrl);
                                     } else {
@@ -1945,17 +1878,17 @@ Page({
                             });
                         });
                     });
-                    
+
                     const newUrls = await Promise.all(uploads);
-                    
+
                     // 保存服务器URL
-                    this.setData({ 
-                        'qualityModal.images': [...currentImages, ...newUrls] 
+                    this.setData({
+                        'qualityModal.images': [...currentImages, ...newUrls]
                     });
-                    
+
                     wx.hideLoading();
                     wx.showToast({ title: '上传成功', icon: 'success' });
-                    
+
                 } catch (e) {
                     wx.hideLoading();
                     const msg = e && (e.message || e.errMsg) ? String(e.message || e.errMsg) : '上传失败';
@@ -1965,8 +1898,6 @@ Page({
                     console.error('上传次品图片失败', e);
                 }
             }
-        });
-    },
         });
     },
 
@@ -2019,13 +1950,13 @@ Page({
             // 获取当前用户
             const user = await this.getCurrentUser();
             const qualityOperatorName = user && (user.name || user.username) ? String(user.name || user.username).trim() : '';
-            
+
             if (!qualityOperatorName) {
                 wx.hideLoading();
                 wx.showToast({ title: '未获取到用户信息', icon: 'none' });
                 return;
             }
-            
+
             // 构建提交数据 - 匹配后端execute接口参数
             const payload = {
                 scanCode: qualityModal.detail.scanCode, // 菲号（扫码内容），不是记录ID！
@@ -2296,18 +2227,18 @@ Page({
      */
     async submitQualified(detail) {
         wx.showLoading({ title: '提交中...', mask: true });
-        
+
         try {
             // 获取当前用户
             const user = await this.getCurrentUser();
             const qualityOperatorName = user && (user.name || user.username) ? String(user.name || user.username).trim() : '';
-            
+
             if (!qualityOperatorName) {
                 wx.hideLoading();
                 wx.showToast({ title: '未获取到用户信息', icon: 'none' });
                 return;
             }
-            
+
             const payload = {
                 scanCode: detail.scanCode,
                 scanType: 'quality',
@@ -2320,20 +2251,20 @@ Page({
                 quantity: detail.quantity,
                 defectRemark: '质检合格',
             };
-            
+
             console.log('提交合格质检结果 - payload:', payload);
-            
+
             await api.production.submitQualityResult(payload);
-            
+
             wx.hideLoading();
             wx.vibrateShort({ type: 'light' });
             wx.showToast({ title: '✓ 质检通过', icon: 'success' });
-            
+
             // 移除提醒
             if (detail.orderNo) {
                 reminderManager.removeRemindersByOrder(detail.orderNo, '质检');
             }
-            
+
             // 更新最后结果
             this.setData({
                 lastResult: {
@@ -2345,10 +2276,10 @@ Page({
                     processName: '质检',
                 },
             });
-            
+
             // 刷新列表
             this.loadMyPanel(true);
-            
+
         } catch (e) {
             wx.hideLoading();
             console.error('提交合格质检结果失败:', e);
