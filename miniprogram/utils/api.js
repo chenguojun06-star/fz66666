@@ -70,8 +70,9 @@ const production = {
     updateArrivedQuantity(payload) {
         return ok('/api/production/purchase/update-arrived-quantity', 'POST', payload || {});
     },
+    // 提交质检结果（通过更新扫码记录）
     submitQualityResult(payload) {
-        return ok('/api/production/scan/submit-quality-result', 'POST', payload || {});
+        return ok('/api/production/scan/execute', 'POST', payload || {});
     },
     async undoScan(payload) {
         const data = payload || {};

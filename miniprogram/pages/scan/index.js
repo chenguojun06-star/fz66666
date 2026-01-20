@@ -1901,9 +1901,10 @@ Page({
         wx.showLoading({ title: '提交中...', mask: true });
 
         try {
-            // 构建提交数据
+            // 构建提交数据 - 使用扫码execute接口格式
             const payload = {
-                scanId: qualityModal.detail.scanId,
+                scanCode: qualityModal.detail.scanId, // 使用scanId作为扫码标识
+                scanType: 'quality',
                 orderNo: qualityModal.detail.orderNo,
                 styleNo: qualityModal.detail.styleNo,
                 color: qualityModal.detail.color,
@@ -1917,8 +1918,12 @@ Page({
                 payload.defectiveQuantity = Number(qualityModal.defectiveQuantity);
                 payload.defectTypes = qualityModal.defectTypesText;
                 payload.handleMethod = this.data.handleMethods[qualityModal.handleMethod];
-                payload.remark = qualityModal.remark;
+                payload.remark = qualityModal.remark || '';
+            } else {
+                payload.remark = '质检合格';
             }
+
+            console.log('提交质检结果 - payload:', payload);
 
             // 调用API提交质检结果
             await api.production.submitQualityResult(payload);
@@ -1933,10 +1938,11 @@ Page({
             this.closeQualityModal();
 
             // 刷新扫码记录
-            await this.loadHistoryRecords();
+            await this.loadMyPanel(true);
 
         } catch (e) {
             wx.hideLoading();
+            console.error('提交质检结果失败:', e);
             const msg = errorHandler.formatError(e, '提交失败');
             wx.showToast({ title: msg, icon: 'none', duration: 2000 });
         }
