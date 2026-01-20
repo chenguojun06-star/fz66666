@@ -967,7 +967,7 @@ Page({
             console.log('第一条记录完整数据:', JSON.stringify(records[0], null, 2));
             console.log('所有字段名:', Object.keys(records[0]));
             console.log('scanType字段值:', records[0].scanType);
-            console.log('qualityResult字段值:', records[0].qualityResult);
+            console.log('scanResult字段值:', records[0].scanResult);
             console.log('isProcurement字段值:', records[0].isProcurement);
         }
         
@@ -1000,9 +1000,9 @@ Page({
             
             // 统计合格/不合格数量
             if (item.scanType === 'quality') {
-                if (item.qualityResult === 'qualified') {
+                if (item.scanResult === 'qualified') {
                     group.qualifiedCount += (item.quantity || 0);
-                } else if (item.qualityResult === 'defective') {
+                } else if (item.scanResult === 'defective') {
                     group.defectiveCount += (item.quantity || 0);
                 }
             }
