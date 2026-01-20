@@ -1,4 +1,5 @@
 const api = require('../../utils/api');
+const reminderManager = require('../../utils/reminderManager');
 
 function toNumber(v) {
     const n = Number(v);
@@ -57,6 +58,9 @@ Page({
         loading: false,
         statsLoaded: false,
         keyword: '',
+        showReminderPanel: false,
+        reminderCount: 0,
+        reminders: [],
         stats: {
             styleCount: 0,
             productionCount: 0,
@@ -79,6 +83,9 @@ Page({
         if (app && typeof app.setTabSelected === 'function') app.setTabSelected(this, 0);
         if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
         this.loadStats();
+        
+        // 加载提醒列表
+        this.loadReminders();
     },
 
     onPullDownRefresh() {
@@ -148,5 +155,60 @@ Page({
         } finally {
             this.setData({ loading: false });
         }
+    },
+
+    loadReminders() {
+        const allReminders = reminderManager.getReminders();
+        const now = Date.now();
+        const REMINDER_INTERVAL = 10 * 60 * 60 * 1000; // 10小时
+        
+        // 过滤出需要提醒的（超过10小时）
+        const pendingReminders = allReminders.filter(r => {
+            return now - r.timestamp >= REMINDER_INTERVAL;
+        });
+        
+        // 格式化时间显示
+        const reminders = pendingReminders.map(r => {
+            const hours = Math.floor((now - r.timestamp) / (60 * 60 * 1000));
+            const timeAgo = hours < 24 ? `${hours}小时前` : `${Math.floor(hours / 24)}天前`;
+            return {
+                id: `${r.orderId}_${r.type}`,
+                orderId: r.orderId,
+                type: r.type,
+                timestamp: r.timestamp,
+                timeAgo,
+            };
+        });
+        
+        this.setData({ 
+            reminders,
+            reminderCount: reminders.length,
+        });
+    },
+
+    toggleReminderPanel() {
+        this.setData({ showReminderPanel: !this.data.showReminderPanel });
+    },
+
+    handleReminderClick(e) {
+        const reminder = e.currentTarget.dataset.reminder;
+        if (!reminder) return;
+        
+        // 关闭面板
+        this.setData({ showReminderPanel: false });
+        
+        // 跳转到扫码页面处理
+        wx.switchTab({ 
+            url: '/pages/scan/index',
+            success: () => {
+                // 可以在这里传递订单信息，但switchTab不支持传参
+                // 可以使用storage临时存储
+                try {
+                    wx.setStorageSync('pending_order_hint', reminder.orderId);
+                } catch (e) {
+                    console.error('存储失败', e);
+                }
+            },
+        });
     },
 });

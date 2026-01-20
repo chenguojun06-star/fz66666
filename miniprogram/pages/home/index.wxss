@@ -2,6 +2,145 @@ page {
   background: #f7f8fa;
 }
 
+/* 右上角提醒按钮 */
+.reminder-btn {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  z-index: 999;
+}
+
+.reminder-icon {
+  width: 24px;
+  height: 24px;
+  filter: brightness(0) invert(1);
+}
+
+.reminder-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  background: #ff4757;
+  color: #ffffff;
+  border-radius: 9px;
+  font-size: 10px;
+  line-height: 18px;
+  text-align: center;
+  padding: 0 4px;
+  font-weight: 600;
+  border: 2px solid #ffffff;
+}
+
+/* 提醒面板 */
+.reminder-panel {
+  position: fixed;
+  top: 0;
+  right: -320px;
+  width: 320px;
+  height: 100vh;
+  background: #ffffff;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+  transition: right 0.3s ease;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+}
+
+.reminder-panel.show {
+  right: 0;
+}
+
+.reminder-panel-header {
+  padding: 16px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.reminder-panel-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.reminder-panel-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  font-size: 18px;
+}
+
+.reminder-panel-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.reminder-empty {
+  text-align: center;
+  color: #9ca3af;
+  padding: 40px 20px;
+  font-size: 14px;
+}
+
+.reminder-item {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+.reminder-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.reminder-item-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.reminder-item-time {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.reminder-item-desc {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* 遮罩层 */
+.reminder-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 999;
+}
+
 .container .card {
   background: #ffffff;
   border: 1px solid #e5e7eb;

@@ -1,4 +1,31 @@
 <view class="container">
+  <!-- 右上角提醒按钮 -->
+  <view class="reminder-btn" bindtap="toggleReminderPanel">
+    <image class="reminder-icon" src="/assets/icons/bell.svg" mode="aspectFit" />
+    <view wx:if="{{reminderCount > 0}}" class="reminder-badge">{{reminderCount > 99 ? '99+' : reminderCount}}</view>
+  </view>
+
+  <!-- 提醒面板 -->
+  <view class="reminder-panel {{showReminderPanel ? 'show' : ''}}">
+    <view class="reminder-panel-header">
+      <view class="reminder-panel-title">待处理任务</view>
+      <view class="reminder-panel-close" bindtap="toggleReminderPanel">✕</view>
+    </view>
+    <view class="reminder-panel-content">
+      <view wx:if="{{reminders.length === 0}}" class="reminder-empty">暂无待处理任务</view>
+      <view wx:for="{{reminders}}" wx:key="id" class="reminder-item" bindtap="handleReminderClick" data-reminder="{{item}}">
+        <view class="reminder-item-header">
+          <view class="reminder-item-title">{{item.type}}</view>
+          <view class="reminder-item-time">{{item.timeAgo}}</view>
+        </view>
+        <view class="reminder-item-desc">订单号: {{item.orderId}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 遮罩层 -->
+  <view wx:if="{{showReminderPanel}}" class="reminder-mask" bindtap="toggleReminderPanel"></view>
+
   <view class="card">
     <view class="title">首页</view>
     <view class="home-actions">
