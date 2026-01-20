@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Button, Card, DatePicker, Input, Select, Space, Switch, message } from 'antd';
+import { DownloadOutlined } from '@ant-design/icons';
 import Layout from '../../components/Layout';
 import ResizableTable from '../../components/common/ResizableTable';
 import api, { unwrapApiData } from '../../utils/api';
@@ -79,7 +80,6 @@ const PayrollOperatorSummary: React.FC = () => {
             setLoading(false);
         }
     };
-
     const reset = () => {
         setOrderNo('');
         setStyleNo('');
@@ -91,9 +91,65 @@ const PayrollOperatorSummary: React.FC = () => {
         setRows([]);
     };
 
+    const exportToExcel = () => {
+        if (rows.length === 0) {
+            message.warning('无数据可导出');
+            return;
+        }
+
+        const headers = ['订单号', '款号', '人员工号', '人员', '工序', '类型', '数量', '单价(元)', '金额(元)'];
+        const csvRows = [headers.join(',')];
+
+        rows.forEach((row: any) => {
+            const csvRow = [
+                String(row?.orderNo || ''),
+                String(row?.styleNo || ''),
+                String(row?.operatorId || ''),
+                String(row?.operatorName || ''),
+                String(row?.processName || ''),
+                scanTypeText(row?.scanType),
+                String(toNumberOrZero(row?.quantity)),
+                toMoneyText(row?.unitPrice),
+                toMoneyText(row?.totalAmount),
+            ].map(escapeCsvCell);
+            csvRows.push(csvRow.join(','));
+        });
+
+        // 添加合计行
+        csvRows.push([
+            '合计', '', '', '', '', '',
+            String(totalQuantity),
+            '',
+            totalAmount.toFixed(2),
+        ].map(escapeCsvCell).join(','));
+
+        const csvContent = '\uFEFF' + csvRows.join('\n'); // BOM for UTF-8
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        const timestamp = dayjs().format('YYYYMMDDHHmmss');
+        link.download = `人员工序统计_${timestamp}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        message.success('导出成功');
+    };
+
+    const escapeCsvCell = (value: any) => {
+        const text = String(value ?? '');
+        if (/[\r\n",]/.test(text)) {
+            return `"${text.replace(/"/g, '""')}"`;
+        }
+        return text;
+    };  setRows([]);
+    };
+
     const columns: any[] = [
         { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 140, ellipsis: true },
         { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 120, ellipsis: true },
+        { title: '人员工号', dataIndex: 'operatorId', key: 'operatorId', width: 120, ellipsis: true, render: (v: any) => String(v || '').trim() || '-' },
         { title: '人员', dataIndex: 'operatorName', key: 'operatorName', width: 140, ellipsis: true },
         { title: '工序', dataIndex: 'processName', key: 'processName', width: 160, ellipsis: true },
         { title: '类型', dataIndex: 'scanType', key: 'scanType', width: 90, render: (v: any) => scanTypeText(v) },
@@ -177,7 +233,7 @@ const PayrollOperatorSummary: React.FC = () => {
                         <RangePicker
                             showTime
                             value={dateRange}
-                            onChange={(v) => setDateRange(v as any)}
+                    scroll={{ x: 1170 }}) => setDateRange(v as any)}
                             style={{ width: 320 }}
                         />
                         <Space>
@@ -190,6 +246,13 @@ const PayrollOperatorSummary: React.FC = () => {
                         <Button onClick={reset} disabled={loading}>
                             重置
                         </Button>
+                        <Button 
+                            icon={<DownloadOutlined />} 
+                            onClick={exportToExcel} 
+                            disabled={loading || rows.length === 0}
+                        >
+                            导出Excel
+                        </Button>
                     </Space>
                 </Card>
 
@@ -198,6 +261,11 @@ const PayrollOperatorSummary: React.FC = () => {
                         <span style={{ color: '#6b7280' }}>行数 {rows.length}</span>
                         <span style={{ color: '#6b7280' }}>数量合计 {totalQuantity}</span>
                         <span style={{ color: '#6b7280' }}>金额合计 {totalAmount.toFixed(2)}</span>
+                        {dateRange?.[0] && dateRange?.[1] && (
+                            <span style={{ color: '#6b7280' }}>
+                                统计周期：{dayjs(dateRange[0]).format('YYYY-MM-DD')} ~ {dayjs(dateRange[1]).format('YYYY-MM-DD')}
+                            </span>
+                        )}
                     </Space>
                 </Card>
 
