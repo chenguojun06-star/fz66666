@@ -22,7 +22,6 @@ import java.util.Map;
 public class MaterialReconciliationServiceImpl extends BaseReconciliationServiceImpl<MaterialReconciliation, MaterialReconciliationMapper>
         implements MaterialReconciliationService {
 
-    @Autowired
     public MaterialReconciliationServiceImpl(StyleInfoService styleInfoService, StyleQuotationService styleQuotationService) {
         this.setStyleInfoService(styleInfoService);
         this.setStyleQuotationService(styleQuotationService);

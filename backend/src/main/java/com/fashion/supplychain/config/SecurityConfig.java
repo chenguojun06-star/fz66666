@@ -54,26 +54,27 @@ public class SecurityConfig implements WebMvcConfigurer {
         http
                 .cors().and()
                 .csrf().disable()
-                .authorizeRequests()
-                .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .antMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                .antMatchers("/api/system/user/login").permitAll()
-                .antMatchers("/api/common/download/**").permitAll()
-                .antMatchers("/api/system/user/me*", "/api/system/user/me/**").authenticated()
-                .antMatchers("/api/system/user/permissions*", "/api/system/user/permissions/**").authenticated()
-                .antMatchers("/api/wechat/mini-program/login").permitAll()
-                .antMatchers("/actuator/health", "/actuator/health/**", "/actuator/info", "/actuator/info/**").permitAll()
-                .antMatchers("/actuator/**").hasAnyAuthority(
-                        "ROLE_admin",
-                        "ROLE_ADMIN",
-                        "ROLE_1")
-                .antMatchers("/api/system/serial/**").authenticated()
-                .antMatchers("/api/system/**").hasAnyAuthority(
-                        "ROLE_admin",
-                        "ROLE_ADMIN",
-                        "ROLE_1")
-                .antMatchers("/api/**").authenticated()
-                .anyRequest().permitAll();
+                .authorizeHttpRequests(authz -> authz
+                        .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .antMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        .antMatchers("/api/system/user/login").permitAll()
+                        .antMatchers("/api/common/download/**").permitAll()
+                        .antMatchers("/api/system/user/me*", "/api/system/user/me/**").authenticated()
+                        .antMatchers("/api/system/user/permissions*", "/api/system/user/permissions/**").authenticated()
+                        .antMatchers("/api/wechat/mini-program/login").permitAll()
+                        .antMatchers("/actuator/health", "/actuator/health/**", "/actuator/info", "/actuator/info/**").permitAll()
+                        .antMatchers("/actuator/**").hasAnyAuthority(
+                                "ROLE_admin",
+                                "ROLE_ADMIN",
+                                "ROLE_1")
+                        .antMatchers("/api/system/serial/**").authenticated()
+                        .antMatchers("/api/system/**").hasAnyAuthority(
+                                "ROLE_admin",
+                                "ROLE_ADMIN",
+                                "ROLE_1")
+                        .antMatchers("/api/**").authenticated()
+                        .anyRequest().permitAll()
+                );
 
         http.addFilterBefore(new TokenAuthFilter(authTokenService), UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(new RequestIdFilter(), TokenAuthFilter.class);
