@@ -1,7 +1,13 @@
 <view class="page">
   <!-- 顶部操作栏 - 紧凑型 -->
   <view class="top-bar">
-    <view class="type-tabs">
+    <!-- 自动识别开关 -->
+    <view class="auto-detect-switch">
+      <switch checked="{{autoDetectEnabled}}" bindchange="onAutoDetectChange" color="#1890ff" />
+      <text class="switch-label">自动识别进度</text>
+    </view>
+    
+    <view class="type-tabs" wx:if="{{!autoDetectEnabled}}">
       <view class="tab {{scanTypeIndex === 0 ? 'on' : ''}}" bindtap="onQuickScanType" data-idx="0">
         <image class="tab-ico" src="/assets/icons/cut.svg" mode="aspectFit" />
         <text>裁剪</text>
@@ -27,6 +33,11 @@
           <text class="more-dot">···</text>
         </view>
       </picker>
+    </view>
+    
+    <view wx:if="{{autoDetectEnabled}}" class="auto-mode-tip">
+      <text class="tip-icon">🤖</text>
+      <text class="tip-text">扫码自动识别当前进度节点</text>
     </view>
   </view>
 
