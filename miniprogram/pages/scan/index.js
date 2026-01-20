@@ -1759,34 +1759,35 @@ Page({
         const recordIdx = e.currentTarget.dataset.recordIdx;
         
         console.log('质检处理 - groupId:', groupId, 'recordIdx:', recordIdx);
-        console.log('当前groupedHistory:', this.data.my.groupedHistory);
         
         // 从groupedHistory中找到对应的记录
         const groupedHistory = this.data.my.groupedHistory || [];
         const group = groupedHistory.find(g => g.id === groupId);
         
-        console.log('找到的group:', group);
-        
         if (!group || !Array.isArray(group.items) || recordIdx >= group.items.length) {
-            console.error('记录查找失败 - group:', group, 'items length:', group ? group.items.length : 0, 'recordIdx:', recordIdx);
             wx.showToast({ title: '记录不存在', icon: 'none' });
             return;
         }
         
         const item = group.items[recordIdx];
-        console.log('质检处理 - 完整记录数据:', JSON.stringify(item));
+        console.log('质检处理 - 记录数据:', item);
+        console.log('质检处理 - orderNo:', item.orderNo, 'styleNo:', item.styleNo, 'quantity:', item.quantity);
+
+        const detailData = {
+            orderNo: item.orderNo || item.order_no || '(无)',
+            styleNo: item.styleNo || item.style_no || '(无)',
+            color: item.color || '-',
+            size: item.size || '-',
+            quantity: item.quantity || item.qty || 0,
+            scanId: item.id || item.scanId || '',
+        };
+        
+        console.log('质检处理 - 设置的detail数据:', detailData);
 
         this.setData({
             qualityModal: {
                 show: true,
-                detail: {
-                    orderNo: item.orderNo || item.order_no || '',
-                    styleNo: item.styleNo || item.style_no || '',
-                    color: item.color || '',
-                    size: item.size || '',
-                    quantity: item.quantity || item.qty || 0,
-                    scanId: item.id || item.scanId || '', // 保存扫码记录ID，用于提交时关联
-                },
+                detail: detailData,
                 result: '',
                 defectiveQuantity: '',
                 selectedDefectTypes: [],
@@ -1796,7 +1797,10 @@ Page({
             }
         });
         
-        console.log('弹窗数据已设置:', this.data.qualityModal);
+        // 验证设置后的数据
+        setTimeout(() => {
+            console.log('质检处理 - 页面实际数据:', this.data.qualityModal.detail);
+        }, 100);
     },
 
     /**
