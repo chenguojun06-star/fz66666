@@ -8,6 +8,67 @@ let confirmTickTimer = null;
 
 const recentScanExpires = new Map();
 
+// ==================== 验证函数 ====================
+
+/**
+ * 验证二维码格式
+ */
+function validateQrCode(qrCode) {
+    const v = String(qrCode || '').trim();
+    if (!v) return '二维码不能为空';
+    if (v.length < 5) return '二维码格式不正确（长度过短）';
+    if (v.length > 500) return '二维码格式不正确（长度过长）';
+    return '';
+}
+
+/**
+ * 验证扫码数量
+ */
+function validateQuantity(qty) {
+    if (qty === null || qty === undefined || qty === '') return '数量不能为空';
+    const v = Number(qty);
+    if (!Number.isInteger(v) || v <= 0) return '数量必须是正整数';
+    if (v > 999999) return '数量不能超过 999999';
+    return '';
+}
+
+/**
+ * 验证订单号
+ */
+function validateOrderNo(orderNo) {
+    const v = String(orderNo || '').trim();
+    if (!v) return '订单号不能为空';
+    if (v.length < 3) return '订单号长度过短';
+    if (v.length > 50) return '订单号长度过长';
+    return '';
+}
+
+/**
+ * 验证款号
+ */
+function validateStyleNo(styleNo) {
+    const v = String(styleNo || '').trim();
+    if (!v) return '款号不能为空';
+    if (v.length < 3) return '款号长度过短';
+    if (v.length > 50) return '款号长度过长';
+    return '';
+}
+
+/**
+ * 防重复扫码检查
+ */
+function isDuplicateScan(qrCode, timeWindow = 2000) {
+    return isRecentDuplicate(qrCode);
+}
+
+/**
+ * 安全的数量转换
+ */
+function toQuantity(v) {
+    const n = Number(v);
+    return Number.isInteger(n) && n > 0 ? Math.floor(Math.min(n, 999999)) : null;
+}
+
 function readStorage(key, fallback) {
     try {
         const v = wx.getStorageSync(key);

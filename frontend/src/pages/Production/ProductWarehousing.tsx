@@ -248,11 +248,11 @@ const ProductWarehousing: React.FC = () => {
   const watchedUnqualifiedQty = Form.useWatch('unqualifiedQuantity', form);
 
   const modalWidth = useMemo(() => {
-    if (typeof window === 'undefined') return '60vw';
+    if (typeof window === 'undefined') return '85vw';
     const w = window.innerWidth;
     if (w < 768) return '96vw';
-    if (w < 1024) return '66vw';
-    return '60vw';
+    if (w < 1024) return '85vw';
+    return '85vw';
   }, []);
 
   const modalInitialHeight = useMemo(() => {
@@ -1054,6 +1054,7 @@ const ProductWarehousing: React.FC = () => {
     const map: Record<string, string> = {
       pending: '未开始',
       not_started: '未开始',
+      created: '已创建',
       in_progress: '进行中',
       completed: '已完成',
       qualified: '已合格',
