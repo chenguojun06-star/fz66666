@@ -1748,17 +1748,20 @@ Page({
     onHandleQuality(e) {
         const item = e.currentTarget.dataset.item;
         if (!item) return;
+        
+        // 调试输出
+        console.log('质检处理 - 原始数据:', item);
 
         this.setData({
             qualityModal: {
                 show: true,
                 detail: {
-                    orderNo: item.orderNo,
-                    styleNo: item.styleNo,
-                    color: item.color,
-                    size: item.size,
-                    quantity: item.quantity,
-                    scanId: item.id, // 保存扫码记录ID，用于提交时关联
+                    orderNo: item.orderNo || item.order_no || '',
+                    styleNo: item.styleNo || item.style_no || '',
+                    color: item.color || '',
+                    size: item.size || '',
+                    quantity: item.quantity || item.qty || 0,
+                    scanId: item.id || item.scanId || '', // 保存扫码记录ID，用于提交时关联
                 },
                 result: '',
                 defectiveQuantity: '',
@@ -1916,7 +1919,16 @@ Page({
      */
     async onHandleProcurement(e) {
         const item = e.currentTarget.dataset.item;
-        if (!item || !item.orderNo) {
+        if (!item) {
+            wx.showToast({ title: '数据不完整', icon: 'none' });
+            return;
+        }
+        
+        // 调试输出
+        console.log('物料采购处理 - 原始数据:', item);
+        
+        const orderNo = item.orderNo || item.order_no || '';
+        if (!orderNo) {
             wx.showToast({ title: '订单信息不完整', icon: 'none' });
             return;
         }
@@ -1925,7 +1937,7 @@ Page({
 
         try {
             // 获取订单的物料采购信息
-            const orderDetail = await api.production.orderDetail(item.orderNo);
+            const orderDetail = await api.production.orderDetail(orderNo);
             const materials = Array.isArray(orderDetail.materialPurchases) 
                 ? orderDetail.materialPurchases.map(m => ({
                     ...m,
@@ -1945,8 +1957,8 @@ Page({
             this.setData({
                 procurementModal: {
                     show: true,
-                    orderNo: item.orderNo,
-                    scanId: item.id,
+                    orderNo: orderNo,
+                    scanId: item.id || item.scanId || '',
                     materials: materials,
                 }
             });
