@@ -15,14 +15,16 @@ public class StyleOperationLogServiceImpl extends ServiceImpl<StyleOperationLogM
         implements StyleOperationLogService {
 
     @Override
-    public List<StyleOperationLog> listByStyleId(Long styleId, String bizType) {
+    public List<StyleOperationLog> listByStyleId(Long styleId, String bizType, String action) {
         LambdaQueryWrapper<StyleOperationLog> wrapper = new LambdaQueryWrapper<StyleOperationLog>()
                 .eq(StyleOperationLog::getStyleId, styleId)
                 .orderByDesc(StyleOperationLog::getCreateTime);
         if (StringUtils.hasText(bizType)) {
             wrapper.eq(StyleOperationLog::getBizType, bizType.trim());
         }
+        if (StringUtils.hasText(action)) {
+            wrapper.eq(StyleOperationLog::getAction, action.trim());
+        }
         return list(wrapper);
     }
 }
-

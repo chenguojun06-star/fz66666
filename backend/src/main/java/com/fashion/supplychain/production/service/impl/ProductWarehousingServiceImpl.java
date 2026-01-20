@@ -71,6 +71,73 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
                 || "待返修".equals(status);
     }
 
+    private int remainingRepairQuantityByBundle(String orderId, String cuttingBundleId, String excludeWarehousingId) {
+        String oid = StringUtils.hasText(orderId) ? orderId.trim() : null;
+        String bid = StringUtils.hasText(cuttingBundleId) ? cuttingBundleId.trim() : null;
+        String exId = StringUtils.hasText(excludeWarehousingId) ? excludeWarehousingId.trim() : null;
+        if (!StringUtils.hasText(oid) || !StringUtils.hasText(bid)) {
+            return 0;
+        }
+        List<ProductWarehousing> list;
+        try {
+            LambdaQueryWrapper<ProductWarehousing> qw = new LambdaQueryWrapper<ProductWarehousing>()
+                    .select(ProductWarehousing::getId, ProductWarehousing::getUnqualifiedQuantity,
+                            ProductWarehousing::getQualifiedQuantity, ProductWarehousing::getRepairRemark,
+                            ProductWarehousing::getQualityStatus)
+                    .eq(ProductWarehousing::getDeleteFlag, 0)
+                    .eq(ProductWarehousing::getOrderId, oid)
+                    .eq(ProductWarehousing::getCuttingBundleId, bid);
+            if (StringUtils.hasText(exId)) {
+                qw.ne(ProductWarehousing::getId, exId);
+            }
+            list = this.list(qw);
+        } catch (Exception e) {
+            return 0;
+        }
+
+        long repairPool = 0;
+        long repairedOut = 0;
+        if (list != null) {
+            for (ProductWarehousing w : list) {
+                if (w == null) {
+                    continue;
+                }
+                int uq = w.getUnqualifiedQuantity() == null ? 0 : w.getUnqualifiedQuantity();
+                if (uq > 0) {
+                    repairPool += uq;
+                }
+
+                String rr = trimToNull(w.getRepairRemark());
+                if (rr != null) {
+                    int q = w.getQualifiedQuantity() == null ? 0 : w.getQualifiedQuantity();
+                    if (q > 0) {
+                        repairedOut += q;
+                    }
+                }
+            }
+        }
+        long remaining = repairPool - repairedOut;
+        if (remaining <= 0) {
+            return 0;
+        }
+        return (int) Math.min(Integer.MAX_VALUE, remaining);
+    }
+
+    private void ensureRepairQuantityNotExceeded(String orderId, String cuttingBundleId, int requestWarehousingQty,
+            String excludeWarehousingId) {
+        int req = Math.max(0, requestWarehousingQty);
+        if (req <= 0) {
+            throw new IllegalArgumentException("入库数量必须大于0");
+        }
+        int remaining = remainingRepairQuantityByBundle(orderId, cuttingBundleId, excludeWarehousingId);
+        if (remaining <= 0) {
+            throw new IllegalStateException("该菲号无可返修入库数量");
+        }
+        if (req > remaining) {
+            throw new IllegalStateException("该菲号可返修入库数量为" + remaining + "，不能超过返修数量");
+        }
+    }
+
     private int sumCuttingQuantityByOrderId(String orderId) {
         String oid = StringUtils.hasText(orderId) ? orderId.trim() : null;
         if (!StringUtils.hasText(oid)) {
@@ -358,7 +425,8 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
         String warehouse = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "warehouse"));
         String qualityStatus = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "qualityStatus"));
         String cuttingBundleId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "cuttingBundleId"));
-        String cuttingBundleQrCode = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "cuttingBundleQrCode"));
+        String cuttingBundleQrCode = ParamUtils
+                .toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "cuttingBundleQrCode"));
 
         LambdaQueryWrapper<ProductWarehousing> wrapper = new LambdaQueryWrapper<ProductWarehousing>()
                 .eq(ProductWarehousing::getDeleteFlag, 0)
@@ -457,6 +525,9 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
             }
             if (blocked && "qualified".equalsIgnoreCase(computedQualityStatus) && !StringUtils.hasText(repairRemark)) {
                 throw new IllegalStateException("该菲号为次品待返修，请填写返修备注后再质检入库");
+            }
+            if (blocked && "qualified".equalsIgnoreCase(computedQualityStatus) && StringUtils.hasText(repairRemark)) {
+                ensureRepairQuantityNotExceeded(order.getId(), bundle.getId(), warehousingQty, null);
             }
             productWarehousing.setCuttingBundleId(bundle.getId());
             productWarehousing.setCuttingBundleNo(bundle.getBundleNo());
@@ -726,9 +797,17 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
                     }
 
                     boolean blocked = isBundleBlockedForWarehousing(bundle.getStatus());
+                    if (blocked && !"qualified".equalsIgnoreCase(computedQualityStatus)) {
+                        throw new IllegalStateException("该菲号为次品待返修，返修完成后才可入库");
+                    }
                     if (blocked && "qualified".equalsIgnoreCase(computedQualityStatus)
                             && !StringUtils.hasText(repairRemark)) {
                         throw new IllegalStateException("该菲号为次品待返修，请填写返修备注后再质检入库");
+                    }
+                    if (blocked && "qualified".equalsIgnoreCase(computedQualityStatus) && StringUtils.hasText(repairRemark)) {
+                        String oid = StringUtils.hasText(oldWarehousing.getOrderId()) ? oldWarehousing.getOrderId().trim()
+                                : null;
+                        ensureRepairQuantityNotExceeded(oid, bundle.getId(), warehousingQty, oldWarehousing.getId());
                     }
 
                     String nextBundleStatus = "unqualified".equalsIgnoreCase(computedQualityStatus) ? "unqualified"
@@ -772,6 +851,9 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
                     current.setWarehousingType(StringUtils.hasText(oldWarehousing.getWarehousingType())
                             ? oldWarehousing.getWarehousingType()
                             : productWarehousing.getWarehousingType());
+                    current.setWarehouse(StringUtils.hasText(productWarehousing.getWarehouse())
+                            ? productWarehousing.getWarehouse()
+                            : oldWarehousing.getWarehouse());
                     current.setCuttingBundleId(StringUtils.hasText(productWarehousing.getCuttingBundleId())
                             ? productWarehousing.getCuttingBundleId()
                             : oldWarehousing.getCuttingBundleId());
@@ -913,6 +995,11 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
             CuttingBundle bundle, LocalDateTime now) {
         if (warehousing == null || order == null || !StringUtils.hasText(warehousing.getId())
                 || !StringUtils.hasText(order.getId())) {
+            return;
+        }
+
+        String warehouse = trimToNull(warehousing.getWarehouse());
+        if (!StringUtils.hasText(warehouse)) {
             return;
         }
 

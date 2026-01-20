@@ -1,6 +1,7 @@
 package com.fashion.supplychain.style.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -50,6 +51,7 @@ public class StyleQuotation {
     /**
      * 报价
      */
+    @TableField("total_price")
     private BigDecimal totalPrice;
 
     /**
@@ -65,10 +67,12 @@ public class StyleQuotation {
     /**
      * 币种
      */
+    @TableField(exist = false)
     private String currency;
     
     /**
      * 版本号
      */
+    @TableField(exist = false)
     private String version;
 }

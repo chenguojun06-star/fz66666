@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
  */
 @Data
 @TableName("t_shipment_reconciliation")
-public class ShipmentReconciliation {
+public class ShipmentReconciliation implements com.fashion.supplychain.finance.service.impl.BaseReconciliationServiceImpl.ReconciliationEntity {
 
     @TableId(type = IdType.ASSIGN_UUID)
     private String id;
@@ -113,4 +113,23 @@ public class ShipmentReconciliation {
 
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
+
+    private String createBy;
+    private String updateBy;
+
+    public String getCreateBy() {
+        return createBy;
+    }
+
+    public void setCreateBy(String createBy) {
+        this.createBy = createBy;
+    }
+
+    public String getUpdateBy() {
+        return updateBy;
+    }
+
+    public void setUpdateBy(String updateBy) {
+        this.updateBy = updateBy;
+    }
 }

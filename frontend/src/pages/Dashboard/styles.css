@@ -1,18 +1,3 @@
-.dashboard-page {
-  padding: 0;
-}
-
-.dashboard-page .page-header {
-  margin-bottom: 24px;
-}
-
-.dashboard-page .page-title {
-  font-size: 20px;
-  font-weight: 500;
-  color: #1a1a1a;
-  margin: 0;
-}
-
 .stats-section {
   display: grid;
   grid-template-columns: repeat(4, minmax(200px, 1fr));

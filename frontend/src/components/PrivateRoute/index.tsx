@@ -1,7 +1,8 @@
 import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { Spin } from 'antd';
-import { routeToPermissionCode, useAuth } from '../../utils/authContext';
+import { isAdminUser as isAdminUserFn, useAuth } from '../../utils/authContext';
+import { paths, resolvePermissionCode } from '../../routeConfig';
 
 const PrivateRoute: React.FC = () => {
   const { isAuthenticated, loading, user } = useAuth();
@@ -16,24 +17,19 @@ const PrivateRoute: React.FC = () => {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to={paths.login} replace />;
   }
 
-  const normalize = (p: string) => p.split('?')[0];
-  const path = normalize(location.pathname);
-  const required = routeToPermissionCode[path];
+  const required = resolvePermissionCode(location.pathname);
 
-  const isAdmin = (() => {
-    const r = user?.role?.toLowerCase() || '';
-    return r.includes('admin') || r.includes('管理员');
-  })();
+  const isAdmin = isAdminUserFn(user);
 
   if (!required || isAdmin) {
     return <Outlet />;
   }
 
   const hasAny = Array.isArray(user?.permissions) && (user!.permissions.includes('all') || user!.permissions.includes(required));
-  return hasAny ? <Outlet /> : <Navigate to="/dashboard" replace />;
+  return hasAny ? <Outlet /> : <Navigate to={paths.dashboard} replace />;
 };
 
 export default PrivateRoute;

@@ -2,21 +2,31 @@
   <view class="card">
     <view class="title">登录</view>
 
-    <view class="field">
-      <view class="label">账号</view>
-      <input class="input" placeholder="请输入账号" value="{{username}}" bindinput="onUsernameInput" />
-    </view>
-
-    <view class="field">
-      <view class="label">密码</view>
-      <input class="input" placeholder="请输入密码" password="true" value="{{password}}" bindinput="onPasswordInput" />
-    </view>
-
     <view class="btn">
-      <view class="btn-primary {{loading ? 'btn-disabled' : ''}}" bindtap="onLogin">{{loading ? '登录中...' : '登录'}}</view>
+      <view class="btn-primary {{loading ? 'btn-disabled' : ''}}" bindtap="onWechatLogin">{{loading ? '登录中...' : '微信一键登录'}}</view>
     </view>
 
-    <view class="hint">登录成功后进入扫码页</view>
+    <view wx:if="{{showDevFields}}">
+      <view class="field">
+        <view class="label">服务器地址</view>
+        <input class="input" placeholder="例如：http://192.168.1.10:8088" value="{{apiBaseUrl}}" bindinput="onApiBaseUrlInput" />
+      </view>
+
+      <view class="field">
+        <view class="label">账号</view>
+        <input class="input" placeholder="请输入账号" value="{{username}}" bindinput="onUsernameInput" />
+      </view>
+
+      <view class="field">
+        <view class="label">密码</view>
+        <input class="input" placeholder="请输入密码" password="true" value="{{password}}" bindinput="onPasswordInput" />
+      </view>
+
+      <view class="btn">
+        <view class="btn-primary {{loading ? 'btn-disabled' : ''}}" bindtap="onDevLogin">{{loading ? '登录中...' : '开发模式登录'}}</view>
+      </view>
+    </view>
+
+    <view class="hint">登录成功后进入首页</view>
   </view>
 </view>
-

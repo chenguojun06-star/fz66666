@@ -113,7 +113,7 @@ public class ProductionOrderController {
 
     @PostMapping("/close")
     public Result<?> close(@Valid @RequestBody CloseOrderRequest body) {
-        ProductionOrder updated = productionOrderOrchestrator.closeOrder(body.getId());
+        ProductionOrder updated = productionOrderOrchestrator.closeOrder(body.getId(), body.getSourceModule());
         return Result.success(updated);
     }
 
@@ -237,12 +237,23 @@ public class ProductionOrderController {
         @NotBlank(message = "id不能为空")
         private String id;
 
+        @NotBlank(message = "sourceModule不能为空")
+        private String sourceModule;
+
         public String getId() {
             return id;
         }
 
         public void setId(String id) {
             this.id = id;
+        }
+
+        public String getSourceModule() {
+            return sourceModule;
+        }
+
+        public void setSourceModule(String sourceModule) {
+            this.sourceModule = sourceModule;
         }
     }
 

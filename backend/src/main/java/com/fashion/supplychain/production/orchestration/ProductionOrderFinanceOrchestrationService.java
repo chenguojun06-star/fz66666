@@ -3,9 +3,7 @@ package com.fashion.supplychain.production.orchestration;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
-import com.fashion.supplychain.finance.entity.FactoryReconciliation;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
-import com.fashion.supplychain.finance.service.FactoryReconciliationService;
 import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
 import com.fashion.supplychain.common.ParamUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -14,20 +12,18 @@ import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.mapper.CuttingBundleMapper;
-import com.fashion.supplychain.production.entity.ScanRecord;
-import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import com.fashion.supplychain.production.service.ProductOutstockService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.StyleInfo;
+import com.fashion.supplychain.style.entity.StyleQuotation;
 import com.fashion.supplychain.style.service.StyleInfoService;
-import com.fashion.supplychain.template.service.TemplateLibraryService;
+import com.fashion.supplychain.style.service.StyleQuotationService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -55,9 +51,6 @@ public class ProductionOrderFinanceOrchestrationService {
     private ProductOutstockService productOutstockService;
 
     @Autowired
-    private FactoryReconciliationService factoryReconciliationService;
-
-    @Autowired
     private ShipmentReconciliationService shipmentReconciliationService;
 
     @Autowired
@@ -67,10 +60,7 @@ public class ProductionOrderFinanceOrchestrationService {
     private StyleInfoService styleInfoService;
 
     @Autowired
-    private ScanRecordMapper scanRecordMapper;
-
-    @Autowired
-    private TemplateLibraryService templateLibraryService;
+    private StyleQuotationService styleQuotationService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -155,7 +145,6 @@ public class ProductionOrderFinanceOrchestrationService {
             throw new IllegalStateException("操作失败");
         }
 
-        ensureFinanceRecordsOnClose(order, (int) Math.min(Integer.MAX_VALUE, qualifiedSum), now);
         return true;
     }
 
@@ -225,7 +214,6 @@ public class ProductionOrderFinanceOrchestrationService {
             throw new IllegalStateException("关单失败");
         }
 
-        ensureFinanceRecordsOnClose(order, warehousingQualified, now);
         ProductionOrder detail = productionOrderService.getDetailById(oid);
         if (detail == null) {
             throw new NoSuchElementException("订单不存在");
@@ -286,7 +274,6 @@ public class ProductionOrderFinanceOrchestrationService {
             throw new IllegalStateException("关单失败");
         }
 
-        ensureFinanceRecordsOnClose(order, warehousingQualified, now);
         return true;
     }
 
@@ -301,29 +288,7 @@ public class ProductionOrderFinanceOrchestrationService {
             throw new NoSuchElementException("生产订单不存在");
         }
         int qty = productWarehousingService.sumQualifiedByOrderId(oid);
-        if (qty <= 0) {
-            try {
-                FactoryReconciliation fr = factoryReconciliationService.lambdaQuery()
-                        .select(FactoryReconciliation::getId, FactoryReconciliation::getStatus)
-                        .eq(FactoryReconciliation::getOrderId, oid)
-                        .orderByDesc(FactoryReconciliation::getCreateTime)
-                        .last("limit 1")
-                        .one();
-                if (fr != null && StringUtils.hasText(fr.getId())) {
-                    String st = fr.getStatus() == null ? "" : fr.getStatus().trim();
-                    if (!StringUtils.hasText(st) || "pending".equalsIgnoreCase(st)) {
-                        factoryReconciliationService.removeById(fr.getId().trim());
-                    }
-                }
-            } catch (Exception e) {
-                log.warn("Failed to cleanup pending factory reconciliation when no warehousing quantity: orderId={}",
-                        oid,
-                        e);
-            }
-            return false;
-        }
-        ensureFinanceRecordsOnClose(order, qty, LocalDateTime.now());
-        return true;
+        return qty > 0;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -366,6 +331,19 @@ public class ProductionOrderFinanceOrchestrationService {
         }
 
         LocalDateTime now = LocalDateTime.now();
+        String uid = null;
+        try {
+            UserContext ctx = UserContext.get();
+            String tmpUid = ctx == null ? null : ctx.getUserId();
+            if (tmpUid != null) {
+                String normalizedUid = tmpUid.trim();
+                if (!normalizedUid.isEmpty()) {
+                    uid = normalizedUid;
+                }
+            }
+        } catch (Exception ignored) {
+            uid = null;
+        }
         ShipmentReconciliation sr;
         try {
             sr = shipmentReconciliationService.lambdaQuery()
@@ -406,6 +384,10 @@ public class ProductionOrderFinanceOrchestrationService {
             sr.setOrderNo(order.getOrderNo());
             sr.setStatus("pending");
             sr.setCreateTime(now);
+            if (StringUtils.hasText(uid)) {
+                sr.setCreateBy(uid);
+                sr.setUpdateBy(uid);
+            }
         } else {
             String st = sr.getStatus() == null ? "" : sr.getStatus().trim();
             if (StringUtils.hasText(st) && !"pending".equalsIgnoreCase(st)) {
@@ -445,6 +427,12 @@ public class ProductionOrderFinanceOrchestrationService {
 
                 if (needPatch) {
                     patch.setUpdateTime(now);
+                    if (StringUtils.hasText(uid)) {
+                        patch.setUpdateBy(uid);
+                        if (!StringUtils.hasText(sr.getCreateBy())) {
+                            patch.setCreateBy(uid);
+                        }
+                    }
                     shipmentReconciliationService.updateById(patch);
                 }
                 return true;
@@ -474,24 +462,65 @@ public class ProductionOrderFinanceOrchestrationService {
             sr.setCustomerName(customerName);
         }
 
-        sr.setQuantity(Math.max(0, shippedQty));
-
-        BigDecimal up = resolveLastUnitPrice(oid, "shipment");
-        if (up == null || up.compareTo(BigDecimal.ZERO) <= 0) {
+        // 尝试从款号资料中获取单价信息
+        BigDecimal unitPrice = sr.getUnitPrice();
+        if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
             try {
-                String sno = order.getStyleNo();
-                if (StringUtils.hasText(sno)) {
-                    StyleInfo styleInfo = styleInfoService.getOne(new LambdaQueryWrapper<StyleInfo>()
-                            .eq(StyleInfo::getStyleNo, sno.trim())
-                            .last("limit 1"));
-                    if (styleInfo != null && styleInfo.getPrice() != null
-                            && styleInfo.getPrice().compareTo(BigDecimal.ZERO) > 0) {
-                        up = styleInfo.getPrice();
+                // 正确处理款号ID，可能是字符串格式
+                if (StringUtils.hasText(order.getStyleId())) {
+                    String sidRaw0 = order.getStyleId();
+                    String sidRaw = StringUtils.hasText(sidRaw0) ? sidRaw0.trim() : null;
+                    if (StringUtils.hasText(sidRaw) && isAllDigits(sidRaw)) {
+                        Long styleId = Long.parseLong(sidRaw);
+                        StyleQuotation quotation = styleQuotationService.getByStyleId(styleId);
+                        if (quotation != null && quotation.getTotalPrice() != null
+                                && quotation.getTotalPrice().compareTo(BigDecimal.ZERO) > 0) {
+                            unitPrice = quotation.getTotalPrice();
+                            sr.setUnitPrice(unitPrice);
+                        }
+                    } else if (StringUtils.hasText(order.getStyleNo())) {
+                        StyleInfo styleInfo = styleInfoService.lambdaQuery()
+                                .eq(StyleInfo::getStyleNo, order.getStyleNo().trim())
+                                .one();
+                        if (styleInfo != null) {
+                            StyleQuotation quotation = styleQuotationService.getByStyleId(styleInfo.getId());
+                            if (quotation != null && quotation.getTotalPrice() != null
+                                    && quotation.getTotalPrice().compareTo(BigDecimal.ZERO) > 0) {
+                                unitPrice = quotation.getTotalPrice();
+                                sr.setUnitPrice(unitPrice);
+                            }
+                        }
                     }
                 }
             } catch (Exception e) {
-                log.warn("Failed to resolve style price for shipment reconciliation: orderId={}, styleNo={}", oid,
+                log.warn("Failed to get unit price from style quotation: styleId={}, styleNo={}", order.getStyleId(),
                         order.getStyleNo(), e);
+            }
+        }
+
+        sr.setQuantity(Math.max(0, shippedQty));
+
+        // 优先使用从款号资料中获取的单价
+        BigDecimal up = sr.getUnitPrice();
+        if (up == null || up.compareTo(BigDecimal.ZERO) <= 0) {
+            // 如果没有从款号资料中获取到单价，尝试从其他途径获取
+            up = resolveLastUnitPrice(oid, "shipment");
+            if (up == null || up.compareTo(BigDecimal.ZERO) <= 0) {
+                try {
+                    String sno = order.getStyleNo();
+                    if (StringUtils.hasText(sno)) {
+                        StyleInfo styleInfo = styleInfoService.getOne(new LambdaQueryWrapper<StyleInfo>()
+                                .eq(StyleInfo::getStyleNo, sno.trim())
+                                .last("limit 1"));
+                        if (styleInfo != null && styleInfo.getPrice() != null
+                                && styleInfo.getPrice().compareTo(BigDecimal.ZERO) > 0) {
+                            up = styleInfo.getPrice();
+                        }
+                    }
+                } catch (Exception e) {
+                    log.warn("Failed to resolve style price for shipment reconciliation: orderId={}, styleNo={}", oid,
+                            order.getStyleNo(), e);
+                }
             }
         }
 
@@ -508,6 +537,12 @@ public class ProductionOrderFinanceOrchestrationService {
         sr.setFinalAmount(total.subtract(sr.getDeductionAmount()).setScale(2, RoundingMode.HALF_UP));
         sr.setReconciliationDate(now);
         sr.setUpdateTime(now);
+        if (StringUtils.hasText(uid)) {
+            sr.setUpdateBy(uid);
+            if (!StringUtils.hasText(sr.getCreateBy())) {
+                sr.setCreateBy(uid);
+            }
+        }
         return shipmentReconciliationService.saveOrUpdate(sr);
     }
 
@@ -600,7 +635,6 @@ public class ProductionOrderFinanceOrchestrationService {
             if (qty <= 0) {
                 continue;
             }
-            ensureFinanceRecordsOnClose(o, qty, now);
             try {
                 ensureShipmentReconciliationForOrder(o.getId());
             } catch (Exception e) {
@@ -615,195 +649,6 @@ public class ProductionOrderFinanceOrchestrationService {
             touched++;
         }
         return touched;
-    }
-
-    private void ensureFinanceRecordsOnClose(ProductionOrder order, int quantity, LocalDateTime now) {
-        if (order == null || !StringUtils.hasText(order.getId())) {
-            return;
-        }
-
-        String oid = order.getId().trim();
-        int qty = Math.max(0, quantity);
-        LocalDateTime t = now == null ? LocalDateTime.now() : now;
-
-        FactoryReconciliation fr;
-        try {
-            fr = factoryReconciliationService.lambdaQuery()
-                    .eq(FactoryReconciliation::getOrderId, oid)
-                    .orderByDesc(FactoryReconciliation::getCreateTime)
-                    .last("limit 1")
-                    .one();
-        } catch (Exception e) {
-            log.warn("Failed to query existing factory reconciliation: orderId={}", oid, e);
-            fr = null;
-        }
-
-        if (fr == null && StringUtils.hasText(order.getOrderNo())) {
-            try {
-                fr = factoryReconciliationService.lambdaQuery()
-                        .eq(FactoryReconciliation::getOrderNo, order.getOrderNo().trim())
-                        .orderByDesc(FactoryReconciliation::getCreateTime)
-                        .last("limit 1")
-                        .one();
-            } catch (Exception e) {
-                log.warn("Failed to query existing factory reconciliation by orderNo: orderId={}, orderNo={}",
-                        oid,
-                        order.getOrderNo(),
-                        e);
-                fr = null;
-            }
-        }
-
-        if (fr == null) {
-            fr = new FactoryReconciliation();
-            fr.setReconciliationNo(buildFinanceNo("FR", t));
-            fr.setFactoryId(order.getFactoryId());
-            fr.setFactoryName(order.getFactoryName());
-            fr.setStyleId(order.getStyleId());
-            fr.setStyleNo(order.getStyleNo());
-            fr.setStyleName(order.getStyleName());
-            fr.setOrderId(order.getId());
-            fr.setOrderNo(order.getOrderNo());
-            fr.setStatus("pending");
-            fr.setCreateTime(t);
-        } else {
-            String st = fr.getStatus() == null ? "" : fr.getStatus().trim();
-            if (StringUtils.hasText(st) && !"pending".equalsIgnoreCase(st)) {
-                FactoryReconciliation patch = new FactoryReconciliation();
-                patch.setId(fr.getId());
-                boolean needPatch = false;
-
-                if (!StringUtils.hasText(fr.getFactoryId()) && StringUtils.hasText(order.getFactoryId())) {
-                    patch.setFactoryId(order.getFactoryId());
-                    needPatch = true;
-                }
-                if (!StringUtils.hasText(fr.getFactoryName()) && StringUtils.hasText(order.getFactoryName())) {
-                    patch.setFactoryName(order.getFactoryName());
-                    needPatch = true;
-                }
-                if (!StringUtils.hasText(fr.getStyleId()) && StringUtils.hasText(order.getStyleId())) {
-                    patch.setStyleId(order.getStyleId());
-                    needPatch = true;
-                }
-                if (!StringUtils.hasText(fr.getStyleNo()) && StringUtils.hasText(order.getStyleNo())) {
-                    patch.setStyleNo(order.getStyleNo());
-                    needPatch = true;
-                }
-                if (!StringUtils.hasText(fr.getStyleName()) && StringUtils.hasText(order.getStyleName())) {
-                    patch.setStyleName(order.getStyleName());
-                    needPatch = true;
-                }
-                if (!StringUtils.hasText(fr.getOrderId()) && StringUtils.hasText(order.getId())) {
-                    patch.setOrderId(order.getId());
-                    needPatch = true;
-                }
-                if (!StringUtils.hasText(fr.getOrderNo()) && StringUtils.hasText(order.getOrderNo())) {
-                    patch.setOrderNo(order.getOrderNo());
-                    needPatch = true;
-                }
-
-                if (needPatch) {
-                    patch.setUpdateTime(t);
-                    factoryReconciliationService.updateById(patch);
-                }
-                return;
-            }
-        }
-
-        if (!StringUtils.hasText(fr.getFactoryId())) {
-            fr.setFactoryId(order.getFactoryId());
-        }
-        if (!StringUtils.hasText(fr.getFactoryName())) {
-            fr.setFactoryName(order.getFactoryName());
-        }
-        if (!StringUtils.hasText(fr.getStyleId())) {
-            fr.setStyleId(order.getStyleId());
-        }
-        if (!StringUtils.hasText(fr.getStyleNo())) {
-            fr.setStyleNo(order.getStyleNo());
-        }
-        if (!StringUtils.hasText(fr.getStyleName())) {
-            fr.setStyleName(order.getStyleName());
-        }
-        if (!StringUtils.hasText(fr.getOrderId())) {
-            fr.setOrderId(order.getId());
-        }
-        if (!StringUtils.hasText(fr.getOrderNo())) {
-            fr.setOrderNo(order.getOrderNo());
-        }
-
-        fr.setQuantity(qty);
-
-        BigDecimal up = resolveFactoryUnitPrice(oid, order.getStyleNo());
-        fr.setUnitPrice(up);
-        if (fr.getDeductionAmount() == null) {
-            fr.setDeductionAmount(BigDecimal.ZERO);
-        }
-        if (up == null) {
-            up = BigDecimal.ZERO;
-            fr.setUnitPrice(up);
-        }
-        BigDecimal total = up.multiply(BigDecimal.valueOf(qty)).setScale(2, RoundingMode.HALF_UP);
-        fr.setTotalAmount(total);
-        fr.setFinalAmount(total.subtract(fr.getDeductionAmount()).setScale(2, RoundingMode.HALF_UP));
-        fr.setReconciliationDate(t);
-        fr.setUpdateTime(t);
-        factoryReconciliationService.saveOrUpdate(fr);
-    }
-
-    private BigDecimal resolveFactoryUnitPrice(String orderId, String styleNo) {
-        BigDecimal up = resolveLastUnitPrice(orderId, "factory");
-        if (up != null && up.compareTo(BigDecimal.ZERO) > 0) {
-            return up;
-        }
-
-        try {
-            List<ScanRecord> list = scanRecordMapper.selectList(new LambdaQueryWrapper<ScanRecord>()
-                    .eq(ScanRecord::getOrderId, orderId)
-                    .eq(ScanRecord::getScanType, "production")
-                    .eq(ScanRecord::getScanResult, "success")
-                    .isNotNull(ScanRecord::getUnitPrice)
-                    .orderByDesc(ScanRecord::getScanTime)
-                    .orderByDesc(ScanRecord::getCreateTime)
-                    .last("limit 1000"));
-
-            if (list != null && !list.isEmpty()) {
-                BigDecimal sum = BigDecimal.ZERO;
-                LinkedHashSet<String> seen = new LinkedHashSet<>();
-                for (ScanRecord r : list) {
-                    if (r == null) {
-                        continue;
-                    }
-                    String pn = r.getProcessName();
-                    pn = StringUtils.hasText(pn) ? pn.trim() : "";
-                    if (!StringUtils.hasText(pn) || !seen.add(pn)) {
-                        continue;
-                    }
-                    BigDecimal v = r.getUnitPrice();
-                    if (v == null || v.compareTo(BigDecimal.ZERO) <= 0) {
-                        continue;
-                    }
-                    sum = sum.add(v);
-                }
-                if (sum.compareTo(BigDecimal.ZERO) > 0) {
-                    return sum.setScale(2, RoundingMode.HALF_UP);
-                }
-            }
-        } catch (Exception e) {
-            log.warn("Failed to resolve unit price from scan records: orderId={}", orderId, e);
-        }
-
-        try {
-            BigDecimal fromTpl = templateLibraryService.resolveTotalUnitPriceFromProgressTemplate(styleNo);
-            if (fromTpl != null && fromTpl.compareTo(BigDecimal.ZERO) > 0) {
-                return fromTpl;
-            }
-        } catch (Exception e) {
-            log.warn("Failed to resolve unit price from progress template: orderId={}, styleNo={}", orderId, styleNo,
-                    e);
-        }
-
-        return BigDecimal.ZERO;
     }
 
     private BigDecimal resolveLastUnitPrice(String orderId, String type) {
@@ -823,13 +668,7 @@ public class ProductionOrderFinanceOrchestrationService {
                         .one();
                 return sr == null ? null : sr.getUnitPrice();
             }
-            FactoryReconciliation fr = factoryReconciliationService.lambdaQuery()
-                    .select(FactoryReconciliation::getUnitPrice)
-                    .eq(FactoryReconciliation::getOrderId, oid)
-                    .orderByDesc(FactoryReconciliation::getCreateTime)
-                    .last("limit 1")
-                    .one();
-            return fr == null ? null : fr.getUnitPrice();
+            return null;
         } catch (Exception e) {
             log.warn("Failed to resolve last unit price: orderId={}, type={}", oid, tp, e);
             return null;
@@ -842,5 +681,17 @@ public class ProductionOrderFinanceOrchestrationService {
         String ts = t.format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
         String rand = String.valueOf((int) (Math.random() * 9000) + 1000);
         return p + ts + rand;
+    }
+
+    private static boolean isAllDigits(String s) {
+        if (s == null || s.isEmpty()) {
+            return false;
+        }
+        for (int i = 0; i < s.length(); i++) {
+            if (!Character.isDigit(s.charAt(i))) {
+                return false;
+            }
+        }
+        return true;
     }
 }

@@ -3,18 +3,29 @@ package com.fashion.supplychain.config;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.core.env.Environment;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import lombok.extern.slf4j.Slf4j;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Component
 @ConditionalOnProperty(prefix = "fashion.db", name = "initializer-enabled", havingValue = "true", matchIfMissing = true)
+@Slf4j
 public class DataInitializer implements CommandLineRunner {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private Environment environment;
 
     private boolean tableExists(String tableName) {
         Integer count = jdbcTemplate.queryForObject(
@@ -40,7 +51,66 @@ public class DataInitializer implements CommandLineRunner {
         try {
             jdbcTemplate.execute(sql);
         } catch (Exception e) {
-            System.err.println("SQL failed: " + e.getMessage());
+            log.warn("SQL failed: {}", e.getMessage());
+        }
+    }
+
+    private boolean waitForDatabaseReady() {
+        long waitMs = resolveInitializerWaitMs();
+        long deadline = waitMs <= 0 ? 0 : (System.currentTimeMillis() + waitMs);
+        while (true) {
+            if (pingDatabaseOnce()) {
+                return true;
+            }
+            if (waitMs <= 0 || System.currentTimeMillis() >= deadline) {
+                return false;
+            }
+            try {
+                long remaining = deadline - System.currentTimeMillis();
+                Thread.sleep(Math.min(1000L, Math.max(1L, remaining)));
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+        }
+    }
+
+    private boolean pingDatabaseOnce() {
+        try {
+            jdbcTemplate.queryForObject("SELECT 1", Integer.class);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private long resolveInitializerWaitMs() {
+        if (environment == null) {
+            return 0;
+        }
+
+        String url = environment.getProperty("spring.datasource.url");
+        if (url != null && url.toLowerCase().contains("jdbc:h2:")) {
+            return 0;
+        }
+
+        String[] profiles = environment.getActiveProfiles();
+        if (profiles != null && Arrays.stream(profiles).anyMatch(p -> p != null && "test".equalsIgnoreCase(p))) {
+            return 0;
+        }
+
+        String raw = environment.getProperty("fashion.db.initializer-wait-ms");
+        if (raw == null || raw.trim().isEmpty()) {
+            return 30000L;
+        }
+        try {
+            long v = Long.parseLong(raw.trim());
+            if (v < 0) {
+                return 0;
+            }
+            return Math.min(v, 120000L);
+        } catch (Exception e) {
+            return 30000L;
         }
     }
 
@@ -52,8 +122,7 @@ public class DataInitializer implements CommandLineRunner {
                     code,
                     name);
         } catch (Exception e) {
-            System.err.println("Failed to ensure permission name by code: code=" + code + ", name=" + name + ", err="
-                    + e.getMessage());
+            log.warn("Failed to ensure permission name by code: code={}, name={}, err={}", code, name, e.getMessage());
         }
     }
 
@@ -109,6 +178,255 @@ public class DataInitializer implements CommandLineRunner {
         }
     }
 
+    private boolean shouldSkipViewInitialization() {
+        if (environment == null) {
+            return false;
+        }
+
+        String url = environment.getProperty("spring.datasource.url");
+        if (url != null && url.toLowerCase().contains("jdbc:h2:")) {
+            return true;
+        }
+
+        String[] profiles = environment.getActiveProfiles();
+        return profiles != null && Arrays.stream(profiles).anyMatch(p -> p != null && "test".equalsIgnoreCase(p));
+    }
+
+    private boolean viewExists(String viewName) {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.views WHERE table_schema = DATABASE() AND table_name = ?",
+                Integer.class,
+                viewName);
+        return count != null && count > 0;
+    }
+
+    private void ensureProductionViewsFallback() {
+        if (viewExists("v_production_order_flow_stage_snapshot")
+                && viewExists("v_production_order_stage_done_agg")
+                && viewExists("v_production_order_procurement_snapshot")) {
+            return;
+        }
+
+        String flowStageSnapshot = """
+                CREATE OR REPLACE VIEW v_production_order_flow_stage_snapshot AS
+                SELECT
+                  sr.order_id AS order_id,
+                  MIN(CASE WHEN sr.scan_type = 'production' AND COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) = '下单' THEN sr.scan_time END) AS order_start_time,
+                  MAX(CASE WHEN sr.scan_type = 'production' AND COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) = '下单' THEN sr.scan_time END) AS order_end_time,
+                  SUBSTRING_INDEX(
+                    MAX(CASE WHEN sr.scan_type = 'production' AND COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) = '下单' THEN CONCAT(LPAD(UNIX_TIMESTAMP(sr.scan_time), 20, '0'), LPAD(UNIX_TIMESTAMP(sr.create_time), 20, '0'), '|', IFNULL(sr.operator_name, '')) END),
+                    '|', -1
+                  ) AS order_operator_name,
+                  MAX(CASE WHEN sr.scan_type = 'production' AND COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) = '采购' THEN sr.scan_time END) AS procurement_scan_end_time,
+                  SUBSTRING_INDEX(
+                    MAX(CASE WHEN sr.scan_type = 'production' AND COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) = '采购' THEN CONCAT(LPAD(UNIX_TIMESTAMP(sr.scan_time), 20, '0'), LPAD(UNIX_TIMESTAMP(sr.create_time), 20, '0'), '|', IFNULL(sr.operator_name, '')) END),
+                    '|', -1
+                  ) AS procurement_scan_operator_name,
+                  MIN(CASE WHEN sr.scan_type = 'cutting' THEN sr.scan_time END) AS cutting_start_time,
+                  MAX(CASE WHEN sr.scan_type = 'cutting' THEN sr.scan_time END) AS cutting_end_time,
+                  SUBSTRING_INDEX(
+                    MAX(CASE WHEN sr.scan_type = 'cutting' THEN CONCAT(LPAD(UNIX_TIMESTAMP(sr.scan_time), 20, '0'), LPAD(UNIX_TIMESTAMP(sr.create_time), 20, '0'), '|', IFNULL(sr.operator_name, '')) END),
+                    '|', -1
+                  ) AS cutting_operator_name,
+                  SUM(CASE WHEN sr.scan_type = 'cutting' THEN IFNULL(sr.quantity, 0) ELSE 0 END) AS cutting_quantity,
+                  MIN(CASE WHEN sr.scan_type = 'production'
+                        AND COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) NOT IN ('下单', '采购')
+                        AND IFNULL(sr.process_code, '') <> 'quality_warehousing'
+                        AND COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) NOT LIKE '%质检%'
+                        AND COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) NOT LIKE '%检验%'
+                        AND COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) NOT LIKE '%品检%'
+                        AND COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) NOT LIKE '%验货%'
+                      THEN sr.scan_time END) AS sewing_start_time,
+                  MAX(CASE WHEN sr.scan_type = 'production'
+                        AND COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) NOT IN ('下单', '采购')
+                        AND IFNULL(sr.process_code, '') <> 'quality_warehousing'
+                        AND COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) NOT LIKE '%质检%'
+                        AND COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) NOT LIKE '%检验%'
+                        AND COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) NOT LIKE '%品检%'
+                        AND COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) NOT LIKE '%验货%'
+                      THEN sr.scan_time END) AS sewing_end_time,
+                  SUBSTRING_INDEX(
+                    MAX(CASE WHEN sr.scan_type = 'production'
+                        AND COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) NOT IN ('下单', '采购')
+                        AND IFNULL(sr.process_code, '') <> 'quality_warehousing'
+                        AND COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) NOT LIKE '%质检%'
+                        AND COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) NOT LIKE '%检验%'
+                        AND COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) NOT LIKE '%品检%'
+                        AND COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) NOT LIKE '%验货%'
+                      THEN CONCAT(LPAD(UNIX_TIMESTAMP(sr.scan_time), 20, '0'), LPAD(UNIX_TIMESTAMP(sr.create_time), 20, '0'), '|', IFNULL(sr.operator_name, '')) END),
+                    '|', -1
+                  ) AS sewing_operator_name,
+                  MIN(CASE WHEN (sr.scan_type = 'quality'
+                        OR IFNULL(sr.process_code, '') = 'quality_warehousing'
+                        OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%质检%'
+                        OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%检验%'
+                        OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%品检%'
+                        OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%验货%')
+                      THEN sr.scan_time END) AS quality_start_time,
+                  MAX(CASE WHEN (sr.scan_type = 'quality'
+                        OR IFNULL(sr.process_code, '') = 'quality_warehousing'
+                        OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%质检%'
+                        OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%检验%'
+                        OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%品检%'
+                        OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%验货%')
+                      THEN sr.scan_time END) AS quality_end_time,
+                  SUBSTRING_INDEX(
+                    MAX(CASE WHEN (sr.scan_type = 'quality'
+                        OR IFNULL(sr.process_code, '') = 'quality_warehousing'
+                        OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%质检%'
+                        OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%检验%'
+                        OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%品检%'
+                        OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%验货%')
+                      THEN CONCAT(LPAD(UNIX_TIMESTAMP(sr.scan_time), 20, '0'), LPAD(UNIX_TIMESTAMP(sr.create_time), 20, '0'), '|', IFNULL(sr.operator_name, '')) END),
+                    '|', -1
+                  ) AS quality_operator_name,
+                  SUM(CASE WHEN (sr.scan_type = 'quality'
+                        OR IFNULL(sr.process_code, '') = 'quality_warehousing'
+                        OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%质检%'
+                        OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%检验%'
+                        OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%品检%'
+                        OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%验货%')
+                      THEN IFNULL(sr.quantity, 0) ELSE 0 END) AS quality_quantity,
+                  MIN(CASE WHEN sr.scan_type = 'warehouse' AND IFNULL(sr.process_code, '') <> 'warehouse_rollback' THEN sr.scan_time END) AS warehousing_start_time,
+                  MAX(CASE WHEN sr.scan_type = 'warehouse' AND IFNULL(sr.process_code, '') <> 'warehouse_rollback' THEN sr.scan_time END) AS warehousing_end_time,
+                  SUBSTRING_INDEX(
+                    MAX(CASE WHEN sr.scan_type = 'warehouse' AND IFNULL(sr.process_code, '') <> 'warehouse_rollback' THEN CONCAT(LPAD(UNIX_TIMESTAMP(sr.scan_time), 20, '0'), LPAD(UNIX_TIMESTAMP(sr.create_time), 20, '0'), '|', IFNULL(sr.operator_name, '')) END),
+                    '|', -1
+                  ) AS warehousing_operator_name,
+                  SUM(CASE WHEN sr.scan_type = 'warehouse' AND IFNULL(sr.process_code, '') <> 'warehouse_rollback' THEN IFNULL(sr.quantity, 0) ELSE 0 END) AS warehousing_quantity
+                FROM t_scan_record sr
+                WHERE sr.scan_result = 'success'
+                GROUP BY sr.order_id;
+                """;
+
+        String stageDoneAgg = """
+                CREATE OR REPLACE VIEW v_production_order_stage_done_agg AS
+                SELECT
+                  t.order_id AS order_id,
+                  t.stage_name AS stage_name,
+                  SUM(IFNULL(t.quantity, 0)) AS done_quantity,
+                  MAX(t.scan_time) AS last_scan_time
+                FROM (
+                  SELECT
+                    sr.order_id,
+                    COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) AS stage_name,
+                    sr.quantity,
+                    sr.scan_time
+                  FROM t_scan_record sr
+                  WHERE sr.scan_result = 'success'
+                    AND sr.quantity > 0
+                    AND sr.scan_type IN ('production', 'cutting')
+                ) t
+                WHERE t.stage_name IS NOT NULL AND t.stage_name <> ''
+                GROUP BY t.order_id, t.stage_name;
+                """;
+
+        String procurementSnapshot = """
+                CREATE OR REPLACE VIEW v_production_order_procurement_snapshot AS
+                SELECT
+                  p.order_id AS order_id,
+                  MIN(p.create_time) AS procurement_start_time,
+                  MAX(COALESCE(p.received_time, p.update_time)) AS procurement_end_time,
+                  SUBSTRING_INDEX(
+                    MAX(CONCAT(LPAD(UNIX_TIMESTAMP(COALESCE(p.received_time, p.update_time)), 20, '0'), LPAD(UNIX_TIMESTAMP(p.update_time), 20, '0'), '|', IFNULL(p.receiver_name, ''))),
+                    '|', -1
+                  ) AS procurement_operator_name,
+                  SUM(IFNULL(p.purchase_quantity, 0)) AS purchase_quantity,
+                  SUM(IFNULL(p.arrived_quantity, 0)) AS arrived_quantity
+                FROM t_material_purchase p
+                WHERE p.delete_flag = 0
+                  AND p.order_id IS NOT NULL
+                  AND p.order_id <> ''
+                GROUP BY p.order_id;
+                """;
+
+        try {
+            jdbcTemplate.execute(flowStageSnapshot);
+            log.info("View v_production_order_flow_stage_snapshot checked/created.");
+        } catch (Exception e) {
+            log.warn("Failed to create view v_production_order_flow_stage_snapshot: {}", e.getMessage());
+        }
+        try {
+            jdbcTemplate.execute(stageDoneAgg);
+            log.info("View v_production_order_stage_done_agg checked/created.");
+        } catch (Exception e) {
+            log.warn("Failed to create view v_production_order_stage_done_agg: {}", e.getMessage());
+        }
+        try {
+            jdbcTemplate.execute(procurementSnapshot);
+            log.info("View v_production_order_procurement_snapshot checked/created.");
+        } catch (Exception e) {
+            log.warn("Failed to create view v_production_order_procurement_snapshot: {}", e.getMessage());
+        }
+    }
+
+    private void ensureProductionViews() {
+        if (shouldSkipViewInitialization()) {
+            return;
+        }
+        ensureViewsFromInitSql();
+        ensureProductionViewsFallback();
+    }
+
+    private void ensureViewsFromInitSql() {
+        if (shouldSkipViewInitialization()) {
+            return;
+        }
+
+        try {
+            ClassPathResource resource = new ClassPathResource("init.sql");
+            if (!resource.exists()) {
+                return;
+            }
+            String content = new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            if (content.trim().isEmpty()) {
+                return;
+            }
+
+            Pattern viewPattern = Pattern.compile("(?is)\\bCREATE\\s+OR\\s+REPLACE\\s+VIEW\\b[\\s\\S]*?;");
+            Matcher matcher = viewPattern.matcher(content);
+            List<String> statements = new ArrayList<>();
+            while (matcher.find()) {
+                String stmt = matcher.group();
+                if (stmt != null && !stmt.trim().isEmpty()) {
+                    statements.add(stmt.trim());
+                }
+            }
+            if (statements.isEmpty()) {
+                return;
+            }
+
+            Pattern namePattern = Pattern
+                    .compile("(?is)\\bCREATE\\s+OR\\s+REPLACE\\s+VIEW\\s+(`?)([\\w.]+)\\1");
+            for (String stmt : statements) {
+                if (stmt == null || stmt.trim().isEmpty()) {
+                    continue;
+                }
+                String viewName = null;
+                Matcher nameMatcher = namePattern.matcher(stmt);
+                if (nameMatcher.find()) {
+                    viewName = nameMatcher.group(2);
+                }
+                try {
+                    jdbcTemplate.execute(stmt);
+                    if (viewName != null) {
+                        log.info("View {} checked/created.", viewName);
+                    } else {
+                        log.info("View checked/created.");
+                    }
+                } catch (Exception e) {
+                    if (viewName != null) {
+                        log.warn("Failed to create view {}: {}", viewName, e.getMessage());
+                    } else {
+                        log.warn("Failed to create view from init.sql: {}", e.getMessage());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to load init.sql for views: {}", e.getMessage());
+        }
+    }
+
     private void ensureDictTable() {
         if (!tableExists("t_dict")) {
             String sqlFromInit = loadCreateTableStatementFromInitSql("t_dict");
@@ -144,8 +462,55 @@ public class DataInitializer implements CommandLineRunner {
                                 "('WINTER', '冬季', 'WINTER', 'season', 4, 'ENABLED')");
             }
         } catch (Exception e) {
-            System.err.println("Failed to seed dict table: err=" + e.getMessage());
+            log.warn("Failed to seed dict table: err={}", e.getMessage());
         }
+    }
+
+    private void ensureLoginLogTable() {
+        if (!tableExists("t_login_log")) {
+            String sqlFromInit = loadCreateTableStatementFromInitSql("t_login_log");
+            if (sqlFromInit != null) {
+                execSilently(sqlFromInit);
+            } else {
+                execSilently("CREATE TABLE IF NOT EXISTS t_login_log (" +
+                        "id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '日志ID'," +
+                        "username VARCHAR(50) NOT NULL COMMENT '用户名'," +
+                        "login_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '登录时间'," +
+                        "login_ip VARCHAR(20) NOT NULL COMMENT '登录IP'," +
+                        "login_result VARCHAR(20) NOT NULL COMMENT '登录结果：SUCCESS-成功，FAILED-失败'," +
+                        "error_message VARCHAR(200) COMMENT '错误信息'" +
+                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='登录日志表'");
+            }
+        }
+
+        if (!columnExists("t_login_log", "login_ip") && columnExists("t_login_log", "ip")) {
+            execSilently("ALTER TABLE t_login_log CHANGE ip login_ip VARCHAR(20) NOT NULL COMMENT '登录IP'");
+        }
+        if (!columnExists("t_login_log", "login_ip")) {
+            execSilently("ALTER TABLE t_login_log ADD COLUMN login_ip VARCHAR(20) NOT NULL DEFAULT '' COMMENT '登录IP'");
+        }
+        if (!columnExists("t_login_log", "login_result") && columnExists("t_login_log", "login_status")) {
+            execSilently(
+                    "ALTER TABLE t_login_log CHANGE login_status login_result VARCHAR(20) NOT NULL COMMENT '登录结果：SUCCESS-成功，FAILED-失败'");
+        }
+        if (!columnExists("t_login_log", "login_result")) {
+            execSilently(
+                    "ALTER TABLE t_login_log ADD COLUMN login_result VARCHAR(20) NOT NULL DEFAULT '' COMMENT '登录结果：SUCCESS-成功，FAILED-失败'");
+        }
+        if (!columnExists("t_login_log", "error_message") && columnExists("t_login_log", "message")) {
+            execSilently("ALTER TABLE t_login_log CHANGE message error_message VARCHAR(200) COMMENT '错误信息'");
+        }
+        if (!columnExists("t_login_log", "error_message")) {
+            execSilently("ALTER TABLE t_login_log ADD COLUMN error_message VARCHAR(200) COMMENT '错误信息'");
+        }
+        if (!columnExists("t_login_log", "login_time")) {
+            execSilently(
+                    "ALTER TABLE t_login_log ADD COLUMN login_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '登录时间'");
+        }
+
+        addIndexIfAbsent("t_login_log", "idx_login_time", "login_time");
+        addIndexIfAbsent("t_login_log", "idx_username", "username");
+        addIndexIfAbsent("t_login_log", "idx_login_result", "login_result");
     }
 
     private void ensureMaterialPurchaseTable() {
@@ -213,9 +578,9 @@ public class DataInitializer implements CommandLineRunner {
         if (sqlFromInit != null) {
             try {
                 jdbcTemplate.execute(sqlFromInit);
-                System.out.println("Table t_material_purchase checked/created.");
+                log.info("Table t_material_purchase checked/created.");
             } catch (Exception e) {
-                System.err.println("Failed to create t_material_purchase table from init.sql: " + e.getMessage());
+                log.warn("Failed to create t_material_purchase table from init.sql: {}", e.getMessage());
             }
         }
 
@@ -258,9 +623,9 @@ public class DataInitializer implements CommandLineRunner {
 
         try {
             jdbcTemplate.execute(createMaterialPurchaseTable);
-            System.out.println("Table t_material_purchase checked/created.");
+            log.info("Table t_material_purchase checked/created.");
         } catch (Exception e) {
-            System.err.println("Failed to create t_material_purchase table: " + e.getMessage());
+            log.warn("Failed to create t_material_purchase table: {}", e.getMessage());
         }
 
         if (!columnExists("t_material_purchase", "material_id")) {
@@ -319,6 +684,79 @@ public class DataInitializer implements CommandLineRunner {
         if (!columnExists("t_material_purchase", "return_confirm_time")) {
             execSilently("ALTER TABLE t_material_purchase ADD COLUMN return_confirm_time DATETIME COMMENT '回料确认时间'");
         }
+    }
+
+    private void ensureMaterialDatabaseTable() {
+        if (tableExists("t_material_database")) {
+            if (!columnExists("t_material_database", "material_type")) {
+                execSilently(
+                        "ALTER TABLE t_material_database ADD COLUMN material_type VARCHAR(20) DEFAULT 'accessory' COMMENT '物料类型'");
+            }
+            if (!columnExists("t_material_database", "specifications")) {
+                execSilently("ALTER TABLE t_material_database ADD COLUMN specifications VARCHAR(100) COMMENT '规格'");
+            }
+            if (!columnExists("t_material_database", "unit")) {
+                execSilently(
+                        "ALTER TABLE t_material_database ADD COLUMN unit VARCHAR(20) NOT NULL DEFAULT '' COMMENT '单位'");
+            }
+            if (!columnExists("t_material_database", "supplier_name")) {
+                execSilently("ALTER TABLE t_material_database ADD COLUMN supplier_name VARCHAR(100) COMMENT '供应商'");
+            }
+            if (!columnExists("t_material_database", "unit_price")) {
+                execSilently(
+                        "ALTER TABLE t_material_database ADD COLUMN unit_price DECIMAL(10,2) DEFAULT 0.00 COMMENT '单价'");
+            }
+            if (!columnExists("t_material_database", "description")) {
+                execSilently("ALTER TABLE t_material_database ADD COLUMN description VARCHAR(255) COMMENT '描述'");
+            }
+            if (!columnExists("t_material_database", "image")) {
+                execSilently("ALTER TABLE t_material_database ADD COLUMN image VARCHAR(500) COMMENT '图片URL'");
+            }
+            if (!columnExists("t_material_database", "remark")) {
+                execSilently("ALTER TABLE t_material_database ADD COLUMN remark VARCHAR(500) COMMENT '备注'");
+            }
+            if (!columnExists("t_material_database", "status")) {
+                execSilently(
+                        "ALTER TABLE t_material_database ADD COLUMN status VARCHAR(20) DEFAULT 'pending' COMMENT '状态'");
+            }
+            if (!columnExists("t_material_database", "completed_time")) {
+                execSilently("ALTER TABLE t_material_database ADD COLUMN completed_time DATETIME COMMENT '完成时间'");
+            }
+            if (!columnExists("t_material_database", "return_reason")) {
+                execSilently("ALTER TABLE t_material_database ADD COLUMN return_reason VARCHAR(255) COMMENT '退回原因'");
+            }
+            if (!columnExists("t_material_database", "delete_flag")) {
+                execSilently(
+                        "ALTER TABLE t_material_database ADD COLUMN delete_flag INT NOT NULL DEFAULT 0 COMMENT '删除标识：0-未删除，1-已删除'");
+            }
+            return;
+        }
+
+        String createTable = "CREATE TABLE IF NOT EXISTS t_material_database (" +
+                "id VARCHAR(36) PRIMARY KEY COMMENT '物料ID'," +
+                "material_code VARCHAR(50) NOT NULL COMMENT '物料编码'," +
+                "material_name VARCHAR(100) NOT NULL COMMENT '物料名称'," +
+                "style_no VARCHAR(50) COMMENT '款号'," +
+                "material_type VARCHAR(20) DEFAULT 'accessory' COMMENT '物料类型'," +
+                "specifications VARCHAR(100) COMMENT '规格'," +
+                "unit VARCHAR(20) NOT NULL COMMENT '单位'," +
+                "supplier_name VARCHAR(100) COMMENT '供应商'," +
+                "unit_price DECIMAL(10,2) DEFAULT 0.00 COMMENT '单价'," +
+                "description VARCHAR(255) COMMENT '描述'," +
+                "image VARCHAR(500) COMMENT '图片URL'," +
+                "remark VARCHAR(500) COMMENT '备注'," +
+                "status VARCHAR(20) DEFAULT 'pending' COMMENT '状态'," +
+                "completed_time DATETIME COMMENT '完成时间'," +
+                "return_reason VARCHAR(255) COMMENT '退回原因'," +
+                "create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'," +
+                "update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'," +
+                "delete_flag INT NOT NULL DEFAULT 0 COMMENT '删除标识：0-未删除，1-已删除'," +
+                "INDEX idx_material_code (material_code)," +
+                "INDEX idx_style_no (style_no)," +
+                "INDEX idx_supplier_name (supplier_name)" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='面辅料数据库';";
+
+        execSilently(createTable);
     }
 
     private void ensurePermissionTables() {
@@ -412,7 +850,7 @@ public class DataInitializer implements CommandLineRunner {
                     "INSERT IGNORE INTO t_role (id, role_name, role_code, description, status) VALUES (?,?,?,?,?)",
                     4L, "普通用户", "user", "普通用户", "active");
         } catch (Exception e) {
-            System.err.println("Failed to seed default roles: err=" + e.getMessage());
+            log.warn("Failed to seed default roles: err={}", e.getMessage());
         }
 
         ensurePermission("仪表盘", "MENU_DASHBOARD", 0L, null, "menu", "/dashboard", null, 0);
@@ -440,8 +878,6 @@ public class DataInitializer implements CommandLineRunner {
             ensurePermissionNameByCode("MENU_WAREHOUSING", "质检入库");
         }
         if (financeId != null) {
-            ensurePermission("工厂对账", "MENU_FACTORY_RECON", financeId, "财务管理", "menu", "/finance/factory-reconciliation",
-                    null, 31);
             ensurePermission("物料对账", "MENU_MATERIAL_RECON", financeId, "财务管理", "menu",
                     "/finance/material-reconciliation", null, 32);
             ensurePermission("成品结算", "MENU_SHIPMENT_RECON", financeId, "财务管理", "menu",
@@ -461,7 +897,7 @@ public class DataInitializer implements CommandLineRunner {
             jdbcTemplate.update(
                     "INSERT IGNORE INTO t_role_permission (role_id, permission_id) SELECT 1, id FROM t_permission");
         } catch (Exception e) {
-            System.err.println("Failed to seed role permissions: err=" + e.getMessage());
+            log.warn("Failed to seed role permissions: err={}", e.getMessage());
         }
     }
 
@@ -481,8 +917,7 @@ public class DataInitializer implements CommandLineRunner {
                     sort,
                     "active");
         } catch (Exception e) {
-            System.err.println(
-                    "Failed to ensure permission: code=" + code + ", name=" + name + ", err=" + e.getMessage());
+            log.warn("Failed to ensure permission: code={}, name={}, err={}", code, name, e.getMessage());
         }
 
         try {
@@ -507,9 +942,9 @@ public class DataInitializer implements CommandLineRunner {
             if (sqlFromInit != null) {
                 try {
                     jdbcTemplate.execute(sqlFromInit);
-                    System.out.println("Table t_scan_record checked/created.");
+                    log.info("Table t_scan_record checked/created.");
                 } catch (Exception e) {
-                    System.err.println("Failed to create t_scan_record table from init.sql: " + e.getMessage());
+                    log.warn("Failed to create t_scan_record table from init.sql: {}", e.getMessage());
                 }
             }
             return;
@@ -551,6 +986,9 @@ public class DataInitializer implements CommandLineRunner {
         }
         if (!columnExists("t_scan_record", "settlement_status")) {
             execSilently("ALTER TABLE t_scan_record ADD COLUMN settlement_status VARCHAR(20) COMMENT '核算状态'");
+        }
+        if (!columnExists("t_scan_record", "payroll_settlement_id")) {
+            execSilently("ALTER TABLE t_scan_record ADD COLUMN payroll_settlement_id VARCHAR(36) COMMENT '工资结算单ID'");
         }
         if (!columnExists("t_scan_record", "process_code")) {
             execSilently("ALTER TABLE t_scan_record ADD COLUMN process_code VARCHAR(50) COMMENT '工序编码'");
@@ -617,6 +1055,145 @@ public class DataInitializer implements CommandLineRunner {
         addUniqueKeyIfAbsent("t_scan_record", "uk_bundle_stage_progress",
                 "cutting_bundle_id, scan_type, progress_stage");
         addIndexIfAbsent("t_scan_record", "idx_request_id", "request_id");
+        addIndexIfAbsent("t_scan_record", "idx_payroll_settlement_id", "payroll_settlement_id");
+    }
+
+    private void ensurePayrollSettlementTable() {
+        if (!tableExists("t_payroll_settlement")) {
+            String sqlFromInit = loadCreateTableStatementFromInitSql("t_payroll_settlement");
+            if (sqlFromInit != null) {
+                try {
+                    jdbcTemplate.execute(sqlFromInit);
+                    log.info("Table t_payroll_settlement checked/created.");
+                } catch (Exception e) {
+                    log.warn("Failed to create t_payroll_settlement table from init.sql: {}", e.getMessage());
+                }
+            }
+            return;
+        }
+
+        execSilently("ALTER TABLE t_payroll_settlement MODIFY COLUMN id VARCHAR(36)");
+        if (!columnExists("t_payroll_settlement", "settlement_no")) {
+            execSilently(
+                    "ALTER TABLE t_payroll_settlement ADD COLUMN settlement_no VARCHAR(50) NOT NULL COMMENT '结算单号'");
+        }
+        if (!columnExists("t_payroll_settlement", "order_id")) {
+            execSilently("ALTER TABLE t_payroll_settlement ADD COLUMN order_id VARCHAR(36) COMMENT '订单ID'");
+        }
+        if (!columnExists("t_payroll_settlement", "order_no")) {
+            execSilently("ALTER TABLE t_payroll_settlement ADD COLUMN order_no VARCHAR(50) COMMENT '订单号'");
+        }
+        if (!columnExists("t_payroll_settlement", "style_id")) {
+            execSilently("ALTER TABLE t_payroll_settlement ADD COLUMN style_id VARCHAR(36) COMMENT '款号ID'");
+        }
+        if (!columnExists("t_payroll_settlement", "style_no")) {
+            execSilently("ALTER TABLE t_payroll_settlement ADD COLUMN style_no VARCHAR(50) COMMENT '款号'");
+        }
+        if (!columnExists("t_payroll_settlement", "style_name")) {
+            execSilently("ALTER TABLE t_payroll_settlement ADD COLUMN style_name VARCHAR(100) COMMENT '款名'");
+        }
+        if (!columnExists("t_payroll_settlement", "start_time")) {
+            execSilently("ALTER TABLE t_payroll_settlement ADD COLUMN start_time DATETIME COMMENT '开始时间'");
+        }
+        if (!columnExists("t_payroll_settlement", "end_time")) {
+            execSilently("ALTER TABLE t_payroll_settlement ADD COLUMN end_time DATETIME COMMENT '结束时间'");
+        }
+        if (!columnExists("t_payroll_settlement", "total_quantity")) {
+            execSilently("ALTER TABLE t_payroll_settlement ADD COLUMN total_quantity INT DEFAULT 0 COMMENT '总数量'");
+        }
+        if (!columnExists("t_payroll_settlement", "total_amount")) {
+            execSilently(
+                    "ALTER TABLE t_payroll_settlement ADD COLUMN total_amount DECIMAL(10,2) DEFAULT 0.00 COMMENT '总金额'");
+        }
+        if (!columnExists("t_payroll_settlement", "status")) {
+            execSilently("ALTER TABLE t_payroll_settlement ADD COLUMN status VARCHAR(20) COMMENT '状态'");
+        }
+        if (!columnExists("t_payroll_settlement", "remark")) {
+            execSilently("ALTER TABLE t_payroll_settlement ADD COLUMN remark VARCHAR(255) COMMENT '备注'");
+        }
+        if (!columnExists("t_payroll_settlement", "create_time")) {
+            execSilently(
+                    "ALTER TABLE t_payroll_settlement ADD COLUMN create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'");
+        }
+        if (!columnExists("t_payroll_settlement", "update_time")) {
+            execSilently(
+                    "ALTER TABLE t_payroll_settlement ADD COLUMN update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'");
+        }
+        if (!columnExists("t_payroll_settlement", "create_by")) {
+            execSilently("ALTER TABLE t_payroll_settlement ADD COLUMN create_by VARCHAR(36) COMMENT '创建人'");
+        }
+        if (!columnExists("t_payroll_settlement", "update_by")) {
+            execSilently("ALTER TABLE t_payroll_settlement ADD COLUMN update_by VARCHAR(36) COMMENT '更新人'");
+        }
+
+        addUniqueKeyIfAbsent("t_payroll_settlement", "uk_payroll_settlement_no", "settlement_no");
+        addIndexIfAbsent("t_payroll_settlement", "idx_payroll_order_no", "order_no");
+        addIndexIfAbsent("t_payroll_settlement", "idx_payroll_style_no", "style_no");
+        addIndexIfAbsent("t_payroll_settlement", "idx_payroll_create_time", "create_time");
+    }
+
+    private void ensurePayrollSettlementItemTable() {
+        if (!tableExists("t_payroll_settlement_item")) {
+            String sqlFromInit = loadCreateTableStatementFromInitSql("t_payroll_settlement_item");
+            if (sqlFromInit != null) {
+                try {
+                    jdbcTemplate.execute(sqlFromInit);
+                    log.info("Table t_payroll_settlement_item checked/created.");
+                } catch (Exception e) {
+                    log.warn("Failed to create t_payroll_settlement_item table from init.sql: {}", e.getMessage());
+                }
+            }
+            return;
+        }
+
+        execSilently("ALTER TABLE t_payroll_settlement_item MODIFY COLUMN id VARCHAR(36)");
+        if (!columnExists("t_payroll_settlement_item", "settlement_id")) {
+            execSilently(
+                    "ALTER TABLE t_payroll_settlement_item ADD COLUMN settlement_id VARCHAR(36) NOT NULL COMMENT '结算单ID'");
+        }
+        if (!columnExists("t_payroll_settlement_item", "operator_id")) {
+            execSilently("ALTER TABLE t_payroll_settlement_item ADD COLUMN operator_id VARCHAR(36) COMMENT '人员ID'");
+        }
+        if (!columnExists("t_payroll_settlement_item", "operator_name")) {
+            execSilently("ALTER TABLE t_payroll_settlement_item ADD COLUMN operator_name VARCHAR(50) COMMENT '人员名称'");
+        }
+        if (!columnExists("t_payroll_settlement_item", "process_name")) {
+            execSilently("ALTER TABLE t_payroll_settlement_item ADD COLUMN process_name VARCHAR(100) COMMENT '工序名称'");
+        }
+        if (!columnExists("t_payroll_settlement_item", "quantity")) {
+            execSilently("ALTER TABLE t_payroll_settlement_item ADD COLUMN quantity INT DEFAULT 0 COMMENT '数量'");
+        }
+        if (!columnExists("t_payroll_settlement_item", "unit_price")) {
+            execSilently("ALTER TABLE t_payroll_settlement_item ADD COLUMN unit_price DECIMAL(10,2) COMMENT '单价'");
+        }
+        if (!columnExists("t_payroll_settlement_item", "total_amount")) {
+            execSilently("ALTER TABLE t_payroll_settlement_item ADD COLUMN total_amount DECIMAL(10,2) COMMENT '总金额'");
+        }
+        if (!columnExists("t_payroll_settlement_item", "order_id")) {
+            execSilently("ALTER TABLE t_payroll_settlement_item ADD COLUMN order_id VARCHAR(36) COMMENT '订单ID'");
+        }
+        if (!columnExists("t_payroll_settlement_item", "order_no")) {
+            execSilently("ALTER TABLE t_payroll_settlement_item ADD COLUMN order_no VARCHAR(50) COMMENT '订单号'");
+        }
+        if (!columnExists("t_payroll_settlement_item", "style_no")) {
+            execSilently("ALTER TABLE t_payroll_settlement_item ADD COLUMN style_no VARCHAR(50) COMMENT '款号'");
+        }
+        if (!columnExists("t_payroll_settlement_item", "scan_type")) {
+            execSilently("ALTER TABLE t_payroll_settlement_item ADD COLUMN scan_type VARCHAR(20) COMMENT '扫码类型'");
+        }
+        if (!columnExists("t_payroll_settlement_item", "create_time")) {
+            execSilently(
+                    "ALTER TABLE t_payroll_settlement_item ADD COLUMN create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'");
+        }
+        if (!columnExists("t_payroll_settlement_item", "update_time")) {
+            execSilently(
+                    "ALTER TABLE t_payroll_settlement_item ADD COLUMN update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'");
+        }
+
+        addIndexIfAbsent("t_payroll_settlement_item", "idx_payroll_item_settlement_id", "settlement_id");
+        addIndexIfAbsent("t_payroll_settlement_item", "idx_payroll_item_operator_id", "operator_id");
+        addIndexIfAbsent("t_payroll_settlement_item", "idx_payroll_item_order_no", "order_no");
+        addIndexIfAbsent("t_payroll_settlement_item", "idx_payroll_item_style_no", "style_no");
     }
 
     private void ensureCuttingBundleTable() {
@@ -625,10 +1202,10 @@ public class DataInitializer implements CommandLineRunner {
             if (sqlFromInit != null) {
                 try {
                     jdbcTemplate.execute(sqlFromInit);
-                    System.out.println("Table t_cutting_bundle checked/created.");
+                    log.info("Table t_cutting_bundle checked/created.");
                     return;
                 } catch (Exception e) {
-                    System.err.println("Failed to create t_cutting_bundle table from init.sql: " + e.getMessage());
+                    log.warn("Failed to create t_cutting_bundle table from init.sql: {}", e.getMessage());
                 }
             }
 
@@ -653,9 +1230,9 @@ public class DataInitializer implements CommandLineRunner {
 
             try {
                 jdbcTemplate.execute(createCuttingBundleTable);
-                System.out.println("Table t_cutting_bundle checked/created.");
+                log.info("Table t_cutting_bundle checked/created.");
             } catch (Exception e) {
-                System.err.println("Failed to create t_cutting_bundle table: " + e.getMessage());
+                log.warn("Failed to create t_cutting_bundle table: {}", e.getMessage());
             }
 
             return;
@@ -756,6 +1333,8 @@ public class DataInitializer implements CommandLineRunner {
                     "cutting_bundle_no INT COMMENT '裁剪扎号序号'," +
                     "cutting_bundle_qr_code VARCHAR(200) COMMENT '裁剪扎号二维码内容'," +
                     "unqualified_image_urls TEXT COMMENT '不合格图片URL列表'," +
+                    "defect_category VARCHAR(64) COMMENT '次品类别'," +
+                    "defect_remark VARCHAR(500) COMMENT '次品备注'," +
                     "repair_remark VARCHAR(255) COMMENT '返修备注'," +
                     "create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'," +
                     "update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'," +
@@ -770,9 +1349,9 @@ public class DataInitializer implements CommandLineRunner {
 
             try {
                 jdbcTemplate.execute(createProductWarehousingTable);
-                System.out.println("Table t_product_warehousing checked/created.");
+                log.info("Table t_product_warehousing checked/created.");
             } catch (Exception e) {
-                System.err.println("Failed to create t_product_warehousing table: " + e.getMessage());
+                log.warn("Failed to create t_product_warehousing table: {}", e.getMessage());
             }
 
             return;
@@ -826,7 +1405,7 @@ public class DataInitializer implements CommandLineRunner {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Failed to cleanup warehousing unique indexes: err=" + e.getMessage());
+            log.warn("Failed to cleanup warehousing unique indexes: err={}", e.getMessage());
         }
         if (!columnExists("t_product_warehousing", "order_id")) {
             execSilently(
@@ -860,6 +1439,23 @@ public class DataInitializer implements CommandLineRunner {
             execSilently(
                     "ALTER TABLE t_product_warehousing ADD COLUMN unqualified_quantity INT NOT NULL DEFAULT 0 COMMENT '不合格数量'");
         }
+        if (!columnExists("t_product_warehousing", "receiver_id")) {
+            execSilently(
+                    "ALTER TABLE t_product_warehousing ADD COLUMN receiver_id VARCHAR(36) NULL COMMENT '领取人ID'");
+        }
+        if (!columnExists("t_product_warehousing", "receiver_name")) {
+            execSilently(
+                    "ALTER TABLE t_product_warehousing ADD COLUMN receiver_name VARCHAR(50) NULL COMMENT '领取人名称'");
+        }
+        if (!columnExists("t_product_warehousing", "received_time")) {
+            execSilently(
+                    "ALTER TABLE t_product_warehousing ADD COLUMN received_time DATETIME NULL COMMENT '领取时间'");
+        }
+        if (!columnExists("t_product_warehousing", "inspection_status")) {
+            execSilently(
+                    "ALTER TABLE t_product_warehousing ADD COLUMN inspection_status VARCHAR(20) NULL COMMENT '验收状态'"
+                            + " AFTER repair_remark");
+        }
         if (!columnExists("t_product_warehousing", "warehousing_type")) {
             execSilently(
                     "ALTER TABLE t_product_warehousing ADD COLUMN warehousing_type VARCHAR(20) DEFAULT 'manual' COMMENT '入库类型'");
@@ -886,6 +1482,14 @@ public class DataInitializer implements CommandLineRunner {
         if (!columnExists("t_product_warehousing", "unqualified_image_urls")) {
             execSilently(
                     "ALTER TABLE t_product_warehousing ADD COLUMN unqualified_image_urls TEXT COMMENT '不合格图片URL列表'");
+        }
+        if (!columnExists("t_product_warehousing", "defect_category")) {
+            execSilently(
+                    "ALTER TABLE t_product_warehousing ADD COLUMN defect_category VARCHAR(64) COMMENT '次品类别'");
+        }
+        if (!columnExists("t_product_warehousing", "defect_remark")) {
+            execSilently(
+                    "ALTER TABLE t_product_warehousing ADD COLUMN defect_remark VARCHAR(500) COMMENT '次品备注'");
         }
         if (!columnExists("t_product_warehousing", "repair_remark")) {
             execSilently(
@@ -937,9 +1541,9 @@ public class DataInitializer implements CommandLineRunner {
 
             try {
                 jdbcTemplate.execute(createProductOutstockTable);
-                System.out.println("Table t_product_outstock checked/created.");
+                log.info("Table t_product_outstock checked/created.");
             } catch (Exception e) {
-                System.err.println("Failed to create t_product_outstock table: " + e.getMessage());
+                log.warn("Failed to create t_product_outstock table: {}", e.getMessage());
             }
             return;
         }
@@ -987,9 +1591,9 @@ public class DataInitializer implements CommandLineRunner {
 
             try {
                 jdbcTemplate.execute(createCuttingTaskTable);
-                System.out.println("Table t_cutting_task checked/created.");
+                log.info("Table t_cutting_task checked/created.");
             } catch (Exception e) {
-                System.err.println("Failed to create t_cutting_task table: " + e.getMessage());
+                log.warn("Failed to create t_cutting_task table: {}", e.getMessage());
             }
 
             return;
@@ -1006,72 +1610,6 @@ public class DataInitializer implements CommandLineRunner {
         }
         if (!columnExists("t_cutting_task", "size")) {
             execSilently("ALTER TABLE t_cutting_task ADD COLUMN size VARCHAR(50) COMMENT '码数'");
-        }
-    }
-
-    private void ensureFactoryReconciliationTable() {
-        if (!tableExists("t_factory_reconciliation")) {
-            String createFactoryReconciliationTable = "CREATE TABLE IF NOT EXISTS t_factory_reconciliation (" +
-                    "id VARCHAR(36) PRIMARY KEY COMMENT '对账ID'," +
-                    "reconciliation_no VARCHAR(50) NOT NULL UNIQUE COMMENT '对账单号'," +
-                    "factory_id VARCHAR(36) NOT NULL COMMENT '工厂ID'," +
-                    "factory_name VARCHAR(100) NOT NULL COMMENT '工厂名称'," +
-                    "style_id VARCHAR(36) NOT NULL COMMENT '款号ID'," +
-                    "style_no VARCHAR(50) NOT NULL COMMENT '款号'," +
-                    "style_name VARCHAR(100) NOT NULL COMMENT '款名'," +
-                    "order_id VARCHAR(36) NOT NULL COMMENT '订单ID'," +
-                    "order_no VARCHAR(50) NOT NULL COMMENT '订单号'," +
-                    "quantity INT NOT NULL COMMENT '数量'," +
-                    "unit_price DECIMAL(10,2) NOT NULL COMMENT '单价(元)'," +
-                    "total_amount DECIMAL(10,2) NOT NULL COMMENT '总金额(元)'," +
-                    "deduction_amount DECIMAL(10,2) NOT NULL COMMENT '扣款项(元)'," +
-                    "final_amount DECIMAL(10,2) NOT NULL COMMENT '最终金额(元)'," +
-                    "reconciliation_date DATETIME NOT NULL COMMENT '对账日期'," +
-                    "status VARCHAR(20) NOT NULL COMMENT '状态'," +
-                    "remark VARCHAR(255) COMMENT '备注'," +
-                    "verified_at DATETIME COMMENT '验证时间'," +
-                    "approved_at DATETIME COMMENT '批准时间'," +
-                    "paid_at DATETIME COMMENT '付款时间'," +
-                    "re_review_at DATETIME COMMENT '重审时间'," +
-                    "re_review_reason VARCHAR(255) COMMENT '重审原因'," +
-                    "create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'," +
-                    "update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'," +
-                    "create_by VARCHAR(36) COMMENT '创建人'," +
-                    "update_by VARCHAR(36) COMMENT '更新人'" +
-                    ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='加工厂对账单表'";
-
-            try {
-                jdbcTemplate.execute(createFactoryReconciliationTable);
-                System.out.println("Table t_factory_reconciliation checked/created.");
-            } catch (Exception e) {
-                System.err.println("Failed to create t_factory_reconciliation table: " + e.getMessage());
-            }
-
-            return;
-        }
-
-        if (!columnExists("t_factory_reconciliation", "create_by")) {
-            execSilently("ALTER TABLE t_factory_reconciliation ADD COLUMN create_by VARCHAR(36) COMMENT '创建人'");
-        }
-        if (!columnExists("t_factory_reconciliation", "update_by")) {
-            execSilently("ALTER TABLE t_factory_reconciliation ADD COLUMN update_by VARCHAR(36) COMMENT '更新人'");
-        }
-
-        if (!columnExists("t_factory_reconciliation", "paid_at")) {
-            execSilently("ALTER TABLE t_factory_reconciliation ADD COLUMN paid_at DATETIME COMMENT '付款时间'");
-        }
-        if (!columnExists("t_factory_reconciliation", "verified_at")) {
-            execSilently("ALTER TABLE t_factory_reconciliation ADD COLUMN verified_at DATETIME COMMENT '验证时间'");
-        }
-        if (!columnExists("t_factory_reconciliation", "approved_at")) {
-            execSilently("ALTER TABLE t_factory_reconciliation ADD COLUMN approved_at DATETIME COMMENT '批准时间'");
-        }
-        if (!columnExists("t_factory_reconciliation", "re_review_at")) {
-            execSilently("ALTER TABLE t_factory_reconciliation ADD COLUMN re_review_at DATETIME COMMENT '重审时间'");
-        }
-        if (!columnExists("t_factory_reconciliation", "re_review_reason")) {
-            execSilently(
-                    "ALTER TABLE t_factory_reconciliation ADD COLUMN re_review_reason VARCHAR(255) COMMENT '重审原因'");
         }
     }
 
@@ -1102,6 +1640,8 @@ public class DataInitializer implements CommandLineRunner {
                     "re_review_reason VARCHAR(255) COMMENT '重审原因'," +
                     "create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'," +
                     "update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'," +
+                    "create_by VARCHAR(36) COMMENT '创建人'," +
+                    "update_by VARCHAR(36) COMMENT '更新人'," +
                     "INDEX idx_status (status)," +
                     "INDEX idx_reconciliation_no (reconciliation_no)," +
                     "INDEX idx_customer_name (customer_name)," +
@@ -1112,9 +1652,9 @@ public class DataInitializer implements CommandLineRunner {
 
             try {
                 jdbcTemplate.execute(createShipmentReconciliationTable);
-                System.out.println("Table t_shipment_reconciliation checked/created.");
+                log.info("Table t_shipment_reconciliation checked/created.");
             } catch (Exception e) {
-                System.err.println("Failed to create t_shipment_reconciliation table: " + e.getMessage());
+                log.warn("Failed to create t_shipment_reconciliation table: {}", e.getMessage());
             }
 
             return;
@@ -1193,6 +1733,13 @@ public class DataInitializer implements CommandLineRunner {
                     "ALTER TABLE t_shipment_reconciliation ADD COLUMN update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'");
         }
 
+        if (!columnExists("t_shipment_reconciliation", "create_by")) {
+            execSilently("ALTER TABLE t_shipment_reconciliation ADD COLUMN create_by VARCHAR(36) COMMENT '创建人'");
+        }
+        if (!columnExists("t_shipment_reconciliation", "update_by")) {
+            execSilently("ALTER TABLE t_shipment_reconciliation ADD COLUMN update_by VARCHAR(36) COMMENT '更新人'");
+        }
+
         if (!columnExists("t_shipment_reconciliation", "paid_at")) {
             execSilently("ALTER TABLE t_shipment_reconciliation ADD COLUMN paid_at DATETIME COMMENT '付款时间'");
         }
@@ -1220,6 +1767,51 @@ public class DataInitializer implements CommandLineRunner {
 
     private void ensureMaterialReconciliationTable() {
         if (!tableExists("t_material_reconciliation")) {
+            String createMaterialReconciliationTable = "CREATE TABLE IF NOT EXISTS t_material_reconciliation (" +
+                    "id VARCHAR(36) PRIMARY KEY COMMENT '对账ID'," +
+                    "reconciliation_no VARCHAR(50) NOT NULL UNIQUE COMMENT '对账单号'," +
+                    "supplier_id VARCHAR(36) NOT NULL COMMENT '供应商ID'," +
+                    "supplier_name VARCHAR(100) NOT NULL COMMENT '供应商名称'," +
+                    "material_id VARCHAR(36) NOT NULL COMMENT '物料ID'," +
+                    "material_code VARCHAR(50) NOT NULL COMMENT '物料编码'," +
+                    "material_name VARCHAR(100) NOT NULL COMMENT '物料名称'," +
+                    "purchase_id VARCHAR(36) COMMENT '采购单ID'," +
+                    "purchase_no VARCHAR(50) COMMENT '采购单号'," +
+                    "order_id VARCHAR(36) COMMENT '订单ID'," +
+                    "order_no VARCHAR(50) COMMENT '订单号'," +
+                    "style_id VARCHAR(36) COMMENT '款号ID'," +
+                    "style_no VARCHAR(50) COMMENT '款号'," +
+                    "style_name VARCHAR(100) COMMENT '款名'," +
+                    "quantity INT DEFAULT 0 COMMENT '数量'," +
+                    "unit_price DECIMAL(10,2) DEFAULT 0.00 COMMENT '单价'," +
+                    "total_amount DECIMAL(10,2) DEFAULT 0.00 COMMENT '总金额'," +
+                    "deduction_amount DECIMAL(10,2) DEFAULT 0.00 COMMENT '扣款项'," +
+                    "final_amount DECIMAL(10,2) DEFAULT 0.00 COMMENT '最终金额'," +
+                    "reconciliation_date VARCHAR(20) COMMENT '对账日期'," +
+                    "status VARCHAR(20) DEFAULT 'pending' COMMENT '状态'," +
+                    "remark VARCHAR(255) COMMENT '备注'," +
+                    "verified_at DATETIME COMMENT '验证时间'," +
+                    "approved_at DATETIME COMMENT '批准时间'," +
+                    "paid_at DATETIME COMMENT '付款时间'," +
+                    "re_review_at DATETIME COMMENT '重审时间'," +
+                    "re_review_reason VARCHAR(255) COMMENT '重审原因'," +
+                    "delete_flag INT DEFAULT 0 COMMENT '删除标识：0-未删除，1-已删除'," +
+                    "create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'," +
+                    "update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'," +
+                    "create_by VARCHAR(36) COMMENT '创建人'," +
+                    "update_by VARCHAR(36) COMMENT '更新人'," +
+                    "INDEX idx_mr_order_no (order_no)," +
+                    "INDEX idx_mr_style_no (style_no)," +
+                    "INDEX idx_mr_create_time (create_time)" +
+                    ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='物料采购对账单表';";
+
+            try {
+                jdbcTemplate.execute(createMaterialReconciliationTable);
+                log.info("Table t_material_reconciliation checked/created.");
+            } catch (Exception e) {
+                log.warn("Failed to create t_material_reconciliation table: {}", e.getMessage());
+            }
+
             return;
         }
 
@@ -1237,6 +1829,13 @@ public class DataInitializer implements CommandLineRunner {
         }
         if (!columnExists("t_material_reconciliation", "style_name")) {
             execSilently("ALTER TABLE t_material_reconciliation ADD COLUMN style_name VARCHAR(100) COMMENT '款名'");
+        }
+
+        if (!columnExists("t_material_reconciliation", "create_by")) {
+            execSilently("ALTER TABLE t_material_reconciliation ADD COLUMN create_by VARCHAR(36) COMMENT '创建人'");
+        }
+        if (!columnExists("t_material_reconciliation", "update_by")) {
+            execSilently("ALTER TABLE t_material_reconciliation ADD COLUMN update_by VARCHAR(36) COMMENT '更新人'");
         }
 
         if (!columnExists("t_material_reconciliation", "paid_at")) {
@@ -1320,8 +1919,9 @@ public class DataInitializer implements CommandLineRunner {
                 return;
             }
         } catch (Exception e) {
-            System.err.println("Failed to check template exists: templateType=" + templateType + ", templateKey="
-                    + templateKey + ", err=" + e.getMessage());
+            log.warn("Failed to check template exists: templateType={}, templateKey={}, err={}", templateType,
+                    templateKey,
+                    e.getMessage());
             return;
         }
 
@@ -1336,19 +1936,17 @@ public class DataInitializer implements CommandLineRunner {
                     null,
                     templateContent);
         } catch (Exception e) {
-            System.err.println("Failed to seed template: templateType=" + templateType + ", templateKey=" + templateKey
-                    + ", err=" + e.getMessage());
+            log.warn("Failed to seed template: templateType={}, templateKey={}, err={}", templateType, templateKey,
+                    e.getMessage());
         }
     }
 
     @Override
     public void run(String... args) throws Exception {
-        System.out.println("Checking database initialization...");
+        log.info("Checking database initialization...");
 
-        try {
-            jdbcTemplate.queryForObject("SELECT 1", Integer.class);
-        } catch (Exception e) {
-            System.err.println("Database not ready, skip initialization: " + (e == null ? null : e.getMessage()));
+        if (!waitForDatabaseReady()) {
+            log.warn("Database not ready, skip initialization");
             return;
         }
 
@@ -1372,10 +1970,12 @@ public class DataInitializer implements CommandLineRunner {
 
         try {
             jdbcTemplate.execute(createUserTable);
-            System.out.println("Table t_user checked/created.");
+            log.info("Table t_user checked/created.");
         } catch (Exception e) {
-            System.err.println("Failed to create t_user table: " + e.getMessage());
+            log.warn("Failed to create t_user table: {}", e.getMessage());
         }
+
+        ensureLoginLogTable();
 
         String createFactoryTable = "CREATE TABLE IF NOT EXISTS t_factory (" +
                 "id VARCHAR(36) PRIMARY KEY COMMENT '加工厂ID'," +
@@ -1394,9 +1994,9 @@ public class DataInitializer implements CommandLineRunner {
 
         try {
             jdbcTemplate.execute(createFactoryTable);
-            System.out.println("System tables checked/created.");
+            log.info("System tables checked/created.");
         } catch (Exception e) {
-            System.err.println("Failed to create system tables: " + e.getMessage());
+            log.warn("Failed to create system tables: {}", e.getMessage());
         }
 
         ensurePermissionTables();
@@ -1598,15 +2198,22 @@ public class DataInitializer implements CommandLineRunner {
             jdbcTemplate.execute(createStyleOperationLogTable);
             jdbcTemplate.execute(createMaterialReconciliationTable);
             jdbcTemplate.execute(createProductionOrderTable);
-            System.out.println(
-                    "Style tables, operation log table, finance tables, and production tables checked/created.");
+            log.info("Style tables, operation log table, finance tables, and production tables checked/created.");
         } catch (Exception e) {
-            System.err.println("Failed to create style, finance, and production tables: " + e.getMessage());
+            log.warn("Failed to create style, finance, and production tables: {}", e.getMessage());
         }
 
         ensureMaterialPurchaseTable();
 
+        ensureMaterialDatabaseTable();
+
         ensureScanRecordTable();
+
+        ensurePayrollSettlementTable();
+
+        ensurePayrollSettlementItemTable();
+
+        ensureProductionViews();
 
         ensureCuttingBundleTable();
 
@@ -1617,8 +2224,6 @@ public class DataInitializer implements CommandLineRunner {
         ensureProductOutstockTable();
 
         ensureCuttingTaskTable();
-
-        ensureFactoryReconciliationTable();
 
         ensureShipmentReconciliationTable();
 
@@ -1763,12 +2368,12 @@ public class DataInitializer implements CommandLineRunner {
             if (count != null && count == 0) {
                 jdbcTemplate.execute(
                         "INSERT INTO t_user (username, password, name, role_name, status) VALUES ('admin', 'admin123', 'Admin', 'admin', 'ENABLED')");
-                System.out.println("Admin user created.");
+                log.info("Admin user created.");
             } else {
-                System.out.println("Admin user already exists.");
+                log.info("Admin user already exists.");
             }
         } catch (Exception e) {
-            System.err.println("Failed to check/insert admin user: " + e.getMessage());
+            log.warn("Failed to check/insert admin user: {}", e.getMessage());
         }
     }
 }

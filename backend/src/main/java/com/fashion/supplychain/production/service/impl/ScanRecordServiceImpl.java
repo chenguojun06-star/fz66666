@@ -33,6 +33,9 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
                 String orderNo = (String) params.getOrDefault("orderNo", "");
                 String styleNo = (String) params.getOrDefault("styleNo", "");
                 String scanType = (String) params.getOrDefault("scanType", "");
+                String scanResult = (String) params.getOrDefault("scanResult", "");
+                String operatorId = (String) params.getOrDefault("operatorId", "");
+                String operatorName = (String) params.getOrDefault("operatorName", "");
 
                 // 使用条件构造器进行查询
                 return baseMapper.selectPage(pageInfo,
@@ -40,6 +43,12 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
                                                 .eq(StringUtils.hasText(orderNo), ScanRecord::getOrderNo, orderNo)
                                                 .like(StringUtils.hasText(styleNo), ScanRecord::getStyleNo, styleNo)
                                                 .eq(StringUtils.hasText(scanType), ScanRecord::getScanType, scanType)
+                                                .eq(StringUtils.hasText(scanResult), ScanRecord::getScanResult,
+                                                                scanResult)
+                                                .eq(StringUtils.hasText(operatorId), ScanRecord::getOperatorId,
+                                                                operatorId)
+                                                .like(StringUtils.hasText(operatorName), ScanRecord::getOperatorName,
+                                                                operatorName)
                                                 .orderByDesc(ScanRecord::getScanTime));
         }
 
@@ -67,5 +76,10 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
                                 new LambdaQueryWrapper<ScanRecord>()
                                                 .eq(ScanRecord::getStyleNo, styleNo)
                                                 .orderByDesc(ScanRecord::getScanTime));
+        }
+
+        @Override
+        public Map<String, Object> getPersonalStats(String operatorId, String scanType) {
+                return baseMapper.selectPersonalStats(operatorId, scanType);
         }
 }

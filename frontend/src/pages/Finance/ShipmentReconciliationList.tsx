@@ -1,16 +1,19 @@
-import React, { useEffect, useState } from 'react';
-import { Button, Card, Form, Input, Select, Space, Tag, message } from 'antd';
-import { CheckOutlined, PlusOutlined, RollbackOutlined, SearchOutlined, SendOutlined } from '@ant-design/icons';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Button, Card, Collapse, Dropdown, Form, Input, InputNumber, Select, Space, Tag, message } from 'antd';
+import { CheckOutlined, DownloadOutlined, MoreOutlined, PlusOutlined, RollbackOutlined, SearchOutlined, SendOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
-import ResizableModal from '../../components/ResizableModal';
-import ResizableTable from '../../components/ResizableTable';
-import RowActions from '../../components/RowActions';
-import { ShipmentReconciliation, ShipmentReconQueryParams } from '../../types/finance';
+import ResizableModal, {
+  ResizableModalFlex,
+  ResizableModalFlexFill,
+  useResizableModalTableScrollY,
+} from '../../components/common/ResizableModal';
+import ResizableTable from '../../components/common/ResizableTable';
+import RowActions from '../../components/common/RowActions';
+import { DeductionItem, ShipmentReconciliation, ShipmentReconQueryParams } from '../../types/finance';
 import { formatDateTime } from '../../utils/datetime';
 import { StyleCoverThumb } from '../../components/StyleAssets';
 import api, { updateFinanceReconciliationStatus } from '../../utils/api';
-import './styles.css';
 
 const { Option } = Select;
 
@@ -20,15 +23,522 @@ const ShipmentReconciliationList: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [approvalSubmitting, setApprovalSubmitting] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [visible, setVisible] = useState(false);
   const [currentRecon, setCurrentRecon] = useState<ShipmentReconciliation | null>(null);
+  const [deductionItems, setDeductionItems] = useState<DeductionItem[]>([]);
+  const [deductionLoading, setDeductionLoading] = useState(false);
+  const [deductionSaving, setDeductionSaving] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [orderProfitByOrderNo, setOrderProfitByOrderNo] = useState<Record<string, any | null>>({});
+  const [materialDetailOpen, setMaterialDetailOpen] = useState(false);
+  const [materialDetailLoading, setMaterialDetailLoading] = useState(false);
+  const [materialDetailProfit, setMaterialDetailProfit] = useState<any | null>(null);
+
+  const materialDetailTableWrapRef = useRef<HTMLDivElement | null>(null);
+  const materialDetailTableScrollY = useResizableModalTableScrollY({ open: materialDetailOpen, ref: materialDetailTableWrapRef });
   const [queryParams, setQueryParams] = useState<ShipmentReconQueryParams>({
     page: 1,
     pageSize: 10,
   });
 
   const [filterForm] = Form.useForm();
+
+  const modalWidth = useMemo(() => {
+    if (typeof window === 'undefined') return '60vw';
+    const w = window.innerWidth;
+    if (w < 768) return '96vw';
+    if (w < 1024) return '66vw';
+    return '60vw';
+  }, []);
+  const modalInitialHeight = 720;
+
+  const escapeCsvCell = (value: any) => {
+    const text = String(value ?? '');
+    if (/[\r\n",]/.test(text)) {
+      return `"${text.replace(/"/g, '""')}"`;
+    }
+    return text;
+  };
+
+  const downloadTextFile = (filename: string, content: string, mime: string) => {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const fileStamp = () => {
+    const d = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+  };
+
+  const toNumberOrNull = (v: any) => {
+    const n = typeof v === 'number' ? v : Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const toCsvMoneyText = (v: any) => {
+    const n = toNumberOrNull(v);
+    return n == null ? '' : n.toFixed(2);
+  };
+
+  const toMoney2 = (v: any) => {
+    const n = toNumberOrNull(v);
+    return n == null ? '-' : n.toFixed(2);
+  };
+
+  const computeUnitPrice = (total: any, qty: any) => {
+    const t = toNumberOrNull(total);
+    const q = toNumberOrNull(qty);
+    if (t == null || q == null || q <= 0) return null;
+    return t / q;
+  };
+
+  const getBaseQty = (profitData: any | null, record: ShipmentReconciliation) => {
+    const w = toNumberOrNull((profitData as any)?.order?.warehousingQuantity);
+    if (w != null && w > 0) return w;
+    const q = toNumberOrNull((record as any)?.quantity);
+    if (q != null && q > 0) return q;
+    const c = toNumberOrNull((profitData as any)?.summary?.calcQty);
+    if (c != null && c > 0) return c;
+    return 0;
+  };
+
+  const sumMaterialCostFromItems = (items: any[]) => {
+    let total = 0;
+    for (const it of items || []) {
+      const qty = toNumberOrNull((it as any)?.arrivedQuantity) ?? 0;
+      const unit = toNumberOrNull((it as any)?.unitPrice) ?? 0;
+      total += qty * unit;
+    }
+    return total;
+  };
+
+  const normalizeDeductionItems = (items: DeductionItem[]) => {
+    return (items || []).map((it) => {
+      const deductionType = String((it as any)?.deductionType || '').trim();
+      const description = String((it as any)?.description || '').trim();
+      const deductionAmountRaw = (it as any)?.deductionAmount;
+      const deductionAmount = typeof deductionAmountRaw === 'number' ? deductionAmountRaw : Number(deductionAmountRaw);
+      return {
+        id: String((it as any)?.id || '').trim() || undefined,
+        reconciliationId: String((it as any)?.reconciliationId || '').trim(),
+        deductionType,
+        description,
+        deductionAmount: Number.isFinite(deductionAmount) && deductionAmount >= 0 ? deductionAmount : 0,
+      } as DeductionItem;
+    });
+  };
+
+  const fetchDeductionItems = async (reconciliationId: string) => {
+    const rid = String(reconciliationId || '').trim();
+    if (!rid) return;
+    setDeductionLoading(true);
+    try {
+      const res = await api.get<any>(`/finance/shipment-reconciliation/deduction-items/${rid}`);
+      const result = res as any;
+      if (result.code === 200) {
+        const rows = normalizeDeductionItems((result.data || []) as DeductionItem[]);
+        setDeductionItems(rows.map((r) => ({ ...r, reconciliationId: rid })));
+      } else {
+        message.error(result.message || '获取扣款项失败');
+        setDeductionItems([]);
+      }
+    } catch (e: any) {
+      message.error(e?.message || '获取扣款项失败');
+      setDeductionItems([]);
+    } finally {
+      setDeductionLoading(false);
+    }
+  };
+
+  const reloadCurrentRecon = async (reconciliationId: string) => {
+    const rid = String(reconciliationId || '').trim();
+    if (!rid) return;
+    try {
+      const res = await api.get<any>(`/finance/shipment-reconciliation/${rid}`);
+      const result = res as any;
+      if (result.code === 200) {
+        setCurrentRecon(result.data || null);
+      }
+    } catch {
+    }
+  };
+
+  const saveCurrentDeductionItems = async () => {
+    const rid = String((currentRecon as any)?.id || '').trim();
+    if (!rid) return;
+    setDeductionSaving(true);
+    try {
+      const payload = normalizeDeductionItems(deductionItems)
+        .map((it) => ({
+          reconciliationId: rid,
+          deductionType: String(it.deductionType || '').trim(),
+          description: String(it.description || '').trim(),
+          deductionAmount: Number(it.deductionAmount || 0),
+        }))
+        .filter((it) => it.deductionType || it.description || (it.deductionAmount || 0) > 0);
+
+      const res = await api.post<any>(`/finance/shipment-reconciliation/deduction-items/${rid}`, payload);
+      const result = res as any;
+      if (result.code === 200) {
+        message.success('扣款项已保存');
+        await Promise.all([fetchDeductionItems(rid), reloadCurrentRecon(rid)]);
+        fetchReconciliationList();
+      } else {
+        message.error(result.message || '保存失败');
+      }
+    } catch (e: any) {
+      message.error(e?.message || '保存失败');
+    } finally {
+      setDeductionSaving(false);
+    }
+  };
+
+  const getMaterialTotalCost = (profitData: any | null) => {
+    const direct = toNumberOrNull((profitData as any)?.summary?.materialArrivedCost);
+    if (direct != null) return direct;
+    const items = ((profitData as any)?.materials || []) as any[];
+    return sumMaterialCostFromItems(items);
+  };
+
+  const getProcessingTotalCost = (profitData: any | null, baseQty: number) => {
+    const direct = toNumberOrNull((profitData as any)?.summary?.processingCost);
+    if (direct != null) return direct;
+    const actualUnit = toNumberOrNull((profitData as any)?.summary?.actualUnitCost);
+    if (actualUnit != null && baseQty > 0) return actualUnit * baseQty;
+    return 0;
+  };
+
+  const getFinalUnitPrice = (profitData: any | null, baseQty: number) => {
+    const q = toNumberOrNull((profitData as any)?.summary?.quotationUnitPrice);
+    if (q != null) return q;
+    const rev = toNumberOrNull((profitData as any)?.summary?.revenue);
+    if (rev != null && baseQty > 0) return rev / baseQty;
+    return 0;
+  };
+
+  const getProfitByFormula = (profitData: any | null, record: ShipmentReconciliation) => {
+    const baseQty = getBaseQty(profitData, record);
+    const finalUnit = getFinalUnitPrice(profitData, baseQty);
+    const revenue = finalUnit * (baseQty || 0);
+    const material = getMaterialTotalCost(profitData);
+    const processing = getProcessingTotalCost(profitData, baseQty);
+    return revenue - material - processing;
+  };
+
+  const escapeHtml = (value: any) => {
+    const s = String(value ?? '');
+    return s
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  };
+
+  const fetchOrderProfitOne = async (orderNo: string) => {
+    const ono = String(orderNo || '').trim();
+    if (!ono) return null;
+    try {
+      const res = await api.get<any>('/finance/reconciliation/order-profit', { params: { orderNo: ono } });
+      const result = res as any;
+      if (result.code === 200) return (result.data || null) as any;
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
+  const ensureOrderProfit = async (orderNos: string[]) => {
+    const unique = Array.from(new Set(orderNos.map((x) => String(x || '').trim()).filter(Boolean)));
+    const missing = unique.filter((x) => !(x in orderProfitByOrderNo));
+    if (!missing.length) return { ...orderProfitByOrderNo };
+
+    const next: Record<string, any | null> = {};
+    const batchSize = 8;
+    for (let i = 0; i < missing.length; i += batchSize) {
+      const batch = missing.slice(i, i + batchSize);
+      const settled = await Promise.allSettled(batch.map((ono) => fetchOrderProfitOne(ono)));
+      settled.forEach((r, idx) => {
+        const ono = batch[idx];
+        next[ono] = r.status === 'fulfilled' ? (r.value as any) : null;
+      });
+    }
+    setOrderProfitByOrderNo((prev) => ({ ...prev, ...next }));
+    return { ...orderProfitByOrderNo, ...next };
+  };
+
+  const buildShipmentReconCsv = (rows: ShipmentReconciliation[], profitMap: Record<string, any | null>) => {
+    const header = [
+      '对账单号',
+      '客户',
+      '订单号',
+      '款号',
+      '颜色',
+      '数量',
+      '入库数量',
+      '生产单价(元/件)',
+      '面辅料总成本(元)',
+      '生产总成本(元)',
+      '总售价(元)',
+      '利润(元)',
+      '单价(元)',
+      '总金额(元)',
+      '对账日期',
+      '状态',
+    ];
+    const lines = [header.map(escapeCsvCell).join(',')];
+    for (const r of rows) {
+      const st = getStatusConfig((r as any)?.status);
+      const orderNo = String((r as any)?.orderNo || '').trim();
+      const p = orderNo ? profitMap[orderNo] : null;
+      const order = (p as any)?.order;
+      const summary = (p as any)?.summary;
+      const baseQty = getBaseQty(p, r);
+      const processingUnit = computeUnitPrice((summary as any)?.processingCost, baseQty);
+      const materialTotalCost = getMaterialTotalCost(p);
+      const processingTotalCost = getProcessingTotalCost(p, baseQty);
+      const finalUnit = getFinalUnitPrice(p, baseQty);
+      const revenue = finalUnit * (baseQty || 0);
+      const profit = revenue - materialTotalCost - processingTotalCost;
+      const warehousingQtyText = (() => {
+        const n = toNumberOrNull((order as any)?.warehousingQuantity);
+        return n == null ? '' : String(n);
+      })();
+      const row = [
+        String((r as any)?.reconciliationNo || '').trim(),
+        String((r as any)?.customerName || '').trim(),
+        orderNo,
+        String((r as any)?.styleNo || '').trim(),
+        String((order as any)?.color || (r as any)?.color || '').trim(),
+        String(Number((r as any)?.quantity ?? 0) || 0),
+        warehousingQtyText,
+        processingUnit == null ? '' : String(processingUnit.toFixed(2)),
+        String(Number(materialTotalCost || 0).toFixed(2)),
+        String(Number(processingTotalCost || 0).toFixed(2)),
+        String(Number(revenue || 0).toFixed(2)),
+        String(Number(profit || 0).toFixed(2)),
+        toCsvMoneyText((r as any)?.unitPrice),
+        toCsvMoneyText((r as any)?.totalAmount),
+        String(formatDateTime((r as any)?.reconciliationDate) || ''),
+        String(st?.text || ''),
+      ];
+      lines.push(row.map(escapeCsvCell).join(','));
+    }
+    return `\ufeff${lines.join('\n')}`;
+  };
+
+  const buildShipmentReconExcelHtml = (rows: ShipmentReconciliation[], profitMap: Record<string, any | null>) => {
+    const header = [
+      '对账单号',
+      '客户',
+      '订单号',
+      '款号',
+      '颜色',
+      '入库数量(件)',
+      '最终报价(元/件)',
+      '生产单价(元/件)',
+      '面辅料总成本(元)',
+      '生产总成本(元)',
+      '总售价(元)',
+      '利润(元)',
+      '对账日期',
+      '状态',
+    ];
+
+    const rowsHtml = rows
+      .map((r) => {
+        const st = getStatusConfig((r as any)?.status);
+        const orderNo = String((r as any)?.orderNo || '').trim();
+        const p = orderNo ? profitMap[orderNo] : null;
+        const order = (p as any)?.order;
+        const summary = (p as any)?.summary;
+
+        const baseQty = getBaseQty(p, r);
+        const finalUnit = getFinalUnitPrice(p, baseQty);
+        const revenue = finalUnit * (baseQty || 0);
+        const materialTotalCost = getMaterialTotalCost(p);
+        const processingTotalCost = getProcessingTotalCost(p, baseQty);
+        const processingUnit = computeUnitPrice((summary as any)?.processingCost, baseQty) ?? 0;
+        const profit = revenue - materialTotalCost - processingTotalCost;
+
+        const cells = [
+          String((r as any)?.reconciliationNo || '').trim(),
+          String((r as any)?.customerName || '').trim(),
+          orderNo,
+          String((r as any)?.styleNo || '').trim(),
+          String((order as any)?.color || (r as any)?.color || '').trim(),
+          baseQty > 0 ? String(baseQty) : '',
+          Number(finalUnit || 0).toFixed(2),
+          Number(processingUnit || 0).toFixed(2),
+          Number(materialTotalCost || 0).toFixed(2),
+          Number(processingTotalCost || 0).toFixed(2),
+          Number(revenue || 0).toFixed(2),
+          Number(profit || 0).toFixed(2),
+          String(formatDateTime((r as any)?.reconciliationDate) || ''),
+          String(st?.text || ''),
+        ];
+
+        return `<tr>${cells.map((c) => `<td>${escapeHtml(c)}</td>`).join('')}</tr>`;
+      })
+      .join('');
+
+    const headerHtml = `<tr>${header.map((h) => `<th>${escapeHtml(h)}</th>`).join('')}</tr>`;
+    return (
+      `<!DOCTYPE html><html><head><meta charset="utf-8" /></head><body>` +
+      `<table border="1" cellspacing="0" cellpadding="4">` +
+      headerHtml +
+      rowsHtml +
+      `</table></body></html>`
+    );
+  };
+
+  const fetchAllForExport = async () => {
+    const pageSize = 200;
+    let page = 1;
+    let total = Infinity;
+    const all: ShipmentReconciliation[] = [];
+    while (all.length < total) {
+      const response = await api.get<any>('/finance/shipment-reconciliation/list', {
+        params: { ...queryParams, page, pageSize },
+      });
+      const result = response as any;
+      if (result.code !== 200) {
+        throw new Error(result.message || '获取出货对账列表失败');
+      }
+      const records = (result.data?.records || []) as ShipmentReconciliation[];
+      total = Number(result.data?.total ?? records.length ?? 0);
+      all.push(...records);
+      if (!records.length) break;
+      if (records.length < pageSize) break;
+      page += 1;
+      if (page > 200) break;
+    }
+    return all;
+  };
+
+  const exportSelectedCsv = async () => {
+    const picked = reconciliationList.filter((r) => selectedRowKeys.includes(String((r as any)?.id)));
+    if (!picked.length) {
+      message.warning('请先勾选要导出的对账单');
+      return;
+    }
+    setExporting(true);
+    try {
+      const profitMap = await ensureOrderProfit(picked.map((r) => String((r as any)?.orderNo || '').trim()));
+      const csv = buildShipmentReconCsv(picked, profitMap);
+      downloadTextFile(`成品结算_勾选_${fileStamp()}.csv`, csv, 'text/csv;charset=utf-8');
+    } catch (e: any) {
+      message.error(e?.message || '导出失败');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const exportFilteredCsv = async () => {
+    setExporting(true);
+    try {
+      const rows = await fetchAllForExport();
+      if (!rows.length) {
+        message.info('暂无记录可导出');
+        return;
+      }
+      const profitMap = await ensureOrderProfit(rows.map((r) => String((r as any)?.orderNo || '').trim()));
+      const csv = buildShipmentReconCsv(rows, profitMap);
+      downloadTextFile(`成品结算_筛选_${fileStamp()}.csv`, csv, 'text/csv;charset=utf-8');
+    } catch (e: any) {
+      message.error(e?.message || '导出失败');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const exportCsv = () => {
+    if (selectedRowKeys.length) {
+      exportSelectedCsv();
+      return;
+    }
+    exportFilteredCsv();
+  };
+
+  const exportSelectedExcel = async () => {
+    const picked = reconciliationList.filter((r) => selectedRowKeys.includes(String((r as any)?.id)));
+    if (!picked.length) {
+      message.warning('请先勾选要导出的对账单');
+      return;
+    }
+    setExporting(true);
+    try {
+      const profitMap = await ensureOrderProfit(picked.map((r) => String((r as any)?.orderNo || '').trim()));
+      const html = buildShipmentReconExcelHtml(picked, profitMap);
+      downloadTextFile(`成品结算_勾选_${fileStamp()}.xls`, html, 'application/vnd.ms-excel;charset=utf-8');
+    } catch (e: any) {
+      message.error(e?.message || '导出失败');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const exportFilteredExcel = async () => {
+    setExporting(true);
+    try {
+      const rows = await fetchAllForExport();
+      if (!rows.length) {
+        message.info('暂无记录可导出');
+        return;
+      }
+      const profitMap = await ensureOrderProfit(rows.map((r) => String((r as any)?.orderNo || '').trim()));
+      const html = buildShipmentReconExcelHtml(rows, profitMap);
+      downloadTextFile(`成品结算_筛选_${fileStamp()}.xls`, html, 'application/vnd.ms-excel;charset=utf-8');
+    } catch (e: any) {
+      message.error(e?.message || '导出失败');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const exportExcel = () => {
+    if (selectedRowKeys.length) {
+      exportSelectedExcel();
+      return;
+    }
+    exportFilteredExcel();
+  };
+
+  const batchAudit = () => {
+    const ids = reconciliationList
+      .filter((r) => selectedRowKeys.includes(String(r.id)) && r.status === 'pending')
+      .map((r) => String(r.id || ''));
+    if (!ids.length) return;
+    if (ids.length !== selectedRowKeys.length) message.warning('仅可批量审核状态为“待审核”的对账单');
+    updateStatusBatch(ids.map((id) => ({ id, status: 'verified' })), '审核成功');
+  };
+
+  const batchSubmit = async () => {
+    const picked = reconciliationList.filter((r) => selectedRowKeys.includes(String(r.id)));
+    const eligible = picked.filter((r) => r.status === 'verified' || r.status === 'rejected');
+    if (!eligible.length) return;
+    if (eligible.length !== picked.length) message.warning('仅可批量提交状态为“已验证/已拒绝”的对账单');
+    const pairs = eligible.map((r) => ({ id: String(r.id || ''), status: r.status === 'verified' ? 'approved' : 'pending' }));
+    await updateStatusBatch(pairs, '提交成功');
+    navigate('/finance/payment-approval', { state: { defaultTab: 'shipment' } });
+  };
+
+  const batchReturn = () => {
+    const picked = reconciliationList.filter((r) => selectedRowKeys.includes(String(r.id)));
+    const eligible = picked.filter((r) => r.status === 'pending' || r.status === 'verified' || r.status === 'approved');
+    if (!eligible.length) return;
+    if (eligible.length !== picked.length) message.warning('仅可批量退回状态为“待审核/已验证/已批准”的对账单');
+    updateStatusBatch(eligible.map((r) => ({ id: String(r.id || ''), status: 'rejected' })), '退回成功');
+  };
 
   const fetchReconciliationList = async () => {
     setLoading(true);
@@ -63,15 +573,96 @@ const ShipmentReconciliationList: React.FC = () => {
     queryParams.endDate,
   ]);
 
+  useEffect(() => {
+    const orderNos = reconciliationList.map((r) => String((r as any)?.orderNo || '').trim()).filter(Boolean);
+    if (!orderNos.length) return;
+    let cancelled = false;
+    (async () => {
+      const unique = Array.from(new Set(orderNos));
+      const missing = unique.filter((x) => !(x in orderProfitByOrderNo));
+      if (!missing.length) return;
+      const next: Record<string, any | null> = {};
+      const batchSize = 8;
+      for (let i = 0; i < missing.length; i += batchSize) {
+        const batch = missing.slice(i, i + batchSize);
+        const settled = await Promise.allSettled(batch.map((ono) => fetchOrderProfitOne(ono)));
+        settled.forEach((r, idx) => {
+          const ono = batch[idx];
+          next[ono] = r.status === 'fulfilled' ? (r.value as any) : null;
+        });
+      }
+      if (cancelled) return;
+      setOrderProfitByOrderNo((prev) => ({ ...prev, ...next }));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [reconciliationList]);
+
   const openDialog = (recon?: ShipmentReconciliation) => {
     setCurrentRecon(recon || null);
     setVisible(true);
+    const rid = String((recon as any)?.id || '').trim();
+    setDeductionItems([]);
+    if (rid) {
+      fetchDeductionItems(rid);
+      reloadCurrentRecon(rid);
+    }
   };
 
   const closeDialog = () => {
     setVisible(false);
     setCurrentRecon(null);
+    setDeductionItems([]);
   };
+
+  const openMaterialDetail = async (record: ShipmentReconciliation) => {
+    const orderNo = String((record as any)?.orderNo || '').trim();
+    if (!orderNo) return;
+    setMaterialDetailOpen(true);
+    setMaterialDetailLoading(true);
+    try {
+      const profitMap = await ensureOrderProfit([orderNo]);
+      setMaterialDetailProfit(profitMap[orderNo] || null);
+    } finally {
+      setMaterialDetailLoading(false);
+    }
+  };
+
+  const closeMaterialDetail = () => {
+    setMaterialDetailOpen(false);
+    setMaterialDetailProfit(null);
+    setMaterialDetailLoading(false);
+  };
+
+  const ignoreRowClick = (e: any) => {
+    const el = e?.target as HTMLElement | null;
+    if (!el) return false;
+    return Boolean(
+      el.closest(
+        'button,a,.ant-checkbox-wrapper,.ant-checkbox,.table-actions,.ant-dropdown,.ant-select,.ant-input,.ant-picker'
+      )
+    );
+  };
+
+  const materialGroups = useMemo(() => {
+    const items = ((materialDetailProfit as any)?.materials || []) as any[];
+    const groups: Record<string, any[]> = {};
+    for (const it of items || []) {
+      const raw = String((it as any)?.materialType || '').trim();
+      const key = raw.includes('面') ? '面料' : raw.includes('辅') ? '辅料' : raw || '其他';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(it);
+    }
+    const order = ['面料', '辅料', '其他'];
+    const keys = Object.keys(groups).sort((a, b) => {
+      const ia = order.indexOf(a);
+      const ib = order.indexOf(b);
+      if (ia !== -1 || ib !== -1) return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+      return a.localeCompare(b);
+    });
+    return keys.map((k) => ({ key: k, title: k, items: groups[k] }));
+  }, [materialDetailProfit]);
 
   const updateStatusBatch = async (pairs: Array<{ id: string; status: string }>, successText: string) => {
     const normalized = pairs
@@ -155,11 +746,107 @@ const ShipmentReconciliationList: React.FC = () => {
       render: (v: any) => String(v || '').trim() || '-',
     },
     {
+      title: '颜色',
+      key: 'color',
+      width: 100,
+      render: (_: any, record: ShipmentReconciliation) => {
+        const orderNo = String((record as any)?.orderNo || '').trim();
+        const p = orderNo ? orderProfitByOrderNo[orderNo] : null;
+        const c = String((p as any)?.order?.color || (record as any)?.color || '').trim();
+        return c || '-';
+      },
+    },
+    {
       title: '数量',
       dataIndex: 'quantity',
       key: 'quantity',
       width: 80,
       align: 'right' as const,
+    },
+    {
+      title: '入库数量',
+      key: 'warehousingQuantity',
+      width: 100,
+      align: 'right' as const,
+      render: (_: any, record: ShipmentReconciliation) => {
+        const orderNo = String((record as any)?.orderNo || '').trim();
+        const p = orderNo ? orderProfitByOrderNo[orderNo] : null;
+        const n = toNumberOrNull((p as any)?.order?.warehousingQuantity);
+        return n == null ? '-' : String(n);
+      },
+    },
+    {
+      title: '生产单价(元/件)',
+      key: 'processingUnitPrice',
+      width: 130,
+      align: 'right' as const,
+      render: (_: any, record: ShipmentReconciliation) => {
+        const orderNo = String((record as any)?.orderNo || '').trim();
+        const p = orderNo ? orderProfitByOrderNo[orderNo] : null;
+        const summary = (p as any)?.summary;
+        const baseQty = getBaseQty(p, record);
+        const unit = computeUnitPrice((summary as any)?.processingCost, baseQty);
+        return unit == null ? '-' : unit.toFixed(2);
+      },
+      sorter: (a: any, b: any) => {
+        const pa = (orderProfitByOrderNo[String((a as any)?.orderNo || '').trim()] || null) as any;
+        const pb = (orderProfitByOrderNo[String((b as any)?.orderNo || '').trim()] || null) as any;
+        const ua = computeUnitPrice(pa?.summary?.processingCost, getBaseQty(pa, a)) ?? -Infinity;
+        const ub = computeUnitPrice(pb?.summary?.processingCost, getBaseQty(pb, b)) ?? -Infinity;
+        return ua - ub;
+      },
+    },
+    {
+      title: '面辅料总成本(元)',
+      key: 'materialTotalCost',
+      width: 140,
+      align: 'right' as const,
+      render: (_: any, record: ShipmentReconciliation) => {
+        const orderNo = String((record as any)?.orderNo || '').trim();
+        const p = orderNo ? orderProfitByOrderNo[orderNo] : null;
+        return toMoney2(getMaterialTotalCost(p));
+      },
+      sorter: (a: any, b: any) => {
+        const pa = (orderProfitByOrderNo[String((a as any)?.orderNo || '').trim()] || null) as any;
+        const pb = (orderProfitByOrderNo[String((b as any)?.orderNo || '').trim()] || null) as any;
+        return getMaterialTotalCost(pa) - getMaterialTotalCost(pb);
+      },
+    },
+    {
+      title: '生产总成本(元)',
+      key: 'processingTotalCost',
+      width: 140,
+      align: 'right' as const,
+      render: (_: any, record: ShipmentReconciliation) => {
+        const orderNo = String((record as any)?.orderNo || '').trim();
+        const p = orderNo ? orderProfitByOrderNo[orderNo] : null;
+        const qty = getBaseQty(p, record);
+        return toMoney2(getProcessingTotalCost(p, qty));
+      },
+      sorter: (a: any, b: any) => {
+        const pa = (orderProfitByOrderNo[String((a as any)?.orderNo || '').trim()] || null) as any;
+        const pb = (orderProfitByOrderNo[String((b as any)?.orderNo || '').trim()] || null) as any;
+        return getProcessingTotalCost(pa, getBaseQty(pa, a)) - getProcessingTotalCost(pb, getBaseQty(pb, b));
+      },
+    },
+    {
+      title: '利润(元)',
+      key: 'profit',
+      width: 120,
+      align: 'right' as const,
+      render: (_: any, record: ShipmentReconciliation) => {
+        const orderNo = String((record as any)?.orderNo || '').trim();
+        const p = orderNo ? orderProfitByOrderNo[orderNo] : null;
+        const v = getProfitByFormula(p, record);
+        const n = toNumberOrNull(v) ?? 0;
+        const color = n > 0 ? '#389e0d' : n < 0 ? '#cf1322' : '#595959';
+        return <span style={{ color, fontWeight: 600 }}>{n.toFixed(2)}</span>;
+      },
+      sorter: (a: any, b: any) => {
+        const pa = (orderProfitByOrderNo[String((a as any)?.orderNo || '').trim()] || null) as any;
+        const pb = (orderProfitByOrderNo[String((b as any)?.orderNo || '').trim()] || null) as any;
+        return getProfitByFormula(pa, a) - getProfitByFormula(pb, b);
+      },
     },
     {
       title: '单价(元)',
@@ -207,7 +894,7 @@ const ShipmentReconciliationList: React.FC = () => {
         return (
           <RowActions
             className="table-actions"
-            maxInline={3}
+            maxInline={0}
             actions={[
               {
                 key: 'audit',
@@ -249,55 +936,73 @@ const ShipmentReconciliationList: React.FC = () => {
 
   return (
     <Layout>
-      <div className="finance-reconciliation-page">
+      <div>
         <Card className="page-card">
           <div className="page-header">
             <h2 className="page-title">成品结算</h2>
             <Space>
-              <Button
-                disabled={!selectedRowKeys.length || !reconciliationList.some((r) => selectedRowKeys.includes(String(r.id)) && r.status === 'pending')}
-                loading={approvalSubmitting}
-                onClick={() => {
-                  const ids = reconciliationList
-                    .filter((r) => selectedRowKeys.includes(String(r.id)) && r.status === 'pending')
-                    .map((r) => String(r.id || ''));
-                  if (ids.length !== selectedRowKeys.length) message.warning('仅可批量审核状态为“待审核”的对账单');
-                  updateStatusBatch(ids.map((id) => ({ id, status: 'verified' })), '审核成功');
+              <Dropdown
+                trigger={['click']}
+                menu={{
+                  items: [
+                    {
+                      key: 'exportExcel',
+                      label: exporting ? '导出中...' : '导出Excel',
+                      icon: <DownloadOutlined />,
+                      disabled: exporting,
+                      onClick: exportExcel,
+                    },
+                    {
+                      key: 'exportCsv',
+                      label: exporting ? '导出中...' : '导出CSV',
+                      icon: <DownloadOutlined />,
+                      disabled: exporting,
+                      onClick: exportCsv,
+                    },
+                    { type: 'divider' as const },
+                    {
+                      key: 'batchAudit',
+                      label: approvalSubmitting ? '处理中...' : '批量审核',
+                      icon: <CheckOutlined />,
+                      disabled:
+                        approvalSubmitting ||
+                        !selectedRowKeys.length ||
+                        !reconciliationList.some((r) => selectedRowKeys.includes(String(r.id)) && r.status === 'pending'),
+                      onClick: batchAudit,
+                    },
+                    {
+                      key: 'batchSubmit',
+                      label: approvalSubmitting ? '处理中...' : '批量提交',
+                      icon: <SendOutlined />,
+                      disabled:
+                        approvalSubmitting ||
+                        !selectedRowKeys.length ||
+                        !reconciliationList.some((r) => selectedRowKeys.includes(String(r.id)) && (r.status === 'verified' || r.status === 'rejected')),
+                      onClick: batchSubmit,
+                    },
+                    {
+                      key: 'batchReturn',
+                      label: approvalSubmitting ? '处理中...' : '批量退回',
+                      icon: <RollbackOutlined />,
+                      disabled:
+                        approvalSubmitting ||
+                        !selectedRowKeys.length ||
+                        !reconciliationList.some((r) => selectedRowKeys.includes(String(r.id)) && (r.status === 'pending' || r.status === 'verified' || r.status === 'approved')),
+                      onClick: batchReturn,
+                      danger: true,
+                    },
+                    { type: 'divider' as const },
+                    {
+                      key: 'create',
+                      label: '新增成品结算',
+                      icon: <PlusOutlined />,
+                      onClick: () => openDialog(),
+                    },
+                  ],
                 }}
               >
-                批量审核
-              </Button>
-              <Button
-                disabled={!selectedRowKeys.length || !reconciliationList.some((r) => selectedRowKeys.includes(String(r.id)) && (r.status === 'verified' || r.status === 'rejected'))}
-                loading={approvalSubmitting}
-                onClick={async () => {
-                  const picked = reconciliationList.filter((r) => selectedRowKeys.includes(String(r.id)));
-                  const eligible = picked.filter((r) => r.status === 'verified' || r.status === 'rejected');
-                  if (!eligible.length) return;
-                  if (eligible.length !== picked.length) message.warning('仅可批量提交状态为“已验证/已拒绝”的对账单');
-                  const pairs = eligible.map((r) => ({ id: String(r.id || ''), status: r.status === 'verified' ? 'approved' : 'pending' }));
-                  await updateStatusBatch(pairs, '提交成功');
-                  navigate('/finance/payment-approval', { state: { defaultTab: 'shipment' } });
-                }}
-              >
-                批量提交
-              </Button>
-              <Button
-                disabled={!selectedRowKeys.length || !reconciliationList.some((r) => selectedRowKeys.includes(String(r.id)) && (r.status === 'pending' || r.status === 'verified' || r.status === 'approved'))}
-                loading={approvalSubmitting}
-                onClick={() => {
-                  const picked = reconciliationList.filter((r) => selectedRowKeys.includes(String(r.id)));
-                  const eligible = picked.filter((r) => r.status === 'pending' || r.status === 'verified' || r.status === 'approved');
-                  if (!eligible.length) return;
-                  if (eligible.length !== picked.length) message.warning('仅可批量退回状态为“待审核/已验证/已批准”的对账单');
-                  updateStatusBatch(eligible.map((r) => ({ id: String(r.id || ''), status: 'rejected' })), '退回成功');
-                }}
-              >
-                批量退回
-              </Button>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => openDialog()}>
-                新增成品结算
-              </Button>
+                <Button icon={<MoreOutlined />}>操作</Button>
+              </Dropdown>
             </Space>
           </div>
 
@@ -369,6 +1074,14 @@ const ShipmentReconciliationList: React.FC = () => {
             rowKey="id"
             loading={loading}
             allowFixedColumns
+            onRow={(record) => {
+              return {
+                onClick: (e: any) => {
+                  if (ignoreRowClick(e)) return;
+                  openMaterialDetail(record);
+                },
+              } as any;
+            }}
             rowSelection={{
               selectedRowKeys,
               onChange: (keys) => setSelectedRowKeys(keys),
@@ -390,8 +1103,14 @@ const ShipmentReconciliationList: React.FC = () => {
         open={visible}
         title={currentRecon ? '成品结算详情' : '新增成品结算'}
         onCancel={closeDialog}
-        footer={null}
-        width="60vw"
+        footer={
+          <div className="modal-footer-actions">
+            <Button onClick={closeDialog}>关闭</Button>
+          </div>
+        }
+        width={modalWidth}
+        initialHeight={modalInitialHeight}
+        scaleWithViewport
       >
         {currentRecon ? (
           <>
@@ -410,6 +1129,151 @@ const ShipmentReconciliationList: React.FC = () => {
                 <div className="modal-detail-item"><span className="modal-detail-label">对账日期：</span><span className="modal-detail-value">{formatDateTime(currentRecon.reconciliationDate)}</span></div>
                 <div className="modal-detail-item"><span className="modal-detail-label">状态：</span><span className="modal-detail-value">{getStatusConfig(currentRecon.status).text}</span></div>
                 <div className="modal-detail-item"><span className="modal-detail-label">创建时间：</span><span className="modal-detail-value">{formatDateTime(currentRecon.createTime)}</span></div>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 24, paddingTop: 24, borderTop: '1px solid #f0f0f0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <h3 className="section-title" style={{ marginBottom: 0, fontWeight: 600 }}>扣款项</h3>
+                <Space wrap>
+                  <Tag color="blue">总金额：{Number((currentRecon as any)?.totalAmount || 0).toFixed(2)} 元</Tag>
+                  <Tag color="orange">扣款：{Number((currentRecon as any)?.deductionAmount || 0).toFixed(2)} 元</Tag>
+                  <Tag color="green">最终金额：{Number((currentRecon as any)?.finalAmount || 0).toFixed(2)} 元</Tag>
+                </Space>
+              </div>
+
+              <div style={{ marginTop: 12 }}>
+                <ResizableTable
+                  columns={[
+                    {
+                      title: '扣款类型',
+                      dataIndex: 'deductionType',
+                      key: 'deductionType',
+                      width: 180,
+                      render: (_: any, record: DeductionItem, index: number) => (
+                        <Input
+                          value={String((record as any)?.deductionType || '')}
+                          placeholder="例如：质量扣款"
+                          disabled={String((currentRecon as any)?.status || '') === 'paid'}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setDeductionItems((prev) => {
+                              const next = [...prev];
+                              next[index] = { ...next[index], deductionType: v } as DeductionItem;
+                              return next;
+                            });
+                          }}
+                        />
+                      ),
+                    },
+                    {
+                      title: '扣款金额(元)',
+                      dataIndex: 'deductionAmount',
+                      key: 'deductionAmount',
+                      width: 160,
+                      align: 'right' as const,
+                      render: (_: any, record: DeductionItem, index: number) => (
+                        <InputNumber
+                          value={Number((record as any)?.deductionAmount || 0)}
+                          min={0}
+                          step={0.01}
+                          style={{ width: '100%' }}
+                          disabled={String((currentRecon as any)?.status || '') === 'paid'}
+                          onChange={(v) => {
+                            const n = typeof v === 'number' ? v : Number(v);
+                            setDeductionItems((prev) => {
+                              const next = [...prev];
+                              next[index] = { ...next[index], deductionAmount: Number.isFinite(n) && n >= 0 ? n : 0 } as DeductionItem;
+                              return next;
+                            });
+                          }}
+                        />
+                      ),
+                    },
+                    {
+                      title: '描述',
+                      dataIndex: 'description',
+                      key: 'description',
+                      render: (_: any, record: DeductionItem, index: number) => (
+                        <Input
+                          value={String((record as any)?.description || '')}
+                          placeholder="可选"
+                          disabled={String((currentRecon as any)?.status || '') === 'paid'}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setDeductionItems((prev) => {
+                              const next = [...prev];
+                              next[index] = { ...next[index], description: v } as DeductionItem;
+                              return next;
+                            });
+                          }}
+                        />
+                      ),
+                    },
+                    {
+                      title: '操作',
+                      key: 'action',
+                      width: 90,
+                      render: (_: any, _record: DeductionItem, index: number) => (
+                        <Button
+                          type="link"
+                          danger
+                          disabled={String((currentRecon as any)?.status || '') === 'paid'}
+                          onClick={() => setDeductionItems((prev) => prev.filter((_, i) => i !== index))}
+                        >
+                          删除
+                        </Button>
+                      ),
+                    },
+                  ]}
+                  dataSource={deductionItems}
+                  rowKey={(r: any, idx?: number) => {
+                    const id = String(r?.id || '').trim();
+                    if (id) return id;
+                    return `tmp-${typeof idx === 'number' ? idx : 0}`;
+                  }}
+                  pagination={false}
+                  size="small"
+                  loading={deductionLoading}
+                  scroll={{ x: 'max-content' }}
+                />
+              </div>
+
+              <div style={{ marginTop: 12, display: 'flex', gap: 8, justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                <Button
+                  type="dashed"
+                  disabled={String((currentRecon as any)?.status || '') === 'paid'}
+                  onClick={() =>
+                    setDeductionItems((prev) => [
+                      ...prev,
+                      {
+                        reconciliationId: String((currentRecon as any)?.id || '').trim(),
+                        deductionType: '',
+                        description: '',
+                        deductionAmount: 0,
+                      } as DeductionItem,
+                    ])
+                  }
+                >
+                  + 新增扣款项
+                </Button>
+                <Space wrap>
+                  <Button
+                    onClick={() => fetchDeductionItems(String((currentRecon as any)?.id || '').trim())}
+                    loading={deductionLoading}
+                    disabled={!String((currentRecon as any)?.id || '').trim()}
+                  >
+                    刷新
+                  </Button>
+                  <Button
+                    type="primary"
+                    onClick={saveCurrentDeductionItems}
+                    loading={deductionSaving}
+                    disabled={String((currentRecon as any)?.status || '') === 'paid' || !String((currentRecon as any)?.id || '').trim()}
+                  >
+                    保存扣款项
+                  </Button>
+                </Space>
               </div>
             </div>
 
@@ -506,6 +1370,136 @@ const ShipmentReconciliationList: React.FC = () => {
             <div style={{ color: '#999' }}>请在业务流程中创建成品结算单。</div>
           </div>
         )}
+      </ResizableModal>
+
+      <ResizableModal
+        open={materialDetailOpen}
+        title="面辅料明细"
+        onCancel={closeMaterialDetail}
+        footer={
+          <div className="modal-footer-actions">
+            <Button onClick={closeMaterialDetail}>关闭</Button>
+          </div>
+        }
+        width={modalWidth}
+        initialHeight={modalInitialHeight}
+        scaleWithViewport
+      >
+        <ResizableModalFlex style={{ gap: 12 }}>
+          <Card size="small" className="mb-sm" loading={materialDetailLoading}>
+            <Space wrap>
+              <Tag color="blue">订单号：{String((materialDetailProfit as any)?.order?.orderNo || '').trim() || '-'}</Tag>
+              <Tag>款号：{String((materialDetailProfit as any)?.order?.styleNo || '').trim() || '-'}</Tag>
+              <Tag>款名：{String((materialDetailProfit as any)?.order?.styleName || '').trim() || '-'}</Tag>
+              <Tag>入库数量：{toNumberOrNull((materialDetailProfit as any)?.order?.warehousingQuantity) ?? 0}</Tag>
+              <Tag color="green">面辅料总成本：{toMoney2(getMaterialTotalCost(materialDetailProfit))}</Tag>
+            </Space>
+          </Card>
+
+          <ResizableModalFlexFill ref={materialDetailTableWrapRef}>
+            <Collapse
+              accordion={false}
+              size="small"
+              items={materialGroups.map((g) => {
+                const data = (g.items || []) as any[];
+                const groupAmount = sumMaterialCostFromItems(data);
+                return {
+                  key: g.key,
+                  label: `${g.title}（${data.length}项，${Number(groupAmount || 0).toFixed(2)}元）`,
+                  children: (
+                    <ResizableTable
+                      columns={[
+                        {
+                          title: '物料名称',
+                          dataIndex: 'materialName',
+                          key: 'materialName',
+                          ellipsis: true,
+                          render: (v: any) => String(v || '').trim() || '-',
+                        },
+                        {
+                          title: '单价(元)',
+                          dataIndex: 'unitPrice',
+                          key: 'unitPrice',
+                          width: 110,
+                          align: 'right' as const,
+                          render: (v: any) => {
+                            const n = toNumberOrNull(v);
+                            return n == null ? '-' : n.toFixed(2);
+                          },
+                          sorter: (a: any, b: any) => (toNumberOrNull(a?.unitPrice) ?? 0) - (toNumberOrNull(b?.unitPrice) ?? 0),
+                        },
+                        {
+                          title: '用量',
+                          dataIndex: 'arrivedQuantity',
+                          key: 'arrivedQuantity',
+                          width: 110,
+                          align: 'right' as const,
+                          render: (v: any) => {
+                            const n = toNumberOrNull(v);
+                            return n == null ? '-' : String(n);
+                          },
+                          sorter: (a: any, b: any) => (toNumberOrNull(a?.arrivedQuantity) ?? 0) - (toNumberOrNull(b?.arrivedQuantity) ?? 0),
+                        },
+                        {
+                          title: '小计(元)',
+                          key: 'amount',
+                          width: 120,
+                          align: 'right' as const,
+                          render: (_: any, r: any) => {
+                            const qty = toNumberOrNull(r?.arrivedQuantity) ?? 0;
+                            const unit = toNumberOrNull(r?.unitPrice) ?? 0;
+                            return (qty * unit).toFixed(2);
+                          },
+                          sorter: (a: any, b: any) => {
+                            const qa = toNumberOrNull(a?.arrivedQuantity) ?? 0;
+                            const ua = toNumberOrNull(a?.unitPrice) ?? 0;
+                            const qb = toNumberOrNull(b?.arrivedQuantity) ?? 0;
+                            const ub = toNumberOrNull(b?.unitPrice) ?? 0;
+                            return qa * ua - qb * ub;
+                          },
+                        },
+                      ]}
+                      dataSource={data as any}
+                      rowKey={(r: any) => {
+                        const id = String(r?.id || '').trim();
+                        if (id) return id;
+                        const purchaseNo = String(r?.purchaseNo || '').trim();
+                        const materialCode = String(r?.materialCode || '').trim();
+                        const materialName = String(r?.materialName || '').trim();
+                        const receivedTime = String(r?.receivedTime || '').trim();
+                        return [purchaseNo, materialCode, materialName, receivedTime].filter(Boolean).join('|') || 'row';
+                      }}
+                      pagination={false}
+                      expandable={{
+                        expandedRowRender: (r: any) => {
+                          const purchaseNo = String(r?.purchaseNo || '').trim();
+                          const materialCode = String(r?.materialCode || '').trim();
+                          const specifications = String(r?.specifications || '').trim();
+                          const unit = String(r?.unit || '').trim();
+                          const materialName = String(r?.materialName || '').trim();
+                          return (
+                            <div style={{ padding: '8px 4px' }}>
+                              <Space wrap>
+                                <Tag>采购单号：{purchaseNo || '-'}</Tag>
+                                <Tag>物料编码：{materialCode || '-'}</Tag>
+                                <Tag>规格：{specifications || '-'}</Tag>
+                                <Tag>单位：{unit || '-'}</Tag>
+                                <Tag>名称：{materialName || '-'}</Tag>
+                              </Space>
+                            </div>
+                          );
+                        },
+                        rowExpandable: (r: any) =>
+                          Boolean(String(r?.purchaseNo || '').trim() || String(r?.materialCode || '').trim()),
+                      }}
+                      scroll={{ x: 'max-content', y: materialDetailTableScrollY }}
+                    />
+                  ),
+                };
+              })}
+            />
+          </ResizableModalFlexFill>
+        </ResizableModalFlex>
       </ResizableModal>
     </Layout>
   );

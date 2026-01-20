@@ -13,6 +13,8 @@ import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
@@ -64,10 +66,52 @@ public class ProductWarehousingOrchestrator {
         return warehousing;
     }
 
+    private void normalizeAndValidateDefectInfo(ProductWarehousing w) {
+        if (w == null) {
+            return;
+        }
+        Integer uq = w.getUnqualifiedQuantity();
+        String qs = trimToNull(w.getQualityStatus());
+        boolean hasUnqualified = (uq != null && uq > 0) || (qs != null && "unqualified".equalsIgnoreCase(qs));
+
+        if (!hasUnqualified) {
+            w.setDefectCategory(null);
+            w.setDefectRemark(null);
+            return;
+        }
+
+        String defectCategory = trimToNull(w.getDefectCategory());
+        String defectRemark = trimToNull(w.getDefectRemark());
+
+        if (!StringUtils.hasText(defectCategory)) {
+            throw new IllegalArgumentException("请选择次品类别");
+        }
+        if (!StringUtils.hasText(defectRemark)) {
+            throw new IllegalArgumentException("请选择次品处理方式");
+        }
+
+        if (!("返修".equals(defectRemark) || "报废".equals(defectRemark))) {
+            throw new IllegalArgumentException("次品处理方式只能选择：返修/报废");
+        }
+
+        boolean okCategory = "appearance_integrity".equals(defectCategory)
+                || "size_accuracy".equals(defectCategory)
+                || "process_compliance".equals(defectCategory)
+                || "functional_effectiveness".equals(defectCategory)
+                || "other".equals(defectCategory);
+        if (!okCategory) {
+            throw new IllegalArgumentException("次品类别不合法");
+        }
+
+        w.setDefectCategory(defectCategory);
+        w.setDefectRemark(defectRemark);
+    }
+
     public boolean save(ProductWarehousing productWarehousing) {
         if (productWarehousing == null) {
             throw new IllegalArgumentException("参数错误");
         }
+        normalizeAndValidateDefectInfo(productWarehousing);
         boolean ok = productWarehousingService.saveWarehousingAndUpdateOrder(productWarehousing);
         if (!ok) {
             throw new IllegalStateException("保存失败");
@@ -116,9 +160,6 @@ public class ProductWarehousingOrchestrator {
         if (!StringUtils.hasText(oid)) {
             throw new IllegalArgumentException("订单ID不能为空");
         }
-        if (!StringUtils.hasText(warehouse)) {
-            throw new IllegalArgumentException("请选择仓库");
-        }
         if (!(itemsRaw instanceof List)) {
             throw new IllegalArgumentException("入库明细不能为空");
         }
@@ -139,7 +180,9 @@ public class ProductWarehousingOrchestrator {
 
             ProductWarehousing w = new ProductWarehousing();
             w.setOrderId(oid);
-            w.setWarehouse(warehouse);
+            if (StringUtils.hasText(warehouse)) {
+                w.setWarehouse(warehouse);
+            }
             w.setWarehousingType(StringUtils.hasText(warehousingType) ? warehousingType : "manual");
             w.setCuttingBundleQrCode(cuttingBundleQrCode);
             w.setWarehousingQuantity(qty);
@@ -203,6 +246,7 @@ public class ProductWarehousingOrchestrator {
         if (current == null || (current.getDeleteFlag() != null && current.getDeleteFlag() != 0)) {
             throw new NoSuchElementException("入库记录不存在");
         }
+        normalizeAndValidateDefectInfo(productWarehousing);
         boolean ok = productWarehousingService.updateWarehousingAndUpdateOrder(productWarehousing);
         if (!ok) {
             throw new IllegalStateException("保存失败");
@@ -314,6 +358,202 @@ public class ProductWarehousingOrchestrator {
             }
         }
         return true;
+    }
+
+    public Map<String, Object> repairStats(Map<String, Object> params) {
+        String orderId = params == null ? null : String.valueOf(params.getOrDefault("orderId", ""));
+        String cuttingBundleQrCode = params == null ? null
+                : String.valueOf(params.getOrDefault("cuttingBundleQrCode", ""));
+        String excludeWarehousingId = params == null ? null
+                : String.valueOf(params.getOrDefault("excludeWarehousingId", ""));
+
+        String oid = trimToNull(orderId);
+        String qr = trimToNull(cuttingBundleQrCode);
+        String exId = trimToNull(excludeWarehousingId);
+
+        if (!StringUtils.hasText(qr)) {
+            throw new IllegalArgumentException("cuttingBundleQrCode不能为空");
+        }
+
+        CuttingBundle bundle = cuttingBundleService.getByQrCode(qr);
+        if (bundle == null || !StringUtils.hasText(bundle.getId())) {
+            throw new NoSuchElementException("未找到对应的裁剪扎号");
+        }
+        if (!StringUtils.hasText(oid)) {
+            oid = StringUtils.hasText(bundle.getProductionOrderId()) ? bundle.getProductionOrderId().trim() : null;
+        }
+        if (!StringUtils.hasText(oid)) {
+            throw new IllegalArgumentException("未匹配到订单");
+        }
+        String bundleOid = StringUtils.hasText(bundle.getProductionOrderId()) ? bundle.getProductionOrderId().trim()
+                : null;
+        if (bundleOid != null && !bundleOid.isEmpty() && !bundleOid.equals(oid)) {
+            throw new IllegalArgumentException("扎号与订单不匹配");
+        }
+
+        List<ProductWarehousing> list = productWarehousingService.list(new LambdaQueryWrapper<ProductWarehousing>()
+                .select(ProductWarehousing::getId, ProductWarehousing::getUnqualifiedQuantity,
+                        ProductWarehousing::getQualifiedQuantity, ProductWarehousing::getRepairRemark)
+                .eq(ProductWarehousing::getDeleteFlag, 0)
+                .eq(ProductWarehousing::getOrderId, oid)
+                .eq(ProductWarehousing::getCuttingBundleId, bundle.getId())
+                .ne(StringUtils.hasText(exId), ProductWarehousing::getId, exId)
+                .orderByDesc(ProductWarehousing::getCreateTime));
+
+        long repairPool = 0;
+        long repairedOut = 0;
+        if (list != null) {
+            for (ProductWarehousing w : list) {
+                if (w == null) {
+                    continue;
+                }
+                int uq = w.getUnqualifiedQuantity() == null ? 0 : w.getUnqualifiedQuantity();
+                if (uq > 0) {
+                    repairPool += uq;
+                }
+
+                String rr = trimToNull(w.getRepairRemark());
+                if (rr != null) {
+                    int q = w.getQualifiedQuantity() == null ? 0 : w.getQualifiedQuantity();
+                    if (q > 0) {
+                        repairedOut += q;
+                    }
+                }
+            }
+        }
+        long remaining = repairPool - repairedOut;
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("orderId", oid);
+        data.put("cuttingBundleId", bundle.getId());
+        data.put("cuttingBundleQrCode", qr);
+        data.put("repairPool", Math.max(0, repairPool));
+        data.put("repairedOut", Math.max(0, repairedOut));
+        data.put("remaining", remaining <= 0 ? 0 : remaining);
+        return data;
+    }
+
+    public Map<String, Object> batchRepairStats(Map<String, Object> body) {
+        Object orderIdRaw = body == null ? null : body.get("orderId");
+        String orderId = orderIdRaw == null ? null : String.valueOf(orderIdRaw);
+        String oid = trimToNull(orderId);
+        if (!StringUtils.hasText(oid)) {
+            throw new IllegalArgumentException("订单ID不能为空");
+        }
+
+        Object qrsRaw = body == null ? null : body.get("qrs");
+        List<?> qrsList = qrsRaw instanceof List ? (List<?>) qrsRaw : Collections.emptyList();
+        List<String> qrs = new ArrayList<>();
+        for (Object v : qrsList) {
+            String s = v == null ? null : String.valueOf(v).trim();
+            if (StringUtils.hasText(s)) {
+                qrs.add(s);
+            }
+        }
+        if (qrs.isEmpty()) {
+            Map<String, Object> resp = new HashMap<>();
+            resp.put("items", new ArrayList<>());
+            return resp;
+        }
+
+        Object excludeWarehousingIdRaw = body == null ? null : body.get("excludeWarehousingId");
+        String excludeWarehousingId = excludeWarehousingIdRaw == null ? null : String.valueOf(excludeWarehousingIdRaw);
+        String exId = trimToNull(excludeWarehousingId);
+
+        List<CuttingBundle> bundles = cuttingBundleService.lambdaQuery()
+                .select(CuttingBundle::getId, CuttingBundle::getQrCode, CuttingBundle::getProductionOrderId)
+                .in(CuttingBundle::getQrCode, qrs)
+                .list();
+        Map<String, CuttingBundle> bundleByQr = new HashMap<>();
+        List<String> bundleIds = new ArrayList<>();
+        if (bundles != null) {
+            for (CuttingBundle b : bundles) {
+                if (b == null) {
+                    continue;
+                }
+                String qr = StringUtils.hasText(b.getQrCode()) ? b.getQrCode().trim() : null;
+                String bid = StringUtils.hasText(b.getId()) ? b.getId().trim() : null;
+                if (!StringUtils.hasText(qr) || !StringUtils.hasText(bid)) {
+                    continue;
+                }
+                bundleByQr.put(qr, b);
+                bundleIds.add(bid);
+            }
+        }
+
+        Map<String, long[]> statsByBundleId = new HashMap<>();
+        if (!bundleIds.isEmpty()) {
+            List<ProductWarehousing> list = productWarehousingService.list(new LambdaQueryWrapper<ProductWarehousing>()
+                    .select(ProductWarehousing::getId, ProductWarehousing::getCuttingBundleId,
+                            ProductWarehousing::getUnqualifiedQuantity, ProductWarehousing::getQualifiedQuantity,
+                            ProductWarehousing::getRepairRemark)
+                    .eq(ProductWarehousing::getDeleteFlag, 0)
+                    .eq(ProductWarehousing::getOrderId, oid)
+                    .in(ProductWarehousing::getCuttingBundleId, bundleIds)
+                    .ne(StringUtils.hasText(exId), ProductWarehousing::getId, exId));
+            if (list != null) {
+                for (ProductWarehousing w : list) {
+                    if (w == null) {
+                        continue;
+                    }
+                    String bid = StringUtils.hasText(w.getCuttingBundleId()) ? w.getCuttingBundleId().trim() : null;
+                    if (!StringUtils.hasText(bid)) {
+                        continue;
+                    }
+                    long[] agg = statsByBundleId.computeIfAbsent(bid, k -> new long[] { 0, 0 });
+                    int uq = w.getUnqualifiedQuantity() == null ? 0 : w.getUnqualifiedQuantity();
+                    if (uq > 0) {
+                        agg[0] += uq;
+                    }
+                    String rr = trimToNull(w.getRepairRemark());
+                    if (rr != null) {
+                        int q = w.getQualifiedQuantity() == null ? 0 : w.getQualifiedQuantity();
+                        if (q > 0) {
+                            agg[1] += q;
+                        }
+                    }
+                }
+            }
+        }
+
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (String qr : qrs) {
+            CuttingBundle b = bundleByQr.get(qr);
+            String bid = b == null ? null : (StringUtils.hasText(b.getId()) ? b.getId().trim() : null);
+            String bundleOid = b == null ? null
+                    : (StringUtils.hasText(b.getProductionOrderId()) ? b.getProductionOrderId().trim() : null);
+            boolean mismatch = bundleOid != null && !bundleOid.isEmpty() && !bundleOid.equals(oid);
+
+            long pool = 0;
+            long out = 0;
+            long remain = 0;
+            if (mismatch || bid == null) {
+                pool = 0;
+                out = 0;
+                remain = 0;
+            } else {
+                long[] agg = statsByBundleId.get(bid);
+                pool = agg == null ? 0 : Math.max(0, agg[0]);
+                out = agg == null ? 0 : Math.max(0, agg[1]);
+                remain = pool - out;
+                if (remain < 0) {
+                    remain = 0;
+                }
+            }
+
+            Map<String, Object> m = new HashMap<>();
+            m.put("qr", qr);
+            m.put("cuttingBundleId", bid);
+            m.put("repairPool", pool);
+            m.put("repairedOut", out);
+            m.put("remaining", remain);
+            items.add(m);
+        }
+
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("orderId", oid);
+        resp.put("items", items);
+        return resp;
     }
 
     public boolean rollbackByBundle(Map<String, Object> body) {

@@ -37,6 +37,17 @@ public class ProductionOrderProgressRecomputeService {
     @Autowired
     private ProductionOrderScanRecordDomainService scanRecordDomainService;
 
+    private boolean isBaseStageName(String processName) {
+        String pn = StringUtils.hasText(processName) ? processName.trim() : null;
+        if (!StringUtils.hasText(pn)) {
+            return false;
+        }
+        return templateLibraryService
+                .progressStageNameMatches(ProductionOrderScanRecordDomainService.STAGE_ORDER_CREATED, pn)
+                || templateLibraryService
+                        .progressStageNameMatches(ProductionOrderScanRecordDomainService.STAGE_PROCUREMENT, pn);
+    }
+
     public ProductionOrder recomputeProgressFromRecords(String orderId) {
         String oid = StringUtils.hasText(orderId) ? orderId.trim() : null;
         if (!StringUtils.hasText(oid)) {
@@ -61,7 +72,7 @@ public class ProductionOrderProgressRecomputeService {
 
         List<ScanRecord> records = scanRecordMapper.selectList(new LambdaQueryWrapper<ScanRecord>()
                 .eq(ScanRecord::getOrderId, oid)
-                .in(ScanRecord::getScanType, java.util.Arrays.asList("production", "cutting", "quality"))
+                .in(ScanRecord::getScanType, java.util.Arrays.asList("production", "cutting", "quality", "warehouse"))
                 .eq(ScanRecord::getScanResult, "success"));
 
         LinkedHashMap<String, Long> prodDoneByProcess = new LinkedHashMap<>();
@@ -108,14 +119,10 @@ public class ProductionOrderProgressRecomputeService {
                     } else {
                         prodDoneByProcess.put(pn, prodDoneByProcess.getOrDefault(pn, 0L) + q);
                     }
-                    if (!stageStarted
-                            && (ProductionOrderScanRecordDomainService.STAGE_ORDER_CREATED.equals(pn)
-                                    || ProductionOrderScanRecordDomainService.STAGE_PROCUREMENT.equals(pn))) {
+                    if (!stageStarted && isBaseStageName(pn)) {
                         stageStarted = true;
                     }
-                    if (!realProductionStarted
-                            && !ProductionOrderScanRecordDomainService.STAGE_ORDER_CREATED.equals(pn)
-                            && !ProductionOrderScanRecordDomainService.STAGE_PROCUREMENT.equals(pn)) {
+                    if (!realProductionStarted && !isBaseStageName(pn)) {
                         realProductionStarted = true;
                     }
                 }
@@ -225,8 +232,7 @@ public class ProductionOrderProgressRecomputeService {
                 continue;
             }
             String pn = n.trim();
-            if (!ProductionOrderScanRecordDomainService.STAGE_ORDER_CREATED.equals(pn)
-                    && !ProductionOrderScanRecordDomainService.STAGE_PROCUREMENT.equals(pn)) {
+            if (!isBaseStageName(pn)) {
                 productionCount += 1;
             }
         }
@@ -238,8 +244,7 @@ public class ProductionOrderProgressRecomputeService {
                 if (!StringUtils.hasText(pn)) {
                     continue;
                 }
-                if (ProductionOrderScanRecordDomainService.STAGE_ORDER_CREATED.equals(pn)
-                        || ProductionOrderScanRecordDomainService.STAGE_PROCUREMENT.equals(pn)) {
+                if (isBaseStageName(pn)) {
                     continue;
                 }
                 derived.add(pn);

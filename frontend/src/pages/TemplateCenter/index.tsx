@@ -1,12 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Card, Form, Input, InputNumber, Modal, Select, Space, Table, Tag, Tooltip, Typography, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { ArrowDownOutlined, ArrowUpOutlined, DeleteOutlined, EditOutlined, EyeOutlined, ImportOutlined, PlusOutlined, RollbackOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, EyeOutlined, HolderOutlined, ImportOutlined, PlusOutlined, RollbackOutlined } from '@ant-design/icons';
 import Layout from '../../components/Layout';
-import ResizableTable from '../../components/ResizableTable';
-import RowActions from '../../components/RowActions';
+import ResizableModal from '../../components/common/ResizableModal';
+import ResizableTable from '../../components/common/ResizableTable';
+import RowActions from '../../components/common/RowActions';
 import api from '../../utils/api';
-import { useAuth } from '../../utils/authContext';
+import { isAdminUser as isAdminUserFn, useAuth } from '../../utils/authContext';
 import type { TemplateLibrary } from '../../types/style';
 
 type ProgressNodeInput = { name: string };
@@ -77,13 +78,7 @@ const TemplateCenter: React.FC = () => {
   const [viewContent, setViewContent] = useState<string>('');
   const [viewObj, setViewObj] = useState<any>(null);
 
-  const isAdminUser = useMemo(() => {
-    const role = String(user?.role || '').trim();
-    if (!role) return false;
-    if (role === '1') return true;
-    const lower = role.toLowerCase();
-    return lower.includes('admin') || role.includes('管理员');
-  }, [user?.role]);
+  const isAdminUser = useMemo(() => isAdminUserFn(user), [user]);
 
   const isLocked = (row?: TemplateLibrary | null) => {
     const v = Number((row as any)?.locked);
@@ -132,6 +127,30 @@ const TemplateCenter: React.FC = () => {
 
   const normalizeStageName = (v: any) => String(v ?? '').trim().replace(/\s+/g, '');
 
+  const isProductionStage = (name: string) => {
+    const n = normalizeStageName(name);
+    if (!n) return false;
+    return n.includes('生产') || n.includes('车缝') || n.includes('缝制') || n.includes('缝纫') || n.includes('车工');
+  };
+
+  const isIroningStage = (name: string) => {
+    const n = normalizeStageName(name);
+    if (!n) return false;
+    return n.includes('整烫') || n.includes('熨烫');
+  };
+
+  const isCuttingStage = (name: string) => {
+    const n = normalizeStageName(name);
+    if (!n) return false;
+    return n.includes('裁剪') || n.includes('裁床') || n.includes('剪裁') || n.includes('开裁');
+  };
+
+  const isShipmentStage = (name: string) => {
+    const n = normalizeStageName(name);
+    if (!n) return false;
+    return n.includes('出货') || n.includes('发货') || n.includes('发运');
+  };
+
   const isQualityStage = (name: string) => {
     const n = normalizeStageName(name);
     if (!n) return false;
@@ -141,7 +160,7 @@ const TemplateCenter: React.FC = () => {
   const isPackagingStage = (name: string) => {
     const n = normalizeStageName(name);
     if (!n) return false;
-    return n.includes('包装') || n.includes('后整');
+    return n.includes('包装') || n.includes('后整') || n.includes('打包') || n.includes('装箱');
   };
 
   const stageNameMatches = (stageName: string, recordProcessName: string) => {
@@ -150,13 +169,19 @@ const TemplateCenter: React.FC = () => {
     if (!a || !b) return false;
     if (a === b) return true;
     if (a.includes(b) || b.includes(a)) return true;
+    if (isCuttingStage(a) && isCuttingStage(b)) return true;
     if (isQualityStage(a) && isQualityStage(b)) return true;
     if (isPackagingStage(a) && isPackagingStage(b)) return true;
+    if (isIroningStage(a) && isIroningStage(b)) return true;
+    if (isProductionStage(a) && isProductionStage(b)) return true;
+    if (isShipmentStage(a) && isShipmentStage(b)) return true;
     return false;
   };
 
   const [processPriceEditing, setProcessPriceEditing] = useState<TemplateLibrary | null>(null);
   const lastLoadedPriceStyleNoRef = useRef<string>('');
+  const draggingNodeIndexRef = useRef<number | null>(null);
+  const [nodeDragOverIndex, setNodeDragOverIndex] = useState<number | null>(null);
 
   const loadProcessPriceForStyle = async (styleNo: string) => {
     const sn = String(styleNo || '').trim();
@@ -1033,7 +1058,7 @@ const TemplateCenter: React.FC = () => {
           columns={columns}
           dataSource={data}
           loading={loading}
-          scroll={{ x: 'max-content' }}
+          scroll={{ x: 'max-content', y: typeof window === 'undefined' ? 560 : window.innerWidth < 768 ? 360 : 560 }}
           pagination={{
             current: page,
             pageSize,
@@ -1044,7 +1069,16 @@ const TemplateCenter: React.FC = () => {
         />
       </Card>
 
-      <Modal title="按款号生成模板" open={createOpen} centered onCancel={() => setCreateOpen(false)} onOk={submitCreate} okText="生成" cancelText="取消">
+      <ResizableModal
+        title="按款号生成模板"
+        open={createOpen}
+        centered
+        onCancel={() => setCreateOpen(false)}
+        onOk={submitCreate}
+        okText="生成"
+        cancelText="取消"
+        width={520}
+      >
         <Form form={createForm} layout="vertical">
           <Form.Item name="sourceStyleNo" label="来源款号" rules={[{ required: true, message: '请输入来源款号' }]}>
             <Select
@@ -1073,9 +1107,18 @@ const TemplateCenter: React.FC = () => {
             />
           </Form.Item>
         </Form>
-      </Modal>
+      </ResizableModal>
 
-      <Modal title="套用到目标款号" open={applyOpen} centered onCancel={() => setApplyOpen(false)} onOk={submitApply} okText="套用" cancelText="取消">
+      <ResizableModal
+        title="套用到目标款号"
+        open={applyOpen}
+        centered
+        onCancel={() => setApplyOpen(false)}
+        onOk={submitApply}
+        okText="套用"
+        cancelText="取消"
+        width={520}
+      >
         <Form form={applyForm} layout="vertical">
           <Form.Item label="模板" >
             <Input value={activeRow ? `${activeRow.templateName || ''}（${typeLabel(activeRow.templateType)}）` : ''} disabled />
@@ -1103,9 +1146,9 @@ const TemplateCenter: React.FC = () => {
             />
           </Form.Item>
         </Form>
-      </Modal>
+      </ResizableModal>
 
-      <Modal
+      <ResizableModal
         title={
           activeRow
             ? `模板内容 - ${String(activeRow.templateName || '')}（${typeLabel(String(activeRow.templateType || ''))}）`
@@ -1114,13 +1157,27 @@ const TemplateCenter: React.FC = () => {
         open={viewOpen}
         centered
         onCancel={() => setViewOpen(false)}
-        footer={null}
-        width="36vw"
+        footer={
+          <div className="modal-footer-actions">
+            <Button onClick={() => setViewOpen(false)}>关闭</Button>
+          </div>
+        }
+        width={
+          typeof window === 'undefined'
+            ? '60vw'
+            : window.innerWidth < 768
+              ? '96vw'
+              : window.innerWidth < 1024
+                ? '66vw'
+                : '60vw'
+        }
+        initialHeight={720}
+        scaleWithViewport
       >
-        <div style={{ maxHeight: '65vh', overflow: 'auto' }}>{renderVisualContent()}</div>
-      </Modal>
+        {renderVisualContent()}
+      </ResizableModal>
 
-      <Modal
+      <ResizableModal
         title={progressEditing?.id ? '编辑进度模板' : '自定义进度模板'}
         open={progressOpen}
         centered
@@ -1133,7 +1190,17 @@ const TemplateCenter: React.FC = () => {
         okText="保存"
         cancelText="取消"
         confirmLoading={progressSaving}
-        width={960}
+        width={
+          typeof window === 'undefined'
+            ? '60vw'
+            : window.innerWidth < 768
+              ? '96vw'
+              : window.innerWidth < 1024
+                ? '66vw'
+                : '60vw'
+        }
+        initialHeight={720}
+        scaleWithViewport
       >
         <Form form={progressForm} layout="vertical">
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -1179,7 +1246,69 @@ const TemplateCenter: React.FC = () => {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       {fields.map((f, idx) => (
-                        <Space key={f.key} style={{ display: 'flex' }} align="start">
+                        <div
+                          key={f.key}
+                          onDragOver={(e) => {
+                            if (progressSaving) return;
+                            e.preventDefault();
+                            if (nodeDragOverIndex !== idx) setNodeDragOverIndex(idx);
+                          }}
+                          onDragLeave={() => {
+                            if (nodeDragOverIndex === idx) setNodeDragOverIndex(null);
+                          }}
+                          onDrop={(e) => {
+                            if (progressSaving) return;
+                            e.preventDefault();
+                            const from = draggingNodeIndexRef.current;
+                            if (from == null || from === idx) return;
+                            move(from, idx);
+                            draggingNodeIndexRef.current = idx;
+                            setNodeDragOverIndex(null);
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: 8,
+                            padding: 6,
+                            borderRadius: 10,
+                            background: nodeDragOverIndex === idx ? 'rgba(45, 127, 249, 0.08)' : 'transparent',
+                          }}
+                        >
+                          <span
+                            draggable={!progressSaving}
+                            onDragStart={(e) => {
+                              if (progressSaving) return;
+                              draggingNodeIndexRef.current = idx;
+                              setNodeDragOverIndex(null);
+                              try {
+                                e.dataTransfer.effectAllowed = 'move';
+                                e.dataTransfer.setData('text/plain', String(idx));
+                              } catch {
+                              }
+                            }}
+                            onDragEnd={() => {
+                              draggingNodeIndexRef.current = null;
+                              setNodeDragOverIndex(null);
+                            }}
+                            style={{
+                              width: 28,
+                              height: 28,
+                              borderRadius: 8,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: 'rgba(0, 0, 0, 0.45)',
+                              background: 'rgba(0, 0, 0, 0.03)',
+                              cursor: progressSaving ? 'not-allowed' : 'grab',
+                              userSelect: 'none',
+                              marginTop: 2,
+                              flex: '0 0 auto',
+                            }}
+                            aria-label="拖动排序"
+                            title="拖动排序"
+                          >
+                            <HolderOutlined />
+                          </span>
                           <Form.Item
                             name={[f.name, 'name']}
                             rules={[{ required: true, message: '请输入环节名称' }]}
@@ -1188,26 +1317,8 @@ const TemplateCenter: React.FC = () => {
                             <Input placeholder="例如：裁剪 / 缝制 / 后整 / 出货" />
                           </Form.Item>
                           <RowActions
-                            maxInline={3}
+                            maxInline={1}
                             actions={[
-                              {
-                                key: 'up',
-                                label: '上移',
-                                title: '上移',
-                                icon: <ArrowUpOutlined />,
-                                disabled: idx === 0 || progressSaving,
-                                onClick: () => idx > 0 && move(idx, idx - 1),
-                                primary: true,
-                              },
-                              {
-                                key: 'down',
-                                label: '下移',
-                                title: '下移',
-                                icon: <ArrowDownOutlined />,
-                                disabled: idx >= fields.length - 1 || progressSaving,
-                                onClick: () => idx < fields.length - 1 && move(idx, idx + 1),
-                                primary: true,
-                              },
                               {
                                 key: 'delete',
                                 label: '删除',
@@ -1219,7 +1330,7 @@ const TemplateCenter: React.FC = () => {
                               },
                             ]}
                           />
-                        </Space>
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -1276,12 +1387,19 @@ const TemplateCenter: React.FC = () => {
                           <Form.Item name={[f.name, 'unitPrice']} style={{ margin: 0 }}>
                             <InputNumber min={0} step={0.01} precision={2} prefix="¥" placeholder="单价" style={{ width: 140 }} />
                           </Form.Item>
-                          <Button
-                            danger
-                            type="text"
-                            icon={<DeleteOutlined />}
-                            onClick={() => remove(f.name)}
-                            disabled={progressSaving}
+                          <RowActions
+                            maxInline={1}
+                            actions={[
+                              {
+                                key: 'delete',
+                                label: '删除',
+                                title: '删除',
+                                icon: <DeleteOutlined />,
+                                danger: true,
+                                disabled: progressSaving,
+                                onClick: () => remove(f.name),
+                              },
+                            ]}
                           />
                         </Space>
                       ))}
@@ -1292,7 +1410,7 @@ const TemplateCenter: React.FC = () => {
             </Card>
           </div>
         </Form>
-      </Modal>
+      </ResizableModal>
     </Layout>
   );
 };

@@ -216,7 +216,17 @@ public class ProductionOrderScanRecordDomainService {
             return false;
         }
         try {
-            java.util.List<String> base = java.util.Arrays.asList(STAGE_ORDER_CREATED, STAGE_PROCUREMENT);
+            java.util.List<String> base = java.util.Arrays.asList(
+                    STAGE_ORDER_CREATED,
+                    STAGE_PROCUREMENT,
+                    "订单创建",
+                    "创建订单",
+                    "开单",
+                    "制单",
+                    "物料采购",
+                    "面辅料采购",
+                    "备料",
+                    "到料");
             Long c = scanRecordMapper.selectCount(
                     new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ScanRecord>()
                             .eq(ScanRecord::getOrderId, oid)

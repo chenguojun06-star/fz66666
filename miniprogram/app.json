@@ -1,8 +1,39 @@
 {
-  "pages": ["pages/login/index", "pages/scan/index"],
+  "pages": [
+    "pages/login/index",
+    "pages/home/index",
+    "pages/work/index",
+    "pages/scan/index",
+    "pages/admin/index"
+  ],
+  "tabBar": {
+    "custom": true,
+    "color": "#8e8e93",
+    "selectedColor": "#0a84ff",
+    "backgroundColor": "#f2f2f7",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/home/index",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/work/index",
+        "text": "生产"
+      },
+      {
+        "pagePath": "pages/scan/index",
+        "text": "扫码"
+      },
+      {
+        "pagePath": "pages/admin/index",
+        "text": "个人"
+      }
+    ]
+  },
   "window": {
-    "navigationBarTitleText": "车间扫码",
-    "navigationBarBackgroundColor": "#1677ff",
+    "navigationBarTitleText": "生产管理",
+    "navigationBarBackgroundColor": "#0a84ff",
     "navigationBarTextStyle": "white",
     "backgroundTextStyle": "light"
   },

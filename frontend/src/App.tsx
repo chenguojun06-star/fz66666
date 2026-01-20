@@ -1,30 +1,32 @@
 import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { Spin } from 'antd';
-import Dashboard from './pages/Dashboard';
-import StyleInfo from './pages/StyleInfo';
-import ProductionList from './pages/Production/List';
-import CuttingManagement from './pages/Production/Cutting';
-import MaterialPurchase from './pages/Production/MaterialPurchase';
-import ProductWarehousing from './pages/Production/ProductWarehousing';
-import OrderFlow from './pages/Production/OrderFlow';
-import FactoryReconciliationList from './pages/Finance/FactoryReconciliationList';
-import MaterialReconciliation from './pages/Finance/MaterialReconciliation';
-import ShipmentReconciliationList from './pages/Finance/ShipmentReconciliationList';
-import PaymentApproval from './pages/Finance/PaymentApproval';
-import UserList from './pages/System/UserList';
-import RoleList from './pages/System/RoleList';
-import FactoryList from './pages/System/FactoryList';
-import LoginLogList from './pages/System/LoginLogList';
-import Profile from './pages/System/Profile';
-import Login from './pages/Login';
+import { Button, Spin } from 'antd';
 import PrivateRoute from './components/PrivateRoute';
-import OrderManagement from './pages/OrderManagement';
-import DataCenter from './pages/DataCenter';
-import TemplateCenter from './pages/TemplateCenter';
 import { useAuth } from './utils/authContext';
-import ResizableModal from './components/ResizableModal';
+import ResizableModal from './components/common/ResizableModal';
+import { paths } from './routeConfig';
 
+// 懒加载组件
+const Dashboard = React.lazy(() => import('./pages/Dashboard'));
+const StyleInfo = React.lazy(() => import('./pages/StyleInfo'));
+const ProductionList = React.lazy(() => import('./pages/Production/List'));
+const CuttingManagement = React.lazy(() => import('./pages/Production/Cutting'));
+const MaterialPurchase = React.lazy(() => import('./pages/Production/MaterialPurchase'));
+const ProductWarehousing = React.lazy(() => import('./pages/Production/ProductWarehousing'));
+const OrderFlow = React.lazy(() => import('./pages/Production/OrderFlow'));
+const MaterialReconciliation = React.lazy(() => import('./pages/Finance/MaterialReconciliation'));
+const ShipmentReconciliationList = React.lazy(() => import('./pages/Finance/ShipmentReconciliationList'));
+const PaymentApproval = React.lazy(() => import('./pages/Finance/PaymentApproval'));
+const PayrollOperatorSummary = React.lazy(() => import('./pages/Finance/PayrollOperatorSummary'));
+const UserList = React.lazy(() => import('./pages/System/UserList'));
+const RoleList = React.lazy(() => import('./pages/System/RoleList'));
+const FactoryList = React.lazy(() => import('./pages/System/FactoryList'));
+const LoginLogList = React.lazy(() => import('./pages/System/LoginLogList'));
+const Profile = React.lazy(() => import('./pages/System/Profile'));
+const Login = React.lazy(() => import('./pages/Login'));
+const OrderManagement = React.lazy(() => import('./pages/OrderManagement'));
+const DataCenter = React.lazy(() => import('./pages/DataCenter'));
+const TemplateCenter = React.lazy(() => import('./pages/TemplateCenter'));
 const ProgressDetail = React.lazy(() => import('./pages/Production/ProgressDetail'));
 
 const RootRedirect: React.FC = () => {
@@ -32,7 +34,7 @@ const RootRedirect: React.FC = () => {
   if (loading) {
     return null;
   }
-  return <Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />;
+  return <Navigate to={isAuthenticated ? paths.dashboard : paths.login} replace />;
 };
 
 const LoginGate: React.FC = () => {
@@ -40,7 +42,99 @@ const LoginGate: React.FC = () => {
   if (loading) {
     return null;
   }
-  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />;
+  return isAuthenticated ? <Navigate to={paths.dashboard} replace /> : <Suspense fallback={<Spin />}><Login /></Suspense>;
+};
+
+const GlobalImagePreview: React.FC = () => {
+  const [open, setOpen] = React.useState(false);
+  const [src, setSrc] = React.useState<string | undefined>(undefined);
+  const [alt, setAlt] = React.useState<string | undefined>(undefined);
+
+  const close = React.useCallback(() => {
+    setOpen(false);
+    setSrc(undefined);
+    setAlt(undefined);
+  }, []);
+
+  React.useEffect(() => {
+    const isIgnored = (img: HTMLImageElement) => {
+      const directDisable =
+        img.getAttribute('data-preview') === 'false' ||
+        img.getAttribute('data-no-preview') === 'true' ||
+        img.getAttribute('data-no-image-preview') === 'true' ||
+        img.classList.contains('no-image-preview');
+      if (directDisable) return true;
+      if (img.closest('[data-no-image-preview], .no-image-preview')) return true;
+      if (img.closest('a[href]')) return true;
+      if (img.closest('button, [role="button"], .ant-btn')) return true;
+      if (img.closest('.ant-image')) return true;
+      return false;
+    };
+
+    const pickSrc = (img: HTMLImageElement) => {
+      const current = (img as any).currentSrc;
+      if (typeof current === 'string' && current) return current;
+      const s = img.getAttribute('src');
+      return s || '';
+    };
+
+    const onClickCapture = (e: MouseEvent) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+      const img = target.closest('img');
+      if (!(img instanceof HTMLImageElement)) return;
+      if (isIgnored(img)) return;
+
+      const nextSrc = pickSrc(img);
+      if (!nextSrc) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+      setSrc(nextSrc);
+      setAlt(img.getAttribute('alt') || undefined);
+      setOpen(true);
+    };
+
+    document.addEventListener('click', onClickCapture, true);
+    return () => document.removeEventListener('click', onClickCapture, true);
+  }, []);
+
+  return (
+    <ResizableModal
+      open={open}
+      title={null}
+      onCancel={close}
+      footer={null}
+      width={600}
+      minWidth={320}
+      minHeight={320}
+      initialHeight={600}
+      contentPadding={0}
+      destroyOnHidden
+    >
+      {src ? (
+        <div
+          style={{
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          <img
+            src={src}
+            alt={alt || ''}
+            style={{
+              maxWidth: '100%',
+              maxHeight: '100%',
+              objectFit: 'contain',
+            }}
+          />
+        </div>
+      ) : null}
+    </ResizableModal>
+  );
 };
 
 const AppRoutes: React.FC = () => {
@@ -48,57 +142,92 @@ const AppRoutes: React.FC = () => {
   const navigate = useNavigate();
   const backgroundLocation = (location.state as any)?.backgroundLocation;
 
+  React.useEffect(() => {
+    (window as any).__appAuthLogoutNavigate = () => navigate(paths.login, { replace: true });
+  }, [navigate]);
+
+  React.useEffect(() => {
+    const w: any = window as any;
+    if (w.__appAuthLogoutListenerInstalled) {
+      return;
+    }
+    w.__appAuthLogoutListenerInstalled = true;
+    w.__appAuthLogoutListener = () => {
+      try {
+        if (typeof w.__appAuthLogoutNavigate === 'function') {
+          w.__appAuthLogoutNavigate();
+        }
+      } catch {
+      }
+    };
+    window.addEventListener('app:auth:logout', w.__appAuthLogoutListener);
+  }, [navigate]);
+
   return (
     <>
       <Routes location={backgroundLocation || location}>
         <Route path="/" element={<RootRedirect />} />
-        <Route path="/login" element={<LoginGate />} />
+        <Route path={paths.login} element={<LoginGate />} />
 
         <Route element={<PrivateRoute />}>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/style-info" element={<StyleInfo />} />
-          <Route path="/style-info/:id" element={<StyleInfo />} />
-          <Route path="/production" element={<ProductionList />} />
-          <Route path="/production/cutting" element={<CuttingManagement />} />
-          <Route path="/production/cutting/task/:orderNo" element={<CuttingManagement />} />
-          <Route path="/production/material" element={<MaterialPurchase />} />
-          <Route path="/production/warehousing" element={<ProductWarehousing />} />
+          <Route path={paths.dashboard} element={<Suspense fallback={<Spin />}><Dashboard /></Suspense>} />
+          <Route path={paths.styleInfoList} element={<Suspense fallback={<Spin />}><StyleInfo /></Suspense>} />
+          <Route path={paths.styleInfoDetail} element={<Suspense fallback={<Spin />}><StyleInfo /></Suspense>} />
+          <Route path={paths.productionList} element={<Suspense fallback={<Spin />}><ProductionList /></Suspense>} />
+          <Route path={paths.cutting} element={<Suspense fallback={<Spin />}><CuttingManagement /></Suspense>} />
+          <Route path={paths.cuttingTask} element={<Suspense fallback={<Spin />}><CuttingManagement /></Suspense>} />
+          <Route path={paths.materialPurchase} element={<Suspense fallback={<Spin />}><MaterialPurchase /></Suspense>} />
+          <Route path={paths.warehousing} element={<Suspense fallback={<Spin />}><ProductWarehousing /></Suspense>} />
+          <Route path={paths.warehousingDetail} element={<Suspense fallback={<Spin />}><ProductWarehousing /></Suspense>} />
           <Route
-            path="/production/progress-detail"
+            path={paths.progressDetail}
             element={
               <Suspense fallback={<Spin />}>
                 <ProgressDetail />
               </Suspense>
             }
           />
-          <Route path="/production/order-flow" element={<OrderFlow />} />
-          <Route path="/finance/factory-reconciliation" element={<FactoryReconciliationList />} />
-          <Route path="/finance/material-reconciliation" element={<MaterialReconciliation />} />
-          <Route path="/finance/shipment-reconciliation" element={<ShipmentReconciliationList />} />
-          <Route path="/finance/payment-approval" element={<PaymentApproval />} />
-          <Route path="/system/user" element={<UserList />} />
-          <Route path="/system/role" element={<RoleList />} />
-          <Route path="/system/factory" element={<FactoryList />} />
-          <Route path="/system/login-log" element={<LoginLogList />} />
-          <Route path="/system/profile" element={<Profile />} />
-          <Route path="/order-management" element={<OrderManagement />} />
-          <Route path="/order-management/:styleNo" element={<OrderManagement />} />
-          <Route path="/data-center" element={<DataCenter />} />
-          <Route path="/basic/template-center" element={<TemplateCenter />} />
+          <Route path={paths.orderFlow} element={<Suspense fallback={<Spin />}><OrderFlow /></Suspense>} />
+          <Route path={paths.materialReconciliation} element={<Suspense fallback={<Spin />}><MaterialReconciliation /></Suspense>} />
+          <Route path={paths.shipmentReconciliation} element={<Suspense fallback={<Spin />}><ShipmentReconciliationList /></Suspense>} />
+          <Route path={paths.paymentApproval} element={<Suspense fallback={<Spin />}><PaymentApproval /></Suspense>} />
+          <Route path={paths.payrollOperatorSummary} element={<Suspense fallback={<Spin />}><PayrollOperatorSummary /></Suspense>} />
+          <Route path={paths.user} element={<Suspense fallback={<Spin />}><UserList /></Suspense>} />
+          <Route path={paths.role} element={<Suspense fallback={<Spin />}><RoleList /></Suspense>} />
+          <Route path={paths.factory} element={<Suspense fallback={<Spin />}><FactoryList /></Suspense>} />
+          <Route path={paths.loginLog} element={<Suspense fallback={<Spin />}><LoginLogList /></Suspense>} />
+          <Route path={paths.profile} element={<Suspense fallback={<Spin />}><Profile /></Suspense>} />
+          <Route path={paths.orderManagementList} element={<Suspense fallback={<Spin />}><OrderManagement /></Suspense>} />
+          <Route path={paths.orderManagementDetail} element={<Suspense fallback={<Spin />}><OrderManagement /></Suspense>} />
+          <Route path={paths.dataCenter} element={<Suspense fallback={<Spin />}><DataCenter /></Suspense>} />
+          <Route path={paths.templateCenter} element={<Suspense fallback={<Spin />}><TemplateCenter /></Suspense>} />
         </Route>
       </Routes>
 
       {backgroundLocation ? (
         <Routes>
           <Route
-            path="/production/progress-detail"
+            path={paths.progressDetail}
             element={
               <ResizableModal
                 open
                 title="生产进度"
                 onCancel={() => navigate(-1)}
-                footer={null}
-                width="64vw"
+                footer={
+                  <div className="modal-footer-actions">
+                    <Button onClick={() => navigate(-1)}>关闭</Button>
+                  </div>
+                }
+                width={
+                  typeof window === 'undefined'
+                    ? '60vw'
+                    : window.innerWidth < 768
+                      ? '96vw'
+                      : window.innerWidth < 1024
+                        ? '66vw'
+                        : '60vw'
+                }
+                initialHeight={720}
                 scaleWithViewport
                 destroyOnHidden
               >
@@ -110,13 +239,15 @@ const AppRoutes: React.FC = () => {
           />
         </Routes>
       ) : null}
+
+      <GlobalImagePreview />
     </>
   );
 };
 
 const App: React.FC = () => {
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AppRoutes />
     </BrowserRouter>
   );

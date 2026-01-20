@@ -5,14 +5,12 @@
 ### 1.1 核心设计理念
 
 1. **弹窗式交互（Modal-First）**：
-
    - 核心列表页（如款号、订单）保持常驻。
    - 详情/编辑操作通过**宽屏弹窗（桌面端 Width: 60%~70%）**完成。
    - 弹窗内支持多 Tab 切换（例如：款号弹窗包含「基础信息 | BOM 表 | 尺寸表 | 工序表 | 报价单 | 附件」）。
    - 优势：用户聚焦当前任务，视觉干扰更少，符合传统软件操作习惯。
 
 2. **主子模块架构**：
-
    - 系统严格遵循「主模块 -> 子模块 -> 功能点」三级架构。
    - 导航栏采用左侧双层折叠菜单，支持高频菜单收藏。
 
@@ -33,6 +31,25 @@
 - 操作列固定在表格最右侧，不允许拖拽调整位置。
 - 前端实现统一使用 RowActions 组件渲染行操作区。
 
+#### 1.2.1.2 列表页（Table）分页规范
+
+- 全站分页统一采用「列表底部行内」样式：分页属于页面内容的一部分，禁止悬浮/吸底。
+- 默认使用简洁分页（simple），避免占用底部整行空间；同时保证移动端可操作。
+- ResizableTable：默认已统一分页样式与位置，页面侧只需按需传入 current/pageSize/total/onChange。
+- 直接使用 antd Table 的场景：pagination 建议写法如下（保持一致样式）。
+
+```ts
+pagination={{
+  pageSize: 10,
+  showSizeChanger: true,
+  pageSizeOptions: ['10', '20', '50', '100'],
+  position: ['bottomRight'],
+  simple: true,
+}}
+```
+
+- 例外：极少数需要展示完整页码器（非 simple）时，允许设置 simple=false。
+
 #### 1.2.2 弹窗（Modal）基础布局
 
 - 统一使用 ResizableModal。
@@ -43,10 +60,13 @@
 
 #### 1.2.4 前端构建分包（Vite/Rollup）
 
-- 目标：避免单个 chunk 过大（>500KB）导致首屏加载/缓存效率变差。
-- 已启用 manualChunks：
-  - antd 按组件目录拆分为多个 chunk（例如 table/form/modal 等）。
-  - 其它 node_modules 默认按“包名”拆分为 vendor chunk。
+- 目标：所有构建产物 chunk（minify 后）必须 ≤ 500KB。
+- 已启用 manualChunks（不要改回“所有 node_modules 打成一个 vendor”）：
+  - react/react-dom 拆分为独立 vendor。
+  - react-router 拆分为独立 vendor。
+  - antd 尽量按二级目录拆分为多个 chunk（降低单包体积与提升缓存命中）。
+  - 其它 node_modules 默认落到 vendor。
+- 已设置 `chunkSizeWarningLimit=500`，并以此作为“不得超过”的硬性口径。
 - 配置位置：`frontend/vite.config.ts`。
 
 #### 1.2.5 前端包管理器版本（npm）
@@ -230,7 +250,6 @@
 #### 3.3.3 已落地的中间层示例（本项目）
 
 - **Dashboard**：
-
   - Controller → Orchestrator → QueryService
   - 目的：把首页聚合口径从 Controller 中抽离，便于后续扩展指标/替换查询实现。
   - 参考：
@@ -239,7 +258,6 @@
     - [DashboardQueryService.java](file:///Users/guojunmini4/Documents/%E6%9C%8D%E8%A3%8566666/backend/src/main/java/com/fashion/supplychain/dashboard/service/DashboardQueryService.java)
 
 - **DataCenter**：
-
   - Controller → Orchestrator → QueryService
   - 目的：统一经营指标口径与“生产单页”聚合返回，Controller 保持极薄。
   - 参考：
@@ -485,13 +503,11 @@ bash scripts/install-launchagent.sh
 3. **性能优化**：BOM 表和尺寸表数据量大时，需使用虚拟滚动或分页加载。
 
 4. **弹窗可调整大小**：所有弹窗统一使用可拖拽缩放方案（ResizableModal）。
-
    - 默认宽度建议 80vw（或 700~900px），高度随视口自适应。
    - 弹窗内容区（body）必须可滚动，避免内容溢出导致页面滚动混乱。
    - 弹窗内避免再出现“固定高度 + 内外双滚动”的组合，优先让 body 承担滚动。
 
 5. **弹窗内表格布局**：弹窗里出现的 Table 统一按“可读优先 + 不挤压”策略。
-
    - 表格开启横向滚动：scroll.x = 'max-content'，让列按内容自然撑开。
    - 列宽策略：关键列显式设置 width；长文本列开启 ellipsis。
    - 弹窗内表格优先 pagination={false}（由弹窗滚动承载），数据很大再考虑分页/虚拟滚动。

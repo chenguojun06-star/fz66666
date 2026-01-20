@@ -96,7 +96,7 @@ public interface MaterialPurchaseService extends IService<MaterialPurchase> {
      * @param arrivedQuantity 到货数量
      * @return 是否更新成功
      */
-    boolean updateArrivedQuantity(String id, Integer arrivedQuantity);
+    boolean updateArrivedQuantity(String id, Integer arrivedQuantity, String remark);
 
     boolean existsActivePurchaseForOrder(String orderId);
 

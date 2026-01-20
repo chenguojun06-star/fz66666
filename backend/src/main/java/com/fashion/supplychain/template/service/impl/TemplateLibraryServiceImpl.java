@@ -70,6 +70,64 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
         return v.trim().replaceAll("\\s+", "");
     }
 
+    private boolean isProgressProductionStageName(String name) {
+        String n = normalizeStageName(name);
+        if (!StringUtils.hasText(n)) {
+            return false;
+        }
+        return n.contains("生产") || n.contains("车缝") || n.contains("缝制") || n.contains("缝纫") || n.contains("车工");
+    }
+
+    private boolean isProgressIroningStageName(String name) {
+        String n = normalizeStageName(name);
+        if (!StringUtils.hasText(n)) {
+            return false;
+        }
+        return n.contains("整烫") || n.contains("熨烫");
+    }
+
+    private boolean isProgressCuttingStageName(String name) {
+        String n = normalizeStageName(name);
+        if (!StringUtils.hasText(n)) {
+            return false;
+        }
+        return n.contains("裁剪") || n.contains("裁床") || n.contains("剪裁") || n.contains("开裁");
+    }
+
+    private boolean isProgressShipmentStageName(String name) {
+        String n = normalizeStageName(name);
+        if (!StringUtils.hasText(n)) {
+            return false;
+        }
+        return n.contains("出货") || n.contains("发货") || n.contains("发运");
+    }
+
+    private boolean isBaseStageName(String name) {
+        String n = normalizeStageName(name);
+        if (!StringUtils.hasText(n)) {
+            return false;
+        }
+        return progressStageNameMatches(STAGE_ORDER_CREATED, n) || progressStageNameMatches(STAGE_PROCUREMENT, n);
+    }
+
+    private boolean isProgressOrderCreatedStageName(String name) {
+        String n = normalizeStageName(name);
+        if (!StringUtils.hasText(n)) {
+            return false;
+        }
+        return n.contains(STAGE_ORDER_CREATED) || n.contains("订单创建") || n.contains("创建订单") || n.contains("开单")
+                || n.contains("制单");
+    }
+
+    private boolean isProgressProcurementStageName(String name) {
+        String n = normalizeStageName(name);
+        if (!StringUtils.hasText(n)) {
+            return false;
+        }
+        return n.contains(STAGE_PROCUREMENT) || n.contains("物料采购") || n.contains("面辅料采购") || n.contains("备料")
+                || n.contains("到料");
+    }
+
     @Override
     public boolean isProgressQualityStageName(String name) {
         String n = normalizeStageName(name);
@@ -85,7 +143,7 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
         if (!StringUtils.hasText(n)) {
             return false;
         }
-        return n.contains("包装") || n.contains("后整");
+        return n.contains("包装") || n.contains("后整") || n.contains("打包") || n.contains("装箱");
     }
 
     @Override
@@ -101,10 +159,28 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
         if (a.contains(b) || b.contains(a)) {
             return true;
         }
+        if (isProgressOrderCreatedStageName(a) && isProgressOrderCreatedStageName(b)) {
+            return true;
+        }
+        if (isProgressProcurementStageName(a) && isProgressProcurementStageName(b)) {
+            return true;
+        }
+        if (isProgressCuttingStageName(a) && isProgressCuttingStageName(b)) {
+            return true;
+        }
         if (isProgressQualityStageName(a) && isProgressQualityStageName(b)) {
             return true;
         }
         if (isProgressPackagingStageName(a) && isProgressPackagingStageName(b)) {
+            return true;
+        }
+        if (isProgressIroningStageName(a) && isProgressIroningStageName(b)) {
+            return true;
+        }
+        if (isProgressProductionStageName(a) && isProgressProductionStageName(b)) {
+            return true;
+        }
+        if (isProgressShipmentStageName(a) && isProgressShipmentStageName(b)) {
             return true;
         }
         return false;
@@ -220,59 +296,65 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
 
     @Override
     public BigDecimal resolveTotalUnitPriceFromProgressTemplate(String styleNo) {
-        TemplateLibrary tpl = resolveProgressTemplate(styleNo);
-        if (tpl == null || !StringUtils.hasText(tpl.getTemplateContent())) {
+        List<Map<String, Object>> nodes = resolveProgressNodeUnitPrices(styleNo);
+        if (nodes == null || nodes.isEmpty()) {
             return BigDecimal.ZERO;
         }
 
-        try {
-            com.fasterxml.jackson.databind.JsonNode root = objectMapper.readTree(tpl.getTemplateContent());
-            com.fasterxml.jackson.databind.JsonNode nodes = root.get("nodes");
-            if (nodes == null || !nodes.isArray()) {
-                return BigDecimal.ZERO;
+        BigDecimal sum = BigDecimal.ZERO;
+        for (Map<String, Object> n : nodes) {
+            if (n == null) {
+                continue;
             }
-
-            BigDecimal sum = BigDecimal.ZERO;
-            for (com.fasterxml.jackson.databind.JsonNode n : nodes) {
-                if (n == null || !n.hasNonNull("unitPrice")) {
-                    continue;
-                }
-                com.fasterxml.jackson.databind.JsonNode v = n.get("unitPrice");
-                BigDecimal up = BigDecimal.ZERO;
-                if (v != null) {
-                    if (v.isNumber()) {
-                        up = v.decimalValue();
-                    } else {
-                        BigDecimal parsed = parseDecimalText(v.asText(null));
-                        up = parsed == null ? BigDecimal.ZERO : parsed;
-                    }
-                }
-                if (up != null && up.compareTo(BigDecimal.ZERO) > 0) {
-                    sum = sum.add(up);
-                }
+            BigDecimal up = toBigDecimal(n.get("unitPrice"));
+            if (up != null && up.compareTo(BigDecimal.ZERO) > 0) {
+                sum = sum.add(up);
             }
-
-            if (sum.compareTo(BigDecimal.ZERO) > 0) {
-                return sum.setScale(2, RoundingMode.HALF_UP);
-            }
-        } catch (Exception e) {
-            log.warn("Failed to resolve total unit price from progress template: styleNo={}, templateId={}",
-                    StringUtils.hasText(styleNo) ? styleNo.trim() : null,
-                    tpl.getId(),
-                    e);
         }
 
+        if (sum.compareTo(BigDecimal.ZERO) > 0) {
+            return sum.setScale(2, RoundingMode.HALF_UP);
+        }
         return BigDecimal.ZERO;
     }
 
     @Override
     public List<Map<String, Object>> resolveProgressNodeUnitPrices(String styleNo) {
         TemplateLibrary tpl = resolveProgressTemplate(styleNo);
-        if (tpl == null || !StringUtils.hasText(tpl.getTemplateContent())) {
-            return new ArrayList<>();
+        Map<String, BigDecimal> processPrices;
+        try {
+            processPrices = resolveProcessUnitPrices(styleNo);
+        } catch (Exception e) {
+            processPrices = new LinkedHashMap<>();
         }
 
         List<Map<String, Object>> out = new ArrayList<>();
+
+        if (tpl == null || !StringUtils.hasText(tpl.getTemplateContent())) {
+            if (processPrices == null || processPrices.isEmpty()) {
+                return out;
+            }
+            for (Map.Entry<String, BigDecimal> e : processPrices.entrySet()) {
+                if (e == null) {
+                    continue;
+                }
+                String name = StringUtils.hasText(e.getKey()) ? e.getKey().trim() : "";
+                if (!StringUtils.hasText(name)) {
+                    continue;
+                }
+                BigDecimal up = e.getValue();
+                if (up == null || up.compareTo(BigDecimal.ZERO) < 0) {
+                    up = BigDecimal.ZERO;
+                }
+                Map<String, Object> item = new LinkedHashMap<>();
+                item.put("id", name);
+                item.put("name", name);
+                item.put("unitPrice", up.setScale(2, RoundingMode.HALF_UP));
+                out.add(item);
+            }
+            return out;
+        }
+
         try {
             com.fasterxml.jackson.databind.JsonNode root = objectMapper.readTree(tpl.getTemplateContent());
             com.fasterxml.jackson.databind.JsonNode arr = root.get("nodes");
@@ -306,6 +388,13 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
                         up = BigDecimal.ZERO;
                     }
 
+                    if (processPrices != null && !processPrices.isEmpty()) {
+                        BigDecimal matched = matchProcessUnitPrice(processPrices, name);
+                        if (matched != null && matched.compareTo(BigDecimal.ZERO) > 0) {
+                            up = matched;
+                        }
+                    }
+
                     Map<String, Object> item = new LinkedHashMap<>();
                     item.put("id", id);
                     item.put("name", name);
@@ -321,6 +410,37 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
         }
 
         return out;
+    }
+
+    private BigDecimal matchProcessUnitPrice(Map<String, BigDecimal> processPrices, String name) {
+        if (processPrices == null || processPrices.isEmpty() || !StringUtils.hasText(name)) {
+            return null;
+        }
+        String n = name.trim();
+        if (!StringUtils.hasText(n)) {
+            return null;
+        }
+
+        BigDecimal exact = processPrices.get(n);
+        if (exact != null && exact.compareTo(BigDecimal.ZERO) > 0) {
+            return exact;
+        }
+
+        for (Map.Entry<String, BigDecimal> e : processPrices.entrySet()) {
+            if (e == null) {
+                continue;
+            }
+            String k = e.getKey();
+            if (!StringUtils.hasText(k)) {
+                continue;
+            }
+            if (progressStageNameMatches(k, n)) {
+                BigDecimal v = e.getValue();
+                return v == null ? null : v;
+            }
+        }
+
+        return null;
     }
 
     private BigDecimal parseDecimalText(String raw) {
@@ -391,7 +511,14 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
             if (!StringUtils.hasText(name)) {
                 continue;
             }
-            if (!processOrder.contains(name)) {
+            boolean exists = false;
+            for (String existed : processOrder) {
+                if (progressStageNameMatches(existed, name)) {
+                    exists = true;
+                    break;
+                }
+            }
+            if (!exists) {
                 processOrder.add(name);
             }
         }
@@ -402,7 +529,7 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
                 continue;
             }
             String pn = n.trim();
-            if (!STAGE_ORDER_CREATED.equals(pn) && !STAGE_PROCUREMENT.equals(pn)) {
+            if (!isBaseStageName(pn)) {
                 productionCount += 1;
             }
         }
@@ -415,7 +542,7 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
                     continue;
                 }
                 String pn = n.trim();
-                if (STAGE_ORDER_CREATED.equals(pn) || STAGE_PROCUREMENT.equals(pn)) {
+                if (isBaseStageName(pn)) {
                     continue;
                 }
                 weights.putIfAbsent(pn, per);
@@ -632,9 +759,9 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
             if (nodes.isEmpty()) {
                 nodes = List.of(
                         Map.of("name", "裁剪", "unitPrice", 0),
-                        Map.of("name", "缝制", "unitPrice", 0),
+                        Map.of("name", "生产", "unitPrice", 0),
                         Map.of("name", "整烫", "unitPrice", 0),
-                        Map.of("name", "检验", "unitPrice", 0),
+                        Map.of("name", "质检", "unitPrice", 0),
                         Map.of("name", "包装", "unitPrice", 0),
                         Map.of("name", "入库", "unitPrice", 0));
             }

@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Button, Input, InputNumber, Popconfirm, Form, Select, message, Space, Tag } from 'antd';
-import { PlusOutlined, DeleteOutlined, SaveOutlined, EditOutlined } from '@ant-design/icons';
+import { Button, Input, InputNumber, Form, Select, message, Space, Tag, Modal, Table, Tabs } from 'antd';
+import { PlusOutlined, DeleteOutlined, SaveOutlined, EditOutlined, CloseOutlined, CheckOutlined } from '@ant-design/icons';
 import { StyleBom, TemplateLibrary } from '../../../types/style';
 import api from '../../../utils/api';
-import ResizableTable from '../../../components/ResizableTable';
-import { useAuth } from '../../../utils/authContext';
+import ResizableTable from '../../../components/common/ResizableTable';
+import RowActions from '../../../components/common/RowActions';
+import { isSupervisorOrAboveUser, useAuth } from '../../../utils/authContext';
 import { getMaterialSortWeight, getMaterialTypeLabel, normalizeMaterialType } from '../../../utils/materialType';
 
 interface Props {
@@ -58,25 +59,27 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
   const [importMode, setImportMode] = useState<'overwrite' | 'append'>('overwrite');
   const [templateSourceStyleNo, setTemplateSourceStyleNo] = useState('');
   const [templateLoading, setTemplateLoading] = useState(false);
+  const [syncLoading, setSyncLoading] = useState(false);
+  const [currentStyleNo, setCurrentStyleNo] = useState('');
+
+  const [syncJobId, setSyncJobId] = useState('');
+  const [syncModalOpen, setSyncModalOpen] = useState(false);
+  const [syncJob, setSyncJob] = useState<any>(null);
+  const syncPollRef = useRef<number | undefined>(undefined);
+
+  const [materialModalOpen, setMaterialModalOpen] = useState(false);
+  const [materialTab, setMaterialTab] = useState<'select' | 'create'>('select');
+  const [materialLoading, setMaterialLoading] = useState(false);
+  const [materialList, setMaterialList] = useState<any[]>([]);
+  const [materialTotal, setMaterialTotal] = useState(0);
+  const [materialPage, setMaterialPage] = useState(1);
+  const [materialKeyword, setMaterialKeyword] = useState('');
+  const [materialTargetRowId, setMaterialTargetRowId] = useState('');
+  const [materialCreateForm] = Form.useForm();
 
   const locked = Boolean(readOnly);
 
-  const isSupervisorOrAbove = (() => {
-    const role = String((user as any)?.role || '').trim();
-    const username = String((user as any)?.username || '').trim();
-    const lower = role.toLowerCase();
-    const perms = Array.isArray((user as any)?.permissions) ? (user as any).permissions : [];
-    return (
-      username === 'admin' ||
-      role === '1' ||
-      lower.includes('admin') ||
-      lower.includes('manager') ||
-      lower.includes('supervisor') ||
-      role.includes('管理员') ||
-      role.includes('主管') ||
-      perms.includes('all')
-    );
-  })();
+  const isSupervisorOrAbove = isSupervisorOrAboveUser(user);
 
   const [styleNoOptions, setStyleNoOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [styleNoLoading, setStyleNoLoading] = useState(false);
@@ -204,14 +207,236 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
     return nextData;
   };
 
+  const syncToMaterialDatabase = async () => {
+    if (locked) {
+      message.error('已完成，无法操作');
+      return;
+    }
+    if (Boolean(editingKey) || tableEditable) {
+      message.error('请先保存或取消编辑');
+      return;
+    }
+    try {
+      setSyncLoading(true);
+      const sid = encodeURIComponent(String(styleId));
+      const res = await api.post<any>(`/style/bom/${sid}/sync-material-database/async`);
+      const result = res as any;
+      if (result.code === 200) {
+        const d = result.data || {};
+        const jid = String(d.jobId || '').trim();
+        if (!jid) {
+          message.error('未获取到任务ID');
+          return;
+        }
+        setSyncJobId(jid);
+        setSyncModalOpen(true);
+        message.success('已提交同步任务');
+        return;
+      }
+      message.error(result?.message || '同步失败');
+    } catch (error: any) {
+      message.error(`同步失败（${error?.message || '请求失败'}）`);
+    } finally {
+      setSyncLoading(false);
+    }
+  };
+
+  const fetchCurrentStyleNo = async () => {
+    const sid = Number(styleId);
+    if (!Number.isFinite(sid) || sid <= 0) {
+      setCurrentStyleNo('');
+      return;
+    }
+    try {
+      const res = await api.get<any>(`/style/info/${sid}`);
+      const result = res as any;
+      if (result.code === 200) {
+        setCurrentStyleNo(String(result.data?.styleNo || '').trim());
+      }
+    } catch {
+      setCurrentStyleNo('');
+    }
+  };
+
+  const fetchSyncJob = async (jid: string) => {
+    const id = String(jid || '').trim();
+    if (!id) return;
+    try {
+      const res = await api.get<any>(`/style/bom/sync-jobs/${encodeURIComponent(id)}`);
+      const result = res as any;
+      if (result.code === 200) {
+        setSyncJob(result.data);
+        const st = String(result.data?.status || '').trim().toLowerCase();
+        if (st === 'done') {
+          const r = result.data?.result || {};
+          const created = Number(r.created) || 0;
+          const updated = Number(r.updated) || 0;
+          const skippedInvalid = Number(r.skippedInvalid) || 0;
+          const skippedCompleted = Number(r.skippedCompleted) || 0;
+          const failed = Number(r.failed) || 0;
+          message.success(`同步完成：新增${created}，更新${updated}，跳过${skippedInvalid + skippedCompleted}，失败${failed}`);
+          if (syncPollRef.current != null) window.clearInterval(syncPollRef.current);
+          syncPollRef.current = undefined;
+        }
+        if (st === 'failed') {
+          const err = String(result.data?.error || '同步失败');
+          message.error(err);
+          if (syncPollRef.current != null) window.clearInterval(syncPollRef.current);
+          syncPollRef.current = undefined;
+        }
+      }
+    } catch {
+    }
+  };
+
+  const mapDbTypeToBomType = (mt: any): MaterialType => {
+    const t = String(mt || '').trim().toLowerCase();
+    if (t.startsWith('fabric')) return 'fabricA';
+    if (t.startsWith('lining')) return 'liningA';
+    if (t.startsWith('accessory')) return 'accessoryA';
+    return 'accessoryA';
+  };
+
+  const ensureMaterialTargetRowId = () => {
+    if (locked) return '';
+    if (tableEditable) {
+      const newId = `tmp_${Date.now()}`;
+      const newBom: StyleBom = {
+        id: newId,
+        styleId,
+        materialType: 'fabricA',
+        materialCode: '',
+        materialName: '',
+        color: '',
+        specification: '',
+        size: '',
+        unit: '',
+        usageAmount: 0,
+        lossRate: 0,
+        unitPrice: 0,
+        totalPrice: 0,
+        supplier: '',
+      };
+      setData((prev) => sortBomRows([...(Array.isArray(prev) ? prev : []), newBom]));
+      const rid = String(newId);
+      form.setFieldsValue({ [rid]: { ...newBom } });
+      return rid;
+    }
+    if (editingKey) return String(editingKey);
+    const newId = `tmp_${Date.now()}`;
+    const newBom: StyleBom = {
+      id: newId,
+      styleId,
+      materialType: 'fabricA',
+      materialCode: '',
+      materialName: '',
+      color: '',
+      specification: '',
+      size: '',
+      unit: '',
+      usageAmount: 0,
+      lossRate: 0,
+      unitPrice: 0,
+      totalPrice: 0,
+      supplier: '',
+    };
+    setData((prev) => sortBomRows([...(Array.isArray(prev) ? prev : []), newBom]));
+    const rid = String(newId);
+    form.setFieldsValue({ [rid]: { ...newBom } });
+    setEditingKey(rid);
+    return rid;
+  };
+
+  const fetchMaterials = async (page: number, keyword?: string) => {
+    const p = Number(page) || 1;
+    const kw = String(keyword ?? '').trim();
+    setMaterialLoading(true);
+    try {
+      const res = await api.get<any>('/material/database/list', {
+        params: {
+          page: p,
+          pageSize: 10,
+          materialCode: kw,
+          materialName: kw,
+        },
+      });
+      const result = res as any;
+      if (result.code === 200) {
+        const records = Array.isArray(result.data?.records) ? result.data.records : [];
+        setMaterialList(records);
+        setMaterialTotal(Number(result.data?.total) || 0);
+        setMaterialPage(p);
+      }
+    } catch {
+    } finally {
+      setMaterialLoading(false);
+    }
+  };
+
+  const openMaterialModal = () => {
+    if (locked) {
+      message.error('已完成，无法操作');
+      return;
+    }
+    const rid = ensureMaterialTargetRowId();
+    if (!rid) return;
+    setMaterialTargetRowId(rid);
+    setMaterialTab('select');
+    setMaterialKeyword('');
+    setMaterialModalOpen(true);
+    materialCreateForm.resetFields();
+    fetchMaterials(1, '');
+  };
+
+  const fillRowFromMaterial = (rid: string, material: any) => {
+    const rowId = String(rid || '').trim();
+    if (!rowId) return;
+    const m = material || {};
+    const patch: any = {
+      materialCode: String(m.materialCode || '').trim(),
+      materialName: String(m.materialName || '').trim(),
+      unit: String(m.unit || '').trim(),
+      supplier: String(m.supplierName || '').trim(),
+      specification: String(m.specifications || '').trim(),
+      unitPrice: Number(m.unitPrice) || 0,
+      materialType: mapDbTypeToBomType(m.materialType),
+    };
+    const current = form.getFieldValue(rowId) || {};
+    const merged = { ...current, ...patch };
+    merged.totalPrice = calcTotalPrice(merged);
+    form.setFieldsValue({ [rowId]: merged });
+    setData((prev) =>
+      sortBomRows(
+        (Array.isArray(prev) ? prev : []).map((it: any) => {
+          if (String(it?.id) !== rowId) return it;
+          return { ...it, ...merged };
+        })
+      )
+    );
+  };
+
   useEffect(() => {
     fetchBom();
+    fetchCurrentStyleNo();
   }, [styleId]);
 
   useEffect(() => {
     fetchBomTemplates('');
     fetchStyleNoOptions('');
   }, []);
+
+  useEffect(() => {
+    if (!syncModalOpen || !syncJobId) return;
+    fetchSyncJob(syncJobId);
+    if (syncPollRef.current != null) window.clearInterval(syncPollRef.current);
+    syncPollRef.current = window.setInterval(() => {
+      fetchSyncJob(syncJobId);
+    }, 1000);
+    return () => {
+      if (syncPollRef.current != null) window.clearInterval(syncPollRef.current);
+      syncPollRef.current = undefined;
+    };
+  }, [syncModalOpen, syncJobId]);
 
   useEffect(() => {
     if (!locked) return;
@@ -280,6 +505,8 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
       const requiredPaths: any[] = [
         rowName(key, 'materialCode'),
         rowName(key, 'materialName'),
+        rowName(key, 'unit'),
+        rowName(key, 'supplier'),
         rowName(key, 'usageAmount'),
         rowName(key, 'unitPrice'),
       ];
@@ -384,6 +611,8 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
       for (const id of ids) {
         requiredPaths.push(rowName(id, 'materialCode'));
         requiredPaths.push(rowName(id, 'materialName'));
+        requiredPaths.push(rowName(id, 'unit'));
+        requiredPaths.push(rowName(id, 'supplier'));
         requiredPaths.push(rowName(id, 'usageAmount'));
         requiredPaths.push(rowName(id, 'unitPrice'));
       }
@@ -688,7 +917,7 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
       render: (text: string, record: StyleBom) => {
         if (!locked && (tableEditable || isEditing(record))) {
           return (
-            <Form.Item name={rowName(record.id, 'unit')} style={{ margin: 0 }}>
+            <Form.Item name={rowName(record.id, 'unit')} style={{ margin: 0 }} rules={[{ required: true, message: '必填' }]}>
               <Input />
             </Form.Item>
           );
@@ -705,7 +934,7 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
       render: (text: string, record: StyleBom) => {
         if (!locked && (tableEditable || isEditing(record))) {
           return (
-            <Form.Item name={rowName(record.id, 'supplier')} style={{ margin: 0 }}>
+            <Form.Item name={rowName(record.id, 'supplier')} style={{ margin: 0 }} rules={[{ required: true, message: '必填' }]}>
               <Input />
             </Form.Item>
           );
@@ -729,11 +958,24 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
         }
         if (tableEditable) {
           return (
-            <Space>
-              <Popconfirm title="确定删除?" onConfirm={() => handleDelete(record.id!)}>
-                <Button type="link" danger icon={<DeleteOutlined />} />
-              </Popconfirm>
-            </Space>
+            <RowActions
+              maxInline={1}
+              actions={[
+                {
+                  key: 'delete',
+                  label: '删除',
+                  title: '删除',
+                  icon: <DeleteOutlined />,
+                  danger: true,
+                  onClick: () => {
+                    Modal.confirm({
+                      title: '确定删除?',
+                      onOk: () => handleDelete(record.id!),
+                    });
+                  },
+                },
+              ]}
+            />
           );
         }
 
@@ -743,19 +985,60 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
 
         const editable = isEditing(record);
         return editable ? (
-          <Space>
-            <Button type="link" icon={<SaveOutlined />} onClick={() => save(String(record.id!))} />
-            <Popconfirm title="确定取消?" onConfirm={cancel}>
-              <Button type="link">取消</Button>
-            </Popconfirm>
-          </Space>
+          <RowActions
+            maxInline={2}
+            actions={[
+              {
+                key: 'save',
+                label: '保存',
+                title: '保存',
+                icon: <SaveOutlined />,
+                onClick: () => save(String(record.id!)),
+                primary: true,
+              },
+              {
+                key: 'cancel',
+                label: '取消',
+                title: '取消',
+                icon: <CloseOutlined />,
+                onClick: () => {
+                  Modal.confirm({
+                    title: '确定取消?',
+                    onOk: cancel,
+                  });
+                },
+              },
+            ]}
+          />
         ) : (
-          <Space>
-            <Button type="link" disabled={editingKey !== ''} icon={<EditOutlined />} onClick={() => edit(record)} />
-            <Popconfirm title="确定删除?" onConfirm={() => handleDelete(record.id!)}>
-              <Button type="link" danger disabled={editingKey !== ''} icon={<DeleteOutlined />} />
-            </Popconfirm>
-          </Space>
+          <RowActions
+            maxInline={2}
+            actions={[
+              {
+                key: 'edit',
+                label: '编辑',
+                title: '编辑',
+                icon: <EditOutlined />,
+                disabled: editingKey !== '',
+                onClick: () => edit(record),
+                primary: true,
+              },
+              {
+                key: 'delete',
+                label: '删除',
+                title: '删除',
+                icon: <DeleteOutlined />,
+                danger: true,
+                disabled: editingKey !== '',
+                onClick: () => {
+                  Modal.confirm({
+                    title: '确定删除?',
+                    onOk: () => handleDelete(record.id!),
+                  });
+                },
+              },
+            ]}
+          />
         );
       },
     },
@@ -772,6 +1055,13 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
             disabled={locked || Boolean(editingKey) || loading || templateLoading || (!tableEditable && !isSupervisorOrAbove)}
           >
             添加物料
+          </Button>
+
+          <Button
+            disabled={locked || loading || templateLoading || syncLoading || (!tableEditable && !isSupervisorOrAbove)}
+            onClick={openMaterialModal}
+          >
+            选择面辅料
           </Button>
 
           {tableEditable ? (
@@ -850,8 +1140,221 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
           <Button disabled={locked || Boolean(editingKey) || loading || templateLoading || tableEditable} onClick={applyBomTemplate}>
             导入模板
           </Button>
+
+          {isSupervisorOrAbove ? (
+            <Button
+              disabled={locked || Boolean(editingKey) || loading || templateLoading || tableEditable || !data.length}
+              loading={syncLoading}
+              onClick={syncToMaterialDatabase}
+            >
+              一键同步到面辅料数据库
+            </Button>
+          ) : null}
         </Space>
       </div>
+      <Modal
+        title="同步状态"
+        open={syncModalOpen}
+        onCancel={() => {
+          setSyncModalOpen(false);
+        }}
+        footer={null}
+        width={720}
+        destroyOnHidden
+      >
+        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 12 }}>
+          <div>任务ID：{syncJobId || '-'}</div>
+          <div>状态：{String(syncJob?.status || '-')}</div>
+          <div>错误：{String(syncJob?.error || '')}</div>
+          <div>款号：{String(syncJob?.result?.styleNo || currentStyleNo || '')}</div>
+        </div>
+        <div style={{ marginBottom: 12 }}>
+          <Button
+            onClick={() => fetchSyncJob(syncJobId)}
+            disabled={!syncJobId}
+          >
+            刷新
+          </Button>
+        </div>
+        <Table
+          size="small"
+          rowKey={(r, index) => String((r as any)?.materialCode || (r as any)?.id || `detail-${index}`)}
+          dataSource={Array.isArray(syncJob?.result?.details) ? syncJob.result.details : []}
+          pagination={false}
+          columns={[
+            { title: '物料编码', dataIndex: 'materialCode', width: 160 },
+            { title: '状态', dataIndex: 'status', width: 100 },
+            { title: '原因', dataIndex: 'reason' },
+          ]}
+        />
+      </Modal>
+
+      <Modal
+        title="面辅料选择"
+        open={materialModalOpen}
+        onCancel={() => setMaterialModalOpen(false)}
+        footer={null}
+        width={920}
+        destroyOnHidden
+      >
+        <Tabs
+          activeKey={materialTab}
+          onChange={(k) => setMaterialTab(k as any)}
+          items={[
+            {
+              key: 'select',
+              label: '选择已有',
+              children: (
+                <div>
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                    <Input
+                      value={materialKeyword}
+                      onChange={(e) => setMaterialKeyword(e.target.value)}
+                      placeholder="输入物料编码/名称"
+                      allowClear
+                    />
+                    <Button onClick={() => fetchMaterials(1, materialKeyword)} loading={materialLoading}>
+                      搜索
+                    </Button>
+                  </div>
+                  <Table
+                    size="small"
+                    loading={materialLoading}
+                    dataSource={materialList}
+                    rowKey={(r, index) => String((r as any)?.id || (r as any)?.materialCode || `material-${index}`)}
+                    pagination={{
+                      current: materialPage,
+                      pageSize: 10,
+                      total: materialTotal,
+                      onChange: (p) => fetchMaterials(p, materialKeyword),
+                      showSizeChanger: false,
+                    }}
+                    onRow={(record) => ({
+                      onDoubleClick: () => {
+                        fillRowFromMaterial(materialTargetRowId, record);
+                        setMaterialModalOpen(false);
+                      },
+                    })}
+                    columns={[
+                      { title: '物料编码', dataIndex: 'materialCode', width: 140 },
+                      { title: '物料名称', dataIndex: 'materialName', width: 160, ellipsis: true },
+                      { title: '类型', dataIndex: 'materialType', width: 90 },
+                      { title: '规格', dataIndex: 'specifications', width: 120, ellipsis: true },
+                      { title: '单位', dataIndex: 'unit', width: 70 },
+                      { title: '供应商', dataIndex: 'supplierName', width: 140, ellipsis: true },
+                      {
+                        title: '单价',
+                        dataIndex: 'unitPrice',
+                        width: 90,
+                        render: (v: any) => `¥${Number(v || 0).toFixed(2)}`,
+                      },
+                      { title: '状态', dataIndex: 'status', width: 90 },
+                      {
+                        title: '操作',
+                        dataIndex: 'op',
+                        width: 90,
+                        render: (_: any, record: any) => (
+                          <RowActions
+                            maxInline={1}
+                            actions={[
+                              {
+                                key: 'use',
+                                label: '选用',
+                                title: '选用',
+                                icon: <CheckOutlined />,
+                                onClick: () => {
+                                  fillRowFromMaterial(materialTargetRowId, record);
+                                  setMaterialModalOpen(false);
+                                },
+                                primary: true,
+                              },
+                            ]}
+                          />
+                        ),
+                      },
+                    ]}
+                  />
+                </div>
+              ),
+            },
+            {
+              key: 'create',
+              label: '新建并使用',
+              children: (
+                <Form
+                  form={materialCreateForm}
+                  layout="vertical"
+                  onFinish={async (values) => {
+                    try {
+                      const payload: any = {
+                        materialCode: String(values.materialCode || '').trim(),
+                        materialName: String(values.materialName || '').trim(),
+                        unit: String(values.unit || '').trim(),
+                        supplierName: String(values.supplierName || '').trim(),
+                        materialType: String(values.materialType || 'accessory').trim(),
+                        specifications: String(values.specifications || '').trim(),
+                        unitPrice: Number(values.unitPrice) || 0,
+                        remark: String(values.remark || '').trim(),
+                        styleNo: String(currentStyleNo || '').trim(),
+                      };
+                      const res = await api.post<any>('/material/database', payload);
+                      const result = res as any;
+                      if (result.code !== 200 || result.data !== true) {
+                        message.error(result.message || '创建失败');
+                        return;
+                      }
+                      message.success('已创建面辅料');
+                      fillRowFromMaterial(materialTargetRowId, payload);
+                      setMaterialModalOpen(false);
+                    } catch (e: any) {
+                      message.error(e?.message || '创建失败');
+                    }
+                  }}
+                >
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
+                    <Form.Item name="materialCode" label="物料编码" rules={[{ required: true, message: '必填' }]}>
+                      <Input />
+                    </Form.Item>
+                    <Form.Item name="materialName" label="物料名称" rules={[{ required: true, message: '必填' }]}>
+                      <Input />
+                    </Form.Item>
+                    <Form.Item name="unit" label="单位" rules={[{ required: true, message: '必填' }]}>
+                      <Input />
+                    </Form.Item>
+                    <Form.Item name="supplierName" label="供应商" rules={[{ required: true, message: '必填' }]}>
+                      <Input />
+                    </Form.Item>
+                    <Form.Item name="materialType" label="类型" initialValue="accessory">
+                      <Select
+                        options={[
+                          { value: 'fabric', label: 'fabric' },
+                          { value: 'lining', label: 'lining' },
+                          { value: 'accessory', label: 'accessory' },
+                        ]}
+                      />
+                    </Form.Item>
+                    <Form.Item name="specifications" label="规格">
+                      <Input />
+                    </Form.Item>
+                    <Form.Item name="unitPrice" label="单价" initialValue={0}>
+                      <InputNumber min={0} step={0.01} style={{ width: '100%' }} prefix="¥" />
+                    </Form.Item>
+                    <Form.Item name="remark" label="备注">
+                      <Input />
+                    </Form.Item>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                    <Button onClick={() => setMaterialModalOpen(false)}>取消</Button>
+                    <Button type="primary" htmlType="submit">
+                      创建并填入BOM
+                    </Button>
+                  </div>
+                </Form>
+              ),
+            },
+          ]}
+        />
+      </Modal>
       <Form form={form} component={false}>
         <ResizableTable
           components={{
@@ -866,7 +1369,7 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
           pagination={false}
           loading={loading}
           rowKey="id"
-          scroll={{ x: 'max-content' }}
+          scroll={{ x: 'max-content', y: typeof window === 'undefined' ? 420 : window.innerWidth < 768 ? 260 : 420 }}
           storageKey={`style-bom-${String(styleId)}`}
           minColumnWidth={70}
         />

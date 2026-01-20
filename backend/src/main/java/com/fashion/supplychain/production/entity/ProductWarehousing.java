@@ -48,7 +48,19 @@ public class ProductWarehousing {
 
     private String unqualifiedImageUrls;
 
+    private String defectCategory;
+
+    private String defectRemark;
+
     private String repairRemark;
+
+    private String receiverId;
+
+    private String receiverName;
+
+    private LocalDateTime receivedTime;
+
+    private String inspectionStatus;
 
     private LocalDateTime createTime;
 

@@ -1,12 +1,18 @@
 package com.fashion.supplychain.finance.orchestration;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.finance.entity.DeductionItem;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
+import com.fashion.supplychain.finance.mapper.DeductionItemMapper;
 import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
+import com.fashion.supplychain.finance.service.impl.BaseReconciliationServiceImpl;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.orchestration.ProductionOrderOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import java.time.LocalDateTime;
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Service
@@ -30,6 +37,9 @@ public class ShipmentReconciliationOrchestrator {
 
     @Autowired
     private ProductionOrderOrchestrator productionOrderOrchestrator;
+
+    @Autowired
+    private DeductionItemMapper deductionItemMapper;
 
     public IPage<ShipmentReconciliation> list(Map<String, Object> params) {
         IPage<ShipmentReconciliation> page = shipmentReconciliationService.queryPage(params);
@@ -104,7 +114,19 @@ public class ShipmentReconciliationOrchestrator {
         if (shipmentReconciliation == null) {
             throw new IllegalArgumentException("参数错误");
         }
+        LocalDateTime now = LocalDateTime.now();
+        UserContext ctx = UserContext.get();
+        String uid = ctx == null ? null : ctx.getUserId();
+        uid = (uid == null || uid.trim().isEmpty()) ? null : uid.trim();
+
         shipmentReconciliation.setStatus("pending");
+        shipmentReconciliation.setCreateTime(now);
+        shipmentReconciliation.setUpdateTime(now);
+        if (StringUtils.hasText(uid)) {
+            BaseReconciliationServiceImpl.ReconciliationEntity audit = shipmentReconciliation;
+            audit.setCreateBy(uid);
+            audit.setUpdateBy(uid);
+        }
         boolean ok = shipmentReconciliationService.save(shipmentReconciliation);
         if (!ok) {
             throw new IllegalStateException("保存失败");
@@ -116,13 +138,39 @@ public class ShipmentReconciliationOrchestrator {
         if (shipmentReconciliation == null || !StringUtils.hasText(shipmentReconciliation.getId())) {
             throw new IllegalArgumentException("参数错误");
         }
-        ShipmentReconciliation current = shipmentReconciliationService.getById(shipmentReconciliation.getId());
+        String id = shipmentReconciliation.getId().trim();
+        shipmentReconciliation.setId(id);
+        ShipmentReconciliation current = shipmentReconciliationService.getById(id);
         if (current == null) {
             throw new NoSuchElementException("对账单不存在");
         }
         String st = current.getStatus() == null ? "" : current.getStatus().trim();
         if (StringUtils.hasText(st) && !"pending".equalsIgnoreCase(st) && !UserContext.isTopAdmin()) {
             throw new IllegalStateException("当前状态不允许修改，请先退回到上一个环节");
+        }
+
+        shipmentReconciliation.setReconciliationNo(current.getReconciliationNo());
+        shipmentReconciliation.setStatus(current.getStatus());
+        shipmentReconciliation.setVerifiedAt(current.getVerifiedAt());
+        shipmentReconciliation.setApprovedAt(current.getApprovedAt());
+        shipmentReconciliation.setPaidAt(current.getPaidAt());
+        shipmentReconciliation.setReReviewAt(current.getReReviewAt());
+        shipmentReconciliation.setReReviewReason(current.getReReviewReason());
+        shipmentReconciliation.setCreateTime(current.getCreateTime());
+
+        LocalDateTime now = LocalDateTime.now();
+        shipmentReconciliation.setUpdateTime(now);
+        UserContext ctx = UserContext.get();
+        String uid = ctx == null ? null : ctx.getUserId();
+        uid = (uid == null || uid.trim().isEmpty()) ? null : uid.trim();
+        BaseReconciliationServiceImpl.ReconciliationEntity audit = shipmentReconciliation;
+        BaseReconciliationServiceImpl.ReconciliationEntity currentAudit = current;
+        if (StringUtils.hasText(uid)) {
+            audit.setUpdateBy(uid);
+            audit.setCreateBy(StringUtils.hasText(currentAudit.getCreateBy()) ? currentAudit.getCreateBy() : uid);
+        } else {
+            audit.setCreateBy(currentAudit.getCreateBy());
+            audit.setUpdateBy(currentAudit.getUpdateBy());
         }
         boolean ok = shipmentReconciliationService.updateById(shipmentReconciliation);
         if (!ok) {
@@ -156,5 +204,97 @@ public class ShipmentReconciliationOrchestrator {
             throw new AccessDeniedException("仅主管级别及以上可执行补数据");
         }
         return productionOrderOrchestrator.backfillFinanceRecords();
+    }
+
+    public List<DeductionItem> getDeductionItems(String reconciliationId) {
+        String rid = StringUtils.hasText(reconciliationId) ? reconciliationId.trim() : null;
+        if (!StringUtils.hasText(rid)) {
+            throw new IllegalArgumentException("参数错误");
+        }
+        return deductionItemMapper.selectByReconciliationId(rid);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void saveDeductionItems(String reconciliationId, List<DeductionItem> items) {
+        String rid = StringUtils.hasText(reconciliationId) ? reconciliationId.trim() : null;
+        if (!StringUtils.hasText(rid)) {
+            throw new IllegalArgumentException("参数错误");
+        }
+
+        ShipmentReconciliation current = shipmentReconciliationService.getById(rid);
+        if (current == null) {
+            throw new NoSuchElementException("对账单不存在");
+        }
+
+        String st = current.getStatus() == null ? "" : current.getStatus().trim();
+        if (StringUtils.hasText(st) && !"pending".equalsIgnoreCase(st) && !UserContext.isTopAdmin()) {
+            throw new IllegalStateException("当前状态不允许修改，请先退回到上一个环节");
+        }
+
+        BigDecimal deductionAmount = BigDecimal.ZERO;
+        if (items != null) {
+            for (DeductionItem it : items) {
+                if (it == null) {
+                    continue;
+                }
+                BigDecimal amt = it.getDeductionAmount() == null ? BigDecimal.ZERO : it.getDeductionAmount();
+                if (amt.compareTo(BigDecimal.ZERO) < 0) {
+                    throw new IllegalArgumentException("扣款金额不能为负数");
+                }
+                deductionAmount = deductionAmount.add(amt);
+            }
+        }
+
+        BigDecimal unitPrice = current.getUnitPrice() == null ? BigDecimal.ZERO : current.getUnitPrice();
+        int qty = current.getQuantity() == null ? 0 : current.getQuantity();
+        BigDecimal totalAmount = unitPrice.multiply(BigDecimal.valueOf(qty));
+        BigDecimal finalAmount = totalAmount.subtract(deductionAmount);
+
+        ShipmentReconciliation patch = new ShipmentReconciliation();
+        patch.setId(rid);
+        patch.setTotalAmount(totalAmount);
+        patch.setDeductionAmount(deductionAmount);
+        patch.setFinalAmount(finalAmount);
+        patch.setUpdateTime(LocalDateTime.now());
+        UserContext ctx = UserContext.get();
+        String uid = ctx == null ? null : ctx.getUserId();
+        uid = (uid == null || uid.trim().isEmpty()) ? null : uid.trim();
+        BaseReconciliationServiceImpl.ReconciliationEntity patchAudit = patch;
+        BaseReconciliationServiceImpl.ReconciliationEntity currentAudit = current;
+        if (uid != null) {
+            patchAudit.setUpdateBy(uid);
+            patchAudit.setCreateBy(StringUtils.hasText(currentAudit.getCreateBy()) ? currentAudit.getCreateBy() : uid);
+        } else {
+            patchAudit.setCreateBy(currentAudit.getCreateBy());
+            patchAudit.setUpdateBy(currentAudit.getUpdateBy());
+        }
+
+        boolean ok = shipmentReconciliationService.updateById(patch);
+        if (!ok) {
+            throw new IllegalStateException("保存失败");
+        }
+
+        deductionItemMapper.delete(new LambdaQueryWrapper<DeductionItem>()
+                .eq(DeductionItem::getReconciliationId, rid));
+
+        if (items != null) {
+            for (DeductionItem it : items) {
+                if (it == null) {
+                    continue;
+                }
+                String type = it.getDeductionType() == null ? "" : it.getDeductionType().trim();
+                String desc = it.getDescription() == null ? "" : it.getDescription().trim();
+                BigDecimal amt = it.getDeductionAmount() == null ? BigDecimal.ZERO : it.getDeductionAmount();
+                if (!StringUtils.hasText(type) && !StringUtils.hasText(desc) && amt.compareTo(BigDecimal.ZERO) == 0) {
+                    continue;
+                }
+                DeductionItem row = new DeductionItem();
+                row.setReconciliationId(rid);
+                row.setDeductionType(type);
+                row.setDeductionAmount(amt);
+                row.setDescription(desc);
+                deductionItemMapper.insert(row);
+            }
+        }
     }
 }

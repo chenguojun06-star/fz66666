@@ -2,15 +2,22 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Card, Form, Input, InputNumber, Modal, Select, Space, Tag, Typography, message } from 'antd';
 import { EyeOutlined, LoginOutlined, PlusOutlined, RollbackOutlined } from '@ant-design/icons';
 import Layout from '../../components/Layout';
-import ResizableTable from '../../components/ResizableTable';
-import RowActions from '../../components/RowActions';
-import api, { ensureProductionOrderUnlocked, fetchProductionOrderDetail, primeProductionOrderFrozenCache } from '../../utils/api';
+import ResizableModal, {
+  ResizableModalFlex,
+  ResizableModalFlexFill,
+  useResizableModalTableScrollY,
+} from '../../components/common/ResizableModal';
+import ResizableTable from '../../components/common/ResizableTable';
+import RowActions from '../../components/common/RowActions';
+import api, { compareSizeAsc, fetchProductionOrderDetail, parseProductionOrderLines, useProductionOrderFrozenCache } from '../../utils/api';
 import { QRCodeCanvas } from 'qrcode.react';
-import { useAuth } from '../../utils/authContext';
-import type { CuttingTask } from '../../types/production';
+import { isSupervisorOrAboveUser, useAuth } from '../../utils/authContext';
+import type { CuttingTask, MaterialPurchase } from '../../types/production';
 import { StyleAttachmentsButton, StyleCoverThumb } from '../../components/StyleAssets';
 import { formatDateTime } from '../../utils/datetime';
 import { useNavigate, useParams } from 'react-router-dom';
+import { getMaterialTypeLabel, getMaterialTypeSortKey } from '../../utils/materialType';
+import './styles.css';
 
 const { Option } = Select;
 const { Text } = Typography;
@@ -60,8 +67,6 @@ const CuttingManagement: React.FC = () => {
   const isEntryPage = Boolean(routeOrderNo);
 
   const editSectionRef = useRef<HTMLDivElement | null>(null);
-  const orderFrozenCacheRef = useRef<Map<string, boolean>>(new Map());
-  const [orderFrozenVersion, setOrderFrozenVersion] = useState(0);
   const [bundlesInput, setBundlesInput] = useState<CuttingBundleRow[]>([{
     color: '',
     size: '',
@@ -108,12 +113,20 @@ const CuttingManagement: React.FC = () => {
   const [receiveTaskLoading, setReceiveTaskLoading] = useState(false);
   const [rollbackTaskLoading, setRollbackTaskLoading] = useState(false);
 
-  const [activeSummary, setActiveSummary] = useState({ totalQuantity: 0, bundleCount: 0 });
-
   const [sheetPreviewOpen, setSheetPreviewOpen] = useState(false);
   const [sheetPreviewLoading, setSheetPreviewLoading] = useState(false);
   const [sheetPreviewTask, setSheetPreviewTask] = useState<CuttingTask | null>(null);
   const [sheetPreviewBundles, setSheetPreviewBundles] = useState<CuttingBundleRow[]>([]);
+  const [sheetPreviewPurchaseLoading, setSheetPreviewPurchaseLoading] = useState(false);
+  const [sheetPreviewPurchases, setSheetPreviewPurchases] = useState<MaterialPurchase[]>([]);
+  const sheetPreviewPurchaseReqSeq = useRef(0);
+
+  const sheetPreviewTableWrapRef = useRef<HTMLDivElement | null>(null);
+  const sheetPreviewTableScrollY = useResizableModalTableScrollY({ open: sheetPreviewOpen, ref: sheetPreviewTableWrapRef });
+
+  const [entryPurchaseLoading, setEntryPurchaseLoading] = useState(false);
+  const [entryPurchases, setEntryPurchases] = useState<MaterialPurchase[]>([]);
+  const entryPurchaseReqSeq = useRef(0);
 
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
   const [createTaskSubmitting, setCreateTaskSubmitting] = useState(false);
@@ -124,45 +137,9 @@ const CuttingManagement: React.FC = () => {
   const [createStyleName, setCreateStyleName] = useState<string>('');
   const [createBundles, setCreateBundles] = useState<CuttingBundleRow[]>([{ color: '', size: '', quantity: 0 }]);
 
-  const resolveCuttingQty = (task: CuttingTask | null, summary: { totalQuantity: number }, bundles?: CuttingBundleRow[]) => {
-    const tv = Number((task as any)?.cuttingQuantity);
-    if (Number.isFinite(tv) && tv > 0) return tv;
-    const sv = Number(summary?.totalQuantity ?? 0);
-    if (Number.isFinite(sv) && sv > 0) return sv;
-    if (bundles && bundles.length) {
-      const sum = bundles.reduce((s, x) => s + (Number((x as any)?.quantity) || 0), 0);
-      if (Number.isFinite(sum) && sum > 0) return sum;
-    }
-    return Number.isFinite(tv) ? tv : 0;
-  };
-
-  const resolveBundleCount = (task: CuttingTask | null, summary: { bundleCount: number }, bundles?: CuttingBundleRow[]) => {
-    const tv = Number((task as any)?.cuttingBundleCount);
-    if (Number.isFinite(tv) && tv > 0) return tv;
-    const sv = Number(summary?.bundleCount ?? 0);
-    if (Number.isFinite(sv) && sv > 0) return sv;
-    if (bundles && bundles.length) {
-      const len = bundles.length;
-      if (Number.isFinite(len) && len > 0) return len;
-    }
-    return Number.isFinite(tv) ? tv : 0;
-  };
-
-  const fetchCuttingSummary = async (orderNo: string) => {
-    const on = String(orderNo || '').trim();
-    if (!on) return;
-    try {
-      const res = await api.get<any>('/production/cutting/summary', { params: { orderNo: on } });
-      const result = res as any;
-      if (result.code === 200) {
-        setActiveSummary({
-          totalQuantity: Number(result.data?.totalQuantity ?? 0) || 0,
-          bundleCount: Number(result.data?.bundleCount ?? 0) || 0,
-        });
-      }
-    } catch {
-    }
-  };
+  const [entryOrderDetailLoading, setEntryOrderDetailLoading] = useState(false);
+  const [entryColorText, setEntryColorText] = useState('');
+  const [entrySizeItems, setEntrySizeItems] = useState<Array<{ size: string; quantity: number }>>([]);
 
   const fetchAllBundlesByOrderNo = async (orderNo: string) => {
     const on = String(orderNo || '').trim();
@@ -178,6 +155,31 @@ const CuttingManagement: React.FC = () => {
       return [] as CuttingBundleRow[];
     } catch {
       return [] as CuttingBundleRow[];
+    }
+  };
+
+  const fetchSortedPurchasesByOrderNo = async (orderNo: string) => {
+    const no = String(orderNo || '').trim();
+    if (!no) return [] as MaterialPurchase[];
+    try {
+      const res = await api.get<any>('/production/purchase/list', {
+        params: { page: 1, pageSize: 200, orderNo: no, materialType: '', status: '' },
+      });
+      const result = res as any;
+      if (result.code !== 200) return [] as MaterialPurchase[];
+      const records = (result.data?.records || []) as MaterialPurchase[];
+      const sorted = [...records].sort((a: any, b: any) => {
+        const ka = getMaterialTypeSortKey(a?.materialType);
+        const kb = getMaterialTypeSortKey(b?.materialType);
+        if (ka !== kb) return ka.localeCompare(kb);
+        const ca = String(a?.materialCode || '');
+        const cb = String(b?.materialCode || '');
+        if (ca !== cb) return ca.localeCompare(cb);
+        return String(a?.id || '').localeCompare(String(b?.id || ''));
+      });
+      return sorted as any;
+    } catch {
+      return [] as MaterialPurchase[];
     }
   };
 
@@ -283,8 +285,9 @@ const CuttingManagement: React.FC = () => {
     }
   };
 
-  const downloadSheetCsvFrom = (task: CuttingTask | null, bundles: CuttingBundleRow[]) => {
+  const downloadSheetCsvFrom = (task: CuttingTask | null, bundles: CuttingBundleRow[], purchases?: MaterialPurchase[]) => {
     const on = String(task?.productionOrderNo || '').trim() || 'unknown';
+    const escapeCsv = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const headers = ['订单号', '款号', '颜色', '尺码', '扎号', '数量', '二维码内容'];
     const lines = [headers.join(',')];
     for (const r of bundles) {
@@ -297,9 +300,42 @@ const CuttingManagement: React.FC = () => {
         String(r.quantity ?? ''),
         String(r.qrCode || ''),
       ]
-        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+        .map(escapeCsv)
         .join(',');
       lines.push(row);
+    }
+
+    const purchaseRows = (purchases || []).filter(Boolean);
+    if (purchaseRows.length) {
+      lines.push('');
+      lines.push(escapeCsv('面辅料采购明细'));
+      const purchaseHeaders = ['类型', '物料编码', '物料名称', '规格', '单位', '采购数量', '单价(元)', '总费用(元)', '供应商'];
+      lines.push(purchaseHeaders.map(escapeCsv).join(','));
+      for (const r of purchaseRows as any[]) {
+        const qty = Number(r?.purchaseQuantity ?? 0) || 0;
+        const unitPrice = Number(r?.unitPrice);
+        const unitPriceText = Number.isFinite(unitPrice) ? unitPrice.toFixed(2) : '';
+        const totalAmountRaw = Number(r?.totalAmount);
+        const totalAmount = Number.isFinite(totalAmountRaw)
+          ? totalAmountRaw
+          : (Number.isFinite(unitPrice) ? qty * unitPrice : NaN);
+        const totalText = Number.isFinite(totalAmount) ? Number(totalAmount).toFixed(2) : '';
+
+        const row = [
+          getMaterialTypeLabel(r?.materialType),
+          String(r?.materialCode || ''),
+          String(r?.materialName || ''),
+          String(r?.specifications || ''),
+          String(r?.unit || ''),
+          String(qty),
+          String(unitPriceText),
+          String(totalText),
+          String(r?.supplierName || ''),
+        ]
+          .map(escapeCsv)
+          .join(',');
+        lines.push(row);
+      }
     }
     const csv = `\uFEFF${lines.join('\n')}`;
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -403,25 +439,58 @@ const CuttingManagement: React.FC = () => {
       message.warning('未找到订单号');
       return;
     }
+
+    const purchaseSeq = (sheetPreviewPurchaseReqSeq.current += 1);
     setSheetPreviewTask(task);
     setSheetPreviewOpen(true);
     setSheetPreviewLoading(true);
+    setSheetPreviewPurchaseLoading(true);
+    setSheetPreviewPurchases([]);
     try {
-      const rows = await fetchAllBundlesByOrderNo(on);
+      const purchasePromise = fetchSortedPurchasesByOrderNo(on);
+
+      const [rows, purchases] = await Promise.all([
+        fetchAllBundlesByOrderNo(on),
+        purchasePromise,
+      ]);
       setSheetPreviewBundles(rows);
+      if (purchaseSeq === sheetPreviewPurchaseReqSeq.current) setSheetPreviewPurchases(purchases);
       if (afterLoad === 'download') {
-        downloadSheetCsvFrom(task, rows);
+        downloadSheetCsvFrom(task, rows, purchases);
       }
       if (afterLoad === 'print') {
         triggerSheetPrintFrom(task, rows);
       }
     } finally {
       setSheetPreviewLoading(false);
+      if (purchaseSeq === sheetPreviewPurchaseReqSeq.current) setSheetPreviewPurchaseLoading(false);
     }
   };
 
-  const downloadSheetCsv = () => downloadSheetCsvFrom(sheetPreviewTask, sheetPreviewBundles);
+  const downloadSheetCsv = () => downloadSheetCsvFrom(sheetPreviewTask, sheetPreviewBundles, sheetPreviewPurchases);
   const triggerSheetPrint = () => triggerSheetPrintFrom(sheetPreviewTask, sheetPreviewBundles);
+
+  const activeOrderNo = useMemo(() => String((activeTask as any)?.productionOrderNo ?? '').trim(), [activeTask]);
+
+  useEffect(() => {
+    if (!isEntryPage) return;
+    const no = activeOrderNo;
+    const seq = (entryPurchaseReqSeq.current += 1);
+    if (!no) {
+      setEntryPurchases([]);
+      setEntryPurchaseLoading(false);
+      return;
+    }
+    setEntryPurchaseLoading(true);
+    setEntryPurchases([]);
+    fetchSortedPurchasesByOrderNo(no)
+      .then((list) => {
+        if (seq === entryPurchaseReqSeq.current) setEntryPurchases(list);
+      })
+      .finally(() => {
+        if (seq === entryPurchaseReqSeq.current) setEntryPurchaseLoading(false);
+      });
+  }, [isEntryPage, activeOrderNo]);
 
   const openBatchPrint = () => {
     if (!printUnlocked) {
@@ -474,87 +543,68 @@ const CuttingManagement: React.FC = () => {
     }, 240);
   };
 
-  const isAdmin = (() => {
-    const role = String((user as any)?.role || '').trim();
-    const username = String((user as any)?.username || '').trim();
-    const lower = role.toLowerCase();
-    return username === 'admin' || lower.includes('admin') || lower.includes('manager') || role.includes('管理员') || role.includes('主管') || role === '1';
-  })();
+  const isAdmin = useMemo(() => isSupervisorOrAboveUser(user), [user]);
 
-  const parseOrderLines = (order: any) => {
-    const detailsRaw = order?.orderDetails;
-    const compareSizeAsc = (a: any, b: any) => {
-      const norm = (v: any) => String(v ?? '').trim().toUpperCase();
-      const parse = (v: any) => {
-        const raw = norm(v);
-        if (!raw || raw === '-') return { rank: 9999, num: 0, raw };
-        if (raw === '均码' || raw === 'ONE SIZE' || raw === 'ONESIZE') return { rank: 55, num: 0, raw };
-        if (/^\d+(\.\d+)?$/.test(raw)) return { rank: 0, num: Number(raw), raw };
-        const mNumXL = raw.match(/^(\d+)XL$/);
-        if (mNumXL) return { rank: 70 + (Number(mNumXL[1]) - 1) * 10, num: 0, raw };
-        const mXS = raw.match(/^(X{0,4})S$/);
-        if (mXS) return { rank: 40 - (mXS[1]?.length || 0) * 10, num: 0, raw };
-        if (raw === 'S') return { rank: 40, num: 0, raw };
-        if (raw === 'M') return { rank: 50, num: 0, raw };
-        const mXL = raw.match(/^(X{1,4})L$/);
-        if (mXL) return { rank: 60 + (mXL[1]?.length || 0) * 10, num: 0, raw };
-        if (raw === 'L') return { rank: 60, num: 0, raw };
-        if (raw === 'XL') return { rank: 70, num: 0, raw };
-        if (raw === 'XXL') return { rank: 80, num: 0, raw };
-        if (raw === 'XXXL') return { rank: 90, num: 0, raw };
-        return { rank: 5000, num: 0, raw };
-      };
-      const pa = parse(a);
-      const pb = parse(b);
-      if (pa.rank !== pb.rank) return pa.rank - pb.rank;
-      if (pa.num !== pb.num) return pa.num - pb.num;
-      return String(pa.raw).localeCompare(String(pb.raw), 'zh-Hans-CN', { numeric: true });
-    };
-    const normalizeLine = (l: any) => {
-      const color = String(l?.color ?? l?.colour ?? l?.colorName ?? '').trim();
-      const size = String(l?.size ?? l?.sizeName ?? l?.spec ?? '').trim();
-      const quantity = Number(l?.quantity ?? l?.qty ?? l?.count ?? l?.num ?? 0) || 0;
-      return { color, size, quantity };
-    };
+  useEffect(() => {
+    if (!isEntryPage) return;
+    const oid = String(orderId || (activeTask as any)?.productionOrderId || '').trim();
+    if (!oid) {
+      setEntryOrderDetailLoading(false);
+      setEntryColorText('');
+      setEntrySizeItems([]);
+      return;
+    }
 
-    let parsed: any = null;
-    if (detailsRaw) {
+    let cancelled = false;
+    setEntryOrderDetailLoading(true);
+    void (async () => {
       try {
-        parsed = typeof detailsRaw === 'string' ? JSON.parse(detailsRaw) : detailsRaw;
+        const detail = await fetchProductionOrderDetail(oid, { acceptAnyData: false });
+        if (cancelled) return;
+        const lines = detail ? parseProductionOrderLines(detail).slice() : [];
+        lines.sort((a: any, b: any) => {
+          const ca = String(a?.color || '').trim();
+          const cb = String(b?.color || '').trim();
+          if (ca && cb) {
+            const byColor = ca.localeCompare(cb, 'zh-Hans-CN', { numeric: true });
+            if (byColor !== 0) return byColor;
+          }
+          return compareSizeAsc(String(a?.size || ''), String(b?.size || ''));
+        });
+        const activeColor = String((activeTask as any)?.color || '').trim();
+        const uniqueColors = Array.from(
+          new Set(lines.map((x: any) => String(x?.color || '').trim()).filter(Boolean))
+        );
+        const derivedColor = uniqueColors.length ? uniqueColors.join(' / ') : String((detail as any)?.color || '').trim();
+        setEntryColorText(activeColor || derivedColor);
+
+        const filtered = activeColor
+          ? lines.filter((x: any) => String(x?.color || '').trim() === activeColor)
+          : lines;
+        const sizeMap = new Map<string, number>();
+        for (const l of filtered) {
+          const size = String((l as any)?.size || '').trim();
+          if (!size) continue;
+          const qty = Number((l as any)?.quantity ?? 0) || 0;
+          sizeMap.set(size, (sizeMap.get(size) || 0) + qty);
+        }
+        const items = Array.from(sizeMap.entries())
+          .map(([size, quantity]) => ({ size, quantity }))
+          .sort((a, b) => compareSizeAsc(a.size, b.size));
+        setEntrySizeItems(items);
       } catch {
-        parsed = null;
+        if (cancelled) return;
+        setEntryColorText('');
+        setEntrySizeItems([]);
+      } finally {
+        if (!cancelled) setEntryOrderDetailLoading(false);
       }
-    }
+    })();
 
-    let list: any[] = [];
-    if (Array.isArray(parsed)) {
-      list = parsed;
-    } else if (parsed && typeof parsed === 'object') {
-      const candidate = (parsed as any).lines || (parsed as any).items || (parsed as any).details || (parsed as any).list;
-      if (Array.isArray(candidate)) list = candidate;
-      else list = [parsed];
-    }
-
-    const normalized = list.map(normalizeLine).filter((l) => l.color || l.size || l.quantity);
-    normalized.sort((a, b) => {
-      const ca = String(a.color || '').trim();
-      const cb = String(b.color || '').trim();
-      if (ca && cb) {
-        const byColor = ca.localeCompare(cb, 'zh-Hans-CN', { numeric: true });
-        if (byColor !== 0) return byColor;
-      }
-      return compareSizeAsc(a.size, b.size);
-    });
-    if (normalized.length) return normalized;
-
-    const fallbackColor = String(order?.color || '').trim();
-    const fallbackSize = String(order?.size || '').trim();
-    const fallbackQty = Number(order?.orderQuantity || 0) || 0;
-    if (fallbackColor || fallbackSize || fallbackQty) {
-      return [{ color: fallbackColor, size: fallbackSize, quantity: fallbackQty }];
-    }
-    return [];
-  };
+    return () => {
+      cancelled = true;
+    };
+  }, [isEntryPage, orderId, activeTask?.id, (activeTask as any)?.color]);
 
   const splitQuantity = (totalQty: number, perBundle = 20) => {
     const qty = Math.max(0, Number(totalQty) || 0);
@@ -568,52 +618,25 @@ const CuttingManagement: React.FC = () => {
     return out;
   };
 
-  const ensureOrderUnlockedById = async (orderId: any) => {
-    return await ensureProductionOrderUnlocked(orderId, orderFrozenCacheRef.current, {
-      rule: 'status',
-      acceptAnyData: false,
-      onCacheUpdated: () => setOrderFrozenVersion((v) => v + 1),
-      onFrozen: () => message.error('订单已完成，无法操作'),
-    });
-  };
-
-  const isOrderFrozenById = (orderId: any) => {
-    void orderFrozenVersion;
-    const oid = String(orderId || '').trim();
-    if (!oid) return false;
-    return orderFrozenCacheRef.current.get(oid) === true;
-  };
-
-  useEffect(() => {
-    const ids = Array.from(
+  const frozenOrderIds = useMemo(() => {
+    return Array.from(
       new Set(
         taskList
           .map((r: any) => String(r?.productionOrderId || '').trim())
           .filter(Boolean)
       )
     );
-    const missing = ids.filter((id) => !orderFrozenCacheRef.current.has(id));
-    if (!missing.length) return;
-
-    let cancelled = false;
-    void (async () => {
-      await Promise.allSettled(
-        missing
-          .slice(0, 50)
-          .map((id) =>
-            primeProductionOrderFrozenCache(id, orderFrozenCacheRef.current, {
-              rule: 'status',
-              acceptAnyData: false,
-            })
-          )
-      );
-      if (!cancelled) setOrderFrozenVersion((v) => v + 1);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
   }, [taskList]);
+
+  const orderFrozen = useProductionOrderFrozenCache(frozenOrderIds, { rule: 'status', acceptAnyData: false });
+
+  const ensureOrderUnlockedById = async (orderId: any) => {
+    return await orderFrozen.ensureUnlocked(orderId, () => message.error('订单已完成，无法操作'));
+  };
+
+  const isOrderFrozenById = (orderId: any) => {
+    return orderFrozen.isFrozenById(orderId);
+  };
 
   const fetchBundles = async () => {
     if (!activeTask?.productionOrderNo) {
@@ -633,7 +656,6 @@ const CuttingManagement: React.FC = () => {
       if (result.code === 200) {
         setDataSource(result.data.records || []);
         setTotal(result.data.total || 0);
-        fetchCuttingSummary(activeTask.productionOrderNo);
       } else {
         message.error(result.message || '获取裁剪列表失败');
       }
@@ -683,6 +705,8 @@ const CuttingManagement: React.FC = () => {
     setOrderId('');
     setImportLocked(false);
     setBundlesInput([{ color: '', size: '', quantity: 0 }]);
+    setEntryPurchases([]);
+    setEntryPurchaseLoading(false);
     setDataSource([]);
     setTotal(0);
     setQueryParams((prev) => ({ ...prev, page: 1 }));
@@ -713,7 +737,6 @@ const CuttingManagement: React.FC = () => {
     if (!task) return null;
     setActiveTask(task);
     setOrderId(String(task.productionOrderId || '').trim());
-    fetchCuttingSummary(task.productionOrderNo);
     return task;
   };
 
@@ -749,7 +772,6 @@ const CuttingManagement: React.FC = () => {
       }
       setActiveTask(nextTask);
       setOrderId(String(nextTask.productionOrderId || '').trim());
-      fetchCuttingSummary(nextTask.productionOrderNo);
       setImportLocked(false);
       setBundlesInput([{ color: '', size: '', quantity: 0 }]);
       setQueryParams((prev) => ({ ...prev, page: 1 }));
@@ -789,6 +811,8 @@ const CuttingManagement: React.FC = () => {
               setOrderId('');
               setImportLocked(false);
               setBundlesInput([{ color: '', size: '', quantity: 0 }]);
+              setEntryPurchases([]);
+              setEntryPurchaseLoading(false);
               setDataSource([]);
               setTotal(0);
               setQueryParams((prev) => ({ ...prev, page: 1 }));
@@ -946,7 +970,16 @@ const CuttingManagement: React.FC = () => {
       return;
     }
 
-    const lines = parseOrderLines(detail);
+    const lines = parseProductionOrderLines(detail).slice();
+    lines.sort((a: any, b: any) => {
+      const ca = String(a?.color || '').trim();
+      const cb = String(b?.color || '').trim();
+      if (ca && cb) {
+        const byColor = ca.localeCompare(cb, 'zh-Hans-CN', { numeric: true });
+        if (byColor !== 0) return byColor;
+      }
+      return compareSizeAsc(String(a?.size || ''), String(b?.size || ''));
+    });
     const next: CuttingBundleRow[] = [];
     for (const l of lines) {
       const color = String(l.color || '').trim();
@@ -978,7 +1011,65 @@ const CuttingManagement: React.FC = () => {
     message.success('已按20件/扎自动生成推荐');
   };
 
-  const totalInputQty = bundlesInput.reduce((sum, r) => sum + (Number(r?.quantity || 0) || 0), 0);
+  const purchaseColumns = useMemo(
+    () =>
+      [
+        {
+          title: '类型',
+          dataIndex: 'materialType',
+          key: 'materialType',
+          width: 110,
+          render: (v: any) => getMaterialTypeLabel(v),
+        },
+        { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 120, ellipsis: true },
+        { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 180, ellipsis: true },
+        {
+          title: '规格',
+          dataIndex: 'specifications',
+          key: 'specifications',
+          width: 180,
+          ellipsis: true,
+          render: (v: any) => String(v || '').trim() || '-',
+        },
+        { title: '单位', dataIndex: 'unit', key: 'unit', width: 90, ellipsis: true },
+        {
+          title: '采购数量',
+          dataIndex: 'purchaseQuantity',
+          key: 'purchaseQuantity',
+          width: 110,
+          align: 'right' as const,
+          render: (v: any) => Number(v ?? 0) || 0,
+        },
+        {
+          title: '单价(元)',
+          dataIndex: 'unitPrice',
+          key: 'unitPrice',
+          width: 110,
+          align: 'right' as const,
+          render: (v: any) => {
+            const n = Number(v);
+            return Number.isFinite(n) ? n.toFixed(2) : '-';
+          },
+        },
+        {
+          title: '总费用(元)',
+          dataIndex: 'totalAmount',
+          key: 'totalAmount',
+          width: 120,
+          align: 'right' as const,
+          render: (v: any, r: any) => {
+            const raw = Number(v);
+            if (Number.isFinite(raw)) return raw.toFixed(2);
+            const qty = Number(r?.purchaseQuantity ?? 0) || 0;
+            const price = Number(r?.unitPrice);
+            if (Number.isFinite(price)) return (qty * price).toFixed(2);
+            return '-';
+          },
+        },
+        { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 160, ellipsis: true },
+      ] as any,
+    []
+  );
 
   const columns = [
     {
@@ -986,7 +1077,7 @@ const CuttingManagement: React.FC = () => {
       key: 'cover',
       width: 72,
       render: (_: any, record: any) => (
-        <StyleCoverThumb styleId={(activeTask as any)?.styleId} styleNo={record.styleNo || (activeTask as any)?.styleNo} size={48} borderRadius={6} />
+        <StyleCoverThumb styleId={(activeTask as any)?.styleId} styleNo={record.styleNo || (activeTask as any)?.styleNo} size={24} borderRadius={4} />
       )
     },
     {
@@ -1056,9 +1147,9 @@ const CuttingManagement: React.FC = () => {
       title: '二维码',
       dataIndex: 'qrCode',
       key: 'qrCodeImage',
-      width: 120,
+      width: 92,
       render: (value: string) => (
-        value ? <QRCodeCanvas value={value} size={84} includeMargin /> : null
+        value ? <QRCodeCanvas value={value} size={42} /> : null
       ),
     },
     {
@@ -1084,20 +1175,23 @@ const CuttingManagement: React.FC = () => {
     <Layout>
       <div className="production-list-page">
         <Card className="page-card">
-          <div className="page-header">
-            <Space>
-              {isEntryPage ? (
-                <Button onClick={() => resetActiveTask(true)}>返回任务列表</Button>
-              ) : null}
-              <h2 className="page-title" style={{ margin: 0 }}>{isEntryPage ? '裁剪明细录入' : '裁剪管理'}</h2>
-            </Space>
-
-            {isEntryPage ? null : (
+          {isEntryPage ? (
+            <div className="cutting-entry-nav">
+              <div className="cutting-entry-nav-title">裁剪明细</div>
+              <Button type="primary" className="cutting-entry-back-btn" onClick={() => resetActiveTask(true)}>
+                返回
+              </Button>
+            </div>
+          ) : (
+            <div className="page-header">
+              <Space>
+                <h2 className="page-title" style={{ margin: 0 }}>裁剪管理</h2>
+              </Space>
               <Button type="primary" icon={<PlusOutlined />} onClick={openCreateTask}>
                 新建裁剪任务
               </Button>
-            )}
-          </div>
+            </div>
+          )}
 
           {isEntryPage ? null : (
             <Card size="small" title="裁剪任务" className="mb-sm">
@@ -1306,105 +1400,154 @@ const CuttingManagement: React.FC = () => {
             <>
               <div ref={editSectionRef} />
 
-              <Card
-                size="small"
-                title={activeTask?.status === 'bundled' ? '裁剪任务明细' : '裁剪明细录入'}
-                className="mb-sm"
-                extra={
-                  <Space>
+              <div className="cutting-entry-layout mb-sm">
+                <div className="cutting-entry-main">
+                  <div className="cutting-entry-info">
+                    <div className="cutting-entry-field">
+                      <div className="cutting-entry-label">订单号</div>
+                      <div className="cutting-entry-value">{String(activeTask.productionOrderNo || '').trim() || '-'}</div>
+                    </div>
+                    <div className="cutting-entry-field">
+                      <div className="cutting-entry-label">款号</div>
+                      <div className="cutting-entry-value">{String(activeTask.styleNo || '').trim() || '-'}</div>
+                    </div>
+                    <div className="cutting-entry-field">
+                      <div className="cutting-entry-label">款名</div>
+                      <div className="cutting-entry-value">{String(activeTask.styleName || '').trim() || '-'}</div>
+                    </div>
+                    <div className="cutting-entry-field">
+                      <div className="cutting-entry-label">颜色</div>
+                      <div className="cutting-entry-value">{String(entryColorText || activeTask.color || '').trim() || '-'}</div>
+                    </div>
+                    <div className="cutting-entry-size-block">
+                      <div className="cutting-entry-label">下单码数明细</div>
+                      {entryOrderDetailLoading ? (
+                        <div className="cutting-entry-size-row">
+                          <span className="cutting-entry-size-muted">加载中...</span>
+                        </div>
+                      ) : (
+                        <div className="cutting-entry-size-row">
+                          {entrySizeItems.length ? (
+                            entrySizeItems.map((x) => (
+                              <div key={x.size} className="cutting-entry-size-item">{`${x.size}：${Number(x.quantity || 0) || 0}`}</div>
+                            ))
+                          ) : (
+                            <span className="cutting-entry-size-muted">-</span>
+                          )}
+                          <div className="cutting-entry-size-total">合计：{entrySizeItems.reduce((s, x) => s + (Number(x.quantity || 0) || 0), 0)}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
                     {isAdmin && activeTask && activeTask.status !== 'pending' ? (
-                      <Button
-                        danger
-                        onClick={() => handleRollbackTask(activeTask)}
-                        loading={rollbackTaskLoading}
-                        disabled={isOrderFrozenById((activeTask as any)?.productionOrderId)}
-                      >
-                        退回
-                      </Button>
+                      <div className="cutting-entry-actions">
+                        <Button
+                          danger
+                          onClick={() => handleRollbackTask(activeTask)}
+                          loading={rollbackTaskLoading}
+                          disabled={isOrderFrozenById((activeTask as any)?.productionOrderId)}
+                        >
+                          退回
+                        </Button>
+                      </div>
                     ) : null}
-                  </Space>
-                }
-              >
-                <Form layout="vertical">
-                  <Form.Item label="当前领取任务">
-                    <Space wrap className="cutting-active-task-tags">
-                      <Tag color="blue">订单号：{activeTask.productionOrderNo}</Tag>
-                      <Tag>款号：{activeTask.styleNo}</Tag>
-                      <Tag>款名：{activeTask.styleName}</Tag>
-                      <Tag>下单数：{activeTask.orderQuantity}</Tag>
-                      <Tag>
-                        裁剪数：
-                        {String(activeTask?.status || '') === 'bundled'
-                          ? resolveCuttingQty(activeTask, activeSummary, dataSource)
-                          : totalInputQty}
-                      </Tag>
-                      <Tag>
-                        扎数：
-                        {String(activeTask?.status || '') === 'bundled'
-                          ? resolveBundleCount(activeTask, activeSummary, dataSource)
-                          : '-'}
-                      </Tag>
-                      <Tag>领取账号：{String(activeTask.receiverName || '').trim() || '-'}</Tag>
-                      <Tag>领取时间：{formatDateTime(activeTask.receivedTime) || '-'}</Tag>
-                      <Tag>完成时间：{formatDateTime(activeTask.bundledTime) || '-'}</Tag>
-                    </Space>
-                  </Form.Item>
-                  {activeTask?.status === 'bundled' ? null : (
-                    <>
-                      {bundlesInput.map((row, index) => (
-                        <Space key={index} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
-                          <Input
-                            placeholder="颜色"
-                            style={{ width: 140 }}
-                            value={row.color}
-                            disabled={importLocked}
-                            onChange={(e) => handleChangeRow(index, 'color', e.target.value)}
-                          />
-                          <Input
-                            placeholder="尺码"
-                            style={{ width: 120 }}
-                            value={row.size}
-                            disabled={importLocked}
-                            onChange={(e) => handleChangeRow(index, 'size', e.target.value)}
-                          />
-                          <InputNumber
-                            placeholder="数量"
-                            style={{ width: 120 }}
-                            min={0}
-                            value={row.quantity}
-                            onChange={(value) => handleChangeRow(index, 'quantity', value || 0)}
-                          />
-                          <Button onClick={() => handleRemoveRow(index)} disabled={importLocked || bundlesInput.length === 1}>
-                            删除
-                          </Button>
-                        </Space>
-                      ))}
-                      <Form.Item>
-                        <Space>
-                          <Button type="dashed" onClick={handleAddRow} disabled={importLocked}>
-                            新增一行
-                          </Button>
-                          <Button type="dashed" onClick={handleAutoImport} disabled={!activeTask}>
-                            一键导入(20件/扎)
-                          </Button>
-                          <Button
-                            onClick={() => {
-                              setImportLocked(false);
-                              setBundlesInput([{ color: '', size: '', quantity: 0 }]);
-                            }}
-                            disabled={!activeTask}
-                          >
-                            清空
-                          </Button>
-                          <Button type="primary" loading={generateLoading} onClick={handleGenerate}>
-                            领取裁剪单并生成二维码
-                          </Button>
-                        </Space>
-                      </Form.Item>
-                    </>
-                  )}
-                </Form>
-              </Card>
+
+                    <Form layout="vertical">
+                      {activeTask?.status === 'bundled' ? null : (
+                        <>
+                          {bundlesInput.map((row, index) => (
+                            <Space key={index} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
+                              <Input
+                                placeholder="颜色"
+                                style={{ width: 140 }}
+                                value={row.color}
+                                disabled={importLocked}
+                                onChange={(e) => handleChangeRow(index, 'color', e.target.value)}
+                              />
+                              <Input
+                                placeholder="尺码"
+                                style={{ width: 120 }}
+                                value={row.size}
+                                disabled={importLocked}
+                                onChange={(e) => handleChangeRow(index, 'size', e.target.value)}
+                              />
+                              <InputNumber
+                                placeholder="数量"
+                                style={{ width: 120 }}
+                                min={0}
+                                value={row.quantity}
+                                onChange={(value) => handleChangeRow(index, 'quantity', value || 0)}
+                              />
+                              <Button onClick={() => handleRemoveRow(index)} disabled={importLocked || bundlesInput.length === 1}>
+                                删除
+                              </Button>
+                            </Space>
+                          ))}
+                          <Form.Item>
+                            <Space>
+                              <Button type="dashed" onClick={handleAddRow} disabled={importLocked}>
+                                新增一行
+                              </Button>
+                              <Button type="dashed" onClick={handleAutoImport} disabled={!activeTask}>
+                                一键导入(20件/扎)
+                              </Button>
+                              <Button
+                                onClick={() => {
+                                  setImportLocked(false);
+                                  setBundlesInput([{ color: '', size: '', quantity: 0 }]);
+                                }}
+                                disabled={!activeTask}
+                              >
+                                清空
+                              </Button>
+                              <Button type="primary" loading={generateLoading} onClick={handleGenerate}>
+                                领取裁剪单并生成二维码
+                              </Button>
+                            </Space>
+                          </Form.Item>
+                        </>
+                      )}
+                    </Form>
+
+                    <Card size="small" title="面辅料采购明细" style={{ marginTop: 12 }} loading={entryPurchaseLoading}>
+                      <ResizableTable<MaterialPurchase>
+                        storageKey="cutting-entry-purchase-table"
+                        columns={purchaseColumns}
+                        dataSource={entryPurchases}
+                        rowKey={(r) =>
+                          String(
+                            r?.id ??
+                            `${(r as any)?.materialType || ''}-${(r as any)?.materialCode || ''}-${(r as any)?.supplierName || ''}`
+                          )
+                        }
+                        loading={entryPurchaseLoading}
+                        pagination={false as any}
+                        size="small"
+                        scroll={{ x: 'max-content', y: typeof window === 'undefined' ? 260 : window.innerWidth < 768 ? 220 : 260 }}
+                      />
+                    </Card>
+                  </div>
+
+                  <div className="cutting-entry-footer">
+                    <div className="cutting-entry-footer-grid">
+                      <div className="cutting-entry-field">
+                        <div className="cutting-entry-label">裁剪人</div>
+                        <div className="cutting-entry-value">{String(activeTask.receiverName || '').trim() || '-'}</div>
+                      </div>
+                      <div className="cutting-entry-field">
+                        <div className="cutting-entry-label">领取时间</div>
+                        <div className="cutting-entry-value">{formatDateTime(activeTask.receivedTime) || '-'}</div>
+                      </div>
+                      <div className="cutting-entry-field">
+                        <div className="cutting-entry-label">完成时间</div>
+                        <div className="cutting-entry-value">{formatDateTime(activeTask.bundledTime) || '-'}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               <Space style={{ marginBottom: 12 }}>
                 <Button type="primary" onClick={openBatchPrint} disabled={!selectedBundles.length}>
@@ -1421,6 +1564,7 @@ const CuttingManagement: React.FC = () => {
                 columns={columns as any}
                 dataSource={dataSource}
                 rowKey={(row) => row.id || `${row.productionOrderNo}-${row.bundleNo}-${row.color}-${row.size}`}
+                size="small"
                 rowSelection={{
                   selectedRowKeys: selectedBundleRowKeys,
                   onChange: (keys, rows) => {
@@ -1429,6 +1573,7 @@ const CuttingManagement: React.FC = () => {
                   },
                 }}
                 loading={listLoading}
+                scroll={{ x: 'max-content', y: typeof window === 'undefined' ? 520 : window.innerWidth < 768 ? 360 : 560 }}
                 pagination={{
                   current: queryParams.page,
                   pageSize: queryParams.pageSize,
@@ -1439,10 +1584,18 @@ const CuttingManagement: React.FC = () => {
                 }}
               />
 
-              <Modal
+              <ResizableModal
                 open={printPreviewOpen}
                 title={`批量打印（${printBundles.length}张）`}
-                width="60vw"
+                width={
+                  typeof window === 'undefined'
+                    ? '60vw'
+                    : window.innerWidth < 768
+                      ? '96vw'
+                      : window.innerWidth < 1024
+                        ? '66vw'
+                        : '60vw'
+                }
                 centered
                 onCancel={() => setPrintPreviewOpen(false)}
                 footer={[
@@ -1456,6 +1609,9 @@ const CuttingManagement: React.FC = () => {
                     打印
                   </Button>,
                 ]}
+                autoFontSize={false}
+                initialHeight={720}
+                scaleWithViewport
               >
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 12, alignItems: 'center' }}>
                   <span style={{ fontWeight: 600 }}>模式</span>
@@ -1535,15 +1691,23 @@ const CuttingManagement: React.FC = () => {
                     </div>
                   ))}
                 </div>
-              </Modal>
+              </ResizableModal>
 
             </>
           ) : null}
 
-          <Modal
+          <ResizableModal
             open={sheetPreviewOpen}
             title={`裁剪单（${String(sheetPreviewTask?.productionOrderNo || '').trim() || '-'}）`}
-            width="64vw"
+            width={
+              typeof window === 'undefined'
+                ? '60vw'
+                : window.innerWidth < 768
+                  ? '96vw'
+                  : window.innerWidth < 1024
+                    ? '66vw'
+                    : '60vw'
+            }
             centered
             onCancel={() => setSheetPreviewOpen(false)}
             footer={[
@@ -1557,48 +1721,69 @@ const CuttingManagement: React.FC = () => {
                 打印
               </Button>,
             ]}
+            autoFontSize={false}
+            initialHeight={720}
+            scaleWithViewport
           >
-            <Card size="small" loading={sheetPreviewLoading}>
-              <Space wrap>
-                <Tag color="blue">订单号：{String(sheetPreviewTask?.productionOrderNo || '').trim() || '-'}</Tag>
-                <Tag>款号：{String(sheetPreviewTask?.styleNo || '').trim() || '-'}</Tag>
-                <Tag>款名：{String(sheetPreviewTask?.styleName || '').trim() || '-'}</Tag>
-                <Tag>下单数：{Number(sheetPreviewTask?.orderQuantity ?? 0) || 0}</Tag>
-                <Tag>
-                  裁剪数：
-                  {(() => {
-                    const tv = Number((sheetPreviewTask as any)?.cuttingQuantity);
-                    if (Number.isFinite(tv) && tv > 0) return tv;
-                    const sum = sheetPreviewBundles.reduce((s, x) => s + (Number((x as any)?.quantity) || 0), 0);
-                    return Number(sum) || 0;
-                  })()}
-                </Tag>
-                <Tag>
-                  扎数：
-                  {(() => {
-                    const tv = Number((sheetPreviewTask as any)?.cuttingBundleCount);
-                    if (Number.isFinite(tv) && tv > 0) return tv;
-                    return Number(sheetPreviewBundles.length) || 0;
-                  })()}
-                </Tag>
-              </Space>
-            </Card>
+            <ResizableModalFlex style={{ gap: 12 }}>
+              <Card size="small" loading={sheetPreviewLoading}>
+                <Space wrap>
+                  <Tag color="blue">订单号：{String(sheetPreviewTask?.productionOrderNo || '').trim() || '-'}</Tag>
+                  <Tag>款号：{String(sheetPreviewTask?.styleNo || '').trim() || '-'}</Tag>
+                  <Tag>款名：{String(sheetPreviewTask?.styleName || '').trim() || '-'}</Tag>
+                  <Tag>下单数：{Number(sheetPreviewTask?.orderQuantity ?? 0) || 0}</Tag>
+                  <Tag>
+                    裁剪数：
+                    {(() => {
+                      const tv = Number((sheetPreviewTask as any)?.cuttingQuantity);
+                      if (Number.isFinite(tv) && tv > 0) return tv;
+                      const sum = sheetPreviewBundles.reduce((s, x) => s + (Number((x as any)?.quantity) || 0), 0);
+                      return Number(sum) || 0;
+                    })()}
+                  </Tag>
+                  <Tag>
+                    扎数：
+                    {(() => {
+                      const tv = Number((sheetPreviewTask as any)?.cuttingBundleCount);
+                      if (Number.isFinite(tv) && tv > 0) return tv;
+                      return Number(sheetPreviewBundles.length) || 0;
+                    })()}
+                  </Tag>
+                </Space>
+              </Card>
 
-            <ResizableTable<CuttingBundleRow>
-              storageKey="cutting-sheet-preview-table"
-              columns={[
-                { title: '颜色', dataIndex: 'color', key: 'color', width: 120 },
-                { title: '尺码', dataIndex: 'size', key: 'size', width: 90 },
-                { title: '扎号', dataIndex: 'bundleNo', key: 'bundleNo', width: 90 },
-                { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 100, align: 'right' as const },
-                { title: '二维码内容', dataIndex: 'qrCode', key: 'qrCode', ellipsis: true },
-              ] as any}
-              dataSource={sheetPreviewBundles}
-              rowKey={(row) => row.id || `${row.productionOrderNo}-${row.bundleNo}-${row.color}-${row.size}`}
-              loading={sheetPreviewLoading}
-              pagination={false as any}
-            />
-          </Modal>
+              <Card size="small" title="面辅料采购明细" loading={sheetPreviewPurchaseLoading}>
+                <ResizableTable<MaterialPurchase>
+                  storageKey="cutting-sheet-preview-purchase-table"
+                  columns={purchaseColumns}
+                  dataSource={sheetPreviewPurchases}
+                  rowKey={(r) => String(r?.id ?? `${(r as any)?.materialType || ''}-${(r as any)?.materialCode || ''}-${(r as any)?.supplierName || ''}`)}
+                  loading={sheetPreviewPurchaseLoading}
+                  pagination={false as any}
+                  size="small"
+                  scroll={{ x: 'max-content', y: typeof window === 'undefined' ? 240 : window.innerWidth < 768 ? 220 : 260 }}
+                />
+              </Card>
+
+              <ResizableModalFlexFill ref={sheetPreviewTableWrapRef}>
+                <ResizableTable<CuttingBundleRow>
+                  storageKey="cutting-sheet-preview-table"
+                  columns={[
+                    { title: '颜色', dataIndex: 'color', key: 'color', width: 120 },
+                    { title: '尺码', dataIndex: 'size', key: 'size', width: 90 },
+                    { title: '扎号', dataIndex: 'bundleNo', key: 'bundleNo', width: 90 },
+                    { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 100, align: 'right' as const },
+                    { title: '二维码内容', dataIndex: 'qrCode', key: 'qrCode', ellipsis: true },
+                  ] as any}
+                  dataSource={sheetPreviewBundles}
+                  rowKey={(row) => row.id || `${row.productionOrderNo}-${row.bundleNo}-${row.color}-${row.size}`}
+                  loading={sheetPreviewLoading}
+                  pagination={false as any}
+                  scroll={{ x: 'max-content', y: sheetPreviewTableScrollY }}
+                />
+              </ResizableModalFlexFill>
+            </ResizableModalFlex>
+          </ResizableModal>
 
           <div
             className="cutting-qr-print-area"
@@ -1652,7 +1837,7 @@ const CuttingManagement: React.FC = () => {
             )}
           </div>
 
-          <Modal
+          <ResizableModal
             open={createTaskOpen}
             title="新建裁剪任务"
             width={645}
@@ -1661,6 +1846,8 @@ const CuttingManagement: React.FC = () => {
             okText="创建"
             confirmLoading={createTaskSubmitting}
             onOk={handleSubmitCreateTask}
+            autoFontSize={false}
+            initialHeight={720}
           >
             <Card size="small" style={{ marginBottom: 12 }}>
               <Space wrap>
@@ -1729,7 +1916,7 @@ const CuttingManagement: React.FC = () => {
                 </Space>
               ))}
             </Card>
-          </Modal>
+          </ResizableModal>
 
 
         </Card>

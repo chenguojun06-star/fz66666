@@ -8,6 +8,7 @@ import com.fashion.supplychain.common.ParamUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import org.springframework.beans.factory.ObjectProvider;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -48,7 +49,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
             .compile("(\\d{4}-\\d{2}-\\d{2}\\s+\\d{2}:\\d{2}(?::\\d{2})?)");
 
     @Autowired
-    private ProductionOrderService productionOrderService;
+    private ObjectProvider<ProductionOrderService> productionOrderServiceProvider;
 
     @Autowired
     private StyleBomService styleBomService;
@@ -435,6 +436,10 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         }
 
         if (StringUtils.hasText(materialPurchase.getOrderId())) {
+            ProductionOrderService productionOrderService = productionOrderServiceProvider.getIfAvailable();
+            if (productionOrderService == null) {
+                return;
+            }
             ProductionOrder order = productionOrderService.getDetailById(materialPurchase.getOrderId());
             if (order != null) {
                 if (!StringUtils.hasText(materialPurchase.getOrderNo())) {
@@ -679,7 +684,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean updateArrivedQuantity(String id, Integer arrivedQuantity) {
+    public boolean updateArrivedQuantity(String id, Integer arrivedQuantity, String remark) {
         // 查询物料采购记录
         MaterialPurchase materialPurchase = this.getById(id);
         if (materialPurchase == null) {
@@ -689,6 +694,18 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         // 更新到货数量
         materialPurchase.setArrivedQuantity(arrivedQuantity);
         materialPurchase.setUpdateTime(LocalDateTime.now());
+
+        if (StringUtils.hasText(remark)) {
+            String current = materialPurchase.getRemark() == null ? "" : materialPurchase.getRemark().trim();
+            String next = remark.trim();
+            if (StringUtils.hasText(current)) {
+                if (!current.contains(next)) {
+                    materialPurchase.setRemark(current + "；" + next);
+                }
+            } else {
+                materialPurchase.setRemark(next);
+            }
+        }
 
         if (materialPurchase.getUnitPrice() != null) {
             int arrivedQty = arrivedQuantity == null ? 0 : arrivedQuantity;
@@ -933,6 +950,10 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
     }
 
     private List<MaterialPurchase> buildDemandItems(String orderId) {
+        ProductionOrderService productionOrderService = productionOrderServiceProvider.getIfAvailable();
+        if (productionOrderService == null) {
+            throw new IllegalStateException("生产订单服务不可用");
+        }
         ProductionOrder order = productionOrderService.getDetailById(orderId);
         if (order == null) {
             throw new NoSuchElementException("生产订单不存在");

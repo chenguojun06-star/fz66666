@@ -1,29 +1,8 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import api from './api';
 
-export const routeToPermissionCode: Record<string, string> = {
-  '/dashboard': 'MENU_DASHBOARD',
-  '/style-info': 'MENU_STYLE_INFO',
-  '/order-management': 'MENU_ORDER_MANAGEMENT',
-  '/data-center': 'MENU_DATA_CENTER',
-  '/basic/template-center': 'MENU_TEMPLATE_CENTER',
-  '/production': 'MENU_PRODUCTION_LIST',
-  '/production/material': 'MENU_MATERIAL_PURCHASE',
-  '/production/cutting': 'MENU_CUTTING',
-  '/production/progress-detail': 'MENU_PROGRESS',
-  '/production/warehousing': 'MENU_WAREHOUSING',
-  '/finance/factory-reconciliation': 'MENU_FACTORY_RECON',
-  '/finance/material-reconciliation': 'MENU_MATERIAL_RECON',
-  '/finance/shipment-reconciliation': 'MENU_SHIPMENT_RECON',
-  '/finance/payment-approval': 'MENU_PAYMENT_APPROVAL',
-  '/system/user': 'MENU_USER',
-  '/system/role': 'MENU_ROLE',
-  '/system/factory': 'MENU_FACTORY',
-  '/system/login-log': 'MENU_LOGIN_LOG',
-};
-
 // 定义用户信息类型
-interface UserInfo {
+export interface UserInfo {
   id: string;
   username: string;
   name: string;
@@ -47,6 +26,17 @@ interface AuthContextType {
 
 // 创建上下文
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const fallbackAuthContext: AuthContextType = {
+  user: null,
+  isAuthenticated: false,
+  loading: false,
+  login: async () => false,
+  updateUser: () => {
+  },
+  logout: () => {
+  },
+};
 
 // 上下文提供者组件
 interface AuthProviderProps {
@@ -76,10 +66,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         const storedUser = localStorage.getItem(userStorageKey);
         if (storedUser) {
-          const parsedUser = JSON.parse(storedUser);
-          setUser(parsedUser);
-          setLoading(false);
-          return;
+          try {
+            const parsedUser = JSON.parse(storedUser);
+            setUser(parsedUser);
+          } catch {
+          }
         }
 
         try {
@@ -162,8 +153,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return true;
       }
       return false;
-    } catch (error) {
-      console.error('登录失败:', error);
+    } catch {
       return false;
     }
   };
@@ -201,8 +191,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 // 自定义钩子，方便组件使用上下文
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (context) return context;
+  if ((import.meta as any)?.env?.DEV) {
     throw new Error('必须在认证上下文提供者内部使用该钩子');
   }
-  return context;
+  return fallbackAuthContext;
+};
+
+export const isAdminUser = (user?: Partial<UserInfo> | null) => {
+  const role = String((user as any)?.role ?? (user as any)?.roleName ?? '').trim();
+  const username = String((user as any)?.username ?? '').trim();
+  if (username === 'admin') return true;
+  if (role === '1') return true;
+  const lower = role.toLowerCase();
+  return lower.includes('admin') || role.includes('管理员');
+};
+
+export const isSupervisorOrAboveUser = (user?: Partial<UserInfo> | null) => {
+  if (isAdminUser(user)) return true;
+  const role = String((user as any)?.role ?? (user as any)?.roleName ?? '').trim();
+  if (!role) return false;
+  const lower = role.toLowerCase();
+  if (lower.includes('manager') || lower.includes('supervisor') || role.includes('主管')) return true;
+  const perms = Array.isArray((user as any)?.permissions) ? (user as any).permissions : [];
+  return perms.includes('all');
 };

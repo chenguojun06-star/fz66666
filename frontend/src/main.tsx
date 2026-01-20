@@ -4,93 +4,11 @@ import { ConfigProvider } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import App from './App';
 import { AuthProvider } from './utils/authContext';
+import { AppProvider } from './utils/appContext';
 import 'antd/dist/reset.css'; // 引入组件库样式
 import './styles/global.css';
 
 const themeStorageKey = 'app.theme';
-
-const installNoiseFilters = () => {
-  const shouldIgnore = (msg: any) => {
-    const m = String(msg || '').trim();
-    if (!m) return false;
-
-    const lower = m.toLowerCase();
-    return (
-      lower.includes('no checkout popup config found')
-      || lower.includes('unchecked runtime.lasterror')
-      || lower.includes('a listener indicated an asynchronous response by returning true')
-      || lower.includes('message channel closed before a response was received')
-      || lower.includes('the message port closed before a response was received')
-      || (lower.includes('[antd: card]') && lower.includes('bordered') && lower.includes('deprecated'))
-      || (lower.includes('[antd: drawer]') && lower.includes('width') && lower.includes('deprecated'))
-    );
-  };
-
-  const extractLikelyMessage = (value: any) => {
-    if (value == null) return '';
-    if (typeof value === 'string') return value;
-    if (typeof value === 'object') {
-      const msg = (value as any)?.message;
-      if (typeof msg === 'string') return msg;
-    }
-    try {
-      return String(value);
-    } catch {
-      return '';
-    }
-  };
-
-  window.addEventListener('error', (event) => {
-    const ev: any = event as any;
-    const msg = extractLikelyMessage(ev?.message) || extractLikelyMessage(ev?.error);
-    if (shouldIgnore(msg)) {
-      event.preventDefault();
-    }
-  });
-
-  window.addEventListener('unhandledrejection', (event) => {
-    const reason: any = (event as any)?.reason;
-    const msg = extractLikelyMessage(reason);
-    if (shouldIgnore(msg)) {
-      event.preventDefault();
-    }
-  });
-
-  const consoleRef: any = console as any;
-  const origError = consoleRef.error?.bind(consoleRef);
-  const origWarn = consoleRef.warn?.bind(consoleRef);
-
-  if (typeof origError === 'function') {
-    consoleRef.error = (...args: any[]) => {
-      const head = args?.[0];
-      const msg = extractLikelyMessage(head);
-      if (shouldIgnore(msg)) return;
-      if (head && typeof head === 'object' && shouldIgnore((head as any)?.message)) return;
-      origError(...args);
-    };
-  }
-
-  if (typeof origWarn === 'function') {
-    consoleRef.warn = (...args: any[]) => {
-      const head = args?.[0];
-      const msg = extractLikelyMessage(head);
-      if (shouldIgnore(msg)) return;
-      if (head && typeof head === 'object' && shouldIgnore((head as any)?.message)) return;
-      origWarn(...args);
-    };
-  }
-};
-
-const ensureCheckoutPopupConfig = () => {
-  const w = window as any;
-  if (w.checkoutPopupConfig == null) {
-    w.checkoutPopupConfig = {
-      title: '订单结账',
-      width: 600,
-      height: 450,
-    };
-  }
-};
 
 const applyTheme = (theme: string | null) => {
   if (typeof document === 'undefined') return;
@@ -103,27 +21,61 @@ const applyTheme = (theme: string | null) => {
   root.setAttribute('data-theme', t);
 };
 
+const shouldSuppressExternalError = (message: string, filename?: string, stack?: string) => {
+  const msg = String(message || '').trim();
+  const file = String(filename || '').trim();
+  const st = String(stack || '').trim();
+  if (!msg) return false;
+
+  if (msg.includes('No checkout popup config found')) return true;
+
+  const isExtension =
+    file.startsWith('chrome-extension://') ||
+    file.startsWith('moz-extension://') ||
+    st.includes('chrome-extension://') ||
+    st.includes('moz-extension://');
+
+  if (isExtension && msg.includes('A listener indicated an asynchronous response')) return true;
+  return false;
+};
+
+try {
+  if (typeof window !== 'undefined') {
+    window.addEventListener('unhandledrejection', (e) => {
+      const reason: any = (e as any)?.reason;
+      const msg = String(reason?.message || reason || '').trim();
+      const stack = String(reason?.stack || '').trim();
+      if (shouldSuppressExternalError(msg, undefined, stack)) {
+        e.preventDefault();
+      }
+    });
+
+    window.addEventListener('error', (e) => {
+      const ev: any = e as any;
+      const msg = String(ev?.message || '').trim();
+      const file = String(ev?.filename || '').trim();
+      const stack = String(ev?.error?.stack || '').trim();
+      if (shouldSuppressExternalError(msg, file, stack)) {
+        e.preventDefault();
+      }
+    });
+  }
+} catch {
+}
+
 try {
   applyTheme(localStorage.getItem(themeStorageKey));
-} catch {
-}
-
-try {
-  ensureCheckoutPopupConfig();
-} catch {
-}
-
-try {
-  installNoiseFilters();
 } catch {
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ConfigProvider locale={zhCN}>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
+      <AppProvider>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </AppProvider>
     </ConfigProvider>
   </React.StrictMode>,
 );

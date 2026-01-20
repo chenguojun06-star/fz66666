@@ -42,8 +42,11 @@ public class WeChatMiniProgramAuthController {
                 request == null ? null : request.getHeader("User-Agent"),
                 status,
                 msg);
-        if (success) {
+        if (success && !needBind) {
             return Result.success(result);
+        }
+        if (needBind) {
+            return Result.fail(400, "需要绑定账号", result);
         }
         return Result.fail((String) result.getOrDefault("message", "登录失败"));
     }

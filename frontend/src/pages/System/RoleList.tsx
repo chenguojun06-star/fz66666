@@ -1,16 +1,18 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Alert, Button, Card, Input, Space, Tree, message } from 'antd';
+import { Alert, Button, Card, Form, Input, Modal, Select, Space, Tag, Tree, message } from 'antd';
 import { DeleteOutlined, EditOutlined, SafetyOutlined } from '@ant-design/icons';
 import Layout from '../../components/Layout';
-import ResizableModal from '../../components/ResizableModal';
-import RowActions from '../../components/RowActions';
-import ResizableTable from '../../components/ResizableTable';
+import ResizableModal from '../../components/common/ResizableModal';
+import RowActions from '../../components/common/RowActions';
+import ResizableTable from '../../components/common/ResizableTable';
 import { Role, RoleQueryParams } from '../../types/system';
 import api, { requestWithPathFallback } from '../../utils/api';
 import { formatDateTime } from '../../utils/datetime';
 import './styles.css';
 
 const RoleList: React.FC = () => {
+  const [form] = Form.useForm();
+  const [viewportWidth, setViewportWidth] = useState<number>(() => (typeof window === 'undefined' ? 1200 : window.innerWidth));
   const [visible, setVisible] = useState(false);
   const [currentRole, setCurrentRole] = useState<Role | null>(null);
   const [queryParams, setQueryParams] = useState<RoleQueryParams>({
@@ -27,6 +29,19 @@ const RoleList: React.FC = () => {
   const [permTree, setPermTree] = useState<any[]>([]);
   const [checkedPermIds, setCheckedPermIds] = useState<Set<number>>(new Set());
   const [permKeyword, setPermKeyword] = useState('');
+  const [permSaving, setPermSaving] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  const isMobile = viewportWidth < 768;
+  const isTablet = viewportWidth >= 768 && viewportWidth < 1024;
+  const modalWidth = isMobile ? '96vw' : isTablet ? '66vw' : '60vw';
+  const modalInitialHeight = 720;
 
   const collectSubtreeIds = (node: any, into: Set<number>) => {
     if (!node) return;
@@ -124,21 +139,41 @@ const RoleList: React.FC = () => {
 
   const openDialog = (role?: Role) => {
     setCurrentRole(role || null);
+    form.setFieldsValue({
+      roleName: String(role?.roleName || ''),
+      roleCode: String(role?.roleCode || ''),
+      description: String(role?.description || ''),
+      status: (role?.status || 'active') as any,
+      dataScope: (role?.dataScope || 'all') as any,
+      dataScopeBrands: Array.isArray(role?.dataScopeBrands) ? role?.dataScopeBrands : [],
+      dataScopeDepartments: Array.isArray(role?.dataScopeDepartments) ? role?.dataScopeDepartments : [],
+    });
     setVisible(true);
   };
 
   const closeDialog = () => {
     setVisible(false);
     setCurrentRole(null);
+    form.resetFields();
   };
 
   const handleSave = async () => {
     try {
+      const values = await form.validateFields();
+      const payload: Role = {
+        ...(currentRole || ({} as any)),
+        ...values,
+        status: (values as any)?.status || 'active',
+        dataScope: (values as any)?.dataScope || 'all',
+        dataScopeBrands: Array.isArray((values as any)?.dataScopeBrands) ? (values as any).dataScopeBrands : [],
+        dataScopeDepartments: Array.isArray((values as any)?.dataScopeDepartments) ? (values as any).dataScopeDepartments : [],
+      };
+
       let response;
-      if (currentRole?.id) {
-        response = await requestWithPathFallback('put', '/system/role', '/auth/role', currentRole);
+      if (payload?.id) {
+        response = await requestWithPathFallback('put', '/system/role', '/auth/role', payload);
       } else {
-        response = await requestWithPathFallback('post', '/system/role', '/auth/role', currentRole);
+        response = await requestWithPathFallback('post', '/system/role', '/auth/role', payload);
       }
       const result = response as any;
       if (result.code === 200) {
@@ -155,21 +190,29 @@ const RoleList: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('确定删除该角色吗？')) {
-      try {
-        const response = await requestWithPathFallback('delete', `/system/role/${id}`, `/auth/role/${id}`);
-        const result = response as any;
-        if (result.code === 200) {
-          message.success('删除成功');
-          fetchRoles();
-        } else {
-          message.error(result.message || '删除失败');
+    Modal.confirm({
+      title: '确认删除',
+      content: '确定删除该角色吗？',
+      okText: '删除',
+      okButtonProps: { danger: true },
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          const response = await requestWithPathFallback('delete', `/system/role/${id}`, `/auth/role/${id}`);
+          const result = response as any;
+          if (result.code === 200) {
+            message.success('删除成功');
+            fetchRoles();
+            return;
+          }
+          throw new Error(result.message || '删除失败');
+        } catch (error: any) {
+          const msg = error?.message || '删除失败';
+          message.error(msg);
+          throw error;
         }
-      } catch (error: any) {
-        const msg = error?.message || '删除失败';
-        message.error(msg);
-      }
-    }
+      },
+    });
   };
 
   const openPermDialog = async (role: Role) => {
@@ -242,6 +285,7 @@ const RoleList: React.FC = () => {
 
   const savePerms = async () => {
     if (!currentRole?.id) return;
+    setPermSaving(true);
     try {
       const ids = Array.from(checkedPermIds.values());
       const res = await requestWithPathFallback('put', `/system/role/${currentRole.id}/permission-ids`, `/auth/role/${currentRole.id}/permission-ids`, ids);
@@ -254,15 +298,13 @@ const RoleList: React.FC = () => {
       }
     } catch (e) {
       message.error('授权失败');
+    } finally {
+      setPermSaving(false);
     }
   };
 
   const getStatusText = (status: string) => {
     return status === 'active' ? '启用' : '停用';
-  };
-
-  const getStatusClass = (status: string) => {
-    return status === 'active' ? 'status-active' : 'status-inactive';
   };
 
   const columns = [
@@ -276,7 +318,7 @@ const RoleList: React.FC = () => {
       width: 110,
       render: (v: any) => {
         const status = String(v || '').trim() || 'inactive';
-        return <span className={`status-tag ${getStatusClass(status)}`}>{getStatusText(status)}</span>;
+        return <Tag color={status === 'active' ? 'green' : 'red'}>{getStatusText(status)}</Tag>;
       },
     },
     {
@@ -338,35 +380,37 @@ const RoleList: React.FC = () => {
           </div>
 
           <Card size="small" className="filter-card mb-sm">
-            <div className="filter-section">
-              <div className="filter-row">
-                <div className="filter-item">
-                  <label className="form-label">角色名称</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="请输入角色名称"
-                    onChange={(e) => setQueryParams(prev => ({ ...prev, roleName: e.target.value, page: 1 }))}
-                  />
-                </div>
-
-                <div className="filter-item">
-                  <label className="form-label">角色编码</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="请输入角色编码"
-                    onChange={(e) => setQueryParams(prev => ({ ...prev, roleCode: e.target.value, page: 1 }))}
-                  />
-                </div>
-
-                <div className="filter-item filter-actions">
-                  <Button type="primary" onClick={fetchRoles}>
-                    查询
-                  </Button>
-                </div>
-              </div>
-            </div>
+            <Space wrap>
+              <Input
+                placeholder="角色名称"
+                style={{ width: 220 }}
+                allowClear
+                value={String((queryParams as any)?.roleName || '')}
+                onChange={(e) => setQueryParams((prev) => ({ ...prev, roleName: e.target.value, page: 1 }))}
+              />
+              <Input
+                placeholder="角色编码"
+                style={{ width: 220 }}
+                allowClear
+                value={String((queryParams as any)?.roleCode || '')}
+                onChange={(e) => setQueryParams((prev) => ({ ...prev, roleCode: e.target.value, page: 1 }))}
+              />
+              <Button type="primary" onClick={fetchRoles}>
+                查询
+              </Button>
+              <Button
+                onClick={() =>
+                  setQueryParams((prev) => ({
+                    page: 1,
+                    pageSize: prev.pageSize,
+                    roleName: '',
+                    roleCode: '',
+                  }) as any)
+                }
+              >
+                重置
+              </Button>
+            </Space>
           </Card>
 
           <div className="table-section">
@@ -384,7 +428,7 @@ const RoleList: React.FC = () => {
                 showTotal: (t) => `共 ${t} 条记录`,
                 onChange: (page, pageSize) => setQueryParams((prev) => ({ ...prev, page, pageSize })),
               }}
-              scroll={{ x: 'max-content' }}
+              scroll={{ x: 'max-content', y: isMobile ? 360 : 560 }}
             />
           </div>
         </Card>
@@ -397,130 +441,88 @@ const RoleList: React.FC = () => {
         onOk={handleSave}
         okText="保存"
         cancelText="取消"
-        width="60vw"
+        width={modalWidth}
+        initialHeight={modalInitialHeight}
+        minWidth={isMobile ? 320 : 520}
+        scaleWithViewport
       >
-        <div className="role-form">
-          <div className="row">
-            <div className="col-6">
-              <div className="form-item">
-                <label className="form-label">角色名称</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={currentRole?.roleName || ''}
-                  onChange={(e) => setCurrentRole({ ...currentRole!, roleName: e.target.value } as Role)}
-                />
-              </div>
-            </div>
-            <div className="col-6">
-              <div className="form-item">
-                <label className="form-label">角色编码</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={currentRole?.roleCode || ''}
-                  onChange={(e) => setCurrentRole({ ...currentRole!, roleCode: e.target.value } as Role)}
-                />
-              </div>
-            </div>
+        <Form form={form} layout="vertical">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Form.Item name="roleName" label="角色名称" rules={[{ required: true, message: '请输入角色名称' }]}>
+              <Input placeholder="请输入角色名称" />
+            </Form.Item>
+            <Form.Item name="roleCode" label="角色编码" rules={[{ required: true, message: '请输入角色编码' }]}>
+              <Input placeholder="请输入角色编码" />
+            </Form.Item>
           </div>
-          <div className="row mt-sm">
-            <div className="col-12">
-              <div className="form-item">
-                <label className="form-label">描述</label>
-                <textarea
-                  className="form-input"
-                  rows={3}
-                  value={currentRole?.description || ''}
-                  onChange={(e) => setCurrentRole({ ...currentRole!, description: e.target.value } as Role)}
-                />
-              </div>
-            </div>
+
+          <Form.Item name="description" label="描述">
+            <Input.TextArea rows={3} placeholder="请输入描述" />
+          </Form.Item>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Form.Item name="status" label="状态" rules={[{ required: true, message: '请选择状态' }]}>
+              <Select
+                options={[
+                  { value: 'active', label: '启用' },
+                  { value: 'inactive', label: '停用' },
+                ]}
+              />
+            </Form.Item>
+            <Form.Item name="dataScope" label="数据权限范围" rules={[{ required: true, message: '请选择数据权限范围' }]}>
+              <Select
+                options={[
+                  { value: 'all', label: '全部数据' },
+                  { value: 'brand', label: '按品牌' },
+                  { value: 'department', label: '按部门' },
+                  { value: 'custom', label: '自定义' },
+                ]}
+              />
+            </Form.Item>
           </div>
-          <div className="row mt-sm">
-            <div className="col-6">
-              <div className="form-item">
-                <label className="form-label">状态</label>
-                <select
-                  className="form-input"
-                  value={currentRole?.status || 'active'}
-                  onChange={(e) => setCurrentRole({ ...currentRole!, status: e.target.value } as Role)}
-                >
-                  <option value="active">启用</option>
-                  <option value="inactive">停用</option>
-                </select>
-              </div>
-            </div>
-            <div className="col-6">
-              <div className="form-item">
-                <label className="form-label">数据权限范围</label>
-                <select
-                  className="form-input"
-                  value={currentRole?.dataScope || 'all'}
-                  onChange={(e) => setCurrentRole({ ...currentRole!, dataScope: e.target.value as any } as Role)}
-                >
-                  <option value="all">全部数据</option>
-                  <option value="brand">按品牌</option>
-                  <option value="department">按部门</option>
-                  <option value="custom">自定义</option>
-                </select>
-              </div>
-            </div>
-          </div>
-          {(currentRole?.dataScope === 'brand' || currentRole?.dataScope === 'custom') && (
-            <div className="row mt-sm">
-              <div className="col-12">
-                <div className="form-item">
-                  <label className="form-label">品牌范围</label>
-                  <select
-                    multiple
-                    className="form-input"
-                    value={currentRole?.dataScopeBrands || []}
-                    onChange={(e) => {
-                      const options = Array.from(e.target.selectedOptions).map(o => o.value);
-                      setCurrentRole({ ...currentRole!, dataScopeBrands: options } as Role);
-                    }}
-                  >
-                    {brandOptions.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
-          {(currentRole?.dataScope === 'department' || currentRole?.dataScope === 'custom') && (
-            <div className="row mt-sm">
-              <div className="col-12">
-                <div className="form-item">
-                  <label className="form-label">部门范围</label>
-                  <select
-                    multiple
-                    className="form-input"
-                    value={currentRole?.dataScopeDepartments || []}
-                    onChange={(e) => {
-                      const options = Array.from(e.target.selectedOptions).map(o => o.value);
-                      setCurrentRole({ ...currentRole!, dataScopeDepartments: options } as Role);
-                    }}
-                  >
-                    {deptOptions.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+
+          <Form.Item shouldUpdate={(prev, next) => prev.dataScope !== next.dataScope} noStyle>
+            {({ getFieldValue }) => {
+              const scope = String(getFieldValue('dataScope') || 'all');
+              const showBrand = scope === 'brand' || scope === 'custom';
+              const showDept = scope === 'department' || scope === 'custom';
+              return (
+                <>
+                  {showBrand ? (
+                    <Form.Item name="dataScopeBrands" label="品牌范围">
+                      <Select mode="multiple" allowClear options={brandOptions} placeholder="选择品牌" />
+                    </Form.Item>
+                  ) : null}
+                  {showDept ? (
+                    <Form.Item name="dataScopeDepartments" label="部门范围">
+                      <Select mode="multiple" allowClear options={deptOptions} placeholder="选择部门" />
+                    </Form.Item>
+                  ) : null}
+                </>
+              );
+            }}
+          </Form.Item>
+        </Form>
       </ResizableModal>
 
       <ResizableModal
         open={permVisible}
         title={currentRole ? `为「${currentRole.roleName}」授权` : '权限授权'}
         onCancel={closePermDialog}
-        footer={null}
-        width="52vw"
-        initialHeight={560}
+        footer={
+          <div className="modal-footer-actions">
+            <Button onClick={closePermDialog} disabled={permSaving}>
+              取消
+            </Button>
+            <Button type="primary" onClick={savePerms} loading={permSaving}>
+              保存
+            </Button>
+          </div>
+        }
+        width={modalWidth}
+        initialHeight={modalInitialHeight}
+        minWidth={isMobile ? 320 : 520}
+        scaleWithViewport
         minHeight={420}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -575,12 +577,6 @@ const RoleList: React.FC = () => {
             />
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 12 }}>
-            <Space>
-              <Button onClick={closePermDialog}>取消</Button>
-              <Button type="primary" onClick={savePerms}>保存</Button>
-            </Space>
-          </div>
         </div>
       </ResizableModal>
     </Layout>

@@ -3,9 +3,9 @@ import { Alert, Button, Card, Empty, Input, Modal, Select, Space, Spin, Tabs, Ta
 import type { MenuProps } from 'antd';
 import { PlusOutlined, SearchOutlined, EditOutlined, CheckOutlined, CloseOutlined, SettingOutlined } from '@ant-design/icons';
 import Layout from '../../components/Layout';
-import ResizableModal from '../../components/ResizableModal';
-import ResizableTable from '../../components/ResizableTable';
-import RowActions from '../../components/RowActions';
+import ResizableModal from '../../components/common/ResizableModal';
+import ResizableTable from '../../components/common/ResizableTable';
+import RowActions from '../../components/common/RowActions';
 import { Role, User as UserType, UserQueryParams } from '../../types/system';
 import api, { requestWithPathFallback } from '../../utils/api';
 import { formatDateTime } from '../../utils/datetime';
@@ -16,6 +16,7 @@ const { Option } = Select;
 const UserList: React.FC = () => {
   const [form] = Form.useForm();
   // 状态管理
+  const [viewportWidth, setViewportWidth] = useState<number>(() => (typeof window === 'undefined' ? 1200 : window.innerWidth));
   const [visible, setVisible] = useState(false);
   const [currentUser, setCurrentUser] = useState<UserType | null>(null);
   const [queryParams, setQueryParams] = useState<UserQueryParams>({
@@ -27,6 +28,18 @@ const UserList: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  const isMobile = viewportWidth < 768;
+  const isTablet = viewportWidth >= 768 && viewportWidth < 1024;
+  const modalWidth = isMobile ? '96vw' : isTablet ? '66vw' : '60vw';
+  const modalInitialHeight = 720;
 
   const [activeEditTab, setActiveEditTab] = useState<'base' | 'perm'>('base');
 
@@ -504,7 +517,7 @@ const UserList: React.FC = () => {
 
   return (
     <Layout>
-      <div className="system-user-page">
+      <div>
         <Card className="page-card">
           {/* 页面标题和操作区 */}
           <div className="page-header">
@@ -591,7 +604,10 @@ const UserList: React.FC = () => {
           onOk={handleSubmit}
           okText="保存"
           cancelText="取消"
-          width="60vw"
+          width={modalWidth}
+          initialHeight={modalInitialHeight}
+          minWidth={isMobile ? 320 : 520}
+          scaleWithViewport
           confirmLoading={submitLoading}
         >
           <Form form={form} layout="vertical" autoComplete="off">

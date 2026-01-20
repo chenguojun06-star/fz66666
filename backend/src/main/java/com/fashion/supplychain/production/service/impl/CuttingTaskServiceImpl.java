@@ -286,6 +286,7 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
                 sr.setColor(task.getColor());
                 sr.setSize(task.getSize());
                 sr.setQuantity(finalQty);
+                sr.setProgressStage(CUTTING_PROCESS_NAME);
                 sr.setProcessName(CUTTING_PROCESS_NAME);
                 sr.setOperatorId(task.getReceiverId());
                 sr.setOperatorName(StringUtils.hasText(task.getReceiverName()) ? task.getReceiverName() : "system");
@@ -300,6 +301,7 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
                 ScanRecord patch = new ScanRecord();
                 patch.setId(existing.getId());
                 patch.setQuantity(finalQty);
+                patch.setProgressStage(CUTTING_PROCESS_NAME);
                 patch.setOperatorId(task.getReceiverId());
                 patch.setOperatorName(StringUtils.hasText(task.getReceiverName()) ? task.getReceiverName() : "system");
                 patch.setScanType("cutting");

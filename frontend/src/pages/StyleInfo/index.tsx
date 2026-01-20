@@ -4,13 +4,13 @@ import { Button, Input, Space, Card, Tabs, message, Form, Row, Col, InputNumber,
 import type { MenuProps } from 'antd';
 import { PlusOutlined, SearchOutlined, EyeOutlined } from '@ant-design/icons';
 import Layout from '../../components/Layout';
-import ResizableModal from '../../components/ResizableModal';
-import ResizableTable from '../../components/ResizableTable';
-import RowActions from '../../components/RowActions';
+import ResizableModal from '../../components/common/ResizableModal';
+import ResizableTable from '../../components/common/ResizableTable';
+import RowActions from '../../components/common/RowActions';
 import { StyleInfo as StyleInfoType, StyleQueryParams } from '../../types/style';
 import api, { withQuery } from '../../utils/api';
-import { useAuth } from '../../utils/authContext';
-import { formatDateTime } from '../../utils/datetime';
+import { isSupervisorOrAboveUser, useAuth } from '../../utils/authContext';
+import { formatDateTime, formatDateTimeSecond } from '../../utils/datetime';
 import { toCategoryCn as toCategoryCnUtil } from '../../utils/styleCategory';
 import './styles.css';
 
@@ -55,16 +55,33 @@ const StyleInfoPage: React.FC = () => {
   const [maintenanceRecord, setMaintenanceRecord] = useState<StyleInfoType | null>(null);
   const [maintenanceReason, setMaintenanceReason] = useState('');
 
-  const [productionEditMode, setProductionEditMode] = useState(false);
   const [productionSaving, setProductionSaving] = useState(false);
+  const [productionRollbackSaving, setProductionRollbackSaving] = useState(false);
+  const [productionReqLocked, setProductionReqLocked] = useState(false);
+  const [productionReqLockLoading, setProductionReqLockLoading] = useState(false);
 
-  const isSupervisorOrAbove = useMemo(() => {
-    const role = String((user as any)?.role || '').trim();
-    if (!role) return false;
-    if (role === '1') return true;
-    const lower = role.toLowerCase();
-    return lower.includes('admin') || lower.includes('manager') || lower.includes('supervisor') || role.includes('主管') || role.includes('管理员');
-  }, [user]);
+  const productionReqRowCount = 15;
+  const [productionReqRows, setProductionReqRows] = useState<string[]>(() => Array.from({ length: productionReqRowCount }).map(() => ''));
+
+  const parseProductionReqRows = (value: any) => {
+    const raw = String(value ?? '');
+    const lines = raw
+      .split(/\r?\n/)
+      .map((l) => String(l || '').replace(/^\s*\d+\s*[.、)）-]?\s*/, '').trim());
+    const out = Array.from({ length: productionReqRowCount }).map(() => '');
+    for (let i = 0; i < Math.min(productionReqRowCount, lines.length); i += 1) {
+      out[i] = lines[i] || '';
+    }
+    return out;
+  };
+
+  const serializeProductionReqRows = (rows: string[]) => {
+    const list = (Array.isArray(rows) ? rows : []).slice(0, productionReqRowCount).map((x) => String(x ?? '').replace(/\r/g, '').trim());
+    while (list.length && !String(list[list.length - 1] || '').trim()) list.pop();
+    return list.join('\n');
+  };
+
+  const isSupervisorOrAbove = useMemo(() => isSupervisorOrAboveUser(user), [user]);
 
   const isStageDoneRow = (record: any) => {
     const node = String(record?.progressNode || '').trim();
@@ -258,9 +275,7 @@ const StyleInfoPage: React.FC = () => {
       title: '款名',
       dataIndex: 'styleName',
       key: 'styleName',
-      render: (text: string) => (
-        <span style={{ fontSize: '16px', fontWeight: 500 }}>{text}</span>
-      ),
+      render: (text: string) => String(text || '-'),
     },
     {
       title: '品类',
@@ -442,11 +457,11 @@ const StyleInfoPage: React.FC = () => {
         const rawCreateTime = (currentStyle as any)?.createTime;
         nextValues.createTime = rawCreateTime ? dayjs(rawCreateTime) : undefined;
         form.setFieldsValue(nextValues);
-        setProductionEditMode(false);
+        setProductionReqRows(parseProductionReqRows(nextValues.description));
         setProductionSaving(false);
       } else {
         form.resetFields();
-        setProductionEditMode(false);
+        setProductionReqRows(Array.from({ length: productionReqRowCount }).map(() => ''));
         setProductionSaving(false);
         // 生成款号
         (async () => {
@@ -495,7 +510,12 @@ const StyleInfoPage: React.FC = () => {
       const normalizedValues: any = { ...values };
       const ct = (values as any)?.createTime;
       if (ct) {
-        normalizedValues.createTime = dayjs(ct).format('YYYY-MM-DD HH:mm:ss');
+        const formatted = formatDateTimeSecond(ct);
+        if (formatted && formatted !== '-') {
+          normalizedValues.createTime = formatted;
+        } else {
+          delete normalizedValues.createTime;
+        }
       } else {
         delete normalizedValues.createTime;
       }
@@ -532,7 +552,8 @@ const StyleInfoPage: React.FC = () => {
       message.error('请先保存基础信息');
       return;
     }
-    const desc = String(form.getFieldValue('description') ?? '');
+
+    const desc = serializeProductionReqRows(productionReqRows);
     setProductionSaving(true);
     try {
       try {
@@ -540,8 +561,8 @@ const StyleInfoPage: React.FC = () => {
         const result = res as any;
         if (result.code === 200) {
           message.success('保存成功');
-          setProductionEditMode(false);
           setCurrentStyle((prev) => (prev ? { ...prev, description: desc } : prev));
+          setProductionReqLocked(true);
           if (isDetailPage) {
             fetchDetail(String(currentStyle.id));
           }
@@ -561,8 +582,8 @@ const StyleInfoPage: React.FC = () => {
       const result2 = res2 as any;
       if (result2.code === 200) {
         message.success('保存成功');
-        setProductionEditMode(false);
         setCurrentStyle((prev) => (prev ? { ...prev, description: desc } : prev));
+        setProductionReqLocked(true);
         if (isDetailPage) {
           fetchDetail(String(currentStyle.id));
         }
@@ -574,6 +595,20 @@ const StyleInfoPage: React.FC = () => {
     } finally {
       setProductionSaving(false);
     }
+  };
+
+  const resetProductionReqFromCurrent = () => {
+    const desc = String((currentStyle as any)?.description ?? '');
+    setProductionReqRows(parseProductionReqRows(desc));
+  };
+
+  const updateProductionReqRow = (index: number, value: string) => {
+    setProductionReqRows((prev) => {
+      const next = prev.slice(0, productionReqRowCount);
+      while (next.length < productionReqRowCount) next.push('');
+      next[index] = String(value ?? '');
+      return next;
+    });
   };
 
   const resolvedCompletedDate = (() => {
@@ -594,11 +629,67 @@ const StyleInfoPage: React.FC = () => {
     return node === '样衣完成' || node === '纸样完成' || sampleStatus === 'COMPLETED' || patternStatus === 'COMPLETED';
   }, [currentStyle]);
 
+  const productionReqEditable = useMemo(() => {
+    if (!currentStyle?.id) return false;
+    if (editLocked) return false;
+    if (productionReqLockLoading) return false;
+    return !productionReqLocked;
+  }, [currentStyle?.id, editLocked, productionReqLockLoading, productionReqLocked]);
+
+  const fetchProductionReqLock = async (styleId: string | number) => {
+    setProductionReqLockLoading(true);
+    try {
+      const [saveRes, rollbackRes] = await Promise.all([
+        api.get<any>('/style/operation-log/list', { params: { styleId, action: 'PRODUCTION_REQUIREMENTS_SAVE' } }),
+        api.get<any>('/style/operation-log/list', { params: { styleId, action: 'PRODUCTION_REQUIREMENTS_ROLLBACK' } }),
+      ]);
+      const saveResult = saveRes as any;
+      const rollbackResult = rollbackRes as any;
+      const saves: any[] = saveResult?.code === 200 ? saveResult.data || [] : [];
+      const rollbacks: any[] = rollbackResult?.code === 200 ? rollbackResult.data || [] : [];
+
+      const saveTime = saves.length ? dayjs(saves[0]?.createTime || saves[0]?.create_time || null) : null;
+      const rollbackTime = rollbacks.length ? dayjs(rollbacks[0]?.createTime || rollbacks[0]?.create_time || null) : null;
+      const latestSave = saveTime && saveTime.isValid() ? saveTime : null;
+      const latestRollback = rollbackTime && rollbackTime.isValid() ? rollbackTime : null;
+
+      const locked = Boolean(latestSave && (!latestRollback || latestRollback.isBefore(latestSave)));
+      setProductionReqLocked(locked);
+    } catch {
+      setProductionReqLocked(false);
+    } finally {
+      setProductionReqLockLoading(false);
+    }
+  };
+
   useEffect(() => {
-    if (!editLocked) return;
-    setProductionEditMode(false);
-    setProductionSaving(false);
-  }, [editLocked]);
+    if (!currentStyle?.id) {
+      setProductionReqLocked(false);
+      setProductionReqLockLoading(false);
+      return;
+    }
+    fetchProductionReqLock(currentStyle.id);
+  }, [currentStyle?.id]);
+
+  const handleRollbackProductionReq = async () => {
+    if (!currentStyle?.id) return;
+    setProductionRollbackSaving(true);
+    try {
+      const res = await api.post(`/style/info/${currentStyle.id}/production-requirements/rollback`, { reason: '维护' });
+      const result = res as any;
+      if (result.code === 200) {
+        message.success('已退回');
+        setProductionReqLocked(false);
+        await fetchProductionReqLock(currentStyle.id);
+        return;
+      }
+      message.error(result.message || '退回失败');
+    } catch (e: any) {
+      message.error(e?.message || '退回失败');
+    } finally {
+      setProductionRollbackSaving(false);
+    }
+  };
 
   // 删除
   const handleDelete = async (id: string | number) => {
@@ -621,282 +712,16 @@ const StyleInfoPage: React.FC = () => {
   if (isDetailPage) {
     return (
       <Layout>
-        <div className="style-info-page">
-          <Card
-            title={currentStyle ? `款号详情 - ${currentStyle.styleNo}` : '款号详情'}
-            extra={<Button onClick={closeModal}>返回</Button>}
-          >
-            <div data-style-detail-root style={{ width: '100%' }}>
-              <style>{
-                '[data-style-detail-root] .ant-table-thead > tr > th,[data-style-detail-root] .ant-table-tbody > tr > td{padding:4px 6px !important;}' +
-                '[data-style-detail-root] .ant-table-cell{line-height:1.2;}'
-              }</style>
-              <Tabs
-                activeKey={activeTabKey}
-                onChange={setActiveTabKey}
-                items={[
-                  {
-                    key: '1',
-                    label: '基础信息',
-                    children: (
-                      <Form layout="vertical" form={form}>
-                        <Row gutter={16}>
-                          <Col xs={24} md={8} lg={6}>
-                            <CoverImageUpload styleId={currentStyle?.id} enabled={Boolean(currentStyle?.id) && !editLocked} />
-                          </Col>
-                          <Col xs={24} md={16} lg={18}>
-                            <Row gutter={16}>
-                              <Col xs={24} sm={12} lg={8}>
-                                <Form.Item name="styleNo" label="款号" rules={[{ required: true, message: '请输入款号' }]}>
-                                  <Input placeholder="请输入款号" disabled={editLocked} />
-                                </Form.Item>
-                              </Col>
-                              <Col xs={24} sm={12} lg={8}>
-                                <Form.Item name="styleName" label="款名" rules={[{ required: true, message: '请输入款名' }]}>
-                                  <Input placeholder="请输入款名" disabled={editLocked} />
-                                </Form.Item>
-                              </Col>
-                              <Col xs={24} sm={12} lg={8}>
-                                <Form.Item name="category" label="品类" rules={[{ required: true, message: '请选择品类' }]}>
-                                  <Select placeholder="请选择品类" options={categoryOptions} disabled={editLocked} />
-                                </Form.Item>
-                              </Col>
-                            </Row>
-
-                            <Row gutter={16}>
-                              <Col xs={24} sm={12} lg={8}>
-                                <Form.Item name="color" label="颜色">
-                                  <Select placeholder="请选择颜色" disabled={editLocked}>
-                                    <Select.Option value="红色">红色</Select.Option>
-                                    <Select.Option value="蓝色">蓝色</Select.Option>
-                                    <Select.Option value="黑色">黑色</Select.Option>
-                                    <Select.Option value="白色">白色</Select.Option>
-                                    <Select.Option value="绿色">绿色</Select.Option>
-                                    <Select.Option value="黄色">黄色</Select.Option>
-                                    <Select.Option value="紫色">紫色</Select.Option>
-                                    <Select.Option value="灰色">灰色</Select.Option>
-                                  </Select>
-                                </Form.Item>
-                              </Col>
-                              <Col xs={24} sm={12} lg={8}>
-                                <Form.Item name="size" label="样衣码数">
-                                  <Select placeholder="请选择样衣码数" disabled={editLocked}>
-                                    <Select.Option value="XS">XS</Select.Option>
-                                    <Select.Option value="S">S</Select.Option>
-                                    <Select.Option value="M">M</Select.Option>
-                                    <Select.Option value="L">L</Select.Option>
-                                    <Select.Option value="XL">XL</Select.Option>
-                                    <Select.Option value="XXL">XXL</Select.Option>
-                                    <Select.Option value="XXXL">XXXL</Select.Option>
-                                  </Select>
-                                </Form.Item>
-                              </Col>
-                              <Col xs={24} sm={12} lg={8}>
-                                <Form.Item name="price" label="单价">
-                                  <InputNumber style={{ width: '100%' }} min={0} prefix="¥" precision={2} disabled />
-                                </Form.Item>
-                              </Col>
-                            </Row>
-
-                            <Row gutter={16}>
-                              <Col xs={24} sm={12} lg={8}>
-                                <Form.Item name="season" label="季节">
-                                  <Select placeholder="请选择季节" options={seasonOptions} disabled={editLocked} />
-                                </Form.Item>
-                              </Col>
-                              <Col xs={24} sm={24} lg={8}>
-                                <Row gutter={8}>
-                                  <Col xs={24} sm={12}>
-                                    <Form.Item name="createTime" label="创建日期">
-                                      <DatePicker
-                                        disabled={Boolean(currentStyle?.id)}
-                                        allowClear
-                                        showTime={{ format: 'HH:mm' }}
-                                        style={{ width: '100%' }}
-                                        placeholder="请选择创建日期"
-                                        format="YYYY-MM-DD HH:mm"
-                                      />
-                                    </Form.Item>
-                                  </Col>
-                                  <Col xs={24} sm={12}>
-                                    <Form.Item label="完成日期">
-                                      <DatePicker
-                                        disabled
-                                        allowClear={false}
-                                        showTime={{ format: 'HH:mm' }}
-                                        style={{ width: '100%' }}
-                                        placeholder="-"
-                                        value={resolvedCompletedDate}
-                                        format="YYYY-MM-DD HH:mm"
-                                      />
-                                    </Form.Item>
-                                  </Col>
-                                </Row>
-                              </Col>
-                              <Col xs={24} sm={12} lg={8}>
-                                <Form.Item name="cycle" label="样衣周期[天]">
-                                  <InputNumber style={{ width: '100%' }} min={0} disabled={editLocked} />
-                                </Form.Item>
-                              </Col>
-                            </Row>
-                          </Col>
-                        </Row>
-
-                        <Row gutter={16}>
-                          <Col span={24}>
-                            <Form.Item name="description" label="生产要求">
-                              <Input.TextArea
-                                rows={4}
-                                placeholder="请输入生产要求"
-                                disabled={editLocked || (Boolean(currentStyle?.id) && !productionEditMode)}
-                              />
-                            </Form.Item>
-                          </Col>
-                        </Row>
-                        <Row gutter={16}>
-                          <Col span={24}>
-                            <Space style={{ justifyContent: 'flex-end' }}>
-                              {currentStyle?.id ? (
-                                editLocked ? null : productionEditMode ? (
-                                  <>
-                                    <Button
-                                      onClick={() => {
-                                        setProductionEditMode(false);
-                                        form.setFieldsValue({ description: String((currentStyle as any)?.description ?? '') });
-                                      }}
-                                      htmlType="button"
-                                    >
-                                      取消编辑
-                                    </Button>
-                                    <Button type="primary" loading={productionSaving} onClick={handleSaveProduction} htmlType="button">
-                                      保存生产要求
-                                    </Button>
-                                  </>
-                                ) : (
-                                  <Button onClick={() => setProductionEditMode(true)} htmlType="button">
-                                    编辑生产要求
-                                  </Button>
-                                )
-                              ) : null}
-                            </Space>
-                          </Col>
-                        </Row>
-                        <Row gutter={16}>
-                          <Col span={24}>
-                            <Space style={{ justifyContent: 'flex-end' }}>
-                              <Button onClick={closeModal}>返回</Button>
-                              <Button type="primary" onClick={handleSave} htmlType="button" disabled={Boolean(currentStyle?.id) && editLocked}>保存基础信息</Button>
-                            </Space>
-                          </Col>
-                        </Row>
-                      </Form>
-                    )
-                  },
-                  ...(currentStyle?.id ? [
-                    { key: '2', label: 'BOM表', children: <StyleBomTab styleId={currentStyle.id} readOnly={editLocked} /> },
-                    {
-                      key: '7',
-                      label: '纸样开发',
-                      children: (
-                        <StylePatternTab
-                          styleId={currentStyle.id}
-                          patternStatus={(currentStyle as any).patternStatus}
-                          patternStartTime={(currentStyle as any).patternStartTime}
-                          patternCompletedTime={(currentStyle as any).patternCompletedTime}
-                          activeSectionKey={patternSectionKey}
-                          onRefresh={() => fetchDetail(String(currentStyle.id))}
-                        />
-                      )
-                    },
-                    {
-                      key: '8',
-                      label: '样衣生产',
-                      children: (
-                        <StyleSampleTab
-                          styleId={currentStyle.id}
-                          styleNo={(currentStyle as any).styleNo}
-                          color={(currentStyle as any).color}
-                          sampleStatus={(currentStyle as any).sampleStatus}
-                          sampleCompletedTime={(currentStyle as any).sampleCompletedTime}
-                          onRefresh={() => fetchDetail(String(currentStyle.id))}
-                        />
-                      )
-                    },
-                    {
-                      key: '5',
-                      label: '报价单',
-                      children: (
-                        <StyleQuotationTab
-                          styleId={currentStyle.id}
-                          readOnly={editLocked}
-                          onSaved={() => fetchDetail(String(currentStyle.id))}
-                        />
-                      ),
-                    },
-                    { key: '6', label: '文件管理', children: <StyleAttachmentTab styleId={currentStyle.id} readOnly={editLocked} /> },
-                  ] : []),
-                ]}
-              />
-            </div>
-          </Card>
-        </div>
-      </Layout>
-    );
-  }
-
-  return (
-    <Layout>
-      <div className="style-info-page">
         <Card className="page-card">
-          <Space style={{ marginBottom: 16 }}>
-            <Input
-              placeholder="搜索款号"
-              prefix={<SearchOutlined />}
-              onChange={e => setQueryParams({ ...queryParams, styleNo: e.target.value })}
-              onPressEnter={fetchData}
-            />
-            <Input
-              placeholder="搜索款名"
-              onChange={e => setQueryParams({ ...queryParams, styleName: e.target.value })}
-              onPressEnter={fetchData}
-            />
-            <Button type="primary" icon={<SearchOutlined />} onClick={fetchData}>查询</Button>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>新增款号</Button>
-          </Space>
-
-          <ResizableTable
-            columns={columns}
-            dataSource={data}
-            rowKey="id"
-            loading={loading}
-            pagination={{
-              current: queryParams.page,
-              pageSize: queryParams.pageSize,
-              total: total,
-              showSizeChanger: true,
-              pageSizeOptions: ['10', '20', '50', '100'],
-              onChange: (page, pageSize) =>
-                setQueryParams((prev) => ({
-                  ...prev,
-                  page: pageSize !== prev.pageSize ? 1 : page,
-                  pageSize,
-                }))
-            }}
-          />
-        </Card>
-
-        {/* 宽屏弹窗 */}
-        <ResizableModal
-          open={modalVisible}
-          title={currentStyle ? `款号详情 - ${currentStyle.styleNo}` : '新增款号'}
-          onCancel={closeModal}
-          footer={null}
-          width="60vw"
-          tableDensity="auto"
-          contentShiftX={12}
-          scaleWithViewport
-        >
-          <div className="style-info-modal">
+          <div className="page-header">
+            <h2 className="page-title">{currentStyle ? `款号详情 - ${currentStyle.styleNo}` : '款号详情'}</h2>
+            <Button onClick={closeModal}>返回</Button>
+          </div>
+          <div data-style-detail-root style={{ width: '100%' }}>
+            <style>{
+              '[data-style-detail-root] .ant-table-thead > tr > th,[data-style-detail-root] .ant-table-tbody > tr > td{padding:4px 6px !important;}' +
+              '[data-style-detail-root] .ant-table-cell{line-height:1.2;}'
+            }</style>
             <Tabs
               activeKey={activeTabKey}
               onChange={setActiveTabKey}
@@ -1007,49 +832,11 @@ const StyleInfoPage: React.FC = () => {
                           </Row>
                         </Col>
                       </Row>
-                      <Row gutter={16}>
-                        <Col span={24}>
-                          <Form.Item name="description" label="生产要求">
-                            <Input.TextArea
-                              rows={4}
-                              placeholder="请输入生产要求"
-                              disabled={editLocked || (Boolean(currentStyle?.id) && !productionEditMode)}
-                            />
-                          </Form.Item>
-                        </Col>
-                      </Row>
+
                       <Row gutter={16}>
                         <Col span={24}>
                           <Space style={{ justifyContent: 'flex-end' }}>
-                            {currentStyle?.id ? (
-                              editLocked ? null : productionEditMode ? (
-                                <>
-                                  <Button
-                                    onClick={() => {
-                                      setProductionEditMode(false);
-                                      form.setFieldsValue({ description: String((currentStyle as any)?.description ?? '') });
-                                    }}
-                                    htmlType="button"
-                                  >
-                                    取消编辑
-                                  </Button>
-                                  <Button type="primary" loading={productionSaving} onClick={handleSaveProduction} htmlType="button">
-                                    保存生产要求
-                                  </Button>
-                                </>
-                              ) : (
-                                <Button onClick={() => setProductionEditMode(true)} htmlType="button">
-                                  编辑生产要求
-                                </Button>
-                              )
-                            ) : null}
-                          </Space>
-                        </Col>
-                      </Row>
-                      <Row gutter={16}>
-                        <Col span={24}>
-                          <Space style={{ justifyContent: 'flex-end' }}>
-                            <Button onClick={closeModal}>取消</Button>
+                            <Button onClick={closeModal}>返回</Button>
                             <Button type="primary" onClick={handleSave} htmlType="button" disabled={Boolean(currentStyle?.id) && editLocked}>保存基础信息</Button>
                           </Space>
                         </Col>
@@ -1058,11 +845,7 @@ const StyleInfoPage: React.FC = () => {
                   )
                 },
                 ...(currentStyle?.id ? [
-                  {
-                    key: '2',
-                    label: 'BOM表',
-                    children: <StyleBomTab styleId={currentStyle.id} readOnly={editLocked} />
-                  },
+                  { key: '2', label: 'BOM表', children: <StyleBomTab styleId={currentStyle.id} readOnly={editLocked} /> },
                   {
                     key: '7',
                     label: '纸样开发',
@@ -1073,6 +856,18 @@ const StyleInfoPage: React.FC = () => {
                         patternStartTime={(currentStyle as any).patternStartTime}
                         patternCompletedTime={(currentStyle as any).patternCompletedTime}
                         activeSectionKey={patternSectionKey}
+                        readOnly={editLocked}
+                        productionReqRows={productionReqRows}
+                        productionReqRowCount={productionReqRowCount}
+                        productionReqLocked={productionReqLocked}
+                        productionReqEditable={productionReqEditable}
+                        productionReqSaving={productionSaving}
+                        productionReqRollbackSaving={productionRollbackSaving}
+                        onProductionReqChange={updateProductionReqRow}
+                        onProductionReqSave={handleSaveProduction}
+                        onProductionReqReset={resetProductionReqFromCurrent}
+                        onProductionReqRollback={handleRollbackProductionReq}
+                        productionReqCanRollback={isSupervisorOrAbove}
                         onRefresh={() => fetchDetail(String(currentStyle.id))}
                       />
                     )
@@ -1098,44 +893,312 @@ const StyleInfoPage: React.FC = () => {
                       <StyleQuotationTab
                         styleId={currentStyle.id}
                         readOnly={editLocked}
-                        onSaved={() => fetchDetail(String(currentStyle.id))}
+                        onSaved={() => {
+                          fetchDetail(String(currentStyle.id));
+                          fetchData();
+                        }}
                       />
-                    )
+                    ),
                   },
-                  {
-                    key: '6',
-                    label: '文件管理',
-                    children: <StyleAttachmentTab styleId={currentStyle.id} readOnly={editLocked} />
-                  }
-                ] : [])
+                  { key: '6', label: '文件管理', children: <StyleAttachmentTab styleId={currentStyle.id} readOnly={editLocked} /> },
+                ] : []),
               ]}
             />
           </div>
-        </ResizableModal>
+        </Card>
+      </Layout>
+    );
+  }
 
-        <ResizableModal
-          open={maintenanceOpen}
-          title="维护"
-          onCancel={closeMaintenance}
-          onOk={submitMaintenance}
-          okText="确定"
-          cancelText="取消"
-          confirmLoading={maintenanceSaving}
-          width={640}
-          initialHeight={320}
-          minHeight={280}
-          autoFontSize={false}
-        >
-          <div style={{ marginBottom: 12, color: 'var(--neutral-text-lighter)' }}>
-            维护会将已完成步骤回退到上一步，并记录维护人。
-          </div>
-          <Form layout="vertical">
-            <Form.Item label="维护原因(可选)">
-              <Input.TextArea rows={4} value={maintenanceReason} onChange={(e) => setMaintenanceReason(e.target.value)} />
-            </Form.Item>
-          </Form>
-        </ResizableModal>
-      </div>
+  return (
+    <Layout>
+      <Card className="page-card">
+        <div className="page-header">
+          <h2 className="page-title">款号资料</h2>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
+            新增款号
+          </Button>
+        </div>
+
+        <Card size="small" className="filter-card mb-sm">
+          <Space wrap>
+            <Input
+              placeholder="搜索款号"
+              prefix={<SearchOutlined />}
+              style={{ width: 180 }}
+              allowClear
+              onChange={(e) => setQueryParams({ ...queryParams, styleNo: e.target.value })}
+              onPressEnter={fetchData}
+            />
+            <Input
+              placeholder="搜索款名"
+              style={{ width: 220 }}
+              allowClear
+              onChange={(e) => setQueryParams({ ...queryParams, styleName: e.target.value })}
+              onPressEnter={fetchData}
+            />
+            <Button type="primary" icon={<SearchOutlined />} onClick={fetchData}>
+              查询
+            </Button>
+          </Space>
+        </Card>
+
+        <ResizableTable
+          columns={columns}
+          dataSource={data}
+          rowKey="id"
+          loading={loading}
+          pagination={{
+            current: queryParams.page,
+            pageSize: queryParams.pageSize,
+            total: total,
+            showSizeChanger: true,
+            pageSizeOptions: ['10', '20', '50', '100'],
+            onChange: (page, pageSize) =>
+              setQueryParams((prev) => ({
+                ...prev,
+                page: pageSize !== prev.pageSize ? 1 : page,
+                pageSize,
+              }))
+          }}
+        />
+      </Card>
+
+      {/* 宽屏弹窗 */}
+      <ResizableModal
+        open={modalVisible}
+        title={currentStyle ? `款号详情 - ${currentStyle.styleNo}` : '新增款号'}
+        onCancel={closeModal}
+        footer={null}
+        width={
+          typeof window === 'undefined'
+            ? '60vw'
+            : window.innerWidth < 768
+              ? '96vw'
+              : window.innerWidth < 1024
+                ? '66vw'
+                : '60vw'
+        }
+        initialHeight={720}
+        tableDensity="auto"
+        contentShiftX={12}
+        scaleWithViewport
+      >
+        <div className="style-info-modal">
+          <Tabs
+            activeKey={activeTabKey}
+            onChange={setActiveTabKey}
+            items={[
+              {
+                key: '1',
+                label: '基础信息',
+                children: (
+                  <Form layout="vertical" form={form}>
+                    <Row gutter={16}>
+                      <Col xs={24} md={8} lg={6}>
+                        <CoverImageUpload styleId={currentStyle?.id} enabled={Boolean(currentStyle?.id) && !editLocked} />
+                      </Col>
+                      <Col xs={24} md={16} lg={18}>
+                        <Row gutter={16}>
+                          <Col xs={24} sm={12} lg={8}>
+                            <Form.Item name="styleNo" label="款号" rules={[{ required: true, message: '请输入款号' }]}>
+                              <Input placeholder="请输入款号" disabled={editLocked} />
+                            </Form.Item>
+                          </Col>
+                          <Col xs={24} sm={12} lg={8}>
+                            <Form.Item name="styleName" label="款名" rules={[{ required: true, message: '请输入款名' }]}>
+                              <Input placeholder="请输入款名" disabled={editLocked} />
+                            </Form.Item>
+                          </Col>
+                          <Col xs={24} sm={12} lg={8}>
+                            <Form.Item name="category" label="品类" rules={[{ required: true, message: '请选择品类' }]}>
+                              <Select placeholder="请选择品类" options={categoryOptions} disabled={editLocked} />
+                            </Form.Item>
+                          </Col>
+                        </Row>
+
+                        <Row gutter={16}>
+                          <Col xs={24} sm={12} lg={8}>
+                            <Form.Item name="color" label="颜色">
+                              <Select placeholder="请选择颜色" disabled={editLocked}>
+                                <Select.Option value="红色">红色</Select.Option>
+                                <Select.Option value="蓝色">蓝色</Select.Option>
+                                <Select.Option value="黑色">黑色</Select.Option>
+                                <Select.Option value="白色">白色</Select.Option>
+                                <Select.Option value="绿色">绿色</Select.Option>
+                                <Select.Option value="黄色">黄色</Select.Option>
+                                <Select.Option value="紫色">紫色</Select.Option>
+                                <Select.Option value="灰色">灰色</Select.Option>
+                              </Select>
+                            </Form.Item>
+                          </Col>
+                          <Col xs={24} sm={12} lg={8}>
+                            <Form.Item name="size" label="样衣码数">
+                              <Select placeholder="请选择样衣码数" disabled={editLocked}>
+                                <Select.Option value="XS">XS</Select.Option>
+                                <Select.Option value="S">S</Select.Option>
+                                <Select.Option value="M">M</Select.Option>
+                                <Select.Option value="L">L</Select.Option>
+                                <Select.Option value="XL">XL</Select.Option>
+                                <Select.Option value="XXL">XXL</Select.Option>
+                                <Select.Option value="XXXL">XXXL</Select.Option>
+                              </Select>
+                            </Form.Item>
+                          </Col>
+                          <Col xs={24} sm={12} lg={8}>
+                            <Form.Item name="price" label="单价">
+                              <InputNumber style={{ width: '100%' }} min={0} prefix="¥" precision={2} disabled />
+                            </Form.Item>
+                          </Col>
+                        </Row>
+
+                        <Row gutter={16}>
+                          <Col xs={24} sm={12} lg={8}>
+                            <Form.Item name="season" label="季节">
+                              <Select placeholder="请选择季节" options={seasonOptions} disabled={editLocked} />
+                            </Form.Item>
+                          </Col>
+                          <Col xs={24} sm={24} lg={8}>
+                            <Row gutter={8}>
+                              <Col xs={24} sm={12}>
+                                <Form.Item name="createTime" label="创建日期">
+                                  <DatePicker
+                                    disabled={Boolean(currentStyle?.id)}
+                                    allowClear
+                                    showTime={{ format: 'HH:mm' }}
+                                    style={{ width: '100%' }}
+                                    placeholder="请选择创建日期"
+                                    format="YYYY-MM-DD HH:mm"
+                                  />
+                                </Form.Item>
+                              </Col>
+                              <Col xs={24} sm={12}>
+                                <Form.Item label="完成日期">
+                                  <DatePicker
+                                    disabled
+                                    allowClear={false}
+                                    showTime={{ format: 'HH:mm' }}
+                                    style={{ width: '100%' }}
+                                    placeholder="-"
+                                    value={resolvedCompletedDate}
+                                    format="YYYY-MM-DD HH:mm"
+                                  />
+                                </Form.Item>
+                              </Col>
+                            </Row>
+                          </Col>
+                          <Col xs={24} sm={12} lg={8}>
+                            <Form.Item name="cycle" label="样衣周期[天]">
+                              <InputNumber style={{ width: '100%' }} min={0} disabled={editLocked} />
+                            </Form.Item>
+                          </Col>
+                        </Row>
+                      </Col>
+                    </Row>
+                    <Row gutter={16}>
+                      <Col span={24}>
+                        <Space style={{ justifyContent: 'flex-end' }}>
+                          <Button onClick={closeModal}>取消</Button>
+                          <Button type="primary" onClick={handleSave} htmlType="button" disabled={Boolean(currentStyle?.id) && editLocked}>保存基础信息</Button>
+                        </Space>
+                      </Col>
+                    </Row>
+                  </Form>
+                )
+              },
+              ...(currentStyle?.id ? [
+                {
+                  key: '2',
+                  label: 'BOM表',
+                  children: <StyleBomTab styleId={currentStyle.id} readOnly={editLocked} />
+                },
+                {
+                  key: '7',
+                  label: '纸样开发',
+                  children: (
+                    <StylePatternTab
+                      styleId={currentStyle.id}
+                      patternStatus={(currentStyle as any).patternStatus}
+                      patternStartTime={(currentStyle as any).patternStartTime}
+                      patternCompletedTime={(currentStyle as any).patternCompletedTime}
+                      activeSectionKey={patternSectionKey}
+                      readOnly={editLocked}
+                      productionReqRows={productionReqRows}
+                      productionReqRowCount={productionReqRowCount}
+                      productionReqLocked={productionReqLocked}
+                      productionReqEditable={productionReqEditable}
+                      productionReqSaving={productionSaving}
+                      productionReqRollbackSaving={productionRollbackSaving}
+                      onProductionReqChange={updateProductionReqRow}
+                      onProductionReqSave={handleSaveProduction}
+                      onProductionReqReset={resetProductionReqFromCurrent}
+                      onProductionReqRollback={handleRollbackProductionReq}
+                      productionReqCanRollback={isSupervisorOrAbove}
+                      onRefresh={() => fetchDetail(String(currentStyle.id))}
+                    />
+                  )
+                },
+                {
+                  key: '8',
+                  label: '样衣生产',
+                  children: (
+                    <StyleSampleTab
+                      styleId={currentStyle.id}
+                      styleNo={(currentStyle as any).styleNo}
+                      color={(currentStyle as any).color}
+                      sampleStatus={(currentStyle as any).sampleStatus}
+                      sampleCompletedTime={(currentStyle as any).sampleCompletedTime}
+                      onRefresh={() => fetchDetail(String(currentStyle.id))}
+                    />
+                  )
+                },
+                {
+                  key: '5',
+                  label: '报价单',
+                  children: (
+                    <StyleQuotationTab
+                      styleId={currentStyle.id}
+                      readOnly={editLocked}
+                      onSaved={() => {
+                        fetchDetail(String(currentStyle.id));
+                        fetchData();
+                      }}
+                    />
+                  )
+                },
+                {
+                  key: '6',
+                  label: '文件管理',
+                  children: <StyleAttachmentTab styleId={currentStyle.id} readOnly={editLocked} />
+                }
+              ] : [])
+            ]}
+          />
+        </div>
+      </ResizableModal>
+
+      <ResizableModal
+        open={maintenanceOpen}
+        title="维护"
+        onCancel={closeMaintenance}
+        onOk={submitMaintenance}
+        okText="确定"
+        cancelText="取消"
+        confirmLoading={maintenanceSaving}
+        width={640}
+        initialHeight={720}
+        minHeight={280}
+        autoFontSize={false}
+      >
+        <div style={{ marginBottom: 12, color: 'var(--neutral-text-lighter)' }}>
+          维护会将已完成步骤回退到上一步，并记录维护人。
+        </div>
+        <Form layout="vertical">
+          <Form.Item label="维护原因(可选)">
+            <Input.TextArea rows={4} value={maintenanceReason} onChange={(e) => setMaintenanceReason(e.target.value)} />
+          </Form.Item>
+        </Form>
+      </ResizableModal>
     </Layout>
   );
 };
@@ -1143,6 +1206,7 @@ const StyleInfoPage: React.FC = () => {
 const AttachmentThumb: React.FC<{ styleId: string | number }> = ({ styleId }) => {
   const [url, setUrl] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState<boolean>(false);
+
   React.useEffect(() => {
     let mounted = true;
     (async () => {
@@ -1160,10 +1224,24 @@ const AttachmentThumb: React.FC<{ styleId: string | number }> = ({ styleId }) =>
         if (mounted) setLoading(false);
       }
     })();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [styleId]);
+
   return (
-    <div style={{ width: 56, height: 56, borderRadius: 4, overflow: 'hidden', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div
+      style={{
+        width: 56,
+        height: 56,
+        borderRadius: 4,
+        overflow: 'hidden',
+        background: '#f5f5f5',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
       {loading ? (
         <span style={{ color: '#999', fontSize: 12 }}>...</span>
       ) : url ? (
@@ -1210,6 +1288,7 @@ const CoverImageUpload: React.FC<{ styleId?: string | number; enabled: boolean }
       message.error('文件过大，最大10MB');
       return false;
     }
+
     const formData = new FormData();
     formData.append('file', file);
     formData.append('styleId', String(styleId));
@@ -1256,7 +1335,9 @@ const CoverImageUpload: React.FC<{ styleId?: string | number; enabled: boolean }
       </div>
       <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Upload beforeUpload={handleUpload} showUploadList={false} disabled={!enabled}>
-          <Button type="primary" disabled={!enabled} loading={loading}>上传图片</Button>
+          <Button type="primary" disabled={!enabled} loading={loading}>
+            上传图片
+          </Button>
         </Upload>
         {loading ? <span style={{ color: '#999', fontSize: 12 }}>加载中...</span> : null}
       </div>

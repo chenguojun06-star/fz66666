@@ -4,10 +4,10 @@ import type { ColumnsType } from 'antd/es/table';
 import { useLocation } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import { StyleCoverThumb } from '../../components/StyleAssets';
-import api from '../../utils/api';
+import api, { parseProductionOrderLines, toNumberSafe } from '../../utils/api';
 import { formatDateTime } from '../../utils/datetime';
 import type { CuttingBundle, CuttingTask, MaterialPurchase, ProductionOrder, ProductWarehousing, ScanRecord } from '../../types/production';
-import type { FactoryReconciliation, ShipmentReconciliation } from '../../types/finance';
+import type { MaterialReconciliation, ShipmentReconciliation } from '../../types/finance';
 import './styles.css';
 
 type FlowStage = {
@@ -33,7 +33,7 @@ type OrderFlowResponse = {
   cuttingTasks?: CuttingTask[];
   cuttingBundles?: CuttingBundle[];
   warehousings?: ProductWarehousing[];
-  factoryReconciliations?: FactoryReconciliation[];
+  materialReconciliations?: MaterialReconciliation[];
   shipmentReconciliations?: ShipmentReconciliation[];
 };
 
@@ -41,11 +41,6 @@ type OrderLine = {
   color: string;
   size: string;
   quantity: number;
-};
-
-const toNumberSafe = (v: any) => {
-  const n = typeof v === 'number' ? v : Number(v);
-  return Number.isFinite(n) ? n : 0;
 };
 
 const isSystemStageRecord = (r: any) => {
@@ -66,45 +61,6 @@ const orderStatusTag = (status: any) => {
   return <Tag color={t.color}>{t.label}</Tag>;
 };
 
-const parseOrderLines = (order?: ProductionOrder | null): OrderLine[] => {
-  if (!order) return [];
-
-  const raw = (order as any)?.orderDetails;
-  if (typeof raw !== 'string' || !raw.trim()) {
-    const color = String((order as any)?.color || '').trim();
-    const size = String((order as any)?.size || '').trim();
-    const quantity = toNumberSafe((order as any)?.orderQuantity);
-    if (color && size && quantity > 0) return [{ color, size, quantity }];
-    return [];
-  }
-
-  try {
-    const json = JSON.parse(raw);
-    const listRaw = Array.isArray(json)
-      ? json
-      : Array.isArray((json as any)?.lines)
-        ? (json as any).lines
-        : Array.isArray((json as any)?.items)
-          ? (json as any).items
-          : [];
-    const lines = (listRaw as any[])
-      .map((r) => {
-        const color = String(r?.color || r?.colour || '').trim();
-        const size = String(r?.size || r?.尺码 || '').trim();
-        const quantity = toNumberSafe(r?.quantity ?? r?.qty ?? r?.数量);
-        return { color, size, quantity };
-      })
-      .filter((r) => r.color && r.size && r.quantity > 0);
-    if (lines.length) return lines;
-  } catch {
-  }
-
-  const color = String((order as any)?.color || '').trim();
-  const size = String((order as any)?.size || '').trim();
-  const quantity = toNumberSafe((order as any)?.orderQuantity);
-  if (color && size && quantity > 0) return [{ color, size, quantity }];
-  return [];
-};
 
 const statusTag = (status: FlowStage['status']) => {
   if (status === 'completed') return <Tag color="green">已完成</Tag>;
@@ -115,6 +71,8 @@ const statusTag = (status: FlowStage['status']) => {
 const stageStatusText = (status: any) => {
   const map: Record<string, string> = {
     pending: '待处理',
+    not_started: '未开始',
+    in_progress: '进行中',
     received: '已领取',
     partial: '部分完成',
     completed: '已完成',
@@ -122,10 +80,13 @@ const stageStatusText = (status: any) => {
     bundled: '已完成',
     qualified: '合格',
     unqualified: '不合格',
+    repaired: '返修完成',
+    repairing: '返修中',
     active: '启用',
     inactive: '停用',
   };
-  const key = String(status || '').trim();
+  const key = String(status || '').trim().toLowerCase();
+  if (!key) return '未开始';
   return map[key] || '未知';
 };
 
@@ -280,12 +241,12 @@ const OrderFlow: React.FC = () => {
 
   const order = data?.order;
 
-  const orderLines = useMemo(() => parseOrderLines(order || null), [order]);
+  const orderLines = useMemo(() => parseProductionOrderLines(order || null) as OrderLine[], [order]);
   const materialPurchases = (data?.materialPurchases || []) as MaterialPurchase[];
   const cuttingTasks = (data?.cuttingTasks || []) as CuttingTask[];
   const cuttingBundles = (data?.cuttingBundles || []) as CuttingBundle[];
   const warehousings = (data?.warehousings || []) as ProductWarehousing[];
-  const factoryReconciliations = (data?.factoryReconciliations || []) as any[];
+  const materialReconciliations = (data?.materialReconciliations || []) as any[];
   const shipmentReconciliations = (data?.shipmentReconciliations || []) as any[];
 
   const scanRecords = (data?.records || []) as ScanRecord[];
@@ -387,8 +348,11 @@ const OrderFlow: React.FC = () => {
     { title: '创建时间', dataIndex: 'createTime', key: 'createTime', width: 170, render: (v: any) => (String(v || '').trim() ? formatDateTime(v) : '-') },
   ];
 
-  const factoryReconColumns: ColumnsType<any> = [
+  const materialReconColumns: ColumnsType<any> = [
     { title: '对账单号', dataIndex: 'reconciliationNo', key: 'reconciliationNo', width: 160, render: (v: any) => String(v || '').trim() || '-' },
+    { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 140, render: (v: any) => String(v || '').trim() || '-' },
+    { title: '物料', dataIndex: 'materialName', key: 'materialName', ellipsis: true, render: (v: any) => String(v || '').trim() || '-' },
+    { title: '采购单号', dataIndex: 'purchaseNo', key: 'purchaseNo', width: 140, render: (v: any) => String(v || '').trim() || '-' },
     {
       title: '状态', dataIndex: 'status', key: 'status', width: 100, render: (v: any) => {
         const s = String(v || '').trim();
@@ -626,8 +590,8 @@ const OrderFlow: React.FC = () => {
                           size="small"
                           columns={purchaseColumns}
                           dataSource={materialPurchases}
-                          rowKey={(r) => String((r as any)?.id || (r as any)?.purchaseNo || Math.random())}
-                          pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50'] }}
+                          rowKey={(r, index) => String((r as any)?.id || (r as any)?.purchaseNo || `purchase-${index}`)}
+                          pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50'], simple: true, className: 'app-pagination-float' }}
                           scroll={{ x: 1150 }}
                         />
                       </div>
@@ -638,7 +602,7 @@ const OrderFlow: React.FC = () => {
                           columns={recordColumns}
                           dataSource={materialScans}
                           rowKey={(r) => String((r as any)?.id || `${(r as any)?.scanTime || ''}-${(r as any)?.processName || ''}`)}
-                          pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50'] }}
+                          pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50'], simple: true, className: 'app-pagination-float' }}
                           scroll={{ x: 980 }}
                         />
                       </div>
@@ -656,7 +620,7 @@ const OrderFlow: React.FC = () => {
                           size="small"
                           columns={cuttingTaskColumns}
                           dataSource={cuttingTasks}
-                          rowKey={(r) => String((r as any)?.id || Math.random())}
+                          rowKey={(r, index) => String((r as any)?.id || (r as any)?.taskNo || `cutting-task-${index}`)}
                           pagination={false}
                           scroll={{ x: 820 }}
                         />
@@ -668,8 +632,8 @@ const OrderFlow: React.FC = () => {
                           size="small"
                           columns={cuttingBundleColumns}
                           dataSource={cuttingBundles}
-                          rowKey={(r) => String((r as any)?.id || (r as any)?.qrCode || Math.random())}
-                          pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'] }}
+                          rowKey={(r, index) => String((r as any)?.id || (r as any)?.qrCode || `cutting-bundle-${index}`)}
+                          pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], simple: true, className: 'app-pagination-float' }}
                           scroll={{ x: 1050 }}
                         />
                       </div>
@@ -681,7 +645,7 @@ const OrderFlow: React.FC = () => {
                           columns={recordColumns}
                           dataSource={cuttingScans}
                           rowKey={(r) => String((r as any)?.id || `${(r as any)?.scanTime || ''}-${(r as any)?.processName || ''}`)}
-                          pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50'] }}
+                          pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50'], simple: true, className: 'app-pagination-float' }}
                           scroll={{ x: 980 }}
                         />
                       </div>
@@ -697,7 +661,7 @@ const OrderFlow: React.FC = () => {
                       columns={recordColumns}
                       dataSource={productionScans}
                       rowKey={(r) => String((r as any)?.id || `${(r as any)?.scanTime || ''}-${(r as any)?.processName || ''}`)}
-                      pagination={{ pageSize: 20, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'] }}
+                      pagination={{ pageSize: 20, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], simple: true, className: 'app-pagination-float' }}
                       scroll={{ x: 980 }}
                     />
                   ),
@@ -711,7 +675,7 @@ const OrderFlow: React.FC = () => {
                       columns={recordColumns}
                       dataSource={qualityScans}
                       rowKey={(r) => String((r as any)?.id || `${(r as any)?.scanTime || ''}-${(r as any)?.processName || ''}`)}
-                      pagination={{ pageSize: 20, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'] }}
+                      pagination={{ pageSize: 20, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], simple: true, className: 'app-pagination-float' }}
                       scroll={{ x: 980 }}
                     />
                   ),
@@ -727,8 +691,8 @@ const OrderFlow: React.FC = () => {
                           size="small"
                           columns={warehousingColumns}
                           dataSource={warehousings}
-                          rowKey={(r) => String((r as any)?.id || (r as any)?.warehousingNo || Math.random())}
-                          pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50'] }}
+                          rowKey={(r, index) => String((r as any)?.id || (r as any)?.warehousingNo || `warehousing-${index}`)}
+                          pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50'], simple: true, className: 'app-pagination-float' }}
                           scroll={{ x: 900 }}
                         />
                       </div>
@@ -739,7 +703,7 @@ const OrderFlow: React.FC = () => {
                           columns={recordColumns}
                           dataSource={warehousingScans}
                           rowKey={(r) => String((r as any)?.id || `${(r as any)?.scanTime || ''}-${(r as any)?.processName || ''}`)}
-                          pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50'] }}
+                          pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50'], simple: true, className: 'app-pagination-float' }}
                           scroll={{ x: 980 }}
                         />
                       </div>
@@ -750,7 +714,7 @@ const OrderFlow: React.FC = () => {
                           columns={recordColumns}
                           dataSource={shipmentScans}
                           rowKey={(r) => String((r as any)?.id || `${(r as any)?.scanTime || ''}-${(r as any)?.processName || ''}`)}
-                          pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50'] }}
+                          pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50'], simple: true, className: 'app-pagination-float' }}
                           scroll={{ x: 980 }}
                         />
                       </div>
@@ -759,17 +723,17 @@ const OrderFlow: React.FC = () => {
                 },
                 {
                   key: 'finance',
-                  label: `财务${(factoryReconciliations.length || shipmentReconciliations.length) ? ` (${factoryReconciliations.length}/${shipmentReconciliations.length})` : ''}`,
+                  label: `财务${(materialReconciliations.length || shipmentReconciliations.length) ? ` (${materialReconciliations.length}/${shipmentReconciliations.length})` : ''}`,
                   children: (
                     <div className="order-flow-module-stack">
                       <div className="order-flow-module">
-                        <div className="order-flow-module-title">{`加工厂对账${factoryReconciliations.length ? ` (${factoryReconciliations.length})` : ''}`}</div>
+                        <div className="order-flow-module-title">{`物料对账${materialReconciliations.length ? ` (${materialReconciliations.length})` : ''}`}</div>
                         <Table
                           size="small"
-                          columns={factoryReconColumns}
-                          dataSource={factoryReconciliations}
-                          rowKey={(r) => String((r as any)?.id || (r as any)?.reconciliationNo || Math.random())}
-                          pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50'] }}
+                          columns={materialReconColumns}
+                          dataSource={materialReconciliations}
+                          rowKey={(r, index) => String((r as any)?.id || (r as any)?.reconciliationNo || `material-recon-${index}`)}
+                          pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50'], simple: true, className: 'app-pagination-float' }}
                           scroll={{ x: 980 }}
                         />
                       </div>
@@ -780,8 +744,8 @@ const OrderFlow: React.FC = () => {
                           size="small"
                           columns={shipmentReconColumns}
                           dataSource={shipmentReconciliations}
-                          rowKey={(r) => String((r as any)?.id || (r as any)?.reconciliationNo || (r as any)?.settlementNo || Math.random())}
-                          pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50'] }}
+                          rowKey={(r, index) => String((r as any)?.id || (r as any)?.reconciliationNo || (r as any)?.settlementNo || `shipment-recon-${index}`)}
+                          pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50'], simple: true, className: 'app-pagination-float' }}
                           scroll={{ x: 980 }}
                         />
                       </div>
@@ -797,7 +761,7 @@ const OrderFlow: React.FC = () => {
                       columns={recordColumns}
                       dataSource={userScanRecords}
                       rowKey={(r) => String((r as any)?.id || `${(r as any)?.scanTime || ''}-${(r as any)?.processName || ''}`)}
-                      pagination={{ pageSize: 20, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'] }}
+                      pagination={{ pageSize: 20, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], simple: true, className: 'app-pagination-float' }}
                       scroll={{ x: 980 }}
                     />
                   ),

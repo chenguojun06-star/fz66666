@@ -1,6 +1,7 @@
 package com.fashion.supplychain.common;
 
 import lombok.Data;
+import org.slf4j.MDC;
 
 import java.io.Serializable;
 
@@ -26,6 +27,11 @@ public class Result<T> implements Serializable {
      */
     private T data;
 
+    /**
+     * 请求追踪ID，用于前后端/日志关联定位问题。
+     *
+     * 该值会自动从 MDC(requestId) 注入（由后端过滤器生成或透传）。
+     */
     private String requestId;
 
     /**
@@ -43,6 +49,7 @@ public class Result<T> implements Serializable {
         result.setCode(200);
         result.setMessage("操作成功");
         result.setData(data);
+        result.setRequestId(currentRequestId());
         return result;
     }
 
@@ -55,6 +62,7 @@ public class Result<T> implements Serializable {
         result.setCode(200);
         result.setMessage(message == null || message.isBlank() ? "操作成功" : message);
         result.setData(data);
+        result.setRequestId(currentRequestId());
         return result;
     }
 
@@ -66,6 +74,7 @@ public class Result<T> implements Serializable {
         result.setCode(500);
         result.setMessage(message);
         result.setData(null);
+        result.setRequestId(currentRequestId());
         return result;
     }
 
@@ -77,6 +86,31 @@ public class Result<T> implements Serializable {
         result.setCode(code);
         result.setMessage(message);
         result.setData(null);
+        result.setRequestId(currentRequestId());
         return result;
+    }
+
+    /**
+     * 失败响应（可携带额外错误信息数据，例如参数校验明细）。
+     */
+    public static <T> Result<T> fail(Integer code, String message, T data) {
+        Result<T> result = new Result<>();
+        result.setCode(code);
+        result.setMessage(message);
+        result.setData(data);
+        result.setRequestId(currentRequestId());
+        return result;
+    }
+
+    /**
+     * 从 MDC 中获取当前请求的 requestId。
+     */
+    private static String currentRequestId() {
+        try {
+            String rid = MDC.get("requestId");
+            return rid == null || rid.isBlank() ? null : rid.trim();
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

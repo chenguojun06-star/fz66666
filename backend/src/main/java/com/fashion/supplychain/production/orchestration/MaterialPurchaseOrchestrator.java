@@ -8,7 +8,11 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -94,6 +98,8 @@ public class MaterialPurchaseOrchestrator {
     public boolean updateArrivedQuantity(Map<String, Object> params) {
         String id = params == null ? null : (params.get("id") == null ? null : String.valueOf(params.get("id")));
         Integer arrivedQuantity = coerceInt(params == null ? null : params.get("arrivedQuantity"));
+        String remark = params == null ? null
+                : (params.get("remark") == null ? null : String.valueOf(params.get("remark")));
         String key = id == null ? null : StringUtils.trimWhitespace(id);
         if (!StringUtils.hasText(key)) {
             throw new IllegalArgumentException("参数错误");
@@ -108,7 +114,13 @@ public class MaterialPurchaseOrchestrator {
         if (current == null || (current.getDeleteFlag() != null && current.getDeleteFlag() != 0)) {
             throw new NoSuchElementException("采购任务不存在");
         }
-        boolean ok = updateArrivedQuantityAndSync(key, arrivedQuantity);
+        int purchaseQty = current.getPurchaseQuantity() == null ? 0 : current.getPurchaseQuantity();
+        if (purchaseQty > 0 && arrivedQuantity * 100 < purchaseQty * 70) {
+            if (!StringUtils.hasText(remark)) {
+                throw new IllegalArgumentException("到货不足70%，请填写备注");
+            }
+        }
+        boolean ok = updateArrivedQuantityAndSync(key, arrivedQuantity, remark);
         if (!ok) {
             throw new IllegalStateException("更新失败");
         }
@@ -119,12 +131,21 @@ public class MaterialPurchaseOrchestrator {
         if (!StringUtils.hasText(orderId)) {
             throw new IllegalArgumentException("orderId不能为空");
         }
-        return materialPurchaseService.previewDemandByOrderId(orderId.trim());
+
+        String seedOrderId = orderId.trim();
+        ProductionOrder seed = productionOrderService.getDetailById(seedOrderId);
+        if (seed == null) {
+            throw new NoSuchElementException("生产订单不存在");
+        }
+
+        List<String> orderIds = resolveTargetOrderIds(seed, false);
+        return buildBatchPreview(orderIds);
     }
 
     public Object generateDemand(Map<String, Object> params) {
         String orderId = params == null ? null
                 : (params.get("orderId") == null ? null : String.valueOf(params.get("orderId")));
+        Object orderIdsRaw = params == null ? null : params.get("orderIds");
         Object overwriteRaw = params == null ? null : params.get("overwrite");
         boolean overwriteFlag = overwriteRaw instanceof Boolean ? (Boolean) overwriteRaw
                 : "true".equalsIgnoreCase(String.valueOf(overwriteRaw));
@@ -134,10 +155,246 @@ public class MaterialPurchaseOrchestrator {
             oid = orderId.trim();
         }
 
-        if (!StringUtils.hasText(oid)) {
-            throw new IllegalArgumentException("orderId不能为空");
+        List<String> explicitOrderIds = coerceStringList(orderIdsRaw);
+
+        List<String> targetOrderIds;
+
+        if (explicitOrderIds != null && !explicitOrderIds.isEmpty()) {
+            targetOrderIds = new ArrayList<>();
+            for (String x : explicitOrderIds) {
+                String id = StringUtils.hasText(x) ? x.trim() : null;
+                if (!StringUtils.hasText(id)) {
+                    continue;
+                }
+                if (!overwriteFlag && materialPurchaseService.existsActivePurchaseForOrder(id)) {
+                    continue;
+                }
+                targetOrderIds.add(id);
+            }
+        } else {
+            if (!StringUtils.hasText(oid)) {
+                throw new IllegalArgumentException("orderId不能为空");
+            }
+            ProductionOrder seed = productionOrderService.getDetailById(oid);
+            if (seed == null) {
+                throw new NoSuchElementException("生产订单不存在");
+            }
+            if (!overwriteFlag && materialPurchaseService.existsActivePurchaseForOrder(oid)) {
+                throw new IllegalStateException("该订单已生成采购需求");
+            }
+            targetOrderIds = resolveTargetOrderIds(seed, overwriteFlag);
         }
-        return materialPurchaseService.generateDemandByOrderId(oid, overwriteFlag);
+
+        return generateBatchDemand(targetOrderIds, overwriteFlag);
+    }
+
+    private List<String> resolveTargetOrderIds(ProductionOrder seed, boolean overwrite) {
+        List<ProductionOrder> matchedOrders = resolveSameDaySameStyleOrders(seed);
+
+        List<String> out = new ArrayList<>();
+        for (ProductionOrder o : matchedOrders) {
+            if (o == null || !StringUtils.hasText(o.getId())) {
+                continue;
+            }
+            String oid = o.getId().trim();
+            if (!StringUtils.hasText(oid)) {
+                continue;
+            }
+            if (!overwrite && materialPurchaseService.existsActivePurchaseForOrder(oid)) {
+                continue;
+            }
+            out.add(oid);
+        }
+        return out;
+    }
+
+    private List<MaterialPurchase> buildBatchPreview(List<String> orderIds) {
+        List<MaterialPurchase> out = new ArrayList<>();
+        if (orderIds == null || orderIds.isEmpty()) {
+            return out;
+        }
+
+        LinkedHashMap<String, String> purchaseNoByKey = new LinkedHashMap<>();
+        for (String idRaw : orderIds) {
+            String id = StringUtils.hasText(idRaw) ? idRaw.trim() : null;
+            if (!StringUtils.hasText(id)) {
+                continue;
+            }
+            List<MaterialPurchase> items = materialPurchaseService.previewDemandByOrderId(id);
+            if (items == null || items.isEmpty()) {
+                continue;
+            }
+            for (MaterialPurchase p : items) {
+                if (p == null) {
+                    continue;
+                }
+                String key = mergeKey(p);
+                String shared = purchaseNoByKey.get(key);
+                if (!StringUtils.hasText(shared)) {
+                    shared = p.getPurchaseNo();
+                    if (StringUtils.hasText(shared)) {
+                        purchaseNoByKey.put(key, shared);
+                    }
+                } else {
+                    p.setPurchaseNo(shared);
+                }
+                out.add(p);
+            }
+        }
+
+        return out;
+    }
+
+    private List<MaterialPurchase> generateBatchDemand(List<String> orderIds, boolean overwrite) {
+        List<MaterialPurchase> out = new ArrayList<>();
+        if (orderIds == null || orderIds.isEmpty()) {
+            return out;
+        }
+
+        if (overwrite) {
+            LocalDateTime now = LocalDateTime.now();
+            for (String idRaw : orderIds) {
+                String oid = StringUtils.hasText(idRaw) ? idRaw.trim() : null;
+                if (!StringUtils.hasText(oid)) {
+                    continue;
+                }
+                MaterialPurchase patch = new MaterialPurchase();
+                patch.setDeleteFlag(1);
+                patch.setUpdateTime(now);
+                materialPurchaseService.update(patch, new LambdaQueryWrapper<MaterialPurchase>()
+                        .eq(MaterialPurchase::getOrderId, oid)
+                        .eq(MaterialPurchase::getDeleteFlag, 0));
+            }
+        }
+
+        LinkedHashMap<String, String> purchaseNoByKey = new LinkedHashMap<>();
+
+        for (String idRaw : orderIds) {
+            String oid = StringUtils.hasText(idRaw) ? idRaw.trim() : null;
+            if (!StringUtils.hasText(oid)) {
+                continue;
+            }
+            List<MaterialPurchase> items = materialPurchaseService.previewDemandByOrderId(oid);
+            if (items == null || items.isEmpty()) {
+                continue;
+            }
+
+            for (MaterialPurchase p : items) {
+                if (p == null) {
+                    continue;
+                }
+
+                String key = mergeKey(p);
+                String shared = purchaseNoByKey.get(key);
+                if (!StringUtils.hasText(shared)) {
+                    shared = p.getPurchaseNo();
+                    if (StringUtils.hasText(shared)) {
+                        purchaseNoByKey.put(key, shared);
+                    }
+                } else {
+                    p.setPurchaseNo(shared);
+                }
+
+                boolean ok = materialPurchaseService.savePurchaseAndUpdateOrder(p);
+                if (ok) {
+                    out.add(p);
+                }
+            }
+        }
+
+        return out;
+    }
+
+    private List<ProductionOrder> resolveSameDaySameStyleOrders(ProductionOrder seed) {
+        if (seed == null || !StringUtils.hasText(seed.getId())) {
+            return List.of();
+        }
+
+        String seedId = seed.getId().trim();
+        String styleId = StringUtils.hasText(seed.getStyleId()) ? seed.getStyleId().trim() : null;
+        LocalDateTime createTime = seed.getCreateTime();
+        if (!StringUtils.hasText(styleId) || createTime == null) {
+            return List.of(seed);
+        }
+
+        LocalDate day = createTime.toLocalDate();
+        LocalDateTime start = day.atStartOfDay();
+        LocalDateTime nextStart = day.plusDays(1).atStartOfDay();
+
+        List<ProductionOrder> list = productionOrderService.list(new LambdaQueryWrapper<ProductionOrder>()
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .eq(ProductionOrder::getStyleId, styleId)
+                .ge(ProductionOrder::getCreateTime, start)
+                .lt(ProductionOrder::getCreateTime, nextStart)
+                .orderByAsc(ProductionOrder::getCreateTime)
+                .orderByAsc(ProductionOrder::getOrderNo));
+
+        if (list == null || list.isEmpty()) {
+            return List.of(seed);
+        }
+
+        LinkedHashMap<String, ProductionOrder> dedup = new LinkedHashMap<>();
+        for (ProductionOrder o : list) {
+            if (o == null || !StringUtils.hasText(o.getId())) {
+                continue;
+            }
+            String id = o.getId().trim();
+            if (!StringUtils.hasText(id)) {
+                continue;
+            }
+            dedup.put(id, o);
+        }
+
+        if (!dedup.containsKey(seedId)) {
+            dedup.put(seedId, seed);
+        }
+        return new ArrayList<>(dedup.values());
+    }
+
+    private String mergeKey(MaterialPurchase p) {
+        return String.join("|",
+                safe(p == null ? null : p.getMaterialType()),
+                safe(p == null ? null : p.getMaterialCode()),
+                safe(p == null ? null : p.getMaterialName()),
+                safe(p == null ? null : p.getSpecifications()),
+                safe(p == null ? null : p.getUnit()),
+                safe(p == null ? null : p.getSupplierName()));
+    }
+
+    private String safe(String v) {
+        return v == null ? "" : v.trim();
+    }
+
+    private List<String> coerceStringList(Object raw) {
+        if (raw == null) {
+            return List.of();
+        }
+        if (raw instanceof List) {
+            List<?> list = (List<?>) raw;
+            List<String> out = new ArrayList<>();
+            for (Object o : list) {
+                if (o == null) {
+                    continue;
+                }
+                String s = String.valueOf(o);
+                if (StringUtils.hasText(s)) {
+                    out.add(s.trim());
+                }
+            }
+            return out;
+        }
+        String s = String.valueOf(raw);
+        if (!StringUtils.hasText(s)) {
+            return List.of();
+        }
+        String[] parts = s.split("[,，\\s]+");
+        List<String> out = new ArrayList<>();
+        for (String p : parts) {
+            if (StringUtils.hasText(p)) {
+                out.add(p.trim());
+            }
+        }
+        return out;
     }
 
     public MaterialPurchase receive(Map<String, Object> body) {
@@ -342,8 +599,8 @@ public class MaterialPurchaseOrchestrator {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    private boolean updateArrivedQuantityAndSync(String purchaseId, Integer arrivedQuantity) {
-        boolean ok = materialPurchaseService.updateArrivedQuantity(purchaseId, arrivedQuantity);
+    private boolean updateArrivedQuantityAndSync(String purchaseId, Integer arrivedQuantity, String remark) {
+        boolean ok = materialPurchaseService.updateArrivedQuantity(purchaseId, arrivedQuantity, remark);
         if (!ok) {
             return false;
         }

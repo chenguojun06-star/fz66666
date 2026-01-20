@@ -369,6 +369,27 @@
   color: var(--sidebar-text-strong);
 }
 
+.mobile-nav-drawer .ant-drawer-content {
+  background: linear-gradient(180deg, var(--sidebar-bg-start) 0%, var(--sidebar-bg-end) 100%);
+}
+
+.mobile-nav-drawer .ant-drawer-header {
+  background: transparent;
+  border-bottom: 1px solid var(--sidebar-item-border-hover);
+}
+
+.mobile-nav-drawer .ant-drawer-title {
+  color: var(--sidebar-text-strong);
+}
+
+.mobile-nav-drawer .ant-drawer-close {
+  color: var(--sidebar-text);
+}
+
+.mobile-nav-drawer .ant-drawer-body {
+  padding: 10px 0;
+}
+
 /* 主内容区 */
 .layout-content {
   flex: 1;

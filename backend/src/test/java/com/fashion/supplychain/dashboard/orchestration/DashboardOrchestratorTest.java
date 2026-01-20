@@ -7,9 +7,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.fashion.supplychain.dashboard.dto.DashboardResponse;
 import com.fashion.supplychain.dashboard.service.DashboardQueryService;
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -29,10 +29,8 @@ class DashboardOrchestratorTest {
     void dashboard_returnsExpectedKeys() {
         when(dashboardQueryService.countEnabledStyles()).thenReturn(10L);
         when(dashboardQueryService.countProductionOrders()).thenReturn(20L);
-        when(dashboardQueryService.countPendingFactoryReconciliations()).thenReturn(1L);
         when(dashboardQueryService.countPendingMaterialReconciliations()).thenReturn(2L);
         when(dashboardQueryService.countPendingShipmentReconciliations()).thenReturn(3L);
-        when(dashboardQueryService.countApprovedFactoryReconciliations()).thenReturn(4L);
         when(dashboardQueryService.countApprovedMaterialReconciliations()).thenReturn(5L);
         when(dashboardQueryService.countApprovedShipmentReconciliations()).thenReturn(6L);
         when(dashboardQueryService.countScansBetween(any(), any())).thenReturn(7L);
@@ -42,31 +40,27 @@ class DashboardOrchestratorTest {
 
         when(dashboardQueryService.listRecentStyles(5)).thenReturn(List.of());
         when(dashboardQueryService.listRecentOrders(5)).thenReturn(List.of());
-        when(dashboardQueryService.listRecentFactoryReconciliations(5)).thenReturn(List.of());
         when(dashboardQueryService.listRecentScans(5)).thenReturn(List.of());
         when(dashboardQueryService.listRecentPurchases(5)).thenReturn(List.of());
 
-        Map<String, Object> data = dashboardOrchestrator.dashboard("2026-01-01", "2026-01-31", null, null);
+        DashboardResponse data = dashboardOrchestrator.dashboard("2026-01-01", "2026-01-31", null, null);
         assertNotNull(data);
 
-        assertEquals(10L, data.get("styleCount"));
-        assertEquals(20L, data.get("productionCount"));
-        assertEquals(6L, data.get("pendingReconciliationCount"));
-        assertEquals(15L, data.get("paymentApprovalCount"));
-        assertEquals(7L, data.get("todayScanCount"));
-        assertEquals(8L, data.get("warehousingOrderCount"));
-        assertEquals(9L, data.get("unqualifiedQuantity"));
-        assertEquals(11L, data.get("urgentEventCount"));
+        assertEquals(10L, data.getStyleCount());
+        assertEquals(20L, data.getProductionCount());
+        assertEquals(5L, data.getPendingReconciliationCount());
+        assertEquals(11L, data.getPaymentApprovalCount());
+        assertEquals(7L, data.getTodayScanCount());
+        assertEquals(8L, data.getWarehousingOrderCount());
+        assertEquals(9L, data.getUnqualifiedQuantity());
+        assertEquals(11L, data.getUrgentEventCount());
 
-        Object recent = data.get("recentActivities");
-        assertTrue(recent instanceof List);
+        assertTrue(data.getRecentActivities() instanceof List);
 
         verify(dashboardQueryService).countEnabledStyles();
         verify(dashboardQueryService).countProductionOrders();
-        verify(dashboardQueryService).countPendingFactoryReconciliations();
         verify(dashboardQueryService).countPendingMaterialReconciliations();
         verify(dashboardQueryService).countPendingShipmentReconciliations();
-        verify(dashboardQueryService).countApprovedFactoryReconciliations();
         verify(dashboardQueryService).countApprovedMaterialReconciliations();
         verify(dashboardQueryService).countApprovedShipmentReconciliations();
         verify(dashboardQueryService).countScansBetween(any(), any());

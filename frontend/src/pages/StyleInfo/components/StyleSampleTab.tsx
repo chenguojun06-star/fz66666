@@ -1,9 +1,16 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Modal, Space, Tag, message } from 'antd';
-import ResizableTable from '../../../components/ResizableTable';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Button, Space, Tag, message } from 'antd';
+import { CheckCircleOutlined, PlayCircleOutlined, ToolOutlined } from '@ant-design/icons';
+import ResizableTable from '../../../components/common/ResizableTable';
+import ResizableModal, {
+  ResizableModalFlex,
+  ResizableModalFlexFill,
+  useResizableModalTableScrollY,
+} from '../../../components/common/ResizableModal';
+import RowActions from '../../../components/common/RowActions';
 import api from '../../../utils/api';
 import type { StyleAttachment, StyleBom } from '../../../types/style';
-import { useAuth } from '../../../utils/authContext';
+import { isSupervisorOrAboveUser, useAuth } from '../../../utils/authContext';
 import { formatDateTime } from '../../../utils/datetime';
 
 interface Props {
@@ -42,6 +49,18 @@ const StyleSampleTab: React.FC<Props> = ({
   const [logs, setLogs] = useState<OperationLog[]>([]);
 
   const [bomDetailOpen, setBomDetailOpen] = useState(false);
+
+  const bomDetailTableWrapRef = useRef<HTMLDivElement | null>(null);
+  const bomDetailTableScrollY = useResizableModalTableScrollY({ open: bomDetailOpen, ref: bomDetailTableWrapRef });
+
+  const modalWidth = useMemo(() => {
+    if (typeof window === 'undefined') return '60vw';
+    const w = window.innerWidth;
+    if (w < 768) return '96vw';
+    if (w < 1024) return '66vw';
+    return '60vw';
+  }, []);
+  const modalInitialHeight = 720;
 
   const [loading, setLoading] = useState(false);
 
@@ -121,13 +140,7 @@ const StyleSampleTab: React.FC<Props> = ({
   const status = useMemo(() => String(sampleStatus || '').trim().toUpperCase(), [sampleStatus]);
   const locked = useMemo(() => status === 'COMPLETED', [status]);
 
-  const canRollback = useMemo(() => {
-    const role = String((user as any)?.role || '').trim();
-    if (!role) return false;
-    if (role === '1') return true;
-    const lower = role.toLowerCase();
-    return lower.includes('admin') || lower.includes('manager') || lower.includes('supervisor') || role.includes('主管') || role.includes('管理员');
-  }, [user]);
+  const canRollback = useMemo(() => isSupervisorOrAboveUser(user), [user]);
 
   const statusTag = useMemo(() => {
     if (status === 'COMPLETED') return <Tag color="green">已完成</Tag>;
@@ -266,35 +279,58 @@ const StyleSampleTab: React.FC<Props> = ({
         title: '操作',
         key: 'action',
         width: 220,
-        render: () => (
-          <Space wrap>
-            {locked ? (
-              <>
-                <Tag color="green">已完成</Tag>
-                <span style={{ color: 'var(--neutral-text-lighter)' }}>无法操作</span>
-                {canRollback ? (
-                  <Button danger loading={saving} onClick={() => post(`/style/info/${styleId}/sample/reset`, { reason: '维护' })}>
-                    维护
-                  </Button>
-                ) : null}
-              </>
-            ) : (
-              <>
-                <Button loading={saving} onClick={() => post(`/style/info/${styleId}/sample/start`)}>
-                  领取开始
-                </Button>
-                <Button type="primary" loading={saving} onClick={() => post(`/style/info/${styleId}/sample/complete`)}>
-                  样板完成
-                </Button>
-                {canRollback ? (
-                  <Button danger loading={saving} onClick={() => post(`/style/info/${styleId}/sample/reset`, { reason: '维护' })}>
-                    维护
-                  </Button>
-                ) : null}
-              </>
-            )}
-          </Space>
-        ),
+        render: () => {
+          const actions = locked
+            ? (canRollback
+              ? [
+                {
+                  key: 'maintenance',
+                  label: '维护',
+                  title: '维护',
+                  icon: <ToolOutlined />,
+                  danger: true,
+                  disabled: saving,
+                  onClick: () => post(`/style/info/${styleId}/sample/reset`, { reason: '维护' }),
+                  primary: true,
+                },
+              ]
+              : [])
+            : [
+              {
+                key: 'start',
+                label: '领取开始',
+                title: '领取开始',
+                icon: <PlayCircleOutlined />,
+                disabled: saving,
+                onClick: () => post(`/style/info/${styleId}/sample/start`),
+                primary: true,
+              },
+              {
+                key: 'complete',
+                label: '样板完成',
+                title: '样板完成',
+                icon: <CheckCircleOutlined />,
+                disabled: saving,
+                onClick: () => post(`/style/info/${styleId}/sample/complete`),
+                primary: true,
+              },
+              ...(canRollback
+                ? [
+                  {
+                    key: 'maintenance',
+                    label: '维护',
+                    title: '维护',
+                    icon: <ToolOutlined />,
+                    danger: true,
+                    disabled: saving,
+                    onClick: () => post(`/style/info/${styleId}/sample/reset`, { reason: '维护' }),
+                  },
+                ]
+                : []),
+            ];
+
+          return <RowActions maxInline={3} actions={actions as any} />;
+        },
       },
     ];
   }, [bomSummary, canRollback, locked, patternAttachments, post, saving, styleId]);
@@ -307,27 +343,36 @@ const StyleSampleTab: React.FC<Props> = ({
         <span style={{ marginLeft: 12 }}>完成时间：{completedTimeText}</span>
       </Space>
 
-      <Modal
+      <ResizableModal
         title="BOM详细资料"
         open={bomDetailOpen}
         centered
         onCancel={() => setBomDetailOpen(false)}
-        footer={null}
-        width="68vw"
-        style={{ maxWidth: 1100 }}
+        footer={
+          <div className="modal-footer-actions">
+            <Button onClick={() => setBomDetailOpen(false)}>关闭</Button>
+          </div>
+        }
+        width={modalWidth}
+        initialHeight={modalInitialHeight}
+        scaleWithViewport
         destroyOnHidden
       >
-        <div style={{ maxHeight: 520, overflow: 'auto' }}>
-          <ResizableTable
-            rowKey={(r: any) => String(r?.id ?? `${r?.materialType || ''}-${r?.materialCode || ''}-${r?.color || ''}-${r?.size || ''}`)}
-            columns={bomDetailColumns as any}
-            dataSource={bomList}
-            pagination={false}
-            scroll={{ x: 'max-content' }}
-            size="small"
-          />
-        </div>
-      </Modal>
+        <ResizableModalFlex>
+          <ResizableModalFlexFill ref={bomDetailTableWrapRef}>
+            <ResizableTable
+              rowKey={(r: any) =>
+                String(r?.id ?? `${r?.materialType || ''}-${r?.materialCode || ''}-${r?.color || ''}-${r?.size || ''}`)
+              }
+              columns={bomDetailColumns as any}
+              dataSource={bomList}
+              pagination={false}
+              scroll={{ x: 'max-content', y: bomDetailTableScrollY }}
+              size="small"
+            />
+          </ResizableModalFlexFill>
+        </ResizableModalFlex>
+      </ResizableModal>
 
       <ResizableTable
         columns={columns as any}

@@ -1,0 +1,18 @@
+# 本地开发环境配置（不上传到 Git）
+spring:
+  security:
+    enabled: false
+
+app:
+  auth:
+    jwt-secret: ThisIsA_LocalJwtSecret_OnlyForDev_0123456789
+    header-auth-enabled: true
+
+fashion:
+  db:
+    initializer-enabled: true
+
+# 日志级别调整为 DEBUG 便于开发调试
+logging:
+  level:
+    com.fashion.supplychain: debug

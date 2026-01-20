@@ -1,0 +1,136 @@
+page {
+  background: linear-gradient(135deg, rgba(169, 201, 255, 0.18), rgba(255, 255, 255, 0.72));
+}
+
+.container .card {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 26px;
+  padding: 14px;
+  box-shadow: none;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: #1f2937;
+}
+
+.btn-primary {
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-size: 12px;
+}
+
+.section-title {
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #2c2c2e;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.btn-secondary {
+  background: rgba(148, 163, 184, 0.18);
+  color: #374151;
+  border-radius: 999px;
+  padding: 8px 12px;
+  text-align: center;
+  font-size: 12px;
+}
+
+.my-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.my-stat {
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 22px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: none;
+}
+
+.my-stat-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1c1c1e;
+}
+
+.my-stat-label {
+  font-size: 12px;
+  color: #8e8e93;
+}
+
+.list-item {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.55);
+  margin-top: 10px;
+}
+
+.item-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.item-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.item-sub {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #374151;
+  line-height: 1.5;
+}
+
+.salary-card {
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.salary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.salary-label {
+  font-size: 12px;
+  color: #8e8e93;
+}
+
+.salary-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1c1c1e;
+}
+
+.hint {
+  font-size: 12px;
+}

@@ -1,61 +1,174 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Button, Card, Collapse, DatePicker, Form, Grid, Input, InputNumber, Modal, Progress, Select, Segmented, Space, Tag, Tooltip, Typography, message } from 'antd';
-import { ArrowDownOutlined, ArrowUpOutlined, DeleteOutlined, DownloadOutlined, EyeOutlined, PlusOutlined, RollbackOutlined, ScanOutlined } from '@ant-design/icons';
+import { Alert, Button, Card, Collapse, DatePicker, Form, Grid, Input, InputNumber, Modal, Select, Segmented, Space, Tag, Tooltip, Typography, message } from 'antd';
+import { DeleteOutlined, DownloadOutlined, EyeOutlined, PlusOutlined, RollbackOutlined, ScanOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { QRCodeCanvas } from 'qrcode.react';
 import { useLocation } from 'react-router-dom';
 import Layout from '../../components/Layout';
-import ResizableModal from '../../components/ResizableModal';
-import ResizableTable from '../../components/ResizableTable';
-import RowActions from '../../components/RowActions';
+import ResizableModal from '../../components/common/ResizableModal';
+import ResizableTable from '../../components/common/ResizableTable';
+import RowActions from '../../components/common/RowActions';
 import { StyleCoverThumb } from '../../components/StyleAssets';
-import api, { generateRequestId, isDuplicateScanMessage, isOrderFrozenByStatus } from '../../utils/api';
-import { useAuth } from '../../utils/authContext';
-import { formatDateTime } from '../../utils/datetime';
+import { compareSizeAsc, generateRequestId, isDuplicateScanMessage, isOrderFrozenByStatus } from '../../utils/api';
+import { isAdminUser as isAdminUserFn, isSupervisorOrAboveUser as isSupervisorOrAboveUserFn, useAuth } from '../../utils/authContext';
+import { formatDateTime, formatDateTimeCompact } from '../../utils/datetime';
 import { CuttingBundle, ProductionOrder, ProductionQueryParams, ScanRecord } from '../../types/production';
 import type { StyleProcess, TemplateLibrary } from '../../types/style';
+import { productionCuttingApi, productionOrderApi, productionScanApi, productionWarehousingApi } from '../../services/production/productionApi';
+import { styleProcessApi } from '../../services/style/styleApi';
+import { templateLibraryApi } from '../../services/template/templateLibraryApi';
 
 const { RangePicker } = DatePicker;
 const { Text } = Typography;
 const { useBreakpoint } = Grid;
 
+/**
+ * 从扫码记录中获取进度阶段名称
+ * @param r 扫码记录对象
+ * @returns 进度阶段名称
+ */
 const getRecordStageName = (r: any) => {
   const stage = String(r?.progressStage || '').trim();
   if (stage) return stage;
   return String(r?.processName || '').trim();
 };
 
+/**
+ * 标准化阶段名称，去除空格并转为小写
+ * @param v 阶段名称
+ * @returns 标准化后的阶段名称
+ */
 const normalizeStageKey = (v: any) => String(v || '').trim().replace(/\s+/g, '');
 
+/**
+ * 判断是否为质检阶段
+ * @param k 阶段名称
+ * @returns 是否为质检阶段
+ */
 const isQualityStageKey = (k: string) => {
   const n = normalizeStageKey(k);
   if (!n) return false;
   return n.includes('质检') || n.includes('检验') || n.includes('品检') || n.includes('验货');
 };
 
+/**
+ * 判断是否为裁剪阶段
+ * @param k 阶段名称
+ * @returns 是否为裁剪阶段
+ */
+const isCuttingStageKey = (k: string) => {
+  const n = normalizeStageKey(k);
+  if (!n) return false;
+  return n.includes('裁剪') || n.includes('裁床') || n.includes('剪裁') || n.includes('开裁');
+};
+
+/**
+ * 判断是否为生产阶段
+ * @param k 阶段名称
+ * @returns 是否为生产阶段
+ */
+const isProductionStageKey = (k: string) => {
+  const n = normalizeStageKey(k);
+  if (!n) return false;
+  return n.includes('生产') || n.includes('车缝') || n.includes('缝制') || n.includes('缝纫') || n.includes('车工');
+};
+
+/**
+ * 判断是否为整烫阶段
+ * @param k 阶段名称
+ * @returns 是否为整烫阶段
+ */
+const isIroningStageKey = (k: string) => {
+  const n = normalizeStageKey(k);
+  if (!n) return false;
+  return n.includes('整烫') || n.includes('熨烫');
+};
+
+/**
+ * 判断是否为包装阶段
+ * @param k 阶段名称
+ * @returns 是否为包装阶段
+ */
 const isPackagingStageKey = (k: string) => {
   const n = normalizeStageKey(k);
   if (!n) return false;
-  return n.includes('包装') || n.includes('后整') || n.includes('整烫') || n.includes('熨烫');
+  return n.includes('包装') || n.includes('后整') || n.includes('打包') || n.includes('装箱');
 };
 
+/**
+ * 判断是否为出货阶段
+ * @param k 阶段名称
+ * @returns 是否为出货阶段
+ */
+const isShipmentStageKey = (k: string) => {
+  const n = normalizeStageKey(k);
+  if (!n) return false;
+  return n.includes('出货') || n.includes('发货') || n.includes('发运');
+};
+
+/**
+ * 获取阶段的规范名称，将不同表述统一为标准名称
+ * @param k 原始阶段名称
+ * @returns 规范后的阶段名称
+ */
 const canonicalStageKey = (k: string) => {
   const n = normalizeStageKey(k);
   if (!n) return '';
-  const map: Record<string, string> = { 车缝: '生产', 缝制: '生产', 缝纫: '生产', 后整: '包装', 整烫: '包装', 熨烫: '包装' };
+  const map: Record<string, string> = {
+    订单创建: '下单',
+    创建订单: '下单',
+    开单: '下单',
+    制单: '下单',
+    物料采购: '采购',
+    面辅料采购: '采购',
+    备料: '采购',
+    到料: '采购',
+    车缝: '生产',
+    缝制: '生产',
+    缝纫: '生产',
+    车工: '生产',
+    后整: '包装',
+    打包: '包装',
+    装箱: '包装',
+    检验: '质检',
+    品检: '质检',
+    验货: '质检',
+    熨烫: '整烫',
+    发货: '出货',
+    发运: '出货',
+    裁床: '裁剪',
+    剪裁: '裁剪',
+    开裁: '裁剪',
+  };
   return normalizeStageKey(map[n] || n);
 };
 
+/**
+ * 判断两个阶段名称是否匹配
+ * @param a 阶段名称a
+ * @param b 阶段名称b
+ * @returns 是否匹配
+ */
 const stageNameMatches = (a: any, b: any) => {
   const x = canonicalStageKey(a);
   const y = canonicalStageKey(b);
   if (!x || !y) return false;
   if (x === y) return true;
+  if (isCuttingStageKey(x) && isCuttingStageKey(y)) return true;
   if (isQualityStageKey(x) && isQualityStageKey(y)) return true;
   if (isPackagingStageKey(x) && isPackagingStageKey(y)) return true;
+  if (isShipmentStageKey(x) && isShipmentStageKey(y)) return true;
+  if (isIroningStageKey(x) && isIroningStageKey(y)) return true;
+  if (isProductionStageKey(x) && isProductionStageKey(y)) return true;
   return x.includes(y) || y.includes(x);
 };
 
+/**
+ * 为指定阶段查找对应的计价工序
+ * @param list 工序列表
+ * @param stageName 阶段名称
+ * @returns 匹配的工序对象，找不到则返回null
+ */
 const findPricingProcessForStage = (list: StyleProcess[], stageName: string) => {
   const stage = String(stageName || '').trim();
   if (!stage) return null;
@@ -70,20 +183,31 @@ const findPricingProcessForStage = (list: StyleProcess[], stageName: string) => 
   return null;
 };
 
+/**
+ * 进度节点类型定义
+ */
 type ProgressNode = {
   id: string;
   name: string;
   unitPrice?: number;
 };
 
+/**
+ * 过滤掉出货相关的节点
+ * @param list 节点列表
+ * @returns 过滤后的节点列表
+ */
 const stripWarehousingNode = (list: ProgressNode[]) => {
   return (Array.isArray(list) ? list : []).filter((n) => {
     const id = String((n as any)?.id || '').trim().toLowerCase();
     const name = String((n as any)?.name || '').trim();
-    return !(id === 'shipment' || name === '出货');
+    return !(id === 'shipment' || name === '出货' || name === '发货' || name === '发运');
   });
 };
 
+/**
+ * 默认进度节点配置
+ */
 const defaultNodes: ProgressNode[] = [
   { id: 'cutting', name: '裁剪', unitPrice: 0 },
   { id: 'production', name: '生产', unitPrice: 0 },
@@ -91,24 +215,35 @@ const defaultNodes: ProgressNode[] = [
   { id: 'packaging', name: '包装', unitPrice: 0 },
 ];
 
+/**
+ * 将数值限制在0-100范围内
+ * @param value 输入数值
+ * @returns 限制后的数值
+ */
 const clampPercent = (value: number) => {
   if (Number.isNaN(value)) return 0;
   return Math.max(0, Math.min(100, Math.round(value)));
 };
 
+/**
+ * 格式化时间为标准格式
+ * @param value 时间字符串
+ * @returns 格式化后的时间字符串
+ */
 const formatTime = (value?: string) => formatDateTime(value);
 
-const formatTimeCompact = (value?: string) => {
-  const raw = String(value || '').trim();
-  if (!raw) return '-';
-  const d = dayjs(raw);
-  if (!d.isValid()) {
-    const fallback = String(formatTime(raw) || '').trim();
-    return fallback || '-';
-  }
-  return d.format('MM-DD HH:mm');
-};
+/**
+ * 格式化时间为紧凑格式（MM-DD HH:mm）
+ * @param value 时间字符串
+ * @returns 格式化后的时间字符串
+ */
+const formatTimeCompact = (value?: string) => formatDateTimeCompact(value);
 
+/**
+ * 转义CSV单元格内容
+ * @param value 单元格值
+ * @returns 转义后的字符串
+ */
 const escapeCsvCell = (value: any) => {
   const text = String(value ?? '');
   if (/[\r\n",]/.test(text)) {
@@ -117,6 +252,12 @@ const escapeCsvCell = (value: any) => {
   return text;
 };
 
+/**
+ * 下载文本文件
+ * @param filename 文件名
+ * @param content 文件内容
+ * @param mime MIME类型
+ */
 const downloadTextFile = (filename: string, content: string, mime: string) => {
   const blob = new Blob([content], { type: mime });
   const url = URL.createObjectURL(blob);
@@ -129,53 +270,40 @@ const downloadTextFile = (filename: string, content: string, mime: string) => {
   URL.revokeObjectURL(url);
 };
 
+/**
+ * 获取订单发货时间
+ * @param order 生产订单对象
+ * @returns 发货时间字符串
+ */
 const getOrderShipTime = (order: ProductionOrder) => {
   return order.actualEndDate || order.plannedEndDate || '';
 };
 
-const isOrderFrozen = (order?: ProductionOrder | null) => {
-  return isOrderFrozenByStatus(order);
-};
-
+/**
+ * 根据进度百分比获取对应的节点索引
+ * @param nodes 节点列表
+ * @param progress 进度百分比
+ * @returns 节点索引
+ */
 const getNodeIndexFromProgress = (nodes: ProgressNode[], progress: number) => {
   if (nodes.length <= 1) return 0;
   const idx = Math.round((clampPercent(progress) / 100) * (nodes.length - 1));
   return Math.max(0, Math.min(nodes.length - 1, idx));
 };
 
+/**
+ * 根据节点索引获取对应的进度百分比
+ * @param nodes 节点列表
+ * @param index 节点索引
+ * @returns 进度百分比
+ */
 const getProgressFromNodeIndex = (nodes: ProgressNode[], index: number) => {
   if (nodes.length <= 1) return 0;
   const idx = Math.max(0, Math.min(nodes.length - 1, index));
   return clampPercent((idx / (nodes.length - 1)) * 100);
 };
 
-const compareSizeAsc = (a: any, b: any) => {
-  const norm = (v: any) => String(v ?? '').trim().toUpperCase();
-  const parse = (v: any) => {
-    const raw = norm(v);
-    if (!raw || raw === '-') return { rank: 9999, num: 0, raw };
-    if (raw === '均码' || raw === 'ONE SIZE' || raw === 'ONESIZE') return { rank: 55, num: 0, raw };
-    if (/^\d+(\.\d+)?$/.test(raw)) return { rank: 0, num: Number(raw), raw };
-    const mNumXL = raw.match(/^(\d+)XL$/);
-    if (mNumXL) return { rank: 70 + (Number(mNumXL[1]) - 1) * 10, num: 0, raw };
-    const mXS = raw.match(/^(X{0,4})S$/);
-    if (mXS) return { rank: 40 - (mXS[1]?.length || 0) * 10, num: 0, raw };
-    if (raw === 'S') return { rank: 40, num: 0, raw };
-    if (raw === 'M') return { rank: 50, num: 0, raw };
-    const mXL = raw.match(/^(X{1,4})L$/);
-    if (mXL) return { rank: 60 + (mXL[1]?.length || 0) * 10, num: 0, raw };
-    if (raw === 'L') return { rank: 60, num: 0, raw };
-    if (raw === 'XL') return { rank: 70, num: 0, raw };
-    if (raw === 'XXL') return { rank: 80, num: 0, raw };
-    if (raw === 'XXXL') return { rank: 90, num: 0, raw };
-    return { rank: 5000, num: 0, raw };
-  };
-  const pa = parse(a);
-  const pb = parse(b);
-  if (pa.rank !== pb.rank) return pa.rank - pb.rank;
-  if (pa.num !== pb.num) return pa.num - pb.num;
-  return String(pa.raw).localeCompare(String(pb.raw), 'zh-Hans-CN', { numeric: true });
-};
+
 
 const modernProgressBoardCss = `
 .mpb-wrap{width:100%}
@@ -183,48 +311,80 @@ const modernProgressBoardCss = `
 .mpb-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px;min-height:46px}
 .mpb-pill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28);color:rgba(15,23,42,.84);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mpb-pillDot{width:8px;height:8px;border-radius:999px;flex:0 0 auto;box-shadow:0 8px 18px rgba(15,23,42,.12)}
-.mpb-trackWrap{position:relative;height:46px;min-width:120px;padding-right:4px}
-.mpb-track{position:absolute;left:0;right:0;top:14px;transform:translateY(-50%);height:10px;border-radius:999px;background:rgba(15,23,42,.07);border:1px solid rgba(255,255,255,.26);box-shadow:inset 0 0 0 1px rgba(255,255,255,.22);overflow:hidden}
-.mpb-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#22c55e,#16a34a);position:relative;overflow:hidden;transition:width 520ms cubic-bezier(.2,.8,.2,1)}
-.mpb-fill::after{content:"";position:absolute;inset:-42% -42%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.28),transparent);transform:translateX(-40%);animation:mpbSweep 3.6s ease-in-out infinite}
-.mpb-fill.mpb-idle{background:transparent;animation:none}
-.mpb-fill.mpb-idle::after{animation:none;opacity:0}
-.mpb-mark{position:absolute;left:var(--x);top:0}
-.mpb-label{position:absolute;left:0;top:28px;transform:translate(-50%,0);max-width:86px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;font-size:11px;line-height:14px;color:rgba(15,23,42,.56);font-variant-numeric:tabular-nums;display:flex;justify-content:center}
-.mpb-label.mpb-edgeL{transform:translate(0,0);justify-content:flex-start;text-align:left}
-.mpb-label.mpb-edgeR{transform:translate(-100%,0);justify-content:flex-end;text-align:right}
-.mpb-labelInner{display:inline-flex;align-items:center;gap:6px;min-width:0}
-.mpb-labelText{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70px}
-.mpb-labelDot{width:6px;height:6px;border-radius:999px;flex:0 0 auto;background:rgba(15,23,42,.18);box-shadow:inset 0 0 0 1px rgba(255,255,255,.50)}
-.mpb-labelDot.mpb-on{background:rgba(34,197,94,.90);box-shadow:0 0 0 2px rgba(34,197,94,.14),0 10px 18px rgba(34,197,94,.18),inset 0 0 0 1px rgba(255,255,255,.42)}
-.mpb-mini{position:absolute;left:0;top:0;transform:translate(-50%,0);height:18px;min-width:26px;padding:0 7px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.30);color:rgba(15,23,42,.74);font-size:11px;line-height:18px;font-variant-numeric:tabular-nums;backdrop-filter:blur(10px) saturate(140%);-webkit-backdrop-filter:blur(10px) saturate(140%)}
-.mpb-mini.mpb-active{background:linear-gradient(135deg,rgba(96,165,250,.28),rgba(52,211,153,.22));border-color:rgba(96,165,250,.34);color:rgba(15,23,42,.86)}
+.mpb-nodesWrap{display:flex;align-items:center;gap:8px;min-height:46px;min-width:120px;flex-wrap:wrap}
+.mpb-mark{display:flex;align-items:center}
+.mpb-node{position:relative;overflow:hidden;height:24px;max-width:126px;min-width:58px;padding:0 10px;border-radius:999px;display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.30);color:rgba(15,23,42,.78);backdrop-filter:blur(10px) saturate(160%);-webkit-backdrop-filter:blur(10px) saturate(160%);box-shadow:0 10px 18px rgba(15,23,42,.10)}
+.mpb-node::before{content:"";position:absolute;left:0;top:0;bottom:0;width:var(--p,0%);background:linear-gradient(90deg,#86efac 0%,#4ade80 26%,#22c55e 52%,#4ade80 78%,#86efac 100%);background-size:220% 100%;animation:mpbNodeFlow 2.8s linear infinite;transition:width .55s cubic-bezier(.2,.8,.2,1);filter:saturate(104%) brightness(.97);box-shadow:inset 0 0 0 1px rgba(255,255,255,.16),inset 0 10px 14px rgba(255,255,255,.10)}
+.mpb-nodeName{position:relative;z-index:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:78px;font-size:12px;line-height:24px}
+.mpb-nodeQty{position:relative;z-index:1;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;height:16px;min-width:24px;padding:0 6px;border-radius:999px;background:rgba(15,23,42,.06);border:1px solid rgba(255,255,255,.36);color:rgba(15,23,42,.78);font-weight:700;font-size:11px;line-height:16px;font-variant-numeric:tabular-nums}
+.mpb-node.mpb-nodeDone{border-color:rgba(34,197,94,.34);color:rgba(15,23,42,.88)}
+.mpb-node.mpb-nodeCurrent{border-color:rgba(96,165,250,.42);color:rgba(15,23,42,.92);animation:mpbNodeGlow 2.6s ease-in-out infinite}
 .mpb-pop{animation:mpbPop .42s cubic-bezier(.2,.8,.2,1) both}
-.mpb-dot{position:absolute;left:0;top:14px;transform:translate(-50%,-50%);width:9px;height:9px;border-radius:999px;background:rgba(15,23,42,.18);box-shadow:0 10px 18px rgba(15,23,42,.10),inset 0 0 0 1px rgba(255,255,255,.42)}
-.mpb-dot.mpb-done{background:linear-gradient(135deg,#60a5fa,#34d399);box-shadow:0 12px 22px rgba(16,185,129,.18),0 12px 22px rgba(59,130,246,.16)}
-.mpb-dot.mpb-current{animation:mpbPulse 2.6s ease-in-out infinite}
 .mpb-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:92px}
 .mpb-percent{display:inline-flex;align-items:center;justify-content:center;height:22px;min-width:52px;padding:0 10px;border-radius:999px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28);color:rgba(15,23,42,.82);font-weight:700;font-size:12px;font-variant-numeric:tabular-nums}
 .mpb-stats{color:rgba(15,23,42,.58);font-size:12px;line-height:14px;white-space:nowrap;font-variant-numeric:tabular-nums}
-@keyframes mpbSweep{0%{transform:translateX(-40%)}100%{transform:translateX(40%)}}
+.mpb-nodeHeaderActions{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;padding-bottom:2px}
+.mpb-nodeHeaderActions .ant-select-selector,.mpb-nodeHeaderActions .ant-btn{border-radius:999px}
+.mpb-nodeHeaderActions::-webkit-scrollbar{height:6px}
+.mpb-nodeHeaderActions::-webkit-scrollbar-thumb{background:rgba(15,23,42,.18);border-radius:999px}
+.mpb-nodeHeaderRow{display:flex;align-items:center;justify-content:space-between;gap:10px;max-width:100%;overflow-x:auto;overscroll-behavior-x:contain}
+.mpb-nodeHeaderRow::-webkit-scrollbar{height:6px}
+.mpb-nodeHeaderRow::-webkit-scrollbar-thumb{background:rgba(15,23,42,.18);border-radius:999px}
+.mpb-nodeHeaderTitle{flex:0 0 auto;white-space:nowrap;font-weight:600}
+.mpb-nodeHeaderRow .mpb-nodeCreateName{flex:0 0 240px;min-width:200px}
+.mpb-nodeHeaderRow .mpb-nodeCreatePrice{flex:0 0 110px}
+.mpb-nodeHeaderRow .mpb-nodeCreateBtn{flex:0 0 auto}
+.mpb-nodeCreateRow{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;padding-bottom:2px}
+.mpb-nodeCreateRow::-webkit-scrollbar{height:6px}
+.mpb-nodeCreateRow::-webkit-scrollbar-thumb{background:rgba(15,23,42,.18);border-radius:999px}
+.mpb-nodeCreateRow .ant-input,.mpb-nodeCreateRow .ant-input-number,.mpb-nodeCreateRow .ant-btn{border-radius:999px}
+.mpb-nodeCreateRow .ant-input{height:32px}
+.mpb-nodeCreateRow .ant-input-number{height:32px;display:flex;align-items:center}
+.mpb-nodeCreateRow .ant-input-number-input{height:30px}
+.mpb-nodeCreateRow .mpb-nodeCreatePrice{flex:0 0 120px}
+.mpb-nodeCreateRow .mpb-nodeCreateBtn{flex:0 0 auto}
+.mpb-nodeCreateRow .mpb-nodeCreateName{flex:1 1 0;min-width:0}
+
+.mpb-detailTrack{position:relative;height:30px;border-radius:999px;background:rgba(15,23,42,.06);border:1px solid rgba(255,255,255,.34);overflow:hidden;box-shadow:inset 0 1px 2px rgba(15,23,42,.10)}
+.mpb-detailFill{position:absolute;left:0;top:0;bottom:0;width:var(--p,0%);border-radius:999px;background:linear-gradient(90deg,#86efac 0%,#4ade80 26%,#22c55e 52%,#4ade80 78%,#86efac 100%);background-size:220% 100%;animation:mpbNodeFlow 2.8s linear infinite;transition:width .55s cubic-bezier(.2,.8,.2,1);box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
+.mpb-detailBarText{position:absolute;left:0;right:0;top:0;bottom:0;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 12px;color:rgba(15,23,42,.86);font-weight:700;font-size:12px;line-height:30px;pointer-events:none;text-shadow:0 1px 0 rgba(255,255,255,.62)}
+.mpb-detailBarLeft{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mpb-detailBarRight{flex:0 0 auto;white-space:nowrap;font-variant-numeric:tabular-nums}
+.mpb-detailCards{display:flex;gap:6px;min-width:max-content;align-items:stretch}
+.mpb-detailCard{position:relative;overflow:hidden;border-radius:10px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.30);backdrop-filter:blur(14px) saturate(150%);-webkit-backdrop-filter:blur(14px) saturate(150%);box-shadow:0 10px 18px rgba(15,23,42,.08);padding:6px;display:flex;flex-direction:column;gap:6px}
+.mpb-detailCard.mpb-draggable .mpb-detailTrack{cursor:grab}
+.mpb-detailCard.mpb-draggable .mpb-detailTrack:active{cursor:grabbing}
+.mpb-detailCard.mpb-dragging{opacity:.55;transform:scale(.98)}
+.mpb-detailCard.mpb-dragOver{outline:2px dashed rgba(59,130,246,.55);outline-offset:2px}
+.mpb-detailCard .ant-input-number,.mpb-detailCard .ant-btn{border-radius:999px}
+.mpb-detailCard .ant-input-number{height:28px;display:flex;align-items:center}
+.mpb-detailCard .ant-input-number-input{height:26px}
+.mpb-detailCard::before{content:"";position:absolute;left:0;top:0;right:0;height:12px;background:linear-gradient(135deg,rgba(255,255,255,.22),rgba(255,255,255,0));opacity:.9;pointer-events:none}
+.mpb-detailBottomRow{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:auto}
+.mpb-detailPriceInline{display:flex;align-items:center;gap:6px;min-width:0;flex:1 1 auto}
+.mpb-detailLabel{color:rgba(15,23,42,.78);font-size:11px;line-height:14px;white-space:nowrap}
+.mpb-detailPriceInput{width:88px;max-width:100%}
+.mpb-detailActions{display:flex;gap:6px;justify-content:flex-end;flex:0 0 auto}
+.mpb-detailActions .ant-btn{padding:0 6px}
+.mpb-detailCard.mpb-detailDone{opacity:.74;background:rgba(248,250,252,.42)}
+.mpb-detailCard.mpb-detailDone::before{opacity:.0}
+.mpb-detailCard.mpb-detailDone .mpb-detailFill{animation:none}
+.mpb-detailCard.mpb-detailCurrent{border-color:rgba(96,165,250,.42);box-shadow:0 12px 22px rgba(59,130,246,.14),0 10px 18px rgba(15,23,42,.08)}
+.mpb-detailCard.mpb-detailFrozen{background:rgba(241,245,249,.38);border-color:rgba(148,163,184,.28);box-shadow:0 8px 18px rgba(15,23,42,.06)}
+.mpb-detailCard.mpb-detailFrozen .mpb-detailFill{animation:none;filter:none;opacity:.6}
 @keyframes mpbPop{0%{transform:translateY(-1px) scale(.94);opacity:.0}100%{transform:translateY(0) scale(1);opacity:1}}
-@keyframes mpbPulse{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.12)}}
+@keyframes mpbNodeFlow{0%{background-position:0% 50%}100%{background-position:100% 50%}}
+@keyframes mpbNodeGlow{0%,100%{box-shadow:0 10px 18px rgba(15,23,42,.10),0 0 0 0 rgba(59,130,246,.0)}50%{box-shadow:0 12px 22px rgba(59,130,246,.16),0 0 0 6px rgba(59,130,246,.08)}}
 .mpb-glass.mpb-frozen{background:linear-gradient(135deg,rgba(248,250,252,.62),rgba(241,245,249,.42));border-color:rgba(148,163,184,.32);box-shadow:0 8px 22px rgba(15,23,42,.06);backdrop-filter:blur(16px) saturate(120%);-webkit-backdrop-filter:blur(16px) saturate(120%)}
 .mpb-frozen .mpb-pill,.mpb-frozen .mpb-percent{background:rgba(241,245,249,.22);border-color:rgba(148,163,184,.30);color:rgba(15,23,42,.56)}
 .mpb-frozen .mpb-stats{color:rgba(15,23,42,.42)}
-.mpb-frozen .mpb-track{background:rgba(148,163,184,.14);border-color:rgba(148,163,184,.24);box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
-.mpb-frozen .mpb-fill{background:linear-gradient(90deg,rgba(148,163,184,.52),rgba(100,116,139,.46))}
-.mpb-frozen .mpb-fill::after{animation:none;opacity:0}
 .mpb-frozen .mpb-pillDot{box-shadow:none}
-.mpb-frozen .mpb-mini{background:rgba(241,245,249,.18);border-color:rgba(148,163,184,.30);color:rgba(15,23,42,.52)}
-.mpb-frozen .mpb-mini.mpb-active{background:rgba(241,245,249,.22);border-color:rgba(148,163,184,.34);color:rgba(15,23,42,.56)}
-.mpb-frozen .mpb-dot{background:rgba(100,116,139,.22);box-shadow:inset 0 0 0 1px rgba(255,255,255,.22)}
-.mpb-frozen .mpb-dot.mpb-done{background:rgba(100,116,139,.34);box-shadow:inset 0 0 0 1px rgba(255,255,255,.22)}
-.mpb-frozen .mpb-dot.mpb-current{animation:none}
-.mpb-frozen .mpb-label{color:rgba(15,23,42,.40)}
-.mpb-frozen .mpb-labelDot{background:rgba(100,116,139,.22);box-shadow:inset 0 0 0 1px rgba(255,255,255,.24)}
-.mpb-frozen .mpb-labelDot.mpb-on{background:rgba(100,116,139,.34);box-shadow:inset 0 0 0 1px rgba(255,255,255,.22)}
-@media (prefers-reduced-motion: reduce){.mpb-fill{animation:none}.mpb-pop{animation:none}.mpb-dot.mpb-current{animation:none}}
+.mpb-frozen .mpb-node{background:rgba(241,245,249,.18);border-color:rgba(148,163,184,.30);color:rgba(15,23,42,.52);box-shadow:0 10px 18px rgba(15,23,42,.06)}
+.mpb-frozen .mpb-node::before{background:linear-gradient(90deg,rgba(100,116,139,.22),rgba(148,163,184,.16));animation:none;filter:none}
+.mpb-frozen .mpb-nodeQty{background:rgba(241,245,249,.22);border-color:rgba(148,163,184,.28);color:rgba(15,23,42,.50)}
+.mpb-frozen .mpb-node.mpb-nodeDone{background:rgba(241,245,249,.22);border-color:rgba(148,163,184,.32);color:rgba(15,23,42,.56)}
+.mpb-frozen .mpb-node.mpb-nodeCurrent{animation:none}
+@media (prefers-reduced-motion: reduce){.mpb-pop{animation:none}.mpb-node.mpb-nodeCurrent{animation:none}.mpb-node::before{animation:none}}
 `;
 
 type ModernProgressBoardProps = {
@@ -243,12 +403,12 @@ const ModernProgressBoard: React.FC<ModernProgressBoardProps> = ({ nodes, progre
   const effectivePct = frozen ? 100 : pct;
   const ns = Array.isArray(nodes) && nodes.length ? nodes : defaultNodes;
   const currentIdx = getNodeIndexFromProgress(ns, effectivePct);
+  const segPct = ns.length ? 100 / ns.length : 100;
   const safeTotal = Math.max(0, Number(totalQty) || 0);
   const safeDoneRaw = Math.max(0, Math.min(Number(doneQty) || 0, safeTotal));
   const safeDone = frozen ? safeTotal : safeDoneRaw;
   const remaining = Math.max(0, safeTotal - safeDone);
   const labelKey = `${label}-${effectivePct}-${safeDone}-${safeTotal}-${remaining}-${frozen ? 1 : 0}`;
-  const pctStop = `${effectivePct}%`;
 
   const stageQty = (i: number, name?: string) => {
     const total = Number(totalQty) || 0;
@@ -266,30 +426,25 @@ const ModernProgressBoard: React.FC<ModernProgressBoardProps> = ({ nodes, progre
     <div className="mpb-wrap" aria-label={`生产进度 ${label} ${effectivePct}%`}>
       <div className={`mpb-glass ${frozen ? 'mpb-frozen' : ''}`}>
         <div className="mpb-row">
-          <div className="mpb-trackWrap" aria-hidden>
-            <div className="mpb-track">
-              <div className={`mpb-fill ${effectivePct <= 0 ? 'mpb-idle' : ''}`} style={{ width: pctStop }} />
-            </div>
+          <div className="mpb-nodesWrap">
             {ns.map((n, i) => {
-              const denom = Math.max(1, ns.length - 1);
-              const x = `${(i / denom) * 100}%`;
               const isDoneNode = i < currentIdx || effectivePct >= 100;
               const isCurrent = !frozen && i === currentIdx && effectivePct > 0 && effectivePct < 100;
-              const prevDone = i === 0 ? effectivePct > 0 : i - 1 < currentIdx || effectivePct >= 100;
-              const isEdgeLeft = i === 0;
-              const isEdgeRight = i === ns.length - 1;
               const name = String(n?.name || '').trim() || '-';
               const qty = stageQty(i, name);
+              const nodeStart = i * segPct;
+              const nodeFillRaw = segPct > 0 ? ((effectivePct - nodeStart) / segPct) * 100 : effectivePct;
+              const fillPct = clampPercent(nodeFillRaw);
               const badgeKey = `${labelKey}-${i}-${qty}`;
               return (
-                <div key={String(n.id || n.name || i)} className="mpb-mark" style={{ ['--x' as any]: x }} title={name}>
-                  <div key={badgeKey} className={`mpb-mini mpb-pop ${isCurrent ? 'mpb-active' : ''}`}>{qty}</div>
-                  <div className={`mpb-dot ${isDoneNode ? 'mpb-done' : ''} ${isCurrent ? 'mpb-current' : ''}`} />
-                  <div className={`mpb-label ${isEdgeLeft ? 'mpb-edgeL' : isEdgeRight ? 'mpb-edgeR' : ''}`}>
-                    <span className="mpb-labelInner">
-                      <span className={`mpb-labelDot ${prevDone ? 'mpb-on' : ''}`} />
-                      <span className="mpb-labelText">{name}</span>
-                    </span>
+                <div key={String(n.id || n.name || i)} className="mpb-mark" title={`${name} ${qty}`}>
+                  <div
+                    key={badgeKey}
+                    className={`mpb-node mpb-pop${isDoneNode ? ' mpb-nodeDone' : ''}${isCurrent ? ' mpb-nodeCurrent' : ''}`}
+                    style={{ ['--p' as any]: `${fillPct}%` }}
+                  >
+                    <span className="mpb-nodeName">{name}</span>
+                    <span className="mpb-nodeQty">{qty}</span>
                   </div>
                 </div>
               );
@@ -309,28 +464,26 @@ const ModernProgressBoard: React.FC<ModernProgressBoardProps> = ({ nodes, progre
   );
 };
 
+/**
+ * 生产进度详情组件属性
+ */
 type ProgressDetailProps = {
+  /** 是否内嵌显示 */
   embedded?: boolean;
 };
 
+/**
+ * 生产进度详情组件
+ * 用于展示和管理生产订单的详细进度信息，包括扫码记录、裁剪扎号、进度节点等
+ */
 const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const { user } = useAuth();
-  const isSupervisorOrAbove = useMemo(() => {
-    const role = String(user?.role || '').trim();
-    if (!role) return false;
-    if (role === '1') return true;
-    const lower = role.toLowerCase();
-    return lower.includes('admin') || lower.includes('manager') || lower.includes('supervisor') || role.includes('主管') || role.includes('管理员');
-  }, [user?.role]);
-  const isAdminUser = useMemo(() => {
-    const role = String(user?.role || '').trim();
-    if (!role) return false;
-    if (role === '1') return true;
-    const lower = role.toLowerCase();
-    return lower.includes('admin') || role.includes('管理员');
-  }, [user?.role]);
+  const isSupervisorOrAbove = useMemo(() => isSupervisorOrAboveUserFn(user), [user]);
+  const isAdminUser = useMemo(() => isAdminUserFn(user), [user]);
   const location = useLocation();
   const screens = useBreakpoint();
+  const modalWidth = screens.md ? (screens.lg ? '60vw' : '66vw') : '96vw';
+  const modalInitialHeight = 720;
   const [queryParams, setQueryParams] = useState<ProductionQueryParams>({ page: 1, pageSize: 10 });
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
 
@@ -355,6 +508,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const [nodeWorkflowLocked, setNodeWorkflowLocked] = useState(false);
   const [nodeWorkflowSaving, setNodeWorkflowSaving] = useState(false);
   const [nodeWorkflowDirty, setNodeWorkflowDirty] = useState(false);
+  const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
+  const [dragOverNodeId, setDragOverNodeId] = useState<string | null>(null);
   const [boardStatsByOrder, setBoardStatsByOrder] = useState<Record<string, Record<string, number>>>({});
   const boardStatsLoadingRef = useRef<Record<string, boolean>>({});
 
@@ -367,12 +522,21 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
 
   const [scanOpen, setScanOpen] = useState(false);
   const [scanSubmitting, setScanSubmitting] = useState(false);
+  const [scanConfirmVisible, setScanConfirmVisible] = useState(false);
+  const [scanConfirmRemain, setScanConfirmRemain] = useState(0);
+  const [scanConfirmLoading, setScanConfirmLoading] = useState(false);
+  const [scanConfirmPayload, setScanConfirmPayload] = useState<any | null>(null);
+  const [scanConfirmDetail, setScanConfirmDetail] = useState<any | null>(null);
+  const [scanConfirmMeta, setScanConfirmMeta] = useState<any | null>(null);
   const [scanForm] = Form.useForm();
   const scanInputRef = useRef<any>(null);
   const scanSubmittingRef = useRef(false);
   const lastFailedRequestRef = useRef<{ key: string; requestId: string } | null>(null);
+  const scanConfirmTimerRef = useRef<number | null>(null);
+  const scanConfirmTickRef = useRef<number | null>(null);
 
   const [scanBundlesExpanded, setScanBundlesExpanded] = useState(false);
+  const [bundleSelectedQr, setBundleSelectedQr] = useState('');
 
   const [rollbackOpen, setRollbackOpen] = useState(false);
   const [rollbackMode, setRollbackMode] = useState<'step' | 'bundle'>('step');
@@ -391,7 +555,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         params.startDate = dateRange[0].startOf('day').toISOString();
         params.endDate = dateRange[1].endOf('day').toISOString();
       }
-      const response = await api.get<any>('/production/order/list', { params });
+      const response = await productionOrderApi.list(params);
       const result = response as any;
       if (result.code === 200) {
         const records = (result.data.records || []) as ProductionOrder[];
@@ -410,7 +574,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
           void (async () => {
             const settled = await Promise.allSettled(
               styleNos.map(async (sn) => {
-                const res = await api.get<any>('/template-library/progress-node-unit-prices', { params: { styleNo: sn } });
+                const res = await templateLibraryApi.progressNodeUnitPrices(sn);
                 const r = res as any;
                 const rows = Array.isArray(r?.data) ? r.data : [];
                 const normalized: ProgressNode[] = rows
@@ -446,6 +610,130 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     }
   };
 
+  const clearScanConfirmTimers = () => {
+    if (scanConfirmTimerRef.current) {
+      window.clearTimeout(scanConfirmTimerRef.current);
+      scanConfirmTimerRef.current = null;
+    }
+    if (scanConfirmTickRef.current) {
+      window.clearInterval(scanConfirmTickRef.current);
+      scanConfirmTickRef.current = null;
+    }
+  };
+
+  useEffect(() => () => {
+    clearScanConfirmTimers();
+  }, []);
+
+  const closeScanConfirm = (silent?: boolean) => {
+    clearScanConfirmTimers();
+    setScanConfirmVisible(false);
+    setScanConfirmRemain(0);
+    setScanConfirmLoading(false);
+    setScanConfirmPayload(null);
+    setScanConfirmDetail(null);
+    setScanConfirmMeta(null);
+    if (!silent) {
+      message.info('已取消');
+    }
+  };
+
+  const openScanConfirm = (payload: any, detail: any, meta: any) => {
+    clearScanConfirmTimers();
+    setScanConfirmPayload(payload || null);
+    setScanConfirmDetail(detail || null);
+    setScanConfirmMeta(meta || null);
+    setScanConfirmVisible(true);
+    setScanConfirmRemain(15);
+    const expireAt = Date.now() + 15000;
+    scanConfirmTimerRef.current = window.setTimeout(() => {
+      closeScanConfirm(true);
+    }, 15000);
+    scanConfirmTickRef.current = window.setInterval(() => {
+      const remain = Math.max(0, Math.ceil((expireAt - Date.now()) / 1000));
+      setScanConfirmRemain((prev) => (prev === remain ? prev : remain));
+    }, 500);
+  };
+
+  const submitConfirmedScan = async () => {
+    if (!scanConfirmPayload || scanConfirmLoading) return;
+    if (!activeOrder) return;
+    setScanConfirmLoading(true);
+    const meta = scanConfirmMeta || {};
+    const attemptKey = meta.attemptKey || '';
+    const attemptRequestId = meta.attemptRequestId || '';
+    const values = meta.values || {};
+    try {
+      const response = await productionScanApi.execute(scanConfirmPayload);
+      const result = response as any;
+      if (result.code === 200) {
+        lastFailedRequestRef.current = null;
+        const serverMsg = String(result?.data?.message || '').trim();
+        const exceed = serverMsg.includes('裁剪') && serverMsg.includes('超出');
+        if (exceed) {
+          message.error('数量超出无法入库');
+          closeScanConfirm(true);
+          return;
+        }
+        const isDuplicate = isDuplicateScanMessage(serverMsg);
+        if (isDuplicate) {
+          message.info('已处理');
+        } else {
+          message.success(serverMsg || '扫码成功');
+        }
+        const effectiveNodes = stripWarehousingNode(resolveNodesForOrder(activeOrder));
+        const isProd = String(values.scanType || '').trim() === 'production';
+        if (!isDuplicate && isProd) {
+          const updated = await fetchScanHistory(activeOrder);
+          const autoCalculatedProgress = calculateProgressFromBundles(activeOrder, cuttingBundles, updated, effectiveNodes);
+          await updateOrderProgress(activeOrder, autoCalculatedProgress);
+          const currentIdx = getNodeIndexFromProgress(effectiveNodes, autoCalculatedProgress);
+          const nextNode = effectiveNodes[currentIdx];
+          if (nextNode) {
+            scanForm.setFieldsValue({
+              progressStage: String(nextNode.name || '').trim() || undefined,
+              processCode: String(nextNode.id || '').trim(),
+              unitPrice: Number.isFinite(Number(nextNode.unitPrice)) && Number(nextNode.unitPrice) >= 0 ? Number(nextNode.unitPrice) : undefined,
+            });
+          }
+        } else {
+          await fetchOrders();
+          await fetchScanHistory(activeOrder);
+        }
+        scanForm.setFieldsValue({ scanCode: '', quantity: undefined });
+        setTimeout(() => scanInputRef.current?.focus?.(), 0);
+      } else {
+        const msg = String(result.message || '').trim();
+        const exceed = msg.includes('裁剪') && msg.includes('超出');
+        if (exceed) {
+          message.error('数量超出无法入库');
+        } else if (msg) {
+          message.error(msg);
+        } else {
+          message.error('系统繁忙');
+        }
+      }
+    } catch (error) {
+      const anyErr: any = error;
+      const hasStatus = anyErr?.status != null || anyErr?.response?.status != null;
+      if (!hasStatus) {
+        if (attemptKey && attemptRequestId) {
+          lastFailedRequestRef.current = { key: attemptKey, requestId: attemptRequestId };
+        }
+        message.error('连接失败');
+      } else {
+        lastFailedRequestRef.current = null;
+        console.error('scan_execute_failed', error);
+        message.error('系统繁忙');
+      }
+    } finally {
+      setScanConfirmLoading(false);
+      closeScanConfirm(true);
+      setScanSubmitting(false);
+      scanSubmittingRef.current = false;
+    }
+  };
+
   useEffect(() => {
     fetchOrders();
   }, [queryParams, dateRange]);
@@ -466,7 +754,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   useEffect(() => {
     (async () => {
       try {
-        const res = await api.get<any>('/template-library/type/progress');
+        const res = await templateLibraryApi.listByType('progress');
         const result = res as any;
         if (result.code === 200) {
           setProgressTemplates(Array.isArray(result.data) ? result.data : []);
@@ -506,7 +794,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const fetchTemplateNodes = async (templateId: string): Promise<ProgressNode[]> => {
     const tid = String(templateId || '').trim();
     if (!tid) return [];
-    const res = await api.get<any>(`/template-library/${tid}`);
+    const res = await templateLibraryApi.getById(tid);
     const result = res as any;
     if (result.code !== 200) return [];
     const tpl: TemplateLibrary = result.data;
@@ -523,6 +811,65 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       return progressNodesByStyleNo[sn];
     }
     return nodes?.length ? nodes : defaultNodes;
+  };
+
+  /**
+   * 基于菲号完成情况计算进度
+   * @param order 生产订单
+   * @param cuttingBundles 裁剪捆包列表
+   * @param scanHistory 扫码历史记录
+   * @returns 计算后的进度百分比
+   */
+  const calculateProgressFromBundles = (
+    order: ProductionOrder,
+    cuttingBundles: CuttingBundle[],
+    scanHistory: ScanRecord[],
+    nodes?: ProgressNode[],
+  ): number => {
+    if (!cuttingBundles.length) {
+      return Number(order.productionProgress) || 0;
+    }
+
+    const effectiveNodes = stripWarehousingNode(Array.isArray(nodes) && nodes.length ? nodes : defaultNodes);
+    if (effectiveNodes.length <= 1) {
+      return Number(order.productionProgress) || 0;
+    }
+
+    // 计算每个节点的完成情况
+    const nodeCompletion = effectiveNodes.map((node) => {
+      const nodeName = node.name;
+      // 统计该节点下所有菲号的完成情况
+      const totalQtyForNode = cuttingBundles.reduce((acc, bundle) => acc + (Number(bundle?.quantity) || 0), 0);
+
+      // 计算该节点已完成的数量
+      const doneQtyForNode = scanHistory
+        .filter((r) => String(r?.scanResult || '').trim() === 'success')
+        .filter((r) => String(r?.scanType || '').trim() === 'production')
+        .filter((r) => stageNameMatches(nodeName, getRecordStageName(r)))
+        .reduce((acc, r) => acc + (Number(r?.quantity) || 0), 0);
+
+      // 计算该节点的完成率
+      const completionRate = totalQtyForNode > 0 ? doneQtyForNode / totalQtyForNode : 0;
+      return { nodeName, completionRate };
+    });
+
+    // 计算整体进度：每个节点按顺序贡献进度，前一个节点未完成，后续节点不贡献
+    let totalProgress = 0;
+    const nodeWeight = 100 / effectiveNodes.length;
+
+    for (let i = 0; i < nodeCompletion.length; i++) {
+      const { completionRate } = nodeCompletion[i];
+      // 如果当前节点完成率达到98%，视为完全完成
+      if (completionRate >= 0.98) {
+        totalProgress += nodeWeight;
+      } else {
+        // 当前节点只贡献部分进度，后续节点不贡献
+        totalProgress += nodeWeight * completionRate;
+        break;
+      }
+    }
+
+    return clampPercent(totalProgress);
   };
 
   const resolveNodesForListOrder = (order: ProductionOrder | null): ProgressNode[] => {
@@ -555,7 +902,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     if (boardStatsLoadingRef.current[oid]) return;
     boardStatsLoadingRef.current[oid] = true;
     try {
-      const res = await api.get<any>(`/production/scan/order/${oid}`, { params: { page: 1, pageSize: 500 } });
+      const res = await productionScanApi.listByOrderId(oid, { page: 1, pageSize: 500 });
       const result = res as any;
       const records: ScanRecord[] = result?.code === 200 && Array.isArray(result?.data?.records) ? result.data.records : [];
       const valid = records
@@ -623,7 +970,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     }
 
     try {
-      const res = await api.get<any>('/template-library/progress-node-unit-prices', { params: { styleNo } });
+      const res = await templateLibraryApi.progressNodeUnitPrices(styleNo);
       const result = res as any;
       if (result.code === 200) {
         const rows = Array.isArray(result.data) ? result.data : [];
@@ -647,14 +994,12 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     }
 
     try {
-      const res = await api.get<any>('/template-library/list', {
-        params: {
-          page: 1,
-          pageSize: 10,
-          templateType: 'progress',
-          sourceStyleNo: styleNo,
-          keyword: '',
-        },
+      const res = await templateLibraryApi.list({
+        page: 1,
+        pageSize: 10,
+        templateType: 'progress',
+        sourceStyleNo: styleNo,
+        keyword: '',
       });
       const result = res as any;
       if (result.code !== 200) return;
@@ -679,7 +1024,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     try {
       let list = progressTemplates;
       if (!list.length) {
-        const res = await api.get<any>('/template-library/type/progress');
+        const res = await templateLibraryApi.listByType('progress');
         const result = res as any;
         if (result.code === 200) {
           list = Array.isArray(result.data) ? result.data : [];
@@ -730,7 +1075,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     }
     setScanHistoryLoading(true);
     try {
-      const response = await api.get<any>(`/production/scan/order/${order.id}`, { params: { page: 1, pageSize: 200 } });
+      const response = await productionScanApi.listByOrderId(String(order.id), { page: 1, pageSize: 200 });
       const result = response as any;
       if (result.code === 200) {
         const records = Array.isArray(result.data?.records) ? result.data.records : [];
@@ -756,13 +1101,11 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     }
     setCuttingBundlesLoading(true);
     try {
-      const res = await api.get<any>('/production/cutting/list', {
-        params: {
-          page: 1,
-          pageSize: 10000,
-          orderNo: orderNo || undefined,
-          orderId: orderId || undefined,
-        },
+      const res = await productionCuttingApi.list({
+        page: 1,
+        pageSize: 10000,
+        orderNo: orderNo || undefined,
+        orderId: orderId || undefined,
       });
       const result = res as any;
       if (result.code === 200) {
@@ -796,7 +1139,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     }
     setPricingProcessLoading(true);
     try {
-      const res = await api.get<any>('/style/process/list', { params: { styleId } });
+      const res = await styleProcessApi.listByStyleId(styleId);
       const result = res as any;
       if (result.code === 200) {
         const list = Array.isArray(result.data) ? (result.data as StyleProcess[]) : [];
@@ -851,7 +1194,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   };
 
   const openScan = async (order: ProductionOrder) => {
-    if (isOrderFrozen(order)) {
+    if (isOrderFrozenByStatus(order)) {
       message.error('订单已完成，无法操作');
       return;
     }
@@ -865,6 +1208,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     await fetchCuttingBundles(effective);
     const procs = await fetchPricingProcesses(effective);
     setScanBundlesExpanded(false);
+    setBundleSelectedQr('');
     setScanOpen(true);
     scanForm.resetFields();
 
@@ -882,7 +1226,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       processCode: currentNodeCode || '',
       color: '',
       size: '',
-      quantity: 1,
+      quantity: undefined,
       baseUnitPrice,
       unitPrice: baseUnitPrice,
     });
@@ -907,7 +1251,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       message.error('未选择订单');
       return;
     }
-    if (isOrderFrozen(activeOrder)) {
+    if (isOrderFrozenByStatus(activeOrder)) {
       message.error('订单已完成，无法操作');
       return;
     }
@@ -946,7 +1290,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       message.error('未选择订单');
       return;
     }
-    if (isOrderFrozen(activeOrder)) {
+    if (isOrderFrozenByStatus(activeOrder)) {
       message.error('订单已完成，无法操作');
       return;
     }
@@ -981,7 +1325,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     setNodeWorkflowSaving(true);
     try {
       const workflowJson = JSON.stringify({ nodes: payloadNodes });
-      const res = await api.post<any>('/production/order/progress-workflow/lock', {
+      const res = await productionOrderApi.saveProgressWorkflow({
         id: activeOrder.id,
         workflowJson,
       });
@@ -1020,7 +1364,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     if (nodeWorkflowSaving) return;
     setNodeWorkflowSaving(true);
     try {
-      const res = await api.post<any>('/production/order/progress-workflow/rollback', { id: activeOrder.id });
+      const res = await productionOrderApi.rollbackProgressWorkflow(activeOrder.id);
       const result = res as any;
       if (result.code === 200) {
         const updated = (result.data || null) as ProductionOrder | null;
@@ -1045,6 +1389,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   };
 
   const closeScan = () => {
+    closeScanConfirm(true);
     setScanOpen(false);
     setScanSubmitting(false);
     scanSubmittingRef.current = false;
@@ -1052,6 +1397,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     scanForm.resetFields();
     setCuttingBundles([]);
     setScanBundlesExpanded(false);
+    setBundleSelectedQr('');
   };
 
   const closeRollback = () => {
@@ -1068,13 +1414,11 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     if (!order?.id) return;
     setRollbackBundlesLoading(true);
     try {
-      const res = await api.get<any>('/production/cutting/list', {
-        params: {
-          page: 1,
-          pageSize: 10000,
-          orderNo: String(order.orderNo || '').trim() || undefined,
-          orderId: String(order.id || '').trim() || undefined,
-        },
+      const res = await productionCuttingApi.list({
+        page: 1,
+        pageSize: 10000,
+        orderNo: String(order.orderNo || '').trim() || undefined,
+        orderId: String(order.id || '').trim() || undefined,
       });
       const result = res as any;
       if (result.code === 200) {
@@ -1160,18 +1504,24 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   useEffect(() => {
     if (!scanOpen) return;
     if (matchedBundle) {
+      const matchedQty = Number(matchedBundle?.quantity);
       scanForm.setFieldsValue({
         color: matchedBundle?.color || '',
         size: matchedBundle?.size || '',
-        quantity: Number(matchedBundle?.quantity) || 1,
+        quantity: Number.isFinite(matchedQty) && matchedQty > 0 ? matchedQty : undefined,
       });
       return;
     }
     const code = String(watchScanCode || '').trim();
     if (!code) {
-      scanForm.setFieldsValue({ color: '', size: '', quantity: 1 });
+      scanForm.setFieldsValue({ color: '', size: '', quantity: undefined });
+      if (bundleSelectedQr) setBundleSelectedQr('');
+      return;
     }
-  }, [matchedBundle, scanOpen, scanForm, watchScanCode]);
+    if (bundleSelectedQr && bundleSelectedQr !== code) {
+      setBundleSelectedQr('');
+    }
+  }, [matchedBundle, scanOpen, scanForm, watchScanCode, bundleSelectedQr]);
 
   const bundleDoneByQrForSelectedNode = useMemo(() => {
     const pn = String(watchProgressStage || '').trim();
@@ -1290,9 +1640,11 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
 
     if (scanSubmittingRef.current) return;
     scanSubmittingRef.current = true;
+    setScanSubmitting(true);
 
     let attemptKey = '';
     let attemptRequestId = '';
+    let didOpenConfirm = false;
     try {
       const stg = String(scanForm.getFieldValue('progressStage') || '').trim();
       if (!stg) {
@@ -1312,62 +1664,87 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         message.error('请扫码或选择扎号');
         return;
       }
-      let selectedBundle = cuttingBundles.find((b) => String(b.qrCode || '').trim() === scanCode) || null;
+      if (isCuttingStageKey(values.progressStage)) {
+        const selectedQr = String(bundleSelectedQr || '').trim();
+        if (!selectedQr || selectedQr !== scanCode) {
+          message.error('请先在扎号列表选择菲号');
+          return;
+        }
+      }
+      let selectedBundle = matchedBundle;
       if (!selectedBundle) {
         const parts = scanCode.split('-').filter(Boolean);
         const looksLikeBundleQr = parts.length >= 6 && /\d+$/.test(parts[parts.length - 1] || '');
-        if (!looksLikeBundleQr) {
-          message.error('请扫码菲号二维码');
-          return;
-        }
-        try {
-          const res = await api.get<any>(`/production/cutting/by-code/${encodeURIComponent(scanCode)}`);
-          const result = res as any;
-          if (result.code !== 200) {
-            message.error(result.message || '未找到对应的裁剪扎号');
-            return;
-          }
-          if (result.data) {
-            const fetched = result.data as CuttingBundle;
-            const fetchedOrderNo = String((fetched as any)?.productionOrderNo || '').trim();
-            const fetchedOrderId = String((fetched as any)?.productionOrderId || '').trim();
-            const currentOrderNo = String(activeOrder.orderNo || '').trim();
-            const currentOrderId = String(activeOrder.id || '').trim();
-            const belongsToOrder =
-              (fetchedOrderNo && currentOrderNo && fetchedOrderNo === currentOrderNo)
-              || (fetchedOrderId && currentOrderId && fetchedOrderId === currentOrderId);
-            if (!belongsToOrder) {
-              message.error('扎号与当前订单不匹配');
+        if (looksLikeBundleQr) {
+          try {
+            const res = await productionCuttingApi.getByCode(scanCode);
+            const result = res as any;
+            if (result.code !== 200) {
+              message.error(result.message || '未找到对应的裁剪扎号');
               return;
             }
-            selectedBundle = fetched;
-            setCuttingBundles((prev) => {
-              const next = Array.isArray(prev) ? [...prev] : [];
-              const exists = next.some((b) => String(b?.qrCode || '').trim() === String(fetched?.qrCode || '').trim());
-              if (!exists) {
-                next.push(fetched);
-                next.sort((a, b) => (Number(a?.bundleNo) || 0) - (Number(b?.bundleNo) || 0));
+            if (result.data) {
+              const fetched = result.data as CuttingBundle;
+              const fetchedOrderNo = String((fetched as any)?.productionOrderNo || '').trim();
+              const fetchedOrderId = String((fetched as any)?.productionOrderId || '').trim();
+              const currentOrderNo = String(activeOrder.orderNo || '').trim();
+              const currentOrderId = String(activeOrder.id || '').trim();
+              const belongsToOrder =
+                (fetchedOrderNo && currentOrderNo && fetchedOrderNo === currentOrderNo)
+                || (fetchedOrderId && currentOrderId && fetchedOrderId === currentOrderId);
+              if (!belongsToOrder) {
+                message.error('扎号与当前订单不匹配');
+                return;
               }
-              return next;
-            });
-            scanForm.setFieldsValue({
-              color: (fetched as any)?.color || values.color || '',
-              size: (fetched as any)?.size || values.size || '',
-              quantity: Number((fetched as any)?.quantity) || Number(values.quantity) || 1,
-            });
+              selectedBundle = fetched;
+              setCuttingBundles((prev) => {
+                const next = Array.isArray(prev) ? [...prev] : [];
+                const exists = next.some((b) => String(b?.qrCode || '').trim() === String(fetched?.qrCode || '').trim());
+                if (!exists) {
+                  next.push(fetched);
+                  next.sort((a, b) => (Number(a?.bundleNo) || 0) - (Number(b?.bundleNo) || 0));
+                }
+                return next;
+              });
+              const fetchedQty = Number((fetched as any)?.quantity);
+              const formQty = Number(values.quantity);
+              const nextQty = Number.isFinite(fetchedQty) && fetchedQty > 0
+                ? fetchedQty
+                : (Number.isFinite(formQty) && formQty > 0 ? formQty : undefined);
+              scanForm.setFieldsValue({
+                color: (fetched as any)?.color || values.color || '',
+                size: (fetched as any)?.size || values.size || '',
+                quantity: nextQty,
+              });
+            }
+          } catch {
           }
-        } catch {
         }
       }
-      if (!selectedBundle) {
-        message.error('未匹配到对应扎号，请重新选择或扫码');
-        return;
-      }
-      if (isBundleCompletedForSelectedNode(selectedBundle)) {
+      if (selectedBundle && isBundleCompletedForSelectedNode(selectedBundle)) {
         message.error('该扎号在当前环节已完成，请选择其他扎号');
         return;
       }
-      setScanSubmitting(true);
+
+      const bundleQty = Number(selectedBundle?.quantity);
+      const formQty = Number(values.quantity);
+      const resolvedQty = Number.isFinite(bundleQty) && bundleQty > 0
+        ? bundleQty
+        : (Number.isFinite(formQty) && formQty > 0 ? formQty : null);
+      if (!resolvedQty) {
+        message.error('请填写数量');
+        return;
+      }
+
+      const formUnitPrice = Number(values.unitPrice ?? scanForm.getFieldValue('baseUnitPrice'));
+      const resolvedUnitPrice = Number.isFinite(formUnitPrice) && formUnitPrice >= 0 ? formUnitPrice : undefined;
+
+      // 自动填充扎号信息，简化用户操作
+      const bundleInfo = {
+        color: selectedBundle?.color || values.color,
+        size: selectedBundle?.size || values.size,
+        quantity: resolvedQty,
+      };
 
       const payloadBase: any = {
         scanType: values.scanType || 'production',
@@ -1379,10 +1756,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         processCode: values.processCode,
         progressStage: values.progressStage,
         processName: values.processName,
-        color: values.color,
-        size: values.size,
-        quantity: values.quantity,
-        unitPrice: values.unitPrice,
+        unitPrice: resolvedUnitPrice,
+        ...bundleInfo,
         operatorId: user.id,
         operatorName: user.name,
       };
@@ -1395,97 +1770,33 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       attemptRequestId = requestId;
       const payload = { ...payloadBase, requestId };
 
-      const response = await api.post<any>('/production/scan/execute', payload);
-      const result = response as any;
-      if (result.code === 200) {
-        lastFailedRequestRef.current = null;
+      const detail = {
+        scanCode,
+        quantity: resolvedQty,
+        progressStage: values.progressStage,
+        processName: values.processName,
+        unitPrice: resolvedUnitPrice,
+        orderNo: activeOrder.orderNo,
+        styleNo: activeOrder.styleNo,
+        color: values.color,
+        size: values.size,
+      };
 
-        const serverMsg = String(result?.data?.message || '').trim();
-        const isDuplicate = isDuplicateScanMessage(serverMsg);
-        if (isDuplicate) {
-          message.info(serverMsg || '重复扫码已忽略');
-        } else {
-          message.success(serverMsg || '扫码成功');
-        }
-        const selectedStageName = String(values.progressStage || '').trim();
-        const effectiveNodes = stripWarehousingNode(resolveNodesForOrder(activeOrder));
-        const selectedProcessCode = String(values.processCode || '').trim();
-        const findIdx = () => {
-          if (selectedProcessCode) {
-            const byId = effectiveNodes.findIndex((n) => String(n.id || '').trim() === selectedProcessCode);
-            if (byId >= 0) return byId;
-          }
-          const exact = effectiveNodes.findIndex((n) => String(n.name || '').trim() === selectedStageName);
-          if (exact >= 0) return exact;
-          const fuzzy = effectiveNodes.findIndex((n) => stageNameMatches(String(n.name || ''), selectedStageName));
-          if (fuzzy >= 0) return fuzzy;
-          const synonyms: Record<string, string> = { 车缝: '生产', 缝制: '生产', 后整: '包装', 整烫: '包装', 熨烫: '包装' };
-          const mapped = synonyms[selectedStageName as keyof typeof synonyms] || selectedStageName;
-          const syn = effectiveNodes.findIndex((n) => String(n.name || '').trim() === mapped);
-          if (syn >= 0) return syn;
-          return -1;
-        };
-        const selectedIdx = findIdx();
-        const isProd = String(values.scanType || '').trim() === 'production';
-        if (!isDuplicate && isProd) {
-          const updated = await fetchScanHistory(activeOrder);
-          const bundlesTotalQty = cuttingBundles.reduce((acc, b) => acc + (Number(b?.quantity) || 0), 0);
-          const orderQty = Number(activeOrder.orderQuantity) || 0;
-          const targetQty = bundlesTotalQty > 0 ? bundlesTotalQty : orderQty;
-          const done = updated
-            .filter((r) => String((r as any)?.scanResult || '').trim() === 'success')
-            .filter((r) => String((r as any)?.scanType || '').trim() === 'production')
-            .filter((r) => stageNameMatches(selectedStageName, getRecordStageName(r)))
-            .reduce((acc, r) => acc + (Number(r?.quantity) || 0), 0);
-
-          const currentIdx = getNodeIndexFromProgress(effectiveNodes, Number(activeOrder.productionProgress) || 0);
-          let targetIdx = selectedIdx >= 0 ? selectedIdx : Math.min(currentIdx + 1, effectiveNodes.length - 1);
-          if (targetQty > 0) {
-            const remaining = Math.max(0, targetQty - done);
-            const autoComplete = remaining / targetQty <= 0.02;
-            if (autoComplete && selectedIdx < effectiveNodes.length - 1) {
-              targetIdx = selectedIdx + 1;
-            }
-          }
-
-          await updateOrderProgress(activeOrder, getProgressFromNodeIndex(effectiveNodes, targetIdx));
-
-          const nextNode = effectiveNodes[targetIdx];
-          if (nextNode) {
-            scanForm.setFieldsValue({
-              progressStage: String(nextNode.name || '').trim() || undefined,
-              processCode: String(nextNode.id || '').trim(),
-              unitPrice: Number.isFinite(Number(nextNode.unitPrice)) && Number(nextNode.unitPrice) >= 0 ? Number(nextNode.unitPrice) : undefined,
-            });
-          }
-        } else {
-          await fetchOrders();
-          await fetchScanHistory(activeOrder);
-        }
-        scanForm.setFieldsValue({ scanCode: '', quantity: 1 });
-
-        setTimeout(() => scanInputRef.current?.focus?.(), 0);
-      } else {
-        message.error(result.message || '扫码失败');
-      }
+      didOpenConfirm = true;
+      openScanConfirm(payload, detail, { attemptKey, attemptRequestId, values });
+      return;
     } catch (error) {
       if ((error as any).errorFields) {
         const firstError = (error as any).errorFields[0];
         message.error(firstError.errors[0] || '表单验证失败');
       } else {
-        const anyErr: any = error;
-        if (anyErr?.status == null) {
-          if (attemptKey && attemptRequestId) {
-            lastFailedRequestRef.current = { key: attemptKey, requestId: attemptRequestId };
-          }
-        } else {
-          lastFailedRequestRef.current = null;
-        }
-        message.error((error as Error).message || '操作失败');
+        message.error('系统繁忙');
       }
     } finally {
-      setScanSubmitting(false);
-      scanSubmittingRef.current = false;
+      if (!didOpenConfirm) {
+        setScanSubmitting(false);
+        scanSubmittingRef.current = false;
+      }
     }
   };
 
@@ -1526,26 +1837,19 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     return getNodeIndexFromProgress(nodes, Number(activeOrder?.productionProgress) || 0);
   }, [nodes, activeOrder?.productionProgress]);
 
-  const moveNode = (direction: 'up' | 'down', nodeId: string) => {
-    if (!activeOrder?.id) {
-      message.error('未选择订单');
-      return;
-    }
-    if (!isSupervisorOrAbove) {
-      message.error('无权限操作进度节点');
-      return;
-    }
-    if (nodeWorkflowLocked) {
-      message.error('流程已锁定，如需修改请先退回');
-      return;
-    }
-    const idx = nodes.findIndex((n) => String(n.id) === String(nodeId));
-    if (idx < 0) return;
-    const nextIdx = direction === 'up' ? idx - 1 : idx + 1;
-    if (nextIdx < 0 || nextIdx >= nodes.length) return;
+  const reorderNodeBefore = (fromId: string, toId: string) => {
+    const from = String(fromId || '').trim();
+    const to = String(toId || '').trim();
+    if (!from || !to || from === to) return;
+
+    const fromIdx = nodes.findIndex((n) => String(n.id) === from);
+    const toIdx = nodes.findIndex((n) => String(n.id) === to);
+    if (fromIdx < 0 || toIdx < 0) return;
+
     const next = [...nodes];
-    const [picked] = next.splice(idx, 1);
-    next.splice(nextIdx, 0, picked);
+    const [picked] = next.splice(fromIdx, 1);
+    const insertIdx = fromIdx < toIdx ? toIdx - 1 : toIdx;
+    next.splice(insertIdx, 0, picked);
     saveNodes(next);
     setNodeWorkflowDirty(true);
   };
@@ -1644,7 +1948,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       message.error('未选择订单');
       return;
     }
-    if (isOrderFrozen(activeOrder)) {
+    if (isOrderFrozenByStatus(activeOrder)) {
       message.error('订单已完成，无法操作');
       return;
     }
@@ -1679,7 +1983,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     const oid = String(orderId || '').trim();
     if (!oid) return null;
     try {
-      const res = await api.get<any>(`/production/order/detail/${oid}`);
+      const res = await productionOrderApi.detail(oid);
       const result = res as any;
       if (result.code === 200) {
         return (result.data || null) as ProductionOrder | null;
@@ -1701,7 +2005,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       if (opts?.rollbackRemark) payload.rollbackRemark = opts.rollbackRemark;
       if (opts?.rollbackToProcessName) payload.rollbackToProcessName = opts.rollbackToProcessName;
 
-      const response = await api.post<any>('/production/order/update-progress', payload);
+      const response = await productionOrderApi.updateProgress(payload);
       const result = response as any;
       if (result.code === 200) {
         message.success('进度已更新');
@@ -1759,15 +2063,10 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     return clampPercent(base);
   };
 
-  const getTotalUnitPriceForOrder = (order: ProductionOrder) => {
-    const ns = stripWarehousingNode(resolveNodesForListOrder(order));
-    const sum = ns.reduce((acc, n) => acc + (Number((n as any)?.unitPrice) || 0), 0);
-    if (sum > 0) {
-      return sum;
-    }
-    const direct = Number((order as any)?.factoryUnitPrice);
-    if (Number.isFinite(direct) && direct > 0) {
-      return direct;
+  const getQuotationUnitPriceForOrder = (order: ProductionOrder) => {
+    const v = Number((order as any)?.quotationUnitPrice);
+    if (Number.isFinite(v) && v > 0) {
+      return v;
     }
     return 0;
   };
@@ -1825,7 +2124,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         </div>
       ),
       onOk: async () => {
-        const result = await api.post<any>('/production/order/close', { id: orderId });
+        const result = await productionOrderApi.close(orderId, 'productionProgress');
         if ((result as any)?.code !== 200) {
           throw new Error((result as any)?.message || '关单失败');
         }
@@ -1869,12 +2168,12 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       width: 140,
     },
     {
-      title: '生产总单价',
-      key: 'totalUnitPrice',
+      title: '最终报价单价',
+      key: 'quotationUnitPrice',
       width: 120,
       align: 'right' as const,
       render: (_: any, record: ProductionOrder) => {
-        const v = getTotalUnitPriceForOrder(record);
+        const v = getQuotationUnitPriceForOrder(record);
         return `¥${v.toFixed(2)}`;
       },
     },
@@ -1927,7 +2226,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       render: (_: any, record: ProductionOrder) => {
         const totalQty = Number(record.orderQuantity) || 0;
         const done = Number(record.completedQuantity) || 0;
-        const frozen = isOrderFrozen(record);
+        const frozen = isOrderFrozenByStatus(record);
         const label = getProgressLabelForTable(record);
         const ns = stripWarehousingNode(resolveNodesForListOrder(record));
         const progress = getProgressPercentForTable(record, ns);
@@ -1951,7 +2250,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       key: 'action',
       width: 110,
       render: (_: any, record: ProductionOrder) => {
-        const frozen = isOrderFrozen(record);
+        const frozen = isOrderFrozenByStatus(record);
         return (
           <RowActions
             actions={[
@@ -2003,11 +2302,15 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const detailNodeCards = useMemo(() => {
     const order = activeOrder;
     if (!order) return null;
-    const currentIdx = getNodeIndexFromProgress(nodes, Number(order.productionProgress) || 0);
-    const canEditWorkflow = isSupervisorOrAbove && !nodeWorkflowSaving && !nodeWorkflowLocked && !isOrderFrozen(order);
+    const frozen = isOrderFrozenByStatus(order);
+    const pct = clampPercent(Number(order.productionProgress) || 0);
+    const effectivePct = frozen ? 100 : pct;
+    const currentIdx = getNodeIndexFromProgress(nodes, effectivePct);
+    const canEditWorkflow = isSupervisorOrAbove && !nodeWorkflowSaving && !nodeWorkflowLocked && !isOrderFrozenByStatus(order);
     const totalUnitPrice = nodes.reduce((sum, n) => sum + (Number(n.unitPrice) || 0), 0);
     const orderQty = Number(order.orderQuantity) || 0;
     const totalOrderCost = totalUnitPrice * orderQty;
+    const cardWidth = Math.round((screens.md ? 260 : 240) * 0.6);
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <Card size="small" styles={{ body: { padding: 12 } }}>
@@ -2022,61 +2325,92 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
           </Space>
         </Card>
         <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
-          <div style={{ display: 'flex', gap: 8, minWidth: 'max-content', alignItems: 'stretch' }}>
+          <div className="mpb-detailCards">
             {nodes.map((n, idx) => {
               const stat = nodeStats.statsByName[n.name] || { done: 0, total: nodeStats.totalQty, remaining: nodeStats.totalQty, percent: 0 };
-              const isCurrent = idx === currentIdx;
-              const isDone = idx < currentIdx;
               const percent = clampPercent(stat.percent);
-              const status = isDone ? 'success' : percent >= 100 ? 'success' : percent > 0 && percent < 100 ? 'active' : isCurrent ? 'active' : undefined;
+              const isDone = frozen || idx < currentIdx || effectivePct >= 100;
+              const isCurrent = !frozen && idx === currentIdx && effectivePct > 0 && effectivePct < 100;
+              const fillPct = isDone ? 100 : percent;
               const unitPrice = Number(n.unitPrice) || 0;
+              const isDragging = draggingNodeId === String(n.id);
+              const isDragOver = !!draggingNodeId && draggingNodeId !== String(n.id) && dragOverNodeId === String(n.id);
               return (
-                <Card
+                <div
                   key={n.id}
-                  size="small"
-                  styles={{ body: { padding: 8 } }}
-                  style={{
-                    width: screens.md ? 260 : 240,
-                    ...(isDone ? { background: '#fafafa', opacity: 0.75 } : null),
+                  className={`mpb-detailCard mpb-pop${canEditWorkflow ? ' mpb-draggable' : ''}${isDragging ? ' mpb-dragging' : ''}${isDragOver ? ' mpb-dragOver' : ''}${isDone ? ' mpb-detailDone' : ''}${isCurrent ? ' mpb-detailCurrent' : ''}${frozen ? ' mpb-detailFrozen' : ''}`}
+                  style={{ width: cardWidth, ['--p' as any]: `${fillPct}%` }}
+                  title={`${n.name} ${stat.done}/${stat.total} · 剩 ${stat.remaining} · ${percent.toFixed(0)}%`}
+                  onDragOver={(e) => {
+                    if (!canEditWorkflow) return;
+                    if (!draggingNodeId) return;
+                    if (String(n.id) === String(draggingNodeId)) return;
+                    e.preventDefault();
+                    setDragOverNodeId(String(n.id));
+                  }}
+                  onDragLeave={() => {
+                    setDragOverNodeId((prev) => (prev === String(n.id) ? null : prev));
+                  }}
+                  onDrop={(e) => {
+                    if (!canEditWorkflow) return;
+                    e.preventDefault();
+                    const fromId = String(draggingNodeId || e.dataTransfer.getData('text/plain') || '').trim();
+                    reorderNodeBefore(fromId, String(n.id));
+                    setDraggingNodeId(null);
+                    setDragOverNodeId(null);
                   }}
                 >
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, height: '100%' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <Tag style={{ marginInlineEnd: 0, fontSize: 12, lineHeight: '18px', paddingInline: 6 }} color={isCurrent ? 'processing' : 'default'}>{n.name}</Tag>
-                      <Text type="secondary" style={{ fontSize: 12 }}>{stat.done} / {stat.total}</Text>
+                  <div
+                    className="mpb-detailTrack"
+                    style={{ ['--p' as any]: `${fillPct}%` }}
+                    draggable={canEditWorkflow}
+                    onDragStart={(e) => {
+                      if (!canEditWorkflow) return;
+                      e.dataTransfer.setData('text/plain', String(n.id));
+                      e.dataTransfer.effectAllowed = 'move';
+                      setDraggingNodeId(String(n.id));
+                    }}
+                    onDragEnd={() => {
+                      setDraggingNodeId(null);
+                      setDragOverNodeId(null);
+                    }}
+                  >
+                    <div className="mpb-detailFill" />
+                    <div className="mpb-detailBarText">
+                      <span className="mpb-detailBarLeft">{n.name}</span>
+                      <span className="mpb-detailBarRight">
+                        {stat.done}/{stat.total} · {percent.toFixed(0)}%
+                      </span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-                      <Text type="secondary" style={{ fontSize: 12 }}>剩余 {stat.remaining}</Text>
-                      <Text type="secondary" style={{ fontSize: 12 }}>{percent.toFixed(0)}%</Text>
-                    </div>
-                    <Progress percent={percent} status={status as any} showInfo={false} size={6} strokeColor={isDone ? '#d9d9d9' : undefined} />
-                    <div style={{ display: 'grid', gridTemplateColumns: '44px 1fr', gap: 6, alignItems: 'center' }}>
-                      <Text style={{ fontSize: 12 }}>单价</Text>
+                  </div>
+
+                  <div className="mpb-detailBottomRow">
+                    <div className="mpb-detailPriceInline">
+                      <span className="mpb-detailLabel">单价</span>
                       <InputNumber
+                        className="mpb-detailPriceInput"
                         size="small"
                         min={0}
                         precision={2}
                         value={unitPrice}
-                        style={{ width: '100%' }}
                         aria-label={`单价-${n.name}`}
                         disabled={!canEditWorkflow}
                         onChange={(v) => updateNodeUnitPrice(n.id, Number(v) || 0)}
                       />
                     </div>
-                    <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', marginTop: 'auto' }}>
-                      <Button size="small" icon={<ArrowUpOutlined />} aria-label="上移" disabled={!canEditWorkflow || idx === 0} onClick={() => moveNode('up', n.id)} />
-                      <Button size="small" icon={<ArrowDownOutlined />} aria-label="下移" disabled={!canEditWorkflow || idx === nodes.length - 1} onClick={() => moveNode('down', n.id)} />
-                      <Button size="small" danger icon={<DeleteOutlined />} aria-label="删除" disabled={!canEditWorkflow} onClick={() => removeNode(n.id)} />
+
+                    <div className="mpb-detailActions">
+                      <Button type="text" size="small" danger icon={<DeleteOutlined />} aria-label="删除" disabled={!canEditWorkflow} onClick={() => removeNode(n.id)} />
                     </div>
                   </div>
-                </Card>
+                </div>
               );
             })}
           </div>
         </div>
       </div>
     );
-  }, [activeOrder, isSupervisorOrAbove, nodeStats, nodeWorkflowLocked, nodeWorkflowSaving, nodes, screens.md]);
+  }, [activeOrder, dragOverNodeId, draggingNodeId, isSupervisorOrAbove, nodeStats, nodeWorkflowLocked, nodeWorkflowSaving, nodes, screens.md]);
 
   const autoOpenDetailOnceRef = useRef(false);
 
@@ -2208,8 +2542,13 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       <ResizableModal
         open={detailOpen}
         onCancel={closeDetail}
-        footer={null}
-        width="60vw"
+        footer={
+          <div className="modal-footer-actions">
+            <Button onClick={closeDetail}>关闭</Button>
+          </div>
+        }
+        width={modalWidth}
+        initialHeight={modalInitialHeight}
         scaleWithViewport
         destroyOnHidden
         title={
@@ -2336,60 +2675,63 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, alignItems: 'start' }}>
               <Card
-                title="进度节点（支持添加节点）"
-                size="small"
-                extra={
-                  <Space size={8} wrap>
-                    {nodeWorkflowLocked ? (
-                      <Tag color="green">已锁定</Tag>
-                    ) : (
-                      <Tag color={nodeWorkflowDirty ? 'gold' : 'processing'}>{nodeWorkflowDirty ? '可编辑（未锁定）' : '可编辑'}</Tag>
-                    )}
-                    <Select
-                      allowClear
-                      size="small"
-                      style={{ width: 220 }}
-                      placeholder="导入进度模板"
-                      value={progressTemplateId}
-                      onChange={(v) => setProgressTemplateId(v)}
-                      options={progressTemplates.map((t) => ({ value: String(t.id || ''), label: t.templateName }))}
-                      disabled={templateApplying || nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozen(activeOrder)}
-                    />
-                    <Button size="small" onClick={applyProgressTemplateToOrder} loading={templateApplying} disabled={nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozen(activeOrder) || !progressTemplateId}>
-                      导入
-                    </Button>
-                    <Button size="small" type="primary" onClick={saveNodeWorkflow} loading={nodeWorkflowSaving} disabled={nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozen(activeOrder)}>
-                      保存并锁定
-                    </Button>
-                    {nodeWorkflowLocked ? (
-                      <Button size="small" danger onClick={rollbackNodeWorkflowLock} loading={nodeWorkflowSaving} disabled={nodeWorkflowSaving || !isAdminUser}>
-                        退回编辑
+                title={
+                  <div className="mpb-nodeHeaderRow">
+                    <div className="mpb-nodeHeaderTitle">进度节点（支持添加节点）</div>
+                    <div className="mpb-nodeHeaderActions">
+                      {nodeWorkflowLocked ? (
+                        <Tag color="green">已锁定</Tag>
+                      ) : (
+                        <Tag color={nodeWorkflowDirty ? 'gold' : 'processing'}>{nodeWorkflowDirty ? '可编辑（未锁定）' : '可编辑'}</Tag>
+                      )}
+                      <Select
+                        allowClear
+                        size="small"
+                        style={{ width: 220 }}
+                        placeholder="导入进度模板"
+                        value={progressTemplateId}
+                        onChange={(v) => setProgressTemplateId(v)}
+                        options={progressTemplates.map((t) => ({ value: String(t.id || ''), label: t.templateName }))}
+                        disabled={templateApplying || nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(activeOrder)}
+                      />
+                      <Button size="small" onClick={applyProgressTemplateToOrder} loading={templateApplying} disabled={nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(activeOrder) || !progressTemplateId}>
+                        导入
                       </Button>
-                    ) : null}
-                  </Space>
+                      <Button size="small" type="primary" onClick={saveNodeWorkflow} loading={nodeWorkflowSaving} disabled={nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(activeOrder)}>
+                        保存并锁定
+                      </Button>
+                      {nodeWorkflowLocked ? (
+                        <Button size="small" danger onClick={rollbackNodeWorkflowLock} loading={nodeWorkflowSaving} disabled={nodeWorkflowSaving || !isAdminUser}>
+                          退回编辑
+                        </Button>
+                      ) : null}
+                      <Input
+                        className="mpb-nodeCreateName"
+                        size="small"
+                        placeholder="新增节点名称（例如：后整、包装）"
+                        value={nodeInput}
+                        onChange={(e) => setNodeInput(e.target.value)}
+                        disabled={nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(activeOrder)}
+                      />
+                      <InputNumber
+                        className="mpb-nodeCreatePrice"
+                        size="small"
+                        min={0}
+                        precision={2}
+                        value={nodeUnitPriceInput}
+                        aria-label="新增节点单价"
+                        onChange={(v) => setNodeUnitPriceInput(Number(v) || 0)}
+                        placeholder="单价"
+                        disabled={nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(activeOrder)}
+                      />
+                      <Button className="mpb-nodeCreateBtn" size="small" icon={<PlusOutlined />} type="primary" onClick={addNode} disabled={nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(activeOrder)}>
+                        添加
+                      </Button>
+                    </div>
+                  </div>
                 }
+                size="small"
               >
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px auto', gap: 8, marginBottom: 12, alignItems: 'center' }}>
-                  <Input
-                    placeholder="新增节点名称（例如：后整、包装）"
-                    value={nodeInput}
-                    onChange={(e) => setNodeInput(e.target.value)}
-                    disabled={nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozen(activeOrder)}
-                  />
-                  <InputNumber
-                    min={0}
-                    precision={2}
-                    value={nodeUnitPriceInput}
-                    style={{ width: '100%' }}
-                    aria-label="新增节点单价"
-                    onChange={(v) => setNodeUnitPriceInput(Number(v) || 0)}
-                    placeholder="单价"
-                    disabled={nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozen(activeOrder)}
-                  />
-                  <Button icon={<PlusOutlined />} type="primary" onClick={addNode} disabled={nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozen(activeOrder)}>
-                    添加
-                  </Button>
-                </div>
                 {detailNodeCards}
 
                 <Collapse
@@ -2500,7 +2842,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         confirmLoading={scanSubmitting}
         okText="提交"
         cancelText="关闭"
-        width={screens.lg ? '68vw' : '96vw'}
+        width={modalWidth}
+        initialHeight={modalInitialHeight}
         tableDensity="dense"
         tablePaddingX={4}
         tablePaddingY={2}
@@ -2566,23 +2909,22 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                         <Select
                           showSearch
                           allowClear
+                          optionFilterProp="label"
                           placeholder={cuttingBundlesLoading ? '加载中...' : '选择扎号可自动带出码数/数量'}
                           loading={cuttingBundlesLoading}
                           value={matchedBundle ? String(matchedBundle.qrCode || '') : undefined}
                           onChange={(v) => {
                             const code = String(v || '').trim();
                             const b = cuttingBundles.find((x) => String(x.qrCode || '').trim() === code);
+                            setBundleSelectedQr(code);
+                            const pickedQty = Number(b?.quantity);
                             scanForm.setFieldsValue({
                               scanCode: code || '',
                               color: b?.color || '',
                               size: b?.size || '',
-                              quantity: Number(b?.quantity) || 1,
+                              quantity: Number.isFinite(pickedQty) && pickedQty > 0 ? pickedQty : undefined,
                             });
                             setTimeout(() => scanInputRef.current?.focus?.(), 0);
-                          }}
-                          filterOption={(input, option) => {
-                            const label = String((option as any)?.label || '').toLowerCase();
-                            return label.includes(String(input || '').toLowerCase());
                           }}
                           options={cuttingBundles.map((b) => ({
                             value: String(b.qrCode || ''),
@@ -2609,11 +2951,13 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                             const r = rows?.[0];
                             const code = String(r?.qrCode || '').trim();
                             if (!code) return;
+                            setBundleSelectedQr(code);
+                            const pickedQty = Number(r?.quantity);
                             scanForm.setFieldsValue({
                               scanCode: code,
                               color: r?.color || '',
                               size: r?.size || '',
-                              quantity: Number(r?.quantity) || 1,
+                              quantity: Number.isFinite(pickedQty) && pickedQty > 0 ? pickedQty : undefined,
                             });
                             setTimeout(() => scanInputRef.current?.focus?.(), 0);
                           },
@@ -2623,11 +2967,13 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                             if (r?.completed) return;
                             const code = String(r?.qrCode || '').trim();
                             if (!code) return;
+                            setBundleSelectedQr(code);
+                            const pickedQty = Number(r?.quantity);
                             scanForm.setFieldsValue({
                               scanCode: code,
                               color: r?.color || '',
                               size: r?.size || '',
-                              quantity: Number(r?.quantity) || 1,
+                              quantity: Number.isFinite(pickedQty) && pickedQty > 0 ? pickedQty : undefined,
                             });
                             setTimeout(() => scanInputRef.current?.focus?.(), 0);
                           },
@@ -2752,7 +3098,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: screens.lg ? '1.05fr 0.95fr 0.8fr 0.8fr 0.8fr 0.8fr' : screens.md ? '1fr 1fr' : '1fr',
+              gridTemplateColumns: screens.lg ? '1fr 1fr' : '1fr',
               gap: 12,
               alignItems: 'end',
             }}
@@ -2799,36 +3145,66 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 }}
               />
             </Form.Item>
-            <Form.Item label="工序编码" name="processCode" style={{ marginBottom: 0 }}>
-              <Input placeholder="可选" disabled />
-            </Form.Item>
-            <Form.Item name="baseUnitPrice" hidden>
-              <Input />
-            </Form.Item>
+          </div>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: screens.lg ? 'repeat(4, 1fr)' : screens.md ? '1fr 1fr' : '1fr',
+              gap: 12,
+              alignItems: 'end',
+              marginTop: 8,
+            }}
+          >
             <Form.Item label="颜色" name="color" style={{ marginBottom: 0 }}>
-              <Input placeholder="可选" disabled />
+              <Input placeholder="可选" />
             </Form.Item>
             <Form.Item label="码数" name="size" style={{ marginBottom: 0 }}>
-              <Input placeholder="可选" disabled />
+              <Input placeholder="可选" />
             </Form.Item>
-            <Form.Item label="数量" name="quantity" rules={[{ required: true, message: '请输入数量' }]} style={{ marginBottom: 0 }}>
-              <InputNumber min={1} style={{ width: '100%' }} disabled />
+            <Form.Item label="数量" name="quantity" style={{ marginBottom: 0 }}>
+              <InputNumber min={1} style={{ width: '100%' }} />
             </Form.Item>
-            <Form.Item
-              label="单价"
-              name="unitPrice"
-              dependencies={['scanType']}
-              rules={[({ getFieldValue }: any) => ({
-                required: getFieldValue('scanType') !== 'warehouse',
-                message: '请输入单价',
-              })]}
-              style={{ marginBottom: 0 }}
-            >
-              <InputNumber min={0} precision={2} style={{ width: '100%' }} disabled />
+            <Form.Item label="单价" name="unitPrice" style={{ marginBottom: 0 }}>
+              <InputNumber min={0} precision={2} style={{ width: '100%' }} />
             </Form.Item>
           </div>
+          <Form.Item name="processCode" hidden>
+            <Input />
+          </Form.Item>
+          <Form.Item name="baseUnitPrice" hidden>
+            <Input />
+          </Form.Item>
         </Form>
       </ResizableModal>
+
+      <Modal
+        title="扫码确认"
+        open={scanConfirmVisible}
+        onCancel={() => closeScanConfirm()}
+        footer={[
+          <Button key="cancel" onClick={() => closeScanConfirm()} disabled={scanConfirmLoading}>
+            取消
+          </Button>,
+          <Button key="submit" type="primary" onClick={submitConfirmedScan} loading={scanConfirmLoading}>
+            领取
+          </Button>,
+        ]}
+      >
+        <div style={{ marginBottom: 8, color: '#6b7280' }}>请在 {scanConfirmRemain} 秒内完成操作</div>
+        {scanConfirmDetail && (
+          <div style={{ display: 'grid', gap: 6 }}>
+            <div>二维码：{scanConfirmDetail.scanCode || '-'}</div>
+            <div>数量：{scanConfirmDetail.quantity || '-'}</div>
+            <div>环节：{scanConfirmDetail.progressStage || scanConfirmDetail.processName || '-'}</div>
+            <div>工序：{scanConfirmDetail.processName || '-'}</div>
+            <div>单价：{scanConfirmDetail.unitPrice ?? '-'}</div>
+            <div>订单号：{scanConfirmDetail.orderNo || '-'}</div>
+            <div>款号：{scanConfirmDetail.styleNo || '-'}</div>
+            <div>颜色：{scanConfirmDetail.color || '-'}</div>
+            <div>尺码：{scanConfirmDetail.size || '-'}</div>
+          </div>
+        )}
+      </Modal>
 
       <ResizableModal
         title="回流"
@@ -2885,7 +3261,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               return;
             }
 
-            const res = await api.post<any>('/production/warehousing/rollback-by-bundle', {
+            const res = await productionWarehousingApi.rollbackByBundle({
               orderId: rollbackOrder.id,
               cuttingBundleQrCode: scannedQr,
               rollbackQuantity: qty,
@@ -2955,6 +3331,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 <Select
                   showSearch
                   allowClear
+                  optionFilterProp="label"
                   placeholder={rollbackBundlesLoading ? '加载中...' : '请选择扎号'}
                   loading={rollbackBundlesLoading}
                   options={rollbackBundles.map((b) => ({
@@ -2971,10 +3348,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                       quantity: Number(b?.quantity) || 0,
                       rollbackQuantity: Number(b?.quantity) || 0,
                     });
-                  }}
-                  filterOption={(input, option) => {
-                    const label = String((option as any)?.label || '').toLowerCase();
-                    return label.includes(String(input || '').toLowerCase());
                   }}
                 />
               </Form.Item>

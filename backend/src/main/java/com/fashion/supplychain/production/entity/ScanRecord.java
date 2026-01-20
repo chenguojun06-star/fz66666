@@ -56,6 +56,8 @@ public class ScanRecord {
 
     private String settlementStatus;
 
+    private String payrollSettlementId;
+
     private String processCode;
 
     private String progressStage;

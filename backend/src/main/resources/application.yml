@@ -1,12 +1,13 @@
 server:
   address: 0.0.0.0
-  port: 8088
+  port: ${PORT:8088}
   servlet:
     context-path: /
+  shutdown: graceful
 
 spring:
   main:
-    allow-circular-references: true
+    allow-circular-references: false
   servlet:
     multipart:
       max-file-size: 20MB
@@ -14,7 +15,7 @@ spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3306/fashion_supplychain?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true}
     username: ${SPRING_DATASOURCE_USERNAME:root}
-    password: ${SPRING_DATASOURCE_PASSWORD:}
+    password: ${SPRING_DATASOURCE_PASSWORD:changeme}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       initialization-fail-timeout: 0
@@ -26,6 +27,9 @@ spring:
 
   security:
     enabled: true
+
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
 
   flyway:
     enabled: ${FLYWAY_ENABLED:false}
@@ -45,14 +49,36 @@ logging:
   level:
     com.fashion.supplychain: debug
     org.springframework: info
+    org.springframework.web: warn
+    org.springframework.security: warn
+    org.apache.ibatis: warn
+    com.baomidou.mybatisplus: warn
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [requestId:%X{requestId:-}] %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [requestId:%X{requestId:-}] %logger{36} - %msg%n"
+  file:
+    name: ./logs/fashion-supplychain.log
+    max-size: 100MB
+    max-history: 7
+    total-size-cap: 1GB
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info,metrics
+
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
 
 fashion:
   upload-path: ${user.dir}/../.run/uploads/
@@ -61,10 +87,10 @@ fashion:
 
 app:
   auth:
-    jwt-secret: ${APP_AUTH_JWT_SECRET:ThisIsA_LocalJwtSecret_OnlyForDev_0123456789}
+    jwt-secret: ${APP_AUTH_JWT_SECRET:}
     header-auth-enabled: ${APP_AUTH_HEADER_AUTH_ENABLED:false}
   cors:
-    allowed-origin-patterns: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:*,http://127.0.0.1:*,http://192.168.*.*:*,http://10.*.*.*:*,http://172.16.*.*:*,http://172.17.*.*:*,http://172.18.*.*:*,http://172.19.*.*:*,http://172.20.*.*:*,http://172.21.*.*:*,http://172.22.*.*:*,http://172.23.*.*:*,http://172.24.*.*:*,http://172.25.*.*:*,http://172.26.*.*:*,http://172.27.*.*:*,http://172.28.*.*:*,http://172.29.*.*:*,http://172.30.*.*:*,http://172.31.*.*:*}
+    allowed-origin-patterns: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:*,http://127.0.0.1:*,http://192.168.*.*:*,http://10.*.*.*:*,http://172.16.*.*:*,http://172.17.*.*:*,http://172.18.*.*:*,http://172.19.*.*:*,http://172.20.*.*:*,http://172.21.*.*:*,http://172.22.*.*:*,http://172.23.*.*:*,http://172.24.*.*:*,http://172.25.*.*:*,http://172.26.*.*:*,http://172.27.*.*:*,http://172.28.*.*:*,http://172.29.*.*:*,http://172.30.*.*:*,http://172.31.*.*:*,https://*.vercel.app,https://*.trycloudflare.com}
     allow-credentials: ${APP_CORS_ALLOW_CREDENTIALS:true}
 
 wechat:

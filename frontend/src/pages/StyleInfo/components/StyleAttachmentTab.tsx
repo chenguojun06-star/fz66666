@@ -1,9 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Button, Upload, message, Popconfirm, Tag, Space } from 'antd';
-import { UploadOutlined, DeleteOutlined, DownloadOutlined, FileOutlined, FileImageOutlined, FilePdfOutlined } from '@ant-design/icons';
+import { Button, Upload, message, Tag, Space, Modal } from 'antd';
+import {
+  UploadOutlined,
+  DeleteOutlined,
+  DownloadOutlined,
+  FileOutlined,
+  FileImageOutlined,
+  FilePdfOutlined,
+  PrinterOutlined,
+} from '@ant-design/icons';
 import { StyleAttachment } from '../../../types/style';
 import api from '../../../utils/api';
-import ResizableTable from '../../../components/ResizableTable';
+import ResizableTable from '../../../components/common/ResizableTable';
+import RowActions from '../../../components/common/RowActions';
 import { formatDateTime } from '../../../utils/datetime';
 
 interface Props {
@@ -176,6 +185,65 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
     return (size / 1024 / 1024).toFixed(2) + ' MB';
   };
 
+  const isWorkorderRecord = (record: StyleAttachment) => {
+    const bt = String((record as any)?.bizType || '').trim().toLowerCase();
+    if (bt === 'workorder') return true;
+    const name = String(record.fileName || '').trim();
+    return name.includes('生产制单');
+  };
+
+  const canPrintRecord = (record: StyleAttachment) => {
+    if (!isWorkorderRecord(record)) return false;
+    const ext = getExt(record.fileName);
+    const t = resolveFileType(record).toLowerCase();
+    return ext === '.pdf' || t.includes('pdf');
+  };
+
+  const buildDownloadUrl = (url: string) => {
+    const src = String(url || '').trim();
+    if (!src) return '';
+    return src + (src.includes('?') ? '&' : '?') + 'download=1';
+  };
+
+  const printByIframe = (url: string) => {
+    const src = String(url || '').trim();
+    if (!src) return;
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.src = src;
+    const cleanup = () => {
+      try {
+        document.body.removeChild(iframe);
+      } catch {
+        return;
+      }
+    };
+    iframe.onload = () => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } catch {
+        return;
+      } finally {
+        setTimeout(cleanup, 1500);
+      }
+    };
+    document.body.appendChild(iframe);
+    setTimeout(() => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } catch {
+        return;
+      }
+    }, 900);
+  };
+
   const columns = [
     {
       title: '文件名',
@@ -237,20 +305,61 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
       key: 'action',
       width: 170,
       resizable: false,
-      render: (_: any, record: StyleAttachment) => (
-        <Space>
-          <Button type="link" icon={<DownloadOutlined />} href={record.fileUrl} download={record.fileName}>
-            下载
-          </Button>
-          {readOnly ? (
-            <Button type="link" danger disabled icon={<DeleteOutlined />}>删除</Button>
-          ) : (
-            <Popconfirm title="确定删除?" onConfirm={() => handleDelete(record.id!)}>
-              <Button type="link" danger icon={<DeleteOutlined />}>删除</Button>
-            </Popconfirm>
-          )}
-        </Space>
-      )
+      render: (_: any, record: StyleAttachment) => {
+        const triggerDownload = () => {
+          const url = buildDownloadUrl(record.fileUrl);
+          if (!url) return;
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = String(record.fileName || '');
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        };
+
+        const actions = [
+          {
+            key: 'download',
+            label: '下载',
+            title: '下载',
+            icon: <DownloadOutlined />,
+            onClick: triggerDownload,
+            primary: true,
+          },
+          ...(canPrintRecord(record)
+            ? [
+              {
+                key: 'print',
+                label: '打印',
+                title: '打印',
+                icon: <PrinterOutlined />,
+                onClick: () => printByIframe(record.fileUrl),
+                primary: true,
+              },
+            ]
+            : []),
+          {
+            key: 'delete',
+            label: '删除',
+            title: '删除',
+            icon: <DeleteOutlined />,
+            danger: true,
+            disabled: Boolean(readOnly),
+            onClick: readOnly
+              ? undefined
+              : () => {
+                Modal.confirm({
+                  title: '确定删除?',
+                  onOk: () => handleDelete(record.id!),
+                });
+              },
+          },
+        ];
+
+        return <RowActions maxInline={3} actions={actions as any} />;
+      },
     }
   ];
 
@@ -291,7 +400,7 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
         rowKey="id"
         loading={loading}
         pagination={false}
-        scroll={{ x: 'max-content' }}
+        scroll={{ x: 'max-content', y: typeof window === 'undefined' ? 420 : window.innerWidth < 768 ? 260 : 420 }}
         storageKey={`style-attachment-${String(styleId)}`}
         minColumnWidth={70}
       />

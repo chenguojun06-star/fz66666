@@ -1,10 +1,8 @@
 package com.fashion.supplychain.production.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.fashion.supplychain.finance.entity.FactoryReconciliation;
 import com.fashion.supplychain.finance.entity.MaterialReconciliation;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
-import com.fashion.supplychain.finance.service.FactoryReconciliationService;
 import com.fashion.supplychain.finance.service.MaterialReconciliationService;
 import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
 import com.fashion.supplychain.production.entity.CuttingBundle;
@@ -59,9 +57,6 @@ public class ProductionCleanupOrchestrator {
 
     @Autowired
     private CuttingBundleService cuttingBundleService;
-
-    @Autowired
-    private FactoryReconciliationService factoryReconciliationService;
 
     @Autowired
     private ShipmentReconciliationService shipmentReconciliationService;
@@ -226,19 +221,6 @@ public class ProductionCleanupOrchestrator {
             }
         }
 
-        List<String> factoryRecIds = new ArrayList<>();
-        List<FactoryReconciliation> factoryRecs = factoryReconciliationService
-                .list(new LambdaQueryWrapper<FactoryReconciliation>()
-                        .select(FactoryReconciliation::getId)
-                        .eq(FactoryReconciliation::getOrderId, oid));
-        if (factoryRecs != null) {
-            for (FactoryReconciliation r : factoryRecs) {
-                if (r != null && StringUtils.hasText(r.getId())) {
-                    factoryRecIds.add(r.getId().trim());
-                }
-            }
-        }
-
         List<String> shipmentRecIds = new ArrayList<>();
         List<ShipmentReconciliation> shipmentRecs = shipmentReconciliationService.list(
                 new LambdaQueryWrapper<ShipmentReconciliation>()
@@ -328,16 +310,6 @@ public class ProductionCleanupOrchestrator {
         cuttingBundleService
                 .remove(new LambdaQueryWrapper<CuttingBundle>().eq(CuttingBundle::getProductionOrderId, oid));
 
-        int factoryRecDeleted = 0;
-        for (String id : factoryRecIds) {
-            if (!StringUtils.hasText(id)) {
-                continue;
-            }
-            if (factoryReconciliationService.deleteById(id.trim())) {
-                factoryRecDeleted++;
-            }
-        }
-
         int shipmentRecDeleted = 0;
         for (String id : shipmentRecIds) {
             if (!StringUtils.hasText(id)) {
@@ -361,7 +333,6 @@ public class ProductionCleanupOrchestrator {
         data.put("materialReconciliationDeleted", materialRecDeleted);
         data.put("cuttingTaskDeleted", cuttingTaskDeleted);
         data.put("cuttingBundleDeleted", cuttingBundleDeleted);
-        data.put("factoryReconciliationDeleted", factoryRecDeleted);
         data.put("shipmentReconciliationDeleted", shipmentRecDeleted);
         data.put("orderSoftDeleted", orderSoftDeleted);
         return data;

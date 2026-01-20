@@ -1,17 +1,19 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AutoComplete, Button, Card, Col, DatePicker, Form, Input, InputNumber, Row, Select, Space, Tabs, Tag, message } from 'antd';
-import { EyeOutlined } from '@ant-design/icons';
+import { DeleteOutlined, PlusOutlined, ShoppingCartOutlined } from '@ant-design/icons';
+
+import dayjs from 'dayjs';
 import Layout from '../../components/Layout';
-import api, { withQuery } from '../../utils/api';
+import api, { parseProductionOrderLines, withQuery } from '../../utils/api';
 import { StyleBom, StyleInfo, StyleQueryParams } from '../../types/style';
 import { Factory } from '../../types/system';
-import ResizableModal from '../../components/ResizableModal';
-import ResizableTable from '../../components/ResizableTable';
-import RowActions from '../../components/RowActions';
+import { formatDateTime } from '../../utils/datetime';
+import ResizableModal from '../../components/common/ResizableModal';
+import ResizableTable from '../../components/common/ResizableTable';
+import RowActions from '../../components/common/RowActions';
 import { QRCodeCanvas } from 'qrcode.react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { StyleAttachmentsButton, StyleCoverThumb } from '../../components/StyleAssets';
-import { formatDateTime } from '../../utils/datetime';
 import { getMaterialTypeCategory } from '../../utils/materialType';
 import { normalizeCategoryQuery, toCategoryCn } from '../../utils/styleCategory';
 type OrderLine = {
@@ -21,16 +23,27 @@ type OrderLine = {
   quantity: number;
 };
 
-const orderStatusText = (status: any) => {
-  const map: Record<string, string> = {
-    pending: '待生产',
-    production: '生产中',
-    completed: '已完成',
-    delayed: '已逾期',
-  };
-  const key = String(status || '').trim();
-  return map[key] || '未知';
+type PricingProcess = {
+  id: string;
+  processName: string;
+  unitPrice: number;
 };
+
+type ProgressNode = {
+  id: string;
+  name: string;
+  processes: PricingProcess[];
+};
+
+const defaultProgressNodes: ProgressNode[] = [
+  { id: 'purchase', name: '采购', processes: [{ id: 'purchase-0', processName: '采购', unitPrice: 0 }] },
+  { id: 'cutting', name: '裁剪', processes: [{ id: 'cutting-0', processName: '裁剪', unitPrice: 0 }] },
+  { id: 'sewing', name: '车缝', processes: [{ id: 'sewing-0', processName: '车缝', unitPrice: 0 }] },
+  { id: 'pressing', name: '大烫', processes: [{ id: 'pressing-0', processName: '大烫', unitPrice: 0 }] },
+  { id: 'quality', name: '质检', processes: [{ id: 'quality-0', processName: '质检', unitPrice: 0 }] },
+  { id: 'packaging', name: '包装', processes: [{ id: 'packaging-0', processName: '包装', unitPrice: 0 }] },
+  { id: 'warehousing', name: '入库', processes: [{ id: 'warehousing-0', processName: '入库', unitPrice: 0 }] },
+];
 
 const OrderManagement: React.FC = () => {
   const navigate = useNavigate();
@@ -74,10 +87,16 @@ const OrderManagement: React.FC = () => {
 
   const [orderLines, setOrderLines] = useState<OrderLine[]>([]);
 
+  const [progressNodes, setProgressNodes] = useState<ProgressNode[]>(defaultProgressNodes);
+  const [activeNodeId, setActiveNodeId] = useState<string>(() => String(defaultProgressNodes?.[0]?.id || '').trim());
+  const [processNameInput, setProcessNameInput] = useState('');
+  const [processUnitPriceInput, setProcessUnitPriceInput] = useState<number>(0);
+  const [draggingProcessId, setDraggingProcessId] = useState<string>('');
+
   const isMobile = viewportWidth < 768;
   const isTablet = viewportWidth >= 768 && viewportWidth < 1024;
-  const modalWidth = isMobile ? '98vw' : isTablet ? '69vw' : '64vw';
-  const modalInitialHeight = typeof window === 'undefined' ? 720 : Math.round(window.innerHeight * (isMobile ? 0.92 : 0.86));
+  const modalWidth = isMobile ? '96vw' : isTablet ? '66vw' : '60vw';
+  const modalInitialHeight = 720;
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -117,48 +136,6 @@ const OrderManagement: React.FC = () => {
     return { total, byColor, bySize, byColorSize };
   }, [orderLines]);
 
-  const formatTime = (value: any) => {
-    return formatDateTime(value);
-  };
-
-  const parseOrderLines = (order: any) => {
-    const detailsRaw = order?.orderDetails;
-    const normalizeLine = (l: any) => {
-      const color = String(l?.color ?? l?.colour ?? l?.colorName ?? '').trim();
-      const size = String(l?.size ?? l?.sizeName ?? l?.spec ?? '').trim();
-      const quantity = Number(l?.quantity ?? l?.qty ?? l?.count ?? l?.num ?? 0) || 0;
-      return { color, size, quantity };
-    };
-
-    let parsed: any = null;
-    if (detailsRaw) {
-      try {
-        parsed = typeof detailsRaw === 'string' ? JSON.parse(detailsRaw) : detailsRaw;
-      } catch {
-        parsed = null;
-      }
-    }
-
-    let list: any[] = [];
-    if (Array.isArray(parsed)) {
-      list = parsed;
-    } else if (parsed && typeof parsed === 'object') {
-      const candidate = (parsed as any).lines || (parsed as any).items || (parsed as any).details || (parsed as any).list;
-      if (Array.isArray(candidate)) list = candidate;
-      else list = [parsed];
-    }
-
-    const normalized = list.map(normalizeLine).filter((l) => l.color || l.size || l.quantity);
-    if (normalized.length) return normalized;
-
-    const fallbackColor = String(order?.color || '').trim();
-    const fallbackSize = String(order?.size || '').trim();
-    const fallbackQty = Number(order?.orderQuantity || 0) || 0;
-    if (fallbackColor || fallbackSize || fallbackQty) {
-      return [{ color: fallbackColor, size: fallbackSize, quantity: fallbackQty }];
-    }
-    return [{ color: '-', size: '-', quantity: 0 }];
-  };
 
   const fetchOrderDetailRows = async (styleNo: string) => {
     setDetailLoading(true);
@@ -180,31 +157,109 @@ const OrderManagement: React.FC = () => {
 
       const orders = result?.data?.records || [];
       const rows: any[] = [];
-      for (const o of orders) {
-        const base = {
-          orderId: o.id,
-          orderNo: o.orderNo,
-          factoryName: o.factoryName,
-          status: o.status,
-          orderTime: o.createTime,
-          completedTime: o.actualEndDate,
-          cuttingOperator: o.cuttingOperatorName,
-          cuttingTime: o.cuttingEndTime,
-          qualityOperator: o.qualityOperatorName,
-          qualityTime: o.qualityEndTime,
-          warehousingOperator: o.warehousingOperatorName,
-          warehousingTime: o.warehousingEndTime,
-        };
-        const lines = parseOrderLines(o);
-        lines.forEach((l, idx) => {
-          rows.push({
-            key: `${String(o.id || o.orderNo || 'order')}-${idx}`,
-            ...base,
-            color: String(l?.color || '').trim() || '-',
-            size: String(l?.size || '').trim() || '-',
-            quantity: Number(l?.quantity || 0) || 0,
-          });
+
+      const list = Array.isArray(orders) ? [...orders] : [];
+      list.sort((a: any, b: any) => {
+        const ta = dayjs(a?.createTime);
+        const tb = dayjs(b?.createTime);
+        const va = ta.isValid() ? ta.valueOf() : 0;
+        const vb = tb.isValid() ? tb.valueOf() : 0;
+        return va - vb;
+      });
+
+      const pickOrdererName = (o: any) => {
+        return (
+          String(o?.orderOperatorName || '').trim() ||
+          String(o?.createUserName || '').trim() ||
+          String(o?.createByName || '').trim() ||
+          String(o?.creatorName || '').trim() ||
+          String(o?.operatorName || '').trim() ||
+          '-'
+        );
+      };
+
+      const joinUniq = (items: any[]) => {
+        const set = new Set<string>();
+        for (const it of items) {
+          const t = String(it || '').trim();
+          if (t) set.add(t);
+        }
+        return Array.from(set).join(',');
+      };
+
+      const detailSizes = ['S', 'M', 'L', 'XL', 'XXL'];
+
+      const buildSizeQty = (lines: any[]) => {
+        const sizeQty: Record<string, number> = {};
+        detailSizes.forEach((s) => {
+          sizeQty[s] = 0;
         });
+        for (const l of lines) {
+          const sizeRaw = String((l as any)?.size || '').trim();
+          if (!sizeRaw) continue;
+          const q = Number((l as any)?.quantity || 0) || 0;
+          if (!q) continue;
+          const matched = detailSizes.find((s) => normalizeMatchKey(s) === normalizeMatchKey(sizeRaw));
+          if (!matched) continue;
+          sizeQty[matched] = (sizeQty[matched] || 0) + q;
+        }
+        return sizeQty;
+      };
+
+      const pickCompletedQty = (o: any, fallbackOrderQty: number) => {
+        const candidates = [
+          (o as any)?.completedQuantity,
+          (o as any)?.completedQty,
+          (o as any)?.finishedQuantity,
+          (o as any)?.finishQuantity,
+          (o as any)?.actualQuantity,
+          (o as any)?.warehousingQualifiedQuantity,
+          (o as any)?.warehousingQuantity,
+          (o as any)?.inStockQuantity,
+        ];
+        for (const c of candidates) {
+          const n = Number(c);
+          if (Number.isFinite(n) && n >= 0) return n;
+        }
+        const status = String((o as any)?.status || '').trim().toLowerCase();
+        const closed = status === 'completed' || status === 'closed' || status === 'finished' || !!String((o as any)?.actualEndDate || '').trim();
+        if (closed) {
+          const orderQty = Number((o as any)?.orderQuantity);
+          return Number.isFinite(orderQty) && orderQty >= 0 ? orderQty : fallbackOrderQty;
+        }
+        return 0;
+      };
+
+      const buildRow = (o: any, key: string, lines: any[], baseOverride?: Partial<any>) => {
+        const base: any = {
+          orderId: o?.id,
+          orderNo: o?.orderNo,
+          styleNo,
+          orderOperatorName: pickOrdererName(o),
+          orderTime: o?.createTime,
+          completedTime: o?.actualEndDate,
+          ...baseOverride,
+        };
+
+        const effectiveLines = lines.length ? lines : [{ color: '-', size: '-', quantity: 0 }];
+        const sumQty = effectiveLines.reduce((acc, l) => acc + (Number((l as any)?.quantity || 0) || 0), 0);
+        const colors = joinUniq(effectiveLines.map((l) => (l as any)?.color)) || '-';
+        const sizeQty = buildSizeQty(effectiveLines);
+        const completedQuantity = base?.completedQuantity != null ? (Number(base?.completedQuantity) || 0) : pickCompletedQty(o, sumQty);
+
+        rows.push({
+          key,
+          ...base,
+          color: base.color ?? colors,
+          sizeQty,
+          orderQuantity: sumQty,
+          completedQuantity,
+        });
+      };
+
+      for (const o of list) {
+        const key = String(o?.id || o?.orderNo || '') ? `${String(o?.id || o?.orderNo)}-row` : `order-row-${Math.random()}`;
+        buildRow(o, key, parseProductionOrderLines(o));
       }
 
       setDetailRows(rows);
@@ -221,6 +276,30 @@ const OrderManagement: React.FC = () => {
   useEffect(() => {
     if (!routeStyleNo) return;
     fetchOrderDetailRows(routeStyleNo);
+  }, [routeStyleNo, detailQuery.page, detailQuery.pageSize]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!routeStyleNo) return;
+    const sn = String(routeStyleNo || '').trim();
+    if (!sn) return;
+    const id = window.setInterval(() => {
+      fetchOrderDetailRows(sn);
+    }, 10000);
+
+    const onFocus = () => fetchOrderDetailRows(sn);
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') fetchOrderDetailRows(sn);
+    };
+
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      window.clearInterval(id);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, [routeStyleNo, detailQuery.page, detailQuery.pageSize]);
 
   const getMatchedQty = (colorRaw: any, sizeRaw: any) => {
@@ -265,6 +344,85 @@ const OrderManagement: React.FC = () => {
     }
     return sum;
   };
+
+  const calcBomBudgetQty = (record: StyleBom) => {
+    const matchedQty = getMatchedQty((record as any).color, (record as any).size);
+    const usage = Number((record as any).usageAmount) || 0;
+    const loss = Number((record as any).lossRate) || 0;
+    const required = usage * (1 + loss / 100) * matchedQty;
+    if (!Number.isFinite(required)) return 0;
+    return Number(required.toFixed(4));
+  };
+
+  const calcBomTotalPrice = (record: StyleBom) => {
+    const unitPrice = Number((record as any).unitPrice) || 0;
+    const budgetQty = calcBomBudgetQty(record);
+    if (!Number.isFinite(budgetQty) || !Number.isFinite(unitPrice)) return 0;
+    return Number((budgetQty * unitPrice).toFixed(2));
+  };
+
+  const bomColumns = [
+    { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 140 },
+    { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 180, ellipsis: true },
+    { title: '颜色', dataIndex: 'color', key: 'color', width: 90 },
+    { title: '规格', dataIndex: 'specification', key: 'specification', width: 140, ellipsis: true },
+    { title: '尺码', dataIndex: 'size', key: 'size', width: 90 },
+    { title: '单位', dataIndex: 'unit', key: 'unit', width: 90 },
+    {
+      title: '匹配订单数量',
+      key: 'matchedQty',
+      width: 130,
+      align: 'right' as const,
+      render: (_: any, record: StyleBom) => getMatchedQty((record as any).color, (record as any).size),
+    },
+    { title: '单件用量', dataIndex: 'usageAmount', key: 'usageAmount', width: 110 },
+    { title: '损耗率(%)', dataIndex: 'lossRate', key: 'lossRate', width: 110 },
+    {
+      title: '预算采购数量',
+      key: 'budgetQty',
+      width: 140,
+      render: (_: any, record: StyleBom) => calcBomBudgetQty(record),
+    },
+    { title: '供应商', dataIndex: 'supplier', key: 'supplier', width: 140, ellipsis: true },
+    { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 100 },
+    {
+      title: '总价',
+      key: 'totalPrice',
+      width: 100,
+      render: (_: any, record: StyleBom) => calcBomTotalPrice(record),
+    },
+  ];
+
+  const demandColumns = [
+    { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 140 },
+    { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 180, ellipsis: true },
+    { title: '颜色', dataIndex: 'color', key: 'color', width: 90 },
+    { title: '尺码', dataIndex: 'size', key: 'size', width: 90 },
+    { title: '规格', dataIndex: 'specification', key: 'specification', width: 140, ellipsis: true },
+    { title: '单位', dataIndex: 'unit', key: 'unit', width: 80 },
+    {
+      title: '预算采购数量',
+      dataIndex: 'budgetQty',
+      key: 'budgetQty',
+      width: 140,
+      align: 'right' as const,
+    },
+    { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 140, ellipsis: true },
+    {
+      title: '单价',
+      dataIndex: 'unitPrice',
+      key: 'unitPrice',
+      width: 100,
+      align: 'right' as const,
+    },
+    {
+      title: '金额',
+      dataIndex: 'totalAmount',
+      key: 'totalAmount',
+      width: 120,
+      align: 'right' as const,
+    },
+  ];
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -351,7 +509,7 @@ const OrderManagement: React.FC = () => {
 
   const generateDemand = async () => {
     if (!createdOrder?.id) {
-      message.error('请先生成生产订单');
+      message.error('请先下单');
       setActiveTabKey('base');
       return;
     }
@@ -459,6 +617,191 @@ const OrderManagement: React.FC = () => {
     return orderLines.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0);
   }, [orderLines]);
 
+  const canEditProgressNodes = !submitLoading && !createdOrder;
+
+  const progressNodeTotals = useMemo(() => {
+    const nodes = (Array.isArray(progressNodes) ? progressNodes : []).map((n) => {
+      const processes = Array.isArray(n.processes) ? n.processes : [];
+      const unitPrice = processes.reduce((sum, p) => sum + (Number(p.unitPrice) || 0), 0);
+      return {
+        id: String(n.id),
+        name: String(n.name || '').trim() || '-',
+        unitPrice,
+        processCount: processes.length,
+      };
+    });
+    const totalUnitPrice = nodes.reduce((sum, n) => sum + (Number(n.unitPrice) || 0), 0);
+    const orderQty = Math.max(0, Number(totalOrderQuantity) || 0);
+    return {
+      totalUnitPrice,
+      orderQty,
+      totalOrderCost: totalUnitPrice * orderQty,
+      nodes,
+    };
+  }, [progressNodes, totalOrderQuantity]);
+
+  const activeNode = useMemo(() => {
+    const id = String(activeNodeId || '').trim();
+    if (!id) return null;
+    return progressNodes.find((n) => String(n.id) === id) || null;
+  }, [activeNodeId, progressNodes]);
+
+  const updateProcessUnitPrice = (nodeId: string, processId: string, nextPrice: number) => {
+    const id = String(nodeId || '').trim();
+    const pid = String(processId || '').trim();
+    if (!id || !pid) return;
+    const price = Number(nextPrice);
+    const safePrice = Number.isFinite(price) && price >= 0 ? price : 0;
+    setProgressNodes((prev) =>
+      prev.map((n) => {
+        if (String(n.id) !== id) return n;
+        const nextProcesses = (Array.isArray(n.processes) ? n.processes : []).map((p) =>
+          String(p.id) === pid ? { ...p, unitPrice: safePrice } : p
+        );
+        return { ...n, processes: nextProcesses };
+      })
+    );
+  };
+
+  const updateProcessName = (nodeId: string, processId: string, nextName: string) => {
+    const id = String(nodeId || '').trim();
+    const pid = String(processId || '').trim();
+    if (!id || !pid) return;
+    const name = String(nextName || '').trim();
+    setProgressNodes((prev) =>
+      prev.map((n) => {
+        if (String(n.id) !== id) return n;
+        const nextProcesses = (Array.isArray(n.processes) ? n.processes : []).map((p) =>
+          String(p.id) === pid ? { ...p, processName: name } : p
+        );
+        return { ...n, processes: nextProcesses };
+      })
+    );
+  };
+
+  const removeProcess = (nodeId: string, processId: string) => {
+    const id = String(nodeId || '').trim();
+    const pid = String(processId || '').trim();
+    if (!id || !pid) return;
+    setProgressNodes((prev) =>
+      prev.map((n) => {
+        if (String(n.id) !== id) return n;
+        const nextProcesses = (Array.isArray(n.processes) ? n.processes : []).filter((p) => String(p.id) !== pid);
+        return { ...n, processes: nextProcesses };
+      })
+    );
+  };
+
+  const moveProcess = (nodeId: string, fromProcessId: string, toProcessId?: string) => {
+    const id = String(nodeId || '').trim();
+    const fromId = String(fromProcessId || '').trim();
+    const toId = String(toProcessId || '').trim();
+    if (!id || !fromId) return;
+
+    setProgressNodes((prev) =>
+      prev.map((n) => {
+        if (String(n.id) !== id) return n;
+        const list = Array.isArray(n.processes) ? [...n.processes] : [];
+        const fromIdx = list.findIndex((p) => String(p.id) === fromId);
+        if (fromIdx < 0) return n;
+        const [picked] = list.splice(fromIdx, 1);
+
+        if (!toId) {
+          return { ...n, processes: [...list, picked] };
+        }
+
+        const toIdx = list.findIndex((p) => String(p.id) === toId);
+        if (toIdx < 0) {
+          return { ...n, processes: [...list, picked] };
+        }
+        list.splice(toIdx, 0, picked);
+        return { ...n, processes: list };
+      })
+    );
+  };
+
+  const addProcess = () => {
+    if (!canEditProgressNodes) return;
+    const nodeId = String(activeNodeId || '').trim();
+    if (!nodeId) {
+      message.error('请先选择一个生产节点');
+      return;
+    }
+    const name = String(processNameInput || '').trim();
+    if (!name) {
+      message.error('请输入工序名称');
+      return;
+    }
+    const currentNode = progressNodes.find((n) => String(n.id) === nodeId);
+    const existsNow = (Array.isArray(currentNode?.processes) ? currentNode!.processes : []).some((p) => String(p.processName || '').trim() === name);
+    if (existsNow) {
+      message.error('工序已存在');
+      return;
+    }
+    const price = Number(processUnitPriceInput);
+    const safePrice = Number.isFinite(price) && price >= 0 ? price : 0;
+    const processId = `${nodeId}-${Date.now()}`;
+    setProgressNodes((prev) =>
+      prev.map((n) => {
+        if (String(n.id) !== nodeId) return n;
+        const list = Array.isArray(n.processes) ? n.processes : [];
+        return { ...n, processes: [...list, { id: processId, processName: name, unitPrice: safePrice }] };
+      })
+    );
+    setProcessNameInput('');
+    setProcessUnitPriceInput(0);
+  };
+
+  const buildProgressWorkflowJson = (nodes: ProgressNode[]) => {
+    const normalizedNodes = (Array.isArray(nodes) ? nodes : [])
+      .map((n) => {
+        const name = String(n?.name || '').trim();
+        const id = String(n?.id || name || '').trim() || name;
+        const processes = (Array.isArray(n?.processes) ? (n as any).processes : []) as PricingProcess[];
+        const safeProcesses = processes
+          .map((p) => {
+            const pname = String((p as any)?.processName || '').trim();
+            const pid = String((p as any)?.id || `${id}-${pname}` || '').trim() || `${id}-${Date.now()}`;
+            const unitPrice = Number((p as any)?.unitPrice);
+            return {
+              id: pid,
+              processName: pname,
+              unitPrice: Number.isFinite(unitPrice) && unitPrice >= 0 ? unitPrice : 0,
+            };
+          })
+          .filter((p) => p.processName);
+        const unitPrice = safeProcesses.reduce((sum, p) => sum + (Number(p.unitPrice) || 0), 0);
+        return {
+          id,
+          name,
+          unitPrice,
+          processes: safeProcesses,
+        };
+      })
+      .filter((n) => n.name);
+
+    const ensuredNodes = normalizedNodes.length
+      ? normalizedNodes
+      : defaultProgressNodes.map((n) => ({
+        id: n.id,
+        name: n.name,
+        unitPrice: (Array.isArray(n.processes) ? n.processes : []).reduce((sum, p) => sum + (Number(p.unitPrice) || 0), 0),
+        processes: n.processes,
+      }));
+    const processesByNode: Record<string, { id: string; name: string; unitPrice: number }[]> = {};
+    for (const n of ensuredNodes) {
+      processesByNode[String(n.id)] = (Array.isArray((n as any).processes) ? (n as any).processes : []).map((p: any) => ({
+        id: String(p.id),
+        name: String(p.processName || '').trim(),
+        unitPrice: Number(p.unitPrice) || 0,
+      }));
+    }
+    return JSON.stringify({
+      nodes: ensuredNodes.map((n) => ({ id: n.id, name: n.name, unitPrice: n.unitPrice })),
+      processesByNode,
+    });
+  };
+
   const setTotalQuantity = (value: number) => {
     const nextQty = Number(value) || 0;
     if (orderLines.length === 1) {
@@ -541,11 +884,29 @@ const OrderManagement: React.FC = () => {
   const selectableColors = useMemo(() => splitOptions(selectedStyle?.color), [selectedStyle?.color]);
   const selectableSizes = useMemo(() => splitOptions(selectedStyle?.size), [selectedStyle?.size]);
 
+  // 智能添加订单行，自动填充颜色和尺码
   const addOrderLine = () => {
+    let nextColor = selectableColors[0] || '';
+    let nextSize = '';
+
+    // 如果已有订单行，智能填充下一行
+    if (orderLines.length > 0) {
+      const lastLine = orderLines[orderLines.length - 1];
+      nextColor = lastLine.color; // 自动填充上一行的颜色
+
+      // 查找上一行尺码在可选尺码中的索引
+      const lastSizeIndex = selectableSizes.indexOf(lastLine.size);
+      // 自动循环填充下一个尺码
+      nextSize = selectableSizes[(lastSizeIndex + 1) % selectableSizes.length] || '';
+    } else {
+      // 第一行，使用默认值
+      nextSize = selectableSizes[0] || '';
+    }
+
     const next: OrderLine = {
       id: `${Date.now()}-${Math.random()}`,
-      color: selectableColors[0] || '',
-      size: selectableSizes[0] || '',
+      color: nextColor,
+      size: nextSize,
       quantity: 1,
     };
     setOrderLines(prev => [...prev, next]);
@@ -592,6 +953,10 @@ const OrderManagement: React.FC = () => {
     setVisible(true);
     setActiveTabKey('base');
     setCreatedOrder(null);
+    setProgressNodes(defaultProgressNodes);
+    setActiveNodeId(String(defaultProgressNodes?.[0]?.id || '').trim());
+    setProcessNameInput('');
+    setProcessUnitPriceInput(0);
     if (style.id !== undefined && style.id !== null && String(style.id)) {
       fetchBom(style.id);
     } else {
@@ -608,12 +973,18 @@ const OrderManagement: React.FC = () => {
         quantity: 1,
       }
     ]);
+    // 智能设置默认计划时间
+    const today = dayjs();
+    // 默认计划周期为7天
+    const plannedStartDate = today;
+    const plannedEndDate = today.add(7, 'day');
+
     form.setFieldsValue({
       orderNo: '',
       factoryId: undefined,
       orderQuantity: 1,
-      plannedStartDate: undefined,
-      plannedEndDate: undefined
+      plannedStartDate: plannedStartDate,
+      plannedEndDate: plannedEndDate
     });
     generateOrderNo();
   };
@@ -625,6 +996,10 @@ const OrderManagement: React.FC = () => {
     setBomList([]);
     setActiveTabKey('base');
     setOrderLines([]);
+    setProgressNodes(defaultProgressNodes);
+    setActiveNodeId(String(defaultProgressNodes?.[0]?.id || '').trim());
+    setProcessNameInput('');
+    setProcessUnitPriceInput(0);
     form.resetFields();
   };
 
@@ -683,23 +1058,24 @@ const OrderManagement: React.FC = () => {
         orderQuantity: computedQty,
         orderDetails,
         plannedStartDate: values.plannedStartDate ? values.plannedStartDate.format('YYYY-MM-DDTHH:mm:ss') : undefined,
-        plannedEndDate: values.plannedEndDate ? values.plannedEndDate.format('YYYY-MM-DDTHH:mm:ss') : undefined
+        plannedEndDate: values.plannedEndDate ? values.plannedEndDate.format('YYYY-MM-DDTHH:mm:ss') : undefined,
+        progressWorkflowJson: buildProgressWorkflowJson(progressNodes),
       };
       const response = await api.post<any>('/production/order', payload);
       const result = response as any;
       if (result.code === 200) {
         setCreatedOrder(result.data || payload);
         setActiveTabKey('bom');
-        message.success('已保存生产订单');
+        message.success('已下单');
         fetchStyles();
       } else {
-        message.error(result.message || '生成生产订单失败');
+        message.error(result.message || '下单失败');
       }
     } catch (error: any) {
       if (error?.errorFields) {
         message.error(error.errorFields?.[0]?.errors?.[0] || '表单校验失败');
       } else {
-        message.error(error?.message || '生成生产订单失败');
+        message.error(error?.message || '下单失败');
       }
     } finally {
       setSubmitLoading(false);
@@ -773,11 +1149,20 @@ const OrderManagement: React.FC = () => {
     {
       title: '操作',
       key: 'action',
-      width: 160,
+      width: 110,
       render: (_: any, record: StyleInfo) => (
-        <Space>
-          <Button type="link" onClick={() => openCreate(record)}>生成生产订单</Button>
-        </Space>
+        <RowActions
+          actions={[
+            {
+              key: 'create',
+              label: '下单',
+              title: '下单',
+              icon: <ShoppingCartOutlined />,
+              onClick: () => openCreate(record),
+              primary: true,
+            },
+          ]}
+        />
       )
     }
   ];
@@ -798,7 +1183,8 @@ const OrderManagement: React.FC = () => {
             rowKey={(r) => String((r as any).key)}
             loading={detailLoading}
             dataSource={detailRows}
-            scroll={{ x: 'max-content' }}
+            style={{ color: '#000' }}
+            scroll={{ x: 'max-content', y: isMobile ? 360 : 560 }}
             size={isMobile ? 'small' : 'middle'}
             pagination={{
               current: detailQuery.page,
@@ -808,113 +1194,19 @@ const OrderManagement: React.FC = () => {
               onChange: (page, pageSize) => setDetailQuery({ page, pageSize }),
             }}
             columns={[
-              {
-                title: '款式图',
-                key: 'cover',
-                width: 72,
-                render: () => <StyleCoverThumb styleNo={routeStyleNo} size={40} borderRadius={6} />,
-              },
-              { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 140 },
-              {
-                title: '下单时间',
-                dataIndex: 'orderTime',
-                key: 'orderTime',
-                width: 160,
-                render: (v: any) => formatTime(v),
-              },
-              {
-                title: '完成时间',
-                dataIndex: 'completedTime',
-                key: 'completedTime',
-                width: 160,
-                render: (v: any) => formatTime(v),
-              },
-              { title: '裁剪员', dataIndex: 'cuttingOperator', key: 'cuttingOperator', width: 100 },
-              {
-                title: '裁剪时间',
-                dataIndex: 'cuttingTime',
-                key: 'cuttingTime',
-                width: 160,
-                render: (v: any) => formatTime(v),
-              },
-              { title: '质检员', dataIndex: 'qualityOperator', key: 'qualityOperator', width: 100 },
-              {
-                title: '质检时间',
-                dataIndex: 'qualityTime',
-                key: 'qualityTime',
-                width: 160,
-                render: (v: any) => formatTime(v),
-              },
-              { title: '入库员', dataIndex: 'warehousingOperator', key: 'warehousingOperator', width: 100 },
-              {
-                title: '入库时间',
-                dataIndex: 'warehousingTime',
-                key: 'warehousingTime',
-                width: 160,
-                render: (v: any) => formatTime(v),
-              },
-              { title: '颜色', dataIndex: 'color', key: 'color', width: 120 },
-              { title: '码数', dataIndex: 'size', key: 'size', width: 120 },
-              {
-                title: '数量',
-                dataIndex: 'quantity',
-                key: 'quantity',
-                width: 100,
-              },
-              { title: '加工厂', dataIndex: 'factoryName', key: 'factoryName', width: 140, ellipsis: true },
-              {
-                title: '状态',
-                dataIndex: 'status',
-                key: 'status',
-                width: 100,
-                render: (v: any) => orderStatusText(v),
-              },
-              {
-                title: '操作',
-                key: 'action',
-                width: 110,
-                render: (_: any, row: any) => {
-                  const orderNo = String(row?.orderNo || '').trim();
-                  const orderId = String(row?.orderId || '').trim();
-                  const styleNo = String(routeStyleNo || '').trim();
-
-                  return (
-                    <RowActions
-                      actions={[
-                        {
-                          key: 'progress',
-                          label: '生产进度',
-                          title: '生产进度',
-                          icon: <EyeOutlined />,
-                          disabled: !orderNo,
-                          onClick: () =>
-                            navigate(withQuery('/production/progress-detail', { orderNo, styleNo }), {
-                              state: { backgroundLocation: location },
-                            }),
-                          primary: true,
-                        },
-                        {
-                          key: 'production',
-                          label: '我的订单',
-                          onClick: () => navigate(withQuery('/production', { orderNo, styleNo })),
-                        },
-                        {
-                          key: 'material',
-                          label: '物料采购',
-                          disabled: !orderNo,
-                          onClick: () => navigate(withQuery('/production/material', { orderNo })),
-                        },
-                        {
-                          key: 'cutting',
-                          label: '裁剪管理',
-                          disabled: !orderId,
-                          onClick: () => navigate(withQuery('/production/cutting', { orderId, orderNo, styleNo })),
-                        },
-                      ]}
-                    />
-                  );
-                },
-              },
+              { title: <span style={{ color: '#000' }}>订单号</span>, dataIndex: 'orderNo', key: 'orderNo', width: 150 },
+              { title: <span style={{ color: '#000' }}>款号</span>, dataIndex: 'styleNo', key: 'styleNo', width: 140 },
+              { title: <span style={{ color: '#000' }}>颜色</span>, dataIndex: 'color', key: 'color', width: 140 },
+              { title: <span style={{ color: '#000' }}>S</span>, dataIndex: ['sizeQty', 'S'], key: 'size_S', width: 90, align: 'right', render: (v: any) => Number(v) || 0 },
+              { title: <span style={{ color: '#000' }}>M</span>, dataIndex: ['sizeQty', 'M'], key: 'size_M', width: 90, align: 'right', render: (v: any) => Number(v) || 0 },
+              { title: <span style={{ color: '#000' }}>L</span>, dataIndex: ['sizeQty', 'L'], key: 'size_L', width: 90, align: 'right', render: (v: any) => Number(v) || 0 },
+              { title: <span style={{ color: '#000' }}>XL</span>, dataIndex: ['sizeQty', 'XL'], key: 'size_XL', width: 90, align: 'right', render: (v: any) => Number(v) || 0 },
+              { title: <span style={{ color: '#000' }}>XXL</span>, dataIndex: ['sizeQty', 'XXL'], key: 'size_XXL', width: 90, align: 'right', render: (v: any) => Number(v) || 0 },
+              { title: <span style={{ color: '#000' }}>下单数</span>, dataIndex: 'orderQuantity', key: 'orderQuantity', width: 110, align: 'right', render: (v: any) => Number(v) || 0 },
+              { title: <span style={{ color: '#000' }}>完成数</span>, dataIndex: 'completedQuantity', key: 'completedQuantity', width: 110, align: 'right', render: (v: any) => Number(v) || 0 },
+              { title: <span style={{ color: '#000' }}>下单人</span>, dataIndex: 'orderOperatorName', key: 'orderOperatorName', width: 140 },
+              { title: <span style={{ color: '#000' }}>下单时间</span>, dataIndex: 'orderTime', key: 'orderTime', width: 170, render: (v: any) => formatDateTime(v) },
+              { title: <span style={{ color: '#000' }}>完成时间</span>, dataIndex: 'completedTime', key: 'completedTime', width: 170, render: (v: any) => formatDateTime(v) },
             ] as any}
           />
         </Card>
@@ -959,7 +1251,7 @@ const OrderManagement: React.FC = () => {
           columns={columns as any}
           dataSource={styles}
           loading={loading}
-          scroll={{ x: 'max-content' }}
+          scroll={{ x: 'max-content', y: isMobile ? 360 : 560 }}
           pagination={{
             current: queryParams.page,
             pageSize: queryParams.pageSize,
@@ -972,7 +1264,7 @@ const OrderManagement: React.FC = () => {
 
       <ResizableModal
         open={visible}
-        title={selectedStyle ? `生成生产订单（${selectedStyle.styleNo}）` : '生成生产订单'}
+        title={selectedStyle ? `下单（${selectedStyle.styleNo}）` : '下单'}
         onCancel={closeDialog}
         footer={null}
         width={modalWidth}
@@ -981,7 +1273,7 @@ const OrderManagement: React.FC = () => {
         scaleWithViewport
         tableDensity={isMobile ? 'dense' : 'auto'}
       >
-        <Form form={form} layout="vertical">
+        <Form form={form} layout="vertical" style={{ minWidth: 0 }}>
           <Tabs
             activeKey={activeTabKey}
             onChange={setActiveTabKey}
@@ -993,11 +1285,11 @@ const OrderManagement: React.FC = () => {
                   <div
                     style={
                       isMobile
-                        ? { display: 'flex', flexDirection: 'column', gap: 16 }
-                        : { display: 'grid', gridTemplateColumns: '280px 1fr', gap: 20 }
+                        ? { display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0, width: '100%' }
+                        : { display: 'grid', gridTemplateColumns: '280px 1fr', gap: 20, minWidth: 0, width: '100%' }
                     }
                   >
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
                       <div style={{ fontWeight: 600 }}>图片</div>
                       <StyleCoverThumb
                         styleId={selectedStyle?.id}
@@ -1033,7 +1325,7 @@ const OrderManagement: React.FC = () => {
                       </div>
                     </div>
 
-                    <div>
+                    <div style={{ minWidth: 0 }}>
                       <Row gutter={16}>
                         <Col xs={24} sm={12}>
                           <Form.Item
@@ -1090,6 +1382,171 @@ const OrderManagement: React.FC = () => {
                           </Form.Item>
                         </Col>
                       </Row>
+
+                      <div style={{ marginTop: 10 }}>
+                        <Card
+                          size="small"
+                          styles={{ body: { padding: 8 } }}
+                          title={<span style={{ fontWeight: 600 }}>工序明细</span>}
+                        >
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                              <div style={{ color: 'rgba(0,0,0,0.65)' }}>
+                                单件工价合计：<span style={{ fontWeight: 600 }}>¥{progressNodeTotals.totalUnitPrice.toFixed(2)}</span>
+                                <span style={{ margin: '0 8px', color: 'rgba(0,0,0,0.35)' }}>·</span>
+                                订单工价合计：<span style={{ fontWeight: 600 }}>¥{progressNodeTotals.totalOrderCost.toFixed(2)}</span>
+                                <span style={{ marginLeft: 8, color: 'rgba(0,0,0,0.35)' }}>（订单数量：{progressNodeTotals.orderQty}）</span>
+                              </div>
+                            </div>
+
+                            <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 'max-content' }}>
+                                {progressNodeTotals.nodes.map((n) => (
+                                  <div key={String(n.id)} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <Button
+                                      size="small"
+                                      type={String(activeNodeId || '').trim() === String(n.id) ? 'primary' : 'default'}
+                                      onClick={() => setActiveNodeId(String(n.id))}
+                                      style={{
+                                        width: 68,
+                                        height: 34,
+                                        padding: 0,
+                                        borderRadius: 999,
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                      }}
+                                    >
+                                      {String(n.name || '-')}
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div style={{ height: 1, background: 'rgba(0,0,0,0.06)', margin: '6px 0' }} />
+
+                            <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
+                              <div
+                                style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', minWidth: 'max-content' }}
+                                onDragOver={(e) => {
+                                  if (!canEditProgressNodes) return;
+                                  e.preventDefault();
+                                }}
+                                onDrop={(e) => {
+                                  if (!canEditProgressNodes) return;
+                                  e.preventDefault();
+                                  const nodeId = String(activeNode?.id || '').trim();
+                                  const fromId = String(draggingProcessId || '').trim();
+                                  if (!nodeId || !fromId) return;
+                                  moveProcess(nodeId, fromId);
+                                  setDraggingProcessId('');
+                                }}
+                              >
+                                {(Array.isArray(activeNode?.processes) ? activeNode!.processes : []).map((p) => {
+                                  const unitPrice = Number(p.unitPrice) || 0;
+                                  const processName = String(p.processName || '').trim();
+                                  const pid = String(p.id);
+                                  const nodeId = String(activeNode?.id || '').trim();
+                                  const isDragging = String(draggingProcessId || '').trim() === pid;
+
+                                  return (
+                                    <div
+                                      key={pid}
+                                      draggable={canEditProgressNodes}
+                                      onDragStart={(e) => {
+                                        if (!canEditProgressNodes) return;
+                                        setDraggingProcessId(pid);
+                                        try {
+                                          e.dataTransfer.effectAllowed = 'move';
+                                          e.dataTransfer.setData('text/plain', pid);
+                                        } catch {
+                                        }
+                                      }}
+                                      onDragEnd={() => setDraggingProcessId('')}
+                                      onDragOver={(e) => {
+                                        if (!canEditProgressNodes) return;
+                                        e.preventDefault();
+                                      }}
+                                      onDrop={(e) => {
+                                        if (!canEditProgressNodes) return;
+                                        e.preventDefault();
+                                        const fromId = String(draggingProcessId || '').trim();
+                                        if (!nodeId || !fromId || fromId === pid) return;
+                                        moveProcess(nodeId, fromId, pid);
+                                        setDraggingProcessId('');
+                                      }}
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 8,
+                                        padding: '2px 10px',
+                                        borderRadius: 999,
+                                        border: '1px solid rgba(0,0,0,0.12)',
+                                        background: '#fff',
+                                        opacity: isDragging ? 0.6 : 1,
+                                      }}
+                                    >
+                                      <Input
+                                        size="small"
+                                        value={processName}
+                                        placeholder="工序"
+                                        variant="borderless"
+                                        disabled={!canEditProgressNodes}
+                                        onChange={(e) => updateProcessName(nodeId, pid, e.target.value)}
+                                        style={{ width: 62, height: 36, borderRadius: 999, fontSize: 12, paddingInline: 10, background: 'transparent' }}
+                                      />
+                                      <InputNumber
+                                        size="small"
+                                        min={0}
+                                        precision={2}
+                                        value={unitPrice}
+                                        variant="borderless"
+                                        disabled={!canEditProgressNodes}
+                                        onChange={(v) => updateProcessUnitPrice(nodeId, pid, Number(v) || 0)}
+                                        style={{ width: 52, height: 36, borderRadius: 999, fontSize: 12, background: 'transparent' }}
+                                      />
+                                      <Button
+                                        type="text"
+                                        size="small"
+                                        danger
+                                        icon={<DeleteOutlined />}
+                                        disabled={!canEditProgressNodes}
+                                        onClick={() => removeProcess(nodeId, pid)}
+                                        style={{ padding: 0, width: 20 }}
+                                      />
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                              <Input
+                                size="small"
+                                placeholder="新增工序名称"
+                                value={processNameInput}
+                                disabled={!canEditProgressNodes || !activeNode}
+                                onChange={(e) => setProcessNameInput(e.target.value)}
+                                style={{ width: isMobile ? '100%' : 180 }}
+                              />
+                              <InputNumber
+                                size="small"
+                                placeholder="单价"
+                                min={0}
+                                precision={2}
+                                value={processUnitPriceInput}
+                                disabled={!canEditProgressNodes || !activeNode}
+                                onChange={(v) => setProcessUnitPriceInput(Number(v) || 0)}
+                                style={{ width: 110 }}
+                              />
+                              <Button type="default" size="small" icon={<PlusOutlined />} disabled={!canEditProgressNodes || !activeNode} onClick={addProcess}>
+                                添加工序
+                              </Button>
+                            </div>
+                          </div>
+                        </Card>
+                      </div>
                     </div>
                   </div>
                 )
@@ -1113,7 +1570,7 @@ const OrderManagement: React.FC = () => {
                       rowKey={(r) => r.id}
                       dataSource={orderLines}
                       pagination={false}
-                      scroll={{ x: 'max-content' }}
+                      scroll={{ x: 'max-content', y: isMobile ? 260 : 360 }}
                       size={isMobile ? 'small' : 'middle'}
                       columns={[
                         {
@@ -1201,57 +1658,9 @@ const OrderManagement: React.FC = () => {
                               loading={bomLoading}
                               dataSource={bomByType.fabric}
                               pagination={false}
-                              scroll={{ x: 'max-content' }}
+                              scroll={{ x: 'max-content', y: isMobile ? 260 : 360 }}
                               size={isMobile ? 'small' : 'middle'}
-                              columns={[
-                                { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 140 },
-                                { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 180, ellipsis: true },
-                                { title: '颜色', dataIndex: 'color', key: 'color', width: 90 },
-                                { title: '规格', dataIndex: 'specification', key: 'specification', width: 140, ellipsis: true },
-                                { title: '尺码', dataIndex: 'size', key: 'size', width: 90 },
-                                { title: '单位', dataIndex: 'unit', key: 'unit', width: 90 },
-                                {
-                                  title: '匹配订单数量',
-                                  key: 'matchedQty',
-                                  width: 130,
-                                  align: 'right' as const,
-                                  render: (_: any, record: StyleBom) => {
-                                    return getMatchedQty((record as any).color, (record as any).size);
-                                  }
-                                },
-                                { title: '单件用量', dataIndex: 'usageAmount', key: 'usageAmount', width: 110 },
-                                { title: '损耗率(%)', dataIndex: 'lossRate', key: 'lossRate', width: 110 },
-                                {
-                                  title: '预算采购数量',
-                                  key: 'budgetQty',
-                                  width: 140,
-                                  render: (_: any, record: StyleBom) => {
-                                    const matchedQty = getMatchedQty((record as any).color, (record as any).size);
-                                    const usage = Number((record as any).usageAmount) || 0;
-                                    const loss = Number((record as any).lossRate) || 0;
-                                    const required = usage * (1 + loss / 100) * matchedQty;
-                                    if (!Number.isFinite(required)) return 0;
-                                    return Number(required.toFixed(4));
-                                  }
-                                },
-                                { title: '供应商', dataIndex: 'supplier', key: 'supplier', width: 140, ellipsis: true },
-                                { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 100 },
-                                {
-                                  title: '总价',
-                                  key: 'totalPrice',
-                                  width: 100,
-                                  render: (_: any, record: StyleBom) => {
-                                    const matchedQty = getMatchedQty((record as any).color, (record as any).size);
-                                    const usage = Number((record as any).usageAmount) || 0;
-                                    const loss = Number((record as any).lossRate) || 0;
-                                    const unitPrice = Number((record as any).unitPrice) || 0;
-
-                                    const budgetQty = usage * (1 + loss / 100) * matchedQty;
-                                    if (!Number.isFinite(budgetQty) || !Number.isFinite(unitPrice)) return 0;
-                                    return Number((budgetQty * unitPrice).toFixed(2));
-                                  }
-                                },
-                              ]}
+                              columns={bomColumns}
                             />
                           )
                         },
@@ -1264,57 +1673,9 @@ const OrderManagement: React.FC = () => {
                               loading={bomLoading}
                               dataSource={bomByType.lining}
                               pagination={false}
-                              scroll={{ x: 'max-content' }}
+                              scroll={{ x: 'max-content', y: isMobile ? 260 : 360 }}
                               size={isMobile ? 'small' : 'middle'}
-                              columns={[
-                                { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 140 },
-                                { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 180, ellipsis: true },
-                                { title: '颜色', dataIndex: 'color', key: 'color', width: 90 },
-                                { title: '规格', dataIndex: 'specification', key: 'specification', width: 140, ellipsis: true },
-                                { title: '尺码', dataIndex: 'size', key: 'size', width: 90 },
-                                { title: '单位', dataIndex: 'unit', key: 'unit', width: 90 },
-                                {
-                                  title: '匹配订单数量',
-                                  key: 'matchedQty',
-                                  width: 130,
-                                  align: 'right' as const,
-                                  render: (_: any, record: StyleBom) => {
-                                    return getMatchedQty((record as any).color, (record as any).size);
-                                  }
-                                },
-                                { title: '单件用量', dataIndex: 'usageAmount', key: 'usageAmount', width: 110 },
-                                { title: '损耗率(%)', dataIndex: 'lossRate', key: 'lossRate', width: 110 },
-                                {
-                                  title: '预算采购数量',
-                                  key: 'budgetQty',
-                                  width: 140,
-                                  render: (_: any, record: StyleBom) => {
-                                    const matchedQty = getMatchedQty((record as any).color, (record as any).size);
-                                    const usage = Number((record as any).usageAmount) || 0;
-                                    const loss = Number((record as any).lossRate) || 0;
-                                    const required = usage * (1 + loss / 100) * matchedQty;
-                                    if (!Number.isFinite(required)) return 0;
-                                    return Number(required.toFixed(4));
-                                  }
-                                },
-                                { title: '供应商', dataIndex: 'supplier', key: 'supplier', width: 140, ellipsis: true },
-                                { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 100 },
-                                {
-                                  title: '总价',
-                                  key: 'totalPrice',
-                                  width: 100,
-                                  render: (_: any, record: StyleBom) => {
-                                    const matchedQty = getMatchedQty((record as any).color, (record as any).size);
-                                    const usage = Number((record as any).usageAmount) || 0;
-                                    const loss = Number((record as any).lossRate) || 0;
-                                    const unitPrice = Number((record as any).unitPrice) || 0;
-
-                                    const budgetQty = usage * (1 + loss / 100) * matchedQty;
-                                    if (!Number.isFinite(budgetQty) || !Number.isFinite(unitPrice)) return 0;
-                                    return Number((budgetQty * unitPrice).toFixed(2));
-                                  }
-                                },
-                              ]}
+                              columns={bomColumns}
                             />
                           )
                         },
@@ -1327,57 +1688,9 @@ const OrderManagement: React.FC = () => {
                               loading={bomLoading}
                               dataSource={bomByType.accessory}
                               pagination={false}
-                              scroll={{ x: 'max-content' }}
+                              scroll={{ x: 'max-content', y: isMobile ? 260 : 360 }}
                               size={isMobile ? 'small' : 'middle'}
-                              columns={[
-                                { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 140 },
-                                { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 180, ellipsis: true },
-                                { title: '颜色', dataIndex: 'color', key: 'color', width: 90 },
-                                { title: '规格', dataIndex: 'specification', key: 'specification', width: 140, ellipsis: true },
-                                { title: '尺码', dataIndex: 'size', key: 'size', width: 90 },
-                                { title: '单位', dataIndex: 'unit', key: 'unit', width: 90 },
-                                {
-                                  title: '匹配订单数量',
-                                  key: 'matchedQty',
-                                  width: 130,
-                                  align: 'right' as const,
-                                  render: (_: any, record: StyleBom) => {
-                                    return getMatchedQty((record as any).color, (record as any).size);
-                                  }
-                                },
-                                { title: '单件用量', dataIndex: 'usageAmount', key: 'usageAmount', width: 110 },
-                                { title: '损耗率(%)', dataIndex: 'lossRate', key: 'lossRate', width: 110 },
-                                {
-                                  title: '预算采购数量',
-                                  key: 'budgetQty',
-                                  width: 140,
-                                  render: (_: any, record: StyleBom) => {
-                                    const matchedQty = getMatchedQty((record as any).color, (record as any).size);
-                                    const usage = Number((record as any).usageAmount) || 0;
-                                    const loss = Number((record as any).lossRate) || 0;
-                                    const required = usage * (1 + loss / 100) * matchedQty;
-                                    if (!Number.isFinite(required)) return 0;
-                                    return Number(required.toFixed(4));
-                                  }
-                                },
-                                { title: '供应商', dataIndex: 'supplier', key: 'supplier', width: 140, ellipsis: true },
-                                { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 100 },
-                                {
-                                  title: '总价',
-                                  key: 'totalPrice',
-                                  width: 100,
-                                  render: (_: any, record: StyleBom) => {
-                                    const matchedQty = getMatchedQty((record as any).color, (record as any).size);
-                                    const usage = Number((record as any).usageAmount) || 0;
-                                    const loss = Number((record as any).lossRate) || 0;
-                                    const unitPrice = Number((record as any).unitPrice) || 0;
-
-                                    const budgetQty = usage * (1 + loss / 100) * matchedQty;
-                                    if (!Number.isFinite(budgetQty) || !Number.isFinite(unitPrice)) return 0;
-                                    return Number((budgetQty * unitPrice).toFixed(2));
-                                  }
-                                },
-                              ]}
+                              columns={bomColumns}
                             />
                           )
                         }
@@ -1412,38 +1725,9 @@ const OrderManagement: React.FC = () => {
                               rowKey={(r) => String((r as any).key)}
                               dataSource={demandRowsByType.fabric as any}
                               pagination={false}
-                              scroll={{ x: 'max-content' }}
+                              scroll={{ x: 'max-content', y: isMobile ? 260 : 360 }}
                               size={isMobile ? 'small' : 'middle'}
-                              columns={[
-                                { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 140 },
-                                { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 180, ellipsis: true },
-                                { title: '颜色', dataIndex: 'color', key: 'color', width: 90 },
-                                { title: '尺码', dataIndex: 'size', key: 'size', width: 90 },
-                                { title: '规格', dataIndex: 'specification', key: 'specification', width: 140, ellipsis: true },
-                                { title: '单位', dataIndex: 'unit', key: 'unit', width: 80 },
-                                {
-                                  title: '预算采购数量',
-                                  dataIndex: 'budgetQty',
-                                  key: 'budgetQty',
-                                  width: 140,
-                                  align: 'right' as const,
-                                },
-                                { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 140, ellipsis: true },
-                                {
-                                  title: '单价',
-                                  dataIndex: 'unitPrice',
-                                  key: 'unitPrice',
-                                  width: 100,
-                                  align: 'right' as const,
-                                },
-                                {
-                                  title: '金额',
-                                  dataIndex: 'totalAmount',
-                                  key: 'totalAmount',
-                                  width: 120,
-                                  align: 'right' as const,
-                                },
-                              ]}
+                              columns={demandColumns}
                             />
                           )
                         },
@@ -1455,38 +1739,9 @@ const OrderManagement: React.FC = () => {
                               rowKey={(r) => String((r as any).key)}
                               dataSource={demandRowsByType.lining as any}
                               pagination={false}
-                              scroll={{ x: 'max-content' }}
+                              scroll={{ x: 'max-content', y: isMobile ? 260 : 360 }}
                               size={isMobile ? 'small' : 'middle'}
-                              columns={[
-                                { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 140 },
-                                { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 180, ellipsis: true },
-                                { title: '颜色', dataIndex: 'color', key: 'color', width: 90 },
-                                { title: '尺码', dataIndex: 'size', key: 'size', width: 90 },
-                                { title: '规格', dataIndex: 'specification', key: 'specification', width: 140, ellipsis: true },
-                                { title: '单位', dataIndex: 'unit', key: 'unit', width: 80 },
-                                {
-                                  title: '预算采购数量',
-                                  dataIndex: 'budgetQty',
-                                  key: 'budgetQty',
-                                  width: 140,
-                                  align: 'right' as const,
-                                },
-                                { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 140, ellipsis: true },
-                                {
-                                  title: '单价',
-                                  dataIndex: 'unitPrice',
-                                  key: 'unitPrice',
-                                  width: 100,
-                                  align: 'right' as const,
-                                },
-                                {
-                                  title: '金额',
-                                  dataIndex: 'totalAmount',
-                                  key: 'totalAmount',
-                                  width: 120,
-                                  align: 'right' as const,
-                                },
-                              ]}
+                              columns={demandColumns}
                             />
                           )
                         },
@@ -1498,38 +1753,9 @@ const OrderManagement: React.FC = () => {
                               rowKey={(r) => String((r as any).key)}
                               dataSource={demandRowsByType.accessory as any}
                               pagination={false}
-                              scroll={{ x: 'max-content' }}
+                              scroll={{ x: 'max-content', y: isMobile ? 260 : 360 }}
                               size={isMobile ? 'small' : 'middle'}
-                              columns={[
-                                { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 140 },
-                                { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 180, ellipsis: true },
-                                { title: '颜色', dataIndex: 'color', key: 'color', width: 90 },
-                                { title: '尺码', dataIndex: 'size', key: 'size', width: 90 },
-                                { title: '规格', dataIndex: 'specification', key: 'specification', width: 140, ellipsis: true },
-                                { title: '单位', dataIndex: 'unit', key: 'unit', width: 80 },
-                                {
-                                  title: '预算采购数量',
-                                  dataIndex: 'budgetQty',
-                                  key: 'budgetQty',
-                                  width: 140,
-                                  align: 'right' as const,
-                                },
-                                { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 140, ellipsis: true },
-                                {
-                                  title: '单价',
-                                  dataIndex: 'unitPrice',
-                                  key: 'unitPrice',
-                                  width: 100,
-                                  align: 'right' as const,
-                                },
-                                {
-                                  title: '金额',
-                                  dataIndex: 'totalAmount',
-                                  key: 'totalAmount',
-                                  width: 120,
-                                  align: 'right' as const,
-                                },
-                              ]}
+                              columns={demandColumns}
                             />
                           )
                         }
@@ -1542,11 +1768,11 @@ const OrderManagement: React.FC = () => {
                 key: 'qr',
                 label: '二维码',
                 children: (
-                  <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexDirection: isMobile ? 'column' : 'row' }}>
+                  <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexDirection: isMobile ? 'column' : 'row', minWidth: 0 }}>
                     <div style={{ border: '1px solid rgba(0,0,0,0.06)', borderRadius: 8, padding: 12 }}>
                       <QRCodeCanvas value={(createdOrder?.qrCode || createdOrder?.orderNo || watchedOrderNo || ' ') as string} size={220} />
                     </div>
-                    <div style={{ lineHeight: 1.8 }}>
+                    <div style={{ lineHeight: 1.8, minWidth: 0, maxWidth: '100%', wordBreak: 'break-all', overflowWrap: 'anywhere' }}>
                       <div>订单号：{createdOrder?.orderNo || watchedOrderNo || '-'}</div>
                       <div>二维码内容：{createdOrder?.qrCode || watchedOrderNo || '-'}</div>
                       <div>款号：{selectedStyle?.styleNo || '-'}</div>
@@ -1560,10 +1786,27 @@ const OrderManagement: React.FC = () => {
             ]}
           />
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
-            <Button onClick={closeDialog} disabled={submitLoading}>关闭</Button>
-            <Button type="primary" onClick={handleSubmit} loading={submitLoading} disabled={!!createdOrder}>保存</Button>
+          <div
+            style={{
+              position: 'sticky',
+              bottom: 0,
+              zIndex: 2,
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: 8,
+              paddingTop: 10,
+              paddingBottom: 6,
+              background: '#fff',
+            }}
+          >
+            <Button onClick={closeDialog} disabled={submitLoading}>
+              关闭
+            </Button>
+            <Button type="primary" onClick={handleSubmit} loading={submitLoading} disabled={!!createdOrder}>
+              下单
+            </Button>
           </div>
+
         </Form>
       </ResizableModal>
     </Layout>

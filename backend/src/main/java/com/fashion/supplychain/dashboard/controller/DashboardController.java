@@ -2,7 +2,6 @@ package com.fashion.supplychain.dashboard.controller;
 
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.dashboard.orchestration.DashboardOrchestrator;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,8 +15,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/dashboard")
 public class DashboardController {
 
-    @Autowired
-    private DashboardOrchestrator dashboardOrchestrator;
+    private final DashboardOrchestrator dashboardOrchestrator;
+
+    public DashboardController(DashboardOrchestrator dashboardOrchestrator) {
+        this.dashboardOrchestrator = dashboardOrchestrator;
+    }
 
     /**
      * 获取首页仪表盘统计数据及近期业务动态。

@@ -1,19 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Input, InputNumber, Popconfirm, message, Space, Select } from 'antd';
+import { Button, Input, InputNumber, message, Space, Select, Modal } from 'antd';
 import { PlusOutlined, DeleteOutlined, SaveOutlined, EditOutlined } from '@ant-design/icons';
 import { StyleProcess, TemplateLibrary } from '../../../types/style';
-import api from '../../../utils/api';
-import ResizableTable from '../../../components/ResizableTable';
+import api, { toNumberSafe } from '../../../utils/api';
+import ResizableTable from '../../../components/common/ResizableTable';
+import RowActions from '../../../components/common/RowActions';
 
 interface Props {
   styleId: string | number;
   readOnly?: boolean;
 }
-
-const toNumber = (v: any, fallback = 0) => {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : fallback;
-};
 
 const norm = (v: any) => String(v || '').trim();
 
@@ -158,7 +154,7 @@ const StyleProcessTab: React.FC<Props> = ({ styleId, readOnly }) => {
   const handleAdd = () => {
     if (readOnly) return;
     if (!editMode) enterEdit();
-    const maxSort = data.length ? Math.max(...data.map((d) => toNumber(d.sortOrder, 0))) : 0;
+    const maxSort = data.length ? Math.max(...data.map((d) => toNumberSafe(d.sortOrder))) : 0;
     const newId = -Date.now();
     const newProcess: StyleProcess = {
       id: newId,
@@ -257,9 +253,9 @@ const StyleProcessTab: React.FC<Props> = ({ styleId, readOnly }) => {
           processCode: norm(r.processCode),
           processName: norm(r.processName),
           machineType: norm(r.machineType),
-          standardTime: toNumber(r.standardTime, 0),
-          price: toNumber(r.price, 0),
-          sortOrder: toNumber(r.sortOrder, 0),
+          standardTime: toNumberSafe(r.standardTime),
+          price: toNumberSafe(r.price),
+          sortOrder: toNumberSafe(r.sortOrder),
         };
         if (!isTempId(r.id)) {
           tasks.push(api.put('/style/process', payload));
@@ -342,7 +338,7 @@ const StyleProcessTab: React.FC<Props> = ({ styleId, readOnly }) => {
               value={record.standardTime}
               min={0}
               style={{ width: '100%' }}
-              onChange={(v) => updateField(record.id!, 'standardTime', toNumber(v, 0))}
+              onChange={(v) => updateField(record.id!, 'standardTime', toNumberSafe(v))}
             />
           ) : (
             text
@@ -363,7 +359,7 @@ const StyleProcessTab: React.FC<Props> = ({ styleId, readOnly }) => {
               onChange={(v) => updateField(record.id!, 'price', v)}
             />
           ) : (
-            `¥${toNumber(text, 0)}`
+            `¥${toNumberSafe(text)}`
           ),
       },
       {
@@ -376,7 +372,7 @@ const StyleProcessTab: React.FC<Props> = ({ styleId, readOnly }) => {
               value={record.sortOrder}
               min={0}
               style={{ width: '100%' }}
-              onChange={(v) => updateField(record.id!, 'sortOrder', toNumber(v, 0))}
+              onChange={(v) => updateField(record.id!, 'sortOrder', toNumberSafe(v))}
             />
           ) : (
             text
@@ -389,9 +385,24 @@ const StyleProcessTab: React.FC<Props> = ({ styleId, readOnly }) => {
         resizable: false,
         render: (_: any, record: StyleProcess) =>
           editableMode ? (
-            <Popconfirm title="确定删除?" onConfirm={() => handleDelete(record.id!)}>
-              <Button type="link" danger icon={<DeleteOutlined />} />
-            </Popconfirm>
+            <RowActions
+              maxInline={1}
+              actions={[
+                {
+                  key: 'delete',
+                  label: '删除',
+                  title: '删除',
+                  icon: <DeleteOutlined />,
+                  danger: true,
+                  onClick: () => {
+                    Modal.confirm({
+                      title: '确定删除?',
+                      onOk: () => handleDelete(record.id!),
+                    });
+                  },
+                },
+              ]}
+            />
           ) : null,
       },
     ];
@@ -471,9 +482,17 @@ const StyleProcessTab: React.FC<Props> = ({ styleId, readOnly }) => {
               <Button icon={<SaveOutlined />} type="primary" onClick={saveAll} loading={saving}>
                 保存
               </Button>
-              <Popconfirm title="放弃未保存的修改？" onConfirm={exitEdit}>
-                <Button disabled={saving}>取消</Button>
-              </Popconfirm>
+              <Button
+                disabled={saving}
+                onClick={() => {
+                  Modal.confirm({
+                    title: '放弃未保存的修改？',
+                    onOk: exitEdit,
+                  });
+                }}
+              >
+                取消
+              </Button>
             </>
           )}
         </Space>
@@ -485,7 +504,7 @@ const StyleProcessTab: React.FC<Props> = ({ styleId, readOnly }) => {
         pagination={false}
         loading={loading}
         rowKey="id"
-        scroll={{ x: 'max-content' }}
+        scroll={{ x: 'max-content', y: typeof window === 'undefined' ? 420 : window.innerWidth < 768 ? 260 : 420 }}
         storageKey={`style-process-${String(styleId)}`}
         minColumnWidth={70}
       />

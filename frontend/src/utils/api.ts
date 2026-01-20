@@ -1,8 +1,30 @@
 import axios from 'axios';
+import { useEffect, useMemo, useRef, useState } from 'react';
+
+export type ApiResult<T = unknown> = {
+  code: number;
+  data: T;
+  message?: string;
+  [key: string]: unknown;
+};
+
+export const isApiSuccess = (result: unknown): result is ApiResult => {
+  return Number((result as any)?.code) === 200;
+};
+
+export const getApiMessage = (result: unknown, fallback: string): string => {
+  const msg = String((result as any)?.message || '').trim();
+  return msg || fallback;
+};
+
+export const unwrapApiData = <T = unknown>(result: unknown, fallbackMessage: string): T => {
+  if (isApiSuccess(result)) return (result as ApiResult<T>).data;
+  throw new Error(getApiMessage(result, fallbackMessage));
+};
 
 export const generateRequestId = () => {
   try {
-    const anyCrypto: any = typeof crypto !== 'undefined' ? (crypto as any) : undefined;
+    const anyCrypto = typeof crypto !== 'undefined' ? (crypto as any) : undefined;
     if (anyCrypto && typeof anyCrypto.randomUUID === 'function') {
       return String(anyCrypto.randomUUID());
     }
@@ -14,13 +36,149 @@ export const generateRequestId = () => {
   return `${t}-${r1}-${r2}`;
 };
 
-export const isDuplicateScanMessage = (serverMessage: any): boolean => {
+export const toNumberSafe = (v: unknown) => {
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+
+export const compareSizeAsc = (a: unknown, b: unknown) => {
+  const norm = (v: unknown) => String(v ?? '').trim().toUpperCase();
+  const parse = (v: unknown) => {
+    const raw = norm(v);
+    if (!raw || raw === '-') return { rank: 9999, num: 0, raw };
+    if (raw === '均码' || raw === 'ONE SIZE' || raw === 'ONESIZE') return { rank: 55, num: 0, raw };
+    if (/^\d+(\.\d+)?$/.test(raw)) return { rank: 0, num: Number(raw), raw };
+    const mNumXL = raw.match(/^(\d+)XL$/);
+    if (mNumXL) return { rank: 70 + (Number(mNumXL[1]) - 1) * 10, num: 0, raw };
+    const mXS = raw.match(/^(X{0,4})S$/);
+    if (mXS) return { rank: 40 - (mXS[1]?.length || 0) * 10, num: 0, raw };
+    if (raw === 'S') return { rank: 40, num: 0, raw };
+    if (raw === 'M') return { rank: 50, num: 0, raw };
+    const mXL = raw.match(/^(X{1,4})L$/);
+    if (mXL) return { rank: 60 + (mXL[1]?.length || 0) * 10, num: 0, raw };
+    if (raw === 'L') return { rank: 60, num: 0, raw };
+    if (raw === 'XL') return { rank: 70, num: 0, raw };
+    if (raw === 'XXL') return { rank: 80, num: 0, raw };
+    if (raw === 'XXXL') return { rank: 90, num: 0, raw };
+    return { rank: 5000, num: 0, raw };
+  };
+  const pa = parse(a);
+  const pb = parse(b);
+  if (pa.rank !== pb.rank) return pa.rank - pb.rank;
+  if (pa.num !== pb.num) return pa.num - pb.num;
+  return String(pa.raw).localeCompare(String(pb.raw), 'zh-Hans-CN', { numeric: true });
+};
+
+export const sortSizeNames = (sizes: string[]) => {
+  const getKey = (name: string): { group: number; a: number; b: string | number; unit: string } => {
+    const t = String(name || '').trim();
+    const order = ['XXXS', 'XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'XXXXL'];
+    const upper = t.toUpperCase();
+    const idx = order.indexOf(upper);
+    if (idx >= 0) return { group: 0, a: idx, b: upper, unit: '' };
+    const m = upper.match(/^(\d+(?:\.\d+)?)(?:\s*[-~–—]\s*(\d+(?:\.\d+)?))?([A-Z]*)$/);
+    if (m) {
+      const a = toNumberSafe(m[1]);
+      const b = String(m[2] || '').trim() ? toNumberSafe(m[2]) : a;
+      const unit = m[3] || '';
+      return { group: 1, a, b, unit };
+    }
+    return { group: 2, a: 0, b: upper, unit: '' };
+  };
+
+  const list = [...sizes];
+  list.sort((a, b) => {
+    const ka = getKey(a);
+    const kb = getKey(b);
+    if (ka.group !== kb.group) return ka.group - kb.group;
+    if (ka.a !== kb.a) return ka.a - kb.a;
+    if (ka.b !== kb.b) return ka.b < kb.b ? -1 : 1;
+    const ua = ka.unit || '';
+    const ub = kb.unit || '';
+    if (ua !== ub) return ua < ub ? -1 : 1;
+    return 0;
+  });
+  return list;
+};
+
+export type ProductionOrderLine = {
+  color: string;
+  size: string;
+  quantity: number;
+  warehousedQuantity?: number;
+};
+
+export const parseProductionOrderLines = (
+  order?: unknown | null,
+  opts?: { includeWarehousedQuantity?: boolean }
+): ProductionOrderLine[] => {
+  if (!order) return [];
+
+  const includeWarehousedQuantity = Boolean(opts?.includeWarehousedQuantity);
+  const detailsRaw = (order as any)?.orderDetails;
+
+  const normalizeLine = (r: any): ProductionOrderLine => {
+    const color = String(r?.color ?? r?.colour ?? r?.colorName ?? r?.['颜色'] ?? '').trim();
+    const size = String(r?.size ?? r?.sizeName ?? r?.spec ?? r?.尺码 ?? r?.['尺码'] ?? '').trim();
+    const quantity = toNumberSafe(r?.quantity ?? r?.qty ?? r?.count ?? r?.num ?? r?.数量 ?? r?.['数量']);
+    const warehousedQuantity = toNumberSafe(
+      r?.warehousedQuantity ?? r?.warehousingQualifiedQuantity ?? r?.warehousingQuantity ?? r?.qualifiedQuantity ?? r?.入库数量 ?? r?.['入库数量']
+    );
+
+    if (includeWarehousedQuantity) return { color, size, quantity, warehousedQuantity };
+    return { color, size, quantity };
+  };
+
+  let parsed: unknown = null;
+  if (detailsRaw != null && String(detailsRaw).trim()) {
+    try {
+      parsed = typeof detailsRaw === 'string' ? JSON.parse(detailsRaw) : detailsRaw;
+    } catch {
+      parsed = null;
+    }
+  }
+
+  let list: unknown[] = [];
+  if (Array.isArray(parsed)) {
+    list = parsed;
+  } else if (parsed && typeof parsed === 'object') {
+    const candidate = (parsed as any).lines || (parsed as any).items || (parsed as any).details || (parsed as any).list;
+    if (Array.isArray(candidate)) list = candidate;
+    else list = [parsed];
+  }
+
+  const normalized = list
+    .map(normalizeLine)
+    .filter((l) => {
+      if (!l.color || !l.size) return false;
+      if (includeWarehousedQuantity) return l.quantity > 0 || (Number(l.warehousedQuantity) || 0) > 0;
+      return l.quantity > 0;
+    });
+  if (normalized.length) return normalized;
+
+  const fallbackColor = String((order as any)?.color || '').trim();
+  const fallbackSize = String((order as any)?.size || '').trim();
+  const fallbackQty = toNumberSafe((order as any)?.orderQuantity);
+  const fallbackWarehousedQty = toNumberSafe((order as any)?.warehousingQualifiedQuantity);
+
+  if (!fallbackColor || !fallbackSize) return [];
+  if (includeWarehousedQuantity) {
+    if (fallbackQty > 0 || fallbackWarehousedQty > 0) {
+      return [{ color: fallbackColor, size: fallbackSize, quantity: fallbackQty, warehousedQuantity: fallbackWarehousedQty }];
+    }
+    return [];
+  }
+  if (fallbackQty > 0) return [{ color: fallbackColor, size: fallbackSize, quantity: fallbackQty }];
+  return [];
+};
+
+export const isDuplicateScanMessage = (serverMessage: unknown): boolean => {
   const msg = String(serverMessage || '').trim();
   if (!msg) return false;
   return msg.includes('忽略') || msg.includes('无需重复') || msg.includes('已扫码');
 };
 
-export const toUrlSearchParams = (params: Record<string, any>): URLSearchParams => {
+export const toUrlSearchParams = (params: Record<string, unknown>): URLSearchParams => {
   const sp = new URLSearchParams();
   if (!params || typeof params !== 'object') return sp;
   for (const [k, v] of Object.entries(params)) {
@@ -32,16 +190,16 @@ export const toUrlSearchParams = (params: Record<string, any>): URLSearchParams 
   return sp;
 };
 
-export const withQuery = (path: string, params: Record<string, any>): string => {
+export const withQuery = (path: string, params: Record<string, unknown>): string => {
   const qs = toUrlSearchParams(params).toString();
   return qs ? `${path}?${qs}` : path;
 };
 
 type OrderFrozenSource = {
-  status?: any;
-  orderQuantity?: any;
-  inStockQuantity?: any;
-  warehousingQualifiedQuantity?: any;
+  status?: unknown;
+  orderQuantity?: unknown;
+  inStockQuantity?: unknown;
+  warehousingQualifiedQuantity?: unknown;
 };
 
 export const isOrderFrozenByStatus = (source?: OrderFrozenSource | null): boolean => {
@@ -62,9 +220,9 @@ export const isOrderFrozenByStatusOrStock = (source?: OrderFrozenSource | null):
 };
 
 export const fetchProductionOrderDetail = async (
-  orderId: any,
+  orderId: unknown,
   opts?: { acceptAnyData?: boolean }
-): Promise<any | null> => {
+): Promise<unknown | null> => {
   const oid = String(orderId || '').trim();
   if (!oid) return null;
   try {
@@ -81,7 +239,7 @@ export const fetchProductionOrderDetail = async (
 export type ProductionOrderFrozenRule = 'status' | 'statusOrStock';
 
 export const primeProductionOrderFrozenCache = async (
-  orderId: any,
+  orderId: unknown,
   cache: Map<string, boolean>,
   opts: { rule: ProductionOrderFrozenRule; acceptAnyData?: boolean; onCacheUpdated?: () => void }
 ): Promise<boolean | undefined> => {
@@ -130,6 +288,81 @@ export const ensureProductionOrderUnlocked = async (
   return true;
 };
 
+export type UseProductionOrderFrozenCacheOptions = {
+  rule: ProductionOrderFrozenRule;
+  acceptAnyData?: boolean;
+  primeBatchSize?: number;
+};
+
+export const useProductionOrderFrozenCache = (ids: any[], opts: UseProductionOrderFrozenCacheOptions) => {
+  const cacheRef = useRef<Map<string, boolean>>(new Map());
+  const [version, setVersion] = useState(0);
+
+  const primeBatchSize = Math.max(1, Math.floor(Number(opts?.primeBatchSize ?? 50) || 50));
+  const acceptAnyData = Boolean(opts?.acceptAnyData);
+  const rule = opts?.rule;
+
+  const normalizedIds = useMemo(() => {
+    const out: string[] = [];
+    const seen = new Set<string>();
+    for (const v of Array.isArray(ids) ? ids : []) {
+      const id = String(v || '').trim();
+      if (!id) continue;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      out.push(id);
+    }
+    return out;
+  }, [ids]);
+
+  const bump = () => setVersion((v) => v + 1);
+
+  useEffect(() => {
+    if (!rule) return;
+    const missing = normalizedIds.filter((id) => !cacheRef.current.has(id));
+    if (!missing.length) return;
+
+    let cancelled = false;
+    void (async () => {
+      await Promise.allSettled(
+        missing
+          .slice(0, primeBatchSize)
+          .map((id) =>
+            primeProductionOrderFrozenCache(id, cacheRef.current, {
+              rule,
+              acceptAnyData,
+              onCacheUpdated: bump,
+            })
+          )
+      );
+      if (!cancelled) bump();
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [acceptAnyData, normalizedIds, primeBatchSize, rule]);
+
+  const isFrozenById = (orderId: any) => {
+    void version;
+    const oid = String(orderId || '').trim();
+    if (!oid) return false;
+    return cacheRef.current.get(oid) === true;
+  };
+
+  const ensureUnlocked = async (orderId: any, onFrozen?: () => void) => {
+    if (!rule) return true;
+    return await ensureProductionOrderUnlocked(orderId, cacheRef.current, {
+      rule,
+      acceptAnyData,
+      onCacheUpdated: bump,
+      onFrozen,
+    });
+  };
+
+  return { cacheRef, isFrozenById, ensureUnlocked };
+};
+
 export const updateFinanceReconciliationStatus = async (id: string, status: string) => {
   const rid = String(id || '').trim();
   const st = String(status || '').trim();
@@ -149,8 +382,31 @@ export const returnFinanceReconciliation = async (id: string, reason: string) =>
 };
 
 // 创建请求实例
+const resolveApiBaseUrl = (): string => {
+  try {
+    const raw = (import.meta as any)?.env?.VITE_API_BASE_URL;
+    const v = raw == null ? '' : String(raw).trim();
+    if (!v) return '/api';
+
+    const normalized = v.replace(/\/+$/g, '');
+    if (normalized === '/api') return normalized;
+    if (normalized.endsWith('/api')) return normalized;
+
+    if (/^https?:\/\//i.test(normalized)) {
+      return `${normalized}/api`;
+    }
+    if (normalized.startsWith('/')) {
+      return `${normalized}/api`;
+    }
+
+    return '/api';
+  } catch {
+    return '/api';
+  }
+};
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: resolveApiBaseUrl(),
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
@@ -225,6 +481,13 @@ api.interceptors.request.use(
   }
 );
 
+// 请求重试配置
+const retryConfig = {
+  retries: 2, // 最多重试2次
+  retryDelay: 1000, // 重试间隔1秒
+  retryableStatuses: [500, 502, 503, 504] // 可重试的HTTP状态码
+};
+
 // 响应拦截器
 api.interceptors.response.use(
   response => {
@@ -232,25 +495,75 @@ api.interceptors.response.use(
     // 直接返回完整的统一结果结构，让前端组件自行处理
     return result;
   },
-  error => {
-    // 处理网络错误和服务器错误
+  async error => {
+    const { config, response, request } = error;
+
+    const status = response?.status;
+    if (status === 401 || status === 403) {
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('userInfo');
+        }
+      } catch {
+      }
+      try {
+        if (typeof window !== 'undefined') {
+          const p = String(window.location?.pathname || '');
+          if (p !== '/login') {
+            window.dispatchEvent(new CustomEvent('app:auth:logout'));
+          }
+        }
+      } catch {
+      }
+    }
+
+    // 处理请求配置错误
+    if (!config) {
+      return Promise.reject(error);
+    }
+
+    // 初始化重试计数
+    config._retryCount = config._retryCount || 0;
+
+    // 判断是否需要重试
+    const shouldRetry = (
+      config._retryCount < retryConfig.retries &&
+      (request && !response) || // 网络错误或服务器无响应
+      (response && retryConfig.retryableStatuses.includes(response.status)) // 可重试的服务器错误
+    );
+
+    if (shouldRetry) {
+      // 增加重试计数
+      config._retryCount += 1;
+
+      // 等待指定时间后重试
+      await new Promise(resolve => setTimeout(resolve, retryConfig.retryDelay));
+
+      // 重试请求
+      return api(config);
+    }
+
+    // 不重试时，构造错误信息
     let errorMessage = '请求失败';
     const enrichedError: any = new Error(errorMessage);
-    if (error.response) {
+
+    if (response) {
       // 服务器返回了错误响应
-      const result = error.response.data;
-      const status = error.response.status;
+      const result = response.data;
+      const status = response.status;
       errorMessage = result?.message || `请求失败 (${status})`;
 
       enrichedError.status = status;
       enrichedError.result = result;
-    } else if (error.request) {
+    } else if (request) {
       // 请求发送成功但没有收到响应
       errorMessage = '服务器无响应';
     } else {
       // 请求配置错误
       errorMessage = error.message;
     }
+
     enrichedError.message = errorMessage;
     return Promise.reject(enrichedError);
   }

@@ -6,6 +6,7 @@ import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleAttachmentService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import java.io.File;
+import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -102,7 +103,8 @@ public class StyleAttachmentOrchestrator {
                             .set(StyleInfo::getCover, attachment.getFileUrl())
                             .update();
                 } catch (Exception e) {
-                    log.warn("Failed to update style cover: styleId={}, fileUrl={}", styleId, attachment.getFileUrl(), e);
+                    log.warn("Failed to update style cover: styleId={}, fileUrl={}", styleId, attachment.getFileUrl(),
+                            e);
                 }
             }
 
@@ -111,6 +113,54 @@ public class StyleAttachmentOrchestrator {
             log.error("Upload style attachment failed: styleId={}, bizType={}, fileName={}", styleId, bizType,
                     file == null ? null : file.getOriginalFilename(), e);
             throw new IllegalStateException("文件上传失败");
+        }
+    }
+
+    public StyleAttachment saveGenerated(byte[] content, String fileName, String styleId, String bizType,
+            String contentType) {
+        if (content == null) {
+            throw new IllegalArgumentException("内容为空");
+        }
+        if (!StringUtils.hasText(styleId)) {
+            throw new IllegalArgumentException("styleId不能为空");
+        }
+
+        String type = StringUtils.hasText(bizType) ? bizType.trim() : "general";
+        if ("pattern".equalsIgnoreCase(type) && isPatternLocked(styleId)) {
+            throw new IllegalStateException("纸样已完成，无法修改，请先回退");
+        }
+
+        String safeName = StringUtils.hasText(fileName) ? fileName.trim() : "file";
+        int dot = safeName.lastIndexOf('.');
+        String extension = dot >= 0 ? safeName.substring(dot) : "";
+
+        try {
+            File dir = new File(uploadPath);
+            if (!dir.exists()) {
+                dir.mkdirs();
+            }
+
+            String newFilename = UUID.randomUUID().toString() + extension;
+            File dest = new File(dir, newFilename);
+            Files.write(dest.toPath(), content);
+
+            StyleAttachment attachment = new StyleAttachment();
+            attachment.setStyleId(styleId);
+            attachment.setFileName(safeName);
+            attachment.setFileUrl("/api/common/download/" + newFilename);
+            attachment.setFileType(StringUtils.hasText(contentType) ? contentType.trim() : "application/octet-stream");
+            attachment.setBizType(type);
+            attachment.setFileSize((long) content.length);
+            UserContext ctx = UserContext.get();
+            attachment.setUploader(ctx != null ? ctx.getUsername() : null);
+            attachment.setCreateTime(LocalDateTime.now());
+
+            styleAttachmentService.save(attachment);
+            return attachment;
+        } catch (Exception e) {
+            log.error("Save generated style attachment failed: styleId={}, bizType={}, fileName={}", styleId, bizType,
+                    safeName, e);
+            throw new IllegalStateException("文件生成失败");
         }
     }
 

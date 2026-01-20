@@ -160,6 +160,9 @@ public class ProductionOrder {
     private BigDecimal factoryUnitPrice;
 
     @TableField(exist = false)
+    private BigDecimal quotationUnitPrice;
+
+    @TableField(exist = false)
     private LocalDateTime orderStartTime;
 
     @TableField(exist = false)
