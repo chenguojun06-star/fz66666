@@ -906,6 +906,7 @@ Page({
         const my = {
             loadingHistory: false,
             history: { page: 1, pageSize: 10, hasMore: true, list: [] },
+            groupedHistory: [], // 保留聚合历史记录
             ...(this.data.my || {}),
         };
         const history = my.history || { page: 1, pageSize: 10, hasMore: true, list: [] };
@@ -927,6 +928,7 @@ Page({
             
             // 聚合处理：按订单号+环节分组
             const groupedHistory = this.groupScanHistory(merged);
+            console.log('聚合后的记录数量:', groupedHistory.length);
             
             this.setData({
                 'my.history': {
@@ -938,6 +940,8 @@ Page({
                 },
                 'my.groupedHistory': groupedHistory,
             });
+            
+            console.log('页面数据更新完成 - groupedHistory:', this.data.my.groupedHistory);
         } catch (e) {
             if (e && e.type === 'auth') return;
             const app = getApp();
