@@ -16,6 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -399,10 +400,8 @@ public class MaterialPurchaseOrchestrator {
     public MaterialPurchase receive(Map<String, Object> body) {
         String purchaseId = body == null ? null
                 : (body.get("purchaseId") == null ? null : String.valueOf(body.get("purchaseId")));
-        String receiverId = body == null ? null
-                : (body.get("receiverId") == null ? null : String.valueOf(body.get("receiverId")));
-        String receiverName = body == null ? null
-                : (body.get("receiverName") == null ? null : String.valueOf(body.get("receiverName")));
+        String receiverIdValue = body == null ? "" : Objects.toString(body.get("receiverId"), "");
+        String receiverNameValue = body == null ? "" : Objects.toString(body.get("receiverName"), "");
 
         if (!StringUtils.hasText(purchaseId)) {
             throw new IllegalArgumentException("参数错误");
@@ -419,23 +418,19 @@ public class MaterialPurchaseOrchestrator {
         }
 
         // 检查是否已被领取
-        String existingReceiverId = StringUtils.hasText(purchase.getReceiverId())
-                ? purchase.getReceiverId().trim()
-                : "";
-        String existingReceiverName = StringUtils.hasText(purchase.getReceiverName())
-                ? purchase.getReceiverName().trim()
-                : "";
-        String rid = StringUtils.hasText(receiverId) ? receiverId.trim() : "";
-        String rname = StringUtils.hasText(receiverName) ? receiverName.trim() : "";
+        String existingReceiverId = purchase.getReceiverId() == null ? "" : purchase.getReceiverId().trim();
+        String existingReceiverName = purchase.getReceiverName() == null ? "" : purchase.getReceiverName().trim();
+        String rid = receiverIdValue.trim();
+        String rname = receiverNameValue.trim();
         
         boolean alreadyReceived = !"pending".equals(status) && StringUtils.hasText(status);
         if (alreadyReceived) {
             // 检查是否是同一个人
             boolean isSame = false;
             if (!rid.isEmpty() && !existingReceiverId.isEmpty()) {
-                isSame = rid.equals(existingReceiverId);
+                isSame = Objects.equals(rid, existingReceiverId);
             } else if (!rname.isEmpty() && !existingReceiverName.isEmpty()) {
-                isSame = rname.equals(existingReceiverName);
+                isSame = Objects.equals(rname, existingReceiverName);
             }
             if (!isSame) {
                 String otherName = StringUtils.hasText(existingReceiverName) ? existingReceiverName : "他人";
@@ -452,12 +447,8 @@ public class MaterialPurchaseOrchestrator {
             // 再次检查最新状态
             MaterialPurchase latest = materialPurchaseService.getById(purchaseId);
             if (latest != null) {
-                String latestReceiverName = StringUtils.hasText(latest.getReceiverName())
-                        ? latest.getReceiverName().trim()
-                        : "";
-                String latestReceiverId = StringUtils.hasText(latest.getReceiverId())
-                        ? latest.getReceiverId().trim()
-                        : "";
+                String latestReceiverName = safe(latest.getReceiverName());
+                String latestReceiverId = safe(latest.getReceiverId());
                 boolean isSameNow = false;
                 if (!rid.isEmpty() && !latestReceiverId.isEmpty()) {
                     isSameNow = rid.equals(latestReceiverId);
