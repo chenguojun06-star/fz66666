@@ -1814,12 +1814,14 @@ Page({
                 handleMethod: 0,
                 remark: '',
             }
+        }, () => {
+            // setData 回调，确保数据已更新
+            console.log('setData完成 - qualityModal.show:', this.data.qualityModal.show);
+            console.log('setData完成 - qualityModal.detail:', this.data.qualityModal.detail);
         });
         
-        // 验证设置后的数据
-        setTimeout(() => {
-            console.log('质检处理 - 页面实际数据:', this.data.qualityModal.detail);
-        }, 100);
+        // 立即检查数据
+        console.log('setData后立即检查 - qualityModal:', this.data.qualityModal);
     },
 
     /**
