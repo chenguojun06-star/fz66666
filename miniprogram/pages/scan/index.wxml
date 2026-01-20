@@ -41,15 +41,10 @@
     </view>
   </view>
 
-  <!-- 质检选项 -->
-  <view wx:if="{{scanTypeOptions[scanTypeIndex].value === 'quality'}}" class="qc-bar">
-    <view class="qc-opt {{qualityIndex === 0 ? 'on pass' : ''}}" bindtap="onQuickQuality" data-idx="0">✓ 合格</view>
-    <view class="qc-opt {{qualityIndex === 1 ? 'on fail' : ''}}" bindtap="onQuickQuality" data-idx="1">✗ 次品</view>
-    <view class="qc-opt {{qualityIndex === 2 ? 'on fix' : ''}}" bindtap="onQuickQuality" data-idx="2">↻ 返修</view>
-  </view>
+  <!-- 质检选项 - 扫码后在确认弹窗中选择，不要提前显示 -->
 
-  <!-- 次品详情 -->
-  <view wx:if="{{scanTypeOptions[scanTypeIndex].value === 'quality' && qualityOptions[qualityIndex].value === 'unqualified'}}" class="defect-box">
+  <!-- 次品详情 - 移至确认弹窗 -->
+  <view wx:if="false" class="defect-box">
     <view class="df-row">
       <text class="df-label">类型</text>
       <picker class="df-picker" mode="selector" range="{{defectCategoryOptions}}" range-key="label" value="{{defectCategoryIndex}}" bindchange="onDefectCategoryChange">
@@ -180,6 +175,32 @@
           <view wx:if="{{scanConfirm.detail.orderNo}}" class="cf-item"><text class="cf-k">订单</text><text class="cf-v hl">{{scanConfirm.detail.orderNo}}</text></view>
           <view wx:if="{{scanConfirm.detail.styleNo}}" class="cf-item"><text class="cf-k">款号</text><text class="cf-v">{{scanConfirm.detail.styleNo}}</text></view>
           <view wx:if="{{scanConfirm.detail.progressStage}}" class="cf-item"><text class="cf-k">环节</text><text class="cf-v">{{scanConfirm.detail.progressStage}}</text></view>
+        </view>
+        
+        <!-- 质检选项 - 在确认弹窗中选择 -->
+        <view wx:if="{{scanTypeOptions[scanTypeIndex].value === 'quality'}}" class="qc-modal-bar">
+          <text class="qc-modal-label">质检结果</text>
+          <view class="qc-modal-opts">
+            <view class="qc-modal-opt {{qualityIndex === 0 ? 'on pass' : ''}}" bindtap="onQuickQuality" data-idx="0">✓ 合格</view>
+            <view class="qc-modal-opt {{qualityIndex === 1 ? 'on fail' : ''}}" bindtap="onQuickQuality" data-idx="1">✗ 次品</view>
+            <view class="qc-modal-opt {{qualityIndex === 2 ? 'on fix' : ''}}" bindtap="onQuickQuality" data-idx="2">↻ 返修</view>
+          </view>
+        </view>
+        
+        <!-- 次品详情 -->
+        <view wx:if="{{scanTypeOptions[scanTypeIndex].value === 'quality' && qualityOptions[qualityIndex].value === 'unqualified'}}" class="defect-modal-box">
+          <view class="df-row">
+            <text class="df-label">类型</text>
+            <picker class="df-picker" mode="selector" range="{{defectCategoryOptions}}" range-key="label" value="{{defectCategoryIndex}}" bindchange="onDefectCategoryChange">
+              <text class="df-val">{{defectCategoryOptions[defectCategoryIndex].label}} ›</text>
+            </picker>
+          </view>
+          <view class="df-row">
+            <text class="df-label">处理</text>
+            <picker class="df-picker" mode="selector" range="{{defectRemarkOptions}}" range-key="label" value="{{defectRemarkIndex}}" bindchange="onDefectRemarkChange">
+              <text class="df-val">{{defectRemarkOptions[defectRemarkIndex].label}} ›</text>
+            </picker>
+          </view>
         </view>
       </view>
       <view class="modal-btns">
