@@ -1,20 +1,12 @@
 page {
-  background: linear-gradient(135deg, rgba(169, 201, 255, 0.18), rgba(255, 255, 255, 0.72));
+  background: #f7f8fa;
 }
 
 .container .card {
-  background: rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  border-radius: 26px;
-  padding: 14px;
-  box-shadow: none;
-}
-
-.title {
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 10px;
-  color: #1f2937;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  padding: 12px;
 }
 
 .btn-primary {
@@ -24,10 +16,10 @@ page {
 }
 
 .section-title {
-  margin-top: 12px;
-  font-size: 13px;
+  margin-top: 10px;
+  font-size: 14px;
   font-weight: 600;
-  color: #2c2c2e;
+  color: #1f2937;
 }
 
 .actions {
@@ -37,7 +29,7 @@ page {
 }
 
 .btn-secondary {
-  background: rgba(148, 163, 184, 0.18);
+  background: #eef2ff;
   color: #374151;
   border-radius: 999px;
   padding: 8px 12px;
@@ -53,17 +45,16 @@ page {
 }
 
 .my-stat {
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  border-radius: 22px;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
   padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.6);
-  box-shadow: none;
+  background: #ffffff;
 }
 
 .my-stat-value {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
-  color: #1c1c1e;
+  color: #111827;
 }
 
 .my-stat-label {
@@ -76,9 +67,9 @@ page {
   width: 100%;
   box-sizing: border-box;
   padding: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  background: #ffffff;
   margin-top: 10px;
 }
 
@@ -92,7 +83,7 @@ page {
 .item-title {
   flex: 1;
   min-width: 0;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
 }
 
@@ -101,16 +92,16 @@ page {
   width: 100%;
   margin-top: 6px;
   font-size: 12px;
-  color: #374151;
+  color: #4b5563;
   line-height: 1.5;
 }
 
 .salary-card {
   margin-top: 10px;
   padding: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  background: #ffffff;
 }
 
 .salary-row {
@@ -126,11 +117,11 @@ page {
 }
 
 .salary-value {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
-  color: #1c1c1e;
+  color: #111827;
 }
 
 .hint {
-  font-size: 12px;
+  font-size: 11px;
 }

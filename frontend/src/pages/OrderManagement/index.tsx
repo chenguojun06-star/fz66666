@@ -1770,11 +1770,11 @@ const OrderManagement: React.FC = () => {
                 children: (
                   <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexDirection: isMobile ? 'column' : 'row', minWidth: 0 }}>
                     <div style={{ border: '1px solid rgba(0,0,0,0.06)', borderRadius: 8, padding: 12 }}>
-                      <QRCodeCanvas value={(createdOrder?.qrCode || createdOrder?.orderNo || watchedOrderNo || ' ') as string} size={220} />
+                      <QRCodeCanvas value={(createdOrder?.qrCode || ' ') as string} size={220} />
                     </div>
                     <div style={{ lineHeight: 1.8, minWidth: 0, maxWidth: '100%', wordBreak: 'break-all', overflowWrap: 'anywhere' }}>
                       <div>订单号：{createdOrder?.orderNo || watchedOrderNo || '-'}</div>
-                      <div>二维码内容：{createdOrder?.qrCode || watchedOrderNo || '-'}</div>
+                      <div>二维码内容：{createdOrder?.qrCode || '-'}</div>
                       <div>款号：{selectedStyle?.styleNo || '-'}</div>
                       <div>颜色：{createdOrder?.color || (orderLineColors.length ? orderLineColors.join(',') : '-')}</div>
                       <div>码数：{createdOrder?.size || (orderLineSizes.length ? orderLineSizes.join(',') : '-')}</div>
@@ -1786,19 +1786,7 @@ const OrderManagement: React.FC = () => {
             ]}
           />
 
-          <div
-            style={{
-              position: 'sticky',
-              bottom: 0,
-              zIndex: 2,
-              display: 'flex',
-              justifyContent: 'flex-end',
-              gap: 8,
-              paddingTop: 10,
-              paddingBottom: 6,
-              background: '#fff',
-            }}
-          >
+          <div className="modal-sticky-footer">
             <Button onClick={closeDialog} disabled={submitLoading}>
               关闭
             </Button>

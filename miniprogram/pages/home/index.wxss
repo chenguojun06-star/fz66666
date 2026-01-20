@@ -1,13 +1,12 @@
 page {
-  background: linear-gradient(135deg, rgba(169, 201, 255, 0.18), rgba(255, 255, 255, 0.72));
+  background: #f7f8fa;
 }
 
 .container .card {
-  background: rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  border-radius: 26px;
-  padding: 14px;
-  box-shadow: none;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  padding: 12px;
 }
 
 .title {
@@ -25,7 +24,7 @@ page {
 }
 
 .btn-secondary {
-  background: rgba(148, 163, 184, 0.18);
+  background: #eef2ff;
   color: #374151;
   border-radius: 999px;
   padding: 8px 12px;
@@ -34,18 +33,18 @@ page {
 }
 
 .home-section-title {
-  margin-top: 12px;
-  font-size: 13px;
+  margin-top: 10px;
+  font-size: 14px;
   font-weight: 600;
-  color: #2c2c2e;
+  color: #1f2937;
 }
 
 .home-filter {
   margin-top: 8px;
   padding: 10px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  background: #ffffff;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -69,21 +68,21 @@ page {
 }
 
 .filter-input {
-  border: 1px solid rgba(148, 163, 184, 0.28);
+  border: 1px solid #e5e7eb;
   border-radius: 999px;
   padding: 8px 12px;
   font-size: 12px;
   color: #111827;
-  background: rgba(255, 255, 255, 0.65);
+  background: #ffffff;
 }
 
 .filter-text {
-  border: 1px solid rgba(148, 163, 184, 0.28);
+  border: 1px solid #e5e7eb;
   border-radius: 999px;
   padding: 8px 12px;
   font-size: 12px;
   color: #111827;
-  background: rgba(255, 255, 255, 0.65);
+  background: #ffffff;
 }
 
 .filter-actions {
@@ -95,16 +94,15 @@ page {
 .home-stats {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 10px;
+  gap: 10px;
+  margin-top: 8px;
 }
 
 .home-stat {
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  border-radius: 22px;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
   padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.6);
-  box-shadow: none;
+  background: #ffffff;
 }
 
 .home-stat-head {
@@ -145,9 +143,9 @@ page {
 }
 
 .home-stat-value {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
-  color: #1c1c1e;
+  color: #111827;
 }
 
 .home-stat-label {
@@ -163,21 +161,21 @@ page {
 }
 
 .home-entry {
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
   color: #111827;
   border-radius: 999px;
-  padding: 10px 8px;
+  padding: 8px 8px;
   text-align: center;
   font-size: 12px;
 }
 
 .home-activity {
   padding: 10px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  border-radius: 22px;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
   margin-top: 10px;
-  background: rgba(255, 255, 255, 0.55);
+  background: #ffffff;
 }
 
 .home-activity-row {

@@ -501,6 +501,24 @@ body {
   justify-content: flex-end;
   flex-wrap: wrap;
   gap: 8px;
+  padding: 12px 0 0 0;
+}
+
+/* 统一弹窗底部sticky按钮区域样式 */
+.modal-sticky-footer {
+  position: sticky;
+  bottom: -16px;
+  left: -24px;
+  right: -24px;
+  z-index: 10;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  margin-top: 16px;
+  background: linear-gradient(to top, #fff 0%, #fff 85%, rgba(255,255,255,0.96) 95%, rgba(255,255,255,0) 100%);
+  border-top: 1px solid rgba(0,0,0,0.06);
 }
 .ant-table { font-size: var(--font-size-base); }
 .ant-table-thead > tr > th {
