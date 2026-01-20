@@ -496,13 +496,145 @@ const OrderProfitPanel: React.FC<OrderProfitPanelProps> = ({
   );
 };
 
+type ApprovalActionItem = {
+  key: string;
+  label: string;
+  icon?: React.ReactNode;
+  danger?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+};
+
+type ApprovalDetailModalProps = {
+  open: boolean;
+  kind: ApprovalListKind;
+  record: ApprovalRecord | null;
+  width: number | string;
+  initialHeight: number;
+  onClose: () => void;
+  buildActionItems: (kind: ApprovalListKind, status: ReconStatus, id: string) => ApprovalActionItem[];
+  getPrevStageTime: (status: ReconStatus, record: ApprovalRecord) => string;
+  getPaidAtTime: (status: ReconStatus, record: ApprovalRecord) => string;
+};
+
+const ApprovalDetailModal: React.FC<ApprovalDetailModalProps> = ({
+  open,
+  kind,
+  record,
+  width,
+  initialHeight,
+  onClose,
+  buildActionItems,
+  getPrevStageTime,
+  getPaidAtTime,
+}) => {
+  return (
+    <ResizableModal
+      open={open}
+      title={kind === 'material' ? '物料付款详情' : '成品结算付款详情'}
+      onCancel={onClose}
+      footer={
+        <div className="modal-footer-actions">
+          <Button onClick={onClose}>关闭</Button>
+        </div>
+      }
+      width={width}
+      initialHeight={initialHeight}
+      scaleWithViewport
+      destroyOnHidden
+    >
+      {record ? (
+        <>
+          <Card size="small" className="mb-sm">
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+              {kind === 'shipment' ? (
+                <StyleCoverThumb
+                  styleId={(record as ShipmentReconciliation)?.styleId}
+                  styleNo={String((record as ShipmentReconciliation)?.styleNo || '').trim() || undefined}
+                  size={84}
+                  borderRadius={12}
+                />
+              ) : (
+                <div style={{ width: 84, height: 84, borderRadius: 12, background: '#f5f5f5' }} />
+              )}
+
+              <div style={{ flex: 1, minWidth: 260 }}>
+                <Space wrap style={{ marginBottom: 8 }}>
+                  <Tag color="blue">{String((record as any)?.reconciliationNo || '').trim() || '-'}</Tag>
+                  <Tag>
+                    状态：{(() => {
+                      const cfg = getStatusConfig((record as any)?.status as any);
+                      return cfg.text;
+                    })()}
+                  </Tag>
+                  <Tag>对账日期：{formatDateTime((record as any)?.reconciliationDate)}</Tag>
+                </Space>
+
+                <Descriptions size="small" column={{ xs: 1, sm: 2, md: 3, lg: 3 }}>
+                  {kind === 'material' ? (
+                    <>
+                      <Descriptions.Item label="供应商">{String((record as any)?.supplierName || '').trim() || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="订单号">{String((record as any)?.orderNo || '').trim() || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="款号">{String((record as any)?.styleNo || '').trim() || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="采购单号">{String((record as any)?.purchaseNo || '').trim() || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="物料编码">{String((record as any)?.materialCode || '').trim() || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="物料名称">{String((record as any)?.materialName || '').trim() || '-'}</Descriptions.Item>
+                    </>
+                  ) : (
+                    <>
+                      <Descriptions.Item label="客户">{String((record as any)?.customerName || '').trim() || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="订单号">{String((record as any)?.orderNo || '').trim() || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="款号">{String((record as any)?.styleNo || '').trim() || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="数量">{Number((record as any)?.quantity ?? 0) || 0}</Descriptions.Item>
+                      <Descriptions.Item label="生产完成数">{Number((record as any)?.productionCompletedQuantity ?? 0) || 0}</Descriptions.Item>
+                    </>
+                  )}
+                  <Descriptions.Item label="总金额(元)">{formatMoney2((record as any)?.totalAmount)}</Descriptions.Item>
+                  <Descriptions.Item label="扣款(元)">{formatMoney2((record as any)?.deductionAmount)}</Descriptions.Item>
+                  <Descriptions.Item label="最终金额(元)">{formatMoney2((record as any)?.finalAmount)}</Descriptions.Item>
+                  <Descriptions.Item label="上环节时间">{getPrevStageTime((record as any)?.status as any, record)}</Descriptions.Item>
+                  <Descriptions.Item label="付款时间">{getPaidAtTime((record as any)?.status as any, record)}</Descriptions.Item>
+                </Descriptions>
+              </div>
+            </div>
+          </Card>
+
+          <Card size="small" title="审核动作">
+            <Space wrap>
+              {buildActionItems(
+                kind,
+                ((record as any)?.status || 'pending') as ReconStatus,
+                String((record as any)?.id || '')
+              ).map((a) => {
+                return (
+                  <Button
+                    key={String(a.key)}
+                    icon={a.icon}
+                    danger={Boolean(a.danger)}
+                    disabled={Boolean(a.disabled)}
+                    onClick={a.onClick}
+                  >
+                    {a.label}
+                  </Button>
+                );
+              })}
+            </Space>
+          </Card>
+        </>
+      ) : (
+        <div style={{ color: '#999' }}>未选择记录</div>
+      )}
+    </ResizableModal>
+  );
+};
+
 const PaymentApproval: React.FC = () => {
   const location = useLocation();
   const { user } = useAuth();
   const [tab, setTab] = useState<ApprovalTab>('shipment');
 
   const [detailOpen, setDetailOpen] = useState(false);
-  const [detailKind, setDetailKind] = useState<ApprovalTab>('shipment');
+  const [detailKind, setDetailKind] = useState<ApprovalListKind>('shipment');
   const [detailRecord, setDetailRecord] = useState<ApprovalRecord | null>(null);
 
   const openDetail = (kind: ApprovalListKind, record: ApprovalRecord) => {
@@ -537,6 +669,11 @@ const PaymentApproval: React.FC = () => {
   const [selectedRows, setSelectedRows] = useState<ApprovalRecord[]>([]);
   const [batchLoading, setBatchLoading] = useState<ReconStatus | null>(null);
 
+  const handleSelectionChange = (keys: React.Key[], rows: ApprovalRecord[]) => {
+    setSelectedRowKeys(keys);
+    setSelectedRows(rows);
+  };
+
   const [materialList, setMaterialList] = useState<MaterialReconciliation[]>([]);
   const [materialTotal, setMaterialTotal] = useState(0);
   const [materialLoading, setMaterialLoading] = useState(false);
@@ -554,7 +691,7 @@ const PaymentApproval: React.FC = () => {
 
   const isAdmin = useMemo(() => isAdminUser(user), [user]);
 
-  const buildActionItems = (kind: ApprovalTab, status: ReconStatus, id: string) => {
+  const buildActionItems = (kind: ApprovalListKind, status: ReconStatus, id: string) => {
     return [
       {
         key: 'verified',
@@ -1599,25 +1736,13 @@ const PaymentApproval: React.FC = () => {
           {tab === 'material' ? materialExtraFilters : tab === 'shipment' ? shipmentExtraFilters : orderProfitExtraFilters}
 
           {tab === 'material' ? (
-            <ResizableTable
+            <ApprovalTable
+              kind="material"
               columns={materialColumns as any}
               dataSource={materialList}
-              rowKey={(r: any) => String(r.id)}
-              onRow={(record: any) => {
-                return {
-                  onClick: (e: any) => {
-                    if (ignoreRowClick(e)) return;
-                    openDetail('material', record);
-                  },
-                } as any;
-              }}
-              rowSelection={{
-                selectedRowKeys,
-                onChange: (keys, rows) => {
-                  setSelectedRowKeys(keys);
-                  setSelectedRows(rows as any[]);
-                },
-              }}
+              onOpenDetail={openDetail}
+              ignoreRowClick={ignoreRowClick}
+              rowSelection={{ selectedRowKeys, onChange: handleSelectionChange }}
               loading={materialLoading}
               pagination={{
                 current: materialQuery.page,
@@ -1627,25 +1752,13 @@ const PaymentApproval: React.FC = () => {
               }}
             />
           ) : tab === 'shipment' ? (
-            <ResizableTable
+            <ApprovalTable
+              kind="shipment"
               columns={shipmentColumns as any}
               dataSource={shipmentList}
-              rowKey={(r: any) => String(r.id)}
-              onRow={(record: any) => {
-                return {
-                  onClick: (e: any) => {
-                    if (ignoreRowClick(e)) return;
-                    openDetail('shipment', record);
-                  },
-                } as any;
-              }}
-              rowSelection={{
-                selectedRowKeys,
-                onChange: (keys, rows) => {
-                  setSelectedRowKeys(keys);
-                  setSelectedRows(rows as any[]);
-                },
-              }}
+              onOpenDetail={openDetail}
+              ignoreRowClick={ignoreRowClick}
+              rowSelection={{ selectedRowKeys, onChange: handleSelectionChange }}
               loading={shipmentLoading}
               pagination={{
                 current: shipmentQuery.page,
@@ -1655,297 +1768,43 @@ const PaymentApproval: React.FC = () => {
               }}
             />
           ) : (
-            <>
-              <Card
-                size="small"
-                className="mb-sm"
-                title="订单概览"
-                loading={orderProfitLoading}
-                extra={
-                  orderInfo ? (
-                    <Space wrap>
-                      {usingWarehousingQty ? <Tag color="green">按入库数量核算</Tag> : <Tag color="orange">按下单数量核算</Tag>}
-                      {calcQty > 0 ? <Tag>核算数量：{calcQty}</Tag> : null}
-                    </Space>
-                  ) : null
-                }
-              >
-                {orderInfo ? (
-                  <Descriptions size="small" column={{ xs: 1, sm: 2, md: 3, lg: 3 }}>
-                    <Descriptions.Item label="订单号">{String(orderInfo.orderNo || '').trim() || '-'}</Descriptions.Item>
-                    <Descriptions.Item label="款号">{String(orderInfo.styleNo || '').trim() || '-'}</Descriptions.Item>
-                    <Descriptions.Item label="款名">{String(orderInfo.styleName || '').trim() || '-'}</Descriptions.Item>
-                    <Descriptions.Item label="工厂">{String(orderInfo.factoryName || '').trim() || '-'}</Descriptions.Item>
-                    <Descriptions.Item label="下单数量">{Number(orderInfo.quantity) || 0}</Descriptions.Item>
-                    <Descriptions.Item label="生产完成数">{Number((orderInfo as any)?.completedQuantity) || 0}</Descriptions.Item>
-                    <Descriptions.Item label="入库数量">{Number((orderInfo as any)?.warehousingQuantity) || 0}</Descriptions.Item>
-                    <Descriptions.Item label="开发最终单价">{`¥${(summary ? Number(summary.quotationUnitPrice) || 0 : 0).toFixed(2)}`}</Descriptions.Item>
-                    <Descriptions.Item label="核算数量">{calcQty}</Descriptions.Item>
-                  </Descriptions>
-                ) : (
-                  <Tag color="default">请输入订单号查询</Tag>
-                )}
-              </Card>
-
-              <Row gutter={[12, 12]} className="mb-sm">
-                <Col xs={24} lg={8}>
-                  <Card size="small" title="面辅料到料（数量/金额）" loading={orderProfitLoading}>
-                    <Row gutter={[16, 16]}>
-                      <Col span={12}>
-                        <Statistic title="到料率" value={materialArrivalRate} precision={2} suffix="%" />
-                      </Col>
-                      <Col span={12}>
-                        <Statistic title="到料金额" value={materialArrivedAmount} precision={2} prefix="¥" />
-                      </Col>
-                      <Col span={12}>
-                        <Statistic title="到料数量" value={materialArrivedQty} />
-                      </Col>
-                      <Col span={12}>
-                        <Statistic title="到货成本(累计)" value={summary ? Number(summary.materialArrivedCost) || 0 : 0} precision={2} prefix="¥" />
-                      </Col>
-                    </Row>
-                    <Collapse
-                      size="small"
-                      ghost
-                      items={[
-                        {
-                          key: 'moreMaterial',
-                          label: '更多指标',
-                          children: (
-                            <Row gutter={[16, 16]}>
-                              <Col span={12}>
-                                <Statistic title="采购数量" value={materialPlannedQty} />
-                              </Col>
-                              <Col span={12}>
-                                <Statistic title="预算金额" value={materialPlannedAmount} precision={2} prefix="¥" />
-                              </Col>
-                            </Row>
-                          ),
-                        },
-                      ]}
-                    />
-                  </Card>
-                </Col>
-
-                <Col xs={24} lg={8}>
-                  <Card size="small" title="生产（数量/单价/成本）" loading={orderProfitLoading}>
-                    <Row gutter={[16, 16]}>
-                      <Col span={12}>
-                        <Statistic title="生产完成数" value={orderInfo ? Number((orderInfo as any)?.completedQuantity) || 0 : 0} />
-                      </Col>
-                      <Col span={12}>
-                        <Statistic title="入库数量" value={orderInfo ? Number((orderInfo as any)?.warehousingQuantity) || 0 : 0} />
-                      </Col>
-                      <Col span={12}>
-                        <Statistic title="总成本" value={totalCost} precision={2} prefix="¥" />
-                      </Col>
-                      <Col span={12}>
-                        <Statistic title="核算成本单价" value={summary ? Number((summary as any)?.actualUnitCost) || 0 : 0} precision={2} prefix="¥" />
-                      </Col>
-                    </Row>
-                    <Collapse
-                      size="small"
-                      ghost
-                      items={[
-                        {
-                          key: 'moreProduction',
-                          label: '更多指标',
-                          children: (
-                            <Row gutter={[16, 16]}>
-                              <Col span={12}>
-                                <Statistic title="生产加工成本" value={summary ? Number(summary.processingCost) || 0 : 0} precision={2} prefix="¥" />
-                              </Col>
-                              <Col span={12}>
-                                <Statistic title="预算面辅料成本" value={summary ? Number(summary.materialPlannedCost) || 0 : 0} precision={2} prefix="¥" />
-                              </Col>
-                            </Row>
-                          ),
-                        },
-                      ]}
-                    />
-                  </Card>
-                </Col>
-
-                <Col xs={24} lg={8}>
-                  <Card size="small" title="成本利润（核算口径）" loading={orderProfitLoading}>
-                    <Row gutter={[16, 16]}>
-                      <Col span={12}>
-                        <Statistic title="核算收入" value={revenue} precision={2} prefix="¥" />
-                      </Col>
-                      <Col span={12}>
-                        <Statistic title="已发生成本" value={incurredCost} precision={2} prefix="¥" />
-                      </Col>
-                      <Col span={12}>
-                        <Statistic title="利润" value={summary ? Number(summary.profit) || 0 : 0} precision={2} prefix="¥" />
-                      </Col>
-                      <Col span={12}>
-                        <Statistic title="毛利率" value={summary ? Number(summary?.marginPercent) || 0 : 0} precision={2} suffix="%" />
-                      </Col>
-                    </Row>
-                    <Collapse
-                      size="small"
-                      ghost
-                      items={[
-                        {
-                          key: 'moreProfit',
-                          label: '更多指标',
-                          children: (
-                            <Row gutter={[16, 16]}>
-                              <Col span={12}>
-                                <Statistic title="入库金额" value={warehousingRevenue} precision={2} prefix="¥" />
-                              </Col>
-                              <Col span={12}>
-                                <Statistic title="已回款(paid)" value={shipmentRevenue} precision={2} prefix="¥" />
-                              </Col>
-                              <Col span={12}>
-                                <Statistic title="出货对账(累计)" value={shipmentRevenueTotal} precision={2} prefix="¥" />
-                              </Col>
-                              <Col span={12}>
-                                <Statistic title="预算成本(报价)" value={summary ? Number(summary.quotationTotalCost) || 0 : 0} precision={2} prefix="¥" />
-                              </Col>
-                              <Col span={12}>
-                                <Statistic title="单件利润" value={summary ? Number((summary as any)?.unitProfit) || 0 : 0} precision={2} prefix="¥" />
-                              </Col>
-                            </Row>
-                          ),
-                        },
-                      ]}
-                    />
-                  </Card>
-                </Col>
-              </Row>
-
-              <Card size="small" className="mb-sm" title="趋势（累计）" loading={orderProfitLoading}>
-                <SimpleLineChart points={timeline} series={chartSeries} />
-              </Card>
-
-              <Card size="small" className="mb-sm" title="趋势明细" loading={orderProfitLoading}>
-                <ResizableTable
-                  columns={orderTimelineColumns as any}
-                  dataSource={timeline as any}
-                  rowKey="date"
-                  pagination={false}
-                  scroll={{ x: 'max-content', y: typeof window === 'undefined' ? 360 : window.innerWidth < 768 ? 260 : 360 }}
-                />
-              </Card>
-
-              <Card size="small" className="mb-sm" title="面辅料明细（到料数量/单价/金额）" loading={orderProfitLoading}>
-                <ResizableTable
-                  columns={orderMaterialColumns as any}
-                  dataSource={(orderProfitData?.materials || []) as any}
-                  rowKey={(r: any) => {
-                    const id = String(r?.id || '').trim();
-                    if (id) return id;
-                    const purchaseNo = String(r?.purchaseNo || '').trim();
-                    const materialCode = String(r?.materialCode || '').trim();
-                    const materialName = String(r?.materialName || '').trim();
-                    const receivedTime = String(r?.receivedTime || '').trim();
-                    return [purchaseNo, materialCode, materialName, receivedTime].filter(Boolean).join('|') || 'row';
-                  }}
-                  pagination={false}
-                  scroll={{ x: 'max-content', y: typeof window === 'undefined' ? 360 : window.innerWidth < 768 ? 260 : 360 }}
-                />
-              </Card>
-            </>
+            <OrderProfitPanel
+              orderInfo={orderInfo}
+              summary={summary}
+              timeline={timeline}
+              orderProfitLoading={orderProfitLoading}
+              usingWarehousingQty={usingWarehousingQty}
+              calcQty={calcQty}
+              materialArrivalRate={materialArrivalRate}
+              materialArrivedAmount={materialArrivedAmount}
+              materialArrivedQty={materialArrivedQty}
+              materialPlannedQty={materialPlannedQty}
+              materialPlannedAmount={materialPlannedAmount}
+              totalCost={totalCost}
+              revenue={revenue}
+              incurredCost={incurredCost}
+              warehousingRevenue={warehousingRevenue}
+              shipmentRevenue={shipmentRevenue}
+              shipmentRevenueTotal={shipmentRevenueTotal}
+              orderTimelineColumns={orderTimelineColumns as any}
+              orderMaterialColumns={orderMaterialColumns as any}
+              chartSeries={chartSeries}
+              materials={orderProfitData?.materials || []}
+            />
           )}
         </Card>
 
-        <ResizableModal
+        <ApprovalDetailModal
           open={detailOpen}
-          title={detailKind === 'material' ? '物料付款详情' : '成品结算付款详情'}
-          onCancel={closeDetail}
-          footer={
-            <div className="modal-footer-actions">
-              <Button onClick={closeDetail}>关闭</Button>
-            </div>
-          }
+          kind={detailKind}
+          record={detailRecord}
           width={detailModalWidth}
           initialHeight={detailModalInitialHeight}
-          scaleWithViewport
-          destroyOnHidden
-        >
-          {detailRecord ? (
-            <>
-              <Card size="small" className="mb-sm">
-                <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                  {detailKind === 'shipment' ? (
-                    <StyleCoverThumb
-                      styleId={(detailRecord as any)?.styleId}
-                      styleNo={String((detailRecord as any)?.styleNo || '').trim() || undefined}
-                      size={84}
-                      borderRadius={12}
-                    />
-                  ) : (
-                    <div style={{ width: 84, height: 84, borderRadius: 12, background: '#f5f5f5' }} />
-                  )}
-
-                  <div style={{ flex: 1, minWidth: 260 }}>
-                    <Space wrap style={{ marginBottom: 8 }}>
-                      <Tag color="blue">{String((detailRecord as any)?.reconciliationNo || '').trim() || '-'}</Tag>
-                      <Tag>
-                        状态：{(() => {
-                          const cfg = getStatusConfig((detailRecord as any)?.status as any);
-                          return cfg.text;
-                        })()}
-                      </Tag>
-                      <Tag>对账日期：{formatDateTime((detailRecord as any)?.reconciliationDate)}</Tag>
-                    </Space>
-
-                    <Descriptions size="small" column={{ xs: 1, sm: 2, md: 3, lg: 3 }}>
-                      {detailKind === 'material' ? (
-                        <>
-                          <Descriptions.Item label="供应商">{String((detailRecord as any)?.supplierName || '').trim() || '-'}</Descriptions.Item>
-                          <Descriptions.Item label="订单号">{String((detailRecord as any)?.orderNo || '').trim() || '-'}</Descriptions.Item>
-                          <Descriptions.Item label="款号">{String((detailRecord as any)?.styleNo || '').trim() || '-'}</Descriptions.Item>
-                          <Descriptions.Item label="采购单号">{String((detailRecord as any)?.purchaseNo || '').trim() || '-'}</Descriptions.Item>
-                          <Descriptions.Item label="物料编码">{String((detailRecord as any)?.materialCode || '').trim() || '-'}</Descriptions.Item>
-                          <Descriptions.Item label="物料名称">{String((detailRecord as any)?.materialName || '').trim() || '-'}</Descriptions.Item>
-                        </>
-                      ) : (
-                        <>
-                          <Descriptions.Item label="客户">{String((detailRecord as any)?.customerName || '').trim() || '-'}</Descriptions.Item>
-                          <Descriptions.Item label="订单号">{String((detailRecord as any)?.orderNo || '').trim() || '-'}</Descriptions.Item>
-                          <Descriptions.Item label="款号">{String((detailRecord as any)?.styleNo || '').trim() || '-'}</Descriptions.Item>
-                          <Descriptions.Item label="数量">{Number((detailRecord as any)?.quantity ?? 0) || 0}</Descriptions.Item>
-                          <Descriptions.Item label="生产完成数">{Number((detailRecord as any)?.productionCompletedQuantity ?? 0) || 0}</Descriptions.Item>
-                        </>
-                      )}
-                      <Descriptions.Item label="总金额(元)">{formatMoney2((detailRecord as any)?.totalAmount)}</Descriptions.Item>
-                      <Descriptions.Item label="扣款(元)">{formatMoney2((detailRecord as any)?.deductionAmount)}</Descriptions.Item>
-                      <Descriptions.Item label="最终金额(元)">{formatMoney2((detailRecord as any)?.finalAmount)}</Descriptions.Item>
-                      <Descriptions.Item label="上环节时间">{getPrevStageTime((detailRecord as any)?.status as any, detailRecord)}</Descriptions.Item>
-                      <Descriptions.Item label="付款时间">{getPaidAtTime((detailRecord as any)?.status as any, detailRecord)}</Descriptions.Item>
-                    </Descriptions>
-                  </div>
-                </div>
-              </Card>
-
-              <Card size="small" title="审核动作">
-                <Space wrap>
-                  {buildActionItems(
-                    detailKind,
-                    ((detailRecord as any)?.status || 'pending') as ReconStatus,
-                    String((detailRecord as any)?.id || '')
-                  ).map((a: any) => {
-                    return (
-                      <Button
-                        key={String(a.key)}
-                        icon={a.icon}
-                        danger={Boolean(a.danger)}
-                        disabled={Boolean(a.disabled)}
-                        onClick={a.onClick}
-                      >
-                        {a.label}
-                      </Button>
-                    );
-                  })}
-                </Space>
-              </Card>
-            </>
-          ) : (
-            <div style={{ color: '#999' }}>未选择记录</div>
-          )}
-        </ResizableModal>
+          onClose={closeDetail}
+          buildActionItems={buildActionItems}
+          getPrevStageTime={getPrevStageTime}
+          getPaidAtTime={getPaidAtTime}
+        />
       </div>
     </Layout>
   );
