@@ -71,7 +71,7 @@ const production = {
         return ok('/api/production/purchase/update-arrived-quantity', 'POST', payload || {});
     },
     submitQualityResult(payload) {
-        return ok('/api/production/quality/submit-result', 'POST', payload || {});
+        return ok('/api/production/scan/submit-quality-result', 'POST', payload || {});
     },
     async undoScan(payload) {
         const data = payload || {};
