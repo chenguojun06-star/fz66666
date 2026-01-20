@@ -1778,7 +1778,7 @@ Page({
 
         } catch (e) {
             wx.hideLoading();
-            const msg = errorHandler.getDisplayMessage(e);
+            const msg = errorHandler.formatError(e, '提交失败');
             wx.showToast({ title: msg, icon: 'none', duration: 2000 });
         }
     },
@@ -1826,7 +1826,7 @@ Page({
             });
         } catch (e) {
             wx.hideLoading();
-            const msg = errorHandler.getDisplayMessage(e);
+            const msg = errorHandler.formatError(e, '获取物料信息失败');
             wx.showToast({ title: msg, icon: 'none', duration: 2000 });
         }
     },
@@ -1914,7 +1914,7 @@ Page({
 
         } catch (e) {
             wx.hideLoading();
-            const msg = errorHandler.getDisplayMessage(e);
+            const msg = errorHandler.formatError(e, '提交失败');
             wx.showToast({ title: msg, icon: 'none', duration: 2000 });
         }
     },
