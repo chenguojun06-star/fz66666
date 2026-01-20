@@ -507,16 +507,20 @@ body {
 /* 统一弹窗底部sticky按钮区域样式 */
 .modal-sticky-footer {
   position: sticky;
-  bottom: -16px;
-  left: -24px;
-  right: -24px;
+  bottom: 0;
+  left: 0;
+  right: 0;
   z-index: 10;
   display: flex;
   justify-content: flex-end;
   align-items: center;
   gap: 8px;
-  padding: 12px 24px;
+  padding: 12px 0;
   margin-top: 16px;
+  margin-left: -24px;
+  margin-right: -24px;
+  padding-left: 24px;
+  padding-right: 24px;
   background: linear-gradient(to top, #fff 0%, #fff 85%, rgba(255,255,255,0.96) 95%, rgba(255,255,255,0) 100%);
   border-top: 1px solid rgba(0,0,0,0.06);
 }
