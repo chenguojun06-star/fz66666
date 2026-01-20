@@ -4,6 +4,36 @@ const api = require('../../utils/api');
 
 let autoWechatTried = false;
 
+// 验证函数
+function validateUsername(username) {
+    const v = String(username || '').trim();
+    if (!v) return '请输入账号';
+    if (v.length < 3) return '账号长度不能少于 3 个字符';
+    if (v.length > 20) return '账号长度不能超过 20 个字符';
+    if (!/^[a-zA-Z0-9_\-]+$/.test(v)) return '账号只能包含字母、数字、下划线和中划线';
+    return '';
+}
+
+function validatePassword(password) {
+    const v = String(password || '').trim();
+    if (!v) return '请输入密码';
+    if (v.length < 6) return '密码长度不能少于 6 个字符';
+    if (v.length > 20) return '密码长度不能超过 20 个字符';
+    return '';
+}
+
+function validateApiBaseUrl(url) {
+    const v = String(url || '').trim();
+    if (!v) return '';  // 可选字段
+    if (!(/^https?:\/\//.test(v))) return 'API 地址必须以 http:// 或 https:// 开头';
+    try {
+        new URL(v);
+    } catch (e) {
+        return 'API 地址格式不正确';
+    }
+    return '';
+}
+
 function resolveAppId() {
     try {
         if (wx && typeof wx.getAccountInfoSync === 'function') {
@@ -100,7 +130,14 @@ Page({
         if (this.data.loading) return;
 
         const apiBaseUrl = (this.data.apiBaseUrl || '').trim();
-        if (this.data.showDevFields && apiBaseUrl) setBaseUrl(apiBaseUrl);
+        if (this.data.showDevFields && apiBaseUrl) {
+            const err = validateApiBaseUrl(apiBaseUrl);
+            if (err) {
+                wx.showToast({ title: err, icon: 'none' });
+                return;
+            }
+            setBaseUrl(apiBaseUrl);
+        }
 
         this.setData({ loading: true });
         try {
@@ -133,12 +170,28 @@ Page({
         const username = (this.data.username || '').trim();
         const password = (this.data.password || '').trim();
         const apiBaseUrl = (this.data.apiBaseUrl || '').trim();
-        if (!username || !password) {
-            wx.showToast({ title: '请输入账号和密码', icon: 'none' });
+
+        // 验证账号
+        let err = validateUsername(username);
+        if (err) {
+            wx.showToast({ title: err, icon: 'none' });
             return;
         }
 
+        // 验证密码
+        err = validatePassword(password);
+        if (err) {
+            wx.showToast({ title: err, icon: 'none' });
+            return;
+        }
+
+        // 验证 API 地址（如果有）
         if (apiBaseUrl) {
+            err = validateApiBaseUrl(apiBaseUrl);
+            if (err) {
+                wx.showToast({ title: err, icon: 'none' });
+                return;
+            }
             setBaseUrl(apiBaseUrl);
         }
 
