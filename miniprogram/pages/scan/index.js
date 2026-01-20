@@ -1758,20 +1758,34 @@ Page({
         const groupId = e.currentTarget.dataset.groupId;
         const recordIdx = e.currentTarget.dataset.recordIdx;
         
-        console.log('质检处理 - groupId:', groupId, 'recordIdx:', recordIdx);
+        console.log('=== 质检处理开始 ===');
+        console.log('groupId:', groupId);
+        console.log('recordIdx:', recordIdx);
         
         // 从groupedHistory中找到对应的记录
         const groupedHistory = this.data.my.groupedHistory || [];
+        console.log('groupedHistory总数:', groupedHistory.length);
+        
         const group = groupedHistory.find(g => g.id === groupId);
         
-        if (!group || !Array.isArray(group.items) || recordIdx >= group.items.length) {
+        if (!group) {
+            console.error('找不到分组，groupId:', groupId);
+            wx.showToast({ title: '记录不存在', icon: 'none' });
+            return;
+        }
+        
+        console.log('找到分组:', group);
+        console.log('分组内记录数:', group.items?.length);
+        
+        if (!Array.isArray(group.items) || recordIdx >= group.items.length) {
+            console.error('记录索引越界，recordIdx:', recordIdx, 'items长度:', group.items?.length);
             wx.showToast({ title: '记录不存在', icon: 'none' });
             return;
         }
         
         const item = group.items[recordIdx];
-        console.log('质检处理 - 记录数据:', item);
-        console.log('质检处理 - orderNo:', item.orderNo, 'styleNo:', item.styleNo, 'quantity:', item.quantity);
+        console.log('记录完整数据:', JSON.stringify(item, null, 2));
+        console.log('记录所有字段名:', Object.keys(item));
 
         const detailData = {
             orderNo: item.orderNo || item.order_no || '(无)',
@@ -1782,7 +1796,7 @@ Page({
             scanId: item.id || item.scanId || '',
         };
         
-        console.log('质检处理 - 设置的detail数据:', detailData);
+        console.log('构造的detailData:', JSON.stringify(detailData, null, 2));
 
         this.setData({
             qualityModal: {
