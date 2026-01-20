@@ -292,18 +292,18 @@
     </view>
     
     <view class="modal-body">
-      <!-- 订单信息 - 添加调试显示 -->
+      <!-- 订单信息 -->
       <view class="qm-info">
         <text class="qm-label">订单号：</text>
-        <text class="qm-value">{{qualityModal.detail.orderNo || '(无)'}}</text>
+        <text class="qm-value">{{qualityModal.detail.orderNo}}</text>
       </view>
       <view class="qm-info">
         <text class="qm-label">款号：</text>
-        <text class="qm-value">{{qualityModal.detail.styleNo || '(无)'}} · {{qualityModal.detail.color || '-'}} · {{qualityModal.detail.size || '-'}}</text>
+        <text class="qm-value">{{qualityModal.detail.styleNo}} · {{qualityModal.detail.color}} · {{qualityModal.detail.size}}</text>
       </view>
       <view class="qm-info">
         <text class="qm-label">数量：</text>
-        <text class="qm-value">{{qualityModal.detail.quantity || 0}}</text>
+        <text class="qm-value">{{qualityModal.detail.quantity}}</text>
       </view>
 
       <!-- 合格/次品选择 -->
