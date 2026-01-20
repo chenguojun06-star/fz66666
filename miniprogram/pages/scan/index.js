@@ -1317,6 +1317,7 @@ Page({
             if (allowQrAutofill) {
                 quantity = recognizedQty;
                 this.setData({ quantity: String(quantity), qtyHint: `已从二维码识别数量：${quantity}（可手动修改）` });
+            }
 
             const stage = {
                 scanType,
