@@ -93,26 +93,35 @@
         <view class="item-sub">物料编码：{{item.materialCode || '-'}}</view>
         <view class="item-sub">规格：{{item.specifications || '-'}}</view>
         <view class="item-sub">供应商：{{item.supplierName || '-'}}</view>
-        <view class="item-sub">需求数量：{{item.demandQuantity != null ? item.demandQuantity : (item.purchaseQuantity || 0)}}{{item.unit || ''}}</view>
-        <view class="item-sub">采购数量：{{item.purchaseQuantity || 0}}{{item.unit || ''}}</view>
-        <view class="item-sub">已到货：{{item.arrivedQuantity || 0}}{{item.unit || ''}}</view>
-        <view class="item-sub">领取状态：{{item.status === 'completed' ? '已领取' : (item.status === 'cancelled' ? '已取消' : '待领取')}}</view>
+        <view class="item-sub item-highlight">📦 需求数量：{{item.demandQuantity != null ? item.demandQuantity : (item.purchaseQuantity || 0)}}{{item.unit || '米'}}</view>
+        <view class="item-sub">采购数量：{{item.purchaseQuantity || 0}}{{item.unit || '米'}}</view>
+        <view class="item-sub">已到货：{{item.arrivedQuantity || 0}}{{item.unit || '米'}}</view>
+        <view class="item-sub">领取状态：<text class="{{item.receiverName ? 'status-received' : 'status-pending'}}">{{item.receiverName ? '已领取' : (item.status === 'cancelled' ? '已取消' : '待领取')}}</text></view>
         <view wx:if="{{item.receiverName}}" class="item-sub">领取人：{{item.receiverName}}</view>
         <view wx:if="{{item.receivedTime}}" class="item-sub">领取时间：{{item.receivedTime}}</view>
-        <view class="field">
-          <view class="label">到货米数</view>
-          <input class="input" type="number" value="{{item.arrivedInput}}" bindinput="onPurchaseArrivedInput" data-idx="{{index}}" />
+        
+        <!-- 领取按钮：未领取时显示 -->
+        <view class="btn" wx:if="{{!item.receiverName && item.status !== 'completed' && item.status !== 'cancelled'}}">
+          <view class="btn-secondary" bindtap="onReceivePurchase" data-idx="{{index}}">📋 领取任务</view>
         </view>
-        <view class="field">
-          <view class="label">备注</view>
-          <textarea class="input textarea" placeholder="请输入备注" value="{{item.remarkInput}}" bindinput="onPurchaseRemarkInput" data-idx="{{index}}" />
+        
+        <!-- 到货填写区域：领取后才显示 -->
+        <view wx:if="{{item.receiverName}}" class="arrival-section">
+          <view class="field">
+            <view class="label">到货数量（必填）</view>
+            <input class="input" type="digit" placeholder="请填写实际到货数量" value="{{item.arrivedInput}}" bindinput="onPurchaseArrivedInput" data-idx="{{index}}" />
+          </view>
+          <view class="field">
+            <view class="label">备注{{(item.demandQuantity || item.purchaseQuantity) > 0 && item.arrivedInput < (item.demandQuantity || item.purchaseQuantity) * 0.7 ? '（不足70%必填）' : ''}}</view>
+            <textarea class="input textarea" placeholder="{{(item.demandQuantity || item.purchaseQuantity) > 0 && item.arrivedInput < (item.demandQuantity || item.purchaseQuantity) * 0.7 ? '请填写缺量原因' : '请输入备注（选填）'}}" value="{{item.remarkInput}}" bindinput="onPurchaseRemarkInput" data-idx="{{index}}" />
+          </view>
+          <view class="btn">
+            <view class="btn-primary" bindtap="onConfirmPurchaseArrived" data-idx="{{index}}">✅ 确认到货</view>
+          </view>
         </view>
-        <view class="btn" wx:if="{{item.status !== 'completed' && item.status !== 'cancelled'}}">
-          <view class="btn-secondary" bindtap="onReceivePurchase" data-idx="{{index}}">领取</view>
-        </view>
-        <view class="btn">
-          <view class="btn-primary" bindtap="onConfirmPurchaseArrived" data-idx="{{index}}">确认到货</view>
-        </view>
+        
+        <!-- 未领取时提示 -->
+        <view wx:if="{{!item.receiverName}}" class="hint-text">请先领取任务，再填写到货数量</view>
       </view>
     </view>
 

@@ -915,15 +915,28 @@ Page({
             wx.showToast({ title: '未找到采购任务', icon: 'none' });
             return;
         }
+        // 必须先领取才能确认到货
+        const status = item && item.status != null ? String(item.status).trim() : '';
+        if (status !== 'received' && status !== 'completed') {
+            const hasReceiver = item.receiverId || item.receiverName;
+            if (!hasReceiver) {
+                wx.showToast({ title: '请先领取任务再确认到货', icon: 'none' });
+                return;
+            }
+        }
         const arrivedInput = Number(item.arrivedInput);
-        if (!Number.isFinite(arrivedInput) || arrivedInput < 0) {
-            wx.showToast({ title: '请输入正确米数', icon: 'none' });
+        // 必须填写到货数量且大于0
+        if (!Number.isFinite(arrivedInput) || arrivedInput <= 0) {
+            wx.showToast({ title: '请填写到货数量（必须大于0）', icon: 'none' });
             return;
         }
         const purchaseQuantity = Number(item.purchaseQuantity) || 0;
+        const demandQuantity = Number(item.demandQuantity) || purchaseQuantity;
         const remark = (item.remarkInput || '').trim();
-        if (purchaseQuantity > 0 && arrivedInput < purchaseQuantity * 0.7 && !remark) {
-            wx.showToast({ title: '到货不足70%，请填写备注', icon: 'none' });
+        // 到货数量不足需求数量70%时，必须填写备注说明原因
+        const threshold = demandQuantity > 0 ? demandQuantity * 0.7 : purchaseQuantity * 0.7;
+        if (threshold > 0 && arrivedInput < threshold && !remark) {
+            wx.showToast({ title: '到货不足需求70%，请填写缺量原因', icon: 'none', duration: 2500 });
             return;
         }
         try {

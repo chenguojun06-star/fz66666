@@ -285,3 +285,39 @@ page {
   color: #374151;
   line-height: 1.5;
 }
+
+/* 面辅料采购高亮样式 */
+.item-highlight {
+  color: #1d4ed8;
+  font-weight: 600;
+  background: rgba(59, 130, 246, 0.1);
+  padding: 6px 10px;
+  border-radius: 8px;
+  margin-top: 8px;
+}
+
+.status-received {
+  color: #059669;
+  font-weight: 500;
+}
+
+.status-pending {
+  color: #d97706;
+  font-weight: 500;
+}
+
+.arrival-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(148, 163, 184, 0.4);
+}
+
+.hint-text {
+  margin-top: 10px;
+  padding: 10px;
+  background: rgba(251, 191, 36, 0.15);
+  border-radius: 10px;
+  font-size: 12px;
+  color: #92400e;
+  text-align: center;
+}
