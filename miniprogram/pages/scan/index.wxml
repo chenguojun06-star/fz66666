@@ -92,8 +92,8 @@
     </view>
   </view>
 
-  <!-- 面辅料采购 -->
-  <view wx:if="{{materialPurchases.length}}" class="section">
+  <!-- 面辅料采购 - 已移至扫码确认弹窗 -->
+  <view wx:if="false" class="section">
     <view class="sec-head">
       <text class="sec-title">📦 面辅料 <text class="sec-count">{{materialPurchases.length}}</text></text>
     </view>
@@ -166,19 +166,44 @@
 
   <!-- 确认弹窗 -->
   <view wx:if="{{scanConfirm.visible}}" class="modal">
-    <view class="modal-box">
-      <view class="modal-head">确认提交 <text class="modal-cd">{{scanConfirm.remain}}s</text></view>
+    <view class="modal-box {{scanConfirm.detail.isProcurement ? 'wide' : ''}}">
+      <view class="modal-head">
+        {{scanConfirm.detail.isProcurement ? '面辅料采购' : '确认提交'}} 
+        <text class="modal-cd">{{scanConfirm.remain}}s</text>
+      </view>
       <view class="modal-body">
         <view wx:if="{{scanConfirm.detail}}" class="cf-list">
           <view class="cf-item"><text class="cf-k">二维码</text><text class="cf-v mono">{{scanConfirm.detail.scanCode}}</text></view>
-          <view class="cf-item"><text class="cf-k">数量</text><text class="cf-v">{{scanConfirm.detail.quantity}}</text></view>
+          <view wx:if="{{!scanConfirm.detail.isProcurement}}" class="cf-item"><text class="cf-k">数量</text><text class="cf-v">{{scanConfirm.detail.quantity}}</text></view>
           <view wx:if="{{scanConfirm.detail.orderNo}}" class="cf-item"><text class="cf-k">订单</text><text class="cf-v hl">{{scanConfirm.detail.orderNo}}</text></view>
           <view wx:if="{{scanConfirm.detail.styleNo}}" class="cf-item"><text class="cf-k">款号</text><text class="cf-v">{{scanConfirm.detail.styleNo}}</text></view>
-          <view wx:if="{{scanConfirm.detail.progressStage}}" class="cf-item"><text class="cf-k">环节</text><text class="cf-v">{{scanConfirm.detail.progressStage}}</text></view>
+          <view wx:if="{{scanConfirm.detail.progressStage && !scanConfirm.detail.isProcurement}}" class="cf-item"><text class="cf-k">环节</text><text class="cf-v">{{scanConfirm.detail.progressStage}}</text></view>
+        </view>
+        
+        <!-- 面辅料采购列表 - 在弹窗中显示 -->
+        <view wx:if="{{scanConfirm.detail.isProcurement && scanConfirm.materialPurchases && scanConfirm.materialPurchases.length}}" class="purchase-modal-list">
+          <view wx:for="{{scanConfirm.materialPurchases}}" wx:key="id" class="purchase-modal-item">
+            <view class="pmi-header">
+              <text class="pmi-name">{{item.materialName || item.materialCode || '物料'}}</text>
+              <text class="pmi-unit">{{item.unit || '米'}}</text>
+            </view>
+            <view class="pmi-row">
+              <text class="pmi-label">需求数量</text>
+              <text class="pmi-value demand">{{item.demandQuantity || item.purchaseQuantity || 0}}</text>
+            </view>
+            <view class="pmi-row">
+              <text class="pmi-label">采购数量</text>
+              <input class="pmi-input" type="digit" placeholder="请填写实际采购数量" value="{{item.purchaseInput}}" bindinput="onModalPurchaseInput" data-idx="{{index}}" />
+            </view>
+            <view class="pmi-row">
+              <text class="pmi-label">备注</text>
+              <input class="pmi-input" placeholder="选填" value="{{item.remarkInput}}" bindinput="onModalPurchaseRemarkInput" data-idx="{{index}}" />
+            </view>
+          </view>
         </view>
         
         <!-- 质检选项 - 在确认弹窗中选择 -->
-        <view wx:if="{{scanTypeOptions[scanTypeIndex].value === 'quality'}}" class="qc-modal-bar">
+        <view wx:if="{{scanTypeOptions[scanTypeIndex].value === 'quality' && !scanConfirm.detail.isProcurement}}" class="qc-modal-bar">
           <text class="qc-modal-label">质检结果</text>
           <view class="qc-modal-opts">
             <view class="qc-modal-opt {{qualityIndex === 0 ? 'on pass' : ''}}" bindtap="onQuickQuality" data-idx="0">✓ 合格</view>
@@ -188,7 +213,7 @@
         </view>
         
         <!-- 次品详情 -->
-        <view wx:if="{{scanTypeOptions[scanTypeIndex].value === 'quality' && qualityOptions[qualityIndex].value === 'unqualified'}}" class="defect-modal-box">
+        <view wx:if="{{scanTypeOptions[scanTypeIndex].value === 'quality' && qualityOptions[qualityIndex].value === 'unqualified' && !scanConfirm.detail.isProcurement}}" class="defect-modal-box">
           <view class="df-row">
             <text class="df-label">类型</text>
             <picker class="df-picker" mode="selector" range="{{defectCategoryOptions}}" range-key="label" value="{{defectCategoryIndex}}" bindchange="onDefectCategoryChange">
@@ -205,7 +230,7 @@
       </view>
       <view class="modal-btns">
         <view class="mbtn cancel" bindtap="onCancelScan">取消</view>
-        <view class="mbtn ok {{scanConfirm.loading ? 'off' : ''}}" bindtap="onConfirmScan">{{scanConfirm.loading ? '...' : '确认'}}</view>
+        <view class="mbtn ok {{scanConfirm.loading ? 'off' : ''}}" bindtap="onConfirmScan">{{scanConfirm.loading ? '...' : (scanConfirm.detail.isProcurement ? '领取并提交' : '确认')}}</view>
       </view>
     </view>
   </view>
