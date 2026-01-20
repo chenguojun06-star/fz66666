@@ -18,10 +18,21 @@
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <maven.compiler.release>${java.version}</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <!-- 依赖版本管理 -->
         <mybatis-plus.version>3.5.7</mybatis-plus.version>
-        <mysql-connector.version>8.1.0</mysql-connector.version>
+        <mysql-connector.version>9.0.0</mysql-connector.version>
         <springdoc-openapi.version>1.7.0</springdoc-openapi.version>
         <snakeyaml.version>2.2</snakeyaml.version>
+        <h2.version>2.2.224</h2.version>
+        <hutool.version>5.8.27</hutool.version>
+        <openhtmltopdf.version>1.0.10</openhtmltopdf.version>
+        <zxing.version>3.5.3</zxing.version>
+        <!-- 编译和构建 -->
+        <maven.compiler.version>3.11.0</maven.compiler.version>
+        <maven.jar.version>3.3.0</maven.jar.version>
+        <maven.dependency.version>3.9.0</maven.dependency.version>
     </properties>
     <dependencies>
         <!-- Spring Boot 核心依赖 -->
@@ -77,24 +88,24 @@
         <dependency>
             <groupId>cn.hutool</groupId>
             <artifactId>hutool-all</artifactId>
-            <version>5.8.27</version>
+            <version>${hutool.version}</version>
         </dependency>
 
         <dependency>
             <groupId>com.openhtmltopdf</groupId>
             <artifactId>openhtmltopdf-pdfbox</artifactId>
-            <version>1.0.10</version>
+            <version>${openhtmltopdf.version}</version>
         </dependency>
 
         <dependency>
             <groupId>com.google.zxing</groupId>
             <artifactId>core</artifactId>
-            <version>3.5.3</version>
+            <version>${zxing.version}</version>
         </dependency>
         <dependency>
             <groupId>com.google.zxing</groupId>
             <artifactId>javase</artifactId>
-            <version>3.5.3</version>
+            <version>${zxing.version}</version>
         </dependency>
 
         <dependency>
@@ -112,6 +123,7 @@
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
+            <version>${h2.version}</version>
             <scope>test</scope>
         </dependency>
         
@@ -125,14 +137,16 @@
 
     <build>
         <plugins>
+            <!-- Java 编译器配置 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.11.0</version>
+                <version>${maven.compiler.version}</version>
                 <configuration>
                     <release>${java.version}</release>
                     <source>${java.version}</source>
                     <target>${java.version}</target>
+                    <encoding>${project.build.sourceEncoding}</encoding>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
@@ -142,6 +156,20 @@
                     </annotationProcessorPaths>
                 </configuration>
             </plugin>
+            <!-- JAR 打包配置 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>${maven.jar.version}</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+            <!-- Spring Boot 打包配置 -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
@@ -154,11 +182,11 @@
                     </excludes>
                 </configuration>
             </plugin>
-
+            <!-- 依赖分析插件 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
-                <version>3.9.0</version>
+                <version>${maven.dependency.version}</version>
             </plugin>
         </plugins>
     </build>

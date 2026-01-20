@@ -21,6 +21,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
 
   # 后端服务
   backend:
@@ -35,12 +38,15 @@ services:
       - ./backend.jar:/app/app.jar
       - ./logs:/logs
       - ./uploads:/uploads
-    command: java -jar /app/app.jar --spring.profiles.active=prod
+    command: java -Xmx512m -Xms256m -jar /app/app.jar --spring.profiles.active=prod
     environment:
       PORT: 8088
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/fashion_supplychain?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
       SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 20
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: 5
+      SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT: 30000
       APP_AUTH_JWT_SECRET: ${JWT_SECRET}
       # 生产环境通常把上传文件映射到外部 volume
       FASHION_UPLOAD_PATH: /uploads/
@@ -49,6 +55,13 @@ services:
         condition: service_healthy
     networks:
       - fashion-net
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # Nginx (前端 + 反向代理)
   nginx:
@@ -69,9 +82,17 @@ services:
       - backend
     networks:
       - fashion-net
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   mysql_data:
+    driver: local
 
 networks:
   fashion-net:

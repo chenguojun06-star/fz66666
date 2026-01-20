@@ -7,7 +7,6 @@ import com.fashion.supplychain.finance.service.MaterialReconciliationService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.StyleQuotationService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -19,10 +18,12 @@ import java.util.Map;
 
 @Service
 @Slf4j
-public class MaterialReconciliationServiceImpl extends BaseReconciliationServiceImpl<MaterialReconciliation, MaterialReconciliationMapper>
+public class MaterialReconciliationServiceImpl
+        extends BaseReconciliationServiceImpl<MaterialReconciliation, MaterialReconciliationMapper>
         implements MaterialReconciliationService {
 
-    public MaterialReconciliationServiceImpl(StyleInfoService styleInfoService, StyleQuotationService styleQuotationService) {
+    public MaterialReconciliationServiceImpl(StyleInfoService styleInfoService,
+            StyleQuotationService styleQuotationService) {
         this.setStyleInfoService(styleInfoService);
         this.setStyleQuotationService(styleQuotationService);
     }
