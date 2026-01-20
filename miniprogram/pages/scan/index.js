@@ -1635,12 +1635,49 @@ Page({
             if (stage.processCode) payload.processCode = stage.processCode;
 
             if (scanType === 'warehouse') payload.warehouse = warehouse;
-            // 质检环节：扫码只是领取任务，不提交质检结果
-            // 质检结果在"我的任务"中填写
-            if (scanType === 'quality') {
-                // 默认设置为待质检状态，不填写具体结果
-                payload.qualityResult = 'pending'; // 待质检
-                payload.remark = 'quality_received'; // 已领取质检任务
+            
+            // 质检环节：直接弹出质检确认对话框
+            if (finalScanType === 'quality') {
+                this.setData({ loading: false });
+                
+                const qualityDetail = {
+                    scanCode: payload.scanCode,
+                    orderNo: payload.orderNo || '',
+                    styleNo: payload.styleNo || '',
+                    color: payload.color || '',
+                    size: payload.size || '',
+                    quantity: quantity || 0,
+                };
+                
+                wx.showModal({
+                    title: '质检确认',
+                    content: `订单：${qualityDetail.orderNo}\n款号：${qualityDetail.styleNo}\n${qualityDetail.color ? '颜色：' + qualityDetail.color + '\n' : ''}${qualityDetail.size ? '尺码：' + qualityDetail.size + '\n' : ''}数量：${qualityDetail.quantity}\n\n是否全部合格？`,
+                    confirmText: '全部合格',
+                    cancelText: '有次品',
+                    success: (res) => {
+                        if (res.confirm) {
+                            // 直接提交合格
+                            this.submitQualified(qualityDetail);
+                        } else {
+                            // 打开次品处理弹窗
+                            this.setData({
+                                qualityModal: {
+                                    show: true,
+                                    detail: qualityDetail,
+                                    result: 'defective',
+                                    defectiveQuantity: '',
+                                    selectedDefectTypes: [],
+                                    defectTypesText: '',
+                                    handleMethod: 0,
+                                    remark: '',
+                                    images: [],
+                                }
+                            });
+                        }
+                    }
+                });
+                
+                return; // 不走原有提交逻辑
             }
 
             const detail = {
@@ -1839,9 +1876,9 @@ Page({
     },
 
     /**
-     * 上传次品图片
+     * 上传次品图片（修复版：真正上传到服务器）
      */
-    onUploadQualityImage() {
+    async onUploadQualityImage() {
         const currentImages = this.data.qualityModal.images || [];
         const maxCount = 5 - currentImages.length;
 
@@ -1854,13 +1891,82 @@ Page({
             count: maxCount,
             sizeType: ['compressed'],
             sourceType: ['album', 'camera'],
-            success: (res) => {
+            success: async (res) => {
                 const tempFilePaths = res.tempFilePaths;
-                const newImages = [...currentImages, ...tempFilePaths];
-                this.setData({
-                    'qualityModal.images': newImages
-                });
+                
+                if (tempFilePaths.length === 0) return;
+                
+                // 显示上传进度
+                wx.showLoading({ title: `上传中 0/${tempFilePaths.length}`, mask: true });
+                
+                try {
+                    const baseUrl = getBaseUrl();
+                    const token = getToken();
+                    
+                    // 并发上传所有图片
+                    const uploads = tempFilePaths.map((filePath, index) => {
+                        return new Promise((resolve, reject) => {
+                            wx.uploadFile({
+                                url: `${baseUrl}/api/common/upload`,
+                                filePath,
+                                name: 'file',
+                                header: token ? { Authorization: `Bearer ${token}` } : {},
+                                success: (uploadRes) => {
+                                    // 更新进度
+                                    wx.showLoading({ 
+                                        title: `上传中 ${index + 1}/${tempFilePaths.length}`,
+                                        mask: true
+                                    });
+                                    
+                                    const statusCode = uploadRes.statusCode;
+                                    const raw = uploadRes.data;
+                                    const parsed = typeof raw === 'string' ? safeJsonParse(raw) : raw;
+                                    
+                                    if (statusCode === 200 && parsed && parsed.code === 200) {
+                                        const path = parsed.data ? String(parsed.data).trim() : '';
+                                        if (!path) {
+                                            reject(new Error('上传失败：未返回路径'));
+                                            return;
+                                        }
+                                        // 返回完整URL
+                                        const fullUrl = path.startsWith('http://') || path.startsWith('https://') 
+                                            ? path 
+                                            : `${baseUrl}${path}`;
+                                        resolve(fullUrl);
+                                    } else {
+                                        const msg = parsed && parsed.message ? String(parsed.message) : '上传失败';
+                                        reject(new Error(msg));
+                                    }
+                                },
+                                fail: (err) => {
+                                    const msg = err && err.errMsg ? String(err.errMsg) : '上传失败';
+                                    reject(new Error(msg));
+                                },
+                            });
+                        });
+                    });
+                    
+                    const newUrls = await Promise.all(uploads);
+                    
+                    // 保存服务器URL
+                    this.setData({ 
+                        'qualityModal.images': [...currentImages, ...newUrls] 
+                    });
+                    
+                    wx.hideLoading();
+                    wx.showToast({ title: '上传成功', icon: 'success' });
+                    
+                } catch (e) {
+                    wx.hideLoading();
+                    const msg = e && (e.message || e.errMsg) ? String(e.message || e.errMsg) : '上传失败';
+                    if (!msg.toLowerCase().includes('cancel')) {
+                        wx.showToast({ title: msg, icon: 'none', duration: 2000 });
+                    }
+                    console.error('上传次品图片失败', e);
+                }
             }
+        });
+    },
         });
     },
 
@@ -1910,6 +2016,16 @@ Page({
         wx.showLoading({ title: '提交中...', mask: true });
 
         try {
+            // 获取当前用户
+            const user = await this.getCurrentUser();
+            const qualityOperatorName = user && (user.name || user.username) ? String(user.name || user.username).trim() : '';
+            
+            if (!qualityOperatorName) {
+                wx.hideLoading();
+                wx.showToast({ title: '未获取到用户信息', icon: 'none' });
+                return;
+            }
+            
             // 构建提交数据 - 匹配后端execute接口参数
             const payload = {
                 scanCode: qualityModal.detail.scanCode, // 菲号（扫码内容），不是记录ID！
@@ -1921,6 +2037,7 @@ Page({
                 quantity: qualityModal.detail.quantity,
                 // 后端需要的是qualityResult字段，值为"qualified"或"unqualified"
                 qualityResult: qualityModal.result === 'qualified' ? 'qualified' : 'unqualified',
+                qualityOperatorName: qualityOperatorName, // ✅ 新增质检人员
             };
 
             // 次品详情 - 使用后端要求的字段名
@@ -2169,6 +2286,74 @@ Page({
             const app = getApp();
             if (app && typeof app.toastError === 'function') app.toastError(e, '撤销失败');
             else wx.showToast({ title: '撤销失败', icon: 'none' });
+        }
+    },
+
+    // ==================== 质检快速提交（新增）====================
+
+    /**
+     * 合格品快速提交
+     */
+    async submitQualified(detail) {
+        wx.showLoading({ title: '提交中...', mask: true });
+        
+        try {
+            // 获取当前用户
+            const user = await this.getCurrentUser();
+            const qualityOperatorName = user && (user.name || user.username) ? String(user.name || user.username).trim() : '';
+            
+            if (!qualityOperatorName) {
+                wx.hideLoading();
+                wx.showToast({ title: '未获取到用户信息', icon: 'none' });
+                return;
+            }
+            
+            const payload = {
+                scanCode: detail.scanCode,
+                scanType: 'quality',
+                qualityResult: 'qualified',
+                qualityOperatorName: qualityOperatorName,
+                orderNo: detail.orderNo,
+                styleNo: detail.styleNo,
+                color: detail.color,
+                size: detail.size,
+                quantity: detail.quantity,
+                defectRemark: '质检合格',
+            };
+            
+            console.log('提交合格质检结果 - payload:', payload);
+            
+            await api.production.submitQualityResult(payload);
+            
+            wx.hideLoading();
+            wx.vibrateShort({ type: 'light' });
+            wx.showToast({ title: '✓ 质检通过', icon: 'success' });
+            
+            // 移除提醒
+            if (detail.orderNo) {
+                reminderManager.removeRemindersByOrder(detail.orderNo, '质检');
+            }
+            
+            // 更新最后结果
+            this.setData({
+                lastResult: {
+                    success: true,
+                    message: '质检通过',
+                    scanCode: detail.scanCode,
+                    orderNo: detail.orderNo,
+                    styleNo: detail.styleNo,
+                    processName: '质检',
+                },
+            });
+            
+            // 刷新列表
+            this.loadMyPanel(true);
+            
+        } catch (e) {
+            wx.hideLoading();
+            console.error('提交合格质检结果失败:', e);
+            const msg = e.data?.message || errorHandler.formatError(e, '提交失败');
+            wx.showToast({ title: msg, icon: 'none', duration: 3000 });
         }
     },
 });
