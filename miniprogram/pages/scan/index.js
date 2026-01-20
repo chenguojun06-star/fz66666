@@ -530,6 +530,7 @@ Page({
             if (remain <= 0) {
                 clearInterval(confirmTickTimer);
                 confirmTickTimer = null;
+                this.closeScanConfirm(true);
                 return;
             }
             if (this.data.scanConfirm.remain !== remain) {
