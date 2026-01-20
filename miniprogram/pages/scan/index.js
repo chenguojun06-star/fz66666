@@ -1051,6 +1051,16 @@ Page({
                 wx.showToast({ title: '图片上传中，请稍候', icon: 'none' });
                 return;
             }
+            // 检查问题类型是否已选择（强制必填）
+            const catOpts = Array.isArray(this.data.defectCategoryOptions) ? this.data.defectCategoryOptions : [];
+            const catIdx = Number.isFinite(Number(this.data.defectCategoryIndex)) ? Number(this.data.defectCategoryIndex) : -1;
+            const catSafe = catOpts.length ? Math.min(Math.max(0, catIdx), catOpts.length - 1) : -1;
+            const catSelected = catSafe >= 0 && catOpts[catSafe] && catOpts[catSafe].value ? String(catOpts[catSafe].value).trim() : '';
+            if (!catSelected) {
+                wx.showToast({ title: '请选择问题类型（必选）', icon: 'none' });
+                return;
+            }
+            // 检查处理方式是否已选择（强制必填）
             const opts = Array.isArray(this.data.defectRemarkOptions) ? this.data.defectRemarkOptions : [];
             const idx = Number.isFinite(Number(this.data.defectRemarkIndex)) ? Number(this.data.defectRemarkIndex) : 0;
             const safe = opts.length ? Math.min(Math.max(0, idx), opts.length - 1) : 0;
