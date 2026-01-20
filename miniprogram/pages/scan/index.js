@@ -1759,18 +1759,22 @@ Page({
         const recordIdx = e.currentTarget.dataset.recordIdx;
         
         console.log('质检处理 - groupId:', groupId, 'recordIdx:', recordIdx);
+        console.log('当前groupedHistory:', this.data.my.groupedHistory);
         
         // 从groupedHistory中找到对应的记录
         const groupedHistory = this.data.my.groupedHistory || [];
         const group = groupedHistory.find(g => g.id === groupId);
         
+        console.log('找到的group:', group);
+        
         if (!group || !Array.isArray(group.items) || recordIdx >= group.items.length) {
+            console.error('记录查找失败 - group:', group, 'items length:', group ? group.items.length : 0, 'recordIdx:', recordIdx);
             wx.showToast({ title: '记录不存在', icon: 'none' });
             return;
         }
         
         const item = group.items[recordIdx];
-        console.log('质检处理 - 记录数据:', item);
+        console.log('质检处理 - 完整记录数据:', JSON.stringify(item));
 
         this.setData({
             qualityModal: {
@@ -1791,6 +1795,8 @@ Page({
                 remark: '',
             }
         });
+        
+        console.log('弹窗数据已设置:', this.data.qualityModal);
     },
 
     /**
