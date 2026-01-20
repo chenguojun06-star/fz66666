@@ -25,9 +25,6 @@ spring:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: Asia/Shanghai
 
-  security:
-    enabled: true
-
   lifecycle:
     timeout-per-shutdown-phase: 30s
 
