@@ -913,7 +913,21 @@ const OrderManagement: React.FC = () => {
 
       const colorLabel = orderLineColors.length ? orderLineColors.join(',') : undefined;
       const sizeLabel = orderLineSizes.length ? orderLineSizes.join(',') : undefined;
-      const orderDetails = JSON.stringify(orderLines.map(l => ({ color: l.color, size: l.size, quantity: l.quantity })));
+      const materialPriceSource = '物料采购系统';
+      const materialPriceAcquiredAt = dayjs().toISOString();
+      const materialPriceVersion = 'purchase.v1';
+      if (materialPriceSource !== '物料采购系统') {
+        message.error('物料价格来源必须为物料采购系统');
+        return;
+      }
+      const orderDetails = JSON.stringify(orderLines.map(l => ({
+        color: l.color,
+        size: l.size,
+        quantity: l.quantity,
+        materialPriceSource,
+        materialPriceAcquiredAt,
+        materialPriceVersion,
+      })));
 
       const payload: any = {
         orderNo: ensuredOrderNo,

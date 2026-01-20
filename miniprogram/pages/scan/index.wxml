@@ -1,3 +1,45 @@
+<wxs module="utils">
+  // 格式化相对时间
+  function formatRelativeTime(timeStr) {
+    if (!timeStr) return '-';
+    
+    var now = getDate().getTime();
+    var time = getDate(timeStr).getTime();
+    var diff = now - time;
+    
+    var minute = 60 * 1000;
+    var hour = 60 * minute;
+    var day = 24 * hour;
+    
+    if (diff < minute) {
+      return '刚刚';
+    } else if (diff < hour) {
+      return Math.floor(diff / minute) + '分钟前';
+    } else if (diff < day) {
+      return Math.floor(diff / hour) + '小时前';
+    } else if (diff < 7 * day) {
+      return Math.floor(diff / day) + '天前';
+    } else {
+      var date = getDate(timeStr);
+      var month = '' + (date.getMonth() + 1);
+      var dayNum = '' + date.getDate();
+      var hours = '' + date.getHours();
+      var minutes = '' + date.getMinutes();
+      
+      if (month.length < 2) month = '0' + month;
+      if (dayNum.length < 2) dayNum = '0' + dayNum;
+      if (hours.length < 2) hours = '0' + hours;
+      if (minutes.length < 2) minutes = '0' + minutes;
+      
+      return month + '-' + dayNum + ' ' + hours + ':' + minutes;
+    }
+  }
+  
+  module.exports = {
+    formatRelativeTime: formatRelativeTime
+  };
+</wxs>
+
 <view class="page">
   <!-- 顶部操作栏 - 紧凑型 -->
   <view class="top-bar">
@@ -131,19 +173,52 @@
     <view class="sec-head">
       <text class="sec-title">📋 扫码记录</text>
     </view>
-    <view wx:if="{{my.history.list.length === 0 && !my.loadingHistory}}" class="empty">暂无记录</view>
-    <view wx:for="{{my.history.list}}" wx:key="id" class="hist">
-      <view class="hist-left">
-        <text class="hist-order">{{item.orderNo || '-'}}</text>
-        <text class="hist-detail">{{item.styleNo || '-'}} · {{item.color || '-'}} · {{item.size || '-'}}</text>
+    <view wx:if="{{my.groupedHistory.length === 0 && !my.loadingHistory}}" class="empty">暂无记录</view>
+    
+    <!-- 聚合后的分组显示 -->
+    <view wx:for="{{my.groupedHistory}}" wx:key="id" class="hist-group">
+      <!-- 分组头部：折叠显示 -->
+      <view class="hist-group-header" bindtap="toggleGroupExpand" data-group-id="{{item.id}}">
+        <view class="hgh-main">
+          <text class="hgh-order">📦 {{item.orderNo}}</text>
+          <text class="hgh-style">款号: {{item.styleNo}}</text>
+          <text class="hgh-stage">{{item.stage}}</text>
+        </view>
+        <view class="hgh-summary">
+          <text class="hgh-total">共{{item.totalQuantity}}件</text>
+          <text wx:if="{{item.qualifiedCount > 0}}" class="hgh-stat qualified">✓{{item.qualifiedCount}}</text>
+          <text wx:if="{{item.defectiveCount > 0}}" class="hgh-stat defective">✗{{item.defectiveCount}}</text>
+        </view>
+        <view class="hgh-footer">
+          <text class="hgh-time">最新: {{utils.formatRelativeTime(item.latestTime)}}</text>
+          <text class="hgh-expand">{{item.expanded ? '▲' : '▼'}}</text>
+        </view>
       </view>
-      <view class="hist-right">
-        <text class="hist-tag {{(item.scanType === 'quality' && item.qualityResult === 'pending') || (item.isProcurement && !item.procurementCompleted) ? 'pending' : ''}}">{{item.processName || item.progressStage || (item.isProcurement ? '物料采购' : '-')}}</text>
-        <text class="hist-qty">×{{item.quantity || 0}}</text>
-        <view wx:if="{{item.scanType === 'quality' && item.qualityResult === 'pending'}}" class="hist-action" bindtap="onHandleQuality" data-item="{{item}}">处理</view>
-        <view wx:if="{{item.isProcurement && !item.procurementCompleted}}" class="hist-action" bindtap="onHandleProcurement" data-item="{{item}}">处理</view>
+      
+      <!-- 分组详情：展开显示 -->
+      <view wx:if="{{item.expanded}}" class="hist-group-details">
+        <view wx:for="{{item.items}}" wx:for-item="record" wx:key="id" class="hist-detail-item">
+          <view class="hdi-row">
+            <text class="hdi-label">颜色:</text>
+            <text class="hdi-value">{{record.color || '-'}}</text>
+            <text class="hdi-label">码数:</text>
+            <text class="hdi-value">{{record.size || '-'}}</text>
+          </view>
+          <view class="hdi-row">
+            <text class="hdi-label">数量:</text>
+            <text class="hdi-value">{{record.quantity || 0}}件</text>
+            <text class="hdi-label">单价:</text>
+            <text class="hdi-value">¥{{record.unitPrice || '-'}}</text>
+          </view>
+          <view class="hdi-row">
+            <text class="hdi-time">{{record.createdAt || record.scanTime || record.time}}</text>
+            <view wx:if="{{record.scanType === 'quality' && record.qualityResult === 'pending'}}" class="hdi-action" bindtap="onHandleQuality" data-item="{{record}}">处理</view>
+            <view wx:if="{{record.isProcurement && !record.procurementCompleted}}" class="hdi-action" bindtap="onHandleProcurement" data-item="{{record}}">处理</view>
+          </view>
+        </view>
       </view>
     </view>
+    
     <view class="load-more" bindtap="loadMoreMyHistory">
       <text wx:if="{{my.loadingHistory}}">加载中...</text>
       <text wx:elif="{{my.history.hasMore}}">加载更多</text>

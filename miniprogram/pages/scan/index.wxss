@@ -593,6 +593,152 @@ page {
   background: #e6f7ff;
   font-weight: 500;
 }
+
+/* ===== 聚合历史记录 ===== */
+.hist-group {
+  margin-bottom: 12px;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+}
+
+.hist-group-header {
+  padding: 12px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  cursor: pointer;
+}
+
+.hgh-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.hgh-order {
+  font-size: 14px; /* 正文字体 */
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.hgh-style {
+  font-size: 12px; /* 辅助字体 */
+  color: #6b7280;
+}
+
+.hgh-stage {
+  font-size: 11px; /* 备注字体 */
+  padding: 2px 8px;
+  background: #dbeafe;
+  color: #1e40af;
+  border-radius: 6px;
+  margin-left: auto;
+}
+
+.hgh-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.hgh-total {
+  font-size: 13px; /* 菜单字体 */
+  font-weight: 500;
+  color: #475569;
+}
+
+.hgh-stat {
+  font-size: 11px; /* 备注字体 */
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.hgh-stat.qualified {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.hgh-stat.defective {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.hgh-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hgh-time {
+  font-size: 11px; /* 备注字体 */
+  color: #9ca3af;
+}
+
+.hgh-expand {
+  font-size: 12px; /* 辅助字体 */
+  color: #6b7280;
+}
+
+/* 分组详情 */
+.hist-group-details {
+  padding: 0 12px 8px;
+  background: #ffffff;
+}
+
+.hist-detail-item {
+  padding: 10px;
+  margin-bottom: 8px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.hist-detail-item:last-child {
+  margin-bottom: 0;
+}
+
+.hdi-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.hdi-row:last-child {
+  margin-bottom: 0;
+}
+
+.hdi-label {
+  font-size: 11px; /* 备注字体 */
+  color: #6b7280;
+  min-width: 40px;
+}
+
+.hdi-value {
+  font-size: 12px; /* 辅助字体 */
+  color: #1f2937;
+  font-weight: 500;
+}
+
+.hdi-time {
+  font-size: 11px; /* 备注字体 */
+  color: #9ca3af;
+  flex: 1;
+}
+
+.hdi-action {
+  font-size: 11px; /* 备注字体 */
+  color: #1890ff;
+  padding: 4px 10px;
+  border: 1px solid #1890ff;
+  border-radius: 6px;
+  background: #e6f7ff;
+  font-weight: 500;
+}
+
 .load-more {
   text-align: center;
   padding: 10px;
