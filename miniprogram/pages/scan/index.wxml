@@ -284,7 +284,7 @@
 
 <!-- 质检处理弹窗 -->
 <view class="modal-backdrop" wx:if="{{qualityModal.show}}" catchtap="closeQualityModal"></view>
-<view class="modal-wrap quality-modal {{qualityModal.show ? 'show' : ''}}">
+<view wx:if="{{qualityModal.show}}" class="modal-wrap quality-modal show">
   <view class="modal-container" catchtap="stopPropagation">
     <view class="modal-header">
       <text class="modal-title">质检结果</text>
@@ -364,7 +364,7 @@
 
 <!-- 物料采购处理弹窗 -->
 <view class="modal-backdrop" wx:if="{{procurementModal.show}}" catchtap="closeProcurementModal"></view>
-<view class="modal-wrap procurement-modal {{procurementModal.show ? 'show' : ''}}">
+<view wx:if="{{procurementModal.show}}" class="modal-wrap procurement-modal show">
   <view class="modal-container" catchtap="stopPropagation">
     <view class="modal-header">
       <text class="modal-title">物料采购</text>
