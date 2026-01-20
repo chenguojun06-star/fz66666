@@ -189,12 +189,17 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
   // 模态框尺寸状态
   const [size, setSize] = React.useState<Size>(() => {
     const resolved = resolveWidthPx(width);
-    const initWidth = resolved ?? (typeof window !== 'undefined' ? Math.round(window.innerWidth * 0.6) : 800);
-    const initHeight =
-      typeof window !== 'undefined' ? Math.round(typeof initialHeight === 'number' ? initialHeight : 720) : 720;
+    const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
+    const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 800;
+    const viewportMaxWidth = Math.round(viewportWidth * 0.98);
+    const viewportMaxHeight = Math.round(viewportHeight * 0.95);
+    const safeMinWidth = Math.min(minWidth, viewportMaxWidth);
+    const safeMinHeight = Math.min(minHeight, viewportMaxHeight);
+    const initWidth = resolved ?? Math.round(viewportWidth * 0.6);
+    const initHeight = Math.round(typeof initialHeight === 'number' ? initialHeight : 720);
     return {
-      width: initWidth,
-      height: initHeight,
+      width: clamp(initWidth, safeMinWidth, viewportMaxWidth),
+      height: clamp(initHeight, safeMinHeight, viewportMaxHeight),
     };
   });
 
@@ -297,10 +302,12 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
 
     const dx = clientX - startX;
     const dy = clientY - startY;
+    const safeMinWidth = Math.min(minWidth, viewportMaxWidth);
+    const safeMinHeight = Math.min(minHeight, viewportMaxHeight);
     const nextWidth =
-      direction === 'x' || direction === 'both' ? clamp(startWidth + dx, minWidth, viewportMaxWidth) : startWidth;
+      direction === 'x' || direction === 'both' ? clamp(startWidth + dx, safeMinWidth, viewportMaxWidth) : startWidth;
     const nextHeight =
-      direction === 'y' || direction === 'both' ? clamp(startHeight + dy, minHeight, viewportMaxHeight) : startHeight;
+      direction === 'y' || direction === 'both' ? clamp(startHeight + dy, safeMinHeight, viewportMaxHeight) : startHeight;
     setSize({ width: nextWidth, height: nextHeight });
   }, [maxHeight, maxWidth, minHeight, minWidth]);
 
@@ -365,6 +372,10 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
     const resolved = resolveWidthPx(width);
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
+    const viewportMaxWidth = Math.round(viewportWidth * 0.98);
+    const viewportMaxHeight = Math.round(viewportHeight * 0.95);
+    const safeMinWidth = Math.min(minWidth, viewportMaxWidth);
+    const safeMinHeight = Math.min(minHeight, viewportMaxHeight);
 
     // 根据视口大小动态计算初始尺寸
     const defaultWidthRatio = viewportWidth < 768 ? 0.96 : viewportWidth < 1024 ? 0.7 : 0.6;
@@ -372,8 +383,8 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
     const initHeight = Math.round(typeof initialHeight === 'number' ? initialHeight : Math.min(720, viewportHeight * 0.8));
 
     setSize({
-      width: clamp(initWidth, minWidth, maxWidth),
-      height: clamp(initHeight, minHeight, maxHeight),
+      width: clamp(initWidth, safeMinWidth, viewportMaxWidth),
+      height: clamp(initHeight, safeMinHeight, viewportMaxHeight),
     });
   }, [initialHeight, maxHeight, maxWidth, minHeight, minWidth, open, width]);
 
@@ -405,10 +416,12 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
           setSize((prev) => {
             const viewportMaxWidth = Math.round(next.w * 0.98);
             const viewportMaxHeight = Math.round(next.h * 0.95);
+            const safeMinWidth = Math.min(minWidth, viewportMaxWidth);
+            const safeMinHeight = Math.min(minHeight, viewportMaxHeight);
 
             // 智能缩放：保持弹窗占视口的相对比例
-            const newWidth = clamp(prev.width * scaleW, minWidth, viewportMaxWidth);
-            const newHeight = clamp(prev.height * scaleH, minHeight, viewportMaxHeight);
+            const newWidth = clamp(prev.width * scaleW, safeMinWidth, viewportMaxWidth);
+            const newHeight = clamp(prev.height * scaleH, safeMinHeight, viewportMaxHeight);
 
             return {
               width: Math.round(newWidth),
