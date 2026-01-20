@@ -1058,39 +1058,6 @@ Page({
         this.setData({ 'my.groupedHistory': updated });
     },
 
-    /**
-     * 格式化相对时间
-     */
-    formatRelativeTime(timeStr) {
-        if (!timeStr) return '-';
-
-        const now = new Date().getTime();
-        const time = new Date(timeStr).getTime();
-        const diff = now - time;
-
-        const minute = 60 * 1000;
-        const hour = 60 * minute;
-        const day = 24 * hour;
-
-        if (diff < minute) {
-            return '刚刚';
-        } else if (diff < hour) {
-            return `${Math.floor(diff / minute)}分钟前`;
-        } else if (diff < day) {
-            return `${Math.floor(diff / hour)}小时前`;
-        } else if (diff < 7 * day) {
-            return `${Math.floor(diff / day)}天前`;
-        } else {
-            // 超过7天显示具体日期
-            const date = new Date(timeStr);
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const dayNum = String(date.getDate()).padStart(2, '0');
-            const hours = String(date.getHours()).padStart(2, '0');
-            const minutes = String(date.getMinutes()).padStart(2, '0');
-            return `${month}-${dayNum} ${hours}:${minutes}`;
-        }
-    },
-
     loadMoreMyHistory() {
         this.loadMyHistory(false, this.currentScanType());
     },

@@ -1416,6 +1416,20 @@ const ProductWarehousing: React.FC = () => {
       align: 'right' as const,
     },
     {
+      title: '颜色',
+      dataIndex: 'color',
+      key: 'color',
+      width: 100,
+      render: (v: any) => v || '-',
+    },
+    {
+      title: '尺码',
+      dataIndex: 'size',
+      key: 'size',
+      width: 90,
+      render: (v: any) => v || '-',
+    },
+    {
       title: '仓库',
       dataIndex: 'warehouse',
       key: 'warehouse',
@@ -1430,6 +1444,40 @@ const ProductWarehousing: React.FC = () => {
         const { text, color } = getQualityStatusConfig(status);
         return <Tag color={color}>{text}</Tag>;
       },
+    },
+    {
+      title: '菲号',
+      dataIndex: 'scanCode',
+      key: 'scanCode',
+      width: 200,
+      ellipsis: true,
+      render: (v: any) => v || '-',
+    },
+    {
+      title: '次品处理',
+      key: 'defectHandling',
+      width: 120,
+      render: (_: any, record: any) => {
+        const unqualified = Number(record?.unqualifiedQuantity || 0);
+        if (unqualified <= 0) return '-';
+        
+        const category = String(record?.defectCategory || '').trim();
+        const remark = String(record?.repairRemark || '').trim();
+        
+        return (
+          <div style={{ fontSize: '12px' }}>
+            {category && <div>类型：{category}</div>}
+            {remark && <div>方式：{remark}</div>}
+          </div>
+        );
+      },
+    },
+    {
+      title: '质检人员',
+      dataIndex: 'qualityOperatorName',
+      key: 'qualityOperatorName',
+      width: 120,
+      render: (v: any) => v || '-',
     },
     {
       title: '质检时间',

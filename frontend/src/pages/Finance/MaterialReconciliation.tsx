@@ -445,6 +445,39 @@ const MaterialReconciliation: React.FC = () => {
       render: (value: number) => value?.toFixed(2) || '0.00',
     },
     {
+      title: '已付金额(元)',
+      dataIndex: 'paidAmount',
+      key: 'paidAmount',
+      width: 120,
+      align: 'right' as const,
+      render: (value: number) => value?.toFixed(2) || '0.00',
+    },
+    {
+      title: '未付金额(元)',
+      key: 'unpaidAmount',
+      width: 120,
+      align: 'right' as const,
+      render: (_: any, record: any) => {
+        const total = Number(record?.totalAmount || 0);
+        const paid = Number(record?.paidAmount || 0);
+        const unpaid = Math.max(0, total - paid);
+        return unpaid.toFixed(2);
+      },
+    },
+    {
+      title: '付款进度',
+      key: 'paymentProgress',
+      width: 100,
+      align: 'right' as const,
+      render: (_: any, record: any) => {
+        const total = Number(record?.totalAmount || 0);
+        const paid = Number(record?.paidAmount || 0);
+        if (total <= 0) return '-';
+        const percent = Math.round((paid / total) * 100);
+        return `${percent}%`;
+      },
+    },
+    {
       title: '扣款项(元)',
       dataIndex: 'deductionAmount',
       key: 'deductionAmount',
@@ -466,6 +499,31 @@ const MaterialReconciliation: React.FC = () => {
       key: 'reconciliationDate',
       width: 120,
       render: (value: any) => formatDateTime(value),
+    },
+    {
+      title: '对账周期',
+      key: 'reconciliationPeriod',
+      width: 200,
+      render: (_: any, record: any) => {
+        const start = formatDateTime(record?.periodStartDate);
+        const end = formatDateTime(record?.periodEndDate);
+        if (!start && !end) return '-';
+        return `${start || '?'} ~ ${end || '?'}`;
+      },
+    },
+    {
+      title: '对账人',
+      dataIndex: 'reconciliationOperatorName',
+      key: 'reconciliationOperatorName',
+      width: 100,
+      render: (v: any) => v || '-',
+    },
+    {
+      title: '审核人',
+      dataIndex: 'auditOperatorName',
+      key: 'auditOperatorName',
+      width: 100,
+      render: (v: any) => v || '-',
     },
     {
       title: '状态',
