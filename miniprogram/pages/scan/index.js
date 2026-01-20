@@ -674,6 +674,30 @@ Page({
         this.loadMyPanel(true);
     },
 
+    onQuickScanType(e) {
+        const idx = Number((e && e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.idx) || 0);
+        const maxIdx = Array.isArray(this.data.scanTypeOptions) ? this.data.scanTypeOptions.length - 1 : 0;
+        const safeIdx = Math.max(0, Math.min(idx, maxIdx));
+        if (safeIdx === this.data.scanTypeIndex) return;
+        const scanType = (this.data.scanTypeOptions[safeIdx] && this.data.scanTypeOptions[safeIdx].value) ? this.data.scanTypeOptions[safeIdx].value : '';
+        this.setData({
+            scanTypeIndex: safeIdx,
+            qualityIndex: scanType === 'quality' ? 1 : this.data.qualityIndex,
+            lastResult: null,
+            qtyHint: '数量需填写；二维码带数量会自动识别，可手动修改。',
+            materialPurchases: [],
+        });
+        writeStorage('mp_scan_type_index', safeIdx);
+        this.loadMyPanel(true);
+    },
+
+    onQuickQuality(e) {
+        const idx = Number((e && e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.idx) || 0);
+        const maxIdx = Array.isArray(this.data.qualityOptions) ? this.data.qualityOptions.length - 1 : 0;
+        const safeIdx = Math.max(0, Math.min(idx, maxIdx));
+        this.setData({ qualityIndex: safeIdx });
+    },
+
     currentScanType() {
         const option = this.data.scanTypeOptions[this.data.scanTypeIndex];
         return option && option.value ? option.value : '';
