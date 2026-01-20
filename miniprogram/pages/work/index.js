@@ -1,7 +1,38 @@
 const api = require('../../utils/api');
+const { validateProductionOrder, normalizeData } = require('../../utils/dataValidator');
+const { errorHandler } = require('../../utils/errorHandler');
 
 function normalizeText(v) {
   return (v || '').toString().trim();
+}
+
+/**
+ * 验证并规范化订单数据
+ */
+function validateAndNormalizeOrder(order) {
+  // 规范化：填充默认值
+  const normalized = normalizeData(order, {
+    id: { required: true, type: 'string' },
+    orderNo: { required: true, type: 'string' },
+    styleNo: { required: true, type: 'string' },
+    orderQuantity: { required: true, type: 'number', default: 0 },
+    completedQuantity: { required: true, type: 'number', default: 0 },
+    productionProgress: { required: true, type: 'number', default: 0 },
+    progressWorkflowJson: { required: true, type: 'string', default: '{}' },
+    status: { required: true, type: 'string' },
+  });
+  
+  // 验证
+  const validation = validateProductionOrder(normalized);
+  if (!validation.valid) {
+    console.warn('[Order Validation] Failed for order:', {
+      orderId: order.id,
+      orderNo: order.orderNo,
+      errors: validation.errors
+    });
+  }
+  
+  return normalized;
 }
 
 function orderStatusText(status) {
@@ -597,10 +628,14 @@ Page({
         if (this.data.activeTab === 'orders_production') params.status = 'production';
         return api.production.listOrders(params);
       },
-      (r) => ({
-        ...r,
-        statusText: orderStatusText(r && r.status),
-      }),
+      (r) => {
+        // 验证并规范化订单数据
+        const validated = validateAndNormalizeOrder(r);
+        return {
+          ...validated,
+          statusText: orderStatusText(validated.status),
+        };
+      },
     );
   },
 
