@@ -82,4 +82,41 @@ public class MaterialReconciliation implements com.fashion.supplychain.finance.s
     private String updateBy;
     
     private Integer deleteFlag;
+
+    // ==================== 付款和对账周期字段（新增）====================
+    
+    /**
+     * 已付金额
+     */
+    private BigDecimal paidAmount;
+
+    /**
+     * 对账周期开始日期
+     */
+    private LocalDateTime periodStartDate;
+
+    /**
+     * 对账周期结束日期
+     */
+    private LocalDateTime periodEndDate;
+
+    /**
+     * 对账人ID
+     */
+    private String reconciliationOperatorId;
+
+    /**
+     * 对账人姓名
+     */
+    private String reconciliationOperatorName;
+
+    /**
+     * 审核人ID
+     */
+    private String auditOperatorId;
+
+    /**
+     * 审核人姓名
+     */
+    private String auditOperatorName;
 }
