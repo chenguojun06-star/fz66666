@@ -571,6 +571,11 @@ page {
   border-radius: 12px;
   overflow: hidden;
 }
+
+.modal-box.wide {
+  max-width: 90vw;
+}
+
 .modal-head {
   padding: 12px 14px;
   background: rgba(255, 255, 255, 0.8);
@@ -647,6 +652,86 @@ page {
   border-radius: 12px;
   padding: 10px;
   border: 1px solid #fed7aa;
+}
+
+/* 面料采购列表 - 弹窗内 */
+.purchase-modal-list {
+  margin-top: 10px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.purchase-modal-item {
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 10px;
+  border: 1px solid #e5e7eb;
+}
+
+.purchase-modal-item:last-child {
+  margin-bottom: 0;
+}
+
+.pmi-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.pmi-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.pmi-unit {
+  font-size: 11px;
+  color: #9ca3af;
+  background: #f3f4f6;
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+
+.pmi-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.pmi-row:last-child {
+  margin-bottom: 0;
+}
+
+.pmi-label {
+  width: 70px;
+  font-size: 11px;
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+.pmi-value {
+  flex: 1;
+  font-size: 13px;
+  color: #1f2937;
+}
+
+.pmi-value.demand {
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.pmi-input {
+  flex: 1;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  height: 32px;
 }
 .cf-item {
   display: flex;

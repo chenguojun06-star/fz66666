@@ -407,6 +407,7 @@ Page({
             payload: null,
             detail: null,
             loading: false,
+            materialPurchases: [], // 面料采购列表
         },
     },
 
@@ -461,7 +462,7 @@ Page({
         }
     },
 
-    openScanConfirm(payload, detail) {
+    openScanConfirm(payload, detail, materialPurchases) {
         if (!payload) return;
         if (confirmTimer) {
             clearTimeout(confirmTimer);
@@ -472,6 +473,20 @@ Page({
             confirmTickTimer = null;
         }
         const expireAt = Date.now() + 15000;
+        
+        // 处理面料采购数据
+        const purchases = Array.isArray(materialPurchases) ? materialPurchases.map((it) => {
+            const purchaseQuantity = Number(it && it.purchaseQuantity) || 0;
+            const demandQuantity = Number(it && it.demandQuantity != null ? it.demandQuantity : purchaseQuantity) || 0;
+            return {
+                ...it,
+                demandQuantity,
+                purchaseQuantity,
+                purchaseInput: purchaseQuantity, // 默认带出采购数量
+                remarkInput: '',
+            };
+        }) : [];
+        
         this.setData({
             scanConfirm: {
                 visible: true,
@@ -480,6 +495,7 @@ Page({
                 payload,
                 detail: detail || null,
                 loading: false,
+                materialPurchases: purchases,
             },
         });
         confirmTimer = setTimeout(() => {
@@ -514,7 +530,7 @@ Page({
             clearInterval(confirmTickTimer);
             confirmTickTimer = null;
         }
-        this.setData({ scanConfirm: { ...this.data.scanConfirm, visible: false, expireAt: 0, remain: 0, payload: null, detail: null, loading: false } });
+        this.setData({ scanConfirm: { ...this.data.scanConfirm, visible: false, expireAt: 0, remain: 0, payload: null, detail: null, loading: false, materialPurchases: [] } });
         if (!silent) {
             wx.showToast({ title: '已取消', icon: 'none' });
         }
@@ -541,6 +557,79 @@ Page({
 
     async submitScanPayload(basePayload, detail) {
         const payload = { ...(basePayload || {}) };
+        const isProcurement = detail && detail.isProcurement;
+        
+        // 如果是采购类型，先处理面料采购
+        if (isProcurement) {
+            const purchases = this.data.scanConfirm.materialPurchases || [];
+            if (purchases.length === 0) {
+                wx.showToast({ title: '未找到面料采购信息', icon: 'none' });
+                this.closeScanConfirm(true);
+                return;
+            }
+            
+            // 验证所有采购数量
+            for (let i = 0; i < purchases.length; i++) {
+                const item = purchases[i];
+                const purchaseInput = Number(item.purchaseInput);
+                if (!Number.isFinite(purchaseInput) || purchaseInput <= 0) {
+                    wx.showToast({ title: `请填写${item.materialName || '物料'}的采购数量`, icon: 'none', duration: 2000 });
+                    return;
+                }
+            }
+            
+            try {
+                // 先领取所有采购任务
+                const user = await this.getCurrentUser();
+                const receiverId = user && user.id != null ? String(user.id).trim() : '';
+                const receiverName = user && (user.name || user.username) ? String(user.name || user.username).trim() : '';
+                
+                const receivePromises = purchases.map(item => 
+                    api.production.receivePurchase({
+                        purchaseId: item.id,
+                        receiverId,
+                        receiverName,
+                    })
+                );
+                
+                await Promise.all(receivePromises);
+                
+                // 再提交采购数量
+                const updatePromises = purchases.map(item => 
+                    api.production.updateArrivedQuantity({ 
+                        id: item.id, 
+                        arrivedQuantity: Number(item.purchaseInput),
+                        remark: (item.remarkInput || '').trim()
+                    })
+                );
+                
+                await Promise.all(updatePromises);
+                
+                wx.showToast({ title: '采购已完成', icon: 'success' });
+                this.setData({
+                    lastResult: {
+                        success: true,
+                        message: '采购已完成',
+                        scanCode: payload.scanCode,
+                        orderNo: detail.orderNo || '',
+                        styleNo: detail.styleNo || '',
+                        processName: '采购',
+                    },
+                    materialPurchases: [], // 清空旧的采购列表
+                });
+                this.closeScanConfirm(true);
+                this.loadMyPanel(true); // 刷新统计
+                return;
+            } catch (e) {
+                const app = getApp();
+                if (app && typeof app.toastError === 'function') app.toastError(e, '采购失败');
+                else wx.showToast({ title: '采购失败', icon: 'none' });
+                this.setData({ scanConfirm: { ...this.data.scanConfirm, loading: false } });
+                return;
+            }
+        }
+        
+        // 非采购类型，执行原有逻辑
         const dedupKey = [
             payload.scanCode,
             payload.scanType,
@@ -899,6 +988,20 @@ Page({
         this.setData({ [`materialPurchases[${idx}].remarkInput`]: v });
     },
 
+    // 弹窗中的面料采购输入
+    onModalPurchaseInput(e) {
+        const idx = Number((e && e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.idx) || 0);
+        const v = Number((e && e.detail && e.detail.value) || 0);
+        const q = Number.isFinite(v) && v >= 0 ? Math.floor(v) : 0;
+        this.setData({ [`scanConfirm.materialPurchases[${idx}].purchaseInput`]: q });
+    },
+
+    onModalPurchaseRemarkInput(e) {
+        const idx = Number((e && e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.idx) || 0);
+        const v = (e && e.detail && e.detail.value) || '';
+        this.setData({ [`scanConfirm.materialPurchases[${idx}].remarkInput`]: v });
+    },
+
     async onReceivePurchase(e) {
         const idx = Number((e && e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.idx) || 0);
         const list = Array.isArray(this.data.materialPurchases) ? this.data.materialPurchases : [];
@@ -1228,7 +1331,22 @@ Page({
                 qualityResult: payload.qualityResult || '',
                 isProcurement: option && option.progressStage === '采购',
             };
-            this.openScanConfirm(payload, detail);
+            
+            // 如果是采购类型，获取面料采购信息
+            let materialPurchases = [];
+            if (detail.isProcurement) {
+                try {
+                    const purchaseData = await api.production.getMaterialPurchases({ 
+                        scanCode: payload.scanCode,
+                        orderNo: detail.orderNo 
+                    });
+                    materialPurchases = Array.isArray(purchaseData) ? purchaseData : [];
+                } catch (e) {
+                    console.error('获取面料采购信息失败', e);
+                }
+            }
+            
+            this.openScanConfirm(payload, detail, materialPurchases);
             return;
         } catch (e) {
             if (e && e.type === 'auth') return;
