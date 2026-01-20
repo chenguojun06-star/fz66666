@@ -356,6 +356,19 @@ public class ScanRecordOrchestrator {
             String stageName = "receive".equals(qualityStage) ? "质检领取" : "质检验收";
             ScanRecord existed = findQualityStageRecord(order.getId(), bundle.getId(), stageCode);
             if (existed != null && hasText(existed.getId())) {
+                // 检查是否是同一个操作人
+                String existingOperatorId = existed.getOperatorId() == null ? null : existed.getOperatorId().trim();
+                String existingOperatorName = existed.getOperatorName() == null ? null : existed.getOperatorName().trim();
+                boolean isSameOperator = false;
+                if (hasText(operatorId) && hasText(existingOperatorId)) {
+                    isSameOperator = operatorId.equals(existingOperatorId);
+                } else if (hasText(operatorName) && hasText(existingOperatorName)) {
+                    isSameOperator = operatorName.equals(existingOperatorName);
+                }
+                if (!isSameOperator && "receive".equals(qualityStage)) {
+                    String otherName = hasText(existingOperatorName) ? existingOperatorName : "他人";
+                    throw new IllegalStateException("该菲号已被「" + otherName + "」领取，无法重复领取");
+                }
                 Map<String, Object> dup = new HashMap<>();
                 dup.put("success", true);
                 dup.put("message", "receive".equals(qualityStage) ? "已领取" : "已验收");
@@ -372,6 +385,19 @@ public class ScanRecordOrchestrator {
                 ScanRecord received = findQualityStageRecord(order.getId(), bundle.getId(), "quality_receive");
                 if (received == null || !hasText(received.getId())) {
                     throw new IllegalStateException("请先领取再验收");
+                }
+                // 验收人必须是领取人
+                String receivedOperatorId = received.getOperatorId() == null ? null : received.getOperatorId().trim();
+                String receivedOperatorName = received.getOperatorName() == null ? null : received.getOperatorName().trim();
+                boolean isSameOperator = false;
+                if (hasText(operatorId) && hasText(receivedOperatorId)) {
+                    isSameOperator = operatorId.equals(receivedOperatorId);
+                } else if (hasText(operatorName) && hasText(receivedOperatorName)) {
+                    isSameOperator = operatorName.equals(receivedOperatorName);
+                }
+                if (!isSameOperator) {
+                    String otherName = hasText(receivedOperatorName) ? receivedOperatorName : "他人";
+                    throw new IllegalStateException("该菲号已被「" + otherName + "」领取，只能由领取人验收");
                 }
             }
 
@@ -879,6 +905,10 @@ public class ScanRecordOrchestrator {
                 isCutting = true;
             }
         }
+        // 检查是否是裁剪环节但没有匹配到菲号
+        if (!isCutting && bundle == null && templateLibraryService.progressStageNameMatches("裁剪", stageNameFinal)) {
+            throw new IllegalStateException("裁剪环节需先在PC端生成菲号，再进行扫码操作");
+        }
         String finalScanType = isCutting ? "cutting" : scanType;
 
         Integer qty = quantity;
@@ -1005,6 +1035,20 @@ public class ScanRecordOrchestrator {
                     .last("limit 1"));
             if (existing == null || !hasText(existing.getId())) {
                 return null;
+            }
+
+            // 检查是否是同一个操作人（领取锁定规则）
+            String existingOperatorId = existing.getOperatorId() == null ? null : existing.getOperatorId().trim();
+            String existingOperatorName = existing.getOperatorName() == null ? null : existing.getOperatorName().trim();
+            boolean isSameOperator = false;
+            if (hasText(operatorId) && hasText(existingOperatorId)) {
+                isSameOperator = operatorId.equals(existingOperatorId);
+            } else if (hasText(operatorName) && hasText(existingOperatorName)) {
+                isSameOperator = operatorName.equals(existingOperatorName);
+            }
+            if (!isSameOperator) {
+                String otherName = hasText(existingOperatorName) ? existingOperatorName : "他人";
+                throw new IllegalStateException("该菲号「" + progressStage + "」环节已被「" + otherName + "」领取，无法重复操作");
             }
 
             int existedQty = existing.getQuantity() == null ? 0 : existing.getQuantity();

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Button, Card, Collapse, DatePicker, Form, Grid, Input, InputNumber, Modal, Select, Segmented, Space, Tag, Tooltip, Typography, message } from 'antd';
 import { DeleteOutlined, DownloadOutlined, EyeOutlined, PlusOutlined, RollbackOutlined, ScanOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -531,6 +531,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const [scanForm] = Form.useForm();
   const scanInputRef = useRef<any>(null);
   const scanSubmittingRef = useRef(false);
+  const orderSyncingRef = useRef(false);
+  const activeOrderRef = useRef<ProductionOrder | null>(null);
   const lastFailedRequestRef = useRef<{ key: string; requestId: string } | null>(null);
   const scanConfirmTimerRef = useRef<number | null>(null);
   const scanConfirmTickRef = useRef<number | null>(null);
@@ -547,8 +549,11 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const [rollbackBundles, setRollbackBundles] = useState<CuttingBundle[]>([]);
   const [rollbackForm] = Form.useForm();
 
-  const fetchOrders = async () => {
-    setLoading(true);
+  const fetchOrders = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent === true;
+    if (!silent) {
+      setLoading(true);
+    }
     try {
       const params: any = { ...queryParams };
       if (dateRange?.[0] && dateRange?.[1]) {
@@ -600,15 +605,19 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             }
           })();
         }
-      } else {
+      } else if (!silent) {
         message.error(result.message || '获取生产订单失败');
       }
     } catch {
-      message.error('获取生产订单失败');
+      if (!silent) {
+        message.error('获取生产订单失败');
+      }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
-  };
+  }, [queryParams, dateRange, progressNodesByStyleNo]);
 
   const clearScanConfirmTimers = () => {
     if (scanConfirmTimerRef.current) {
@@ -736,7 +745,11 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
 
   useEffect(() => {
     fetchOrders();
-  }, [queryParams, dateRange]);
+  }, [fetchOrders]);
+
+  useEffect(() => {
+    activeOrderRef.current = activeOrder;
+  }, [activeOrder]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -1068,12 +1081,15 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     setNodeWorkflowDirty(false);
   }, [activeOrder?.id, (activeOrder as any)?.progressWorkflowLocked]);
 
-  const fetchScanHistory = async (order: ProductionOrder): Promise<ScanRecord[]> => {
+  const fetchScanHistory = async (order: ProductionOrder, options?: { silent?: boolean }): Promise<ScanRecord[]> => {
+    const silent = options?.silent === true;
     if (!order.id) {
       setScanHistory([]);
       return [];
     }
-    setScanHistoryLoading(true);
+    if (!silent) {
+      setScanHistoryLoading(true);
+    }
     try {
       const response = await productionScanApi.listByOrderId(String(order.id), { page: 1, pageSize: 200 });
       const result = response as any;
@@ -1081,13 +1097,17 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         const records = Array.isArray(result.data?.records) ? result.data.records : [];
         setScanHistory(records);
         return records;
-      } else {
+      } else if (!silent) {
         message.error(result.message || '获取扫码记录失败');
       }
     } catch {
-      message.error('获取扫码记录失败');
+      if (!silent) {
+        message.error('获取扫码记录失败');
+      }
     } finally {
-      setScanHistoryLoading(false);
+      if (!silent) {
+        setScanHistoryLoading(false);
+      }
     }
     return [];
   };
@@ -1993,6 +2013,36 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       return null;
     }
   };
+
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      if (orderSyncingRef.current) return;
+      orderSyncingRef.current = true;
+      try {
+        await fetchOrders({ silent: true });
+        const current = activeOrderRef.current;
+        if (current?.id) {
+          const detail = await fetchOrderDetail(current.id);
+          if (!cancelled && detail) {
+            setActiveOrder(detail);
+          }
+          const base = detail || current;
+          if (base) {
+            await fetchScanHistory(base, { silent: true });
+          }
+        }
+      } finally {
+        orderSyncingRef.current = false;
+      }
+    };
+    run();
+    const timer = window.setInterval(run, 30000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [fetchOrders, fetchOrderDetail, fetchScanHistory]);
 
   const updateOrderProgress = async (
     order: ProductionOrder,
