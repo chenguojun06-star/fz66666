@@ -400,6 +400,7 @@ Page({
             loadingHistory: false,
             stats: null,
             history: { page: 1, pageSize: 10, hasMore: true, list: [] },
+            groupedHistory: [], // 聚合后的历史记录
         },
         materialPurchases: [],
         currentUser: null,
@@ -923,6 +924,10 @@ Page({
             const merged = reset ? records : prev.concat(records);
             const app = getApp();
             const hasMore = app && typeof app.hasMoreByPage === 'function' ? app.hasMoreByPage(page) : true;
+            
+            // 聚合处理：按订单号+环节分组
+            const groupedHistory = this.groupScanHistory(merged);
+            
             this.setData({
                 'my.history': {
                     ...history,
@@ -931,6 +936,7 @@ Page({
                     list: merged,
                     hasMore,
                 },
+                'my.groupedHistory': groupedHistory,
             });
         } catch (e) {
             if (e && e.type === 'auth') return;
@@ -943,6 +949,126 @@ Page({
 
     refreshMy() {
         this.loadMyPanel(true);
+    },
+
+    /**
+     * 聚合扫码记录：按订单号+环节分组
+     */
+    groupScanHistory(records) {
+        if (!Array.isArray(records) || records.length === 0) return [];
+        
+        const groups = new Map();
+        
+        records.forEach(item => {
+            const orderNo = item.orderNo || '-';
+            const styleNo = item.styleNo || '-';
+            const stage = item.processName || item.progressStage || (item.isProcurement ? '物料采购' : '-');
+            const key = `${orderNo}_${styleNo}_${stage}`;
+            
+            if (!groups.has(key)) {
+                groups.set(key, {
+                    id: key,
+                    orderNo,
+                    styleNo,
+                    stage,
+                    totalQuantity: 0,
+                    qualifiedCount: 0,
+                    defectiveCount: 0,
+                    items: [],
+                    latestTime: null,
+                    expanded: false, // 是否展开
+                });
+            }
+            
+            const group = groups.get(key);
+            group.items.push(item);
+            group.totalQuantity += (item.quantity || 0);
+            
+            // 统计合格/不合格数量
+            if (item.scanType === 'quality') {
+                if (item.qualityResult === 'qualified') {
+                    group.qualifiedCount += (item.quantity || 0);
+                } else if (item.qualityResult === 'defective') {
+                    group.defectiveCount += (item.quantity || 0);
+                }
+            }
+            
+            // 更新最新时间
+            const itemTime = item.createdAt || item.scanTime || item.time;
+            if (itemTime && (!group.latestTime || new Date(itemTime) > new Date(group.latestTime))) {
+                group.latestTime = itemTime;
+            }
+        });
+        
+        // 转换为数组并按时间倒序排序
+        const result = Array.from(groups.values()).sort((a, b) => {
+            const timeA = a.latestTime ? new Date(a.latestTime).getTime() : 0;
+            const timeB = b.latestTime ? new Date(b.latestTime).getTime() : 0;
+            return timeB - timeA;
+        });
+        
+        // 对每组内的items也按时间倒序排序
+        result.forEach(group => {
+            group.items.sort((a, b) => {
+                const timeA = a.createdAt || a.scanTime || a.time;
+                const timeB = b.createdAt || b.scanTime || b.time;
+                if (!timeA) return 1;
+                if (!timeB) return -1;
+                return new Date(timeB).getTime() - new Date(timeA).getTime();
+            });
+        });
+        
+        return result;
+    },
+
+    /**
+     * 切换分组展开/折叠
+     */
+    toggleGroupExpand(e) {
+        const groupId = e.currentTarget.dataset.groupId;
+        const groupedHistory = this.data.my.groupedHistory || [];
+        
+        const updated = groupedHistory.map(group => {
+            if (group.id === groupId) {
+                return { ...group, expanded: !group.expanded };
+            }
+            return group;
+        });
+        
+        this.setData({ 'my.groupedHistory': updated });
+    },
+
+    /**
+     * 格式化相对时间
+     */
+    formatRelativeTime(timeStr) {
+        if (!timeStr) return '-';
+        
+        const now = new Date().getTime();
+        const time = new Date(timeStr).getTime();
+        const diff = now - time;
+        
+        const minute = 60 * 1000;
+        const hour = 60 * minute;
+        const day = 24 * hour;
+        
+        if (diff < minute) {
+            return '刚刚';
+        } else if (diff < hour) {
+            return `${Math.floor(diff / minute)}分钟前`;
+        } else if (diff < day) {
+            return `${Math.floor(diff / hour)}小时前`;
+        } else if (diff < 7 * day) {
+            return `${Math.floor(diff / day)}天前`;
+        } else {
+            // 超过7天显示具体日期
+            const date = new Date(timeStr);
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const dayNum = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${month}-${dayNum} ${hours}:${minutes}`;
+        }
     },
 
     loadMoreMyHistory() {
