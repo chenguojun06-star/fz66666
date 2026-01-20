@@ -1,33 +1,25 @@
 const { getToken, setToken } = require('../../utils/storage');
 const { DEFAULT_BASE_URL, setBaseUrl, normalizeBaseUrl } = require('../../config');
 const api = require('../../utils/api');
+const { validateByRule } = require('../../utils/validationRules');
+const { errorHandler } = require('../../utils/errorHandler');
 
 let autoWechatTried = false;
 
-// 验证函数
+// 验证函数 (使用统一的规则库)
 function validateUsername(username) {
-    const v = String(username || '').trim();
-    if (!v) return '请输入账号';
-    if (v.length < 3) return '账号长度不能少于 3 个字符';
-    if (v.length > 20) return '账号长度不能超过 20 个字符';
-    if (!/^[a-zA-Z0-9_\-]+$/.test(v)) return '账号只能包含字母、数字、下划线和中划线';
-    return '';
+    return validateByRule(username, { name: '账号', required: true, minLength: 3, maxLength: 20, pattern: /^[a-zA-Z0-9_\-]+$/ }) || '';
 }
 
 function validatePassword(password) {
-    const v = String(password || '').trim();
-    if (!v) return '请输入密码';
-    if (v.length < 6) return '密码长度不能少于 6 个字符';
-    if (v.length > 20) return '密码长度不能超过 20 个字符';
-    return '';
+    return validateByRule(password, { name: '密码', required: true, minLength: 6, maxLength: 20 }) || '';
 }
 
 function validateApiBaseUrl(url) {
     const v = String(url || '').trim();
     if (!v) return '';  // 可选字段
-    if (!(/^https?:\/\//.test(v))) return 'API 地址必须以 http:// 或 https:// 开头';
-    try {
-        new URL(v);
+    const error = validateByRule(v, { name: 'API 地址', required: false, pattern: /^https?:\/\// });
+    if (error) return error;
     } catch (e) {
         return 'API 地址格式不正确';
     }

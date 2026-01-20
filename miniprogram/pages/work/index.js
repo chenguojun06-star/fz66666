@@ -1,6 +1,8 @@
 const api = require('../../utils/api');
 const { validateProductionOrder, normalizeData } = require('../../utils/dataValidator');
 const { errorHandler } = require('../../utils/errorHandler');
+const { validateByRule } = require('../../utils/validationRules');
+const { syncManager } = require('../../utils/syncManager');
 
 function normalizeText(v) {
   return (v || '').toString().trim();
@@ -198,6 +200,10 @@ Page({
     } catch (e) {
       null;
     }
+    
+    // 启动订单列表的实时同步 (30 秒轮询一次)
+    this.setupOrderSync();
+    
     this.ensureLoaded();
   },
 
@@ -693,4 +699,65 @@ Page({
       }),
     );
   },
+
+  /**
+   * 设置订单列表的实时同步
+   */
+  setupOrderSync() {
+    // 只在订单标签页启用同步
+    const syncFn = async () => {
+      try {
+        const f = this.data.filters;
+        const params = {
+          page: 1,
+          pageSize: 20, // 只同步前 20 条
+          orderNo: normalizeText(f.orderNo),
+          styleNo: normalizeText(f.styleNo),
+          factoryName: normalizeText(f.factoryName),
+        };
+        if (this.data.activeTab === 'orders_production') params.status = 'production';
+        return await api.production.listOrders(params);
+      } catch (error) {
+        errorHandler.logError(error, '[Work] Sync orders');
+        throw error;
+      }
+    };
+
+    // 数据变化时的处理
+    const onDataChange = (newPage) => {
+      if (!newPage || !Array.isArray(newPage.records)) return;
+
+      // 更新列表
+      const newList = newPage.records.map((r) => {
+        const validated = validateAndNormalizeOrder(r);
+        return {
+          ...validated,
+          statusText: orderStatusText(validated.status),
+        };
+      });
+
+      console.log(`[Sync] Orders updated: ${newList.length} items`);
+      this.setData({ 'orders.list': newList });
+    };
+
+    // 启动同步 (30 秒轮询一次)
+    syncManager.startSync('work_orders', syncFn, 30000, {
+      onDataChange,
+      onError: (error, errorCount) => {
+        console.warn(`[Sync] Orders sync error (${errorCount}):`, error.message);
+        if (errorCount > 3) {
+          // 连续 3 次失败时停止同步
+          syncManager.stopSync('work_orders');
+          console.error('[Sync] Stopped orders sync due to repeated failures');
+        }
+      }
+    });
+  },
+
+  onHide() {
+    // 页面隐藏时停止同步（节省资源）
+    syncManager.stopSync('work_orders');
+  },
 });
+
+
