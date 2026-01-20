@@ -712,6 +712,7 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
         initialHeight={720}
         minHeight={240}
         autoFontSize={false}
+        scaleWithViewport
       >
         <Input.TextArea
           value={newSizeName}

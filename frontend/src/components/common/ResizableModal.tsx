@@ -363,8 +363,14 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
   React.useEffect(() => {
     if (!open) return;
     const resolved = resolveWidthPx(width);
-    const initWidth = resolved ?? Math.round(window.innerWidth * 0.6);
-    const initHeight = Math.round(typeof initialHeight === 'number' ? initialHeight : 720);
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    
+    // 根据视口大小动态计算初始尺寸
+    const defaultWidthRatio = viewportWidth < 768 ? 0.96 : viewportWidth < 1024 ? 0.7 : 0.6;
+    const initWidth = resolved ?? Math.round(viewportWidth * defaultWidthRatio);
+    const initHeight = Math.round(typeof initialHeight === 'number' ? initialHeight : Math.min(720, viewportHeight * 0.8));
+    
     setSize({
       width: clamp(initWidth, minWidth, maxWidth),
       height: clamp(initHeight, minHeight, maxHeight),
@@ -378,26 +384,46 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
     if (typeof window === 'undefined') return;
 
     const viewportRef = { w: window.innerWidth, h: window.innerHeight };
+    let resizeTimer: NodeJS.Timeout | null = null;
 
     const onResize = () => {
-      const next = { w: window.innerWidth, h: window.innerHeight };
-      const scaleW = viewportRef.w > 0 ? next.w / viewportRef.w : 1;
-      const scaleH = viewportRef.h > 0 ? next.h / viewportRef.h : 1;
-      viewportRef.w = next.w;
-      viewportRef.h = next.h;
+      // 防抖优化性能
+      if (resizeTimer) clearTimeout(resizeTimer);
+      
+      resizeTimer = setTimeout(() => {
+        const next = { w: window.innerWidth, h: window.innerHeight };
+        const scaleW = viewportRef.w > 0 ? next.w / viewportRef.w : 1;
+        const scaleH = viewportRef.h > 0 ? next.h / viewportRef.h : 1;
+        
+        // 只在变化超过5%时才缩放，避免微小抖动
+        const shouldScale = Math.abs(scaleW - 1) > 0.05 || Math.abs(scaleH - 1) > 0.05;
+        
+        if (shouldScale) {
+          viewportRef.w = next.w;
+          viewportRef.h = next.h;
 
-      setSize((prev) => {
-        const viewportMaxWidth = Math.round(next.w * 0.98);
-        const viewportMaxHeight = Math.round(next.h * 0.95);
-        return {
-          width: clamp(prev.width * scaleW, minWidth, viewportMaxWidth),
-          height: clamp(prev.height * scaleH, minHeight, viewportMaxHeight),
-        };
-      });
+          setSize((prev) => {
+            const viewportMaxWidth = Math.round(next.w * 0.98);
+            const viewportMaxHeight = Math.round(next.h * 0.95);
+            
+            // 智能缩放：保持弹窗占视口的相对比例
+            const newWidth = clamp(prev.width * scaleW, minWidth, viewportMaxWidth);
+            const newHeight = clamp(prev.height * scaleH, minHeight, viewportMaxHeight);
+            
+            return {
+              width: Math.round(newWidth),
+              height: Math.round(newHeight),
+            };
+          });
+        }
+      }, 150); // 150ms防抖
     };
 
     window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      if (resizeTimer) clearTimeout(resizeTimer);
+    };
   }, [maxHeight, maxWidth, minHeight, minWidth, open, scaleWithViewport]);
 
   // 组件卸载时清理
