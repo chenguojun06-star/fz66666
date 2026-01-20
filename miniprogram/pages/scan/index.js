@@ -1,6 +1,8 @@
 const api = require('../../utils/api');
 const { getBaseUrl } = require('../../config');
 const { getToken } = require('../../utils/storage');
+const { errorHandler } = require('../../utils/errorHandler');
+const { validateScanRecord } = require('../../utils/dataValidator');
 
 let undoTimer = null;
 let confirmTimer = null;

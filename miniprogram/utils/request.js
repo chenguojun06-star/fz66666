@@ -43,6 +43,7 @@ function request(options) {
         const data = (options && options.data) || undefined;
         const header = (options && options.header) || {};
         const skipAuthRedirect = !!(options && options.skipAuthRedirect);
+        const retryCount = (options && options._retryCount) || 0;
 
         const token = getToken();
         const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
@@ -52,7 +53,7 @@ function request(options) {
             url: `${baseUrl}${url}`,
             method,
             data,
-            timeout: 15000,
+            timeout: 10000,
             header: {
                 'content-type': 'application/json',
                 ...authHeader,
@@ -88,7 +89,27 @@ function request(options) {
                 resolve(body);
             },
             fail(err) {
-                reject(createError((err && err.errMsg) || '网络异常', { type: 'network', raw: err }));
+                // 网络错误时，检查是否需要重试
+                const isRetryable = retryCount < 2;
+                const errMsg = (err && err.errMsg) || '网络异常';
+                
+                // 超时错误或网络错误建议重试
+                const isTimeoutOrNetwork = errMsg.includes('timeout') || 
+                                          errMsg.includes('request:fail') ||
+                                          errMsg.includes('network');
+                
+                if (isRetryable && isTimeoutOrNetwork) {
+                    // 添加指数退避延迟
+                    const delayMs = 1000 * (Math.pow(2, retryCount) - 1);
+                    console.warn(`[Request Retry] Retrying (${retryCount + 1}/2) after ${delayMs}ms: ${url}`);
+                    
+                    setTimeout(() => {
+                        const retryOptions = { ...options, _retryCount: retryCount + 1 };
+                        request(retryOptions).then(resolve).catch(reject);
+                    }, delayMs);
+                } else {
+                    reject(createError(errMsg, { type: 'network', raw: err }));
+                }
             },
         });
     });
