@@ -197,18 +197,36 @@ Page({
         // 关闭面板
         this.setData({ showReminderPanel: false });
         
-        // 跳转到扫码页面处理
-        wx.switchTab({ 
-            url: '/pages/scan/index',
-            success: () => {
-                // 可以在这里传递订单信息，但switchTab不支持传参
-                // 可以使用storage临时存储
-                try {
-                    wx.setStorageSync('pending_order_hint', reminder.orderId);
-                } catch (e) {
-                    console.error('存储失败', e);
-                }
-            },
-        });
+        const type = reminder.type || '';
+        const orderId = reminder.orderId || '';
+        
+        // 根据任务类型跳转到对应页面
+        if (type === '采购') {
+            // 采购任务跳转到扫码页面，设置为采购模式
+            try {
+                wx.setStorageSync('mp_scan_type_index', 2); // 采购是第3个选项，索引为2
+                wx.setStorageSync('pending_order_hint', orderId);
+            } catch (e) {
+                console.error('存储失败', e);
+            }
+            wx.switchTab({ url: '/pages/scan/index' });
+        } else if (type === '裁剪' || type === '缝制' || type === '质检') {
+            // 生产任务跳转到工作台的生产中标签页
+            try {
+                wx.setStorageSync('work_active_tab', 'orders_production');
+                wx.setStorageSync('pending_order_hint', orderId);
+            } catch (e) {
+                console.error('存储失败', e);
+            }
+            wx.switchTab({ url: '/pages/work/index' });
+        } else {
+            // 其他任务默认跳转到扫码页面
+            try {
+                wx.setStorageSync('pending_order_hint', orderId);
+            } catch (e) {
+                console.error('存储失败', e);
+            }
+            wx.switchTab({ url: '/pages/scan/index' });
+        }
     },
 });

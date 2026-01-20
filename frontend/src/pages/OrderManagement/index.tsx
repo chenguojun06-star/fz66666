@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AutoComplete, Button, Card, Col, DatePicker, Form, Input, InputNumber, Row, Select, Space, Tabs, Tag, message } from 'antd';
-import { DeleteOutlined, PlusOutlined, ShoppingCartOutlined } from '@ant-design/icons';
+import { AutoComplete, Button, Card, Col, DatePicker, Form, Input, InputNumber, Modal, Row, Select, Space, Tabs, Tag, message } from 'antd';
+import { ShoppingCartOutlined } from '@ant-design/icons';
 
 import dayjs from 'dayjs';
 import Layout from '../../components/Layout';
@@ -88,10 +88,6 @@ const OrderManagement: React.FC = () => {
   const [orderLines, setOrderLines] = useState<OrderLine[]>([]);
 
   const [progressNodes, setProgressNodes] = useState<ProgressNode[]>(defaultProgressNodes);
-  const [activeNodeId, setActiveNodeId] = useState<string>(() => String(defaultProgressNodes?.[0]?.id || '').trim());
-  const [processNameInput, setProcessNameInput] = useState('');
-  const [processUnitPriceInput, setProcessUnitPriceInput] = useState<number>(0);
-  const [draggingProcessId, setDraggingProcessId] = useState<string>('');
 
   const isMobile = viewportWidth < 768;
   const isTablet = viewportWidth >= 768 && viewportWidth < 1024;
@@ -617,140 +613,17 @@ const OrderManagement: React.FC = () => {
     return orderLines.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0);
   }, [orderLines]);
 
-  const canEditProgressNodes = !submitLoading && !createdOrder;
-
-  const progressNodeTotals = useMemo(() => {
-    const nodes = (Array.isArray(progressNodes) ? progressNodes : []).map((n) => {
-      const processes = Array.isArray(n.processes) ? n.processes : [];
-      const unitPrice = processes.reduce((sum, p) => sum + (Number(p.unitPrice) || 0), 0);
-      return {
-        id: String(n.id),
-        name: String(n.name || '').trim() || '-',
-        unitPrice,
-        processCount: processes.length,
-      };
+  const confirmPricingReady = () =>
+    new Promise<boolean>((resolve) => {
+      Modal.confirm({
+        title: '下单提醒',
+        content: '请确认已在单价流程完善好。',
+        okText: '确认下单',
+        cancelText: '取消',
+        onOk: () => resolve(true),
+        onCancel: () => resolve(false),
+      });
     });
-    const totalUnitPrice = nodes.reduce((sum, n) => sum + (Number(n.unitPrice) || 0), 0);
-    const orderQty = Math.max(0, Number(totalOrderQuantity) || 0);
-    return {
-      totalUnitPrice,
-      orderQty,
-      totalOrderCost: totalUnitPrice * orderQty,
-      nodes,
-    };
-  }, [progressNodes, totalOrderQuantity]);
-
-  const activeNode = useMemo(() => {
-    const id = String(activeNodeId || '').trim();
-    if (!id) return null;
-    return progressNodes.find((n) => String(n.id) === id) || null;
-  }, [activeNodeId, progressNodes]);
-
-  const updateProcessUnitPrice = (nodeId: string, processId: string, nextPrice: number) => {
-    const id = String(nodeId || '').trim();
-    const pid = String(processId || '').trim();
-    if (!id || !pid) return;
-    const price = Number(nextPrice);
-    const safePrice = Number.isFinite(price) && price >= 0 ? price : 0;
-    setProgressNodes((prev) =>
-      prev.map((n) => {
-        if (String(n.id) !== id) return n;
-        const nextProcesses = (Array.isArray(n.processes) ? n.processes : []).map((p) =>
-          String(p.id) === pid ? { ...p, unitPrice: safePrice } : p
-        );
-        return { ...n, processes: nextProcesses };
-      })
-    );
-  };
-
-  const updateProcessName = (nodeId: string, processId: string, nextName: string) => {
-    const id = String(nodeId || '').trim();
-    const pid = String(processId || '').trim();
-    if (!id || !pid) return;
-    const name = String(nextName || '').trim();
-    setProgressNodes((prev) =>
-      prev.map((n) => {
-        if (String(n.id) !== id) return n;
-        const nextProcesses = (Array.isArray(n.processes) ? n.processes : []).map((p) =>
-          String(p.id) === pid ? { ...p, processName: name } : p
-        );
-        return { ...n, processes: nextProcesses };
-      })
-    );
-  };
-
-  const removeProcess = (nodeId: string, processId: string) => {
-    const id = String(nodeId || '').trim();
-    const pid = String(processId || '').trim();
-    if (!id || !pid) return;
-    setProgressNodes((prev) =>
-      prev.map((n) => {
-        if (String(n.id) !== id) return n;
-        const nextProcesses = (Array.isArray(n.processes) ? n.processes : []).filter((p) => String(p.id) !== pid);
-        return { ...n, processes: nextProcesses };
-      })
-    );
-  };
-
-  const moveProcess = (nodeId: string, fromProcessId: string, toProcessId?: string) => {
-    const id = String(nodeId || '').trim();
-    const fromId = String(fromProcessId || '').trim();
-    const toId = String(toProcessId || '').trim();
-    if (!id || !fromId) return;
-
-    setProgressNodes((prev) =>
-      prev.map((n) => {
-        if (String(n.id) !== id) return n;
-        const list = Array.isArray(n.processes) ? [...n.processes] : [];
-        const fromIdx = list.findIndex((p) => String(p.id) === fromId);
-        if (fromIdx < 0) return n;
-        const [picked] = list.splice(fromIdx, 1);
-
-        if (!toId) {
-          return { ...n, processes: [...list, picked] };
-        }
-
-        const toIdx = list.findIndex((p) => String(p.id) === toId);
-        if (toIdx < 0) {
-          return { ...n, processes: [...list, picked] };
-        }
-        list.splice(toIdx, 0, picked);
-        return { ...n, processes: list };
-      })
-    );
-  };
-
-  const addProcess = () => {
-    if (!canEditProgressNodes) return;
-    const nodeId = String(activeNodeId || '').trim();
-    if (!nodeId) {
-      message.error('请先选择一个生产节点');
-      return;
-    }
-    const name = String(processNameInput || '').trim();
-    if (!name) {
-      message.error('请输入工序名称');
-      return;
-    }
-    const currentNode = progressNodes.find((n) => String(n.id) === nodeId);
-    const existsNow = (Array.isArray(currentNode?.processes) ? currentNode!.processes : []).some((p) => String(p.processName || '').trim() === name);
-    if (existsNow) {
-      message.error('工序已存在');
-      return;
-    }
-    const price = Number(processUnitPriceInput);
-    const safePrice = Number.isFinite(price) && price >= 0 ? price : 0;
-    const processId = `${nodeId}-${Date.now()}`;
-    setProgressNodes((prev) =>
-      prev.map((n) => {
-        if (String(n.id) !== nodeId) return n;
-        const list = Array.isArray(n.processes) ? n.processes : [];
-        return { ...n, processes: [...list, { id: processId, processName: name, unitPrice: safePrice }] };
-      })
-    );
-    setProcessNameInput('');
-    setProcessUnitPriceInput(0);
-  };
 
   const buildProgressWorkflowJson = (nodes: ProgressNode[]) => {
     const normalizedNodes = (Array.isArray(nodes) ? nodes : [])
@@ -954,9 +827,6 @@ const OrderManagement: React.FC = () => {
     setActiveTabKey('base');
     setCreatedOrder(null);
     setProgressNodes(defaultProgressNodes);
-    setActiveNodeId(String(defaultProgressNodes?.[0]?.id || '').trim());
-    setProcessNameInput('');
-    setProcessUnitPriceInput(0);
     if (style.id !== undefined && style.id !== null && String(style.id)) {
       fetchBom(style.id);
     } else {
@@ -997,9 +867,6 @@ const OrderManagement: React.FC = () => {
     setActiveTabKey('base');
     setOrderLines([]);
     setProgressNodes(defaultProgressNodes);
-    setActiveNodeId(String(defaultProgressNodes?.[0]?.id || '').trim());
-    setProcessNameInput('');
-    setProcessUnitPriceInput(0);
     form.resetFields();
   };
 
@@ -1383,170 +1250,6 @@ const OrderManagement: React.FC = () => {
                         </Col>
                       </Row>
 
-                      <div style={{ marginTop: 10 }}>
-                        <Card
-                          size="small"
-                          styles={{ body: { padding: 8 } }}
-                          title={<span style={{ fontWeight: 600 }}>工序明细</span>}
-                        >
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                              <div style={{ color: 'rgba(0,0,0,0.65)' }}>
-                                单件工价合计：<span style={{ fontWeight: 600 }}>¥{progressNodeTotals.totalUnitPrice.toFixed(2)}</span>
-                                <span style={{ margin: '0 8px', color: 'rgba(0,0,0,0.35)' }}>·</span>
-                                订单工价合计：<span style={{ fontWeight: 600 }}>¥{progressNodeTotals.totalOrderCost.toFixed(2)}</span>
-                                <span style={{ marginLeft: 8, color: 'rgba(0,0,0,0.35)' }}>（订单数量：{progressNodeTotals.orderQty}）</span>
-                              </div>
-                            </div>
-
-                            <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 'max-content' }}>
-                                {progressNodeTotals.nodes.map((n) => (
-                                  <div key={String(n.id)} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                    <Button
-                                      size="small"
-                                      type={String(activeNodeId || '').trim() === String(n.id) ? 'primary' : 'default'}
-                                      onClick={() => setActiveNodeId(String(n.id))}
-                                      style={{
-                                        width: 68,
-                                        height: 34,
-                                        padding: 0,
-                                        borderRadius: 999,
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                      }}
-                                    >
-                                      {String(n.name || '-')}
-                                    </Button>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-
-                            <div style={{ height: 1, background: 'rgba(0,0,0,0.06)', margin: '6px 0' }} />
-
-                            <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
-                              <div
-                                style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', minWidth: 'max-content' }}
-                                onDragOver={(e) => {
-                                  if (!canEditProgressNodes) return;
-                                  e.preventDefault();
-                                }}
-                                onDrop={(e) => {
-                                  if (!canEditProgressNodes) return;
-                                  e.preventDefault();
-                                  const nodeId = String(activeNode?.id || '').trim();
-                                  const fromId = String(draggingProcessId || '').trim();
-                                  if (!nodeId || !fromId) return;
-                                  moveProcess(nodeId, fromId);
-                                  setDraggingProcessId('');
-                                }}
-                              >
-                                {(Array.isArray(activeNode?.processes) ? activeNode!.processes : []).map((p) => {
-                                  const unitPrice = Number(p.unitPrice) || 0;
-                                  const processName = String(p.processName || '').trim();
-                                  const pid = String(p.id);
-                                  const nodeId = String(activeNode?.id || '').trim();
-                                  const isDragging = String(draggingProcessId || '').trim() === pid;
-
-                                  return (
-                                    <div
-                                      key={pid}
-                                      draggable={canEditProgressNodes}
-                                      onDragStart={(e) => {
-                                        if (!canEditProgressNodes) return;
-                                        setDraggingProcessId(pid);
-                                        try {
-                                          e.dataTransfer.effectAllowed = 'move';
-                                          e.dataTransfer.setData('text/plain', pid);
-                                        } catch {
-                                        }
-                                      }}
-                                      onDragEnd={() => setDraggingProcessId('')}
-                                      onDragOver={(e) => {
-                                        if (!canEditProgressNodes) return;
-                                        e.preventDefault();
-                                      }}
-                                      onDrop={(e) => {
-                                        if (!canEditProgressNodes) return;
-                                        e.preventDefault();
-                                        const fromId = String(draggingProcessId || '').trim();
-                                        if (!nodeId || !fromId || fromId === pid) return;
-                                        moveProcess(nodeId, fromId, pid);
-                                        setDraggingProcessId('');
-                                      }}
-                                      style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 8,
-                                        padding: '2px 10px',
-                                        borderRadius: 999,
-                                        border: '1px solid rgba(0,0,0,0.12)',
-                                        background: '#fff',
-                                        opacity: isDragging ? 0.6 : 1,
-                                      }}
-                                    >
-                                      <Input
-                                        size="small"
-                                        value={processName}
-                                        placeholder="工序"
-                                        variant="borderless"
-                                        disabled={!canEditProgressNodes}
-                                        onChange={(e) => updateProcessName(nodeId, pid, e.target.value)}
-                                        style={{ width: 62, height: 36, borderRadius: 999, fontSize: 12, paddingInline: 10, background: 'transparent' }}
-                                      />
-                                      <InputNumber
-                                        size="small"
-                                        min={0}
-                                        precision={2}
-                                        value={unitPrice}
-                                        variant="borderless"
-                                        disabled={!canEditProgressNodes}
-                                        onChange={(v) => updateProcessUnitPrice(nodeId, pid, Number(v) || 0)}
-                                        style={{ width: 52, height: 36, borderRadius: 999, fontSize: 12, background: 'transparent' }}
-                                      />
-                                      <Button
-                                        type="text"
-                                        size="small"
-                                        danger
-                                        icon={<DeleteOutlined />}
-                                        disabled={!canEditProgressNodes}
-                                        onClick={() => removeProcess(nodeId, pid)}
-                                        style={{ padding: 0, width: 20 }}
-                                      />
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-
-                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                              <Input
-                                size="small"
-                                placeholder="新增工序名称"
-                                value={processNameInput}
-                                disabled={!canEditProgressNodes || !activeNode}
-                                onChange={(e) => setProcessNameInput(e.target.value)}
-                                style={{ width: isMobile ? '100%' : 180 }}
-                              />
-                              <InputNumber
-                                size="small"
-                                placeholder="单价"
-                                min={0}
-                                precision={2}
-                                value={processUnitPriceInput}
-                                disabled={!canEditProgressNodes || !activeNode}
-                                onChange={(v) => setProcessUnitPriceInput(Number(v) || 0)}
-                                style={{ width: 110 }}
-                              />
-                              <Button type="default" size="small" icon={<PlusOutlined />} disabled={!canEditProgressNodes || !activeNode} onClick={addProcess}>
-                                添加工序
-                              </Button>
-                            </div>
-                          </div>
-                        </Card>
-                      </div>
                     </div>
                   </div>
                 )

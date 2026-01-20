@@ -202,10 +202,23 @@ Page({
       null;
     }
     
-    // 检查提醒
-    setTimeout(() => {
-      reminderManager.checkAndShowReminders();
-    }, 500);
+    // 检查是否有pending_order_hint，如果有则显示提示
+    try {
+      const pendingOrderHint = wx.getStorageSync('pending_order_hint');
+      if (pendingOrderHint) {
+        wx.showToast({ 
+          title: `请处理订单: ${pendingOrderHint}`, 
+          icon: 'none',
+          duration: 3000,
+        });
+        wx.removeStorageSync('pending_order_hint');
+      }
+    } catch (e) {
+      console.error('检查pending_order_hint失败', e);
+    }
+    
+    // 加载提醒列表（不弹窗）
+    this.loadReminders();
     
     // 启动订单列表的实时同步 (30 秒轮询一次)
     this.setupOrderSync();
@@ -758,6 +771,12 @@ Page({
         }
       }
     });
+  },
+
+  loadReminders() {
+    // 加载提醒列表（仅更新数据，不显示弹窗）
+    // work页面暂不显示提醒按钮，只在home页面显示
+    // 这里预留接口，未来可以在work页面也添加提醒按钮
   },
 
   onHide() {
