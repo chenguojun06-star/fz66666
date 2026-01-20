@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ThreadLocalRandom;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -138,7 +139,7 @@ public class ProductOutstockServiceImpl extends ServiceImpl<ProductOutstockMappe
 
     private String buildOutstockNo(LocalDateTime now) {
         String ts = now.format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
-        int rand = (int) (Math.random() * 900) + 100;
+        int rand = (int) (ThreadLocalRandom.current().nextDouble() * 900) + 100;
         return "OS" + ts + rand;
     }
 }

@@ -5,6 +5,7 @@ import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -368,7 +369,7 @@ public final class StringUtils {
         String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
         StringBuilder sb = new StringBuilder(length);
         for (int i = 0; i < length; i++) {
-            int index = (int) (Math.random() * chars.length());
+            int index = (int) (ThreadLocalRandom.current().nextDouble() * chars.length());
             sb.append(chars.charAt(index));
         }
         return sb.toString();

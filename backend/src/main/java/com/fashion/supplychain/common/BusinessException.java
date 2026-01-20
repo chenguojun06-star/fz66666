@@ -1,11 +1,14 @@
 package com.fashion.supplychain.common;
 
+import java.io.Serial;
+
 /**
  * 业务异常类
  * 用于处理业务逻辑中的异常情况
  */
 public class BusinessException extends RuntimeException {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /**

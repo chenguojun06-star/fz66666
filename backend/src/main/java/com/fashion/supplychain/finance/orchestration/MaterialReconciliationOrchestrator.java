@@ -22,6 +22,7 @@ import java.util.List;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.time.format.DateTimeFormatter;
 
@@ -517,7 +518,7 @@ public class MaterialReconciliationOrchestrator {
         String p = StringUtils.hasText(prefix) ? prefix.trim() : "NO";
         LocalDateTime t = now == null ? LocalDateTime.now() : now;
         String ts = t.format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
-        int rand = (int) (Math.random() * 900) + 100;
+        int rand = (int) (ThreadLocalRandom.current().nextDouble() * 900) + 100;
         return p + ts + rand;
     }
 }

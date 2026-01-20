@@ -46,8 +46,8 @@ public final class ParamUtils {
         if (v == null) {
             return 0;
         }
-        if (v instanceof Number) {
-            return ((Number) v).intValue();
+        if (v instanceof Number number) {
+            return number.intValue();
         }
         String s = String.valueOf(v);
         if (!StringUtils.hasText(s)) {
@@ -73,8 +73,8 @@ public final class ParamUtils {
             return defaultValue;
         }
 
-        if (v instanceof Number) {
-            return ((Number) v).intValue();
+        if (v instanceof Number number) {
+            return number.intValue();
         }
 
         String s = String.valueOf(v);
@@ -103,8 +103,8 @@ public final class ParamUtils {
             return defaultValue;
         }
 
-        if (v instanceof Number) {
-            return ((Number) v).longValue();
+        if (v instanceof Number number) {
+            return number.longValue();
         }
 
         String s = String.valueOf(v);

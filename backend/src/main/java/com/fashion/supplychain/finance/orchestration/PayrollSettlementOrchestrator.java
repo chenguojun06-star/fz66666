@@ -279,7 +279,7 @@ public class PayrollSettlementOrchestrator {
                 .one();
         int seq = resolveNextSeq(prefix, latest == null ? null : latest.getSettlementNo());
         for (int i = 0; i < 200; i++) {
-            String candidate = prefix + String.format("%03d", seq);
+            String candidate = prefix + "%03d".formatted(seq);
             Long cnt = payrollSettlementService.count(
                     new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<PayrollSettlement>()
                             .eq(PayrollSettlement::getSettlementNo, candidate));
@@ -407,8 +407,8 @@ public class PayrollSettlementOrchestrator {
         if (raw == null) {
             return null;
         }
-        if (raw instanceof Number) {
-            return ((Number) raw).intValue();
+        if (raw instanceof Number number) {
+            return number.intValue();
         }
         String v = normalize(String.valueOf(raw));
         if (!StringUtils.hasText(v)) {
@@ -425,11 +425,11 @@ public class PayrollSettlementOrchestrator {
         if (raw == null) {
             return null;
         }
-        if (raw instanceof BigDecimal) {
-            return (BigDecimal) raw;
+        if (raw instanceof BigDecimal decimal) {
+            return decimal;
         }
-        if (raw instanceof Number) {
-            return BigDecimal.valueOf(((Number) raw).doubleValue());
+        if (raw instanceof Number number) {
+            return BigDecimal.valueOf(number.doubleValue());
         }
         String v = normalize(String.valueOf(raw));
         if (!StringUtils.hasText(v)) {

@@ -147,7 +147,7 @@ public class MaterialPurchaseOrchestrator {
                 : (params.get("orderId") == null ? null : String.valueOf(params.get("orderId")));
         Object orderIdsRaw = params == null ? null : params.get("orderIds");
         Object overwriteRaw = params == null ? null : params.get("overwrite");
-        boolean overwriteFlag = overwriteRaw instanceof Boolean ? (Boolean) overwriteRaw
+        boolean overwriteFlag = overwriteRaw instanceof Boolean b ? b
                 : "true".equalsIgnoreCase(String.valueOf(overwriteRaw));
 
         String oid = null;
@@ -369,8 +369,7 @@ public class MaterialPurchaseOrchestrator {
         if (raw == null) {
             return List.of();
         }
-        if (raw instanceof List) {
-            List<?> list = (List<?>) raw;
+        if (raw instanceof List<?> list) {
             List<String> out = new ArrayList<>();
             for (Object o : list) {
                 if (o == null) {
@@ -419,8 +418,44 @@ public class MaterialPurchaseOrchestrator {
             throw new IllegalStateException("该采购任务已结束，无法领取");
         }
 
+        // 检查是否已被领取
+        String existingReceiverId = purchase.getReceiverId() == null ? null : purchase.getReceiverId().trim();
+        String existingReceiverName = purchase.getReceiverName() == null ? null : purchase.getReceiverName().trim();
+        String rid = StringUtils.hasText(receiverId) ? receiverId.trim() : null;
+        String rname = StringUtils.hasText(receiverName) ? receiverName.trim() : null;
+        
+        boolean alreadyReceived = !"pending".equals(status) && StringUtils.hasText(status);
+        if (alreadyReceived) {
+            // 检查是否是同一个人
+            boolean isSame = false;
+            if (StringUtils.hasText(rid) && StringUtils.hasText(existingReceiverId)) {
+                isSame = rid.equals(existingReceiverId);
+            } else if (StringUtils.hasText(rname) && StringUtils.hasText(existingReceiverName)) {
+                isSame = rname.equals(existingReceiverName);
+            }
+            if (!isSame) {
+                String otherName = StringUtils.hasText(existingReceiverName) ? existingReceiverName : "他人";
+                throw new IllegalStateException("该任务已被「" + otherName + "」领取，无法重复领取");
+            }
+        }
+
         boolean ok = receiveAndSync(purchaseId, receiverId, receiverName);
         if (!ok) {
+            // 再次检查最新状态
+            MaterialPurchase latest = materialPurchaseService.getById(purchaseId);
+            if (latest != null) {
+                String latestReceiverName = latest.getReceiverName() == null ? null : latest.getReceiverName().trim();
+                String latestReceiverId = latest.getReceiverId() == null ? null : latest.getReceiverId().trim();
+                boolean isSameNow = false;
+                if (StringUtils.hasText(rid) && StringUtils.hasText(latestReceiverId)) {
+                    isSameNow = rid.equals(latestReceiverId);
+                } else if (StringUtils.hasText(rname) && StringUtils.hasText(latestReceiverName)) {
+                    isSameNow = rname.equals(latestReceiverName);
+                }
+                if (!isSameNow && StringUtils.hasText(latestReceiverName)) {
+                    throw new IllegalStateException("该任务已被「" + latestReceiverName + "」领取，无法重复领取");
+                }
+            }
             throw new IllegalStateException("领取失败");
         }
 
@@ -743,8 +778,8 @@ public class MaterialPurchaseOrchestrator {
         if (v == null) {
             return null;
         }
-        if (v instanceof Number) {
-            return ((Number) v).intValue();
+        if (v instanceof Number number) {
+            return number.intValue();
         }
         String s = String.valueOf(v).trim();
         if (!StringUtils.hasText(s)) {

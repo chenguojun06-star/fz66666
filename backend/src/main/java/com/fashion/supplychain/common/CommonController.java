@@ -15,7 +15,6 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.UUID;
 
 @RestController
@@ -60,7 +59,7 @@ public class CommonController {
     public ResponseEntity<Resource> downloadFile(@PathVariable String fileName,
             @RequestParam(value = "download", required = false, defaultValue = "0") String download) {
         try {
-            Path baseDir = Paths.get(uploadPath).toAbsolutePath().normalize();
+            Path baseDir = Path.of(uploadPath).toAbsolutePath().normalize();
             Path filePath = baseDir.resolve(fileName).normalize();
             if (!filePath.startsWith(baseDir)) {
                 return ResponseEntity.notFound().build();

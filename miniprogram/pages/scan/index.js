@@ -821,16 +821,22 @@ Page({
             receiverName,
         })));
         const updated = [];
-        let failed = 0;
+        const errors = [];
         results.forEach((r) => {
             if (r.status === 'fulfilled') {
                 if (r.value) updated.push(r.value);
             } else {
-                failed += 1;
+                // 提取错误信息
+                const err = r.reason;
+                const msg = err && err.errMsg ? String(err.errMsg) : '领取失败';
+                if (msg && !errors.includes(msg)) {
+                    errors.push(msg);
+                }
             }
         });
-        if (failed > 0) {
-            wx.showToast({ title: '部分采购领取失败', icon: 'none' });
+        if (errors.length > 0) {
+            // 显示第一个错误的详细信息（例如"该任务已被「XXX」领取"）
+            wx.showToast({ title: errors[0], icon: 'none', duration: 3000 });
         } else if (updated.length > 0) {
             wx.showToast({ title: '采购已领取', icon: 'none' });
         }

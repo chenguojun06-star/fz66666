@@ -16,6 +16,7 @@ import com.fashion.supplychain.production.service.CuttingTaskService;
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.ObjectProvider;
@@ -129,7 +130,7 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
         LocalDateTime now = LocalDateTime.now();
         String ts = now.format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
         for (int i = 0; i < 6; i++) {
-            int rand = (int) (Math.random() * 900) + 100;
+            int rand = (int) (ThreadLocalRandom.current().nextDouble() * 900) + 100;
             String candidate = "ORD" + ts + rand;
             long cnt = this.count(new LambdaQueryWrapper<ProductionOrder>().eq(ProductionOrder::getOrderNo, candidate));
             if (cnt == 0) {

@@ -49,7 +49,7 @@ public class SerialOrchestrator {
 
         int seq = resolveNextSeq(prefix, latest == null ? null : latest.getStyleNo());
         for (int i = 0; i < 200; i++) {
-            String candidate = prefix + String.format("%03d", seq);
+            String candidate = prefix + "%03d".formatted(seq);
             Long cnt = styleInfoService.count(new LambdaQueryWrapper<StyleInfo>()
                     .eq(StyleInfo::getStyleNo, candidate));
             if (cnt == null || cnt == 0) {
@@ -73,7 +73,7 @@ public class SerialOrchestrator {
 
         int seq = resolveNextSeq(prefix, latest == null ? null : latest.getOrderNo());
         for (int i = 0; i < 200; i++) {
-            String candidate = prefix + String.format("%03d", seq);
+            String candidate = prefix + "%03d".formatted(seq);
             Long cnt = productionOrderService.count(new LambdaQueryWrapper<ProductionOrder>()
                     .eq(ProductionOrder::getOrderNo, candidate));
             if (cnt == null || cnt == 0) {

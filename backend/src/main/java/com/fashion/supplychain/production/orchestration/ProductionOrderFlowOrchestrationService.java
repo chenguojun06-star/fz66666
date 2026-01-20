@@ -315,8 +315,8 @@ public class ProductionOrderFlowOrchestrationService {
                 continue;
             }
 
-            ScanRecord first = list.get(0);
-            ScanRecord last = list.get(list.size() - 1);
+            ScanRecord first = list.getFirst();
+            ScanRecord last = list.getLast();
 
             row.put("startTime", first == null ? null : first.getScanTime());
             row.put("startOperatorId", first == null ? null : first.getOperatorId());

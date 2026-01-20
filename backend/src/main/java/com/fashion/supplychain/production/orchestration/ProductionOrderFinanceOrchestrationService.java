@@ -27,6 +27,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ThreadLocalRandom;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
@@ -183,7 +184,7 @@ public class ProductionOrderFinanceOrchestrationService {
                     .eq("production_order_id", oid);
             List<Map<String, Object>> rows = cuttingBundleMapper.selectMaps(qw);
             if (rows != null && !rows.isEmpty()) {
-                Object v = ParamUtils.getIgnoreCase(rows.get(0), "totalQuantity");
+                Object v = ParamUtils.getIgnoreCase(rows.getFirst(), "totalQuantity");
                 cuttingQty = ParamUtils.toIntSafe(v);
             }
         } catch (Exception e) {
@@ -244,7 +245,7 @@ public class ProductionOrderFinanceOrchestrationService {
                     .eq("production_order_id", oid);
             List<Map<String, Object>> rows = cuttingBundleMapper.selectMaps(qw);
             if (rows != null && !rows.isEmpty()) {
-                Object v = ParamUtils.getIgnoreCase(rows.get(0), "totalQuantity");
+                Object v = ParamUtils.getIgnoreCase(rows.getFirst(), "totalQuantity");
                 cuttingQty = ParamUtils.toIntSafe(v);
             }
         } catch (Exception e) {
@@ -679,7 +680,7 @@ public class ProductionOrderFinanceOrchestrationService {
         LocalDateTime t = now == null ? LocalDateTime.now() : now;
         String p = StringUtils.hasText(prefix) ? prefix.trim().toUpperCase() : "NO";
         String ts = t.format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
-        String rand = String.valueOf((int) (Math.random() * 9000) + 1000);
+        String rand = String.valueOf((int) (ThreadLocalRandom.current().nextDouble() * 9000) + 1000);
         return p + ts + rand;
     }
 

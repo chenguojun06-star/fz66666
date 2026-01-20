@@ -527,7 +527,7 @@ public class ProductionOrderQueryService {
                         continue;
                     }
                     String stageName = r[0] == null ? null : String.valueOf(r[0]).trim();
-                    long q = r[1] instanceof Number ? ((Number) r[1]).longValue() : 0L;
+                    long q = r[1] instanceof Number n ? n.longValue() : 0L;
                     if (!StringUtils.hasText(stageName) || q <= 0) {
                         continue;
                     }
@@ -1195,8 +1195,8 @@ public class ProductionOrderQueryService {
         if (v == null) {
             return 0L;
         }
-        if (v instanceof Number) {
-            return ((Number) v).longValue();
+        if (v instanceof Number number) {
+            return number.longValue();
         }
         String s = String.valueOf(v);
         if (!StringUtils.hasText(s)) {
@@ -1213,11 +1213,11 @@ public class ProductionOrderQueryService {
         if (v == null) {
             return null;
         }
-        if (v instanceof LocalDateTime) {
-            return (LocalDateTime) v;
+        if (v instanceof LocalDateTime time) {
+            return time;
         }
-        if (v instanceof java.sql.Timestamp) {
-            return ((java.sql.Timestamp) v).toLocalDateTime();
+        if (v instanceof java.sql.Timestamp timestamp) {
+            return timestamp.toLocalDateTime();
         }
         return null;
     }

@@ -8,7 +8,7 @@ export const formValidationRules = {
   username: [
     { required: true, message: '请输入用户名' },
     { min: 3, max: 20, message: '用户名长度在 3-20 个字符' },
-    { pattern: /^[a-zA-Z0-9_\-]+$/, message: '用户名只能包含字母、数字、下划线和中划线' }
+    { pattern: /^[a-zA-Z0-9_-]+$/, message: '用户名只能包含字母、数字、下划线和中划线' }
   ],
 
   password: [
@@ -29,7 +29,7 @@ export const formValidationRules = {
   phone: [
     { required: false, message: '请输入手机号' },
     {
-      validator: (_, value) => {
+      validator: (_: any, value: any) => {
         if (!value) return Promise.resolve();
         if (!/^1\d{10}$/.test(value)) {
           return Promise.reject(new Error('请输入有效的手机号'));
@@ -70,7 +70,7 @@ export const formValidationRules = {
   quantity: [
     { required: true, message: '请输入数量' },
     {
-      validator: (_, value) => {
+      validator: (_: any, value: any) => {
         if (!value) return Promise.reject(new Error('请输入数量'));
         const n = Number(value);
         if (!Number.isInteger(n) || n <= 0) {
@@ -87,7 +87,7 @@ export const formValidationRules = {
   unitPrice: [
     { required: false, message: '请输入单价' },
     {
-      validator: (_, value) => {
+      validator: (_: any, value: any) => {
         if (!value && value !== 0) return Promise.resolve();
         const n = Number(value);
         if (!Number.isFinite(n) || n < 0) {
@@ -164,7 +164,7 @@ export const formValidationRules = {
   // 可选电话
   optionalPhone: [
     {
-      validator: (_, value) => {
+      validator: (_: any, value: any) => {
         if (!value) return Promise.resolve();
         if (!/^\d{7,20}$/.test(value.replace(/[-\s]/g, ''))) {
           return Promise.reject(new Error('请输入有效的电话号码'));
@@ -177,7 +177,7 @@ export const formValidationRules = {
   // 可选邮箱
   optionalEmail: [
     {
-      validator: (_, value) => {
+      validator: (_: any, value: any) => {
         if (!value) return Promise.resolve();
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
           return Promise.reject(new Error('请输入有效的邮箱地址'));

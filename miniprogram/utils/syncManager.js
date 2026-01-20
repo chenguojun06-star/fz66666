@@ -25,26 +25,24 @@ class SyncManager {
    * @param {string} taskId - 任务 ID（唯一）
    * @param {Function} fetchFn - 获取数据的函数 (async)
    * @param {number} interval - 同步间隔（毫秒），默认 30000ms
-   * @param {Object} options - 选项
-   * @param {Function} options.onDataChange - 数据变化回调
-   * @param {Function} options.onError - 错误回调
-   * @param {Function} options.compareData - 自定义数据比较函数
    * @returns {boolean} 是否启动成功
    */
-  startSync(taskId, fetchFn, interval = 30000, options = {}) {
+  startSync(taskId, fetchFn, interval = 30000, options) {
     if (!taskId || !fetchFn) return false;
     if (this.syncTasks.has(taskId)) {
       console.warn(`[SyncManager] Task ${taskId} already running`);
       return false;
     }
 
+    const opts = options || {};
+
     const config = {
       taskId,
       fetchFn,
       interval: Math.max(interval, 5000), // 最少 5s
-      onDataChange: options.onDataChange || null,
-      onError: options.onError || null,
-      compareData: options.compareData || this._defaultCompare
+      onDataChange: opts.onDataChange || null,
+      onError: opts.onError || null,
+      compareData: opts.compareData || this._defaultCompare
     };
 
     // 立即执行一次
@@ -99,7 +97,7 @@ class SyncManager {
    * @returns {Function} 取消监听函数
    */
   onDataChange(taskId, callback) {
-    if (!taskId || !callback) return () => {};
+    if (!taskId || !callback) return () => { };
 
     if (!this.listeners.has(taskId)) {
       this.listeners.set(taskId, new Set());
