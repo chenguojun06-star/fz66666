@@ -197,7 +197,7 @@
       
       <!-- 分组详情：展开显示 -->
       <view wx:if="{{item.expanded}}" class="hist-group-details">
-        <view wx:for="{{item.items}}" wx:for-item="record" wx:key="id" class="hist-detail-item">
+        <view wx:for="{{item.items}}" wx:for-item="record" wx:for-index="recordIdx" wx:key="id" class="hist-detail-item">
           <view class="hdi-row">
             <text class="hdi-label">颜色:</text>
             <text class="hdi-value">{{record.color || '-'}}</text>
@@ -212,8 +212,8 @@
           </view>
           <view class="hdi-row">
             <text class="hdi-time">{{record.createdAt || record.scanTime || record.time}}</text>
-            <view wx:if="{{record.scanType === 'quality' && record.qualityResult === 'pending'}}" class="hdi-action" bindtap="onHandleQuality" data-item="{{record}}">处理</view>
-            <view wx:if="{{record.isProcurement && !record.procurementCompleted}}" class="hdi-action" bindtap="onHandleProcurement" data-item="{{record}}">处理</view>
+            <view wx:if="{{record.scanType === 'quality' && record.qualityResult === 'pending'}}" class="hdi-action" bindtap="onHandleQuality" data-group-id="{{item.id}}" data-record-idx="{{recordIdx}}">处理</view>
+            <view wx:if="{{record.isProcurement && !record.procurementCompleted}}" class="hdi-action" bindtap="onHandleProcurement" data-group-id="{{item.id}}" data-record-idx="{{recordIdx}}">处理</view>
           </view>
         </view>
       </view>

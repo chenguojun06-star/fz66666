@@ -1755,11 +1755,22 @@ Page({
      * 打开质检处理弹窗
      */
     onHandleQuality(e) {
-        const item = e.currentTarget.dataset.item;
-        if (!item) return;
+        const groupId = e.currentTarget.dataset.groupId;
+        const recordIdx = e.currentTarget.dataset.recordIdx;
         
-        // 调试输出
-        console.log('质检处理 - 原始数据:', item);
+        console.log('质检处理 - groupId:', groupId, 'recordIdx:', recordIdx);
+        
+        // 从groupedHistory中找到对应的记录
+        const groupedHistory = this.data.my.groupedHistory || [];
+        const group = groupedHistory.find(g => g.id === groupId);
+        
+        if (!group || !Array.isArray(group.items) || recordIdx >= group.items.length) {
+            wx.showToast({ title: '记录不存在', icon: 'none' });
+            return;
+        }
+        
+        const item = group.items[recordIdx];
+        console.log('质检处理 - 记录数据:', item);
 
         this.setData({
             qualityModal: {
@@ -1927,14 +1938,22 @@ Page({
      * 打开物料采购处理弹窗
      */
     async onHandleProcurement(e) {
-        const item = e.currentTarget.dataset.item;
-        if (!item) {
-            wx.showToast({ title: '数据不完整', icon: 'none' });
+        const groupId = e.currentTarget.dataset.groupId;
+        const recordIdx = e.currentTarget.dataset.recordIdx;
+        
+        console.log('物料采购处理 - groupId:', groupId, 'recordIdx:', recordIdx);
+        
+        // 从groupedHistory中找到对应的记录
+        const groupedHistory = this.data.my.groupedHistory || [];
+        const group = groupedHistory.find(g => g.id === groupId);
+        
+        if (!group || !Array.isArray(group.items) || recordIdx >= group.items.length) {
+            wx.showToast({ title: '记录不存在', icon: 'none' });
             return;
         }
         
-        // 调试输出
-        console.log('物料采购处理 - 原始数据:', item);
+        const item = group.items[recordIdx];
+        console.log('物料采购处理 - 记录数据:', item);
         
         const orderNo = item.orderNo || item.order_no || '';
         if (!orderNo) {
