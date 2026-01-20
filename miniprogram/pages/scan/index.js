@@ -754,6 +754,17 @@ Page({
             if (data && data.success === false) {
                 unmarkRecent(dedupKey);
             } else {
+                // 质检领取成功后添加提醒
+                const orderNo = oi.orderNo || sr.orderNo || (detail && detail.orderNo) || '';
+                const processName = sr.processName || (detail && detail.processName) || '';
+                if (!isDuplicate && payload.scanType === 'quality' && orderNo) {
+                    reminderManager.addReminder({
+                        orderId: orderNo,
+                        type: '质检',
+                        timestamp: Date.now(),
+                    });
+                }
+                
                 markRecent(dedupKey, 8000);
                 const expireAt = Date.now() + 15000;
                 this.setData({ undo: { ...this.data.undo, canUndo: true, loading: false, expireAt, payload } });
@@ -1342,24 +1353,12 @@ Page({
             if (stage.processCode) payload.processCode = stage.processCode;
 
             if (scanType === 'warehouse') payload.warehouse = warehouse;
+            // 质检环节：扫码只是领取任务，不提交质检结果
+            // 质检结果在"我的任务"中填写
             if (scanType === 'quality') {
-                payload.qualityResult = qualityResult;
-                payload.remark = `qualityResult=${qualityResult}`;
-                if (qualityResult === 'repaired') {
-                    payload.repairRemark = '返修完成';
-                }
-                if (qualityResult === 'unqualified') {
-                    const opts = Array.isArray(this.data.defectCategoryOptions) ? this.data.defectCategoryOptions : [];
-                    const idx = Number.isFinite(Number(this.data.defectCategoryIndex)) ? Number(this.data.defectCategoryIndex) : 0;
-                    const safe = opts.length ? Math.min(Math.max(0, idx), opts.length - 1) : 0;
-                    payload.defectCategory = opts[safe] && opts[safe].value ? opts[safe].value : '';
-                    const remarkOpts = Array.isArray(this.data.defectRemarkOptions) ? this.data.defectRemarkOptions : [];
-                    const rIdx = Number.isFinite(Number(this.data.defectRemarkIndex)) ? Number(this.data.defectRemarkIndex) : 0;
-                    const rSafe = remarkOpts.length ? Math.min(Math.max(0, rIdx), remarkOpts.length - 1) : 0;
-                    payload.defectRemark = remarkOpts[rSafe] && remarkOpts[rSafe].value ? String(remarkOpts[rSafe].value).trim() : '';
-                    const imgs = Array.isArray(this.data.defectImageUrls) ? this.data.defectImageUrls : [];
-                    if (imgs.length) payload.unqualifiedImageUrls = JSON.stringify(imgs);
-                }
+                // 默认设置为待质检状态，不填写具体结果
+                payload.qualityResult = 'pending'; // 待质检
+                payload.remark = 'quality_received'; // 已领取质检任务
             }
 
             const detail = {
