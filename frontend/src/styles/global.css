@@ -476,6 +476,16 @@ body {
 
 .ant-modal {
   max-width: calc(100vw - 24px);
+  /* 强制所有设备居中显示，不要底部弹出 */
+  top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* 确保centered属性在移动端也生效 */
+.ant-modal-wrap .ant-modal.ant-modal-centered {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 .ant-modal-content {

@@ -56,12 +56,7 @@ Page({
     data: {
         loading: false,
         statsLoaded: false,
-        filters: {
-            startDate: '',
-            endDate: '',
-            brand: '',
-            factory: '',
-        },
+        keyword: '',
         stats: {
             styleCount: 0,
             productionCount: 0,
@@ -94,50 +89,26 @@ Page({
         this.loadStats();
     },
 
-    onStartDateChange(e) {
-        const v = e && e.detail ? e.detail.value : '';
-        this.setData({ 'filters.startDate': v || '' });
+    onKeywordInput(e) {
+        this.setData({ keyword: (e && e.detail && e.detail.value) || '' });
     },
 
-    onEndDateChange(e) {
-        const v = e && e.detail ? e.detail.value : '';
-        this.setData({ 'filters.endDate': v || '' });
+    queryByKeyword() {
+        this.loadStats();
     },
 
-    onBrandInput(e) {
-        this.setData({ 'filters.brand': (e && e.detail && e.detail.value) || '' });
-    },
-
-    onFactoryInput(e) {
-        this.setData({ 'filters.factory': (e && e.detail && e.detail.value) || '' });
-    },
-
-    resetFilters() {
-        this.setData({
-            filters: {
-                startDate: '',
-                endDate: '',
-                brand: '',
-                factory: '',
-            },
-        });
+    resetKeyword() {
+        this.setData({ keyword: '' });
         this.loadStats();
     },
 
     buildDashboardParams() {
-        const f = {
-            startDate: '',
-            endDate: '',
-            brand: '',
-            factory: '',
-            ...(this.data.filters || {}),
+        const raw = String(this.data.keyword || '').trim();
+        if (!raw) return {};
+        return {
+            brand: raw,
+            factory: raw,
         };
-        const params = {};
-        if (f.startDate) params.startDate = String(f.startDate);
-        if (f.endDate) params.endDate = String(f.endDate);
-        if (f.brand) params.brand = String(f.brand).trim();
-        if (f.factory) params.factory = String(f.factory).trim();
-        return params;
     },
 
     goWork(e) {
