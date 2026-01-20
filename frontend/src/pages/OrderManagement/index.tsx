@@ -873,6 +873,8 @@ const OrderManagement: React.FC = () => {
   const handleSubmit = async () => {
     if (!selectedStyle) return;
     try {
+      const confirmed = await confirmPricingReady();
+      if (!confirmed) return;
       setSubmitLoading(true);
 
       if (!orderLines.length) {
