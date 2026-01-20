@@ -119,6 +119,7 @@ public class ProductionOrderOrchestrator {
 
     public boolean saveOrUpdateOrder(ProductionOrder productionOrder) {
         boolean isCreate = productionOrder != null && !StringUtils.hasText(productionOrder.getId());
+        validateUnitPriceSources(productionOrder);
         boolean ok = productionOrderService.saveOrUpdateOrder(productionOrder);
         if (!ok) {
             throw new IllegalStateException("操作失败");
@@ -155,6 +156,82 @@ public class ProductionOrderOrchestrator {
         }
 
         return true;
+    }
+
+    private void validateUnitPriceSources(ProductionOrder productionOrder) {
+        if (productionOrder == null) {
+            throw new IllegalArgumentException("参数错误");
+        }
+        String details = safeText(productionOrder.getOrderDetails());
+        if (!StringUtils.hasText(details)) {
+            throw new IllegalStateException("订单明细缺少物料价格来源信息");
+        }
+        List<Map<String, Object>> lines = resolveOrderLines(details);
+        if (lines == null || lines.isEmpty()) {
+            throw new IllegalStateException("订单明细缺少物料价格来源信息");
+        }
+        for (Map<String, Object> r : lines) {
+            if (r == null || r.isEmpty()) {
+                continue;
+            }
+            String source = pickFirstText(r, "materialPriceSource", "material_price_source", "materialPrice来源", "物料价格来源");
+            String acquiredAt = pickFirstText(r, "materialPriceAcquiredAt", "material_price_acquired_at", "materialPriceTime", "物料价格获取时间");
+            String version = pickFirstText(r, "materialPriceVersion", "material_price_version", "materialPriceVer", "物料价格版本");
+            if (!StringUtils.hasText(source) || !"物料采购系统".equals(source.trim())) {
+                throw new IllegalStateException("物料价格来源必须为物料采购系统");
+            }
+            if (!StringUtils.hasText(acquiredAt)) {
+                throw new IllegalStateException("物料价格获取时间不能为空");
+            }
+            if (!StringUtils.hasText(version)) {
+                throw new IllegalStateException("物料价格版本不能为空");
+            }
+        }
+    }
+
+    private List<Map<String, Object>> resolveOrderLines(String details) {
+        if (!StringUtils.hasText(details)) {
+            return List.of();
+        }
+        try {
+            List<Map<String, Object>> list = objectMapper.readValue(details,
+                    new TypeReference<List<Map<String, Object>>>() {
+                    });
+            if (list != null) {
+                return list;
+            }
+        } catch (Exception ignore) {
+        }
+        try {
+            Map<String, Object> obj = objectMapper.readValue(details, new TypeReference<Map<String, Object>>() {
+            });
+            Object lines = obj == null ? null
+                    : (obj.get("lines") != null ? obj.get("lines")
+                            : (obj.get("items") != null ? obj.get("items")
+                                    : (obj.get("details") != null ? obj.get("details") : obj.get("list"))));
+            if (lines instanceof List) {
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> cast = (List<Map<String, Object>>) lines;
+                return cast;
+            }
+        } catch (Exception ignore) {
+        }
+        return List.of();
+    }
+
+    private String pickFirstText(Map<String, Object> row, String... keys) {
+        if (row == null || keys == null) {
+            return "";
+        }
+        for (String k : keys) {
+            if (!StringUtils.hasText(k)) {
+                continue;
+            }
+            if (row.containsKey(k)) {
+                return safeText(row.get(k));
+            }
+        }
+        return "";
     }
 
     private void generateWorkorderAttachmentOnCreate(ProductionOrder order) {
@@ -285,9 +362,6 @@ public class ProductionOrderOrchestrator {
         String orderNo = safeText(order == null ? null : order.getOrderNo());
         String color = safeText(order == null ? null : order.getColor());
         String qrValue = safeText(order == null ? null : order.getQrCode());
-        if (!StringUtils.hasText(qrValue)) {
-            qrValue = orderNo;
-        }
         String qrUrl = buildQrPngDataUri(qrValue);
         if (!StringUtils.hasText(qrUrl) && StringUtils.hasText(qrValue)) {
             qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data="
