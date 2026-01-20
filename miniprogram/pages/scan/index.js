@@ -1786,7 +1786,8 @@ Page({
             color: item.color || '-',
             size: item.size || '-',
             quantity: item.quantity || item.qty || 0,
-            scanId: item.id || item.scanId || '',
+            scanCode: item.scanCode || '', // 菲号（扫码内容）
+            recordId: item.id || '', // 记录ID
         };
 
         this.setData({
@@ -1944,7 +1945,7 @@ Page({
         try {
             // 构建提交数据 - 匹配后端execute接口参数
             const payload = {
-                scanCode: qualityModal.detail.scanId, // 扫码ID
+                scanCode: qualityModal.detail.scanCode, // 菲号（扫码内容），不是记录ID！
                 scanType: 'quality',
                 orderNo: qualityModal.detail.orderNo,
                 styleNo: qualityModal.detail.styleNo,
