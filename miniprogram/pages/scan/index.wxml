@@ -127,8 +127,9 @@
         <text class="hist-detail">{{item.styleNo || '-'}} · {{item.color || '-'}} · {{item.size || '-'}}</text>
       </view>
       <view class="hist-right">
-        <text class="hist-tag">{{item.processName || item.progressStage || '-'}}</text>
+        <text class="hist-tag {{item.scanType === 'quality' && item.qualityResult === 'pending' ? 'pending' : ''}}">{{item.processName || item.progressStage || '-'}}</text>
         <text class="hist-qty">×{{item.quantity || 0}}</text>
+        <view wx:if="{{item.scanType === 'quality' && item.qualityResult === 'pending'}}" class="hist-action" bindtap="onHandleQuality" data-item="{{item}}">处理</view>
       </view>
     </view>
     <view class="load-more" bindtap="loadMoreMyHistory">
@@ -150,7 +151,7 @@
           <view class="cf-item"><text class="cf-k">二维码</text><text class="cf-v mono">{{scanConfirm.detail.scanCode}}</text></view>
           <view wx:if="{{!scanConfirm.detail.isProcurement}}" class="cf-item">
             <text class="cf-k">数量</text>
-            <input class="cf-input" type="number" placeholder="请输入数量" value="{{scanConfirm.detail.quantity}}" bindinput="onModalQuantityInput" />
+            <text class="cf-v">{{scanConfirm.detail.quantity}}</text>
           </view>
           <view wx:if="{{scanConfirm.detail.orderNo}}" class="cf-item"><text class="cf-k">订单</text><text class="cf-v hl">{{scanConfirm.detail.orderNo}}</text></view>
           <view wx:if="{{scanConfirm.detail.styleNo}}" class="cf-item"><text class="cf-k">款号</text><text class="cf-v">{{scanConfirm.detail.styleNo}}</text></view>
@@ -190,6 +191,86 @@
           {{scanConfirm.loading ? '...' : (scanConfirm.detail.isProcurement ? '领取并提交' : (scanTypeOptions[scanTypeIndex].value === 'quality' ? '领取' : '确认'))}}
         </view>
       </view>
+    </view>
+  </view>
+</view>
+
+<!-- 质检处理弹窗 -->
+<view class="modal-backdrop" wx:if="{{qualityModal.show}}" catchtap="closeQualityModal"></view>
+<view class="modal-wrap quality-modal {{qualityModal.show ? 'show' : ''}}">
+  <view class="modal-container" catchtap="stopPropagation">
+    <view class="modal-header">
+      <text class="modal-title">质检结果</text>
+      <view class="modal-close" catchtap="closeQualityModal">×</view>
+    </view>
+    
+    <view class="modal-body">
+      <!-- 订单信息 -->
+      <view class="qm-info">
+        <text class="qm-label">订单号：</text>
+        <text class="qm-value">{{qualityModal.detail.orderNo}}</text>
+      </view>
+      <view class="qm-info">
+        <text class="qm-label">款号：</text>
+        <text class="qm-value">{{qualityModal.detail.styleNo}} · {{qualityModal.detail.color}} · {{qualityModal.detail.size}}</text>
+      </view>
+      <view class="qm-info">
+        <text class="qm-label">数量：</text>
+        <text class="qm-value">{{qualityModal.detail.quantity}}</text>
+      </view>
+
+      <!-- 合格/次品选择 -->
+      <view class="qm-section">
+        <text class="qm-section-title">检验结果</text>
+        <view class="qm-radio-group">
+          <view class="qm-radio {{qualityModal.result === 'qualified' ? 'active' : ''}}" bindtap="onSelectQualityResult" data-value="qualified">
+            <text class="qm-radio-icon">{{qualityModal.result === 'qualified' ? '✓' : ''}}</text>
+            <text>合格</text>
+          </view>
+          <view class="qm-radio {{qualityModal.result === 'defective' ? 'active' : ''}}" bindtap="onSelectQualityResult" data-value="defective">
+            <text class="qm-radio-icon">{{qualityModal.result === 'defective' ? '✓' : ''}}</text>
+            <text>次品</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 次品详情 -->
+      <view wx:if="{{qualityModal.result === 'defective'}}" class="qm-defective">
+        <view class="qm-field">
+          <text class="qm-field-label">次品数量</text>
+          <input class="qm-input" type="number" placeholder="请输入次品数量" value="{{qualityModal.defectiveQuantity}}" bindinput="onDefectiveQuantityInput" />
+        </view>
+        
+        <view class="qm-field">
+          <text class="qm-field-label">问题类型</text>
+          <picker mode="multiSelector" range="{{defectTypes}}" value="{{qualityModal.selectedDefectTypes}}" bindchange="onDefectTypesChange">
+            <view class="qm-picker">
+              <text class="qm-picker-value">{{qualityModal.defectTypesText || '请选择问题类型'}}</text>
+              <text class="qm-picker-arrow">›</text>
+            </view>
+          </picker>
+        </view>
+
+        <view class="qm-field">
+          <text class="qm-field-label">处理方式</text>
+          <picker mode="selector" range="{{handleMethods}}" value="{{qualityModal.handleMethod}}" bindchange="onHandleMethodChange">
+            <view class="qm-picker">
+              <text class="qm-picker-value">{{handleMethods[qualityModal.handleMethod] || '请选择处理方式'}}</text>
+              <text class="qm-picker-arrow">›</text>
+            </view>
+          </picker>
+        </view>
+
+        <view class="qm-field">
+          <text class="qm-field-label">备注</text>
+          <textarea class="qm-textarea" placeholder="请输入备注信息（选填）" value="{{qualityModal.remark}}" bindinput="onRemarkInput" maxlength="200"></textarea>
+        </view>
+      </view>
+    </view>
+
+    <view class="modal-footer">
+      <button class="modal-btn cancel" bindtap="closeQualityModal">取消</button>
+      <button class="modal-btn confirm" bindtap="submitQualityResult">提交</button>
     </view>
   </view>
 </view>

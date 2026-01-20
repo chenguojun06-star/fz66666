@@ -411,6 +411,23 @@ Page({
             loading: false,
             materialPurchases: [], // 面料采购列表
         },
+        // 质检处理弹窗
+        qualityModal: {
+            show: false,
+            detail: {}, // 订单详情
+            result: '', // 'qualified' | 'defective'
+            defectiveQuantity: '', // 次品数量
+            selectedDefectTypes: [], // 已选择的问题类型索引
+            defectTypesText: '', // 问题类型显示文本
+            handleMethod: 0, // 处理方式索引
+            remark: '', // 备注
+        },
+        // 次品问题类型选项
+        defectTypes: [
+            ['外观完整性问题', '尺寸精度问题', '工艺规范性问题', '功能有效性问题', '其他问题']
+        ],
+        // 处理方式选项
+        handleMethods: ['返修', '报废'],
     },
 
     onShow() {
@@ -1440,6 +1457,181 @@ Page({
         } catch (e) {
             const statusCode = e && e.type === 'http' ? Number(e.statusCode) : NaN;
             const unsupported = statusCode === 404 || statusCode === 405;
+            wx.showToast({ title: unsupported ? '暂不支持撤销' : '撤销失败', icon: 'none' });
+            this.setData({ undo: { ...this.data.undo, loading: false } });
+        }
+    },
+
+    // ==================== 质检处理相关 ====================
+    
+    /**
+     * 打开质检处理弹窗
+     */
+    onHandleQuality(e) {
+        const item = e.currentTarget.dataset.item;
+        if (!item) return;
+
+        this.setData({
+            qualityModal: {
+                show: true,
+                detail: {
+                    orderNo: item.orderNo,
+                    styleNo: item.styleNo,
+                    color: item.color,
+                    size: item.size,
+                    quantity: item.quantity,
+                    scanId: item.id, // 保存扫码记录ID，用于提交时关联
+                },
+                result: '',
+                defectiveQuantity: '',
+                selectedDefectTypes: [],
+                defectTypesText: '',
+                handleMethod: 0,
+                remark: '',
+            }
+        });
+    },
+
+    /**
+     * 关闭质检处理弹窗
+     */
+    closeQualityModal() {
+        this.setData({
+            'qualityModal.show': false
+        });
+    },
+
+    /**
+     * 阻止事件冒泡
+     */
+    stopPropagation() {
+        // 阻止点击弹窗内容区域时关闭弹窗
+    },
+
+    /**
+     * 选择质检结果
+     */
+    onSelectQualityResult(e) {
+        const value = e.currentTarget.dataset.value;
+        this.setData({
+            'qualityModal.result': value
+        });
+    },
+
+    /**
+     * 次品数量输入
+     */
+    onDefectiveQuantityInput(e) {
+        this.setData({
+            'qualityModal.defectiveQuantity': e.detail.value
+        });
+    },
+
+    /**
+     * 问题类型选择
+     */
+    onDefectTypesChange(e) {
+        const indices = e.detail.value;
+        const selectedTypes = indices.map(idx => this.data.defectTypes[0][idx]);
+        
+        this.setData({
+            'qualityModal.selectedDefectTypes': indices,
+            'qualityModal.defectTypesText': selectedTypes.join('、')
+        });
+    },
+
+    /**
+     * 处理方式选择
+     */
+    onHandleMethodChange(e) {
+        this.setData({
+            'qualityModal.handleMethod': e.detail.value
+        });
+    },
+
+    /**
+     * 备注输入
+     */
+    onRemarkInput(e) {
+        this.setData({
+            'qualityModal.remark': e.detail.value
+        });
+    },
+
+    /**
+     * 提交质检结果
+     */
+    async submitQualityResult() {
+        const { qualityModal } = this.data;
+        
+        // 验证
+        if (!qualityModal.result) {
+            wx.showToast({ title: '请选择检验结果', icon: 'none' });
+            return;
+        }
+
+        if (qualityModal.result === 'defective') {
+            if (!qualityModal.defectiveQuantity || qualityModal.defectiveQuantity <= 0) {
+                wx.showToast({ title: '请输入次品数量', icon: 'none' });
+                return;
+            }
+            
+            if (Number(qualityModal.defectiveQuantity) > Number(qualityModal.detail.quantity)) {
+                wx.showToast({ title: '次品数量不能超过总数量', icon: 'none' });
+                return;
+            }
+
+            if (!qualityModal.defectTypesText) {
+                wx.showToast({ title: '请选择问题类型', icon: 'none' });
+                return;
+            }
+        }
+
+        wx.showLoading({ title: '提交中...', mask: true });
+
+        try {
+            // 构建提交数据
+            const payload = {
+                scanId: qualityModal.detail.scanId,
+                orderNo: qualityModal.detail.orderNo,
+                styleNo: qualityModal.detail.styleNo,
+                color: qualityModal.detail.color,
+                size: qualityModal.detail.size,
+                quantity: qualityModal.detail.quantity,
+                qualityResult: qualityModal.result,
+            };
+
+            // 次品详情
+            if (qualityModal.result === 'defective') {
+                payload.defectiveQuantity = Number(qualityModal.defectiveQuantity);
+                payload.defectTypes = qualityModal.defectTypesText;
+                payload.handleMethod = this.data.handleMethods[qualityModal.handleMethod];
+                payload.remark = qualityModal.remark;
+            }
+
+            // 调用API提交质检结果
+            await api.production.submitQualityResult(payload);
+
+            wx.hideLoading();
+            wx.showToast({ title: '提交成功', icon: 'success' });
+
+            // 移除提醒
+            reminderManager.removeRemindersByOrder(qualityModal.detail.orderNo, '质检');
+
+            // 关闭弹窗
+            this.closeQualityModal();
+
+            // 刷新扫码记录
+            await this.loadHistoryRecords();
+
+        } catch (e) {
+            wx.hideLoading();
+            const msg = errorHandler.getDisplayMessage(e);
+            wx.showToast({ title: msg, icon: 'none', duration: 2000 });
+        }
+    },
+});
+
             this.setData({ undo: { ...this.data.undo, loading: false, canUndo: !unsupported } });
             if (unsupported) {
                 wx.showModal({

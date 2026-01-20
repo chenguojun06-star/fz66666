@@ -535,9 +535,24 @@ page {
   border-radius: 6px;
   font-size: 10px;
 }
+.hist-tag.pending {
+  color: #ff9800;
+  background: #fff3e0;
+  font-weight: 500;
+}
 .hist-qty {
   font-size: 12px;
   color: #666;
+  font-weight: 500;
+}
+.hist-action {
+  font-size: 10px;
+  color: #1890ff;
+  padding: 3px 8px;
+  border: 1px solid #1890ff;
+  border-radius: 4px;
+  margin-left: 4px;
+  background: #e6f7ff;
   font-weight: 500;
 }
 .load-more {
@@ -823,4 +838,146 @@ page {
 }
 .mbtn.ok.off {
   opacity: 0.5;
+}
+
+/* 质检处理弹窗 */
+.quality-modal .modal-container {
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.qm-info {
+  display: flex;
+  align-items: center;
+  padding: 8px 0;
+  font-size: 13px;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.qm-label {
+  color: #999;
+  width: 70px;
+  flex-shrink: 0;
+}
+
+.qm-value {
+  color: #333;
+  font-weight: 500;
+}
+
+.qm-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.qm-section-title {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 12px;
+}
+
+.qm-radio-group {
+  display: flex;
+  gap: 12px;
+}
+
+.qm-radio {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #666;
+  background: #fff;
+  transition: all 0.2s;
+}
+
+.qm-radio.active {
+  border-color: #1890ff;
+  background: #e6f7ff;
+  color: #1890ff;
+  font-weight: 500;
+}
+
+.qm-radio-icon {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d9d9d9;
+  border-radius: 50%;
+  font-size: 12px;
+  color: #fff;
+}
+
+.qm-radio.active .qm-radio-icon {
+  background: #1890ff;
+  border-color: #1890ff;
+}
+
+.qm-defective {
+  margin-top: 16px;
+}
+
+.qm-field {
+  margin-bottom: 16px;
+}
+
+.qm-field-label {
+  display: block;
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.qm-input {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 14px;
+  background: #fff;
+}
+
+.qm-picker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.qm-picker-value {
+  font-size: 14px;
+  color: #333;
+  flex: 1;
+}
+
+.qm-picker-arrow {
+  font-size: 20px;
+  color: #999;
+  transform: rotate(90deg);
+}
+
+.qm-textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 14px;
+  background: #fff;
+  line-height: 1.6;
 }

@@ -70,6 +70,9 @@ const production = {
     updateArrivedQuantity(payload) {
         return ok('/api/production/purchase/update-arrived-quantity', 'POST', payload || {});
     },
+    submitQualityResult(payload) {
+        return ok('/api/production/quality/submit-result', 'POST', payload || {});
+    },
     async undoScan(payload) {
         const data = payload || {};
         const candidates = ['/api/production/scan/undo', '/api/production/scan/revoke', '/api/production/scan/cancel'];
