@@ -4,35 +4,16 @@
     <view class="home-actions">
       <view class="btn-secondary {{loading ? 'btn-disabled' : ''}}" bindtap="refresh">刷新</view>
     </view>
-    <view class="home-section-title">筛选</view>
+    <view class="home-section-title">搜索</view>
     <view class="home-filter">
       <view class="filter-row">
-        <view class="filter-field">
-          <view class="filter-label">开始日期</view>
-          <picker mode="date" value="{{filters.startDate}}" bindchange="onStartDateChange">
-            <view class="filter-input">{{filters.startDate || '选择开始日期'}}</view>
-          </picker>
-        </view>
-        <view class="filter-field">
-          <view class="filter-label">结束日期</view>
-          <picker mode="date" value="{{filters.endDate}}" bindchange="onEndDateChange">
-            <view class="filter-input">{{filters.endDate || '选择结束日期'}}</view>
-          </picker>
-        </view>
-      </view>
-      <view class="filter-row">
-        <view class="filter-field">
-          <view class="filter-label">品牌</view>
-          <input class="filter-text" placeholder="品牌" value="{{filters.brand}}" bindinput="onBrandInput" />
-        </view>
-        <view class="filter-field">
-          <view class="filter-label">加工厂</view>
-          <input class="filter-text" placeholder="加工厂" value="{{filters.factory}}" bindinput="onFactoryInput" />
+        <view class="filter-field" style="grid-column: 1 / span 2;">
+          <input class="filter-text" placeholder="输入订单号/款号/品牌/加工厂进行搜索" value="{{keyword}}" bindinput="onKeywordInput" />
         </view>
       </view>
       <view class="filter-actions">
-        <view class="btn-secondary {{loading ? 'btn-disabled' : ''}}" bindtap="loadStats">查询</view>
-        <view class="btn-secondary {{loading ? 'btn-disabled' : ''}}" bindtap="resetFilters">重置</view>
+        <view class="btn-secondary {{loading ? 'btn-disabled' : ''}}" bindtap="queryByKeyword">查询</view>
+        <view class="btn-secondary {{loading ? 'btn-disabled' : ''}}" bindtap="resetKeyword">清空</view>
       </view>
     </view>
     <view wx:if="{{loading}}" class="hint">加载中...</view>
