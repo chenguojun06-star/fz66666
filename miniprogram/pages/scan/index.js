@@ -1918,9 +1918,33 @@ Page({
             wx.showToast({ title: msg, icon: 'none', duration: 2000 });
         }
     },
-});
 
-            this.setData({ undo: { ...this.data.undo, loading: false, canUndo: !unsupported } });
+    // ==================== 撤销相关 ====================
+    
+    async onUndo() {
+        const undo = this.data.undo;
+        if (!undo || !undo.canUndo || undo.loading || !undo.payload) return;
+        this.setData({ undo: { ...undo, loading: true } });
+        try {
+            await api.production.undoScan(undo.payload);
+            unmarkRecent(undo.payload.dedupKey || '');
+            this.setData({
+                undo: { ...this.data.undo, canUndo: false, loading: false, expireAt: 0, payload: null },
+                lastResult: {
+                    success: true,
+                    message: '已撤销本次扫码',
+                    scanCode: undo.payload.scanCode || '',
+                    orderNo: (this.data.lastResult && this.data.lastResult.orderNo) || '',
+                    styleNo: (this.data.lastResult && this.data.lastResult.styleNo) || '',
+                    processName: (this.data.lastResult && this.data.lastResult.processName) || '',
+                },
+            });
+            wx.showToast({ title: '已撤销', icon: 'none' });
+        } catch (e) {
+            const statusCode = e && e.type === 'http' ? Number(e.statusCode) : NaN;
+            const unsupported = statusCode === 404 || statusCode === 405;
+            wx.showToast({ title: unsupported ? '暂不支持撤销' : '撤销失败', icon: 'none' });
+            this.setData({ undo: { ...this.data.undo, loading: false } });
             if (unsupported) {
                 wx.showModal({
                     title: '无法撤销',
@@ -1934,5 +1958,4 @@ Page({
             else wx.showToast({ title: '撤销失败', icon: 'none' });
         }
     },
-
 });
