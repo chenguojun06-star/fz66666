@@ -444,11 +444,11 @@ Page({
         const app = getApp();
         if (app && typeof app.setTabSelected === 'function') app.setTabSelected(this, 2);
         if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
-        
+
         // 加载自动识别开关状态
         const savedAutoDetect = wx.getStorageSync('auto_detect_enabled');
         const autoDetectEnabled = savedAutoDetect !== false; // 默认开启
-        
+
         const savedTypeIndex = Number(readStorage('mp_scan_type_index', 0));
         const len = Array.isArray(this.data.scanTypeOptions) ? this.data.scanTypeOptions.length : 0;
         const rawIdx = Number.isFinite(savedTypeIndex) && savedTypeIndex >= 0 ? savedTypeIndex : 0;
@@ -463,13 +463,13 @@ Page({
             qtyHint: autoDetectEnabled ? '扫码自动识别进度节点' : '数量需填写；二维码带数量会自动识别，可手动修改。',
         });
         this.loadMyPanel(true);
-        
+
         // 检查是否有pending_order_hint，如果有则显示提示
         try {
             const pendingOrderHint = wx.getStorageSync('pending_order_hint');
             if (pendingOrderHint) {
-                wx.showToast({ 
-                    title: `请处理订单: ${pendingOrderHint}`, 
+                wx.showToast({
+                    title: `请处理订单: ${pendingOrderHint}`,
                     icon: 'none',
                     duration: 3000,
                 });
@@ -581,7 +581,7 @@ Page({
             clearInterval(confirmTickTimer);
             confirmTickTimer = null;
         }
-        this.setData({ 
+        this.setData({
             scanConfirm: { ...this.data.scanConfirm, visible: false, expireAt: 0, remain: 0, payload: null, detail: null, loading: false, materialPurchases: [] },
             defectQuantity: '', // 清空次品数量
         });
@@ -593,7 +593,7 @@ Page({
     onConfirmScan() {
         const confirm = this.data.scanConfirm;
         if (!confirm || !confirm.visible || confirm.loading || !confirm.payload) return;
-        
+
         // 检查数量是否有效
         const quantity = confirm.payload.quantity;
         if (!Number.isFinite(Number(quantity)) || Number(quantity) <= 0) {
@@ -601,7 +601,7 @@ Page({
             this.setData({ scanConfirm: { ...confirm, loading: false } });
             return;
         }
-        
+
         if (confirmTimer) {
             clearTimeout(confirmTimer);
             confirmTimer = null;
@@ -757,15 +757,20 @@ Page({
                 }
                 const purchases = this.buildMaterialPurchases(merged);
                 this.setData({ materialPurchases: purchases });
-                
+
                 // 采购领取成功后添加提醒
                 if (received.length > 0 && !isDuplicate) {
                     const orderNo = oi.orderNo || sr.orderNo || (detail && detail.orderNo) || '';
                     if (orderNo) {
+                        const styleNo = oi.styleNo || sr.styleNo || (detail && detail.styleNo) || '';
+                        const type = '采购';
                         reminderManager.addReminder({
-                            orderId: orderNo,
-                            type: '采购',
-                            timestamp: Date.now(),
+                            id: `${orderNo}_${type}`,
+                            orderNo,
+                            styleNo,
+                            type,
+                            message: '',
+                            createdAt: Date.now(),
                         });
                     }
                 }
@@ -791,13 +796,18 @@ Page({
                 const orderNo = oi.orderNo || sr.orderNo || (detail && detail.orderNo) || '';
                 const processName = sr.processName || (detail && detail.processName) || '';
                 if (!isDuplicate && payload.scanType === 'quality' && orderNo) {
+                    const styleNo = oi.styleNo || sr.styleNo || (detail && detail.styleNo) || '';
+                    const type = '质检';
                     reminderManager.addReminder({
-                        orderId: orderNo,
-                        type: '质检',
-                        timestamp: Date.now(),
+                        id: `${orderNo}_${type}`,
+                        orderNo,
+                        styleNo,
+                        type,
+                        message: '',
+                        createdAt: Date.now(),
                     });
                 }
-                
+
                 markRecent(dedupKey, 8000);
                 const expireAt = Date.now() + 15000;
                 this.setData({ undo: { ...this.data.undo, canUndo: true, loading: false, expireAt, payload } });
@@ -926,11 +936,11 @@ Page({
             const merged = reset ? records : prev.concat(records);
             const app = getApp();
             const hasMore = app && typeof app.hasMoreByPage === 'function' ? app.hasMoreByPage(page) : true;
-            
+
             // 聚合处理：按订单号+环节分组
             const groupedHistory = this.groupScanHistory(merged);
             console.log('聚合后的记录数量:', groupedHistory.length);
-            
+
             this.setData({
                 'my.history': {
                     ...history,
@@ -941,7 +951,7 @@ Page({
                 },
                 'my.groupedHistory': groupedHistory,
             });
-            
+
             console.log('页面数据更新完成 - groupedHistory:', this.data.my.groupedHistory);
         } catch (e) {
             if (e && e.type === 'auth') return;
@@ -961,20 +971,20 @@ Page({
      */
     groupScanHistory(records) {
         if (!Array.isArray(records) || records.length === 0) return [];
-        
+
         // 调试：查看第一条记录的结构（开发调试用）
         if (records.length > 0 && false) {
             console.log('扫码记录第一条:', records[0]);
         }
-        
+
         const groups = new Map();
-        
+
         records.forEach(item => {
             const orderNo = item.orderNo || '-';
             const styleNo = item.styleNo || '-';
             const stage = item.processName || item.progressStage || (item.isProcurement ? '物料采购' : '-');
             const key = `${orderNo}_${styleNo}_${stage}`;
-            
+
             if (!groups.has(key)) {
                 groups.set(key, {
                     id: key,
@@ -989,11 +999,11 @@ Page({
                     expanded: false, // 是否展开
                 });
             }
-            
+
             const group = groups.get(key);
             group.items.push(item);
             group.totalQuantity += (item.quantity || 0);
-            
+
             // 统计合格/不合格数量
             if (item.scanType === 'quality') {
                 if (item.scanResult === 'qualified') {
@@ -1002,21 +1012,21 @@ Page({
                     group.defectiveCount += (item.quantity || 0);
                 }
             }
-            
+
             // 更新最新时间
             const itemTime = item.createdAt || item.scanTime || item.time;
             if (itemTime && (!group.latestTime || new Date(itemTime) > new Date(group.latestTime))) {
                 group.latestTime = itemTime;
             }
         });
-        
+
         // 转换为数组并按时间倒序排序
         const result = Array.from(groups.values()).sort((a, b) => {
             const timeA = a.latestTime ? new Date(a.latestTime).getTime() : 0;
             const timeB = b.latestTime ? new Date(b.latestTime).getTime() : 0;
             return timeB - timeA;
         });
-        
+
         // 对每组内的items也按时间倒序排序
         result.forEach(group => {
             group.items.sort((a, b) => {
@@ -1027,7 +1037,7 @@ Page({
                 return new Date(timeB).getTime() - new Date(timeA).getTime();
             });
         });
-        
+
         return result;
     },
 
@@ -1037,14 +1047,14 @@ Page({
     toggleGroupExpand(e) {
         const groupId = e.currentTarget.dataset.groupId;
         const groupedHistory = this.data.my.groupedHistory || [];
-        
+
         const updated = groupedHistory.map(group => {
             if (group.id === groupId) {
                 return { ...group, expanded: !group.expanded };
             }
             return group;
         });
-        
+
         this.setData({ 'my.groupedHistory': updated });
     },
 
@@ -1053,15 +1063,15 @@ Page({
      */
     formatRelativeTime(timeStr) {
         if (!timeStr) return '-';
-        
+
         const now = new Date().getTime();
         const time = new Date(timeStr).getTime();
         const diff = now - time;
-        
+
         const minute = 60 * 1000;
         const hour = 60 * minute;
         const day = 24 * hour;
-        
+
         if (diff < minute) {
             return '刚刚';
         } else if (diff < hour) {
@@ -1121,7 +1131,7 @@ Page({
         // 自动根据次品数量设置qualityIndex
         // 如果次品数>0，设置为次品(1)，否则设置为合格(0)
         const qualityIndex = num > 0 ? 1 : 0;
-        this.setData({ 
+        this.setData({
             defectQuantity: value,
             qualityIndex,
         });
@@ -1441,7 +1451,7 @@ Page({
 
         // 获取订单当前进度
         const currentProgress = orderDetail.currentProgress || orderDetail.progressStage || '';
-        
+
         // 特殊情况处理
         if (!currentProgress || currentProgress === '待开始' || currentProgress === '未开始') {
             // 检查是否需要采购物料
@@ -1499,14 +1509,14 @@ Page({
      */
     onAutoDetectChange(e) {
         const enabled = e.detail.value;
-        this.setData({ 
+        this.setData({
             autoDetectEnabled: enabled,
             qtyHint: enabled ? '扫码自动识别进度节点' : '数量需填写；二维码带数量会自动识别，可手动修改。'
         });
         wx.setStorageSync('auto_detect_enabled', enabled);
-        wx.showToast({ 
-            title: enabled ? '已启用自动识别' : '已关闭自动识别', 
-            icon: 'none' 
+        wx.showToast({
+            title: enabled ? '已启用自动识别' : '已关闭自动识别',
+            icon: 'none'
         });
     },
 
@@ -1581,7 +1591,7 @@ Page({
             const finalScanCode = parsed && parsed.scanCode ? parsed.scanCode : scanCode;
             const parsedQty = parsed ? parsed.quantity : null;
             const recognizedQty = Number.isFinite(parsedQty) && parsedQty > 0 ? parsedQty : null;
-            
+
             // 自动识别当前进度节点（仅在启用时）
             let autoDetectedStage = null;
             if (this.data.autoDetectEnabled) {
@@ -1592,17 +1602,17 @@ Page({
                         wx.showLoading({ title: '识别进度中...', mask: true });
                         const orderDetail = await api.production.orderDetail(orderNo);
                         wx.hideLoading();
-                        
+
                         // 根据订单当前进度自动选择下一个节点
                         autoDetectedStage = this.detectNextStage(orderDetail);
-                        
+
                         if (autoDetectedStage) {
                             // 自动设置扫码类型
                             const autoIndex = this.data.scanTypeOptions.findIndex(
                                 opt => opt.processName === autoDetectedStage.processName
                             );
                             if (autoIndex >= 0) {
-                                this.setData({ 
+                                this.setData({
                                     scanTypeIndex: autoIndex,
                                     qtyHint: `✓ 已自动识别: ${autoDetectedStage.processName}`
                                 });
@@ -1622,11 +1632,11 @@ Page({
             }
 
             // 使用自动识别的类型或手动选择的类型
-            const finalOption = autoDetectedStage 
+            const finalOption = autoDetectedStage
                 ? this.data.scanTypeOptions.find(opt => opt.processName === autoDetectedStage.processName) || option
                 : option;
             const finalScanType = finalOption.value;
-            
+
             const allowQrAutofill = recognizedQty != null && !(finalScanType === 'quality' && qualityResult === 'unqualified');
             if (allowQrAutofill) {
                 quantity = recognizedQty;
@@ -1751,23 +1761,23 @@ Page({
     },
 
     // ==================== 质检处理相关 ====================
-    
+
     /**
      * 打开质检处理弹窗
      */
     onHandleQuality(e) {
         const groupId = e.currentTarget.dataset.groupId;
         const recordIdx = e.currentTarget.dataset.recordIdx;
-        
+
         // 从groupedHistory中找到对应的记录
         const groupedHistory = this.data.my.groupedHistory || [];
         const group = groupedHistory.find(g => g.id === groupId);
-        
+
         if (!group || !Array.isArray(group.items) || recordIdx >= group.items.length) {
             wx.showToast({ title: '记录不存在', icon: 'none' });
             return;
         }
-        
+
         const item = group.items[recordIdx];
 
         const detailData = {
@@ -1778,7 +1788,7 @@ Page({
             quantity: item.quantity || item.qty || 0,
             scanId: item.id || item.scanId || '',
         };
-        
+
         this.setData({
             qualityModal: {
                 show: true,
@@ -1835,7 +1845,7 @@ Page({
     onDefectTypesChange(e) {
         const indices = e.detail.value;
         const selectedTypes = indices.map(idx => this.data.defectTypes[0][idx]);
-        
+
         this.setData({
             'qualityModal.selectedDefectTypes': indices,
             'qualityModal.defectTypesText': selectedTypes.join('、')
@@ -1866,7 +1876,7 @@ Page({
     onUploadQualityImage() {
         const currentImages = this.data.qualityModal.images || [];
         const maxCount = 5 - currentImages.length;
-        
+
         if (maxCount <= 0) {
             wx.showToast({ title: '最多上传5张图片', icon: 'none' });
             return;
@@ -1903,20 +1913,22 @@ Page({
      */
     async submitQualityResult() {
         const { qualityModal } = this.data;
-        
+
         // 验证
         if (!qualityModal.result) {
             wx.showToast({ title: '请选择检验结果', icon: 'none' });
             return;
         }
 
+        let defectiveQty = null;
         if (qualityModal.result === 'defective') {
-            if (!qualityModal.defectiveQuantity || qualityModal.defectiveQuantity <= 0) {
+            defectiveQty = Number(qualityModal.defectiveQuantity);
+            if (!Number.isFinite(defectiveQty) || defectiveQty <= 0) {
                 wx.showToast({ title: '请输入次品数量', icon: 'none' });
                 return;
             }
-            
-            if (Number(qualityModal.defectiveQuantity) > Number(qualityModal.detail.quantity)) {
+
+            if (defectiveQty > Number(qualityModal.detail.quantity)) {
                 wx.showToast({ title: '次品数量不能超过总数量', icon: 'none' });
                 return;
             }
@@ -1930,32 +1942,41 @@ Page({
         wx.showLoading({ title: '提交中...', mask: true });
 
         try {
-            // 构建提交数据 - 使用扫码execute接口格式
+            // 构建提交数据 - 匹配后端execute接口参数
             const payload = {
-                scanCode: qualityModal.detail.scanId, // 使用scanId作为扫码标识
+                scanCode: qualityModal.detail.scanId, // 扫码ID
                 scanType: 'quality',
                 orderNo: qualityModal.detail.orderNo,
                 styleNo: qualityModal.detail.styleNo,
                 color: qualityModal.detail.color,
                 size: qualityModal.detail.size,
                 quantity: qualityModal.detail.quantity,
-                qualityResult: qualityModal.result,
+                // 后端需要的是qualityResult字段，值为"qualified"或"unqualified"
+                qualityResult: qualityModal.result === 'qualified' ? 'qualified' : 'unqualified',
             };
 
-            // 次品详情
+            // 次品详情 - 使用后端要求的字段名
             if (qualityModal.result === 'defective') {
-                payload.defectiveQuantity = Number(qualityModal.defectiveQuantity);
-                payload.defectTypes = qualityModal.defectTypesText;
-                payload.handleMethod = this.data.handleMethods[qualityModal.handleMethod];
-                payload.remark = qualityModal.remark || '';
+                const defectiveQty = Number(qualityModal.defectiveQuantity);
+                payload.defectiveQuantity = defectiveQty;
+                payload.defectCategory = qualityModal.defectTypesText; // 后端字段名
+                payload.defectRemark = qualityModal.remark || ''; // 后端字段名
+                payload.repairRemark = this.data.handleMethods[qualityModal.handleMethod] || '返修';
+                // 图片URL（如果有的话）
+                if (qualityModal.images && qualityModal.images.length > 0) {
+                    payload.unqualifiedImageUrls = qualityModal.images.join(',');
+                }
             } else {
-                payload.remark = '质检合格';
+                // 合格备注
+                payload.defectRemark = '质检合格';
             }
 
             console.log('提交质检结果 - payload:', payload);
 
             // 调用API提交质检结果
-            await api.production.submitQualityResult(payload);
+            const result = await api.production.submitQualityResult(payload);
+
+            console.log('提交质检结果 - 成功响应:', result);
 
             wx.hideLoading();
             wx.showToast({ title: '提交成功', icon: 'success' });
@@ -1972,34 +1993,47 @@ Page({
         } catch (e) {
             wx.hideLoading();
             console.error('提交质检结果失败:', e);
-            const msg = errorHandler.formatError(e, '提交失败');
-            wx.showToast({ title: msg, icon: 'none', duration: 2000 });
+            console.error('错误详情 - data:', e.data);
+            console.error('错误详情 - statusCode:', e.statusCode);
+            console.error('错误详情 - errMsg:', e.errMsg);
+
+            // 如果有后端返回的错误信息，显示出来
+            let msg = '提交失败';
+            if (e.data && e.data.message) {
+                msg = e.data.message;
+            } else if (e.data && typeof e.data === 'string') {
+                msg = e.data;
+            } else {
+                msg = errorHandler.formatError(e, '提交失败');
+            }
+
+            wx.showToast({ title: msg, icon: 'none', duration: 3000 });
         }
     },
 
     // ==================== 物料采购处理相关 ====================
-    
+
     /**
      * 打开物料采购处理弹窗
      */
     async onHandleProcurement(e) {
         const groupId = e.currentTarget.dataset.groupId;
         const recordIdx = e.currentTarget.dataset.recordIdx;
-        
+
         console.log('物料采购处理 - groupId:', groupId, 'recordIdx:', recordIdx);
-        
+
         // 从groupedHistory中找到对应的记录
         const groupedHistory = this.data.my.groupedHistory || [];
         const group = groupedHistory.find(g => g.id === groupId);
-        
+
         if (!group || !Array.isArray(group.items) || recordIdx >= group.items.length) {
             wx.showToast({ title: '记录不存在', icon: 'none' });
             return;
         }
-        
+
         const item = group.items[recordIdx];
         console.log('物料采购处理 - 记录数据:', item);
-        
+
         const orderNo = item.orderNo || item.order_no || '';
         if (!orderNo) {
             wx.showToast({ title: '订单信息不完整', icon: 'none' });
@@ -2011,7 +2045,7 @@ Page({
         try {
             // 获取订单的物料采购信息
             const orderDetail = await api.production.orderDetail(orderNo);
-            const materials = Array.isArray(orderDetail.materialPurchases) 
+            const materials = Array.isArray(orderDetail.materialPurchases)
                 ? orderDetail.materialPurchases.map(m => ({
                     ...m,
                     purchaseInput: m.purchaseQuantity || m.demandQuantity || '',
@@ -2076,7 +2110,7 @@ Page({
      */
     async submitProcurementResult() {
         const { procurementModal } = this.data;
-        
+
         // 验证至少有一个物料填写了采购数量
         const hasValid = procurementModal.materials.some(m => {
             const qty = m.purchaseInput;
@@ -2121,7 +2155,7 @@ Page({
             this.closeProcurementModal();
 
             // 刷新扫码记录
-            await this.loadHistoryRecords();
+            await this.loadMyPanel(true);
 
         } catch (e) {
             wx.hideLoading();
@@ -2131,7 +2165,7 @@ Page({
     },
 
     // ==================== 撤销相关 ====================
-    
+
     async onUndo() {
         const undo = this.data.undo;
         if (!undo || !undo.canUndo || undo.loading || !undo.payload) return;

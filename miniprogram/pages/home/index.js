@@ -83,7 +83,7 @@ Page({
         if (app && typeof app.setTabSelected === 'function') app.setTabSelected(this, 0);
         if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
         this.loadStats();
-        
+
         // 加载提醒列表
         this.loadReminders();
     },
@@ -161,26 +161,30 @@ Page({
         const allReminders = reminderManager.getReminders();
         const now = Date.now();
         const REMINDER_INTERVAL = 10 * 60 * 60 * 1000; // 10小时
-        
+
         // 过滤出需要提醒的（超过10小时）
         const pendingReminders = allReminders.filter(r => {
-            return now - r.timestamp >= REMINDER_INTERVAL;
+            const baseTime = Number(r.lastRemindAt || r.createdAt || 0);
+            return baseTime > 0 && now - baseTime >= REMINDER_INTERVAL;
         });
-        
+
         // 格式化时间显示
         const reminders = pendingReminders.map(r => {
-            const hours = Math.floor((now - r.timestamp) / (60 * 60 * 1000));
-            const timeAgo = hours < 24 ? `${hours}小时前` : `${Math.floor(hours / 24)}天前`;
+            const baseTime = Number(r.lastRemindAt || r.createdAt || 0);
+            const hours = baseTime > 0 ? Math.floor((now - baseTime) / (60 * 60 * 1000)) : 0;
+            const timeAgo = baseTime <= 0 ? '未知' : (hours < 24 ? `${hours}小时前` : `${Math.floor(hours / 24)}天前`);
+            const orderNo = r.orderNo || '';
+            const type = r.type || '';
             return {
-                id: `${r.orderId}_${r.type}`,
-                orderId: r.orderId,
-                type: r.type,
-                timestamp: r.timestamp,
+                id: r.id || `${orderNo}_${type}`,
+                orderNo,
+                type,
+                createdAt: baseTime,
                 timeAgo,
             };
         });
-        
-        this.setData({ 
+
+        this.setData({
             reminders,
             reminderCount: reminders.length,
         });
@@ -193,19 +197,19 @@ Page({
     handleReminderClick(e) {
         const reminder = e.currentTarget.dataset.reminder;
         if (!reminder) return;
-        
+
         // 关闭面板
         this.setData({ showReminderPanel: false });
-        
+
         const type = reminder.type || '';
-        const orderId = reminder.orderId || '';
-        
+        const orderNo = reminder.orderNo || '';
+
         // 根据任务类型跳转到对应页面
         if (type === '采购') {
             // 采购任务跳转到扫码页面，设置为采购模式
             try {
                 wx.setStorageSync('mp_scan_type_index', 2); // 采购是第3个选项，索引为2
-                wx.setStorageSync('pending_order_hint', orderId);
+                wx.setStorageSync('pending_order_hint', orderNo);
             } catch (e) {
                 console.error('存储失败', e);
             }
@@ -214,7 +218,7 @@ Page({
             // 生产任务跳转到工作台的生产中标签页
             try {
                 wx.setStorageSync('work_active_tab', 'orders_production');
-                wx.setStorageSync('pending_order_hint', orderId);
+                wx.setStorageSync('pending_order_hint', orderNo);
             } catch (e) {
                 console.error('存储失败', e);
             }
@@ -222,7 +226,7 @@ Page({
         } else {
             // 其他任务默认跳转到扫码页面
             try {
-                wx.setStorageSync('pending_order_hint', orderId);
+                wx.setStorageSync('pending_order_hint', orderNo);
             } catch (e) {
                 console.error('存储失败', e);
             }
