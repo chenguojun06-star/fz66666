@@ -16,6 +16,44 @@ page {
   margin-bottom: 8px;
   border: 1px solid #e5e7eb;
 }
+
+.auto-detect-switch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  background: #f9fafb;
+  border-radius: 12px;
+  gap: 8px;
+}
+
+.switch-label {
+  font-size: 13px;
+  color: #475569;
+  font-weight: 500;
+}
+
+.auto-mode-tip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: linear-gradient(135deg, #e0f2fe 0%, #e0e7ff 100%);
+  border-radius: 12px;
+  gap: 8px;
+}
+
+.tip-icon {
+  font-size: 18px;
+}
+
+.tip-text {
+  font-size: 13px;
+  color: #1e40af;
+  font-weight: 500;
+}
+
 .type-tabs {
   display: flex;
   gap: 4px;

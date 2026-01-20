@@ -351,6 +351,7 @@ function scanCodeErrorText(err) {
 Page({
     data: {
         loading: false,
+        autoDetectEnabled: true, // 默认启用自动识别
         scanTypeOptions: [
             { label: '裁剪', value: 'cutting', progressStage: '裁剪', processName: '裁剪', processCode: '' },
             { label: '缝制(计件)', value: 'sewing', progressStage: '缝制', processName: '缝制', processCode: '' },
@@ -441,6 +442,11 @@ Page({
         const app = getApp();
         if (app && typeof app.setTabSelected === 'function') app.setTabSelected(this, 2);
         if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
+        
+        // 加载自动识别开关状态
+        const savedAutoDetect = wx.getStorageSync('auto_detect_enabled');
+        const autoDetectEnabled = savedAutoDetect !== false; // 默认开启
+        
         const savedTypeIndex = Number(readStorage('mp_scan_type_index', 0));
         const len = Array.isArray(this.data.scanTypeOptions) ? this.data.scanTypeOptions.length : 0;
         const rawIdx = Number.isFinite(savedTypeIndex) && savedTypeIndex >= 0 ? savedTypeIndex : 0;
@@ -448,10 +454,11 @@ Page({
         const scanType = (this.data.scanTypeOptions[idx] && this.data.scanTypeOptions[idx].value) ? this.data.scanTypeOptions[idx].value : '';
         const savedWarehouse = readStorage('mp_scan_warehouse', '');
         this.setData({
+            autoDetectEnabled: autoDetectEnabled,
             scanTypeIndex: idx,
             qualityIndex: scanType === 'quality' ? 1 : this.data.qualityIndex,
             warehouse: savedWarehouse != null ? String(savedWarehouse) : '',
-            qtyHint: '数量需填写；二维码带数量会自动识别，可手动修改。',
+            qtyHint: autoDetectEnabled ? '扫码自动识别进度节点' : '数量需填写；二维码带数量会自动识别，可手动修改。',
         });
         this.loadMyPanel(true);
         
@@ -1278,6 +1285,95 @@ Page({
         this.setData({ defectImageUrls: nextUrls, defectImageFullUrls: nextFull });
     },
 
+    /**
+     * 根据订单当前进度自动识别下一个节点
+     */
+    detectNextStage(orderDetail) {
+        if (!orderDetail) return null;
+
+        // 生产流程顺序
+        const stageSequence = [
+            '采购',      // 0
+            '裁剪',      // 1
+            '缝制',      // 2
+            '车缝',      // 3
+            '大烫',      // 4
+            '质检',      // 5
+            '包装',      // 6
+            '入库'       // 7
+        ];
+
+        // 获取订单当前进度
+        const currentProgress = orderDetail.currentProgress || orderDetail.progressStage || '';
+        
+        // 特殊情况处理
+        if (!currentProgress || currentProgress === '待开始' || currentProgress === '未开始') {
+            // 检查是否需要采购物料
+            if (orderDetail.materialPurchases && orderDetail.materialPurchases.length > 0) {
+                const hasUnfinishedPurchase = orderDetail.materialPurchases.some(
+                    m => !m.arrivedQuantity || m.arrivedQuantity < m.demandQuantity
+                );
+                if (hasUnfinishedPurchase) {
+                    return {
+                        processName: '采购',
+                        progressStage: '采购',
+                        scanType: 'procurement'
+                    };
+                }
+            }
+            // 没有采购需求，从裁剪开始
+            return {
+                processName: '裁剪',
+                progressStage: '裁剪',
+                scanType: 'cutting'
+            };
+        }
+
+        // 根据当前进度找到下一个节点
+        const currentIndex = stageSequence.indexOf(currentProgress);
+        if (currentIndex < 0) {
+            // 无法识别当前进度，返回null使用手动选择
+            return null;
+        }
+
+        // 如果已经是最后一个节点（入库），提示已完成
+        if (currentIndex >= stageSequence.length - 1) {
+            wx.showToast({ title: '该订单已入库', icon: 'none' });
+            return null;
+        }
+
+        // 返回下一个节点
+        const nextStage = stageSequence[currentIndex + 1];
+        const stageMapping = {
+            '采购': { processName: '采购', progressStage: '采购', scanType: 'procurement' },
+            '裁剪': { processName: '裁剪', progressStage: '裁剪', scanType: 'cutting' },
+            '缝制': { processName: '缝制', progressStage: '缝制', scanType: 'sewing' },
+            '车缝': { processName: '车缝', progressStage: '车缝', scanType: 'production' },
+            '大烫': { processName: '大烫', progressStage: '大烫', scanType: 'production' },
+            '质检': { processName: '质检', progressStage: '质检', scanType: 'quality' },
+            '包装': { processName: '包装', progressStage: '包装', scanType: 'production' },
+            '入库': { processName: '入库', progressStage: '入库', scanType: 'warehouse' },
+        };
+
+        return stageMapping[nextStage] || null;
+    },
+
+    /**
+     * 自动识别开关切换
+     */
+    onAutoDetectChange(e) {
+        const enabled = e.detail.value;
+        this.setData({ 
+            autoDetectEnabled: enabled,
+            qtyHint: enabled ? '扫码自动识别进度节点' : '数量需填写；二维码带数量会自动识别，可手动修改。'
+        });
+        wx.setStorageSync('auto_detect_enabled', enabled);
+        wx.showToast({ 
+            title: enabled ? '已启用自动识别' : '已关闭自动识别', 
+            icon: 'none' 
+        });
+    },
+
     async onScan() {
         if (this.data.loading) return;
 
@@ -1349,17 +1445,66 @@ Page({
             const finalScanCode = parsed && parsed.scanCode ? parsed.scanCode : scanCode;
             const parsedQty = parsed ? parsed.quantity : null;
             const recognizedQty = Number.isFinite(parsedQty) && parsedQty > 0 ? parsedQty : null;
-            const allowQrAutofill = recognizedQty != null && !(scanType === 'quality' && qualityResult === 'unqualified');
+            
+            // 自动识别当前进度节点（仅在启用时）
+            let autoDetectedStage = null;
+            if (this.data.autoDetectEnabled) {
+                try {
+                    // 如果二维码包含订单号，查询订单当前进度
+                    const orderNo = parsed && parsed.orderNo ? parsed.orderNo : null;
+                    if (orderNo) {
+                        wx.showLoading({ title: '识别进度中...', mask: true });
+                        const orderDetail = await api.production.orderDetail(orderNo);
+                        wx.hideLoading();
+                        
+                        // 根据订单当前进度自动选择下一个节点
+                        autoDetectedStage = this.detectNextStage(orderDetail);
+                        
+                        if (autoDetectedStage) {
+                            // 自动设置扫码类型
+                            const autoIndex = this.data.scanTypeOptions.findIndex(
+                                opt => opt.processName === autoDetectedStage.processName
+                            );
+                            if (autoIndex >= 0) {
+                                this.setData({ 
+                                    scanTypeIndex: autoIndex,
+                                    qtyHint: `✓ 已自动识别: ${autoDetectedStage.processName}`
+                                });
+                            }
+                        } else {
+                            wx.showToast({ title: '无法识别进度，请手动选择', icon: 'none' });
+                        }
+                    } else {
+                        wx.showToast({ title: '二维码未包含订单号，请手动选择类型', icon: 'none', duration: 2000 });
+                    }
+                } catch (e) {
+                    wx.hideLoading();
+                    console.error('自动识别进度失败', e);
+                    wx.showToast({ title: '识别失败，请手动选择', icon: 'none' });
+                    // 识别失败不影响扫码流程，继续使用手动选择的类型
+                }
+            }
+
+            // 使用自动识别的类型或手动选择的类型
+            const finalOption = autoDetectedStage 
+                ? this.data.scanTypeOptions.find(opt => opt.processName === autoDetectedStage.processName) || option
+                : option;
+            const finalScanType = finalOption.value;
+            
+            const allowQrAutofill = recognizedQty != null && !(finalScanType === 'quality' && qualityResult === 'unqualified');
             if (allowQrAutofill) {
                 quantity = recognizedQty;
-                this.setData({ quantity: String(quantity), qtyHint: `已从二维码识别数量：${quantity}（可手动修改）` });
+                const qtyHintText = this.data.autoDetectEnabled && autoDetectedStage
+                    ? `✓ 已识别: ${autoDetectedStage.processName} | 数量: ${quantity}`
+                    : `已从二维码识别数量：${quantity}（可手动修改）`;
+                this.setData({ quantity: String(quantity), qtyHint: qtyHintText });
             }
 
             const stage = {
-                scanType,
-                progressStage: option.progressStage,
-                processName: option.processName,
-                processCode: option.processCode,
+                scanType: finalScanType,
+                progressStage: finalOption.progressStage,
+                processName: finalOption.processName,
+                processCode: finalOption.processCode,
             };
             const payload = {
                 requestId: generateRequestId(),
