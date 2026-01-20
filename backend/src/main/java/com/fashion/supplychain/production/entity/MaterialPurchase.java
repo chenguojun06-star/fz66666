@@ -80,4 +80,16 @@ public class MaterialPurchase {
     private LocalDateTime updateTime;
     
     private Integer deleteFlag;
+
+    // ==================== 到货日期字段（新增）====================
+    
+    /**
+     * 预计到货日期
+     */
+    private LocalDateTime expectedArrivalDate;
+
+    /**
+     * 实际到货日期
+     */
+    private LocalDateTime actualArrivalDate;
 }

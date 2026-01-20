@@ -233,4 +233,96 @@ public class ProductionOrder {
 
     @TableField(exist = false)
     private Integer warehousingCompletionRate;
+
+    // ==================== 车缝环节字段（新增）====================
+    
+    /**
+     * 车缝开始时间
+     */
+    @TableField(exist = false)
+    private LocalDateTime carSewingStartTime;
+
+    /**
+     * 车缝完成时间
+     */
+    @TableField(exist = false)
+    private LocalDateTime carSewingEndTime;
+
+    /**
+     * 车缝员姓名
+     */
+    @TableField(exist = false)
+    private String carSewingOperatorName;
+
+    /**
+     * 车缝完成率(%)
+     */
+    @TableField(exist = false)
+    private Integer carSewingCompletionRate;
+
+    // ==================== 大烫环节字段（新增）====================
+    
+    /**
+     * 大烫开始时间
+     */
+    @TableField(exist = false)
+    private LocalDateTime ironingStartTime;
+
+    /**
+     * 大烫完成时间
+     */
+    @TableField(exist = false)
+    private LocalDateTime ironingEndTime;
+
+    /**
+     * 大烫员姓名
+     */
+    @TableField(exist = false)
+    private String ironingOperatorName;
+
+    /**
+     * 大烫完成率(%)
+     */
+    @TableField(exist = false)
+    private Integer ironingCompletionRate;
+
+    // ==================== 包装环节字段（新增）====================
+    
+    /**
+     * 包装开始时间
+     */
+    @TableField(exist = false)
+    private LocalDateTime packagingStartTime;
+
+    /**
+     * 包装完成时间
+     */
+    @TableField(exist = false)
+    private LocalDateTime packagingEndTime;
+
+    /**
+     * 包装员姓名
+     */
+    @TableField(exist = false)
+    private String packagingOperatorName;
+
+    /**
+     * 包装完成率(%)
+     */
+    @TableField(exist = false)
+    private Integer packagingCompletionRate;
+
+    // ==================== 质量统计字段（新增）====================
+    
+    /**
+     * 次品数量
+     */
+    @TableField(exist = false)
+    private Integer unqualifiedQuantity;
+
+    /**
+     * 返修数量
+     */
+    @TableField(exist = false)
+    private Integer repairQuantity;
 }

@@ -1,8 +1,9 @@
 package com.fashion.supplychain.production.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.IdType;
 import java.time.LocalDateTime;
 import lombok.Data;
 
@@ -67,4 +68,36 @@ public class ProductWarehousing {
     private LocalDateTime updateTime;
 
     private Integer deleteFlag;
+
+    // ==================== 颜色尺码字段（临时字段，查询时填充）====================
+    
+    /**
+     * 颜色（从ScanRecord填充）
+     */
+    @TableField(exist = false)
+    private String color;
+
+    /**
+     * 尺码（从ScanRecord填充）
+     */
+    @TableField(exist = false)
+    private String size;
+
+    /**
+     * 扫码内容/菲号（从ScanRecord填充）
+     */
+    @TableField(exist = false)
+    private String scanCode;
+
+    // ==================== 质检人员字段（新增数据库字段）====================
+    
+    /**
+     * 质检人员ID
+     */
+    private String qualityOperatorId;
+
+    /**
+     * 质检人员姓名
+     */
+    private String qualityOperatorName;
 }
