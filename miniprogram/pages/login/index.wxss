@@ -19,5 +19,5 @@ page {
 .btn-primary {
   border-radius: 999px;
   padding: 10px 14px;
-  font-size: 12px;
+  font-size: 14px; /* 按钮字体 */
 }

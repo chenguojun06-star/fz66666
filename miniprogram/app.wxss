@@ -1,8 +1,8 @@
 page {
   background: #f7f8fa;
   color: #1f2937;
-  font-size: 12px;
-  line-height: 1.4;
+  font-size: 14px; /* 统一基础字体为14px */
+  line-height: 1.5;
   font-family:
     -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
     "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
@@ -20,17 +20,26 @@ page {
   box-shadow: none;
 }
 
+/* 一级标题 - 页面主标题 */
 .title {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
   margin-bottom: 10px;
   color: #111827;
 }
 
+/* 二级标题 - 区块标题 */
 .section-title {
   margin-top: 10px;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
+  color: #1f2937;
+}
+
+/* 三级标题 - 小标题 */
+.sub-title {
+  font-size: 14px;
+  font-weight: 500;
   color: #1f2937;
 }
 
@@ -38,6 +47,7 @@ page {
   margin-bottom: 10px;
 }
 
+/* 标签文字 */
 .label {
   font-size: 12px;
   color: #6b7280;
@@ -49,7 +59,7 @@ page {
   border-radius: 999px;
   padding: 8px 12px;
   background: #ffffff;
-  font-size: 12px;
+  font-size: 14px; /* 统一为正文字体14px */
 }
 
 .row {
@@ -65,6 +75,7 @@ page {
   margin-top: 10px;
 }
 
+/* 主要按钮 */
 .btn-primary {
   background: rgba(255, 255, 255, 0.72);
   color: #1f2937;
@@ -72,9 +83,10 @@ page {
   border-radius: 999px;
   padding: 10px 14px;
   text-align: center;
-  font-size: 12px;
+  font-size: 14px; /* 统一为按钮字体14px */
 }
 
+/* 次要按钮 */
 .btn-secondary {
   background: rgba(255, 255, 255, 0.6);
   color: #1f2937;
@@ -82,31 +94,34 @@ page {
   border-radius: 999px;
   padding: 8px 12px;
   text-align: center;
-  font-size: 12px;
+  font-size: 14px; /* 统一为按钮字体14px */
 }
 
 .btn-disabled {
   opacity: 0.6;
 }
 
+/* 提示文字 */
 .hint {
   margin-top: 8px;
-  font-size: 11px;
+  font-size: 11px; /* 保持备注文字11px */
   color: #8b8b94;
 }
 
+/* 结果文字 */
 .result {
   margin-top: 10px;
-  font-size: 12px;
+  font-size: 14px; /* 统一为正文字体14px */
   color: #374151;
   line-height: 1.6;
 }
 
+/* 标签 */
 .tag {
   display: inline-block;
   padding: 2px 8px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 11px; /* 保持标签文字11px */
   background: rgba(148, 163, 184, 0.18);
   color: #475569;
 }

@@ -29,7 +29,7 @@ page {
 }
 
 .switch-label {
-  font-size: 13px;
+  font-size: 13px; /* 菜单字体 */
   color: #475569;
   font-weight: 500;
 }
@@ -45,11 +45,11 @@ page {
 }
 
 .tip-icon {
-  font-size: 18px;
+  font-size: 18px; /* 一级标题/图标 */
 }
 
 .tip-text {
-  font-size: 13px;
+  font-size: 13px; /* 菜单字体 */
   color: #1e40af;
   font-weight: 500;
 }
@@ -65,7 +65,7 @@ page {
   align-items: center;
   padding: 6px 2px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 12px; /* 辅助字体 */
   color: #6b7280;
   background: #f3f4f6;
 }
@@ -236,7 +236,7 @@ page {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: 18px; /* 一级标题/图标 */
   color: #cbd5e1;
 }
 .df-add.off {
@@ -515,7 +515,7 @@ page {
 }
 .st-num {
   display: block;
-  font-size: 15px;
+  font-size: 16px; /* 二级标题/数值强调 */
   font-weight: 600;
   color: #333;
 }
@@ -1004,7 +1004,7 @@ page {
 }
 
 .qm-picker-arrow {
-  font-size: 20px;
+  font-size: 18px; /* 一级标题/图标 */
   color: #999;
   transform: rotate(90deg);
 }
