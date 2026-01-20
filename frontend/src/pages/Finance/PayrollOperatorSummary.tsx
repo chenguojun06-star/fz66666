@@ -143,7 +143,6 @@ const PayrollOperatorSummary: React.FC = () => {
             return `"${text.replace(/"/g, '""')}"`;
         }
         return text;
-    };  setRows([]);
     };
 
     const columns: any[] = [
@@ -233,7 +232,7 @@ const PayrollOperatorSummary: React.FC = () => {
                         <RangePicker
                             showTime
                             value={dateRange}
-                    scroll={{ x: 1170 }}) => setDateRange(v as any)}
+                            onChange={(v) => setDateRange(v as any)}
                             style={{ width: 320 }}
                         />
                         <Space>
@@ -246,9 +245,9 @@ const PayrollOperatorSummary: React.FC = () => {
                         <Button onClick={reset} disabled={loading}>
                             重置
                         </Button>
-                        <Button 
-                            icon={<DownloadOutlined />} 
-                            onClick={exportToExcel} 
+                        <Button
+                            icon={<DownloadOutlined />}
+                            onClick={exportToExcel}
                             disabled={loading || rows.length === 0}
                         >
                             导出Excel
@@ -296,4 +295,3 @@ const PayrollOperatorSummary: React.FC = () => {
 };
 
 export default PayrollOperatorSummary;
-
