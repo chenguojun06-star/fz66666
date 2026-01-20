@@ -496,6 +496,20 @@ body {
   overflow: auto;
 }
 
+/* 优化antd Modal默认footer按钮布局 */
+.ant-modal-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px !important;
+}
+
+.ant-modal-footer .ant-btn {
+  margin: 0 !important; /* 移除antd默认的margin */
+}
+
 .modal-footer-actions {
   display: flex;
   justify-content: flex-end;
