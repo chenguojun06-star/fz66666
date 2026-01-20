@@ -1,4 +1,5 @@
 const { getToken, clearToken } = require('./utils/storage');
+const reminderManager = require('./utils/reminderManager');
 
 let redirectingToLogin = false;
 let redirectResetTimer = null;
@@ -6,6 +7,26 @@ let redirectResetTimer = null;
 App({
     globalData: {
         token: '',
+    },
+
+    onLaunch() {
+        // 清理过期提醒（超过7天）
+        try {
+            reminderManager.cleanupExpiredReminders();
+        } catch (e) {
+            console.error('清理过期提醒失败', e);
+        }
+    },
+
+    onShow() {
+        // 小程序从后台进入前台时检查提醒
+        try {
+            setTimeout(() => {
+                reminderManager.checkAndShowReminders();
+            }, 1000);
+        } catch (e) {
+            console.error('检查提醒失败', e);
+        }
     },
 
     setTabSelected(page, selected) {

@@ -3,6 +3,7 @@ const { validateProductionOrder, normalizeData } = require('../../utils/dataVali
 const { errorHandler } = require('../../utils/errorHandler');
 const { validateByRule } = require('../../utils/validationRules');
 const { syncManager } = require('../../utils/syncManager');
+const reminderManager = require('../../utils/reminderManager');
 
 function normalizeText(v) {
   return (v || '').toString().trim();
@@ -200,6 +201,11 @@ Page({
     } catch (e) {
       null;
     }
+    
+    // 检查提醒
+    setTimeout(() => {
+      reminderManager.checkAndShowReminders();
+    }, 500);
     
     // 启动订单列表的实时同步 (30 秒轮询一次)
     this.setupOrderSync();

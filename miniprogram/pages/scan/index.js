@@ -3,6 +3,7 @@ const { getBaseUrl } = require('../../config');
 const { getToken } = require('../../utils/storage');
 const { errorHandler } = require('../../utils/errorHandler');
 const { validateScanRecord } = require('../../utils/dataValidator');
+const reminderManager = require('../../utils/reminderManager');
 
 let undoTimer = null;
 let confirmTimer = null;
@@ -428,6 +429,21 @@ Page({
             qtyHint: '数量需填写；二维码带数量会自动识别，可手动修改。',
         });
         this.loadMyPanel(true);
+        
+        // 检查是否有pending_order_hint，如果有则显示提示
+        try {
+            const pendingOrderHint = wx.getStorageSync('pending_order_hint');
+            if (pendingOrderHint) {
+                wx.showToast({ 
+                    title: `请处理订单: ${pendingOrderHint}`, 
+                    icon: 'none',
+                    duration: 3000,
+                });
+                wx.removeStorageSync('pending_order_hint');
+            }
+        } catch (e) {
+            console.error('检查pending_order_hint失败', e);
+        }
     },
 
     onHide() {
@@ -473,7 +489,7 @@ Page({
             confirmTickTimer = null;
         }
         const expireAt = Date.now() + 15000;
-        
+
         // 处理面料采购数据
         const purchases = Array.isArray(materialPurchases) ? materialPurchases.map((it) => {
             const purchaseQuantity = Number(it && it.purchaseQuantity) || 0;
@@ -486,7 +502,7 @@ Page({
                 remarkInput: '',
             };
         }) : [];
-        
+
         this.setData({
             scanConfirm: {
                 visible: true,
@@ -558,7 +574,7 @@ Page({
     async submitScanPayload(basePayload, detail) {
         const payload = { ...(basePayload || {}) };
         const isProcurement = detail && detail.isProcurement;
-        
+
         // 如果是采购类型，先处理面料采购
         if (isProcurement) {
             const purchases = this.data.scanConfirm.materialPurchases || [];
@@ -567,7 +583,7 @@ Page({
                 this.closeScanConfirm(true);
                 return;
             }
-            
+
             // 验证所有采购数量
             for (let i = 0; i < purchases.length; i++) {
                 const item = purchases[i];
@@ -577,34 +593,37 @@ Page({
                     return;
                 }
             }
-            
+
             try {
                 // 先领取所有采购任务
                 const user = await this.getCurrentUser();
                 const receiverId = user && user.id != null ? String(user.id).trim() : '';
                 const receiverName = user && (user.name || user.username) ? String(user.name || user.username).trim() : '';
-                
-                const receivePromises = purchases.map(item => 
+
+                const receivePromises = purchases.map(item =>
                     api.production.receivePurchase({
                         purchaseId: item.id,
                         receiverId,
                         receiverName,
                     })
                 );
-                
+
                 await Promise.all(receivePromises);
-                
+
                 // 再提交采购数量
-                const updatePromises = purchases.map(item => 
-                    api.production.updateArrivedQuantity({ 
-                        id: item.id, 
+                const updatePromises = purchases.map(item =>
+                    api.production.updateArrivedQuantity({
+                        id: item.id,
                         arrivedQuantity: Number(item.purchaseInput),
                         remark: (item.remarkInput || '').trim()
                     })
                 );
-                
+
                 await Promise.all(updatePromises);
-                
+
+                // 移除该订单的采购提醒
+                reminderManager.removeRemindersByOrder(detail.orderNo || payload.scanCode, '采购');
+
                 wx.showToast({ title: '采购已完成', icon: 'success' });
                 this.setData({
                     lastResult: {
@@ -628,7 +647,7 @@ Page({
                 return;
             }
         }
-        
+
         // 非采购类型，执行原有逻辑
         const dedupKey = [
             payload.scanCode,
@@ -691,6 +710,18 @@ Page({
                 }
                 const purchases = this.buildMaterialPurchases(merged);
                 this.setData({ materialPurchases: purchases });
+                
+                // 采购领取成功后添加提醒
+                if (received.length > 0 && !isDuplicate) {
+                    const orderNo = oi.orderNo || sr.orderNo || (detail && detail.orderNo) || '';
+                    if (orderNo) {
+                        reminderManager.addReminder({
+                            orderId: orderNo,
+                            type: '采购',
+                            timestamp: Date.now(),
+                        });
+                    }
+                }
             }
             this.setData({
                 lastResult: {
@@ -1331,21 +1362,21 @@ Page({
                 qualityResult: payload.qualityResult || '',
                 isProcurement: option && option.progressStage === '采购',
             };
-            
+
             // 如果是采购类型，获取面料采购信息
             let materialPurchases = [];
             if (detail.isProcurement) {
                 try {
-                    const purchaseData = await api.production.getMaterialPurchases({ 
+                    const purchaseData = await api.production.getMaterialPurchases({
                         scanCode: payload.scanCode,
-                        orderNo: detail.orderNo 
+                        orderNo: detail.orderNo
                     });
                     materialPurchases = Array.isArray(purchaseData) ? purchaseData : [];
                 } catch (e) {
                     console.error('获取面料采购信息失败', e);
                 }
             }
-            
+
             this.openScanConfirm(payload, detail, materialPurchases);
             return;
         } catch (e) {
