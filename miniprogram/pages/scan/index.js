@@ -957,6 +957,11 @@ Page({
     groupScanHistory(records) {
         if (!Array.isArray(records) || records.length === 0) return [];
         
+        // 调试：查看第一条记录的结构
+        if (records.length > 0) {
+            console.log('扫码记录第一条数据结构:', records[0]);
+        }
+        
         const groups = new Map();
         
         records.forEach(item => {
