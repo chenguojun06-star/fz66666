@@ -1,31 +1,18 @@
 page {
-  background: linear-gradient(135deg, rgba(169, 201, 255, 0.18), rgba(255, 255, 255, 0.72));
+  background: #f7f8fa;
 }
 
 .container .card {
-  background: rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  border-radius: 26px;
-  padding: 14px;
-  box-shadow: none;
-}
-
-.title {
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 10px;
-  color: #1f2937;
-}
-
-.label {
-  font-size: 12px;
-  color: #6b7280;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  padding: 12px;
 }
 
 .input {
-  background: rgba(255, 255, 255, 0.65);
-  border: 1px solid rgba(148, 163, 184, 0.28);
-  border-radius: 18px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
   padding: 8px 12px;
 }
 
@@ -33,9 +20,4 @@ page {
   border-radius: 999px;
   padding: 10px 14px;
   font-size: 12px;
-}
-
-.hint {
-  font-size: 12px;
-  color: #8e8e93;
 }

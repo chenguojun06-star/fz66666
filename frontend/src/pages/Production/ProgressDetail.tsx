@@ -362,8 +362,9 @@ const modernProgressBoardCss = `
 .mpb-detailCard::before{content:"";position:absolute;left:0;top:0;right:0;height:12px;background:linear-gradient(135deg,rgba(255,255,255,.22),rgba(255,255,255,0));opacity:.9;pointer-events:none}
 .mpb-detailBottomRow{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:auto}
 .mpb-detailPriceInline{display:flex;align-items:center;gap:6px;min-width:0;flex:1 1 auto}
-.mpb-detailLabel{color:rgba(15,23,42,.78);font-size:11px;line-height:14px;white-space:nowrap}
-.mpb-detailPriceInput{width:88px;max-width:100%}
+.mpb-detailLabel{color:rgba(15,23,42,.78);font-size:13px;line-height:16px;white-space:nowrap}
+.mpb-detailPriceInput{width:100px;max-width:100%}
+.mpb-detailPriceInput .ant-input-number-input{font-size:13px}
 .mpb-detailActions{display:flex;gap:6px;justify-content:flex-end;flex:0 0 auto}
 .mpb-detailActions .ant-btn{padding:0 6px}
 .mpb-detailCard.mpb-detailDone{opacity:.74;background:rgba(248,250,252,.42)}
@@ -2357,6 +2358,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     const effectivePct = frozen ? 100 : pct;
     const currentIdx = getNodeIndexFromProgress(nodes, effectivePct);
     const canEditWorkflow = isSupervisorOrAbove && !nodeWorkflowSaving && !nodeWorkflowLocked && !isOrderFrozenByStatus(order);
+    const canReorderWorkflow = false;
     const totalUnitPrice = nodes.reduce((sum, n) => sum + (Number(n.unitPrice) || 0), 0);
     const orderQty = Number(order.orderQuantity) || 0;
     const totalOrderCost = totalUnitPrice * orderQty;
@@ -2388,11 +2390,11 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               return (
                 <div
                   key={n.id}
-                  className={`mpb-detailCard mpb-pop${canEditWorkflow ? ' mpb-draggable' : ''}${isDragging ? ' mpb-dragging' : ''}${isDragOver ? ' mpb-dragOver' : ''}${isDone ? ' mpb-detailDone' : ''}${isCurrent ? ' mpb-detailCurrent' : ''}${frozen ? ' mpb-detailFrozen' : ''}`}
+                  className={`mpb-detailCard mpb-pop${canReorderWorkflow ? ' mpb-draggable' : ''}${isDragging ? ' mpb-dragging' : ''}${isDragOver ? ' mpb-dragOver' : ''}${isDone ? ' mpb-detailDone' : ''}${isCurrent ? ' mpb-detailCurrent' : ''}${frozen ? ' mpb-detailFrozen' : ''}`}
                   style={{ width: cardWidth, ['--p' as any]: `${fillPct}%` }}
                   title={`${n.name} ${stat.done}/${stat.total} · 剩 ${stat.remaining} · ${percent.toFixed(0)}%`}
                   onDragOver={(e) => {
-                    if (!canEditWorkflow) return;
+                    if (!canReorderWorkflow) return;
                     if (!draggingNodeId) return;
                     if (String(n.id) === String(draggingNodeId)) return;
                     e.preventDefault();
@@ -2402,7 +2404,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     setDragOverNodeId((prev) => (prev === String(n.id) ? null : prev));
                   }}
                   onDrop={(e) => {
-                    if (!canEditWorkflow) return;
+                    if (!canReorderWorkflow) return;
                     e.preventDefault();
                     const fromId = String(draggingNodeId || e.dataTransfer.getData('text/plain') || '').trim();
                     reorderNodeBefore(fromId, String(n.id));
@@ -2413,9 +2415,9 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                   <div
                     className="mpb-detailTrack"
                     style={{ ['--p' as any]: `${fillPct}%` }}
-                    draggable={canEditWorkflow}
+                    draggable={canReorderWorkflow}
                     onDragStart={(e) => {
-                      if (!canEditWorkflow) return;
+                      if (!canReorderWorkflow) return;
                       e.dataTransfer.setData('text/plain', String(n.id));
                       e.dataTransfer.effectAllowed = 'move';
                       setDraggingNodeId(String(n.id));
@@ -2644,8 +2646,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 }}
               >
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, justifySelf: screens.lg ? 'start' : 'start' }}>
-                  <QRCodeCanvas value={activeOrder.orderNo} size={120} includeMargin />
-                  <div style={{ textAlign: 'center', color: '#8c8c8c', fontSize: 12, lineHeight: 1.2 }}>{activeOrder.orderNo}</div>
+                  <QRCodeCanvas value={activeOrder.qrCode || ' '} size={120} includeMargin />
+                  <div style={{ textAlign: 'center', color: '#8c8c8c', fontSize: 12, lineHeight: 1.2 }}>{activeOrder.qrCode || '-'}</div>
                 </div>
 
                 <div
