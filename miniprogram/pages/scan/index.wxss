@@ -626,6 +626,20 @@ page {
   box-sizing: border-box;
 }
 
+.qc-receive-tip {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: #f0f9ff;
+  border-left: 3px solid #3b82f6;
+  border-radius: 6px;
+}
+
+.qc-tip-text {
+  font-size: 12px;
+  color: #1e40af;
+  line-height: 1.5;
+}
+
 .qc-modal-opts {
   display: flex;
   gap: 6px;

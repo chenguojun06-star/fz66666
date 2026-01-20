@@ -179,31 +179,16 @@
           </view>
         </view>
         
-        <!-- 质检次品数量 -->
-        <view wx:if="{{scanTypeOptions[scanTypeIndex].value === 'quality' && !scanConfirm.detail.isProcurement}}" class="qc-modal-bar">
-          <text class="qc-modal-label">次品数量</text>
-          <input class="qc-defect-input" type="number" placeholder="默认全部合格，填写次品数" value="{{defectQuantity}}" bindinput="onDefectQuantityInput" />
-        </view>
-        
-        <!-- 次品详情 -->
-        <view wx:if="{{scanTypeOptions[scanTypeIndex].value === 'quality' && defectQuantity > 0 && !scanConfirm.detail.isProcurement}}" class="defect-modal-box">
-          <view class="df-row">
-            <text class="df-label">类型</text>
-            <picker class="df-picker" mode="selector" range="{{defectCategoryOptions}}" range-key="label" value="{{defectCategoryIndex}}" bindchange="onDefectCategoryChange">
-              <text class="df-val">{{defectCategoryOptions[defectCategoryIndex].label}} ›</text>
-            </picker>
-          </view>
-          <view class="df-row">
-            <text class="df-label">处理</text>
-            <picker class="df-picker" mode="selector" range="{{defectRemarkOptions}}" range-key="label" value="{{defectRemarkIndex}}" bindchange="onDefectRemarkChange">
-              <text class="df-val">{{defectRemarkOptions[defectRemarkIndex].label}} ›</text>
-            </picker>
-          </view>
+        <!-- 质检领取提示 -->
+        <view wx:if="{{scanTypeOptions[scanTypeIndex].value === 'quality' && !scanConfirm.detail.isProcurement}}" class="qc-receive-tip">
+          <text class="qc-tip-text">领取后可在"我的任务"中填写质检结果</text>
         </view>
       </view>
       <view class="modal-btns">
         <view class="mbtn cancel" bindtap="onCancelScan">取消</view>
-        <view class="mbtn ok {{scanConfirm.loading ? 'off' : ''}}" bindtap="onConfirmScan">{{scanConfirm.loading ? '...' : (scanConfirm.detail.isProcurement ? '领取并提交' : '确认')}}</view>
+        <view class="mbtn ok {{scanConfirm.loading ? 'off' : ''}}" bindtap="onConfirmScan">
+          {{scanConfirm.loading ? '...' : (scanConfirm.detail.isProcurement ? '领取并提交' : (scanTypeOptions[scanTypeIndex].value === 'quality' ? '领取' : '确认'))}}
+        </view>
       </view>
     </view>
   </view>
