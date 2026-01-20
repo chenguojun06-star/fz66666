@@ -1117,6 +1117,17 @@ const MaterialPurchase: React.FC = () => {
       align: 'right' as const,
     },
     {
+      title: '待到数量',
+      key: 'remainingQuantity',
+      width: 100,
+      align: 'right' as const,
+      render: (_: any, record: any) => {
+        const total = Number(record?.purchaseQuantity || 0);
+        const arrived = Number(record?.arrivedQuantity || 0);
+        return Math.max(0, total - arrived);
+      },
+    },
+    {
       title: '供应商',
       dataIndex: 'supplierName',
       key: 'supplierName',
@@ -1146,6 +1157,20 @@ const MaterialPurchase: React.FC = () => {
         const v = Number(value);
         return Number.isFinite(v) ? v.toFixed(2) : '-';
       },
+    },
+    {
+      title: '预计到货',
+      dataIndex: 'expectedArrivalDate',
+      key: 'expectedArrivalDate',
+      width: 120,
+      render: (v: any) => formatDateTime(v) || '-',
+    },
+    {
+      title: '实际到货',
+      dataIndex: 'actualArrivalDate',
+      key: 'actualArrivalDate',
+      width: 120,
+      render: (v: any) => formatDateTime(v) || '-',
     },
     {
       title: '领取人',

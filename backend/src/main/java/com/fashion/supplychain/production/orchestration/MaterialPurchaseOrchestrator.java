@@ -419,18 +419,22 @@ public class MaterialPurchaseOrchestrator {
         }
 
         // 检查是否已被领取
-        String existingReceiverId = purchase.getReceiverId() == null ? null : purchase.getReceiverId().trim();
-        String existingReceiverName = purchase.getReceiverName() == null ? null : purchase.getReceiverName().trim();
-        String rid = StringUtils.hasText(receiverId) ? receiverId.trim() : null;
-        String rname = StringUtils.hasText(receiverName) ? receiverName.trim() : null;
+        String existingReceiverId = StringUtils.hasText(purchase.getReceiverId())
+                ? purchase.getReceiverId().trim()
+                : "";
+        String existingReceiverName = StringUtils.hasText(purchase.getReceiverName())
+                ? purchase.getReceiverName().trim()
+                : "";
+        String rid = StringUtils.hasText(receiverId) ? receiverId.trim() : "";
+        String rname = StringUtils.hasText(receiverName) ? receiverName.trim() : "";
         
         boolean alreadyReceived = !"pending".equals(status) && StringUtils.hasText(status);
         if (alreadyReceived) {
             // 检查是否是同一个人
             boolean isSame = false;
-            if (StringUtils.hasText(rid) && StringUtils.hasText(existingReceiverId)) {
+            if (!rid.isEmpty() && !existingReceiverId.isEmpty()) {
                 isSame = rid.equals(existingReceiverId);
-            } else if (StringUtils.hasText(rname) && StringUtils.hasText(existingReceiverName)) {
+            } else if (!rname.isEmpty() && !existingReceiverName.isEmpty()) {
                 isSame = rname.equals(existingReceiverName);
             }
             if (!isSame) {
@@ -439,20 +443,28 @@ public class MaterialPurchaseOrchestrator {
             }
         }
 
-        boolean ok = receiveAndSync(purchaseId, receiverId, receiverName);
+        boolean ok = receiveAndSync(
+                purchaseId,
+                StringUtils.hasText(rid) ? rid : null,
+                StringUtils.hasText(rname) ? rname : null
+        );
         if (!ok) {
             // 再次检查最新状态
             MaterialPurchase latest = materialPurchaseService.getById(purchaseId);
             if (latest != null) {
-                String latestReceiverName = latest.getReceiverName() == null ? null : latest.getReceiverName().trim();
-                String latestReceiverId = latest.getReceiverId() == null ? null : latest.getReceiverId().trim();
+                String latestReceiverName = StringUtils.hasText(latest.getReceiverName())
+                        ? latest.getReceiverName().trim()
+                        : "";
+                String latestReceiverId = StringUtils.hasText(latest.getReceiverId())
+                        ? latest.getReceiverId().trim()
+                        : "";
                 boolean isSameNow = false;
-                if (StringUtils.hasText(rid) && StringUtils.hasText(latestReceiverId)) {
+                if (!rid.isEmpty() && !latestReceiverId.isEmpty()) {
                     isSameNow = rid.equals(latestReceiverId);
-                } else if (StringUtils.hasText(rname) && StringUtils.hasText(latestReceiverName)) {
+                } else if (!rname.isEmpty() && !latestReceiverName.isEmpty()) {
                     isSameNow = rname.equals(latestReceiverName);
                 }
-                if (!isSameNow && StringUtils.hasText(latestReceiverName)) {
+                if (!isSameNow && !latestReceiverName.isEmpty()) {
                     throw new IllegalStateException("该任务已被「" + latestReceiverName + "」领取，无法重复领取");
                 }
             }
@@ -679,7 +691,9 @@ public class MaterialPurchaseOrchestrator {
             return;
         }
 
-        if (StringUtils.hasText(purchase.getId())) {
+        boolean allowReconciliation = !StringUtils.hasText(purchase.getOrderId())
+                && !StringUtils.hasText(purchase.getOrderNo());
+        if (allowReconciliation && StringUtils.hasText(purchase.getId())) {
             try {
                 materialReconciliationOrchestrator.upsertFromPurchaseId(purchase.getId().trim());
             } catch (Exception e) {
