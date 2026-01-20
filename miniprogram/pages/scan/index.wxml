@@ -1,109 +1,99 @@
 <view class="page">
-  <!-- 顶部标题栏 -->
-  <view class="glass-header">
-    <text class="header-title">扫码</text>
+  <!-- 顶部 -->
+  <view class="top-bar">
     <picker mode="selector" range="{{scanTypeOptions}}" range-key="label" value="{{scanTypeIndex}}" bindchange="onScanTypeChange">
-      <view class="type-chip">
-        <text>{{scanTypeOptions[scanTypeIndex].label}}</text>
-        <text class="chip-arrow">›</text>
-      </view>
+      <view class="type-btn">{{scanTypeOptions[scanTypeIndex].label}} ▾</view>
     </picker>
   </view>
 
-  <!-- 扫码操作区 -->
-  <view class="glass-card">
-    <view class="scan-row">
-      <view class="input-wrap">
-        <input class="qty-input" type="digit" placeholder="数量" value="{{quantity}}" bindinput="onQuantityInput" />
-      </view>
-      <view class="scan-btn {{loading ? 'disabled' : ''}}" bindtap="onScan">
-        <text>{{loading ? '...' : '扫码'}}</text>
-      </view>
-    </view>
-    
-    <!-- 质检选项 -->
-    <view wx:if="{{scanTypeOptions[scanTypeIndex].value === 'quality'}}" class="quality-row">
-      <view class="chip {{qualityIndex === 0 ? 'active green' : ''}}" bindtap="onQuickQuality" data-idx="0">合格</view>
-      <view class="chip {{qualityIndex === 1 ? 'active orange' : ''}}" bindtap="onQuickQuality" data-idx="1">次品</view>
-      <view class="chip {{qualityIndex === 2 ? 'active blue' : ''}}" bindtap="onQuickQuality" data-idx="2">返修</view>
+  <!-- 扫码区 -->
+  <view class="card">
+    <view class="row">
+      <input class="input" type="digit" placeholder="数量" value="{{quantity}}" bindinput="onQuantityInput" />
+      <view class="btn-scan {{loading ? 'disabled' : ''}}" bindtap="onScan">{{loading ? '处理中' : '扫码'}}</view>
     </view>
 
-    <!-- 次品详情 -->
-    <view wx:if="{{scanTypeOptions[scanTypeIndex].value === 'quality' && qualityOptions[qualityIndex].value === 'unqualified'}}" class="defect-area">
-      <view class="form-row">
-        <text class="form-label">类型</text>
+    <!-- 质检 -->
+    <view wx:if="{{scanTypeOptions[scanTypeIndex].value === 'quality'}}" class="quality-btns">
+      <view class="q-btn {{qualityIndex === 0 ? 'active' : ''}}" bindtap="onQuickQuality" data-idx="0">合格</view>
+      <view class="q-btn warn {{qualityIndex === 1 ? 'active' : ''}}" bindtap="onQuickQuality" data-idx="1">次品</view>
+      <view class="q-btn {{qualityIndex === 2 ? 'active' : ''}}" bindtap="onQuickQuality" data-idx="2">返修</view>
+    </view>
+
+    <!-- 次品 -->
+    <view wx:if="{{scanTypeOptions[scanTypeIndex].value === 'quality' && qualityOptions[qualityIndex].value === 'unqualified'}}" class="defect-box">
+      <view class="field">
+        <text class="label">问题类型</text>
         <picker mode="selector" range="{{defectCategoryOptions}}" range-key="label" value="{{defectCategoryIndex}}" bindchange="onDefectCategoryChange">
-          <view class="form-picker">{{defectCategoryOptions[defectCategoryIndex].label}}<text class="arrow">›</text></view>
+          <view class="picker-val">{{defectCategoryOptions[defectCategoryIndex].label}} ›</view>
         </picker>
       </view>
-      <view class="form-row">
-        <text class="form-label">处理</text>
+      <view class="field">
+        <text class="label">处理方式</text>
         <picker mode="selector" range="{{defectRemarkOptions}}" range-key="label" value="{{defectRemarkIndex}}" bindchange="onDefectRemarkChange">
-          <view class="form-picker">{{defectRemarkOptions[defectRemarkIndex].label}}<text class="arrow">›</text></view>
+          <view class="picker-val">{{defectRemarkOptions[defectRemarkIndex].label}} ›</view>
         </picker>
       </view>
-      <view class="photo-row">
-        <view wx:for="{{defectImageFullUrls}}" wx:key="*this" class="photo-thumb">
+      <view class="photos">
+        <view wx:for="{{defectImageFullUrls}}" wx:key="*this" class="photo">
           <image src="{{item}}" mode="aspectFill" bindtap="onPreviewDefectPhoto" data-idx="{{index}}" />
-          <text class="del-btn" bindtap="onRemoveDefectPhoto" data-idx="{{index}}">×</text>
+          <text class="photo-del" bindtap="onRemoveDefectPhoto" data-idx="{{index}}">×</text>
         </view>
         <view wx:if="{{defectImageFullUrls.length < 4}}" class="photo-add {{defectUploading ? 'disabled' : ''}}" bindtap="onAddDefectPhoto">+</view>
       </view>
     </view>
 
-    <!-- 入库仓库 -->
-    <view wx:if="{{scanTypeOptions[scanTypeIndex].value === 'warehouse'}}" class="form-row" style="margin-top:12px;">
-      <text class="form-label">仓库</text>
-      <input class="form-input" placeholder="输入仓库名" value="{{warehouse}}" bindinput="onWarehouseInput" />
+    <!-- 入库 -->
+    <view wx:if="{{scanTypeOptions[scanTypeIndex].value === 'warehouse'}}" class="field" style="margin-top:12px">
+      <text class="label">仓库</text>
+      <input class="field-input" placeholder="仓库名称" value="{{warehouse}}" bindinput="onWarehouseInput" />
     </view>
   </view>
 
-  <!-- 扫码结果 -->
-  <view wx:if="{{lastResult}}" class="glass-card {{lastResult.success ? 'success' : 'error'}}">
-    <view class="result-head">
+  <!-- 结果 -->
+  <view wx:if="{{lastResult}}" class="card {{lastResult.success ? 'card-ok' : 'card-err'}}">
+    <view class="result-top">
       <text class="result-msg">{{lastResult.message}}</text>
-      <view wx:if="{{lastResult.success && undo.canUndo}}" class="undo-link" bindtap="onUndoLast">{{undo.loading ? '...' : '撤销'}}</view>
+      <text wx:if="{{lastResult.success && undo.canUndo}}" class="undo" bindtap="onUndoLast">{{undo.loading ? '...' : '撤销'}}</text>
     </view>
-    <view wx:if="{{lastResult.orderNo || lastResult.styleNo}}" class="result-info">
-      <text wx:if="{{lastResult.orderNo}}">{{lastResult.orderNo}}</text>
-      <text wx:if="{{lastResult.styleNo}}" class="sub">{{lastResult.styleNo}}</text>
-      <text wx:if="{{lastResult.processName}}" class="tag">{{lastResult.processName}}</text>
+    <view wx:if="{{lastResult.orderNo}}" class="result-row">
+      <text class="result-order">{{lastResult.orderNo}}</text>
+      <text wx:if="{{lastResult.processName}}" class="result-tag">{{lastResult.processName}}</text>
     </view>
-    <view wx:if="{{lastResult.color || lastResult.size || lastResult.unitPrice != null}}" class="result-detail">
+    <view class="result-sub">
+      <text wx:if="{{lastResult.styleNo}}">{{lastResult.styleNo}}</text>
       <text wx:if="{{lastResult.color}}">{{lastResult.color}}</text>
       <text wx:if="{{lastResult.size}}">{{lastResult.size}}</text>
       <text wx:if="{{lastResult.unitPrice != null}}">¥{{lastResult.unitPrice}}</text>
     </view>
   </view>
 
-  <!-- 采购面板 -->
-  <view wx:if="{{materialPurchases.length}}" class="glass-card">
-    <view class="card-title">采购任务 <text class="badge">{{materialPurchases.length}}</text></view>
-    <view wx:for="{{materialPurchases}}" wx:key="id" class="purchase-item">
-      <view class="purchase-head">
-        <text class="purchase-name">{{item.materialName || item.materialCode || '物料'}}</text>
-        <text class="purchase-status {{item.receiverName ? 'done' : ''}}">{{item.receiverName ? '已领' : '待领'}}</text>
+  <!-- 采购 -->
+  <view wx:if="{{materialPurchases.length}}" class="card">
+    <view class="card-head">采购任务 <text class="num">{{materialPurchases.length}}</text></view>
+    <view wx:for="{{materialPurchases}}" wx:key="id" class="purchase">
+      <view class="p-top">
+        <text class="p-name">{{item.materialName || item.materialCode || '物料'}}</text>
+        <text class="p-status {{item.receiverName ? 'done' : ''}}">{{item.receiverName ? '已领' : '待领'}}</text>
       </view>
-      <view class="purchase-grid">
-        <view class="grid-cell"><text class="cell-val">{{item.demandQuantity || item.purchaseQuantity || 0}}</text><text class="cell-lbl">需求</text></view>
-        <view class="grid-cell"><text class="cell-val">{{item.purchaseQuantity || 0}}</text><text class="cell-lbl">采购</text></view>
-        <view class="grid-cell"><text class="cell-val">{{item.arrivedQuantity || 0}}</text><text class="cell-lbl">到货</text></view>
+      <view class="p-nums">
+        <view class="p-num"><text class="pn-v">{{item.demandQuantity || item.purchaseQuantity || 0}}</text><text class="pn-l">需求</text></view>
+        <view class="p-num"><text class="pn-v">{{item.purchaseQuantity || 0}}</text><text class="pn-l">采购</text></view>
+        <view class="p-num"><text class="pn-v">{{item.arrivedQuantity || 0}}</text><text class="pn-l">到货</text></view>
       </view>
-      <view wx:if="{{item.receiverName}}" class="receiver-row">{{item.receiverName}} 已领取</view>
-      
-      <!-- 操作 -->
-      <view wx:if="{{!item.receiverName && item.status !== 'completed' && item.status !== 'cancelled'}}" class="purchase-action">
-        <view class="btn-primary" bindtap="onReceivePurchase" data-idx="{{index}}">领取</view>
+      <view wx:if="{{item.receiverName}}" class="p-receiver">{{item.receiverName}} 已领取</view>
+      <view wx:if="{{!item.receiverName && item.status !== 'completed' && item.status !== 'cancelled'}}" class="p-action">
+        <view class="btn-primary" bindtap="onReceivePurchase" data-idx="{{index}}">领取任务</view>
       </view>
-      <view wx:if="{{item.receiverName}}" class="arrival-form">
-        <view class="form-row">
-          <text class="form-label">到货量</text>
-          <input class="form-input" type="digit" placeholder="填写" value="{{item.arrivedInput}}" bindinput="onPurchaseArrivedInput" data-idx="{{index}}" />
-          <text class="form-unit">{{item.unit || '米'}}</text>
+      <view wx:if="{{item.receiverName}}" class="p-form">
+        <view class="field">
+          <text class="label">到货量</text>
+          <input class="field-input" type="digit" placeholder="填写数量" value="{{item.arrivedInput}}" bindinput="onPurchaseArrivedInput" data-idx="{{index}}" />
+          <text class="unit">{{item.unit || '米'}}</text>
         </view>
-        <view class="form-row">
-          <text class="form-label">备注</text>
-          <input class="form-input" placeholder="选填" value="{{item.remarkInput}}" bindinput="onPurchaseRemarkInput" data-idx="{{index}}" />
+        <view class="field">
+          <text class="label">备注</text>
+          <input class="field-input" placeholder="选填" value="{{item.remarkInput}}" bindinput="onPurchaseRemarkInput" data-idx="{{index}}" />
         </view>
         <view class="btn-primary" bindtap="onConfirmPurchaseArrived" data-idx="{{index}}">确认到货</view>
       </view>
@@ -111,52 +101,46 @@
   </view>
 
   <!-- 统计 -->
-  <view class="glass-card">
-    <view class="card-title">今日统计 <text class="refresh {{my.loadingStats ? 'disabled' : ''}}" bindtap="refreshMy">刷新</text></view>
-    <view class="stats-row">
-      <view class="stat-cell"><text class="stat-num">{{my.stats.scanCount || 0}}</text><text class="stat-lbl">扫码</text></view>
-      <view class="stat-cell"><text class="stat-num">{{my.stats.orderCount || 0}}</text><text class="stat-lbl">订单</text></view>
-      <view class="stat-cell"><text class="stat-num">{{my.stats.totalQuantity || 0}}</text><text class="stat-lbl">数量</text></view>
-      <view class="stat-cell highlight"><text class="stat-num">¥{{my.stats.totalAmount || 0}}</text><text class="stat-lbl">收入</text></view>
+  <view class="card">
+    <view class="card-head">今日统计 <text class="refresh {{my.loadingStats ? 'disabled' : ''}}" bindtap="refreshMy">刷新</text></view>
+    <view class="stats">
+      <view class="stat"><text class="stat-v">{{my.stats.scanCount || 0}}</text><text class="stat-l">扫码</text></view>
+      <view class="stat"><text class="stat-v">{{my.stats.orderCount || 0}}</text><text class="stat-l">订单</text></view>
+      <view class="stat"><text class="stat-v">{{my.stats.totalQuantity || 0}}</text><text class="stat-l">数量</text></view>
+      <view class="stat hl"><text class="stat-v">¥{{my.stats.totalAmount || 0}}</text><text class="stat-l">收入</text></view>
     </view>
   </view>
 
-  <!-- 历史 -->
-  <view class="glass-card">
-    <view class="card-title">扫码记录</view>
-    <view wx:if="{{my.history.list.length === 0 && !my.loadingHistory}}" class="empty">暂无记录</view>
-    <view wx:for="{{my.history.list}}" wx:key="id" class="history-item">
-      <view class="history-main">
-        <text class="history-order">{{item.orderNo || '-'}}</text>
-        <text class="history-tag">{{item.processName || item.progressStage || '-'}}</text>
+  <!-- 记录 -->
+  <view class="card">
+    <view class="card-head">扫码记录</view>
+    <view wx:if="{{!my.history.list.length && !my.loadingHistory}}" class="empty">暂无记录</view>
+    <view wx:for="{{my.history.list}}" wx:key="id" class="record">
+      <view class="r-top">
+        <text class="r-order">{{item.orderNo || '-'}}</text>
+        <text class="r-tag">{{item.processName || item.progressStage || '-'}}</text>
       </view>
-      <view class="history-sub">
-        <text>{{item.styleNo || '-'}} · {{item.color || '-'}} · {{item.size || '-'}}</text>
-        <text class="history-qty">×{{item.quantity || 0}}</text>
-      </view>
+      <view class="r-sub">{{item.styleNo || '-'}} · {{item.color || '-'}} · {{item.size || '-'}} <text class="r-qty">×{{item.quantity || 0}}</text></view>
     </view>
-    <view class="load-more" bindtap="loadMoreMyHistory">
+    <view class="more" bindtap="loadMoreMyHistory">
       <text wx:if="{{my.loadingHistory}}">加载中...</text>
       <text wx:elif="{{my.history.hasMore}}">加载更多</text>
-      <text wx:else class="no-more">— 没有更多 —</text>
+      <text wx:else class="no-more">没有更多了</text>
     </view>
   </view>
 
-  <!-- 确认弹窗 -->
-  <view wx:if="{{scanConfirm.visible}}" class="modal-mask" bindtap="onCancelScan">
-    <view class="modal-glass" catchtap="">
-      <view class="modal-head">
-        <text>确认提交</text>
-        <text class="countdown">{{scanConfirm.remain}}s</text>
-      </view>
+  <!-- 弹窗 -->
+  <view wx:if="{{scanConfirm.visible}}" class="mask" bindtap="onCancelScan">
+    <view class="modal" catchtap="">
+      <view class="modal-title">确认提交 <text class="cd">{{scanConfirm.remain}}s</text></view>
       <view wx:if="{{scanConfirm.detail}}" class="modal-body">
-        <view class="info-row"><text class="info-lbl">二维码</text><text class="info-val">{{scanConfirm.detail.scanCode}}</text></view>
-        <view class="info-row"><text class="info-lbl">数量</text><text class="info-val">{{scanConfirm.detail.quantity}}</text></view>
-        <view wx:if="{{scanConfirm.detail.orderNo}}" class="info-row"><text class="info-lbl">订单</text><text class="info-val">{{scanConfirm.detail.orderNo}}</text></view>
-        <view wx:if="{{scanConfirm.detail.progressStage}}" class="info-row"><text class="info-lbl">环节</text><text class="info-val">{{scanConfirm.detail.progressStage}}</text></view>
+        <view class="m-row"><text class="m-l">二维码</text><text class="m-v">{{scanConfirm.detail.scanCode}}</text></view>
+        <view class="m-row"><text class="m-l">数量</text><text class="m-v">{{scanConfirm.detail.quantity}}</text></view>
+        <view wx:if="{{scanConfirm.detail.orderNo}}" class="m-row"><text class="m-l">订单</text><text class="m-v">{{scanConfirm.detail.orderNo}}</text></view>
+        <view wx:if="{{scanConfirm.detail.progressStage}}" class="m-row"><text class="m-l">环节</text><text class="m-v">{{scanConfirm.detail.progressStage}}</text></view>
       </view>
-      <view class="modal-foot">
-        <view class="btn-ghost" bindtap="onCancelScan">取消</view>
+      <view class="modal-btns">
+        <view class="btn-cancel" bindtap="onCancelScan">取消</view>
         <view class="btn-primary {{scanConfirm.loading ? 'disabled' : ''}}" bindtap="onConfirmScan">{{scanConfirm.loading ? '...' : '确认'}}</view>
       </view>
     </view>
