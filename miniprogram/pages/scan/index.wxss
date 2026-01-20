@@ -32,8 +32,9 @@ page {
   background: #f3f4f6;
 }
 .tab.on {
-  background: #0a84ff;
-  color: #fff;
+  background: #f3f5f9;
+  color: #1f2937;
+  border: 1px solid #e5e7eb;
 }
 .tab-ico {
   width: 16px;
@@ -84,8 +85,9 @@ page {
   gap: 4px;
   padding: 0 14px;
   height: 34px;
-  background: #0a84ff;
-  color: #fff;
+  background: rgba(255, 255, 255, 0.72);
+  color: #1f2937;
+  border: 1px solid #e5e7eb;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
@@ -126,8 +128,8 @@ page {
   color: #e65100;
 }
 .qc-opt.on.fix {
-  background: #e3f2fd;
-  color: #1565c0;
+  background: #f3f5f9;
+  color: #475569;
 }
 
 /* ===== 次品详情 ===== */
@@ -276,7 +278,7 @@ page {
   color: #6b7280;
 }
 .res-order {
-  color: #0a84ff;
+  color: #475569;
   font-weight: 500;
 }
 .res-style {
@@ -284,8 +286,8 @@ page {
 }
 .res-proc {
   padding: 2px 8px;
-  background: rgba(10, 132, 255, 0.12);
-  color: #0a84ff;
+  background: rgba(148, 163, 184, 0.18);
+  color: #475569;
   border-radius: 999px;
   font-size: 11px;
 }
@@ -312,8 +314,9 @@ page {
 .sec-count {
   display: inline-block;
   padding: 0 6px;
-  background: #0a84ff;
-  color: #fff;
+  background: rgba(255, 255, 255, 0.72);
+  color: #1f2937;
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
   font-size: 11px;
   margin-left: 4px;
@@ -386,7 +389,7 @@ page {
   margin-top: 2px;
 }
 .mc-val.hl {
-  color: #2b7de9;
+  color: #475569;
 }
 .mc-val.gr {
   color: #2e7d32;
@@ -410,8 +413,9 @@ page {
 .btn-receive {
   display: inline-block;
   padding: 8px 20px;
-  background: #2b7de9;
-  color: #fff;
+  background: rgba(255, 255, 255, 0.72);
+  color: #1f2937;
+  border: 1px solid #e5e7eb;
   border-radius: 16px;
   font-size: 12px;
 }
@@ -469,7 +473,7 @@ page {
   border-radius: 8px;
 }
 .st.hl {
-  background: #e6f0ff;
+  background: #f3f5f9;
 }
 .st-num {
   display: block;
@@ -478,7 +482,7 @@ page {
   color: #333;
 }
 .st.hl .st-num {
-  color: #2b7de9;
+  color: #475569;
 }
 .st-label {
   display: block;
@@ -527,7 +531,7 @@ page {
 .hist-tag {
   padding: 2px 6px;
   background: #f5f6f8;
-  color: #2b7de9;
+  color: #475569;
   border-radius: 6px;
   font-size: 10px;
 }
@@ -540,7 +544,7 @@ page {
   text-align: center;
   padding: 10px;
   font-size: 11px;
-  color: #2b7de9;
+  color: #475569;
 }
 .load-more .no-more {
   color: #ccc;
@@ -569,8 +573,9 @@ page {
 }
 .modal-head {
   padding: 12px 14px;
-  background: #2b7de9;
-  color: #fff;
+  background: rgba(255, 255, 255, 0.8);
+  color: #1f2937;
+  border-bottom: 1px solid #e5e7eb;
   font-size: 14px;
   font-weight: 500;
 }
@@ -583,13 +588,65 @@ page {
 }
 .modal-body {
   padding: 12px;
-  max-height: 240px;
+  max-height: 400px;
   overflow-y: auto;
 }
 .cf-list {
   background: #f9fafb;
   border-radius: 8px;
   padding: 8px;
+  margin-bottom: 10px;
+}
+
+/* 质检选项 - 弹窗内 */
+.qc-modal-bar {
+  margin-top: 10px;
+  padding: 10px 0;
+  border-top: 1px solid #f0f0f0;
+}
+.qc-modal-label {
+  display: block;
+  font-size: 11px;
+  color: #999;
+  margin-bottom: 8px;
+}
+.qc-modal-opts {
+  display: flex;
+  gap: 6px;
+}
+.qc-modal-opt {
+  flex: 1;
+  text-align: center;
+  padding: 8px 4px;
+  border-radius: 12px;
+  font-size: 12px;
+  color: #6b7280;
+  background: #f3f4f6;
+  border: 1px solid transparent;
+}
+.qc-modal-opt.on.pass {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border-color: #a5d6a7;
+}
+.qc-modal-opt.on.fail {
+  background: #fff3e0;
+  color: #e65100;
+  border-color: #ffcc80;
+}
+.qc-modal-opt.on.fix {
+  background: #f3f5f9;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+/* 次品详情 - 弹窗内 */
+.defect-modal-box {
+  margin-top: 10px;
+  background: #fff7ed;
+  border-radius: 12px;
+  padding: 10px;
+  border: 1px solid #fed7aa;
 }
 .cf-item {
   display: flex;
@@ -616,7 +673,7 @@ page {
   font-size: 10px;
 }
 .cf-v.hl {
-  color: #2b7de9;
+  color: #475569;
   font-weight: 500;
 }
 .modal-btns {
@@ -638,8 +695,9 @@ page {
   color: #666;
 }
 .mbtn.ok {
-  background: #2b7de9;
-  color: #fff;
+  background: rgba(255, 255, 255, 0.72);
+  color: #1f2937;
+  border: 1px solid #e5e7eb;
 }
 .mbtn.ok.off {
   opacity: 0.5;

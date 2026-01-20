@@ -66,9 +66,9 @@ page {
 }
 
 .btn-primary {
-  background: #0a84ff;
-  color: #ffffff;
-  border: none;
+  background: rgba(255, 255, 255, 0.72);
+  color: #1f2937;
+  border: 1px solid #e5e7eb;
   border-radius: 999px;
   padding: 10px 14px;
   text-align: center;
@@ -76,8 +76,9 @@ page {
 }
 
 .btn-secondary {
-  background: #eef2ff;
-  color: #374151;
+  background: rgba(255, 255, 255, 0.6);
+  color: #1f2937;
+  border: 1px solid #e5e7eb;
   border-radius: 999px;
   padding: 8px 12px;
   text-align: center;
@@ -106,8 +107,8 @@ page {
   padding: 2px 8px;
   border-radius: 999px;
   font-size: 11px;
-  background: rgba(10, 132, 255, 0.12);
-  color: #0a84ff;
+  background: rgba(148, 163, 184, 0.18);
+  color: #475569;
 }
 
 .tag-ok {

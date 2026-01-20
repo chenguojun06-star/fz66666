@@ -646,13 +646,14 @@ Page({
                     wx.showToast({ title: errMsg, icon: 'none' });
                 } else {
                     console.error('scan_execute_failed', e);
-                    wx.showToast({ title: '系统繁忙', icon: 'none' });
+                    wx.showToast({ title: '操作失败，请重试', icon: 'none', duration: 2000 });
                 }
             } else if (lower.includes('network')) {
                 wx.showToast({ title: '连接失败', icon: 'none' });
             } else {
                 console.error('scan_execute_failed', e);
-                wx.showToast({ title: '系统繁忙', icon: 'none' });
+                const errDetail = e && e.message ? String(e.message) : '';
+                wx.showToast({ title: errDetail || '操作失败，请重试', icon: 'none', duration: 2500 });
             }
         } finally {
             this.setData({ scanConfirm: { ...this.data.scanConfirm, loading: false } });
