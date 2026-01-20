@@ -32,7 +32,7 @@ page {
   background: #ff4757;
   color: #ffffff;
   border-radius: 9px;
-  font-size: 10px;
+  font-size: 10px; /* 极小字体 */
   line-height: 18px;
   text-align: center;
   padding: 0 4px;
@@ -68,7 +68,7 @@ page {
 }
 
 .reminder-panel-title {
-  font-size: 16px;
+  font-size: 16px; /* 二级标题 */
   font-weight: 600;
   color: #1f2937;
 }
@@ -82,7 +82,7 @@ page {
   align-items: center;
   justify-content: center;
   color: #6b7280;
-  font-size: 18px;
+  font-size: 18px; /* 一级标题/图标 */
 }
 
 .reminder-panel-content {
@@ -95,7 +95,7 @@ page {
   text-align: center;
   color: #9ca3af;
   padding: 40px 20px;
-  font-size: 14px;
+  font-size: 14px; /* 正文字体 */
 }
 
 .reminder-item {
@@ -148,7 +148,7 @@ page {
 }
 
 .title {
-  font-size: 16px;
+  font-size: 16px; /* 二级标题 */
   font-weight: 600;
   margin-bottom: 10px;
   color: #1f2937;

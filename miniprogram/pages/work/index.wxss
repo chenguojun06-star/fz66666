@@ -19,7 +19,7 @@ page {
 .btn-primary {
   border-radius: 999px;
   padding: 10px 14px;
-  font-size: 12px;
+  font-size: 14px; /* 按钮字体 */
 }
 
 .tabbar-actions {
@@ -45,7 +45,7 @@ page {
   border-radius: 999px;
   background: transparent;
   color: #6b7280;
-  font-size: 12px;
+  font-size: 12px; /* 辅助字体 */
   text-align: center;
 }
 
@@ -63,7 +63,7 @@ page {
 
 .home-section-title {
   margin-top: 10px;
-  font-size: 14px;
+  font-size: 14px; /* 三级标题 */
   font-weight: 600;
   color: #1f2937;
 }
@@ -87,13 +87,13 @@ page {
 }
 
 .home-stat-value {
-  font-size: 14px;
+  font-size: 14px; /* 正文字体 */
   font-weight: 600;
   color: #111827;
 }
 
 .home-stat-label {
-  font-size: 12px;
+  font-size: 12px; /* 辅助字体 */
   color: #6b7280;
 }
 

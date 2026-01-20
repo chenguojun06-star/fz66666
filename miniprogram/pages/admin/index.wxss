@@ -12,12 +12,12 @@ page {
 .btn-primary {
   border-radius: 999px;
   padding: 10px 14px;
-  font-size: 12px;
+  font-size: 14px; /* 按钮字体 */
 }
 
 .section-title {
   margin-top: 10px;
-  font-size: 14px;
+  font-size: 14px; /* 三级标题 */
   font-weight: 600;
   color: #1f2937;
 }
@@ -35,7 +35,7 @@ page {
   border-radius: 999px;
   padding: 8px 12px;
   text-align: center;
-  font-size: 12px;
+  font-size: 14px; /* 按钮字体 */
 }
 
 .my-stats {
@@ -53,13 +53,13 @@ page {
 }
 
 .my-stat-value {
-  font-size: 14px;
+  font-size: 14px; /* 正文字体 */
   font-weight: 600;
   color: #111827;
 }
 
 .my-stat-label {
-  font-size: 12px;
+  font-size: 12px; /* 辅助字体 */
   color: #6b7280;
 }
 
@@ -84,7 +84,7 @@ page {
 .item-title {
   flex: 1;
   min-width: 0;
-  font-size: 14px;
+  font-size: 14px; /* 正文字体 */
   font-weight: 600;
 }
 
@@ -92,7 +92,7 @@ page {
   display: block;
   width: 100%;
   margin-top: 6px;
-  font-size: 12px;
+  font-size: 12px; /* 辅助字体 */
   color: #374151;
   line-height: 1.5;
 }
@@ -113,17 +113,17 @@ page {
 }
 
 .salary-label {
-  font-size: 12px;
+  font-size: 12px; /* 辅助字体 */
   color: #6b7280;
 }
 
 .salary-value {
-  font-size: 14px;
+  font-size: 14px; /* 正文字体 */
   font-weight: 600;
   color: #111827;
 }
 
 .hint {
-  font-size: 11px;
+  font-size: 11px; /* 备注字体 */
   color: #8b8b94;
 }
