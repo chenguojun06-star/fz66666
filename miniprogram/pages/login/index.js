@@ -20,9 +20,6 @@ function validateApiBaseUrl(url) {
     if (!v) return '';  // 可选字段
     const error = validateByRule(v, { name: 'API 地址', required: false, pattern: /^https?:\/\// });
     if (error) return error;
-    } catch (e) {
-        return 'API 地址格式不正确';
-    }
     return '';
 }
 
