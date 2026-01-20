@@ -1024,10 +1024,92 @@ page {
   opacity: 0.5;
 }
 
+/* 弹窗遮罩层 */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+
+/* 弹窗容器 */
+.modal-wrap {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  max-width: 90%;
+  width: 500rpx;
+}
+
 /* 质检处理弹窗 */
 .quality-modal .modal-container {
   max-height: 80vh;
   overflow-y: auto;
+}
+
+/* 弹窗头部 */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.modal-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.modal-close {
+  font-size: 24px;
+  color: #999;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 弹窗内容区 */
+.modal-body {
+  padding: 16px;
+}
+
+/* 弹窗底部按钮 */
+.modal-footer {
+  display: flex;
+  padding: 12px 16px;
+  border-top: 1px solid #f0f0f0;
+  gap: 12px;
+}
+
+.modal-btn {
+  flex: 1;
+  height: 44px;
+  border-radius: 8px;
+  font-size: 15px;
+  border: none;
+}
+
+.modal-btn.cancel {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.modal-btn.confirm {
+  background: #3b82f6;
+  color: #fff;
 }
 
 .qm-info {
