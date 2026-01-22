@@ -1,10 +1,14 @@
 import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { Button, Spin } from 'antd';
+import { App as AntApp, Button, Spin } from 'antd';
 import PrivateRoute from './components/PrivateRoute';
 import { useAuth } from './utils/authContext';
 import ResizableModal from './components/common/ResizableModal';
+import ErrorBoundary from './components/common/ErrorBoundary';
 import { paths } from './routeConfig';
+import { useViewport } from './utils/useViewport';
+import Login from './pages/Login';
+import Register from './pages/Register';
 
 // 懒加载组件
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
@@ -13,21 +17,23 @@ const ProductionList = React.lazy(() => import('./pages/Production/List'));
 const CuttingManagement = React.lazy(() => import('./pages/Production/Cutting'));
 const MaterialPurchase = React.lazy(() => import('./pages/Production/MaterialPurchase'));
 const ProductWarehousing = React.lazy(() => import('./pages/Production/ProductWarehousing'));
+const OrderTransfer = React.lazy(() => import('./pages/Production/OrderTransfer'));
 const OrderFlow = React.lazy(() => import('./pages/Production/OrderFlow'));
 const MaterialReconciliation = React.lazy(() => import('./pages/Finance/MaterialReconciliation'));
 const ShipmentReconciliationList = React.lazy(() => import('./pages/Finance/ShipmentReconciliationList'));
 const PaymentApproval = React.lazy(() => import('./pages/Finance/PaymentApproval'));
 const PayrollOperatorSummary = React.lazy(() => import('./pages/Finance/PayrollOperatorSummary'));
 const UserList = React.lazy(() => import('./pages/System/UserList'));
+const UserApproval = React.lazy(() => import('./pages/System/UserApproval'));
 const RoleList = React.lazy(() => import('./pages/System/RoleList'));
 const FactoryList = React.lazy(() => import('./pages/System/FactoryList'));
 const LoginLogList = React.lazy(() => import('./pages/System/LoginLogList'));
 const Profile = React.lazy(() => import('./pages/System/Profile'));
-const Login = React.lazy(() => import('./pages/Login'));
 const OrderManagement = React.lazy(() => import('./pages/OrderManagement'));
 const DataCenter = React.lazy(() => import('./pages/DataCenter'));
 const TemplateCenter = React.lazy(() => import('./pages/TemplateCenter'));
 const ProgressDetail = React.lazy(() => import('./pages/Production/ProgressDetail'));
+const NotFound = React.lazy(() => import('./pages/NotFound'));
 
 const RootRedirect: React.FC = () => {
   const { isAuthenticated, loading } = useAuth();
@@ -42,7 +48,7 @@ const LoginGate: React.FC = () => {
   if (loading) {
     return null;
   }
-  return isAuthenticated ? <Navigate to={paths.dashboard} replace /> : <Suspense fallback={<Spin />}><Login /></Suspense>;
+  return isAuthenticated ? <Navigate to={paths.dashboard} replace /> : <Login />;
 };
 
 const GlobalImagePreview: React.FC = () => {
@@ -140,6 +146,7 @@ const GlobalImagePreview: React.FC = () => {
 const AppRoutes: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { modalWidth } = useViewport();
   const backgroundLocation = (location.state as any)?.backgroundLocation;
 
   React.useEffect(() => {
@@ -168,6 +175,7 @@ const AppRoutes: React.FC = () => {
       <Routes location={backgroundLocation || location}>
         <Route path="/" element={<RootRedirect />} />
         <Route path={paths.login} element={<LoginGate />} />
+        <Route path="/register" element={<Register />} />
 
         <Route element={<PrivateRoute />}>
           <Route path={paths.dashboard} element={<Suspense fallback={<Spin />}><Dashboard /></Suspense>} />
@@ -179,6 +187,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.materialPurchase} element={<Suspense fallback={<Spin />}><MaterialPurchase /></Suspense>} />
           <Route path={paths.warehousing} element={<Suspense fallback={<Spin />}><ProductWarehousing /></Suspense>} />
           <Route path={paths.warehousingDetail} element={<Suspense fallback={<Spin />}><ProductWarehousing /></Suspense>} />
+          <Route path={paths.orderTransfer} element={<Suspense fallback={<Spin />}><OrderTransfer /></Suspense>} />
           <Route
             path={paths.progressDetail}
             element={
@@ -193,6 +202,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.paymentApproval} element={<Suspense fallback={<Spin />}><PaymentApproval /></Suspense>} />
           <Route path={paths.payrollOperatorSummary} element={<Suspense fallback={<Spin />}><PayrollOperatorSummary /></Suspense>} />
           <Route path={paths.user} element={<Suspense fallback={<Spin />}><UserList /></Suspense>} />
+          <Route path={paths.userApproval} element={<Suspense fallback={<Spin />}><UserApproval /></Suspense>} />
           <Route path={paths.role} element={<Suspense fallback={<Spin />}><RoleList /></Suspense>} />
           <Route path={paths.factory} element={<Suspense fallback={<Spin />}><FactoryList /></Suspense>} />
           <Route path={paths.loginLog} element={<Suspense fallback={<Spin />}><LoginLogList /></Suspense>} />
@@ -202,6 +212,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.dataCenter} element={<Suspense fallback={<Spin />}><DataCenter /></Suspense>} />
           <Route path={paths.templateCenter} element={<Suspense fallback={<Spin />}><TemplateCenter /></Suspense>} />
         </Route>
+        <Route path="*" element={<Suspense fallback={<Spin />}><NotFound /></Suspense>} />
       </Routes>
 
       {backgroundLocation ? (
@@ -218,15 +229,7 @@ const AppRoutes: React.FC = () => {
                     <Button onClick={() => navigate(-1)}>关闭</Button>
                   </div>
                 }
-                width={
-                  typeof window === 'undefined'
-                    ? '60vw'
-                    : window.innerWidth < 768
-                      ? '96vw'
-                      : window.innerWidth < 1024
-                        ? '66vw'
-                        : '60vw'
-                }
+                width={modalWidth}
                 initialHeight={720}
                 scaleWithViewport
                 destroyOnHidden
@@ -247,9 +250,13 @@ const AppRoutes: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <AppRoutes />
-    </BrowserRouter>
+    <ErrorBoundary>
+      <AntApp>
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <AppRoutes />
+        </BrowserRouter>
+      </AntApp>
+    </ErrorBoundary>
   );
 };
 

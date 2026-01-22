@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Button, Input, Space, Card, Tabs, message, Form, Row, Col, InputNumber, Select, Upload, Tag, DatePicker } from 'antd';
+import { App, Button, Card, Col, DatePicker, Form, Input, InputNumber, Row, Select, Space, Tabs, Tag, Upload } from 'antd';
 import type { MenuProps } from 'antd';
 import { PlusOutlined, SearchOutlined, EyeOutlined } from '@ant-design/icons';
 import Layout from '../../components/Layout';
+import { useSync } from '../../utils/syncManager';
 import ResizableModal from '../../components/common/ResizableModal';
 import ResizableTable from '../../components/common/ResizableTable';
 import RowActions from '../../components/common/RowActions';
@@ -12,6 +13,7 @@ import api, { withQuery } from '../../utils/api';
 import { isSupervisorOrAboveUser, useAuth } from '../../utils/authContext';
 import { formatDateTime, formatDateTimeSecond } from '../../utils/datetime';
 import { toCategoryCn as toCategoryCnUtil } from '../../utils/styleCategory';
+import { useViewport } from '../../utils/useViewport';
 import './styles.css';
 
 import dayjs from 'dayjs';
@@ -24,12 +26,14 @@ import StylePatternTab from './components/StylePatternTab';
 import StyleSampleTab from './components/StyleSampleTab';
 
 const StyleInfoPage: React.FC = () => {
+  const { modal, message } = App.useApp();
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const params = useParams();
   const navigate = useNavigate();
   const styleIdParam = params.id;
   const isDetailPage = Boolean(styleIdParam);
+  const { modalWidth } = useViewport();
 
   // 状态管理
   const [loading, setLoading] = useState(false);
@@ -124,14 +128,23 @@ const StyleInfoPage: React.FC = () => {
       return;
     }
 
+    const remark = String(maintenanceReason || '').trim();
+    if (!remark) {
+      message.error('请输入维护原因');
+      return;
+    }
+
     setMaintenanceSaving(true);
     try {
-      const res = await api.post(url, { reason: maintenanceReason });
+      const res = await api.post(url, { reason: remark });
       const result = res as any;
       if (result.code === 200) {
         message.success('维护成功');
         closeMaintenance();
         fetchData();
+        if (record.id) {
+          await fetchDetail(String(record.id));
+        }
         return;
       }
       message.error(result.message || '维护失败');
@@ -190,6 +203,48 @@ const StyleInfoPage: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, [queryParams]);
+
+  // 实时同步：60秒自动轮询更新款式信息列表
+  // 款式信息更新频率较低，使用60秒轮询
+  useSync(
+    'style-info-list',
+    async () => {
+      try {
+        const response = await api.get<any>('/style/info/list', { params: queryParams });
+        const result = response as any;
+        if (result.code === 200) {
+          return {
+            records: result.data.records || [],
+            total: result.data.total || 0
+          };
+        }
+        return null;
+      } catch (error) {
+        console.error('[实时同步] 获取款式信息列表失败', error);
+        return null;
+      }
+    },
+    (newData, oldData) => {
+      if (oldData !== null && newData) {
+        setData(newData.records);
+        setTotal(newData.total);
+        console.log('[实时同步] 款式信息数据已更新', {
+          oldCount: oldData.records.length,
+          newCount: newData.records.length,
+          oldTotal: oldData.total,
+          newTotal: newData.total
+        });
+      }
+    },
+    {
+      interval: 60000, // 60秒轮询，款式信息更新频率较低
+      enabled: !loading && !isDetailPage && !modalVisible, // 加载中/详情页/弹窗打开时暂停
+      pauseOnHidden: true, // 页面隐藏时暂停
+      onError: (error) => {
+        console.error('[实时同步] 款式信息数据同步错误', error);
+      }
+    }
+  );
 
   useEffect(() => {
     if (!tabKeyFromQuery) return;
@@ -673,22 +728,55 @@ const StyleInfoPage: React.FC = () => {
 
   const handleRollbackProductionReq = async () => {
     if (!currentStyle?.id) return;
-    setProductionRollbackSaving(true);
-    try {
-      const res = await api.post(`/style/info/${currentStyle.id}/production-requirements/rollback`, { reason: '维护' });
-      const result = res as any;
-      if (result.code === 200) {
-        message.success('已退回');
-        setProductionReqLocked(false);
-        await fetchProductionReqLock(currentStyle.id);
-        return;
-      }
-      message.error(result.message || '退回失败');
-    } catch (e: any) {
-      message.error(e?.message || '退回失败');
-    } finally {
-      setProductionRollbackSaving(false);
-    }
+    let reason = '';
+    modal.confirm({
+      title: '退回修改',
+      content: (
+        <div>
+          <div style={{ marginBottom: 12, fontWeight: 600 }}>退回原因</div>
+          <Input.TextArea
+            placeholder="请输入退回原因"
+            autoSize={{ minRows: 3, maxRows: 6 }}
+            maxLength={200}
+            showCount
+            onChange={(e) => {
+              reason = String(e?.target?.value || '');
+            }}
+          />
+        </div>
+      ),
+      okText: '确认退回',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        const remark = String(reason || '').trim();
+        if (!remark) {
+          message.error('请输入退回原因');
+          return Promise.reject(new Error('请输入退回原因'));
+        }
+        const styleId = currentStyle?.id;
+        if (!styleId) {
+          message.error('未选择款号');
+          return Promise.reject(new Error('未选择款号'));
+        }
+        setProductionRollbackSaving(true);
+        try {
+          const res = await api.post(`/style/info/${styleId}/production-requirements/rollback`, { reason: remark });
+          const result = res as any;
+          if (result.code === 200) {
+            message.success('已退回');
+            setProductionReqLocked(false);
+            await fetchProductionReqLock(styleId);
+            return;
+          }
+          message.error(result.message || '退回失败');
+        } catch (e: any) {
+          message.error(e?.message || '退回失败');
+        } finally {
+          setProductionRollbackSaving(false);
+        }
+      },
+    });
   };
 
   // 删除
@@ -748,8 +836,8 @@ const StyleInfoPage: React.FC = () => {
                               </Form.Item>
                             </Col>
                             <Col xs={24} sm={12} lg={8}>
-                              <Form.Item name="category" label="品类" rules={[{ required: true, message: '请选择品类' }]}>
-                                <Select placeholder="请选择品类" options={categoryOptions} disabled={editLocked} />
+                              <Form.Item name="category" label="品类" rules={[{ required: true, message: '请输入品类' }]}>
+                                <Input placeholder="请输入品类" />
                               </Form.Item>
                             </Col>
                           </Row>
@@ -757,29 +845,12 @@ const StyleInfoPage: React.FC = () => {
                           <Row gutter={16}>
                             <Col xs={24} sm={12} lg={8}>
                               <Form.Item name="color" label="颜色">
-                                <Select placeholder="请选择颜色" disabled={editLocked}>
-                                  <Select.Option value="红色">红色</Select.Option>
-                                  <Select.Option value="蓝色">蓝色</Select.Option>
-                                  <Select.Option value="黑色">黑色</Select.Option>
-                                  <Select.Option value="白色">白色</Select.Option>
-                                  <Select.Option value="绿色">绿色</Select.Option>
-                                  <Select.Option value="黄色">黄色</Select.Option>
-                                  <Select.Option value="紫色">紫色</Select.Option>
-                                  <Select.Option value="灰色">灰色</Select.Option>
-                                </Select>
+                                <Input placeholder="请输入颜色" disabled={editLocked} />
                               </Form.Item>
                             </Col>
                             <Col xs={24} sm={12} lg={8}>
                               <Form.Item name="size" label="样衣码数">
-                                <Select placeholder="请选择样衣码数" disabled={editLocked}>
-                                  <Select.Option value="XS">XS</Select.Option>
-                                  <Select.Option value="S">S</Select.Option>
-                                  <Select.Option value="M">M</Select.Option>
-                                  <Select.Option value="L">L</Select.Option>
-                                  <Select.Option value="XL">XL</Select.Option>
-                                  <Select.Option value="XXL">XXL</Select.Option>
-                                  <Select.Option value="XXXL">XXXL</Select.Option>
-                                </Select>
+                                <Input placeholder="请输入样衣码数" disabled={editLocked} />
                               </Form.Item>
                             </Col>
                             <Col xs={24} sm={12} lg={8}>
@@ -970,15 +1041,7 @@ const StyleInfoPage: React.FC = () => {
         title={currentStyle ? `款号详情 - ${currentStyle.styleNo}` : '新增款号'}
         onCancel={closeModal}
         footer={null}
-        width={
-          typeof window === 'undefined'
-            ? '60vw'
-            : window.innerWidth < 768
-              ? '96vw'
-              : window.innerWidth < 1024
-                ? '66vw'
-                : '60vw'
-        }
+        width={modalWidth}
         initialHeight={720}
         tableDensity="auto"
         contentShiftX={12}
@@ -1011,8 +1074,8 @@ const StyleInfoPage: React.FC = () => {
                             </Form.Item>
                           </Col>
                           <Col xs={24} sm={12} lg={8}>
-                            <Form.Item name="category" label="品类" rules={[{ required: true, message: '请选择品类' }]}>
-                              <Select placeholder="请选择品类" options={categoryOptions} disabled={editLocked} />
+                            <Form.Item name="category" label="品类" rules={[{ required: true, message: '请输入品类' }]}>
+                              <Input placeholder="请输入品类" />
                             </Form.Item>
                           </Col>
                         </Row>
@@ -1020,29 +1083,12 @@ const StyleInfoPage: React.FC = () => {
                         <Row gutter={16}>
                           <Col xs={24} sm={12} lg={8}>
                             <Form.Item name="color" label="颜色">
-                              <Select placeholder="请选择颜色" disabled={editLocked}>
-                                <Select.Option value="红色">红色</Select.Option>
-                                <Select.Option value="蓝色">蓝色</Select.Option>
-                                <Select.Option value="黑色">黑色</Select.Option>
-                                <Select.Option value="白色">白色</Select.Option>
-                                <Select.Option value="绿色">绿色</Select.Option>
-                                <Select.Option value="黄色">黄色</Select.Option>
-                                <Select.Option value="紫色">紫色</Select.Option>
-                                <Select.Option value="灰色">灰色</Select.Option>
-                              </Select>
+                              <Input placeholder="请输入颜色" disabled={editLocked} />
                             </Form.Item>
                           </Col>
                           <Col xs={24} sm={12} lg={8}>
                             <Form.Item name="size" label="样衣码数">
-                              <Select placeholder="请选择样衣码数" disabled={editLocked}>
-                                <Select.Option value="XS">XS</Select.Option>
-                                <Select.Option value="S">S</Select.Option>
-                                <Select.Option value="M">M</Select.Option>
-                                <Select.Option value="L">L</Select.Option>
-                                <Select.Option value="XL">XL</Select.Option>
-                                <Select.Option value="XXL">XXL</Select.Option>
-                                <Select.Option value="XXXL">XXXL</Select.Option>
-                              </Select>
+                              <Input placeholder="请输入样衣码数" disabled={editLocked} />
                             </Form.Item>
                           </Col>
                           <Col xs={24} sm={12} lg={8}>
@@ -1195,7 +1241,7 @@ const StyleInfoPage: React.FC = () => {
           维护会将已完成步骤回退到上一步，并记录维护人。
         </div>
         <Form layout="vertical">
-          <Form.Item label="维护原因(可选)">
+          <Form.Item label="维护原因">
             <Input.TextArea rows={4} value={maintenanceReason} onChange={(e) => setMaintenanceReason(e.target.value)} />
           </Form.Item>
         </Form>
@@ -1244,17 +1290,18 @@ const AttachmentThumb: React.FC<{ styleId: string | number }> = ({ styleId }) =>
       }}
     >
       {loading ? (
-        <span style={{ color: '#999', fontSize: 12 }}>...</span>
+        <span style={{ color: '#999', fontSize: 'var(--font-size-sm)' }}>...</span>
       ) : url ? (
         <img src={url} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       ) : (
-        <span style={{ color: '#ccc', fontSize: 12 }}>无图</span>
+        <span style={{ color: '#ccc', fontSize: 'var(--font-size-sm)' }}>无图</span>
       )}
     </div>
   );
 };
 
 const CoverImageUpload: React.FC<{ styleId?: string | number; enabled: boolean }> = ({ styleId, enabled }) => {
+  const { message } = App.useApp();
   const [url, setUrl] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState<boolean>(false);
 
@@ -1340,7 +1387,7 @@ const CoverImageUpload: React.FC<{ styleId?: string | number; enabled: boolean }
             上传图片
           </Button>
         </Upload>
-        {loading ? <span style={{ color: '#999', fontSize: 12 }}>加载中...</span> : null}
+        {loading ? <span style={{ color: '#999', fontSize: 'var(--font-size-sm)' }}>加载中...</span> : null}
       </div>
     </div>
   );

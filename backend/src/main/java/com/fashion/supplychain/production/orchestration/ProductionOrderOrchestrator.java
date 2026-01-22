@@ -119,7 +119,35 @@ public class ProductionOrderOrchestrator {
 
     public boolean saveOrUpdateOrder(ProductionOrder productionOrder) {
         boolean isCreate = productionOrder != null && !StringUtils.hasText(productionOrder.getId());
+        ProductionOrder existed = null;
+        String remarkForLog = null;
+        if (!isCreate) {
+            String oid = productionOrder == null ? null : productionOrder.getId();
+            String orderId = StringUtils.hasText(oid) ? oid.trim() : null;
+            if (!StringUtils.hasText(orderId)) {
+                throw new IllegalArgumentException("参数错误");
+            }
+            existed = productionOrderService.getById(orderId);
+            if (existed == null || existed.getDeleteFlag() == null || existed.getDeleteFlag() != 0) {
+                throw new NoSuchElementException("生产订单不存在");
+            }
+            String st = safeText(existed.getStatus()).toLowerCase();
+            if ("completed".equals(st)) {
+                throw new IllegalStateException("订单已完成，无法编辑");
+            }
+            String remark = productionOrder == null ? null : productionOrder.getOperationRemark();
+            remarkForLog = StringUtils.hasText(remark) ? remark.trim() : null;
+            if (!StringUtils.hasText(remarkForLog)) {
+                throw new IllegalStateException("请填写操作备注");
+            }
+        }
         validateUnitPriceSources(productionOrder);
+        
+        // 创建订单时检查纸样是否齐全（只警告，不阻止）
+        if (isCreate && productionOrder != null && StringUtils.hasText(productionOrder.getStyleId())) {
+            checkPatternCompleteWarning(productionOrder.getStyleId());
+        }
+        
         boolean ok = productionOrderService.saveOrUpdateOrder(productionOrder);
         if (!ok) {
             throw new IllegalStateException("操作失败");
@@ -152,6 +180,16 @@ public class ProductionOrderOrchestrator {
                         "generateWorkorder",
                         msg == null ? "generateWorkorder failed" : ("generateWorkorder failed: " + msg),
                         LocalDateTime.now());
+            }
+        }
+
+        if (!isCreate && existed != null && StringUtils.hasText(remarkForLog)) {
+            try {
+                ProductionOrder logOrder = productionOrderService.getById(existed.getId());
+                scanRecordDomainService.insertOrderOperationRecord(logOrder != null ? logOrder : existed, "编辑",
+                        remarkForLog, LocalDateTime.now());
+            } catch (Exception e) {
+                log.warn("Failed to log order edit: orderId={}", existed.getId(), e);
             }
         }
 
@@ -901,6 +939,38 @@ public class ProductionOrderOrchestrator {
         return true;
     }
 
+    @Transactional(rollbackFor = Exception.class)
+    public boolean scrapOrder(String id, String remark) {
+        String oid = StringUtils.hasText(id) ? id.trim() : null;
+        if (!StringUtils.hasText(oid)) {
+            throw new IllegalArgumentException("参数错误");
+        }
+        String r = StringUtils.hasText(remark) ? remark.trim() : null;
+        if (!StringUtils.hasText(r)) {
+            throw new IllegalArgumentException("remark不能为空");
+        }
+
+        ProductionOrder existed = productionOrderService.getById(oid);
+        if (existed == null || existed.getDeleteFlag() == null || existed.getDeleteFlag() != 0) {
+            throw new NoSuchElementException("生产订单不存在");
+        }
+        String st = safeText(existed.getStatus()).toLowerCase();
+        if ("completed".equals(st)) {
+            throw new IllegalStateException("订单已完成，无法报废");
+        }
+
+        boolean ok = productionOrderService.deleteById(oid);
+        if (!ok) {
+            throw new IllegalStateException("报废失败");
+        }
+        try {
+            scanRecordDomainService.insertOrderOperationRecord(existed, "报废", r, LocalDateTime.now());
+        } catch (Exception e) {
+            log.warn("Failed to log order scrap: orderId={}", oid, e);
+        }
+        return true;
+    }
+
     public int recomputeProgressByStyleNo(String styleNo) {
         return progressOrchestrationService.recomputeProgressByStyleNo(styleNo);
     }
@@ -1021,7 +1091,7 @@ public class ProductionOrderOrchestrator {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public ProductionOrder rollbackProgressWorkflow(String id) {
+    public ProductionOrder rollbackProgressWorkflow(String id, String reason) {
         if (!UserContext.isTopAdmin()) {
             throw new AccessDeniedException("无权限操作");
         }
@@ -1029,6 +1099,11 @@ public class ProductionOrderOrchestrator {
         String oid = StringUtils.hasText(id) ? id.trim() : null;
         if (!StringUtils.hasText(oid)) {
             throw new IllegalArgumentException("参数错误");
+        }
+
+        String remark = StringUtils.hasText(reason) ? reason.trim() : null;
+        if (!StringUtils.hasText(remark)) {
+            throw new IllegalArgumentException("reason不能为空");
         }
 
         ProductionOrder existed = productionOrderService.getById(oid);
@@ -1047,6 +1122,11 @@ public class ProductionOrderOrchestrator {
                 .update();
         if (!ok) {
             throw new IllegalStateException("退回失败");
+        }
+        try {
+            scanRecordDomainService.insertRollbackRecord(existed, "流程退回", remark, now);
+        } catch (Exception e) {
+            log.warn("Failed to log workflow rollback: orderId={}", oid, e);
         }
 
         return getDetailById(oid);
@@ -1120,6 +1200,25 @@ public class ProductionOrderOrchestrator {
             return objectMapper.writeValueAsString(Map.of("nodes", outNodes));
         } catch (Exception e) {
             return null;
+        }
+    }
+
+    /**
+     * 检查纸样是否齐全（只记录警告，不阻止流程）
+     */
+    private void checkPatternCompleteWarning(String styleId) {
+        if (!StringUtils.hasText(styleId)) {
+            return;
+        }
+        try {
+            boolean complete = styleAttachmentOrchestrator != null 
+                    && styleAttachmentOrchestrator.checkPatternComplete(styleId) != null
+                    && Boolean.TRUE.equals(styleAttachmentOrchestrator.checkPatternComplete(styleId).get("complete"));
+            if (!complete) {
+                log.warn("Pattern files not complete for styleId={}, order creation continues with warning", styleId);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to check pattern complete for styleId={}: {}", styleId, e.getMessage());
         }
     }
 }

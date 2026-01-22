@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Card, Form, Input, InputNumber, Modal, Select, Space, Tag, Typography, message } from 'antd';
 import { EyeOutlined, LoginOutlined, PlusOutlined, RollbackOutlined } from '@ant-design/icons';
 import Layout from '../../components/Layout';
+import { useSync } from '../../utils/syncManager';
 import ResizableModal, {
   ResizableModalFlex,
   ResizableModalFlexFill,
@@ -17,6 +18,7 @@ import { StyleAttachmentsButton, StyleCoverThumb } from '../../components/StyleA
 import { formatDateTime } from '../../utils/datetime';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getMaterialTypeLabel, getMaterialTypeSortKey } from '../../utils/materialType';
+import { useViewport } from '../../utils/useViewport';
 import './styles.css';
 
 const { Option } = Select;
@@ -53,6 +55,7 @@ type CuttingPrintMode = 'grid' | 'single';
 const CuttingManagement: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { isMobile, modalWidth } = useViewport();
   const params = useParams();
   const routeOrderNo = useMemo(() => {
     const raw = String((params as any)?.orderNo || '').trim();
@@ -388,8 +391,8 @@ const CuttingManagement: React.FC = () => {
       h1 { font-size: 16px; margin: 0 0 8px; }
       .meta { font-size: 12px; margin: 0 0 10px; display: flex; flex-wrap: wrap; gap: 12px; }
       table { width: 100%; border-collapse: collapse; font-size: 12px; }
-      th, td { border: 1px solid #333; padding: 6px 8px; }
-      th { background: #f3f3f3; text-align: left; }
+      th, td { border: 1px solid #d1d5db; padding: 6px 8px; vertical-align: middle; text-align: center; }
+      th { background: #f3f3f3; text-align: center; }
       .right { text-align: right; }
     </style>
   </head>
@@ -688,10 +691,81 @@ const CuttingManagement: React.FC = () => {
     fetchBundles();
   }, [queryParams, activeTask?.productionOrderNo]);
 
+  // 实时同步：30秒自动轮询更新裁剪批次数据
+  useSync(
+    'cutting-bundles',
+    async () => {
+      if (!activeTask?.productionOrderNo) return null;
+      try {
+        const res = await api.get<any>('/production/cutting/list', {
+          params: { ...queryParams, orderNo: activeTask.productionOrderNo }
+        });
+        const result = res as any;
+        if (result.code === 200) {
+          return {
+            records: result.data.records || [],
+            total: result.data.total || 0
+          };
+        }
+        return null;
+      } catch (error) {
+        console.error('[实时同步] 获取裁剪批次失败', error);
+        return null;
+      }
+    },
+    (newData, oldData) => {
+      if (oldData !== null && newData) {
+        setDataSource(newData.records);
+        setTotal(newData.total);
+        console.log('[实时同步] 裁剪批次数据已更新', { oldCount: oldData.records.length, newCount: newData.records.length });
+      }
+    },
+    {
+      interval: 30000,
+      enabled: !listLoading && Boolean(activeTask?.productionOrderNo),
+      pauseOnHidden: true,
+      onError: (error) => console.error('[实时同步] 裁剪批次同步错误', error)
+    }
+  );
+
   useEffect(() => {
     if (isEntryPage) return;
     fetchTasks();
   }, [isEntryPage, taskQuery]);
+
+  // 实时同步：裁剪任务列表（30秒轮询）
+  useSync(
+    'cutting-tasks',
+    async () => {
+      try {
+        const res = await api.get<any>('/production/cutting-task/list', { params: taskQuery });
+        const result = res as any;
+        if (result.code === 200) {
+          return {
+            records: result.data.records || [],
+            total: result.data.total || 0
+          };
+        }
+        return null;
+      } catch (error) {
+        console.error('[实时同步] 获取裁剪任务失败', error);
+        return null;
+      }
+    },
+    (newData, oldData) => {
+      if (oldData !== null && newData) {
+        setTaskList(newData.records);
+        setTaskTotal(newData.total);
+        console.log('[实时同步] 裁剪任务数据已更新', { oldCount: oldData.records.length, newCount: newData.records.length });
+      }
+    },
+    {
+      interval: 30000,
+      enabled: !taskLoading && !isEntryPage,
+      pauseOnHidden: true,
+      onError: (error) => console.error('[实时同步] 裁剪任务同步错误', error)
+    }
+  );
 
   useEffect(() => {
     if (!activeTask) return;
@@ -790,18 +864,39 @@ const CuttingManagement: React.FC = () => {
   const handleRollbackTask = async (task: CuttingTask) => {
     if (!task?.id) return;
     if (!(await ensureOrderUnlockedById((task as any)?.productionOrderId))) return;
+    let reason = '';
     Modal.confirm({
       title: '确认退回该裁剪任务？',
-      content: '退回后会清空领取信息，并删除已生成的裁剪明细，可重新领取并重新生成。',
-      okText: '退回',
+      content: (
+        <div>
+          <div style={{ marginBottom: 8 }}>退回后会清空领取信息，并删除已生成的裁剪明细，可重新领取并重新生成。</div>
+          <div style={{ marginBottom: 12, fontWeight: 600 }}>退回原因</div>
+          <Input.TextArea
+            placeholder="请输入退回原因"
+            autoSize={{ minRows: 3, maxRows: 6 }}
+            maxLength={200}
+            showCount
+            onChange={(e) => {
+              reason = String(e?.target?.value || '');
+            }}
+          />
+        </div>
+      ),
+      okText: '确认退回',
       okButtonProps: { danger: true },
       cancelText: '取消',
       onOk: async () => {
+        const remark = String(reason || '').trim();
+        if (!remark) {
+          message.error('请输入退回原因');
+          return Promise.reject(new Error('请输入退回原因'));
+        }
         setRollbackTaskLoading(true);
         try {
           const res = await api.post<any>('/production/cutting-task/rollback', {
             taskId: task.id,
             operatorId: user?.id,
+            reason: remark,
           });
           const result = res as any;
           if (result.code === 200) {
@@ -1526,7 +1621,7 @@ const CuttingManagement: React.FC = () => {
                         loading={entryPurchaseLoading}
                         pagination={false as any}
                         size="small"
-                        scroll={{ x: 'max-content', y: typeof window === 'undefined' ? 260 : window.innerWidth < 768 ? 220 : 260 }}
+                        scroll={{ x: 'max-content', y: isMobile ? 220 : 260 }}
                       />
                     </Card>
                   </div>
@@ -1574,7 +1669,7 @@ const CuttingManagement: React.FC = () => {
                   },
                 }}
                 loading={listLoading}
-                scroll={{ x: 'max-content', y: typeof window === 'undefined' ? 520 : window.innerWidth < 768 ? 360 : 560 }}
+                scroll={{ x: 'max-content', y: isMobile ? 360 : 560 }}
                 pagination={{
                   current: queryParams.page,
                   pageSize: queryParams.pageSize,
@@ -1588,15 +1683,7 @@ const CuttingManagement: React.FC = () => {
               <ResizableModal
                 open={printPreviewOpen}
                 title={`批量打印（${printBundles.length}张）`}
-                width={
-                  typeof window === 'undefined'
-                    ? '60vw'
-                    : window.innerWidth < 768
-                      ? '96vw'
-                      : window.innerWidth < 1024
-                        ? '66vw'
-                        : '60vw'
-                }
+                width={modalWidth}
                 centered
                 onCancel={() => setPrintPreviewOpen(false)}
                 footer={[
@@ -1700,15 +1787,7 @@ const CuttingManagement: React.FC = () => {
           <ResizableModal
             open={sheetPreviewOpen}
             title={`裁剪单（${String(sheetPreviewTask?.productionOrderNo || '').trim() || '-'}）`}
-            width={
-              typeof window === 'undefined'
-                ? '60vw'
-                : window.innerWidth < 768
-                  ? '96vw'
-                  : window.innerWidth < 1024
-                    ? '66vw'
-                    : '60vw'
-            }
+            width={modalWidth}
             centered
             onCancel={() => setSheetPreviewOpen(false)}
             footer={[
@@ -1727,30 +1806,86 @@ const CuttingManagement: React.FC = () => {
             scaleWithViewport
           >
             <ResizableModalFlex style={{ gap: 12 }}>
-              <Card size="small" loading={sheetPreviewLoading}>
-                <Space wrap>
-                  <Tag color="blue">订单号：{String(sheetPreviewTask?.productionOrderNo || '').trim() || '-'}</Tag>
-                  <Tag>款号：{String(sheetPreviewTask?.styleNo || '').trim() || '-'}</Tag>
-                  <Tag>款名：{String(sheetPreviewTask?.styleName || '').trim() || '-'}</Tag>
-                  <Tag>下单数：{Number(sheetPreviewTask?.orderQuantity ?? 0) || 0}</Tag>
-                  <Tag>
-                    裁剪数：
-                    {(() => {
-                      const tv = Number((sheetPreviewTask as any)?.cuttingQuantity);
-                      if (Number.isFinite(tv) && tv > 0) return tv;
-                      const sum = sheetPreviewBundles.reduce((s, x) => s + (Number((x as any)?.quantity) || 0), 0);
-                      return Number(sum) || 0;
-                    })()}
-                  </Tag>
-                  <Tag>
-                    扎数：
-                    {(() => {
-                      const tv = Number((sheetPreviewTask as any)?.cuttingBundleCount);
-                      if (Number.isFinite(tv) && tv > 0) return tv;
-                      return Number(sheetPreviewBundles.length) || 0;
-                    })()}
-                  </Tag>
-                </Space>
+              <Card 
+                size="small" 
+                loading={sheetPreviewLoading}
+                style={{ 
+                  background: 'linear-gradient(135deg, #f6f8fb 0%, #ffffff 100%)',
+                  border: '1px solid #e8edf5'
+                }}
+              >
+                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                  <div style={{ flex: 1, minWidth: 300 }}>
+                    <Space wrap size="small">
+                      <Tag color="blue">订单号：{String(sheetPreviewTask?.productionOrderNo || '').trim() || '-'}</Tag>
+                      <Tag>款号：{String(sheetPreviewTask?.styleNo || '').trim() || '-'}</Tag>
+                      <Tag>款名：{String(sheetPreviewTask?.styleName || '').trim() || '-'}</Tag>
+                      <Tag>下单数：{Number(sheetPreviewTask?.orderQuantity ?? 0) || 0}</Tag>
+                      <Tag>
+                        裁剪数：
+                        {(() => {
+                          const tv = Number((sheetPreviewTask as any)?.cuttingQuantity);
+                          if (Number.isFinite(tv) && tv > 0) return tv;
+                          const sum = sheetPreviewBundles.reduce((s, x) => s + (Number((x as any)?.quantity) || 0), 0);
+                          return Number(sum) || 0;
+                        })()}
+                      </Tag>
+                      <Tag>
+                        扎数：
+                        {(() => {
+                          const tv = Number((sheetPreviewTask as any)?.cuttingBundleCount);
+                          if (Number.isFinite(tv) && tv > 0) return tv;
+                          return Number(sheetPreviewBundles.length) || 0;
+                        })()}
+                      </Tag>
+                    </Space>
+                  </div>
+                  
+                  {sheetPreviewTask?.qrCode && (
+                    <div style={{ 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      alignItems: 'center',
+                      padding: '12px',
+                      background: '#ffffff',
+                      borderRadius: '8px',
+                      border: '1px solid #e8edf5',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+                    }}>
+                      <div style={{
+                        padding: '8px',
+                        background: '#ffffff',
+                        borderRadius: '6px',
+                        border: '2px solid #e8edf5'
+                      }}>
+                        <QRCodeCanvas 
+                          value={sheetPreviewTask.qrCode} 
+                          size={100} 
+                          level="M"
+                          includeMargin={false}
+                        />
+                      </div>
+                      <div style={{ 
+                        marginTop: '8px', 
+                        fontSize: '12px', 
+                        color: '#666',
+                        fontWeight: 500
+                      }}>
+                        裁剪单二维码
+                      </div>
+                      <div style={{ 
+                        fontSize: '11px', 
+                        color: '#999',
+                        maxWidth: '120px',
+                        textAlign: 'center',
+                        wordBreak: 'break-all',
+                        marginTop: '4px'
+                      }}>
+                        {sheetPreviewTask.qrCode}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </Card>
 
               <Card size="small" title="面辅料采购明细" loading={sheetPreviewPurchaseLoading}>
@@ -1762,7 +1897,7 @@ const CuttingManagement: React.FC = () => {
                   loading={sheetPreviewPurchaseLoading}
                   pagination={false as any}
                   size="small"
-                  scroll={{ x: 'max-content', y: typeof window === 'undefined' ? 240 : window.innerWidth < 768 ? 220 : 260 }}
+                  scroll={{ x: 'max-content', y: isMobile ? 220 : 260 }}
                 />
               </Card>
 

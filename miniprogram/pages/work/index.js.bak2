@@ -1,0 +1,662 @@
+import api from '../../utils/api';
+import { validateProductionOrder, normalizeData } from '../../utils/dataValidator';
+import { errorHandler } from '../../utils/errorHandler';
+import { validateByRule } from '../../utils/validationRules';
+import { syncManager } from '../../utils/syncManager';
+import * as reminderManager from '../../utils/reminderManager';
+import { DEBUG_MODE } from '../../config';
+import { filterOrders, getRoleDisplayName, isAdminOrSupervisor } from '../../utils/permission';
+
+function normalizeText(v) {
+  return (v || '').toString().trim();
+}
+
+/**
+ * 验证并规范化订单数据
+ */
+function validateAndNormalizeOrder(order) {
+  // 兼容后端返回null - 在normalizeData之前处理
+  if (order && order.progressWorkflowJson == null) {
+    order = { ...order, progressWorkflowJson: '{}' };
+  }
+  
+  // 规范化：填充默认值（降低必填要求以兼容历史数据）
+  const normalized = normalizeData(order, {
+    id: { required: true, type: 'string' },
+    orderNo: { required: true, type: 'string' },
+    styleNo: { type: 'string', default: '' },
+    orderQuantity: { type: 'number', default: 0 },
+    completedQuantity: { type: 'number', default: 0 },
+    productionProgress: { type: 'number', default: 0 },
+    progressWorkflowJson: { type: 'string', default: '{}' },
+    status: { required: true, type: 'string' },
+  });
+
+  // 验证（仅打印警告，不阻止流程）
+  const validation = validateProductionOrder(normalized);
+  if (!validation.valid && validation.errors.length > 0) {
+    // 仅在调试模式输出警告，不阻止数据展示
+    if (DEBUG_MODE) console.debug('[订单数据提示]', {
+      订单ID: order.id,
+      订单号: order.orderNo,
+      提示信息: validation.errors
+    });
+  }
+
+  return normalized;
+}
+
+function orderStatusText(status) {
+  const s = normalizeText(status).toLowerCase();
+  const map = {
+    pending: '待生产',
+    production: '生产中',
+    completed: '已完成',
+    delayed: '已逾期',
+    cancelled: '已取消',
+    canceled: '已取消',
+    paused: '已暂停',
+    returned: '已退回',
+  };
+  if (!s) return '';
+  return map[s] || '未知';
+}
+
+function qualityStatusText(status) {
+  const s = normalizeText(status).toLowerCase();
+  const map = {
+    qualified: '合格',
+    unqualified: '次品待返修',
+    repaired: '返修完成',
+  };
+  if (!s) return '';
+  return map[s] || '未知';
+}
+
+function stripWarehousingNode(list) {
+  const items = Array.isArray(list) ? list : [];
+  return items.filter((n) => {
+    const id = normalizeText(n && n.id).toLowerCase();
+    const name = normalizeText(n && n.name);
+    return !(id === 'shipment' || name === '出货' || name === '发货' || name === '发运');
+  });
+}
+
+const defaultNodes = [
+  { id: 'cutting', name: '裁剪' },
+  { id: 'production', name: '生产' },
+  { id: 'quality', name: '质检' },
+  { id: 'packaging', name: '包装' },
+];
+
+function clampPercent(value) {
+  if (Number.isNaN(value)) return 0;
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function getNodeIndexFromProgress(nodes, progress) {
+  if (!nodes || nodes.length <= 1) return 0;
+  const idx = Math.round((clampPercent(progress) / 100) * (nodes.length - 1));
+  return Math.max(0, Math.min(nodes.length - 1, idx));
+}
+
+function getProgressFromNodeIndex(nodes, index) {
+  if (!nodes || nodes.length <= 1) return 0;
+  const idx = Math.max(0, Math.min(nodes.length - 1, index));
+  return clampPercent((idx / (nodes.length - 1)) * 100);
+}
+
+function parseProgressNodes(raw) {
+  const text = normalizeText(raw);
+  if (!text) return [];
+  try {
+    const obj = JSON.parse(text);
+    const nodesRaw = obj && Array.isArray(obj.nodes) ? obj.nodes : [];
+    return stripWarehousingNode(
+      nodesRaw
+        .map((n) => {
+          const name = normalizeText(n && n.name);
+          const id = normalizeText(n && n.id) || name;
+          return name ? { id, name } : null;
+        })
+        .filter((n) => n && n.name),
+    );
+  } catch (e) {
+    return [];
+  }
+}
+
+function resolveNodesFromOrder(order) {
+  const raw = normalizeText(order && order.progressWorkflowJson);
+  const parsed = parseProgressNodes(raw);
+  return parsed.length ? parsed : defaultNodes;
+}
+
+Page({
+  data: {
+    activeTab: 'all',
+    globalSearch: {
+      keyword: '',
+      hasSearched: false,
+      loading: false,
+      results: [], // 存储搜索结果 {id, type, typeText, orderNo, styleNo, ...}
+    },
+    filters: {
+      orderNo: '',
+      styleNo: '',
+      factoryName: '',
+    },
+    orders: { loading: false, page: 1, pageSize: 10, hasMore: true, list: [] },
+  },
+
+  onShow() {
+    const app = getApp();
+    if (app && typeof app.setTabSelected === 'function') app.setTabSelected(this, 1);
+    if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
+    try {
+      const nextTab = wx.getStorageSync('work_active_tab');
+      if (nextTab) {
+        const allowed = ['orders_production', 'orders_all', 'warehousing', 'status_filter'];
+        if (allowed.includes(nextTab) && nextTab !== this.data.activeTab) {
+          this.setData({ activeTab: nextTab });
+        }
+        wx.removeStorageSync('work_active_tab');
+      }
+    } catch (e) {
+      null;
+    }
+
+    // 检查是否有pending_order_hint，如果有则显示提示
+    try {
+      const pendingOrderHint = wx.getStorageSync('pending_order_hint');
+      if (pendingOrderHint) {
+        wx.showToast({
+          title: `请处理订单: ${pendingOrderHint}`,
+          icon: 'none',
+          duration: 3000,
+        });
+        wx.removeStorageSync('pending_order_hint');
+      }
+    } catch (e) {
+      console.error('检查pending_order_hint失败', e);
+    }
+
+    // 加载提醒列表（不弹窗）
+    this.loadReminders();
+
+    // 启动订单列表的实时同步 (30 秒轮询一次)
+    this.setupOrderSync();
+
+    this.ensureLoaded();
+  },
+
+  onPullDownRefresh() {
+    this.refreshActive().finally(() => wx.stopPullDownRefresh());
+  },
+
+  onReachBottom() {
+    this.loadMoreActive();
+  },
+
+  ensureLoaded() {
+    // 所有标签页都加载订单列表
+    if (this.data.orders.list.length === 0) {
+      this.loadOrders(true);
+    }
+  },
+
+  onTab(e) {
+    const tab = e && e.currentTarget && e.currentTarget.dataset ? e.currentTarget.dataset.tab : '';
+    if (!tab || tab === this.data.activeTab) return;
+    this.setData({ activeTab: tab });
+    this.ensureLoaded();
+  },
+
+  goScan() {
+    wx.switchTab({ url: '/pages/scan/index' });
+  },
+
+  onOrderNoInput(e) {
+    this.setData({ 'filters.orderNo': (e && e.detail && e.detail.value) || '' });
+  },
+  onStyleNoInput(e) {
+    this.setData({ 'filters.styleNo': (e && e.detail && e.detail.value) || '' });
+  },
+  onFactoryNameInput(e) {
+    this.setData({ 'filters.factoryName': (e && e.detail && e.detail.value) || '' });
+  },
+
+  clearOrderFilters() {
+    this.setData(
+      {
+        filters: {
+          ...this.data.filters,
+          orderNo: '',
+          styleNo: '',
+          factoryName: '',
+        },
+      },
+      () => {
+        const app = getApp();
+        if (app && typeof app.resetPagedList === 'function') app.resetPagedList(this, 'orders');
+        this.loadOrders(true);
+      },
+    );
+  },
+
+  onWOrderNoInput(e) {
+    this.setData({ 'filters.wOrderNo': (e && e.detail && e.detail.value) || '' });
+  },
+  onWStyleNoInput(e) {
+    this.setData({ 'filters.wStyleNo': (e && e.detail && e.detail.value) || '' });
+  },
+  onWarehouseInput(e) {
+    this.setData({ 'filters.warehouse': (e && e.detail && e.detail.value) || '' });
+  },
+
+  onQualityPickerChange(e) {
+    const idx = Number((e && e.detail && e.detail.value) || 0);
+    this.setData({ 'filters.qualityIndex': Number.isFinite(idx) ? idx : 0 });
+  },
+  clearWarehousingFilters() {
+    this.setData(
+      {
+        filters: {
+          ...this.data.filters,
+          wOrderNo: '',
+          wStyleNo: '',
+          warehouse: '',
+          qualityIndex: 0,
+        },
+      },
+      () => {
+        const app = getApp();
+        if (app && typeof app.resetPagedList === 'function') app.resetPagedList(this, 'warehousing');
+        if (this.data.activeTab === 'warehousing') {
+          this.loadWarehousing(true);
+        }
+      },
+    );
+  },
+
+  onStatusPickerChange(e) {
+    const idx = Number((e && e.detail && e.detail.value) || 0);
+    this.setData({ 'filters.statusIndex': Number.isFinite(idx) ? idx : 0 }, () => {
+      const app = getApp();
+      if (app && typeof app.resetPagedList === 'function') app.resetPagedList(this, 'statusFiltered');
+      if (this.data.activeTab === 'status_filter') {
+        this.loadStatusFiltered(true);
+      }
+    });
+  },
+
+  clearStatusFilters() {
+    this.setData(
+      {
+        filters: {
+          ...this.data.filters,
+          statusIndex: 0,
+        },
+      },
+      () => {
+        const app = getApp();
+        if (app && typeof app.resetPagedList === 'function') app.resetPagedList(this, 'statusFiltered');
+        if (this.data.activeTab === 'status_filter') {
+          this.loadStatusFiltered(true);
+        }
+      },
+    );
+  },
+
+  refreshActive() {
+    const t = this.data.activeTab;
+    if (t === 'orders_all' || t === 'orders_production') return this.loadOrders(true);
+    if (t === 'warehousing') return this.loadWarehousing(true);
+    if (t === 'status_filter') return this.loadStatusFiltered(true);
+    return Promise.resolve();
+  },
+
+  loadMoreActive() {
+    const t = this.data.activeTab;
+    if (t === 'orders_all' || t === 'orders_production') return this.loadOrders(false);
+    if (t === 'warehousing') return this.loadWarehousing(false);
+    if (t === 'status_filter') return this.loadStatusFiltered(false);
+    return Promise.resolve();
+  },
+
+  loadOrders(reset) {
+    const app = getApp();
+    if (!app || typeof app.loadPagedList !== 'function') return Promise.resolve();
+
+    return app.loadPagedList(
+      this,
+      'orders',
+      reset === true,
+      async ({ page, pageSize }) => {
+        const f = this.data.filters;
+        const params = {
+          page,
+          pageSize,
+          orderNo: normalizeText(f.orderNo),
+          styleNo: normalizeText(f.styleNo),
+          factoryName: normalizeText(f.factoryName),
+        };
+        
+        // 根据activeTab筛选当前节点
+        const tab = this.data.activeTab;
+        const processMap = {
+          'procurement': '采购',
+          'cutting': '裁剪',
+          'sewing': '车缝',
+          'warehousing': '入库'
+        };
+        if (tab !== 'all' && processMap[tab]) {
+          params.currentProcessName = processMap[tab];
+        }
+        
+        const resp = await api.production.listOrders(params);
+        
+        // 应用权限过滤
+        if (resp && resp.records && Array.isArray(resp.records)) {
+          resp.records = filterOrders(resp.records);
+        }
+        
+        return resp;
+      },
+      (r) => {
+        // 验证并规范化订单数据
+        const validated = validateAndNormalizeOrder(r);
+        return {
+          ...validated,
+          statusText: orderStatusText(validated.status),
+        };
+      },
+    );
+  },
+
+  loadWarehousing(reset) {
+    const app = getApp();
+    if (!app || typeof app.loadPagedList !== 'function') return Promise.resolve();
+
+    return app.loadPagedList(
+      this,
+      'warehousing',
+      reset === true,
+      async ({ page, pageSize }) => {
+        const f = this.data.filters;
+        const qs = this.data.qualityOptions[this.data.filters.qualityIndex].value;
+        const params = {
+          page,
+          pageSize,
+          orderNo: normalizeText(f.wOrderNo),
+          styleNo: normalizeText(f.wStyleNo),
+          warehouse: normalizeText(f.warehouse),
+          qualityStatus: normalizeText(qs),
+        };
+        return api.production.listWarehousing(params);
+      },
+      (r) => ({
+        ...r,
+        qualityStatusText: qualityStatusText(r && r.qualityStatus),
+      }),
+    );
+  },
+
+  loadStatusFiltered(reset) {
+    const app = getApp();
+    if (!app || typeof app.loadPagedList !== 'function') return Promise.resolve();
+
+    return app.loadPagedList(
+      this,
+      'statusFiltered',
+      reset === true,
+      async ({ page, pageSize }) => {
+        const f = this.data.filters;
+        const statusValue = this.data.statusOptions[f.statusIndex].value;
+        const params = {
+          page,
+          pageSize,
+        };
+        // 如果选择了特定状态，添加status筛选
+        if (statusValue) {
+          params.status = statusValue;
+        }
+        const resp = await api.production.listOrders(params);
+        
+        // 应用权限过滤
+        if (resp && resp.records && Array.isArray(resp.records)) {
+          resp.records = filterOrders(resp.records);
+        }
+        
+        return resp;
+      },
+      (r) => {
+        const validated = validateAndNormalizeOrder(r);
+        return {
+          ...validated,
+          statusText: orderStatusText(validated.status),
+          statusColor: this.getStatusColor(validated.status),
+        };
+      },
+    );
+  },
+
+  // ============ 全局搜索功能 ============
+  
+  onGlobalSearchInput(e) {
+    const value = e && e.detail ? e.detail.value : '';
+    this.setData({ 'globalSearch.keyword': value });
+  },
+
+  async doGlobalSearch() {
+    const keyword = normalizeText(this.data.globalSearch.keyword);
+    if (!keyword) {
+      wx.showToast({ title: '请输入搜索关键词', icon: 'none' });
+      return;
+    }
+
+    this.setData({ 'globalSearch.loading': true });
+    wx.showLoading({ title: '搜索中...' });
+
+    try {
+      // 并行搜索所有模块
+      const [ordersRes, warehousingRes] = await Promise.all([
+        // 搜索订单（生产+订单）
+        api.production.listOrders({
+          page: 1,
+          pageSize: 50,
+          orderNo: keyword,
+          styleNo: keyword,
+          factoryName: keyword,
+        }).catch(() => ({ records: [] })),
+        
+        // 搜索入库
+        api.production.listWarehousing({
+          page: 1,
+          pageSize: 50,
+          orderNo: keyword,
+          styleNo: keyword,
+          warehouse: keyword,
+        }).catch(() => ({ records: [] })),
+      ]);
+
+      const results = [];
+
+      // 处理订单数据
+      const orders = ordersRes.records || [];
+      orders.forEach(item => {
+        const validated = validateAndNormalizeOrder(item);
+        results.push({
+          id: `order_${validated.id}`,
+          type: 'order',
+          typeText: validated.status === 'production' ? '生产' : '订单',
+          orderNo: validated.orderNo,
+          styleNo: validated.styleNo,
+          factoryName: validated.factoryName,
+          statusText: orderStatusText(validated.status),
+          statusColor: this.getStatusColor(validated.status),
+          rawData: validated,
+        });
+      });
+
+      // 处理入库数据
+      const warehousing = warehousingRes.records || [];
+      warehousing.forEach(item => {
+        results.push({
+          id: `warehousing_${item.id}`,
+          type: 'warehousing',
+          typeText: '入库',
+          orderNo: item.orderNo,
+          styleNo: item.styleNo,
+          warehouse: item.warehouse,
+          qualityStatusText: qualityStatusText(item.qualityStatus),
+          statusText: qualityStatusText(item.qualityStatus),
+          statusColor: this.getQualityColor(item.qualityStatus),
+          rawData: item,
+        });
+      });
+
+      this.setData({
+        'globalSearch.results': results,
+        'globalSearch.hasSearched': true,
+        'globalSearch.loading': false,
+      });
+
+      wx.hideLoading();
+
+      if (results.length === 0) {
+        wx.showToast({ title: '未找到匹配的订单', icon: 'none' });
+      }
+    } catch (error) {
+      console.error('全局搜索失败:', error);
+      this.setData({ 'globalSearch.loading': false });
+      wx.hideLoading();
+      wx.showToast({ title: '搜索失败，请重试', icon: 'none' });
+    }
+  },
+
+  clearGlobalSearch() {
+    this.setData({
+      'globalSearch.keyword': '',
+      'globalSearch.hasSearched': false,
+      'globalSearch.results': [],
+    });
+  },
+
+  closeGlobalSearch() {
+    this.setData({
+      'globalSearch.hasSearched': false,
+      'globalSearch.results': [],
+    });
+  },
+
+  onResultItemTap(e) {
+    const item = (e && e.detail && e.detail.item) || (e && e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.item);
+    if (!item) return;
+
+    // 根据类型跳转到对应Tab
+    if (item.type === 'order') {
+      const status = item.rawData.status;
+      const targetTab = status === 'production' ? 'orders_production' : 'orders_all';
+      this.setData({ 
+        activeTab: targetTab,
+        'globalSearch.hasSearched': false,
+      });
+    } else if (item.type === 'warehousing') {
+      this.setData({ 
+        activeTab: 'warehousing',
+        'globalSearch.hasSearched': false,
+      });
+    }
+  },
+
+  getStatusColor(status) {
+    const s = normalizeText(status).toLowerCase();
+    const colorMap = {
+      pending: '#f59e0b',
+      production: '#3b82f6',
+      completed: '#10b981',
+      delayed: '#ef4444',
+      cancelled: '#6b7280',
+      canceled: '#6b7280',
+      paused: '#f59e0b',
+      returned: '#8b5cf6',
+    };
+    return colorMap[s] || '#6b7280';
+  },
+
+  getQualityColor(qualityStatus) {
+    const s = normalizeText(qualityStatus).toLowerCase();
+    const colorMap = {
+      qualified: '#10b981',
+      unqualified: '#ef4444',
+      repaired: '#3b82f6',
+    };
+    return colorMap[s] || '#6b7280';
+  },
+
+  /**
+   * 设置订单列表的实时同步
+   */
+  setupOrderSync() {
+    // 只在订单标签页启用同步
+    const syncFn = async () => {
+      try {
+        const f = this.data.filters;
+        const params = {
+          page: 1,
+          pageSize: 20, // 只同步前 20 条
+          orderNo: normalizeText(f.orderNo),
+          styleNo: normalizeText(f.styleNo),
+          factoryName: normalizeText(f.factoryName),
+        };
+        if (this.data.activeTab === 'orders_production') params.status = 'production';
+        return await api.production.listOrders(params);
+      } catch (error) {
+        errorHandler.logError(error, '[Work] Sync orders');
+        throw error;
+      }
+    };
+
+    // 数据变化时的处理
+    const onDataChange = (newPage) => {
+      if (!newPage || !Array.isArray(newPage.records)) return;
+
+      // 更新列表
+      const newList = newPage.records.map((r) => {
+        const validated = validateAndNormalizeOrder(r);
+        return {
+          ...validated,
+          statusText: orderStatusText(validated.status),
+        };
+      });
+
+      if (DEBUG_MODE) console.log(`[同步] 订单已更新: ${newList.length} 条`);
+      this.setData({ 'orders.list': newList });
+    };
+
+    // 启动同步 (30 秒轮询一次)
+    syncManager.startSync('work_orders', syncFn, 30000, {
+      onDataChange,
+      onError: (error, errorCount) => {
+        console.warn(`[同步] 订单同步错误 (${errorCount}次):`, error.message);
+        if (errorCount > 3) {
+          // 连续 3 次失败时停止同步
+          syncManager.stopSync('work_orders');
+          console.error('[同步] 由于重复失败已停止订单同步');
+        }
+      }
+    });
+  },
+
+  loadReminders() {
+    // 加载提醒列表（仅更新数据，不显示弹窗）
+    // 工作页面暂不显示提醒按钮，只在首页显示
+    // 这里预留接口，后续可在工作页面添加提醒按钮
+  },
+
+  onHide() {
+    // 页面隐藏时停止同步（节省资源）
+    syncManager.stopSync('work_orders');
+  },
+});

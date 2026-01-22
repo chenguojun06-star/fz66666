@@ -3,6 +3,7 @@ import { Button, Input, InputNumber, message, Space, Select, Modal } from 'antd'
 import { DeleteOutlined, EditOutlined, PlusOutlined, SaveOutlined } from '@ant-design/icons';
 import { StyleSize, TemplateLibrary } from '../../../types/style';
 import api, { sortSizeNames, toNumberSafe } from '../../../utils/api';
+import { useViewport } from '../../../utils/useViewport';
 import ResizableTable from '../../../components/common/ResizableTable';
 import ResizableModal from '../../../components/common/ResizableModal';
 import RowActions from '../../../components/common/RowActions';
@@ -59,6 +60,7 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
   const [styleNoLoading, setStyleNoLoading] = useState(false);
   const styleNoReqSeq = useRef(0);
   const styleNoTimerRef = useRef<number | undefined>(undefined);
+  const { tableScrollY } = useViewport();
 
   const fetchStyleNoOptions = async (keyword?: string) => {
     const seq = (styleNoReqSeq.current += 1);
@@ -691,7 +693,7 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
         pagination={false}
         loading={loading}
         rowKey="key"
-        scroll={{ x: 'max-content', y: typeof window === 'undefined' ? 420 : window.innerWidth < 768 ? 260 : 420 }}
+        scroll={{ x: 'max-content', y: tableScrollY }}
         tableLayout="auto"
         storageKey={`style-size-v2-${String(styleId)}`}
         minColumnWidth={70}

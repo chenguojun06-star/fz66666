@@ -9,6 +9,7 @@ export interface User {
   roleName: string;
   permissionRange: string;
   status: 'active' | 'inactive';
+  operationRemark?: string;
   phone?: string;
   email?: string;
   createTime?: string;
@@ -23,6 +24,7 @@ export interface Role {
   roleCode: string;
   description?: string;
   status: 'active' | 'inactive';
+  operationRemark?: string;
   createTime?: string;
   updateTime?: string;
   permissions?: Permission[];
@@ -67,6 +69,7 @@ export interface Factory {
   contactPhone?: string;
   address?: string;
   status: 'active' | 'inactive';
+  operationRemark?: string;
   createTime?: string;
   updateTime?: string;
 }

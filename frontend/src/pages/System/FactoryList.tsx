@@ -5,15 +5,18 @@ import RowActions from '../../components/common/RowActions';
 import ResizableTable from '../../components/common/ResizableTable';
 import { Factory as FactoryType, FactoryQueryParams } from '../../types/system';
 import api from '../../utils/api';
-import { Button, Card, Form, Input, Modal, Select, Space, Tag, message } from 'antd';
-import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined } from '@ant-design/icons';
+import { App, Button, Card, Form, Input, Modal, Select, Space, Tag, Upload } from 'antd';
+import type { UploadFile } from 'antd';
+import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, UploadOutlined, FileSearchOutlined } from '@ant-design/icons';
 import { formatDateTime } from '../../utils/datetime';
+import { useViewport } from '../../utils/useViewport';
 
 type DialogMode = 'create' | 'view' | 'edit';
 
 const FactoryList: React.FC = () => {
+  const { message, modal } = App.useApp();
   const [form] = Form.useForm();
-  const [viewportWidth, setViewportWidth] = useState<number>(() => (typeof window === 'undefined' ? 1200 : window.innerWidth));
+  const { isMobile, modalWidth } = useViewport();
   const [visible, setVisible] = useState(false);
   const [dialogMode, setDialogMode] = useState<DialogMode>('view');
   const [queryParams, setQueryParams] = useState<FactoryQueryParams>({
@@ -26,18 +29,52 @@ const FactoryList: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [currentFactory, setCurrentFactory] = useState<FactoryType | null>(null);
+  const [licenseFileList, setLicenseFileList] = useState<UploadFile[]>([]);
+  const [logVisible, setLogVisible] = useState(false);
+  const [logLoading, setLogLoading] = useState(false);
+  const [logRecords, setLogRecords] = useState<any[]>([]);
+  const [logTitle, setLogTitle] = useState('操作日志');
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const onResize = () => setViewportWidth(window.innerWidth);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
-
-  const isMobile = viewportWidth < 768;
-  const isTablet = viewportWidth >= 768 && viewportWidth < 1024;
-  const modalWidth = isMobile ? '96vw' : isTablet ? '66vw' : '60vw';
   const modalInitialHeight = 720;
+
+  // 构建图片文件列表
+  const buildImageFileList = (url: any): UploadFile[] => {
+    const u = String(url || '').trim();
+    if (!u) return [];
+    return [{ uid: 'license-1', name: '营业执照', status: 'done', url: u } as UploadFile];
+  };
+
+  // 上传营业执照
+  const uploadBusinessLicense = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      message.error('仅支持图片文件');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      message.error('图片过大，最大10MB');
+      return;
+    }
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const response = await api.post<any>('/common/upload', formData);
+      const result = response as any;
+      if (result.code === 200) {
+        const url = String(result.data || '').trim();
+        if (!url) {
+          message.error('上传失败');
+          return;
+        }
+        form.setFieldsValue({ businessLicense: url });
+        setLicenseFileList(buildImageFileList(url));
+        message.success('上传成功');
+      } else {
+        message.error(result.message || '上传失败');
+      }
+    } catch (e: any) {
+      message.error(String(e?.message || '上传失败'));
+    }
+  };
 
   const fetchFactories = async () => {
     setLoading(true);
@@ -48,10 +85,10 @@ const FactoryList: React.FC = () => {
         setFactoryList(result.data.records || []);
         setTotal(result.data.total || 0);
       } else {
-        message.error(result.message || '获取加工厂列表失败');
+        message.error(result.message || '获取供应商列表失败');
       }
     } catch (error: any) {
-      message.error(error?.message || '获取加工厂列表失败');
+      message.error(error?.message || '获取供应商列表失败');
     } finally {
       setLoading(false);
     }
@@ -72,7 +109,9 @@ const FactoryList: React.FC = () => {
         contactPhone: '',
         address: '',
         status: 'active',
+        businessLicense: undefined,
       });
+      setLicenseFileList([]);
     } else {
       form.setFieldsValue({
         factoryCode: factory?.factoryCode,
@@ -81,7 +120,9 @@ const FactoryList: React.FC = () => {
         contactPhone: factory?.contactPhone,
         address: factory?.address,
         status: factory?.status || 'inactive',
+        businessLicense: (factory as any)?.businessLicense,
       });
+      setLicenseFileList(buildImageFileList((factory as any)?.businessLicense));
     }
     setVisible(true);
   };
@@ -90,58 +131,121 @@ const FactoryList: React.FC = () => {
     setVisible(false);
     setCurrentFactory(null);
     form.resetFields();
+    setLicenseFileList([]);
+  };
+
+  const openRemarkModal = (
+    title: string,
+    okText: string,
+    okButtonProps: any,
+    onConfirm: (remark: string) => Promise<void>
+  ) => {
+    let remarkValue = '';
+    modal.confirm({
+      title,
+      content: (
+        <Form layout="vertical" onSubmitCapture={(e) => e.preventDefault()}>
+          <Form.Item label="操作原因">
+            <Input.TextArea
+              rows={4}
+              maxLength={200}
+              showCount
+              onChange={(e) => {
+                remarkValue = e.target.value;
+              }}
+            />
+          </Form.Item>
+        </Form>
+      ),
+      okText,
+      cancelText: '取消',
+      okButtonProps,
+      onOk: async () => {
+        const remark = String(remarkValue || '').trim();
+        if (!remark) {
+          message.error('请输入操作原因');
+          return Promise.reject(new Error('请输入操作原因'));
+        }
+        await onConfirm(remark);
+      },
+    });
+  };
+
+  const openLogModal = async (bizType: string, bizId: string, title: string) => {
+    setLogTitle(title);
+    setLogVisible(true);
+    setLogLoading(true);
+    try {
+      const res = await api.get('/system/operation-log/list', {
+        params: { bizType, bizId },
+      });
+      const result = res as any;
+      if (result.code === 200) {
+        setLogRecords(Array.isArray(result.data) ? result.data : []);
+      } else {
+        message.error(result.message || '获取日志失败');
+        setLogRecords([]);
+      }
+    } catch (e: any) {
+      message.error(e?.message || '获取日志失败');
+      setLogRecords([]);
+    } finally {
+      setLogLoading(false);
+    }
   };
 
   const handleSave = async () => {
     const values = await form.validateFields();
 
-    const payload: any = {
-      ...values,
-      status: values.status || 'active',
-      id: currentFactory?.id,
+    const submit = async (remark?: string) => {
+      const payload: any = {
+        ...values,
+        status: values.status || 'active',
+        id: currentFactory?.id,
+        operationRemark: remark,
+      };
+
+      setSubmitLoading(true);
+      try {
+        const response = dialogMode === 'edit'
+          ? await api.put<any>('/system/factory', payload)
+          : await api.post<any>('/system/factory', payload);
+
+        const result = response as any;
+        if (result.code === 200) {
+          message.success('保存成功');
+          closeDialog();
+          fetchFactories();
+        } else {
+          message.error(result.message || '保存失败');
+        }
+      } catch (error: any) {
+        message.error(error?.message || '保存失败');
+      } finally {
+        setSubmitLoading(false);
+      }
     };
 
-    setSubmitLoading(true);
-    try {
-      const response = dialogMode === 'edit'
-        ? await api.put<any>('/system/factory', payload)
-        : await api.post<any>('/system/factory', payload);
-
-      const result = response as any;
-      if (result.code === 200) {
-        message.success('保存成功');
-        closeDialog();
-        fetchFactories();
-      } else {
-        message.error(result.message || '保存失败');
-      }
-    } catch (error: any) {
-      message.error(error?.message || '保存失败');
-    } finally {
-      setSubmitLoading(false);
+    if (dialogMode === 'edit') {
+      openRemarkModal('确认保存', '确认保存', undefined, submit);
+      return;
     }
+
+    await submit();
   };
 
   const handleDelete = async (id?: string) => {
     if (!id) return;
 
-    Modal.confirm({
-      title: '确认删除',
-      content: '确定要删除该加工厂吗？',
-      okText: '删除',
-      okButtonProps: { danger: true },
-      cancelText: '取消',
-      onOk: async () => {
-        const response = await api.delete<any>(`/system/factory/${id}`);
-        const result = response as any;
-        if (result.code === 200) {
-          message.success('删除成功');
-          setQueryParams((prev) => ({ ...prev, page: 1 }));
-          return;
-        }
-        throw new Error(result.message || '删除失败');
-      },
-      onCancel: () => { },
+    openRemarkModal('确认删除', '删除', { danger: true }, async (remark) => {
+      const response = await api.delete<any>(`/system/factory/${id}`, { params: { remark } });
+      const result = response as any;
+      if (result.code === 200) {
+        message.success('删除成功');
+        setQueryParams((prev) => ({ ...prev, page: 1 }));
+        return;
+      }
+      throw new Error(result.message || '删除失败');
     });
   };
 
@@ -153,9 +257,39 @@ const FactoryList: React.FC = () => {
     return statusMap[status] || '未知';
   };
 
+  const logColumns = [
+    {
+      title: '动作',
+      dataIndex: 'action',
+      key: 'action',
+      width: 120,
+      render: (v: string) => v || '-',
+    },
+    {
+      title: '操作人',
+      dataIndex: 'operator',
+      key: 'operator',
+      width: 120,
+      render: (v: string) => v || '-',
+    },
+    {
+      title: '原因',
+      dataIndex: 'remark',
+      key: 'remark',
+      render: (v: string) => v || '-',
+    },
+    {
+      title: '时间',
+      dataIndex: 'createTime',
+      key: 'createTime',
+      width: 180,
+      render: (v: string) => formatDateTime(v),
+    },
+  ];
+
   const columns = [
-    { title: '加工厂编码', dataIndex: 'factoryCode', key: 'factoryCode', width: 140 },
-    { title: '加工厂名称', dataIndex: 'factoryName', key: 'factoryName', width: 180, ellipsis: true },
+    { title: '供应商编码', dataIndex: 'factoryCode', key: 'factoryCode', width: 140 },
+    { title: '供应商名称', dataIndex: 'factoryName', key: 'factoryName', width: 180, ellipsis: true },
     { title: '联系人', dataIndex: 'contactPerson', key: 'contactPerson', width: 120 },
     { title: '联系电话', dataIndex: 'contactPhone', key: 'contactPhone', width: 140 },
     { title: '地址', dataIndex: 'address', key: 'address', ellipsis: true },
@@ -186,7 +320,7 @@ const FactoryList: React.FC = () => {
       render: (_: any, factory: FactoryType) => (
         <RowActions
           className="table-actions"
-          maxInline={3}
+          maxInline={2}
           actions={[
             {
               key: 'view',
@@ -203,6 +337,13 @@ const FactoryList: React.FC = () => {
               icon: <EditOutlined />,
               onClick: () => openDialog('edit', factory),
               primary: true,
+            },
+            {
+              key: 'log',
+              label: '日志',
+              title: '日志',
+              icon: <FileSearchOutlined />,
+              onClick: () => openLogModal('factory', String(factory.id || ''), `供应商 ${factory.factoryName} 操作日志`),
             },
             {
               key: 'delete',
@@ -222,7 +363,7 @@ const FactoryList: React.FC = () => {
     <Layout>
       <Card className="page-card">
         <div className="page-header">
-          <h2 className="page-title">加工厂管理</h2>
+          <h2 className="page-title">供应商管理</h2>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => openDialog('create')}>
             新增加工厂
           </Button>
@@ -231,14 +372,14 @@ const FactoryList: React.FC = () => {
         <Card size="small" className="filter-card mb-sm">
           <Space wrap>
             <Input
-              placeholder="加工厂编码"
+              placeholder="供应商编码"
               style={{ width: 180 }}
               allowClear
               value={String((queryParams as any)?.factoryCode || '')}
               onChange={(e) => setQueryParams((prev) => ({ ...prev, factoryCode: e.target.value, page: 1 }))}
             />
             <Input
-              placeholder="加工厂名称"
+              placeholder="供应商名称"
               style={{ width: 220 }}
               allowClear
               value={String((queryParams as any)?.factoryName || '')}
@@ -283,7 +424,7 @@ const FactoryList: React.FC = () => {
 
       <ResizableModal
         open={visible}
-        title={dialogMode === 'create' ? '新增加工厂' : dialogMode === 'edit' ? '编辑加工厂' : '加工厂详情'}
+        title={dialogMode === 'create' ? '新增供应商' : dialogMode === 'edit' ? '编辑供应商' : '供应商详情'}
         onCancel={closeDialog}
         onOk={dialogMode === 'view' ? undefined : handleSave}
         okText="保存"
@@ -303,11 +444,11 @@ const FactoryList: React.FC = () => {
       >
         <Form form={form} layout="vertical" disabled={dialogMode === 'view'}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <Form.Item name="factoryCode" label="加工厂编码" rules={[{ required: true, message: '请输入加工厂编码' }]}>
-              <Input placeholder="请输入加工厂编码" />
+            <Form.Item name="factoryCode" label="供应商编码" rules={[{ required: true, message: '请输入供应商编码' }]}>
+              <Input placeholder="请输入供应商编码" />
             </Form.Item>
-            <Form.Item name="factoryName" label="加工厂名称" rules={[{ required: true, message: '请输入加工厂名称' }]}>
-              <Input placeholder="请输入加工厂名称" />
+            <Form.Item name="factoryName" label="供应商名称" rules={[{ required: true, message: '请输入供应商名称' }]}>
+              <Input placeholder="请输入供应商名称" />
             </Form.Item>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -321,6 +462,35 @@ const FactoryList: React.FC = () => {
           <Form.Item name="address" label="地址">
             <Input placeholder="请输入地址" />
           </Form.Item>
+          <Form.Item name="businessLicense" label="营业执照" hidden>
+            <Input />
+          </Form.Item>
+          <Form.Item label="营业执照图片">
+            <Upload
+              accept="image/*"
+              listType="picture-card"
+              maxCount={1}
+              fileList={licenseFileList}
+              disabled={dialogMode === 'view'}
+              onRemove={() => {
+                form.setFieldsValue({ businessLicense: undefined });
+                setLicenseFileList([]);
+                return true;
+              }}
+              beforeUpload={(file) => {
+                void uploadBusinessLicense(file as File);
+                return Upload.LIST_IGNORE;
+              }}
+            >
+              {licenseFileList.length ? null : (
+                <div>
+                  <UploadOutlined />
+                  <div style={{ marginTop: 8, fontSize: 'var(--font-size-sm)' }}>上传营业执照</div>
+                </div>
+              )}
+            </Upload>
+            <div style={{ fontSize: 'var(--font-size-sm)', color: '#999', marginTop: 4 }}>支持jpg、png格式，最大10MB（非必填）</div>
+          </Form.Item>
           <Form.Item name="status" label="状态" rules={[{ required: true, message: '请选择状态' }]}>
             <Select
               options={[
@@ -330,6 +500,29 @@ const FactoryList: React.FC = () => {
             />
           </Form.Item>
         </Form>
+      </ResizableModal>
+
+      <ResizableModal
+        open={logVisible}
+        title={logTitle}
+        onCancel={() => {
+          setLogVisible(false);
+          setLogRecords([]);
+        }}
+        footer={null}
+        width={modalWidth}
+        initialHeight={520}
+        minWidth={isMobile ? 320 : 520}
+        scaleWithViewport
+      >
+        <ResizableTable
+          columns={logColumns as any}
+          dataSource={logRecords}
+          rowKey={(r) => String(r.id || `${r.bizType}-${r.bizId}-${r.createTime}`)}
+          loading={logLoading}
+          pagination={false}
+          scroll={{ x: 'max-content', y: isMobile ? 320 : 420 }}
+        />
       </ResizableModal>
     </Layout>
   );

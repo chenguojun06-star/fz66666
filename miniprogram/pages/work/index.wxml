@@ -2,234 +2,101 @@
   <view class="card">
     <view class="title">生产</view>
 
-    <view class="tabbar-actions">
-      <view class="tabbar">
-        <view class="tab {{activeTab === 'orders_production' ? 'tab-active' : ''}}" data-tab="orders_production" bindtap="onTab">生产</view>
-        <view class="tab {{activeTab === 'orders_all' ? 'tab-active' : ''}}" data-tab="orders_all" bindtap="onTab">订单</view>
-        <view class="tab {{activeTab === 'warehousing' ? 'tab-active' : ''}}" data-tab="warehousing" bindtap="onTab">入库</view>
-        <view class="tab {{activeTab === 'exceptions' ? 'tab-active' : ''}}" data-tab="exceptions" bindtap="onTab">异常</view>
-      </view>
-      <view class="btn-primary tabbar-scan" bindtap="goScan">扫码</view>
+    <!-- 搜索组件放在最上面 -->
+    <global-search
+      keyword="{{globalSearch.keyword}}"
+      results="{{globalSearch.results}}"
+      has-searched="{{globalSearch.hasSearched}}"
+      bind:input="onGlobalSearchInput"
+      bind:search="doGlobalSearch"
+      bind:clear="clearGlobalSearch"
+      bind:close="closeGlobalSearch"
+      bind:itemtap="onResultItemTap"
+    />
+
+    <!-- 标签栏在搜索栏下面 -->
+    <view class="tabbar">
+      <view class="tab {{activeTab === 'all' ? 'tab-active' : ''}}" data-tab="all" bindtap="onTab">全部</view>
+      <view class="tab {{activeTab === 'procurement' ? 'tab-active' : ''}}" data-tab="procurement" bindtap="onTab">采购</view>
+      <view class="tab {{activeTab === 'cutting' ? 'tab-active' : ''}}" data-tab="cutting" bindtap="onTab">裁剪</view>
+      <view class="tab {{activeTab === 'sewing' ? 'tab-active' : ''}}" data-tab="sewing" bindtap="onTab">车缝</view>
+      <view class="tab {{activeTab === 'warehousing' ? 'tab-active' : ''}}" data-tab="warehousing" bindtap="onTab">入库</view>
     </view>
 
-    <view wx:if="{{activeTab === 'orders_all' || activeTab === 'orders_production'}}">
-      <view class="row">
-        <view class="col field">
-          <view class="label">订单号</view>
-          <input class="input" placeholder="订单号" value="{{filters.orderNo}}" bindinput="onOrderNoInput" />
-        </view>
-        <view class="col field">
-          <view class="label">款号</view>
-          <input class="input" placeholder="款号" value="{{filters.styleNo}}" bindinput="onStyleNoInput" />
-        </view>
-      </view>
-      <view class="field">
-        <view class="label">加工厂</view>
-        <input class="input" placeholder="加工厂名称" value="{{filters.factoryName}}" bindinput="onFactoryNameInput" />
-      </view>
-
-      <view class="row">
-        <view class="col btn">
-          <view class="btn-primary" bindtap="refreshActive">查询</view>
-        </view>
-        <view class="col btn">
-          <view class="btn-secondary" bindtap="clearOrderFilters">清空</view>
-        </view>
-      </view>
-
-      <view class="row">
-        <view class="col btn">
-          <view class="btn-secondary" bindtap="toggleBatchProgress">{{batchProgress.open ? '收起批量更新' : '批量更新进度'}}</view>
-        </view>
-      </view>
-
-      <view wx:if="{{batchProgress.open}}" class="batch-card">
-        <view class="field">
-          <view class="label">目标进度（0-100）</view>
-          <input class="input" type="number" placeholder="请输入进度" value="{{batchProgress.progress}}" bindinput="onBatchProgressInput" />
-        </view>
-        <view class="field">
-          <view class="label">问题点（回退必填）</view>
-          <input class="input" placeholder="请输入问题点" value="{{batchProgress.remark}}" bindinput="onBatchProgressRemarkInput" />
-        </view>
-        <view class="batch-meta">已选 {{batchProgress.selectedIds.length}} 单</view>
-        <view class="row">
-          <view class="col btn">
-            <view class="btn-primary {{batchProgress.submitting ? 'btn-disabled' : ''}}" bindtap="submitBatchProgress">{{batchProgress.submitting ? '更新中...' : '批量更新'}}</view>
-          </view>
-          <view class="col btn">
-            <view class="btn-secondary" bindtap="clearBatchSelection">清空选择</view>
-          </view>
-        </view>
-      </view>
-
-      <view wx:if="{{rollbackStep.open}}" class="rollback-card">
-        <view class="field">
-          <view class="label">订单号</view>
-          <view class="input">{{rollbackStep.orderNo || rollbackStep.orderId}}</view>
-        </view>
-        <view class="field">
-          <view class="label">回流目标</view>
-          <view class="input">退回到「{{rollbackStep.nextProcessName}}」</view>
-        </view>
-        <view class="field">
-          <view class="label">问题点</view>
-          <input class="input" placeholder="请填写问题点" value="{{rollbackStep.remark}}" bindinput="onRollbackStepRemarkInput" />
-        </view>
-        <view class="row">
-          <view class="col btn">
-            <view class="btn-primary {{rollbackStep.submitting ? 'btn-disabled' : ''}}" bindtap="submitStepRollback">{{rollbackStep.submitting ? '回流中...' : '确认回流'}}</view>
-          </view>
-          <view class="col btn">
-            <view class="btn-secondary" bindtap="closeStepRollback">取消</view>
-          </view>
-        </view>
-      </view>
+    <!-- 订单列表 -->
+    <view>
 
       <view wx:if="{{orders.list.length === 0 && !orders.loading}}" class="hint">暂无数据</view>
-      <checkbox-group bindchange="onBatchSelectChange">
         <view wx:for="{{orders.list}}" wx:key="id" class="list-item">
           <view class="item-head">
             <view class="item-title">{{item.orderNo || '-'}}</view>
-            <view class="item-head-actions">
-              <checkbox class="order-checkbox" value="{{item.id}}" checked="{{batchProgress.selectedIds.indexOf(item.id) >= 0}}" />
-              <text class="tag">{{item.statusText || '-'}}</text>
-            </view>
+            <text class="tag">{{item.statusText || '-'}}</text>
           </view>
           <view class="item-sub">款号：{{item.styleNo || '-'}}</view>
           <view class="item-sub">工厂：{{item.factoryName || '-'}}</view>
-          <view class="item-sub">数量：{{item.orderQuantity || 0}}，完成：{{item.completedQuantity || 0}}，进度：{{item.productionProgress || 0}}%</view>
-          <view wx:if="{{item.currentProcessName}}" class="item-sub">当前环节：{{item.currentProcessName}}</view>
-          <view class="item-actions">
-            <view class="btn-secondary" data-id="{{item.id}}" bindtap="openStepRollback">回退上一步</view>
+          <view class="item-sub">数量：{{item.orderQuantity || 0}}，完成：{{item.completedQuantity || 0}}</view>
+          <view class="progress-wrapper">
+            <view class="progress-bar {{item.status === 'completed' ? 'progress-closed' : 'progress-active'}}">
+              <view class="progress-fill" style="width: {{item.productionProgress || 0}}%"></view>
+            </view>
+            <text class="progress-text progress-percent">{{item.productionProgress || 0}}%</text>
+          </view>
+          <view class="current-process">{{item.currentProcessName || '待开始'}}</view>
+          <!-- 生成菲号按钮 -->
+          <view wx:if="{{item.currentProcessName === '裁剪' || item.currentProcessName === '采购'}}" class="item-actions">
+            <view class="action-btn" bindtap="onGenerateBundle" data-order="{{item}}">
+              <text>📋 生成菲号</text>
+            </view>
           </view>
         </view>
-      </checkbox-group>
 
       <view class="btn">
         <view class="btn-secondary {{orders.loading || !orders.hasMore ? 'btn-disabled' : ''}}" bindtap="loadMoreActive">{{orders.loading ? '加载中...' : (orders.hasMore ? '加载更多' : '没有更多了')}}</view>
       </view>
     </view>
+  </view>
 
-    <view wx:if="{{activeTab === 'warehousing'}}">
-      <view class="row">
-        <view class="col field">
-          <view class="label">订单号</view>
-          <input class="input" placeholder="订单号" value="{{filters.wOrderNo}}" bindinput="onWOrderNoInput" />
-        </view>
-        <view class="col field">
-          <view class="label">款号</view>
-          <input class="input" placeholder="款号" value="{{filters.wStyleNo}}" bindinput="onWStyleNoInput" />
-        </view>
+  <!-- 生成菲号弹窗 -->
+  <view wx:if="{{bundleModal.visible}}" class="modal">
+    <view class="modal-box wide">
+      <view class="modal-head">
+        生成菲号
       </view>
-      <view class="row">
-        <view class="col field">
-          <view class="label">仓库</view>
-          <input class="input" placeholder="仓库" value="{{filters.warehouse}}" bindinput="onWarehouseInput" />
+      <view class="modal-body">
+        <view class="cf-list">
+          <view class="cf-item"><text class="cf-k">订单</text><text class="cf-v hl">{{bundleModal.orderNo}}</text></view>
+          <view class="cf-item"><text class="cf-k">款号</text><text class="cf-v">{{bundleModal.styleNo}}</text></view>
         </view>
-        <view class="col field">
-          <view class="label">质检状态</view>
-          <picker mode="selector" range="{{qualityOptions}}" range-key="label" value="{{filters.qualityIndex}}" bindchange="onQualityPickerChange">
-            <view class="input">{{qualityOptions[filters.qualityIndex].label}}</view>
-          </picker>
-        </view>
-      </view>
-
-      <view class="row">
-        <view class="col btn">
-          <view class="btn-primary" bindtap="refreshActive">查询</view>
-        </view>
-        <view class="col btn">
-          <view class="btn-secondary" bindtap="clearWarehousingFilters">清空</view>
-        </view>
-      </view>
-
-      <view class="btn">
-        <view class="btn-secondary" bindtap="toggleRollback">{{rollback.open ? '收起入库回退' : '入库回退'}}</view>
-      </view>
-
-      <view wx:if="{{rollback.open}}" class="rollback-card">
-        <view class="field">
-          <view class="label">订单ID（可选）</view>
-          <input class="input" placeholder="订单ID，可不填" value="{{rollback.orderId}}" bindinput="onRollbackOrderIdInput" />
-        </view>
-
-        <view class="row">
-          <view class="col field">
-            <view class="label">扎号二维码</view>
-            <input class="input" placeholder="请扫码/粘贴扎号二维码" value="{{rollback.cuttingBundleQrCode}}" bindinput="onRollbackQrInput" />
-          </view>
-          <view class="col btn">
-            <view class="btn-secondary" bindtap="onScanRollbackQr">扫码</view>
+        
+        <view class="bundle-input-list">
+          <view wx:for="{{bundleModal.items}}" wx:key="index" class="bundle-input-item">
+            <view class="bii-row">
+              <text class="bii-label">颜色</text>
+              <input class="bii-input" placeholder="如：红色" value="{{item.color}}" bindinput="onBundleColorInput" data-idx="{{index}}" />
+            </view>
+            <view class="bii-row">
+              <text class="bii-label">尺码</text>
+              <input class="bii-input" placeholder="如：L" value="{{item.size}}" bindinput="onBundleSizeInput" data-idx="{{index}}" />
+            </view>
+            <view class="bii-row">
+              <text class="bii-label">数量</text>
+              <input class="bii-input" type="digit" placeholder="如：20" value="{{item.quantity}}" bindinput="onBundleQuantityInput" data-idx="{{index}}" />
+            </view>
+            <view wx:if="{{bundleModal.items.length > 1}}" class="bii-remove" bindtap="onRemoveBundleItem" data-idx="{{index}}">
+              <text>✕ 删除</text>
+            </view>
           </view>
         </view>
-
-        <view class="row">
-          <view class="col field">
-            <view class="label">回退数量</view>
-            <input class="input" type="number" value="{{rollback.rollbackQuantity}}" bindinput="onRollbackQtyInput" />
-          </view>
-          <view class="col field">
-            <view class="label">问题点</view>
-            <input class="input" placeholder="请填写问题点" value="{{rollback.rollbackRemark}}" bindinput="onRollbackRemarkInput" />
-          </view>
-        </view>
-
-        <view class="btn">
-          <view class="btn-primary {{rollback.submitting ? 'btn-disabled' : ''}}" bindtap="submitRollback">{{rollback.submitting ? '回退中...' : '确认回退'}}</view>
+        
+        <view class="bundle-add-btn" bindtap="onAddBundleItem">
+          <text>+ 添加一行</text>
         </view>
       </view>
-
-      <view wx:if="{{warehousing.list.length === 0 && !warehousing.loading}}" class="hint">暂无数据</view>
-      <view wx:for="{{warehousing.list}}" wx:key="id" class="list-item">
-        <view class="item-head">
-          <view class="item-title">{{item.warehousingNo || '-'}} </view>
-          <text class="tag">{{item.qualityStatusText || '-'}}</text>
+      <view class="modal-btns">
+        <view class="mbtn cancel" bindtap="onCancelBundle">取消</view>
+        <view class="mbtn ok {{bundleModal.loading ? 'off' : ''}}" bindtap="onConfirmBundle">
+          {{bundleModal.loading ? '生成中...' : '确认生成'}}
         </view>
-        <view class="item-sub">订单号：{{item.orderNo || '-'}}，款号：{{item.styleNo || '-'}}</view>
-        <view class="item-sub">仓库：{{item.warehouse || '-'}}</view>
-        <view class="item-sub">入库：{{item.warehousingQuantity || 0}}，合格：{{item.qualifiedQuantity || 0}}，次品：{{item.unqualifiedQuantity || 0}}</view>
-        <view wx:if="{{item.cuttingBundleQrCode}}" class="item-sub">扎号：{{item.cuttingBundleQrCode}}</view>
-        <view wx:if="{{item.repairRemark}}" class="item-sub">返修信息：{{item.repairRemark}}</view>
-      </view>
-      <view class="btn">
-        <view class="btn-secondary {{warehousing.loading || !warehousing.hasMore ? 'btn-disabled' : ''}}" bindtap="loadMoreActive">{{warehousing.loading ? '加载中...' : (warehousing.hasMore ? '加载更多' : '没有更多了')}}</view>
-      </view>
-    </view>
-
-    <view wx:if="{{activeTab === 'exceptions'}}">
-      <view class="row">
-        <view class="col field">
-          <view class="label">订单号</view>
-          <input class="input" placeholder="订单号" value="{{filters.eOrderNo}}" bindinput="onEOrderNoInput" />
-        </view>
-        <view class="col field">
-          <view class="label">款号</view>
-          <input class="input" placeholder="款号" value="{{filters.eStyleNo}}" bindinput="onEStyleNoInput" />
-        </view>
-      </view>
-
-      <view class="row">
-        <view class="col btn">
-          <view class="btn-primary" bindtap="refreshActive">查询</view>
-        </view>
-        <view class="col btn">
-          <view class="btn-secondary" bindtap="clearExceptionFilters">清空</view>
-        </view>
-      </view>
-
-      <view wx:if="{{exceptions.list.length === 0 && !exceptions.loading}}" class="hint">暂无数据</view>
-      <view wx:for="{{exceptions.list}}" wx:key="id" class="list-item">
-        <view class="item-head">
-          <view class="item-title">{{item.orderNo || '-'}} </view>
-          <text class="tag tag-bad">{{item.scanResultText || '失败'}}</text>
-        </view>
-        <view class="item-sub">动作：{{item.progressStage || item.processName || '-'}}</view>
-        <view class="item-sub">原因：{{item.remark || '-'}}</view>
-        <view wx:if="{{item.scanTime}}" class="item-sub">时间：{{item.scanTime}}</view>
-      </view>
-      <view class="btn">
-        <view class="btn-secondary {{exceptions.loading || !exceptions.hasMore ? 'btn-disabled' : ''}}" bindtap="loadMoreActive">{{exceptions.loading ? '加载中...' : (exceptions.hasMore ? '加载更多' : '没有更多了')}}</view>
       </view>
     </view>
   </view>

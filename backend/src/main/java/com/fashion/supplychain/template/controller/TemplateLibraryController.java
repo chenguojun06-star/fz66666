@@ -54,9 +54,16 @@ public class TemplateLibraryController {
         return Result.success(templateLibraryOrchestrator.update(tpl));
     }
 
+    @PutMapping("/{id}")
+    public Result<?> updateById(@PathVariable String id, @RequestBody TemplateLibrary tpl) {
+        tpl.setId(id);
+        return Result.success(templateLibraryOrchestrator.update(tpl));
+    }
+
     @PostMapping("/{id}/rollback")
-    public Result<?> rollback(@PathVariable String id) {
-        return Result.success(templateLibraryOrchestrator.rollback(id));
+    public Result<?> rollback(@PathVariable String id, @RequestBody Map<String, Object> body) {
+        String reason = body == null ? null : String.valueOf(body.getOrDefault("reason", "")).trim();
+        return Result.success(templateLibraryOrchestrator.rollback(id, reason));
     }
 
     @DeleteMapping("/{id}")

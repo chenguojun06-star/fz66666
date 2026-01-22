@@ -1,4 +1,14 @@
+/**
+ * 默认API地址
+ * 开发环境：http://192.168.2.248:8088
+ * 生产环境：请修改为实际域名，如 https://api.your-domain.com
+ */
 const DEFAULT_BASE_URL = 'http://192.168.2.248:8088';
+
+/**
+ * 是否启用调试日志（生产环境请设为 false）
+ */
+const DEBUG_MODE = true;
 
 function normalizeBaseUrl(url) {
     const raw = (url == null ? '' : String(url)).trim();
@@ -40,10 +50,13 @@ function setBaseUrl(url) {
     return v || DEFAULT_BASE_URL;
 }
 
-module.exports = {
+const baseUrl = getBaseUrl();
+
+export {
     DEFAULT_BASE_URL,
+    DEBUG_MODE,
     getBaseUrl,
     setBaseUrl,
     normalizeBaseUrl,
-    baseUrl: getBaseUrl(),
+    baseUrl,
 };

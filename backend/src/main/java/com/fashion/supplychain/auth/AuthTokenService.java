@@ -43,6 +43,7 @@ public class AuthTokenService {
         payload.put("roleId", subject.getRoleId());
         payload.put("roleName", subject.getRoleName());
         payload.put("openid", subject.getOpenid());
+        payload.put("permRange", subject.getPermissionRange()); // 数据权限范围
         payload.put("iat", new Date(nowMillis));
         payload.put("exp", new Date(nowMillis + safeTtl.toMillis()));
 
@@ -77,6 +78,7 @@ public class AuthTokenService {
         Object roleId = jwt.getPayload("roleId");
         Object roleName = jwt.getPayload("roleName");
         Object openid = jwt.getPayload("openid");
+        Object permRange = jwt.getPayload("permRange");
 
         TokenSubject subject = new TokenSubject();
         subject.setUserId(uid == null ? null : String.valueOf(uid));
@@ -84,6 +86,7 @@ public class AuthTokenService {
         subject.setRoleId(roleId == null ? null : String.valueOf(roleId));
         subject.setRoleName(roleName == null ? null : String.valueOf(roleName));
         subject.setOpenid(openid == null ? null : String.valueOf(openid));
+        subject.setPermissionRange(permRange == null ? "all" : String.valueOf(permRange));
         return subject;
     }
 }

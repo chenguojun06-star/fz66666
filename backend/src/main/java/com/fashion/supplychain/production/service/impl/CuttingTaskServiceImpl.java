@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -386,5 +387,40 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
         task.setBundledTime(null);
         task.setUpdateTime(now);
         return this.updateById(task);
+    }
+
+    @Override
+    public void insertRollbackLog(CuttingTask task, String operatorId, String operatorName, String remark) {
+        if (task == null || !StringUtils.hasText(task.getId())) {
+            return;
+        }
+        if (!StringUtils.hasText(remark)) {
+            return;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        ScanRecord sr = new ScanRecord();
+        sr.setRequestId("CUTTING_TASK_ROLLBACK:" + task.getId().trim() + ":" + UUID.randomUUID().toString().replace("-", ""));
+        sr.setOrderId(task.getProductionOrderId());
+        sr.setOrderNo(task.getProductionOrderNo());
+        sr.setStyleId(task.getStyleId());
+        sr.setStyleNo(task.getStyleNo());
+        sr.setColor(task.getColor());
+        sr.setSize(task.getSize());
+        sr.setQuantity(0);
+        sr.setProgressStage("裁剪退回");
+        sr.setProcessName("裁剪退回");
+        sr.setOperatorId(operatorId);
+        sr.setOperatorName(StringUtils.hasText(operatorName) ? operatorName.trim() : "system");
+        sr.setScanType("cutting");
+        sr.setScanResult("success");
+        sr.setRemark("退回：" + remark.trim());
+        sr.setScanTime(now);
+        sr.setCreateTime(now);
+        sr.setUpdateTime(now);
+        try {
+            scanRecordMapper.insert(sr);
+        } catch (Exception e) {
+            log.warn("Failed to insert cutting rollback log: taskId={}", task.getId(), e);
+        }
     }
 }

@@ -35,6 +35,9 @@ public class ProductionOrder {
     @TableField("order_details")
     private String orderDetails;
 
+    @TableField(exist = false)
+    private String operationRemark;
+
     @TableField("progress_workflow_json")
     private String progressWorkflowJson;
 

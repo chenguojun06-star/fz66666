@@ -1,5 +1,6 @@
 package com.fashion.supplychain.system.entity;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -30,9 +31,18 @@ public class User {
     
     private String status;
     
+    private String approvalStatus; // 审批状态: pending, approved, rejected
+    
+    private LocalDateTime approvalTime; // 审批时间
+    
+    private String approvalRemark; // 审批备注
+    
     private String phone;
     
     private String email;
+
+    @TableField(exist = false)
+    private String operationRemark;
     
     private LocalDateTime createTime;
     

@@ -1,4 +1,4 @@
-const { getToken, setToken } = require('../../utils/storage');
+const { getToken, setToken, setUserInfo } = require('../../utils/storage');
 const { DEFAULT_BASE_URL, setBaseUrl, normalizeBaseUrl } = require('../../config');
 const api = require('../../utils/api');
 const { validateByRule } = require('../../utils/validationRules');
@@ -140,6 +140,10 @@ Page({
 
             if (resp && resp.code === 200 && resp.data && resp.data.token) {
                 setToken(resp.data.token);
+                // 保存用户信息（包含角色）
+                if (resp.data.user) {
+                    setUserInfo(resp.data.user);
+                }
                 wx.switchTab({ url: '/pages/home/index' });
                 return;
             }
@@ -196,6 +200,10 @@ Page({
 
             if (resp && resp.code === 200 && resp.data && resp.data.token) {
                 setToken(resp.data.token);
+                // 保存用户信息（包含角色）
+                if (resp.data.user) {
+                    setUserInfo(resp.data.user);
+                }
                 wx.switchTab({ url: '/pages/home/index' });
                 return;
             }

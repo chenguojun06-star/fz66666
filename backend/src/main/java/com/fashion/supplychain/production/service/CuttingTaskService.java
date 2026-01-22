@@ -17,4 +17,6 @@ public interface CuttingTaskService extends IService<CuttingTask> {
     boolean markBundledByOrderId(String productionOrderId);
 
     boolean rollbackTask(String taskId);
+
+    void insertRollbackLog(CuttingTask task, String operatorId, String operatorName, String remark);
 }

@@ -43,7 +43,12 @@ export const materialReconciliationApi = {
   updateMaterialReconciliationStatus: async (id: string, status: string) => {
     const response = await api.post(`/finance/material-reconciliation/update-status`, { id, status });
     return response;
-  }
+  },
+
+  returnMaterialReconciliation: async (id: string, reason: string) => {
+    const response = await api.post('/finance/material-reconciliation/return', { id, reason });
+    return response;
+  },
 };
 
 export default materialReconciliationApi;

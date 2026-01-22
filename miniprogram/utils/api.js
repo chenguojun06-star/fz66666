@@ -1,6 +1,6 @@
-const { request } = require('./request');
-const { validateProductionOrder, validateScanRecord } = require('./dataValidator');
-const { errorHandler } = require('./errorHandler');
+import { request } from './request';
+import { validateProductionOrder, validateScanRecord } from './dataValidator';
+import { errorHandler } from './errorHandler';
 
 function pickMessage(resp, fallback) {
     const msg = resp && resp.message != null ? String(resp.message) : '';
@@ -70,9 +70,25 @@ const production = {
     updateArrivedQuantity(payload) {
         return ok('/api/production/purchase/update-arrived-quantity', 'POST', payload || {});
     },
+    // 通过扫码获取关联的采购单
+    getMaterialPurchases(params) {
+        return ok('/api/production/purchase/by-scan-code', 'GET', params || {});
+    },
+    // 获取我的采购任务
+    myProcurementTasks() {
+        return ok('/api/production/purchase/my-tasks', 'GET', {});
+    },
     // 提交质检结果（通过更新扫码记录）
     submitQualityResult(payload) {
         return ok('/api/production/scan/execute', 'POST', payload || {});
+    },
+    // 查询裁剪菲号信息（验证菲号是否存在，获取准确数量）
+    getCuttingBundle(orderNo, bundleNo) {
+        return ok('/api/production/cutting/by-no', 'GET', { orderNo, bundleNo });
+    },
+    // 生成裁剪菲号
+    generateCuttingBundles(orderId, bundles) {
+        return raw('/api/production/cutting/generate', 'POST', { orderId, bundles });
     },
     async undoScan(payload) {
         const data = payload || {};
@@ -105,8 +121,8 @@ const system = {
     getUser(userId) {
         return ok(`/api/system/user/${userId}`, 'GET', {});
     },
-    updateUser(payload) {
-        return ok('/api/system/user', 'PUT', payload || {});
+    updateUser(userId, payload) {
+        return ok(`/api/system/user/${userId}`, 'PUT', payload || {});
     },
     approveUser(userId) {
         return ok(`/api/system/user/${userId}/approve`, 'POST', {});
@@ -126,10 +142,8 @@ const system = {
     getPermissionTree() {
         return ok('/api/system/permission/tree', 'GET', {});
     },
-    async getOnlineCount() {
-        const resp = await raw('/api/system/user/online-count', 'GET', {});
-        if (resp && resp.code === 200) return resp.data;
-        throw createBizError(resp, 'GET /api/system/user/online-count');
+    getOnlineCount() {
+        return ok('/api/system/user/online-count', 'GET', {});
     },
 };
 
@@ -139,9 +153,18 @@ const wechat = {
     },
 };
 
-module.exports = {
+const api = {
     dashboard,
     production,
     system,
     wechat,
 };
+
+export {
+    dashboard,
+    production,
+    system,
+    wechat,
+};
+
+export default api;

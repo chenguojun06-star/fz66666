@@ -25,6 +25,8 @@ public class TemplateLibrary {
 
     private Integer locked;
 
+    private String operatorName;
+
     private LocalDateTime createTime;
 
     private LocalDateTime updateTime;

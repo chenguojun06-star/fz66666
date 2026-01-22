@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Input, Space, Table, Tabs, Tag, message } from 'antd';
+import { Alert, Button, Input, Modal, Space, Table, Tabs, Tag, message } from 'antd';
 import api from '../../../utils/api';
 import { isSupervisorOrAboveUser, useAuth } from '../../../utils/authContext';
 import { formatDateTime } from '../../../utils/datetime';
@@ -52,8 +52,27 @@ const StylePatternTab: React.FC<Props> = ({
 }) => {
   const { user } = useAuth();
   const [saving, setSaving] = useState(false);
-  const [sectionKey, setSectionKey] = useState<'files' | 'size' | 'process' | 'workorder'>(activeSectionKey || 'files');
+  const [sectionKey, setSectionKey] = useState<'files' | 'grading' | 'size' | 'process' | 'workorder'>(activeSectionKey || 'files');
   const [patternFiles, setPatternFiles] = useState<StyleAttachment[]>([]);
+  const [gradingFiles, setGradingFiles] = useState<StyleAttachment[]>([]);
+  const [patternCheckResult, setPatternCheckResult] = useState<{ complete: boolean; missingItems: string[] } | null>(null);
+
+  // 检查纸样是否齐全
+  const checkPatternComplete = async () => {
+    try {
+      const res = await api.get<any>('/style/attachment/pattern/check', { params: { styleId } });
+      const result = res as any;
+      if (result.code === 200) {
+        setPatternCheckResult(result.data);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    checkPatternComplete();
+  }, [styleId, patternFiles, gradingFiles]);
 
   useEffect(() => {
     if (!activeSectionKey) return;
@@ -112,6 +131,38 @@ const StylePatternTab: React.FC<Props> = ({
     } finally {
       setSaving(false);
     }
+  };
+
+  const openMaintenance = () => {
+    let reason = '';
+    Modal.confirm({
+      title: '维护',
+      content: (
+        <div>
+          <div style={{ marginBottom: 12, fontWeight: 600 }}>维护原因</div>
+          <Input.TextArea
+            placeholder="请输入维护原因"
+            autoSize={{ minRows: 3, maxRows: 6 }}
+            maxLength={200}
+            showCount
+            onChange={(e) => {
+              reason = String(e?.target?.value || '');
+            }}
+          />
+        </div>
+      ),
+      okText: '确认维护',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        const remark = String(reason || '').trim();
+        if (!remark) {
+          message.error('请输入维护原因');
+          return Promise.reject(new Error('请输入维护原因'));
+        }
+        await call(`/style/info/${styleId}/pattern/reset`, { reason: remark });
+      },
+    });
   };
 
   const productionReqRootRef = useRef<HTMLDivElement | null>(null);
@@ -222,6 +273,22 @@ const StylePatternTab: React.FC<Props> = ({
           {statusTag}
           <span>开始时间：{startTimeText}</span>
           <span>完成时间：{completedTimeText}</span>
+          {/* 纸样齐全检查提示 */}
+          {patternCheckResult && !patternCheckResult.complete && (
+            <span style={{ 
+              fontSize: '12px', 
+              color: '#faad14', 
+              backgroundColor: '#fffbe6', 
+              border: '1px solid #ffe58f',
+              padding: '2px 8px',
+              borderRadius: '4px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}>
+              ⚠️ 缺少: {patternCheckResult.missingItems.join('、')}
+            </span>
+          )}
         </Space>
 
         <Space size="large" wrap>
@@ -230,7 +297,7 @@ const StylePatternTab: React.FC<Props> = ({
               <Tag color="green">已完成</Tag>
               <span style={{ color: 'var(--neutral-text-lighter)' }}>无法操作</span>
               {canRollback ? (
-                <Button danger loading={saving} onClick={() => call(`/style/info/${styleId}/pattern/reset`, { reason: '维护' })}>维护</Button>
+                <Button danger loading={saving} onClick={openMaintenance}>维护</Button>
               ) : null}
             </>
           ) : (
@@ -251,7 +318,7 @@ const StylePatternTab: React.FC<Props> = ({
                 标记完成
               </Button>
               {canRollback ? (
-                <Button danger loading={saving} onClick={() => call(`/style/info/${styleId}/pattern/reset`, { reason: '维护' })}>维护</Button>
+                <Button danger loading={saving} onClick={openMaintenance}>维护</Button>
               ) : null}
               {!hasValidPatternFile ? <span style={{ color: 'var(--neutral-text-lighter)' }}>需先上传纸样(dxf/plt/ets)</span> : null}
             </>
@@ -277,6 +344,19 @@ const StylePatternTab: React.FC<Props> = ({
             ),
           },
           {
+            key: 'grading',
+            label: '放码文件',
+            children: (
+              <StyleAttachmentTab
+                styleId={styleId}
+                bizType="pattern_grading"
+                uploadText="上传放码文件"
+                readOnly={childReadOnly}
+                onListChange={setGradingFiles}
+              />
+            ),
+          },
+          {
             key: 'size',
             label: '尺寸表',
             children: <StyleSizeTab styleId={styleId} readOnly={childReadOnly} />,
@@ -292,7 +372,7 @@ const StylePatternTab: React.FC<Props> = ({
             children: (
               <div data-production-req ref={productionReqRootRef}>
                 <style>{
-                  '[data-production-req] .ant-table-thead > tr > th,[data-production-req] .ant-table-tbody > tr > td{padding:4px 6px !important;text-align:left !important;}' +
+                  '[data-production-req] .ant-table-thead > tr > th,[data-production-req] .ant-table-tbody > tr > td{padding:4px 6px !important;text-align:center !important;vertical-align:middle !important;}' +
                   '[data-production-req] .ant-input{padding:0 6px !important;height:24px !important;line-height:24px !important;}'
                 }</style>
 

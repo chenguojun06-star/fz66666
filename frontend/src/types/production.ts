@@ -67,6 +67,8 @@ export interface ProductionOrder {
   warehousingOperatorName?: string;
   warehousingCompletionRate?: number;
 
+  operationRemark?: string;
+
   factoryUnitPrice?: number;
   quotationUnitPrice?: number;
 }

@@ -1,0 +1,51 @@
+<view class="container">
+  <view class="header">
+    <view class="title">用户审批</view>
+    <view class="count">待审批：{{total}}人</view>
+  </view>
+
+  <view wx:if="{{loading && pendingUsers.length === 0}}" class="loading">
+    <view class="loading-text">加载中...</view>
+  </view>
+
+  <view wx:elif="{{pendingUsers.length === 0}}" class="empty">
+    <image class="empty-icon" src="/assets/icons/empty.svg" mode="aspectFit" />
+    <view class="empty-text">暂无待审批用户</view>
+  </view>
+
+  <view wx:else class="user-list">
+    <view wx:for="{{pendingUsers}}" wx:key="id" class="user-card">
+      <view class="user-info">
+        <view class="user-name">{{item.name || item.username}}</view>
+        <view class="user-meta">
+          <view wx:if="{{item.roleName}}" class="meta-item">角色：{{item.roleName}}</view>
+          <view wx:if="{{item.phone}}" class="meta-item">手机：{{item.phone}}</view>
+          <view wx:if="{{item.email}}" class="meta-item">邮箱：{{item.email}}</view>
+          <view class="meta-item">注册时间：{{item.createTime}}</view>
+        </view>
+      </view>
+      <view class="user-actions">
+        <button 
+          class="btn-approve" 
+          size="mini"
+          bindtap="onApprove" 
+          data-user="{{item}}"
+        >
+          批准
+        </button>
+        <button 
+          class="btn-reject" 
+          size="mini"
+          bindtap="onReject" 
+          data-user="{{item}}"
+        >
+          拒绝
+        </button>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{loading && pendingUsers.length > 0}}" class="loading-more">
+    加载更多...
+  </view>
+</view>

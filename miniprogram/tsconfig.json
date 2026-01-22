@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "target": "ES2021",
-    "module": "commonjs",
+    "target": "ES2019",
+    "module": "ESNext",
     "moduleResolution": "node",
     "allowJs": true,
     "checkJs": false,

@@ -1,8 +1,21 @@
-const { getBaseUrl } = require('../config');
-const { getToken, clearToken } = require('./storage');
+import { getBaseUrl } from '../config';
+import { getToken, clearToken } from './storage';
 
 let redirectingToLogin = false;
 let redirectResetTimer = null;
+
+function resolveEnvVersion() {
+    try {
+        if (wx && typeof wx.getAccountInfoSync === 'function') {
+            const info = wx.getAccountInfoSync();
+            const mp = info && info.miniProgram;
+            return mp && mp.envVersion ? String(mp.envVersion) : '';
+        }
+    } catch (e) {
+        null;
+    }
+    return '';
+}
 
 function triggerLoginRedirect() {
     try {
@@ -48,6 +61,23 @@ function request(options) {
         const token = getToken();
         const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
         const baseUrl = getBaseUrl();
+        const envVersion = resolveEnvVersion();
+        const isDevEnv = !envVersion || envVersion === 'develop';
+        const requireHttps = !isDevEnv;
+
+        if (!baseUrl) {
+            reject(createError('未配置有效的 API 地址', { type: 'config' }));
+            return;
+        }
+
+        if (requireHttps && /^http:\/\//i.test(baseUrl)) {
+            reject(createError('当前环境仅支持 https 域名，请配置合法域名和证书', {
+                type: 'config',
+                url: baseUrl,
+                envVersion,
+            }));
+            return;
+        }
 
         wx.request({
             url: `${baseUrl}${url}`,
@@ -66,6 +96,19 @@ function request(options) {
                 if (body && typeof body === 'object' && !(body instanceof ArrayBuffer) && 'code' in body) {
                     code = body.code != null ? Number(body.code) : NaN;
                 }
+                let serverMessage = '';
+                if (body && typeof body === 'string') {
+                    serverMessage = body;
+                } else if (body && typeof body === 'object' && !(body instanceof ArrayBuffer)) {
+                    const candidates = [body.message, body.msg, body.error, body.detail];
+                    for (let i = 0; i < candidates.length; i += 1) {
+                        const v = candidates[i];
+                        if (v != null && v !== '') {
+                            serverMessage = String(v);
+                            break;
+                        }
+                    }
+                }
 
                 if (statusCode === 401 || code === 401) {
                     clearToken();
@@ -77,12 +120,29 @@ function request(options) {
                 }
 
                 if (statusCode === 403 || code === 403) {
+                    // 如果没有token，403可能是未登录，触发登录
+                    if (!token) {
+                        clearToken();
+                        if (!skipAuthRedirect) {
+                            triggerLoginRedirect();
+                            reject(createError('未登录', { type: 'auth', statusCode, data: body }));
+                            return;
+                        }
+                    }
                     reject(createError('无权限', { type: 'forbidden', statusCode, data: body }));
                     return;
                 }
 
                 if (statusCode && (statusCode < 200 || statusCode >= 300)) {
-                    reject(createError(`HTTP ${statusCode}`, { type: 'http', statusCode, data: body }));
+                    const errMsg = serverMessage ? serverMessage : `HTTP ${statusCode}`;
+                    const errType = statusCode >= 500 ? 'server' : 'http';
+                    reject(createError(errMsg, {
+                        type: errType,
+                        statusCode,
+                        data: body,
+                        url,
+                        method,
+                    }));
                     return;
                 }
 
@@ -92,29 +152,40 @@ function request(options) {
                 // 网络错误时，检查是否需要重试
                 const isRetryable = retryCount < 2;
                 const errMsg = (err && err.errMsg) || '网络异常';
-                
+                const lower = String(errMsg || '').toLowerCase();
+                let mappedMsg = errMsg;
+                if (errMsg.includes('域名') || lower.includes('domain')) {
+                    mappedMsg = isDevEnv
+                        ? '请求域名未配置或不合法，请在开发者工具关闭域名校验或改用 https 域名'
+                        : '请求域名未配置或不合法，请配置合法 https 域名';
+                } else if (lower.includes('https') || lower.includes('tls') || errMsg.includes('证书')) {
+                    mappedMsg = isDevEnv
+                        ? 'HTTPS 证书或 TLS 版本不符合要求，请改用合法 https 域名或本地代理'
+                        : 'HTTPS 证书或 TLS 版本不符合要求';
+                }
+
                 // 超时错误或网络错误建议重试
-                const isTimeoutOrNetwork = errMsg.includes('timeout') || 
-                                          errMsg.includes('request:fail') ||
-                                          errMsg.includes('network');
-                
+                const isTimeoutOrNetwork = errMsg.includes('timeout') ||
+                    errMsg.includes('request:fail') ||
+                    errMsg.includes('network');
+
                 if (isRetryable && isTimeoutOrNetwork) {
                     // 添加指数退避延迟
                     const delayMs = 1000 * (Math.pow(2, retryCount) - 1);
                     console.warn(`[Request Retry] Retrying (${retryCount + 1}/2) after ${delayMs}ms: ${url}`);
-                    
+
                     setTimeout(() => {
                         const retryOptions = { ...options, _retryCount: retryCount + 1 };
                         request(retryOptions).then(resolve).catch(reject);
                     }, delayMs);
                 } else {
-                    reject(createError(errMsg, { type: 'network', raw: err }));
+                    reject(createError(mappedMsg, { type: 'network', raw: err }));
                 }
             },
         });
     });
 }
 
-module.exports = {
+export {
     request,
 };

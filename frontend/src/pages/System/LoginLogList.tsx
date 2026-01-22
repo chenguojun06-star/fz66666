@@ -5,6 +5,7 @@ import api from '../../utils/api';
 import { Button, Card, DatePicker, Input, Select, Space, Tag, message } from 'antd';
 import { formatDateTimeSecond } from '../../utils/datetime';
 import ResizableTable from '../../components/common/ResizableTable';
+import { useViewport } from '../../utils/useViewport';
 import './styles.css';
 
 import dayjs from 'dayjs';
@@ -18,6 +19,7 @@ const LoginLogList: React.FC = () => {
   const [loginLogs, setLoginLogs] = useState<LoginLog[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+  const { isMobile } = useViewport();
 
   const fetchLogs = async () => {
     setLoading(true);
@@ -151,7 +153,7 @@ const LoginLogList: React.FC = () => {
             showTotal: (t) => `共 ${t} 条记录`,
             onChange: (page, pageSize) => setQueryParams((prev) => ({ ...prev, page, pageSize })),
           }}
-          scroll={{ x: 'max-content', y: typeof window === 'undefined' ? 560 : window.innerWidth < 768 ? 360 : 560 }}
+          scroll={{ x: 'max-content', y: isMobile ? 360 : 560 }}
         />
       </Card>
     </Layout>

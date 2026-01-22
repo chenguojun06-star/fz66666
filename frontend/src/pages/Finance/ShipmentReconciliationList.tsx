@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Card, Collapse, Dropdown, Form, Input, InputNumber, Select, Space, Tag, message } from 'antd';
+import { Button, Card, Collapse, Dropdown, Form, Input, InputNumber, Select, Space, Tag, message, Modal } from 'antd';
 import { CheckOutlined, DownloadOutlined, MoreOutlined, PlusOutlined, RollbackOutlined, SearchOutlined, SendOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
@@ -13,7 +13,9 @@ import RowActions from '../../components/common/RowActions';
 import { DeductionItem, ShipmentReconciliation, ShipmentReconQueryParams } from '../../types/finance';
 import { formatDateTime } from '../../utils/datetime';
 import { StyleCoverThumb } from '../../components/StyleAssets';
-import api, { updateFinanceReconciliationStatus } from '../../utils/api';
+import api, { updateFinanceReconciliationStatus, returnFinanceReconciliation } from '../../utils/api';
+import { useSync } from '../../utils/syncManager';
+import { useViewport } from '../../utils/useViewport';
 
 const { Option } = Select;
 
@@ -44,13 +46,7 @@ const ShipmentReconciliationList: React.FC = () => {
 
   const [filterForm] = Form.useForm();
 
-  const modalWidth = useMemo(() => {
-    if (typeof window === 'undefined') return '60vw';
-    const w = window.innerWidth;
-    if (w < 768) return '96vw';
-    if (w < 1024) return '66vw';
-    return '60vw';
-  }, []);
+  const { modalWidth } = useViewport();
   const modalInitialHeight = 720;
 
   const escapeCsvCell = (value: any) => {
@@ -534,10 +530,10 @@ const ShipmentReconciliationList: React.FC = () => {
 
   const batchReturn = () => {
     const picked = reconciliationList.filter((r) => selectedRowKeys.includes(String(r.id)));
-    const eligible = picked.filter((r) => r.status === 'pending' || r.status === 'verified' || r.status === 'approved');
+    const eligible = picked.filter((r) => r.status === 'verified' || r.status === 'approved' || r.status === 'paid');
     if (!eligible.length) return;
-    if (eligible.length !== picked.length) message.warning('仅可批量退回状态为“待审核/已验证/已批准”的对账单');
-    updateStatusBatch(eligible.map((r) => ({ id: String(r.id || ''), status: 'rejected' })), '退回成功');
+    if (eligible.length !== picked.length) message.warning('仅可批量退回状态为“已验证/已批准/已付款”的对账单');
+    openReturnModal(eligible.map((r) => String(r.id || '')));
   };
 
   const fetchReconciliationList = async () => {
@@ -572,6 +568,48 @@ const ShipmentReconciliationList: React.FC = () => {
     queryParams.startDate,
     queryParams.endDate,
   ]);
+
+  // 实时同步：45秒自动轮询更新出货对账数据
+  // 出货对账数据需要及时更新，防止多人操作时数据不一致
+  useSync(
+    'shipment-reconciliation-list',
+    async () => {
+      try {
+        const response = await api.get<any>('/finance/shipment-reconciliation/list', { params: queryParams });
+        const result = response as any;
+        if (result.code === 200) {
+          return {
+            records: (result.data?.records || []) as ShipmentReconciliation[],
+            total: Number(result.data?.total || 0)
+          };
+        }
+        return null;
+      } catch (error) {
+        console.error('[实时同步] 获取出货对账列表失败', error);
+        return null;
+      }
+    },
+    (newData, oldData) => {
+      if (oldData !== null && newData) {
+        setReconciliationList(newData.records);
+        setTotal(newData.total);
+        console.log('[实时同步] 出货对账数据已更新', {
+          oldCount: oldData.records.length,
+          newCount: newData.records.length,
+          oldTotal: oldData.total,
+          newTotal: newData.total
+        });
+      }
+    },
+    {
+      interval: 45000, // 45秒轮询，财务数据中等频率
+      enabled: !loading && !visible && !materialDetailOpen, // 加载中或弹窗打开时暂停
+      pauseOnHidden: true, // 页面隐藏时暂停
+      onError: (error) => {
+        console.error('[实时同步] 出货对账数据同步错误', error);
+      }
+    }
+  );
 
   useEffect(() => {
     const orderNos = reconciliationList.map((r) => String((r as any)?.orderNo || '').trim()).filter(Boolean);
@@ -689,6 +727,59 @@ const ShipmentReconciliationList: React.FC = () => {
     } finally {
       setApprovalSubmitting(false);
     }
+  };
+
+  const openReturnModal = (ids: string[]) => {
+    const normalized = ids.map((id) => String(id || '').trim()).filter(Boolean);
+    if (!normalized.length) return;
+    let reasonValue = '';
+    Modal.confirm({
+      title: normalized.length > 1 ? `批量退回（${normalized.length}条）` : '退回',
+      content: (
+        <Form layout="vertical" onSubmitCapture={(e) => e.preventDefault()}>
+          <Form.Item label="退回原因">
+            <Input.TextArea
+              rows={4}
+              maxLength={200}
+              showCount
+              onChange={(e) => {
+                reasonValue = e.target.value;
+              }}
+            />
+          </Form.Item>
+        </Form>
+      ),
+      okText: '确认退回',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        const remark = String(reasonValue || '').trim();
+        if (!remark) {
+          message.error('请输入退回原因');
+          return Promise.reject(new Error('请输入退回原因'));
+        }
+        setApprovalSubmitting(true);
+        try {
+          const settled = await Promise.allSettled(
+            normalized.map((id) => returnFinanceReconciliation(id, remark)),
+          );
+          const okCount = settled.filter((r) => r.status === 'fulfilled' && (r.value as any)?.code === 200).length;
+          const failed = normalized.length - okCount;
+          if (okCount <= 0) {
+            message.error('退回失败');
+            return;
+          }
+          if (failed) message.error(`部分退回失败（${failed}/${normalized.length}）`);
+          else message.success('退回成功');
+          setSelectedRowKeys([]);
+          fetchReconciliationList();
+        } catch (e: any) {
+          message.error(e?.message || '退回失败');
+        } finally {
+          setApprovalSubmitting(false);
+        }
+      },
+    });
   };
 
   const getStatusConfig = (status: ShipmentReconciliation['status'] | string | undefined | null) => {
@@ -890,7 +981,7 @@ const ShipmentReconciliationList: React.FC = () => {
         const st = String(record.status || '').trim();
         const canAudit = Boolean(id) && st === 'pending';
         const canSubmit = Boolean(id) && (st === 'verified' || st === 'rejected');
-        const canReturn = Boolean(id) && (st === 'pending' || st === 'verified' || st === 'approved');
+        const canReturn = Boolean(id) && (st === 'verified' || st === 'approved' || st === 'paid');
         return (
           <RowActions
             className="table-actions"
@@ -924,7 +1015,7 @@ const ShipmentReconciliationList: React.FC = () => {
                 title: canReturn ? '退回' : '退回(不可用)',
                 icon: <RollbackOutlined />,
                 disabled: !canReturn,
-                onClick: () => updateStatusBatch([{ id, status: 'rejected' }], '退回成功'),
+                onClick: () => openReturnModal([id]),
                 danger: true,
               },
             ]}
@@ -987,7 +1078,7 @@ const ShipmentReconciliationList: React.FC = () => {
                       disabled:
                         approvalSubmitting ||
                         !selectedRowKeys.length ||
-                        !reconciliationList.some((r) => selectedRowKeys.includes(String(r.id)) && (r.status === 'pending' || r.status === 'verified' || r.status === 'approved')),
+                        !reconciliationList.some((r) => selectedRowKeys.includes(String(r.id)) && (r.status === 'verified' || r.status === 'approved' || r.status === 'paid')),
                       onClick: batchReturn,
                       danger: true,
                     },

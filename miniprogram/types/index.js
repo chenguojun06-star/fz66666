@@ -65,27 +65,50 @@
 /**
  * @typedef {Object} ProgressWorkflow
  * @property {ProgressNode[]} nodes - 进度节点列表
- * @property {number} currentIndex - 当前节点索引 (可选)
+ * @property {number} currentIndex - 当前节点索引（可选）
  */
 
 /**
  * @typedef {Object} PaginatedList
- * @template T
+ * @template T - 数据类型
  * @property {number} page - 当前页码
  * @property {number} pageSize - 每页数量
- * @property {number} total - 总数 (可选)
+ * @property {number} total - 总数（可选）
  * @property {T[]} records - 数据列表
  */
 
 /**
  * @typedef {Object} ApiResponse
- * @template T
- * @property {number} code - 状态码 (200 为成功)
+ * @template T - 数据类型
+ * @property {number} code - 状态码（200 为成功）
  * @property {T} data - 返回数据
  * @property {string} message - 返回消息
  */
 
-module.exports = {
-  // 仅用于 JSDoc 类型定义
-  // 实际使用时只需导入此文件即可获得类型提示
-};
+/**
+ * @typedef {Object} ScanExecuteResponse
+ * @property {boolean} success - 是否成功
+ * @property {string} message - 返回消息
+ * @property {ScanRecord} scanRecord - 扫码记录
+ * @property {Object} orderInfo - 订单信息
+ * @property {string} orderInfo.orderNo - 订单号
+ * @property {string} orderInfo.styleNo - 款号
+ * @property {number} unitPrice - 单价（可能为0）
+ * @property {string} [unitPriceHint] - 单价提示信息（当单价为0时返回，提示用户去模板中心配置）
+ */
+
+/**
+ * @typedef {Object} ScanResultDisplay
+ * @property {boolean} success - 是否成功
+ * @property {string} message - 显示消息
+ * @property {string} scanCode - 扫码值
+ * @property {string} orderNo - 订单号
+ * @property {string} styleNo - 款号
+ * @property {string} processName - 工序名称
+ * @property {string} [color] - 颜色
+ * @property {string} [size] - 尺寸
+ * @property {number} [unitPrice] - 单价
+ * @property {string} [unitPriceHint] - 单价提示信息（当单价为0时显示警告）
+ */
+
+export { };

@@ -86,6 +86,7 @@ public class ProductionOrderQueryService {
         String styleNo = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "styleNo"));
         String factoryName = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "factoryName"));
         String status = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "status"));
+        String currentProcessName = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "currentProcessName"));
 
         IPage<ProductionOrder> resultPage = productionOrderMapper.selectPage(pageInfo,
                 new LambdaQueryWrapper<ProductionOrder>()
@@ -105,6 +106,18 @@ public class ProductionOrderQueryService {
         fixProductionProgressByCompletedQuantity(resultPage.getRecords());
         fillFactoryUnitPrice(resultPage.getRecords());
         fillQuotationUnitPrice(resultPage.getRecords());
+
+        // 在应用层过滤 currentProcessName（因为它是计算字段，不在数据库表中）
+        if (StringUtils.hasText(currentProcessName)) {
+            List<ProductionOrder> filtered = resultPage.getRecords().stream()
+                    .filter(order -> {
+                        String cpn = order.getCurrentProcessName();
+                        return cpn != null && cpn.contains(currentProcessName);
+                    })
+                    .collect(java.util.stream.Collectors.toList());
+            resultPage.setRecords(filtered);
+            resultPage.setTotal(filtered.size());
+        }
 
         return resultPage;
     }
@@ -1253,7 +1266,7 @@ public class ProductionOrderQueryService {
                             (int) Math.round(Math.max(0, wareQtyForRate) * 100.0 / Math.max(1, cuttingQtyForRate)));
             o.setSewingCompletionRate(sewingRate);
 
-            // 设置车缝环节（新增 - fallback分支）
+            // 设置车缝环节（新增 - 兜底分支）
             o.setCarSewingStartTime(carSewingStart);
             o.setCarSewingEndTime(carSewingEnd);
             o.setCarSewingOperatorName(carSewingOperator);
@@ -1262,7 +1275,7 @@ public class ProductionOrderQueryService {
                             (int) Math.round(Math.max(0, wareQtyForRate) * 100.0 / o.getOrderQuantity()));
             o.setCarSewingCompletionRate(carSewingRate);
 
-            // 设置大烫环节（新增 - fallback分支）
+            // 设置大烫环节（新增 - 兜底分支）
             o.setIroningStartTime(ironingStart);
             o.setIroningEndTime(ironingEnd);
             o.setIroningOperatorName(ironingOperator);
@@ -1271,7 +1284,7 @@ public class ProductionOrderQueryService {
                             (int) Math.round(Math.max(0, wareQtyForRate) * 100.0 / o.getOrderQuantity()));
             o.setIroningCompletionRate(ironingRate);
 
-            // 设置包装环节（新增 - fallback分支）
+            // 设置包装环节（新增 - 兜底分支）
             o.setPackagingStartTime(packagingStart);
             o.setPackagingEndTime(packagingEnd);
             o.setPackagingOperatorName(packagingOperator);

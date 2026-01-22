@@ -13,6 +13,8 @@ import { StyleAttachmentsButton, StyleCoverThumb } from '../../components/StyleA
 import { formatDateTime } from '../../utils/datetime';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { paths } from '../../routeConfig';
+import { useSync } from '../../utils/syncManager';
+import { useViewport } from '../../utils/useViewport';
 import './styles.css';
 
 const { Option } = Select;
@@ -236,7 +238,7 @@ const ProductWarehousing: React.FC = () => {
 
   // 独立弹窗（与“点击入库号跳转详情页”完全分离）的状态
   // - 只负责弹窗展示，不复用/不改动现有跳转逻辑
-  // - 使用独立的 warehousingNo 作为数据加载入口
+  // - 使用独立的入库单号（warehousingNo）作为数据加载入口
   const [independentDetailOpen, setIndependentDetailOpen] = useState(false);
   const [independentDetailWarehousingNo, setIndependentDetailWarehousingNo] = useState<string>('');
   const [independentDetailSummary, setIndependentDetailSummary] = useState<WarehousingType | null>(null);
@@ -247,25 +249,13 @@ const ProductWarehousing: React.FC = () => {
   const watchedWarehousingQty = Form.useWatch('warehousingQuantity', form);
   const watchedUnqualifiedQty = Form.useWatch('unqualifiedQuantity', form);
 
-  const modalWidth = useMemo(() => {
-    if (typeof window === 'undefined') return '85vw';
-    const w = window.innerWidth;
-    if (w < 768) return '96vw';
-    if (w < 1024) return '85vw';
-    return '85vw';
-  }, []);
+  const { modalWidth, isMobile } = useViewport();
 
   const modalInitialHeight = useMemo(() => {
-    return 640;
+    return 720;
   }, []);
 
-  const detailPopupWidth = useMemo(() => {
-    if (typeof window === 'undefined') return '60vw';
-    const w = window.innerWidth;
-    if (w < 768) return '96vw';
-    if (w < 1024) return '66vw';
-    return '60vw';
-  }, []);
+  const detailPopupWidth = modalWidth;
 
   const detailPopupInitialHeight = useMemo(() => {
     return 720;
@@ -706,6 +696,48 @@ const ProductWarehousing: React.FC = () => {
     if (isEntryPage) return;
     fetchWarehousingList();
   }, [isEntryPage, queryParams]);
+
+  // 实时同步：30秒自动轮询更新质检入库数据
+  // 质检入库页面数据实时性要求高，需要及时看到最新的入库状态
+  useSync(
+    'product-warehousing-list',
+    async () => {
+      try {
+        const response = await api.get<any>('/production/warehousing/list', { params: queryParams });
+        const result = response as any;
+        if (result.code === 200) {
+          return {
+            records: result.data.records || [],
+            total: result.data.total || 0
+          };
+        }
+        return null;
+      } catch (error) {
+        console.error('[实时同步] 获取质检入库列表失败', error);
+        return null;
+      }
+    },
+    (newData, oldData) => {
+      if (oldData !== null && newData) {
+        setWarehousingList(newData.records);
+        setTotal(newData.total);
+        console.log('[实时同步] 质检入库数据已更新', {
+          oldCount: oldData.records.length,
+          newCount: newData.records.length,
+          oldTotal: oldData.total,
+          newTotal: newData.total
+        });
+      }
+    },
+    {
+      interval: 30000, // 30秒轮询，入库数据实时性要求高
+      enabled: !loading && !isEntryPage && !visible && !warehousingModalOpen && !independentDetailOpen, // 加载中、详情页、弹窗打开时暂停
+      pauseOnHidden: true, // 页面隐藏时暂停
+      onError: (error) => {
+        console.error('[实时同步] 质检入库数据同步错误', error);
+      }
+    }
+  );
 
   useEffect(() => {
     if (!isEntryPage) {
@@ -1371,7 +1403,7 @@ const ProductWarehousing: React.FC = () => {
       width: 120,
       ellipsis: true,
       render: (v: any) => (
-        <span style={{ whiteSpace: 'nowrap' }}>{String(v || '').trim() || '-'}</span>
+        <span className="order-no-compact">{String(v || '').trim() || '-'}</span>
       ),
     },
     {
@@ -1460,12 +1492,12 @@ const ProductWarehousing: React.FC = () => {
       render: (_: any, record: any) => {
         const unqualified = Number(record?.unqualifiedQuantity || 0);
         if (unqualified <= 0) return '-';
-        
+
         const category = String(record?.defectCategory || '').trim();
         const remark = String(record?.repairRemark || '').trim();
-        
+
         return (
-          <div style={{ fontSize: '12px' }}>
+          <div style={{ fontSize: 'var(--font-size-sm)' }}>
             {category && <div>类型：{category}</div>}
             {remark && <div>方式：{remark}</div>}
           </div>
@@ -2259,7 +2291,7 @@ const ProductWarehousing: React.FC = () => {
                 dataSource={tableData}
                 rowKey="id"
                 loading={loading}
-                scroll={{ x: 'max-content', y: typeof window === 'undefined' ? 560 : window.innerWidth < 768 ? 360 : 560 }}
+                scroll={{ x: 'max-content', y: isMobile ? 360 : 560 }}
                 rowClassName={() => 'clickable-row'}
                 onRow={(record: any) => {
                   return {
@@ -2293,27 +2325,11 @@ const ProductWarehousing: React.FC = () => {
         title={currentWarehousing ? '质检详情' : '新增质检'}
         open={visible}
         onCancel={closeDialog}
-        onOk={handleSubmit}
-        okText="保存"
-        cancelText="取消"
-        footer={currentWarehousing ? null : [
-          <Button key="cancel" onClick={closeDialog}>
-            取消
-          </Button>,
-          <Button
-            key="batch"
-            onClick={() => handleBatchQualifiedSubmit()}
-            disabled={!batchSelectedBundleQrs.length || batchSelectedHasBlocked}
-            loading={submitLoading}
-          >
-            批量合格质检
-          </Button>,
-          <Button key="submit" type="primary" onClick={() => handleSubmit()} loading={submitLoading}>
-            保存
-          </Button>
-        ]}
+        footer={null}
         width={modalWidth}
         initialHeight={modalInitialHeight}
+        tableDensity="auto"
+        contentShiftX={12}
         scaleWithViewport
       >
         {currentWarehousing ? (
@@ -2951,6 +2967,21 @@ const ProductWarehousing: React.FC = () => {
                     </Form.Item>
                   </div>
                 </div>
+
+              </div>
+
+              <div className="modal-sticky-footer">
+                <Button onClick={closeDialog}>取消</Button>
+                <Button
+                  onClick={() => handleBatchQualifiedSubmit()}
+                  disabled={!batchSelectedBundleQrs.length || batchSelectedHasBlocked}
+                  loading={submitLoading}
+                >
+                  批量合格质检
+                </Button>
+                <Button type="primary" onClick={() => handleSubmit()} loading={submitLoading}>
+                  保存
+                </Button>
               </div>
             </div>
           </Form>

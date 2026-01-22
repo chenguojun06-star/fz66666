@@ -9,6 +9,7 @@ import java.io.File;
 import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
@@ -50,6 +51,10 @@ public class StyleAttachmentOrchestrator {
     }
 
     public StyleAttachment upload(MultipartFile file, String styleId, String bizType) {
+        return uploadWithVersion(file, styleId, bizType, null);
+    }
+
+    public StyleAttachment uploadWithVersion(MultipartFile file, String styleId, String bizType, String versionRemark) {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("文件为空");
         }
@@ -73,13 +78,26 @@ public class StyleAttachmentOrchestrator {
             int dot = safeOriginal.lastIndexOf('.');
             String extension = dot >= 0 ? safeOriginal.substring(dot) : "";
 
-            if ("pattern".equalsIgnoreCase(type) && !isAllowedPatternExtension(extension)) {
+            if (("pattern".equalsIgnoreCase(type) || "pattern_grading".equalsIgnoreCase(type)) 
+                    && !isAllowedPatternExtension(extension)) {
                 throw new IllegalArgumentException("纸样文件仅支持dxf/plt/ets格式");
             }
 
             String newFilename = UUID.randomUUID().toString() + extension;
             File dest = new File(dir, newFilename);
             file.transferTo(dest);
+
+            // 获取当前版本号
+            StyleAttachment latest = styleAttachmentService.getLatestPattern(styleId, type);
+            int nextVersion = 1;
+            String parentId = null;
+            if (latest != null) {
+                nextVersion = (latest.getVersion() == null ? 1 : latest.getVersion()) + 1;
+                parentId = latest.getId();
+                // 将旧版本状态改为archived
+                latest.setStatus("archived");
+                styleAttachmentService.updateById(latest);
+            }
 
             StyleAttachment attachment = new StyleAttachment();
             attachment.setStyleId(styleId);
@@ -89,6 +107,10 @@ public class StyleAttachmentOrchestrator {
             attachment.setFileType(contentType);
             attachment.setBizType(type);
             attachment.setFileSize(file.getSize());
+            attachment.setVersion(nextVersion);
+            attachment.setVersionRemark(StringUtils.hasText(versionRemark) ? versionRemark.trim() : null);
+            attachment.setStatus("active");
+            attachment.setParentId(parentId);
             UserContext ctx = UserContext.get();
             attachment.setUploader(ctx != null ? ctx.getUsername() : null);
             attachment.setCreateTime(LocalDateTime.now());
@@ -177,6 +199,74 @@ public class StyleAttachmentOrchestrator {
         if (!ok) {
             throw new IllegalStateException("删除失败");
         }
+        return true;
+    }
+
+    /**
+     * 获取纸样版本历史
+     */
+    public List<StyleAttachment> listPatternVersions(String styleId, String bizType) {
+        return styleAttachmentService.listPatternVersions(styleId, bizType);
+    }
+
+    /**
+     * 检查纸样是否齐全
+     */
+    public Map<String, Object> checkPatternComplete(String styleId) {
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("complete", false);
+        result.put("missingItems", new java.util.ArrayList<>());
+
+        if (!StringUtils.hasText(styleId)) {
+            ((List<String>) result.get("missingItems")).add("styleId不能为空");
+            return result;
+        }
+
+        List<String> missing = new java.util.ArrayList<>();
+        StyleAttachment pattern = styleAttachmentService.getLatestPattern(styleId, "pattern");
+        if (pattern == null) {
+            missing.add("纸样文件");
+        }
+
+        StyleAttachment grading = styleAttachmentService.getLatestPattern(styleId, "pattern_grading");
+        if (grading == null) {
+            missing.add("放码文件");
+        }
+
+        result.put("missingItems", missing);
+        result.put("complete", missing.isEmpty());
+        result.put("patternFile", pattern);
+        result.put("gradingFile", grading);
+        return result;
+    }
+
+    /**
+     * 将纸样资料流回资料中心（按款号）
+     */
+    public boolean flowPatternToDataCenter(String styleId) {
+        if (!StringUtils.hasText(styleId)) {
+            throw new IllegalArgumentException("styleId不能为空");
+        }
+        // 检查纸样是否齐全
+        Map<String, Object> check = checkPatternComplete(styleId);
+        if (!(Boolean) check.get("complete")) {
+            throw new IllegalStateException("纸样资料不齐全，无法流回资料中心");
+        }
+
+        // 标记纸样为最终版本（pattern_final）
+        StyleAttachment pattern = (StyleAttachment) check.get("patternFile");
+        StyleAttachment grading = (StyleAttachment) check.get("gradingFile");
+
+        if (pattern != null) {
+            pattern.setBizType("pattern_final");
+            styleAttachmentService.updateById(pattern);
+        }
+        if (grading != null) {
+            grading.setBizType("pattern_grading_final");
+            styleAttachmentService.updateById(grading);
+        }
+
+        log.info("Pattern files flowed to data center: styleId={}", styleId);
         return true;
     }
 

@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/style/attachment")
@@ -27,6 +28,42 @@ public class StyleAttachmentController {
             @RequestParam("styleId") String styleId,
             @RequestParam(value = "bizType", required = false) String bizType) {
         return Result.success(styleAttachmentOrchestrator.upload(file, styleId, bizType));
+    }
+
+    /**
+     * 上传纸样文件（支持版本管理）
+     */
+    @PostMapping("/pattern/upload")
+    public Result<StyleAttachment> uploadPattern(@RequestParam("file") MultipartFile file,
+            @RequestParam("styleId") String styleId,
+            @RequestParam(value = "bizType", defaultValue = "pattern") String bizType,
+            @RequestParam(value = "versionRemark", required = false) String versionRemark) {
+        return Result.success(styleAttachmentOrchestrator.uploadWithVersion(file, styleId, bizType, versionRemark));
+    }
+
+    /**
+     * 获取纸样版本历史
+     */
+    @GetMapping("/pattern/versions")
+    public Result<List<StyleAttachment>> patternVersions(@RequestParam String styleId,
+            @RequestParam(value = "bizType", defaultValue = "pattern") String bizType) {
+        return Result.success(styleAttachmentOrchestrator.listPatternVersions(styleId, bizType));
+    }
+
+    /**
+     * 检查纸样是否齐全
+     */
+    @GetMapping("/pattern/check")
+    public Result<Map<String, Object>> checkPattern(@RequestParam String styleId) {
+        return Result.success(styleAttachmentOrchestrator.checkPatternComplete(styleId));
+    }
+
+    /**
+     * 纸样资料流回资料中心
+     */
+    @PostMapping("/pattern/flow-to-center")
+    public Result<Boolean> flowPatternToCenter(@RequestParam String styleId) {
+        return Result.success(styleAttachmentOrchestrator.flowPatternToDataCenter(styleId));
     }
 
     @DeleteMapping("/{id}")

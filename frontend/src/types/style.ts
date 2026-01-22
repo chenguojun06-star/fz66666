@@ -140,4 +140,5 @@ export interface TemplateLibrary {
   locked?: number;
   createTime?: string;
   updateTime?: string;
+  operatorName?: string;
 }

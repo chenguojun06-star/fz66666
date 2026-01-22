@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Form, Input, Button, Card, Typography, message } from 'antd';
+import { Form, Input, Button, Card, Typography, App } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../utils/authContext';
@@ -12,6 +12,7 @@ const Login: React.FC = () => {
   const [form] = Form.useForm();
   const { login } = useAuth();
   const [submitting, setSubmitting] = useState(false);
+  const { message } = App.useApp();
 
   const year = useMemo(() => new Date().getFullYear(), []);
 
@@ -28,7 +29,7 @@ const Login: React.FC = () => {
         message.error('登录失败，请检查用户名和密码');
       }
     } catch (error) {
-      message.error('登录失败，请检查用户名和密码');
+      message.error('登录失败,请检查用户名和密码');
     } finally {
       setSubmitting(false);
     }
@@ -88,6 +89,16 @@ const Login: React.FC = () => {
               loading={submitting}
             >
               登录
+            </Button>
+          </Form.Item>
+          <Form.Item style={{ marginBottom: 0 }}>
+            <Button
+              type="link"
+              onClick={() => navigate('/register')}
+              style={{ width: '100%', padding: 0 }}
+              disabled={submitting}
+            >
+              还没有账号？立即注册
             </Button>
           </Form.Item>
         </Form>

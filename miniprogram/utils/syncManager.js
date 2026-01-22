@@ -7,30 +7,31 @@
  * syncMgr.startSync('orders', api.production.listOrders, 30000);
  */
 
-const { errorHandler } = require('./errorHandler');
+import { errorHandler } from './errorHandler';
+import { DEBUG_MODE } from '../config';
 
 /**
  * 数据同步管理器类
  */
 class SyncManager {
   constructor() {
-    this.syncTasks = new Map(); // key: taskId, value: { timer, lastData, config }
-    this.listeners = new Map(); // key: taskId, value: Set of callbacks
-    this.lastSyncTime = new Map(); // key: taskId, value: timestamp
-    this.syncErrors = new Map(); // key: taskId, value: { count, lastError, timestamp }
+    this.syncTasks = new Map(); // 键：任务 ID，值：{ timer, lastData, config }
+    this.listeners = new Map(); // 键：任务 ID，值：回调集合
+    this.lastSyncTime = new Map(); // 键：任务 ID，值：时间戳
+    this.syncErrors = new Map(); // 键：任务 ID，值：{ count, lastError, timestamp }
   }
 
   /**
    * 启动数据同步任务
    * @param {string} taskId - 任务 ID（唯一）
-   * @param {Function} fetchFn - 获取数据的函数 (async)
-   * @param {number} interval - 同步间隔（毫秒），默认 30000ms
+  * @param {Function} fetchFn - 获取数据的函数（异步）
+  * @param {number} interval - 同步间隔（毫秒），默认 30000 毫秒
    * @returns {boolean} 是否启动成功
    */
   startSync(taskId, fetchFn, interval = 30000, options) {
     if (!taskId || !fetchFn) return false;
     if (this.syncTasks.has(taskId)) {
-      console.warn(`[SyncManager] Task ${taskId} already running`);
+      console.warn(`[同步管理器] 任务 ${taskId} 已在运行中`);
       return false;
     }
 
@@ -59,7 +60,7 @@ class SyncManager {
       config
     });
 
-    console.log(`[SyncManager] Sync task started: ${taskId}, interval: ${config.interval}ms`);
+    if (DEBUG_MODE) console.log(`[同步管理器] 同步任务已启动: ${taskId}, 间隔: ${config.interval}ms`);
     return true;
   }
 
@@ -77,7 +78,7 @@ class SyncManager {
     this.listeners.delete(taskId);
     this.syncErrors.delete(taskId);
 
-    console.log(`[SyncManager] Sync task stopped: ${taskId}`);
+    if (DEBUG_MODE) console.log(`[同步管理器] 同步任务已停止: ${taskId}`);
     return true;
   }
 
@@ -199,7 +200,7 @@ class SyncManager {
 
       // 如果数据变化，触发回调
       if (hasChanged) {
-        console.log(`[SyncManager] Data changed for task: ${taskId}`);
+        if (DEBUG_MODE) console.log(`[同步管理器] 任务数据已变更: ${taskId}`);
 
         // 更新缓存
         task.lastData = this._deepClone(newData);
@@ -277,7 +278,7 @@ class SyncManager {
  */
 const syncManager = new SyncManager();
 
-module.exports = {
+export {
   SyncManager,
   syncManager
 };

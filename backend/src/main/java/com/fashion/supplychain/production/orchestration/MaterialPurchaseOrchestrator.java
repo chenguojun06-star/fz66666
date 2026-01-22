@@ -12,11 +12,13 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -400,8 +402,10 @@ public class MaterialPurchaseOrchestrator {
     public MaterialPurchase receive(Map<String, Object> body) {
         String purchaseId = body == null ? null
                 : (body.get("purchaseId") == null ? null : String.valueOf(body.get("purchaseId")));
-        String receiverIdValue = body == null ? "" : Objects.toString(body.get("receiverId"), "");
-        String receiverNameValue = body == null ? "" : Objects.toString(body.get("receiverName"), "");
+        String receiverIdValue = body == null ? null
+                : (body.get("receiverId") == null ? null : String.valueOf(body.get("receiverId")));
+        String receiverNameValue = body == null ? null
+                : (body.get("receiverName") == null ? null : String.valueOf(body.get("receiverName")));
 
         if (!StringUtils.hasText(purchaseId)) {
             throw new IllegalArgumentException("参数错误");
@@ -420,8 +424,8 @@ public class MaterialPurchaseOrchestrator {
         // 检查是否已被领取
         String existingReceiverId = purchase.getReceiverId() == null ? "" : purchase.getReceiverId().trim();
         String existingReceiverName = purchase.getReceiverName() == null ? "" : purchase.getReceiverName().trim();
-        String rid = receiverIdValue.trim();
-        String rname = receiverNameValue.trim();
+        String rid = safe(receiverIdValue);
+        String rname = safe(receiverNameValue);
         
         boolean alreadyReceived = !"pending".equals(status) && StringUtils.hasText(status);
         if (alreadyReceived) {
@@ -451,9 +455,9 @@ public class MaterialPurchaseOrchestrator {
                 String latestReceiverId = safe(latest.getReceiverId());
                 boolean isSameNow = false;
                 if (!rid.isEmpty() && !latestReceiverId.isEmpty()) {
-                    isSameNow = rid.equals(latestReceiverId);
+                    isSameNow = Objects.equals(rid, latestReceiverId);
                 } else if (!rname.isEmpty() && !latestReceiverName.isEmpty()) {
-                    isSameNow = rname.equals(latestReceiverName);
+                    isSameNow = Objects.equals(rname, latestReceiverName);
                 }
                 if (!isSameNow && !latestReceiverName.isEmpty()) {
                     throw new IllegalStateException("该任务已被「" + latestReceiverName + "」领取，无法重复领取");
@@ -534,6 +538,9 @@ public class MaterialPurchaseOrchestrator {
 
         if (!StringUtils.hasText(purchaseId)) {
             throw new IllegalArgumentException("参数错误");
+        }
+        if (!StringUtils.hasText(reason)) {
+            throw new IllegalArgumentException("退回原因不能为空");
         }
 
         if (!UserContext.isSupervisorOrAbove()) {
@@ -741,6 +748,83 @@ public class MaterialPurchaseOrchestrator {
         productionOrderOrchestrator.updateMaterialArrivalRate(oid, rate);
     }
 
+    /**
+     * 通过扫码获取关联的采购单列表
+     * @param params 包含 scanCode 和 orderNo 
+     * @return 采购单列表
+     */
+    public List<MaterialPurchase> getByScanCode(Map<String, Object> params) {
+        String scanCode = params.get("scanCode") != null ? String.valueOf(params.get("scanCode")).trim() : null;
+        String orderNo = params.get("orderNo") != null ? String.valueOf(params.get("orderNo")).trim() : null;
+
+        // 如果有 scanCode，尝试多种方式匹配
+        if (StringUtils.hasText(scanCode)) {
+            // 1. 先尝试作为采购单号精确查询
+            LambdaQueryWrapper<MaterialPurchase> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(MaterialPurchase::getPurchaseNo, scanCode);
+            wrapper.eq(MaterialPurchase::getDeleteFlag, 0);
+            List<MaterialPurchase> purchases = materialPurchaseService.list(wrapper);
+            
+            if (purchases != null && !purchases.isEmpty()) {
+                return purchases;
+            }
+
+            // 2. 尝试将 scanCode 转换为订单号格式
+            // P020226012201 -> PO20260122001
+            String normalizedOrderNo = normalizeOrderNo(scanCode);
+            if (StringUtils.hasText(normalizedOrderNo)) {
+                wrapper = new LambdaQueryWrapper<>();
+                wrapper.eq(MaterialPurchase::getOrderNo, normalizedOrderNo);
+                wrapper.eq(MaterialPurchase::getDeleteFlag, 0);
+                wrapper.orderByDesc(MaterialPurchase::getCreateTime);
+                purchases = materialPurchaseService.list(wrapper);
+                
+                if (purchases != null && !purchases.isEmpty()) {
+                    return purchases;
+                }
+            }
+        }
+
+        // 如果有明确的订单号参数，用它查询
+        if (StringUtils.hasText(orderNo)) {
+            LambdaQueryWrapper<MaterialPurchase> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(MaterialPurchase::getOrderNo, orderNo);
+            wrapper.eq(MaterialPurchase::getDeleteFlag, 0);
+            wrapper.orderByDesc(MaterialPurchase::getCreateTime);
+            List<MaterialPurchase> purchases = materialPurchaseService.list(wrapper);
+            
+            if (purchases != null && !purchases.isEmpty()) {
+                return purchases;
+            }
+        }
+
+        return new ArrayList<>();
+    }
+
+    /**
+     * 将各种格式的订单号标准化为 PO 格式
+     * 例如: P020226012201 -> PO20260122001 (将 P0 替换为 PO)
+     */
+    private String normalizeOrderNo(String code) {
+        if (!StringUtils.hasText(code)) {
+            return null;
+        }
+        
+        String trimmed = code.trim();
+        
+        // 如果已经是 PO 开头，直接返回
+        if (trimmed.startsWith("PO")) {
+            return trimmed;
+        }
+        
+        // P0 开头的转换为 PO
+        if (trimmed.startsWith("P0")) {
+            return "PO" + trimmed.substring(2);
+        }
+        
+        return null;
+    }
+
     public boolean delete(String id) {
         String key = StringUtils.hasText(id) ? id.trim() : null;
         if (!StringUtils.hasText(key)) {
@@ -777,6 +861,16 @@ public class MaterialPurchaseOrchestrator {
             recomputeAndUpdateMaterialArrivalRate(current.getOrderId().trim());
         }
         return true;
+    }
+
+    public List<MaterialPurchase> getMyTasks() {
+        // 查询所有已领取但未完成的采购任务（暂不过滤用户，返回所有）
+        List<MaterialPurchase> allPurchases = materialPurchaseService.list();
+        return allPurchases.stream()
+                .filter(p -> p.getDeleteFlag() == null || p.getDeleteFlag() == 0)
+                .filter(p -> "received".equals(p.getStatus()))
+                .filter(p -> p.getReturnConfirmed() == null || p.getReturnConfirmed() == 0)
+                .collect(Collectors.toList());
     }
 
     private Integer coerceInt(Object v) {

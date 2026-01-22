@@ -8,6 +8,7 @@ import ResizableModal from '../../components/common/ResizableModal';
 import RowActions from '../../components/common/RowActions';
 import api from '../../utils/api';
 import { returnFinanceReconciliation, updateFinanceReconciliationStatus } from '../../utils/api';
+import { useSync } from '../../utils/syncManager';
 import {
   MaterialReconQueryParams,
   MaterialReconciliation,
@@ -22,6 +23,7 @@ import {
 import { formatDateTime } from '../../utils/datetime';
 import { StyleCoverThumb } from '../../components/StyleAssets';
 import { useAuth } from '../../utils/authContext';
+import { useViewport } from '../../utils/useViewport';
 
 type ApprovalTab = 'material' | 'shipment' | 'orderProfit';
 type ReconStatus = 'pending' | 'verified' | 'approved' | 'paid' | 'rejected';
@@ -183,7 +185,7 @@ const SimpleLineChart = <T extends { date?: string }>(
           const label = String((p as any)?.date || '').trim();
           if (!label) return null;
           return (
-            <text key={i} x={x(i)} y={h - 16} fontSize={11} fill="#666" textAnchor="middle">
+            <text key={i} x={x(i)} y={h - 16} fill="#666" textAnchor="middle" style={{ fontSize: 'var(--font-size-xs)' }}>
               {label}
             </text>
           );
@@ -194,7 +196,7 @@ const SimpleLineChart = <T extends { date?: string }>(
         {series.map((s) => (
           <div key={s.key} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ width: 10, height: 10, borderRadius: 2, background: s.color, display: 'inline-block' }} />
-            <span style={{ fontSize: 12, color: '#555' }}>{s.name}</span>
+            <span style={{ fontSize: 'var(--font-size-sm)', color: '#555' }}>{s.name}</span>
           </div>
         ))}
       </div>
@@ -300,6 +302,7 @@ const OrderProfitPanel: React.FC<OrderProfitPanelProps> = ({
   chartSeries,
   materials,
 }) => {
+  const { isMobile } = useViewport();
   return (
     <>
       <Card
@@ -471,7 +474,7 @@ const OrderProfitPanel: React.FC<OrderProfitPanelProps> = ({
           dataSource={timeline as any}
           rowKey="date"
           pagination={false}
-          scroll={{ x: 'max-content', y: typeof window === 'undefined' ? 360 : window.innerWidth < 768 ? 260 : 360 }}
+          scroll={{ x: 'max-content', y: isMobile ? 260 : 360 }}
         />
       </Card>
 
@@ -489,7 +492,7 @@ const OrderProfitPanel: React.FC<OrderProfitPanelProps> = ({
             return [purchaseNo, materialCode, materialName, receivedTime].filter(Boolean).join('|') || 'row';
           }}
           pagination={false}
-          scroll={{ x: 'max-content', y: typeof window === 'undefined' ? 360 : window.innerWidth < 768 ? 260 : 360 }}
+          scroll={{ x: 'max-content', y: isMobile ? 260 : 360 }}
         />
       </Card>
     </>
@@ -656,13 +659,8 @@ const PaymentApproval: React.FC = () => {
     );
   };
 
-  const detailModalWidth = useMemo(() => {
-    if (typeof window === 'undefined') return '60vw';
-    const w = window.innerWidth;
-    if (w < 768) return '96vw';
-    if (w < 1024) return '66vw';
-    return '60vw';
-  }, []);
+  const { modalWidth } = useViewport();
+  const detailModalWidth = modalWidth;
   const detailModalInitialHeight = 720;
 
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
@@ -850,9 +848,77 @@ const PaymentApproval: React.FC = () => {
     if (tab === 'material') fetchMaterialApprovals();
   }, [tab, materialQuery]);
 
+  // 实时同步：物料审批付款列表（45秒轮询）
+  useSync(
+    'material-approval-list',
+    async () => {
+      try {
+        const res = await api.get<any>('/finance/material-reconciliation/list', { params: materialQuery });
+        const result = res as any;
+        if (result.code === 200) {
+          return {
+            records: toArray<MaterialReconciliation>(result.data?.records),
+            total: Number(result.data?.total || 0)
+          };
+        }
+        return null;
+      } catch (error) {
+        console.error('[实时同步] 获取物料审批列表失败', error);
+        return null;
+      }
+    },
+    (newData, oldData) => {
+      if (oldData !== null && newData) {
+        setMaterialList(newData.records);
+        setMaterialTotal(newData.total);
+        console.log('[实时同步] 物料审批数据已更新', { oldCount: oldData.records.length, newCount: newData.records.length });
+      }
+    },
+    {
+      interval: 45000,
+      enabled: !materialLoading && tab === 'material' && !detailOpen,
+      pauseOnHidden: true,
+      onError: (error) => console.error('[实时同步] 物料审批同步错误', error)
+    }
+  );
+
   useEffect(() => {
     if (tab === 'shipment') fetchShipmentApprovals();
   }, [tab, shipmentQuery]);
+
+  // 实时同步：出货审批付款列表（45秒轮询）
+  useSync(
+    'shipment-approval-list',
+    async () => {
+      try {
+        const res = await api.get<any>('/finance/shipment-reconciliation/list', { params: shipmentQuery });
+        const result = res as any;
+        if (result.code === 200) {
+          return {
+            records: toArray<ShipmentReconciliation>(result.data?.records),
+            total: Number(result.data?.total || 0)
+          };
+        }
+        return null;
+      } catch (error) {
+        console.error('[实时同步] 获取出货审批列表失败', error);
+        return null;
+      }
+    },
+    (newData, oldData) => {
+      if (oldData !== null && newData) {
+        setShipmentList(newData.records);
+        setShipmentTotal(newData.total);
+        console.log('[实时同步] 出货审批数据已更新', { oldCount: oldData.records.length, newCount: newData.records.length });
+      }
+    },
+    {
+      interval: 45000,
+      enabled: !shipmentLoading && tab === 'shipment' && !detailOpen,
+      pauseOnHidden: true,
+      onError: (error) => console.error('[实时同步] 出货审批同步错误', error)
+    }
+  );
 
   useEffect(() => {
     if (tab !== 'orderProfit') return;

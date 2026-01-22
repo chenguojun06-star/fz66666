@@ -9,9 +9,39 @@ export interface UserInfo {
   role: string;
   roleId?: string;
   permissions: string[];
+  /** 数据权限范围: all=全部, team=团队, own=仅自己 */
+  permissionRange?: 'all' | 'team' | 'own';
   phone?: string;
   email?: string;
   avatarUrl?: string;
+}
+
+/**
+ * 判断是否为管理员
+ */
+export function isAdmin(user: UserInfo | null): boolean {
+  if (!user) return false;
+  const role = (user.role || '').toLowerCase();
+  return role.includes('admin') || role.includes('管理员') || user.roleId === '1';
+}
+
+/**
+ * 判断是否为主管或以上
+ */
+export function isSupervisorOrAbove(user: UserInfo | null): boolean {
+  if (isAdmin(user)) return true;
+  if (!user) return false;
+  const role = (user.role || '').toLowerCase();
+  return role.includes('主管') || role.includes('manager') || role.includes('supervisor') || role.includes('组长');
+}
+
+/**
+ * 判断是否可以查看所有数据
+ */
+export function canViewAllData(user: UserInfo | null): boolean {
+  if (isAdmin(user)) return true;
+  if (!user) return false;
+  return user.permissionRange === 'all';
 }
 
 // 定义上下文类型
@@ -22,6 +52,10 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<boolean>;
   updateUser: (patch: Partial<UserInfo>) => void;
   logout: () => void;
+  /** 便捷方法：是否管理员 */
+  isAdmin: boolean;
+  /** 便捷方法：是否可查看所有数据 */
+  canViewAll: boolean;
 }
 
 // 创建上下文
@@ -36,6 +70,8 @@ const fallbackAuthContext: AuthContextType = {
   },
   logout: () => {
   },
+  isAdmin: false,
+  canViewAll: false,
 };
 
 // 上下文提供者组件
@@ -62,6 +98,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           return;
         }
 
+        // 恢复用户主题设置
+        const restoreUserTheme = (userId: string) => {
+          try {
+            const userThemeKey = `app.theme.user.${userId}`;
+            const userTheme = localStorage.getItem(userThemeKey);
+            if (userTheme) {
+              localStorage.setItem('app.theme', userTheme);
+              if (typeof document !== 'undefined') {
+                const root = document.documentElement;
+                if (userTheme === 'default') {
+                  root.removeAttribute('data-theme');
+                } else {
+                  root.setAttribute('data-theme', userTheme);
+                }
+              }
+            }
+          } catch {
+          }
+        };
+
         setIsAuthenticated(true);
 
         const storedUser = localStorage.getItem(userStorageKey);
@@ -84,12 +140,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               role: u.roleName || u.role || 'admin',
               roleId: u.roleId ? String(u.roleId) : undefined,
               permissions: Array.isArray(u.permissions) ? u.permissions : ['all'],
+              permissionRange: u.permissionRange || 'all',
               phone: u.phone || undefined,
               email: u.email || undefined,
               avatarUrl: u.avatarUrl || u.avatar || u.headUrl || undefined,
             };
             localStorage.setItem(userStorageKey, JSON.stringify(next));
             setUser(next);
+            
+            // 恢复用户主题
+            restoreUserTheme(next.id);
+            // 触发用户登录事件
+            window.dispatchEvent(new CustomEvent('user-login', { detail: { userId: next.id } }));
           } else {
             localStorage.removeItem(tokenStorageKey);
             localStorage.removeItem(userStorageKey);
@@ -127,6 +189,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           role: u.roleName || u.role || 'admin',
           roleId: u.roleId ? String(u.roleId) : undefined,
           permissions: ['all'],
+          permissionRange: u.permissionRange || 'all',
           phone: u.phone || undefined,
           email: u.email || undefined,
           avatarUrl: u.avatarUrl || u.avatar || u.headUrl || undefined,
@@ -136,6 +199,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         localStorage.setItem(userStorageKey, JSON.stringify(baseUser));
         setUser(baseUser);
         setIsAuthenticated(true);
+
+        // 恢复用户主题设置
+        try {
+          const userThemeKey = `app.theme.user.${baseUser.id}`;
+          const userTheme = localStorage.getItem(userThemeKey) || 'default';
+          localStorage.setItem('app.theme', userTheme);
+          if (typeof document !== 'undefined') {
+            const root = document.documentElement;
+            if (userTheme === 'default') {
+              root.removeAttribute('data-theme');
+            } else {
+              root.setAttribute('data-theme', userTheme);
+            }
+          }
+          // 触发用户登录事件
+          window.dispatchEvent(new CustomEvent('user-login', { detail: { userId: baseUser.id } }));
+        } catch {
+        }
 
         try {
           const rid = baseUser.roleId;
@@ -179,10 +260,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // 更新状态
     setUser(null);
     setIsAuthenticated(false);
+    
+    // 清除主题设置，恢复默认主题
+    try {
+      localStorage.setItem('app.theme', 'default');
+      if (typeof document !== 'undefined') {
+        document.documentElement.removeAttribute('data-theme');
+      }
+      // 触发用户退出事件
+      window.dispatchEvent(new Event('user-logout'));
+    } catch {
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, loading, login, updateUser, logout }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      isAuthenticated, 
+      loading, 
+      login, 
+      updateUser, 
+      logout,
+      isAdmin: isAdmin(user),
+      canViewAll: canViewAllData(user),
+    }}>
       {children}
     </AuthContext.Provider>
   );

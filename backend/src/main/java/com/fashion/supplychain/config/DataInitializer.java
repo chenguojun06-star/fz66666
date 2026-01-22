@@ -884,14 +884,99 @@ public class DataInitializer implements CommandLineRunner {
                     "/finance/shipment-reconciliation", null, 33);
             ensurePermission("审批付款", "MENU_PAYMENT_APPROVAL", financeId, "财务管理", "menu", "/finance/payment-approval",
                     null, 34);
+            ensurePermission("人员工序统计", "MENU_PAYROLL_OPERATOR_SUMMARY", financeId, "财务管理", "menu",
+                    "/finance/payroll-operator-summary", null, 35);
         }
         if (systemId != null) {
             ensurePermission("人员管理", "MENU_USER", systemId, "系统设置", "menu", "/system/user", null, 41);
             ensurePermission("角色管理", "MENU_ROLE", systemId, "系统设置", "menu", "/system/role", null, 42);
-            ensurePermission("加工厂管理", "MENU_FACTORY", systemId, "系统设置", "menu", "/system/factory", null, 43);
+            ensurePermission("供应商管理", "MENU_FACTORY", systemId, "系统设置", "menu", "/system/factory", null, 43);
             ensurePermission("权限管理", "MENU_PERMISSION", systemId, "系统设置", "menu", "/system/permission", null, 44);
             ensurePermission("登录日志", "MENU_LOGIN_LOG", systemId, "系统设置", "menu", "/system/login-log", null, 45);
         }
+
+        // 功能按钮权限定义
+        // 款号资料按钮权限
+        ensurePermission("新增款号", "STYLE_CREATE", null, null, "button", null, null, 100);
+        ensurePermission("编辑款号", "STYLE_EDIT", null, null, "button", null, null, 101);
+        ensurePermission("删除款号", "STYLE_DELETE", null, null, "button", null, null, 102);
+        ensurePermission("导入款号", "STYLE_IMPORT", null, null, "button", null, null, 103);
+        ensurePermission("导出款号", "STYLE_EXPORT", null, null, "button", null, null, 104);
+
+        // 订单管理按钮权限
+        ensurePermission("新增订单", "ORDER_CREATE", null, null, "button", null, null, 110);
+        ensurePermission("编辑订单", "ORDER_EDIT", null, null, "button", null, null, 111);
+        ensurePermission("删除订单", "ORDER_DELETE", null, null, "button", null, null, 112);
+        ensurePermission("取消订单", "ORDER_CANCEL", null, null, "button", null, null, 113);
+        ensurePermission("完成订单", "ORDER_COMPLETE", null, null, "button", null, null, 114);
+        ensurePermission("导入订单", "ORDER_IMPORT", null, null, "button", null, null, 115);
+        ensurePermission("导出订单", "ORDER_EXPORT", null, null, "button", null, null, 116);
+        ensurePermission("订单转移", "ORDER_TRANSFER", null, null, "button", null, null, 117);
+
+        // 物料采购按钮权限
+        ensurePermission("新增采购单", "PURCHASE_CREATE", null, null, "button", null, null, 120);
+        ensurePermission("编辑采购单", "PURCHASE_EDIT", null, null, "button", null, null, 121);
+        ensurePermission("删除采购单", "PURCHASE_DELETE", null, null, "button", null, null, 122);
+        ensurePermission("领取采购任务", "PURCHASE_RECEIVE", null, null, "button", null, null, 123);
+        ensurePermission("回料确认", "PURCHASE_RETURN_CONFIRM", null, null, "button", null, null, 124);
+        ensurePermission("生成采购单", "PURCHASE_GENERATE", null, null, "button", null, null, 125);
+
+        // 裁剪管理按钮权限
+        ensurePermission("新增裁剪", "CUTTING_CREATE", null, null, "button", null, null, 130);
+        ensurePermission("编辑裁剪", "CUTTING_EDIT", null, null, "button", null, null, 131);
+        ensurePermission("删除裁剪", "CUTTING_DELETE", null, null, "button", null, null, 132);
+        ensurePermission("裁剪扫码", "CUTTING_SCAN", null, null, "button", null, null, 133);
+
+        // 生产进度按钮权限
+        ensurePermission("进度扫码", "PROGRESS_SCAN", null, null, "button", null, null, 140);
+        ensurePermission("编辑进度", "PROGRESS_EDIT", null, null, "button", null, null, 141);
+        ensurePermission("删除进度", "PROGRESS_DELETE", null, null, "button", null, null, 142);
+
+        // 质检入库按钮权限
+        ensurePermission("新增入库", "WAREHOUSING_CREATE", null, null, "button", null, null, 150);
+        ensurePermission("编辑入库", "WAREHOUSING_EDIT", null, null, "button", null, null, 151);
+        ensurePermission("删除入库", "WAREHOUSING_DELETE", null, null, "button", null, null, 152);
+        ensurePermission("入库回退", "WAREHOUSING_ROLLBACK", null, null, "button", null, null, 153);
+
+        // 物料对账按钮权限
+        ensurePermission("新增对账单", "MATERIAL_RECON_CREATE", null, null, "button", null, null, 160);
+        ensurePermission("编辑对账单", "MATERIAL_RECON_EDIT", null, null, "button", null, null, 161);
+        ensurePermission("删除对账单", "MATERIAL_RECON_DELETE", null, null, "button", null, null, 162);
+        ensurePermission("审核对账单", "MATERIAL_RECON_AUDIT", null, null, "button", null, null, 163);
+        ensurePermission("结算对账单", "MATERIAL_RECON_SETTLEMENT", null, null, "button", null, null, 164);
+
+        // 成品结算按钮权限
+        ensurePermission("新增结算单", "SHIPMENT_RECON_CREATE", null, null, "button", null, null, 170);
+        ensurePermission("编辑结算单", "SHIPMENT_RECON_EDIT", null, null, "button", null, null, 171);
+        ensurePermission("删除结算单", "SHIPMENT_RECON_DELETE", null, null, "button", null, null, 172);
+        ensurePermission("审核结算单", "SHIPMENT_RECON_AUDIT", null, null, "button", null, null, 173);
+
+        // 审批付款按钮权限
+        ensurePermission("审批付款", "PAYMENT_APPROVE", null, null, "button", null, null, 180);
+        ensurePermission("拒绝付款", "PAYMENT_REJECT", null, null, "button", null, null, 181);
+        ensurePermission("取消付款", "PAYMENT_CANCEL", null, null, "button", null, null, 182);
+
+        // 系统管理按钮权限
+        ensurePermission("新增用户", "USER_CREATE", null, null, "button", null, null, 190);
+        ensurePermission("编辑用户", "USER_EDIT", null, null, "button", null, null, 191);
+        ensurePermission("删除用户", "USER_DELETE", null, null, "button", null, null, 192);
+        ensurePermission("重置密码", "USER_RESET_PASSWORD", null, null, "button", null, null, 193);
+
+        ensurePermission("新增角色", "ROLE_CREATE", null, null, "button", null, null, 200);
+        ensurePermission("编辑角色", "ROLE_EDIT", null, null, "button", null, null, 201);
+        ensurePermission("删除角色", "ROLE_DELETE", null, null, "button", null, null, 202);
+
+        ensurePermission("新增供应商", "FACTORY_CREATE", null, null, "button", null, null, 210);
+        ensurePermission("编辑供应商", "FACTORY_EDIT", null, null, "button", null, null, 211);
+        ensurePermission("删除供应商", "FACTORY_DELETE", null, null, "button", null, null, 212);
+
+        // 数据导入导出权限
+        ensurePermission("数据导入", "DATA_IMPORT", null, null, "button", null, null, 220);
+        ensurePermission("数据导出", "DATA_EXPORT", null, null, "button", null, null, 221);
+
+        // 模板中心权限
+        ensurePermission("上传模板", "TEMPLATE_UPLOAD", null, null, "button", null, null, 230);
+        ensurePermission("删除模板", "TEMPLATE_DELETE", null, null, "button", null, null, 231);
 
         try {
             jdbcTemplate.update(
@@ -1984,6 +2069,7 @@ public class DataInitializer implements CommandLineRunner {
                 "contact_person VARCHAR(50) COMMENT '联系人'," +
                 "contact_phone VARCHAR(30) COMMENT '联系电话'," +
                 "address VARCHAR(200) COMMENT '地址'," +
+                "business_license VARCHAR(512) COMMENT '营业执照图片URL'," +
                 "status VARCHAR(20) DEFAULT 'active' COMMENT '状态'," +
                 "create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'," +
                 "update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'," +
@@ -1997,6 +2083,60 @@ public class DataInitializer implements CommandLineRunner {
             log.info("System tables checked/created.");
         } catch (Exception e) {
             log.warn("Failed to create system tables: {}", e.getMessage());
+        }
+
+        if (tableExists("t_factory")) {
+            execSilently("ALTER TABLE t_factory MODIFY COLUMN id VARCHAR(36)");
+            if (!columnExists("t_factory", "contact_person") && columnExists("t_factory", "contact_name")) {
+                execSilently("ALTER TABLE t_factory CHANGE contact_name contact_person VARCHAR(50) COMMENT '联系人'");
+            }
+            if (!columnExists("t_factory", "contact_person")) {
+                execSilently("ALTER TABLE t_factory ADD COLUMN contact_person VARCHAR(50) COMMENT '联系人'");
+            }
+            if (!columnExists("t_factory", "contact_phone")) {
+                execSilently("ALTER TABLE t_factory ADD COLUMN contact_phone VARCHAR(30) COMMENT '联系电话'");
+            }
+            if (!columnExists("t_factory", "address")) {
+                execSilently("ALTER TABLE t_factory ADD COLUMN address VARCHAR(200) COMMENT '地址'");
+            }
+            if (!columnExists("t_factory", "business_license")) {
+                execSilently("ALTER TABLE t_factory ADD COLUMN business_license VARCHAR(512) COMMENT '营业执照图片URL'");
+            }
+            if (!columnExists("t_factory", "status")) {
+                execSilently("ALTER TABLE t_factory ADD COLUMN status VARCHAR(20) DEFAULT 'active' COMMENT '状态'");
+            }
+            if (!columnExists("t_factory", "create_time")) {
+                execSilently(
+                        "ALTER TABLE t_factory ADD COLUMN create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'");
+            }
+            if (!columnExists("t_factory", "update_time")) {
+                execSilently(
+                        "ALTER TABLE t_factory ADD COLUMN update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'");
+            }
+            if (!columnExists("t_factory", "delete_flag")) {
+                execSilently(
+                        "ALTER TABLE t_factory ADD COLUMN delete_flag INT NOT NULL DEFAULT 0 COMMENT '删除标识：0-未删除，1-已删除'");
+            }
+            addIndexIfAbsent("t_factory", "idx_factory_code", "factory_code");
+            addIndexIfAbsent("t_factory", "idx_factory_name", "factory_name");
+        }
+
+        String createSystemOperationLogTable = "CREATE TABLE IF NOT EXISTS t_system_operation_log (" +
+                "id VARCHAR(36) PRIMARY KEY COMMENT '操作日志ID'," +
+                "biz_type VARCHAR(50) NOT NULL COMMENT '业务类型'," +
+                "biz_id VARCHAR(64) NOT NULL COMMENT '业务ID'," +
+                "action VARCHAR(50) NOT NULL COMMENT '操作动作'," +
+                "operator VARCHAR(50) COMMENT '操作人'," +
+                "remark VARCHAR(255) COMMENT '备注'," +
+                "create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'," +
+                "INDEX idx_system_biz (biz_type, biz_id)," +
+                "INDEX idx_system_action (action)" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统操作日志表'";
+
+        try {
+            jdbcTemplate.execute(createSystemOperationLogTable);
+        } catch (Exception e) {
+            log.warn("Failed to create system operation log table: {}", e.getMessage());
         }
 
         ensurePermissionTables();
@@ -2119,6 +2259,17 @@ public class DataInitializer implements CommandLineRunner {
                 "INDEX idx_biz_type (biz_type)" +
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='款号操作日志表'";
 
+        String createTemplateOperationLogTable = "CREATE TABLE IF NOT EXISTS t_template_operation_log (" +
+                "id VARCHAR(36) PRIMARY KEY COMMENT '操作日志ID'," +
+                "template_id VARCHAR(36) NOT NULL COMMENT '模板ID'," +
+                "action VARCHAR(50) NOT NULL COMMENT '操作动作'," +
+                "operator VARCHAR(50) COMMENT '操作人'," +
+                "remark VARCHAR(255) COMMENT '备注'," +
+                "create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'," +
+                "INDEX idx_template_id (template_id)," +
+                "INDEX idx_action (action)" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='模板操作日志表'";
+
         String createMaterialReconciliationTable = "CREATE TABLE IF NOT EXISTS t_material_reconciliation (" +
                 "id VARCHAR(36) PRIMARY KEY COMMENT '对账ID'," +
                 "reconciliation_no VARCHAR(50) NOT NULL UNIQUE COMMENT '对账单号'," +
@@ -2196,6 +2347,7 @@ public class DataInitializer implements CommandLineRunner {
             jdbcTemplate.execute(createStyleQuotationTable);
             jdbcTemplate.execute(createStyleAttachmentTable);
             jdbcTemplate.execute(createStyleOperationLogTable);
+            jdbcTemplate.execute(createTemplateOperationLogTable);
             jdbcTemplate.execute(createMaterialReconciliationTable);
             jdbcTemplate.execute(createProductionOrderTable);
             log.info("Style tables, operation log table, finance tables, and production tables checked/created.");

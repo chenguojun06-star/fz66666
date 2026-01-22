@@ -130,22 +130,7 @@ public class ProductWarehousingOrchestrator {
             }
             productionOrderService.recomputeProgressFromRecords(orderId);
 
-            try {
-                productionOrderOrchestrator.autoCloseOrderIfEligible(orderId);
-            } catch (Exception e) {
-                log.warn("Failed to auto close order after warehousing save: orderId={}, warehousingId={}",
-                        orderId,
-                        productWarehousing == null ? null : productWarehousing.getId(),
-                        e);
-                scanRecordDomainService.insertOrchestrationFailure(
-                        orderId,
-                        null,
-                        null,
-                        null,
-                        "autoCloseOrder",
-                        e == null ? "autoCloseOrder failed" : ("autoCloseOrder failed: " + e.getMessage()),
-                        LocalDateTime.now());
-            }
+            // 已禁用系统自动关单
         }
         return true;
     }
@@ -219,22 +204,7 @@ public class ProductWarehousingOrchestrator {
         }
         productionOrderService.recomputeProgressFromRecords(oid);
 
-        try {
-            productionOrderOrchestrator.autoCloseOrderIfEligible(oid);
-        } catch (Exception e) {
-            log.warn("Failed to auto close order after warehousing batch save: orderId={}, itemsCount={}",
-                    oid,
-                    list == null ? 0 : list.size(),
-                    e);
-            scanRecordDomainService.insertOrchestrationFailure(
-                    oid,
-                    null,
-                    null,
-                    null,
-                    "autoCloseOrder",
-                    e == null ? "autoCloseOrder failed" : ("autoCloseOrder failed: " + e.getMessage()),
-                    LocalDateTime.now());
-        }
+        // 已禁用系统自动关单
         return true;
     }
 
@@ -273,22 +243,7 @@ public class ProductWarehousingOrchestrator {
             }
             productionOrderService.recomputeProgressFromRecords(orderId);
 
-            try {
-                productionOrderOrchestrator.autoCloseOrderIfEligible(orderId);
-            } catch (Exception e) {
-                log.warn("Failed to auto close order after warehousing update: orderId={}, warehousingId={}",
-                        orderId,
-                        productWarehousing == null ? null : productWarehousing.getId(),
-                        e);
-                scanRecordDomainService.insertOrchestrationFailure(
-                        orderId,
-                        null,
-                        null,
-                        null,
-                        "autoCloseOrder",
-                        e == null ? "autoCloseOrder failed" : ("autoCloseOrder failed: " + e.getMessage()),
-                        LocalDateTime.now());
-            }
+            // 已禁用系统自动关单
         }
         return true;
     }
@@ -577,6 +532,9 @@ public class ProductWarehousingOrchestrator {
 
         if (qty == null || qty <= 0) {
             throw new IllegalArgumentException("rollbackQuantity参数错误");
+        }
+        if (!StringUtils.hasText(remark)) {
+            throw new IllegalArgumentException("请填写问题点");
         }
 
         boolean ok = rollbackQualifiedByBundleQrCode(orderId, cuttingBundleQrCode, qty, remark);

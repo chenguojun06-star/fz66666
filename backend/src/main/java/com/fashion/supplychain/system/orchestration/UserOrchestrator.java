@@ -6,10 +6,12 @@ import com.fashion.supplychain.auth.AuthTokenService;
 import com.fashion.supplychain.auth.TokenSubject;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.system.entity.LoginLog;
+import com.fashion.supplychain.system.entity.SystemOperationLog;
 import com.fashion.supplychain.system.entity.User;
 import com.fashion.supplychain.system.service.LoginLogService;
 import com.fashion.supplychain.system.service.PermissionService;
 import com.fashion.supplychain.system.service.RolePermissionService;
+import com.fashion.supplychain.system.service.SystemOperationLogService;
 import com.fashion.supplychain.system.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -51,6 +53,9 @@ public class UserOrchestrator {
     private LoginLogService loginLogService;
 
     @Autowired
+    private SystemOperationLogService systemOperationLogService;
+
+    @Autowired
     private AuthTokenService authTokenService;
 
     public Page<User> list(Long page, Long pageSize, String username, String name, String roleName, String status) {
@@ -78,6 +83,7 @@ public class UserOrchestrator {
         if (!success) {
             throw new IllegalStateException("新增失败");
         }
+        saveOperationLog("user", user == null ? null : String.valueOf(user.getId()), "CREATE", normalize(user == null ? null : user.getOperationRemark()));
         return true;
     }
 
@@ -85,32 +91,55 @@ public class UserOrchestrator {
         if (!UserContext.isTopAdmin()) {
             throw new AccessDeniedException("无权限操作");
         }
+        String remark = normalize(user == null ? null : user.getOperationRemark());
+        if (!StringUtils.hasText(remark)) {
+            throw new IllegalArgumentException("操作原因不能为空");
+        }
         boolean success = userService.updateUser(user);
         if (!success) {
             throw new IllegalStateException("更新失败");
         }
+        saveOperationLog("user", user == null ? null : String.valueOf(user.getId()), "UPDATE", remark);
         return true;
     }
 
     public boolean delete(Long id) {
+        return delete(id, null);
+    }
+
+    public boolean delete(Long id, String remark) {
         if (!UserContext.isTopAdmin()) {
             throw new AccessDeniedException("无权限操作");
+        }
+        String normalized = normalize(remark);
+        if (!StringUtils.hasText(normalized)) {
+            throw new IllegalArgumentException("操作原因不能为空");
         }
         boolean success = userService.deleteUser(id);
         if (!success) {
             throw new IllegalStateException("删除失败");
         }
+        saveOperationLog("user", id == null ? null : String.valueOf(id), "DELETE", normalized);
         return true;
     }
 
     public boolean toggleStatus(Long id, String status) {
+        return toggleStatus(id, status, null);
+    }
+
+    public boolean toggleStatus(Long id, String status, String remark) {
         if (!UserContext.isTopAdmin()) {
             throw new AccessDeniedException("无权限操作");
+        }
+        String normalized = normalize(remark);
+        if (!StringUtils.hasText(normalized)) {
+            throw new IllegalArgumentException("操作原因不能为空");
         }
         boolean success = userService.toggleUserStatus(id, status);
         if (!success) {
             throw new IllegalStateException("状态切换失败");
         }
+        saveOperationLog("user", id == null ? null : String.valueOf(id), "STATUS_UPDATE", normalized);
         return true;
     }
 
@@ -122,6 +151,17 @@ public class UserOrchestrator {
             throw new IllegalStateException("用户名或密码错误");
         }
 
+        // 检查审批状态
+        String approvalStatus = user.getApprovalStatus();
+        if (approvalStatus != null && !"approved".equals(approvalStatus)) {
+            if ("pending".equals(approvalStatus)) {
+                throw new IllegalStateException("您的账号正在审批中，请耐心等待管理员审核");
+            } else if ("rejected".equals(approvalStatus)) {
+                throw new IllegalStateException("您的账号已被拒绝，原因：" + 
+                    (user.getApprovalRemark() != null ? user.getApprovalRemark() : "管理员拒绝"));
+            }
+        }
+
         sanitizeUser(user);
 
         TokenSubject subject = new TokenSubject();
@@ -129,6 +169,8 @@ public class UserOrchestrator {
         subject.setUsername(StringUtils.hasText(user.getName()) ? user.getName() : user.getUsername());
         subject.setRoleId(user.getRoleId() == null ? null : String.valueOf(user.getRoleId()));
         subject.setRoleName(user.getRoleName());
+        // 设置数据权限范围，默认为 all
+        subject.setPermissionRange(StringUtils.hasText(user.getPermissionRange()) ? user.getPermissionRange() : "all");
 
         String token = authTokenService == null ? null : authTokenService.issueToken(subject, Duration.ofHours(12));
         if (!StringUtils.hasText(token)) {
@@ -175,13 +217,29 @@ public class UserOrchestrator {
         loginThrottle.remove(key);
     }
 
-    public User me() {
+    public Map<String, Object> me() {
         User user = resolveCurrentUser();
         if (user == null) {
             throw new NoSuchElementException("用户不存在");
         }
         sanitizeUser(user);
-        return user;
+        
+        // 构建返回对象，包含用户信息和权限列表
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", user.getId());
+        result.put("username", user.getUsername());
+        result.put("name", user.getName());
+        result.put("roleId", user.getRoleId());
+        result.put("roleName", user.getRoleName());
+        result.put("permissionRange", user.getPermissionRange());
+        result.put("phone", user.getPhone());
+        result.put("email", user.getEmail());
+        
+        // 获取用户权限列表（使用内部方法，不做权限检查）
+        List<String> permissions = getPermissionCodesByRoleId(user.getRoleId());
+        result.put("permissions", permissions);
+        
+        return result;
     }
 
     public User updateMe(User patch) {
@@ -229,6 +287,90 @@ public class UserOrchestrator {
         }
     }
 
+    /**
+     * 获取待审批用户列表
+     */
+    public Page<User> listPendingUsers(Long page, Long pageSize) {
+        if (!UserContext.isTopAdmin()) {
+            throw new AccessDeniedException("无权限操作");
+        }
+        QueryWrapper<User> wrapper = new QueryWrapper<>();
+        wrapper.eq("approval_status", "pending")
+               .or()
+               .isNull("approval_status");
+        wrapper.orderByDesc("create_time");
+        
+        Page<User> userPage = userService.page(new Page<>(page, pageSize), wrapper);
+        if (userPage != null && userPage.getRecords() != null) {
+            userPage.getRecords().forEach(this::sanitizeUser);
+        }
+        return userPage;
+    }
+
+    /**
+     * 批准用户
+     */
+    public boolean approveUser(Long id) {
+        return approveUser(id, null);
+    }
+
+    public boolean approveUser(Long id, String remark) {
+        if (!UserContext.isTopAdmin()) {
+            throw new AccessDeniedException("无权限操作");
+        }
+        User user = userService.getById(id);
+        if (user == null) {
+            throw new NoSuchElementException("用户不存在");
+        }
+
+        String normalized = normalize(remark);
+        if (!StringUtils.hasText(normalized)) {
+            throw new IllegalArgumentException("操作原因不能为空");
+        }
+        
+        user.setApprovalStatus("approved");
+        user.setApprovalTime(LocalDateTime.now());
+        user.setApprovalRemark(normalized);
+        user.setStatus("active"); // 同时激活用户
+        
+        boolean success = userService.updateById(user);
+        if (!success) {
+            throw new IllegalStateException("批准失败");
+        }
+        saveOperationLog("user", id == null ? null : String.valueOf(id), "APPROVE", normalized);
+        return true;
+    }
+
+    /**
+     * 拒绝用户
+     */
+    public boolean rejectUser(Long id, String remark) {
+        if (!UserContext.isTopAdmin()) {
+            throw new AccessDeniedException("无权限操作");
+        }
+        User user = userService.getById(id);
+        if (user == null) {
+            throw new NoSuchElementException("用户不存在");
+        }
+
+        String normalized = normalize(remark);
+        if (!StringUtils.hasText(normalized)) {
+            throw new IllegalArgumentException("操作原因不能为空");
+        }
+        
+        user.setApprovalStatus("rejected");
+        user.setApprovalTime(LocalDateTime.now());
+        user.setApprovalRemark(normalized);
+        user.setStatus("inactive"); // 同时停用用户
+        
+        boolean success = userService.updateById(user);
+        if (!success) {
+            throw new IllegalStateException("拒绝失败");
+        }
+        saveOperationLog("user", id == null ? null : String.valueOf(id), "REJECT", normalized);
+        return true;
+    }
+
     public List<String> permissionsByRole(Long roleId) {
         Long rid = roleId;
         if (!UserContext.isTopAdmin()) {
@@ -238,11 +380,18 @@ public class UserOrchestrator {
             }
             rid = current.getRoleId();
         }
-        if (rid == null) {
-            throw new IllegalArgumentException("角色ID不能为空");
+        return getPermissionCodesByRoleId(rid);
+    }
+
+    /**
+     * 内部方法：根据角色ID获取权限代码列表（不做权限检查）
+     */
+    private List<String> getPermissionCodesByRoleId(Long roleId) {
+        if (roleId == null) {
+            return List.of();
         }
 
-        List<Long> ids = rolePermissionService.getPermissionIdsByRoleId(rid);
+        List<Long> ids = rolePermissionService.getPermissionIdsByRoleId(roleId);
         if (ids == null || ids.isEmpty()) {
             return List.of();
         }
@@ -292,6 +441,29 @@ public class UserOrchestrator {
         }
         String t = s.trim();
         return t.isEmpty() ? null : t;
+    }
+
+    private static String normalize(String v) {
+        if (!StringUtils.hasText(v)) {
+            return null;
+        }
+        String t = v.trim();
+        return t.isEmpty() ? null : t;
+    }
+
+    private void saveOperationLog(String bizType, String bizId, String action, String remark) {
+        try {
+            SystemOperationLog log = new SystemOperationLog();
+            log.setBizType(bizType);
+            log.setBizId(bizId);
+            log.setAction(action);
+            UserContext ctx = UserContext.get();
+            log.setOperator(ctx != null ? ctx.getUsername() : null);
+            log.setRemark(remark);
+            log.setCreateTime(LocalDateTime.now());
+            systemOperationLogService.save(log);
+        } catch (Exception e) {
+        }
     }
 
     private static String loginThrottleKey(String username, String ip) {

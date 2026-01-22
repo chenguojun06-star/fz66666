@@ -1,5 +1,6 @@
 package com.fashion.supplychain.system.entity;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -23,6 +24,11 @@ public class Role {
     private String description;
     
     private String status;
+    
+    private String dataScope; // 数据权限范围: all-全部数据, self-仅本人数据
+
+    @TableField(exist = false)
+    private String operationRemark;
     
     private LocalDateTime createTime;
     

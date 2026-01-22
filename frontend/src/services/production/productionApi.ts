@@ -12,7 +12,7 @@ export const productionOrderApi = {
   close: (id: string, sourceModule: string) => api.post<any>('/production/order/close', { id, sourceModule }),
   updateProgress: (payload: any) => api.post<any>('/production/order/update-progress', payload),
   saveProgressWorkflow: (payload: any) => api.post<any>('/production/order/progress-workflow/lock', payload),
-  rollbackProgressWorkflow: (id: any) => api.post<any>('/production/order/progress-workflow/rollback', { id }),
+  rollbackProgressWorkflow: (payload: any) => api.post<any>('/production/order/progress-workflow/rollback', payload),
 };
 
 export const productionCuttingApi = {

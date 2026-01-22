@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Form, InputNumber, Button, Row, Col, Statistic, Divider, message, Space } from 'antd';
+import { Card, Form, InputNumber, Button, Row, Col, Statistic, Divider, Space, App } from 'antd';
 import { SaveOutlined } from '@ant-design/icons';
 import { StyleQuotation, StyleBom, StyleProcess } from '../../../types/style';
 import api from '../../../utils/api';
@@ -11,6 +11,7 @@ interface Props {
 }
 
 const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const [_loading, setLoading] = useState(false);
   const [quotation, setQuotation] = useState<StyleQuotation | null>(null);
@@ -171,12 +172,19 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
               <Row gutter={16}>
                 <Col span={12}>
                   <Form.Item label="其他费用 (包装/运输/管理)" name="otherCost">
-                    <InputNumber style={{ width: '100%' }} prefix="¥" min={0} disabled={Boolean(readOnly)} />
+                    <InputNumber style={{ width: '100%' }} prefix="¥" min={0} />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
-                  <Form.Item label="目标利润率 (%)" name="profitRate">
-                    <InputNumber style={{ width: '100%' }} min={0} max={100} disabled={Boolean(readOnly)} />
+                  <Form.Item label="目标利润率 (%)">
+                    <Space.Compact style={{ width: '100%' }}>
+                      <Form.Item name="profitRate" noStyle>
+                        <InputNumber style={{ width: '100%' }} min={0} max={100} />
+                      </Form.Item>
+                      <Button type="primary" onClick={handleSave}>
+                        保存
+                      </Button>
+                    </Space.Compact>
                   </Form.Item>
                 </Col>
               </Row>
@@ -187,7 +195,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                 <Col span={12}>
                   <Form.Item label="总成本" name="totalCost">
                     <InputNumber
-                      style={{ width: '100%', fontSize: '1.2em' }}
+                      style={{ width: '100%', fontSize: 'var(--font-size-lg)' }}
                       prefix="¥"
                       readOnly
                       precision={2}
@@ -197,7 +205,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                 <Col span={12}>
                   <Form.Item label="最终报价" name="totalPrice">
                     <InputNumber
-                      style={{ width: '100%', fontSize: '1.2em', fontWeight: 'bold' }}
+                      style={{ width: '100%', fontSize: 'var(--font-size-xl)', fontWeight: 'bold' }}
                       prefix="¥"
                       readOnly
                       precision={2}

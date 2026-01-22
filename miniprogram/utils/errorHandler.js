@@ -28,7 +28,7 @@ class ErrorHandler {
       502: { type: ErrorType.SERVER, msg: '服务暂时不可用，请稍后重试' },
       503: { type: ErrorType.SERVER, msg: '服务暂时不可用，请稍后重试' },
     };
-    
+
     this.networkErrorMap = {
       'ECONNABORTED': { type: ErrorType.TIMEOUT, msg: '请求超时，请检查网络连接并重试' },
       'ERR_NETWORK': { type: ErrorType.NETWORK, msg: '网络连接失败，请检查网络设置' },
@@ -46,11 +46,11 @@ class ErrorHandler {
       return { type: ErrorType.UNKNOWN, msg: '发生未知错误' };
     }
 
-    // 处理 API 业务错误
+    // 处理接口业务错误
     if (error.type === 'biz') {
       const code = error.code;
       const errMsg = error.errMsg || error.message || '';
-      
+
       if (this.errorMap[code]) {
         return {
           type: this.errorMap[code].type,
@@ -58,8 +58,8 @@ class ErrorHandler {
           code
         };
       }
-      
-      // 5xx 错误
+
+      // 服务端 5xx 错误
       if (code >= 500) {
         return {
           type: ErrorType.SERVER,
@@ -67,8 +67,8 @@ class ErrorHandler {
           code
         };
       }
-      
-      // 其他 API 错误
+
+      // 其他接口错误
       return {
         type: ErrorType.BUSINESS,
         msg: errMsg || '操作失败',
@@ -135,7 +135,7 @@ class ErrorHandler {
   logError(error, context = '') {
     const result = this.categorizeError(error);
     const timestamp = new Date().toISOString();
-    
+
     console.error(`[${timestamp}] ${context}`, {
       type: result.type,
       msg: result.msg,
@@ -152,14 +152,14 @@ class ErrorHandler {
    */
   isRetryable(error) {
     const result = this.categorizeError(error);
-    
+
     // 这些错误类型建议重试
     const retryableTypes = [
       ErrorType.TIMEOUT,
       ErrorType.NETWORK,
       ErrorType.SERVER
     ];
-    
+
     return retryableTypes.includes(result.type);
   }
 
@@ -187,7 +187,7 @@ class ErrorHandler {
 // 创建全局错误处理器实例
 const errorHandler = new ErrorHandler();
 
-module.exports = {
+export {
   ErrorType,
   ErrorHandler,
   errorHandler

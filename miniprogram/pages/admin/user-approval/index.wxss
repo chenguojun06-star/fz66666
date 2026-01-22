@@ -1,0 +1,121 @@
+page {
+  background: #f7f8fa;
+}
+
+.container {
+  padding: 16px;
+  min-height: 100vh;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.count {
+  font-size: 14px;
+  color: #6b7280;
+  background: #f3f4f6;
+  padding: 4px 12px;
+  border-radius: 12px;
+}
+
+.loading, .empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 0;
+}
+
+.loading-text {
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+.empty-icon {
+  width: 120px;
+  height: 120px;
+  opacity: 0.3;
+  margin-bottom: 16px;
+}
+
+.empty-text {
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+.user-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.user-card {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.user-info {
+  margin-bottom: 12px;
+}
+
+.user-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 8px;
+}
+
+.user-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.meta-item {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.user-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-approve, .btn-reject {
+  flex: 1;
+  height: 36px;
+  line-height: 36px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.btn-approve {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  border: none;
+}
+
+.btn-reject {
+  background: #ffffff;
+  color: #ef4444;
+  border: 1px solid #ef4444;
+}
+
+.loading-more {
+  text-align: center;
+  padding: 20px;
+  font-size: 14px;
+  color: #9ca3af;
+}

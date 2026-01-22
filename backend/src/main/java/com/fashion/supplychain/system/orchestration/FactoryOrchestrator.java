@@ -5,7 +5,9 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.system.entity.Factory;
+import com.fashion.supplychain.system.entity.SystemOperationLog;
 import com.fashion.supplychain.system.service.FactoryService;
+import com.fashion.supplychain.system.service.SystemOperationLogService;
 import java.time.LocalDateTime;
 import java.util.NoSuchElementException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +20,9 @@ public class FactoryOrchestrator {
 
     @Autowired
     private FactoryService factoryService;
+
+    @Autowired
+    private SystemOperationLogService systemOperationLogService;
 
     public IPage<Factory> list(String page, String pageSize, String factoryCode, String factoryName, String status) {
         int p = parsePositiveIntOrDefault(page, 1, "page");
@@ -42,7 +47,7 @@ public class FactoryOrchestrator {
         }
         Factory factory = factoryService.getById(id);
         if (factory == null || (factory.getDeleteFlag() != null && factory.getDeleteFlag() == 1)) {
-            throw new NoSuchElementException("加工厂不存在");
+            throw new NoSuchElementException("供应商不存在");
         }
         return factory;
     }
@@ -67,6 +72,7 @@ public class FactoryOrchestrator {
         if (!ok) {
             throw new IllegalStateException("保存失败");
         }
+        saveOperationLog("factory", factory.getId(), "CREATE", null);
         return true;
     }
 
@@ -77,20 +83,33 @@ public class FactoryOrchestrator {
         if (factory == null || !StringUtils.hasText(factory.getId())) {
             throw new IllegalArgumentException("参数错误");
         }
+        String remark = normalize(factory.getOperationRemark());
+        if (!StringUtils.hasText(remark)) {
+            throw new IllegalArgumentException("操作原因不能为空");
+        }
         factory.setUpdateTime(LocalDateTime.now());
         boolean ok = factoryService.updateById(factory);
         if (!ok) {
             throw new IllegalStateException("更新失败");
         }
+        saveOperationLog("factory", factory.getId(), "UPDATE", remark);
         return true;
     }
 
     public boolean delete(String id) {
+        return delete(id, null);
+    }
+
+    public boolean delete(String id, String remark) {
         if (!UserContext.isTopAdmin()) {
             throw new AccessDeniedException("无权限操作");
         }
         if (!StringUtils.hasText(id)) {
             throw new IllegalArgumentException("参数错误");
+        }
+        String normalized = normalize(remark);
+        if (!StringUtils.hasText(normalized)) {
+            throw new IllegalArgumentException("操作原因不能为空");
         }
         Factory factory = new Factory();
         factory.setId(id);
@@ -100,6 +119,7 @@ public class FactoryOrchestrator {
         if (!ok) {
             throw new IllegalStateException("删除失败");
         }
+        saveOperationLog("factory", id, "DELETE", normalized);
         return true;
     }
 
@@ -112,6 +132,21 @@ public class FactoryOrchestrator {
             return null;
         }
         return v;
+    }
+
+    private void saveOperationLog(String bizType, String bizId, String action, String remark) {
+        try {
+            SystemOperationLog log = new SystemOperationLog();
+            log.setBizType(bizType);
+            log.setBizId(bizId);
+            log.setAction(action);
+            UserContext ctx = UserContext.get();
+            log.setOperator(ctx != null ? ctx.getUsername() : null);
+            log.setRemark(remark);
+            log.setCreateTime(LocalDateTime.now());
+            systemOperationLogService.save(log);
+        } catch (Exception e) {
+        }
     }
 
     private static int parsePositiveIntOrDefault(String raw, int defaultValue, String name) {

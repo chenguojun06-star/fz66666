@@ -1,13 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Card, Form, Input, InputNumber, Modal, Select, Space, Table, Tag, Tooltip, Typography, message } from 'antd';
+import { App, Button, Card, Form, Input, InputNumber, Select, Space, Table, Tag, Tooltip, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { DeleteOutlined, EditOutlined, EyeOutlined, HolderOutlined, ImportOutlined, PlusOutlined, RollbackOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, EyeOutlined, HolderOutlined, PlusOutlined, RollbackOutlined } from '@ant-design/icons';
 import Layout from '../../components/Layout';
 import ResizableModal from '../../components/common/ResizableModal';
 import ResizableTable from '../../components/common/ResizableTable';
 import RowActions from '../../components/common/RowActions';
 import api from '../../utils/api';
 import { isAdminUser as isAdminUserFn, useAuth } from '../../utils/authContext';
+import { useViewport } from '../../utils/useViewport';
 import type { TemplateLibrary } from '../../types/style';
 
 type ProgressNodeInput = { name: string };
@@ -51,7 +52,9 @@ const formatTemplateKey = (raw: any) => {
 };
 
 const TemplateCenter: React.FC = () => {
+  const { modal, message } = App.useApp();
   const { user } = useAuth();
+  const { modalWidth, isMobile } = useViewport();
   const [queryForm] = Form.useForm();
   const [createForm] = Form.useForm();
   const [applyForm] = Form.useForm();
@@ -74,6 +77,10 @@ const TemplateCenter: React.FC = () => {
   const [progressOpen, setProgressOpen] = useState(false);
   const [progressSaving, setProgressSaving] = useState(false);
   const [progressEditing, setProgressEditing] = useState<TemplateLibrary | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editingRow, setEditingRow] = useState<TemplateLibrary | null>(null);
+  const [editTableData, setEditTableData] = useState<any>(null);
   const [activeRow, setActiveRow] = useState<TemplateLibrary | null>(null);
   const [viewContent, setViewContent] = useState<string>('');
   const [viewObj, setViewObj] = useState<any>(null);
@@ -105,7 +112,7 @@ const TemplateCenter: React.FC = () => {
     }
   };
 
-  const parseProcessPriceSteps = (raw: string): Array<{ processName: string; unitPrice: number }> => {
+  const parseProcessPriceSteps = (raw: string): Array<{ processName: string; unitPrice: number; estimatedMinutes?: number }> => {
     const text = String(raw ?? '').trim();
     if (!text) return [];
     try {
@@ -117,7 +124,9 @@ const TemplateCenter: React.FC = () => {
           const processName = String(s?.processName || '').trim();
           const p = Number(s?.unitPrice ?? s?.price);
           const unitPrice = Number.isFinite(p) && p >= 0 ? p : 0;
-          return { processName, unitPrice };
+          const m = Number(s?.estimatedMinutes);
+          const estimatedMinutes = Number.isFinite(m) && m > 0 ? m : undefined;
+          return { processName, unitPrice, estimatedMinutes };
         })
         .filter((s: any) => s.processName);
     } catch {
@@ -185,8 +194,9 @@ const TemplateCenter: React.FC = () => {
 
   const loadProcessPriceForStyle = async (styleNo: string) => {
     const sn = String(styleNo || '').trim();
-    if (!sn) return { tpl: null as TemplateLibrary | null, steps: [] as Array<{ processName: string; unitPrice: number }> };
+    if (!sn) return { tpl: null as TemplateLibrary | null, steps: [] as Array<{ processName: string; unitPrice: number; estimatedMinutes?: number }> };
     try {
+      // 1. 尝试从 process_price 模板读取
       const res = await api.get<any>('/template-library/list', {
         params: {
           page: 1,
@@ -197,24 +207,58 @@ const TemplateCenter: React.FC = () => {
         },
       });
       const result = res as any;
-      if (result.code !== 200) return { tpl: null, steps: [] };
-      const records = Array.isArray(result.data?.records) ? (result.data.records as TemplateLibrary[]) : [];
-      const list = [...records];
-      const expectedKey = `style_${sn}`;
-      const picked = list.find((t) => String(t?.templateKey || '').trim() === expectedKey) || list[0] || null;
-      if (!picked?.id) return { tpl: null, steps: [] };
+      let tpl: TemplateLibrary | null = null;
+      let templateSteps: Array<{ processName: string; unitPrice: number; estimatedMinutes?: number }> = [];
+      
+      if (result.code === 200) {
+        const records = Array.isArray(result.data?.records) ? (result.data.records as TemplateLibrary[]) : [];
+        const list = [...records];
+        const expectedKey = `style_${sn}`;
+        const picked = list.find((t) => String(t?.templateKey || '').trim() === expectedKey) || list[0] || null;
+        if (picked?.id) {
+          tpl = picked;
+          let content = String(picked.templateContent ?? '');
+          try {
+            const det = await api.get<any>(`/template-library/${picked.id}`);
+            const detRes = det as any;
+            if (detRes.code === 200) {
+              content = String((detRes.data as any)?.templateContent ?? content);
+            }
+          } catch {
+          }
+          templateSteps = parseProcessPriceSteps(content);
+        }
+      }
 
-      let content = String(picked.templateContent ?? '');
+      // 2. 从 t_style_process 表读取实际单价（优先使用）
+      let processSteps: Array<{ processName: string; unitPrice: number; estimatedMinutes?: number }> = [];
       try {
-        const det = await api.get<any>(`/template-library/${picked.id}`);
-        const detRes = det as any;
-        if (detRes.code === 200) {
-          content = String((detRes.data as any)?.templateContent ?? content);
+        // 先获取款号ID
+        const styleRes = await api.get<any>('/style/info/list', {
+          params: { page: 1, pageSize: 1, styleNo: sn },
+        });
+        const styleResult = styleRes as any;
+        if (styleResult.code === 200 && styleResult.data?.records?.length > 0) {
+          const styleId = styleResult.data.records[0].id;
+          const procRes = await api.get<any>('/style/process/list', {
+            params: { styleId },
+          });
+          const procResult = procRes as any;
+          if (procResult.code === 200 && Array.isArray(procResult.data)) {
+            processSteps = procResult.data.map((p: any) => ({
+              processName: String(p?.processName || '').trim(),
+              unitPrice: Number(p?.price) || 0,
+              estimatedMinutes: 0,
+            })).filter((s: any) => s.processName);
+          }
         }
       } catch {
       }
 
-      return { tpl: picked, steps: parseProcessPriceSteps(content) };
+      // 3. 合并数据：优先使用 t_style_process 的单价，回退到模板
+      const steps = processSteps.length > 0 ? processSteps : templateSteps;
+
+      return { tpl, steps };
     } catch {
       return { tpl: null, steps: [] };
     }
@@ -249,13 +293,56 @@ const TemplateCenter: React.FC = () => {
     setProcessPriceEditing(null);
     progressForm.resetFields();
     progressForm.setFieldsValue({
-      templateName: '自定义进度模板',
+      templateName: '进度单价',
       templateKey: '',
       sourceStyleNo: undefined,
-      nodes: [{ name: '裁剪' }, { name: '缝制' }, { name: '整烫' }, { name: '检验' }, { name: '包装' }],
-      priceSteps: [{ processName: '裁剪', unitPrice: 0 }, { processName: '缝制', unitPrice: 0 }, { processName: '整烫', unitPrice: 0 }, { processName: '检验', unitPrice: 0 }, { processName: '包装', unitPrice: 0 }],
+      nodes: [{ name: '采购' }, { name: '裁剪' }, { name: '车缝' }, { name: '大烫' }, { name: '质检' }, { name: '包装' }, { name: '入库' }],
+      priceSteps: [{ processName: '采购', unitPrice: 0 }, { processName: '裁剪', unitPrice: 0 }, { processName: '车缝', unitPrice: 0 }, { processName: '大烫', unitPrice: 0 }, { processName: '质检', unitPrice: 0 }, { processName: '包装', unitPrice: 0 }, { processName: '入库', unitPrice: 0 }],
     });
     setProgressOpen(true);
+  };
+
+  const openProgressEditFromProcessPrice = async (row: TemplateLibrary) => {
+    const styleNo = String(row.sourceStyleNo || '').trim();
+    if (!styleNo) {
+      message.error('工序单价模板缺少来源款号');
+      return;
+    }
+    
+    // 查找或创建对应的进度单价模板
+    try {
+      const res = await api.get<any>('/template-library/list', {
+        params: {
+          page: 1,
+          pageSize: 50,
+          templateType: 'progress',
+          sourceStyleNo: styleNo,
+          keyword: '',
+        },
+      });
+      const result = res as any;
+      let progressTpl: TemplateLibrary | null = null;
+      if (result.code === 200) {
+        const records = Array.isArray(result.data?.records) ? (result.data.records as TemplateLibrary[]) : [];
+        progressTpl = records.find(t => String(t.sourceStyleNo || '').trim() === styleNo) || null;
+      }
+      
+      if (progressTpl) {
+        // 如果存在进度单价模板，直接打开
+        await openProgressEdit(progressTpl);
+      } else {
+        // 否则创建新的进度单价模板
+        await openProgressCreate();
+        // 预填充来源款号和工序单价
+        const loaded = await loadProcessPriceForStyle(styleNo);
+        progressForm.setFieldsValue({
+          sourceStyleNo: styleNo,
+          priceSteps: loaded.steps,
+        });
+      }
+    } catch (e: any) {
+      message.error(e?.message || '打开失败');
+    }
   };
 
   const openProgressEdit = async (row: TemplateLibrary) => {
@@ -265,6 +352,8 @@ const TemplateCenter: React.FC = () => {
     }
     setProgressEditing(row);
     progressForm.resetFields();
+    
+    const templateType = String(row?.templateType || '').trim().toLowerCase();
     let content = String(row?.templateContent ?? '');
     if (row?.id) {
       try {
@@ -277,22 +366,44 @@ const TemplateCenter: React.FC = () => {
       }
     }
 
-    const items = parseProgressNodeItems(content);
+    // 如果是工序单价模板，解析 steps 而不是 nodes
+    let items: Array<{ name: string; unitPrice?: number }> = [];
+    let priceSteps: Array<{ processName: string; unitPrice: number; estimatedMinutes?: number }> = [];
+    
+    if (templateType === 'process_price') {
+      // 工序单价模板：从 steps 解析
+      priceSteps = parseProcessPriceSteps(content);
+      items = priceSteps.map(s => ({ name: s.processName, unitPrice: s.unitPrice }));
+    } else {
+      // 进度单价模板：从 nodes 解析
+      items = parseProgressNodeItems(content);
+    }
+    
     const styleNo = String(row.sourceStyleNo || '').trim();
-    const loaded = styleNo ? await loadProcessPriceForStyle(styleNo) : { tpl: null, steps: [] as Array<{ processName: string; unitPrice: number }> };
-    setProcessPriceEditing(loaded.tpl);
-    const priceSteps = loaded.steps.length
-      ? loaded.steps
-      : items.map((n) => ({ processName: String(n?.name || '').trim(), unitPrice: Number(n?.unitPrice) || 0 })).filter((s) => s.processName);
+    const loaded = styleNo ? await loadProcessPriceForStyle(styleNo) : { tpl: null, steps: [] as Array<{ processName: string; unitPrice: number; estimatedMinutes?: number }> };
+    
+    // 如果是工序单价模板，不需要设置 processPriceEditing（避免显示"已存在"标签）
+    if (templateType !== 'process_price') {
+      setProcessPriceEditing(loaded.tpl);
+    } else {
+      setProcessPriceEditing(null);
+    }
+    
+    const finalPriceSteps = priceSteps.length > 0 
+      ? priceSteps 
+      : (loaded.steps.length
+        ? loaded.steps
+        : items.map((n) => ({ processName: String(n?.name || '').trim(), unitPrice: Number(n?.unitPrice) || 0, estimatedMinutes: 0 })).filter((s) => s.processName));
+    
     progressForm.setFieldsValue({
       templateName: row.templateName,
       templateKey: row.templateKey,
       sourceStyleNo: row.sourceStyleNo || undefined,
       nodes: (items.length
         ? items
-        : ['裁剪', '缝制', '整烫', '检验', '包装'].map((n) => ({ name: n }))
+        : ['采购', '裁剪', '车缝', '大烫', '质检', '包装', '入库'].map((n) => ({ name: n }))
       ).map((n: any) => ({ name: String(n?.name || '').trim() })),
-      priceSteps,
+      priceSteps: finalPriceSteps,
     });
     setProgressOpen(true);
   };
@@ -356,7 +467,13 @@ const TemplateCenter: React.FC = () => {
         const sn = sourceStyleNo;
         const tplKey = `style_${sn}`;
         const tplName = `${sn}-工序单价模板`;
-        const tplContent = JSON.stringify({ steps: priceSteps.map((s) => ({ processName: s.processName, unitPrice: s.unitPrice })) });
+        const tplContent = JSON.stringify({ 
+          steps: priceSteps.map((s) => ({ 
+            processName: s.processName, 
+            unitPrice: s.unitPrice,
+            estimatedMinutes: s.estimatedMinutes || undefined
+          })) 
+        });
         if (processPriceEditing?.id) {
           const res = await api.put<any>('/template-library', {
             id: processPriceEditing.id,
@@ -403,15 +520,25 @@ const TemplateCenter: React.FC = () => {
       };
 
       setProgressSaving(true);
-      await saveProcessPriceTemplate();
-      if (progressEditing?.id) {
+      
+      // 判断当前编辑的是什么类型的模板
+      const editingType = String(progressEditing?.templateType || '').trim().toLowerCase();
+      
+      if (editingType === 'process_price') {
+        // 如果编辑的是工序单价模板，只保存 steps
+        const tplContent = JSON.stringify({ 
+          steps: priceSteps.map((s) => ({ 
+            processName: s.processName, 
+            unitPrice: s.unitPrice,
+          })) 
+        });
         const res = await api.put<any>('/template-library', {
           id: progressEditing.id,
-          templateType: 'progress',
+          templateType: 'process_price',
           templateKey,
           templateName,
           sourceStyleNo: sourceStyleNo || null,
-          templateContent,
+          templateContent: tplContent,
         });
         const result = res as any;
         if (result.code !== 200) {
@@ -420,19 +547,38 @@ const TemplateCenter: React.FC = () => {
         }
         message.success('已保存并锁定');
       } else {
-        const res = await api.post<any>('/template-library', {
-          templateType: 'progress',
-          templateKey,
-          templateName,
-          sourceStyleNo: sourceStyleNo || null,
-          templateContent,
-        });
-        const result = res as any;
-        if (result.code !== 200) {
-          message.error(result.message || '保存失败');
-          return;
+        // 如果编辑的是进度单价模板，保存 nodes 并同时保存工序单价库
+        await saveProcessPriceTemplate();
+        if (progressEditing?.id) {
+          const res = await api.put<any>('/template-library', {
+            id: progressEditing.id,
+            templateType: 'progress',
+            templateKey,
+            templateName,
+            sourceStyleNo: sourceStyleNo || null,
+            templateContent,
+          });
+          const result = res as any;
+          if (result.code !== 200) {
+            message.error(result.message || '保存失败');
+            return;
+          }
+          message.success('已保存并锁定');
+        } else {
+          const res = await api.post<any>('/template-library', {
+            templateType: 'progress',
+            templateKey,
+            templateName,
+            sourceStyleNo: sourceStyleNo || null,
+            templateContent,
+          });
+          const result = res as any;
+          if (result.code !== 200) {
+            message.error(result.message || '保存失败');
+            return;
+          }
+          message.success('已创建并锁定');
         }
-        message.success('已创建并锁定');
       }
 
       setProgressOpen(false);
@@ -446,19 +592,154 @@ const TemplateCenter: React.FC = () => {
     }
   };
 
+  const openEdit = async (row: TemplateLibrary) => {
+    // 先从服务器获取最新数据，确保 locked 状态是最新的
+    let latestRow = row;
+    if (row?.id) {
+      try {
+        const res = await api.get<any>(`/template-library/${row.id}`);
+        const result = res as any;
+        if (result.code === 200 && result.data) {
+          latestRow = result.data as TemplateLibrary;
+        }
+      } catch {
+      }
+    }
+    
+    if (isLocked(latestRow)) {
+      message.error('模板已锁定，如需修改请先退回');
+      return;
+    }
+    const t = String(latestRow?.templateType || '').trim().toLowerCase();
+    
+    // 进度单价和工序单价都使用同一个友好编辑界面
+    if (t === 'progress' || t === 'process_price') {
+      openProgressEdit(latestRow);
+      return;
+    }
+    
+    setEditingRow(latestRow);
+    let content = String(row?.templateContent ?? '');
+    if (row?.id) {
+      try {
+        const res = await api.get<any>(`/template-library/${row.id}`);
+        const result = res as any;
+        if (result.code === 200) {
+          content = String((result.data as any)?.templateContent ?? content);
+        }
+      } catch {
+      }
+    }
+    
+    // 解析JSON为表格数据
+    try {
+      const parsed = JSON.parse(content);
+      setEditTableData(parsed);
+    } catch {
+      setEditTableData(null);
+    }
+    
+    setEditOpen(true);
+    
+    // 延迟操作表单，等待 Modal 和 Form 渲染完成
+    setTimeout(() => {
+      createForm.resetFields();
+      createForm.setFieldsValue({
+        templateName: row.templateName,
+        templateKey: row.templateKey,
+        templateType: row.templateType,
+        sourceStyleNo: row.sourceStyleNo || undefined,
+      });
+    }, 0);
+  };
+
+  const submitEdit = async () => {
+    try {
+      const v = await createForm.validateFields();
+      const templateName = String(v.templateName || '').trim();
+      if (!templateName) {
+        message.error('请输入模板名称');
+        return;
+      }
+      const templateType = String(v.templateType || '').trim();
+      if (!templateType) {
+        message.error('请选择模板类型');
+        return;
+      }
+      
+      // 将表格数据转换为JSON字符串
+      let templateContent = '';
+      if (editTableData) {
+        templateContent = JSON.stringify(editTableData);
+      } else {
+        message.error('模板内容无效');
+        return;
+      }
+      
+      setEditSaving(true);
+      const body = {
+        id: editingRow?.id,
+        templateName,
+        templateKey: String(v.templateKey || '').trim() || undefined,
+        templateType,
+        sourceStyleNo: v.sourceStyleNo || undefined,
+        templateContent,
+      };
+      
+      const res = await api.put<any>(`/template-library/${editingRow?.id}`, body);
+      const result = res as any;
+      if (result.code !== 200) {
+        message.error(result.message || '更新失败');
+        return;
+      }
+      
+      message.success('更新成功');
+      setEditOpen(false);
+      setEditingRow(null);
+      setEditTableData(null);
+      fetchList({ page: 1 });
+    } catch (e: any) {
+      if (e?.errorFields) return;
+      message.error(e?.message || '更新失败');
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
   const handleRollback = async (row: TemplateLibrary) => {
     if (!row?.id) return;
     if (!isAdminUser) {
       message.error('仅管理员可退回修改');
       return;
     }
-    Modal.confirm({
+    let reason = '';
+    modal.confirm({
       title: '退回该模板为可编辑？',
-      content: String(row.templateName || ''),
-      okText: '退回',
+      content: (
+        <div>
+          <div style={{ marginBottom: 8 }}>{String(row.templateName || '')}</div>
+          <div style={{ marginBottom: 12, fontWeight: 600 }}>退回原因</div>
+          <Input.TextArea
+            placeholder="请输入退回原因"
+            autoSize={{ minRows: 3, maxRows: 6 }}
+            maxLength={200}
+            showCount
+            onChange={(e) => {
+              reason = String(e?.target?.value || '');
+            }}
+          />
+        </div>
+      ),
+      okText: '确认退回',
       cancelText: '取消',
+      okButtonProps: { danger: true },
       onOk: async () => {
-        const res = await api.post<any>(`/template-library/${row.id}/rollback`);
+        const remark = String(reason || '').trim();
+        if (!remark) {
+          message.error('请输入退回原因');
+          return Promise.reject(new Error('请输入退回原因'));
+        }
+        const res = await api.post<any>(`/template-library/${row.id}/rollback`, { reason: remark });
         const result = res as any;
         if (result.code !== 200) {
           message.error(result.message || '退回失败');
@@ -586,18 +867,6 @@ const TemplateCenter: React.FC = () => {
       if (e?.errorFields) return;
       message.error(e?.message || '生成模板失败');
     }
-  };
-
-  const openApply = (row: TemplateLibrary) => {
-    const t = String(row?.templateType || '').trim().toLowerCase();
-    if (t === 'progress') {
-      message.info('进度模板请在“生产进度”页面导入');
-      return;
-    }
-    setActiveRow(row);
-    applyForm.resetFields();
-    applyForm.setFieldsValue({ mode: 'overwrite' });
-    setApplyOpen(true);
   };
 
   const submitApply = async () => {
@@ -855,7 +1124,7 @@ const TemplateCenter: React.FC = () => {
 
   const handleDelete = async (row: TemplateLibrary) => {
     if (!row?.id) return;
-    Modal.confirm({
+    modal.confirm({
       title: '确认删除该模板？',
       content: `${row.templateName || ''}`,
       okText: '删除',
@@ -933,6 +1202,13 @@ const TemplateCenter: React.FC = () => {
       render: (v) => String(v || '-'),
     },
     {
+      title: '操作人',
+      dataIndex: 'operatorName',
+      key: 'operatorName',
+      width: 120,
+      render: (v) => String(v || '-'),
+    },
+    {
       title: '状态',
       dataIndex: 'locked',
       key: 'locked',
@@ -963,13 +1239,21 @@ const TemplateCenter: React.FC = () => {
               icon: <EditOutlined />,
               onClick: () => openProgressEdit(row),
             })
-          : {
-            key: 'apply',
-            label: '套用',
-            title: '套用',
-            icon: <ImportOutlined />,
-            onClick: () => openApply(row),
-          };
+          : (locked
+            ? {
+              key: 'rollback',
+              label: '退回',
+              title: '退回',
+              icon: <RollbackOutlined />,
+              onClick: () => handleRollback(row),
+            }
+            : {
+              key: 'edit',
+              label: '编辑',
+              title: '编辑',
+              icon: <EditOutlined />,
+              onClick: () => openEdit(row),
+            });
 
         return (
           <RowActions
@@ -1004,12 +1288,7 @@ const TemplateCenter: React.FC = () => {
         className="page-card"
         title="单价流程"
         extra={
-          <Space>
-            <Button type="primary" onClick={openCreate}>
-              按款号生成
-            </Button>
-            <Button onClick={openProgressCreate}>自定义进度模板</Button>
-          </Space>
+          <Button type="primary" onClick={openProgressCreate}>进度单价</Button>
         }
       >
         <Form form={queryForm} layout="inline" initialValues={{ templateType: '' }}>
@@ -1058,7 +1337,7 @@ const TemplateCenter: React.FC = () => {
           columns={columns}
           dataSource={data}
           loading={loading}
-          scroll={{ x: 'max-content', y: typeof window === 'undefined' ? 560 : window.innerWidth < 768 ? 360 : 560 }}
+          scroll={{ x: 'max-content', y: isMobile ? 360 : 560 }}
           pagination={{
             current: page,
             pageSize,
@@ -1149,6 +1428,203 @@ const TemplateCenter: React.FC = () => {
       </ResizableModal>
 
       <ResizableModal
+        title={editingRow?.id ? '编辑模板' : '编辑模板'}
+        open={editOpen}
+        centered
+        onCancel={() => {
+          setEditOpen(false);
+          setEditingRow(null);
+        }}
+        onOk={submitEdit}
+        okText="保存"
+        cancelText="取消"
+        confirmLoading={editSaving}
+        width={modalWidth}
+        initialHeight={600}
+        scaleWithViewport
+      >
+        <Form form={createForm} layout="vertical">
+          <Form.Item name="templateName" label="模板名称" rules={[{ required: true, message: '请输入模板名称' }]}>
+            <Input placeholder="例如：外协款-BOM模板" />
+          </Form.Item>
+          <Form.Item name="templateKey" label="模板标识(可选)">
+            <Input placeholder="不填则保持原标识" />
+          </Form.Item>
+          <Form.Item name="templateType" label="模板类型" rules={[{ required: true, message: '请选择模板类型' }]}>
+            <Select
+              placeholder="请选择"
+              options={[
+                { value: 'bom', label: 'BOM' },
+                { value: 'size', label: '尺寸' },
+                { value: 'process', label: '工艺' },
+                { value: 'process_price', label: '工序单价' },
+              ]}
+              disabled
+            />
+          </Form.Item>
+          <Form.Item name="sourceStyleNo" label="来源款号(可选)">
+            <Select
+              allowClear
+              showSearch
+              filterOption={false}
+              loading={styleNoLoading}
+              placeholder="搜索/选择款号"
+              options={styleNoOptions}
+              onSearch={scheduleFetchStyleNos}
+              onOpenChange={(open) => {
+                if (open && !styleNoOptions.length) fetchStyleNoOptions('');
+              }}
+            />
+          </Form.Item>
+          <Form.Item label="模板内容">
+            {editTableData ? (
+              <div style={{ maxHeight: 400, overflow: 'auto', border: '1px solid #d9d9d9', padding: 8 }}>
+                {(() => {
+                  const type = editingRow?.templateType;
+                  // 尺寸表模板
+                  if (type === 'size' && editTableData.sizes && editTableData.parts) {
+                    return (
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr>
+                            <th style={{ border: '1px solid #ccc', padding: 4, background: '#f5f5f5' }}>部位</th>
+                            {editTableData.sizes.map((size: string, idx: number) => (
+                              <th key={idx} style={{ border: '1px solid #ccc', padding: 4, background: '#f5f5f5' }}>
+                                <Input
+                                  size="small"
+                                  value={size}
+                                  onChange={(e) => {
+                                    const newData = { ...editTableData };
+                                    newData.sizes[idx] = e.target.value;
+                                    setEditTableData(newData);
+                                  }}
+                                  style={{ border: 'none', background: 'transparent', textAlign: 'center' }}
+                                />
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {editTableData.parts.map((part: any, pIdx: number) => (
+                            <tr key={pIdx}>
+                              <td style={{ border: '1px solid #ccc', padding: 4 }}>
+                                <Input
+                                  size="small"
+                                  value={part.partName}
+                                  onChange={(e) => {
+                                    const newData = { ...editTableData };
+                                    newData.parts[pIdx].partName = e.target.value;
+                                    setEditTableData(newData);
+                                  }}
+                                  style={{ border: 'none' }}
+                                />
+                              </td>
+                              {editTableData.sizes.map((size: string, sIdx: number) => (
+                                <td key={sIdx} style={{ border: '1px solid #ccc', padding: 4 }}>
+                                  <Input
+                                    size="small"
+                                    value={part.values?.[size] || ''}
+                                    onChange={(e) => {
+                                      const newData = { ...editTableData };
+                                      if (!newData.parts[pIdx].values) newData.parts[pIdx].values = {};
+                                      newData.parts[pIdx].values[size] = e.target.value;
+                                      setEditTableData(newData);
+                                    }}
+                                    style={{ border: 'none' }}
+                                  />
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    );
+                  }
+                  // BOM表模板
+                  if (type === 'bom' && Array.isArray(editTableData)) {
+                    return (
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr>
+                            <th style={{ border: '1px solid #ccc', padding: 4, background: '#f5f5f5' }}>物料名称</th>
+                            <th style={{ border: '1px solid #ccc', padding: 4, background: '#f5f5f5' }}>规格</th>
+                            <th style={{ border: '1px solid #ccc', padding: 4, background: '#f5f5f5' }}>用量</th>
+                            <th style={{ border: '1px solid #ccc', padding: 4, background: '#f5f5f5' }}>单位</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {editTableData.map((item: any, idx: number) => (
+                            <tr key={idx}>
+                              <td style={{ border: '1px solid #ccc', padding: 4 }}>
+                                <Input
+                                  size="small"
+                                  value={item.materialName || ''}
+                                  onChange={(e) => {
+                                    const newData = [...editTableData];
+                                    newData[idx].materialName = e.target.value;
+                                    setEditTableData(newData);
+                                  }}
+                                  style={{ border: 'none' }}
+                                />
+                              </td>
+                              <td style={{ border: '1px solid #ccc', padding: 4 }}>
+                                <Input
+                                  size="small"
+                                  value={item.spec || ''}
+                                  onChange={(e) => {
+                                    const newData = [...editTableData];
+                                    newData[idx].spec = e.target.value;
+                                    setEditTableData(newData);
+                                  }}
+                                  style={{ border: 'none' }}
+                                />
+                              </td>
+                              <td style={{ border: '1px solid #ccc', padding: 4 }}>
+                                <Input
+                                  size="small"
+                                  value={item.quantity || ''}
+                                  onChange={(e) => {
+                                    const newData = [...editTableData];
+                                    newData[idx].quantity = e.target.value;
+                                    setEditTableData(newData);
+                                  }}
+                                  style={{ border: 'none' }}
+                                />
+                              </td>
+                              <td style={{ border: '1px solid #ccc', padding: 4 }}>
+                                <Input
+                                  size="small"
+                                  value={item.unit || ''}
+                                  onChange={(e) => {
+                                    const newData = [...editTableData];
+                                    newData[idx].unit = e.target.value;
+                                    setEditTableData(newData);
+                                  }}
+                                  style={{ border: 'none' }}
+                                />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    );
+                  }
+                  // 其他类型暂时显示JSON
+                  return (
+                    <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0 }}>
+                      {JSON.stringify(editTableData, null, 2)}
+                    </pre>
+                  );
+                })()}
+              </div>
+            ) : (
+              <div style={{ color: '#999', padding: 8 }}>无效的模板内容</div>
+            )}
+          </Form.Item>
+        </Form>
+      </ResizableModal>
+
+      <ResizableModal
         title={
           activeRow
             ? `模板内容 - ${String(activeRow.templateName || '')}（${typeLabel(String(activeRow.templateType || ''))}）`
@@ -1162,15 +1638,7 @@ const TemplateCenter: React.FC = () => {
             <Button onClick={() => setViewOpen(false)}>关闭</Button>
           </div>
         }
-        width={
-          typeof window === 'undefined'
-            ? '60vw'
-            : window.innerWidth < 768
-              ? '96vw'
-              : window.innerWidth < 1024
-                ? '66vw'
-                : '60vw'
-        }
+        width={modalWidth}
         initialHeight={720}
         scaleWithViewport
       >
@@ -1178,7 +1646,7 @@ const TemplateCenter: React.FC = () => {
       </ResizableModal>
 
       <ResizableModal
-        title={progressEditing?.id ? '编辑进度模板' : '自定义进度模板'}
+        title={progressEditing?.id ? '编辑进度单价' : '进度单价'}
         open={progressOpen}
         centered
         onCancel={() => {
@@ -1190,226 +1658,205 @@ const TemplateCenter: React.FC = () => {
         okText="保存"
         cancelText="取消"
         confirmLoading={progressSaving}
-        width={
-          typeof window === 'undefined'
-            ? '60vw'
-            : window.innerWidth < 768
-              ? '96vw'
-              : window.innerWidth < 1024
-                ? '66vw'
-                : '60vw'
-        }
-        initialHeight={720}
+        width={950}
+        initialHeight={600}
         scaleWithViewport
       >
-        <Form form={progressForm} layout="vertical">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <Form.Item name="templateName" label="模板名称" rules={[{ required: true, message: '请输入模板名称' }]}>
-              <Input placeholder="例如：外协款-进度模板" />
-            </Form.Item>
-            <Form.Item name="templateKey" label="模板标识(可选)">
-              <Input placeholder="不填则自动生成" />
-            </Form.Item>
-          </div>
+        <div style={{ maxHeight: '60vh', overflow: 'auto', padding: '0 2px' }}>
+          <Form form={progressForm} layout="vertical">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <Form.Item name="templateName" label="模板名称" rules={[{ required: true, message: '请输入模板名称' }]} style={{ marginBottom: 8 }}>
+                <Input placeholder="例如：外协款-进度模板" size="small" />
+              </Form.Item>
+              <Form.Item name="templateKey" label="模板标识(可选)" style={{ marginBottom: 8 }}>
+                <Input placeholder="不填则自动生成" size="small" />
+              </Form.Item>
+            </div>
 
-          <Form.Item name="sourceStyleNo" label="绑定款号(可选)">
-            <Select
-              allowClear
-              showSearch
-              filterOption={false}
-              loading={styleNoLoading}
-              placeholder="绑定后打开该款订单会自动尝试套用"
-              options={styleNoOptions}
-              onSearch={scheduleFetchStyleNos}
-              onOpenChange={(open) => {
-                if (open && !styleNoOptions.length) fetchStyleNoOptions('');
-              }}
-            />
-          </Form.Item>
+            <Form.Item name="sourceStyleNo" label="绑定款号(可选)" style={{ marginBottom: 12 }}>
+              <Select
+                allowClear
+                showSearch
+                size="small"
+                filterOption={false}
+                loading={styleNoLoading}
+                placeholder="绑定后打开该款订单会自动尝试套用"
+                options={styleNoOptions}
+                onSearch={scheduleFetchStyleNos}
+                onOpenChange={(open) => {
+                  if (open && !styleNoOptions.length) fetchStyleNoOptions('');
+                }}
+              />
+            </Form.Item>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1.05fr 0.95fr', gap: 12, alignItems: 'start' }}>
-            <Card size="small" title="环节列表" styles={{ body: { padding: 12 } }}>
-              <Form.List name="nodes">
-                {(fields, { add, remove, move }) => (
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                      <Text type="secondary">仅维护顺序；单价来自右侧工序库</Text>
-                      <Button
-                        type="primary"
-                        size="small"
-                        icon={<PlusOutlined />}
-                        title="添加环节"
-                        aria-label="添加环节"
-                        onClick={() => add({ name: '' })}
-                        disabled={progressSaving}
-                      />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      {fields.map((f, idx) => (
-                        <div
-                          key={f.key}
-                          onDragOver={(e) => {
-                            if (progressSaving) return;
-                            e.preventDefault();
-                            if (nodeDragOverIndex !== idx) setNodeDragOverIndex(idx);
-                          }}
-                          onDragLeave={() => {
-                            if (nodeDragOverIndex === idx) setNodeDragOverIndex(null);
-                          }}
-                          onDrop={(e) => {
-                            if (progressSaving) return;
-                            e.preventDefault();
-                            const from = draggingNodeIndexRef.current;
-                            if (from == null || from === idx) return;
-                            move(from, idx);
-                            draggingNodeIndexRef.current = idx;
-                            setNodeDragOverIndex(null);
-                          }}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            gap: 8,
-                            padding: 6,
-                            borderRadius: 10,
-                            background: nodeDragOverIndex === idx ? 'rgba(45, 127, 249, 0.08)' : 'transparent',
-                          }}
-                        >
-                          <span
-                            draggable={!progressSaving}
-                            onDragStart={(e) => {
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <div style={{ border: '1px solid #d9d9d9', padding: 8, borderRadius: 4 }}>
+                <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>进度节点</div>
+                <Form.List name="nodes">
+                  {(fields, { add, remove, move }) => (
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, fontSize: 11, color: '#666' }}>
+                        <span>仅维护顺序；单价来自右侧工序库</span>
+                        <Button
+                          type="primary"
+                          size="small"
+                          icon={<PlusOutlined />}
+                          onClick={() => add({ name: '' })}
+                          disabled={progressSaving}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {fields.map((f, idx) => (
+                          <div
+                            key={f.key}
+                            onDragOver={(e) => {
                               if (progressSaving) return;
-                              draggingNodeIndexRef.current = idx;
-                              setNodeDragOverIndex(null);
-                              try {
-                                e.dataTransfer.effectAllowed = 'move';
-                                e.dataTransfer.setData('text/plain', String(idx));
-                              } catch {
-                              }
+                              e.preventDefault();
+                              if (nodeDragOverIndex !== idx) setNodeDragOverIndex(idx);
                             }}
-                            onDragEnd={() => {
-                              draggingNodeIndexRef.current = null;
+                            onDragLeave={() => {
+                              if (nodeDragOverIndex === idx) setNodeDragOverIndex(null);
+                            }}
+                            onDrop={(e) => {
+                              if (progressSaving) return;
+                              e.preventDefault();
+                              const from = draggingNodeIndexRef.current;
+                              if (from == null || from === idx) return;
+                              move(from, idx);
+                              draggingNodeIndexRef.current = idx;
                               setNodeDragOverIndex(null);
                             }}
                             style={{
-                              width: 28,
-                              height: 28,
-                              borderRadius: 8,
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: 'rgba(0, 0, 0, 0.45)',
-                              background: 'rgba(0, 0, 0, 0.03)',
-                              cursor: progressSaving ? 'not-allowed' : 'grab',
-                              userSelect: 'none',
-                              marginTop: 2,
-                              flex: '0 0 auto',
+                              display: 'flex',
+                              alignItems: 'flex-start',
+                              gap: 4,
+                              padding: 2,
+                              background: nodeDragOverIndex === idx ? '#e6f7ff' : 'transparent',
                             }}
-                            aria-label="拖动排序"
-                            title="拖动排序"
                           >
-                            <HolderOutlined />
-                          </span>
-                          <Form.Item
-                            name={[f.name, 'name']}
-                            rules={[{ required: true, message: '请输入环节名称' }]}
-                            style={{ margin: 0, flex: 1 }}
-                          >
-                            <Input placeholder="例如：裁剪 / 缝制 / 后整 / 出货" />
-                          </Form.Item>
-                          <RowActions
-                            maxInline={1}
-                            actions={[
-                              {
-                                key: 'delete',
-                                label: '删除',
-                                title: '删除',
-                                icon: <DeleteOutlined />,
-                                danger: true,
-                                disabled: progressSaving,
-                                onClick: () => remove(f.name),
-                              },
-                            ]}
-                          />
-                        </div>
-                      ))}
+                            <span
+                              draggable={!progressSaving}
+                              onDragStart={(e) => {
+                                if (progressSaving) return;
+                                draggingNodeIndexRef.current = idx;
+                                setNodeDragOverIndex(null);
+                                try {
+                                  e.dataTransfer.effectAllowed = 'move';
+                                  e.dataTransfer.setData('text/plain', String(idx));
+                                } catch {
+                                }
+                              }}
+                              onDragEnd={() => {
+                                draggingNodeIndexRef.current = null;
+                                setNodeDragOverIndex(null);
+                              }}
+                              style={{
+                                width: 20,
+                                height: 20,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#999',
+                                cursor: progressSaving ? 'not-allowed' : 'grab',
+                                userSelect: 'none',
+                                fontSize: 12,
+                              }}
+                            >
+                              <HolderOutlined />
+                            </span>
+                            <Form.Item
+                              name={[f.name, 'name']}
+                              rules={[{ required: true, message: '请输入节点名称' }]}
+                              style={{ margin: 0, flex: 1 }}
+                            >
+                              <Input placeholder="生产进度" size="small" />
+                            </Form.Item>
+                            <Button
+                              type="text"
+                              size="small"
+                              danger
+                              icon={<DeleteOutlined />}
+                              disabled={progressSaving}
+                              onClick={() => remove(f.name)}
+                            />
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </Form.List>
-            </Card>
+                  )}
+                </Form.List>
+              </div>
 
-            <Card
-              size="small"
-              title="单价工序库"
-              extra={processPriceEditing?.id ? <Tag color="cyan">已存在</Tag> : <Tag>未创建</Tag>}
-              styles={{ body: { padding: 12 } }}
-            >
-              <Text type="secondary">绑定款号后会保存为该款号的工序单价模板</Text>
-              <div style={{ height: 10 }} />
-              <Form.List name="priceSteps">
-                {(fields, { add, remove }) => (
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                      <Space size={8}>
+              <div style={{ border: '1px solid #d9d9d9', padding: 8, borderRadius: 4 }}>
+                <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>单价工序库</span>
+                  {processPriceEditing?.id ? <Tag color="cyan" style={{ margin: 0, fontSize: 11 }}>已存在</Tag> : <Tag style={{ margin: 0, fontSize: 11 }}>未创建</Tag>}
+                </div>
+                <div style={{ fontSize: 11, color: '#666', marginBottom: 6 }}>绑定款号后会保存为该款号的工序单价模板</div>
+                <Form.List name="priceSteps">
+                  {(fields, { add, remove }) => (
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                         <Button
                           size="small"
                           onClick={() => {
                             const nodes = (progressForm.getFieldValue('nodes') || []) as Array<{ name?: string }>;
                             const names = nodes.map((n) => String(n?.name || '').trim()).filter(Boolean);
-                            const current = (progressForm.getFieldValue('priceSteps') || []) as Array<{ processName?: string; unitPrice?: number }>;
-                            const map = new Map(current.map((s) => [String(s?.processName || '').trim(), Number(s?.unitPrice) || 0]));
-                            const next = Array.from(new Set(names)).map((n) => ({ processName: n, unitPrice: map.get(n) ?? 0 }));
+                            const current = (progressForm.getFieldValue('priceSteps') || []) as Array<{ processName?: string; unitPrice?: number; estimatedMinutes?: number }>;
+                            const map = new Map(current.map((s) => [String(s?.processName || '').trim(), { unitPrice: Number(s?.unitPrice) || 0, estimatedMinutes: Number(s?.estimatedMinutes) || 0 }]));
+                            const next = Array.from(new Set(names)).map((n) => {
+                              const existing = map.get(n) || { unitPrice: 0, estimatedMinutes: 0 };
+                              return { processName: n, unitPrice: existing.unitPrice, estimatedMinutes: existing.estimatedMinutes };
+                            });
                             progressForm.setFieldsValue({ priceSteps: next });
                           }}
                           disabled={progressSaving}
+                          style={{ fontSize: 11 }}
                         >
-                          从环节生成
+                          从节点生成
                         </Button>
-                      </Space>
-                      <Button
-                        type="primary"
-                        size="small"
-                        icon={<PlusOutlined />}
-                        onClick={() => add({ processName: '', unitPrice: 0 })}
-                        disabled={progressSaving}
-                      />
+                        <Button
+                          type="primary"
+                          size="small"
+                          icon={<PlusOutlined />}
+                          onClick={() => add({ processName: '', unitPrice: 0, estimatedMinutes: 0 })}
+                          disabled={progressSaving}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {fields.map((f) => (
+                          <div key={f.key} style={{ display: 'flex', gap: 4, alignItems: 'flex-start' }}>
+                            <Form.Item
+                              name={[f.name, 'processName']}
+                              rules={[{ required: true, message: '请输入工序名称' }]}
+                              style={{ margin: 0, flex: 1 }}
+                            >
+                              <Input placeholder="工序名称" size="small" />
+                            </Form.Item>
+                            <Form.Item name={[f.name, 'estimatedMinutes']} style={{ margin: 0 }} tooltip="预计耗时(分钟/件)，不填则使用默认">
+                              <InputNumber min={0} step={1} precision={0} placeholder="时间(分)" size="small" style={{ width: 90 }} />
+                            </Form.Item>
+                            <Form.Item name={[f.name, 'unitPrice']} style={{ margin: 0 }}>
+                              <InputNumber min={0} step={0.01} precision={2} prefix="¥" placeholder="单价" size="small" style={{ width: 100 }} />
+                            </Form.Item>
+                            <Button
+                              type="text"
+                              size="small"
+                              danger
+                              icon={<DeleteOutlined />}
+                              disabled={progressSaving}
+                              onClick={() => remove(f.name)}
+                            />
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      {fields.map((f) => (
-                        <Space key={f.key} style={{ display: 'flex' }} align="start">
-                          <Form.Item
-                            name={[f.name, 'processName']}
-                            rules={[{ required: true, message: '请输入工序名称' }]}
-                            style={{ margin: 0, flex: 1 }}
-                          >
-                            <Input placeholder="工序名称" />
-                          </Form.Item>
-                          <Form.Item name={[f.name, 'unitPrice']} style={{ margin: 0 }}>
-                            <InputNumber min={0} step={0.01} precision={2} prefix="¥" placeholder="单价" style={{ width: 140 }} />
-                          </Form.Item>
-                          <RowActions
-                            maxInline={1}
-                            actions={[
-                              {
-                                key: 'delete',
-                                label: '删除',
-                                title: '删除',
-                                icon: <DeleteOutlined />,
-                                danger: true,
-                                disabled: progressSaving,
-                                onClick: () => remove(f.name),
-                              },
-                            ]}
-                          />
-                        </Space>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </Form.List>
-            </Card>
-          </div>
-        </Form>
+                  )}
+                </Form.List>
+              </div>
+            </div>
+          </Form>
+        </div>
       </ResizableModal>
     </Layout>
   );

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AutoComplete, Button, Card, Col, DatePicker, Form, Input, InputNumber, Modal, Row, Select, Space, Tabs, Tag, message } from 'antd';
+import { App, AutoComplete, Button, Card, Col, DatePicker, Form, Input, InputNumber, Modal, Row, Select, Space, Tabs, Tag } from 'antd';
 import { ShoppingCartOutlined } from '@ant-design/icons';
+import { useSync } from '../../utils/syncManager';
 
 import dayjs from 'dayjs';
 import Layout from '../../components/Layout';
@@ -16,6 +17,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { StyleAttachmentsButton, StyleCoverThumb } from '../../components/StyleAssets';
 import { getMaterialTypeCategory } from '../../utils/materialType';
 import { normalizeCategoryQuery, toCategoryCn } from '../../utils/styleCategory';
+import { useViewport } from '../../utils/useViewport';
 type OrderLine = {
   id: string;
   color: string;
@@ -46,6 +48,7 @@ const defaultProgressNodes: ProgressNode[] = [
 ];
 
 const OrderManagement: React.FC = () => {
+  const { modal, message } = App.useApp();
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams();
@@ -58,7 +61,7 @@ const OrderManagement: React.FC = () => {
       return raw;
     }
   }, [params]);
-  const [viewportWidth, setViewportWidth] = useState<number>(() => (typeof window === 'undefined' ? 1200 : window.innerWidth));
+  const { isMobile, isTablet, modalWidth } = useViewport();
   const [queryParams, setQueryParams] = useState<StyleQueryParams>({
     page: 1,
     pageSize: 10,
@@ -89,17 +92,7 @@ const OrderManagement: React.FC = () => {
 
   const [progressNodes, setProgressNodes] = useState<ProgressNode[]>(defaultProgressNodes);
 
-  const isMobile = viewportWidth < 768;
-  const isTablet = viewportWidth >= 768 && viewportWidth < 1024;
-  const modalWidth = isMobile ? '96vw' : isTablet ? '66vw' : '60vw';
   const modalInitialHeight = 720;
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const onResize = () => setViewportWidth(window.innerWidth);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
 
   const normalizeMatchKey = (v: any) => String(v || '').trim().replace(/\s+/g, ' ').toLowerCase();
 
@@ -615,7 +608,7 @@ const OrderManagement: React.FC = () => {
 
   const confirmPricingReady = () =>
     new Promise<boolean>((resolve) => {
-      Modal.confirm({
+      modal.confirm({
         title: '下单提醒',
         content: '请确认单价流程维护已完成。',
         okText: '确认下单',
@@ -749,6 +742,40 @@ const OrderManagement: React.FC = () => {
   useEffect(() => {
     fetchStyles();
   }, [queryParams]);
+
+  // 实时同步：60秒自动轮询更新款式列表
+  useSync(
+    'order-management-styles',
+    async () => {
+      try {
+        const response = await api.get<any>('/style/info/list', { params: queryParams });
+        const result = response as any;
+        if (result.code === 200) {
+          return {
+            records: result.data.records || [],
+            total: result.data.total || 0
+          };
+        }
+        return null;
+      } catch (error) {
+        console.error('[实时同步] 获取款式列表失败', error);
+        return null;
+      }
+    },
+    (newData, oldData) => {
+      if (oldData !== null && newData) {
+        setStyles(newData.records);
+        setTotal(newData.total);
+        console.log('[实时同步] 订单管理款式数据已更新', { oldCount: oldData.records.length, newCount: newData.records.length });
+      }
+    },
+    {
+      interval: 60000,
+      enabled: !loading && !visible,
+      pauseOnHidden: true,
+      onError: (error) => console.error('[实时同步] 订单管理款式同步错误', error)
+    }
+  );
 
   useEffect(() => {
     fetchFactories();

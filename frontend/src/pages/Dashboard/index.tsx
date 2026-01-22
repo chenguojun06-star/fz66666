@@ -13,6 +13,7 @@ import {
 import Layout from '../../components/Layout';
 import api from '../../utils/api';
 import errorHandler from '../../utils/errorHandler';
+import { useSync } from '../../utils/syncManager';
 import './styles.css';
 
 interface DashboardStats {
@@ -23,7 +24,7 @@ interface DashboardStats {
   todayScanCount: number;
   warehousingOrderCount: number;
   unqualifiedQuantity: number;
-  urgentEventCount: number;
+  urgentEventCount: number; // 紧急事件（包含各种超期提醒）
 }
 
 interface RecentActivity {
@@ -111,6 +112,54 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     fetchDashboard();
   }, [dateRange?.[0], dateRange?.[1], brand, factory]);
+
+  // 实时同步：60秒自动轮询更新统计数据
+  useSync(
+    'dashboard-stats',
+    async () => {
+      const response = await api.get<any>('/dashboard', {
+        params: {
+          startDate: dateRange[0],
+          endDate: dateRange[1],
+          brand,
+          factory
+        }
+      });
+      const result = response as any;
+      if (result?.code === 200) {
+        return result.data || {};
+      }
+      // 返回 null 表示获取失败但不算错误
+      return null;
+    },
+    (newData, oldData) => {
+      if (oldData !== null && newData) {
+        // 数据有变化，静默更新
+        setStats({
+          styleCount: newData.styleCount ?? 0,
+          productionCount: newData.productionCount ?? 0,
+          pendingReconciliationCount: newData.pendingReconciliationCount ?? 0,
+          paymentApprovalCount: newData.paymentApprovalCount ?? 0,
+          todayScanCount: newData.todayScanCount ?? 0,
+          warehousingOrderCount: newData.warehousingOrderCount ?? 0,
+          unqualifiedQuantity: newData.unqualifiedQuantity ?? 0,
+          urgentEventCount: newData.urgentEventCount ?? 0,
+        });
+        setRecentActivities(newData.recentActivities ?? []);
+        console.log('[实时同步] 仪表盘数据已更新');
+      }
+    },
+    {
+      interval: 60000, // 60秒轮询（统计数据不需要太频繁）
+      pauseOnHidden: true,
+      onError: (error: any) => {
+        // 只在非认证错误时显示提示
+        if (error?.status !== 401 && error?.status !== 403) {
+          console.error('[实时同步] 仪表盘数据同步失败:', error?.message || error);
+        }
+      }
+    }
+  );
 
   return (
     <Layout>
@@ -273,7 +322,7 @@ const Dashboard: React.FC = () => {
                 </a>
                 <a href="/system/factory" className="quick-entry-item quick-entry-item--factory">
                   <span className="entry-icon entry-icon--factory"><ApartmentOutlined /></span>
-                  <span className="entry-label">加工厂管理</span>
+                  <span className="entry-label">供应商管理</span>
                 </a>
               </div>
             </div>

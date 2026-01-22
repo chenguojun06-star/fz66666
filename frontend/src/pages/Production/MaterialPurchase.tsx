@@ -3,6 +3,7 @@ import { Button, Card, Input, Select, Space, Tag, Form, Row, Col, InputNumber, U
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, SearchOutlined, EyeOutlined, EditOutlined, UploadOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
+import { QRCodeCanvas } from 'qrcode.react';
 import Layout from '../../components/Layout';
 import ResizableModal from '../../components/common/ResizableModal';
 import ResizableTable from '../../components/common/ResizableTable';
@@ -14,6 +15,8 @@ import { getMaterialTypeCategory, getMaterialTypeLabel, getMaterialTypeSortKey, 
 import { StyleAttachmentsButton, StyleCoverThumb } from '../../components/StyleAssets';
 import { useLocation } from 'react-router-dom';
 import { isSupervisorOrAboveUser, useAuth } from '../../utils/authContext';
+import { useSync } from '../../utils/syncManager';
+import { useViewport } from '../../utils/useViewport';
 import './styles.css';
 
 const { Option } = Select;
@@ -27,7 +30,7 @@ const MATERIAL_DB_QUERY_STORAGE_KEY = 'MaterialPurchase.materialDatabaseQueryPar
 const MaterialPurchase: React.FC = () => {
   const location = useLocation();
   const { user } = useAuth();
-  const [viewportWidth, setViewportWidth] = useState<number>(() => (typeof window === 'undefined' ? 1200 : window.innerWidth));
+  const { isMobile, modalWidth } = useViewport();
 
   const isSupervisorOrAbove = useMemo(() => isSupervisorOrAboveUser(user), [user]);
 
@@ -96,6 +99,39 @@ const MaterialPurchase: React.FC = () => {
     return Array.from(new Set(purchaseList.map((r: any) => String(r?.orderId || '').trim()).filter(Boolean)));
   }, [purchaseList]);
 
+  // 按订单分组采购单数据
+  const groupedPurchaseList = useMemo(() => {
+    const groups = new Map<string, MaterialPurchaseType[]>();
+
+    purchaseList.forEach((item) => {
+      const orderNo = String(item.orderNo || '').trim();
+      if (!orderNo) return;
+
+      if (!groups.has(orderNo)) {
+        groups.set(orderNo, []);
+      }
+      groups.get(orderNo)!.push(item);
+    });
+
+    // 转换为表格需要的数据格式
+    return Array.from(groups.entries()).map(([orderNo, items]) => {
+      const first = items[0];
+      return {
+        key: orderNo,
+        orderNo,
+        styleNo: first.styleNo,
+        styleName: first.styleName,
+        styleId: first.styleId,
+        styleCover: first.styleCover,
+        orderId: (first as any).orderId,
+        purchaseCount: items.length,
+        totalQuantity: items.reduce((sum, item) => sum + (Number(item.purchaseQuantity) || 0), 0),
+        totalArrived: items.reduce((sum, item) => sum + (Number(item.arrivedQuantity) || 0), 0),
+        children: items,
+      };
+    });
+  }, [purchaseList]);
+
   const orderFrozen = useProductionOrderFrozenCache(frozenOrderIds, { rule: 'status', acceptAnyData: true });
 
   const watchedUnitPrice = Form.useWatch('unitPrice', form);
@@ -132,17 +168,7 @@ const MaterialPurchase: React.FC = () => {
   const [materialDatabaseForm] = Form.useForm();
   const [materialDatabaseImageFiles, setMaterialDatabaseImageFiles] = useState<UploadFile[]>([]);
 
-  const isMobile = viewportWidth < 768;
-  const isTablet = viewportWidth >= 768 && viewportWidth < 1024;
-  const modalWidth = isMobile ? '96vw' : isTablet ? '66vw' : '60vw';
   const modalInitialHeight = 720;
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const onResize = () => setViewportWidth(window.innerWidth);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -332,6 +358,48 @@ const MaterialPurchase: React.FC = () => {
       fetchMaterialDatabaseList();
     }
   }, [queryParams, materialDatabaseQueryParams, activeTabKey]);
+
+  // 实时同步：30秒自动轮询更新物料采购数据
+  // 采购状态需要实时更新，确保采购进度及时同步
+  useSync(
+    'material-purchase-list',
+    async () => {
+      try {
+        const response = await api.get<any>('/production/purchase/list', { params: queryParams });
+        const result = response as any;
+        if (result.code === 200) {
+          return {
+            records: result.data.records || [],
+            total: result.data.total || 0
+          };
+        }
+        return null;
+      } catch (error) {
+        console.error('[实时同步] 获取物料采购列表失败', error);
+        return null;
+      }
+    },
+    (newData, oldData) => {
+      if (oldData !== null && newData) {
+        setPurchaseList(newData.records);
+        setTotal(newData.total);
+        console.log('[实时同步] 物料采购数据已更新', {
+          oldCount: oldData.records.length,
+          newCount: newData.records.length,
+          oldTotal: oldData.total,
+          newTotal: newData.total
+        });
+      }
+    },
+    {
+      interval: 30000, // 30秒轮询，采购状态实时性要求高
+      enabled: !loading && activeTabKey === 'purchase' && !visible, // 加载中、非采购页签或弹窗打开时暂停
+      pauseOnHidden: true, // 页面隐藏时暂停
+      onError: (error) => {
+        console.error('[实时同步] 物料采购数据同步错误', error);
+      }
+    }
+  );
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -725,14 +793,14 @@ const MaterialPurchase: React.FC = () => {
           .kv b{display:block;color:#111;margin-top:2px;font-size:13px}
           .block{margin-top:14px}
           .size-table{border-collapse:collapse;font-size:12px}
-          .size-table th,.size-table td{border:1px solid #e6e8f0;padding:6px 8px;white-space:nowrap}
+          .size-table th,.size-table td{border:1px solid #d1d5db;padding:6px 8px;white-space:nowrap;vertical-align:middle;text-align:center}
           .size-table .row-head{background:#fafafa}
-          .size-table .total-cell{min-width:140px;text-align:left;background:#fafafa}
+          .size-table .total-cell{min-width:140px;text-align:center;background:#fafafa}
           .section{margin-top:18px}
           .section h3{margin:0 0 8px 0;font-size:14px}
           .data-table{width:100%;border-collapse:collapse;font-size:12px}
-          .data-table th,.data-table td{border:1px solid #e6e8f0;padding:6px 8px;vertical-align:top}
-          .data-table th{background:#fafafa;text-align:left}
+          .data-table th,.data-table td{border:1px solid #d1d5db;padding:6px 8px;vertical-align:middle;text-align:center}
+          .data-table th{background:#fafafa;text-align:center}
           .data-table .num{text-align:right;white-space:nowrap}
           .empty{text-align:center;color:#999}
           .actions{display:flex;gap:8px;justify-content:flex-end}
@@ -1010,6 +1078,97 @@ const MaterialPurchase: React.FC = () => {
     openReturnConfirm([record]);
   };
 
+  // 物料采购表格列定义（分组视图）
+  const purchaseGroupColumns = [
+    {
+      title: '图片',
+      dataIndex: 'styleCover',
+      key: 'styleCover',
+      width: 72,
+      render: (_: any, record: any) => (
+        <StyleCoverThumb styleId={record.styleId} styleNo={record.styleNo} src={record.styleCover || null} size={48} borderRadius={6} />
+      )
+    },
+    {
+      title: '订单号',
+      dataIndex: 'orderNo',
+      key: 'orderNo',
+      width: 120,
+      ellipsis: true,
+      render: (v: any) => (
+        <span className="order-no-compact">{String(v || '').trim() || '-'}</span>
+      ),
+    },
+    {
+      title: '款号',
+      dataIndex: 'styleNo',
+      key: 'styleNo',
+      width: 100,
+      ellipsis: true,
+    },
+    {
+      title: '款名',
+      dataIndex: 'styleName',
+      key: 'styleName',
+      width: 140,
+      ellipsis: true,
+    },
+    {
+      title: '采购单数',
+      dataIndex: 'purchaseCount',
+      key: 'purchaseCount',
+      width: 100,
+      align: 'center' as const,
+      render: (v: any) => `${v || 0} 个`,
+    },
+    {
+      title: '总采购数量',
+      dataIndex: 'totalQuantity',
+      key: 'totalQuantity',
+      width: 110,
+      align: 'right' as const,
+    },
+    {
+      title: '总到货数量',
+      dataIndex: 'totalArrived',
+      key: 'totalArrived',
+      width: 110,
+      align: 'right' as const,
+    },
+    {
+      title: '待到数量',
+      key: 'remainingQuantity',
+      width: 100,
+      align: 'right' as const,
+      render: (_: any, record: any) => {
+        const total = Number(record?.totalQuantity || 0);
+        const arrived = Number(record?.totalArrived || 0);
+        return Math.max(0, total - arrived);
+      },
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 110,
+      render: (_: any, record: any) => {
+        // 对于分组行，显示查看详情
+        if (record.children && record.children.length > 0) {
+          return (
+            <Button
+              type="link"
+              size="small"
+              icon={<EyeOutlined />}
+              onClick={() => void openDialogSafe('view', record.children[0])}
+            >
+              查看
+            </Button>
+          );
+        }
+        return null;
+      },
+    },
+  ];
+
   // 物料采购表格列定义
   const purchaseColumns = [
     {
@@ -1027,6 +1186,9 @@ const MaterialPurchase: React.FC = () => {
       key: 'orderNo',
       width: 120,
       ellipsis: true,
+      render: (v: any) => (
+        <span className="order-no-compact">{String(v || '').trim() || '-'}</span>
+      ),
     },
     {
       title: '款号',
@@ -1470,7 +1632,7 @@ const MaterialPurchase: React.FC = () => {
     <Layout>
       <div>
         <Card className="page-card">
-          {/* Tab切换 */}
+          {/* 页签切换 */}
           <Tabs
             activeKey={activeTabKey}
             onChange={(k) => {
@@ -1669,12 +1831,94 @@ const MaterialPurchase: React.FC = () => {
 
                     {/* 表格区 */}
                     <ResizableTable
-                      columns={purchaseColumns}
-                      dataSource={purchaseList}
-                      rowKey="id"
+                      columns={purchaseGroupColumns}
+                      dataSource={groupedPurchaseList}
+                      rowKey="key"
                       loading={loading}
                       scroll={{ x: 'max-content', y: isMobile ? 360 : 560 }}
                       size={isMobile ? 'small' : 'middle'}
+                      expandable={{
+                        expandedRowRender: (record: any) => {
+                          const items = record.children || [];
+                          return (
+                            <div style={{ padding: '12px 24px', background: '#fafafa' }}>
+                              <div style={{ marginBottom: 8, fontWeight: 500, color: '#666' }}>采购明细（{items.length}项）</div>
+                              {items.map((item: any, index: number) => (
+                                <Card
+                                  key={item.id || index}
+                                  size="small"
+                                  style={{ marginBottom: 8 }}
+                                  title={
+                                    <Space>
+                                      <Tag color={
+                                        getMaterialTypeCategory(item.materialType) === 'accessory' ? 'purple' :
+                                          getMaterialTypeCategory(item.materialType) === 'lining' ? 'cyan' : 'geekblue'
+                                      }>
+                                        {getMaterialTypeLabel(item.materialType)}
+                                      </Tag>
+                                      <span>{item.materialName || '-'}</span>
+                                    </Space>
+                                  }
+                                  extra={
+                                    <Space>
+                                      <Tag color={getStatusConfig(item.status).color}>
+                                        {getStatusConfig(item.status).text}
+                                      </Tag>
+                                      <RowActions
+                                        actions={[
+                                          {
+                                            key: 'view',
+                                            label: '查看',
+                                            icon: <EyeOutlined />,
+                                            onClick: () => void openDialogSafe('view', item),
+                                            primary: true,
+                                          },
+                                        ]}
+                                      />
+                                    </Space>
+                                  }
+                                >
+                                  <Row gutter={[16, 8]}>
+                                    <Col xs={12} sm={8} md={6}>
+                                      <div style={{ fontSize: 12, color: '#999' }}>采购单号</div>
+                                      <div>{item.purchaseNo || '-'}</div>
+                                    </Col>
+                                    <Col xs={12} sm={8} md={6}>
+                                      <div style={{ fontSize: 12, color: '#999' }}>物料编码</div>
+                                      <div>{item.materialCode || '-'}</div>
+                                    </Col>
+                                    <Col xs={12} sm={8} md={6}>
+                                      <div style={{ fontSize: 12, color: '#999' }}>规格</div>
+                                      <div>{item.specifications || '-'}</div>
+                                    </Col>
+                                    <Col xs={12} sm={8} md={6}>
+                                      <div style={{ fontSize: 12, color: '#999' }}>供应商</div>
+                                      <div>{item.supplierName || '-'}</div>
+                                    </Col>
+                                    <Col xs={12} sm={8} md={6}>
+                                      <div style={{ fontSize: 12, color: '#999' }}>采购数量</div>
+                                      <div>{item.purchaseQuantity || 0} {item.unit || ''}</div>
+                                    </Col>
+                                    <Col xs={12} sm={8} md={6}>
+                                      <div style={{ fontSize: 12, color: '#999' }}>到货数量</div>
+                                      <div>{item.arrivedQuantity || 0} {item.unit || ''}</div>
+                                    </Col>
+                                    <Col xs={12} sm={8} md={6}>
+                                      <div style={{ fontSize: 12, color: '#999' }}>单价</div>
+                                      <div>¥{Number.isFinite(Number(item.unitPrice)) ? Number(item.unitPrice).toFixed(2) : '-'}</div>
+                                    </Col>
+                                    <Col xs={12} sm={8} md={6}>
+                                      <div style={{ fontSize: 12, color: '#999' }}>领取人</div>
+                                      <div>{item.receiverName || '-'}</div>
+                                    </Col>
+                                  </Row>
+                                </Card>
+                              ))}
+                            </div>
+                          );
+                        },
+                        rowExpandable: (record: any) => (record.children && record.children.length > 0),
+                      }}
                       pagination={{
                         current: queryParams.page,
                         pageSize: queryParams.pageSize,
@@ -1972,6 +2216,9 @@ const MaterialPurchase: React.FC = () => {
                     key: 'orderNo',
                     width: 120,
                     ellipsis: true,
+                    render: (v: any) => (
+                      <span className="order-no-compact">{String(v || '').trim() || '-'}</span>
+                    ),
                   },
                   {
                     title: '款号',
@@ -2061,6 +2308,24 @@ const MaterialPurchase: React.FC = () => {
                       ) : (
                         <div className="purchase-detail-cover purchase-detail-cover-empty" />
                       )}
+                      {currentPurchase?.orderNo && (
+                        <div style={{ marginTop: 12, textAlign: 'center' }}>
+                          <QRCodeCanvas
+                            value={JSON.stringify({
+                              type: 'order',
+                              orderNo: currentPurchase.orderNo,
+                              styleNo: currentPurchase.styleNo,
+                              styleName: currentPurchase.styleName,
+                              purchaseCount: detailPurchases.length
+                            })}
+                            size={120}
+                            level="M"
+                            includeMargin
+                          />
+                          <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>订单号</div>
+                          <div style={{ fontSize: 10, color: '#999', marginTop: 2 }}>{currentPurchase.orderNo}</div>
+                        </div>
+                      )}
                     </div>
                   </Col>
                   <Col xs={24} md={16} lg={18}>
@@ -2069,7 +2334,7 @@ const MaterialPurchase: React.FC = () => {
                         <Col xs={24} sm={12} lg={8}>
                           <div className="purchase-detail-field">
                             <div className="purchase-detail-label">订单号</div>
-                            <div className="purchase-detail-value">{currentPurchase?.orderNo || '-'}</div>
+                            <div className="purchase-detail-value order-no-compact">{currentPurchase?.orderNo || '-'}</div>
                           </div>
                         </Col>
                         <Col xs={24} sm={12} lg={8}>
@@ -2130,7 +2395,63 @@ const MaterialPurchase: React.FC = () => {
                   </Col>
                 </Row>
 
-                <Card size="small" title="需要采购的面辅料（只读）" loading={detailLoading}>
+                <Card
+                  size="small"
+                  title="需要采购的面辅料（只读）"
+                  loading={detailLoading}
+                  extra={
+                    <Space>
+                      <Button
+                        size="small"
+                        type="primary"
+                        disabled={!detailPurchases.some((p) => p.status === 'pending')}
+                        onClick={async () => {
+                          const targets = detailPurchases.filter((p) => p.status === 'pending' && String(p.id || '').trim());
+                          if (!targets.length) {
+                            message.info('没有待领取的采购任务');
+                            return;
+                          }
+                          try {
+                            const res = await api.post('/production/purchase/batch-receive', {
+                              purchaseIds: targets.map((t) => t.id),
+                            });
+                            const result = res as any;
+                            if (result.code === 200) {
+                              message.success(`成功领取${targets.length}个采购任务`);
+                              const no = String(currentPurchase?.orderNo || '').trim();
+                              if (no) loadDetailByOrderNo(no);
+                              fetchMaterialPurchaseList();
+                            } else {
+                              message.error(result.message || '领取失败');
+                            }
+                          } catch (e) {
+                            message.error('领取失败');
+                          }
+                        }}
+                      >
+                        一键领取全部
+                      </Button>
+                      <Button
+                        size="small"
+                        disabled={!detailPurchases.some((p) => p.status === 'received' || p.status === 'partial' || p.status === 'completed')}
+                        onClick={() => {
+                          const targets = detailPurchases.filter((p) =>
+                            (p.status === 'received' || p.status === 'partial' || p.status === 'completed') &&
+                            Number((p as any)?.returnConfirmed || 0) !== 1 &&
+                            String(p?.id || '').trim()
+                          );
+                          if (!targets.length) {
+                            message.info('没有可回料确认的采购任务');
+                            return;
+                          }
+                          openReturnConfirm(targets);
+                        }}
+                      >
+                        批量回料确认
+                      </Button>
+                    </Space>
+                  }
+                >
                   {(() => {
                     const sections = ([
                       { key: 'fabric', title: '面料' },
@@ -2154,6 +2475,30 @@ const MaterialPurchase: React.FC = () => {
                           size={isMobile ? 'small' : 'middle'}
                           scroll={{ x: 'max-content', y: 320 }}
                           columns={[
+                            {
+                              title: '二维码',
+                              key: 'qrcode',
+                              width: 100,
+                              align: 'center' as const,
+                              render: (_: any, record: any) => {
+                                const qrValue = JSON.stringify({
+                                  purchaseNo: record.purchaseNo,
+                                  materialCode: record.materialCode,
+                                  materialName: record.materialName,
+                                  materialType: record.materialType,
+                                  id: record.id
+                                });
+                                return (
+                                  <div style={{ padding: 4 }}>
+                                    <QRCodeCanvas
+                                      value={qrValue}
+                                      size={60}
+                                      level="M"
+                                    />
+                                  </div>
+                                );
+                              },
+                            },
                             {
                               title: '类型',
                               dataIndex: 'materialType',
@@ -2262,7 +2607,7 @@ const MaterialPurchase: React.FC = () => {
                     return (
                       <Collapse
                         size="small"
-                        defaultActiveKey={[]}
+                        defaultActiveKey={items.map(x => x.key)}
                         items={items as any}
                       />
                     );
@@ -2409,7 +2754,7 @@ const MaterialPurchase: React.FC = () => {
                       <tr key={String((t as any)?.id || idx)}>
                         <td style={{ padding: '8px 10px', borderBottom: '1px solid #f5f5f5' }}>
                           <div style={{ fontWeight: 600, color: '#1f1f1f' }}>{String((t as any)?.materialName || '-')}</div>
-                          <div style={{ fontSize: 12, color: '#8c8c8c' }}>{String((t as any)?.materialCode || '')}</div>
+                          <div style={{ fontSize: 'var(--font-size-sm)', color: '#8c8c8c' }}>{String((t as any)?.materialCode || '')}</div>
                           <Form.Item name={['items', idx, 'purchaseId']} initialValue={String((t as any)?.id || '')} hidden>
                             <Input />
                           </Form.Item>
@@ -2525,7 +2870,7 @@ const MaterialPurchase: React.FC = () => {
                     {materialDatabaseImageFiles.length ? null : (
                       <div>
                         <UploadOutlined />
-                        <div style={{ marginTop: 8, fontSize: 12 }}>上传</div>
+                        <div style={{ marginTop: 8, fontSize: 'var(--font-size-sm)' }}>上传</div>
                       </div>
                     )}
                   </Upload>

@@ -64,3 +64,11 @@
   display: flex;
   justify-content: center;
 }
+
+.permission-tree {
+  border: 1px solid #f0f0f0;
+  padding: 12px;
+  background: #fff;
+  max-height: 300px;
+  overflow-y: auto;
+}

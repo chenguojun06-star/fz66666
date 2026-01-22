@@ -247,6 +247,7 @@ public class CuttingTaskOrchestrator {
     public CuttingTask rollback(Map<String, Object> body) {
         String taskId = getTrimmedText(body, "taskId");
         String operatorIdStr = getTrimmedText(body, "operatorId");
+        String reason = getTrimmedText(body, "reason");
 
         if (!StringUtils.hasText(taskId)) {
             throw new IllegalArgumentException("参数错误");
@@ -254,6 +255,10 @@ public class CuttingTaskOrchestrator {
 
         if (!StringUtils.hasText(operatorIdStr)) {
             throw new IllegalArgumentException("缺少操作人");
+        }
+
+        if (!StringUtils.hasText(reason)) {
+            throw new IllegalArgumentException("退回原因不能为空");
         }
 
         Long operatorId;
@@ -277,6 +282,8 @@ public class CuttingTaskOrchestrator {
         if (!ok) {
             throw new IllegalStateException("退回失败");
         }
+
+        cuttingTaskService.insertRollbackLog(task, operatorIdStr.trim(), operator.getName(), reason);
 
         CuttingTask updated = cuttingTaskService.getById(taskId);
         if (updated == null) {

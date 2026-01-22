@@ -73,7 +73,7 @@
 }
 
 .purchase-detail-size-total {
-  font-size: 36px;
+  font-size: var(--font-size-xl);
   font-weight: 700;
   line-height: 1;
   color: #1f1f1f;
@@ -291,7 +291,7 @@
 
 .order-flow-metric-value {
   margin-top: 2px;
-  font-size: 18px;
+  font-size: var(--font-size-xl);
   font-weight: 700;
   color: #1f1f1f;
   line-height: 1.2;
@@ -318,7 +318,7 @@
 }
 
 .order-flow-field-value {
-  font-size: 14px;
+  font-size: var(--font-size-base);
   font-weight: 700;
   color: #1f1f1f;
   overflow: hidden;
@@ -353,13 +353,13 @@
 }
 
 .order-flow-h-timeline-title-main {
-  font-size: 14px;
+  font-size: var(--font-size-base);
   font-weight: 700;
   color: #1f1f1f;
 }
 
 .order-flow-h-timeline-title-sub {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: rgba(0, 0, 0, 0.45);
   white-space: nowrap;
 }
@@ -614,6 +614,7 @@
   grid-template-columns: 120px 1fr;
   column-gap: 16px;
   align-items: start;
+  font-size: var(--font-size-base);
 }
 
 .wh-thumb {
@@ -641,11 +642,16 @@
   align-items: flex-start;
 }
 
+.wh-form-grid .modal-sticky-footer {
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+}
+
 .wh-label {
   width: 72px;
   flex: 0 0 auto;
-  color: #595959;
-  font-size: var(--font-size-sm);
+  color: var(--neutral-text);
+  font-size: var(--font-size-base);
   line-height: 32px;
   white-space: nowrap;
 }
@@ -766,12 +772,12 @@
 }
 
 .cutting-entry-label {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: rgba(0, 0, 0, 0.45);
 }
 
 .cutting-entry-value {
-  font-size: 15px;
+  font-size: var(--font-size-base);
   font-weight: 700;
   color: rgba(0, 0, 0, 0.88);
   overflow: hidden;

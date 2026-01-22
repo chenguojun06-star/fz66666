@@ -391,6 +391,56 @@ public class ProductionOrderScanRecordDomainService {
         scanRecordMapper.insert(sr);
     }
 
+    public void insertOrderOperationRecord(ProductionOrder order, String action, String remark, LocalDateTime now) {
+        if (order == null || !StringUtils.hasText(order.getId())) {
+            return;
+        }
+
+        String act = StringUtils.hasText(action) ? action.trim() : null;
+        if (!StringUtils.hasText(act)) {
+            return;
+        }
+
+        UserContext ctx = UserContext.get();
+        String operatorId = ctx == null ? null : ctx.getUserId();
+        String operatorName = ctx == null ? null : ctx.getUsername();
+        String operatorNameTrimmed = operatorName == null ? null : operatorName.trim();
+
+        String r = StringUtils.hasText(remark) ? remark.trim() : "";
+        String finalRemark = StringUtils.hasText(r) ? (act + "：" + r) : act;
+        if (finalRemark.length() > 900) {
+            finalRemark = finalRemark.substring(0, 900);
+        }
+
+        LocalDateTime t = now == null ? LocalDateTime.now() : now;
+        ScanRecord sr = new ScanRecord();
+        sr.setRequestId("ORDER_OP:" + act + ":" + order.getId() + ":" + UUID.randomUUID().toString().replace("-", ""));
+        sr.setOrderId(order.getId());
+        sr.setOrderNo(order.getOrderNo());
+        sr.setStyleId(order.getStyleId());
+        sr.setStyleNo(order.getStyleNo());
+        sr.setColor(order.getColor());
+        sr.setSize(order.getSize());
+        sr.setQuantity(0);
+        sr.setProgressStage(act);
+        sr.setProcessName(act);
+        String opId = operatorId == null ? null : operatorId.trim();
+        sr.setOperatorId(StringUtils.hasText(opId) ? opId : null);
+        sr.setOperatorName(StringUtils.hasText(operatorNameTrimmed) ? operatorNameTrimmed : "system");
+        sr.setScanType("production");
+        sr.setScanResult("success");
+        sr.setRemark(finalRemark);
+        sr.setScanTime(t);
+        sr.setCreateTime(t);
+        sr.setUpdateTime(t);
+
+        try {
+            scanRecordMapper.insert(sr);
+        } catch (Exception e) {
+            log.warn("Failed to insert order operation record: orderId={}, action={}", order.getId(), act, e);
+        }
+    }
+
     public void insertRollbackRecord(ProductionOrder order, String toProcessName, String remark, LocalDateTime now) {
         if (order == null || !StringUtils.hasText(order.getId())) {
             return;

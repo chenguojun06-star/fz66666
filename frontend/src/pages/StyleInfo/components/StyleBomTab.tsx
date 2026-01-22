@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Button, Input, InputNumber, Form, Select, message, Space, Tag, Modal, Table, Tabs } from 'antd';
+import { App, Button, Input, InputNumber, Form, Select, Space, Tag, Modal, Table, Tabs } from 'antd';
 import { PlusOutlined, DeleteOutlined, SaveOutlined, EditOutlined, CloseOutlined, CheckOutlined } from '@ant-design/icons';
 import { StyleBom, TemplateLibrary } from '../../../types/style';
 import api from '../../../utils/api';
@@ -7,6 +7,7 @@ import ResizableTable from '../../../components/common/ResizableTable';
 import RowActions from '../../../components/common/RowActions';
 import { isSupervisorOrAboveUser, useAuth } from '../../../utils/authContext';
 import { getMaterialSortWeight, getMaterialTypeLabel, normalizeMaterialType } from '../../../utils/materialType';
+import { useViewport } from '../../../utils/useViewport';
 
 interface Props {
   styleId: string | number;
@@ -49,6 +50,7 @@ const sortBomRows = (rows: StyleBom[]) => {
 
 const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
   const { user } = useAuth();
+  const { message } = App.useApp();
   const [data, setData] = useState<StyleBom[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingKey, setEditingKey] = useState('');
@@ -80,6 +82,7 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
   const locked = Boolean(readOnly);
 
   const isSupervisorOrAbove = isSupervisorOrAboveUser(user);
+  const { tableScrollY } = useViewport();
 
   const [styleNoOptions, setStyleNoOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [styleNoLoading, setStyleNoLoading] = useState(false);
@@ -1369,7 +1372,7 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
           pagination={false}
           loading={loading}
           rowKey="id"
-          scroll={{ x: 'max-content', y: typeof window === 'undefined' ? 420 : window.innerWidth < 768 ? 260 : 420 }}
+          scroll={{ x: 'max-content', y: tableScrollY }}
           storageKey={`style-bom-${String(styleId)}`}
           minColumnWidth={70}
         />
