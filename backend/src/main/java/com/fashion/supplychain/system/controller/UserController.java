@@ -103,8 +103,9 @@ public class UserController {
      * @return 操作结果
      */
     @DeleteMapping("/{id}")
-    public Result<?> deleteUser(@PathVariable Long id) {
-        userOrchestrator.delete(id);
+    public Result<?> deleteUser(@PathVariable Long id,
+            @RequestParam(required = false) String remark) {
+        userOrchestrator.delete(id, remark);
         return Result.successMessage("删除成功");
     }
 
@@ -116,8 +117,9 @@ public class UserController {
      * @return 操作结果
      */
     @PutMapping("/status")
-    public Result<?> toggleStatus(@RequestParam Long id, @RequestParam String status) {
-        userOrchestrator.toggleStatus(id, status);
+    public Result<?> toggleStatus(@RequestParam Long id, @RequestParam String status,
+            @RequestParam(required = false) String remark) {
+        userOrchestrator.toggleStatus(id, status, remark);
         return Result.successMessage("状态切换成功");
     }
 
@@ -214,5 +216,54 @@ public class UserController {
     @GetMapping("/permissions")
     public Result<?> getPermissionsByRole(@RequestParam(required = false) Long roleId) {
         return Result.success(userOrchestrator.permissionsByRole(roleId));
+    }
+    
+    /**
+     * 获取待审批用户列表
+     * 
+     * @param page     当前页码
+     * @param pageSize 每页条数
+     * @return 待审批用户列表
+     */
+    @GetMapping("/pending")
+    public Result<?> getPendingUsers(
+            @RequestParam(defaultValue = "1") Long page,
+            @RequestParam(defaultValue = "10") Long pageSize) {
+        Page<User> userPage = userOrchestrator.listPendingUsers(page, pageSize);
+        return Result.success(userPage);
+    }
+    
+    /**
+     * 批准用户
+     * 
+     * @param id 用户ID
+     * @return 操作结果
+     */
+    @PostMapping("/{id}/approve")
+    public Result<?> approveUser(@PathVariable Long id,
+            @RequestBody(required = false) User body) {
+        String remark = body == null ? null : body.getOperationRemark();
+        if (remark == null) {
+            remark = body == null ? null : body.getApprovalRemark();
+        }
+        userOrchestrator.approveUser(id, remark);
+        return Result.successMessage("用户已批准");
+    }
+    
+    /**
+     * 拒绝用户
+     * 
+     * @param id     用户ID
+     * @param reason 拒绝原因
+     * @return 操作结果
+     */
+    @PostMapping("/{id}/reject")
+    public Result<?> rejectUser(@PathVariable Long id, @RequestBody(required = false) User reason) {
+        String remark = reason == null ? null : reason.getApprovalRemark();
+        if (remark == null) {
+            remark = reason == null ? null : reason.getOperationRemark();
+        }
+        userOrchestrator.rejectUser(id, remark);
+        return Result.successMessage("用户已拒绝");
     }
 }

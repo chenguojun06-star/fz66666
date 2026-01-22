@@ -6,7 +6,9 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.template.entity.TemplateLibrary;
+import com.fashion.supplychain.template.entity.TemplateOperationLog;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
+import com.fashion.supplychain.template.service.TemplateOperationLogService;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -28,6 +30,9 @@ public class TemplateLibraryOrchestrator {
 
     @Autowired
     private StyleInfoService styleInfoService;
+
+    @Autowired
+    private TemplateOperationLogService templateOperationLogService;
 
     @Autowired
     private com.fashion.supplychain.production.orchestration.ProductionOrderOrchestrator productionOrderOrchestrator;
@@ -104,6 +109,7 @@ public class TemplateLibraryOrchestrator {
         }
 
         LocalDateTime now = LocalDateTime.now();
+        String operator = UserContext.username();
 
         TemplateLibrary created = new TemplateLibrary();
         created.setId(UUID.randomUUID().toString());
@@ -113,6 +119,7 @@ public class TemplateLibraryOrchestrator {
         created.setSourceStyleNo(StringUtils.hasText(ssn) ? ssn : null);
         created.setTemplateContent(content);
         created.setLocked(1);
+        created.setOperatorName(operator);
         created.setCreateTime(now);
         created.setUpdateTime(now);
 
@@ -147,6 +154,7 @@ public class TemplateLibraryOrchestrator {
         tpl.setLocked(1);
         String ssn = String.valueOf(tpl.getSourceStyleNo() == null ? "" : tpl.getSourceStyleNo()).trim();
         tpl.setSourceStyleNo(StringUtils.hasText(ssn) ? ssn : null);
+        tpl.setOperatorName(UserContext.username());
         LocalDateTime now = LocalDateTime.now();
         if (tpl.getCreateTime() == null) {
             tpl.setCreateTime(now);
@@ -203,6 +211,7 @@ public class TemplateLibraryOrchestrator {
                 .valueOf(tpl.getSourceStyleNo() == null ? current.getSourceStyleNo() : tpl.getSourceStyleNo()).trim();
         current.setSourceStyleNo(StringUtils.hasText(ssn) ? ssn : null);
         current.setLocked(1);
+        current.setOperatorName(UserContext.username());
         current.setUpdateTime(LocalDateTime.now());
         boolean ok = templateLibraryService.updateById(current);
         if (!ok) {
@@ -263,13 +272,17 @@ public class TemplateLibraryOrchestrator {
         return true;
     }
 
-    public boolean rollback(String id) {
+    public boolean rollback(String id, String reason) {
         if (!UserContext.isTopAdmin()) {
             throw new AccessDeniedException("无权限操作");
         }
         String tid = String.valueOf(id == null ? "" : id).trim();
         if (!StringUtils.hasText(tid)) {
             throw new IllegalArgumentException("id不能为空");
+        }
+        String remark = StringUtils.hasText(reason) ? reason.trim() : null;
+        if (!StringUtils.hasText(remark)) {
+            throw new IllegalArgumentException("reason不能为空");
         }
         TemplateLibrary current = templateLibraryService.getById(tid);
         if (current == null) {
@@ -284,7 +297,23 @@ public class TemplateLibraryOrchestrator {
         if (!ok) {
             throw new IllegalStateException("退回失败");
         }
+        saveRollbackLog(tid, remark);
         return true;
+    }
+
+    private void saveRollbackLog(String templateId, String remark) {
+        try {
+            TemplateOperationLog log = new TemplateOperationLog();
+            log.setTemplateId(templateId);
+            log.setAction("ROLLBACK");
+            UserContext ctx = UserContext.get();
+            log.setOperator(ctx != null ? ctx.getUsername() : null);
+            log.setRemark(remark);
+            log.setCreateTime(LocalDateTime.now());
+            templateOperationLogService.save(log);
+        } catch (Exception e) {
+            log.warn("Failed to save template rollback log: templateId={}", templateId, e);
+        }
     }
 
     private static boolean isLocked(TemplateLibrary tpl) {

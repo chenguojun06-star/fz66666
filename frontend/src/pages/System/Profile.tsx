@@ -23,10 +23,16 @@ const Profile: React.FC = () => {
     const [avatarUploading, setAvatarUploading] = useState(false);
     const [form] = Form.useForm();
     const avatarUrl = Form.useWatch('avatarUrl', form);
-    const themeStorageKey = 'app.theme';
+    
+    // 获取当前用户的主题存储key（每个账号独立）
+    const getUserThemeKey = () => {
+        const userId = String(user?.id || '').trim();
+        return userId ? `app.theme.user.${userId}` : 'app.theme';
+    };
+    
     const [theme, setTheme] = useState<string>(() => {
         try {
-            return localStorage.getItem(themeStorageKey) || 'default';
+            return localStorage.getItem(getUserThemeKey()) || 'default';
         } catch {
             return 'default';
         }
@@ -99,7 +105,12 @@ const Profile: React.FC = () => {
         setTheme(v);
         applyTheme(v);
         try {
-            localStorage.setItem(themeStorageKey, v);
+            const themeKey = getUserThemeKey();
+            localStorage.setItem(themeKey, v);
+            // 同时设置全局主题key供其他地方使用
+            localStorage.setItem('app.theme', v);
+            // 触发自定义事件通知 ConfigProvider 更新主题
+            window.dispatchEvent(new Event('theme-change'));
         } catch {
         }
         message.success('主题已切换');
@@ -207,10 +218,10 @@ const Profile: React.FC = () => {
                                 value={theme}
                                 onChange={onThemeChange}
                                 options={[
-                                    { value: 'default', label: '原生主题（不变）' },
-                                    { value: 'blue', label: '蓝色主题' },
-                                    { value: 'white', label: '全白主题' },
-                                    { value: 'dark', label: '高级黑主题' },
+                                    { value: 'default', label: '默认主题（浅色）' },
+                                    { value: 'blue', label: '雾霾蓝主题（浅色）' },
+                                    { value: 'white', label: '纯白主题（浅色）' },
+                                    { value: 'dark', label: '深色主题（雾黑）' },
                                 ]}
                             />
                         </div>

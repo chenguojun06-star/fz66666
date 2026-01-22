@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Card, Dropdown, Input, Select, Space, Tag, Form, message } from 'antd';
+import { Button, Card, Dropdown, Input, Select, Space, Tag, Form, message, Modal } from 'antd';
 import { CheckOutlined, DownloadOutlined, MoreOutlined, PlusOutlined, RollbackOutlined, SearchOutlined, SendOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
@@ -14,13 +14,15 @@ import { formatDateTime } from '../../utils/datetime';
 import { unwrapApiData } from '../../utils/api';
 import { getMaterialReconStatusConfig, materialReconStatusTransitions } from '../../constants/finance';
 import { isSupervisorOrAboveUser, useAuth } from '../../utils/authContext';
+import { useSync } from '../../utils/syncManager';
+import { useViewport } from '../../utils/useViewport';
 
 const { Option } = Select;
 
 const MaterialReconciliation: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth(); // 获取当前用户信息
-  const [viewportWidth, setViewportWidth] = useState<number>(() => (typeof window === 'undefined' ? 1200 : window.innerWidth));
+  const { isMobile, modalWidth } = useViewport();
   const [visible, setVisible] = useState(false);
   const [currentRecon, setCurrentRecon] = useState<MaterialReconType | null>(null);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
@@ -31,16 +33,6 @@ const MaterialReconciliation: React.FC = () => {
   const [filterForm] = Form.useForm();
   const saveFormRef = React.useRef<(() => Promise<void>) | null>(null);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const onResize = () => setViewportWidth(window.innerWidth);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
-
-  const isMobile = viewportWidth < 768;
-  const isTablet = viewportWidth >= 768 && viewportWidth < 1024;
-  const modalWidth = isMobile ? '96vw' : isTablet ? '66vw' : '60vw';
   const modalInitialHeight = 720;
 
   // 真实数据状态
@@ -177,10 +169,10 @@ const MaterialReconciliation: React.FC = () => {
 
   const batchReturn = () => {
     const picked = reconciliationList.filter((r) => selectedRowKeys.includes(String(r.id)));
-    const eligible = picked.filter((r) => r.status === 'pending' || r.status === 'verified' || r.status === 'approved');
+    const eligible = picked.filter((r) => r.status === 'verified' || r.status === 'approved' || r.status === 'paid');
     if (!eligible.length) return;
-    if (eligible.length !== picked.length) message.warning('仅可批量退回状态为“待审核/已验证/已批准”的对账单');
-    updateStatusBatch(eligible.map((r) => ({ id: String(r.id || ''), status: 'rejected' })), '退回成功');
+    if (eligible.length !== picked.length) message.warning('仅可批量退回状态为“已验证/已批准/已付款”的对账单');
+    openReturnModal(eligible.map((r) => String(r.id || '')));
   };
 
   // 权限判断函数
@@ -256,6 +248,59 @@ const MaterialReconciliation: React.FC = () => {
     }
   };
 
+  const openReturnModal = (ids: string[]) => {
+    const normalized = ids.map((id) => String(id || '').trim()).filter(Boolean);
+    if (!normalized.length) return;
+    let reasonValue = '';
+    Modal.confirm({
+      title: normalized.length > 1 ? `批量退回（${normalized.length}条）` : '退回',
+      content: (
+        <Form layout="vertical" onSubmitCapture={(e) => e.preventDefault()}>
+          <Form.Item label="退回原因">
+            <Input.TextArea
+              rows={4}
+              maxLength={200}
+              showCount
+              onChange={(e) => {
+                reasonValue = e.target.value;
+              }}
+            />
+          </Form.Item>
+        </Form>
+      ),
+      okText: '确认退回',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        const remark = String(reasonValue || '').trim();
+        if (!remark) {
+          message.error('请输入退回原因');
+          return Promise.reject(new Error('请输入退回原因'));
+        }
+        setApprovalSubmitting(true);
+        try {
+          const settled = await Promise.allSettled(
+            normalized.map((id) => materialReconciliationApi.returnMaterialReconciliation(id, remark)),
+          );
+          const okCount = settled.filter((r) => r.status === 'fulfilled' && (r.value as any)?.code === 200).length;
+          const failed = normalized.length - okCount;
+          if (okCount <= 0) {
+            message.error('退回失败');
+            return;
+          }
+          if (failed) message.error(`部分退回失败（${failed}/${normalized.length}）`);
+          else message.success('退回成功');
+          setSelectedRowKeys([]);
+          fetchReconciliationList();
+        } catch (e: any) {
+          errorHandler.handleApiError(e, '退回失败');
+        } finally {
+          setApprovalSubmitting(false);
+        }
+      },
+    });
+  };
+
   /**
    * 获取物料对账列表
    * 从后端API获取物料对账数据，并更新列表状态
@@ -282,11 +327,50 @@ const MaterialReconciliation: React.FC = () => {
   };
 
   /**
-   * 页面加载或查询参数变化时，获取物料对账列表
+   * 页面加载或查询参数变化时,获取物料对账列表
    */
   useEffect(() => {
     fetchReconciliationList();
   }, [queryParams]);
+
+  // 实时同步：45秒自动轮询更新物料对账数据
+  // 财务对账数据需要及时更新，防止多人操作时数据不一致
+  useSync(
+    'material-reconciliation-list',
+    async () => {
+      try {
+        const res = await materialReconciliationApi.getMaterialReconciliationList(queryParams);
+        const data = unwrapApiData<any>(res, '');
+        return {
+          records: data.records || [],
+          total: data.total || 0
+        };
+      } catch (error) {
+        console.error('[实时同步] 获取物料对账列表失败', error);
+        return null;
+      }
+    },
+    (newData, oldData) => {
+      if (oldData !== null && newData) {
+        setReconciliationList(newData.records);
+        setTotal(newData.total);
+        console.log('[实时同步] 物料对账数据已更新', {
+          oldCount: oldData.records.length,
+          newCount: newData.records.length,
+          oldTotal: oldData.total,
+          newTotal: newData.total
+        });
+      }
+    },
+    {
+      interval: 45000, // 45秒轮询，财务数据中等频率
+      enabled: !loading && !queryLoading && !visible, // 加载中或弹窗打开时暂停
+      pauseOnHidden: true, // 页面隐藏时暂停
+      onError: (error) => {
+        console.error('[实时同步] 物料对账数据同步错误', error);
+      }
+    }
+  );
 
   /**
    * 打开物料对账弹窗
@@ -346,7 +430,7 @@ const MaterialReconciliation: React.FC = () => {
   const MaterialThumb: React.FC = () => {
     return (
       <div style={{ width: 48, height: 48, borderRadius: 6, overflow: 'hidden', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <span style={{ color: '#ccc', fontSize: 12 }}>无图</span>
+        <span style={{ color: '#ccc', fontSize: 'var(--font-size-sm)' }}>无图</span>
       </div>
     );
   };
@@ -545,7 +629,7 @@ const MaterialReconciliation: React.FC = () => {
         const status = String(record.status || '').trim();
         const canAudit = Boolean(id) && status === 'pending' && canPerformAction('audit');
         const canSubmit = Boolean(id) && (status === 'verified' || status === 'rejected') && canPerformAction('submit');
-        const canReturn = Boolean(id) && (status === 'pending' || status === 'verified' || status === 'approved') && canPerformAction('return');
+        const canReturn = Boolean(id) && (status === 'verified' || status === 'approved' || status === 'paid') && canPerformAction('return');
 
         return (
           <RowActions
@@ -583,7 +667,7 @@ const MaterialReconciliation: React.FC = () => {
                     label: '退回',
                     title: canReturn ? '退回' : '退回(不可用)',
                     disabled: !canReturn,
-                    onClick: () => updateStatusBatch([{ id, status: 'rejected' }], '退回成功'),
+                    onClick: () => openReturnModal([id]),
                     danger: true,
                   },
                 ] as any,
@@ -642,7 +726,7 @@ const MaterialReconciliation: React.FC = () => {
                       disabled:
                         approvalSubmitting ||
                         !selectedRowKeys.length ||
-                        !reconciliationList.some((r) => selectedRowKeys.includes(String(r.id)) && (r.status === 'pending' || r.status === 'verified' || r.status === 'approved')),
+                        !reconciliationList.some((r) => selectedRowKeys.includes(String(r.id)) && (r.status === 'verified' || r.status === 'approved' || r.status === 'paid')),
                       onClick: batchReturn,
                       danger: true,
                     },

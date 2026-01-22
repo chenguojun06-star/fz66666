@@ -1,0 +1,7 @@
+.result-item:last-child {
+  border-bottom: none;
+}
+
+.result-item:active {
+  background: rgba(224, 242, 254, 0.3);
+}

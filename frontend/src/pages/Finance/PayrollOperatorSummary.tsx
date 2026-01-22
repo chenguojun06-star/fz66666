@@ -123,7 +123,7 @@ const PayrollOperatorSummary: React.FC = () => {
             totalAmount.toFixed(2),
         ].map(escapeCsvCell).join(','));
 
-        const csvContent = '\uFEFF' + csvRows.join('\n'); // BOM for UTF-8
+        const csvContent = '\uFEFF' + csvRows.join('\n'); // UTF-8 的 BOM 头，避免中文乱码
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');

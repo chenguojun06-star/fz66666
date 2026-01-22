@@ -292,79 +292,20 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
     );
   }, [contentPadding, contentShiftX, resolvedTablePadding.x, resolvedTablePadding.y]);
 
-  // 应用调整大小
-  const applyResize = React.useCallback((clientX: number, clientY: number) => {
-    if (!resizeSessionRef.current) return;
-    const { startX, startY, startWidth, startHeight, direction } = resizeSessionRef.current;
-
-    const viewportMaxWidth = typeof window !== 'undefined' ? Math.round(window.innerWidth * 0.98) : maxWidth;
-    const viewportMaxHeight = typeof window !== 'undefined' ? Math.round(window.innerHeight * 0.95) : maxHeight;
-
-    const dx = clientX - startX;
-    const dy = clientY - startY;
-    const safeMinWidth = Math.min(minWidth, viewportMaxWidth);
-    const safeMinHeight = Math.min(minHeight, viewportMaxHeight);
-    const nextWidth =
-      direction === 'x' || direction === 'both' ? clamp(startWidth + dx, safeMinWidth, viewportMaxWidth) : startWidth;
-    const nextHeight =
-      direction === 'y' || direction === 'both' ? clamp(startHeight + dy, safeMinHeight, viewportMaxHeight) : startHeight;
-    setSize({ width: nextWidth, height: nextHeight });
-  }, [maxHeight, maxWidth, minHeight, minWidth]);
+  const rafIdRef = React.useRef<number | null>(null);
 
   // 停止调整大小
   const stopResize = React.useCallback(() => {
+    // 清理待处理的动画帧
+    if (rafIdRef.current !== null) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = null;
+    }
     resizeSessionRef.current = null;
     setIsResizing(false);
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
   }, []);
-
-  // 开始调整大小
-  const startResize = React.useCallback((direction: 'both' | 'x' | 'y') => {
-    return (e: React.PointerEvent<HTMLDivElement>) => {
-      e.preventDefault();
-      e.stopPropagation();
-
-      try {
-        e.currentTarget.setPointerCapture(e.pointerId);
-      } catch {
-      }
-
-      resizeSessionRef.current = {
-        startX: e.clientX,
-        startY: e.clientY,
-        startWidth: size.width,
-        startHeight: size.height,
-        direction,
-        pointerId: e.pointerId,
-      };
-      setIsResizing(true);
-      document.body.style.cursor = direction === 'x' ? 'ew-resize' : direction === 'y' ? 'ns-resize' : 'nwse-resize';
-      document.body.style.userSelect = 'none';
-    };
-  }, [size.height, size.width]);
-
-  // 处理指针移动
-  const onHandlePointerMove = React.useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (!resizeSessionRef.current) return;
-    if (e.pointerId !== resizeSessionRef.current.pointerId) return;
-    e.preventDefault();
-    e.stopPropagation();
-    applyResize(e.clientX, e.clientY);
-  }, [applyResize]);
-
-  // 处理指针抬起
-  const onHandlePointerUp = React.useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (!resizeSessionRef.current) return;
-    if (e.pointerId !== resizeSessionRef.current.pointerId) return;
-    e.preventDefault();
-    e.stopPropagation();
-    try {
-      e.currentTarget.releasePointerCapture(e.pointerId);
-    } catch {
-    }
-    stopResize();
-  }, [stopResize]);
 
   // 打开时初始化大小
   React.useEffect(() => {
@@ -429,7 +370,7 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
             };
           });
         }
-      }, 150); // 150ms防抖
+      }, 150); // 150 毫秒防抖
     };
 
     window.addEventListener('resize', onResize);
@@ -489,27 +430,7 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
                 lineHeight: 1.4,
               },
             })}
-            {/* 调整大小手柄 */}
-            <div
-              onPointerDown={startResize('both')}
-              onPointerMove={onHandlePointerMove}
-              onPointerUp={onHandlePointerUp}
-              onPointerCancel={onHandlePointerUp}
-              style={{
-                position: 'absolute',
-                right: 12,
-                bottom: 12,
-                width: 28,
-                height: 28,
-                cursor: 'nwse-resize',
-                zIndex: 2147483647,
-                touchAction: 'none',
-                borderRadius: 6,
-                border: '1px solid rgba(0,0,0,0.12)',
-                background:
-                  'linear-gradient(135deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.12) 50%, rgba(0,0,0,0.12) 56%, rgba(0,0,0,0) 56%, rgba(0,0,0,0) 62%, rgba(0,0,0,0.12) 62%, rgba(0,0,0,0.12) 68%, rgba(0,0,0,0) 68%, rgba(0,0,0,0) 100%)',
-              }}
-            />
+
             {/* 调整大小提示 */}
             {isResizing ? (
               <div
@@ -518,7 +439,7 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
                   right: 40,
                   bottom: 10,
                   padding: '2px 8px',
-                  fontSize: 12,
+                  fontSize: 'var(--font-size-sm)',
                   lineHeight: '16px',
                   background: 'rgba(0,0,0,0.55)',
                   color: '#fff',

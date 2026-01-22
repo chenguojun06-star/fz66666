@@ -82,6 +82,12 @@ public class ProductionOrderController {
         return Result.successMessage("删除成功");
     }
 
+    @PostMapping("/scrap")
+    public Result<?> scrap(@Valid @RequestBody ScrapOrderRequest body) {
+        productionOrderOrchestrator.scrapOrder(body.getId(), body.getRemark());
+        return Result.successMessage("报废成功");
+    }
+
     /**
      * 更新生产进度
      */
@@ -126,7 +132,7 @@ public class ProductionOrderController {
 
     @PostMapping("/progress-workflow/rollback")
     public Result<?> rollbackProgressWorkflow(@Valid @RequestBody RollbackProgressWorkflowRequest body) {
-        ProductionOrder updated = productionOrderOrchestrator.rollbackProgressWorkflow(body.getId());
+        ProductionOrder updated = productionOrderOrchestrator.rollbackProgressWorkflow(body.getId(), body.getReason());
         return Result.success(updated);
     }
 
@@ -210,6 +216,30 @@ public class ProductionOrderController {
         }
     }
 
+    public static class ScrapOrderRequest {
+        @NotBlank(message = "id不能为空")
+        private String id;
+
+        @NotBlank(message = "remark不能为空")
+        private String remark;
+
+        public String getId() {
+            return id;
+        }
+
+        public void setId(String id) {
+            this.id = id;
+        }
+
+        public String getRemark() {
+            return remark;
+        }
+
+        public void setRemark(String remark) {
+            this.remark = remark;
+        }
+    }
+
     public static class CompleteProductionRequest {
         @NotBlank(message = "id不能为空")
         private String id;
@@ -285,12 +315,23 @@ public class ProductionOrderController {
         @NotBlank(message = "id不能为空")
         private String id;
 
+        @NotBlank(message = "reason不能为空")
+        private String reason;
+
         public String getId() {
             return id;
         }
 
         public void setId(String id) {
             this.id = id;
+        }
+
+        public String getReason() {
+            return reason;
+        }
+
+        public void setReason(String reason) {
+            this.reason = reason;
         }
     }
 }

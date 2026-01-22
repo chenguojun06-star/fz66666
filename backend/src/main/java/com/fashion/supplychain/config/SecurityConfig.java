@@ -2,6 +2,7 @@ package com.fashion.supplychain.config;
 
 import com.fashion.supplychain.auth.AuthTokenService;
 import com.fashion.supplychain.auth.TokenAuthFilter;
+import com.fashion.supplychain.auth.TokenSubject;
 import com.fashion.supplychain.common.UserContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationRunner;
@@ -58,9 +59,15 @@ public class SecurityConfig implements WebMvcConfigurer {
                         .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .antMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .antMatchers("/api/system/user/login").permitAll()
+                        .antMatchers("/api/auth/register").permitAll()
                         .antMatchers("/api/common/download/**").permitAll()
+                        .antMatchers(HttpMethod.GET, "/api/production/warehousing/list").permitAll()
                         .antMatchers("/api/system/user/me*", "/api/system/user/me/**").authenticated()
                         .antMatchers("/api/system/user/permissions*", "/api/system/user/permissions/**").authenticated()
+                        .antMatchers("/api/system/user/online-count").authenticated()
+                        .antMatchers("/api/system/user/pending").hasAnyAuthority("ROLE_admin", "ROLE_ADMIN", "ROLE_1")
+                        .antMatchers("/api/system/user/*/approve").hasAnyAuthority("ROLE_admin", "ROLE_ADMIN", "ROLE_1")
+                        .antMatchers("/api/system/user/*/reject").hasAnyAuthority("ROLE_admin", "ROLE_ADMIN", "ROLE_1")
                         .antMatchers("/api/wechat/mini-program/login").permitAll()
                         .antMatchers("/actuator/health", "/actuator/health/**", "/actuator/info", "/actuator/info/**").permitAll()
                         .antMatchers("/actuator/**").hasAnyAuthority(
@@ -181,15 +188,29 @@ public class SecurityConfig implements WebMvcConfigurer {
                     @NonNull Object handler) {
                 UserContext ctx = new UserContext();
 
-                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-                if (auth != null && auth.isAuthenticated() && auth.getPrincipal() != null) {
-                    ctx.setUsername(String.valueOf(auth.getPrincipal()));
-                    ctx.setUserId(auth.getCredentials() == null ? null : String.valueOf(auth.getCredentials()));
-                    ctx.setRole(extractRole(auth));
-                } else if (headerAuthEnabled && isLocalRequest(request)) {
-                    ctx.setUserId(request.getHeader("X-User-Id"));
-                    ctx.setUsername(decodeHeaderValue(request.getHeader("X-User-Name")));
-                    ctx.setRole(decodeHeaderValue(request.getHeader("X-User-Role")));
+                // 优先从TokenSubject获取完整用户信息（包括permissionRange）
+                Object tokenSubjectAttr = request.getAttribute(TokenAuthFilter.TOKEN_SUBJECT_ATTR);
+                if (tokenSubjectAttr instanceof TokenSubject) {
+                    TokenSubject subject = (TokenSubject) tokenSubjectAttr;
+                    ctx.setUserId(subject.getUserId());
+                    ctx.setUsername(subject.getUsername());
+                    ctx.setRole(subject.getRoleName());
+                    ctx.setPermissionRange(subject.getPermissionRange());
+                } else {
+                    // 回退：从SecurityContext获取基本信息
+                    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                    if (auth != null && auth.isAuthenticated() && auth.getPrincipal() != null) {
+                        ctx.setUsername(String.valueOf(auth.getPrincipal()));
+                        ctx.setUserId(auth.getCredentials() == null ? null : String.valueOf(auth.getCredentials()));
+                        ctx.setRole(extractRole(auth));
+                        // 默认权限范围
+                        ctx.setPermissionRange("all");
+                    } else if (headerAuthEnabled && isLocalRequest(request)) {
+                        ctx.setUserId(request.getHeader("X-User-Id"));
+                        ctx.setUsername(decodeHeaderValue(request.getHeader("X-User-Name")));
+                        ctx.setRole(decodeHeaderValue(request.getHeader("X-User-Role")));
+                        ctx.setPermissionRange(decodeHeaderValue(request.getHeader("X-Permission-Range")));
+                    }
                 }
                 UserContext.set(ctx);
                 return true;
@@ -267,7 +288,7 @@ public class SecurityConfig implements WebMvcConfigurer {
         if (request == null) {
             return false;
         }
-        String ip = request.getRemoteAddr();
+        String ip = resolveClientIp(request);
         if (ip == null || ip.isBlank()) {
             return false;
         }
@@ -277,6 +298,46 @@ public class SecurityConfig implements WebMvcConfigurer {
         }
         if (v.startsWith("127.")) {
             return true;
+        }
+        return isPrivateNetwork(v);
+    }
+
+    private static String resolveClientIp(HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) {
+            String first = forwarded.split(",")[0];
+            if (first != null && !first.isBlank()) {
+                return first.trim();
+            }
+        }
+        String real = request.getHeader("X-Real-IP");
+        if (real != null && !real.isBlank()) {
+            return real.trim();
+        }
+        return request.getRemoteAddr();
+    }
+
+    private static boolean isPrivateNetwork(String ip) {
+        if (ip == null || ip.isBlank()) {
+            return false;
+        }
+        String v = ip.trim();
+        if (v.startsWith("10.")) {
+            return true;
+        }
+        if (v.startsWith("192.168.")) {
+            return true;
+        }
+        if (v.startsWith("172.")) {
+            String[] parts = v.split("\\.");
+            if (parts.length > 1) {
+                try {
+                    int second = Integer.parseInt(parts[1]);
+                    return second >= 16 && second <= 31;
+                } catch (NumberFormatException e) {
+                    return false;
+                }
+            }
         }
         return false;
     }

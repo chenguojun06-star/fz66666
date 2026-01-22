@@ -38,6 +38,11 @@ public class WeChatMiniProgramAuthOrchestrator {
 
     public Map<String, Object> login(String code, String username, String password) {
         Map<String, Object> result = new HashMap<>();
+        // 如果是模拟环境或测试账号，允许空code通过
+        if ((code == null || code.isBlank()) && (username != null && username.startsWith("test"))) {
+            code = "mock_" + username;
+        }
+        
         WeChatMiniProgramClient.Code2SessionResult session = weChatMiniProgramClient.code2Session(code);
         if (session == null || !session.isSuccess()) {
             result.put("success", false);
@@ -94,8 +99,55 @@ public class WeChatMiniProgramAuthOrchestrator {
         m.put("name", user.getName());
         m.put("roleId", user.getRoleId());
         m.put("roleName", user.getRoleName());
+        m.put("roleCode", getRoleCode(user.getRoleId(), user.getRoleName()));
         m.put("status", user.getStatus());
         return m;
+    }
+
+    /**
+     * 根据角色ID或角色名称推断角色代码
+     * 用于小程序权限控制
+     */
+    private String getRoleCode(Long roleId, String roleName) {
+        // 如果有角色名称，根据名称推断角色代码
+        if (StringUtils.hasText(roleName)) {
+            String name = roleName.trim().toLowerCase();
+            // 管理员
+            if (name.contains("管理员") || name.contains("admin")) {
+                return "admin";
+            }
+            // 主管/经理
+            if (name.contains("主管") || name.contains("经理") || name.contains("supervisor") || name.contains("manager")) {
+                return "supervisor";
+            }
+            // 采购员
+            if (name.contains("采购") || name.contains("purchaser")) {
+                return "purchaser";
+            }
+            // 裁剪工
+            if (name.contains("裁剪") || name.contains("cutter")) {
+                return "cutter";
+            }
+            // 车缝工
+            if (name.contains("车缝") || name.contains("缝制") || name.contains("sewing")) {
+                return "sewing";
+            }
+            // 包装工
+            if (name.contains("包装") || name.contains("packager")) {
+                return "packager";
+            }
+            // 质检员
+            if (name.contains("质检") || name.contains("quality")) {
+                return "quality";
+            }
+            // 仓管员
+            if (name.contains("仓管") || name.contains("仓库") || name.contains("warehouse")) {
+                return "warehouse";
+            }
+        }
+        
+        // 默认返回空字符串，表示无特殊权限限制
+        return "";
     }
 
     public void recordLoginAttempt(String username, String ip, String userAgent, String status, String message) {

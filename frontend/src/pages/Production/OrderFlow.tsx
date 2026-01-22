@@ -496,7 +496,7 @@ const OrderFlow: React.FC = () => {
                   <div className="order-flow-order-col">
                     <div className="order-flow-kv">
                       <div className="order-flow-kv-label">订单号</div>
-                      <div className="order-flow-kv-value">{(order as any)?.orderNo || query.orderNo || '-'}</div>
+                      <div className="order-flow-kv-value order-no-compact">{(order as any)?.orderNo || query.orderNo || '-'}</div>
                     </div>
                     <div className="order-flow-kv">
                       <div className="order-flow-kv-label">扎数</div>

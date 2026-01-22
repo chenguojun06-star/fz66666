@@ -37,6 +37,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import com.fashion.supplychain.common.ProcessSynonymMapping;
 
 @Service
 @Slf4j
@@ -157,6 +158,10 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
             return true;
         }
         if (a.contains(b) || b.contains(a)) {
+            return true;
+        }
+        // 优先使用同义词映射表进行匹配
+        if (ProcessSynonymMapping.isEquivalent(a, b)) {
             return true;
         }
         if (isProgressOrderCreatedStageName(a) && isProgressOrderCreatedStageName(b)) {

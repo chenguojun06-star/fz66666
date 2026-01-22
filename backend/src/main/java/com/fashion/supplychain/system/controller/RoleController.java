@@ -7,7 +7,9 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 角色控制器
@@ -48,8 +50,9 @@ public class RoleController {
     }
 
     @DeleteMapping("/{id}")
-    public Result<?> deleteRole(@PathVariable Long id) {
-        roleOrchestrator.delete(id);
+    public Result<?> deleteRole(@PathVariable Long id,
+            @RequestParam(required = false) String remark) {
+        roleOrchestrator.delete(id, remark);
         return Result.successMessage("删除成功");
     }
 
@@ -60,8 +63,37 @@ public class RoleController {
 
     @PutMapping("/{id}/permission-ids")
     public Result<?> updateRolePermissionIds(@PathVariable Long id,
-            @RequestBody(required = false) List<Long> permissionIds) {
-        roleOrchestrator.updatePermissionIds(id, permissionIds);
+            @RequestBody(required = false) Object body) {
+        List<Long> permissionIds = null;
+        String remark = null;
+        if (body instanceof Map<?, ?> map) {
+            Object ids = map.get("permissionIds");
+            if (ids instanceof List<?> list) {
+                permissionIds = parseIds(list);
+            }
+            Object r = map.get("remark");
+            remark = r == null ? null : String.valueOf(r);
+        } else if (body instanceof List<?> list) {
+            permissionIds = parseIds(list);
+        }
+        roleOrchestrator.updatePermissionIds(id, permissionIds, remark);
         return Result.successMessage("保存成功");
+    }
+
+    private static List<Long> parseIds(List<?> list) {
+        if (list == null) {
+            return null;
+        }
+        List<Long> result = new ArrayList<>();
+        for (Object item : list) {
+            if (item == null) {
+                continue;
+            }
+            try {
+                result.add(Long.valueOf(String.valueOf(item)));
+            } catch (Exception e) {
+            }
+        }
+        return result;
     }
 }

@@ -467,7 +467,7 @@ public class ProductionOrderFinanceOrchestrationService {
         BigDecimal unitPrice = sr.getUnitPrice();
         if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
             try {
-                // 正确处理款号ID，可能是字符串格式
+                // 正确处理款号 ID，可能是字符串格式
                 if (StringUtils.hasText(order.getStyleId())) {
                     String sidRaw0 = order.getStyleId();
                     String sidRaw = StringUtils.hasText(sidRaw0) ? sidRaw0.trim() : null;

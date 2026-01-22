@@ -1,9 +1,10 @@
 import React, { ReactNode, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Avatar, Button, Drawer, Dropdown, message } from 'antd';
-import { CloseOutlined, DownOutlined, LogoutOutlined, MenuOutlined, MenuFoldOutlined, MenuUnfoldOutlined, RightOutlined, SettingOutlined } from '@ant-design/icons';
+import { Avatar, Button, Drawer, Dropdown, Layout as AntLayout, Menu, message } from 'antd';
+import { CloseOutlined, DownOutlined, LogoutOutlined, MenuOutlined, SettingOutlined } from '@ant-design/icons';
 import { isAdminUser as isAdminUserFn, useAuth } from '../../utils/authContext';
 import { menuConfig, resolvePermissionCode } from '../../routeConfig';
+import { useViewport } from '../../utils/useViewport';
 import './styles.css';
 
 interface LayoutProps {
@@ -21,7 +22,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const sidebarExpandedStorageKey = 'layout.sidebar.expandedKey';
   const recentPagesStorageKey = 'layout.header.recentPages';
   const maxRecentPages = 12;
 
@@ -64,34 +64,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
     return null;
   }, [getActivePath]);
-
-  const readExpandedKey = () => {
-    try {
-      const raw = localStorage.getItem(sidebarExpandedStorageKey);
-      const v = String(raw || '').trim();
-      return v || null;
-    } catch {
-      return null;
-    }
-  };
-
-  const writeExpandedKey = (key: string | null) => {
-    try {
-      if (!key) {
-        localStorage.removeItem(sidebarExpandedStorageKey);
-        return;
-      }
-      localStorage.setItem(sidebarExpandedStorageKey, key);
-    } catch {
-    }
-  };
-
-  const [expandedKeys, setExpandedKeys] = useState<string[]>(() => {
-    if (typeof window === 'undefined') return [];
-    const stored = readExpandedKey();
-    const initial = stored || activeSectionKey;
-    return initial ? [initial] : [];
-  });
 
   const readRecentPages = (): RecentPage[] => {
     try {
@@ -137,19 +109,64 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     return readRecentPages().slice(0, maxRecentPages);
   });
 
-  const [viewportWidth, setViewportWidth] = useState<number>(() => (typeof window === 'undefined' ? 1200 : window.innerWidth));
+  const { isMobile } = useViewport();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const onResize = () => setViewportWidth(window.innerWidth);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
-
   const collapsed = sidebarCollapsed;
-  const isMobile = viewportWidth < 768;
+
+  const isAdmin = useMemo(() => isAdminUserFn(user), [user]);
+
+  const hasPermissionForPath = (path: string) => {
+    if (isAdmin) return true;
+    const code = resolvePermissionCode(normalizePath(path));
+    if (!code) return true;
+    return Array.isArray(user?.permissions) && (user!.permissions.includes('all') || user!.permissions.includes(code));
+  };
+
+  // 构建 Menu items
+  const menuItems = useMemo(() => {
+    return menuConfig
+      .filter((section) => {
+        if (section.items) {
+          return section.items.some((item) => hasPermissionForPath(item.path));
+        }
+        return hasPermissionForPath(section.path!);
+      })
+      .map((section) => {
+        if (section.items) {
+          const children = section.items
+            .filter((item) => hasPermissionForPath(item.path))
+            .map((item) => ({
+              key: item.path,
+              icon: item.icon,
+              label: <Link to={item.path}>{item.label}</Link>,
+            }));
+
+          return {
+            key: section.key,
+            icon: section.icon,
+            label: section.title,
+            children: children.length > 0 ? children : undefined,
+          };
+        } else {
+          return {
+            key: section.path!,
+            icon: section.icon,
+            label: <Link to={section.path!}>{section.title}</Link>,
+          };
+        }
+      });
+  }, [menuConfig, user]);
+
+  // 获取当前选中的菜单项
+  const selectedKeys = useMemo(() => {
+    return getActivePath ? [getActivePath] : [];
+  }, [getActivePath]);
+
+  // 获取展开的菜单项
+  const defaultOpenKeys = useMemo(() => {
+    return activeSectionKey ? [activeSectionKey] : [];
+  }, [activeSectionKey]);
 
   useEffect(() => {
     if (!isMobile) {
@@ -161,44 +178,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (!isMobile) return;
     setMobileNavOpen(false);
   }, [isMobile, effectivePathname]);
-
-  useEffect(() => {
-    if (!activeSectionKey) {
-      setExpandedKeys([]);
-      writeExpandedKey(null);
-      return;
-    }
-
-    setExpandedKeys((prev) => {
-      const current = prev[0] || null;
-      if (current === activeSectionKey) return prev;
-      writeExpandedKey(activeSectionKey);
-      return [activeSectionKey];
-    });
-  }, [activeSectionKey]);
-
-  const toggleSection = (key: string) => {
-    setExpandedKeys((prev) => {
-      const isOpen = prev.includes(key);
-      const next = isOpen ? [] : [key];
-      writeExpandedKey(next[0] || null);
-      return next;
-    });
-  };
-
-  const isExpanded = (key: string) => expandedKeys.includes(key);
-
-  const isAdmin = useMemo(() => isAdminUserFn(user), [user]);
-
-  const hasPermissionForPath = (path: string) => {
-    if (isAdmin) return true;
-    const code = resolvePermissionCode(normalizePath(path));
-    if (!code) return true;
-    return Array.isArray(user?.permissions) && (user!.permissions.includes('all') || user!.permissions.includes(code));
-  };
-
-  const activePath = getActivePath;
-  const isActive = (path: string) => activePath === normalizePath(path);
 
   const resolveRecentTitle = (basePath: string | undefined, pathname: string) => {
     const base = basePath || pathname;
@@ -340,61 +319,24 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       <div className="layout-main">
         {!isMobile ? (
-          <aside className="layout-sidebar">
-            <div className="sidebar-tools">
-              <Button
-                type="text"
-                icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-                aria-label={collapsed ? '展开菜单' : '收起菜单'}
-                onClick={() => setSidebarCollapsed((v) => !v)}
-              />
-            </div>
-            <nav className="sidebar-nav">
-              {menuConfig.map((section) => (
-                <div key={section.key} className={`nav-section ${isExpanded(section.key) ? 'expanded' : ''}`}>
-                  {section.items ? (
-                    <>
-                      <div className="nav-section-header" onClick={() => toggleSection(section.key)}>
-                        <span className={`nav-section-arrow ${isExpanded(section.key) ? 'expanded' : ''}`}>
-                          <RightOutlined />
-                        </span>
-                        <span className="nav-icon">{section.icon}</span>
-                        <h3 className="nav-section-title">
-                          <span className="nav-section-title-text">{section.title}</span>
-                        </h3>
-                      </div>
-                      {isExpanded(section.key) && (
-                        <ul className="nav-list">
-                          {section.items.filter((item) => hasPermissionForPath(item.path)).map((item) => (
-                            <li key={item.path} className={`nav-item ${isActive(item.path) ? 'active' : ''}`}>
-                              <Link to={item.path} className="nav-link">
-                                <span className="nav-icon">{item.icon}</span>
-                                <span className="nav-label">{item.label}</span>
-                              </Link>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </>
-                  ) : (
-                    hasPermissionForPath(section.path!) ? (
-                      <Link to={section.path!} style={{ textDecoration: 'none' }}>
-                        <div className={`nav-section-header single-link ${isActive(section.path!) ? 'active' : ''}`}>
-                          <span className="nav-section-arrow placeholder">
-                            <RightOutlined />
-                          </span>
-                          <span className="nav-icon">{section.icon}</span>
-                          <h3 className="nav-section-title">
-                            <span className="nav-section-title-text">{section.title}</span>
-                          </h3>
-                        </div>
-                      </Link>
-                    ) : null
-                  )}
-                </div>
-              ))}
-            </nav>
-          </aside>
+          <AntLayout.Sider
+            collapsible
+            collapsed={collapsed}
+            onCollapse={setSidebarCollapsed}
+            width={180}
+            collapsedWidth={64}
+            trigger={null}
+            className="layout-sidebar"
+          >
+            <Menu
+              mode="inline"
+              selectedKeys={selectedKeys}
+              defaultOpenKeys={defaultOpenKeys}
+              items={menuItems}
+              inlineCollapsed={collapsed}
+              className="sidebar-menu"
+            />
+          </AntLayout.Sider>
         ) : (
           <Drawer
             title="菜单"
@@ -404,51 +346,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             open={mobileNavOpen}
             onClose={() => setMobileNavOpen(false)}
           >
-            <nav className="sidebar-nav sidebar-nav-drawer">
-              {menuConfig.map((section) => (
-                <div key={section.key} className={`nav-section ${isExpanded(section.key) ? 'expanded' : ''}`}>
-                  {section.items ? (
-                    <>
-                      <div className="nav-section-header" onClick={() => toggleSection(section.key)}>
-                        <span className={`nav-section-arrow ${isExpanded(section.key) ? 'expanded' : ''}`}>
-                          <RightOutlined />
-                        </span>
-                        <span className="nav-icon">{section.icon}</span>
-                        <h3 className="nav-section-title">
-                          <span className="nav-section-title-text">{section.title}</span>
-                        </h3>
-                      </div>
-                      {isExpanded(section.key) && (
-                        <ul className="nav-list">
-                          {section.items.filter((item) => hasPermissionForPath(item.path)).map((item) => (
-                            <li key={item.path} className={`nav-item ${isActive(item.path) ? 'active' : ''}`}>
-                              <Link to={item.path} className="nav-link" onClick={() => setMobileNavOpen(false)}>
-                                <span className="nav-icon">{item.icon}</span>
-                                <span className="nav-label">{item.label}</span>
-                              </Link>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </>
-                  ) : (
-                    hasPermissionForPath(section.path!) ? (
-                      <Link to={section.path!} style={{ textDecoration: 'none' }} onClick={() => setMobileNavOpen(false)}>
-                        <div className={`nav-section-header single-link ${isActive(section.path!) ? 'active' : ''}`}>
-                          <span className="nav-section-arrow placeholder">
-                            <RightOutlined />
-                          </span>
-                          <span className="nav-icon">{section.icon}</span>
-                          <h3 className="nav-section-title">
-                            <span className="nav-section-title-text">{section.title}</span>
-                          </h3>
-                        </div>
-                      </Link>
-                    ) : null
-                  )}
-                </div>
-              ))}
-            </nav>
+            <Menu
+              mode="inline"
+              selectedKeys={selectedKeys}
+              defaultOpenKeys={defaultOpenKeys}
+              items={menuItems}
+              className="sidebar-menu"
+              onClick={() => setMobileNavOpen(false)}
+            />
           </Drawer>
         )}
 

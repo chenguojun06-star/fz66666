@@ -1,0 +1,42 @@
+# 生产环境配置
+# 所有敏感配置通过环境变量注入，不要在此文件中硬编码
+
+spring:
+  datasource:
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  # 生产环境启用 Flyway 进行数据库迁移管理
+  flyway:
+    enabled: ${FLYWAY_ENABLED:true}
+
+# 生产环境日志配置 - 降低日志级别
+logging:
+  level:
+    com.fashion.supplychain: info
+    org.springframework: warn
+    org.springframework.web: warn
+    org.springframework.security: warn
+    org.apache.ibatis: warn
+    com.baomidou.mybatisplus: warn
+  file:
+    name: /logs/fashion-supplychain.log
+    max-size: 100MB
+    max-history: 30
+    total-size-cap: 5GB
+
+# 生产环境禁用数据库初始化器（使用 Flyway 管理）
+fashion:
+  db:
+    initializer-enabled: false
+  upload-path: /uploads/
+
+# 生产环境隐藏健康检查详情
+management:
+  endpoint:
+    health:
+      show-details: never

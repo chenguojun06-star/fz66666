@@ -3,8 +3,10 @@ package com.fashion.supplychain.system.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fashion.supplychain.system.entity.Role;
 import com.fashion.supplychain.system.entity.User;
 import com.fashion.supplychain.system.mapper.UserMapper;
+import com.fashion.supplychain.system.service.RoleService;
 import com.fashion.supplychain.system.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -22,6 +24,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+    
+    @Autowired
+    private RoleService roleService;
 
     @Override
     public Page<User> getUserPage(Long page, Long pageSize, String username, String name, String roleName,
@@ -58,6 +63,22 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (StringUtils.hasText(raw) && !isBcryptHash(raw)) {
             user.setPassword(passwordEncoder.encode(raw.trim()));
         }
+        
+        // 如果设置了roleId，同步设置roleName和permissionRange
+        if (user.getRoleId() != null) {
+            Role role = roleService.getById(user.getRoleId());
+            if (role != null) {
+                user.setRoleName(role.getRoleName());
+                // 根据角色的data_scope设置用户的permissionRange
+                String dataScope = role.getDataScope();
+                if ("all".equals(dataScope)) {
+                    user.setPermissionRange("all");
+                } else {
+                    user.setPermissionRange("self");
+                }
+            }
+        }
+        
         return save(user);
     }
 
@@ -76,6 +97,21 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             user.setPassword(existing.getPassword());
         } else if (!isBcryptHash(user.getPassword())) {
             user.setPassword(passwordEncoder.encode(user.getPassword().trim()));
+        }
+        
+        // 如果更新了roleId，同步更新roleName和permissionRange
+        if (user.getRoleId() != null) {
+            Role role = roleService.getById(user.getRoleId());
+            if (role != null) {
+                user.setRoleName(role.getRoleName());
+                // 根据角色的data_scope设置用户的permissionRange
+                String dataScope = role.getDataScope();
+                if ("all".equals(dataScope)) {
+                    user.setPermissionRange("all");
+                } else {
+                    user.setPermissionRange("self");
+                }
+            }
         }
 
         return updateById(user);

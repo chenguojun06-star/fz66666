@@ -224,6 +224,7 @@ const ResizableHeaderCell: React.FC<HeaderCellProps> = (cellProps) => {
     dragging: false,
     startX: 0,
     startWidth: typeof width === 'number' ? width : 0,
+    rafId: null as number | null,
   });
 
   // 处理指针按下事件
@@ -240,16 +241,30 @@ const ResizableHeaderCell: React.FC<HeaderCellProps> = (cellProps) => {
     }
   };
 
-  // 处理指针移动事件
+  // 处理指针移动事件（用 requestAnimationFrame 做帧级节流）
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!dragRef.current.dragging) return;
     if (!canResize) return;
     e.preventDefault();
     e.stopPropagation();
-    const delta = e.clientX - dragRef.current.startX;
-    const base = dragRef.current.startWidth;
-    const next = clamp(base + delta, minColumnWidth, maxColumnWidth);
-    (onResize as (w: number) => void)(next);
+    
+    // 取消上一次未执行的动画帧
+    if (dragRef.current.rafId !== null) {
+      cancelAnimationFrame(dragRef.current.rafId);
+    }
+    
+    const clientX = e.clientX;
+    const startX = dragRef.current.startX;
+    const startWidth = dragRef.current.startWidth;
+    
+    // 用 requestAnimationFrame 合并本帧更新
+    dragRef.current.rafId = requestAnimationFrame(() => {
+      const delta = clientX - startX;
+      const base = startWidth;
+      const next = clamp(base + delta, minColumnWidth, maxColumnWidth);
+      (onResize as (w: number) => void)(next);
+      dragRef.current.rafId = null;
+    });
   };
 
   // 处理指针抬起事件
@@ -257,6 +272,13 @@ const ResizableHeaderCell: React.FC<HeaderCellProps> = (cellProps) => {
     if (!dragRef.current.dragging) return;
     e.preventDefault();
     e.stopPropagation();
+    
+    // 清理待处理的动画帧
+    if (dragRef.current.rafId !== null) {
+      cancelAnimationFrame(dragRef.current.rafId);
+      dragRef.current.rafId = null;
+    }
+    
     dragRef.current.dragging = false;
     try {
       e.currentTarget.releasePointerCapture(e.pointerId);
@@ -407,7 +429,7 @@ const ResizableTable = <T extends AnyRecord>(props: ResizableTableProps<T>) => {
     setColumnOrder(nextOrder);
   }, [resolvedStorageKey]);
 
-  // 当前拖拽的列ID
+  // 当前正在拖拽的列 ID
   const draggingIdRef = React.useRef<string | null>(null);
 
   // 保存列宽到本地存储

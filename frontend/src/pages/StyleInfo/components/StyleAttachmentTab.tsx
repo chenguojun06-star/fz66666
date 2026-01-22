@@ -14,6 +14,7 @@ import api from '../../../utils/api';
 import ResizableTable from '../../../components/common/ResizableTable';
 import RowActions from '../../../components/common/RowActions';
 import { formatDateTime } from '../../../utils/datetime';
+import { useViewport } from '../../../utils/useViewport';
 
 interface Props {
   styleId: string | number;
@@ -26,8 +27,12 @@ interface Props {
 const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, readOnly, onListChange }) => {
   const [data, setData] = useState<StyleAttachment[]>([]);
   const [loading, setLoading] = useState(false);
+  const { tableScrollY } = useViewport();
 
-  const isPattern = useMemo(() => String(bizType || '').trim().toLowerCase() === 'pattern', [bizType]);
+  const isPattern = useMemo(() => {
+    const type = String(bizType || '').trim().toLowerCase();
+    return type === 'pattern' || type === 'pattern_grading';
+  }, [bizType]);
 
   const acceptExts = useMemo(() => {
     if (isPattern) {
@@ -271,6 +276,21 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
         </Space>
       )
     },
+    ...(isPattern ? [{
+      title: '版本',
+      dataIndex: 'version',
+      width: 80,
+      render: (v: number, record: any) => {
+        const version = v || 1;
+        const status = record?.status || 'active';
+        return (
+          <Space size={4}>
+            <Tag color={status === 'active' ? 'green' : 'default'}>V{version}</Tag>
+            {status === 'archived' && <Tag color="orange">历史</Tag>}
+          </Space>
+        );
+      }
+    }] : []),
     {
       title: '类型',
       dataIndex: 'fileType',
@@ -400,7 +420,7 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
         rowKey="id"
         loading={loading}
         pagination={false}
-        scroll={{ x: 'max-content', y: typeof window === 'undefined' ? 420 : window.innerWidth < 768 ? 260 : 420 }}
+        scroll={{ x: 'max-content', y: tableScrollY }}
         storageKey={`style-attachment-${String(styleId)}`}
         minColumnWidth={70}
       />

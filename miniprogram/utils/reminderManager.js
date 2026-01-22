@@ -20,7 +20,7 @@ function addReminder(reminder) {
     try {
         const reminders = getReminders();
         const id = reminder.id || `${reminder.orderNo}_${reminder.type}_${Date.now()}`;
-        
+
         // 检查是否已存在
         const existingIndex = reminders.findIndex(r => r.id === id);
         if (existingIndex >= 0) {
@@ -37,7 +37,7 @@ function addReminder(reminder) {
                 remindCount: 1,
             });
         }
-        
+
         saveReminders(reminders);
         return id;
     } catch (e) {
@@ -115,11 +115,11 @@ function checkAndShowReminders() {
         const reminders = getReminders();
         const now = Date.now();
         const needRemind = [];
-        
+
         reminders.forEach(reminder => {
             const lastRemindAt = reminder.lastRemindAt || reminder.createdAt || 0;
             const timeSinceLastRemind = now - lastRemindAt;
-            
+
             // 超过10小时才提醒
             if (timeSinceLastRemind >= REMINDER_INTERVAL) {
                 needRemind.push(reminder);
@@ -128,12 +128,12 @@ function checkAndShowReminders() {
                 reminder.remindCount = (reminder.remindCount || 0) + 1;
             }
         });
-        
+
         if (needRemind.length > 0) {
             saveReminders(reminders);
             showReminderNotification(needRemind);
         }
-        
+
         return needRemind;
     } catch (e) {
         console.error('检查提醒失败', e);
@@ -146,7 +146,7 @@ function checkAndShowReminders() {
  */
 function showReminderNotification(reminders) {
     if (!reminders || reminders.length === 0) return;
-    
+
     const typeNames = {
         procurement: '面辅料采购',
         cutting: '裁剪',
@@ -156,7 +156,7 @@ function showReminderNotification(reminders) {
         warehouse: '入库',
         packing: '包装',
     };
-    
+
     if (reminders.length === 1) {
         const r = reminders[0];
         const typeName = typeNames[r.type] || r.type;
@@ -176,11 +176,11 @@ function showReminderNotification(reminders) {
             }
             groupByType[typeName].push(r);
         });
-        
+
         const summary = Object.keys(groupByType).map(typeName => {
             return `${typeName}(${groupByType[typeName].length}个)`;
         }).join('、');
-        
+
         wx.showModal({
             title: '待处理提醒',
             content: `您有 ${reminders.length} 个待处理任务超过10小时：${summary}，请及时处理`,
@@ -211,12 +211,12 @@ function cleanupExpiredReminders() {
         const reminders = getReminders();
         const now = Date.now();
         const sevenDays = 7 * 24 * 60 * 60 * 1000;
-        
+
         const filtered = reminders.filter(r => {
             const createdAt = r.createdAt || 0;
             return (now - createdAt) < sevenDays;
         });
-        
+
         saveReminders(filtered);
         return true;
     } catch (e) {
@@ -225,7 +225,7 @@ function cleanupExpiredReminders() {
     }
 }
 
-module.exports = {
+export {
     addReminder,
     removeReminder,
     removeRemindersByOrder,

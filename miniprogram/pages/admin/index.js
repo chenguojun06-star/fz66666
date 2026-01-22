@@ -1,18 +1,82 @@
-const api = require('../../utils/api');
+import api from '../../utils/api';
+import { getUserInfo, getUserRoleName } from '../../utils/storage';
+import { getRoleDisplayName, getRolePermissions, isAdminOrSupervisor } from '../../utils/permission';
 
 Page({
     data: {
         loadingStats: false,
         loadingHistory: false,
+        loadingSystemInfo: false,
         stats: null,
         history: { page: 1, pageSize: 10, hasMore: true, list: [] },
+        userInfo: null,
+        roleDisplayName: '',
+        onlineCount: 0,
+        permissions: [],
+        pendingUserCount: 0,
+        showApprovalEntry: false,
     },
 
     onShow() {
         const app = getApp();
         if (app && typeof app.setTabSelected === 'function') app.setTabSelected(this, 3);
         if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
+        
+        // 加载用户信息
+        this.loadUserInfo();
+        
+        // 检查是否显示审批入口
+        const showApproval = isAdminOrSupervisor();
+        this.setData({ showApprovalEntry: showApproval });
+        
+        // 加载系统信息
+        this.loadSystemInfo();
+        
         this.refreshAll(true);
+    },
+    
+    loadUserInfo() {
+        const userInfo = getUserInfo();
+        const roleDisplayName = getRoleDisplayName();
+        const userName = userInfo?.name || userInfo?.username || '未知';
+        const avatarLetter = userName.charAt(0);
+        this.setData({ userInfo, roleDisplayName, avatarLetter });
+    },
+
+    async loadSystemInfo() {
+        if (this.data.loadingSystemInfo) return;
+        this.setData({ loadingSystemInfo: true });
+        try {
+            // 加载在线人数
+            const onlineCount = await api.system.getOnlineCount();
+            
+            // 使用预定义的角色权限
+            const permissions = getRolePermissions();
+            
+            // 如果是管理员，加载待审批用户数量
+            let pendingUserCount = 0;
+            if (this.data.showApprovalEntry) {
+                try {
+                    const result = await api.system.listPendingUsers({ page: 1, pageSize: 1 });
+                    pendingUserCount = result?.total || 0;
+                } catch (e) {
+                    console.error('加载待审批用户数量失败', e);
+                }
+            }
+            
+            this.setData({ 
+                onlineCount: Number(onlineCount) || 0, 
+                permissions,
+                pendingUserCount
+            });
+        } catch (e) {
+            console.error('加载系统信息失败', e);
+            // 即使在线人数加载失败，也显示本地权限
+            const permissions = getRolePermissions();
+            this.setData({ permissions });
+        } finally {
+            this.setData({ loadingSystemInfo: false });
+        }
     },
 
     onPullDownRefresh() {
@@ -21,7 +85,11 @@ Page({
 
     refreshAll(reset) {
         const shouldReset = reset === true;
-        return Promise.all([this.loadStats(), this.loadHistory(shouldReset)]);
+        return Promise.all([
+            this.loadStats(),
+            this.loadHistory(shouldReset),
+            this.loadSystemInfo(),
+        ]);
     },
 
     async loadStats() {
@@ -56,8 +124,16 @@ Page({
         try {
             const page = await api.production.myScanHistory({ page: nextPage, pageSize });
             const records = page && Array.isArray(page.records) ? page.records : [];
+            // 过滤掉采购类型的记录（物料采购不计入工资统计）
+            const filteredRecords = records.filter(item => {
+                const scanType = (item.scanType || '').toLowerCase();
+                const processName = (item.processName || '').toLowerCase();
+                return scanType !== 'procurement' && 
+                       !processName.includes('采购') && 
+                       !processName.includes('物料');
+            });
             const prev = Array.isArray(history.list) ? history.list : [];
-            const merged = reset ? records : prev.concat(records);
+            const merged = reset ? filteredRecords : prev.concat(filteredRecords);
             const app = getApp();
             const hasMore = app && typeof app.hasMoreByPage === 'function' ? app.hasMoreByPage(page) : true;
             this.setData({
@@ -87,4 +163,16 @@ Page({
         if (app && typeof app.logout === 'function') app.logout();
         else wx.reLaunch({ url: '/pages/login/index' });
     },
+
+    onGoToUserApproval() {
+        wx.navigateTo({
+            url: '/pages/admin/user-approval/index'
+        });
+    },
+
+    onGoToNotification() {
+        wx.navigateTo({
+            url: '/pages/admin/notification/index'
+        });
+    }
 });

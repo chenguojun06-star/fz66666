@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Button, Card, Collapse, DatePicker, Form, Grid, Input, InputNumber, Modal, Select, Segmented, Space, Tag, Tooltip, Typography, message } from 'antd';
+import { Alert, App, Button, Card, Collapse, DatePicker, Form, Grid, Input, InputNumber, Modal, Select, Segmented, Space, Tag, Tooltip, Typography } from 'antd';
 import { DeleteOutlined, DownloadOutlined, EyeOutlined, PlusOutlined, RollbackOutlined, ScanOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { QRCodeCanvas } from 'qrcode.react';
@@ -324,7 +324,7 @@ const modernProgressBoardCss = `
 .mpb-percent{display:inline-flex;align-items:center;justify-content:center;height:22px;min-width:52px;padding:0 10px;border-radius:999px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28);color:rgba(15,23,42,.82);font-weight:700;font-size:12px;font-variant-numeric:tabular-nums}
 .mpb-stats{color:rgba(15,23,42,.58);font-size:12px;line-height:14px;white-space:nowrap;font-variant-numeric:tabular-nums}
 .mpb-nodeHeaderActions{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;padding-bottom:2px}
-.mpb-nodeHeaderActions .ant-select-selector,.mpb-nodeHeaderActions .ant-btn{border-radius:999px}
+.mpb-nodeHeaderActions .ant-select-selector{border-radius:999px}
 .mpb-nodeHeaderActions::-webkit-scrollbar{height:6px}
 .mpb-nodeHeaderActions::-webkit-scrollbar-thumb{background:rgba(15,23,42,.18);border-radius:999px}
 .mpb-nodeHeaderRow{display:flex;align-items:center;justify-content:space-between;gap:10px;max-width:100%;overflow-x:auto;overscroll-behavior-x:contain}
@@ -337,7 +337,7 @@ const modernProgressBoardCss = `
 .mpb-nodeCreateRow{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;padding-bottom:2px}
 .mpb-nodeCreateRow::-webkit-scrollbar{height:6px}
 .mpb-nodeCreateRow::-webkit-scrollbar-thumb{background:rgba(15,23,42,.18);border-radius:999px}
-.mpb-nodeCreateRow .ant-input,.mpb-nodeCreateRow .ant-input-number,.mpb-nodeCreateRow .ant-btn{border-radius:999px}
+.mpb-nodeCreateRow .ant-input,.mpb-nodeCreateRow .ant-input-number{border-radius:999px}
 .mpb-nodeCreateRow .ant-input{height:32px}
 .mpb-nodeCreateRow .ant-input-number{height:32px;display:flex;align-items:center}
 .mpb-nodeCreateRow .ant-input-number-input{height:30px}
@@ -356,7 +356,7 @@ const modernProgressBoardCss = `
 .mpb-detailCard.mpb-draggable .mpb-detailTrack:active{cursor:grabbing}
 .mpb-detailCard.mpb-dragging{opacity:.55;transform:scale(.98)}
 .mpb-detailCard.mpb-dragOver{outline:2px dashed rgba(59,130,246,.55);outline-offset:2px}
-.mpb-detailCard .ant-input-number,.mpb-detailCard .ant-btn{border-radius:999px}
+.mpb-detailCard .ant-input-number{border-radius:999px}
 .mpb-detailCard .ant-input-number{height:28px;display:flex;align-items:center}
 .mpb-detailCard .ant-input-number-input{height:26px}
 .mpb-detailCard::before{content:"";position:absolute;left:0;top:0;right:0;height:12px;background:linear-gradient(135deg,rgba(255,255,255,.22),rgba(255,255,255,0));opacity:.9;pointer-events:none}
@@ -366,7 +366,6 @@ const modernProgressBoardCss = `
 .mpb-detailPriceInput{width:100px;max-width:100%}
 .mpb-detailPriceInput .ant-input-number-input{font-size:13px}
 .mpb-detailActions{display:flex;gap:6px;justify-content:flex-end;flex:0 0 auto}
-.mpb-detailActions .ant-btn{padding:0 6px}
 .mpb-detailCard.mpb-detailDone{opacity:.74;background:rgba(248,250,252,.42)}
 .mpb-detailCard.mpb-detailDone::before{opacity:.0}
 .mpb-detailCard.mpb-detailDone .mpb-detailFill{animation:none}
@@ -386,6 +385,72 @@ const modernProgressBoardCss = `
 .mpb-frozen .mpb-node.mpb-nodeDone{background:rgba(241,245,249,.22);border-color:rgba(148,163,184,.32);color:rgba(15,23,42,.56)}
 .mpb-frozen .mpb-node.mpb-nodeCurrent{animation:none}
 @media (prefers-reduced-motion: reduce){.mpb-pop{animation:none}.mpb-node.mpb-nodeCurrent{animation:none}.mpb-node::before{animation:none}}
+
+/* ========== 深色主题 ========== */
+:root[data-theme="dark"] .mpb-glass{background:linear-gradient(135deg,rgba(30,33,40,.85),rgba(26,28,34,.75));border-color:rgba(255,255,255,.12);box-shadow:0 8px 22px rgba(0,0,0,.35)}
+:root[data-theme="dark"] .mpb-pill{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.15);color:rgba(232,234,237,.88)}
+:root[data-theme="dark"] .mpb-pillDot{box-shadow:0 8px 18px rgba(0,0,0,.25)}
+:root[data-theme="dark"] .mpb-node{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.15);color:rgba(232,234,237,.85);box-shadow:0 10px 18px rgba(0,0,0,.25)}
+:root[data-theme="dark"] .mpb-nodeName{color:rgba(232,234,237,.92)}
+:root[data-theme="dark"] .mpb-nodeQty{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.18);color:rgba(232,234,237,.88)}
+:root[data-theme="dark"] .mpb-node.mpb-nodeDone{border-color:rgba(95,208,104,.45);color:rgba(232,234,237,.92)}
+:root[data-theme="dark"] .mpb-node.mpb-nodeCurrent{border-color:rgba(90,156,255,.5);color:rgba(232,234,237,.95)}
+:root[data-theme="dark"] .mpb-percent{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.15);color:rgba(232,234,237,.88)}
+:root[data-theme="dark"] .mpb-stats{color:rgba(232,234,237,.6)}
+:root[data-theme="dark"] .mpb-detailTrack{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12)}
+:root[data-theme="dark"] .mpb-detailBarText{color:rgba(232,234,237,.92);text-shadow:none}
+:root[data-theme="dark"] .mpb-detailCard{background:rgba(30,33,40,.85);border-color:rgba(255,255,255,.12);box-shadow:0 10px 18px rgba(0,0,0,.3)}
+:root[data-theme="dark"] .mpb-detailCard::before{background:linear-gradient(135deg,rgba(255,255,255,.06),rgba(255,255,255,0))}
+:root[data-theme="dark"] .mpb-detailLabel{color:rgba(232,234,237,.75)}
+:root[data-theme="dark"] .mpb-detailCard.mpb-detailDone{background:rgba(30,33,40,.55)}
+:root[data-theme="dark"] .mpb-detailCard.mpb-detailCurrent{border-color:rgba(90,156,255,.45);box-shadow:0 12px 22px rgba(90,156,255,.18),0 10px 18px rgba(0,0,0,.25)}
+:root[data-theme="dark"] .mpb-detailCard.mpb-detailFrozen{background:rgba(30,33,40,.45);border-color:rgba(255,255,255,.1)}
+:root[data-theme="dark"] .mpb-glass.mpb-frozen{background:linear-gradient(135deg,rgba(30,33,40,.65),rgba(26,28,34,.45));border-color:rgba(255,255,255,.08)}
+:root[data-theme="dark"] .mpb-frozen .mpb-pill,:root[data-theme="dark"] .mpb-frozen .mpb-percent{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.1);color:rgba(232,234,237,.5)}
+:root[data-theme="dark"] .mpb-frozen .mpb-stats{color:rgba(232,234,237,.35)}
+:root[data-theme="dark"] .mpb-frozen .mpb-node{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.1);color:rgba(232,234,237,.45)}
+:root[data-theme="dark"] .mpb-frozen .mpb-nodeQty{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.1);color:rgba(232,234,237,.4)}
+:root[data-theme="dark"] .mpb-nodeHeaderActions::-webkit-scrollbar-thumb,:root[data-theme="dark"] .mpb-nodeHeaderRow::-webkit-scrollbar-thumb,:root[data-theme="dark"] .mpb-nodeCreateRow::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18)}
+
+/* ========== 蓝色主题 ========== */
+:root[data-theme="blue"] .mpb-glass{background:linear-gradient(135deg,rgba(255,255,255,.75),rgba(234,241,255,.55));border-color:rgba(45,127,249,.18);box-shadow:0 8px 22px rgba(11,45,92,.10)}
+:root[data-theme="blue"] .mpb-pill{background:rgba(45,127,249,.08);border-color:rgba(45,127,249,.18);color:#0b2d5c}
+:root[data-theme="blue"] .mpb-pillDot{box-shadow:0 8px 18px rgba(11,45,92,.15)}
+:root[data-theme="blue"] .mpb-node{background:rgba(45,127,249,.06);border-color:rgba(45,127,249,.18);color:#0b2d5c;box-shadow:0 10px 18px rgba(11,45,92,.08)}
+:root[data-theme="blue"] .mpb-nodeName{color:#0b2d5c}
+:root[data-theme="blue"] .mpb-nodeQty{background:rgba(45,127,249,.08);border-color:rgba(45,127,249,.2);color:#0b2d5c}
+:root[data-theme="blue"] .mpb-node.mpb-nodeDone{border-color:rgba(34,197,94,.4);color:#0b2d5c}
+:root[data-theme="blue"] .mpb-node.mpb-nodeCurrent{border-color:rgba(45,127,249,.5);color:#0b2d5c}
+:root[data-theme="blue"] .mpb-percent{background:rgba(45,127,249,.08);border-color:rgba(45,127,249,.18);color:#0b2d5c}
+:root[data-theme="blue"] .mpb-stats{color:rgba(11,45,92,.6)}
+:root[data-theme="blue"] .mpb-detailTrack{background:rgba(45,127,249,.06);border-color:rgba(45,127,249,.18)}
+:root[data-theme="blue"] .mpb-detailBarText{color:#0b2d5c;text-shadow:0 1px 0 rgba(255,255,255,.7)}
+:root[data-theme="blue"] .mpb-detailCard{background:rgba(255,255,255,.75);border-color:rgba(45,127,249,.18);box-shadow:0 10px 18px rgba(11,45,92,.08)}
+:root[data-theme="blue"] .mpb-detailCard::before{background:linear-gradient(135deg,rgba(255,255,255,.4),rgba(255,255,255,0))}
+:root[data-theme="blue"] .mpb-detailLabel{color:rgba(11,45,92,.75)}
+:root[data-theme="blue"] .mpb-detailCard.mpb-detailDone{background:rgba(248,250,252,.65)}
+:root[data-theme="blue"] .mpb-detailCard.mpb-detailCurrent{border-color:rgba(45,127,249,.4);box-shadow:0 12px 22px rgba(45,127,249,.14),0 10px 18px rgba(11,45,92,.08)}
+:root[data-theme="blue"] .mpb-glass.mpb-frozen{background:linear-gradient(135deg,rgba(248,250,252,.75),rgba(241,245,249,.55));border-color:rgba(11,45,92,.12)}
+:root[data-theme="blue"] .mpb-frozen .mpb-pill,:root[data-theme="blue"] .mpb-frozen .mpb-percent{background:rgba(11,45,92,.04);border-color:rgba(11,45,92,.12);color:rgba(11,45,92,.5)}
+:root[data-theme="blue"] .mpb-frozen .mpb-stats{color:rgba(11,45,92,.4)}
+:root[data-theme="blue"] .mpb-frozen .mpb-node{background:rgba(11,45,92,.04);border-color:rgba(11,45,92,.12);color:rgba(11,45,92,.5)}
+:root[data-theme="blue"] .mpb-frozen .mpb-nodeQty{background:rgba(11,45,92,.04);border-color:rgba(11,45,92,.12);color:rgba(11,45,92,.45)}
+:root[data-theme="blue"] .mpb-nodeHeaderActions::-webkit-scrollbar-thumb,:root[data-theme="blue"] .mpb-nodeHeaderRow::-webkit-scrollbar-thumb,:root[data-theme="blue"] .mpb-nodeCreateRow::-webkit-scrollbar-thumb{background:rgba(11,45,92,.18)}
+
+/* ========== 白色主题 ========== */
+:root[data-theme="white"] .mpb-glass{background:linear-gradient(135deg,rgba(255,255,255,.85),rgba(248,249,250,.7));border-color:rgba(31,31,31,.1);box-shadow:0 8px 22px rgba(31,31,31,.06)}
+:root[data-theme="white"] .mpb-pill{background:rgba(31,31,31,.04);border-color:rgba(31,31,31,.12);color:#1f1f1f}
+:root[data-theme="white"] .mpb-node{background:rgba(31,31,31,.04);border-color:rgba(31,31,31,.12);color:#1f1f1f;box-shadow:0 10px 18px rgba(31,31,31,.06)}
+:root[data-theme="white"] .mpb-nodeName{color:#1f1f1f}
+:root[data-theme="white"] .mpb-nodeQty{background:rgba(31,31,31,.06);border-color:rgba(31,31,31,.12);color:#1f1f1f}
+:root[data-theme="white"] .mpb-node.mpb-nodeDone{border-color:rgba(34,197,94,.4);color:#1f1f1f}
+:root[data-theme="white"] .mpb-node.mpb-nodeCurrent{border-color:rgba(45,127,249,.45);color:#1f1f1f}
+:root[data-theme="white"] .mpb-percent{background:rgba(31,31,31,.04);border-color:rgba(31,31,31,.12);color:#1f1f1f}
+:root[data-theme="white"] .mpb-stats{color:rgba(31,31,31,.55)}
+:root[data-theme="white"] .mpb-detailTrack{background:rgba(31,31,31,.04);border-color:rgba(31,31,31,.12)}
+:root[data-theme="white"] .mpb-detailBarText{color:#1f1f1f;text-shadow:0 1px 0 rgba(255,255,255,.7)}
+:root[data-theme="white"] .mpb-detailCard{background:rgba(255,255,255,.85);border-color:rgba(31,31,31,.1);box-shadow:0 10px 18px rgba(31,31,31,.06)}
+:root[data-theme="white"] .mpb-detailLabel{color:rgba(31,31,31,.7)}
 `;
 
 type ModernProgressBoardProps = {
@@ -432,20 +497,22 @@ const ModernProgressBoard: React.FC<ModernProgressBoardProps> = ({ nodes, progre
               const isDoneNode = i < currentIdx || effectivePct >= 100;
               const isCurrent = !frozen && i === currentIdx && effectivePct > 0 && effectivePct < 100;
               const name = String(n?.name || '').trim() || '-';
+              const isProcurementNode = name.includes('采购') || name.includes('物料');
               const qty = stageQty(i, name);
               const nodeStart = i * segPct;
               const nodeFillRaw = segPct > 0 ? ((effectivePct - nodeStart) / segPct) * 100 : effectivePct;
-              const fillPct = clampPercent(nodeFillRaw);
-              const badgeKey = `${labelKey}-${i}-${qty}`;
+              const fillPct = isProcurementNode ? 100 : clampPercent(nodeFillRaw);
+              const displayText = isProcurementNode ? '完成' : String(qty);
+              const badgeKey = `${labelKey}-${i}-${displayText}`;
               return (
-                <div key={String(n.id || n.name || i)} className="mpb-mark" title={`${name} ${qty}`}>
+                <div key={String(n.id || n.name || i)} className="mpb-mark" title={isProcurementNode ? `${name} 已完成` : `${name} ${qty}`}>
                   <div
                     key={badgeKey}
-                    className={`mpb-node mpb-pop${isDoneNode ? ' mpb-nodeDone' : ''}${isCurrent ? ' mpb-nodeCurrent' : ''}`}
+                    className={`mpb-node mpb-pop${isProcurementNode || isDoneNode ? ' mpb-nodeDone' : ''}${isCurrent ? ' mpb-nodeCurrent' : ''}`}
                     style={{ ['--p' as any]: `${fillPct}%` }}
                   >
                     <span className="mpb-nodeName">{name}</span>
-                    <span className="mpb-nodeQty">{qty}</span>
+                    <span className="mpb-nodeQty">{displayText}</span>
                   </div>
                 </div>
               );
@@ -478,6 +545,7 @@ type ProgressDetailProps = {
  * 用于展示和管理生产订单的详细进度信息，包括扫码记录、裁剪扎号、进度节点等
  */
 const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
+  const { message } = App.useApp();
   const { user } = useAuth();
   const isSupervisorOrAbove = useMemo(() => isSupervisorOrAboveUserFn(user), [user]);
   const isAdminUser = useMemo(() => isAdminUserFn(user), [user]);
@@ -504,6 +572,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
 
   const [nodes, setNodes] = useState<ProgressNode[]>(defaultNodes);
   const [progressNodesByStyleNo, setProgressNodesByStyleNo] = useState<Record<string, ProgressNode[]>>({});
+  const progressNodesByStyleNoRef = useRef<Record<string, ProgressNode[]>>({});
   const [nodeInput, setNodeInput] = useState('');
   const [nodeUnitPriceInput, setNodeUnitPriceInput] = useState<number>(0);
   const [nodeWorkflowLocked, setNodeWorkflowLocked] = useState(false);
@@ -550,16 +619,28 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const [rollbackBundles, setRollbackBundles] = useState<CuttingBundle[]>([]);
   const [rollbackForm] = Form.useForm();
 
+  const queryParamsRef = useRef(queryParams);
+  const dateRangeRef = useRef(dateRange);
+
+  useEffect(() => {
+    queryParamsRef.current = queryParams;
+  }, [queryParams]);
+
+  useEffect(() => {
+    dateRangeRef.current = dateRange;
+  }, [dateRange]);
+
   const fetchOrders = useCallback(async (options?: { silent?: boolean }) => {
     const silent = options?.silent === true;
     if (!silent) {
       setLoading(true);
     }
     try {
-      const params: any = { ...queryParams };
-      if (dateRange?.[0] && dateRange?.[1]) {
-        params.startDate = dateRange[0].startOf('day').toISOString();
-        params.endDate = dateRange[1].endOf('day').toISOString();
+      const params: any = { ...queryParamsRef.current };
+      const currentDateRange = dateRangeRef.current;
+      if (currentDateRange?.[0] && currentDateRange?.[1]) {
+        params.startDate = currentDateRange[0].startOf('day').toISOString();
+        params.endDate = currentDateRange[1].endOf('day').toISOString();
       }
       const response = await productionOrderApi.list(params);
       const result = response as any;
@@ -573,7 +654,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             records
               .map((r) => String((r as any)?.styleNo || '').trim())
               .filter((sn) => sn)
-              .filter((sn) => !progressNodesByStyleNo[sn])
+              .filter((sn) => !progressNodesByStyleNoRef.current[sn])
           )
         );
         if (styleNos.length) {
@@ -618,7 +699,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         setLoading(false);
       }
     }
-  }, [queryParams, dateRange, progressNodesByStyleNo]);
+  }, []);
 
   const clearScanConfirmTimers = () => {
     if (scanConfirmTimerRef.current) {
@@ -744,9 +825,39 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     }
   };
 
+  // 使用 ref 标记是否已经初始化加载
+  const initialLoadDone = useRef(false);
+
+  // 仅在组件首次挂载时获取数据
   useEffect(() => {
     fetchOrders();
-  }, [fetchOrders]);
+    initialLoadDone.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 当查询参数改变时获取数据
+  useEffect(() => {
+    // 跳过初始加载
+    if (!initialLoadDone.current) return;
+    
+    const timer = setTimeout(() => {
+      fetchOrders();
+    }, 300);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    queryParams.page,
+    queryParams.pageSize,
+    queryParams.orderNo,
+    queryParams.styleNo,
+    // 使用稳定的值，null 转换为固定字符串
+    dateRange?.[0]?.valueOf() ?? 'null-start',
+    dateRange?.[1]?.valueOf() ?? 'null-end'
+  ]);
+
+  useEffect(() => {
+    progressNodesByStyleNoRef.current = progressNodesByStyleNo;
+  }, [progressNodesByStyleNo]);
 
   useEffect(() => {
     activeOrderRef.current = activeOrder;
@@ -783,14 +894,20 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     if (!text) return [];
     try {
       const obj = JSON.parse(text);
-      const nodesRaw = (obj as any)?.nodes;
-      if (!Array.isArray(nodesRaw)) return [];
-      const normalized: ProgressNode[] = nodesRaw
+      // 支持两种格式：nodes (进度节点) 和 steps (工序单价)
+      let itemsRaw = (obj as any)?.nodes;
+      if (!Array.isArray(itemsRaw)) {
+        itemsRaw = (obj as any)?.steps;
+      }
+      if (!Array.isArray(itemsRaw)) return [];
+      
+      const normalized: ProgressNode[] = itemsRaw
         .map((n: any) => {
-          const name = String(n?.name || '').trim();
+          const name = String(n?.name || n?.processName || '').trim();
           const p = Number(n?.unitPrice);
           const unitPrice = Number.isFinite(p) && p >= 0 ? p : 0;
-          return { id: String(n?.id || name || ''), name, unitPrice };
+          const id = String(n?.id || n?.processCode || name || '');
+          return { id, name, unitPrice };
         })
         .filter((n: ProgressNode) => n.name);
       return stripWarehousingNode(normalized);
@@ -818,6 +935,24 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const resolveNodesForOrder = (order: ProductionOrder | null): ProgressNode[] => {
     const orderNodes = parseWorkflowNodesFromOrder(order);
     if (orderNodes.length) {
+      // 如果订单有进度节点，但单价都是0，则从款号工序单价中回填
+      const styleNo = String((order as any)?.styleNo || '').trim();
+      const styleNodes = styleNo && progressNodesByStyleNo[styleNo] ? progressNodesByStyleNo[styleNo] : [];
+      if (styleNodes.length > 0) {
+        const hasAnyPrice = orderNodes.some(n => (Number(n.unitPrice) || 0) > 0);
+        if (!hasAnyPrice) {
+          // 创建名称到单价的映射
+          const priceMap = new Map<string, number>();
+          styleNodes.forEach(sn => {
+            priceMap.set(sn.name, Number(sn.unitPrice) || 0);
+          });
+          // 回填单价
+          return orderNodes.map(n => ({
+            ...n,
+            unitPrice: priceMap.get(n.name) ?? (Number(n.unitPrice) || 0)
+          }));
+        }
+      }
       return orderNodes;
     }
     const sn = String((order as any)?.styleNo || '').trim();
@@ -972,7 +1107,9 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const ensureNodesFromTemplateIfNeeded = async (order: ProductionOrder) => {
     const orderNodes = parseWorkflowNodesFromOrder(order);
     if (orderNodes.length) {
-      saveNodes(orderNodes);
+      // 使用 resolveNodesForOrder 以便回填款号工序单价
+      const resolvedNodes = resolveNodesForOrder(order);
+      saveNodes(resolvedNodes);
       return;
     }
     const styleNo = String(order.styleNo || '').trim();
@@ -1382,31 +1519,59 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       message.error('仅管理员可退回编辑');
       return;
     }
-    if (nodeWorkflowSaving) return;
-    setNodeWorkflowSaving(true);
-    try {
-      const res = await productionOrderApi.rollbackProgressWorkflow(activeOrder.id);
-      const result = res as any;
-      if (result.code === 200) {
-        const updated = (result.data || null) as ProductionOrder | null;
-        if (updated) {
-          setActiveOrder(updated);
-          setNodeWorkflowLocked(Number((updated as any)?.progressWorkflowLocked) === 1);
-          await ensureNodesFromTemplateIfNeeded(updated);
-        } else {
-          unlockNodeWorkflow();
+    let reason = '';
+    Modal.confirm({
+      title: '退回编辑',
+      content: (
+        <div>
+          <div style={{ marginBottom: 12, fontWeight: 600 }}>退回原因</div>
+          <Input.TextArea
+            placeholder="请输入退回原因"
+            autoSize={{ minRows: 3, maxRows: 6 }}
+            maxLength={200}
+            showCount
+            onChange={(e) => {
+              reason = String(e?.target?.value || '');
+            }}
+          />
+        </div>
+      ),
+      okText: '确认退回',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        const remark = String(reason || '').trim();
+        if (!remark) {
+          message.error('请输入退回原因');
+          return Promise.reject(new Error('请输入退回原因'));
         }
-        setNodeWorkflowDirty(false);
-        message.success('已退回，可编辑');
-        await fetchOrders();
-      } else {
-        message.error(result.message || '退回失败');
-      }
-    } catch {
-      message.error('退回失败');
-    } finally {
-      setNodeWorkflowSaving(false);
-    }
+        if (nodeWorkflowSaving) return;
+        setNodeWorkflowSaving(true);
+        try {
+          const res = await productionOrderApi.rollbackProgressWorkflow({ id: activeOrder.id, reason: remark });
+          const result = res as any;
+          if (result.code === 200) {
+            const updated = (result.data || null) as ProductionOrder | null;
+            if (updated) {
+              setActiveOrder(updated);
+              setNodeWorkflowLocked(Number((updated as any)?.progressWorkflowLocked) === 1);
+              await ensureNodesFromTemplateIfNeeded(updated);
+            } else {
+              unlockNodeWorkflow();
+            }
+            setNodeWorkflowDirty(false);
+            message.success('已退回，可编辑');
+            await fetchOrders();
+          } else {
+            message.error(result.message || '退回失败');
+          }
+        } catch {
+          message.error('退回失败');
+        } finally {
+          setNodeWorkflowSaving(false);
+        }
+      },
+    });
   };
 
   const closeScan = () => {
@@ -2043,7 +2208,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [fetchOrders, fetchOrderDetail, fetchScanHistory]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 移除所有函数依赖，避免重复创建定时器
 
   const updateOrderProgress = async (
     order: ProductionOrder,
@@ -2211,6 +2377,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       dataIndex: 'orderNo',
       key: 'orderNo',
       width: 160,
+      render: (v: any) => <span className="order-no-compact">{String(v || '').trim() || '-'}</span>,
     },
     {
       title: '款号',
@@ -2299,7 +2466,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     {
       title: '操作',
       key: 'action',
-      width: 110,
+      width: 160,
       render: (_: any, record: ProductionOrder) => {
         const frozen = isOrderFrozenByStatus(record);
         return (
@@ -2379,10 +2546,12 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
           <div className="mpb-detailCards">
             {nodes.map((n, idx) => {
+              // 物料采购节点始终显示100%完成
+              const isProcurementNode = String(n.name || '').includes('采购') || String(n.name || '').includes('物料');
               const stat = nodeStats.statsByName[n.name] || { done: 0, total: nodeStats.totalQty, remaining: nodeStats.totalQty, percent: 0 };
-              const percent = clampPercent(stat.percent);
-              const isDone = frozen || idx < currentIdx || effectivePct >= 100;
-              const isCurrent = !frozen && idx === currentIdx && effectivePct > 0 && effectivePct < 100;
+              const percent = isProcurementNode ? 100 : clampPercent(stat.percent);
+              const isDone = isProcurementNode || frozen || idx < currentIdx || effectivePct >= 100;
+              const isCurrent = !frozen && !isProcurementNode && idx === currentIdx && effectivePct > 0 && effectivePct < 100;
               const fillPct = isDone ? 100 : percent;
               const unitPrice = Number(n.unitPrice) || 0;
               const isDragging = draggingNodeId === String(n.id);
@@ -2392,7 +2561,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                   key={n.id}
                   className={`mpb-detailCard mpb-pop${canReorderWorkflow ? ' mpb-draggable' : ''}${isDragging ? ' mpb-dragging' : ''}${isDragOver ? ' mpb-dragOver' : ''}${isDone ? ' mpb-detailDone' : ''}${isCurrent ? ' mpb-detailCurrent' : ''}${frozen ? ' mpb-detailFrozen' : ''}`}
                   style={{ width: cardWidth, ['--p' as any]: `${fillPct}%` }}
-                  title={`${n.name} ${stat.done}/${stat.total} · 剩 ${stat.remaining} · ${percent.toFixed(0)}%`}
+                  title={isProcurementNode ? `${n.name} 已完成` : `${n.name} ${stat.done}/${stat.total} · 剩 ${stat.remaining} · ${percent.toFixed(0)}%`}
                   onDragOver={(e) => {
                     if (!canReorderWorkflow) return;
                     if (!draggingNodeId) return;
@@ -2431,7 +2600,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     <div className="mpb-detailBarText">
                       <span className="mpb-detailBarLeft">{n.name}</span>
                       <span className="mpb-detailBarRight">
-                        {stat.done}/{stat.total} · {percent.toFixed(0)}%
+                        {isProcurementNode ? '已完成' : `${stat.done}/${stat.total} · ${percent.toFixed(0)}%`}
                       </span>
                     </div>
                   </div>
@@ -2647,7 +2816,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               >
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, justifySelf: screens.lg ? 'start' : 'start' }}>
                   <QRCodeCanvas value={activeOrder.qrCode || ' '} size={120} includeMargin />
-                  <div style={{ textAlign: 'center', color: '#8c8c8c', fontSize: 12, lineHeight: 1.2 }}>{activeOrder.qrCode || '-'}</div>
+                  <div style={{ textAlign: 'center', color: '#8c8c8c', fontSize: 'var(--font-size-sm)', lineHeight: 1.2 }}>{activeOrder.qrCode || '-'}</div>
                 </div>
 
                 <div
@@ -3073,8 +3242,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                             key: 'completed',
                             width: 64,
                             render: (v: any) => (v
-                              ? <Tag color="success" style={{ marginInlineEnd: 0, paddingInline: 2, lineHeight: '16px', fontSize: 11 }}>已完成</Tag>
-                              : <Tag style={{ marginInlineEnd: 0, paddingInline: 2, lineHeight: '16px', fontSize: 11 }}>未完成</Tag>),
+                              ? <Tag color="success" style={{ marginInlineEnd: 0, paddingInline: 2, lineHeight: '16px', fontSize: 'var(--font-size-xs)' }}>已完成</Tag>
+                              : <Tag style={{ marginInlineEnd: 0, paddingInline: 2, lineHeight: '16px', fontSize: 'var(--font-size-xs)' }}>未完成</Tag>),
                           },
                           {
                             title: '生产人员ID',

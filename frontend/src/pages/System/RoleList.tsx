@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Alert, Button, Card, Form, Input, Modal, Select, Space, Tag, Tree, message } from 'antd';
-import { DeleteOutlined, EditOutlined, SafetyOutlined } from '@ant-design/icons';
+import { Alert, App, Button, Card, Checkbox, Form, Input, Modal, Select, Space, Tag } from 'antd';
+import { DeleteOutlined, EditOutlined, SafetyOutlined, FileSearchOutlined } from '@ant-design/icons';
 import Layout from '../../components/Layout';
 import ResizableModal from '../../components/common/ResizableModal';
 import RowActions from '../../components/common/RowActions';
@@ -8,11 +8,13 @@ import ResizableTable from '../../components/common/ResizableTable';
 import { Role, RoleQueryParams } from '../../types/system';
 import api, { requestWithPathFallback } from '../../utils/api';
 import { formatDateTime } from '../../utils/datetime';
+import { useViewport } from '../../utils/useViewport';
 import './styles.css';
 
 const RoleList: React.FC = () => {
+  const { message, modal } = App.useApp();
   const [form] = Form.useForm();
-  const [viewportWidth, setViewportWidth] = useState<number>(() => (typeof window === 'undefined' ? 1200 : window.innerWidth));
+  const { isMobile, modalWidth } = useViewport();
   const [visible, setVisible] = useState(false);
   const [currentRole, setCurrentRole] = useState<Role | null>(null);
   const [queryParams, setQueryParams] = useState<RoleQueryParams>({
@@ -30,17 +32,11 @@ const RoleList: React.FC = () => {
   const [checkedPermIds, setCheckedPermIds] = useState<Set<number>>(new Set());
   const [permKeyword, setPermKeyword] = useState('');
   const [permSaving, setPermSaving] = useState(false);
+  const [logVisible, setLogVisible] = useState(false);
+  const [logLoading, setLogLoading] = useState(false);
+  const [logRecords, setLogRecords] = useState<any[]>([]);
+  const [logTitle, setLogTitle] = useState('操作日志');
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const onResize = () => setViewportWidth(window.innerWidth);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
-
-  const isMobile = viewportWidth < 768;
-  const isTablet = viewportWidth >= 768 && viewportWidth < 1024;
-  const modalWidth = isMobile ? '96vw' : isTablet ? '66vw' : '60vw';
   const modalInitialHeight = 720;
 
   const collectSubtreeIds = (node: any, into: Set<number>) => {
@@ -157,6 +153,66 @@ const RoleList: React.FC = () => {
     form.resetFields();
   };
 
+  const openRemarkModal = (
+    title: string,
+    okText: string,
+    okButtonProps: any,
+    onConfirm: (remark: string) => Promise<void>
+  ) => {
+    let remarkValue = '';
+    modal.confirm({
+      title,
+      content: (
+        <Form layout="vertical" onSubmitCapture={(e) => e.preventDefault()}>
+          <Form.Item label="操作原因">
+            <Input.TextArea
+              rows={4}
+              maxLength={200}
+              showCount
+              onChange={(e) => {
+                remarkValue = e.target.value;
+              }}
+            />
+          </Form.Item>
+        </Form>
+      ),
+      okText,
+      cancelText: '取消',
+      okButtonProps,
+      onOk: async () => {
+        const remark = String(remarkValue || '').trim();
+        if (!remark) {
+          message.error('请输入操作原因');
+          return Promise.reject(new Error('请输入操作原因'));
+        }
+        await onConfirm(remark);
+      },
+    });
+  };
+
+  const openLogModal = async (bizType: string, bizId: string, title: string) => {
+    setLogTitle(title);
+    setLogVisible(true);
+    setLogLoading(true);
+    try {
+      const res = await api.get('/system/operation-log/list', {
+        params: { bizType, bizId },
+      });
+      const result = res as any;
+      if (result.code === 200) {
+        setLogRecords(Array.isArray(result.data) ? result.data : []);
+      } else {
+        message.error(result.message || '获取日志失败');
+        setLogRecords([]);
+      }
+    } catch (e: any) {
+      message.error(e?.message || '获取日志失败');
+      setLogRecords([]);
+    } finally {
+      setLogLoading(false);
+    }
+  };
+
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
@@ -169,20 +225,33 @@ const RoleList: React.FC = () => {
         dataScopeDepartments: Array.isArray((values as any)?.dataScopeDepartments) ? (values as any).dataScopeDepartments : [],
       };
 
-      let response;
+      const submit = async (remark?: string) => {
+        const nextPayload = {
+          ...payload,
+          operationRemark: remark,
+        };
+        let response;
+        if (nextPayload?.id) {
+          response = await requestWithPathFallback('put', '/system/role', '/auth/role', nextPayload);
+        } else {
+          response = await requestWithPathFallback('post', '/system/role', '/auth/role', nextPayload);
+        }
+        const result = response as any;
+        if (result.code === 200) {
+          message.success('保存成功');
+          closeDialog();
+          fetchRoles();
+        } else {
+          message.error(result.message || '保存失败');
+        }
+      };
+
       if (payload?.id) {
-        response = await requestWithPathFallback('put', '/system/role', '/auth/role', payload);
-      } else {
-        response = await requestWithPathFallback('post', '/system/role', '/auth/role', payload);
+        openRemarkModal('确认保存', '确认保存', undefined, submit);
+        return;
       }
-      const result = response as any;
-      if (result.code === 200) {
-        message.success('保存成功');
-        closeDialog();
-        fetchRoles();
-      } else {
-        message.error(result.message || '保存失败');
-      }
+
+      await submit();
     } catch (error: any) {
       const msg = error?.message || '保存失败';
       message.error(msg);
@@ -190,28 +259,27 @@ const RoleList: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    Modal.confirm({
-      title: '确认删除',
-      content: '确定删除该角色吗？',
-      okText: '删除',
-      okButtonProps: { danger: true },
-      cancelText: '取消',
-      onOk: async () => {
-        try {
-          const response = await requestWithPathFallback('delete', `/system/role/${id}`, `/auth/role/${id}`);
-          const result = response as any;
-          if (result.code === 200) {
-            message.success('删除成功');
-            fetchRoles();
-            return;
-          }
-          throw new Error(result.message || '删除失败');
-        } catch (error: any) {
-          const msg = error?.message || '删除失败';
-          message.error(msg);
-          throw error;
+    openRemarkModal('确认删除', '删除', { danger: true }, async (remark) => {
+      try {
+        const response = await requestWithPathFallback(
+          'delete',
+          `/system/role/${id}`,
+          `/auth/role/${id}`,
+          undefined,
+          { params: { remark } }
+        );
+        const result = response as any;
+        if (result.code === 200) {
+          message.success('删除成功');
+          fetchRoles();
+          return;
         }
-      },
+        throw new Error(result.message || '删除失败');
+      } catch (error: any) {
+        const msg = error?.message || '删除失败';
+        message.error(msg);
+        throw error;
+      }
     });
   };
 
@@ -247,65 +315,129 @@ const RoleList: React.FC = () => {
     setCheckedPermIds(new Set(ids));
   };
 
-  const treeData = useMemo(() => {
-    const kw = String(permKeyword || '').trim();
-    const lowerKw = kw.toLowerCase();
-    const mapNodes = (nodes: any[]): any[] => {
-      return (nodes || []).map((n) => {
-        const children = Array.isArray(n.children) ? mapNodes(n.children) : undefined;
-        return {
-          key: String(n.id),
-          title: n.permissionName,
-          children,
-        };
-      });
-    };
-    const raw = mapNodes(permTree);
-    if (!kw) return raw;
+  // 按模块分组所有权限（菜单+按钮）
+  const permissionsByModule = useMemo(() => {
+    const kw = String(permKeyword || '').trim().toLowerCase();
 
-    const filterNodes = (nodes: any[]): any[] => {
-      const next: any[] = [];
-      for (const n of nodes || []) {
-        const title = String(n.title || '');
-        const matchSelf = title.toLowerCase().includes(lowerKw);
-        const children = Array.isArray(n.children) ? filterNodes(n.children) : [];
-        if (matchSelf || children.length) {
-          next.push({ ...n, children: children.length ? children : undefined });
+    // 收集所有顶级模块及其子权限
+    const modules: Array<{
+      moduleId: number;
+      moduleName: string;
+      permissions: any[];
+    }> = [];
+
+    const collectPermissions = (node: any) => {
+      const allPerms: any[] = [];
+
+      // 递归收集所有子权限
+      const collectChildren = (n: any) => {
+        if (!n) return;
+
+        // 添加当前节点（如果不是顶级模块）
+        if (n.parentId && n.parentId !== 0) {
+          allPerms.push({
+            id: n.id,
+            name: n.permissionName,
+            type: n.permissionType,
+          });
         }
-      }
-      return next;
+
+        // 递归处理子节点
+        if (Array.isArray(n.children)) {
+          for (const child of n.children) {
+            collectChildren(child);
+          }
+        }
+      };
+
+      collectChildren(node);
+      return allPerms;
     };
 
-    return filterNodes(raw);
-  }, [permKeyword, permTree]);
+    // 遍历顶级节点
+    for (const topNode of permTree || []) {
+      const perms = collectPermissions(topNode);
 
-  const checkedKeys = useMemo(() => {
-    return Array.from(checkedPermIds.values()).map((id) => String(id));
-  }, [checkedPermIds]);
+      // 如果有搜索关键词，过滤权限
+      let filteredPerms = perms;
+      if (kw) {
+        filteredPerms = perms.filter(p =>
+          String(p.name || '').toLowerCase().includes(kw)
+        );
+      }
+
+      if (filteredPerms.length > 0 || !kw) {
+        modules.push({
+          moduleId: topNode.id,
+          moduleName: topNode.permissionName,
+          permissions: filteredPerms,
+        });
+      }
+    }
+
+    return modules;
+  }, [permKeyword, permTree]);
 
   const savePerms = async () => {
     if (!currentRole?.id) return;
-    setPermSaving(true);
-    try {
-      const ids = Array.from(checkedPermIds.values());
-      const res = await requestWithPathFallback('put', `/system/role/${currentRole.id}/permission-ids`, `/auth/role/${currentRole.id}/permission-ids`, ids);
-      const result = res as any;
-      if (result.code === 200) {
-        message.success('授权成功');
-        closePermDialog();
-      } else {
-        message.error(result.message || '授权失败');
+    openRemarkModal('确认授权', '确认授权', undefined, async (remark) => {
+      setPermSaving(true);
+      try {
+        const ids = Array.from(checkedPermIds.values());
+        const res = await requestWithPathFallback(
+          'put',
+          `/system/role/${currentRole.id}/permission-ids`,
+          `/auth/role/${currentRole.id}/permission-ids`,
+          { permissionIds: ids, remark }
+        );
+        const result = res as any;
+        if (result.code === 200) {
+          message.success('授权成功');
+          closePermDialog();
+        } else {
+          message.error(result.message || '授权失败');
+        }
+      } catch (e) {
+        message.error('授权失败');
+      } finally {
+        setPermSaving(false);
       }
-    } catch (e) {
-      message.error('授权失败');
-    } finally {
-      setPermSaving(false);
-    }
+    });
   };
 
   const getStatusText = (status: string) => {
     return status === 'active' ? '启用' : '停用';
   };
+
+  const logColumns = [
+    {
+      title: '动作',
+      dataIndex: 'action',
+      key: 'action',
+      width: 120,
+      render: (v: string) => v || '-',
+    },
+    {
+      title: '操作人',
+      dataIndex: 'operator',
+      key: 'operator',
+      width: 120,
+      render: (v: string) => v || '-',
+    },
+    {
+      title: '原因',
+      dataIndex: 'remark',
+      key: 'remark',
+      render: (v: string) => v || '-',
+    },
+    {
+      title: '时间',
+      dataIndex: 'createTime',
+      key: 'createTime',
+      width: 180,
+      render: (v: string) => formatDateTime(v),
+    },
+  ];
 
   const columns = [
     { title: '角色名称', dataIndex: 'roleName', key: 'roleName', width: 160 },
@@ -336,7 +468,7 @@ const RoleList: React.FC = () => {
       render: (_: any, role: Role) => (
         <RowActions
           className="table-actions"
-          maxInline={3}
+          maxInline={2}
           actions={[
             {
               key: 'edit',
@@ -353,6 +485,13 @@ const RoleList: React.FC = () => {
               icon: <SafetyOutlined />,
               onClick: () => openPermDialog(role),
               primary: true,
+            },
+            {
+              key: 'log',
+              label: '日志',
+              title: '日志',
+              icon: <FileSearchOutlined />,
+              onClick: () => openLogModal('role', String(role.id || ''), `角色 ${role.roleName} 操作日志`),
             },
             {
               key: 'delete',
@@ -559,25 +698,93 @@ const RoleList: React.FC = () => {
               </Button>
             ))}
           </Space>
-          <div className="permission-tree" style={{ borderRadius: 8 }}>
-            <Tree
-              checkable
-              defaultExpandAll
-              checkedKeys={checkedKeys}
-              onCheck={(keys) => {
-                const nextKeys = (Array.isArray(keys) ? keys : (keys as any).checked) as any[];
-                const next = new Set<number>();
-                for (const k of nextKeys) {
-                  const n = Number(k);
-                  if (Number.isFinite(n)) next.add(n);
-                }
-                setCheckedPermIds(next);
-              }}
-              treeData={treeData}
-            />
+
+          {/* 列式模块布局 */}
+          <div style={{
+            marginTop: 12,
+            display: 'flex',
+            gap: 8,
+            flexWrap: 'wrap',
+            alignItems: 'flex-start'
+          }}>
+            {permissionsByModule.map((module) => (
+              <div
+                key={module.moduleId}
+                style={{
+                  minWidth: 120,
+                  maxWidth: 160,
+                  border: '1px solid #d1d5db',
+                  padding: '2px 6px'
+                }}
+              >
+                {/* 模块复选框 */}
+                <div style={{ lineHeight: '20px' }}>
+                  <Checkbox
+                    checked={checkedPermIds.has(module.moduleId)}
+                    onChange={(e) => {
+                      const next = new Set(checkedPermIds);
+                      if (e.target.checked) {
+                        next.add(module.moduleId);
+                        module.permissions.forEach(p => next.add(p.id));
+                      } else {
+                        next.delete(module.moduleId);
+                        module.permissions.forEach(p => next.delete(p.id));
+                      }
+                      setCheckedPermIds(next);
+                    }}
+                    style={{ fontSize: 12 }}
+                  >
+                    {module.moduleName}
+                  </Checkbox>
+                </div>
+                {/* 子权限列表 */}
+                {module.permissions.map((perm) => (
+                  <div key={perm.id} style={{ lineHeight: '20px' }}>
+                    <Checkbox
+                      checked={checkedPermIds.has(perm.id)}
+                      onChange={(e) => {
+                        const next = new Set(checkedPermIds);
+                        if (e.target.checked) {
+                          next.add(perm.id);
+                        } else {
+                          next.delete(perm.id);
+                        }
+                        setCheckedPermIds(next);
+                      }}
+                      style={{ fontSize: 12 }}
+                    >
+                      {perm.name}
+                    </Checkbox>
+                  </div>
+                ))}
+              </div>
+            ))}
           </div>
 
         </div>
+      </ResizableModal>
+
+      <ResizableModal
+        open={logVisible}
+        title={logTitle}
+        onCancel={() => {
+          setLogVisible(false);
+          setLogRecords([]);
+        }}
+        footer={null}
+        width={modalWidth}
+        initialHeight={520}
+        minWidth={isMobile ? 320 : 520}
+        scaleWithViewport
+      >
+        <ResizableTable
+          columns={logColumns as any}
+          dataSource={logRecords}
+          rowKey={(r) => String(r.id || `${r.bizType}-${r.bizId}-${r.createTime}`)}
+          loading={logLoading}
+          pagination={false}
+          scroll={{ x: 'max-content', y: isMobile ? 320 : 420 }}
+        />
       </ResizableModal>
     </Layout>
   );

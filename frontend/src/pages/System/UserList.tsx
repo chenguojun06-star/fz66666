@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Alert, Button, Card, Empty, Input, Modal, Select, Space, Spin, Tabs, Tag, Tree, Form, Row, Col, message } from 'antd';
+import { Alert, App, Button, Card, Checkbox, Empty, Input, Modal, Select, Space, Spin, Tabs, Tag, Form, Row, Col } from 'antd';
 import type { MenuProps } from 'antd';
-import { PlusOutlined, SearchOutlined, EditOutlined, CheckOutlined, CloseOutlined, SettingOutlined } from '@ant-design/icons';
+import { PlusOutlined, SearchOutlined, EditOutlined, CheckOutlined, CloseOutlined, SettingOutlined, FileSearchOutlined } from '@ant-design/icons';
 import Layout from '../../components/Layout';
 import ResizableModal from '../../components/common/ResizableModal';
 import ResizableTable from '../../components/common/ResizableTable';
@@ -9,14 +9,17 @@ import RowActions from '../../components/common/RowActions';
 import { Role, User as UserType, UserQueryParams } from '../../types/system';
 import api, { requestWithPathFallback } from '../../utils/api';
 import { formatDateTime } from '../../utils/datetime';
+import { useSync } from '../../utils/syncManager';
+import { useViewport } from '../../utils/useViewport';
 import './styles.css';
 
 const { Option } = Select;
 
 const UserList: React.FC = () => {
+  const { message, modal } = App.useApp();
   const [form] = Form.useForm();
   // 状态管理
-  const [viewportWidth, setViewportWidth] = useState<number>(() => (typeof window === 'undefined' ? 1200 : window.innerWidth));
+  const { isMobile, modalWidth } = useViewport();
   const [visible, setVisible] = useState(false);
   const [currentUser, setCurrentUser] = useState<UserType | null>(null);
   const [queryParams, setQueryParams] = useState<UserQueryParams>({
@@ -29,16 +32,6 @@ const UserList: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const onResize = () => setViewportWidth(window.innerWidth);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
-
-  const isMobile = viewportWidth < 768;
-  const isTablet = viewportWidth >= 768 && viewportWidth < 1024;
-  const modalWidth = isMobile ? '96vw' : isTablet ? '66vw' : '60vw';
   const modalInitialHeight = 720;
 
   const [activeEditTab, setActiveEditTab] = useState<'base' | 'perm'>('base');
@@ -47,9 +40,14 @@ const UserList: React.FC = () => {
   const [roleOptionsLoading, setRoleOptionsLoading] = useState(false);
 
   const [permTree, setPermTree] = useState<any[]>([]);
-  const [permCheckedKeys, setPermCheckedKeys] = useState<string[]>([]);
+  const [permCheckedIds, setPermCheckedIds] = useState<Set<number>>(new Set());
   const [permLoading, setPermLoading] = useState(false);
   const [permSaving, setPermSaving] = useState(false);
+  const [pendingUserCount, setPendingUserCount] = useState(0);
+  const [logVisible, setLogVisible] = useState(false);
+  const [logLoading, setLogLoading] = useState(false);
+  const [logRecords, setLogRecords] = useState<any[]>([]);
+  const [logTitle, setLogTitle] = useState('操作日志');
 
   // 表单验证规则
   const formRules = {
@@ -104,6 +102,32 @@ const UserList: React.FC = () => {
     }
   };
 
+  // 获取待审批用户数量
+  const fetchPendingUserCount = async () => {
+    try {
+      const response = await api.get('/system/user/pending', {
+        params: { page: 1, pageSize: 1 }
+      });
+      const result = response as any;
+      if (result.code === 200) {
+        const count = result.data?.total || 0;
+        if (count > pendingUserCount && pendingUserCount > 0) {
+          // 有新的待审批用户
+          message.info({
+            content: `有 ${count - pendingUserCount} 个新用户待审批`,
+            duration: 5,
+            onClick: () => {
+              window.location.href = '/system/user-approval';
+            }
+          });
+        }
+        setPendingUserCount(count);
+      }
+    } catch (error) {
+      console.error('获取待审批用户数量失败', error);
+    }
+  };
+
   // 获取用户列表
   const getUserList = async () => {
     setLoading(true);
@@ -136,7 +160,61 @@ const UserList: React.FC = () => {
   // 页面加载时获取用户列表
   useEffect(() => {
     getUserList();
+    fetchRoleOptions();
+    fetchPendingUserCount(); // 初始加载待审批用户数量
+
+    // 每30秒检查一次待审批用户数量
+    const interval = setInterval(() => {
+      fetchPendingUserCount();
+    }, 30000);
+
+    return () => clearInterval(interval);
   }, [queryParams]);
+
+  // 实时同步：60秒自动轮询更新用户列表
+  // 用户管理数据更新频率较低
+  // 注意：普通用户无权访问此接口，会返回403
+  useSync(
+    'user-list',
+    async () => {
+      try {
+        const response = await api.get<any>('/system/user/list', {
+          params: queryParams,
+        });
+        const result = response as any;
+        if (result.code === 200) {
+          return {
+            records: result.data.records || [],
+            total: result.data.total || 0
+          };
+        }
+        return null;
+      } catch (error: any) {
+        // 403权限错误不输出到控制台（普通用户正常情况）
+        const status = error?.response?.status || error?.status;
+        if (status !== 403) {
+          console.error('[实时同步] 获取用户列表失败', error);
+        }
+        return null;
+      }
+    },
+    (newData, oldData) => {
+      if (oldData !== null && newData) {
+        setUserList(newData.records);
+        setTotal(newData.total);
+        console.log('[实时同步] 用户列表数据已更新', {
+          oldCount: oldData.records.length,
+          newCount: newData.records.length
+        });
+      }
+    },
+    {
+      interval: 60000, // 60秒轮询
+      enabled: !loading && !visible,
+      pauseOnHidden: true,
+      onError: (error) => console.error('[实时同步] 用户列表同步错误', error)
+    }
+  );
 
   useEffect(() => {
     fetchRoleOptions();
@@ -151,25 +229,61 @@ const UserList: React.FC = () => {
     return hit?.roleName || '';
   }, [roleOptions, selectedRoleId]);
 
-  const treeData = useMemo(() => {
-    const mapNodes = (nodes: any[]): any[] => {
-      return (nodes || []).map((n) => {
-        const children = Array.isArray(n.children) ? mapNodes(n.children) : undefined;
-        return {
-          key: String(n.id),
-          title: n.permissionName,
-          children,
-        };
-      });
+  const permissionsByModule = useMemo(() => {
+    // 收集所有顶级模块及其子权限
+    const modules: Array<{
+      moduleId: number;
+      moduleName: string;
+      permissions: any[];
+    }> = [];
+
+    const collectPermissions = (node: any) => {
+      const allPerms: any[] = [];
+
+      // 递归收集所有子权限
+      const collectChildren = (n: any) => {
+        if (!n) return;
+
+        // 添加当前节点（如果不是顶级模块）
+        if (n.parentId && n.parentId !== 0) {
+          allPerms.push({
+            id: n.id,
+            name: n.permissionName,
+            type: n.permissionType,
+          });
+        }
+
+        // 递归处理子节点
+        if (Array.isArray(n.children)) {
+          for (const child of n.children) {
+            collectChildren(child);
+          }
+        }
+      };
+
+      collectChildren(node);
+      return allPerms;
     };
-    return mapNodes(permTree);
+
+    // 遍历顶级节点
+    for (const topNode of permTree || []) {
+      const perms = collectPermissions(topNode);
+
+      modules.push({
+        moduleId: topNode.id,
+        moduleName: topNode.permissionName,
+        permissions: perms,
+      });
+    }
+
+    return modules;
   }, [permTree]);
 
   const loadPermTreeAndChecked = async (roleId: string) => {
     const rid = String(roleId || '').trim();
     if (!rid) {
       setPermTree([]);
-      setPermCheckedKeys([]);
+      setPermCheckedIds(new Set());
       return;
     }
     setPermLoading(true);
@@ -186,11 +300,11 @@ const UserList: React.FC = () => {
         setPermTree([]);
       }
       const idList: number[] = (idsResult.code === 200 && Array.isArray(idsResult.data)) ? idsResult.data : [];
-      setPermCheckedKeys(idList.map((id) => String(id)));
+      setPermCheckedIds(new Set(idList));
     } catch {
       message.error('加载权限失败');
       setPermTree([]);
-      setPermCheckedKeys([]);
+      setPermCheckedIds(new Set());
     } finally {
       setPermLoading(false);
     }
@@ -202,27 +316,40 @@ const UserList: React.FC = () => {
       message.error('请先选择角色');
       return;
     }
-    setPermSaving(true);
-    try {
-      const ids = permCheckedKeys.map((k) => Number(k)).filter((n) => Number.isFinite(n));
-      const res = await requestWithPathFallback('put', `/system/role/${rid}/permission-ids`, `/auth/role/${rid}/permission-ids`, ids);
-      const result = res as any;
-      if (result.code === 200) {
-        message.success('权限保存成功');
-      } else {
-        message.error(result.message || '权限保存失败');
+    openRemarkModal('确认保存权限', '确认保存', undefined, async (remark) => {
+      setPermSaving(true);
+      try {
+        const ids = Array.from(permCheckedIds.values());
+        const res = await requestWithPathFallback(
+          'put',
+          `/system/role/${rid}/permission-ids`,
+          `/auth/role/${rid}/permission-ids`,
+          { permissionIds: ids, remark }
+        );
+        const result = res as any;
+        if (result.code === 200) {
+          message.success('权限保存成功');
+        } else {
+          message.error(result.message || '权限保存失败');
+        }
+      } catch {
+        message.error('权限保存失败');
+      } finally {
+        setPermSaving(false);
       }
-    } catch {
-      message.error('权限保存失败');
-    } finally {
-      setPermSaving(false);
-    }
+    });
   };
 
   // 打开弹窗
   const openDialog = (user?: UserType, initialTab: 'base' | 'perm' = 'base') => {
     setActiveEditTab(initialTab);
     setCurrentUser(user || null);
+
+    // 确保加载角色选项
+    if (roleOptions.length === 0 && !roleOptionsLoading) {
+      fetchRoleOptions();
+    }
+
     if (user) {
       const next = {
         ...user,
@@ -234,7 +361,8 @@ const UserList: React.FC = () => {
       // 设置默认值
       form.setFieldsValue({
         permissionRange: 'all',
-        status: 'active'
+        status: 'active',
+        approvalStatus: 'approved'
       });
     }
     setVisible(true);
@@ -246,8 +374,68 @@ const UserList: React.FC = () => {
     setCurrentUser(null);
     setActiveEditTab('base');
     setPermTree([]);
-    setPermCheckedKeys([]);
+    setPermCheckedIds(new Set());
     form.resetFields();
+  };
+
+  const openRemarkModal = (
+    title: string,
+    okText: string,
+    okButtonProps: any,
+    onConfirm: (remark: string) => Promise<void>
+  ) => {
+    let remarkValue = '';
+    modal.confirm({
+      title,
+      content: (
+        <Form layout="vertical" onSubmitCapture={(e) => e.preventDefault()}>
+          <Form.Item label="操作原因">
+            <Input.TextArea
+              rows={4}
+              maxLength={200}
+              showCount
+              onChange={(e) => {
+                remarkValue = e.target.value;
+              }}
+            />
+          </Form.Item>
+        </Form>
+      ),
+      okText,
+      cancelText: '取消',
+      okButtonProps,
+      onOk: async () => {
+        const remark = String(remarkValue || '').trim();
+        if (!remark) {
+          message.error('请输入操作原因');
+          return Promise.reject(new Error('请输入操作原因'));
+        }
+        await onConfirm(remark);
+      },
+    });
+  };
+
+  const openLogModal = async (bizType: string, bizId: string, title: string) => {
+    setLogTitle(title);
+    setLogVisible(true);
+    setLogLoading(true);
+    try {
+      const res = await api.get('/system/operation-log/list', {
+        params: { bizType, bizId },
+      });
+      const result = res as any;
+      if (result.code === 200) {
+        setLogRecords(Array.isArray(result.data) ? result.data : []);
+      } else {
+        message.error(result.message || '获取日志失败');
+        setLogRecords([]);
+      }
+    } catch (e: any) {
+      message.error(e?.message || '获取日志失败');
+      setLogRecords([]);
+    } finally {
+      setLogLoading(false);
+    }
   };
 
   // 获取状态配置
@@ -261,41 +449,56 @@ const UserList: React.FC = () => {
     return { text: '未知', color: 'default', icon: null };
   };
 
-  // 获取权限范围文本
+  // 获取权限范围文本 (数据可见性)
   const getPermissionRangeText = (range: string) => {
-    const rangeMap = {
-      all: '全部权限',
+    const rangeMap: Record<string, string> = {
+      all: '查看全部',
+      team: '查看团队',
+      own: '仅看自己',
+      // 兼容旧数据
       style: '款号资料',
       production: '生产管理',
       finance: '财务管理',
       system: '系统设置'
     };
-    return rangeMap[range as keyof typeof rangeMap] || range;
+    return rangeMap[range] || range || '未设置';
+  };
+
+  // 获取权限范围标签颜色
+  const getPermissionRangeColor = (range: string) => {
+    const colorMap: Record<string, string> = {
+      all: 'blue',
+      team: 'green',
+      own: 'orange',
+    };
+    return colorMap[range] || 'default';
   };
 
   // 切换用户状态
   const toggleUserStatus = async (id: string, currentStatus: UserType['status']) => {
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
-    try {
-      const response = await api.put('/system/user/status', null, {
-        params: {
-          id,
-          status: newStatus
+    openRemarkModal('确认状态变更', '确认', undefined, async (remark) => {
+      try {
+        const response = await api.put('/system/user/status', null, {
+          params: {
+            id,
+            status: newStatus,
+            remark,
+          }
+        });
+        const result = response as any;
+        if (result.code === 200) {
+          message.success('状态更新成功');
+          setUserList(prev => prev.map(user =>
+            user.id === id ? { ...user, status: newStatus } : user
+          ));
+        } else {
+          message.error(result.message || '状态更新失败');
         }
-      });
-      const result = response as any;
-      if (result.code === 200) {
-        message.success('状态更新成功');
-        // 更新本地状态
-        setUserList(prev => prev.map(user =>
-          user.id === id ? { ...user, status: newStatus } : user
-        ));
-      } else {
-        message.error(result.message || '状态更新失败');
+      } catch (error: any) {
+        message.error(error?.message || '状态更新失败');
       }
-    } catch (error: any) {
-      message.error(error?.message || '状态更新失败');
-    }
+    });
   };
 
   const applyRoleToUser = async (user: UserType, role: Role) => {
@@ -306,60 +509,64 @@ const UserList: React.FC = () => {
       return;
     }
 
-    Modal.confirm({
-      title: '一键授权',
-      content: `将「${String(user.name || user.username || uid)}」的角色设置为「${String(role.roleName || rid)}」？`,
-      okText: '确定',
-      cancelText: '取消',
-      onOk: async () => {
-        const payload: any = {
-          id: user.id,
-          username: user.username,
-          name: user.name,
-          roleId: Number(role.id),
-          roleName: role.roleName,
-          permissionRange: (user as any).permissionRange,
-          status: user.status,
-          phone: user.phone,
-          email: user.email,
-        };
-        const response = await api.put('/system/user', payload);
-        const result = response as any;
-        if (result.code === 200) {
-          message.success('授权成功');
-          getUserList();
-          return;
-        }
-        message.error(result.message || '授权失败');
-        throw new Error('grant failed');
-      },
+    openRemarkModal('一键授权', '确定', undefined, async (remark) => {
+      const payload: any = {
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        roleId: Number(role.id),
+        roleName: role.roleName,
+        permissionRange: (user as any).permissionRange,
+        status: user.status,
+        phone: user.phone,
+        email: user.email,
+        operationRemark: remark,
+      };
+      const response = await api.put('/system/user', payload);
+      const result = response as any;
+      if (result.code === 200) {
+        message.success('授权成功');
+        getUserList();
+        return;
+      }
+      message.error(result.message || '授权失败');
+      throw new Error('grant failed');
     });
   };
 
   // 表单提交
   const handleSubmit = async () => {
     try {
-      setSubmitLoading(true);
       const values = await form.validateFields();
-      let response;
+      const submit = async (remark?: string) => {
+        setSubmitLoading(true);
+        try {
+          let response;
+          if (currentUser?.id) {
+            response = await api.put('/system/user', { ...values, id: currentUser.id, operationRemark: remark });
+          } else {
+            response = await api.post('/system/user', values);
+          }
+
+          const result = response as any;
+          if (result.code === 200) {
+            message.success(currentUser?.id ? '编辑人员成功' : '新增人员成功');
+            closeDialog();
+            getUserList();
+          } else {
+            message.error(result.message || '保存失败');
+          }
+        } finally {
+          setSubmitLoading(false);
+        }
+      };
+
       if (currentUser?.id) {
-        // 编辑用户
-        response = await api.put('/system/user', { ...values, id: currentUser.id });
-      } else {
-        // 新增用户
-        response = await api.post('/system/user', values);
+        openRemarkModal('确认保存', '确认保存', undefined, submit);
+        return;
       }
 
-      const result = response as any;
-      if (result.code === 200) {
-        message.success(currentUser?.id ? '编辑人员成功' : '新增人员成功');
-        // 关闭弹窗
-        closeDialog();
-        // 刷新用户列表
-        getUserList();
-      } else {
-        message.error(result.message || '保存失败');
-      }
+      await submit();
     } catch (error) {
       // 处理表单验证错误
       if ((error as any).errorFields) {
@@ -369,11 +576,39 @@ const UserList: React.FC = () => {
         message.error((error as Error).message || '保存失败');
       }
     } finally {
-      setSubmitLoading(false);
     }
   };
 
   // 表格列定义
+  const logColumns = [
+    {
+      title: '动作',
+      dataIndex: 'action',
+      key: 'action',
+      width: 120,
+      render: (v: string) => v || '-',
+    },
+    {
+      title: '操作人',
+      dataIndex: 'operator',
+      key: 'operator',
+      width: 120,
+      render: (v: string) => v || '-',
+    },
+    {
+      title: '原因',
+      dataIndex: 'remark',
+      key: 'remark',
+      render: (v: string) => v || '-',
+    },
+    {
+      title: '时间',
+      dataIndex: 'createTime',
+      key: 'createTime',
+      width: 180,
+      render: (v: string) => formatDateTime(v),
+    },
+  ];
   const columns = [
     {
       title: '用户名',
@@ -394,11 +629,15 @@ const UserList: React.FC = () => {
       width: 100,
     },
     {
-      title: '权限范围',
+      title: '数据权限',
       dataIndex: 'permissionRange',
       key: 'permissionRange',
       width: 120,
-      render: (range: string) => getPermissionRangeText(range),
+      render: (range: string) => (
+        <Tag color={getPermissionRangeColor(range)}>
+          {getPermissionRangeText(range)}
+        </Tag>
+      ),
     },
     {
       title: '状态',
@@ -468,6 +707,7 @@ const UserList: React.FC = () => {
 
         return (
           <RowActions
+            maxInline={2}
             actions={[
               {
                 key: 'edit',
@@ -492,6 +732,13 @@ const UserList: React.FC = () => {
                 children: roleItems,
               },
               {
+                key: 'log',
+                label: '日志',
+                title: '日志',
+                icon: <FileSearchOutlined />,
+                onClick: () => openLogModal('user', String(record.id || ''), `人员 ${record.name || record.username} 操作日志`),
+              },
+              {
                 key: 'toggle',
                 label: toggleLabel,
                 danger: record.status === 'active',
@@ -509,7 +756,7 @@ const UserList: React.FC = () => {
     const rid = String(selectedRoleId || '').trim();
     if (!rid) {
       setPermTree([]);
-      setPermCheckedKeys([]);
+      setPermCheckedIds(new Set());
       return;
     }
     loadPermTreeAndChecked(rid);
@@ -526,6 +773,27 @@ const UserList: React.FC = () => {
               新增人员
             </Button>
           </div>
+
+          {/* 待审批用户提醒 */}
+          {pendingUserCount > 0 && (
+            <Alert
+              message={`有 ${pendingUserCount} 个新用户待审批`}
+              description="点击前往审批页面，为新用户分配角色和权限"
+              type="info"
+              showIcon
+              closable
+              action={
+                <Button
+                  size="small"
+                  type="primary"
+                  onClick={() => window.location.href = '/system/user-approval'}
+                >
+                  立即审批
+                </Button>
+              }
+              style={{ marginBottom: 16 }}
+            />
+          )}
 
           {/* 筛选区 */}
           <Card size="small" className="filter-card mb-sm">
@@ -644,22 +912,29 @@ const UserList: React.FC = () => {
                         <Col span={8}>
                           <Form.Item name="roleId" label="角色" rules={formRules.roleId}>
                             <Select placeholder="请选择角色" loading={roleOptionsLoading}>
-                              <Option value="">请选择角色</Option>
                               {roleOptions.map((r) => (
-                                <Option key={String(r.id)} value={String(r.id)}>{r.roleName}</Option>
+                                <Option key={String(r.id)} value={String(r.id)}>
+                                  {r.roleName || '未命名角色'}
+                                </Option>
                               ))}
                             </Select>
                           </Form.Item>
                         </Col>
                         <Col span={8}>
-                          <Form.Item name="permissionRange" label="权限范围" rules={formRules.permissionRange}>
-                            <Select placeholder="请选择权限范围">
-                              <Option value="">请选择权限范围</Option>
-                              <Option value="all">全部权限</Option>
-                              <Option value="style">款号资料</Option>
-                              <Option value="production">生产管理</Option>
-                              <Option value="finance">财务管理</Option>
-                              <Option value="system">系统设置</Option>
+                          <Form.Item name="permissionRange" label="数据权限" rules={formRules.permissionRange}>
+                            <Select placeholder="请选择数据权限">
+                              <Option value="all">
+                                <Tag color="blue" style={{ marginRight: 4 }}>全部</Tag>
+                                查看所有人数据
+                              </Option>
+                              <Option value="team">
+                                <Tag color="green" style={{ marginRight: 4 }}>团队</Tag>
+                                查看团队数据
+                              </Option>
+                              <Option value="own">
+                                <Tag color="orange" style={{ marginRight: 4 }}>个人</Tag>
+                                仅查看自己数据
+                              </Option>
                             </Select>
                           </Form.Item>
                         </Col>
@@ -726,14 +1001,67 @@ const UserList: React.FC = () => {
                           <div className="user-perm-loading">
                             <Spin />
                           </div>
-                        ) : treeData.length ? (
-                          <Tree
-                            checkable
-                            defaultExpandAll
-                            checkedKeys={permCheckedKeys}
-                            onCheck={(keys) => setPermCheckedKeys((Array.isArray(keys) ? keys : (keys as any).checked) as string[])}
-                            treeData={treeData}
-                          />
+                        ) : permissionsByModule.length ? (
+                          <div style={{
+                            marginTop: 12,
+                            display: 'flex',
+                            gap: 8,
+                            flexWrap: 'wrap',
+                            alignItems: 'flex-start'
+                          }}>
+                            {permissionsByModule.map((module) => (
+                              <div
+                                key={module.moduleId}
+                                style={{
+                                  minWidth: 120,
+                                  maxWidth: 160,
+                                  border: '1px solid #d1d5db',
+                                  padding: '2px 6px'
+                                }}
+                              >
+                                {/* 模块复选框 */}
+                                <div style={{ lineHeight: '20px' }}>
+                                  <Checkbox
+                                    checked={permCheckedIds.has(module.moduleId)}
+                                    onChange={(e) => {
+                                      const next = new Set(permCheckedIds);
+                                      if (e.target.checked) {
+                                        next.add(module.moduleId);
+                                        module.permissions.forEach(p => next.add(p.id));
+                                      } else {
+                                        next.delete(module.moduleId);
+                                        module.permissions.forEach(p => next.delete(p.id));
+                                      }
+                                      setPermCheckedIds(next);
+                                    }}
+                                    style={{ fontSize: 12 }}
+                                  >
+                                    {module.moduleName}
+                                  </Checkbox>
+                                </div>
+                                {/* 子权限列表 */}
+                                {module.permissions.map((perm) => (
+                                  <div key={perm.id} style={{ lineHeight: '20px' }}>
+                                    <Checkbox
+                                      checked={permCheckedIds.has(perm.id)}
+                                      onChange={(e) => {
+                                        const next = new Set(permCheckedIds);
+                                        if (e.target.checked) {
+                                          next.add(perm.id);
+                                        } else {
+                                          next.delete(perm.id);
+                                        }
+                                        setPermCheckedIds(next);
+                                      }}
+                                      style={{ fontSize: 12 }}
+                                    >
+                                      {perm.name}
+                                    </Checkbox>
+                                  </div>
+                                ))}
+                              </div>
+                            ))}
+                          </div>
                         ) : (
                           <Empty description={String(selectedRoleId || '').trim() ? '暂无可配置权限' : '请先选择角色'} />
                         )}
@@ -744,6 +1072,29 @@ const UserList: React.FC = () => {
               ]}
             />
           </Form>
+        </ResizableModal>
+
+        <ResizableModal
+          open={logVisible}
+          title={logTitle}
+          onCancel={() => {
+            setLogVisible(false);
+            setLogRecords([]);
+          }}
+          footer={null}
+          width={modalWidth}
+          initialHeight={520}
+          minWidth={isMobile ? 320 : 520}
+          scaleWithViewport
+        >
+          <ResizableTable
+            columns={logColumns as any}
+            dataSource={logRecords}
+            rowKey={(r) => String(r.id || `${r.bizType}-${r.bizId}-${r.createTime}`)}
+            loading={logLoading}
+            pagination={false}
+            scroll={{ x: 'max-content', y: isMobile ? 320 : 420 }}
+          />
         </ResizableModal>
       </div>
     </Layout>

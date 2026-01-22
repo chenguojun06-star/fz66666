@@ -1,11 +1,17 @@
 package com.fashion.supplychain.auth;
 
+/**
+ * JWT令牌主体信息
+ * 包含用户身份和权限范围信息
+ */
 public class TokenSubject {
     private String userId;
     private String username;
     private String roleId;
     private String roleName;
     private String openid;
+    /** 数据权限范围: all=全部, team=团队, own=仅自己 */
+    private String permissionRange;
 
     public String getUserId() {
         return userId;
@@ -45,5 +51,13 @@ public class TokenSubject {
 
     public void setOpenid(String openid) {
         this.openid = openid;
+    }
+
+    public String getPermissionRange() {
+        return permissionRange;
+    }
+
+    public void setPermissionRange(String permissionRange) {
+        this.permissionRange = permissionRange;
     }
 }

@@ -77,4 +77,23 @@ public class MaterialPurchaseController {
     public Result<Boolean> delete(@PathVariable String id) {
         return Result.success(materialPurchaseOrchestrator.delete(id));
     }
+
+    /**
+     * 通过扫码获取关联的采购单列表
+     * @param params 包含 scanCode 和 orderNo
+     * @return 采购单列表
+     */
+    @GetMapping("/by-scan-code")
+    public Result<List<MaterialPurchase>> getByScanCode(@RequestParam Map<String, Object> params) {
+        return Result.success(materialPurchaseOrchestrator.getByScanCode(params));
+    }
+
+    /**
+     * 获取当前用户的采购任务
+     * @return 采购任务列表
+     */
+    @GetMapping("/my-tasks")
+    public Result<List<MaterialPurchase>> getMyTasks() {
+        return Result.success(materialPurchaseOrchestrator.getMyTasks());
+    }
 }

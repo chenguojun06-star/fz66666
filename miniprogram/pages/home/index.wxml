@@ -28,60 +28,43 @@
 
   <view class="card">
     <view class="title">首页</view>
-    <view class="home-actions">
-      <view class="btn-secondary {{loading ? 'btn-disabled' : ''}}" bindtap="refresh">刷新</view>
-    </view>
-    <view class="home-section-title">搜索</view>
-    <view class="home-filter">
-      <view class="filter-row">
-        <view class="filter-field" style="grid-column: 1 / span 2;">
-          <input class="filter-text" placeholder="输入订单号/款号/品牌/加工厂进行搜索" value="{{keyword}}" bindinput="onKeywordInput" />
-        </view>
-      </view>
-      <view class="filter-actions">
-        <view class="btn-secondary {{loading ? 'btn-disabled' : ''}}" bindtap="queryByKeyword">查询</view>
-        <view class="btn-secondary {{loading ? 'btn-disabled' : ''}}" bindtap="resetKeyword">清空</view>
-      </view>
-    </view>
+    
+    <global-search
+      keyword="{{globalSearch.keyword}}"
+      results="{{globalSearch.results}}"
+      has-searched="{{globalSearch.hasSearched}}"
+      bind:input="onGlobalSearchInput"
+      bind:search="doGlobalSearch"
+      bind:clear="clearGlobalSearch"
+      bind:close="closeGlobalSearch"
+      bind:itemtap="onResultItemTap"
+    />
+
     <view wx:if="{{loading}}" class="hint">加载中...</view>
     <view wx:if="{{!loading && !statsLoaded}}" class="hint">暂无统计</view>
     <view class="home-section-title">数据概览</view>
-    <view class="home-stats">
-      <view class="home-stat stat-order">
-        <view class="home-stat-head">
-          <view class="home-stat-icon-wrap icon-order">
-            <image class="home-stat-icon" src="/assets/icons/order.svg" mode="aspectFit" />
-          </view>
-          <view class="home-stat-label">订单数量</view>
-        </view>
-        <view class="home-stat-value">{{stats.productionOrders}}</view>
+    <view class="home-stats-row">
+      <view class="home-stat-item">
+        <text class="home-stat-emoji">📋</text>
+        <text class="home-stat-label">订单</text>
+        <text class="home-stat-value">{{stats.productionOrders}}</text>
       </view>
-      <view class="home-stat stat-stock">
-        <view class="home-stat-head">
-          <view class="home-stat-icon-wrap icon-stock">
-            <image class="home-stat-icon" src="/assets/icons/stock.svg" mode="aspectFit" />
-          </view>
-          <view class="home-stat-label">当天入库</view>
-        </view>
-        <view class="home-stat-value">{{stats.warehousingToday}}</view>
+      <view class="home-stat-item">
+        <text class="home-stat-emoji">📥</text>
+        <text class="home-stat-label">入库</text>
+        <text class="home-stat-value">{{stats.warehousingToday}}</text>
       </view>
-      <view class="home-stat stat-purchase">
-        <view class="home-stat-head">
-          <view class="home-stat-icon-wrap icon-purchase">
-            <image class="home-stat-icon" src="/assets/icons/purchase.svg" mode="aspectFit" />
-          </view>
-          <view class="home-stat-label">物料采购</view>
-        </view>
-        <view class="home-stat-value">{{stats.materialPurchase}}</view>
+    </view>
+    <view class="home-stats-row">
+      <view class="home-stat-item">
+        <text class="home-stat-emoji">🛒</text>
+        <text class="home-stat-label">采购</text>
+        <text class="home-stat-value">{{stats.materialPurchase}}</text>
       </view>
-      <view class="home-stat stat-defect">
-        <view class="home-stat-head">
-          <view class="home-stat-icon-wrap icon-defect">
-            <image class="home-stat-icon" src="/assets/icons/defect.svg" mode="aspectFit" />
-          </view>
-          <view class="home-stat-label">次品数量</view>
-        </view>
-        <view class="home-stat-value">{{stats.defectCount}}</view>
+      <view class="home-stat-item">
+        <text class="home-stat-emoji">⚠️</text>
+        <text class="home-stat-label">次品</text>
+        <text class="home-stat-value">{{stats.defectCount}}</text>
       </view>
     </view>
 

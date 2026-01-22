@@ -61,7 +61,10 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
 
     @Override
     public long countProductionOrders() {
-        return productionOrderService.lambdaQuery().eq(ProductionOrder::getDeleteFlag, 0).count();
+        return productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .eq(ProductionOrder::getStatus, "production")
+                .count();
     }
 
     @Override
@@ -134,10 +137,28 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
 
     @Override
     public long countUrgentEvents() {
-        return productionOrderService.lambdaQuery()
+        LocalDateTime now = LocalDateTime.now();
+        
+        // 1. 订单超期：已超过计划结束日期但未完成的订单
+        long delayedOrders = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
-                .eq(ProductionOrder::getStatus, "delayed")
+                .ne(ProductionOrder::getStatus, "已完成")
+                .ne(ProductionOrder::getStatus, "已取消")
+                .isNotNull(ProductionOrder::getPlannedEndDate)
+                .lt(ProductionOrder::getPlannedEndDate, now)
                 .count();
+        
+        // 2. 面料采购待处理：状态为pending的采购单
+        long pendingPurchases = materialPurchaseService.lambdaQuery()
+                .eq(MaterialPurchase::getDeleteFlag, 0)
+                .eq(MaterialPurchase::getStatus, "pending")
+                .count();
+        
+        // 3. 未来可扩展：质检超期、对账超期等
+        // long overdueQualityCheck = ...;
+        // long overdueReconciliation = ...;
+        
+        return delayedOrders + pendingPurchases;
     }
 
     @Override

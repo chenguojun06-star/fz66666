@@ -68,7 +68,7 @@ class TemplateLibraryOrchestratorTest {
         ctx.setRole("user");
         UserContext.set(ctx);
 
-        assertThrows(AccessDeniedException.class, () -> templateLibraryOrchestrator.rollback("t1"));
+        assertThrows(AccessDeniedException.class, () -> templateLibraryOrchestrator.rollback("t1", "原因"));
     }
 
     @Test
@@ -78,7 +78,7 @@ class TemplateLibraryOrchestratorTest {
         UserContext.set(ctx);
 
         when(templateLibraryService.getById("missing")).thenReturn(null);
-        assertThrows(NoSuchElementException.class, () -> templateLibraryOrchestrator.rollback("missing"));
+        assertThrows(NoSuchElementException.class, () -> templateLibraryOrchestrator.rollback("missing", "原因"));
     }
 
     @Test

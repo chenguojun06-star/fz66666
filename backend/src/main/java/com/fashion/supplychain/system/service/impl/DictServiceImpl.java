@@ -10,13 +10,23 @@ import com.fashion.supplychain.system.mapper.DictMapper;
 import com.fashion.supplychain.system.service.DictService;
 import java.util.HashMap;
 import java.util.Map;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+/**
+ * 字典服务实现
+ * 
+ * 缓存策略：
+ * - 字典数据查询结果会被缓存，提升查询性能
+ * - 保存/更新/删除操作会清空缓存，保证数据一致性
+ */
 @Service
 public class DictServiceImpl extends ServiceImpl<DictMapper, Dict> implements DictService {
 
     @Override
+    @Cacheable(value = "dict", key = "#params.toString()", unless = "#result == null || #result.records.empty")
     public IPage<Dict> queryPage(Map<String, Object> params) {
         Map<String, Object> safeParams = params == null ? new HashMap<>() : params;
 

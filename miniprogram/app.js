@@ -1,5 +1,5 @@
-const { getToken, clearToken } = require('./utils/storage');
-const reminderManager = require('./utils/reminderManager');
+import { getToken, clearToken } from './utils/storage';
+import * as reminderManager from './utils/reminderManager';
 
 let redirectingToLogin = false;
 let redirectResetTimer = null;
@@ -63,6 +63,8 @@ App({
 
     logout() {
         clearToken();
+        const { clearUserInfo } = require('./utils/storage');
+        clearUserInfo();
         this.redirectToLogin();
     },
 

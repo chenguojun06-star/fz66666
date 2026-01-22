@@ -66,7 +66,8 @@ class Logger {
     }
 
     // 开发环境打印到控制台
-    if (process?.env?.NODE_ENV === 'development') {
+    const isDev = process?.env?.NODE_ENV === 'development';
+    if (isDev) {
       const prefix = `[${level}${traceId ? ` ${traceId}` : ''}] ${message}`;
       switch (level) {
         case LogLevel.Debug:
@@ -247,7 +248,7 @@ class ErrorHandler {
       // 表单验证错误
       return this.handleFormValidationError(error);
     } else if (error?.response || error?.request) {
-      // 网络/API 错误
+      // 网络/接口错误
       return this.handleApiError(error, defaultMsg);
     } else if (error?.message) {
       // 其他错误

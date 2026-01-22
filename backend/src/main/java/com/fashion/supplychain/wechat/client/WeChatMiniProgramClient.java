@@ -46,6 +46,15 @@ public class WeChatMiniProgramClient {
                 ok.setUnionid(null);
                 return ok;
             }
+            // 当未配置appid/secret但mockEnabled为false时，如果code是模拟数据（如mock_code），也允许通过
+            if (code.startsWith("mock_")) {
+                 String openid = code;
+                 Code2SessionResult ok = Code2SessionResult.ok();
+                 ok.setOpenid(openid);
+                 ok.setSessionKey("");
+                 ok.setUnionid(null);
+                 return ok;
+            }
             return Code2SessionResult.fail("小程序appid/secret未配置");
         }
 

@@ -124,6 +124,8 @@
   box-shadow: 0 26px 70px rgba(0, 0, 0, 0.46);
   position: relative;
   overflow: hidden;
+  z-index: 10;
+  pointer-events: auto;
 }
 
 

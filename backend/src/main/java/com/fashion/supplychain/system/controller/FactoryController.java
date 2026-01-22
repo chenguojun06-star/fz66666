@@ -41,7 +41,8 @@ public class FactoryController {
     }
 
     @DeleteMapping("/{id}")
-    public Result<Boolean> delete(@PathVariable String id) {
-        return Result.success(factoryOrchestrator.delete(id));
+    public Result<Boolean> delete(@PathVariable String id,
+            @RequestParam(required = false) String remark) {
+        return Result.success(factoryOrchestrator.delete(id, remark));
     }
 }

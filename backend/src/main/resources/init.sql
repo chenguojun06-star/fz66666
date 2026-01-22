@@ -74,15 +74,17 @@ CREATE TABLE IF NOT EXISTS t_login_log (
 
 -- 6. 工厂表
 CREATE TABLE IF NOT EXISTS t_factory (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '工厂ID',
+    id VARCHAR(36) PRIMARY KEY COMMENT '工厂ID',
     factory_code VARCHAR(50) NOT NULL UNIQUE COMMENT '工厂编码',
     factory_name VARCHAR(100) NOT NULL COMMENT '工厂名称',
-    contact_name VARCHAR(50) COMMENT '联系人',
-    contact_phone VARCHAR(20) COMMENT '联系电话',
+    contact_person VARCHAR(50) COMMENT '联系人',
+    contact_phone VARCHAR(30) COMMENT '联系电话',
     address VARCHAR(200) COMMENT '工厂地址',
-    status VARCHAR(20) DEFAULT 'ENABLED' COMMENT '状态：ENABLED-启用，DISABLED-禁用',
+    business_license VARCHAR(512) COMMENT '营业执照图片URL',
+    status VARCHAR(20) DEFAULT 'active' COMMENT '状态：active-启用，inactive-禁用',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    delete_flag INT NOT NULL DEFAULT 0 COMMENT '删除标识：0-未删除，1-已删除'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='工厂表';
 
 -- 7. 款号信息表
@@ -171,8 +173,14 @@ CREATE TABLE IF NOT EXISTS t_style_attachment (
     file_type VARCHAR(20) NOT NULL COMMENT '文件类型',
     file_size BIGINT NOT NULL COMMENT '文件大小(字节)',
     file_url VARCHAR(200) NOT NULL COMMENT '文件URL',
+    version INT DEFAULT 1 COMMENT '版本号',
+    version_remark VARCHAR(255) COMMENT '版本说明',
+    status VARCHAR(20) DEFAULT 'active' COMMENT '状态',
+    parent_id VARCHAR(36) COMMENT '父版本ID',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    uploader VARCHAR(50) COMMENT '上传人',
+    biz_type VARCHAR(20) DEFAULT 'general' COMMENT '业务类型',
     INDEX idx_style_id (style_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='款号附件表';
 
@@ -401,15 +409,34 @@ CREATE TABLE IF NOT EXISTS t_material_reconciliation (
     material_name VARCHAR(100) NOT NULL COMMENT '物料名称',
     purchase_id VARCHAR(36) COMMENT '采购单ID',
     purchase_no VARCHAR(50) COMMENT '采购单号',
+    order_id VARCHAR(36) COMMENT '订单ID',
+    order_no VARCHAR(50) COMMENT '订单号',
+    style_id VARCHAR(36) COMMENT '款号ID',
+    style_no VARCHAR(50) COMMENT '款号',
+    style_name VARCHAR(100) COMMENT '款名',
     quantity INT DEFAULT 0 COMMENT '数量',
     unit_price DECIMAL(10,2) DEFAULT 0.00 COMMENT '单价',
     total_amount DECIMAL(10,2) DEFAULT 0.00 COMMENT '总金额',
     deduction_amount DECIMAL(10,2) DEFAULT 0.00 COMMENT '扣款项',
     final_amount DECIMAL(10,2) DEFAULT 0.00 COMMENT '最终金额',
+    paid_amount DECIMAL(10,2) DEFAULT 0.00 COMMENT '已付金额',
     reconciliation_date VARCHAR(20) COMMENT '对账日期',
+    period_start_date DATETIME COMMENT '对账周期开始日期',
+    period_end_date DATETIME COMMENT '对账周期结束日期',
     status VARCHAR(20) DEFAULT 'pending' COMMENT '状态：pending-待审核，verified-已验证，approved-已批准，paid-已付款，rejected-已拒绝',
     remark VARCHAR(255) COMMENT '备注',
     delete_flag INT DEFAULT 0 COMMENT '删除标识：0-未删除，1-已删除',
+    reconciliation_operator_id VARCHAR(36) COMMENT '对账人ID',
+    reconciliation_operator_name VARCHAR(50) COMMENT '对账人姓名',
+    audit_operator_id VARCHAR(36) COMMENT '审核人ID',
+    audit_operator_name VARCHAR(50) COMMENT '审核人姓名',
+    verified_at DATETIME COMMENT '验证时间',
+    approved_at DATETIME COMMENT '批准时间',
+    paid_at DATETIME COMMENT '付款时间',
+    re_review_at DATETIME COMMENT '复审时间',
+    re_review_reason VARCHAR(255) COMMENT '复审原因',
+    create_by VARCHAR(36) COMMENT '创建人',
+    update_by VARCHAR(36) COMMENT '更新人',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='物料采购对账单表';

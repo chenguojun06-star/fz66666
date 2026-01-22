@@ -1,31 +1,14 @@
-const api = require('../../utils/api');
-const { getBaseUrl } = require('../../config');
-const { getToken } = require('../../utils/storage');
-const { errorHandler } = require('../../utils/errorHandler');
-const reminderManager = require('../../utils/reminderManager');
+import api from '../../utils/api';
+import { getBaseUrl, DEBUG_MODE } from '../../config';
+import { getToken, getStorageValue, setStorageValue } from '../../utils/storage';
+import { errorHandler } from '../../utils/errorHandler';
+import * as reminderManager from '../../utils/reminderManager';
 
 let undoTimer = null;
 let confirmTimer = null;
 let confirmTickTimer = null;
 
 const recentScanExpires = new Map();
-
-function readStorage(key, fallback) {
-    try {
-        const v = wx.getStorageSync(key);
-        return v == null ? fallback : v;
-    } catch (e) {
-        return fallback;
-    }
-}
-
-function writeStorage(key, value) {
-    try {
-        wx.setStorageSync(key, value);
-    } catch (e) {
-        null;
-    }
-}
 
 function cleanupRecentScans() {
     if (recentScanExpires.size <= 80) return;
@@ -209,6 +192,20 @@ function parseScanContent(rawScanCode) {
     if (first === '{' || first === '[') {
         const obj = safeJsonParse(raw);
         if (obj && typeof obj === 'object') {
+            // 检查是否为订单级别的二维码
+            if (obj.type === 'order' && obj.orderNo) {
+                return {
+                    scanCode: obj.orderNo, // 使用订单号作为scanCode
+                    quantity: null,
+                    orderNo: String(obj.orderNo).trim(),
+                    styleNo: obj.styleNo ? String(obj.styleNo).trim() : '',
+                    color: '',
+                    size: '',
+                    bundleNo: '',
+                    isOrderQR: true, // 标记为订单级别二维码
+                };
+            }
+            
             const code = obj.scanCode || obj.code || obj.qr || obj.value || obj.data;
             const qty = obj.quantity || obj.qty || obj.num || obj.count;
             const orderNo = obj.orderNo || obj.po || obj.order || obj.productionOrderNo;
@@ -253,6 +250,26 @@ function parseScanContent(rawScanCode) {
     }
 
     const meta = parseFeiNo(raw);
+    
+    // 如果解析不出菲号格式，判断是否为订单号格式
+    if (!meta) {
+        // 订单号格式：PO + 数字/字母，长度至少8位
+        // 支持：PO20260122001, PO2026-0122-001, PO_20260122001 等
+        const orderNoPattern = /^PO[-_]?[0-9A-Z]{8,}$/i;
+        if (orderNoPattern.test(raw)) {
+            return {
+                scanCode: raw,
+                quantity: null,
+                orderNo: raw.replace(/[-_]/g, ''), // 移除分隔符统一格式
+                styleNo: '',
+                color: '',
+                size: '',
+                bundleNo: '',
+                isOrderQR: true, // 标记为订单级别二维码
+            };
+        }
+    }
+    
     return {
         scanCode: raw,
         quantity: meta && meta.quantity != null ? meta.quantity : parseQuantityFromText(raw),
@@ -289,17 +306,17 @@ function scanCodeErrorText(err) {
 Page({
     data: {
         loading: false,
-        autoDetectEnabled: true, // 默认启用自动识别
+        autoDetectEnabled: true, // 始终启用自动识别
         scanTypeOptions: [
+            { label: '采购', value: 'procurement', progressStage: '采购', processName: '采购', processCode: '' },
             { label: '裁剪', value: 'cutting', progressStage: '裁剪', processName: '裁剪', processCode: '' },
-            { label: '缝制(计件)', value: 'sewing', progressStage: '缝制', processName: '缝制', processCode: '' },
             { label: '车缝', value: 'production', progressStage: '车缝', processName: '车缝', processCode: '' },
             { label: '大烫', value: 'production', progressStage: '大烫', processName: '大烫', processCode: '' },
             { label: '质检', value: 'quality', progressStage: '质检', processName: '质检', processCode: '' },
             { label: '包装', value: 'production', progressStage: '包装', processName: '包装', processCode: '' },
             { label: '入库', value: 'warehouse', processCode: '' },
         ],
-        scanTypeIndex: 0,
+        scanTypeIndex: 1,
         quantity: '',
         qtyHint: '数量需填写；二维码带数量会自动识别，可手动修改。',
         warehouse: '',
@@ -340,7 +357,6 @@ Page({
             history: { page: 1, pageSize: 10, hasMore: true, list: [] },
             groupedHistory: [], // 聚合后的历史记录
         },
-        materialPurchases: [],
         currentUser: null,
         scanConfirm: {
             visible: false,
@@ -355,7 +371,7 @@ Page({
         qualityModal: {
             show: false,
             detail: {}, // 订单详情
-            result: '', // 'qualified' | 'defective'
+            result: '', // 质检结果：'qualified'（合格）或 'defective'（次品）
             defectiveQuantity: '', // 次品数量
             selectedDefectTypes: [], // 已选择的问题类型索引
             defectTypesText: '', // 问题类型显示文本
@@ -373,7 +389,7 @@ Page({
         procurementModal: {
             show: false,
             orderNo: '',
-            scanId: '', // 扫码记录ID
+            scanId: '', // 扫码记录 ID
             materials: [], // 物料列表
         },
     },
@@ -383,22 +399,31 @@ Page({
         if (app && typeof app.setTabSelected === 'function') app.setTabSelected(this, 2);
         if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
 
-        // 加载自动识别开关状态
-        const savedAutoDetect = wx.getStorageSync('auto_detect_enabled');
-        const autoDetectEnabled = savedAutoDetect !== false; // 默认开启
-
-        const savedTypeIndex = Number(readStorage('mp_scan_type_index', 0));
+        // 始终启用自动识别
+        const savedTypeIndex = Number(getStorageValue('mp_scan_type_index', 1));
         const len = Array.isArray(this.data.scanTypeOptions) ? this.data.scanTypeOptions.length : 0;
-        const rawIdx = Number.isFinite(savedTypeIndex) && savedTypeIndex >= 0 ? savedTypeIndex : 0;
-        const idx = len > 0 ? Math.min(Math.max(0, rawIdx), len - 1) : 0;
+        
+        // 索引映射：删除了"缝制(计件)"后，需要调整历史索引
+        // 旧索引: 0采购 1裁剪 2缝制 3车缝 4大烫 5质检 6包装 7入库
+        // 新索引: 0采购 1裁剪 2车缝 3大烫 4质检 5包装 6入库
+        let mappedIdx = savedTypeIndex;
+        if (savedTypeIndex === 2) {
+            // 旧的"缝制"位置 → 改为"车缝"
+            mappedIdx = 2;
+        } else if (savedTypeIndex >= 3 && savedTypeIndex <= 7) {
+            // 车缝~入库位置前移1位
+            mappedIdx = savedTypeIndex - 1;
+        }
+        
+        const idx = len > 0 ? Math.min(Math.max(0, mappedIdx), len - 1) : 0;
         const scanType = (this.data.scanTypeOptions[idx] && this.data.scanTypeOptions[idx].value) ? this.data.scanTypeOptions[idx].value : '';
-        const savedWarehouse = readStorage('mp_scan_warehouse', '');
+        const savedWarehouse = getStorageValue('mp_scan_warehouse', '');
         this.setData({
-            autoDetectEnabled: autoDetectEnabled,
+            autoDetectEnabled: true, // 始终启用
             scanTypeIndex: idx,
             qualityIndex: scanType === 'quality' ? 1 : this.data.qualityIndex,
             warehouse: savedWarehouse != null ? String(savedWarehouse) : '',
-            qtyHint: autoDetectEnabled ? '扫码自动识别进度节点' : '数量需填写；二维码带数量会自动识别，可手动修改。',
+            qtyHint: '扫码自动识别进度节点',
         });
         this.loadMyPanel(true);
 
@@ -460,17 +485,23 @@ Page({
             clearInterval(confirmTickTimer);
             confirmTickTimer = null;
         }
-        const expireAt = Date.now() + 15000;
+        
+        // 采购类型不自动关闭，其他类型15秒自动关闭
+        const isProcurement = detail && detail.isProcurement;
+        const expireTime = isProcurement ? 0 : 15000;
+        const expireAt = expireTime > 0 ? Date.now() + expireTime : 0;
 
         // 处理面料采购数据
         const purchases = Array.isArray(materialPurchases) ? materialPurchases.map((it) => {
             const purchaseQuantity = Number(it && it.purchaseQuantity) || 0;
             const demandQuantity = Number(it && it.demandQuantity != null ? it.demandQuantity : purchaseQuantity) || 0;
+            // 默认值：如果有需求数量就用需求数量，否则用采购数量
+            const defaultInput = demandQuantity > 0 ? demandQuantity : (purchaseQuantity > 0 ? purchaseQuantity : '');
             return {
                 ...it,
                 demandQuantity,
                 purchaseQuantity,
-                purchaseInput: purchaseQuantity, // 默认带出采购数量
+                purchaseInput: String(defaultInput), // 转换为字符串，方便input组件显示
                 remarkInput: '',
             };
         }) : [];
@@ -479,35 +510,42 @@ Page({
             scanConfirm: {
                 visible: true,
                 expireAt,
-                remain: 15,
+                remain: isProcurement ? 0 : 15,
                 payload,
                 detail: detail || null,
                 loading: false,
                 materialPurchases: purchases,
             },
         });
-        confirmTimer = setTimeout(() => {
-            confirmTimer = null;
-            this.closeScanConfirm(true);
-        }, 15000);
-        confirmTickTimer = setInterval(() => {
-            const now = Date.now();
-            const remain = Math.max(0, Math.ceil((expireAt - now) / 1000));
-            if (!this.data.scanConfirm || !this.data.scanConfirm.visible) {
-                clearInterval(confirmTickTimer);
-                confirmTickTimer = null;
-                return;
-            }
-            if (remain <= 0) {
-                clearInterval(confirmTickTimer);
-                confirmTickTimer = null;
+        
+        // 只有非采购类型才设置自动关闭
+        if (!isProcurement) {
+            confirmTimer = setTimeout(() => {
+                confirmTimer = null;
                 this.closeScanConfirm(true);
-                return;
-            }
-            if (this.data.scanConfirm.remain !== remain) {
-                this.setData({ scanConfirm: { ...this.data.scanConfirm, remain } });
-            }
-        }, 500);
+            }, 15000);
+        }
+        // 只有非采购类型才需要倒计时
+        if (!isProcurement) {
+            confirmTickTimer = setInterval(() => {
+                const now = Date.now();
+                const remain = Math.max(0, Math.ceil((expireAt - now) / 1000));
+                if (!this.data.scanConfirm || !this.data.scanConfirm.visible) {
+                    clearInterval(confirmTickTimer);
+                    confirmTickTimer = null;
+                    return;
+                }
+                if (remain <= 0) {
+                    clearInterval(confirmTickTimer);
+                    confirmTickTimer = null;
+                    this.closeScanConfirm(true);
+                    return;
+                }
+                if (this.data.scanConfirm.remain !== remain) {
+                    this.setData({ scanConfirm: { ...this.data.scanConfirm, remain } });
+                }
+            }, 500);
+        }
     },
 
     closeScanConfirm(silent) {
@@ -532,12 +570,16 @@ Page({
         const confirm = this.data.scanConfirm;
         if (!confirm || !confirm.visible || confirm.loading || !confirm.payload) return;
 
-        // 检查数量是否有效
-        const quantity = confirm.payload.quantity;
-        if (!Number.isFinite(Number(quantity)) || Number(quantity) <= 0) {
-            wx.showToast({ title: '请填写有效数量', icon: 'none' });
-            this.setData({ scanConfirm: { ...confirm, loading: false } });
-            return;
+        const isProcurement = confirm.detail && confirm.detail.isProcurement;
+        
+        // 非采购类型需要检查数量是否有效
+        if (!isProcurement) {
+            const quantity = confirm.payload.quantity;
+            if (!Number.isFinite(Number(quantity)) || Number(quantity) <= 0) {
+                wx.showToast({ title: '请填写有效数量', icon: 'none' });
+                this.setData({ scanConfirm: { ...confirm, loading: false } });
+                return;
+            }
         }
 
         if (confirmTimer) {
@@ -556,11 +598,67 @@ Page({
         this.closeScanConfirm(false);
     },
 
+    // 只领取任务，不提交数量
+    async onReceiveOnly() {
+        const confirm = this.data.scanConfirm;
+        if (!confirm || !confirm.visible || confirm.loading) return;
+        
+        const purchases = confirm.materialPurchases || [];
+        if (purchases.length === 0) {
+            wx.showToast({ title: '未找到面料采购信息', icon: 'none' });
+            return;
+        }
+
+        this.setData({ scanConfirm: { ...confirm, loading: true } });
+        
+        try {
+            const user = await this.getCurrentUser();
+            const receiverId = user && user.id != null ? String(user.id).trim() : '';
+            const receiverName = user && (user.name || user.username) ? String(user.name || user.username).trim() : '';
+
+            const receivePromises = purchases
+                .filter(item => item.status === 'pending')
+                .map(item =>
+                    api.production.receivePurchase({
+                        purchaseId: item.id,
+                        receiverId,
+                        receiverName,
+                    })
+                );
+
+            if (receivePromises.length > 0) {
+                await Promise.all(receivePromises);
+                wx.showToast({ title: `已领取${receivePromises.length}个采购任务`, icon: 'success' });
+            } else {
+                wx.showToast({ title: '所有任务已领取', icon: 'none' });
+            }
+
+            this.setData({
+                lastResult: {
+                    success: true,
+                    message: '采购任务已领取',
+                    scanCode: confirm.payload.scanCode,
+                    orderNo: confirm.detail.orderNo || '',
+                    styleNo: confirm.detail.styleNo || '',
+                    processName: '采购',
+                },
+                materialPurchases: [],
+            });
+            this.closeScanConfirm(true);
+            this.loadMyPanel(true);
+        } catch (e) {
+            const app = getApp();
+            if (app && typeof app.toastError === 'function') app.toastError(e, '领取失败');
+            else wx.showToast({ title: '领取失败', icon: 'none' });
+            this.setData({ scanConfirm: { ...this.data.scanConfirm, loading: false } });
+        }
+    },
+
     async submitScanPayload(basePayload, detail) {
         const payload = { ...(basePayload || {}) };
         const isProcurement = detail && detail.isProcurement;
 
-        // 如果是采购类型，先处理面料采购
+        // 如果是采购类型，先处理面料采购（领取并提交）
         if (isProcurement) {
             const purchases = this.data.scanConfirm.materialPurchases || [];
             if (purchases.length === 0) {
@@ -569,51 +667,56 @@ Page({
                 return;
             }
 
-            // 验证所有采购数量
+            // 验证所有条目都有输入数量（领取并提交时必须填写）
+            let hasInvalid = false;
             for (let i = 0; i < purchases.length; i++) {
                 const item = purchases[i];
-                const purchaseInput = Number(item.purchaseInput);
-                if (!Number.isFinite(purchaseInput) || purchaseInput <= 0) {
-                    wx.showToast({ title: `请填写${item.materialName || '物料'}的采购数量`, icon: 'none', duration: 2000 });
-                    return;
+                const inputQuantity = parseFloat(item.purchaseInput || '0');
+                if (!inputQuantity || inputQuantity <= 0) {
+                    wx.showToast({ title: `请填写第${i+1}项采购数量后再提交`, icon: 'none', duration: 2000 });
+                    hasInvalid = true;
+                    break;
                 }
+            }
+            if (hasInvalid) {
+                this.setData({ scanConfirm: { ...this.data.scanConfirm, loading: false } });
+                return;
             }
 
             try {
-                // 先领取所有采购任务
+                // 领取所有待采购的任务
                 const user = await this.getCurrentUser();
                 const receiverId = user && user.id != null ? String(user.id).trim() : '';
                 const receiverName = user && (user.name || user.username) ? String(user.name || user.username).trim() : '';
 
-                const receivePromises = purchases.map(item =>
-                    api.production.receivePurchase({
-                        purchaseId: item.id,
-                        receiverId,
-                        receiverName,
-                    })
-                );
+                const receivePromises = purchases
+                    .filter(item => item.status === 'pending') // 只领取待采购的
+                    .map(item =>
+                        api.production.receivePurchase({
+                            purchaseId: item.id,
+                            receiverId,
+                            receiverName,
+                        })
+                    );
 
-                await Promise.all(receivePromises);
-
-                // 再提交采购数量
-                const updatePromises = purchases.map(item =>
-                    api.production.updateArrivedQuantity({
+                // 更新到货数量
+                const updatePromises = purchases.map(item => {
+                    const arrivedQuantity = parseFloat(item.purchaseInput || '0');
+                    const remark = item.remarkInput || '';
+                    return api.production.updateArrivedQuantity({
                         id: item.id,
-                        arrivedQuantity: Number(item.purchaseInput),
-                        remark: (item.remarkInput || '').trim()
-                    })
-                );
+                        arrivedQuantity: arrivedQuantity,
+                        remark: remark
+                    });
+                });
 
-                await Promise.all(updatePromises);
+                await Promise.all([...receivePromises, ...updatePromises]);
+                wx.showToast({ title: '采购完成提交成功！', icon: 'success' });
 
-                // 移除该订单的采购提醒
-                reminderManager.removeRemindersByOrder(detail.orderNo || payload.scanCode, '采购');
-
-                wx.showToast({ title: '采购已完成', icon: 'success' });
                 this.setData({
                     lastResult: {
                         success: true,
-                        message: '采购已完成',
+                        message: '采购任务已领取',
                         scanCode: payload.scanCode,
                         orderNo: detail.orderNo || '',
                         styleNo: detail.styleNo || '',
@@ -626,8 +729,8 @@ Page({
                 return;
             } catch (e) {
                 const app = getApp();
-                if (app && typeof app.toastError === 'function') app.toastError(e, '采购失败');
-                else wx.showToast({ title: '采购失败', icon: 'none' });
+                if (app && typeof app.toastError === 'function') app.toastError(e, '领取失败');
+                else wx.showToast({ title: '领取失败', icon: 'none' });
                 this.setData({ scanConfirm: { ...this.data.scanConfirm, loading: false } });
                 return;
             }
@@ -659,6 +762,7 @@ Page({
                     color: (detail && detail.color) || payload.color || '',
                     size: (detail && detail.size) || payload.size || '',
                     unitPrice: payload.unitPrice,
+                    unitPriceHint: null, // 重复扫码不再提示
                 },
             });
             return;
@@ -682,37 +786,10 @@ Page({
             const isDuplicate = msg.includes('忽略') || msg.includes('无需重复') || msg.includes('已扫码') || msg.includes('重复');
             const displayMsg = isDuplicate ? '已处理' : (msg || '成功');
             const isProcurement = detail && detail.isProcurement;
-            if (isProcurement) {
-                const raw = Array.isArray(data.materialPurchases) ? data.materialPurchases : [];
-                const received = await this.receivePurchases(raw);
-                let merged = raw;
-                if (received.length) {
-                    const byId = new Map(received.map((it) => [String(it.id || ''), it]));
-                    merged = raw.map((it) => {
-                        const id = it && it.id != null ? String(it.id) : '';
-                        return id && byId.has(id) ? { ...it, ...byId.get(id) } : it;
-                    });
-                }
-                const purchases = this.buildMaterialPurchases(merged);
-                this.setData({ materialPurchases: purchases });
-
-                // 采购领取成功后添加提醒
-                if (received.length > 0 && !isDuplicate) {
-                    const orderNo = oi.orderNo || sr.orderNo || (detail && detail.orderNo) || '';
-                    if (orderNo) {
-                        const styleNo = oi.styleNo || sr.styleNo || (detail && detail.styleNo) || '';
-                        const type = '采购';
-                        reminderManager.addReminder({
-                            id: `${orderNo}_${type}`,
-                            orderNo,
-                            styleNo,
-                            type,
-                            message: '',
-                            createdAt: Date.now(),
-                        });
-                    }
-                }
-            }
+            // 处理单价提示信息
+            const finalUnitPrice = sr.unitPrice != null ? sr.unitPrice : payload.unitPrice;
+            const unitPriceHint = data.unitPriceHint || null;
+            
             this.setData({
                 lastResult: {
                     success: data && data.success === false ? false : true,
@@ -723,9 +800,23 @@ Page({
                     processName: sr.processName || (detail && detail.processName) || '',
                     color: sr.color || payload.color || (detail && detail.color) || '',
                     size: sr.size || payload.size || (detail && detail.size) || '',
-                    unitPrice: sr.unitPrice != null ? sr.unitPrice : payload.unitPrice,
+                    unitPrice: finalUnitPrice,
+                    unitPriceHint: unitPriceHint,
                 },
             });
+            
+            // 如果单价为0且有提示信息，显示警告弹窗
+            if (unitPriceHint && !isDuplicate) {
+                setTimeout(() => {
+                    wx.showModal({
+                        title: '⚠️ 单价提示',
+                        content: unitPriceHint,
+                        showCancel: false,
+                        confirmText: '知道了',
+                    });
+                }, 300);
+            }
+            
             wx.vibrateShort({ type: 'light' });
             if (data && data.success === false) {
                 unmarkRecent(dedupKey);
@@ -796,7 +887,7 @@ Page({
             qtyHint: '数量需填写；二维码带数量会自动识别，可手动修改。',
             materialPurchases: [],
         });
-        writeStorage('mp_scan_type_index', idx);
+        setStorageValue('mp_scan_type_index', idx);
         this.loadMyPanel(true);
     },
 
@@ -813,7 +904,7 @@ Page({
             qtyHint: '数量需填写；二维码带数量会自动识别，可手动修改。',
             materialPurchases: [],
         });
-        writeStorage('mp_scan_type_index', safeIdx);
+        setStorageValue('mp_scan_type_index', safeIdx);
         this.loadMyPanel(true);
     },
 
@@ -831,7 +922,11 @@ Page({
 
     async loadMyPanel(resetHistory) {
         const scanType = this.currentScanType();
-        await Promise.all([this.loadMyStats(scanType), this.loadMyHistory(resetHistory === true, scanType)]);
+        await Promise.all([
+            this.loadMyStats(scanType), 
+            this.loadMyHistory(resetHistory === true, scanType),
+            this.loadMyProcurementTasks() // 加载采购任务
+        ]);
     },
 
     async loadMyStats(scanType) {
@@ -876,7 +971,7 @@ Page({
 
             // 聚合处理：按订单号+环节分组
             const groupedHistory = this.groupScanHistory(merged);
-            console.log('聚合后的记录数量:', groupedHistory.length);
+            // 聚合完成
 
             this.setData({
                 'my.history': {
@@ -889,7 +984,7 @@ Page({
                 'my.groupedHistory': groupedHistory,
             });
 
-            console.log('页面数据更新完成 - groupedHistory:', this.data.my.groupedHistory);
+            // 数据更新完成
         } catch (e) {
             if (e && e.type === 'auth') return;
             const app = getApp();
@@ -901,6 +996,61 @@ Page({
 
     refreshMy() {
         this.loadMyPanel(true);
+    },
+
+    /**
+     * 加载已领取的采购任务
+     */
+    async loadMyProcurementTasks() {
+        try {
+            const user = await this.getCurrentUser();
+            if (!user || !user.id) return;
+            
+            // 获取已领取但未完成的采购任务
+            const tasks = await api.production.myProcurementTasks();
+            const pendingTasks = Array.isArray(tasks) ? tasks.filter(t => 
+                t.status === 'received' && t.returnConfirmed !== true
+            ) : [];
+            
+            // 按订单号分组
+            const groupedTasks = this.groupProcurementTasks(pendingTasks);
+            
+            this.setData({
+                'my.procurementTasks': groupedTasks
+            });
+        } catch (e) {
+            console.error('加载采购任务失败:', e);
+        }
+    },
+
+    /**
+     * 按订单号分组采购任务
+     */
+    groupProcurementTasks(tasks) {
+        if (!Array.isArray(tasks) || tasks.length === 0) return [];
+        
+        const groups = new Map();
+        
+        tasks.forEach(task => {
+            const orderNo = task.orderNo || '-';
+            const key = orderNo;
+            
+            if (!groups.has(key)) {
+                groups.set(key, {
+                    orderNo,
+                    styleNo: task.styleNo || '-',
+                    styleName: task.styleName || '',
+                    tasks: [],
+                    totalCount: 0
+                });
+            }
+            
+            const group = groups.get(key);
+            group.tasks.push(task);
+            group.totalCount++;
+        });
+        
+        return Array.from(groups.values());
     },
 
     /**
@@ -1008,7 +1158,7 @@ Page({
     onWarehouseInput(e) {
         const v = (e && e.detail && e.detail.value) || '';
         this.setData({ warehouse: v });
-        writeStorage('mp_scan_warehouse', v);
+        setStorageValue('mp_scan_warehouse', v);
     },
 
     onQualityChange(e) {
@@ -1062,76 +1212,6 @@ Page({
         }
     },
 
-    async receivePurchases(list) {
-        const items = Array.isArray(list) ? list : [];
-        if (items.length === 0) return [];
-        const pending = items.filter((it) => {
-            const status = it && it.status != null ? String(it.status).trim() : '';
-            return !status || status === 'pending';
-        });
-        if (pending.length === 0) return [];
-        const user = await this.getCurrentUser();
-        const receiverId = user && user.id != null ? String(user.id).trim() : '';
-        const receiverName = user && (user.name || user.username) ? String(user.name || user.username).trim() : '';
-        const results = await Promise.allSettled(pending.map((it) => api.production.receivePurchase({
-            purchaseId: it.id,
-            receiverId,
-            receiverName,
-        })));
-        const updated = [];
-        const errors = [];
-        results.forEach((r) => {
-            if (r.status === 'fulfilled') {
-                if (r.value) updated.push(r.value);
-            } else {
-                // 提取错误信息
-                const err = r.reason;
-                const msg = err && err.errMsg ? String(err.errMsg) : '领取失败';
-                if (msg && !errors.includes(msg)) {
-                    errors.push(msg);
-                }
-            }
-        });
-        if (errors.length > 0) {
-            // 显示第一个错误的详细信息（例如"该任务已被「XXX」领取"）
-            wx.showToast({ title: errors[0], icon: 'none', duration: 3000 });
-        } else if (updated.length > 0) {
-            wx.showToast({ title: '采购已领取', icon: 'none' });
-        }
-        return updated;
-    },
-
-    buildMaterialPurchases(list) {
-        const items = Array.isArray(list) ? list : [];
-        return items.map((it) => {
-            const purchaseQuantity = Number(it && it.purchaseQuantity) || 0;
-            const arrivedQuantity = Number(it && it.arrivedQuantity) || 0;
-            const rawDemand = it && it.demandQuantity != null ? it.demandQuantity : it && it.purchaseQuantity;
-            const demandQuantity = Number(rawDemand) || 0;
-            return {
-                ...it,
-                demandQuantity,
-                purchaseQuantity,
-                arrivedQuantity,
-                arrivedInput: arrivedQuantity > 0 ? arrivedQuantity : 0,
-                remarkInput: '',
-            };
-        });
-    },
-
-    onPurchaseArrivedInput(e) {
-        const idx = Number((e && e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.idx) || 0);
-        const v = Number((e && e.detail && e.detail.value) || 0);
-        const q = Number.isFinite(v) && v >= 0 ? Math.floor(v) : 0;
-        this.setData({ [`materialPurchases[${idx}].arrivedInput`]: q });
-    },
-
-    onPurchaseRemarkInput(e) {
-        const idx = Number((e && e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.idx) || 0);
-        const v = (e && e.detail && e.detail.value) || '';
-        this.setData({ [`materialPurchases[${idx}].remarkInput`]: v });
-    },
-
     // 弹窗中的面料采购输入
     onModalPurchaseInput(e) {
         const idx = Number((e && e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.idx) || 0);
@@ -1154,85 +1234,6 @@ Page({
         const idx = Number((e && e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.idx) || 0);
         const v = (e && e.detail && e.detail.value) || '';
         this.setData({ [`scanConfirm.materialPurchases[${idx}].remarkInput`]: v });
-    },
-
-    async onReceivePurchase(e) {
-        const idx = Number((e && e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.idx) || 0);
-        const list = Array.isArray(this.data.materialPurchases) ? this.data.materialPurchases : [];
-        const item = list[idx];
-        if (!item || !item.id) {
-            wx.showToast({ title: '未找到采购任务', icon: 'none' });
-            return;
-        }
-        const status = item && item.status != null ? String(item.status).trim() : '';
-        if (status === 'completed' || status === 'cancelled') {
-            wx.showToast({ title: '该采购任务不可领取', icon: 'none' });
-            return;
-        }
-        try {
-            const user = await this.getCurrentUser();
-            const receiverId = user && user.id != null ? String(user.id).trim() : '';
-            const receiverName = user && (user.name || user.username) ? String(user.name || user.username).trim() : '';
-            const updated = await api.production.receivePurchase({
-                purchaseId: item.id,
-                receiverId,
-                receiverName,
-            });
-            if (updated) {
-                this.setData({ [`materialPurchases[${idx}]`]: { ...item, ...updated } });
-            }
-            wx.showToast({ title: '已领取', icon: 'none' });
-        } catch (e) {
-            const app = getApp();
-            if (app && typeof app.toastError === 'function') app.toastError(e, '领取失败');
-            else wx.showToast({ title: '领取失败', icon: 'none' });
-        }
-    },
-
-    async onConfirmPurchaseArrived(e) {
-        const idx = Number((e && e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.idx) || 0);
-        const list = Array.isArray(this.data.materialPurchases) ? this.data.materialPurchases : [];
-        const item = list[idx];
-        if (!item || !item.id) {
-            wx.showToast({ title: '未找到采购任务', icon: 'none' });
-            return;
-        }
-        // 必须先领取才能确认到货
-        const status = item && item.status != null ? String(item.status).trim() : '';
-        if (status !== 'received' && status !== 'completed') {
-            const hasReceiver = item.receiverId || item.receiverName;
-            if (!hasReceiver) {
-                wx.showToast({ title: '请先领取任务再确认到货', icon: 'none' });
-                return;
-            }
-        }
-        const arrivedInput = Number(item.arrivedInput);
-        // 必须填写到货数量且大于0
-        if (!Number.isFinite(arrivedInput) || arrivedInput <= 0) {
-            wx.showToast({ title: '请填写到货数量（必须大于0）', icon: 'none' });
-            return;
-        }
-        const purchaseQuantity = Number(item.purchaseQuantity) || 0;
-        const demandQuantity = Number(item.demandQuantity) || purchaseQuantity;
-        const remark = (item.remarkInput || '').trim();
-        // 到货数量不足需求数量70%时，必须填写备注说明原因
-        const threshold = demandQuantity > 0 ? demandQuantity * 0.7 : purchaseQuantity * 0.7;
-        if (threshold > 0 && arrivedInput < threshold && !remark) {
-            wx.showToast({ title: '到货不足需求70%，请填写缺量原因', icon: 'none', duration: 2500 });
-            return;
-        }
-        try {
-            await api.production.updateArrivedQuantity({ id: item.id, arrivedQuantity: arrivedInput, remark });
-            this.setData({
-                [`materialPurchases[${idx}].arrivedQuantity`]: arrivedInput,
-                [`materialPurchases[${idx}].remark`]: remark,
-            });
-            wx.showToast({ title: '已确认到货', icon: 'none' });
-        } catch (e) {
-            const app = getApp();
-            if (app && typeof app.toastError === 'function') app.toastError(e, '确认失败');
-            else wx.showToast({ title: '确认失败', icon: 'none' });
-        }
     },
 
     async onAddDefectPhoto() {
@@ -1333,6 +1334,7 @@ Page({
 
     /**
      * 根据订单当前进度自动识别下一个节点
+     * 特别处理：车缝工序可能包含多个子工序（钉扣、锁边、压线等），需要判断是否全部完成
      */
     detectNextStage(orderDetail) {
         if (!orderDetail) return null;
@@ -1349,37 +1351,54 @@ Page({
             '入库'       // 7
         ];
 
-        // 获取订单当前进度
-        const currentProgress = orderDetail.currentProgress || orderDetail.progressStage || '';
+        // 获取订单当前进度（后端返回的是 currentProcessName 字段）
+        const currentProgress = orderDetail.currentProcessName || orderDetail.currentProgress || orderDetail.progressStage || '';
 
-        // 特殊情况处理
+        // 特殊情况处理：如果订单刚下单还未开始，从采购开始
         if (!currentProgress || currentProgress === '待开始' || currentProgress === '未开始') {
-            // 检查是否需要采购物料
-            if (orderDetail.materialPurchases && orderDetail.materialPurchases.length > 0) {
-                const hasUnfinishedPurchase = orderDetail.materialPurchases.some(
-                    m => !m.arrivedQuantity || m.arrivedQuantity < m.demandQuantity
-                );
-                if (hasUnfinishedPurchase) {
-                    return {
-                        processName: '采购',
-                        progressStage: '采购',
-                        scanType: 'procurement'
-                    };
-                }
-            }
-            // 没有采购需求，从裁剪开始
             return {
-                processName: '裁剪',
-                progressStage: '裁剪',
-                scanType: 'cutting'
+                processName: '采购',
+                progressStage: '采购',
+                scanType: 'procurement',
+                hint: '订单开始，进行采购'
+            };
+        }
+
+        // 如果当前就是采购阶段，继续采购
+        if (currentProgress === '采购') {
+            return {
+                processName: '采购',
+                progressStage: '采购',
+                scanType: 'procurement',
+                hint: '采购阶段进行中'
+            };
+        }
+
+        // 特殊处理：如果当前进度是车缝子工序，判断车缝阶段是否全部完成
+        const sewingSubProcesses = ['钉扣', '锁边', '压线', '上拉链', '钉标', '打枣', '车线', '绷缝', '缝骨', '包边'];
+        const isSewingSubProcess = sewingSubProcesses.some(sp => currentProgress.includes(sp));
+        
+        if (isSewingSubProcess || currentProgress === '车缝') {
+            // 当前在车缝阶段，需要检查车缝的各个子工序是否都完成
+            // 如果订单还在车缝阶段（currentProcessName 是车缝或其子工序），说明车缝还未完全完成
+            // 继续返回车缝工序
+            return {
+                processName: currentProgress, // 使用当前子工序名称
+                progressStage: '车缝',
+                scanType: 'production',
+                hint: '车缝阶段进行中，完成当前工序'
             };
         }
 
         // 根据当前进度找到下一个节点
         const currentIndex = stageSequence.indexOf(currentProgress);
         if (currentIndex < 0) {
-            // 无法识别当前进度，返回null使用手动选择
-            return null;
+            // 无法识别当前进度，可能是车缝子工序，返回车缝
+            return {
+                processName: currentProgress,
+                progressStage: '车缝',
+                scanType: 'production'
+            };
         }
 
         // 如果已经是最后一个节点（入库），提示已完成
@@ -1405,20 +1424,139 @@ Page({
     },
 
     /**
-     * 自动识别开关切换
+     * 基于菲号识别下一个工序
+     * 核心逻辑：统计该菲号的扫码次数,根据次数判断当前应该做哪个工序
+     * 防重复逻辑：根据菲号数量和工序配置的预计时间动态计算，在此时间内重复扫码视为误操作
      */
-    onAutoDetectChange(e) {
-        const enabled = e.detail.value;
-        this.setData({
-            autoDetectEnabled: enabled,
-            qtyHint: enabled ? '扫码自动识别进度节点' : '数量需填写；二维码带数量会自动识别，可手动修改。'
-        });
-        wx.setStorageSync('auto_detect_enabled', enabled);
-        wx.showToast({
-            title: enabled ? '已启用自动识别' : '已关闭自动识别',
-            icon: 'none'
-        });
+    async detectNextStageByBundle(orderNo, bundleNo, bundleQuantity, orderDetail) {
+        try {
+            // 1. 验证菲号是否存在，并获取准确数量
+            let accurateQuantity = bundleQuantity || 10;  // 默认值
+            try {
+                const bundleInfo = await api.production.getCuttingBundle(orderNo, bundleNo);
+                if (bundleInfo && bundleInfo.quantity) {
+                    accurateQuantity = bundleInfo.quantity;  // 使用裁剪表中的准确数量
+                    // 使用裁剪表的准确数量
+                }
+            } catch (e) {
+                // 查询失败，使用二维码数量
+                // 菲号不存在或查询失败，使用二维码中的数量
+            }
+
+            // 2. 查询该菲号的所有扫码记录
+            const historyRes = await api.production.myScanHistory({
+                pageNum: 1,
+                pageSize: 100,  // 获取所有记录
+                orderNo: orderNo,
+                bundleNo: bundleNo
+            });
+
+            // 3. 从订单工艺模板获取车缝阶段的工序列表（动态获取，不写死）
+            let sewingProcessList = [];
+            if (orderDetail && orderDetail.progressNodeUnitPrices && Array.isArray(orderDetail.progressNodeUnitPrices)) {
+                // 筛选出车缝阶段的工序，并按顺序排序
+                sewingProcessList = orderDetail.progressNodeUnitPrices
+                    .filter(node => node.progressStage === '车缝' || node.name === '车缝')
+                    .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+                    .map(node => node.name)
+                    .filter(name => name && name.trim());
+            }
+
+            // 如果模板中没有配置车缝工序，使用默认列表
+            if (sewingProcessList.length === 0) {
+                sewingProcessList = ['车缝'];  // 默认整件车缝
+            }
+
+            // 4. 从订单工艺模板获取工序预计时间配置
+            let processTimeConfig = {};  // { '做领': 5, '上领': 3, ... } 单位：分钟
+            if (orderDetail && orderDetail.progressNodeUnitPrices && Array.isArray(orderDetail.progressNodeUnitPrices)) {
+                orderDetail.progressNodeUnitPrices.forEach(node => {
+                    const name = node.name || '';
+                    const minutes = node.estimatedMinutes || 0;
+                    if (name && minutes > 0) {
+                        processTimeConfig[name] = minutes;
+                    }
+                });
+            }
+
+            // 5. 统计该菲号的扫码次数
+            const scanCount = (historyRes && historyRes.records) ? historyRes.records.length : 0;
+
+            // 6. 防重复扫码检查 - 根据数量和工序配置动态计算
+            if (scanCount > 0 && historyRes.records && historyRes.records[0]) {
+                const lastRecord = historyRes.records[0];
+                const lastScanTime = lastRecord.scanTime || lastRecord.createTime;
+                const lastProcessName = lastRecord.processName || '';
+                const currentTime = Date.now();
+                
+                // 计算时间差（秒）
+                let timeDiff = 999999;
+                if (lastScanTime) {
+                    const lastTime = new Date(lastScanTime).getTime();
+                    timeDiff = (currentTime - lastTime) / 1000;
+                }
+                
+                // 从配置获取该工序的预计时间，如果没有配置则使用默认值1分钟/件
+                const configMinutesPerPiece = processTimeConfig[lastProcessName] || 1;  // 默认1分钟/件
+                const secondsPerPiece = configMinutesPerPiece * 60;
+                const expectedTime = accurateQuantity * secondsPerPiece;  // 使用准确数量
+                
+                // 如果距离上次扫码时间小于预期完成时间的50%，判定为重复扫码
+                // 使用50%作为缓冲，避免工人干得快也被拦截
+                const minIntervalTime = Math.max(30, expectedTime * 0.5);  // 最少30秒
+                
+                if (timeDiff < minIntervalTime) {
+                    const minutesAgo = Math.floor(timeDiff / 60);
+                    const secondsAgo = Math.floor(timeDiff % 60);
+                    const timeText = minutesAgo > 0 
+                        ? `${minutesAgo}分${secondsAgo}秒前` 
+                        : `${secondsAgo}秒前`;
+                    
+                    const expectedMinutes = Math.floor(expectedTime / 60);
+                    
+                    return {
+                        processName: lastProcessName,
+                        progressStage: '车缝',
+                        scanType: 'production',
+                        hint: `⚠️ ${accurateQuantity}件预计需${expectedMinutes}分钟，${timeText}已扫过`,
+                        isDuplicate: true  // 标记为重复扫码
+                    };
+                }
+            }
+
+            // 7. 根据扫码次数判断当前应该做哪个工序
+            if (scanCount < sewingProcessList.length) {
+                // 还在车缝工序内
+                const nextProcessName = sewingProcessList[scanCount];
+                return {
+                    processName: nextProcessName,
+                    progressStage: '车缝',
+                    scanType: 'production',
+                    hint: `${nextProcessName} (第${scanCount + 1}/${sewingProcessList.length}次)`,
+                    isDuplicate: false,
+                    quantity: accurateQuantity  // 返回准确数量
+                };
+            } else {
+                // 车缝工序都完成了，进入下一阶段
+                // 返回大烫工序（车缝的下一个阶段）
+                return {
+                    processName: '大烫',
+                    progressStage: '大烫',
+                    scanType: 'production',
+                    hint: `车缝已完成`,
+                    isDuplicate: false,
+                    quantity: accurateQuantity  // 返回准确数量
+                };
+            }
+        } catch (e) {
+            console.error('基于菲号识别进度失败', e);
+            return null;
+        }
     },
+
+    /**
+     * 已移除：自动识别已默认启用，无需开关
+     */
 
     async onScan() {
         if (this.data.loading) return;
@@ -1491,48 +1629,113 @@ Page({
             const parsedQty = parsed ? parsed.quantity : null;
             const recognizedQty = Number.isFinite(parsedQty) && parsedQty > 0 ? parsedQty : null;
 
+            // 订单级别二维码：根据订单当前进度自动识别应该扫什么类型
+            // 不再固定为采购，而是智能判断（采购→裁剪→车缝→质检→入库）
+            let skipAutoDetect = false;
+
             // 自动识别当前进度节点（仅在启用时）
             let autoDetectedStage = null;
-            if (this.data.autoDetectEnabled) {
+            if (this.data.autoDetectEnabled && !skipAutoDetect) {
                 try {
-                    // 如果二维码包含订单号，查询订单当前进度
+                    const bundleNo = parsed && parsed.bundleNo ? parsed.bundleNo : null;
                     const orderNo = parsed && parsed.orderNo ? parsed.orderNo : null;
+                    
+                    // 先基于订单查询当前进度，判断是否已进入车缝阶段
                     if (orderNo) {
                         wx.showLoading({ title: '识别进度中...', mask: true });
+                        console.log('[扫码识别] 订单号:', orderNo, '是否订单码:', parsed.isOrderQR);
                         const orderDetail = await api.production.orderDetail(orderNo);
-                        wx.hideLoading();
-
-                        // 根据订单当前进度自动选择下一个节点
-                        autoDetectedStage = this.detectNextStage(orderDetail);
-
-                        if (autoDetectedStage) {
-                            // 自动设置扫码类型
-                            const autoIndex = this.data.scanTypeOptions.findIndex(
-                                opt => opt.processName === autoDetectedStage.processName
-                            );
-                            if (autoIndex >= 0) {
-                                this.setData({
-                                    scanTypeIndex: autoIndex,
-                                    qtyHint: `✓ 已自动识别: ${autoDetectedStage.processName}`
+                        console.log('[扫码识别] 订单详情:', orderDetail);
+                        const currentProgress = orderDetail.currentProcessName || '';
+                        console.log('[扫码识别] 当前进度:', currentProgress);
+                        
+                        // 车缝及之后的工序列表（需要按菲号追踪）
+                        const sewingAndAfterStages = [
+                            '钉扣', '锁边', '压线', '上拉链', '钉标', '打枣', '车线', '绷缝', '缝骨', '包边', '车缝',
+                            '大烫', '质检', '包装', '入库'
+                        ];
+                        
+                        const isInSewingPhase = sewingAndAfterStages.some(stage => 
+                            currentProgress.includes(stage) || stage === currentProgress
+                        );
+                        
+                        // 车缝阶段：使用菲号识别
+                        if (isInSewingPhase && bundleNo) {
+                            const bundleQuantity = recognizedQty || parsed.quantity || null;
+                            autoDetectedStage = await this.detectNextStageByBundle(orderNo, bundleNo, bundleQuantity, orderDetail);
+                            wx.hideLoading();
+                            
+                            // 检查是否为重复扫码
+                            if (autoDetectedStage && autoDetectedStage.isDuplicate) {
+                                wx.showToast({ 
+                                    title: autoDetectedStage.hint || '⚠️ 请勿重复扫码', 
+                                    icon: 'none',
+                                    duration: 3000
                                 });
+                                this.setData({ loading: false });
+                                return;
+                            }
+                            
+                            if (autoDetectedStage) {
+                                const autoIndex = this.data.scanTypeOptions.findIndex(
+                                    opt => opt.progressStage === autoDetectedStage.progressStage
+                                );
+                                if (autoIndex >= 0) {
+                                    const hintMessage = `✓ 菲号${bundleNo}: ${autoDetectedStage.processName}`;
+                                    this.setData({
+                                        scanTypeIndex: autoIndex,
+                                        qtyHint: hintMessage
+                                    });
+                                }
                             }
                         } else {
-                            wx.showToast({ title: '无法识别进度，请手动选择', icon: 'none' });
+                            // 裁剪及之前的工序：基于订单识别
+                            autoDetectedStage = this.detectNextStage(orderDetail);
+                            console.log('[扫码识别] 识别结果:', autoDetectedStage);
+                            wx.hideLoading();
+
+                            if (autoDetectedStage) {
+                                const autoIndex = this.data.scanTypeOptions.findIndex(
+                                    opt => opt.progressStage === autoDetectedStage.progressStage
+                                );
+                                if (autoIndex >= 0) {
+                                    // 判断是订单码还是菲号码，显示不同提示
+                                    const isOrderQR = parsed && parsed.isOrderQR;
+                                    let hintMessage;
+                                    if (isOrderQR) {
+                                        hintMessage = `✓ 订单码: ${orderNo} → ${autoDetectedStage.processName}`;
+                                    } else if (autoDetectedStage.hint) {
+                                        hintMessage = `✓ ${autoDetectedStage.hint}`;
+                                    } else {
+                                        hintMessage = `✓ 已自动识别: ${autoDetectedStage.processName}`;
+                                    }
+                                    console.log('[扫码识别] 提示信息:', hintMessage);
+                                    this.setData({
+                                        scanTypeIndex: autoIndex,
+                                        qtyHint: hintMessage
+                                    });
+                                }
+                            } else {
+                                console.log('[扫码识别] 识别失败: 未能确定下一个工序');
+                                wx.showToast({ title: '无法识别进度，请手动选择', icon: 'none' });
+                            }
                         }
                     } else {
+                        wx.hideLoading();
+                        console.log('[扫码识别] 失败: 二维码未包含订单号');
                         wx.showToast({ title: '二维码未包含订单号，请手动选择类型', icon: 'none', duration: 2000 });
                     }
                 } catch (e) {
                     wx.hideLoading();
-                    console.error('自动识别进度失败', e);
-                    wx.showToast({ title: '识别失败，请手动选择', icon: 'none' });
+                    console.error('[扫码识别] 异常:', e);
+                    wx.showToast({ title: '识别失败，请重试', icon: 'none' });
                     // 识别失败不影响扫码流程，继续使用手动选择的类型
                 }
             }
 
             // 使用自动识别的类型或手动选择的类型
             const finalOption = autoDetectedStage
-                ? this.data.scanTypeOptions.find(opt => opt.processName === autoDetectedStage.processName) || option
+                ? this.data.scanTypeOptions.find(opt => opt.progressStage === autoDetectedStage.progressStage) || option
                 : option;
             const finalScanType = finalOption.value;
 
@@ -1540,15 +1743,15 @@ Page({
             if (allowQrAutofill) {
                 quantity = recognizedQty;
                 const qtyHintText = this.data.autoDetectEnabled && autoDetectedStage
-                    ? `✓ 已识别: ${autoDetectedStage.processName} | 数量: ${quantity}`
+                    ? (autoDetectedStage.hint || `✓ 已识别: ${autoDetectedStage.processName}`) + ` | 数量: ${quantity}`
                     : `已从二维码识别数量：${quantity}（可手动修改）`;
                 this.setData({ quantity: String(quantity), qtyHint: qtyHintText });
             }
 
             const stage = {
                 scanType: finalScanType,
-                progressStage: finalOption.progressStage,
-                processName: finalOption.processName,
+                progressStage: autoDetectedStage ? autoDetectedStage.progressStage : finalOption.progressStage,
+                processName: autoDetectedStage ? autoDetectedStage.processName : finalOption.processName,
                 processCode: finalOption.processCode,
             };
             const payload = {
@@ -1987,12 +2190,12 @@ Page({
                 payload.defectRemark = '质检合格';
             }
 
-            console.log('提交质检结果 - payload:', payload);
+            // 提交质检结果
 
             // 调用API提交质检结果
             const result = await api.production.submitQualityResult(payload);
 
-            console.log('提交质检结果 - 成功响应:', result);
+            // 提交成功
 
             wx.hideLoading();
             wx.showToast({ title: '提交成功', icon: 'success' });
@@ -2009,9 +2212,6 @@ Page({
         } catch (e) {
             wx.hideLoading();
             console.error('提交质检结果失败:', e);
-            console.error('错误详情 - data:', e.data);
-            console.error('错误详情 - statusCode:', e.statusCode);
-            console.error('错误详情 - errMsg:', e.errMsg);
 
             // 如果有后端返回的错误信息，显示出来
             let msg = '提交失败';
@@ -2033,24 +2233,39 @@ Page({
      * 打开物料采购处理弹窗
      */
     async onHandleProcurement(e) {
-        const groupId = e.currentTarget.dataset.groupId;
-        const recordIdx = e.currentTarget.dataset.recordIdx;
+        const dataset = e.currentTarget.dataset;
+        const orderNo = dataset.orderNo; // 直接从dataset获取orderNo
+        
+        // 如果没有orderNo，尝试从记录中获取
+        if (!orderNo) {
+            const groupId = dataset.groupId;
+            const recordIdx = dataset.recordIdx;
+            const groupedHistory = this.data.my.groupedHistory || [];
+            const group = groupedHistory.find(g => g.id === groupId);
 
-        console.log('物料采购处理 - groupId:', groupId, 'recordIdx:', recordIdx);
+            if (!group || !Array.isArray(group.items) || recordIdx >= group.items.length) {
+                wx.showToast({ title: '记录不存在', icon: 'none' });
+                return;
+            }
 
-        // 从groupedHistory中找到对应的记录
-        const groupedHistory = this.data.my.groupedHistory || [];
-        const group = groupedHistory.find(g => g.id === groupId);
-
-        if (!group || !Array.isArray(group.items) || recordIdx >= group.items.length) {
-            wx.showToast({ title: '记录不存在', icon: 'none' });
-            return;
+            const item = group.items[recordIdx];
+            const itemOrderNo = item.orderNo || item.order_no || '';
+            if (!itemOrderNo) {
+                wx.showToast({ title: '订单信息不完整', icon: 'none' });
+                return;
+            }
+            
+            return this.openProcurementModal(itemOrderNo);
         }
-
-        const item = group.items[recordIdx];
-        console.log('物料采购处理 - 记录数据:', item);
-
-        const orderNo = item.orderNo || item.order_no || '';
+        
+        // 使用直接传入的orderNo
+        this.openProcurementModal(orderNo);
+    },
+    
+    /**
+     * 打开采购弹窗
+     */
+    async openProcurementModal(orderNo) {
         if (!orderNo) {
             wx.showToast({ title: '订单信息不完整', icon: 'none' });
             return;
@@ -2060,13 +2275,20 @@ Page({
 
         try {
             // 获取订单的物料采购信息
-            const orderDetail = await api.production.orderDetail(orderNo);
-            const materials = Array.isArray(orderDetail.materialPurchases)
-                ? orderDetail.materialPurchases.map(m => ({
-                    ...m,
-                    purchaseInput: m.purchaseQuantity || m.demandQuantity || '',
-                    remarkInput: m.remark || '',
-                }))
+            const purchases = await api.production.getMaterialPurchases({
+                orderNo: orderNo
+            });
+            
+            const materials = Array.isArray(purchases)
+                ? purchases.map(m => {
+                    // 默认值：已填写的显示已填写的，未填写的显示需求数量
+                    const defaultInput = m.arrivedQuantity > 0 ? m.arrivedQuantity : (m.demandQuantity || '');
+                    return {
+                        ...m,
+                        purchaseInput: String(defaultInput),
+                        remarkInput: m.remark || '',
+                    };
+                })
                 : [];
 
             if (materials.length === 0) {
@@ -2081,13 +2303,12 @@ Page({
                 procurementModal: {
                     show: true,
                     orderNo: orderNo,
-                    scanId: item.id || item.scanId || '',
                     materials: materials,
                 }
             });
         } catch (e) {
             wx.hideLoading();
-            const msg = errorHandler.formatError(e, '获取物料信息失败');
+            const msg = e.message || '获取物料信息失败';
             wx.showToast({ title: msg, icon: 'none', duration: 2000 });
         }
     },
@@ -2170,6 +2391,9 @@ Page({
             // 关闭弹窗
             this.closeProcurementModal();
 
+            // 刷新我的采购任务列表，让已完成的任务消失
+            await this.loadMyProcurementTasks();
+            
             // 刷新扫码记录
             await this.loadMyPanel(true);
 
@@ -2252,7 +2476,7 @@ Page({
                 defectRemark: '质检合格',
             };
 
-            console.log('提交合格质检结果 - payload:', payload);
+            // 提交合格质检结果
 
             await api.production.submitQualityResult(payload);
 

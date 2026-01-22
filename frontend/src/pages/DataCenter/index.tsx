@@ -165,8 +165,8 @@ export const buildProductionSheetHtml = (payload: any) => {
     .section { margin-top: 18px; }
     .section-title { font-weight: 700; font-size: 14px; margin-bottom: 8px; }
     table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
-    th, td { border: 1px solid rgba(0,0,0,0.10); padding: 6px 8px; vertical-align: top; overflow-wrap: anywhere; word-break: break-word; }
-    th { background: rgba(0,0,0,0.03); text-align: left; }
+    th, td { border: 1px solid #d1d5db; padding: 6px 8px; vertical-align: middle; text-align: center; overflow-wrap: anywhere; word-break: break-word; }
+    th { background: rgba(0,0,0,0.03); text-align: center; }
     .no { width: 56px; text-align: center; }
     .req { white-space: pre-wrap; }
     @media print {
@@ -251,11 +251,11 @@ const AttachmentThumb: React.FC<{ styleId?: string | number; cover?: string | nu
   return (
     <div style={{ width: 56, height: 56, borderRadius: 6, overflow: 'hidden', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       {loading ? (
-        <span style={{ color: '#999', fontSize: 12 }}>...</span>
+        <span style={{ color: '#999', fontSize: 'var(--font-size-sm)' }}>...</span>
       ) : url ? (
         <img src={url} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       ) : (
-        <span style={{ color: '#ccc', fontSize: 12 }}>无图</span>
+        <span style={{ color: '#ccc', fontSize: 'var(--font-size-sm)' }}>无图</span>
       )}
     </div>
   );

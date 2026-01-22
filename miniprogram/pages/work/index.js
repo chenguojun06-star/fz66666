@@ -136,29 +136,13 @@ function resolveNodesFromOrder(order) {
 
 Page({
   data: {
-    activeTab: 'orders_production',
+    activeTab: 'all',
     filters: {
       orderNo: '',
       styleNo: '',
       factoryName: '',
-
-      wOrderNo: '',
-      wStyleNo: '',
-      warehouse: '',
-      qualityIndex: 0,
-
-      eOrderNo: '',
-      eStyleNo: '',
     },
-    qualityOptions: [
-      { label: '全部', value: '' },
-      { label: '合格', value: 'qualified' },
-      { label: '次品待返修', value: 'unqualified' },
-      { label: '返修完成', value: 'repaired' },
-    ],
     orders: { loading: false, page: 1, pageSize: 10, hasMore: true, list: [] },
-    warehousing: { loading: false, page: 1, pageSize: 10, hasMore: true, list: [] },
-    exceptions: { loading: false, page: 1, pageSize: 10, hasMore: true, list: [] },
     rollback: {
       open: false,
       submitting: false,
@@ -183,6 +167,14 @@ Page({
       progress: '',
       remark: '',
     },
+    bundleModal: {
+      visible: false,
+      loading: false,
+      orderId: '',
+      orderNo: '',
+      styleNo: '',
+      items: [{ color: '', size: '', quantity: '' }],
+    },
   },
 
   onShow() {
@@ -192,7 +184,7 @@ Page({
     try {
       const nextTab = wx.getStorageSync('work_active_tab');
       if (nextTab) {
-        const allowed = ['orders_production', 'orders_all', 'warehousing', 'exceptions'];
+        const allowed = ['all', 'procurement', 'cutting', 'sewing', 'warehousing'];
         if (allowed.includes(nextTab) && nextTab !== this.data.activeTab) {
           this.setData({ activeTab: nextTab });
         }
@@ -235,17 +227,9 @@ Page({
   },
 
   ensureLoaded() {
-    const t = this.data.activeTab;
-    if (t === 'orders_all' || t === 'orders_production') {
-      if (this.data.orders.list.length === 0) this.loadOrders(true);
-      return;
-    }
-    if (t === 'warehousing') {
-      if (this.data.warehousing.list.length === 0) this.loadWarehousing(true);
-      return;
-    }
-    if (t === 'exceptions') {
-      if (this.data.exceptions.list.length === 0) this.loadExceptions(true);
+    // 所有标签页都加载订单列表
+    if (this.data.orders.list.length === 0) {
+      this.loadOrders(true);
     }
   },
 
@@ -253,7 +237,10 @@ Page({
     const tab = e && e.currentTarget && e.currentTarget.dataset ? e.currentTarget.dataset.tab : '';
     if (!tab || tab === this.data.activeTab) return;
     this.setData({ activeTab: tab });
-    this.ensureLoaded();
+    // 切换标签页时强制重新加载订单
+    const app = getApp();
+    if (app && typeof app.resetPagedList === 'function') app.resetPagedList(this, 'orders');
+    this.loadOrders(true);
   },
 
   goScan() {
@@ -341,10 +328,8 @@ Page({
         },
       });
 
-      if (this.data.activeTab === 'orders_all' || this.data.activeTab === 'orders_production') {
-        if (app && typeof app.resetPagedList === 'function') app.resetPagedList(this, 'orders');
-        await this.loadOrders(true);
-      }
+      if (app && typeof app.resetPagedList === 'function') app.resetPagedList(this, 'orders');
+      await this.loadOrders(true);
     } catch (e) {
       if (e && e.type === 'auth') return;
       if (app && typeof app.toastError === 'function') app.toastError(e, '更新失败');
@@ -367,22 +352,11 @@ Page({
       () => {
         const app = getApp();
         if (app && typeof app.resetPagedList === 'function') app.resetPagedList(this, 'orders');
-        if (this.data.activeTab === 'orders_all' || this.data.activeTab === 'orders_production') {
-          this.loadOrders(true);
-        }
+        this.loadOrders(true);
       },
     );
   },
 
-  onWOrderNoInput(e) {
-    this.setData({ 'filters.wOrderNo': (e && e.detail && e.detail.value) || '' });
-  },
-  onWStyleNoInput(e) {
-    this.setData({ 'filters.wStyleNo': (e && e.detail && e.detail.value) || '' });
-  },
-  onWarehouseInput(e) {
-    this.setData({ 'filters.warehouse': (e && e.detail && e.detail.value) || '' });
-  },
 
   async openStepRollback(e) {
     const orderId = normalizeText(e && e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.id);
@@ -467,10 +441,8 @@ Page({
       });
       wx.showToast({ title: '回流成功', icon: 'success' });
       this.closeStepRollback();
-      if (this.data.activeTab === 'orders_all' || this.data.activeTab === 'orders_production') {
-        if (app && typeof app.resetPagedList === 'function') app.resetPagedList(this, 'orders');
-        await this.loadOrders(true);
-      }
+      if (app && typeof app.resetPagedList === 'function') app.resetPagedList(this, 'orders');
+      await this.loadOrders(true);
     } catch (e3) {
       if (e3 && e3.type === 'auth') return;
       if (app && typeof app.toastError === 'function') app.toastError(e3, '回流失败');
@@ -567,37 +539,7 @@ Page({
       this.setData({ 'rollback.submitting': false });
     }
   },
-  onQualityPickerChange(e) {
-    const idx = Number((e && e.detail && e.detail.value) || 0);
-    this.setData({ 'filters.qualityIndex': Number.isFinite(idx) ? idx : 0 });
-  },
-  clearWarehousingFilters() {
-    this.setData(
-      {
-        filters: {
-          ...this.data.filters,
-          wOrderNo: '',
-          wStyleNo: '',
-          warehouse: '',
-          qualityIndex: 0,
-        },
-      },
-      () => {
-        const app = getApp();
-        if (app && typeof app.resetPagedList === 'function') app.resetPagedList(this, 'warehousing');
-        if (this.data.activeTab === 'warehousing') {
-          this.loadWarehousing(true);
-        }
-      },
-    );
-  },
 
-  onEOrderNoInput(e) {
-    this.setData({ 'filters.eOrderNo': (e && e.detail && e.detail.value) || '' });
-  },
-  onEStyleNoInput(e) {
-    this.setData({ 'filters.eStyleNo': (e && e.detail && e.detail.value) || '' });
-  },
   clearExceptionFilters() {
     this.setData(
       {
@@ -618,19 +560,11 @@ Page({
   },
 
   refreshActive() {
-    const t = this.data.activeTab;
-    if (t === 'orders_all' || t === 'orders_production') return this.loadOrders(true);
-    if (t === 'warehousing') return this.loadWarehousing(true);
-    if (t === 'exceptions') return this.loadExceptions(true);
-    return Promise.resolve();
+    return this.loadOrders(true);
   },
 
   loadMoreActive() {
-    const t = this.data.activeTab;
-    if (t === 'orders_all' || t === 'orders_production') return this.loadOrders(false);
-    if (t === 'warehousing') return this.loadWarehousing(false);
-    if (t === 'exceptions') return this.loadExceptions(false);
-    return Promise.resolve();
+    return this.loadOrders(false);
   },
 
   loadOrders(reset) {
@@ -650,7 +584,19 @@ Page({
           styleNo: normalizeText(f.styleNo),
           factoryName: normalizeText(f.factoryName),
         };
-        if (this.data.activeTab === 'orders_production') params.status = 'production';
+        
+        // 根据标签页添加当前工序节点过滤
+        const tab = this.data.activeTab;
+        const processMap = {
+          procurement: '采购',
+          cutting: '裁剪',
+          sewing: '车缝',
+          warehousing: '入库',
+        };
+        if (tab !== 'all' && processMap[tab]) {
+          params.currentProcessName = processMap[tab];
+        }
+        
         return api.production.listOrders(params);
       },
       (r) => {
@@ -664,60 +610,7 @@ Page({
     );
   },
 
-  loadWarehousing(reset) {
-    const app = getApp();
-    if (!app || typeof app.loadPagedList !== 'function') return Promise.resolve();
 
-    return app.loadPagedList(
-      this,
-      'warehousing',
-      reset === true,
-      async ({ page, pageSize }) => {
-        const f = this.data.filters;
-        const qs = this.data.qualityOptions[this.data.filters.qualityIndex].value;
-        const params = {
-          page,
-          pageSize,
-          orderNo: normalizeText(f.wOrderNo),
-          styleNo: normalizeText(f.wStyleNo),
-          warehouse: normalizeText(f.warehouse),
-          qualityStatus: normalizeText(qs),
-        };
-        return api.production.listWarehousing(params);
-      },
-      (r) => ({
-        ...r,
-        qualityStatusText: qualityStatusText(r && r.qualityStatus),
-      }),
-    );
-  },
-
-  loadExceptions(reset) {
-    const app = getApp();
-    if (!app || typeof app.loadPagedList !== 'function') return Promise.resolve();
-
-    return app.loadPagedList(
-      this,
-      'exceptions',
-      reset === true,
-      async ({ page, pageSize }) => {
-        const f = this.data.filters;
-        const params = {
-          page,
-          pageSize,
-          orderNo: normalizeText(f.eOrderNo),
-          styleNo: normalizeText(f.eStyleNo),
-          scanType: 'orchestration',
-          scanResult: 'failure',
-        };
-        return api.production.listScans(params);
-      },
-      (r) => ({
-        ...r,
-        scanResultText: scanResultText(r && r.scanResult),
-      }),
-    );
-  },
 
   /**
    * 设置订单列表的实时同步
@@ -734,7 +627,6 @@ Page({
           styleNo: normalizeText(f.styleNo),
           factoryName: normalizeText(f.factoryName),
         };
-        if (this.data.activeTab === 'orders_production') params.status = 'production';
         return await api.production.listOrders(params);
       } catch (error) {
         errorHandler.logError(error, '[Work] Sync orders');
@@ -777,6 +669,123 @@ Page({
     // 加载提醒列表（仅更新数据，不显示弹窗）
     // work页面暂不显示提醒按钮，只在home页面显示
     // 这里预留接口，未来可以在work页面也添加提醒按钮
+  },
+
+  /**
+   * 生成菲号功能
+   */
+  onGenerateBundle(e) {
+    const order = e.currentTarget.dataset.order;
+    if (!order || !order.id) {
+      wx.showToast({ title: '订单信息错误', icon: 'none' });
+      return;
+    }
+    
+    this.setData({
+      bundleModal: {
+        visible: true,
+        loading: false,
+        orderId: order.id,
+        orderNo: order.orderNo || '',
+        styleNo: order.styleNo || '',
+        items: [{ color: '', size: '', quantity: '' }],
+      },
+    });
+  },
+
+  onBundleColorInput(e) {
+    const idx = e.currentTarget.dataset.idx;
+    const value = e.detail.value;
+    const items = [...this.data.bundleModal.items];
+    items[idx].color = value;
+    this.setData({ 'bundleModal.items': items });
+  },
+
+  onBundleSizeInput(e) {
+    const idx = e.currentTarget.dataset.idx;
+    const value = e.detail.value;
+    const items = [...this.data.bundleModal.items];
+    items[idx].size = value;
+    this.setData({ 'bundleModal.items': items });
+  },
+
+  onBundleQuantityInput(e) {
+    const idx = e.currentTarget.dataset.idx;
+    const value = e.detail.value;
+    const items = [...this.data.bundleModal.items];
+    items[idx].quantity = value;
+    this.setData({ 'bundleModal.items': items });
+  },
+
+  onAddBundleItem() {
+    const items = [...this.data.bundleModal.items, { color: '', size: '', quantity: '' }];
+    this.setData({ 'bundleModal.items': items });
+  },
+
+  onRemoveBundleItem(e) {
+    const idx = e.currentTarget.dataset.idx;
+    const items = this.data.bundleModal.items.filter((_, i) => i !== idx);
+    this.setData({ 'bundleModal.items': items });
+  },
+
+  onCancelBundle() {
+    this.setData({
+      bundleModal: {
+        visible: false,
+        loading: false,
+        orderId: '',
+        orderNo: '',
+        styleNo: '',
+        items: [{ color: '', size: '', quantity: '' }],
+      },
+    });
+  },
+
+  async onConfirmBundle() {
+    const modal = this.data.bundleModal;
+    
+    // 验证数据
+    const validItems = modal.items
+      .map((item) => ({
+        color: String(item.color || '').trim(),
+        size: String(item.size || '').trim(),
+        quantity: Number(item.quantity) || 0,
+      }))
+      .filter((item) => item.quantity > 0);
+
+    if (validItems.length === 0) {
+      wx.showToast({ title: '请至少填写一行有效数据', icon: 'none' });
+      return;
+    }
+
+    const invalid = validItems.find((item) => !item.color || !item.size);
+    if (invalid) {
+      wx.showToast({ title: '颜色和尺码不能为空', icon: 'none' });
+      return;
+    }
+
+    // 显示加载状态
+    this.setData({ 'bundleModal.loading': true });
+
+    try {
+      // 调用后端API生成菲号
+      const res = await api.production.generateCuttingBundles(modal.orderId, validItems);
+      
+      if (res.code === 200) {
+        wx.showToast({ title: '菲号生成成功', icon: 'success' });
+        this.onCancelBundle();
+        // 刷新订单列表
+        this.loadOrders();
+      } else {
+        wx.showToast({ title: res.message || '生成失败', icon: 'none', duration: 2000 });
+      }
+    } catch (error) {
+      console.error('生成菲号失败', error);
+      const errMsg = error && error.errMsg ? error.errMsg : '生成失败，请重试';
+      wx.showToast({ title: errMsg, icon: 'none', duration: 2000 });
+    } finally {
+      this.setData({ 'bundleModal.loading': false });
+    }
   },
 
   onHide() {

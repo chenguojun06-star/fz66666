@@ -41,55 +41,20 @@
 </wxs>
 
 <view class="page">
-  <!-- 顶部操作栏 - 紧凑型 -->
-  <view class="top-bar">
-    <!-- 自动识别开关 -->
-    <view class="auto-detect-switch">
-      <switch checked="{{autoDetectEnabled}}" bindchange="onAutoDetectChange" color="#1890ff" />
-      <text class="switch-label">自动识别进度</text>
-    </view>
-    
-    <view class="type-tabs" wx:if="{{!autoDetectEnabled}}">
-      <view class="tab {{scanTypeIndex === 0 ? 'on' : ''}}" bindtap="onQuickScanType" data-idx="0">
-        <image class="tab-ico" src="/assets/icons/cut.svg" mode="aspectFit" />
-        <text>裁剪</text>
-      </view>
-      <view class="tab {{scanTypeIndex === 1 ? 'on' : ''}}" bindtap="onQuickScanType" data-idx="1">
-        <image class="tab-ico" src="/assets/icons/sew.svg" mode="aspectFit" />
-        <text>缝制</text>
-      </view>
-      <view class="tab {{scanTypeIndex === 4 ? 'on' : ''}}" bindtap="onQuickScanType" data-idx="4">
-        <image class="tab-ico" src="/assets/icons/check.svg" mode="aspectFit" />
-        <text>质检</text>
-      </view>
-      <view class="tab {{scanTypeIndex === 5 ? 'on' : ''}}" bindtap="onQuickScanType" data-idx="5">
-        <image class="tab-ico" src="/assets/icons/pack.svg" mode="aspectFit" />
-        <text>包装</text>
-      </view>
-      <view class="tab {{scanTypeIndex === 6 ? 'on' : ''}}" bindtap="onQuickScanType" data-idx="6">
-        <image class="tab-ico" src="/assets/icons/store.svg" mode="aspectFit" />
-        <text>入库</text>
-      </view>
-      <picker class="more-picker" mode="selector" range="{{scanTypeOptions}}" range-key="label" value="{{scanTypeIndex}}" bindchange="onScanTypeChange">
-        <view class="tab more">
-          <text class="more-dot">···</text>
-        </view>
-      </picker>
-    </view>
-    
-    <view wx:if="{{autoDetectEnabled}}" class="auto-mode-tip">
-      <text class="tip-icon">🤖</text>
-      <text class="tip-text">扫码自动识别当前进度节点</text>
-    </view>
-  </view>
-
   <!-- 扫码区 -->
   <view class="scan-area">
+    <!-- 生产节点选择器 -->
+    <picker class="scan-type-picker" mode="selector" range="{{scanTypeOptions}}" range-key="label" value="{{scanTypeIndex}}" bindchange="onScanTypeChange">
+      <view class="picker-display">
+        <text class="picker-label">{{scanTypeOptions[scanTypeIndex].label}}</text>
+        <text class="picker-arrow">▼</text>
+      </view>
+    </picker>
+    
     <view class="scan-input">
       <input type="digit" placeholder="数量" value="{{quantity}}" bindinput="onQuantityInput" />
     </view>
     <view class="scan-btn {{loading ? 'off' : ''}}" bindtap="onScan">
-      <image class="scan-ico" src="/assets/icons/scan.svg" mode="aspectFit" />
       <text>{{loading ? '...' : '扫码'}}</text>
     </view>
   </view>
@@ -115,49 +80,19 @@
       <text wx:if="{{lastResult.color}}">{{lastResult.color}}</text>
       <text wx:if="{{lastResult.size}}">{{lastResult.size}}</text>
       <text wx:if="{{lastResult.processName}}" class="res-proc">{{lastResult.processName}}</text>
-      <text wx:if="{{lastResult.unitPrice != null}}">¥{{lastResult.unitPrice}}</text>
+      <text wx:if="{{lastResult.unitPrice != null}}" class="{{lastResult.unitPriceHint ? 'res-price-warn' : ''}}">¥{{lastResult.unitPrice}}{{lastResult.unitPriceHint ? ' ⚠️' : ''}}</text>
     </view>
-  </view>
-
-  <!-- 面辅料采购 - 已移至扫码确认弹窗 -->
-  <view wx:if="false" class="section">
-    <view class="sec-head">
-      <text class="sec-title">📦 面辅料 <text class="sec-count">{{materialPurchases.length}}</text></text>
-    </view>
-    <view wx:for="{{materialPurchases}}" wx:key="id" class="mat-card">
-      <view class="mat-top">
-        <text class="mat-name">{{item.materialName || item.materialCode || '物料'}}</text>
-        <text class="mat-tag {{item.receiverName ? 'done' : ''}}">{{item.receiverName ? '已领' : '待领'}}</text>
-      </view>
-      <view class="mat-grid">
-        <view class="mat-cell"><text class="mc-label">需求</text><text class="mc-val hl">{{item.demandQuantity || item.purchaseQuantity || 0}}{{item.unit || '米'}}</text></view>
-        <view class="mat-cell"><text class="mc-label">采购</text><text class="mc-val">{{item.purchaseQuantity || 0}}{{item.unit || '米'}}</text></view>
-        <view class="mat-cell"><text class="mc-label">到货</text><text class="mc-val {{item.arrivedQuantity > 0 ? 'gr' : ''}}">{{item.arrivedQuantity || 0}}{{item.unit || '米'}}</text></view>
-      </view>
-      <view wx:if="{{item.receiverName}}" class="mat-receiver">👤 {{item.receiverName}} <text wx:if="{{item.receivedTime}}" class="mat-time">{{item.receivedTime}}</text></view>
-      
-      <view wx:if="{{!item.receiverName && item.status !== 'completed' && item.status !== 'cancelled'}}" class="mat-action">
-        <view class="btn-receive" bindtap="onReceivePurchase" data-idx="{{index}}">领取任务</view>
-      </view>
-      <view wx:if="{{item.receiverName}}" class="mat-form">
-        <view class="mf-row">
-          <text class="mf-label">到货</text>
-          <input type="digit" placeholder="0" value="{{item.arrivedInput}}" bindinput="onPurchaseArrivedInput" data-idx="{{index}}" />
-          <text class="mf-unit">{{item.unit || '米'}}</text>
-        </view>
-        <view class="mf-row">
-          <text class="mf-label">备注</text>
-          <input placeholder="选填" value="{{item.remarkInput}}" bindinput="onPurchaseRemarkInput" data-idx="{{index}}" />
-        </view>
-        <view class="btn-confirm" bindtap="onConfirmPurchaseArrived" data-idx="{{index}}">确认到货</view>
-      </view>
+    <!-- 单价提示信息 -->
+    <view wx:if="{{lastResult.unitPriceHint}}" class="res-hint">
+      <text class="hint-icon">⚠️</text>
+      <text class="hint-text">{{lastResult.unitPriceHint}}</text>
     </view>
   </view>
 
   <!-- 今日统计 -->
   <view class="section">
     <view class="sec-head">
-      <text class="sec-title">📊 今日统计</text>
+      <text class="section-title">📊 今日统计</text>
       <text class="sec-refresh {{my.loadingStats ? 'off' : ''}}" bindtap="refreshMy">刷新</text>
     </view>
     <view class="stats">
@@ -168,10 +103,28 @@
     </view>
   </view>
 
+  <!-- 我的采购任务 -->
+  <view wx:if="{{my.procurementTasks && my.procurementTasks.length > 0}}" class="section">
+    <view class="sec-head">
+      <text class="section-title">🛒 我的采购任务</text>
+    </view>
+    <view wx:for="{{my.procurementTasks}}" wx:key="orderNo" class="procurement-task-card">
+      <view class="ptc-header">
+        <text class="ptc-order">订单: {{item.orderNo}}</text>
+        <text class="ptc-style">款号: {{item.styleNo}}</text>
+      </view>
+      <view wx:if="{{item.styleName}}" class="ptc-name">{{item.styleName}}</view>
+      <view class="ptc-footer">
+        <text class="ptc-count">{{item.totalCount}}项待采购</text>
+        <view class="ptc-btn" bindtap="onHandleProcurement" data-order-no="{{item.orderNo}}">填写数量</view>
+      </view>
+    </view>
+  </view>
+
   <!-- 扫码记录 -->
   <view class="section">
     <view class="sec-head">
-      <text class="sec-title">📋 扫码记录</text>
+      <text class="section-title">📋 扫码记录</text>
     </view>
     <view wx:if="{{my.groupedHistory.length === 0 && !my.loadingHistory}}" class="empty">暂无记录</view>
     
@@ -235,7 +188,8 @@
       </view>
       <view class="modal-body">
         <view wx:if="{{scanConfirm.detail}}" class="cf-list">
-          <view class="cf-item"><text class="cf-k">二维码</text><text class="cf-v mono">{{scanConfirm.detail.scanCode}}</text></view>
+          <!-- 只在非采购类型时显示二维码 -->
+          <view wx:if="{{!scanConfirm.detail.isProcurement}}" class="cf-item"><text class="cf-k">二维码</text><text class="cf-v mono">{{scanConfirm.detail.scanCode}}</text></view>
           <view wx:if="{{!scanConfirm.detail.isProcurement}}" class="cf-item">
             <text class="cf-k">数量</text>
             <text class="cf-v">{{scanConfirm.detail.quantity}}</text>
@@ -251,6 +205,10 @@
             <view class="pmi-header">
               <text class="pmi-name">{{item.materialName || item.materialCode || '物料'}}</text>
               <text class="pmi-unit">{{item.unit || '米'}}</text>
+            </view>
+            <view wx:if="{{item.purchaseNo}}" class="pmi-row">
+              <text class="pmi-label">采购单号</text>
+              <text class="pmi-value" style="font-size: 12px; color: #666;">{{item.purchaseNo}}</text>
             </view>
             <view class="pmi-row">
               <text class="pmi-label">需求数量</text>
@@ -274,6 +232,9 @@
       </view>
       <view class="modal-btns">
         <view class="mbtn cancel" bindtap="onCancelScan">取消</view>
+        <view wx:if="{{scanConfirm.detail.isProcurement}}" class="mbtn" style="background: #52c41a; {{scanConfirm.loading ? 'opacity: 0.6;' : ''}}" bindtap="onReceiveOnly">
+          {{scanConfirm.loading ? '...' : '领取任务'}}
+        </view>
         <view class="mbtn ok {{scanConfirm.loading ? 'off' : ''}}" bindtap="onConfirmScan">
           {{scanConfirm.loading ? '...' : (scanConfirm.detail.isProcurement ? '领取并提交' : (scanTypeOptions[scanTypeIndex].value === 'quality' ? '领取' : '确认'))}}
         </view>
@@ -398,6 +359,11 @@
           <view class="pm-item-header">
             <text class="pm-item-name">{{item.materialName || item.materialCode || '物料'}}</text>
             <text class="pm-item-unit">{{item.unit || '米'}}</text>
+          </view>
+          
+          <view wx:if="{{item.purchaseNo}}" class="pm-field">
+            <text class="pm-field-label">采购单号</text>
+            <text class="pm-field-value" style="font-size: 12px; color: #666;">{{item.purchaseNo}}</text>
           </view>
           
           <view class="pm-field">

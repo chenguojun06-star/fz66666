@@ -41,6 +41,7 @@ export const paths = {
   orderFlow: '/production/order-flow',
   warehousing: '/production/warehousing',
   warehousingDetail: '/production/warehousing/detail/:warehousingNo',
+  orderTransfer: '/production/transfer',
 
   materialReconciliation: '/finance/material-reconciliation',
   shipmentReconciliation: '/finance/shipment-reconciliation',
@@ -49,6 +50,7 @@ export const paths = {
 
   profile: '/system/profile',
   user: '/system/user',
+  userApproval: '/system/user-approval',
   role: '/system/role',
   factory: '/system/factory',
   loginLog: '/system/login-log',
@@ -66,12 +68,14 @@ export const permissionCodes = {
   cutting: 'MENU_CUTTING',
   progress: 'MENU_PROGRESS',
   warehousing: 'MENU_WAREHOUSING',
+  orderTransfer: 'MENU_ORDER_TRANSFER',
 
   materialRecon: 'MENU_MATERIAL_RECON',
   shipmentRecon: 'MENU_SHIPMENT_RECON',
   paymentApproval: 'MENU_PAYMENT_APPROVAL',
 
   user: 'MENU_USER',
+  userApproval: 'MENU_USER_APPROVAL',
   role: 'MENU_ROLE',
   factory: 'MENU_FACTORY',
   loginLog: 'MENU_LOGIN_LOG',
@@ -140,7 +144,7 @@ export const menuConfig: MenuSection[] = [
       { label: '个人中心', path: paths.profile, icon: React.createElement(SettingOutlined) },
       { label: '人员管理', path: paths.user, icon: React.createElement(TeamOutlined) },
       { label: '角色管理', path: paths.role, icon: React.createElement(UserSwitchOutlined) },
-      { label: '加工厂管理', path: paths.factory, icon: React.createElement(DatabaseOutlined) },
+      { label: '供应商管理', path: paths.factory, icon: React.createElement(DatabaseOutlined) },
       { label: '登录日志', path: paths.loginLog, icon: React.createElement(FileSearchOutlined) },
     ],
   },
@@ -164,6 +168,7 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.paymentApproval]: permissionCodes.paymentApproval,
 
   [paths.user]: permissionCodes.user,
+  [paths.userApproval]: permissionCodes.userApproval,
   [paths.role]: permissionCodes.role,
   [paths.factory]: permissionCodes.factory,
   [paths.loginLog]: permissionCodes.loginLog,

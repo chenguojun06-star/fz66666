@@ -138,7 +138,11 @@ public class StyleInfoOrchestrator {
         }
 
         String reason = body == null ? null : (body.get("reason") == null ? null : String.valueOf(body.get("reason")));
-        saveMaintenanceLog(id, "PRODUCTION_REQUIREMENTS_ROLLBACK", reason);
+        String remark = StringUtils.hasText(reason) ? reason.trim() : null;
+        if (!StringUtils.hasText(remark)) {
+            throw new IllegalArgumentException("退回原因不能为空");
+        }
+        saveMaintenanceLog(id, "PRODUCTION_REQUIREMENTS_ROLLBACK", remark);
         return true;
     }
 
@@ -237,6 +241,11 @@ public class StyleInfoOrchestrator {
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
+        String reason = body == null ? null : (body.get("reason") == null ? null : String.valueOf(body.get("reason")));
+        String remark = StringUtils.hasText(reason) ? reason.trim() : null;
+        if (!StringUtils.hasText(remark)) {
+            throw new IllegalArgumentException("维护原因不能为空");
+        }
         boolean ok = styleInfoService.lambdaUpdate()
                 .eq(StyleInfo::getId, id)
                 .set(StyleInfo::getPatternStatus, null)
@@ -244,7 +253,7 @@ public class StyleInfoOrchestrator {
                 .set(StyleInfo::getUpdateTime, LocalDateTime.now())
                 .update();
         if (ok) {
-            saveMaintenanceLog(id, "PATTERN_RESET", body != null ? String.valueOf(body.get("reason")) : null);
+            saveMaintenanceLog(id, "PATTERN_RESET", remark);
         }
         if (!ok) {
             throw new IllegalStateException("操作失败");
@@ -343,6 +352,11 @@ public class StyleInfoOrchestrator {
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
+        String reason = body == null ? null : (body.get("reason") == null ? null : String.valueOf(body.get("reason")));
+        String remark = StringUtils.hasText(reason) ? reason.trim() : null;
+        if (!StringUtils.hasText(remark)) {
+            throw new IllegalArgumentException("维护原因不能为空");
+        }
         boolean ok = styleInfoService.lambdaUpdate()
                 .eq(StyleInfo::getId, id)
                 .set(StyleInfo::getSampleStatus, null)
@@ -351,7 +365,7 @@ public class StyleInfoOrchestrator {
                 .set(StyleInfo::getUpdateTime, LocalDateTime.now())
                 .update();
         if (ok) {
-            saveMaintenanceLog(id, "SAMPLE_RESET", body != null ? String.valueOf(body.get("reason")) : null);
+            saveMaintenanceLog(id, "SAMPLE_RESET", remark);
         }
         if (!ok) {
             throw new IllegalStateException("操作失败");

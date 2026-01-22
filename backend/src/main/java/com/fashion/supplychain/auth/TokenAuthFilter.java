@@ -16,7 +16,14 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * JWT令牌认证过滤器
+ * 从请求头中解析Bearer Token并设置安全上下文
+ */
 public class TokenAuthFilter extends OncePerRequestFilter {
+
+    /** Request Attribute Key: 存储解析后的TokenSubject */
+    public static final String TOKEN_SUBJECT_ATTR = "TOKEN_SUBJECT";
 
     private final AuthTokenService authTokenService;
 
@@ -50,6 +57,9 @@ public class TokenAuthFilter extends OncePerRequestFilter {
                         subject.getUserId(),
                         authorities);
                 SecurityContextHolder.getContext().setAuthentication(auth);
+                
+                // 将TokenSubject存储在request attribute中，供后续Interceptor使用
+                request.setAttribute(TOKEN_SUBJECT_ATTR, subject);
             }
         }
 

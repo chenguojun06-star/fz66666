@@ -127,12 +127,12 @@ const ValidationRules = {
     message: '描述长度不超过 1000 位'
   },
 
-  // API 相关
+  // 接口相关
   apiBaseUrl: {
-    name: 'API 地址',
+    name: '接口地址',
     required: true,
     pattern: /^https?:\/\//,
-    message: 'API 地址必须以 http:// 或 https:// 开头'
+    message: '接口地址必须以 http:// 或 https:// 开头'
   }
 };
 

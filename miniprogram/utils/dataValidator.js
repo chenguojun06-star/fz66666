@@ -5,27 +5,28 @@
 
 /**
  * 生产订单数据结构定义
+ * 注意：部分字段可能因历史数据或特殊情况为空，标记为非必填以保证兼容性
  */
 const ProductionOrderShape = {
   id: { required: true, type: 'string' },
   orderNo: { required: true, type: 'string' },
-  styleId: { required: true, type: 'string' },
-  styleNo: { required: true, type: 'string' },
-  styleName: { required: true, type: 'string' },
-  factoryId: { required: true, type: 'string' },
-  factoryName: { required: true, type: 'string' },
-  orderQuantity: { required: true, type: 'number' },
-  completedQuantity: { required: true, type: 'number', default: 0 },
-  productionProgress: { required: true, type: 'number', default: 0 },
+  styleId: { type: 'string', default: '' },  // 可能为空
+  styleNo: { type: 'string', default: '' },  // 可能为空（历史数据）
+  styleName: { type: 'string', default: '' },  // 可能为空
+  factoryId: { type: 'string', default: '' },  // 可能为空
+  factoryName: { type: 'string', default: '' },  // 可能为空
+  orderQuantity: { required: true, type: 'number', default: 0 },
+  completedQuantity: { type: 'number', default: 0 },
+  productionProgress: { type: 'number', default: 0 },
   status: { required: true, type: 'string' },
-  
+
   // 关键: 进度流程定义 (JSON 字符串)
-  progressWorkflowJson: { required: true, type: 'string', default: '' },
+  progressWorkflowJson: { type: 'string', default: '{}' },
   progressWorkflowLocked: { type: 'number', default: 0 },
   progressWorkflowLockedAt: { type: 'string' },
   progressWorkflowLockedBy: { type: 'string' },
   progressWorkflowLockedByName: { type: 'string' },
-  
+
   // 时间戳
   createTime: { type: 'string' },
   updateTime: { type: 'string' },
@@ -58,7 +59,7 @@ function validateField(value, rule, fieldName = '') {
   if (rule.required && (value === null || value === undefined || value === '')) {
     return `${fieldName} 不能为空`;
   }
-  
+
   // 检查类型
   const valueType = typeof value;
   if (value !== null && value !== undefined) {
@@ -72,7 +73,7 @@ function validateField(value, rule, fieldName = '') {
       return `${fieldName} 必须是对象类型`;
     }
   }
-  
+
   return null;
 }
 
@@ -84,20 +85,20 @@ function validateField(value, rule, fieldName = '') {
  */
 function validateDataShape(data, shape) {
   const errors = [];
-  
+
   if (!data || typeof data !== 'object') {
     return { valid: false, errors: ['数据必须是对象类型'] };
   }
-  
+
   for (const [fieldName, rule] of Object.entries(shape)) {
     const value = data[fieldName];
     const error = validateField(value, rule, fieldName);
-    
+
     if (error) {
       errors.push(error);
     }
   }
-  
+
   return {
     valid: errors.length === 0,
     errors
@@ -111,14 +112,14 @@ function validateDataShape(data, shape) {
  */
 function validateProductionOrder(order) {
   const result = validateDataShape(order, ProductionOrderShape);
-  
+
   if (!result.valid) {
     return result;
   }
-  
+
   // 额外的业务规则验证
   const additionalErrors = [];
-  
+
   // 验证 progressWorkflowJson 格式
   if (order.progressWorkflowJson) {
     try {
@@ -130,17 +131,17 @@ function validateProductionOrder(order) {
       additionalErrors.push(`progressWorkflowJson 格式不正确: ${e.message}`);
     }
   }
-  
+
   // 验证进度值范围
   if (order.productionProgress < 0 || order.productionProgress > 100) {
     additionalErrors.push('productionProgress 必须在 0-100 之间');
   }
-  
+
   // 验证数量关系
   if (order.completedQuantity > order.orderQuantity) {
     additionalErrors.push('completedQuantity 不能大于 orderQuantity');
   }
-  
+
   return {
     valid: additionalErrors.length === 0,
     errors: additionalErrors
@@ -190,22 +191,22 @@ function normalizeData(data, shape) {
   if (!data || typeof data !== 'object') {
     return {};
   }
-  
+
   const normalized = { ...data };
-  
+
   for (const [fieldName, rule] of Object.entries(shape)) {
     const value = normalized[fieldName];
-    
+
     // 如果字段为空且有默认值，使用默认值
     if ((value === null || value === undefined) && rule.default !== undefined) {
       normalized[fieldName] = rule.default;
     }
   }
-  
+
   return normalized;
 }
 
-module.exports = {
+export {
   ProductionOrderShape,
   ScanRecordShape,
   validateField,

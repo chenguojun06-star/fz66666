@@ -1,0 +1,5 @@
+{
+  "navigationBarTitleText": "用户审批",
+  "enablePullDownRefresh": true,
+  "onReachBottomDistance": 50
+}

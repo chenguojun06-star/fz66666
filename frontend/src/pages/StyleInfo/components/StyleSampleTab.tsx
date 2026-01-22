@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Space, Tag, message } from 'antd';
+import { Button, Input, Modal, Space, Tag, message } from 'antd';
 import { CheckCircleOutlined, PlayCircleOutlined, ToolOutlined } from '@ant-design/icons';
 import ResizableTable from '../../../components/common/ResizableTable';
 import ResizableModal, {
@@ -12,6 +12,7 @@ import api from '../../../utils/api';
 import type { StyleAttachment, StyleBom } from '../../../types/style';
 import { isSupervisorOrAboveUser, useAuth } from '../../../utils/authContext';
 import { formatDateTime } from '../../../utils/datetime';
+import { useViewport } from '../../../utils/useViewport';
 
 interface Props {
   styleId: string | number;
@@ -53,13 +54,7 @@ const StyleSampleTab: React.FC<Props> = ({
   const bomDetailTableWrapRef = useRef<HTMLDivElement | null>(null);
   const bomDetailTableScrollY = useResizableModalTableScrollY({ open: bomDetailOpen, ref: bomDetailTableWrapRef });
 
-  const modalWidth = useMemo(() => {
-    if (typeof window === 'undefined') return '60vw';
-    const w = window.innerWidth;
-    if (w < 768) return '96vw';
-    if (w < 1024) return '66vw';
-    return '60vw';
-  }, []);
+  const { modalWidth } = useViewport();
   const modalInitialHeight = 720;
 
   const [loading, setLoading] = useState(false);
@@ -121,6 +116,38 @@ const StyleSampleTab: React.FC<Props> = ({
     } finally {
       setSaving(false);
     }
+  };
+
+  const openMaintenance = () => {
+    let reason = '';
+    Modal.confirm({
+      title: '维护',
+      content: (
+        <div>
+          <div style={{ marginBottom: 12, fontWeight: 600 }}>维护原因</div>
+          <Input.TextArea
+            placeholder="请输入维护原因"
+            autoSize={{ minRows: 3, maxRows: 6 }}
+            maxLength={200}
+            showCount
+            onChange={(e) => {
+              reason = String(e?.target?.value || '');
+            }}
+          />
+        </div>
+      ),
+      okText: '确认维护',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        const remark = String(reason || '').trim();
+        if (!remark) {
+          message.error('请输入维护原因');
+          return Promise.reject(new Error('请输入维护原因'));
+        }
+        await post(`/style/info/${styleId}/sample/reset`, { reason: remark });
+      },
+    });
   };
 
   const timeText = useCallback((raw?: string) => {
@@ -290,7 +317,7 @@ const StyleSampleTab: React.FC<Props> = ({
                   icon: <ToolOutlined />,
                   danger: true,
                   disabled: saving,
-                  onClick: () => post(`/style/info/${styleId}/sample/reset`, { reason: '维护' }),
+                  onClick: openMaintenance,
                   primary: true,
                 },
               ]
@@ -323,7 +350,7 @@ const StyleSampleTab: React.FC<Props> = ({
                     icon: <ToolOutlined />,
                     danger: true,
                     disabled: saving,
-                    onClick: () => post(`/style/info/${styleId}/sample/reset`, { reason: '维护' }),
+                    onClick: openMaintenance,
                   },
                 ]
                 : []),

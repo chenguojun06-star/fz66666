@@ -36,7 +36,25 @@ public class StyleAttachment {
      */
     private String fileType;
 
+    /**
+     * 业务类型: general/pattern/pattern_grading/pattern_final/workorder
+     */
     private String bizType;
+
+    /**
+     * 版本号
+     */
+    private Integer version;
+
+    /**
+     * 版本说明
+     */
+    private String versionRemark;
+
+    /**
+     * 状态: active/archived
+     */
+    private String status;
 
     /**
      * 文件大小(KB)
@@ -46,4 +64,9 @@ public class StyleAttachment {
     private LocalDateTime createTime;
     
     private String uploader;
+
+    /**
+     * 父版本ID (用于版本链追溯)
+     */
+    private String parentId;
 }

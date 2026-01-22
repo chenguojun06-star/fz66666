@@ -234,6 +234,9 @@ public class MaterialReconciliationOrchestrator {
         if (!StringUtils.hasText(purchase.getId())) {
             return true;
         }
+        if (StringUtils.hasText(purchase.getOrderId()) || StringUtils.hasText(purchase.getOrderNo())) {
+            return true;
+        }
         if (purchase.getDeleteFlag() != null && purchase.getDeleteFlag() != 0) {
             return true;
         }
@@ -301,6 +304,10 @@ public class MaterialReconciliationOrchestrator {
 
     private boolean upsertFromPurchase(MaterialPurchase purchase, LocalDateTime now) {
         if (purchase == null || !StringUtils.hasText(purchase.getId())) {
+            return false;
+        }
+        if (StringUtils.hasText(purchase.getOrderId()) || StringUtils.hasText(purchase.getOrderNo())) {
+            cleanupPendingByPurchaseId(purchase.getId(), now == null ? LocalDateTime.now() : now);
             return false;
         }
         if (purchase.getDeleteFlag() != null && purchase.getDeleteFlag() != 0) {

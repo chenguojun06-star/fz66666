@@ -1,61 +1,42 @@
 <view class="container">
   <view class="card">
-    <view class="title">个人</view>
-
-    <view class="actions">
-      <view class="btn-secondary {{loadingStats || loadingHistory ? 'btn-disabled' : ''}}" bindtap="refreshAll">刷新</view>
-      <view class="btn-primary" bindtap="onLogout">退出登录</view>
-    </view>
-
-    <view class="section-title">累计扫码记录</view>
-    <view wx:if="{{loadingStats}}" class="hint">加载中...</view>
-    <view wx:if="{{stats}}" class="my-stats">
-      <view class="my-stat">
-        <view class="my-stat-value">{{stats.scanCount || 0}}</view>
-        <view class="my-stat-label">次数</view>
-      </view>
-      <view class="my-stat">
-        <view class="my-stat-value">{{stats.orderCount || 0}}</view>
-        <view class="my-stat-label">订单</view>
-      </view>
-      <view class="my-stat">
-        <view class="my-stat-value">{{stats.totalQuantity || 0}}</view>
-        <view class="my-stat-label">数量</view>
-      </view>
-      <view class="my-stat">
-        <view class="my-stat-value">{{stats.totalAmount || 0}}</view>
-        <view class="my-stat-label">金额</view>
+    <view class="title-row">
+      <view class="title">个人</view>
+      <view class="title-right-group">
+        <view wx:if="{{showApprovalEntry}}" class="notification-bell" bindtap="onGoToNotification">
+          <image class="bell-icon" src="/assets/icons/bell.svg" mode="aspectFit" />
+          <view wx:if="{{pendingUserCount > 0}}" class="bell-badge">
+            {{pendingUserCount > 99 ? '99+' : pendingUserCount}}
+          </view>
+        </view>
+        <view class="user-info-item" bindtap="onLogout">
+          <text class="user-info-label">退出登录</text>
+        </view>
       </view>
     </view>
-    <view wx:if="{{!stats && !loadingStats}}" class="hint">暂无统计</view>
-
-    <view class="section-title">扫码记录</view>
-    <view wx:if="{{history.list.length === 0 && !loadingHistory}}" class="hint">暂无记录</view>
-    <view wx:for="{{history.list}}" wx:key="id" class="list-item">
-      <view class="item-head">
-        <view class="item-title">{{item.orderNo || '-'}}</view>
-        <text class="tag">{{item.processName || item.progressStage || item.scanType || '-'}}</text>
-      </view>
-      <view class="item-sub">款号：{{item.styleNo || '-'}}</view>
-      <view class="item-sub">颜色：{{item.color || '-'}}</view>
-      <view class="item-sub">尺码：{{item.size || '-'}}</view>
-      <view class="item-sub">数量：{{item.quantity || 0}}</view>
-      <view class="item-sub">单价：{{item.unitPrice == null || item.unitPrice === '' ? '-' : item.unitPrice}}</view>
-      <view wx:if="{{item.scanTime}}" class="item-sub">时间：{{item.scanTime}}</view>
-    </view>
-    <view class="btn">
-      <view class="btn-secondary {{loadingHistory || !history.hasMore ? 'btn-disabled' : ''}}" bindtap="loadMoreHistory">{{loadingHistory ? '加载中...' : (history.hasMore ? '加载更多' : '没有更多了')}}</view>
-    </view>
-
-    <view class="section-title">工资信息</view>
-    <view class="salary-card">
-      <view class="salary-row">
-        <view class="salary-label">工资合计</view>
-        <view class="salary-value">{{stats && stats.totalAmount != null ? stats.totalAmount : 0}}</view>
+    
+    <!-- 用户信息 -->
+    <view wx:if="{{userInfo}}" class="user-profile-card">
+      <view class="profile-avatar">{{avatarLetter}}</view>
+      <view class="profile-name">{{userInfo.name || userInfo.username || '未知用户'}}</view>
+      <view class="profile-role">{{roleDisplayName || '普通用户'}}</view>
+      <view wx:if="{{showApprovalEntry}}" class="profile-online">
+        <text class="online-icon">👥</text>
+        <text>{{onlineCount}}人</text>
       </view>
     </view>
 
-    <view class="section-title">工资明细</view>
+    <!-- 功能导航行 -->
+    <view class="nav-row">
+      <view class="user-info-item">
+        <text class="user-info-label">工资信息</text>
+        <text class="user-info-text">{{stats && stats.totalAmount != null ? stats.totalAmount : 0}}</text>
+      </view>
+      <view class="user-info-item {{loadingStats || loadingHistory ? 'disabled' : ''}}" bindtap="refreshAll">
+        <text class="user-info-label">刷新</text>
+      </view>
+    </view>
+
     <view wx:if="{{history.list.length === 0 && !loadingHistory}}" class="hint">暂无明细</view>
     <view wx:for="{{history.list}}" wx:key="id" class="list-item">
       <view class="item-head">
@@ -69,5 +50,28 @@
       <view class="item-sub">金额：{{item.amount || item.totalAmount || item.salaryAmount || 0}}</view>
       <view wx:if="{{item.scanTime}}" class="item-sub">时间：{{item.scanTime}}</view>
     </view>
+
+    <!-- 工资明细 -->
+    <view class="section-title">工资明细</view>
+    <view wx:if="{{loadingStats}}" class="hint">加载中...</view>
+    <view wx:if="{{stats}}" class="stat-grid">
+      <view class="stat-card">
+        <view class="stat-value">{{stats.scanCount || 0}}</view>
+        <view class="stat-label">次数</view>
+      </view>
+      <view class="stat-card">
+        <view class="stat-value">{{stats.orderCount || 0}}</view>
+        <view class="stat-label">订单</view>
+      </view>
+      <view class="stat-card">
+        <view class="stat-value">{{stats.totalQuantity || 0}}</view>
+        <view class="stat-label">数量</view>
+      </view>
+      <view class="stat-card">
+        <view class="stat-value">{{stats.totalAmount || 0}}</view>
+        <view class="stat-label">金额</view>
+      </view>
+    </view>
+    <view wx:if="{{!stats && !loadingStats}}" class="hint">暂无统计</view>
   </view>
 </view>

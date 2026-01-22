@@ -76,6 +76,9 @@ public class ScanRecordOrchestrator {
     @Autowired
     private ProductionOrderScanRecordDomainService scanRecordDomainService;
 
+    @Autowired
+    private com.fashion.supplychain.style.service.StyleAttachmentService styleAttachmentService;
+
     private boolean isAutoSkippableStageName(ProductionOrder order, String processName) {
         String pn = hasText(processName) ? processName.trim() : null;
         if (!hasText(pn)) {
@@ -909,6 +912,12 @@ public class ScanRecordOrchestrator {
         if (!isCutting && bundle == null && templateLibraryService.progressStageNameMatches("裁剪", stageNameFinal)) {
             throw new IllegalStateException("裁剪环节需先在PC端生成菲号，再进行扫码操作");
         }
+        
+        // 裁剪环节检查纸样是否齐全（只警告，不阻止）
+        if (isCutting && order != null && hasText(order.getStyleId())) {
+            checkPatternForCutting(order.getStyleId());
+        }
+        
         String finalScanType = isCutting ? "cutting" : scanType;
 
         Integer qty = quantity;
@@ -1580,14 +1589,19 @@ public class ScanRecordOrchestrator {
         }
 
         BigDecimal unitPrice = resolveUnitPriceFromTemplate(styleNo, processName);
-        if (unitPrice == null) {
+        String unitPriceHint = null;
+        if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
             unitPrice = BigDecimal.ZERO;
+            unitPriceHint = "未找到工序【" + processName + "】的单价配置，请在模板中心设置工序单价模板";
         }
 
         Map<String, Object> result = new HashMap<>();
         result.put("unitPrice", unitPrice.setScale(2, RoundingMode.HALF_UP));
         result.put("styleNo", styleNo);
         result.put("processName", processName);
+        if (hasText(unitPriceHint)) {
+            result.put("unitPriceHint", unitPriceHint);
+        }
         if (hasText(scanCode)) {
             result.put("scanCode", scanCode);
         }
@@ -1790,5 +1804,22 @@ public class ScanRecordOrchestrator {
 
     private boolean hasText(String value) {
         return value != null && !value.trim().isEmpty();
+    }
+
+    /**
+     * 裁剪环节检查纸样是否齐全（只记录警告，不阻止流程）
+     */
+    private void checkPatternForCutting(String styleId) {
+        if (!hasText(styleId)) {
+            return;
+        }
+        try {
+            boolean complete = styleAttachmentService != null && styleAttachmentService.checkPatternComplete(styleId);
+            if (!complete) {
+                log.warn("Pattern files not complete for styleId={}, cutting scan continues with warning", styleId);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to check pattern complete for styleId={}: {}", styleId, e.getMessage());
+        }
     }
 }

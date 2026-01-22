@@ -8,6 +8,7 @@ import ResizableModal, {
   useResizableModalTableScrollY,
 } from './common/ResizableModal';
 import ResizableTable from './common/ResizableTable';
+import { useViewport } from '../utils/useViewport';
 
 /**
  * 标识类型定义
@@ -69,11 +70,11 @@ export const StyleCoverThumb: React.FC<{
   return (
     <div style={{ width: size, height: size, borderRadius, overflow: 'hidden', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       {loading ? (
-        <span style={{ color: '#999', fontSize: 12 }}>...</span>
+        <span style={{ color: '#999', fontSize: 'var(--font-size-sm)' }}>...</span>
       ) : url ? (
         <img src={url} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       ) : (
-        <span style={{ color: '#ccc', fontSize: 12 }}>无图</span>
+        <span style={{ color: '#ccc', fontSize: 'var(--font-size-sm)' }}>无图</span>
       )}
     </div>
   );
@@ -92,6 +93,7 @@ export const StyleAttachmentsButton: React.FC<{
   /** 模态框标题，默认"附件" */
   modalTitle?: string;
 }> = ({ styleId, styleNo, buttonText = '附件', modalTitle = '附件' }) => {
+  const { modalWidth } = useViewport();
   // 模态框打开状态
   const [open, setOpen] = React.useState(false);
   // 加载状态
@@ -179,15 +181,7 @@ export const StyleAttachmentsButton: React.FC<{
         title={modalTitle}
         onCancel={() => setOpen(false)}
         footer={<Space><Button onClick={() => setOpen(false)}>关闭</Button></Space>}
-        width={
-          typeof window === 'undefined'
-            ? '60vw'
-            : window.innerWidth < 768
-              ? '96vw'
-              : window.innerWidth < 1024
-                ? '66vw'
-                : '60vw'
-        }
+        width={modalWidth}
         initialHeight={720}
         tableDensity="auto"
         scaleWithViewport

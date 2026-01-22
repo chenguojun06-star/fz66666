@@ -1,5 +1,94 @@
 page {
   background: #f7f8fa;
+  padding-bottom: calc(60px + env(safe-area-inset-bottom));
+}
+
+/* 搜索栏/搜索结果样式已移至 app.wxss 统一管理 */
+
+/* home 页面特有：搜索结果间距调整 */
+.global-results {
+  margin-bottom: 16px;
+}
+
+.result-item:last-child {
+  border-bottom: none;
+}
+
+.result-item:active {
+  background: rgba(224, 242, 254, 0.3);
+}
+
+.result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.result-type {
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #ffffff;
+  background: #3b82f6;
+  border-radius: 999px;
+}
+
+.result-status {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.result-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.result-order,
+.result-style {
+  font-size: 13px;
+  color: #1f2937;
+}
+
+.result-detail {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+/* 无搜索结果 */
+.no-results {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  margin-bottom: 16px;
+}
+
+.no-results-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.3;
+}
+
+.no-results-text {
+  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 16px;
+}
+
+.no-results .close-btn {
+  padding: 8px 24px;
+  font-size: 14px;
+  color: #1f2937;
+  background: rgba(224, 242, 254, 0.8);
+  border: 1px solid rgba(224, 242, 254, 0.9);
+  border-radius: 999px;
 }
 
 /* 右上角提醒按钮 */
@@ -15,6 +104,9 @@ page {
   align-items: center;
   justify-content: center;
   z-index: 999;
+}
+.reminder-btn:active {
+  background: rgba(224, 242, 254, 0.8);
 }
 
 .reminder-icon {
@@ -84,6 +176,9 @@ page {
   color: #6b7280;
   font-size: 18px; /* 一级标题/图标 */
 }
+.reminder-panel-close:active {
+  background: rgba(224, 242, 254, 0.8);
+}
 
 .reminder-panel-content {
   flex: 1;
@@ -104,6 +199,9 @@ page {
   border-radius: 12px;
   padding: 12px;
   margin-bottom: 10px;
+}
+.reminder-item:active {
+  background: rgba(224, 242, 254, 0.8);
 }
 
 .reminder-item-header {
@@ -140,13 +238,6 @@ page {
   z-index: 999;
 }
 
-.container .card {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 18px;
-  padding: 12px;
-}
-
 .title {
   font-size: 16px; /* 二级标题 */
   font-weight: 600;
@@ -161,14 +252,8 @@ page {
   margin-bottom: 8px;
 }
 
-.btn-secondary {
-  background: rgba(255, 255, 255, 0.6);
-  color: #1f2937;
-  border: 1px solid #e5e7eb;
-  border-radius: 999px;
-  padding: 8px 12px;
-  text-align: center;
-  font-size: 12px;
+.btn-secondary:active {
+  background: rgba(224, 242, 254, 0.8); /* 很浅的雾蓝色 */
 }
 
 .home-section-title {
@@ -210,7 +295,7 @@ page {
   border: 1px solid #e5e7eb;
   border-radius: 999px;
   padding: 8px 12px;
-  font-size: 12px;
+  font-size: 14px;
   color: #111827;
   background: #ffffff;
 }
@@ -219,7 +304,7 @@ page {
   border: 1px solid #e5e7eb;
   border-radius: 999px;
   padding: 8px 12px;
-  font-size: 12px;
+  font-size: 14px;
   color: #111827;
   background: #ffffff;
 }
@@ -228,6 +313,50 @@ page {
   display: flex;
   gap: 10px;
   justify-content: flex-end;
+}
+
+/* 数据概览 - 胶囊风格 */
+.home-stats-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.home-stat-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: rgba(224, 242, 254, 0.3);
+  border: 1px solid rgba(224, 242, 254, 0.5);
+  border-radius: 999px;
+  font-size: 12px;
+  color: #1f2937;
+}
+
+.home-stat-emoji {
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+.home-stat-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.home-stat-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
 }
 
 .home-stats {
@@ -248,6 +377,12 @@ page {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* Emoji图标样式 */
+.home-stat-emoji {
+  font-size: 20px;
+  opacity: 0.8;
 }
 
 .home-stat-icon-wrap {
@@ -300,13 +435,23 @@ page {
 }
 
 .home-entry {
-  border: 1px solid #e5e7eb;
-  background: #ffffff;
-  color: #111827;
+  border: 1px solid rgba(224, 242, 254, 0.9);
+  background: rgba(224, 242, 254, 0.8);
+  color: #1f2937;
   border-radius: 999px;
-  padding: 8px 8px;
+  padding: 3px 18px;
   text-align: center;
   font-size: 12px;
+  font-weight: 500;
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.15);
+}
+
+.home-entry:active {
+  background: rgba(186, 230, 253, 0.9);
 }
 
 .home-activity {
