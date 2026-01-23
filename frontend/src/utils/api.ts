@@ -142,7 +142,7 @@ export const parseProductionOrderLines = (
   if (Array.isArray(parsed)) {
     list = parsed;
   } else if (parsed && typeof parsed === 'object') {
-    const candidate = (parsed as any).lines || (parsed as any).items || (parsed as any).details || (parsed as any).list;
+    const candidate = (parsed as any).lines || (parsed as any).items || (parsed as any).details || (parsed as any).list || (parsed as any).orderLines;
     if (Array.isArray(candidate)) list = candidate;
     else list = [parsed];
   }

@@ -72,6 +72,20 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deleteByOrderId(String orderId) {
+        if (!StringUtils.hasText(orderId)) {
+            return false;
+        }
+        MaterialPurchase patch = new MaterialPurchase();
+        patch.setDeleteFlag(1);
+        patch.setUpdateTime(LocalDateTime.now());
+        return this.update(patch, new LambdaUpdateWrapper<MaterialPurchase>()
+                .eq(MaterialPurchase::getOrderId, orderId.trim())
+                .eq(MaterialPurchase::getDeleteFlag, 0));
+    }
+
+    @Override
     public String resolveMaterialId(MaterialPurchase purchase) {
         if (purchase == null) {
             return null;

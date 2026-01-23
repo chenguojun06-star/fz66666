@@ -471,6 +471,10 @@ class QRCodeParser {
     if (!s) return null;
 
     // 匹配数字
+    // 修复: 增加安全检查，防止 s.match 报错
+    if (typeof s.match !== 'function') {
+      return null;
+    }
     const m = s.match(/\d+/);
     if (!m) return null;
 

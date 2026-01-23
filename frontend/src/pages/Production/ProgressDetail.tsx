@@ -498,18 +498,18 @@ const ModernProgressBoard: React.FC<ModernProgressBoardProps> = ({ nodes, progre
               const isDoneNode = i < currentIdx || effectivePct >= 100;
               const isCurrent = !frozen && i === currentIdx && effectivePct > 0 && effectivePct < 100;
               const name = String(n?.name || '').trim() || '-';
-              const isProcurementNode = name.includes('采购') || name.includes('物料');
+              // const isProcurementNode = name.includes('采购') || name.includes('物料');
               const qty = stageQty(i, name);
               const nodeStart = i * segPct;
               const nodeFillRaw = segPct > 0 ? ((effectivePct - nodeStart) / segPct) * 100 : effectivePct;
-              const fillPct = isProcurementNode ? 100 : clampPercent(nodeFillRaw);
-              const displayText = isProcurementNode ? '完成' : String(qty);
+              const fillPct = clampPercent(nodeFillRaw);
+              const displayText = String(qty);
               const badgeKey = `${labelKey}-${i}-${displayText}`;
               return (
-                <div key={String(n.id || n.name || i)} className="mpb-mark" title={isProcurementNode ? `${name} 已完成` : `${name} ${qty}`}>
+                <div key={String(n.id || n.name || i)} className="mpb-mark" title={`${name} ${qty}`}>
                   <div
                     key={badgeKey}
-                    className={`mpb-node mpb-pop${isProcurementNode || isDoneNode ? ' mpb-nodeDone' : ''}${isCurrent ? ' mpb-nodeCurrent' : ''}`}
+                    className={`mpb-node mpb-pop${isDoneNode ? ' mpb-nodeDone' : ''}${isCurrent ? ' mpb-nodeCurrent' : ''}`}
                     style={{ ['--p' as any]: `${fillPct}%` }}
                   >
                     <span className="mpb-nodeName">{name}</span>

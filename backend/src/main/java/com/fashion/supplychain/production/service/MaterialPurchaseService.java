@@ -116,5 +116,12 @@ public interface MaterialPurchaseService extends IService<MaterialPurchase> {
 
     ArrivalStats computeArrivalStats(List<MaterialPurchase> purchases);
 
+    /**
+     * 删除指定生产订单关联的所有采购任务
+     * @param orderId 生产订单ID
+     * @return 是否成功
+     */
+    boolean deleteByOrderId(String orderId);
+
     String resolveMaterialId(MaterialPurchase purchase);
 }
