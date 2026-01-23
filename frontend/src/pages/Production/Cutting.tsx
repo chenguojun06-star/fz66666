@@ -1802,7 +1802,7 @@ const CuttingManagement: React.FC = () => {
               </Button>,
             ]}
             autoFontSize={false}
-            initialHeight={720}
+            initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
             scaleWithViewport
           >
             <ResizableModalFlex style={{ gap: 12 }}>
@@ -1814,7 +1814,41 @@ const CuttingManagement: React.FC = () => {
                   border: '1px solid #e8edf5'
                 }}
               >
-                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+                  {/* 订单扫码二维码 - 左侧 */}
+                  {sheetPreviewTask?.productionOrderNo && (
+                    <div style={{ 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      alignItems: 'center',
+                      padding: '8px',
+                      background: '#e6f7ff',
+                      borderRadius: '8px',
+                      border: '2px solid #1890ff',
+                      boxShadow: '0 4px 12px rgba(24, 144, 255, 0.15)',
+                      flexShrink: 0
+                    }}>
+                      <QRCodeCanvas 
+                        value={JSON.stringify({
+                          type: 'order',
+                          orderNo: sheetPreviewTask.productionOrderNo
+                        })}
+                        size={120} 
+                        level="M"
+                        includeMargin={false}
+                      />
+                      <div style={{ 
+                        marginTop: '8px', 
+                        fontSize: '12px', 
+                        color: '#1890ff',
+                        fontWeight: 600
+                      }}>
+                        📱 订单扫码
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* 订单信息 - 中间 */}
                   <div style={{ flex: 1, minWidth: 300 }}>
                     <Space wrap size="small">
                       <Tag color="blue">订单号：{String(sheetPreviewTask?.productionOrderNo || '').trim() || '-'}</Tag>
@@ -1841,6 +1875,7 @@ const CuttingManagement: React.FC = () => {
                     </Space>
                   </div>
                   
+                  {/* 裁剪单二维码 - 右侧 */}
                   {sheetPreviewTask?.qrCode && (
                     <div style={{ 
                       display: 'flex', 
@@ -1850,7 +1885,8 @@ const CuttingManagement: React.FC = () => {
                       background: '#ffffff',
                       borderRadius: '8px',
                       border: '1px solid #e8edf5',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                      flexShrink: 0
                     }}>
                       <div style={{
                         padding: '8px',
@@ -1897,7 +1933,7 @@ const CuttingManagement: React.FC = () => {
                   loading={sheetPreviewPurchaseLoading}
                   pagination={false as any}
                   size="small"
-                  scroll={{ x: 'max-content', y: isMobile ? 220 : 260 }}
+                  scroll={{ x: 'max-content', y: isMobile ? 180 : 200 }}
                 />
               </Card>
 

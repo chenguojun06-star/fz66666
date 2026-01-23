@@ -248,8 +248,8 @@ const MyComponent = () => {
       open={open}
       title="示例模态框"
       onCancel={() => setOpen(false)}
-      width="60vw"
-      initialHeight={520}
+      width={modalWidth}
+      initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
       tableDensity="auto"
     >
       {/* 模态框内容 */}
@@ -261,16 +261,37 @@ const MyComponent = () => {
 
 **主要属性**：
 
-- `width`：初始宽度
+- `width`：初始宽度，使用 `modalWidth` 响应式值（移动端 96vw，平板/PC 80vw）
 - `minWidth`：最小宽度，默认520px
 - `minHeight`：最小高度，默认320px
-- `initialHeight`：初始高度
+- `initialHeight`：初始高度，推荐使用 `window.innerHeight * 0.85` 实现响应式自适应
 - `autoFontSize`：是否自动调整字体大小，默认true
 - `tableDensity`：表格密度
 
+**全站弹窗尺寸规范（2026-01-23更新）**：
+
+```typescript
+// 从 useViewport hook 获取响应式配置
+const { isMobile, modalWidth } = useViewport();
+
+// modalWidth 配置：
+// - 移动端（< 768px）：96vw
+// - 平板/PC（≥ 768px）：80vw
+
+// 弹窗高度推荐配置：
+initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
+// - 默认为视口高度的 85%
+// - SSR 环境回退到 800px
+```
+
 **约定**：
 
-- 全站图片预览弹窗默认尺寸：600×600
+- ✅ **弹窗宽度**：全站统一使用 `modalWidth`（响应式 80vw/96vw）
+- ✅ **弹窗高度**：推荐使用 `window.innerHeight * 0.85`（视口高度的 85%）
+- ✅ **表格滚动高度**：
+  - 面辅料采购明细表：移动端 180px，PC端 200px
+  - 裁剪单明细表：使用 `ResizableModalFlexFill` 自动占据剩余空间
+- 🖼️ 全站图片预览弹窗默认尺寸：600×600
 
 #### 6.1.2 ResizableTable
 
