@@ -110,15 +110,6 @@ public class DashboardOrchestrator {
         data.setTotalWarehousingCount(dashboardQueryService.countTotalWarehousing());  // 入库总数
         data.setDefectiveQuantity(unqualifiedQuantity);  // 次品数量
         data.setPaymentApprovalCount(paymentApprovalCount);  // 审批付款
-        
-        // 保留旧字段以兼容
-        data.setStyleCount(styleCount);
-        data.setProductionCount(productionCount);
-        data.setPendingReconciliationCount(pendingReconciliationCount);
-        data.setTodayScanCount(todayScanCount);
-        data.setWarehousingOrderCount(warehousingOrderCount);
-        data.setUnqualifiedQuantity(unqualifiedQuantity);
-        data.setUrgentEventCount(urgentEventCount);
         data.setRecentActivities(recentActivities);
         return data;
     }
