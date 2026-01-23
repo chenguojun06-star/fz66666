@@ -8,9 +8,9 @@
   align-items: center;
   justify-content: center;
   padding: 40rpx;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #e0f2fe 0%, #e0e7ff 100%);
   border-radius: 20rpx;
-  box-shadow: 0 10rpx 40rpx rgba(102, 126, 234, 0.4);
+  box-shadow: 0 10rpx 40rpx rgba(224, 242, 254, 0.4);
   transition: all 0.3s ease;
 }
 
