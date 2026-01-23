@@ -1240,6 +1240,48 @@ background: linear-gradient(135deg, #e0f2fe 0%, #e0e7ff 100%);
 6. **页面背景** → 统一使用 `#f7f8fa`
 7. **卡片阴影** → 统一使用 `0 2px 6px rgba(0, 0, 0, 0.05)`
 8. **文字颜色** → 主文字 `#111827`，次文字 `#6b7280`
+9. **弹窗尺寸** → 统一使用 `max-width: 90vw`, `border-radius: 16px`
+10. **进度条样式** → 仅使用 `app.wxss` 全局样式，不得在页面重复定义
+
+#### UI细节统一标准（2026-01-23 补充）
+
+##### 弹窗 Modal
+```css
+/* ✅ 统一标准：使用 app.wxss 的 .modal-backdrop + .modal-wrap */
+.modal-wrap {
+  max-width: 90vw;           /* 统一宽度 */
+  border-radius: 16px;       /* 统一圆角 */
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.15);
+}
+
+/* ❌ 禁止：页面自定义弹窗样式覆盖 */
+```
+
+##### 按钮颜色
+```css
+/* ✅ 主要按钮：浅蓝渐变 */
+.btn-primary {
+  background: linear-gradient(135deg, #e0f2fe 0%, #e0e7ff 100%);
+}
+
+/* ❌ 禁止：使用紫色渐变 #667eea → #764ba2 */
+```
+
+##### 进度条
+```css
+/* ✅ 统一使用 app.wxss 全局样式 */
+.progress-wrapper { /* 仅在 app.wxss 定义 */ }
+.progress-bar { /* 仅在 app.wxss 定义 */ }
+.progress-fill { 
+  background: linear-gradient(90deg, #10b981 0%, #3b82f6 100%);
+}
+
+/* ❌ 禁止：页面 wxss 重复定义进度条样式 */
+```
+
+##### 节点进度文字颜色
+- 进度百分比：`color: #6b7280`, `font-size: 11px`
+- 当前节点：使用 app.wxss 统一样式，不得单独定义
 
 #### 设计规范文件位置
 - **设计系统文档**: `miniprogram/DESIGN_SYSTEM.md`
