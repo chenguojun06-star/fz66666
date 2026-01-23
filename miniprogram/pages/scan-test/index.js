@@ -242,6 +242,12 @@ Page({
 
             wx.hideLoading();
 
+            // 检查是否需要输入数量
+            if (!result.success && result.needInput) {
+                this.showQuantityInput(rawScanCode, result.data);
+                return;
+            }
+
             if (result.success) {
                 markRecent(dedupKey, 2000);
                 wx.vibrateShort({ type: 'light' });
@@ -267,6 +273,67 @@ Page({
                 title: msg, 
                 icon: 'none',
                 duration: 2000 
+            });
+        }
+    },
+
+    // 显示数量输入弹窗
+    showQuantityInput(rawScanCode, parsedData) {
+        wx.showModal({
+            title: '请输入数量',
+            content: `订单号: ${parsedData.orderNo}`,
+            editable: true,
+            placeholderText: '请输入数量',
+            success: async (res) => {
+                if (res.confirm && res.content) {
+                    const quantity = parseInt(res.content, 10);
+                    if (isNaN(quantity) || quantity <= 0) {
+                        wx.showToast({
+                            title: '请输入有效数量',
+                            icon: 'none'
+                        });
+                        return;
+                    }
+                    // 重新扫码,传入手动输入的数量
+                    await this.processScanWithQuantity(rawScanCode, quantity);
+                }
+            }
+        });
+    },
+
+    // 带数量的扫码处理
+    async processScanWithQuantity(rawScanCode, quantity) {
+        const dedupKey = `scan:${rawScanCode}`;
+        wx.showLoading({ title: '提交中...', mask: true });
+
+        try {
+            // 调用 handleScan 并传入手动输入的数量
+            const result = await this.scanHandler.handleScan(rawScanCode, quantity);
+            
+            wx.hideLoading();
+
+            if (result.success) {
+                markRecent(dedupKey, 2000);
+                wx.vibrateShort({ type: 'light' });
+                wx.showToast({
+                    title: result.message,
+                    icon: 'success',
+                    duration: 1500,
+                });
+            } else {
+                wx.showToast({
+                    title: result.message,
+                    icon: 'none',
+                    duration: 2000,
+                });
+            }
+        } catch (e) {
+            wx.hideLoading();
+            console.error('[ScanTest] 提交失败:', e);
+            wx.showToast({
+                title: errorHandler.formatError(e, '提交失败'),
+                icon: 'none',
+                duration: 2000
             });
         }
     },
