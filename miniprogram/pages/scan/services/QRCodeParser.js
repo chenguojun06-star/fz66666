@@ -26,31 +26,50 @@ class QRCodeParser {
    * 主解析方法 - 统一入口
    * @param {string} rawScanCode - 扫描的原始内容
    * @returns {Object} 解析结果
-   * @returns {string} result.scanCode - 扫描码
-   * @returns {number|null} result.quantity - 数量
-   * @returns {string} result.orderNo - 订单号
-   * @returns {string} result.styleNo - 款号
-   * @returns {string} result.color - 颜色
-   * @returns {string} result.size - 尺码
-   * @returns {string} result.bundleNo - 菲号序号
-   * @returns {boolean} result.isOrderQR - 是否为订单级别二维码
+   * @returns {boolean} result.success - 是否成功解析
+   * @returns {string} result.message - 提示消息
+   * @returns {Object} result.data - 解析后的数据
+   * @returns {string} result.data.scanCode - 扫描码
+   * @returns {number|null} result.data.quantity - 数量
+   * @returns {string} result.data.orderNo - 订单号
+   * @returns {string} result.data.styleNo - 款号
+   * @returns {string} result.data.color - 颜色
+   * @returns {string} result.data.size - 尺码
+   * @returns {string} result.data.bundleNo - 菲号序号
+   * @returns {boolean} result.data.isOrderQR - 是否为订单级别二维码
    */
   parse(rawScanCode) {
     const raw = (rawScanCode || '').toString().trim();
     if (!raw) {
-      return this._emptyResult();
+      return {
+        success: false,
+        message: '扫描内容为空',
+        data: null
+      };
     }
 
     // 1. 尝试解析 JSON 格式
     const first = raw[0];
     if (first === '{' || first === '[') {
       const jsonResult = this._parseJSON(raw);
-      if (jsonResult) return jsonResult;
+      if (jsonResult) {
+        return {
+          success: true,
+          message: '解析成功 (JSON)',
+          data: jsonResult
+        };
+      }
     }
 
     // 2. 尝试解析 URL 参数格式
     const urlResult = this._parseURLParams(raw);
-    if (urlResult) return urlResult;
+    if (urlResult) {
+      return {
+        success: true,
+        message: '解析成功 (URL)',
+        data: urlResult
+      };
+    }
 
     // 3. 尝试解析菲号格式
     const bundleResult = this._parseFeiNo(raw);
@@ -58,28 +77,47 @@ class QRCodeParser {
     // 4. 如果不是菲号，判断是否为订单号
     if (!bundleResult) {
       const orderResult = this._parseOrderNo(raw);
-      if (orderResult) return orderResult;
+      if (orderResult) {
+        return {
+          success: true,
+          message: '解析成功 (订单号)',
+          data: orderResult
+        };
+      }
     }
 
-    // 5. 返回菲号解析结果或默认值
-    return bundleResult ? {
-      scanCode: raw,
-      quantity: bundleResult.quantity,
-      orderNo: bundleResult.orderNo,
-      styleNo: bundleResult.styleNo,
-      color: bundleResult.color,
-      size: bundleResult.size,
-      bundleNo: bundleResult.bundleNo != null ? String(bundleResult.bundleNo) : '',
-      isOrderQR: false,
-    } : {
-      scanCode: raw,
-      quantity: this._parseQuantityFromText(raw),
-      orderNo: '',
-      styleNo: '',
-      color: '',
-      size: '',
-      bundleNo: '',
-      isOrderQR: false,
+    // 5. 返回菲号解析结果或失败
+    if (bundleResult) {
+      return {
+        success: true,
+        message: '解析成功 (菲号)',
+        data: {
+          scanCode: raw,
+          quantity: bundleResult.quantity,
+          orderNo: bundleResult.orderNo,
+          styleNo: bundleResult.styleNo,
+          color: bundleResult.color,
+          size: bundleResult.size,
+          bundleNo: bundleResult.bundleNo != null ? String(bundleResult.bundleNo) : '',
+          isOrderQR: false,
+        }
+      };
+    }
+
+    // 无法识别格式
+    return {
+      success: false,
+      message: '无法识别的二维码格式',
+      data: {
+        scanCode: raw,
+        quantity: this._parseQuantityFromText(raw),
+        orderNo: '',
+        styleNo: '',
+        color: '',
+        size: '',
+        bundleNo: '',
+        isOrderQR: false,
+      }
     };
   }
 
