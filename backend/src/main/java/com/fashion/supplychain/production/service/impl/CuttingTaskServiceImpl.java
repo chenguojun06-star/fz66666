@@ -14,6 +14,7 @@ import com.fashion.supplychain.production.mapper.CuttingBundleMapper;
 import com.fashion.supplychain.production.mapper.CuttingTaskMapper;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import com.fashion.supplychain.production.service.CuttingTaskService;
+import com.fashion.supplychain.production.service.ProductionOrderService;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -36,6 +37,9 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
 
     @Autowired
     private ScanRecordMapper scanRecordMapper;
+
+    @Autowired
+    private ProductionOrderService productionOrderService;
 
     @Override
     public IPage<CuttingTask> queryPage(Map<String, Object> params) {
@@ -67,6 +71,37 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
                 .filter(StringUtils::hasText)
                 .distinct()
                 .collect(Collectors.toList());
+        if (!orderIds.isEmpty()) {
+            Map<String, ProductionOrder> orderMap = productionOrderService.listByIds(orderIds).stream()
+                    .filter(o -> o != null && StringUtils.hasText(o.getId()))
+                    .collect(Collectors.toMap(o -> o.getId().trim(), o -> o, (a, b) -> a));
+            records = records.stream()
+                    .filter(t -> {
+                        String oid = StringUtils.hasText(t.getProductionOrderId())
+                                ? t.getProductionOrderId().trim()
+                                : null;
+                        if (!StringUtils.hasText(oid)) {
+                            return true;
+                        }
+                        ProductionOrder order = orderMap.get(oid);
+                        return order != null && (order.getDeleteFlag() == null || order.getDeleteFlag() == 0);
+                    })
+                    .collect(Collectors.toList());
+            pageResult.setRecords(records);
+            pageResult.setTotal(records.size());
+        }
+
+        if (records.isEmpty()) {
+            return pageResult;
+        }
+
+        List<String> orderIdsFiltered = records.stream()
+                .map(CuttingTask::getProductionOrderId)
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .filter(StringUtils::hasText)
+                .distinct()
+                .collect(Collectors.toList());
         List<String> orderNos = records.stream()
                 .map(CuttingTask::getProductionOrderNo)
                 .filter(StringUtils::hasText)
@@ -74,7 +109,7 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
                 .filter(StringUtils::hasText)
                 .distinct()
                 .collect(Collectors.toList());
-        if (orderIds.isEmpty() && orderNos.isEmpty()) {
+        if (orderIdsFiltered.isEmpty() && orderNos.isEmpty()) {
             return pageResult;
         }
 
@@ -84,12 +119,12 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
             LambdaQueryWrapper<CuttingBundle> qw = new LambdaQueryWrapper<CuttingBundle>()
                     .select(CuttingBundle::getProductionOrderId, CuttingBundle::getProductionOrderNo,
                             CuttingBundle::getQuantity);
-            if (!orderIds.isEmpty() && !orderNos.isEmpty()) {
-                qw.and(w -> w.in(CuttingBundle::getProductionOrderId, orderIds)
+            if (!orderIdsFiltered.isEmpty() && !orderNos.isEmpty()) {
+                qw.and(w -> w.in(CuttingBundle::getProductionOrderId, orderIdsFiltered)
                         .or()
                         .in(CuttingBundle::getProductionOrderNo, orderNos));
-            } else if (!orderIds.isEmpty()) {
-                qw.in(CuttingBundle::getProductionOrderId, orderIds);
+            } else if (!orderIdsFiltered.isEmpty()) {
+                qw.in(CuttingBundle::getProductionOrderId, orderIdsFiltered);
             } else {
                 qw.in(CuttingBundle::getProductionOrderNo, orderNos);
             }
@@ -432,6 +467,30 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
             scanRecordMapper.insert(sr);
         } catch (Exception e) {
             log.warn("Failed to insert cutting rollback log: taskId={}", task.getId(), e);
+        }
+    }
+
+    @Override
+    public void deleteByOrderId(String orderId) {
+        String oid = StringUtils.hasText(orderId) ? orderId.trim() : null;
+        if (!StringUtils.hasText(oid)) {
+            return;
+        }
+
+        try {
+            // 删除裁剪单
+            LambdaQueryWrapper<CuttingBundle> bundleQuery = new LambdaQueryWrapper<>();
+            bundleQuery.eq(CuttingBundle::getProductionOrderId, oid);
+            cuttingBundleMapper.delete(bundleQuery);
+            log.info("Deleted cutting bundles for order: {}", oid);
+
+            // 删除裁剪任务
+            LambdaQueryWrapper<CuttingTask> taskQuery = new LambdaQueryWrapper<>();
+            taskQuery.eq(CuttingTask::getProductionOrderId, oid);
+            this.remove(taskQuery);
+            log.info("Deleted cutting tasks for order: {}", oid);
+        } catch (Exception e) {
+            log.warn("Failed to delete cutting data for order: {}", oid, e);
         }
     }
 }
