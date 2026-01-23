@@ -66,7 +66,7 @@ class Logger {
     }
 
     // 开发环境打印到控制台
-    const isDev = process?.env?.NODE_ENV === 'development';
+    const isDev = typeof process !== 'undefined' && process?.env?.NODE_ENV === 'development';
     if (isDev) {
       const prefix = `[${level}${traceId ? ` ${traceId}` : ''}] ${message}`;
       switch (level) {
