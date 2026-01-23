@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
+import java.util.List;
 
 /**
  * 扫码记录Controller
@@ -180,5 +181,34 @@ public class ScanRecordController {
     public Result<?> validateSKU(@RequestBody ScanRecord scanRecord) {
         boolean valid = skuService.validateSKU(scanRecord);
         return Result.success(valid);
+    }
+
+    /**
+     * 获取订单的工序单价配置（Phase 5新增）
+     */
+    @GetMapping("/process-prices/{orderNo}")
+    public Result<?> getProcessUnitPrices(@PathVariable String orderNo) {
+        List<Map<String, Object>> prices = skuService.getProcessUnitPrices(orderNo);
+        return Result.success(prices);
+    }
+
+    /**
+     * 根据工序名称获取单价（Phase 5新增）
+     */
+    @GetMapping("/process-price/{orderNo}/{processName}")
+    public Result<?> getUnitPriceByProcess(
+            @PathVariable String orderNo,
+            @PathVariable String processName) {
+        Map<String, Object> priceInfo = skuService.getUnitPriceByProcess(orderNo, processName);
+        return Result.success(priceInfo);
+    }
+
+    /**
+     * 计算订单总工价（Phase 5新增）
+     */
+    @GetMapping("/order-total-cost/{orderNo}")
+    public Result<?> calculateOrderTotalCost(@PathVariable String orderNo) {
+        Map<String, Object> costInfo = skuService.calculateOrderTotalCost(orderNo);
+        return Result.success(costInfo);
     }
 }

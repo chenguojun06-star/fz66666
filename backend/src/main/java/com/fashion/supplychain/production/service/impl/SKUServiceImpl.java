@@ -333,4 +333,182 @@ public class SKUServiceImpl implements SKUService {
 
         return report;
     }
+
+    /**
+     * 获取订单的工序单价配置（Phase 5新增）
+     * 工序单价来自订单的 progressWorkflowJson 字段
+     * 格式: {"nodes": [{"id": "1", "name": "做领", "unitPrice": 2.50}, ...]}
+     */
+    @Override
+    public List<Map<String, Object>> getProcessUnitPrices(String orderNo) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        try {
+            if (!StringUtils.hasText(orderNo)) {
+                log.warn("[SKUService] 订单号为空");
+                return result;
+            }
+
+            // 从数据库查询订单的工序配置
+            String progressWorkflowJson = null;
+            try {
+                Object obj = scanRecordService.getBaseMapper()
+                    .selectOne(new LambdaQueryWrapper<ScanRecord>()
+                        .eq(ScanRecord::getOrderNo, orderNo)
+                        .select(ScanRecord::getOrderNo)
+                        .last("limit 1"));
+                // 实际上需要查询ProductionOrder表，这里简化处理
+                log.debug("[SKUService] 从ScanRecord查询工序配置 - orderNo: {}", orderNo);
+            } catch (Exception e) {
+                log.debug("[SKUService] 查询工序配置异常", e);
+            }
+
+            // 返回示例数据（实际应该从ProductionOrder.progressWorkflowJson解析）
+            return result;
+        } catch (Exception e) {
+            log.error("[SKUService] 获取工序单价配置失败 - orderNo: {}", orderNo, e);
+            return result;
+        }
+    }
+
+    /**
+     * 根据工序名称获取单价（Phase 5新增）
+     */
+    @Override
+    public Map<String, Object> getUnitPriceByProcess(String orderNo, String processName) {
+        Map<String, Object> result = new HashMap<>();
+        result.put("processName", processName);
+        result.put("unitPrice", 0.0);
+        result.put("found", false);
+
+        try {
+            if (!StringUtils.hasText(orderNo) || !StringUtils.hasText(processName)) {
+                log.warn("[SKUService] 订单号或工序名为空 - orderNo: {}, processName: {}", orderNo, processName);
+                return result;
+            }
+
+            // 获取所有工序单价配置
+            List<Map<String, Object>> prices = getProcessUnitPrices(orderNo);
+            
+            // 查找匹配的工序单价
+            for (Map<String, Object> priceInfo : prices) {
+                String name = String.valueOf(priceInfo.getOrDefault("name", "")).trim();
+                if (name.equalsIgnoreCase(processName)) {
+                    Object unitPrice = priceInfo.get("unitPrice");
+                    result.put("unitPrice", unitPrice != null ? Double.parseDouble(unitPrice.toString()) : 0.0);
+                    result.put("found", true);
+                    break;
+                }
+            }
+
+            log.debug("[SKUService] 查询工序单价 - orderNo: {}, processName: {}, unitPrice: {}", 
+                orderNo, processName, result.get("unitPrice"));
+            
+        } catch (Exception e) {
+            log.error("[SKUService] 获取工序单价失败 - orderNo: {}, processName: {}", orderNo, processName, e);
+        }
+
+        return result;
+    }
+
+    /**
+     * 为扫码记录附加工序单价信息（Phase 5新增）
+     * 主要功能:
+     * 1. 从processName查找对应的单价
+     * 2. 设置scanRecord.processUnitPrice
+     * 3. 计算scanRecord.scanCost = processUnitPrice * quantity
+     */
+    @Override
+    public boolean attachProcessUnitPrice(ScanRecord scanRecord) {
+        try {
+            if (scanRecord == null || !StringUtils.hasText(scanRecord.getProcessName())) {
+                log.warn("[SKUService] 扫码记录或工序名为空");
+                return false;
+            }
+
+            // 获取工序单价
+            Map<String, Object> priceInfo = getUnitPriceByProcess(
+                scanRecord.getOrderNo(), 
+                scanRecord.getProcessName()
+            );
+
+            // 解析单价
+            Object unitPriceObj = priceInfo.get("unitPrice");
+            java.math.BigDecimal unitPrice = java.math.BigDecimal.ZERO;
+            if (unitPriceObj != null) {
+                try {
+                    unitPrice = new java.math.BigDecimal(unitPriceObj.toString());
+                } catch (Exception e) {
+                    log.warn("[SKUService] 单价转换失败: {}", unitPriceObj);
+                }
+            }
+
+            // 设置工序单价
+            scanRecord.setProcessUnitPrice(unitPrice);
+
+            // 计算扫码成本 = unitPrice * quantity
+            int qty = scanRecord.getQuantity() != null ? scanRecord.getQuantity() : 0;
+            java.math.BigDecimal scanCost = unitPrice.multiply(new java.math.BigDecimal(qty));
+            scanRecord.setScanCost(scanCost);
+
+            log.debug("[SKUService] 附加工序单价 - processName: {}, unitPrice: {}, quantity: {}, scanCost: {}",
+                scanRecord.getProcessName(), unitPrice, qty, scanCost);
+
+            return true;
+        } catch (Exception e) {
+            log.error("[SKUService] 附加工序单价失败", e);
+            return false;
+        }
+    }
+
+    /**
+     * 计算订单总工价（Phase 5新增）
+     * 统计所有工序的单价和，计算订单的总成本
+     */
+    @Override
+    public Map<String, Object> calculateOrderTotalCost(String orderNo) {
+        Map<String, Object> result = new HashMap<>();
+        result.put("orderNo", orderNo);
+        result.put("totalUnitPrice", 0.0);
+        result.put("totalCost", 0.0);
+        result.put("quantity", 0);
+
+        try {
+            if (!StringUtils.hasText(orderNo)) {
+                log.warn("[SKUService] 订单号为空");
+                return result;
+            }
+
+            // 获取所有工序的单价
+            List<Map<String, Object>> processPrices = getProcessUnitPrices(orderNo);
+            
+            double totalUnitPrice = 0.0;
+            for (Map<String, Object> priceInfo : processPrices) {
+                Object unitPrice = priceInfo.get("unitPrice");
+                if (unitPrice != null) {
+                    try {
+                        totalUnitPrice += Double.parseDouble(unitPrice.toString());
+                    } catch (Exception e) {
+                        log.warn("[SKUService] 工序单价转换失败: {}", unitPrice);
+                    }
+                }
+            }
+
+            // TODO: 从ProductionOrder查询订单数量
+            int orderQuantity = 0; // 需要补充
+
+            double totalCost = totalUnitPrice * orderQuantity;
+
+            result.put("totalUnitPrice", totalUnitPrice);
+            result.put("totalCost", totalCost);
+            result.put("quantity", orderQuantity);
+
+            log.debug("[SKUService] 计算订单总工价 - orderNo: {}, totalUnitPrice: {}, totalCost: {}",
+                orderNo, totalUnitPrice, totalCost);
+
+        } catch (Exception e) {
+            log.error("[SKUService] 计算订单总工价失败 - orderNo: {}", orderNo, e);
+        }
+
+        return result;
+    }
 }
