@@ -176,7 +176,7 @@ class ScanHandler {
    */
   async _getOrderDetail(orderNo) {
     try {
-      const res = await this.api.production.getOrderByNo(orderNo);
+      const res = await this.api.production.orderDetailByOrderNo(orderNo);
       return res || null;
     } catch (e) {
       console.error('[ScanHandler] 获取订单失败:', e);
