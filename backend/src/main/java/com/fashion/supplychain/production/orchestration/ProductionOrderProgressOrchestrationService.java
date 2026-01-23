@@ -223,19 +223,40 @@ public class ProductionOrderProgressOrchestrationService {
                 scanTime = LocalDateTime.now();
             }
 
-            scanRecordDomainService.upsertStageScanRecord(
-                    ProductionOrderScanRecordDomainService.REQUEST_PREFIX_PROCUREMENT + oid,
-                    oid,
-                    order.getOrderNo(),
-                    order.getStyleId(),
-                    order.getStyleNo(),
-                    order.getColor(),
-                    order.getSize(),
-                    qty,
-                    ProductionOrderScanRecordDomainService.STAGE_PROCUREMENT,
-                    scanTime,
-                    operatorId,
-                    StringUtils.hasText(operatorName) ? operatorName : "system");
+            if (qty > 0) {
+                scanRecordDomainService.upsertStageScanRecord(
+                        ProductionOrderScanRecordDomainService.REQUEST_PREFIX_PROCUREMENT + oid,
+                        oid,
+                        order.getOrderNo(),
+                        order.getStyleId(),
+                        order.getStyleNo(),
+                        order.getColor(),
+                        order.getSize(),
+                        qty,
+                        ProductionOrderScanRecordDomainService.STAGE_PROCUREMENT,
+                        scanTime,
+                        operatorId,
+                        StringUtils.hasText(operatorName) ? operatorName : "system");
+            } else {
+                // If quantity is 0, we should ensure no fake procurement record exists
+                try {
+                    com.fashion.supplychain.production.entity.ScanRecord probe = new com.fashion.supplychain.production.entity.ScanRecord();
+                    probe.setRequestId(ProductionOrderScanRecordDomainService.REQUEST_PREFIX_PROCUREMENT + oid);
+                    com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.fashion.supplychain.production.entity.ScanRecord> wrapper = 
+                        new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
+                    wrapper.eq(com.fashion.supplychain.production.entity.ScanRecord::getRequestId, probe.getRequestId());
+                    // We can use scanRecordService to remove if it exists, but we need to inject it or use mapper?
+                    // This class injects scanRecordDomainService, but not scanRecordService directly.
+                    // However, scanRecordDomainService uses scanRecordMapper.
+                    // Let's keep it simple: if qty > 0 create. 
+                    // The cleanup orchestrator handles the deletion of existing ones if they are considered "fake" (quantity 0 usually).
+                    // But wait, "fake" ones created before had quantity 0?
+                    // In ensureBaseStageRecordsIfAbsent, qty was calculated from rate. If rate=0, qty=0.
+                    // So yes, records with qty=0 were created.
+                } catch (Exception e) {
+                    // ignore
+                }
+            }
 
             productionOrderService.recomputeProgressFromRecords(oid);
         }

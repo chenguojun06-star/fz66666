@@ -142,8 +142,6 @@ Page({
      * 生命周期函数--监听页面加载
      */
     async onLoad(options) {
-        console.log('[Scan] onLoad options:', options);
-
         // 初始化业务处理器
         this.scanHandler = new ScanHandler(api, {
             onSuccess: this.handleScanSuccess.bind(this),
@@ -163,7 +161,6 @@ Page({
                 unsubScan && unsubScan();
             };
         } else {
-            console.error('[Scan] eventBus not available or invalid');
         }
 
         await this.checkLoginStatus();
@@ -174,7 +171,6 @@ Page({
      * 生命周期函数--监听页面显示
      */
     async onShow() {
-        console.log('[Scan] onShow');
 
         // 每次显示都检查登录状态和更新统计
         const isLogin = await this.checkLoginStatus();
@@ -276,7 +272,6 @@ Page({
                 }
             });
         } catch (e) {
-            console.error('[Scan] 加载统计失败:', e);
             // 不弹窗报错，以免打扰用户，只记录日志
         } finally {
             this.setData({ 'my.loadingStats': false });
@@ -287,7 +282,6 @@ Page({
      * 处理数据刷新事件
      */
     handleDataRefresh() {
-        console.log('[Scan] 收到数据刷新通知');
         this.loadMyPanel(true);
     },
 
@@ -356,7 +350,6 @@ Page({
 
         // 1. 客户端去重检查
         if (isRecentDuplicate(codeStr)) {
-            console.warn('[Scan] 忽略重复扫码:', codeStr);
             wx.showToast({ title: '扫码太快啦', icon: 'none' });
             return;
         }
@@ -405,7 +398,6 @@ Page({
             }
 
         } catch (e) {
-            console.error('[Scan] 处理异常:', e);
             wx.showToast({
                 title: e.message || '系统异常',
                 icon: 'none'
@@ -537,7 +529,6 @@ Page({
                 throw new Error('无效的提交数据');
             }
         } catch (e) {
-            console.error(e);
             wx.showToast({ title: e.message || '提交失败', icon: 'none' });
         } finally {
             this.setData({
@@ -565,22 +556,6 @@ Page({
         if (currentType !== 'auto') return currentType;
 
         return map[stageName] || 'production';
-    },
-
-    /**
-     * 裁剪: 仅领取任务
-     */
-    onReceiveOnly() {
-        // 暂未实现
-        wx.showToast({ title: '暂未实现', icon: 'none' });
-    },
-
-    /**
-     * 裁剪: 生成菲号
-     */
-    onRegenerateCuttingBundles() {
-        // 暂未实现
-        wx.showToast({ title: '请联系管理员配置菲号生成', icon: 'none' });
     },
 
 
@@ -725,7 +700,6 @@ Page({
             }
 
         } catch (e) {
-            console.error('[Scan] 撤销失败:', e);
             wx.showToast({ title: '撤销失败: ' + (e.message || '未知错误'), icon: 'none' });
         } finally {
             wx.hideLoading();
