@@ -65,14 +65,15 @@ class ScanHandler {
    * 6. 触发成功回调
    * 
    * @param {string} rawScanCode - 原始扫码结果
+   * @param {number} manualQuantity - 手动输入的数量(可选)
    * @returns {Promise<Object>} 处理结果
    * @returns {boolean} result.success - 是否成功
    * @returns {string} result.message - 提示消息
    * @returns {Object} result.data - 扫码数据（成功时）
    * @returns {string} result.scanMode - 扫码模式（bundle/order）
    */
-  async handleScan(rawScanCode) {
-    console.log('[ScanHandler] 处理扫码:', rawScanCode);
+  async handleScan(rawScanCode, manualQuantity = null) {
+    console.log('[ScanHandler] 处理扫码:', rawScanCode, manualQuantity ? `数量:${manualQuantity}` : '');
 
     try {
       // === 步骤1：解析二维码 ===
@@ -84,6 +85,12 @@ class ScanHandler {
       }
 
       const parsedData = parseResult.data;
+      
+      // 如果手动输入了数量,覆盖解析结果
+      if (manualQuantity && manualQuantity > 0) {
+        parsedData.quantity = manualQuantity;
+      }
+      
       const scanMode = parsedData.isOrderQR 
         ? this.SCAN_MODE.ORDER 
         : this.SCAN_MODE.BUNDLE;
@@ -95,13 +102,24 @@ class ScanHandler {
         quantity: parsedData.quantity
       });
 
-      // === 步骤2：获取订单详情 ===
+      // === 步骤2：处理订单扫码数量 ===
+      // 订单扫码时quantity为null,需要用户输入
+      if (scanMode === this.SCAN_MODE.ORDER && !parsedData.quantity) {
+        return {
+          success: false,
+          message: '请输入数量',
+          needInput: true, // 标记需要输入
+          data: parsedData
+        };
+      }
+
+      // === 步骤3：获取订单详情 ===
       const orderDetail = await this._getOrderDetail(parsedData.orderNo);
       if (!orderDetail) {
         return this._errorResult('订单不存在或已删除');
       }
 
-      // === 步骤3：检测下一个工序 ===
+      // === 步骤4：检测下一个工序 ===
       const stageResult = await this._detectStage(
         scanMode, 
         parsedData, 
@@ -109,28 +127,28 @@ class ScanHandler {
       );
       
       if (!stageResult) {
-        return this._errorResult('无法识别当前工序，请联系管理员');
+        return this._errorResult('无法识别当前工序,请联系管理员');
       }
 
-      // === 步骤4：检查是否重复扫码 ===
+      // === 步骤5：检查是否重复扫码 ===
       if (stageResult.isDuplicate) {
-        return this._errorResult(stageResult.hint || '扫码过于频繁，请稍后再试');
+        return this._errorResult(stageResult.hint || '扫码过于频繁,请稍后再试');
       }
 
-      // === 步骤5：准备扫码数据 ===
+      // === 步骤6：准备扫码数据 ===
       const scanData = this._prepareScanData(
         parsedData, 
         stageResult, 
         orderDetail
       );
 
-      // === 步骤6：提交扫码记录 ===
+      // === 步骤7：提交扫码记录 ===
       const submitResult = await this._submitScan(scanData);
       if (!submitResult.success) {
         return this._errorResult(submitResult.message || '提交失败');
       }
 
-      // === 步骤7：触发成功回调 ===
+      // === 步骤8：触发成功回调 ===
       const finalResult = {
         success: true,
         message: this._buildSuccessMessage(scanMode, scanData, stageResult),
