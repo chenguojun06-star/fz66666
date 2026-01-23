@@ -633,9 +633,9 @@ INSERT INTO t_dict (dict_code, dict_label, dict_value, dict_type, sort, status) 
 ('AUTUMN', '秋季', 'AUTUMN', 'season', 3, 'ENABLED'),
 ('WINTER', '冬季', 'WINTER', 'season', 4, 'ENABLED');
 
--- 2. 插入系统用户
+-- 2. 插入系统用户（密码：admin123）
 INSERT INTO t_user (username, password, name, role_id, role_name, permission_range, status) VALUES
-('admin', 'admin123', '系统管理员', 1, 'admin', 'all', 'ENABLED');
+('admin', '$2a$10$623ZxbbWEcIHyyc9Rx2cneCpPHPp3Q/y8Qfbb7yn1eHD9z6pAWVfC', '系统管理员', 1, 'admin', 'all', 'ENABLED');
 
 -- 3. 插入角色数据
 INSERT INTO t_role (role_name, role_code, description, status) VALUES
