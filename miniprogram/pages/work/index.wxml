@@ -42,8 +42,8 @@
             <text class="progress-text progress-percent">{{item.productionProgress || 0}}%</text>
           </view>
           <view class="current-process">{{item.currentProcessName || '待开始'}}</view>
-          <!-- 生成菲号按钮 -->
-          <view wx:if="{{item.currentProcessName === '裁剪' || item.currentProcessName === '采购'}}" class="item-actions">
+          <!-- 生成菲号按钮：仅在裁剪阶段显示 -->
+          <view wx:if="{{item.currentProcessName === '裁剪'}}" class="item-actions">
             <view class="action-btn" bindtap="onGenerateBundle" data-order="{{item}}">
               <text>📋 生成菲号</text>
             </view>
