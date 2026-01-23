@@ -246,11 +246,14 @@ Page({
         wx.showLoading({ title: '处理中...', mask: true });
 
         try {
+            console.log('[ScanTest] 准备调用 handleScan');
             const result = await this.scanHandler.handleScan(rawScanCode);
+            console.log('[ScanTest] handleScan 返回结果:', result);
 
             wx.hideLoading();
 
             if (result.success) {
+                console.log('[ScanTest] 扫码成功:', result.message);
                 markRecent(dedupKey, 2000);
                 wx.vibrateShort({ type: 'light' });
                 wx.showToast({
@@ -259,6 +262,7 @@ Page({
                     duration: 1500,
                 });
             } else {
+                console.warn('[ScanTest] 扫码失败:', result.message);
                 wx.showToast({
                     title: result.message,
                     icon: 'none',
