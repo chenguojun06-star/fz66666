@@ -141,19 +141,6 @@ Page({
         wx.switchTab({ url: '/pages/scan/index' });
     },
 
-    goScanTest() {
-        wx.navigateTo({ 
-            url: '/pages/scan-test/index',
-            fail: (err) => {
-                console.error('跳转测试页面失败:', err);
-                wx.showToast({
-                    title: '跳转失败',
-                    icon: 'none'
-                });
-            }
-        });
-    },
-
     goAdmin() {
         wx.switchTab({ url: '/pages/admin/index' });
     },

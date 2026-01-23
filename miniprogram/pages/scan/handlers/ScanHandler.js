@@ -152,9 +152,30 @@ class ScanHandler {
         // 检查是否有SKU明细
         if (orderDetail.items && orderDetail.items.length > 0) {
           console.log('[ScanHandler] 发现订单明细:', orderDetail.items.length);
-          // 将明细传递给后端，或前端展示
-          // 这里我们将明细作为额外数据保存，以便后续处理
-          parsedData.skuItems = orderDetail.items;
+
+          // 预判工序 (用于前端显示)
+          let nextStage = '未知';
+          try {
+            const stageRes = await this._detectStage(scanMode, parsedData, orderDetail);
+            if (stageRes) nextStage = stageRes.progressStage;
+          } catch (e) {
+            console.warn('[ScanHandler] 预判工序失败:', e);
+          }
+
+          // 2026-01-23: 用户要求订单扫码显示所有明细，而不是自动取总数
+          // 直接返回明细供前端选择/确认
+          return {
+            success: true,
+            needConfirm: true,
+            scanMode: this.SCAN_MODE.ORDER,
+            data: {
+              ...parsedData,
+              skuItems: orderDetail.items,
+              progressStage: nextStage,
+              orderDetail: orderDetail // 传递完整详情以备用
+            },
+            message: '请确认扫码明细'
+          };
         }
 
         // 如果没有解析到数量，尝试从订单详情获取总数

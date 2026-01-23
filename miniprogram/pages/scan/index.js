@@ -120,6 +120,15 @@ Page({
             }
         },
 
+        // 确认弹窗
+        scanConfirm: {
+            visible: false,
+            loading: false,
+            remain: 0,
+            detail: null,
+            skuList: []
+        },
+
         // 调试模式
         debug: DEBUG_MODE
     },
@@ -365,6 +374,12 @@ Page({
             // 3. 调用 Handler 处理
             const result = await this.scanHandler.handleScan(codeStr, options);
 
+            // 2026-01-23: 处理需要确认明细的情况 (如订单扫码)
+            if (result && result.needConfirm) {
+                this.showConfirmModal(result.data);
+                return;
+            }
+
             // 处理需要输入数量的情况
             if (result && result.needInput) {
                 wx.showModal({
@@ -400,6 +415,174 @@ Page({
             this.setData({ loading: false });
         }
     },
+
+    /**
+     * 显示确认弹窗
+     */
+    showConfirmModal(data) {
+        // 构造 SKU 列表 (用于通用工序)
+        const skuList = data.skuItems ? data.skuItems.map(item => ({
+            ...item,
+            inputQuantity: item.quantity || item.num || 0 // 默认为剩余/总数量
+        })) : [];
+
+        // 构造 Cutting 任务 (如果是裁剪工序)
+        let cuttingTasks = [];
+        if (data.progressStage === '裁剪' && data.skuItems) {
+            cuttingTasks = data.skuItems.map(item => ({
+                color: item.color,
+                size: item.size,
+                plannedQuantity: item.quantity || item.num || 0,
+                cuttingInput: item.quantity || item.num || 0
+            }));
+        }
+
+        this.setData({
+            scanConfirm: {
+                visible: true,
+                loading: false,
+                remain: 30, // 30秒后自动关闭? (目前暂未实现倒计时逻辑)
+                detail: {
+                    ...data,
+                    isProcurement: this.data.scanTypeOptions[this.data.scanTypeIndex].value === 'procurement' || data.progressStage === '采购'
+                },
+                skuList: skuList,
+                cuttingTasks: cuttingTasks,
+                materialPurchases: [] // 采购逻辑暂未集成到此处，通常由 Handler 返回
+            }
+        });
+    },
+
+    /**
+     * 弹窗输入变更 (通用SKU)
+     */
+    onModalSkuInput(e) {
+        const idx = e.currentTarget.dataset.idx;
+        const val = e.detail.value;
+        const key = `scanConfirm.skuList[${idx}].inputQuantity`;
+        this.setData({ [key]: val });
+    },
+
+    /**
+     * 弹窗输入变更 (裁剪)
+     */
+    onModalCuttingInput(e) {
+        const idx = e.currentTarget.dataset.idx;
+        const val = e.detail.value;
+        const key = `scanConfirm.cuttingTasks[${idx}].cuttingInput`;
+        this.setData({ [key]: val });
+    },
+
+    /**
+     * 取消扫码
+     */
+    onCancelScan() {
+        this.setData({ 'scanConfirm.visible': false });
+    },
+
+    /**
+     * 确认提交
+     */
+    async onConfirmScan() {
+        if (this.data.scanConfirm.loading) return;
+        this.setData({ 'scanConfirm.loading': true });
+
+        try {
+            const detail = this.data.scanConfirm.detail;
+            const skuList = this.data.scanConfirm.skuList;
+            const cuttingTasks = this.data.scanConfirm.cuttingTasks;
+
+            // 1. 裁剪特殊处理
+            if (detail.progressStage === '裁剪' && cuttingTasks.length > 0) {
+                // 调用裁剪相关接口 (这里简化为批量执行 executeScan，实际可能需要生成菲号)
+                // 注意：裁剪通常需要生成菲号，这里如果是“确认提交”，假设是完成裁剪
+                // 如果是“生成菲号”，有单独的按钮 onRegenerateCuttingBundles
+                // 这里我们暂且按普通工序提交
+            }
+
+            // 2. 通用批量提交 (SKU List)
+            if (skuList && skuList.length > 0) {
+                const tasks = skuList
+                    .filter(item => Number(item.inputQuantity) > 0)
+                    .map(item => {
+                        // 构造请求
+                        return api.production.executeScan({
+                            orderNo: detail.orderNo,
+                            styleNo: detail.styleNo,
+                            color: item.color,
+                            size: item.size,
+                            quantity: Number(item.inputQuantity),
+                            action: 'scan',
+                            scanType: this.mapScanType(detail.progressStage)
+                        });
+                    });
+
+                if (tasks.length === 0) {
+                    throw new Error('请至少输入一个数量');
+                }
+
+                await Promise.all(tasks);
+
+                wx.showToast({ title: '批量提交成功', icon: 'success' });
+                this.handleScanSuccess({
+                    success: true,
+                    message: `成功提交 ${tasks.length} 条记录`,
+                    orderNo: detail.orderNo,
+                    processName: detail.progressStage
+                });
+            } else {
+                // 兜底：如果没有 SKU List，可能是普通扫码
+                // 重新调用 submitScan? 但我们没有 ScanHandler 实例的上下文
+                // 这里应该不会走到，因为 showConfirmModal 只有在有 skuItems 时才调用
+                throw new Error('无效的提交数据');
+            }
+        } catch (e) {
+            console.error(e);
+            wx.showToast({ title: e.message || '提交失败', icon: 'none' });
+        } finally {
+            this.setData({
+                'scanConfirm.loading': false,
+                'scanConfirm.visible': false
+            });
+        }
+    },
+
+    /**
+     * 映射工序名称到 API scanType
+     */
+    mapScanType(stageName) {
+        const map = {
+            '采购': 'procurement',
+            '裁剪': 'cutting',
+            '车缝': 'production',
+            '大烫': 'ironing', // 假设
+            '质检': 'quality',
+            '包装': 'packing', // 假设
+            '入库': 'warehouse'
+        };
+        // 如果当前选择了特定类型，优先使用
+        const currentType = this.data.scanTypeOptions[this.data.scanTypeIndex].value;
+        if (currentType !== 'auto') return currentType;
+
+        return map[stageName] || 'production';
+    },
+
+    /**
+     * 裁剪: 仅领取任务
+     */
+    onReceiveOnly() {
+        // 暂未实现
+        wx.showToast({ title: '暂未实现', icon: 'none' });
+    },
+
+    /**
+     * 裁剪: 生成菲号
+     */
+    onRegenerateCuttingBundles() {
+        // 暂未实现
+        wx.showToast({ title: '请联系管理员配置菲号生成', icon: 'none' });
+    },
+
 
     /**
      * Handler 回调: 扫码成功

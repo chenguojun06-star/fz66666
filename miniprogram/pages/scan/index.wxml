@@ -250,6 +250,30 @@
             </view>
           </view>
         </view>
+
+        <!-- 通用 SKU 列表 (非采购、非裁剪) -->
+        <view wx:if="{{!scanConfirm.detail.isProcurement && scanConfirm.detail.progressStage !== '裁剪' && scanConfirm.skuList && scanConfirm.skuList.length}}" class="purchase-modal-list">
+          <view wx:for="{{scanConfirm.skuList}}" wx:key="index" class="purchase-modal-item">
+            <view class="pmi-header">
+              <text class="pmi-name">{{item.color}} - {{item.size}}</text>
+            </view>
+            <view class="pmi-row">
+              <text class="pmi-label">待完成</text>
+              <text class="pmi-value demand">{{item.quantity || item.num || 0}}</text>
+            </view>
+            <view class="pmi-row">
+              <text class="pmi-label">本次完成</text>
+              <input 
+                class="pmi-input" 
+                type="digit" 
+                placeholder="数量" 
+                value="{{item.inputQuantity}}" 
+                bindinput="onModalSkuInput" 
+                data-idx="{{index}}"
+              />
+            </view>
+          </view>
+        </view>
         
         <!-- 质检领取提示 -->
         <view wx:if="{{scanTypeOptions[scanTypeIndex].value === 'quality' && !scanConfirm.detail.isProcurement}}" class="qc-receive-tip">
