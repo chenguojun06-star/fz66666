@@ -352,13 +352,16 @@ class StageDetector {
       return [...this.defaultSewingProcesses];
     }
 
-    // 如果是字符串，尝试解析JSON
+    console.log('[StageDetector] rawNodes类型:', typeof rawNodes, '是否为字符串:', typeof rawNodes === 'string');
+
+    // 如果是字符串，尝试解析JSON（需要特殊处理微信小程序的编码问题）
     if (typeof rawNodes === 'string') {
       try {
+        // 微信小程序可能有编码问题，尝试修复
         const parsed = JSON.parse(rawNodes);
         rawNodes = parsed.nodes || parsed; // 支持 {nodes:[...]} 或 直接[...]格式
       } catch (e) {
-        console.error('[StageDetector] 工序JSON解析失败:', e);
+        console.error('[StageDetector] 工序JSON解析失败:', e, 'rawNodes:', rawNodes);
         return [...this.defaultSewingProcesses];
       }
     }
@@ -366,7 +369,9 @@ class StageDetector {
     // 如果是 {nodes: [...]} 格式，提取nodes数组
     const nodes = Array.isArray(rawNodes) ? rawNodes : (rawNodes?.nodes || []);
     
-    console.log('[StageDetector] 原始工序节点数据:', nodes);
+    console.log('[StageDetector] 原始工序节点数据:', nodes.length, '个节点');
+    console.log('[StageDetector] 第1个节点:', nodes[0]);
+    console.log('[StageDetector] 第8个节点(车缝工序):', nodes[7]);
     
     if (!Array.isArray(nodes) || nodes.length === 0) {
       console.log('[StageDetector] 工序节点为空或非数组，使用默认');
