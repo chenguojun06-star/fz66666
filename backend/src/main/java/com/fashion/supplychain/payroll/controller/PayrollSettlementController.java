@@ -1,8 +1,6 @@
 package com.fashion.supplychain.payroll.controller;
 
 import com.fashion.supplychain.common.Result;
-import com.fashion.supplychain.payroll.entity.PayrollSettlementData;
-import com.fashion.supplychain.payroll.entity.PayrollSettlement;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
