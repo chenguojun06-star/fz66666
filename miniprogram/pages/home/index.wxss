@@ -454,6 +454,18 @@ page {
   background: rgba(186, 230, 253, 0.9);
 }
 
+.home-entry.test-entry {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  border: none;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  font-weight: 600;
+}
+
+.home-entry.test-entry:active {
+  background: linear-gradient(135deg, #5568d3 0%, #654098 100%);
+}
+
 .home-activity {
   padding: 10px 12px;
   border: 1px solid #e5e7eb;
