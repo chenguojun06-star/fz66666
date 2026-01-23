@@ -181,7 +181,7 @@ const Dashboard: React.FC = () => {
           paymentApprovalCount: newData.paymentApprovalCount ?? 0,
         });
         setRecentActivities(newData.recentActivities ?? []);
-        console.log('[实时同步] 仪表盘数据已更新');
+        // // console.log('[实时同步] 仪表盘数据已更新');
       }
     },
     {

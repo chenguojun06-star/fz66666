@@ -766,7 +766,7 @@ const OrderManagement: React.FC = () => {
       if (oldData !== null && newData) {
         setStyles(newData.records);
         setTotal(newData.total);
-        console.log('[实时同步] 订单管理款式数据已更新', { oldCount: oldData.records.length, newCount: newData.records.length });
+        // // console.log('[实时同步] 订单管理款式数据已更新', { oldCount: oldData.records.length, newCount: newData.records.length });
       }
     },
     {

@@ -905,7 +905,7 @@ public class ProductionOrderQueryService {
                     if (purchaseQty > 0) {
                         procurementRateFromPurchases = (int) Math.round(Math.max(0L, arrivedQty) * 100.0 / purchaseQty);
                     } else {
-                        procurementRateFromPurchases = 0;
+                        procurementRateFromPurchases = null;
                     }
                 } else if (flow != null) {
                     procurementEnd = toLocalDateTime(ParamUtils.getIgnoreCase(flow, "procurementScanEndTime"));
@@ -985,7 +985,7 @@ public class ProductionOrderQueryService {
                 } else if (procurementRateFromPurchases != null) {
                     procurementRate = scanRecordDomainService.clampPercent(procurementRateFromPurchases);
                 } else {
-                    procurementRate = 0;
+                    procurementRate = null;
                 }
                 o.setProcurementCompletionRate(procurementRate);
 
@@ -1267,7 +1267,7 @@ public class ProductionOrderQueryService {
                                 procurementStart = s;
                             }
 
-                            LocalDateTime t = p.getReceivedTime() == null ? p.getUpdateTime() : p.getReceivedTime();
+                            LocalDateTime t = p.getReceivedTime();
                             if (t != null && (procurementEnd == null || t.isAfter(procurementEnd))) {
                                 procurementEnd = t;
                                 procurementOperator = p.getReceiverName();
