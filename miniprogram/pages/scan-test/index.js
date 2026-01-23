@@ -122,36 +122,33 @@ Page({
     },
 
     async onLoad(options) {
-        console.log('[ScanTest] 测试页面加载', options);
+        console.log('[ScanTest] 页面加载');
         
-        // 显示测试提示
         wx.showToast({
             title: '🧪 测试版本 2.0',
             icon: 'none',
             duration: 2000,
         });
         
-        // ===== 重要：先初始化 ScanHandler =====
+        // 初始化 ScanHandler
         try {
-            console.log('[ScanTest] 开始初始化 ScanHandler');
             this.scanHandler = new ScanHandler(api, {
                 getCurrentFactory: () => this.data.currentFactory,
                 getCurrentWorker: () => this.data.currentUser,
                 onSuccess: (result) => this.handleScanSuccess(result),
                 onError: (message) => this.handleScanError(message),
             });
-            console.log('[ScanTest] ScanHandler 初始化成功', this.scanHandler);
         } catch (error) {
-            console.error('[ScanTest] ScanHandler 初始化失败:', error);
+            console.error('[ScanTest] 初始化失败:', error);
             wx.showModal({
                 title: '初始化失败',
-                content: 'ScanHandler 初始化失败: ' + error.message,
+                content: error.message,
                 showCancel: false
             });
             return;
         }
         
-        // 加载其他数据
+        // 加载数据
         await this.loadFactoryInfo();
         await this.loadUserInfo();
         await this.loadMyPanel();
@@ -166,19 +163,11 @@ Page({
         console.log('[ScanTest] 页面显示');
         this.loadMyPanel();
         this.loadReminders();
-        
-        // 注释掉 eventBus 订阅，避免缺少 handleDataRefresh 方法导致错误
-        // const { eventBus, Events } = require('../../utils/eventBus');
-        // eventBus.on(Events.DATA_REFRESH, this.handleDataRefresh);
     },
 
     onHide() {
         console.log('[ScanTest] 页面隐藏');
         this.clearTimers();
-        
-        // 注释掉 eventBus 取消订阅
-        // const { eventBus, Events } = require('../../utils/eventBus');
-        // eventBus.off(Events.DATA_REFRESH, this.handleDataRefresh);
     },
 
     onUnload() {
@@ -222,7 +211,7 @@ Page({
     },
 
     async processScan(rawScanCode) {
-        console.log('[ScanTest] 开始处理扫码:', rawScanCode);
+        console.log('[ScanTest] 处理扫码:', rawScanCode);
 
         // 检查 ScanHandler 是否已初始化
         if (!this.scanHandler) {
@@ -248,14 +237,12 @@ Page({
         wx.showLoading({ title: '处理中...', mask: true });
 
         try {
-            console.log('[ScanTest] 准备调用 handleScan');
             const result = await this.scanHandler.handleScan(rawScanCode);
-            console.log('[ScanTest] handleScan 返回结果:', result);
+            console.log('[ScanTest] 扫码结果:', result.success ? '成功' : '失败', result.message);
 
             wx.hideLoading();
 
             if (result.success) {
-                console.log('[ScanTest] 扫码成功:', result.message);
                 markRecent(dedupKey, 2000);
                 wx.vibrateShort({ type: 'light' });
                 wx.showToast({
@@ -264,7 +251,6 @@ Page({
                     duration: 1500,
                 });
             } else {
-                console.warn('[ScanTest] 扫码失败:', result.message);
                 wx.showToast({
                     title: result.message,
                     icon: 'none',
