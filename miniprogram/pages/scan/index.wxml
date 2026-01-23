@@ -253,6 +253,22 @@
 
         <!-- 通用 SKU 列表 (非采购、非裁剪) -->
         <view wx:if="{{!scanConfirm.detail.isProcurement && scanConfirm.detail.progressStage !== '裁剪' && scanConfirm.skuList && scanConfirm.skuList.length}}" class="purchase-modal-list">
+          <!-- ✅ 新增: SKU统计摘要 -->
+          <view wx:if="{{scanConfirm.summary}}" class="sku-summary">
+            <view class="summary-stat">
+              <text class="summary-label">SKU总数:</text>
+              <text class="summary-value">{{scanConfirm.summary.totalSKUs}}</text>
+            </view>
+            <view class="summary-stat">
+              <text class="summary-label">已选:</text>
+              <text class="summary-value">{{scanConfirm.summary.completedSKUs}}</text>
+            </view>
+            <view class="summary-stat">
+              <text class="summary-label">进度:</text>
+              <text class="summary-value">{{scanConfirm.summary.overallProgress}}%</text>
+            </view>
+          </view>
+
           <view wx:for="{{scanConfirm.skuList}}" wx:key="index" class="purchase-modal-item">
             <view class="pmi-header">
               <text class="pmi-name">{{item.color}} - {{item.size}}</text>

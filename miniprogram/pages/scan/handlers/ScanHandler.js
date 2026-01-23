@@ -26,6 +26,7 @@
 
 const QRCodeParser = require('../services/QRCodeParser');
 const StageDetector = require('../services/StageDetector');
+const SKUProcessor = require('../processors/SKUProcessor');
 
 class ScanHandler {
   /**
