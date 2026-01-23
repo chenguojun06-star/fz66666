@@ -445,7 +445,12 @@ Page({
         this.setData({ 'undo.loading': true });
 
         try {
-            await api.production.undoScan(undo.payload);
+            // 使用 executeScan 进行删除
+            await api.production.executeScan({
+                action: 'delete',
+                recordId: undo.payload.recordId
+            });
+            
             unmarkRecent(undo.payload.dedupKey || '');
 
             this.setData({
@@ -469,7 +474,6 @@ Page({
             wx.showToast({ title: '已撤销', icon: 'none' });
             this.loadMyPanel(true);
 
-            const { triggerDataRefresh, Events } = require('../../utils/eventBus');
             triggerDataRefresh('scans', {
                 action: 'undo',
                 orderNo: undo.payload.orderNo,
@@ -491,7 +495,7 @@ Page({
                 });
             } else {
                 wx.showToast({ 
-                    title: '撤销失败', 
+                    title: '撤销失败: ' + (e.message || '未知错误'), 
                     icon: 'none' 
                 });
             }

@@ -37,21 +37,7 @@
       </view>
     </view>
 
-    <view wx:if="{{history.list.length === 0 && !loadingHistory}}" class="hint">暂无明细</view>
-    <view wx:for="{{history.list}}" wx:key="id" class="list-item">
-      <view class="item-head">
-        <view class="item-title">{{item.orderNo || '-'}}</view>
-        <text class="tag">{{item.processName || item.progressStage || item.scanType || '-'}}</text>
-      </view>
-      <view class="item-sub">颜色：{{item.color || '-'}}</view>
-      <view class="item-sub">尺码：{{item.size || '-'}}</view>
-      <view class="item-sub">数量：{{item.quantity || 0}}</view>
-      <view class="item-sub">单价：{{item.unitPrice == null || item.unitPrice === '' ? '-' : item.unitPrice}}</view>
-      <view class="item-sub">金额：{{item.amount || item.totalAmount || item.salaryAmount || 0}}</view>
-      <view wx:if="{{item.scanTime}}" class="item-sub">时间：{{item.scanTime}}</view>
-    </view>
-
-    <!-- 工资明细 -->
+    <!-- 工资明细面板（固定在上方） -->
     <view class="section-title">工资明细</view>
     <view wx:if="{{loadingStats}}" class="hint">加载中...</view>
     <view wx:if="{{stats}}" class="stat-grid">
@@ -73,5 +59,21 @@
       </view>
     </view>
     <view wx:if="{{!stats && !loadingStats}}" class="hint">暂无统计</view>
+
+    <!-- 扫码记录列表（滚动区域） -->
+    <view class="section-title" style="margin-top: 32rpx;">扫码记录列表</view>
+    <view wx:if="{{history.list.length === 0 && !loadingHistory}}" class="hint">暂无记录</view>
+    <view wx:for="{{history.list}}" wx:key="id" class="list-item">
+      <view class="item-head">
+        <view class="item-title">{{item.orderNo || '-'}}</view>
+        <text class="tag">{{item.processName || item.progressStage || item.scanType || '-'}}</text>
+      </view>
+      <view class="item-sub">颜色：{{item.color || '-'}}</view>
+      <view class="item-sub">尺码：{{item.size || '-'}}</view>
+      <view class="item-sub">数量：{{item.quantity || 0}}</view>
+      <view class="item-sub">单价：{{item.unitPrice == null || item.unitPrice === '' ? '-' : item.unitPrice}}</view>
+      <view class="item-sub">金额：{{item.amount || item.totalAmount || item.salaryAmount || 0}}</view>
+      <view wx:if="{{item.scanTime}}" class="item-sub">时间：{{item.scanTime}}</view>
+    </view>
   </view>
 </view>
