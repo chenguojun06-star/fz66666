@@ -257,14 +257,6 @@ class StageDetector {
       // === 步骤4：从订单获取工序时间配置 ===
       const processTimeConfig = this._extractProcessTimeConfig(orderDetail);
 
-      console.log('[StageDetector] 菲号检测上下文:', {
-        orderNo,
-        bundleNo,
-        scanCount,
-        sewingProcessList,
-        nextProcess: scanCount < sewingProcessList.length ? sewingProcessList[scanCount] : '大烫'
-      });
-
       // === 步骤5：防重复扫码检查 ===
       if (scanCount > 0) {
         const duplicateCheck = this._checkDuplicate(
@@ -344,58 +336,21 @@ class StageDetector {
    * @returns {Array<string>} 工序名称数组
    */
   _extractSewingProcesses(orderDetail) {
-    // 优先使用 progressNodeUnitPrices（新字段），回退到 progressWorkflowJson
-    let rawNodes = orderDetail?.progressNodeUnitPrices || orderDetail?.progressWorkflowJson;
-    
-    if (!rawNodes) {
-      console.log('[StageDetector] 无工序配置，使用默认');
+    if (!orderDetail || !orderDetail.progressNodeUnitPrices) {
       return [...this.defaultSewingProcesses];
     }
 
-    console.log('[StageDetector] rawNodes类型:', typeof rawNodes, '是否为字符串:', typeof rawNodes === 'string');
-
-    // 如果是字符串，尝试解析JSON（需要特殊处理微信小程序的编码问题）
-    if (typeof rawNodes === 'string') {
-      try {
-        // 微信小程序可能有编码问题，尝试修复
-        const parsed = JSON.parse(rawNodes);
-        rawNodes = parsed.nodes || parsed; // 支持 {nodes:[...]} 或 直接[...]格式
-      } catch (e) {
-        console.error('[StageDetector] 工序JSON解析失败:', e, 'rawNodes:', rawNodes);
-        return [...this.defaultSewingProcesses];
-      }
-    }
-
-    // 如果是 {nodes: [...]} 格式，提取nodes数组
-    const nodes = Array.isArray(rawNodes) ? rawNodes : (rawNodes?.nodes || []);
-    
-    console.log('[StageDetector] 原始工序节点数据:', nodes.length, '个节点');
-    console.log('[StageDetector] 第1个节点:', nodes[0]);
-    console.log('[StageDetector] 第8个节点(车缝工序):', nodes[7]);
-    
+    const nodes = orderDetail.progressNodeUnitPrices;
     if (!Array.isArray(nodes) || nodes.length === 0) {
-      console.log('[StageDetector] 工序节点为空或非数组，使用默认');
       return [...this.defaultSewingProcesses];
     }
 
     // 筛选车缝阶段的工序，按顺序排序
-    const filteredNodes = nodes.filter(node => {
-      const match = node.progressStage === '车缝' || node.name === '车缝';
-      console.log('[StageDetector] 节点筛选:', {
-        name: node.name,
-        progressStage: node.progressStage,
-        sortOrder: node.sortOrder,
-        match: match
-      });
-      return match;
-    });
-
-    const sewingProcesses = filteredNodes
+    const sewingProcesses = nodes
+      .filter(node => node.progressStage === '车缝' || node.name === '车缝')
       .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
       .map(node => node.name)
       .filter(name => name && name.trim());
-
-    console.log('[StageDetector] 提取车缝工序列表:', sewingProcesses, '原始节点数:', nodes.length, '筛选后:', filteredNodes.length);
 
     // 如果没有配置，使用默认
     return sewingProcesses.length > 0 ? sewingProcesses : [...this.defaultSewingProcesses];
@@ -410,26 +365,11 @@ class StageDetector {
   _extractProcessTimeConfig(orderDetail) {
     const config = {};
 
-    // 优先使用 progressNodeUnitPrices，回退到 progressWorkflowJson
-    let rawNodes = orderDetail?.progressNodeUnitPrices || orderDetail?.progressWorkflowJson;
-    
-    if (!rawNodes) {
+    if (!orderDetail || !orderDetail.progressNodeUnitPrices) {
       return config;
     }
 
-    // 如果是字符串，尝试解析JSON
-    if (typeof rawNodes === 'string') {
-      try {
-        const parsed = JSON.parse(rawNodes);
-        rawNodes = parsed.nodes || parsed;
-      } catch (e) {
-        return config;
-      }
-    }
-
-    // 如果是 {nodes: [...]} 格式，提取nodes数组
-    const nodes = Array.isArray(rawNodes) ? rawNodes : (rawNodes?.nodes || []);
-    
+    const nodes = orderDetail.progressNodeUnitPrices;
     if (!Array.isArray(nodes)) {
       return config;
     }
