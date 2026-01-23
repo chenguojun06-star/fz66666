@@ -262,7 +262,7 @@ class ScanHandler {
    */
   async _submitScan(scanData) {
     try {
-      const res = await this.api.production.submitScan(scanData);
+      const res = await this.api.production.executeScan(scanData);
       
       if (res && res.success !== false) {
         return {

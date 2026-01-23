@@ -167,16 +167,18 @@ Page({
         this.loadMyPanel();
         this.loadReminders();
         
-        const { eventBus, Events } = require('../../utils/eventBus');
-        eventBus.on(Events.DATA_REFRESH, this.handleDataRefresh);
+        // 注释掉 eventBus 订阅，避免缺少 handleDataRefresh 方法导致错误
+        // const { eventBus, Events } = require('../../utils/eventBus');
+        // eventBus.on(Events.DATA_REFRESH, this.handleDataRefresh);
     },
 
     onHide() {
         console.log('[ScanTest] 页面隐藏');
         this.clearTimers();
         
-        const { eventBus, Events } = require('../../utils/eventBus');
-        eventBus.off(Events.DATA_REFRESH, this.handleDataRefresh);
+        // 注释掉 eventBus 取消订阅
+        // const { eventBus, Events } = require('../../utils/eventBus');
+        // eventBus.off(Events.DATA_REFRESH, this.handleDataRefresh);
     },
 
     onUnload() {
