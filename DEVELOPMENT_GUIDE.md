@@ -774,10 +774,10 @@ pages/scan/
 
 #### 主色调
 ```css
-/* 紫色渐变 - 用于重要卡片、强调按钮、品牌元素 */
-background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+/* 浅蓝渐变 - 用于重要卡片、强调按钮、品牌元素 */
+background: linear-gradient(135deg, #e0f2fe 0%, #e0e7ff 100%);
 
-/* 示例：用户信息卡片、主要操作按钮 */
+/* 示例：扫码页面卡片、状态展示区域 */
 ```
 
 #### 辅助色
@@ -903,16 +903,16 @@ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
-/* 用户信息卡片（紫色渐变） */
-.user-profile-card {
+/* 状态展示卡片（浅蓝渐变） */
+.status-display-card {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 10px 14px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #e0f2fe 0%, #e0e7ff 100%);
   border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
-  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  color: #1e40af;
 }
 
 /* 统计卡片（4列网格） */
@@ -946,15 +946,15 @@ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 
 #### 2. 按钮组件
 ```css
-/* 主要按钮（紫色渐变） */
+/* 主要按钮（浅蓝背景） */
 .btn-primary {
   padding: 10px 18px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #ffffff;
+  background: #e0f2fe;
+  color: #1e40af;
   border-radius: 999px;
   font-weight: 600;
-  border: none;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
+  border: 1px solid #bae6fd;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.15);
 }
 
 /* 次要按钮（浅蓝色） */
@@ -1235,7 +1235,7 @@ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 1. **所有主卡片** → `border-radius: 18px`
 2. **所有小卡片/列表项** → `border-radius: 12px`
 3. **所有按钮** → `border-radius: 999px`
-4. **紫色渐变** → 统一使用 `linear-gradient(135deg, #667eea 0%, #764ba2 100%)`
+4. **浅蓝渐变** → 统一使用 `linear-gradient(135deg, #e0f2fe 0%, #e0e7ff 100%)`（浅蓝到淡紫蓝）
 5. **激活状态** → 统一使用 `rgba(224, 242, 254, 0.8)`
 6. **页面背景** → 统一使用 `#f7f8fa`
 7. **卡片阴影** → 统一使用 `0 2px 6px rgba(0, 0, 0, 0.05)`
