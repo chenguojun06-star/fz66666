@@ -354,12 +354,12 @@ const MaterialReconciliation: React.FC = () => {
       if (oldData !== null && newData) {
         setReconciliationList(newData.records);
         setTotal(newData.total);
-        // // console.log('[实时同步] 物料对账数据已更新', {
-          oldCount: oldData.records.length,
-          newCount: newData.records.length,
-          oldTotal: oldData.total,
-          newTotal: newData.total
-        });
+        // console.log('[实时同步] 物料对账数据已更新', {
+        //   oldCount: oldData.records.length,
+        //   newCount: newData.records.length,
+        //   oldTotal: oldData.total,
+        //   newTotal: newData.total
+        // });
       }
     },
     {

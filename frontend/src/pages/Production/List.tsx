@@ -221,10 +221,10 @@ const ProductionList: React.FC = () => {
       if (oldData !== null) {
         // 不是首次加载，说明数据有变化
         setProductionList(newData);
-        // // console.log('[实时同步] 生产订单数据已更新', {
-          oldCount: oldData.length,
-          newCount: newData.length
-        });
+        // console.log('[实时同步] 生产订单数据已更新', {
+        //   oldCount: oldData.length,
+        //   newCount: newData.length
+        // });
 
         // 可选：显示提示（不打扰用户的情况下）
         // message.info('订单数据已自动更新', 1);
