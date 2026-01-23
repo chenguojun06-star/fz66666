@@ -40,6 +40,11 @@ const production = {
         const oid = String(id || '').trim();
         return ok(`/api/production/order/detail/${encodeURIComponent(oid)}`, 'GET', {});
     },
+    // 通过订单号查询订单详情（用于扫码场景）
+    orderDetailByOrderNo(orderNo) {
+        const on = String(orderNo || '').trim();
+        return ok(`/api/production/order/by-order-no/${encodeURIComponent(on)}`, 'GET', {});
+    },
     updateProgress(payload) {
         return ok('/api/production/order/update-progress', 'POST', payload || {});
     },
@@ -86,9 +91,21 @@ const production = {
     getCuttingBundle(orderNo, bundleNo) {
         return ok('/api/production/cutting/by-no', 'GET', { orderNo, bundleNo });
     },
+    // 获取订单的裁剪任务汇总（按颜色尺码分组）
+    getCuttingTasks(params) {
+        return ok('/api/production/cutting/summary', 'GET', params || {});
+    },
     // 生成裁剪菲号
     generateCuttingBundles(orderId, bundles) {
         return raw('/api/production/cutting/generate', 'POST', { orderId, bundles });
+    },
+    // 领取裁剪任务
+    receiveCuttingTaskById(taskId, receiverId, receiverName) {
+        return ok('/api/production/cutting-task/receive', 'POST', { taskId, receiverId, receiverName });
+    },
+    // 获取订单的裁剪任务
+    getCuttingTaskByOrderId(orderId) {
+        return ok('/api/production/cutting-task/list', 'GET', { orderId, pageSize: 1 });
     },
     async undoScan(payload) {
         const data = payload || {};

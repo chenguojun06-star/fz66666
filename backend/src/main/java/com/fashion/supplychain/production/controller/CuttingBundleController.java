@@ -43,7 +43,12 @@ public class CuttingBundleController {
     }
 
     @GetMapping("/by-no")
-    public Result<?> getByBundleNo(@RequestParam String orderNo, @RequestParam Integer bundleNo) {
-        return Result.success(cuttingBundleOrchestrator.getByBundleNo(orderNo, bundleNo));
+    public Result<?> getByBundleNo(@RequestParam String orderNo, @RequestParam String bundleNo) {
+        try {
+            Integer bundleNoInt = Integer.parseInt(bundleNo);
+            return Result.success(cuttingBundleOrchestrator.getByBundleNo(orderNo, bundleNoInt));
+        } catch (NumberFormatException e) {
+            return Result.fail("菲号格式错误，必须为数字");
+        }
     }
 }

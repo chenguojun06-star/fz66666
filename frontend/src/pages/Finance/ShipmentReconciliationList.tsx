@@ -47,7 +47,7 @@ const ShipmentReconciliationList: React.FC = () => {
   const [filterForm] = Form.useForm();
 
   const { modalWidth } = useViewport();
-  const modalInitialHeight = 720;
+  const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
   const escapeCsvCell = (value: any) => {
     const text = String(value ?? '');

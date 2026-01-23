@@ -182,7 +182,7 @@ export const StyleAttachmentsButton: React.FC<{
         onCancel={() => setOpen(false)}
         footer={<Space><Button onClick={() => setOpen(false)}>关闭</Button></Space>}
         width={modalWidth}
-        initialHeight={720}
+        initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
         tableDensity="auto"
         scaleWithViewport
       >

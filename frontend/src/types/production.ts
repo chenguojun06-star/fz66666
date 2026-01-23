@@ -125,6 +125,7 @@ export interface CuttingTask {
   productionOrderId: string;
   productionOrderNo: string;
   orderQrCode?: string;
+  qrCode?: string;
   styleId: string;
   styleNo: string;
   styleName?: string;

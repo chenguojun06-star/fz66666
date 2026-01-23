@@ -252,13 +252,13 @@ const ProductWarehousing: React.FC = () => {
   const { modalWidth, isMobile } = useViewport();
 
   const modalInitialHeight = useMemo(() => {
-    return 720;
+    return typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
   }, []);
 
   const detailPopupWidth = modalWidth;
 
   const detailPopupInitialHeight = useMemo(() => {
-    return 720;
+    return typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
   }, []);
 
   const singleSelectedQr = useMemo(() => {
@@ -3010,10 +3010,11 @@ const ProductWarehousing: React.FC = () => {
           setPreviewTitle('');
         }}
         width={600}
-        minWidth={320}
-        minHeight={320}
+        minWidth={600}
+        minHeight={600}
         initialHeight={600}
         autoFontSize={false}
+        scaleWithViewport={false}
       >
         {previewUrl ? (
           <div
@@ -3046,8 +3047,8 @@ const ProductWarehousing: React.FC = () => {
         okText="入库"
         cancelText="取消"
         confirmLoading={warehousingModalLoading}
-        width={520}
-        initialHeight={720}
+        width={modalWidth}
+        initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
         autoFontSize={false}
         destroyOnHidden
       >

@@ -25,14 +25,61 @@
   display: flex;
   align-items: center;
   gap: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-.stat-card--style {
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border-width: 2px;
+}
+
+/* 新的8个统计卡片样式 */
+.stat-card--sample {
   border-color: #1677ff;
+  background: linear-gradient(135deg, #fff 0%, #f0f7ff 100%);
 }
 
 .stat-card--production {
   border-color: #13c2c2;
+  background: linear-gradient(135deg, #fff 0%, #e6fffb 100%);
+}
+
+.stat-card--quantity {
+  border-color: #52c41a;
+  background: linear-gradient(135deg, #fff 0%, #f6ffed 100%);
+}
+
+.stat-card--overdue {
+  border-color: #ff4d4f;
+  background: linear-gradient(135deg, #fff 0%, #fff1f0 100%);
+}
+
+.stat-card--today-warehousing {
+  border-color: #faad14;
+  background: linear-gradient(135deg, #fff 0%, #fffbe6 100%);
+}
+
+.stat-card--total-warehousing {
+  border-color: #722ed1;
+  background: linear-gradient(135deg, #fff 0%, #f9f0ff 100%);
+}
+
+.stat-card--defective {
+  border-color: #fa541c;
+  background: linear-gradient(135deg, #fff 0%, #fff7e6 100%);
+}
+
+.stat-card--payment {
+  border-color: #2f54eb;
+  background: linear-gradient(135deg, #fff 0%, #f0f5ff 100%);
+}
+
+/* 旧样式保留以兼容 */
+.stat-card--style {
+  border-color: #1677ff;
 }
 
 .stat-card--finance {
@@ -41,10 +88,6 @@
 
 .stat-card--scan {
   border-color: #722ed1;
-}
-
-.stat-card--payment {
-  border-color: #2f54eb;
 }
 
 .stat-card--warehousing {
@@ -69,9 +112,15 @@
   background: #f5f5f5;
   border-radius: 8px;
   color: #595959;
+  transition: all 0.3s ease;
 }
 
-.stat-icon--style {
+.stat-card:hover .stat-icon {
+  transform: scale(1.1);
+}
+
+/* 新的8个图标样式 */
+.stat-icon--sample {
   color: #1677ff;
   background: #e6f4ff;
 }
@@ -79,6 +128,42 @@
 .stat-icon--production {
   color: #13c2c2;
   background: #e6fffb;
+}
+
+.stat-icon--quantity {
+  color: #52c41a;
+  background: #d9f7be;
+}
+
+.stat-icon--overdue {
+  color: #ff4d4f;
+  background: #ffccc7;
+}
+
+.stat-icon--today-warehousing {
+  color: #faad14;
+  background: #ffe7ba;
+}
+
+.stat-icon--total-warehousing {
+  color: #722ed1;
+  background: #efdbff;
+}
+
+.stat-icon--defective {
+  color: #fa541c;
+  background: #ffd8bf;
+}
+
+.stat-icon--payment {
+  color: #2f54eb;
+  background: #d6e4ff;
+}
+
+/* 旧样式保留以兼容 */
+.stat-icon--style {
+  color: #1677ff;
+  background: #e6f4ff;
 }
 
 .stat-icon--finance {
@@ -89,11 +174,6 @@
 .stat-icon--scan {
   color: #722ed1;
   background: #f9f0ff;
-}
-
-.stat-icon--payment {
-  color: #2f54eb;
-  background: #f0f5ff;
 }
 
 .stat-icon--warehousing {

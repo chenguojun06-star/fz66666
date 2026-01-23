@@ -33,7 +33,7 @@ const MaterialReconciliation: React.FC = () => {
   const [filterForm] = Form.useForm();
   const saveFormRef = React.useRef<(() => Promise<void>) | null>(null);
 
-  const modalInitialHeight = 720;
+  const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
   // 真实数据状态
   const [reconciliationList, setReconciliationList] = useState<MaterialReconType[]>([]);

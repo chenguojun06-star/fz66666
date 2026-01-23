@@ -5,7 +5,7 @@ import RowActions from '../../components/common/RowActions';
 import ResizableTable from '../../components/common/ResizableTable';
 import { Factory as FactoryType, FactoryQueryParams } from '../../types/system';
 import api from '../../utils/api';
-import { App, Button, Card, Form, Input, Modal, Select, Space, Tag, Upload } from 'antd';
+import { App, Button, Card, Form, Input, Select, Space, Tag, Upload } from 'antd';
 import type { UploadFile } from 'antd';
 import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, UploadOutlined, FileSearchOutlined } from '@ant-design/icons';
 import { formatDateTime } from '../../utils/datetime';
@@ -35,7 +35,7 @@ const FactoryList: React.FC = () => {
   const [logRecords, setLogRecords] = useState<any[]>([]);
   const [logTitle, setLogTitle] = useState('操作日志');
 
-  const modalInitialHeight = 720;
+  const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
   // 构建图片文件列表
   const buildImageFileList = (url: any): UploadFile[] => {
@@ -511,7 +511,7 @@ const FactoryList: React.FC = () => {
         }}
         footer={null}
         width={modalWidth}
-        initialHeight={520}
+        initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
         minWidth={isMobile ? 320 : 520}
         scaleWithViewport
       >

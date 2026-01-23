@@ -168,7 +168,7 @@ const MaterialPurchase: React.FC = () => {
   const [materialDatabaseForm] = Form.useForm();
   const [materialDatabaseImageFiles, setMaterialDatabaseImageFiles] = useState<UploadFile[]>([]);
 
-  const modalInitialHeight = 720;
+  const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -658,10 +658,6 @@ const MaterialPurchase: React.FC = () => {
 
   const ensureOrderUnlocked = async (orderId: any) => {
     return await orderFrozen.ensureUnlocked(orderId, () => message.error('订单已完成，无法操作'));
-  };
-
-  const isOrderFrozenById = (orderId: any) => {
-    return orderFrozen.isFrozenById(orderId);
   };
 
   const openDialogSafe = async (mode: 'view' | 'create' | 'preview', purchase?: MaterialPurchaseType) => {
@@ -1165,276 +1161,6 @@ const MaterialPurchase: React.FC = () => {
           );
         }
         return null;
-      },
-    },
-  ];
-
-  // 物料采购表格列定义
-  const purchaseColumns = [
-    {
-      title: '图片',
-      dataIndex: 'styleCover',
-      key: 'styleCover',
-      width: 72,
-      render: (_: any, record: any) => (
-        <StyleCoverThumb styleId={record.styleId} styleNo={record.styleNo} src={record.styleCover || null} size={48} borderRadius={6} />
-      )
-    },
-    {
-      title: '订单号',
-      dataIndex: 'orderNo',
-      key: 'orderNo',
-      width: 120,
-      ellipsis: true,
-      render: (v: any) => (
-        <span className="order-no-compact">{String(v || '').trim() || '-'}</span>
-      ),
-    },
-    {
-      title: '款号',
-      dataIndex: 'styleNo',
-      key: 'styleNo',
-      width: 100,
-      ellipsis: true,
-    },
-    {
-      title: '款名',
-      dataIndex: 'styleName',
-      key: 'styleName',
-      width: 140,
-      ellipsis: true,
-    },
-    {
-      title: '附件',
-      key: 'attachments',
-      width: 100,
-      render: (_: any, record: any) => (
-        <StyleAttachmentsButton styleId={record.styleId} styleNo={record.styleNo} modalTitle={record.styleNo ? `附件（${record.styleNo}）` : '附件'} />
-      )
-    },
-    {
-      title: '采购单号',
-      dataIndex: 'purchaseNo',
-      key: 'purchaseNo',
-      width: 120,
-    },
-    {
-      title: '面料辅料类型',
-      dataIndex: 'materialType',
-      key: 'materialType',
-      width: 120,
-      render: (v: any) => {
-        const type = String(v || '').trim();
-        const category = getMaterialTypeCategory(type);
-        const text = getMaterialTypeLabel(type);
-        const color = category === 'accessory' ? 'purple' : category === 'lining' ? 'cyan' : 'geekblue';
-        return <Tag color={color}>{text}</Tag>;
-      },
-    },
-    {
-      title: '物料编码',
-      dataIndex: 'materialCode',
-      key: 'materialCode',
-      width: 100,
-    },
-    {
-      title: '物料名称',
-      dataIndex: 'materialName',
-      key: 'materialName',
-      ellipsis: true,
-    },
-    {
-      title: '规格',
-      dataIndex: 'specifications',
-      key: 'specifications',
-      width: 100,
-    },
-    {
-      title: '单位',
-      dataIndex: 'unit',
-      key: 'unit',
-      width: 80,
-    },
-    {
-      title: '采购数量',
-      dataIndex: 'purchaseQuantity',
-      key: 'purchaseQuantity',
-      width: 100,
-      align: 'right' as const,
-    },
-    {
-      title: '到货数量',
-      dataIndex: 'arrivedQuantity',
-      key: 'arrivedQuantity',
-      width: 100,
-      align: 'right' as const,
-    },
-    {
-      title: '待到数量',
-      key: 'remainingQuantity',
-      width: 100,
-      align: 'right' as const,
-      render: (_: any, record: any) => {
-        const total = Number(record?.purchaseQuantity || 0);
-        const arrived = Number(record?.arrivedQuantity || 0);
-        return Math.max(0, total - arrived);
-      },
-    },
-    {
-      title: '供应商',
-      dataIndex: 'supplierName',
-      key: 'supplierName',
-      width: 120,
-    },
-    {
-      title: '单价(元)',
-      dataIndex: 'unitPrice',
-      key: 'unitPrice',
-      width: 100,
-      align: 'right' as const,
-      render: (value: any) => {
-        const n = Number(value);
-        return Number.isFinite(n) ? n.toFixed(2) : '-';
-      },
-    },
-    {
-      title: '金额(元)',
-      dataIndex: 'totalAmount',
-      key: 'totalAmount',
-      width: 120,
-      align: 'right' as const,
-      render: (value: any, record: MaterialPurchaseType) => {
-        const qty = Number((record as any)?.arrivedQuantity ?? 0);
-        const price = Number((record as any)?.unitPrice);
-        if (Number.isFinite(qty) && Number.isFinite(price)) return (qty * price).toFixed(2);
-        const v = Number(value);
-        return Number.isFinite(v) ? v.toFixed(2) : '-';
-      },
-    },
-    {
-      title: '预计到货',
-      dataIndex: 'expectedArrivalDate',
-      key: 'expectedArrivalDate',
-      width: 120,
-      render: (v: any) => formatDateTime(v) || '-',
-    },
-    {
-      title: '实际到货',
-      dataIndex: 'actualArrivalDate',
-      key: 'actualArrivalDate',
-      width: 120,
-      render: (v: any) => formatDateTime(v) || '-',
-    },
-    {
-      title: '领取人',
-      dataIndex: 'receiverName',
-      key: 'receiverName',
-      width: 100,
-      render: (v: any) => {
-        const t = String(v || '').trim();
-        return t || '-';
-      },
-    },
-    {
-      title: '领取时间',
-      dataIndex: 'receivedTime',
-      key: 'receivedTime',
-      width: 160,
-      render: (v: any) => {
-        const raw = String(v ?? '').trim();
-        if (!raw) return '-';
-        return formatDateTime(v) || '-';
-      },
-    },
-    {
-      title: '回料时间',
-      key: 'returnTime',
-      width: 160,
-      render: (_: any, record: MaterialPurchaseType) => {
-        if (Number((record as any)?.returnConfirmed || 0) !== 1) return '-';
-        return formatDateTime((record as any)?.returnConfirmTime) || '-';
-      },
-    },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
-      width: 100,
-      render: (status: MaterialPurchaseType['status']) => {
-        const { text, color } = getStatusConfig(status);
-        return <Tag color={color}>{text}</Tag>;
-      },
-    },
-    {
-      title: '操作',
-      key: 'action',
-      width: 110,
-      render: (_: any, record: MaterialPurchaseType) => {
-        const orderId = String((record as any)?.orderId || '').trim();
-        const frozen = isOrderFrozenById(orderId);
-
-        const moreItems = (() => {
-          const items: any[] = [];
-          if (record.status === 'pending') {
-            items.push({
-              key: 'receive',
-              label: '领取任务',
-              disabled: frozen,
-              onClick: () => void (async () => {
-                if (!(await ensureOrderUnlocked((record as any)?.orderId))) return;
-                receivePurchaseTask(record);
-              })(),
-            });
-          }
-          if (record.status === 'received' || record.status === 'partial' || record.status === 'completed') {
-            items.push({
-              key: 'returnConfirm',
-              label: Number((record as any)?.returnConfirmed || 0) === 1 ? '回料确认(已确认)' : '回料确认',
-              disabled: frozen || Number((record as any)?.returnConfirmed || 0) === 1,
-              onClick: () => void (async () => {
-                if (!(await ensureOrderUnlocked((record as any)?.orderId))) return;
-                confirmReturnPurchaseTask(record);
-              })(),
-            });
-          }
-
-          if (Number((record as any)?.returnConfirmed || 0) === 1) {
-            items.push({
-              key: 'returnReset',
-              label: '退回回料确认',
-              disabled: frozen || !isSupervisorOrAbove,
-              onClick: () => void (async () => {
-                if (!(await ensureOrderUnlocked((record as any)?.orderId))) return;
-                openReturnReset(record);
-              })(),
-            });
-          }
-          return items;
-        })();
-
-        return (
-          <RowActions
-            actions={[
-              {
-                key: 'view',
-                label: '查看',
-                title: '查看',
-                icon: <EyeOutlined />,
-                onClick: () => void openDialogSafe('view', record),
-                primary: true,
-              },
-              ...(moreItems.length
-                ? [
-                  {
-                    key: 'more',
-                    label: '更多',
-                    children: moreItems as any,
-                  },
-                ]
-                : []),
-            ]}
-          />
-        );
       },
     },
   ];
@@ -2728,7 +2454,7 @@ const MaterialPurchase: React.FC = () => {
           onOk={submitReturnConfirm}
           destroyOnHidden
           autoFontSize={false}
-          initialHeight={720}
+          initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
           scaleWithViewport
         >
           <Form form={returnConfirmForm} layout="vertical" preserve={false}>
@@ -2812,7 +2538,7 @@ const MaterialPurchase: React.FC = () => {
           onOk={submitReturnReset}
           destroyOnHidden
           autoFontSize={false}
-          initialHeight={720}
+          initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
           scaleWithViewport
         >
           <Form form={returnResetForm} layout="vertical" preserve={false}>

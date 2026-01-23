@@ -42,8 +42,9 @@ class ScanHandler {
     this.options = options;
     
     // 初始化服务
-    this.qrParser = new QRCodeParser();
-    this.stageDetector = new StageDetector(api);
+    // 注意：QRCodeParser 导出的是实例，StageDetector 导出的是类
+    this.qrParser = QRCodeParser; // 直接使用导出的实例
+    this.stageDetector = new StageDetector(api); // 需要实例化
     
     // 扫码模式
     this.SCAN_MODE = {

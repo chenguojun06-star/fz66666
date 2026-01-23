@@ -33,4 +33,12 @@ public class DashboardController {
     ) {
         return Result.success(dashboardOrchestrator.dashboard(startDate, endDate, brand, factory));
     }
+
+    /**
+     * 获取紧急事件列表（延期订单、次品、待审批等）
+     */
+    @GetMapping("/urgent-events")
+    public Result<?> urgentEvents() {
+        return Result.success(dashboardOrchestrator.getUrgentEvents());
+    }
 }

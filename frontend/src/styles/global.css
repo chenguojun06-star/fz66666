@@ -77,9 +77,24 @@ body {
   --spacing-md: 24px;
   --spacing-lg: 32px;
   /* 字体大小 */
-  --font-size-sm: 12px;
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
   --font-size-base: 14px;
+  --font-size-md: 15px;
   --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-xxl: 20px;
+  
+  /* 字体粗细 */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  
+  /* 表格专用颜色 */
+  --table-border-color: rgba(0, 0, 0, 0.06);
+  --table-border-light: rgba(0, 0, 0, 0.04);
+  
   /* 边框 */
   --border-width: 1px;
   --border-radius: 4px;
@@ -557,14 +572,27 @@ body {
   background: linear-gradient(to top, #fff 0%, #fff 85%, rgba(255,255,255,0.96) 95%, rgba(255,255,255,0) 100%);
   border-top: 1px solid rgba(0,0,0,0.06);
 }
-.ant-table { font-size: var(--font-size-base); }
+
+/* ========================================
+   表格统一样式规范
+   ======================================== */
+
+/* 表格基础样式 */
+.ant-table {
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+/* 表头样式 - 一级标题 */
 .ant-table-thead > tr > th {
-  font-weight: 700;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
   background: var(--table-header-bg);
   color: var(--neutral-text);
   text-align: center !important;
-  height: 44px;
-  border-bottom: 1px solid var(--neutral-dark);
+  height: 48px;
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--table-border-color);
   overflow: hidden;
 }
 
@@ -582,10 +610,32 @@ body {
   text-overflow: clip;
   white-space: normal;
 }
-.ant-table-tbody > tr > td { text-align: center !important; }
-.ant-table-tbody > tr > td.ant-table-cell-align-left { text-align: center !important; }
-.ant-table-tbody > tr > td.ant-table-cell-align-right { text-align: center !important; }
-.ant-table-cell { line-height: 1.4; vertical-align: middle; white-space: normal; word-break: break-word; overflow-wrap: anywhere; }
+
+/* 表格单元格样式 */
+.ant-table-tbody > tr > td {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-normal);
+  text-align: center !important;
+  padding: 10px 8px;
+  line-height: 1.5;
+}
+
+.ant-table-tbody > tr > td.ant-table-cell-align-left {
+  text-align: center !important;
+}
+
+.ant-table-tbody > tr > td.ant-table-cell-align-right {
+  text-align: center !important;
+}
+
+/* 单元格内容 */
+.ant-table-cell {
+  line-height: 1.5;
+  vertical-align: middle;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
 .ant-table-cell-ellipsis {
   white-space: normal;
   text-overflow: clip;
@@ -621,26 +671,28 @@ body {
   font-size: 15px;
   padding: 4px 12px;
 }
+/* 表格容器样式 */
 .ant-table-wrapper .ant-table {
   background: var(--neutral-white);
 }
 
 .ant-table-wrapper .ant-table-container {
-  border: 1px solid var(--neutral-dark);
+  border: 1px solid var(--table-border-color);
   border-radius: 10px;
 }
 
+/* 表格边框 - 使用淡淡的颜色 */
 .ant-table-wrapper .ant-table-tbody > tr > td {
-  border-bottom: 1px solid var(--neutral-dark);
+  border-bottom: 1px solid var(--table-border-light);
 }
 
 .ant-table-wrapper .ant-table-thead > tr > th:not(:last-child),
 .ant-table-wrapper .ant-table-tbody > tr > td:not(:last-child) {
-  border-inline-end: 1px solid var(--neutral-dark) !important;
+  border-inline-end: 1px solid var(--table-border-light) !important;
 }
 
 .ant-table-wrapper .ant-table-thead > tr > th::before {
-  background-color: var(--neutral-dark) !important;
+  background-color: var(--table-border-color) !important;
 }
 
 .ant-table-wrapper .ant-table-container table {
@@ -655,6 +707,7 @@ body {
   background: var(--table-row-hover-bg);
 }
 
+/* 特殊样式保留 */
 .resizable-table .ant-table-thead > tr > th::before {
   z-index: 0 !important;
 }
@@ -682,12 +735,18 @@ body {
   white-space: normal;
 }
 
-
-
 .clickable-row td {
   cursor: pointer;
 }
-.ant-btn-link { font-weight: 600; }
+
+/* ========================================
+   操作列统一样式
+   ======================================== */
+
+/* 操作按钮基础样式 */
+.ant-btn-link {
+  font-weight: var(--font-weight-semibold);
+}
 
 .row-actions {
   white-space: nowrap;
@@ -696,20 +755,21 @@ body {
 .row-actions.ant-space {
   width: 100%;
   display: inline-flex;
-  justify-content: flex-end;
-  column-gap: 2px;
+  justify-content: center;
+  column-gap: 4px;
 }
 
 .ant-table-tbody > tr > td .row-actions {
-  margin-right: -4px;
+  margin-right: 0;
 }
 
+/* 图标按钮样式 */
 .row-actions .ant-btn-link.row-actions__btn--icon,
 .ant-table-tbody .ant-btn-link.ant-btn-icon-only {
-  width: 45px;
-  height: 45px;
+  width: 32px;
+  height: 32px;
   padding: 0;
-  border-radius: 14px;
+  border-radius: 8px;
   border: none;
   background: transparent;
   color: var(--primary-color);
@@ -717,6 +777,7 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  transition: all 0.2s ease;
 }
 
 .row-actions .ant-btn-link.row-actions__btn--icon::before,
@@ -726,16 +787,18 @@ body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 20px;
-  height: 20px;
-  border-radius: 8px;
-  border: 1px solid rgba(45, 127, 249, 0.22);
-  background: rgba(45, 127, 249, 0.10);
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid rgba(45, 127, 249, 0.18);
+  background: rgba(45, 127, 249, 0.08);
+  transition: all 0.2s ease;
 }
 
 .row-actions .ant-btn-link.row-actions__btn--icon:not(:disabled):hover,
 .ant-table-tbody .ant-btn-link.ant-btn-icon-only:not(:disabled):hover {
   color: var(--primary-color);
+  transform: scale(1.05);
 }
 
 .row-actions .ant-btn-link.row-actions__btn--icon:not(:disabled):hover::before,
@@ -753,6 +816,7 @@ body {
   background: rgba(45, 127, 249, 0.18);
 }
 
+/* 危险操作按钮 */
 .row-actions .ant-btn-link.row-actions__btn--icon.ant-btn-dangerous,
 .ant-table-tbody .ant-btn-link.ant-btn-icon-only.ant-btn-dangerous {
   color: var(--error-color);
@@ -760,21 +824,23 @@ body {
 
 .row-actions .ant-btn-link.row-actions__btn--icon.ant-btn-dangerous::before,
 .ant-table-tbody .ant-btn-link.ant-btn-icon-only.ant-btn-dangerous::before {
-  border-color: rgba(245, 34, 45, 0.28);
-  background: rgba(245, 34, 45, 0.10);
+  border-color: rgba(245, 34, 45, 0.18);
+  background: rgba(245, 34, 45, 0.08);
 }
 
 .row-actions .ant-btn-link.row-actions__btn--icon.ant-btn-dangerous:not(:disabled):hover,
 .ant-table-tbody .ant-btn-link.ant-btn-icon-only.ant-btn-dangerous:not(:disabled):hover {
   color: var(--error-color);
+  transform: scale(1.05);
 }
 
 .row-actions .ant-btn-link.row-actions__btn--icon.ant-btn-dangerous:not(:disabled):hover::before,
 .ant-table-tbody .ant-btn-link.ant-btn-icon-only.ant-btn-dangerous:not(:disabled):hover::before {
-  border-color: rgba(245, 34, 45, 0.40);
+  border-color: rgba(245, 34, 45, 0.35);
   background: rgba(245, 34, 45, 0.14);
 }
 
+/* 图标样式 */
 .row-actions__icon {
   display: inline-flex;
   align-items: center;
@@ -784,23 +850,36 @@ body {
 }
 
 .row-actions__btn--icon .anticon {
-  font-size: 22px;
+  font-size: 16px;
 }
 
+/* 禁用状态 */
 .row-actions .ant-btn-link.row-actions__btn--icon:disabled,
 .ant-table-tbody .ant-btn-link.ant-btn-icon-only:disabled {
-  opacity: 0.55;
+  opacity: 0.45;
   cursor: not-allowed;
   color: var(--neutral-text-lighter);
 }
 
 .row-actions .ant-btn-link.row-actions__btn--icon:disabled::before,
 .ant-table-tbody .ant-btn-link.ant-btn-icon-only:disabled::before {
-  border-color: var(--neutral-dark);
-  background: var(--neutral-medium);
+  border-color: var(--table-border-color);
+  background: var(--neutral-light);
 }
-.ant-card .ant-card-head-title { font-size: 16px; font-weight: 700; }
-.ant-tabs-tab { font-size: var(--font-size-base); }
+
+/* ========================================
+   卡片和标题统一样式
+   ======================================== */
+
+.ant-card .ant-card-head-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+.ant-tabs-tab {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+}
 
 .modal-detail-header {
   display: grid;

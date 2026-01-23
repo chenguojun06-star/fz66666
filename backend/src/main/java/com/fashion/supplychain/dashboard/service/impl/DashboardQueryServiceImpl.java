@@ -199,4 +199,53 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
                 .page(new Page<>(1, lim))
                 .getRecords();
     }
+
+    @Override
+    public long sumTotalOrderQuantity() {
+        // 计算所有生产订单的总数量
+        List<ProductionOrder> orders = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .select(ProductionOrder::getOrderQuantity)
+                .list();
+        return orders.stream()
+                .mapToLong(order -> order.getOrderQuantity() != null ? order.getOrderQuantity() : 0L)
+                .sum();
+    }
+
+    @Override
+    public long countOverdueOrders() {
+        // 计算延期订单：计划结束日期已过但状态不是已完成的订单
+        LocalDateTime now = LocalDateTime.now();
+        return productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .ne(ProductionOrder::getStatus, "completed")
+                .ne(ProductionOrder::getStatus, "cancelled")
+                .isNotNull(ProductionOrder::getPlannedEndDate)
+                .lt(ProductionOrder::getPlannedEndDate, now)
+                .count();
+    }
+
+    @Override
+    public long countTotalWarehousing() {
+        // 统计所有入库记录的总数
+        return productWarehousingService.lambdaQuery()
+                .eq(ProductWarehousing::getDeleteFlag, 0)
+                .count();
+    }
+
+    @Override
+    public List<ProductionOrder> listOverdueOrders(int limit) {
+        // 获取延期订单列表
+        int lim = Math.max(1, limit);
+        LocalDateTime now = LocalDateTime.now();
+        return productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .ne(ProductionOrder::getStatus, "completed")
+                .ne(ProductionOrder::getStatus, "cancelled")
+                .isNotNull(ProductionOrder::getPlannedEndDate)
+                .lt(ProductionOrder::getPlannedEndDate, now)
+                .orderBy(true, true, ProductionOrder::getPlannedEndDate)
+                .page(new Page<>(1, lim))
+                .getRecords();
+    }
 }

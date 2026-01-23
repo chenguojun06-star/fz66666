@@ -51,6 +51,7 @@ const sortBomRows = (rows: StyleBom[]) => {
 const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
   const { user } = useAuth();
   const { message } = App.useApp();
+  const { modalWidth } = useViewport();
   const [data, setData] = useState<StyleBom[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingKey, setEditingKey] = useState('');
@@ -1162,7 +1163,7 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
           setSyncModalOpen(false);
         }}
         footer={null}
-        width={720}
+        width={modalWidth}
         destroyOnHidden
       >
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 12 }}>
@@ -1197,7 +1198,7 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
         open={materialModalOpen}
         onCancel={() => setMaterialModalOpen(false)}
         footer={null}
-        width={920}
+        width={modalWidth}
         destroyOnHidden
       >
         <Tabs

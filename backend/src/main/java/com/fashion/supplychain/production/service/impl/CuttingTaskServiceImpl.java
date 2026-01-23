@@ -185,8 +185,19 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
         String rid = StringUtils.hasText(receiverId) ? receiverId.trim() : null;
         String rname = StringUtils.hasText(receiverName) ? receiverName.trim() : null;
 
+        // 如果不是 pending 状态，检查是否是同一个人重复领取
         if (!"pending".equals(status)) {
-            return isSameReceiver(task, rid, rname);
+            // 如果是同一个人，也需要更新领取时间（用于退回后再次领取的场景）
+            if (isSameReceiver(task, rid, rname)) {
+                LocalDateTime now = LocalDateTime.now();
+                LambdaUpdateWrapper<CuttingTask> uw = new LambdaUpdateWrapper<CuttingTask>()
+                        .eq(CuttingTask::getId, taskId)
+                        .set(CuttingTask::getReceivedTime, now)
+                        .set(CuttingTask::getUpdateTime, now);
+                this.update(uw);
+                return true;
+            }
+            return false;
         }
 
         LocalDateTime now = LocalDateTime.now();

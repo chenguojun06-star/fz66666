@@ -11,6 +11,7 @@ import RowActions from '../../components/common/RowActions';
 import { StyleCoverThumb } from '../../components/StyleAssets';
 import { compareSizeAsc, generateRequestId, isDuplicateScanMessage, isOrderFrozenByStatus } from '../../utils/api';
 import { isAdminUser as isAdminUserFn, isSupervisorOrAboveUser as isSupervisorOrAboveUserFn, useAuth } from '../../utils/authContext';
+import { useViewport } from '../../utils/useViewport';
 import { formatDateTime, formatDateTimeCompact } from '../../utils/datetime';
 import { CuttingBundle, ProductionOrder, ProductionQueryParams, ScanRecord } from '../../types/production';
 import type { StyleProcess, TemplateLibrary } from '../../types/style';
@@ -314,7 +315,7 @@ const modernProgressBoardCss = `
 .mpb-nodesWrap{display:flex;align-items:center;gap:8px;min-height:46px;min-width:120px;flex-wrap:wrap}
 .mpb-mark{display:flex;align-items:center}
 .mpb-node{position:relative;overflow:hidden;height:24px;max-width:126px;min-width:58px;padding:0 10px;border-radius:999px;display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.30);color:rgba(15,23,42,.78);backdrop-filter:blur(10px) saturate(160%);-webkit-backdrop-filter:blur(10px) saturate(160%);box-shadow:0 10px 18px rgba(15,23,42,.10)}
-.mpb-node::before{content:"";position:absolute;left:0;top:0;bottom:0;width:var(--p,0%);background:linear-gradient(90deg,#86efac 0%,#4ade80 26%,#22c55e 52%,#4ade80 78%,#86efac 100%);background-size:220% 100%;animation:mpbNodeFlow 2.8s linear infinite;transition:width .55s cubic-bezier(.2,.8,.2,1);filter:saturate(104%) brightness(.97);box-shadow:inset 0 0 0 1px rgba(255,255,255,.16),inset 0 10px 14px rgba(255,255,255,.10)}
+.mpb-node::before{content:"";position:absolute;left:0;top:0;bottom:0;width:var(--p,0%);background:linear-gradient(90deg,#86efac 0%,#4ade80 26%,#22c55e 52%,#4ade80 78%,#86efac 100%);background-size:200% 100%;animation:mpbNodeFlow 2.8s linear infinite;transition:width .55s cubic-bezier(.2,.8,.2,1);filter:saturate(104%) brightness(.97);box-shadow:inset 0 0 0 1px rgba(255,255,255,.16),inset 0 10px 14px rgba(255,255,255,.10)}
 .mpb-nodeName{position:relative;z-index:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:78px;font-size:12px;line-height:24px}
 .mpb-nodeQty{position:relative;z-index:1;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;height:16px;min-width:24px;padding:0 6px;border-radius:999px;background:rgba(15,23,42,.06);border:1px solid rgba(255,255,255,.36);color:rgba(15,23,42,.78);font-weight:700;font-size:11px;line-height:16px;font-variant-numeric:tabular-nums}
 .mpb-node.mpb-nodeDone{border-color:rgba(34,197,94,.34);color:rgba(15,23,42,.88)}
@@ -346,7 +347,7 @@ const modernProgressBoardCss = `
 .mpb-nodeCreateRow .mpb-nodeCreateName{flex:1 1 0;min-width:0}
 
 .mpb-detailTrack{position:relative;height:30px;border-radius:999px;background:rgba(15,23,42,.06);border:1px solid rgba(255,255,255,.34);overflow:hidden;box-shadow:inset 0 1px 2px rgba(15,23,42,.10)}
-.mpb-detailFill{position:absolute;left:0;top:0;bottom:0;width:var(--p,0%);border-radius:999px;background:linear-gradient(90deg,#86efac 0%,#4ade80 26%,#22c55e 52%,#4ade80 78%,#86efac 100%);background-size:220% 100%;animation:mpbNodeFlow 2.8s linear infinite;transition:width .55s cubic-bezier(.2,.8,.2,1);box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
+.mpb-detailFill{position:absolute;left:0;top:0;bottom:0;width:var(--p,0%);border-radius:999px;background:linear-gradient(90deg,#86efac 0%,#4ade80 26%,#22c55e 52%,#4ade80 78%,#86efac 100%);background-size:200% 100%;animation:mpbNodeFlow 2.8s linear infinite;transition:width .55s cubic-bezier(.2,.8,.2,1);box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
 .mpb-detailBarText{position:absolute;left:0;right:0;top:0;bottom:0;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 12px;color:rgba(15,23,42,.86);font-weight:700;font-size:12px;line-height:30px;pointer-events:none;text-shadow:0 1px 0 rgba(255,255,255,.62)}
 .mpb-detailBarLeft{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mpb-detailBarRight{flex:0 0 auto;white-space:nowrap;font-variant-numeric:tabular-nums}
@@ -547,12 +548,12 @@ type ProgressDetailProps = {
 const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const { message } = App.useApp();
   const { user } = useAuth();
+  const { modalWidth } = useViewport();
   const isSupervisorOrAbove = useMemo(() => isSupervisorOrAboveUserFn(user), [user]);
   const isAdminUser = useMemo(() => isAdminUserFn(user), [user]);
   const location = useLocation();
   const screens = useBreakpoint();
-  const modalWidth = screens.md ? (screens.lg ? '60vw' : '66vw') : '96vw';
-  const modalInitialHeight = 720;
+  const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
   const [queryParams, setQueryParams] = useState<ProductionQueryParams>({ page: 1, pageSize: 10 });
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
 
@@ -832,19 +833,17 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   useEffect(() => {
     fetchOrders();
     initialLoadDone.current = true;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 当查询参数改变时获取数据
   useEffect(() => {
     // 跳过初始加载
     if (!initialLoadDone.current) return;
-    
+
     const timer = setTimeout(() => {
       fetchOrders();
     }, 300);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     queryParams.page,
     queryParams.pageSize,
@@ -900,7 +899,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         itemsRaw = (obj as any)?.steps;
       }
       if (!Array.isArray(itemsRaw)) return [];
-      
+
       const normalized: ProgressNode[] = itemsRaw
         .map((n: any) => {
           const name = String(n?.name || n?.processName || '').trim();
@@ -2208,7 +2207,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       cancelled = true;
       window.clearInterval(timer);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // 移除所有函数依赖，避免重复创建定时器
 
   const updateOrderProgress = async (
@@ -3513,7 +3511,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         confirmLoading={rollbackSubmitting}
         okText="确认"
         cancelText="取消"
-        width={540}
+        width={modalWidth}
         scaleWithViewport
       >
         <Form form={rollbackForm} layout="vertical">

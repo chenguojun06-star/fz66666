@@ -1,30 +1,31 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Card, DatePicker, Select, Space } from 'antd';
+import { Button, Card, Input, Space, message } from 'antd';
 import {
   AccountBookOutlined,
   ApartmentOutlined,
-  BellOutlined,
   FileTextOutlined,
   InboxOutlined,
+  SearchOutlined,
   ShoppingCartOutlined,
   TagsOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
-import api from '../../utils/api';
+import api, { ApiResult } from '../../utils/api';
 import errorHandler from '../../utils/errorHandler';
 import { useSync } from '../../utils/syncManager';
 import './styles.css';
 
 interface DashboardStats {
-  styleCount: number;
-  productionCount: number;
-  pendingReconciliationCount: number;
-  paymentApprovalCount: number;
-  todayScanCount: number;
-  warehousingOrderCount: number;
-  unqualifiedQuantity: number;
-  urgentEventCount: number; // 紧急事件（包含各种超期提醒）
+  sampleDevelopmentCount: number;     // 样衣开发
+  productionOrderCount: number;       // 生产订单
+  orderQuantityTotal: number;         // 订单数量
+  overdueOrderCount: number;          // 延期订单
+  todayWarehousingCount: number;      // 当天入库
+  totalWarehousingCount: number;      // 入库总数
+  defectiveQuantity: number;          // 次品数量
+  paymentApprovalCount: number;       // 审批付款
 }
 
 interface RecentActivity {
@@ -35,32 +36,80 @@ interface RecentActivity {
 }
 
 const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [searchLoading, setSearchLoading] = useState(false);
+
   const [stats, setStats] = useState<DashboardStats>({
-    styleCount: 0,
-    productionCount: 0,
-    pendingReconciliationCount: 0,
+    sampleDevelopmentCount: 0,
+    productionOrderCount: 0,
+    orderQuantityTotal: 0,
+    overdueOrderCount: 0,
+    todayWarehousingCount: 0,
+    totalWarehousingCount: 0,
+    defectiveQuantity: 0,
     paymentApprovalCount: 0,
-    todayScanCount: 0,
-    warehousingOrderCount: 0,
-    unqualifiedQuantity: 0,
-    urgentEventCount: 0,
   });
 
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
-  const [dateRange, setDateRange] = useState<[string | undefined, string | undefined]>([undefined, undefined]);
-  const [brand, setBrand] = useState<string | undefined>(undefined);
-  const [factory, setFactory] = useState<string | undefined>(undefined);
+
+  // 全能搜索功能
+  const handleSearch = async () => {
+    const keyword = searchKeyword.trim();
+    if (!keyword) {
+      message.warning('请输入搜索关键词');
+      return;
+    }
+
+    setSearchLoading(true);
+    try {
+      const response = (await api.get('/search/universal', {
+        params: { keyword }
+      })) as ApiResult<any>;
+
+      if (response.code === 200) {
+        const result = response.data;
+
+        // 优先跳转到最相关的结果
+        if (result.orderNo) {
+          // 找到订单号，跳转到生产进度
+          navigate(`/production?orderNo=${result.orderNo}`);
+        } else if (result.styleNo) {
+          // 找到款号，跳转到款号资料
+          navigate(`/style-info?styleNo=${result.styleNo}`);
+        } else if (result.bundleQr) {
+          // 找到扎号，跳转到生产进度
+          navigate(`/production?bundleQr=${result.bundleQr}`);
+        } else if (result.supplierName) {
+          // 找到供应商，跳转到供应商管理
+          navigate(`/system/factory?keyword=${keyword}`);
+        } else {
+          message.info('未找到相关结果，请尝试其他关键词');
+        }
+      } else {
+        message.error(response.message || '搜索失败');
+      }
+    } catch (error: any) {
+      if (error?.status !== 404) {
+        errorHandler.handleError(error, '搜索失败');
+      } else {
+        message.info('未找到相关结果');
+      }
+    } finally {
+      setSearchLoading(false);
+    }
+  };
 
   const resetDashboardData = () => {
     setStats({
-      styleCount: 0,
-      productionCount: 0,
-      pendingReconciliationCount: 0,
+      sampleDevelopmentCount: 0,
+      productionOrderCount: 0,
+      orderQuantityTotal: 0,
+      overdueOrderCount: 0,
+      todayWarehousingCount: 0,
+      totalWarehousingCount: 0,
+      defectiveQuantity: 0,
       paymentApprovalCount: 0,
-      todayScanCount: 0,
-      warehousingOrderCount: 0,
-      unqualifiedQuantity: 0,
-      urgentEventCount: 0,
     });
     setRecentActivities([]);
   };
@@ -77,26 +126,19 @@ const Dashboard: React.FC = () => {
 
   const fetchDashboard = async () => {
     try {
-      const response = await api.get<any>('/dashboard', {
-        params: {
-          startDate: dateRange[0],
-          endDate: dateRange[1],
-          brand,
-          factory
-        }
-      });
+      const response = await api.get<any>('/dashboard');
       const result = response as any;
       if (result.code === 200) {
         const d = result.data || {};
         setStats({
-          styleCount: d.styleCount ?? 0,
-          productionCount: d.productionCount ?? 0,
-          pendingReconciliationCount: d.pendingReconciliationCount ?? 0,
+          sampleDevelopmentCount: d.sampleDevelopmentCount ?? 0,
+          productionOrderCount: d.productionOrderCount ?? 0,
+          orderQuantityTotal: d.orderQuantityTotal ?? 0,
+          overdueOrderCount: d.overdueOrderCount ?? 0,
+          todayWarehousingCount: d.todayWarehousingCount ?? 0,
+          totalWarehousingCount: d.totalWarehousingCount ?? 0,
+          defectiveQuantity: d.defectiveQuantity ?? 0,
           paymentApprovalCount: d.paymentApprovalCount ?? 0,
-          todayScanCount: d.todayScanCount ?? 0,
-          warehousingOrderCount: d.warehousingOrderCount ?? 0,
-          unqualifiedQuantity: d.unqualifiedQuantity ?? 0,
-          urgentEventCount: d.urgentEventCount ?? 0,
         });
         setRecentActivities(d.recentActivities ?? []);
       } else {
@@ -111,20 +153,13 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     fetchDashboard();
-  }, [dateRange?.[0], dateRange?.[1], brand, factory]);
+  }, []);
 
   // 实时同步：60秒自动轮询更新统计数据
   useSync(
     'dashboard-stats',
     async () => {
-      const response = await api.get<any>('/dashboard', {
-        params: {
-          startDate: dateRange[0],
-          endDate: dateRange[1],
-          brand,
-          factory
-        }
-      });
+      const response = await api.get<any>('/dashboard');
       const result = response as any;
       if (result?.code === 200) {
         return result.data || {};
@@ -136,14 +171,14 @@ const Dashboard: React.FC = () => {
       if (oldData !== null && newData) {
         // 数据有变化，静默更新
         setStats({
-          styleCount: newData.styleCount ?? 0,
-          productionCount: newData.productionCount ?? 0,
-          pendingReconciliationCount: newData.pendingReconciliationCount ?? 0,
+          sampleDevelopmentCount: newData.sampleDevelopmentCount ?? 0,
+          productionOrderCount: newData.productionOrderCount ?? 0,
+          orderQuantityTotal: newData.orderQuantityTotal ?? 0,
+          overdueOrderCount: newData.overdueOrderCount ?? 0,
+          todayWarehousingCount: newData.todayWarehousingCount ?? 0,
+          totalWarehousingCount: newData.totalWarehousingCount ?? 0,
+          defectiveQuantity: newData.defectiveQuantity ?? 0,
           paymentApprovalCount: newData.paymentApprovalCount ?? 0,
-          todayScanCount: newData.todayScanCount ?? 0,
-          warehousingOrderCount: newData.warehousingOrderCount ?? 0,
-          unqualifiedQuantity: newData.unqualifiedQuantity ?? 0,
-          urgentEventCount: newData.urgentEventCount ?? 0,
         });
         setRecentActivities(newData.recentActivities ?? []);
         console.log('[实时同步] 仪表盘数据已更新');
@@ -168,110 +203,91 @@ const Dashboard: React.FC = () => {
           <h2 className="page-title">仪表盘</h2>
         </div>
 
+        {/* 全能搜索框 */}
         <Card size="small" className="filter-card mb-sm">
-          <Space wrap>
-            <span>时间范围</span>
-            <DatePicker.RangePicker onChange={(_, dateStrings) => setDateRange([dateStrings[0], dateStrings[1]])} />
-            <span>品牌</span>
-            <Select
+          <Space.Compact style={{ width: '100%', maxWidth: 600 }}>
+            <Input
+              size="large"
+              placeholder="输入款号、订单号、扎号、供应商等关键词搜索..."
+              prefix={<SearchOutlined />}
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              onPressEnter={handleSearch}
               allowClear
-              placeholder="选择品牌"
-              style={{ width: 160 }}
-              value={brand}
-              onChange={(val) => setBrand(val)}
-              options={[
-                { value: 'ALL', label: '全部' },
-                { value: 'BrandA', label: '品牌A' },
-                { value: 'BrandB', label: '品牌B' },
-              ]}
-            />
-            <span>加工厂</span>
-            <Select
-              allowClear
-              placeholder="选择加工厂"
-              style={{ width: 160 }}
-              value={factory}
-              onChange={(val) => setFactory(val)}
-              options={[
-                { value: 'ALL', label: '全部' },
-                { value: 'Guangzhou', label: '广州服装厂' },
-                { value: 'Shenzhen', label: '深圳服装厂' },
-              ]}
             />
             <Button
-              onClick={() => {
-                setDateRange([undefined, undefined]);
-                setBrand(undefined);
-                setFactory(undefined);
-              }}
+              size="large"
+              type="primary"
+              loading={searchLoading}
+              onClick={handleSearch}
             >
-              重置
+              搜索
             </Button>
-          </Space>
+          </Space.Compact>
         </Card>
 
         <div className="stats-section">
-          <div className="stat-card stat-card--style">
-            <div className="stat-icon stat-icon--style"><TagsOutlined /></div>
+          <div className="stat-card stat-card--sample" onClick={() => navigate('/style-info')} style={{ cursor: 'pointer' }}>
+            <div className="stat-icon stat-icon--sample"><TagsOutlined /></div>
             <div className="stat-content">
-              <div className="stat-value">{stats.styleCount}</div>
-              <div className="stat-label">款号总数</div>
+              <div className="stat-value">{stats.sampleDevelopmentCount}</div>
+              <div className="stat-label">样衣开发</div>
             </div>
           </div>
 
-          <div className="stat-card stat-card--production">
+          <div className="stat-card stat-card--production" onClick={() => navigate('/production')} style={{ cursor: 'pointer' }}>
             <div className="stat-icon stat-icon--production"><InboxOutlined /></div>
             <div className="stat-content">
-              <div className="stat-value">{stats.productionCount}</div>
+              <div className="stat-value">{stats.productionOrderCount}</div>
               <div className="stat-label">生产订单</div>
             </div>
           </div>
 
-          <div className="stat-card stat-card--finance">
-            <div className="stat-icon stat-icon--finance"><AccountBookOutlined /></div>
+          <div className="stat-card stat-card--quantity" onClick={() => navigate('/production')} style={{ cursor: 'pointer' }}>
+            <div className="stat-icon stat-icon--quantity"><ShoppingCartOutlined /></div>
             <div className="stat-content">
-              <div className="stat-value">{stats.pendingReconciliationCount}</div>
-              <div className="stat-label">待对账</div>
+              <div className="stat-value">{stats.orderQuantityTotal}</div>
+              <div className="stat-label">订单数量</div>
             </div>
           </div>
 
-          <div className="stat-card stat-card--scan">
-            <div className="stat-icon stat-icon--scan"><FileTextOutlined /></div>
+          <div className="stat-card stat-card--overdue" onClick={() => navigate('/production')} style={{ cursor: 'pointer' }}>
+            <div className="stat-icon stat-icon--overdue"><WarningOutlined /></div>
             <div className="stat-content">
-              <div className="stat-value">{stats.todayScanCount}</div>
-              <div className="stat-label">今日扫码</div>
+              <div className="stat-value">{stats.overdueOrderCount}</div>
+              <div className="stat-label">延期订单</div>
             </div>
           </div>
 
-          <div className="stat-card stat-card--warehousing">
-            <div className="stat-icon stat-icon--warehousing"><InboxOutlined /></div>
+          <div className="stat-card stat-card--today-warehousing" onClick={() => navigate('/production/warehousing')} style={{ cursor: 'pointer' }}>
+            <div className="stat-icon stat-icon--today-warehousing"><InboxOutlined /></div>
             <div className="stat-content">
-              <div className="stat-value">{stats.warehousingOrderCount}</div>
+              <div className="stat-value">{stats.todayWarehousingCount}</div>
               <div className="stat-label">当天入库</div>
             </div>
           </div>
 
-          <div className="stat-card stat-card--unqualified">
-            <div className="stat-icon stat-icon--unqualified"><WarningOutlined /></div>
+          <div className="stat-card stat-card--total-warehousing" onClick={() => navigate('/production/warehousing')} style={{ cursor: 'pointer' }}>
+            <div className="stat-icon stat-icon--total-warehousing"><ApartmentOutlined /></div>
             <div className="stat-content">
-              <div className="stat-value">{stats.unqualifiedQuantity}</div>
+              <div className="stat-value">{stats.totalWarehousingCount}</div>
+              <div className="stat-label">入库总数</div>
+            </div>
+          </div>
+
+          <div className="stat-card stat-card--defective" onClick={() => navigate('/production/warehousing')} style={{ cursor: 'pointer' }}>
+            <div className="stat-icon stat-icon--defective"><WarningOutlined /></div>
+            <div className="stat-content">
+              <div className="stat-value">{stats.defectiveQuantity}</div>
               <div className="stat-label">次品数量</div>
             </div>
           </div>
 
-          <div className="stat-card stat-card--payment">
-            <div className="stat-icon stat-icon--payment"><FileTextOutlined /></div>
+          <div className="stat-card stat-card--payment" onClick={() => navigate('/finance/payment-approval')} style={{ cursor: 'pointer' }}>
+            <div className="stat-icon stat-icon--payment"><AccountBookOutlined /></div>
             <div className="stat-content">
               <div className="stat-value">{stats.paymentApprovalCount}</div>
               <div className="stat-label">审批付款</div>
-            </div>
-          </div>
-
-          <div className="stat-card stat-card--urgent">
-            <div className="stat-icon stat-icon--urgent"><BellOutlined /></div>
-            <div className="stat-content">
-              <div className="stat-value">{stats.urgentEventCount}</div>
-              <div className="stat-label">紧急事件</div>
             </div>
           </div>
         </div>

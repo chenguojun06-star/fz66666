@@ -91,11 +91,13 @@ public class ProductionOrder {
     /**
      * 物料到位率(%)
      */
+    @TableField("material_arrival_rate")
     private Integer materialArrivalRate;
 
     /**
      * 生产进度(%)
      */
+    @TableField("production_progress")
     private Integer productionProgress;
 
     /**
