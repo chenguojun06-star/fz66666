@@ -871,7 +871,7 @@ const PaymentApproval: React.FC = () => {
       if (oldData !== null && newData) {
         setMaterialList(newData.records);
         setMaterialTotal(newData.total);
-        console.log('[实时同步] 物料审批数据已更新', { oldCount: oldData.records.length, newCount: newData.records.length });
+        // // console.log('[实时同步] 物料审批数据已更新', { oldCount: oldData.records.length, newCount: newData.records.length });
       }
     },
     {
@@ -909,7 +909,7 @@ const PaymentApproval: React.FC = () => {
       if (oldData !== null && newData) {
         setShipmentList(newData.records);
         setShipmentTotal(newData.total);
-        console.log('[实时同步] 出货审批数据已更新', { oldCount: oldData.records.length, newCount: newData.records.length });
+        // // console.log('[实时同步] 出货审批数据已更新', { oldCount: oldData.records.length, newCount: newData.records.length });
       }
     },
     {

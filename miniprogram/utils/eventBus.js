@@ -1,3 +1,4 @@
+const { DEBUG } = require('../config/debug');
 /**
  * 小程序事件总线 - 用于跨页面通信
  * 实现多端数据同步通知
@@ -21,7 +22,7 @@ class EventBus {
    */
   on(eventName, callback) {
     if (!eventName || typeof callback !== 'function') {
-      console.warn('[EventBus] Invalid event subscription');
+      if (DEBUG) console.warn('[EventBus] Invalid event subscription');
       return () => {};
     }
 

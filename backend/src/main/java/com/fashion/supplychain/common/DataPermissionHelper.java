@@ -90,8 +90,8 @@ public class DataPermissionHelper {
         String currentUsername = UserContext.username();
         
         if ("team".equals(dataScope)) {
-            // TODO: 需要查询是否同一团队
-            // 暂时允许组长查看所有
+            // 注意：当前未实现团队成员查询，仅允许组长查看所有
+            // 未来需要：查询是否同一团队（通过 t_user_team 表）
             if (UserContext.isTeamLeader()) {
                 return true;
             }
@@ -127,7 +127,8 @@ public class DataPermissionHelper {
             ids.add(userId);
         }
         
-        // TODO: team范围时需要查询同团队成员ID
+        // 注意：当前 team 范围的权限检查未完全实现
+        // 未来需要：查询 t_user_team 表判断是否同团队
         
         return ids;
     }

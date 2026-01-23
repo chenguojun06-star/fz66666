@@ -721,7 +721,7 @@ const ProductWarehousing: React.FC = () => {
       if (oldData !== null && newData) {
         setWarehousingList(newData.records);
         setTotal(newData.total);
-        console.log('[实时同步] 质检入库数据已更新', {
+        // // console.log('[实时同步] 质检入库数据已更新', {
           oldCount: oldData.records.length,
           newCount: newData.records.length,
           oldTotal: oldData.total,

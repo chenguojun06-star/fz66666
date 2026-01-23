@@ -1,4 +1,5 @@
 /**
+import logger from './logger';
  * PC端数据同步管理器
  * 基于小程序 syncManager.js 改造的 TypeScript 版本
  * 
@@ -72,7 +73,7 @@ class SyncManager {
     }
 
     if (this.tasks.has(taskId)) {
-      console.warn(`[同步管理器] 任务 ${taskId} 已在运行中`);
+      logger.warn(`[同步管理器] 任务 ${taskId} 已在运行中`);
       return false;
     }
 
@@ -103,7 +104,7 @@ class SyncManager {
       }
     }, normalizedInterval);
 
-    console.log(`[同步管理器] 任务 ${taskId} 已启动，间隔 ${normalizedInterval}ms`);
+    logger.debug(`[同步管理器] 任务 ${taskId} 已启动，间隔 ${normalizedInterval}ms`);
 
     return true;
   }
@@ -114,7 +115,7 @@ class SyncManager {
   stopSync(taskId: string): boolean {
     const task = this.tasks.get(taskId);
     if (!task) {
-      console.warn(`[同步管理器] 任务 ${taskId} 不存在`);
+      logger.warn(`[同步管理器] 任务 ${taskId} 不存在`);
       return false;
     }
 
@@ -124,7 +125,7 @@ class SyncManager {
     }
 
     this.tasks.delete(taskId);
-    console.log(`[同步管理器] 任务 ${taskId} 已停止`);
+    logger.debug(`[同步管理器] 任务 ${taskId} 已停止`);
 
     return true;
   }
@@ -137,7 +138,7 @@ class SyncManager {
     if (!task) return false;
 
     task.isPaused = true;
-    console.log(`[同步管理器] 任务 ${taskId} 已暂停`);
+    logger.debug(`[同步管理器] 任务 ${taskId} 已暂停`);
     return true;
   }
 
@@ -149,7 +150,7 @@ class SyncManager {
     if (!task) return false;
 
     task.isPaused = false;
-    console.log(`[同步管理器] 任务 ${taskId} 已恢复`);
+    logger.debug(`[同步管理器] 任务 ${taskId} 已恢复`);
 
     // 立即执行一次
     this.executeSync(task);
@@ -196,10 +197,10 @@ class SyncManager {
       if (task.lastData !== null && compareData) {
         const hasChanges = compareData(task.lastData, newData);
         if (hasChanges) {
-          console.log(`[实时同步] 任务 ${taskId} 检测到数据变化`);
+          logger.debug(`[实时同步] 任务 ${taskId} 检测到数据变化`);
           onDataChange?.(newData, task.lastData);
         } else {
-          console.log(`[实时同步] 任务 ${taskId} 数据无变化`);
+          logger.debug(`[实时同步] 任务 ${taskId} 数据无变化`);
         }
       } else {
         // 首次获取数据
@@ -217,7 +218,7 @@ class SyncManager {
       const isAuthError = err?.status === 401 || err?.status === 403;
       
       if (isAuthError) {
-        console.warn(`[实时同步] 任务 ${taskId} 认证失败，停止同步`);
+        logger.warn(`[实时同步] 任务 ${taskId} 认证失败，停止同步`);
         this.stopSync(taskId);
         // 不调用 onError，因为认证错误已经由拦截器处理（跳转登录）
         return;
@@ -258,10 +259,10 @@ class SyncManager {
       this.tasks.forEach((task, taskId) => {
         if (task.config.pauseOnHidden !== false) {
           if (isHidden) {
-            console.log(`[同步管理器] 页面隐藏，暂停任务 ${taskId}`);
+            logger.debug(`[同步管理器] 页面隐藏，暂停任务 ${taskId}`);
             this.pauseSync(taskId);
           } else {
-            console.log(`[同步管理器] 页面可见，恢复任务 ${taskId}`);
+            logger.debug(`[同步管理器] 页面可见，恢复任务 ${taskId}`);
             this.resumeSync(taskId);
           }
         }
@@ -345,7 +346,7 @@ export function useSync<T = any>(
     });
 
     if (!started) {
-      console.warn(`[useSync] 任务 ${taskId} 启动失败`);
+      logger.warn(`[useSync] 任务 ${taskId} 启动失败`);
     }
 
     return () => {

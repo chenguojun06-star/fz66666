@@ -190,7 +190,8 @@ public class DashboardOrchestrator {
             events.add(event);
         }
         
-        // TODO: 添加次品和审批相关的紧急事件
+        // 注意：当前未实现紧急事件追踪
+        // 未来可添加：次品数超标、付款审批超时等紧急事件
         // 这里可以根据实际业务需求添加更多事件类型
         
         return events;

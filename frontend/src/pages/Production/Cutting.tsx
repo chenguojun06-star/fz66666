@@ -718,7 +718,7 @@ const CuttingManagement: React.FC = () => {
       if (oldData !== null && newData) {
         setDataSource(newData.records);
         setTotal(newData.total);
-        console.log('[实时同步] 裁剪批次数据已更新', { oldCount: oldData.records.length, newCount: newData.records.length });
+        // // console.log('[实时同步] 裁剪批次数据已更新', { oldCount: oldData.records.length, newCount: newData.records.length });
       }
     },
     {
@@ -757,7 +757,7 @@ const CuttingManagement: React.FC = () => {
       if (oldData !== null && newData) {
         setTaskList(newData.records);
         setTaskTotal(newData.total);
-        console.log('[实时同步] 裁剪任务数据已更新', { oldCount: oldData.records.length, newCount: newData.records.length });
+        // // console.log('[实时同步] 裁剪任务数据已更新', { oldCount: oldData.records.length, newCount: newData.records.length });
       }
     },
     {

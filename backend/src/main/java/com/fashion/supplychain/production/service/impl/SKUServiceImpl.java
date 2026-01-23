@@ -493,8 +493,9 @@ public class SKUServiceImpl implements SKUService {
                 }
             }
 
-            // TODO: 从ProductionOrder查询订单数量
-            int orderQuantity = 0; // 需要补充
+            // 注意：当前未查询订单数量，成本计算可能不准
+            // 需要的话可从 ProductionOrder 查询 orderQuantity
+            int orderQuantity = 0; // 默认为0
 
             double totalCost = totalUnitPrice * orderQuantity;
 

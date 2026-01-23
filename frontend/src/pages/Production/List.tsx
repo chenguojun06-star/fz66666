@@ -221,7 +221,7 @@ const ProductionList: React.FC = () => {
       if (oldData !== null) {
         // 不是首次加载，说明数据有变化
         setProductionList(newData);
-        console.log('[实时同步] 生产订单数据已更新', {
+        // // console.log('[实时同步] 生产订单数据已更新', {
           oldCount: oldData.length,
           newCount: newData.length
         });

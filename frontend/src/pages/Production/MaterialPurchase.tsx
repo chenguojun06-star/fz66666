@@ -383,7 +383,7 @@ const MaterialPurchase: React.FC = () => {
       if (oldData !== null && newData) {
         setPurchaseList(newData.records);
         setTotal(newData.total);
-        console.log('[实时同步] 物料采购数据已更新', {
+        // // console.log('[实时同步] 物料采购数据已更新', {
           oldCount: oldData.records.length,
           newCount: newData.records.length,
           oldTotal: oldData.total,

@@ -1,3 +1,4 @@
+const { DEBUG } = require('../config/debug');
 /**
  * 小程序统一错误处理器
  * 将后端错误转换为用户友好的提示
