@@ -16,7 +16,7 @@
 
 import api from '../../utils/api';
 import { getBaseUrl, DEBUG_MODE } from '../../config';
-import { getToken, getStorageValue, setStorageValue } from '../../utils/storage';
+import { getToken, getStorageValue, setStorageValue, getUserInfo } from '../../utils/storage';
 import { errorHandler } from '../../utils/errorHandler';
 import * as reminderManager from '../../utils/reminderManager';
 
@@ -228,7 +228,7 @@ Page({
      */
     async checkLoginStatus() {
         const token = getToken();
-        const user = getStorageValue('currentUser');
+        const user = getUserInfo();
         const factory = getStorageValue('currentFactory');
 
         if (!token || !user) {

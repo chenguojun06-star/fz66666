@@ -64,6 +64,125 @@ public class ProductionCleanupOrchestrator {
     @Autowired
     private MaterialReconciliationService materialReconciliationService;
 
+    /**
+     * 清理无效的孤儿数据（如：关联订单已删除的采购单）
+     * 建议在系统启动时或定时执行
+     */
+    @Transactional
+    public void cleanupOrphanData() {
+        log.info("Starting orphan data cleanup...");
+
+        // 1. 清理孤儿采购单
+        List<MaterialPurchase> purchases = materialPurchaseService.list(new LambdaQueryWrapper<MaterialPurchase>()
+                .eq(MaterialPurchase::getDeleteFlag, 0)
+                .select(MaterialPurchase::getId, MaterialPurchase::getOrderId, MaterialPurchase::getPurchaseNo));
+
+        if (purchases != null && !purchases.isEmpty()) {
+            List<String> orphanIds = new ArrayList<>();
+            for (MaterialPurchase p : purchases) {
+                if (p == null || !StringUtils.hasText(p.getOrderId())) {
+                    continue;
+                }
+                String orderId = p.getOrderId().trim();
+                ProductionOrder order = productionOrderService.getById(orderId);
+                // 如果订单不存在，或者已删除
+                if (order == null || (order.getDeleteFlag() != null && order.getDeleteFlag() != 0)) {
+                    orphanIds.add(p.getId());
+                    log.info("Found orphan purchase order: {} (orderId: {})", p.getPurchaseNo(), orderId);
+                }
+            }
+
+            if (!orphanIds.isEmpty()) {
+                MaterialPurchase patch = new MaterialPurchase();
+                patch.setDeleteFlag(1);
+                patch.setUpdateTime(LocalDateTime.now());
+                patch.setRemark("System cleanup orphan");
+                materialPurchaseService.update(patch, new LambdaQueryWrapper<MaterialPurchase>()
+                        .in(MaterialPurchase::getId, orphanIds));
+                log.info("Cleaned up {} orphan purchase orders.", orphanIds.size());
+            }
+        }
+
+        // 2. 清理重复的采购单（同一订单、同一物料的重复记录）
+        cleanupDuplicatePurchases();
+
+        log.info("Orphan data cleanup completed.");
+    }
+
+    private void cleanupDuplicatePurchases() {
+        List<MaterialPurchase> allPurchases = materialPurchaseService.list(new LambdaQueryWrapper<MaterialPurchase>()
+                .eq(MaterialPurchase::getDeleteFlag, 0));
+
+        if (allPurchases == null || allPurchases.isEmpty()) {
+            return;
+        }
+
+        // 1. Deduplicate identical items (same material signature)
+        deduplicateItems(allPurchases);
+    }
+
+    private void deduplicateItems(List<MaterialPurchase> allPurchases) {
+        // 分组：OrderId -> (MaterialSignature -> List<Purchase>)
+        Map<String, Map<String, List<MaterialPurchase>>> byOrderAndMaterial = new HashMap<>();
+
+        for (MaterialPurchase p : allPurchases) {
+            if (p == null || !StringUtils.hasText(p.getOrderId())) {
+                continue;
+            }
+            String orderId = p.getOrderId().trim();
+            String signature = getMaterialSignature(p);
+
+            byOrderAndMaterial
+                    .computeIfAbsent(orderId, k -> new HashMap<>())
+                    .computeIfAbsent(signature, k -> new ArrayList<>())
+                    .add(p);
+        }
+
+        List<String> duplicateIds = new ArrayList<>();
+
+        for (Map<String, List<MaterialPurchase>> materials : byOrderAndMaterial.values()) {
+            for (List<MaterialPurchase> group : materials.values()) {
+                if (group.size() > 1) {
+                    // 按创建时间倒序排序（保留最新的）
+                    group.sort((a, b) -> {
+                        LocalDateTime t1 = a.getCreateTime() != null ? a.getCreateTime() : LocalDateTime.MIN;
+                        LocalDateTime t2 = b.getCreateTime() != null ? b.getCreateTime() : LocalDateTime.MIN;
+                        return t2.compareTo(t1);
+                    });
+
+                    // 标记除了第一个之外的所有记录为删除
+                    for (int i = 1; i < group.size(); i++) {
+                        duplicateIds.add(group.get(i).getId());
+                    }
+                }
+            }
+        }
+
+        if (!duplicateIds.isEmpty()) {
+            MaterialPurchase patch = new MaterialPurchase();
+            patch.setDeleteFlag(1);
+            patch.setUpdateTime(LocalDateTime.now());
+            patch.setRemark("System cleanup duplicate");
+            materialPurchaseService.update(patch, new LambdaQueryWrapper<MaterialPurchase>()
+                    .in(MaterialPurchase::getId, duplicateIds));
+            log.info("Cleaned up {} duplicate purchase orders.", duplicateIds.size());
+        }
+    }
+
+    private String getMaterialSignature(MaterialPurchase p) {
+        return String.join("|",
+                safe(p.getMaterialType()),
+                safe(p.getMaterialCode()),
+                safe(p.getMaterialName()),
+                safe(p.getSpecifications()),
+                safe(p.getUnit()),
+                safe(p.getSupplierName()));
+    }
+
+    private String safe(String v) {
+        return v == null ? "" : v.trim();
+    }
+
     @Transactional
     public Map<String, Object> cleanupSince(LocalDateTime cutoff) {
         if (cutoff == null) {

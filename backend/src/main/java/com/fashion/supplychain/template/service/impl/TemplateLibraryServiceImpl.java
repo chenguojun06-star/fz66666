@@ -511,6 +511,19 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
         weights.put(STAGE_PROCUREMENT, new BigDecimal("15"));
 
         List<String> nodes = resolveProgressNodes(styleNo);
+        
+        // 确保裁剪环节存在（如果模板中未定义，则默认插入到采购之后）
+        boolean hasCutting = false;
+        for (String n : nodes) {
+            if (isProgressCuttingStageName(n)) {
+                hasCutting = true;
+                break;
+            }
+        }
+        if (!hasCutting) {
+            processOrder.add("裁剪");
+        }
+
         for (String n : nodes) {
             String name = StringUtils.hasText(n) ? n.trim() : null;
             if (!StringUtils.hasText(name)) {

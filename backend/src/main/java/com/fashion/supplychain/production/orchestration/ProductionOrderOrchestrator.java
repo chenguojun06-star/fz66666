@@ -954,6 +954,14 @@ public class ProductionOrderOrchestrator {
         if (!ok) {
             throw new IllegalStateException("删除失败");
         }
+        
+        try {
+            // 级联删除关联的采购任务
+            materialPurchaseService.deleteByOrderId(oid);
+        } catch (Exception e) {
+            log.warn("Failed to cascade delete material purchases: orderId={}", oid, e);
+        }
+        
         return true;
     }
 

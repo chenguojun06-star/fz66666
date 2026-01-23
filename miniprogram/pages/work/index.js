@@ -105,6 +105,12 @@ function resolveNodesFromOrder(order) {
 
 Page({
   data: {
+    globalSearch: {
+      keyword: '',
+      hasSearched: false,
+      loading: false,
+      results: [],
+    },
     activeTab: 'all',
     filters: {
       orderNo: '',

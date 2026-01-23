@@ -4,6 +4,11 @@
 
 三端协同的服装供应链管理系统：**Java Spring Boot 后端** + **React TypeScript PC端** + **微信小程序手机端**，管理从订单到生产、质检、对账的完整流程。系统评分 96/100。
 
+**核心技术栈**：
+- 后端：Spring Boot 2.7.18 + MyBatis Plus 3.5.7 + MySQL 9.0 + Java 21
+- PC端：React 18 + Ant Design 6.1.3 + Vite 7 + TypeScript 5.3.3 + Zustand
+- 小程序：微信原生框架 + JSDoc 类型注释
+
 ## 🏗️ 架构关键设计
 
 ### 后端：Orchestrator 模式（核心）
@@ -37,7 +42,7 @@
 
 ### 启动开发环境
 ```bash
-# 1. 启动 MySQL（Docker）
+# 1. 启动 MySQL（Docker，注意端口3308非标准端口）
 docker start fashion-mysql-simple
 
 # 2. 后端（推荐用 dev-public.sh，自动加载 .run/backend.env）
@@ -51,10 +56,16 @@ cd frontend && npm run dev  # http://localhost:5173
 # 使用微信开发者工具打开 miniprogram/ 目录
 ```
 
+**环境变量配置**：
+- 后端环境变量在 `.run/backend.env`（需自行创建，不入版本库）
+- 数据库连接默认 `localhost:3308`（非标准端口，Docker映射配置）
+- JWT密钥、微信配置等敏感信息通过环境变量注入
+
 ### 数据库管理
 - **配置**：`deployment/DATABASE_CONFIG.md`
 - **管理脚本**：`deployment/db-manager.sh`（备份/恢复/迁移）
 - **SQL 脚本**：`scripts/` 目录下的 `.sql` 文件
+- **连接串**：`jdbc:mysql://127.0.0.1:3308/fashion_supplychain?useUnicode=true&characterEncoding=utf-8`
 
 ### 快速测试
 参考 `QUICK_TEST_GUIDE.md`，重点测试：
@@ -75,6 +86,7 @@ cd frontend && npm run dev  # http://localhost:5173
 - **权限控制**：`@PreAuthorize("hasAuthority('CODE')")` 配合 `permissionCodes` 常量
 - **认证**：JWT Token，通过 `AuthTokenService` 和 `TokenAuthFilter` 实现
 - **API 文档**：SpringDoc OpenAPI，访问 `/swagger-ui.html`
+- **⚠️ UTF-8编码**：application.yml 必须配置 `server.servlet.encoding.force=true` 和 `spring.jackson.generator.escape-non-ascii=false`，否则中文乱码
 
 ### React 前端
 - **组件规范**：功能组件 + TypeScript + Hooks
@@ -83,6 +95,7 @@ cd frontend && npm run dev  # http://localhost:5173
 - **弹窗尺寸**：统一 80vw × 85vh，使用 `ResizableModal`
 - **API 调用**：`services/api.ts` 统一封装，自动处理错误和 token
 - **路由配置**：`routeConfig.ts` 定义路径和权限码
+- **性能优化**：使用 `requestAnimationFrame` 优化 INP 到 <200ms，构建限制 chunk 大小（800KB main, 300KB vendor）
 
 ### 微信小程序
 - **目录结构**：`pages/` 页面，`utils/` 工具，`components/` 组件

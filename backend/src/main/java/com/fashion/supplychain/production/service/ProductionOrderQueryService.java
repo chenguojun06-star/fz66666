@@ -722,6 +722,30 @@ public class ProductionOrderQueryService {
                 continue;
             }
 
+            // 检查是否还在采购阶段
+            boolean inProcurement = false;
+            if (byProc.containsKey("采购") || byProc.containsKey("物料采购")) {
+                long procurementDone = sumDoneByStageName(byProc, "采购") + sumDoneByStageName(byProc, "物料采购");
+                // 如果采购未完成（数量小于订单数量），说明还在采购阶段
+                if (orderQty > 0 && procurementDone < orderQty) {
+                    inProcurement = true;
+                } else if (orderQty <= 0 && procurementDone <= 0) {
+                    inProcurement = true;
+                }
+            } else if (!realStarted && !stageStarted) {
+                // 如果没有任何扫码记录，也认为在采购阶段
+                inProcurement = true;
+            }
+
+            if (inProcurement) {
+                order.setCurrentProcessName("采购");
+                String st = order.getStatus() == null ? "" : order.getStatus().trim();
+                if (!"completed".equals(st)) {
+                    order.setStatus("production");
+                }
+                continue;
+            }
+
             int currentIdx = -1;
             for (int i = 0; i < productionProcesses.size(); i++) {
                 String pn = productionProcesses.get(i);
@@ -1233,6 +1257,11 @@ public class ProductionOrderQueryService {
                             if (p == null) {
                                 continue;
                             }
+                            String status = p.getStatus() == null ? "" : p.getStatus().trim();
+                            if ("pending".equalsIgnoreCase(status) || "cancelled".equalsIgnoreCase(status)) {
+                                continue;
+                            }
+
                             LocalDateTime s = p.getCreateTime();
                             if (s != null && (procurementStart == null || s.isBefore(procurementStart))) {
                                 procurementStart = s;
