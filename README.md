@@ -46,23 +46,48 @@
 
 ### 启动步骤
 
+**⚠️ 重要：开发环境必须使用启动脚本，否则会因缺少环境变量导致API 403错误**
+
 ```bash
-# 1. 启动数据库
-docker start fashion-mysql-simple
+# 推荐方式：使用一键启动脚本（会自动加载环境变量）
+./dev-public.sh
 
-# 2. 启动后端
-cd backend
-mvn clean package -DskipTests
-java -jar target/fashion-supplychain-*.jar
+# 该脚本会自动：
+# 1. 启动 MySQL Docker 容器
+# 2. 加载 .run/backend.env 环境变量
+# 3. 启动后端 Spring Boot (端口 8088)
+# 4. 启动前端 Vite dev server (端口 5173)
+# 5. 启动 Cloudflare Tunnel (可选，用于外网访问)
 
-# 3. 启动前端
-cd frontend
-npm run dev
-
-# 4. 访问系统
-# PC端：http://localhost:5173
-# 后端：http://localhost:8088
+# 访问地址：
+# - PC端：http://localhost:5173 或 http://192.168.2.248:5173
+# - 后端：http://localhost:8088 或 http://192.168.2.248:8088
+# - 小程序：使用微信开发者工具打开 miniprogram/ 目录
 ```
+
+**首次启动前准备：**
+```bash
+# 1. 创建环境变量文件（如果不存在）
+mkdir -p .run
+cat > .run/backend.env << 'EOF'
+SPRING_DATASOURCE_URL=jdbc:mysql://127.0.0.1:3308/fashion_supplychain?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
+SPRING_DATASOURCE_USERNAME=root
+SPRING_DATASOURCE_PASSWORD=changeme
+APP_AUTH_JWT_SECRET=ThisIsA_LocalJwtSecret_OnlyForDev_0123456789
+WECHAT_MINI_PROGRAM_MOCK_ENABLED=true
+EOF
+
+# 2. 确保 MySQL 容器存在并运行
+docker start fashion-mysql-simple || docker run -d \
+  --name fashion-mysql-simple \
+  -p 3308:3306 \
+  -e MYSQL_ROOT_PASSWORD=changeme \
+  -e MYSQL_DATABASE=fashion_supplychain \
+  mysql:8.0
+```
+
+**详细配置说明：**
+- 查看 [ENV_CONFIG_GUIDE.md](ENV_CONFIG_GUIDE.md) - 环境变量完整配置指南
 
 ### 一键同步代码
 ```bash
@@ -71,7 +96,15 @@ npm run dev
 
 ---
 
-## ✨ 最新更新（2026-01-23）
+## ✨ 最新更新（2026-01-24）
+
+- ✅ **修复Dashboard API 403错误**（环境变量配置问题）
+- ✅ 添加环境变量配置完整指南（ENV_CONFIG_GUIDE.md）
+- ✅ 更新README启动流程（强调必须使用dev-public.sh）
+- ✅ 修复SKU系统数据库字段缺失问题
+- ✅ 规范开发环境启动方式
+
+### 历史更新（2026-01-23）
 
 - ✅ PC端裁剪单弹窗添加订单扫码二维码
 - ✅ 全站弹窗尺寸规范统一（80vw × 85vh）
