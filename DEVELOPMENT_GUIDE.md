@@ -17,12 +17,12 @@
 - [快速开始](#六快速开始) - 新手入门指南
 
 ### 业务流程文档
+- [SKU_QUICK_REFERENCE.md](SKU_QUICK_REFERENCE.md) - **SKU系统快速参考**（款号+颜色+尺码统一）
 - [WORKFLOW_EXPLANATION.md](WORKFLOW_EXPLANATION.md) - 完整业务流程
-- [SCAN_SYSTEM_LOGIC.md](SCAN_SYSTEM_LOGIC.md) - 扫码系统核心逻辑
+- [SCAN_SYSTEM_LOGIC.md](SCAN_SYSTEM_LOGIC.md) - 扫码系统核心逻辑（三种模式）
 - [QUICK_TEST_GUIDE.md](QUICK_TEST_GUIDE.md) - 快速测试指南
 
 ### 技术实现文档
-- [CODE_CLEANUP_REPORT.md](CODE_CLEANUP_REPORT.md) - 代码清理报告
 - [MULTI_PAGE_SYNC_GUIDE.md](MULTI_PAGE_SYNC_GUIDE.md) - 多页面同步机制
 - [DATA_SYNC_ANALYSIS.md](DATA_SYNC_ANALYSIS.md) - 数据同步分析
 
@@ -455,6 +455,160 @@ Page({
 **关键区别**：
 - 后端：编排3个Service，处理事务
 - 小程序：调用1个API，触发事件，**所有复杂逻辑在后端完成**
+
+---
+
+## 二点五、SKU系统 - 三端统一设计
+
+### 2.5.1 SKU核心概念
+
+**SKU = 最小库存单位 = 款号 + 颜色 + 尺码**
+
+```javascript
+// 标准SKU对象
+{
+  styleNo: 'ST001',         // 款号（与订单号可能不同）
+  color: '黑色',            // 颜色（必须规范化）
+  size: 'L',                // 尺码（S/M/L/XL/XXL等）
+  orderNo: 'PO20260122001', // 所属订单
+  
+  // 数量字段
+  totalQuantity: 50,        // 订单总数
+  completedQuantity: 30,    // 已完成数
+  pendingQuantity: 20,      // 待完成数（= total - completed）
+  
+  // 可选字段
+  bundleNo: 'PO-黑色-01'   // 关联菲号（裁剪后产生）
+}
+```
+
+### 2.5.2 三种扫码模式
+
+#### 模式1：订单扫码（ORDER）
+```
+扫码内容: PO20260122001
+识别规则: 纯订单号格式
+后端返回: 订单详情 + SKU列表
+小程序显示: SKU明细选择表单
+适用场景: 首次进入工序，确认各SKU数量
+```
+
+#### 模式2：菲号扫码（BUNDLE）
+```
+扫码内容: PO20260122001-黑色-01
+识别规则: 订单号-颜色-序号
+后端返回: 菲号信息（一个颜色，可能多个尺码）
+小程序显示: 直接确认（无需选择）
+适用场景: 裁剪后，快速批量提交
+```
+
+#### 模式3：SKU扫码（SKU）
+```
+扫码内容: {orderNo: 'PO...', color: '黑色', size: 'L', qty: 50}
+识别规则: JSON格式或CSV格式
+后端返回: SKU验证结果
+小程序显示: 单个SKU确认
+适用场景: 特定SKU精确扫描（如质检入库）
+```
+
+### 2.5.3 SKUProcessor 统一处理
+
+**位置**：`miniprogram/utils/SKUProcessor.js` (450行)
+
+```javascript
+// 核心方法
+class SKUProcessor {
+  // 规范化后端返回的items为标准SKU列表
+  static normalizeOrderItems(items, orderNo, styleNo) { ... }
+  
+  // 构建SKU输入表单项
+  static buildSKUInputList(skuList) { ... }
+  
+  // 验证SKU数量批次
+  static validateSKUInputBatch(skuList) { ... }
+  
+  // 生成扫码请求
+  static generateScanRequests(skuList, processNode, operatorId) { ... }
+  
+  // 获取SKU进度汇总
+  static getSummary(skuList) { ... }
+  
+  // 解析菲号
+  static parseBundleNo(bundleNo) { ... }
+}
+```
+
+### 2.5.4 数据流向
+
+```
+┌─────────────────────────────────────────────────┐
+│ 扫码 (订单号/菲号/SKU)                           │
+└──────────────┬──────────────────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────────────────┐
+│ QRCodeParser.parse() - 识别类型                 │
+│ • ORDER: 纯订单号                                │
+│ • BUNDLE: 订单号-颜色-序号                       │
+│ • SKU: JSON/CSV格式                             │
+└──────────────┬──────────────────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────────────────┐
+│ 调用后端API获取详情                              │
+│ • /api/production/order/detail (ORDER)          │
+│ • /api/production/bundle/detail (BUNDLE)        │
+│ • /api/production/sku/validate (SKU)            │
+└──────────────┬──────────────────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────────────────┐
+│ SKUProcessor.normalizeOrderItems()              │
+│ 将后端返回转为标准SKU列表                        │
+└──────────────┬──────────────────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────────────────┐
+│ 小程序显示SKU表单（如需）                        │
+│ • 订单模式：显示多SKU选择表                      │
+│ • 菲号模式：显示确认按钮                         │
+│ • SKU模式：显示单SKU确认                        │
+└──────────────┬──────────────────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────────────────┐
+│ SKUProcessor.generateScanRequests()             │
+│ 生成标准扫码请求                                 │
+└──────────────┬──────────────────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────────────────┐
+│ 提交到后端 /api/production/scan/execute         │
+│ 后端 Orchestrator 处理业务逻辑                  │
+└─────────────────────────────────────────────────┘
+```
+
+### 2.5.5 关键约定
+
+1. **颜色和尺码必须规范化**
+   - 使用统一的中文命名
+   - 后端和前端保持一致
+
+2. **数量字段规则**
+   - `totalQuantity`: 订单要求总数（不变）
+   - `completedQuantity`: 已完成数（递增）
+   - `pendingQuantity`: 待完成数（= total - completed）
+
+3. **SKU唯一性**
+   - 同订单内 (styleNo + color + size) 唯一
+   - 用于追踪进度和防止重复
+
+4. **菲号关联**
+   - 菲号在裁剪阶段生成
+   - 一个菲号对应一个颜色，可能多个尺码
+   - 格式：`订单号-颜色-序号`（如：PO20260122001-黑色-01）
+
+**详细参考**：[SKU_QUICK_REFERENCE.md](SKU_QUICK_REFERENCE.md)
 
 ---
 
