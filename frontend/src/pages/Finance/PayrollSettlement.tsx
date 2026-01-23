@@ -73,7 +73,7 @@ const PayrollSettlementPage: React.FC = () => {
   const fetchSettlementData = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/api/payroll/settlement-data/pending', {
+      const res = await api.get('/payroll/settlement-data/pending', {
         params: { page, pageSize }
       });
       setDataSource(res.data?.records || []);
@@ -89,7 +89,7 @@ const PayrollSettlementPage: React.FC = () => {
   const fetchPayrollSettlements = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/api/payroll/settlement', {
+      const res = await api.get('/payroll/settlement', {
         params: { page, pageSize }
       });
       setSettlementSource(res.data?.records || []);
@@ -125,8 +125,8 @@ const PayrollSettlementPage: React.FC = () => {
     try {
       const isApproved = values.action === 'approve';
       const endpoint = tab === 'data' 
-        ? `/api/payroll/settlement-data/${approvalRecord.id}/approve`
-        : `/api/payroll/settlement/${approvalRecord.id}/approve`;
+        ? `/payroll/settlement-data/${approvalRecord.id}/approve`
+        : `/payroll/settlement/${approvalRecord.id}/approve`;
 
       await api.post(endpoint, {
         approved: isApproved,
@@ -158,7 +158,7 @@ const PayrollSettlementPage: React.FC = () => {
       cancelText: '取消',
       onOk: async () => {
         try {
-          await api.post('/api/payroll/payment/execute', {
+          await api.post('/payroll/payment/execute', {
             settlementId: settlement.id,
             paymentMethod: 'transfer'
           });
