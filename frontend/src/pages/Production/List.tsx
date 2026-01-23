@@ -50,7 +50,7 @@ const ProductionList: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const modalInitialHeight = 720;
+  const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
   const orderDetailLines = currentOrder ? parseProductionOrderLines(currentOrder, { includeWarehousedQuantity: true }) : [];
   const detailColors = (() => {

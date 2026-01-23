@@ -36,4 +36,13 @@ public interface DashboardQueryService {
     List<ScanRecord> listRecentScans(int limit);
 
     List<MaterialPurchase> listRecentPurchases(int limit);
+
+    // 新增方法
+    long sumTotalOrderQuantity();
+
+    long countOverdueOrders();
+
+    long countTotalWarehousing();
+
+    List<ProductionOrder> listOverdueOrders(int limit);
 }

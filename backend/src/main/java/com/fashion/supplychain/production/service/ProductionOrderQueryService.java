@@ -86,7 +86,8 @@ public class ProductionOrderQueryService {
         String styleNo = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "styleNo"));
         String factoryName = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "factoryName"));
         String status = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "status"));
-        String currentProcessName = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "currentProcessName"));
+        String currentProcessName = ParamUtils
+                .toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "currentProcessName"));
 
         IPage<ProductionOrder> resultPage = productionOrderMapper.selectPage(pageInfo,
                 new LambdaQueryWrapper<ProductionOrder>()
@@ -128,18 +129,38 @@ public class ProductionOrderQueryService {
                 .eq(ProductionOrder::getDeleteFlag, 0));
 
         if (productionOrder != null) {
-            fillStyleCover(List.of(productionOrder));
-            fillCuttingSummary(List.of(productionOrder));
-            fillCurrentProcessName(List.of(productionOrder));
-            fillStockSummary(List.of(productionOrder));
-            fillFlowStageFields(List.of(productionOrder));
-            fillQualityStats(List.of(productionOrder)); // 新增：填充质量统计字段
-            fixProductionProgressByCompletedQuantity(List.of(productionOrder));
-            fillFactoryUnitPrice(List.of(productionOrder));
-            fillQuotationUnitPrice(List.of(productionOrder));
+            fillDetails(List.of(productionOrder));
         }
 
         return productionOrder;
+    }
+
+    public ProductionOrder getDetailByOrderNo(String orderNo) {
+        ProductionOrder productionOrder = productionOrderMapper.selectOne(new LambdaQueryWrapper<ProductionOrder>()
+                .eq(ProductionOrder::getOrderNo, orderNo)
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .last("limit 1"));
+
+        if (productionOrder != null) {
+            fillDetails(List.of(productionOrder));
+        }
+
+        return productionOrder;
+    }
+
+    private void fillDetails(List<ProductionOrder> productionOrders) {
+        if (productionOrders == null || productionOrders.isEmpty()) {
+            return;
+        }
+        fillStyleCover(productionOrders);
+        fillCuttingSummary(productionOrders);
+        fillCurrentProcessName(productionOrders);
+        fillStockSummary(productionOrders);
+        fillFlowStageFields(productionOrders);
+        fillQualityStats(productionOrders);
+        fixProductionProgressByCompletedQuantity(productionOrders);
+        fillFactoryUnitPrice(productionOrders);
+        fillQuotationUnitPrice(productionOrders);
     }
 
     private void fillFactoryUnitPrice(List<ProductionOrder> records) {

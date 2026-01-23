@@ -19,6 +19,7 @@ import { getToken, getStorageValue, setStorageValue } from '../../utils/storage'
 import { errorHandler } from '../../utils/errorHandler';
 import * as reminderManager from '../../utils/reminderManager';
 
+// 导入重构后的 ScanHandler（使用 CommonJS require）
 const ScanHandler = require('../scan/handlers/ScanHandler');
 
 // ==================== 全局变量 ====================
@@ -130,14 +131,27 @@ Page({
             duration: 2000,
         });
         
-        // 初始化 ScanHandler
-        this.scanHandler = new ScanHandler(api, {
-            getCurrentFactory: () => this.data.currentFactory,
-            getCurrentWorker: () => this.data.currentUser,
-            onSuccess: (result) => this.handleScanSuccess(result),
-            onError: (message) => this.handleScanError(message),
-        });
+        // ===== 重要：先初始化 ScanHandler =====
+        try {
+            console.log('[ScanTest] 开始初始化 ScanHandler');
+            this.scanHandler = new ScanHandler(api, {
+                getCurrentFactory: () => this.data.currentFactory,
+                getCurrentWorker: () => this.data.currentUser,
+                onSuccess: (result) => this.handleScanSuccess(result),
+                onError: (message) => this.handleScanError(message),
+            });
+            console.log('[ScanTest] ScanHandler 初始化成功', this.scanHandler);
+        } catch (error) {
+            console.error('[ScanTest] ScanHandler 初始化失败:', error);
+            wx.showModal({
+                title: '初始化失败',
+                content: 'ScanHandler 初始化失败: ' + error.message,
+                showCancel: false
+            });
+            return;
+        }
         
+        // 加载其他数据
         await this.loadFactoryInfo();
         await this.loadUserInfo();
         await this.loadMyPanel();
@@ -207,6 +221,17 @@ Page({
 
     async processScan(rawScanCode) {
         console.log('[ScanTest] 开始处理扫码:', rawScanCode);
+
+        // 检查 ScanHandler 是否已初始化
+        if (!this.scanHandler) {
+            console.error('[ScanTest] ScanHandler 未初始化');
+            wx.showToast({ 
+                title: '系统初始化中，请稍后', 
+                icon: 'none',
+                duration: 2000
+            });
+            return;
+        }
 
         const dedupKey = `scan:${rawScanCode}`;
         if (isRecentDuplicate(dedupKey)) {

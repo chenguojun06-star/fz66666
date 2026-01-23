@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Alert, App, Button, Card, Checkbox, Form, Input, Modal, Select, Space, Tag } from 'antd';
+import { Alert, App, Button, Card, Checkbox, Form, Input, Select, Space, Tag } from 'antd';
 import { DeleteOutlined, EditOutlined, SafetyOutlined, FileSearchOutlined } from '@ant-design/icons';
 import Layout from '../../components/Layout';
 import ResizableModal from '../../components/common/ResizableModal';
@@ -37,7 +37,7 @@ const RoleList: React.FC = () => {
   const [logRecords, setLogRecords] = useState<any[]>([]);
   const [logTitle, setLogTitle] = useState('操作日志');
 
-  const modalInitialHeight = 720;
+  const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
   const collectSubtreeIds = (node: any, into: Set<number>) => {
     if (!node) return;
@@ -773,7 +773,7 @@ const RoleList: React.FC = () => {
         }}
         footer={null}
         width={modalWidth}
-        initialHeight={520}
+        initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
         minWidth={isMobile ? 320 : 520}
         scaleWithViewport
       >

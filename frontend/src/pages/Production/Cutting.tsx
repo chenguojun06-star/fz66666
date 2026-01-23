@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Card, Form, Input, InputNumber, Modal, Select, Space, Tag, Typography, message } from 'antd';
+import { App, Button, Card, Form, Input, InputNumber, Select, Space, Tag, Typography } from 'antd';
 import { EyeOutlined, LoginOutlined, PlusOutlined, RollbackOutlined } from '@ant-design/icons';
 import Layout from '../../components/Layout';
 import { useSync } from '../../utils/syncManager';
@@ -53,6 +53,7 @@ type CuttingPrintOrientation = 'portrait' | 'landscape';
 type CuttingPrintMode = 'grid' | 'single';
 
 const CuttingManagement: React.FC = () => {
+  const { message, modal } = App.useApp();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { isMobile, modalWidth } = useViewport();
@@ -865,7 +866,7 @@ const CuttingManagement: React.FC = () => {
     if (!task?.id) return;
     if (!(await ensureOrderUnlockedById((task as any)?.productionOrderId))) return;
     let reason = '';
-    Modal.confirm({
+    modal.confirm({
       title: '确认退回该裁剪任务？',
       content: (
         <div>
@@ -998,7 +999,7 @@ const CuttingManagement: React.FC = () => {
       return;
     }
 
-    Modal.confirm({
+    modal.confirm({
       title: '确认保存并生成二维码？',
       content: '确认后将保存裁剪单并生成二维码，保存成功后才可批量打印。',
       okText: '确认保存',
@@ -1698,7 +1699,7 @@ const CuttingManagement: React.FC = () => {
                   </Button>,
                 ]}
                 autoFontSize={false}
-                initialHeight={720}
+                initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
                 scaleWithViewport
               >
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 12, alignItems: 'center' }}>
@@ -1806,10 +1807,10 @@ const CuttingManagement: React.FC = () => {
             scaleWithViewport
           >
             <ResizableModalFlex style={{ gap: 12 }}>
-              <Card 
-                size="small" 
+              <Card
+                size="small"
                 loading={sheetPreviewLoading}
-                style={{ 
+                style={{
                   background: 'linear-gradient(135deg, #f6f8fb 0%, #ffffff 100%)',
                   border: '1px solid #e8edf5'
                 }}
@@ -1817,9 +1818,9 @@ const CuttingManagement: React.FC = () => {
                 <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
                   {/* 订单扫码二维码 - 左侧 */}
                   {sheetPreviewTask?.productionOrderNo && (
-                    <div style={{ 
-                      display: 'flex', 
-                      flexDirection: 'column', 
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
                       alignItems: 'center',
                       padding: '8px',
                       background: '#e6f7ff',
@@ -1828,18 +1829,18 @@ const CuttingManagement: React.FC = () => {
                       boxShadow: '0 4px 12px rgba(24, 144, 255, 0.15)',
                       flexShrink: 0
                     }}>
-                      <QRCodeCanvas 
+                      <QRCodeCanvas
                         value={JSON.stringify({
                           type: 'order',
                           orderNo: sheetPreviewTask.productionOrderNo
                         })}
-                        size={120} 
+                        size={120}
                         level="M"
                         includeMargin={false}
                       />
-                      <div style={{ 
-                        marginTop: '8px', 
-                        fontSize: '12px', 
+                      <div style={{
+                        marginTop: '8px',
+                        fontSize: '12px',
                         color: '#1890ff',
                         fontWeight: 600
                       }}>
@@ -1847,7 +1848,7 @@ const CuttingManagement: React.FC = () => {
                       </div>
                     </div>
                   )}
-                  
+
                   {/* 订单信息 - 中间 */}
                   <div style={{ flex: 1, minWidth: 300 }}>
                     <Space wrap size="small">
@@ -1874,12 +1875,12 @@ const CuttingManagement: React.FC = () => {
                       </Tag>
                     </Space>
                   </div>
-                  
+
                   {/* 裁剪单二维码 - 右侧 */}
                   {sheetPreviewTask?.qrCode && (
-                    <div style={{ 
-                      display: 'flex', 
-                      flexDirection: 'column', 
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
                       alignItems: 'center',
                       padding: '12px',
                       background: '#ffffff',
@@ -1894,23 +1895,23 @@ const CuttingManagement: React.FC = () => {
                         borderRadius: '6px',
                         border: '2px solid #e8edf5'
                       }}>
-                        <QRCodeCanvas 
-                          value={sheetPreviewTask.qrCode} 
-                          size={100} 
+                        <QRCodeCanvas
+                          value={sheetPreviewTask.qrCode}
+                          size={100}
                           level="M"
                           includeMargin={false}
                         />
                       </div>
-                      <div style={{ 
-                        marginTop: '8px', 
-                        fontSize: '12px', 
+                      <div style={{
+                        marginTop: '8px',
+                        fontSize: '12px',
                         color: '#666',
                         fontWeight: 500
                       }}>
                         裁剪单二维码
                       </div>
-                      <div style={{ 
-                        fontSize: '11px', 
+                      <div style={{
+                        fontSize: '11px',
                         color: '#999',
                         maxWidth: '120px',
                         textAlign: 'center',
@@ -2012,14 +2013,14 @@ const CuttingManagement: React.FC = () => {
           <ResizableModal
             open={createTaskOpen}
             title="新建裁剪任务"
-            width={645}
+            width={modalWidth}
             centered
             onCancel={() => setCreateTaskOpen(false)}
             okText="创建"
             confirmLoading={createTaskSubmitting}
             onOk={handleSubmitCreateTask}
             autoFontSize={false}
-            initialHeight={720}
+            initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
           >
             <Card size="small" style={{ marginBottom: 12 }}>
               <Space wrap>

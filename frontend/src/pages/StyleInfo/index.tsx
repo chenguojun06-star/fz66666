@@ -1042,7 +1042,7 @@ const StyleInfoPage: React.FC = () => {
         onCancel={closeModal}
         footer={null}
         width={modalWidth}
-        initialHeight={720}
+        initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
         tableDensity="auto"
         contentShiftX={12}
         scaleWithViewport
@@ -1231,8 +1231,8 @@ const StyleInfoPage: React.FC = () => {
         okText="确定"
         cancelText="取消"
         confirmLoading={maintenanceSaving}
-        width={640}
-        initialHeight={720}
+        width={modalWidth}
+        initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
         minHeight={280}
         autoFontSize={false}
         scaleWithViewport

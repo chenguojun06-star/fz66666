@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
+import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
@@ -36,6 +37,9 @@ public class ProductionOrderProgressRecomputeService {
 
     @Autowired
     private ProductionOrderScanRecordDomainService scanRecordDomainService;
+    
+    @Autowired
+    private CuttingBundleService cuttingBundleService;
 
     private boolean isBaseStageName(String processName) {
         String pn = StringUtils.hasText(processName) ? processName.trim() : null;
@@ -68,6 +72,23 @@ public class ProductionOrderProgressRecomputeService {
         int orderQty = order.getOrderQuantity() == null ? 0 : order.getOrderQuantity();
         if (orderQty <= 0) {
             return null;
+        }
+        
+        // 获取实际裁剪数量（从裁剪菲号汇总）
+        int actualCuttingQty = 0;
+        try {
+            List<CuttingBundle> bundles = cuttingBundleService.list(
+                new LambdaQueryWrapper<CuttingBundle>()
+                    .eq(CuttingBundle::getProductionOrderId, oid));
+            if (bundles != null && !bundles.isEmpty()) {
+                for (CuttingBundle bundle : bundles) {
+                    actualCuttingQty += bundle.getQuantity() == null ? 0 : bundle.getQuantity();
+                }
+                log.info("订单实际裁剪数量: orderId={}, actualCuttingQty={}, orderQty={}", 
+                    oid, actualCuttingQty, orderQty);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to get actual cutting quantity: orderId={}", oid, e);
         }
 
         List<ScanRecord> records = scanRecordMapper.selectList(new LambdaQueryWrapper<ScanRecord>()
@@ -318,12 +339,26 @@ public class ProductionOrderProgressRecomputeService {
                 if (done < 0) {
                     done = 0;
                 }
-                if (done > orderQty) {
-                    done = orderQty;
+                
+                // 如果是裁剪阶段，使用实际裁剪数量而不是订单数量
+                int baseQty = orderQty;
+                if (actualCuttingQty > 0 && templateLibraryService.progressStageNameMatches("裁剪", pn)) {
+                    baseQty = actualCuttingQty;
+                    log.debug("裁剪阶段使用实际裁剪数量: stage={}, actualQty={}, orderQty={}", 
+                        pn, actualCuttingQty, orderQty);
+                    // 不限制done值，允许超过订单数量
+                    if (done > actualCuttingQty) {
+                        done = actualCuttingQty;
+                    }
+                } else {
+                    if (done > orderQty) {
+                        done = orderQty;
+                    }
                 }
+                
                 BigDecimal ratio = BigDecimal.ZERO;
-                if (orderQty > 0 && done > 0) {
-                    ratio = BigDecimal.valueOf(done).divide(BigDecimal.valueOf(orderQty), 6, RoundingMode.HALF_UP);
+                if (baseQty > 0 && done > 0) {
+                    ratio = BigDecimal.valueOf(done).divide(BigDecimal.valueOf(baseQty), 6, RoundingMode.HALF_UP);
                     if (ratio.compareTo(BigDecimal.ONE) > 0) {
                         ratio = BigDecimal.ONE;
                     }

@@ -112,11 +112,12 @@ const GlobalImagePreview: React.FC = () => {
       onCancel={close}
       footer={null}
       width={600}
-      minWidth={320}
-      minHeight={320}
+      minWidth={600}
+      minHeight={600}
       initialHeight={600}
       contentPadding={0}
       destroyOnHidden
+      scaleWithViewport={false}
     >
       {src ? (
         <div
@@ -230,7 +231,7 @@ const AppRoutes: React.FC = () => {
                   </div>
                 }
                 width={modalWidth}
-                initialHeight={720}
+                initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
                 scaleWithViewport
                 destroyOnHidden
               >

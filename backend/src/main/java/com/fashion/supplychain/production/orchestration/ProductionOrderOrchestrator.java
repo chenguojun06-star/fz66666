@@ -1,5 +1,6 @@
 package com.fashion.supplychain.production.orchestration;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.WriterException;
@@ -111,6 +112,23 @@ public class ProductionOrderOrchestrator {
             throw new IllegalArgumentException("参数错误");
         }
         ProductionOrder order = productionOrderQueryService.getDetailById(oid);
+        if (order == null) {
+            throw new NoSuchElementException("生产订单不存在");
+        }
+        return order;
+    }
+
+    public ProductionOrder getDetailByOrderNo(String orderNo) {
+        String on = StringUtils.hasText(orderNo) ? orderNo.trim() : null;
+        if (!StringUtils.hasText(on)) {
+            throw new IllegalArgumentException("订单号不能为空");
+        }
+        ProductionOrder order = productionOrderService.getOne(
+            new LambdaQueryWrapper<ProductionOrder>()
+                .eq(ProductionOrder::getOrderNo, on)
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .last("limit 1")
+        );
         if (order == null) {
             throw new NoSuchElementException("生产订单不存在");
         }

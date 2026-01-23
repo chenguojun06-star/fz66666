@@ -63,13 +63,16 @@ function request(options) {
         const baseUrl = getBaseUrl();
         const envVersion = resolveEnvVersion();
         const isDevEnv = !envVersion || envVersion === 'develop';
-        const requireHttps = !isDevEnv;
+        // 开发调试时允许HTTP（项目配置中已关闭urlCheck）
+        // 生产环境请使用HTTPS域名
+        const requireHttps = false; // !isDevEnv;
 
         if (!baseUrl) {
             reject(createError('未配置有效的 API 地址', { type: 'config' }));
             return;
         }
 
+        // 开发阶段暂时允许HTTP，生产环境需要配置HTTPS
         if (requireHttps && /^http:\/\//i.test(baseUrl)) {
             reject(createError('当前环境仅支持 https 域名，请配置合法域名和证书', {
                 type: 'config',

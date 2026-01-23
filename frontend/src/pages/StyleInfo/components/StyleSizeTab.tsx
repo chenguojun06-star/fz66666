@@ -60,7 +60,7 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
   const [styleNoLoading, setStyleNoLoading] = useState(false);
   const styleNoReqSeq = useRef(0);
   const styleNoTimerRef = useRef<number | undefined>(undefined);
-  const { tableScrollY } = useViewport();
+  const { tableScrollY, modalWidth } = useViewport();
 
   const fetchStyleNoOptions = async (keyword?: string) => {
     const seq = (styleNoReqSeq.current += 1);
@@ -710,8 +710,8 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
         okText="确定"
         cancelText="取消"
         confirmLoading={saving}
-        width={560}
-        initialHeight={720}
+        width={modalWidth}
+        initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
         minHeight={240}
         autoFontSize={false}
         scaleWithViewport

@@ -491,6 +491,38 @@ const MyComponent = () => {
 
 ## 8. 修复日志
 
+### 版本 1.0.2 - 2026-01-23
+
+#### 8.1 警告说明
+
+1. **Ant Design Table 组件警告**：
+   - 警告1：`expandedRowRender` should not use with nested Table
+   - 警告2：`expandIconColumnIndex` is deprecated
+   
+   **原因分析**：
+   - 这些是Ant Design 6.x的非阻塞性警告，不影响功能使用
+   - 当前代码中没有使用嵌套Table，也没有使用`expandIconColumnIndex`属性
+   - 警告可能由Ant Design内部实现触发
+   
+   **影响评估**：
+   - ✅ 功能正常运行
+   - ⚠️ 控制台有警告信息
+   - ❌ 不影响用户体验
+   
+   **解决方案**：
+   - 如需完全消除警告，可以在expandable配置中明确指定展开列位置
+   - 或等待Ant Design后续版本更新
+
+2. **建议的最佳实践**（可选优化）：
+   ```tsx
+   // 在使用expandable时，可以添加展开列配置
+   expandable={{
+     expandedRowRender: (record) => <div>...</div>,
+     columnWidth: 48, // 指定展开列宽度
+     // 不使用 expandIconColumnIndex（已废弃）
+   }}
+   ```
+
 ### 版本 1.0.1 - 2026-01-17
 
 #### 8.1 修复的问题
@@ -556,7 +588,122 @@ const MyComponent = () => {
 - 为所有方法添加方法注释，说明方法的功能、参数和返回值
 - 为复杂逻辑添加行注释，说明代码的实现思路
 
-### 9.3 Git提交规范
+### 9.3 前端UI/UX规范（2026-01-23更新）
+
+#### 9.3.1 表格样式规范
+
+**字体规范（舒适易读的层级结构）**：
+
+- **一级标题（表头）**：14px / 粗体700（font-weight-bold）
+- **表格内容**：13px / 常规400（font-weight-normal）
+- **二级标题（卡片标题）**：16px / 粗体700
+- **三级标题（标签页）**：14px / 中等500（font-weight-medium）
+
+**颜色规范（清晰舒服的淡色线条）**：
+
+- **主边框**：`rgba(0,0,0,0.06)` - 淡淡的灰色，不刺眼（`--table-border-color`）
+- **次边框**：`rgba(0,0,0,0.04)` - 更淡的灰色，柔和分隔（`--table-border-light`）
+- **表头背景**：`var(--table-header-bg)` - 浅色突出
+- **斑马纹**：`var(--table-row-stripe-bg)` - 交替行便于阅读
+- **悬停效果**：`var(--table-row-hover-bg)` - 蓝色高亮
+
+**操作列规范**：
+
+- **按钮尺寸**：32×32px（width + height）
+- **图标大小**：16px（font-size）
+- **按钮间距**：4px（column-gap）
+- **对齐方式**：居中对齐（justify-content: center）
+- **悬停效果**：
+  - 缩放1.05倍（transform: scale(1.05)）
+  - 背景色加深（border + background 颜色加深）
+  - 过渡动画：0.2s ease
+- **危险操作**：红色主题（error-color），保持一致风格
+- **禁用状态**：透明度0.45，灰色背景
+
+**表格尺寸规范**：
+
+- **表头高度**：48px（含padding 12px上下）
+- **单元格内边距**：10px 8px（上下10px，左右8px）
+- **行高**：1.5（line-height）
+- **圆角**：10px（border-radius）
+- **表格布局**：table-layout: fixed（固定布局）
+
+**CSS变量系统**：
+
+```css
+/* 字体大小 */
+--font-size-xs: 12px;
+--font-size-sm: 13px;
+--font-size-base: 14px;
+--font-size-md: 15px;
+--font-size-lg: 16px;
+--font-size-xl: 18px;
+--font-size-xxl: 20px;
+
+/* 字体粗细 */
+--font-weight-normal: 400;
+--font-weight-medium: 500;
+--font-weight-semibold: 600;
+--font-weight-bold: 700;
+
+/* 表格边框 */
+--table-border-color: rgba(0, 0, 0, 0.06);
+--table-border-light: rgba(0, 0, 0, 0.04);
+```
+
+**全站统一要求**：
+
+- ✅ 所有 `ResizableTable` 自动应用统一样式
+- ✅ 操作列使用 `.row-actions` class
+- ✅ 操作按钮使用 `.row-actions__btn--icon` class
+- ✅ 全站表格边框统一使用淡灰色
+- ✅ 字体大小分层清晰（12-20px体系）
+- ✅ 悬停效果统一（缩放 + 颜色加深）
+
+#### 9.3.2 首页搜索规范（2026-01-23新增）
+
+**搜索框规范**：
+
+- **尺寸**：size="large"，最大宽度600px
+- **位置**：首页顶部居中显示
+- **图标**：左侧前缀 `<SearchOutlined />`
+- **功能**：
+  - 支持回车键快速搜索
+  - 支持一键清空（allowClear）
+  - Loading状态反馈
+  - 友好的空结果提示
+
+**搜索范围（智能识别）**：
+
+- **款号**：自动跳转到款号资料页面（`/style-info?styleNo=xxx`）
+- **订单号**：自动跳转到生产进度页面（`/production?orderNo=xxx`）
+- **扎号**：自动跳转到生产进度页面（`/production?bundleQr=xxx`）
+- **供应商名称**：自动跳转到供应商管理页面（`/system/factory?keyword=xxx`）
+
+**后端API要求**：
+
+```
+GET /search/universal?keyword={keyword}
+Response: {
+  code: 200,
+  data: {
+    orderNo?: string,      // 订单号（优先级最高）
+    styleNo?: string,      // 款号
+    bundleQr?: string,     // 扎号
+    supplierName?: string  // 供应商名称
+  }
+}
+```
+
+**实现要求**：
+
+- ✅ 后端需提供 `/search/universal` 全局搜索接口
+- ✅ 智能识别关键词类型并返回最匹配的结果
+- ✅ 前端根据返回结果自动跳转到相应页面
+- ✅ 404错误友好提示"未找到相关结果"
+- ❌ 不再需要品牌筛选、加工厂筛选、时间范围筛选
+
+### 9.4 Git提交规范
 
 - **提交信息格式**：`[模块名] 提交内容`，如`[StyleInfo] 修复款号资料显示问题`
 - **提交频率**：每个功能或修复单独提交，避免大的提交
@@ -585,5 +732,12 @@ const MyComponent = () => {
 
 ---
 
-**文档更新时间**：2026-01-17
-**文档版本**：1.0.2
+**文档更新时间**：2026-01-23
+**文档版本**：1.1.0
+
+**最近更新内容**：
+- 2026-01-23：新增全站表格样式规范（9.3.1节）
+- 2026-01-23：新增首页全能搜索规范（9.3.2节）
+- 2026-01-23：更新弹窗尺寸规范（6.1.1节）
+- 2026-01-17：初始版本发布
+

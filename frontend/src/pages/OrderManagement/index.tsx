@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { App, AutoComplete, Button, Card, Col, DatePicker, Form, Input, InputNumber, Modal, Row, Select, Space, Tabs, Tag } from 'antd';
+import { App, AutoComplete, Button, Card, Col, DatePicker, Form, Input, InputNumber, Row, Select, Space, Tabs, Tag } from 'antd';
 import { ShoppingCartOutlined } from '@ant-design/icons';
 import { useSync } from '../../utils/syncManager';
 
@@ -92,7 +92,7 @@ const OrderManagement: React.FC = () => {
 
   const [progressNodes, setProgressNodes] = useState<ProgressNode[]>(defaultProgressNodes);
 
-  const modalInitialHeight = 720;
+  const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
   const normalizeMatchKey = (v: any) => String(v || '').trim().replace(/\s+/g, ' ').toLowerCase();
 

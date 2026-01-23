@@ -2,6 +2,7 @@ package com.fashion.supplychain.dashboard.orchestration;
 
 import com.fashion.supplychain.dashboard.dto.DashboardActivityDto;
 import com.fashion.supplychain.dashboard.dto.DashboardResponse;
+import com.fashion.supplychain.dashboard.dto.UrgentEventDto;
 import com.fashion.supplychain.dashboard.service.DashboardQueryService;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -100,10 +101,20 @@ public class DashboardOrchestrator {
         }
 
         DashboardResponse data = new DashboardResponse();
+        // 新字段映射
+        data.setSampleDevelopmentCount(styleCount);  // 样衣开发 = 款号总数
+        data.setProductionOrderCount(productionCount);  // 生产订单
+        data.setOrderQuantityTotal(dashboardQueryService.sumTotalOrderQuantity());  // 订单数量总和
+        data.setOverdueOrderCount(dashboardQueryService.countOverdueOrders());  // 延期订单
+        data.setTodayWarehousingCount(warehousingOrderCount);  // 当天入库
+        data.setTotalWarehousingCount(dashboardQueryService.countTotalWarehousing());  // 入库总数
+        data.setDefectiveQuantity(unqualifiedQuantity);  // 次品数量
+        data.setPaymentApprovalCount(paymentApprovalCount);  // 审批付款
+        
+        // 保留旧字段以兼容
         data.setStyleCount(styleCount);
         data.setProductionCount(productionCount);
         data.setPendingReconciliationCount(pendingReconciliationCount);
-        data.setPaymentApprovalCount(paymentApprovalCount);
         data.setTodayScanCount(todayScanCount);
         data.setWarehousingOrderCount(warehousingOrderCount);
         data.setUnqualifiedQuantity(unqualifiedQuantity);
@@ -158,5 +169,30 @@ public class DashboardOrchestrator {
             dto.setTime(time);
             return dto;
         }
+    }
+
+    /**
+     * 获取紧急事件列表
+     */
+    public List<UrgentEventDto> getUrgentEvents() {
+        List<UrgentEventDto> events = new ArrayList<>();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+        
+        // 获取延期订单
+        List<ProductionOrder> overdueOrders = dashboardQueryService.listOverdueOrders(10);
+        for (ProductionOrder order : overdueOrders) {
+            UrgentEventDto event = new UrgentEventDto();
+            event.setId(order.getId());
+            event.setType("overdue");
+            event.setTitle("订单延期：" + order.getOrderNo());
+            event.setOrderNo(order.getOrderNo());
+            event.setTime(order.getPlannedEndDate() == null ? "" : order.getPlannedEndDate().format(formatter));
+            events.add(event);
+        }
+        
+        // TODO: 添加次品和审批相关的紧急事件
+        // 这里可以根据实际业务需求添加更多事件类型
+        
+        return events;
     }
 }

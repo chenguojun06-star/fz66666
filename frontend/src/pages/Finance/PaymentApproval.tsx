@@ -661,7 +661,7 @@ const PaymentApproval: React.FC = () => {
 
   const { modalWidth } = useViewport();
   const detailModalWidth = modalWidth;
-  const detailModalInitialHeight = 720;
+  const detailModalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [selectedRows, setSelectedRows] = useState<ApprovalRecord[]>([]);

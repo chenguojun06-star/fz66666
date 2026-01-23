@@ -1,10 +1,11 @@
 import React, { ReactNode, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Avatar, Button, Drawer, Dropdown, Layout as AntLayout, Menu, message } from 'antd';
-import { CloseOutlined, DownOutlined, LogoutOutlined, MenuOutlined, SettingOutlined } from '@ant-design/icons';
+import { Avatar, Badge, Button, Drawer, Dropdown, Layout as AntLayout, Menu, message, Popover } from 'antd';
+import { BellOutlined, CloseOutlined, DownOutlined, LogoutOutlined, MenuOutlined, SettingOutlined } from '@ant-design/icons';
 import { isAdminUser as isAdminUserFn, useAuth } from '../../utils/authContext';
 import { menuConfig, resolvePermissionCode } from '../../routeConfig';
 import { useViewport } from '../../utils/useViewport';
+import api, { ApiResult } from '../../utils/api';
 import './styles.css';
 
 interface LayoutProps {
@@ -17,6 +18,14 @@ type RecentPage = {
   title: string;
   ts: number;
 };
+
+interface UrgentEvent {
+  id: string;
+  type: 'overdue' | 'defective' | 'approval';
+  title: string;
+  orderNo: string;
+  time: string;
+}
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
@@ -108,11 +117,25 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (typeof window === 'undefined') return [];
     return readRecentPages().slice(0, maxRecentPages);
   });
+  const [urgentEvents, setUrgentEvents] = useState<UrgentEvent[]>([]);
 
   const { isMobile } = useViewport();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const collapsed = sidebarCollapsed;
+
+  // 获取紧急事件
+  const fetchUrgentEvents = async () => {
+    try {
+      const response = (await api.get('/dashboard/urgent-events')) as ApiResult<UrgentEvent[]>;
+      if (response.code === 200) {
+        setUrgentEvents(response.data || []);
+      }
+    } catch (error: any) {
+      // 静默失败，不显示错误提示
+      console.error('获取紧急事件失败:', error);
+    }
+  };
 
   const isAdmin = useMemo(() => isAdminUserFn(user), [user]);
 
@@ -178,6 +201,22 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (!isMobile) return;
     setMobileNavOpen(false);
   }, [isMobile, effectivePathname]);
+
+  // 加载紧急事件
+  useEffect(() => {
+    fetchUrgentEvents();
+    // 每5分钟刷新一次
+    const timer = setInterval(fetchUrgentEvents, 300000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // 加载紧急事件
+  useEffect(() => {
+    fetchUrgentEvents();
+    // 每5分钟刷新一次
+    const timer = setInterval(fetchUrgentEvents, 300000);
+    return () => clearInterval(timer);
+  }, []);
 
   const resolveRecentTitle = (basePath: string | undefined, pathname: string) => {
     const base = basePath || pathname;
@@ -290,6 +329,61 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             ) : null}
           </div>
           <div className="header-user">
+            {/* 紧急事件铃铛 */}
+            <Popover
+              placement="bottomRight"
+              title="紧急事件"
+              content={
+                <div style={{ maxWidth: 360, maxHeight: 400, overflow: 'auto' }}>
+                  {urgentEvents.length === 0 ? (
+                    <div style={{ padding: '20px 0', textAlign: 'center', color: '#999' }}>
+                      暂无紧急事件
+                    </div>
+                  ) : (
+                    <div>
+                      {urgentEvents.map((event) => (
+                        <div
+                          key={event.id}
+                          style={{
+                            padding: '12px 0',
+                            borderBottom: '1px solid #f0f0f0',
+                            cursor: 'pointer',
+                          }}
+                          onClick={() => {
+                            // 根据类型跳转到对应页面
+                            if (event.type === 'overdue') {
+                              navigate(`/production?orderNo=${event.orderNo}`);
+                            } else if (event.type === 'defective') {
+                              navigate(`/production/warehousing?orderNo=${event.orderNo}`);
+                            } else if (event.type === 'approval') {
+                              navigate(`/finance/payment-approval?orderNo=${event.orderNo}`);
+                            }
+                          }}
+                        >
+                          <div style={{ fontWeight: 500, marginBottom: 4 }}>{event.title}</div>
+                          <div style={{ fontSize: 12, color: '#666' }}>
+                            订单号: {event.orderNo}
+                          </div>
+                          <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>
+                            {event.time}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              }
+              trigger="click"
+            >
+              <Badge count={urgentEvents.length} offset={[-2, 2]} size="small">
+                <Button
+                  type="text"
+                  icon={<BellOutlined style={{ fontSize: 18 }} />}
+                  style={{ marginRight: 12 }}
+                />
+              </Badge>
+            </Popover>
+
             <Dropdown
               placement="bottomRight"
               trigger={['click']}

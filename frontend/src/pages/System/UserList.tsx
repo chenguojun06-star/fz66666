@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Alert, App, Button, Card, Checkbox, Empty, Input, Modal, Select, Space, Spin, Tabs, Tag, Form, Row, Col } from 'antd';
+import { Alert, App, Button, Card, Checkbox, Empty, Input, Select, Space, Spin, Tabs, Tag, Form, Row, Col } from 'antd';
 import type { MenuProps } from 'antd';
 import { PlusOutlined, SearchOutlined, EditOutlined, CheckOutlined, CloseOutlined, SettingOutlined, FileSearchOutlined } from '@ant-design/icons';
 import Layout from '../../components/Layout';
@@ -32,7 +32,7 @@ const UserList: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
 
-  const modalInitialHeight = 720;
+  const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
   const [activeEditTab, setActiveEditTab] = useState<'base' | 'perm'>('base');
 
@@ -1083,7 +1083,7 @@ const UserList: React.FC = () => {
           }}
           footer={null}
           width={modalWidth}
-          initialHeight={520}
+          initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
           minWidth={isMobile ? 320 : 520}
           scaleWithViewport
         >

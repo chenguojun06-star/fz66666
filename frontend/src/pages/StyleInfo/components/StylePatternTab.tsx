@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Button, Input, Modal, Space, Table, Tabs, Tag, message } from 'antd';
+import { Button, Input, Modal, Space, Table, Tabs, Tag, message } from 'antd';
 import api from '../../../utils/api';
 import { isSupervisorOrAboveUser, useAuth } from '../../../utils/authContext';
 import { formatDateTime } from '../../../utils/datetime';
@@ -275,10 +275,10 @@ const StylePatternTab: React.FC<Props> = ({
           <span>完成时间：{completedTimeText}</span>
           {/* 纸样齐全检查提示 */}
           {patternCheckResult && !patternCheckResult.complete && (
-            <span style={{ 
-              fontSize: '12px', 
-              color: '#faad14', 
-              backgroundColor: '#fffbe6', 
+            <span style={{
+              fontSize: '12px',
+              color: '#faad14',
+              backgroundColor: '#fffbe6',
               border: '1px solid #ffe58f',
               padding: '2px 8px',
               borderRadius: '4px',

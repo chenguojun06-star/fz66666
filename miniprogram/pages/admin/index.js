@@ -1,6 +1,7 @@
 import api from '../../utils/api';
 import { getUserInfo, getUserRoleName } from '../../utils/storage';
 import { getRoleDisplayName, getRolePermissions, isAdminOrSupervisor } from '../../utils/permission';
+import { onDataRefresh, triggerDataRefresh, Events } from '../../utils/eventBus';
 
 Page({
     data: {
@@ -15,6 +16,7 @@ Page({
         permissions: [],
         pendingUserCount: 0,
         showApprovalEntry: false,
+        _unsubscribeRefresh: null, // 保存取消订阅函数
     },
 
     onShow() {
@@ -33,6 +35,39 @@ Page({
         this.loadSystemInfo();
         
         this.refreshAll(true);
+        
+        // 设置数据刷新监听
+        this.setupDataRefreshListener();
+    },
+    
+    setupDataRefreshListener() {
+        // 如果已经设置监听，先取消旧的
+        if (this._unsubscribeRefresh) {
+            this._unsubscribeRefresh();
+        }
+        
+        // 订阅数据刷新事件
+        this._unsubscribeRefresh = onDataRefresh((payload) => {
+            console.log('[个人页面] 收到数据变更通知:', payload);
+            // 刷新当前页面数据
+            this.refreshAll(true);
+        });
+    },
+    
+    onHide() {
+        // 页面隐藏时取消监听
+        if (this._unsubscribeRefresh) {
+            this._unsubscribeRefresh();
+            this._unsubscribeRefresh = null;
+        }
+    },
+    
+    onUnload() {
+        // 页面卸载时取消监听
+        if (this._unsubscribeRefresh) {
+            this._unsubscribeRefresh();
+            this._unsubscribeRefresh = null;
+        }
     },
     
     loadUserInfo() {
@@ -124,13 +159,15 @@ Page({
         try {
             const page = await api.production.myScanHistory({ page: nextPage, pageSize });
             const records = page && Array.isArray(page.records) ? page.records : [];
-            // 过滤掉采购类型的记录（物料采购不计入工资统计）
+            // 过滤掉采购类型的记录（物料采购不计入工资统计）和失败记录（退回后被作废的记录）
             const filteredRecords = records.filter(item => {
                 const scanType = (item.scanType || '').toLowerCase();
                 const processName = (item.processName || '').toLowerCase();
+                const scanResult = (item.scanResult || '').toLowerCase();
                 return scanType !== 'procurement' && 
                        !processName.includes('采购') && 
-                       !processName.includes('物料');
+                       !processName.includes('物料') &&
+                       scanResult !== 'failure'; // 排除已作废的记录
             });
             const prev = Array.isArray(history.list) ? history.list : [];
             const merged = reset ? filteredRecords : prev.concat(filteredRecords);

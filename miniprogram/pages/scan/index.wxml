@@ -225,18 +225,61 @@
           </view>
         </view>
         
+        <!--裁剪任务列表 - 在弹窗中显示 -->
+        <view wx:if="{{scanConfirm.detail.progressStage === '裁剪' && scanConfirm.cuttingTasks && scanConfirm.cuttingTasks.length}}" class="purchase-modal-list">
+          <view wx:for="{{scanConfirm.cuttingTasks}}" wx:key="index" class="purchase-modal-item">
+            <view class="pmi-header">
+              <text class="pmi-name">{{item.color || '颜色'}} - {{item.size || '尺码'}}</text>
+            </view>
+            <view class="pmi-row">
+              <text class="pmi-label">计划数量</text>
+              <text class="pmi-value demand">{{item.plannedQuantity || 0}}</text>
+            </view>
+            <view class="pmi-row">
+              <text class="pmi-label">裁剪数量</text>
+              <input 
+                class="pmi-input" 
+                type="digit" 
+                placeholder="请填写实际裁剪数量" 
+                value="{{item.cuttingInput}}" 
+                bindinput="onModalCuttingInput" 
+                data-color="{{item.color}}" 
+                data-size="{{item.size}}" 
+                data-idx="{{index}}"
+              />
+            </view>
+          </view>
+        </view>
+        
         <!-- 质检领取提示 -->
         <view wx:if="{{scanTypeOptions[scanTypeIndex].value === 'quality' && !scanConfirm.detail.isProcurement}}" class="qc-receive-tip">
           <text class="qc-tip-text">领取后可在"我的任务"中填写质检结果</text>
         </view>
+        
+        <!-- 裁剪任务已领取提示 -->
+        <view wx:if="{{scanConfirm.detail.progressStage === '裁剪' && scanConfirm.cuttingTaskReceived}}" class="qc-receive-tip" style="background: #f6ffed; border-color: #b7eb8f;">
+          <text class="qc-tip-text" style="color: #52c41a;">✓ 任务已领取，可修改数量重新生成菲号</text>
+        </view>
       </view>
       <view class="modal-btns">
         <view class="mbtn cancel" bindtap="onCancelScan">取消</view>
+        <!-- 裁剪模式：未领取显示"领取任务"，已领取显示"生成菲号" -->
+        <view wx:if="{{scanConfirm.detail.progressStage === '裁剪' && !scanConfirm.cuttingTaskReceived}}" class="mbtn" style="background: #52c41a; {{scanConfirm.loading ? 'opacity: 0.6;' : ''}}" bindtap="onReceiveOnly">
+          {{scanConfirm.loading ? '...' : '领取任务'}}
+        </view>
+        <view wx:if="{{scanConfirm.detail.progressStage === '裁剪' && scanConfirm.cuttingTaskReceived}}" class="mbtn ok {{scanConfirm.loading ? 'off' : ''}}" bindtap="onRegenerateCuttingBundles">
+          {{scanConfirm.loading ? '...' : '生成菲号'}}
+        </view>
+        <!-- 采购模式 -->
         <view wx:if="{{scanConfirm.detail.isProcurement}}" class="mbtn" style="background: #52c41a; {{scanConfirm.loading ? 'opacity: 0.6;' : ''}}" bindtap="onReceiveOnly">
           {{scanConfirm.loading ? '...' : '领取任务'}}
         </view>
-        <view class="mbtn ok {{scanConfirm.loading ? 'off' : ''}}" bindtap="onConfirmScan">
-          {{scanConfirm.loading ? '...' : (scanConfirm.detail.isProcurement ? '领取并提交' : (scanTypeOptions[scanTypeIndex].value === 'quality' ? '领取' : '确认'))}}
+        <view wx:if="{{scanConfirm.detail.isProcurement}}" class="mbtn ok {{scanConfirm.loading ? 'off' : ''}}" bindtap="onConfirmScan">
+          {{scanConfirm.loading ? '...' : '领取并提交'}}
+        </view>
+        <!-- 其他模式 -->
+        <view wx:if="{{!scanConfirm.detail.isProcurement && scanConfirm.detail.progressStage !== '裁剪'}}" class="mbtn ok {{scanConfirm.loading ? 'off' : ''}}" bindtap="onConfirmScan">
+          {{scanConfirm.loading ? '...' : (scanTypeOptions[scanTypeIndex].value === 'quality' ? '领取' : '确认')}}
         </view>
       </view>
     </view>

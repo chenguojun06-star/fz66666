@@ -55,7 +55,7 @@ const StyleSampleTab: React.FC<Props> = ({
   const bomDetailTableScrollY = useResizableModalTableScrollY({ open: bomDetailOpen, ref: bomDetailTableWrapRef });
 
   const { modalWidth } = useViewport();
-  const modalInitialHeight = 720;
+  const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
   const [loading, setLoading] = useState(false);
 

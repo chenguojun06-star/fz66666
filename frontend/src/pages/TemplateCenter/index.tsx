@@ -209,7 +209,7 @@ const TemplateCenter: React.FC = () => {
       const result = res as any;
       let tpl: TemplateLibrary | null = null;
       let templateSteps: Array<{ processName: string; unitPrice: number; estimatedMinutes?: number }> = [];
-      
+
       if (result.code === 200) {
         const records = Array.isArray(result.data?.records) ? (result.data.records as TemplateLibrary[]) : [];
         const list = [...records];
@@ -302,49 +302,6 @@ const TemplateCenter: React.FC = () => {
     setProgressOpen(true);
   };
 
-  const openProgressEditFromProcessPrice = async (row: TemplateLibrary) => {
-    const styleNo = String(row.sourceStyleNo || '').trim();
-    if (!styleNo) {
-      message.error('工序单价模板缺少来源款号');
-      return;
-    }
-    
-    // 查找或创建对应的进度单价模板
-    try {
-      const res = await api.get<any>('/template-library/list', {
-        params: {
-          page: 1,
-          pageSize: 50,
-          templateType: 'progress',
-          sourceStyleNo: styleNo,
-          keyword: '',
-        },
-      });
-      const result = res as any;
-      let progressTpl: TemplateLibrary | null = null;
-      if (result.code === 200) {
-        const records = Array.isArray(result.data?.records) ? (result.data.records as TemplateLibrary[]) : [];
-        progressTpl = records.find(t => String(t.sourceStyleNo || '').trim() === styleNo) || null;
-      }
-      
-      if (progressTpl) {
-        // 如果存在进度单价模板，直接打开
-        await openProgressEdit(progressTpl);
-      } else {
-        // 否则创建新的进度单价模板
-        await openProgressCreate();
-        // 预填充来源款号和工序单价
-        const loaded = await loadProcessPriceForStyle(styleNo);
-        progressForm.setFieldsValue({
-          sourceStyleNo: styleNo,
-          priceSteps: loaded.steps,
-        });
-      }
-    } catch (e: any) {
-      message.error(e?.message || '打开失败');
-    }
-  };
-
   const openProgressEdit = async (row: TemplateLibrary) => {
     if (isLocked(row)) {
       message.error('模板已锁定，如需修改请先退回');
@@ -352,7 +309,7 @@ const TemplateCenter: React.FC = () => {
     }
     setProgressEditing(row);
     progressForm.resetFields();
-    
+
     const templateType = String(row?.templateType || '').trim().toLowerCase();
     let content = String(row?.templateContent ?? '');
     if (row?.id) {
@@ -369,7 +326,7 @@ const TemplateCenter: React.FC = () => {
     // 如果是工序单价模板，解析 steps 而不是 nodes
     let items: Array<{ name: string; unitPrice?: number }> = [];
     let priceSteps: Array<{ processName: string; unitPrice: number; estimatedMinutes?: number }> = [];
-    
+
     if (templateType === 'process_price') {
       // 工序单价模板：从 steps 解析
       priceSteps = parseProcessPriceSteps(content);
@@ -378,23 +335,23 @@ const TemplateCenter: React.FC = () => {
       // 进度单价模板：从 nodes 解析
       items = parseProgressNodeItems(content);
     }
-    
+
     const styleNo = String(row.sourceStyleNo || '').trim();
     const loaded = styleNo ? await loadProcessPriceForStyle(styleNo) : { tpl: null, steps: [] as Array<{ processName: string; unitPrice: number; estimatedMinutes?: number }> };
-    
+
     // 如果是工序单价模板，不需要设置 processPriceEditing（避免显示"已存在"标签）
     if (templateType !== 'process_price') {
       setProcessPriceEditing(loaded.tpl);
     } else {
       setProcessPriceEditing(null);
     }
-    
-    const finalPriceSteps = priceSteps.length > 0 
-      ? priceSteps 
+
+    const finalPriceSteps = priceSteps.length > 0
+      ? priceSteps
       : (loaded.steps.length
         ? loaded.steps
         : items.map((n) => ({ processName: String(n?.name || '').trim(), unitPrice: Number(n?.unitPrice) || 0, estimatedMinutes: 0 })).filter((s) => s.processName));
-    
+
     progressForm.setFieldsValue({
       templateName: row.templateName,
       templateKey: row.templateKey,
@@ -436,7 +393,9 @@ const TemplateCenter: React.FC = () => {
           const processName = String((s as any)?.processName || '').trim();
           const p = Number((s as any)?.unitPrice);
           const unitPrice = Number.isFinite(p) && p >= 0 ? p : 0;
-          return { processName, unitPrice };
+          const m = Number((s as any)?.estimatedMinutes);
+          const estimatedMinutes = Number.isFinite(m) && m > 0 ? m : undefined;
+          return { processName, unitPrice, estimatedMinutes };
         })
         .filter((s) => s.processName);
       const priceNames = priceSteps.map((s) => s.processName);
@@ -467,12 +426,12 @@ const TemplateCenter: React.FC = () => {
         const sn = sourceStyleNo;
         const tplKey = `style_${sn}`;
         const tplName = `${sn}-工序单价模板`;
-        const tplContent = JSON.stringify({ 
-          steps: priceSteps.map((s) => ({ 
-            processName: s.processName, 
+        const tplContent = JSON.stringify({
+          steps: priceSteps.map((s) => ({
+            processName: s.processName,
             unitPrice: s.unitPrice,
             estimatedMinutes: s.estimatedMinutes || undefined
-          })) 
+          }))
         });
         if (processPriceEditing?.id) {
           const res = await api.put<any>('/template-library', {
@@ -520,17 +479,21 @@ const TemplateCenter: React.FC = () => {
       };
 
       setProgressSaving(true);
-      
+
       // 判断当前编辑的是什么类型的模板
       const editingType = String(progressEditing?.templateType || '').trim().toLowerCase();
-      
+
       if (editingType === 'process_price') {
+        if (!progressEditing?.id) {
+          message.error('保存失败');
+          return;
+        }
         // 如果编辑的是工序单价模板，只保存 steps
-        const tplContent = JSON.stringify({ 
-          steps: priceSteps.map((s) => ({ 
-            processName: s.processName, 
+        const tplContent = JSON.stringify({
+          steps: priceSteps.map((s) => ({
+            processName: s.processName,
             unitPrice: s.unitPrice,
-          })) 
+          }))
         });
         const res = await api.put<any>('/template-library', {
           id: progressEditing.id,
@@ -605,19 +568,19 @@ const TemplateCenter: React.FC = () => {
       } catch {
       }
     }
-    
+
     if (isLocked(latestRow)) {
       message.error('模板已锁定，如需修改请先退回');
       return;
     }
     const t = String(latestRow?.templateType || '').trim().toLowerCase();
-    
+
     // 进度单价和工序单价都使用同一个友好编辑界面
     if (t === 'progress' || t === 'process_price') {
       openProgressEdit(latestRow);
       return;
     }
-    
+
     setEditingRow(latestRow);
     let content = String(row?.templateContent ?? '');
     if (row?.id) {
@@ -630,7 +593,7 @@ const TemplateCenter: React.FC = () => {
       } catch {
       }
     }
-    
+
     // 解析JSON为表格数据
     try {
       const parsed = JSON.parse(content);
@@ -638,9 +601,9 @@ const TemplateCenter: React.FC = () => {
     } catch {
       setEditTableData(null);
     }
-    
+
     setEditOpen(true);
-    
+
     // 延迟操作表单，等待 Modal 和 Form 渲染完成
     setTimeout(() => {
       createForm.resetFields();
@@ -666,7 +629,7 @@ const TemplateCenter: React.FC = () => {
         message.error('请选择模板类型');
         return;
       }
-      
+
       // 将表格数据转换为JSON字符串
       let templateContent = '';
       if (editTableData) {
@@ -675,7 +638,7 @@ const TemplateCenter: React.FC = () => {
         message.error('模板内容无效');
         return;
       }
-      
+
       setEditSaving(true);
       const body = {
         id: editingRow?.id,
@@ -685,14 +648,14 @@ const TemplateCenter: React.FC = () => {
         sourceStyleNo: v.sourceStyleNo || undefined,
         templateContent,
       };
-      
+
       const res = await api.put<any>(`/template-library/${editingRow?.id}`, body);
       const result = res as any;
       if (result.code !== 200) {
         message.error(result.message || '更新失败');
         return;
       }
-      
+
       message.success('更新成功');
       setEditOpen(false);
       setEditingRow(null);
@@ -834,12 +797,6 @@ const TemplateCenter: React.FC = () => {
     ],
     []
   );
-
-  const openCreate = () => {
-    createForm.resetFields();
-    createForm.setFieldsValue({ templateTypes: ['bom', 'size', 'process', 'progress'] });
-    setCreateOpen(true);
-  };
 
   const submitCreate = async () => {
     try {
@@ -1356,7 +1313,7 @@ const TemplateCenter: React.FC = () => {
         onOk={submitCreate}
         okText="生成"
         cancelText="取消"
-        width={520}
+        width={modalWidth}
       >
         <Form form={createForm} layout="vertical">
           <Form.Item name="sourceStyleNo" label="来源款号" rules={[{ required: true, message: '请输入来源款号' }]}>
@@ -1396,7 +1353,7 @@ const TemplateCenter: React.FC = () => {
         onOk={submitApply}
         okText="套用"
         cancelText="取消"
-        width={520}
+        width={modalWidth}
       >
         <Form form={applyForm} layout="vertical">
           <Form.Item label="模板" >
@@ -1440,7 +1397,7 @@ const TemplateCenter: React.FC = () => {
         cancelText="取消"
         confirmLoading={editSaving}
         width={modalWidth}
-        initialHeight={600}
+        initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
         scaleWithViewport
       >
         <Form form={createForm} layout="vertical">
@@ -1639,7 +1596,7 @@ const TemplateCenter: React.FC = () => {
           </div>
         }
         width={modalWidth}
-        initialHeight={720}
+        initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
         scaleWithViewport
       >
         {renderVisualContent()}
@@ -1658,8 +1615,8 @@ const TemplateCenter: React.FC = () => {
         okText="保存"
         cancelText="取消"
         confirmLoading={progressSaving}
-        width={950}
-        initialHeight={600}
+        width={modalWidth}
+        initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
         scaleWithViewport
       >
         <div style={{ maxHeight: '60vh', overflow: 'auto', padding: '0 2px' }}>

@@ -4,11 +4,12 @@ const { errorHandler } = require('../../utils/errorHandler');
 const { validateByRule } = require('../../utils/validationRules');
 const { syncManager } = require('../../utils/syncManager');
 const reminderManager = require('../../utils/reminderManager');
+const { orderStatusText, qualityStatusText, scanResultText } = require('../../utils/orderStatusHelper');
+const { onDataRefresh, triggerDataRefresh, Events } = require('../../utils/eventBus');
 
 function normalizeText(v) {
   return (v || '').toString().trim();
 }
-
 /**
  * 验证并规范化订单数据
  */
@@ -38,42 +39,10 @@ function validateAndNormalizeOrder(order) {
   return normalized;
 }
 
-function orderStatusText(status) {
-  const s = normalizeText(status).toLowerCase();
-  const map = {
-    pending: '待生产',
-    production: '生产中',
-    completed: '已完成',
-    delayed: '已逾期',
-    cancelled: '已取消',
-    canceled: '已取消',
-    paused: '已暂停',
-    returned: '已退回',
-  };
-  if (!s) return '';
-  return map[s] || '未知';
-}
-
-function qualityStatusText(status) {
-  const s = normalizeText(status).toLowerCase();
-  const map = {
-    qualified: '合格',
-    unqualified: '次品待返修',
-    repaired: '返修完成',
-  };
-  if (!s) return '';
-  return map[s] || '未知';
-}
-
-function scanResultText(status) {
-  const s = normalizeText(status).toLowerCase();
-  const map = {
-    success: '成功',
-    failure: '失败',
-  };
-  if (!s) return '';
-  return map[s] || '未知';
-}
+// 以下函数已移至 utils/orderStatusHelper.js
+// - orderStatusText
+// - qualityStatusText
+// - scanResultText
 
 function stripWarehousingNode(list) {
   const items = Array.isArray(list) ? list : [];
@@ -215,7 +184,24 @@ Page({
     // 启动订单列表的实时同步 (30 秒轮询一次)
     this.setupOrderSync();
     
+    // 设置数据刷新监听
+    this.setupDataRefreshListener();
+    
     this.ensureLoaded();
+  },
+  
+  setupDataRefreshListener() {
+    // 如果已经设置监听，先取消旧的
+    if (this._unsubscribeRefresh) {
+      this._unsubscribeRefresh();
+    }
+    
+    // 订阅数据刷新事件
+    this._unsubscribeRefresh = onDataRefresh((payload) => {
+      console.log('[生产页面] 收到数据变更通知:', payload);
+      // 刷新当前页面数据
+      this.loadOrders(true);
+    });
   },
 
   onPullDownRefresh() {
@@ -531,6 +517,18 @@ Page({
         if (app2 && typeof app2.resetPagedList === 'function') app2.resetPagedList(this, 'warehousing');
         this.loadWarehousing(true);
       }
+
+      // 无论在哪个标签页，都刷新订单列表，确保状态同步
+      const app = getApp();
+      if (app && typeof app.resetPagedList === 'function') app.resetPagedList(this, 'orders');
+      await this.loadOrders(true);
+      
+      // 触发全局数据刷新事件
+      triggerDataRefresh('orders', {
+        action: 'rollback',
+        orderId: orderId,
+        bundleNo: this.data.rollback.cuttingBundleQrCode,
+      });
     } catch (e) {
       if (e && e.type === 'auth') return;
       if (app && typeof app.toastError === 'function') app.toastError(e, '回退失败');

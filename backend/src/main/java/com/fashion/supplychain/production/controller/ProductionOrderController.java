@@ -44,6 +44,15 @@ public class ProductionOrderController {
         return Result.success(productionOrder);
     }
 
+    /**
+     * 根据订单号查询生产订单详情（支持扫码场景）
+     */
+    @GetMapping("/by-order-no/{orderNo}")
+    public Result<?> getByOrderNo(@PathVariable String orderNo) {
+        ProductionOrder productionOrder = productionOrderOrchestrator.getDetailByOrderNo(orderNo);
+        return Result.success(productionOrder);
+    }
+
     @GetMapping("/flow/{id}")
     public Result<?> flow(@PathVariable String id) {
         return Result.success(productionOrderOrchestrator.getOrderFlow(id));
