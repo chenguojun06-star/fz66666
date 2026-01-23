@@ -109,4 +109,37 @@ public interface SKUService {
      * @return SKU报告信息
      */
     Map<String, Object> generateSKUReport(String orderNo);
+
+    /**
+     * 获取订单的工序单价配置（Phase 5新增）
+     * 
+     * @param orderNo 订单号
+     * @return 工序单价列表 [{processName: '做领', unitPrice: 2.50}, ...]
+     */
+    List<Map<String, Object>> getProcessUnitPrices(String orderNo);
+
+    /**
+     * 根据工序名称获取单价（Phase 5新增）
+     * 
+     * @param orderNo 订单号
+     * @param processName 工序名称 (如 '做领', '上领')
+     * @return 单价 (BigDecimal)
+     */
+    Map<String, Object> getUnitPriceByProcess(String orderNo, String processName);
+
+    /**
+     * 为扫码记录附加工序单价信息（Phase 5新增）
+     * 
+     * @param scanRecord 扫码记录
+     * @return 是否成功附加
+     */
+    boolean attachProcessUnitPrice(ScanRecord scanRecord);
+
+    /**
+     * 计算订单总工价（Phase 5新增）
+     * 
+     * @param orderNo 订单号
+     * @return {totalUnitPrice: 单件工价合计, totalCost: 订单工价合计, quantity: 订单数量}
+     */
+    Map<String, Object> calculateOrderTotalCost(String orderNo);
 }

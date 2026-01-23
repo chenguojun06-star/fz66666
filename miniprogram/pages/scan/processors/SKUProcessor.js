@@ -330,6 +330,141 @@ const SKUProcessor = {
       pendingQuantity: totalQuantity - completedQuantity,
       overallProgress: progress
     };
+  },
+
+  /**
+   * 从订单的progressNodeUnitPrices获取工序单价列表 (Phase 5新增)
+   * 工序单价配置在订单对象中，格式: {nodes: [{name: '做领', unitPrice: 2.50}, ...]}
+   * @param {Object} order - 订单对象 (包含progressNodeUnitPrices或progressWorkflowJson)
+   * @returns {Array} 工序单价列表 [{processName: '做领', unitPrice: 2.50}, ...]
+   */
+  getProcessUnitPrices(order) {
+    if (!order) return [];
+
+    // 优先从 progressNodeUnitPrices 字段读取
+    if (Array.isArray(order.progressNodeUnitPrices)) {
+      return order.progressNodeUnitPrices.map(node => ({
+        processName: node.name || node.processName || '',
+        unitPrice: Number(node.unitPrice) || 0,
+        id: node.id
+      })).filter(p => p.processName);
+    }
+
+    // 其次尝试从 progressWorkflowJson 解析
+    if (order.progressWorkflowJson) {
+      try {
+        const workflow = typeof order.progressWorkflowJson === 'string'
+          ? JSON.parse(order.progressWorkflowJson)
+          : order.progressWorkflowJson;
+
+        if (workflow && Array.isArray(workflow.nodes)) {
+          return workflow.nodes.map(node => ({
+            processName: node.name || '',
+            unitPrice: Number(node.unitPrice) || 0,
+            id: node.id
+          })).filter(p => p.processName);
+        }
+      } catch (e) {
+        console.warn('[SKUProcessor] 解析progressWorkflowJson失败:', e);
+      }
+    }
+
+    return [];
+  },
+
+  /**
+   * 根据工序名称获取单价 (Phase 5新增)
+   * @param {Object} order - 订单对象
+   * @param {string} processName - 工序名称 (如 '做领', '上领')
+   * @returns {number} 单价，找不到返回0
+   */
+  getUnitPriceByProcess(order, processName) {
+    if (!order || !processName) return 0;
+
+    const prices = this.getProcessUnitPrices(order);
+    const found = prices.find(p => p.processName === processName);
+
+    if (found) {
+      console.log(`[SKUProcessor] 查询工序单价 - processName: ${processName}, unitPrice: ${found.unitPrice}`);
+      return Number(found.unitPrice) || 0;
+    }
+
+    console.warn(`[SKUProcessor] 未找到工序单价 - processName: ${processName}`);
+    return 0;
+  },
+
+  /**
+   * 为SKU列表附加工序单价信息 (Phase 5新增)
+   * @param {SKU[]} skuList - SKU列表
+   * @param {Object} order - 订单对象（包含工序单价配置）
+   * @returns {SKU[]} 附加了processUnitPrice的SKU列表
+   */
+  attachProcessUnitPricesToSKU(skuList, order) {
+    if (!Array.isArray(skuList) || !order) return skuList;
+
+    return skuList.map(sku => ({
+      ...sku,
+      // 本SKU对应的工序单价会在API调用时动态获取
+      unitPrice: 0 // 占位符，实际值由API返回
+    }));
+  },
+
+  /**
+   * 计算本次扫码的成本 (Phase 5新增)
+   * @param {number} unitPrice - 工序单价
+   * @param {number} quantity - 扫码数量
+   * @returns {number} 扫码成本 = unitPrice * quantity
+   */
+  calculateScanCost(unitPrice, quantity) {
+    const price = Number(unitPrice) || 0;
+    const qty = Number(quantity) || 0;
+    const cost = price * qty;
+
+    console.log(`[SKUProcessor] 计算扫码成本 - unitPrice: ${price}, quantity: ${qty}, cost: ${cost}`);
+    return Math.round(cost * 100) / 100; // 保留2位小数
+  },
+
+  /**
+   * 生成工序成本统计摘要 (Phase 5新增)
+   * @param {Object[]} scanRequests - 扫码请求列表
+   * @param {Object} order - 订单对象
+   * @returns {Object} 成本统计
+   */
+  calculateCostSummary(scanRequests, order) {
+    if (!Array.isArray(scanRequests) || !order) {
+      return {
+        totalCost: 0,
+        scanCount: 0,
+        costBreakdown: []
+      };
+    }
+
+    let totalCost = 0;
+    const costByProcess = {};
+
+    for (const request of scanRequests) {
+      const unitPrice = this.getUnitPriceByProcess(order, request.processNode);
+      const scanCost = this.calculateScanCost(unitPrice, request.quantity);
+
+      totalCost += scanCost;
+
+      if (!costByProcess[request.processNode]) {
+        costByProcess[request.processNode] = {
+          processName: request.processNode,
+          unitPrice: unitPrice,
+          totalQuantity: 0,
+          totalCost: 0
+        };
+      }
+      costByProcess[request.processNode].totalQuantity += request.quantity;
+      costByProcess[request.processNode].totalCost += scanCost;
+    }
+
+    return {
+      totalCost: Math.round(totalCost * 100) / 100,
+      scanCount: scanRequests.length,
+      costBreakdown: Object.values(costByProcess)
+    };
   }
 };
 

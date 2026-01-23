@@ -119,6 +119,16 @@ public class ScanRecord {
     private Integer skuTotalCount;
 
     /**
+     * 工序单价 - Phase 5新增（识别的工序对应的单价）
+     */
+    private BigDecimal processUnitPrice;
+
+    /**
+     * 本次扫码工序成本 = processUnitPrice * quantity
+     */
+    private BigDecimal scanCost;
+
+    /**
      * 创建时间
      */
     private LocalDateTime createTime;
