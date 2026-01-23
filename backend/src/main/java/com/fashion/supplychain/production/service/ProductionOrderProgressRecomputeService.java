@@ -494,18 +494,20 @@ public class ProductionOrderProgressRecomputeService {
         if (qty > orderQty) {
             qty = orderQty;
         }
-        scanRecordDomainService.upsertStageScanRecord(
-                ProductionOrderScanRecordDomainService.REQUEST_PREFIX_PROCUREMENT + oid,
-                oid,
-                order.getOrderNo(),
-                order.getStyleId(),
-                order.getStyleNo(),
-                order.getColor(),
-                order.getSize(),
-                qty,
-                ProductionOrderScanRecordDomainService.STAGE_PROCUREMENT,
-                order.getUpdateTime() == null ? createdTime : order.getUpdateTime(),
-                null,
-                "system");
+        if (qty > 0) {
+            scanRecordDomainService.upsertStageScanRecord(
+                    ProductionOrderScanRecordDomainService.REQUEST_PREFIX_PROCUREMENT + oid,
+                    oid,
+                    order.getOrderNo(),
+                    order.getStyleId(),
+                    order.getStyleNo(),
+                    order.getColor(),
+                    order.getSize(),
+                    qty,
+                    ProductionOrderScanRecordDomainService.STAGE_PROCUREMENT,
+                    order.getUpdateTime() == null ? createdTime : order.getUpdateTime(),
+                    null,
+                    "system");
+        }
     }
 }

@@ -29,11 +29,8 @@ function validateAndNormalizeOrder(order) {
   // 验证
   const validation = validateProductionOrder(normalized);
   if (!validation.valid) {
-    console.warn('[Order Validation] Failed for order:', {
-      orderId: order.id,
-      orderNo: order.orderNo,
-      errors: validation.errors
-    });
+    // 验证失败 - 使用错误处理而非日志
+    return null;
   }
   
   return normalized;
@@ -170,7 +167,6 @@ Page({
     }
     
     // ⚠️ 强制刷新订单列表（应对后端数据变更）
-    console.log('[Work] onShow: Force reload orders from backend');
     this.loadOrders(true);
     
     // 检查是否有pending_order_hint，如果有则显示提示
@@ -208,7 +204,6 @@ Page({
     
     // 订阅数据刷新事件
     this._unsubscribeRefresh = onDataRefresh((payload) => {
-      console.log('[生产页面] 收到数据变更通知:', payload);
       // 刷新当前页面数据
       this.loadOrders(true);
     });
