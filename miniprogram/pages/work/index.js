@@ -169,6 +169,10 @@ Page({
       null;
     }
     
+    // ⚠️ 强制刷新订单列表（应对后端数据变更）
+    console.log('[Work] onShow: Force reload orders from backend');
+    this.loadOrders(true);
+    
     // 检查是否有pending_order_hint，如果有则显示提示
     try {
       const pendingOrderHint = wx.getStorageSync('pending_order_hint');

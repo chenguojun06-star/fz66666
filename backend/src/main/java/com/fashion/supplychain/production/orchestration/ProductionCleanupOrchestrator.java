@@ -65,12 +65,30 @@ public class ProductionCleanupOrchestrator {
     private MaterialReconciliationService materialReconciliationService;
 
     /**
+     * 清理错误创建的虚拟采购记录
+     */
+    @Transactional
+    public void cleanupFakeProcurementRecords() {
+        log.info("Starting cleanup of fake procurement records...");
+        try {
+            boolean removed = scanRecordService.remove(new LambdaQueryWrapper<ScanRecord>()
+                    .likeRight(ScanRecord::getRequestId, "ORDER_PROCUREMENT:"));
+            log.info("Cleanup fake procurement records result: {}", removed);
+        } catch (Exception e) {
+            log.warn("Failed to cleanup fake procurement records", e);
+        }
+    }
+
+    /**
      * 清理无效的孤儿数据（如：关联订单已删除的采购单）
      * 建议在系统启动时或定时执行
      */
     @Transactional
     public void cleanupOrphanData() {
         log.info("Starting orphan data cleanup...");
+
+        // 0. 清理虚拟采购记录
+        cleanupFakeProcurementRecords();
 
         // 1. 清理孤儿采购单
         List<MaterialPurchase> purchases = materialPurchaseService.list(new LambdaQueryWrapper<MaterialPurchase>()

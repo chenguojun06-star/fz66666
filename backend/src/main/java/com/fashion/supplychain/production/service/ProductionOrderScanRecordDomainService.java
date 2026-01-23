@@ -336,20 +336,6 @@ public class ProductionOrderScanRecordDomainService {
                 scanTime,
                 null,
                 "system");
-
-        upsertStageScanRecord(
-                REQUEST_PREFIX_PROCUREMENT + oid,
-                oid,
-                order.getOrderNo(),
-                order.getStyleId(),
-                order.getStyleNo(),
-                order.getColor(),
-                order.getSize(),
-                0,
-                STAGE_PROCUREMENT,
-                scanTime,
-                null,
-                "system");
     }
 
     public void insertAdvanceRecord(ProductionOrder order, int toProgress, LocalDateTime now) {

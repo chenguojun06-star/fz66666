@@ -2545,11 +2545,11 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
           <div className="mpb-detailCards">
             {nodes.map((n, idx) => {
               // 物料采购节点始终显示100%完成
-              const isProcurementNode = String(n.name || '').includes('采购') || String(n.name || '').includes('物料');
+              // const isProcurementNode = String(n.name || '').includes('采购') || String(n.name || '').includes('物料');
               const stat = nodeStats.statsByName[n.name] || { done: 0, total: nodeStats.totalQty, remaining: nodeStats.totalQty, percent: 0 };
-              const percent = isProcurementNode ? 100 : clampPercent(stat.percent);
-              const isDone = isProcurementNode || frozen || idx < currentIdx || effectivePct >= 100;
-              const isCurrent = !frozen && !isProcurementNode && idx === currentIdx && effectivePct > 0 && effectivePct < 100;
+              const percent = clampPercent(stat.percent);
+              const isDone = frozen || idx < currentIdx || effectivePct >= 100;
+              const isCurrent = !frozen && idx === currentIdx && effectivePct > 0 && effectivePct < 100;
               const fillPct = isDone ? 100 : percent;
               const unitPrice = Number(n.unitPrice) || 0;
               const isDragging = draggingNodeId === String(n.id);
@@ -2559,7 +2559,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                   key={n.id}
                   className={`mpb-detailCard mpb-pop${canReorderWorkflow ? ' mpb-draggable' : ''}${isDragging ? ' mpb-dragging' : ''}${isDragOver ? ' mpb-dragOver' : ''}${isDone ? ' mpb-detailDone' : ''}${isCurrent ? ' mpb-detailCurrent' : ''}${frozen ? ' mpb-detailFrozen' : ''}`}
                   style={{ width: cardWidth, ['--p' as any]: `${fillPct}%` }}
-                  title={isProcurementNode ? `${n.name} 已完成` : `${n.name} ${stat.done}/${stat.total} · 剩 ${stat.remaining} · ${percent.toFixed(0)}%`}
+                  title={`${n.name} ${stat.done}/${stat.total} · 剩 ${stat.remaining} · ${percent.toFixed(0)}%`}
                   onDragOver={(e) => {
                     if (!canReorderWorkflow) return;
                     if (!draggingNodeId) return;
@@ -2598,7 +2598,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     <div className="mpb-detailBarText">
                       <span className="mpb-detailBarLeft">{n.name}</span>
                       <span className="mpb-detailBarRight">
-                        {isProcurementNode ? '已完成' : `${stat.done}/${stat.total} · ${percent.toFixed(0)}%`}
+                        {`${stat.done}/${stat.total} · ${percent.toFixed(0)}%`}
                       </span>
                     </div>
                   </div>
