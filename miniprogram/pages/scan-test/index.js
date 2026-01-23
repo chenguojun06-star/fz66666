@@ -167,16 +167,16 @@ Page({
         this.loadMyPanel();
         this.loadReminders();
         
-        const { on, Events } = require('../../utils/eventBus');
-        on(Events.DATA_REFRESH, this.handleDataRefresh, this);
+        const { eventBus, Events } = require('../../utils/eventBus');
+        eventBus.on(Events.DATA_REFRESH, this.handleDataRefresh);
     },
 
     onHide() {
         console.log('[ScanTest] 页面隐藏');
         this.clearTimers();
         
-        const { off, Events } = require('../../utils/eventBus');
-        off(Events.DATA_REFRESH, this.handleDataRefresh, this);
+        const { eventBus, Events } = require('../../utils/eventBus');
+        eventBus.off(Events.DATA_REFRESH, this.handleDataRefresh);
     },
 
     onUnload() {
@@ -545,8 +545,8 @@ Page({
 
     async loadUserInfo() {
         try {
-            const user = await api.auth.getCurrentUser();
-            this.setData({ currentUser: user });
+            const user = await api.system.getMe();
+            this.setData({ currentUser: user || null });
 
         } catch (e) {
             console.error('[ScanTest] 加载用户信息失败:', e);
