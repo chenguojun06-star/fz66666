@@ -1,0 +1,366 @@
+/* 扫码测试页面样式 */
+
+.scan-test-page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+  padding-bottom: 40rpx;
+}
+
+/* 测试版本标识 */
+.test-banner {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 20rpx 30rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  backdrop-filter: blur(10px);
+}
+
+.test-icon {
+  font-size: 40rpx;
+  margin-right: 16rpx;
+}
+
+.test-text {
+  flex: 1;
+  color: #fff;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.compare-btn {
+  background: rgba(255, 255, 255, 0.3);
+  color: #fff;
+  border: 1rpx solid rgba(255, 255, 255, 0.5);
+  font-size: 24rpx;
+}
+
+/* 工厂信息 */
+.factory-info {
+  padding: 30rpx;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.factory-name {
+  color: #fff;
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+.user-name {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 28rpx;
+}
+
+/* 扫码区域 */
+.scan-section {
+  padding: 60rpx 30rpx 40rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.scan-button {
+  width: 400rpx;
+  height: 400rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fff 0%, #f0f0f0 100%);
+  box-shadow: 0 20rpx 60rpx rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 8rpx solid rgba(255, 255, 255, 0.8);
+  transition: all 0.3s ease;
+}
+
+.scan-button:active {
+  transform: scale(0.95);
+  box-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.2);
+}
+
+.scan-button.disabled {
+  opacity: 0.5;
+}
+
+.scan-icon {
+  font-size: 120rpx;
+  margin-bottom: 20rpx;
+}
+
+.scan-text {
+  color: #667eea;
+  font-size: 36rpx;
+  font-weight: 600;
+}
+
+.debug-button {
+  margin-top: 30rpx;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border: 1rpx solid rgba(255, 255, 255, 0.3);
+}
+
+/* 结果区域 */
+.result-section {
+  margin: 30rpx;
+}
+
+.result-card {
+  background: #fff;
+  border-radius: 24rpx;
+  padding: 40rpx;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.1);
+}
+
+.result-card.success {
+  border-left: 8rpx solid #52c41a;
+}
+
+.result-card.error {
+  border-left: 8rpx solid #ff4d4f;
+}
+
+.result-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 30rpx;
+}
+
+.result-icon {
+  font-size: 48rpx;
+  margin-right: 16rpx;
+}
+
+.result-message {
+  flex: 1;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.result-details {
+  margin-top: 20rpx;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.detail-item:last-child {
+  border-bottom: none;
+}
+
+.detail-label {
+  color: #999;
+  font-size: 28rpx;
+}
+
+.detail-value {
+  color: #333;
+  font-size: 28rpx;
+  font-weight: 500;
+}
+
+/* 撤销按钮 */
+.undo-section {
+  margin-top: 30rpx;
+  padding-top: 30rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.undo-button {
+  width: 100%;
+  background: #ff4d4f;
+  color: #fff;
+  font-size: 28rpx;
+}
+
+.undo-button.loading {
+  background: #ccc;
+}
+
+/* 我的面板 */
+.my-panel {
+  background: #fff;
+  border-radius: 24rpx;
+  margin: 30rpx;
+  padding: 40rpx;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.1);
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30rpx;
+}
+
+.panel-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.refresh-btn {
+  font-size: 32rpx;
+  cursor: pointer;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30rpx;
+  margin-bottom: 40rpx;
+}
+
+.stat-item {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16rpx;
+  padding: 30rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-value {
+  color: #fff;
+  font-size: 48rpx;
+  font-weight: 700;
+  margin-bottom: 8rpx;
+}
+
+.stat-label {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 24rpx;
+}
+
+/* 最近记录 */
+.recent-records {
+  border-top: 1rpx solid #f0f0f0;
+  padding-top: 30rpx;
+}
+
+.records-title {
+  display: block;
+  font-size: 28rpx;
+  color: #666;
+  margin-bottom: 20rpx;
+}
+
+.record-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f5f5f5;
+}
+
+.record-process {
+  flex: 1;
+  color: #333;
+  font-size: 28rpx;
+}
+
+.record-quantity {
+  color: #667eea;
+  font-size: 28rpx;
+  font-weight: 600;
+  margin: 0 20rpx;
+}
+
+.record-time {
+  color: #999;
+  font-size: 24rpx;
+}
+
+/* 提醒列表 */
+.reminders-section {
+  background: #fff;
+  border-radius: 24rpx;
+  margin: 30rpx;
+  padding: 40rpx;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.1);
+}
+
+.reminders-header {
+  margin-bottom: 20rpx;
+}
+
+.reminders-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.reminder-item {
+  display: flex;
+  align-items: center;
+  padding: 24rpx;
+  margin: 16rpx 0;
+  background: #f8f9fa;
+  border-radius: 16rpx;
+}
+
+.reminder-icon {
+  font-size: 40rpx;
+  margin-right: 20rpx;
+}
+
+.reminder-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.reminder-order {
+  color: #333;
+  font-size: 28rpx;
+  font-weight: 600;
+  margin-bottom: 8rpx;
+}
+
+.reminder-message {
+  color: #666;
+  font-size: 24rpx;
+}
+
+/* 架构说明 */
+.architecture-info {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 24rpx;
+  margin: 30rpx;
+  padding: 40rpx;
+  backdrop-filter: blur(10px);
+}
+
+.arch-title {
+  display: block;
+  color: #fff;
+  font-size: 32rpx;
+  font-weight: 600;
+  margin-bottom: 16rpx;
+}
+
+.arch-desc {
+  display: block;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 28rpx;
+  margin-bottom: 30rpx;
+}
+
+.arch-layers {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.layer-item {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 26rpx;
+  line-height: 1.6;
+}

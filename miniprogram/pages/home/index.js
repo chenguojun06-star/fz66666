@@ -1,5 +1,6 @@
 import api from '../../utils/api';
 import * as reminderManager from '../../utils/reminderManager';
+import { orderStatusText, qualityStatusText, getStatusColor, getQualityColor } from '../../utils/orderStatusHelper';
 
 function toNumber(v) {
     const n = Number(v);
@@ -140,6 +141,19 @@ Page({
         wx.switchTab({ url: '/pages/scan/index' });
     },
 
+    goScanTest() {
+        wx.navigateTo({ 
+            url: '/pages/scan-test/index',
+            fail: (err) => {
+                console.error('跳转测试页面失败:', err);
+                wx.showToast({
+                    title: '跳转失败',
+                    icon: 'none'
+                });
+            }
+        });
+    },
+
     goAdmin() {
         wx.switchTab({ url: '/pages/admin/index' });
     },
@@ -278,7 +292,7 @@ Page({
                     warehouse: keyword,
                 }).catch(() => ({ records: [] })),
                 
-                // 搜索异常
+                // 搜索异常（过滤掉采购记录，保持与其他页面一致）
                 api.production.listScans({
                     page: 1,
                     pageSize: 50,
@@ -294,7 +308,7 @@ Page({
             // 处理订单数据
             const orders = ordersRes.records || [];
             orders.forEach(item => {
-                const statusText = this.orderStatusText(item.status);
+                const statusText = orderStatusText(item.status);
                 results.push({
                     id: `order_${item.id}`,
                     type: 'order',
@@ -303,7 +317,7 @@ Page({
                     styleNo: item.styleNo,
                     factoryName: item.factoryName,
                     statusText,
-                    statusColor: this.getStatusColor(item.status),
+                    statusColor: getStatusColor(item.status),
                     rawData: item,
                 });
             });
@@ -311,7 +325,7 @@ Page({
             // 处理入库数据
             const warehousing = warehousingRes.records || [];
             warehousing.forEach(item => {
-                const qualityText = this.qualityStatusText(item.qualityStatus);
+                const qualityText = qualityStatusText(item.qualityStatus);
                 results.push({
                     id: `warehousing_${item.id}`,
                     type: 'warehousing',
@@ -321,7 +335,7 @@ Page({
                     warehouse: item.warehouse,
                     qualityStatusText: qualityText,
                     statusText: qualityText,
-                    statusColor: this.getQualityColor(item.qualityStatus),
+                    statusColor: getQualityColor(item.qualityStatus),
                     rawData: item,
                 });
             });
@@ -406,53 +420,9 @@ Page({
         }
     },
 
-    orderStatusText(status) {
-        const s = String(status || '').toLowerCase();
-        const map = {
-            pending: '待生产',
-            production: '生产中',
-            completed: '已完成',
-            delayed: '已逾期',
-            cancelled: '已取消',
-            canceled: '已取消',
-            paused: '已暂停',
-            returned: '已退回',
-        };
-        return map[s] || '未知';
-    },
-
-    qualityStatusText(status) {
-        const s = String(status || '').toLowerCase();
-        const map = {
-            qualified: '合格',
-            unqualified: '次品待返修',
-            repaired: '返修完成',
-        };
-        return map[s] || '未知';
-    },
-
-    getStatusColor(status) {
-        const s = String(status || '').toLowerCase();
-        const colorMap = {
-            pending: '#f59e0b',
-            production: '#3b82f6',
-            completed: '#10b981',
-            delayed: '#ef4444',
-            cancelled: '#6b7280',
-            canceled: '#6b7280',
-            paused: '#f59e0b',
-            returned: '#8b5cf6',
-        };
-        return colorMap[s] || '#6b7280';
-    },
-
-    getQualityColor(qualityStatus) {
-        const s = String(qualityStatus || '').toLowerCase();
-        const colorMap = {
-            qualified: '#10b981',
-            unqualified: '#ef4444',
-            repaired: '#3b82f6',
-        };
-        return colorMap[s] || '#6b7280';
-    },
+    // 以下方法已移至 utils/orderStatusHelper.js
+    // - orderStatusText
+    // - qualityStatusText  
+    // - getStatusColor
+    // - getQualityColor
 });
