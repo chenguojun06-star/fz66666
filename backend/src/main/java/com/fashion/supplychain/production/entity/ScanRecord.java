@@ -103,6 +103,22 @@ public class ScanRecord {
     private String cuttingBundleQrCode;
 
     /**
+     * SKU追踪字段 - Phase 3新增
+     * 扫码模式(ORDER/BUNDLE/SKU)
+     */
+    private String scanMode;
+
+    /**
+     * SKU完成数
+     */
+    private Integer skuCompletedCount;
+
+    /**
+     * SKU总数
+     */
+    private Integer skuTotalCount;
+
+    /**
      * 创建时间
      */
     private LocalDateTime createTime;

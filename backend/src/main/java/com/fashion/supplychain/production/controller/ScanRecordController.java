@@ -3,6 +3,7 @@ package com.fashion.supplychain.production.controller;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.orchestration.ScanRecordOrchestrator;
+import com.fashion.supplychain.production.service.SKUService;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +18,10 @@ public class ScanRecordController {
 
     @Autowired
     private ScanRecordOrchestrator scanRecordOrchestrator;
+
+    // ✅ Phase 3新增: SKU服务注入
+    @Autowired
+    private SKUService skuService;
 
     /**
      * 执行扫码操作
@@ -95,5 +100,85 @@ public class ScanRecordController {
     @PostMapping("/delete-full-link/{orderId}")
     public Result<?> deleteFullLinkByOrderId(@PathVariable String orderId) {
         return Result.success(scanRecordOrchestrator.deleteFullLinkByOrderId(orderId));
+    }
+
+    // ================= ✅ Phase 3新增: SKU相关端点 =================
+
+    /**
+     * 获取订单的SKU列表
+     */
+    @GetMapping("/sku/list/{orderNo}")
+    public Result<?> getSKUList(@PathVariable String orderNo) {
+        return Result.success(skuService.getSKUListByOrder(orderNo));
+    }
+
+    /**
+     * 获取单个SKU的进度
+     */
+    @GetMapping("/sku/progress")
+    public Result<?> getSKUProgress(
+            @RequestParam String orderNo,
+            @RequestParam String styleNo,
+            @RequestParam String color,
+            @RequestParam String size) {
+        return Result.success(skuService.getSKUProgress(orderNo, styleNo, color, size));
+    }
+
+    /**
+     * 获取订单的整体SKU进度
+     */
+    @GetMapping("/sku/order-progress/{orderNo}")
+    public Result<?> getOrderSKUProgress(@PathVariable String orderNo) {
+        return Result.success(skuService.getOrderSKUProgress(orderNo));
+    }
+
+    /**
+     * 查询SKU统计信息 (分页)
+     */
+    @GetMapping("/sku/statistics")
+    public Result<?> querySKUStatistics(@RequestParam Map<String, Object> params) {
+        return Result.success(skuService.querySKUStatistics(params));
+    }
+
+    /**
+     * 检查SKU是否已完成
+     */
+    @GetMapping("/sku/is-completed")
+    public Result<?> isSKUCompleted(
+            @RequestParam String orderNo,
+            @RequestParam String styleNo,
+            @RequestParam String color,
+            @RequestParam String size) {
+        boolean completed = skuService.isSKUCompleted(orderNo, styleNo, color, size);
+        return Result.success(completed);
+    }
+
+    /**
+     * 生成SKU报告
+     */
+    @GetMapping("/sku/report/{orderNo}")
+    public Result<?> generateSKUReport(@PathVariable String orderNo) {
+        return Result.success(skuService.generateSKUReport(orderNo));
+    }
+
+    /**
+     * 检测扫码模式
+     */
+    @PostMapping("/sku/detect-mode")
+    public Result<?> detectScanMode(@RequestBody Map<String, Object> params) {
+        String scanCode = (String) params.get("scanCode");
+        String color = (String) params.get("color");
+        String size = (String) params.get("size");
+        String mode = skuService.detectScanMode(scanCode, color, size);
+        return Result.success(mode);
+    }
+
+    /**
+     * 验证SKU数据
+     */
+    @PostMapping("/sku/validate")
+    public Result<?> validateSKU(@RequestBody ScanRecord scanRecord) {
+        boolean valid = skuService.validateSKU(scanRecord);
+        return Result.success(valid);
     }
 }
