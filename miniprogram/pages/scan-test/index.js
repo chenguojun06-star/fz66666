@@ -240,13 +240,14 @@ Page({
             const result = await this.scanHandler.handleScan(rawScanCode);
             console.log('[ScanTest] 扫码结果:', result.success ? '成功' : '失败', result.message);
 
-            wx.hideLoading();
-
-            // 检查是否需要输入数量
+            // 检查是否需要输入数量（在hideLoading之前检查）
             if (!result.success && result.needInput) {
+                wx.hideLoading();
                 this.showQuantityInput(rawScanCode, result.data);
                 return;
             }
+
+            wx.hideLoading();
 
             if (result.success) {
                 markRecent(dedupKey, 2000);
