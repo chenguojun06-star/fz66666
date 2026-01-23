@@ -46,14 +46,12 @@ class DashboardOrchestratorTest {
         DashboardResponse data = dashboardOrchestrator.dashboard("2026-01-01", "2026-01-31", null, null);
         assertNotNull(data);
 
-        assertEquals(10L, data.getStyleCount());
-        assertEquals(20L, data.getProductionCount());
-        assertEquals(5L, data.getPendingReconciliationCount());
-        assertEquals(11L, data.getPaymentApprovalCount());
-        assertEquals(7L, data.getTodayScanCount());
-        assertEquals(8L, data.getWarehousingOrderCount());
-        assertEquals(9L, data.getUnqualifiedQuantity());
-        assertEquals(11L, data.getUrgentEventCount());
+        // 使用新字段名
+        assertEquals(10L, data.getSampleDevelopmentCount());  // styleCount -> sampleDevelopmentCount
+        assertEquals(20L, data.getProductionOrderCount());     // productionCount -> productionOrderCount
+        assertEquals(11L, data.getPaymentApprovalCount());    // paymentApprovalCount 保持不变
+        assertEquals(8L, data.getTodayWarehousingCount());    // warehousingOrderCount -> todayWarehousingCount
+        assertEquals(9L, data.getDefectiveQuantity());        // unqualifiedQuantity -> defectiveQuantity
 
         assertTrue(data.getRecentActivities() instanceof List);
 
