@@ -185,7 +185,7 @@ const PayrollOperatorSummary: React.FC = () => {
         <Layout>
             <Card className="page-card">
                 <div className="page-header">
-                    <h2 className="page-title">人员工序统计</h2>
+                    <h2 className="page-title">人员工序结算</h2>
                 </div>
 
                 <Card size="small" className="filter-card mb-sm">
