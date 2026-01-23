@@ -1,5 +1,6 @@
-/**
 import logger from './logger';
+
+/**
  * PC端数据同步管理器
  * 基于小程序 syncManager.js 改造的 TypeScript 版本
  * 
