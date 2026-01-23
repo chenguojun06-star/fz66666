@@ -344,12 +344,28 @@ class StageDetector {
    * @returns {Array<string>} 工序名称数组
    */
   _extractSewingProcesses(orderDetail) {
-    if (!orderDetail || !orderDetail.progressNodeUnitPrices) {
+    // 优先使用 progressNodeUnitPrices（新字段），回退到 progressWorkflowJson
+    let rawNodes = orderDetail?.progressNodeUnitPrices || orderDetail?.progressWorkflowJson;
+    
+    if (!rawNodes) {
       console.log('[StageDetector] 无工序配置，使用默认');
       return [...this.defaultSewingProcesses];
     }
 
-    const nodes = orderDetail.progressNodeUnitPrices;
+    // 如果是字符串，尝试解析JSON
+    if (typeof rawNodes === 'string') {
+      try {
+        const parsed = JSON.parse(rawNodes);
+        rawNodes = parsed.nodes || parsed; // 支持 {nodes:[...]} 或 直接[...]格式
+      } catch (e) {
+        console.error('[StageDetector] 工序JSON解析失败:', e);
+        return [...this.defaultSewingProcesses];
+      }
+    }
+
+    // 如果是 {nodes: [...]} 格式，提取nodes数组
+    const nodes = Array.isArray(rawNodes) ? rawNodes : (rawNodes?.nodes || []);
+    
     console.log('[StageDetector] 原始工序节点数据:', nodes);
     
     if (!Array.isArray(nodes) || nodes.length === 0) {
@@ -389,11 +405,26 @@ class StageDetector {
   _extractProcessTimeConfig(orderDetail) {
     const config = {};
 
-    if (!orderDetail || !orderDetail.progressNodeUnitPrices) {
+    // 优先使用 progressNodeUnitPrices，回退到 progressWorkflowJson
+    let rawNodes = orderDetail?.progressNodeUnitPrices || orderDetail?.progressWorkflowJson;
+    
+    if (!rawNodes) {
       return config;
     }
 
-    const nodes = orderDetail.progressNodeUnitPrices;
+    // 如果是字符串，尝试解析JSON
+    if (typeof rawNodes === 'string') {
+      try {
+        const parsed = JSON.parse(rawNodes);
+        rawNodes = parsed.nodes || parsed;
+      } catch (e) {
+        return config;
+      }
+    }
+
+    // 如果是 {nodes: [...]} 格式，提取nodes数组
+    const nodes = Array.isArray(rawNodes) ? rawNodes : (rawNodes?.nodes || []);
+    
     if (!Array.isArray(nodes)) {
       return config;
     }
