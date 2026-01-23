@@ -362,7 +362,15 @@ class QRCodeParser {
     const bundleNo = params.bundleNo || params.cuttingBundleNo || params.bundle;
 
     // 尝试进一步解析code字段
-    const meta = code ? this._parseFeiNo(code) : null;
+    let meta = code ? this._parseFeiNo(code) : null;
+    
+    // 如果不是菲号，尝试解析为订单号
+    if (!meta && code) {
+        const orderMeta = this._parseOrderNo(code);
+        if (orderMeta) {
+            meta = orderMeta;
+        }
+    }
 
     return {
       scanCode: code != null && String(code).trim() ? String(code).trim() : raw,

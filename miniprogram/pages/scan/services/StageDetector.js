@@ -28,7 +28,7 @@ class StageDetector {
    */
   constructor(api) {
     this.api = api;
-    
+
     // 生产流程标准顺序（订单级别）
     this.stageSequence = [
       '采购',      // 0 - 物料采购
@@ -45,7 +45,7 @@ class StageDetector {
 
     // 车缝相关子工序关键词（用于识别）
     this.sewingSubProcessKeywords = [
-      '钉扣', '锁边', '压线', '上拉链', '钉标', 
+      '钉扣', '锁边', '压线', '上拉链', '钉标',
       '打枣', '车线', '绷缝', '缝骨', '包边'
     ];
 
@@ -88,13 +88,13 @@ class StageDetector {
     if (!orderDetail) return null;
 
     // 获取订单当前进度
-    const currentProgress = orderDetail.currentProcessName || 
-                           orderDetail.currentProgress || 
-                           orderDetail.progressStage || '';
+    const currentProgress = orderDetail.currentProcessName ||
+      orderDetail.currentProgress ||
+      orderDetail.progressStage || '';
 
     // 检查是否有裁剪菲号（标志裁剪已完成）
-    const hasCuttingBundles = (orderDetail.cuttingBundleCount || 0) > 0 || 
-                             (orderDetail.bundleCount || 0) > 0;
+    const hasCuttingBundles = (orderDetail.cuttingBundleCount || 0) > 0 ||
+      (orderDetail.bundleCount || 0) > 0;
 
     // === 特殊情况1：新订单（未开始或待开始）===
     if (!currentProgress || currentProgress === '待开始' || currentProgress === '未开始') {
@@ -125,7 +125,7 @@ class StageDetector {
     const isSewingSubProcess = this.sewingSubProcessKeywords.some(
       keyword => currentProgress.includes(keyword)
     );
-    
+
     if (isSewingSubProcess || currentProgress === '车缝') {
       // 继续车缝，使用当前子工序名称
       return {
@@ -138,7 +138,7 @@ class StageDetector {
 
     // === 标准流程：根据当前进度查找下一节点 ===
     const currentIndex = this.stageSequence.indexOf(currentProgress);
-    
+
     // 无法识别当前进度（可能是车缝子工序）
     if (currentIndex < 0) {
       return {
@@ -242,8 +242,8 @@ class StageDetector {
     try {
       // === 步骤1：获取菲号准确数量 ===
       const accurateQuantity = await this._getAccurateBundleQuantity(
-        orderNo, 
-        bundleNo, 
+        orderNo,
+        bundleNo,
         bundleQuantity
       );
 
@@ -264,7 +264,7 @@ class StageDetector {
           accurateQuantity,
           processTimeConfig
         );
-        
+
         // duplicateCheck 为 null 表示不重复，为对象表示重复
         if (duplicateCheck && duplicateCheck.isDuplicate) {
           return duplicateCheck;
@@ -273,8 +273,8 @@ class StageDetector {
 
       // === 步骤6：根据扫码次数判断当前工序 ===
       return this._determineCurrentProcess(
-        scanCount, 
-        sewingProcessList, 
+        scanCount,
+        sewingProcessList,
         accurateQuantity
       );
 
@@ -301,7 +301,7 @@ class StageDetector {
     } catch (e) {
       console.warn('[StageDetector] 查询菲号失败，使用二维码数量:', e);
     }
-    
+
     // 查询失败或无数据，使用备用值
     return fallbackQuantity || 10;  // 默认10件
   }
@@ -347,7 +347,24 @@ class StageDetector {
 
     // 筛选车缝阶段的工序，按顺序排序
     const sewingProcesses = nodes
-      .filter(node => node.progressStage === '车缝' || node.name === '车缝')
+      .filter(node => {
+        // 兼容乱码情况 (UTF-8 bytes interpreted as Latin-1)
+        // 车缝: è½¦ç¼
+        const stage = node.progressStage || '';
+        const name = node.name || '';
+
+        const isSewing = stage === '车缝' || stage === 'è½¦ç¼' ||
+          name === '车缝' || name === 'è½¦ç¼';
+
+        const match = isSewing;
+        console.log('[StageDetector] 节点筛选:', {
+          name: node.name,
+          progressStage: node.progressStage,
+          sortOrder: node.sortOrder,
+          match: match
+        });
+        return match;
+      })
       .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
       .map(node => node.name)
       .filter(name => name && name.trim());
