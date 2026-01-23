@@ -345,22 +345,36 @@ class StageDetector {
    */
   _extractSewingProcesses(orderDetail) {
     if (!orderDetail || !orderDetail.progressNodeUnitPrices) {
+      console.log('[StageDetector] 无工序配置，使用默认');
       return [...this.defaultSewingProcesses];
     }
 
     const nodes = orderDetail.progressNodeUnitPrices;
+    console.log('[StageDetector] 原始工序节点数据:', nodes);
+    
     if (!Array.isArray(nodes) || nodes.length === 0) {
+      console.log('[StageDetector] 工序节点为空或非数组，使用默认');
       return [...this.defaultSewingProcesses];
     }
 
     // 筛选车缝阶段的工序，按顺序排序
-    const sewingProcesses = nodes
-      .filter(node => node.progressStage === '车缝' || node.name === '车缝')
+    const filteredNodes = nodes.filter(node => {
+      const match = node.progressStage === '车缝' || node.name === '车缝';
+      console.log('[StageDetector] 节点筛选:', {
+        name: node.name,
+        progressStage: node.progressStage,
+        sortOrder: node.sortOrder,
+        match: match
+      });
+      return match;
+    });
+
+    const sewingProcesses = filteredNodes
       .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
       .map(node => node.name)
       .filter(name => name && name.trim());
 
-    console.log('[StageDetector] 提取车缝工序列表:', sewingProcesses, '节点数:', nodes.length);
+    console.log('[StageDetector] 提取车缝工序列表:', sewingProcesses, '原始节点数:', nodes.length, '筛选后:', filteredNodes.length);
 
     // 如果没有配置，使用默认
     return sewingProcesses.length > 0 ? sewingProcesses : [...this.defaultSewingProcesses];
