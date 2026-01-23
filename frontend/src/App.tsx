@@ -22,7 +22,6 @@ const OrderFlow = React.lazy(() => import('./pages/Production/OrderFlow'));
 const MaterialReconciliation = React.lazy(() => import('./pages/Finance/MaterialReconciliation'));
 const ShipmentReconciliationList = React.lazy(() => import('./pages/Finance/ShipmentReconciliationList'));
 const PaymentApproval = React.lazy(() => import('./pages/Finance/PaymentApproval'));
-const PayrollSettlement = React.lazy(() => import('./pages/Finance/PayrollSettlement'));
 const PayrollOperatorSummary = React.lazy(() => import('./pages/Finance/PayrollOperatorSummary'));
 const UserList = React.lazy(() => import('./pages/System/UserList'));
 const UserApproval = React.lazy(() => import('./pages/System/UserApproval'));
@@ -202,7 +201,6 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.materialReconciliation} element={<Suspense fallback={<Spin />}><MaterialReconciliation /></Suspense>} />
           <Route path={paths.shipmentReconciliation} element={<Suspense fallback={<Spin />}><ShipmentReconciliationList /></Suspense>} />
           <Route path={paths.paymentApproval} element={<Suspense fallback={<Spin />}><PaymentApproval /></Suspense>} />
-          <Route path={paths.payrollSettlement} element={<Suspense fallback={<Spin />}><PayrollSettlement /></Suspense>} />
           <Route path={paths.payrollOperatorSummary} element={<Suspense fallback={<Spin />}><PayrollOperatorSummary /></Suspense>} />
           <Route path={paths.user} element={<Suspense fallback={<Spin />}><UserList /></Suspense>} />
           <Route path={paths.userApproval} element={<Suspense fallback={<Spin />}><UserApproval /></Suspense>} />

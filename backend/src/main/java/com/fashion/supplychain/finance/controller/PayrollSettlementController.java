@@ -1,49 +1,67 @@
 package com.fashion.supplychain.finance.controller;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.fashion.supplychain.finance.orchestration.PayrollAggregationOrchestrator;
+import com.fashion.supplychain.finance.orchestration.PayrollAggregationOrchestrator.PayrollOperatorProcessSummaryDTO;
 import com.fashion.supplychain.common.Result;
-import com.fashion.supplychain.finance.entity.PayrollSettlement;
-import com.fashion.supplychain.finance.orchestration.PayrollSettlementOrchestrator;
-import java.util.Map;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import lombok.AllArgsConstructor;
+import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 工资结算 Controller
+ * 支持按人员和工序分组查询工资聚合数据
+ */
 @RestController
-@RequestMapping("/api/finance/payroll-settlement")
+@RequestMapping("/finance/payroll-settlement")
+@AllArgsConstructor
 public class PayrollSettlementController {
 
-    @Autowired
-    private PayrollSettlementOrchestrator payrollSettlementOrchestrator;
+    private final PayrollAggregationOrchestrator payrollAggregationOrchestrator;
 
-    @GetMapping("/list")
-    public Result<?> list(@RequestParam Map<String, Object> params) {
-        IPage<PayrollSettlement> page = payrollSettlementOrchestrator.list(params);
-        return Result.success(page);
-    }
-
-    @GetMapping("/detail/{id}")
-    public Result<?> detail(@PathVariable String id) {
-        return Result.success(payrollSettlementOrchestrator.detail(id));
-    }
-
-    @GetMapping("/items/{settlementId}")
-    public Result<?> items(@PathVariable String settlementId) {
-        return Result.success(payrollSettlementOrchestrator.items(settlementId));
-    }
-
+    /**
+     * 获取人员工序汇总数据
+     *
+     * @param params 查询参数：
+     *        - orderNo: 订单号 (可选)
+     *        - operatorName: 人员名称 (可选)
+     *        - processName: 工序名 (可选)
+     *        - startTime: 开始时间 (可选)
+     *        - endTime: 结束时间 (可选)
+     *        - includeSettled: 是否包含已结算 (默认 true)
+     * @return 聚合结果列表
+     */
     @PostMapping("/operator-summary")
-    public Result<?> operatorSummary(@RequestBody Map<String, Object> params) {
-        return Result.success(payrollSettlementOrchestrator.operatorSummary(params));
-    }
+    public Result<List<PayrollOperatorProcessSummaryDTO>> getOperatorSummary(
+            @RequestBody Map<String, Object> params) {
 
-    @PostMapping("/generate")
-    public Result<?> generate(@RequestBody Map<String, Object> params) {
-        return Result.success(payrollSettlementOrchestrator.generate(params));
+        String orderNo = (String) params.get("orderNo");
+        String operatorName = (String) params.get("operatorName");
+        String processName = (String) params.get("processName");
+        String startTimeStr = (String) params.get("startTime");
+        String endTimeStr = (String) params.get("endTime");
+        Boolean includeSettled = (Boolean) params.getOrDefault("includeSettled", true);
+
+        // 解析时间
+        LocalDateTime startTime = startTimeStr != null && !startTimeStr.isEmpty()
+                ? LocalDateTime.parse(startTimeStr)
+                : null;
+        LocalDateTime endTime = endTimeStr != null && !endTimeStr.isEmpty()
+                ? LocalDateTime.parse(endTimeStr)
+                : null;
+
+        List<PayrollOperatorProcessSummaryDTO> result = payrollAggregationOrchestrator
+                .aggregatePayrollByOperatorAndProcess(
+                        orderNo,
+                        operatorName,
+                        processName,
+                        startTime,
+                        endTime,
+                        includeSettled != null && includeSettled
+                );
+
+        return Result.success(result);
     }
 }
