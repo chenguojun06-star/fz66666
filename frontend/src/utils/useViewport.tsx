@@ -20,7 +20,7 @@ export const useViewport = (options: ViewportOptions = {}) => {
   const { isMobile, isTablet, modalWidth, tableScrollY } = useMemo(() => {
     const mobile = width < mobileMax;
     const tablet = width >= mobileMax && width < tabletMax;
-    const modal = mobile ? '96vw' : tablet ? '66vw' : '60vw';
+    const modal = mobile ? '96vw' : tablet ? '80vw' : '80vw';
     const scrollY = mobile ? 260 : 420;
     return { isMobile: mobile, isTablet: tablet, modalWidth: modal, tableScrollY: scrollY };
   }, [mobileMax, tabletMax, width]);
