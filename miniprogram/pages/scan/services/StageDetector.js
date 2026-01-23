@@ -265,7 +265,8 @@ class StageDetector {
           processTimeConfig
         );
         
-        if (duplicateCheck.isDuplicate) {
+        // duplicateCheck 为 null 表示不重复，为对象表示重复
+        if (duplicateCheck && duplicateCheck.isDuplicate) {
           return duplicateCheck;
         }
       }
