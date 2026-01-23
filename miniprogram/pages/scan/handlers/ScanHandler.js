@@ -73,11 +73,16 @@ class ScanHandler {
    */
   async handleScan(rawScanCode) {
     console.log('[ScanHandler] 开始处理扫码:', rawScanCode);
+    console.log('[ScanHandler] qrParser 状态:', this.qrParser ? '已初始化' : '未初始化');
 
     try {
       // === 步骤1：解析二维码 ===
+      console.log('[ScanHandler] 准备调用 qrParser.parse()');
       const parseResult = this.qrParser.parse(rawScanCode);
+      console.log('[ScanHandler] 解析完成:', parseResult);
+      
       if (!parseResult.success) {
+        console.warn('[ScanHandler] 解析失败:', parseResult.message);
         return this._errorResult(parseResult.message || '无法识别的二维码格式');
       }
 
@@ -87,6 +92,7 @@ class ScanHandler {
         : this.SCAN_MODE.BUNDLE;
 
       console.log('[ScanHandler] 解析结果:', {
+        success: true,
         scanMode,
         orderNo: parsedData.orderNo,
         bundleNo: parsedData.bundleNo,
