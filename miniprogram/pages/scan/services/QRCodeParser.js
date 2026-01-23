@@ -73,7 +73,7 @@ class QRCodeParser {
 
     // 3. 尝试解析菲号格式
     const bundleResult = this._parseFeiNo(raw);
-    
+
     // 4. 如果不是菲号，判断是否为订单号
     if (!bundleResult) {
       const orderResult = this._parseOrderNo(raw);
@@ -88,9 +88,13 @@ class QRCodeParser {
 
     // 5. 返回菲号解析结果或失败
     if (bundleResult) {
+      // 如果没有菲号，但有颜色尺码，认为是 SKU 码
+      // 注意：bundleNo 可能为 0，需严格判断 null/undefined
+      const isSku = (bundleResult.bundleNo == null) && bundleResult.color && bundleResult.size;
+
       return {
         success: true,
-        message: '解析成功 (菲号)',
+        message: isSku ? '解析成功 (SKU)' : '解析成功 (菲号)',
         data: {
           scanCode: raw,
           quantity: bundleResult.quantity,
@@ -100,6 +104,7 @@ class QRCodeParser {
           size: bundleResult.size,
           bundleNo: bundleResult.bundleNo != null ? String(bundleResult.bundleNo) : '',
           isOrderQR: false,
+          isSkuQR: isSku
         }
       };
     }
@@ -138,19 +143,19 @@ class QRCodeParser {
 
     // 统一分隔符：将全角横线转为半角
     const normalized = raw.replace(/[\u2013\u2014]/g, '-');
-    
+
     // 按分隔符拆分，过滤空白
     const parts = normalized
       .split('-')
       .map((p) => (p == null ? '' : String(p)).trim())
       .filter((p) => p);
-    
+
     // 至少需要3个部分：订单号-款号-颜色
     if (parts.length < 3) return null;
 
     // 查找ST款号的位置
     const stIdx = this._findStyleIndex(parts);
-    
+
     // 如果找不到ST，尝试按位置解析
     if (stIdx < 0) {
       return this._parseFeiNoByPosition(parts);
@@ -209,7 +214,7 @@ class QRCodeParser {
 
     const orderNo = (parts[0] || '').trim();
     const styleNo = (parts[1] || '').trim();
-    
+
     if (!orderNo || !styleNo) return null;
 
     return {
@@ -232,11 +237,11 @@ class QRCodeParser {
   _parseFeiNoWithStyleIndex(parts, stIdx) {
     // 查找PO订单号位置
     const poIdx = this._findOrderIndex(parts);
-    
+
     // 订单号：优先使用PO位置，否则使用ST前一位
     const orderNo = (poIdx >= 0 ? parts[poIdx] : parts[stIdx - 1]) || '';
     const styleNo = parts[stIdx] || '';
-    
+
     // ST后面的部分：颜色-尺码-数量-菲号序号
     const tail = parts.slice(stIdx + 1);
 
@@ -249,7 +254,7 @@ class QRCodeParser {
     if (tail.length >= 3) {
       const last = this._parsePositiveInt(tail[tail.length - 1]);
       const secondLast = this._parsePositiveInt(tail[tail.length - 2]);
-      
+
       if (last != null && secondLast != null) {
         // 有两个数字：倒数第一是菲号，倒数第二是数量
         bundleNo = last;
@@ -261,6 +266,14 @@ class QRCodeParser {
         quantity = last;
         size = tail[tail.length - 2] || '';
         color = tail.slice(0, -2).join('-');
+      }
+    } else if (tail.length >= 2) {
+      // 没有数字结尾，可能是 SKU 格式 (颜色-尺码)
+      // 检查最后一位是否像尺码 (通常较短)
+      const potentialSize = tail[tail.length - 1];
+      if (potentialSize.length <= 10) {
+        size = potentialSize;
+        color = tail.slice(0, -1).join('-');
       }
     }
 
@@ -280,7 +293,7 @@ class QRCodeParser {
 
     // 至少需要订单号和款号
     if (!result.orderNo || !result.styleNo) return null;
-    
+
     return result;
   }
 
@@ -363,13 +376,13 @@ class QRCodeParser {
 
     // 尝试进一步解析code字段
     let meta = code ? this._parseFeiNo(code) : null;
-    
+
     // 如果不是菲号，尝试解析为订单号
     if (!meta && code) {
-        const orderMeta = this._parseOrderNo(code);
-        if (orderMeta) {
-            meta = orderMeta;
-        }
+      const orderMeta = this._parseOrderNo(code);
+      if (orderMeta) {
+        meta = orderMeta;
+      }
     }
 
     return {
@@ -420,14 +433,14 @@ class QRCodeParser {
     // 移除开头的?或#
     const clean = s.replace(/^[?#]/, '');
     const pairs = clean.split('&');
-    
+
     const out = {};
     for (const pair of pairs) {
       const [k, v] = pair.split('=').map((x) => decodeURIComponent(x).trim());
       if (!k) continue;
       out[k] = v;
     }
-    
+
     return Object.keys(out).length > 0 ? out : null;
   }
 
@@ -440,10 +453,10 @@ class QRCodeParser {
   _parsePositiveInt(v) {
     const s = (v == null ? '' : String(v)).trim();
     if (!/^\d{1,9}$/.test(s)) return null;
-    
+
     const n = Number(s);
     if (!Number.isFinite(n) || n <= 0) return null;
-    
+
     return Math.floor(n);
   }
 
@@ -456,14 +469,14 @@ class QRCodeParser {
   _parseQuantityFromText(text) {
     const s = (text || '').toString().trim();
     if (!s) return null;
-    
+
     // 匹配数字
     const m = s.match(/\d+/);
     if (!m) return null;
-    
+
     const n = Number(m[0]);
     if (!Number.isFinite(n) || n <= 0) return null;
-    
+
     return Math.floor(n);
   }
 

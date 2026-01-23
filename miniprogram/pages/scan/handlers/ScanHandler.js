@@ -40,16 +40,17 @@ class ScanHandler {
   constructor(api, options = {}) {
     this.api = api;
     this.options = options;
-    
+
     // 初始化服务
     // 注意：QRCodeParser 导出的是实例，StageDetector 导出的是类
     this.qrParser = QRCodeParser; // 直接使用导出的实例
     this.stageDetector = new StageDetector(api); // 需要实例化
-    
+
     // 扫码模式
     this.SCAN_MODE = {
       BUNDLE: 'bundle',   // 菲号扫码（推荐）
-      ORDER: 'order'      // 订单扫码
+      ORDER: 'order',     // 订单扫码
+      SKU: 'sku'          // SKU扫码
     };
   }
 
@@ -78,40 +79,33 @@ class ScanHandler {
     try {
       // === 步骤1：解析二维码 ===
       const parseResult = this.qrParser.parse(rawScanCode);
-      
+
       if (!parseResult.success) {
         console.warn('[ScanHandler] 解析失败:', parseResult.message);
         return this._errorResult(parseResult.message || '无法识别的二维码格式');
       }
 
       const parsedData = parseResult.data;
-      
+
       // 如果手动输入了数量,覆盖解析结果
       if (manualQuantity && manualQuantity > 0) {
         parsedData.quantity = manualQuantity;
       }
-      
-      const scanMode = parsedData.isOrderQR 
-        ? this.SCAN_MODE.ORDER 
-        : this.SCAN_MODE.BUNDLE;
+
+      let scanMode = this.SCAN_MODE.BUNDLE;
+      if (parsedData.isOrderQR) {
+        scanMode = this.SCAN_MODE.ORDER;
+      } else if (parsedData.isSkuQR) {
+        scanMode = this.SCAN_MODE.SKU;
+      }
 
       console.log('[ScanHandler] 解析成功:', {
         scanMode,
         orderNo: parsedData.orderNo,
         bundleNo: parsedData.bundleNo,
-        quantity: parsedData.quantity
+        quantity: parsedData.quantity,
+        isSku: parsedData.isSkuQR
       });
-
-      // === 步骤2：处理订单扫码数量 ===
-      // 订单扫码时quantity为null,需要用户输入
-      if (scanMode === this.SCAN_MODE.ORDER && !parsedData.quantity) {
-        return {
-          success: false,
-          message: '请输入数量',
-          needInput: true, // 标记需要输入
-          data: parsedData
-        };
-      }
 
       // === 步骤3：获取订单详情 ===
       const orderDetail = await this._getOrderDetail(parsedData.orderNo);
@@ -119,13 +113,75 @@ class ScanHandler {
         return this._errorResult('订单不存在或已删除');
       }
 
+      // === 步骤2：处理订单/SKU扫码数量 (移到获取详情后) ===
+
+      // SKU 模式处理
+      if (scanMode === this.SCAN_MODE.SKU && !parsedData.quantity) {
+        // 尝试在订单明细中找到该SKU的数量
+        if (orderDetail.items && orderDetail.items.length > 0) {
+          const matchedItem = orderDetail.items.find(item =>
+            item.color === parsedData.color &&
+            item.size === parsedData.size
+          );
+
+          if (matchedItem) {
+            // 使用明细数量
+            const skuQty = matchedItem.quantity || matchedItem.num;
+            if (skuQty > 0) {
+              parsedData.quantity = Number(skuQty);
+              console.log('[ScanHandler] 自动使用SKU数量:', parsedData.quantity);
+            }
+          }
+        }
+
+        // 如果还是没有数量，默认1或者弹窗
+        if (!parsedData.quantity) {
+          // 这里策略：SKU扫码如果没数量，暂时默认为0让detectStage去判断，或者弹窗
+          // 考虑到用户说“还要有清晰的码数”，我们这里如果不确定数量，最好还是让用户确认或输入
+          return {
+            success: false,
+            message: `请输入 ${parsedData.color}/${parsedData.size} 的数量`,
+            needInput: true,
+            data: parsedData
+          };
+        }
+      }
+
+      // 订单扫码时如果quantity为null,尝试从订单详情获取
+      if (scanMode === this.SCAN_MODE.ORDER) {
+        // 检查是否有SKU明细
+        if (orderDetail.items && orderDetail.items.length > 0) {
+          console.log('[ScanHandler] 发现订单明细:', orderDetail.items.length);
+          // 将明细传递给后端，或前端展示
+          // 这里我们将明细作为额外数据保存，以便后续处理
+          parsedData.skuItems = orderDetail.items;
+        }
+
+        // 如果没有解析到数量，尝试从订单详情获取总数
+        if (!parsedData.quantity) {
+          const orderQuantity = orderDetail.quantity || orderDetail.totalQuantity || orderDetail.totalNum;
+          if (orderQuantity && orderQuantity > 0) {
+            parsedData.quantity = Number(orderQuantity);
+            console.log('[ScanHandler] 自动使用订单数量:', parsedData.quantity);
+          } else if (!parsedData.skuItems) {
+            // 既没有总数，也没有明细，才要求输入
+            return {
+              success: false,
+              message: '请输入数量',
+              needInput: true,
+              data: parsedData
+            };
+          }
+        }
+      }
+
       // === 步骤4：检测下一个工序 ===
       const stageResult = await this._detectStage(
-        scanMode, 
-        parsedData, 
+        scanMode,
+        parsedData,
         orderDetail
       );
-      
+
       if (!stageResult) {
         return this._errorResult('无法识别当前工序,请联系管理员');
       }
@@ -137,8 +193,8 @@ class ScanHandler {
 
       // === 步骤6：准备扫码数据 ===
       const scanData = this._prepareScanData(
-        parsedData, 
-        stageResult, 
+        parsedData,
+        stageResult,
         orderDetail
       );
 
@@ -173,11 +229,11 @@ class ScanHandler {
     } catch (e) {
       console.error('[ScanHandler] 扫码处理异常:', e);
       const errorMsg = e.message || '扫码失败，请重试';
-      
+
       if (this.options.onError) {
         this.options.onError(errorMsg);
       }
-      
+
       return this._errorResult(errorMsg);
     }
   }
@@ -230,12 +286,12 @@ class ScanHandler {
    * @returns {Object} 扫码数据对象
    */
   _prepareScanData(parsedData, stageResult, orderDetail) {
-    const factory = this.options.getCurrentFactory 
-      ? this.options.getCurrentFactory() 
+    const factory = this.options.getCurrentFactory
+      ? this.options.getCurrentFactory()
       : null;
-    
-    const worker = this.options.getCurrentWorker 
-      ? this.options.getCurrentWorker() 
+
+    const worker = this.options.getCurrentWorker
+      ? this.options.getCurrentWorker()
       : null;
 
     return {
@@ -243,26 +299,29 @@ class ScanHandler {
       orderNo: parsedData.orderNo,
       bundleNo: parsedData.bundleNo || '',
       quantity: stageResult.quantity || parsedData.quantity || 0,
-      
+
+      // 扩展信息：SKU明细
+      skuItems: parsedData.skuItems || [],
+
       // 工序信息
       processName: stageResult.processName,
       progressStage: stageResult.progressStage,
       scanType: stageResult.scanType,
-      
+
       // 订单信息
       styleNo: parsedData.styleNo || orderDetail.styleNo || '',
       color: parsedData.color || '',
       size: parsedData.size || '',
-      
+
       // 工厂和工人信息
       factoryId: factory?.id || orderDetail.factoryId || '',
       factoryName: factory?.name || orderDetail.factoryName || '',
       workerId: worker?.id || '',
       workerName: worker?.name || '',
-      
+
       // 扫码时间
       scanTime: new Date().toISOString(),
-      
+
       // 客户端标识
       source: 'miniprogram'
     };
@@ -277,7 +336,7 @@ class ScanHandler {
   async _submitScan(scanData) {
     try {
       const res = await this.api.production.executeScan(scanData);
-      
+
       if (res && res.success !== false) {
         return {
           success: true,
@@ -291,7 +350,7 @@ class ScanHandler {
       }
     } catch (e) {
       console.error('[ScanHandler] 提交扫码失败:', e);
-      
+
       // 判断是否为网络错误
       if (e.errMsg && e.errMsg.includes('timeout')) {
         return {
@@ -299,7 +358,7 @@ class ScanHandler {
           message: '网络超时，请检查网络后重试'
         };
       }
-      
+
       return {
         success: false,
         message: e.message || '提交失败'
@@ -319,13 +378,21 @@ class ScanHandler {
     const quantity = scanData.quantity;
     const processName = scanData.processName;
     const bundleNo = scanData.bundleNo;
+    const skuItems = scanData.skuItems;
 
     if (scanMode === this.SCAN_MODE.BUNDLE && bundleNo) {
       // 菲号模式：显示工序和数量
       const hint = stageResult.hint ? ` ${stageResult.hint}` : '';
       return `✅ ${processName} ${quantity}件${hint}`;
+    } else if (scanMode === this.SCAN_MODE.SKU) {
+      // SKU模式：显示工序、SKU信息和数量
+      return `✅ ${processName} 成功 - ${scanData.color}/${scanData.size} ${quantity}件`;
     } else {
       // 订单模式：显示工序
+      if (skuItems && skuItems.length > 0) {
+        // 如果有SKU明细，提示已处理明细
+        return `✅ ${processName} 成功 - 已处理 ${skuItems.length} 个规格`;
+      }
       return `✅ 订单扫码成功 - ${processName}`;
     }
   }
@@ -368,13 +435,13 @@ class ScanHandler {
     for (let i = 0; i < scanCodes.length; i++) {
       const code = scanCodes[i];
       const result = await this.handleScan(code);
-      
+
       if (result.success) {
         results.success++;
       } else {
         results.failed++;
       }
-      
+
       results.details.push({
         index: i + 1,
         code: code,
@@ -399,12 +466,12 @@ class ScanHandler {
    * @returns {string} result.message - 错误消息（无效时）
    */
   validateScanPermission() {
-    const factory = this.options.getCurrentFactory 
-      ? this.options.getCurrentFactory() 
+    const factory = this.options.getCurrentFactory
+      ? this.options.getCurrentFactory()
       : null;
-    
-    const worker = this.options.getCurrentWorker 
-      ? this.options.getCurrentWorker() 
+
+    const worker = this.options.getCurrentWorker
+      ? this.options.getCurrentWorker()
       : null;
 
     if (!factory) {
