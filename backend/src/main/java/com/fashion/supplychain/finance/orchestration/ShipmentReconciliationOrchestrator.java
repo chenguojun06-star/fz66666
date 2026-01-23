@@ -13,11 +13,16 @@ import com.fashion.supplychain.production.orchestration.ProductionOrderOrchestra
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import java.time.LocalDateTime;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.stream.Collectors;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.production.entity.ScanRecord;
+import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
@@ -41,10 +46,75 @@ public class ShipmentReconciliationOrchestrator {
     @Autowired
     private DeductionItemMapper deductionItemMapper;
 
+    @Autowired
+    private ScanRecordMapper scanRecordMapper;
+
+    /**
+     * 计算工序成本（从Phase 5 ScanRecord汇总）
+     * 数据来源：该订单下所有ScanRecord的scanCost求和
+     */
+    public BigDecimal calculateScanCost(String orderId) {
+        if (!StringUtils.hasText(orderId)) {
+            return BigDecimal.ZERO;
+        }
+        try {
+            List<ScanRecord> records = scanRecordMapper.selectList(
+                new LambdaQueryWrapper<ScanRecord>()
+                    .eq(ScanRecord::getOrderId, orderId)
+                    .isNotNull(ScanRecord::getScanCost)
+            );
+            return records.stream()
+                .map(ScanRecord::getScanCost)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        } catch (Exception e) {
+            log.warn("Failed to calculate scan cost for order: {}", orderId, e);
+            return BigDecimal.ZERO;
+        }
+    }
+
+    /**
+     * 填充利润信息
+     */
+    public void fillProfitInfo(ShipmentReconciliation shipment) {
+        if (shipment == null) {
+            return;
+        }
+        BigDecimal scanCost = calculateScanCost(shipment.getOrderId());
+        shipment.setScanCost(scanCost);
+        BigDecimal materialCost = shipment.getMaterialCost();
+        if (materialCost == null) {
+            materialCost = BigDecimal.ZERO;
+        }
+        BigDecimal totalCost = scanCost.add(materialCost);
+        shipment.setTotalCost(totalCost);
+        BigDecimal finalAmount = shipment.getFinalAmount();
+        if (finalAmount == null) {
+            finalAmount = BigDecimal.ZERO;
+        }
+        BigDecimal profit = finalAmount.subtract(totalCost);
+        if (profit.compareTo(BigDecimal.ZERO) < 0) {
+            profit = BigDecimal.ZERO;
+        }
+        shipment.setProfitAmount(profit);
+        if (finalAmount.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal margin = profit
+                .divide(finalAmount, 4, RoundingMode.HALF_UP)
+                .multiply(new BigDecimal("100"))
+                .setScale(2, RoundingMode.HALF_UP);
+            shipment.setProfitMargin(margin);
+        } else {
+            shipment.setProfitMargin(BigDecimal.ZERO);
+        }
+    }
+
     public IPage<ShipmentReconciliation> list(Map<String, Object> params) {
         IPage<ShipmentReconciliation> page = shipmentReconciliationService.queryPage(params);
-        if (page != null) {
+        if (page != null && page.getRecords() != null) {
             fillProductionCompletedQuantity(page.getRecords());
+            for (ShipmentReconciliation record : page.getRecords()) {
+                fillProfitInfo(record);
+            }
         }
         return page;
     }
@@ -63,6 +133,7 @@ public class ShipmentReconciliationOrchestrator {
             throw new NoSuchElementException("对账单不存在");
         }
         fillProductionCompletedQuantity(List.of(r));
+        fillProfitInfo(r);
         return r;
     }
 
@@ -114,6 +185,7 @@ public class ShipmentReconciliationOrchestrator {
         if (shipmentReconciliation == null) {
             throw new IllegalArgumentException("参数错误");
         }
+        fillProfitInfo(shipmentReconciliation);
         LocalDateTime now = LocalDateTime.now();
         UserContext ctx = UserContext.get();
         String uid = ctx == null ? null : ctx.getUserId();

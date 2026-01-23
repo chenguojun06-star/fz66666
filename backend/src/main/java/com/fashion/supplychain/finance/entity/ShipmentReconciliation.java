@@ -87,6 +87,31 @@ public class ShipmentReconciliation implements com.fashion.supplychain.finance.s
     private BigDecimal finalAmount;
 
     /**
+     * 工序成本（从Phase 5 ScanRecord.scanCost汇总）
+     */
+    private BigDecimal scanCost;
+
+    /**
+     * 物料成本（可选，从物料对账获取）
+     */
+    private BigDecimal materialCost;
+
+    /**
+     * 总成本 = 工序成本 + 物料成本
+     */
+    private BigDecimal totalCost;
+
+    /**
+     * 利润 = finalAmount - totalCost
+     */
+    private BigDecimal profitAmount;
+
+    /**
+     * 利润率(%) = profitAmount / finalAmount * 100
+     */
+    private BigDecimal profitMargin;
+
+    /**
      * 对账日期
      */
     private LocalDateTime reconciliationDate;
