@@ -10,6 +10,7 @@ import com.google.zxing.qrcode.QRCodeWriter;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderQueryService;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
+import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.common.UserContext;
@@ -76,6 +77,9 @@ public class ProductionOrderOrchestrator {
     private MaterialPurchaseService materialPurchaseService;
 
     @Autowired
+    private CuttingTaskService cuttingTaskService;
+
+    @Autowired
     private ProductionOrderProgressOrchestrationService progressOrchestrationService;
 
     @Autowired
@@ -132,6 +136,22 @@ public class ProductionOrderOrchestrator {
         if (order == null) {
             throw new NoSuchElementException("生产订单不存在");
         }
+        
+        // 解析 orderDetails JSON 并填充 items 字段（用于小程序扫码场景）
+        if (StringUtils.hasText(order.getOrderDetails())) {
+            try {
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                java.util.List<java.util.Map<String, Object>> items = mapper.readValue(
+                    order.getOrderDetails(), 
+                    new com.fasterxml.jackson.core.type.TypeReference<java.util.List<java.util.Map<String, Object>>>() {}
+                );
+                order.setItems(items);
+            } catch (Exception e) {
+                // JSON 解析失败，items 保持为 null
+                System.err.println("解析订单明细失败: " + e.getMessage());
+            }
+        }
+        
         return order;
     }
 
@@ -961,6 +981,16 @@ public class ProductionOrderOrchestrator {
         } catch (Exception e) {
             log.warn("Failed to cascade delete material purchases: orderId={}", oid, e);
         }
+        
+        try {
+            // 级联删除裁剪任务和裁剪单
+            cuttingTaskService.deleteByOrderId(oid);
+        } catch (Exception e) {
+            log.warn("Failed to cascade delete cutting tasks: orderId={}", oid, e);
+        }
+        
+        // TODO: 如需级联删除其他关联数据（扫码记录、质检入库等），
+        // 需要在对应的 Service 中添加 deleteByOrderId 方法
         
         return true;
     }

@@ -9,6 +9,7 @@ import RowActions from '../../components/common/RowActions';
 import api from '../../utils/api';
 import { isAdminUser as isAdminUserFn, useAuth } from '../../utils/authContext';
 import { useViewport } from '../../utils/useViewport';
+import { getMaterialTypeLabel } from '../../utils/materialType';
 import type { TemplateLibrary } from '../../types/style';
 
 type ProgressNodeInput = { name: string };
@@ -903,27 +904,33 @@ const TemplateCenter: React.FC = () => {
     if (t === 'progress') {
       const nodes = Array.isArray((obj as any)?.nodes) ? (obj as any).nodes : [];
       return (
-        <Table
-          size="small"
-          rowKey={(r: any) => String(r?.name || '')}
-          pagination={false}
-          scroll={{ x: 'max-content', y: 520 }}
-          columns={[
-            { title: '环节', dataIndex: 'name', key: 'name', width: 220, render: (v: any) => String(v || '-') },
-            {
-              title: '单价',
-              dataIndex: 'unitPrice',
-              key: 'unitPrice',
-              width: 120,
-              align: 'right',
-              render: (v: any) => {
-                const n = typeof v === 'number' ? v : Number(v);
-                return Number.isFinite(n) ? n.toFixed(2) : '-';
-              },
-            },
-          ]}
-          dataSource={nodes}
-        />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          <div style={{ border: '1px solid #d9d9d9', padding: 8, borderRadius: 4 }}>
+            <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>进度节点</div>
+            <div style={{ maxHeight: 480, overflow: 'auto' }}>
+              {nodes.map((n: any, idx: number) => (
+                <div key={idx} style={{ padding: '6px 8px', borderBottom: '1px solid #f0f0f0', fontSize: 13 }}>
+                  {String(n?.name || '-')}
+                </div>
+              ))}
+              {nodes.length === 0 && <div style={{ padding: 12, textAlign: 'center', color: '#999' }}>暂无数据</div>}
+            </div>
+          </div>
+          <div style={{ border: '1px solid #d9d9d9', padding: 8, borderRadius: 4 }}>
+            <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>单价工序库</div>
+            <div style={{ maxHeight: 480, overflow: 'auto' }}>
+              {nodes.filter((n: any) => n?.unitPrice != null && n.unitPrice !== 0).map((n: any, idx: number) => (
+                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderBottom: '1px solid #f0f0f0', fontSize: 13 }}>
+                  <span>{String(n?.name || '-')}</span>
+                  <span style={{ fontWeight: 500 }}>¥ {Number(n?.unitPrice || 0).toFixed(2)}</span>
+                </div>
+              ))}
+              {nodes.filter((n: any) => n?.unitPrice != null && n.unitPrice !== 0).length === 0 && 
+                <div style={{ padding: 12, textAlign: 'center', color: '#999' }}>暂无单价数据</div>
+              }
+            </div>
+          </div>
+        </div>
       );
     }
 
@@ -931,46 +938,49 @@ const TemplateCenter: React.FC = () => {
       const steps = Array.isArray((obj as any)?.steps) ? (obj as any).steps : [];
       const unitField = t === 'process_price' ? 'unitPrice' : 'price';
       return (
-        <Table
-          size="small"
-          rowKey={(r: any) => String(r?.processCode || r?.processName || '')}
-          pagination={false}
-          scroll={{ x: 'max-content', y: 520 }}
-          columns={[
-            { title: '工序编码', dataIndex: 'processCode', key: 'processCode', width: 120, render: (v: any) => String(v || '-') },
-            { title: '工序名称', dataIndex: 'processName', key: 'processName', width: 180, render: (v: any) => String(v || '-') },
-            ...(t === 'process'
-              ? [{ title: '机器类型', dataIndex: 'machineType', key: 'machineType', width: 140, render: (v: any) => String(v || '-') }]
-              : []),
-            {
-              title: t === 'process_price' ? '单价' : '工价',
-              dataIndex: unitField,
-              key: unitField,
-              width: 120,
-              align: 'right',
-              render: (v: any) => {
-                const n = typeof v === 'number' ? v : Number(v);
-                return Number.isFinite(n) ? n.toFixed(2) : '-';
-              },
-            },
-            ...(t === 'process'
-              ? [
-                {
-                  title: '标准工时(秒)',
-                  dataIndex: 'standardTime',
-                  key: 'standardTime',
-                  width: 140,
-                  align: 'right',
-                  render: (v: any) => {
-                    const n = typeof v === 'number' ? v : Number(v);
-                    return Number.isFinite(n) ? n : '-';
-                  },
-                },
-              ]
-              : []),
-          ] as any}
-          dataSource={steps}
-        />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          <div style={{ border: '1px solid #d9d9d9', padding: 8, borderRadius: 4 }}>
+            <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>
+              {t === 'process_price' ? '工序节点' : '工艺节点'}
+            </div>
+            <div style={{ maxHeight: 480, overflow: 'auto' }}>
+              {steps.map((s: any, idx: number) => (
+                <div key={idx} style={{ padding: '6px 8px', borderBottom: '1px solid #f0f0f0', fontSize: 13 }}>
+                  <div>{String(s?.processName || '-')}</div>
+                  {s?.processCode && <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>编码: {s.processCode}</div>}
+                  {t === 'process' && s?.machineType && <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>机器: {s.machineType}</div>}
+                  {t === 'process' && s?.standardTime && <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>工时: {s.standardTime}秒</div>}
+                </div>
+              ))}
+              {steps.length === 0 && <div style={{ padding: 12, textAlign: 'center', color: '#999' }}>暂无数据</div>}
+            </div>
+          </div>
+          <div style={{ border: '1px solid #d9d9d9', padding: 8, borderRadius: 4 }}>
+            <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>
+              {t === 'process_price' ? '单价工序库' : '工价工序库'}
+            </div>
+            <div style={{ maxHeight: 480, overflow: 'auto' }}>
+              {steps.filter((s: any) => {
+                const price = s?.[unitField];
+                return price != null && price !== 0;
+              }).map((s: any, idx: number) => {
+                const price = Number(s?.[unitField] || 0);
+                return (
+                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderBottom: '1px solid #f0f0f0', fontSize: 13 }}>
+                    <span>{String(s?.processName || '-')}</span>
+                    <span style={{ fontWeight: 500 }}>¥ {price.toFixed(2)}</span>
+                  </div>
+                );
+              })}
+              {steps.filter((s: any) => {
+                const price = s?.[unitField];
+                return price != null && price !== 0;
+              }).length === 0 && 
+                <div style={{ padding: 12, textAlign: 'center', color: '#999' }}>暂无价格数据</div>
+              }
+            </div>
+          </div>
+        </div>
       );
     }
 
@@ -983,7 +993,7 @@ const TemplateCenter: React.FC = () => {
           pagination={false}
           scroll={{ x: 'max-content', y: 520 }}
           columns={[
-            { title: '类型', dataIndex: 'materialType', key: 'materialType', width: 140, render: (v: any) => String(v || '-') },
+            { title: '类型', dataIndex: 'materialType', key: 'materialType', width: 140, render: (v: any) => getMaterialTypeLabel(v) },
             { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 180, ellipsis: true, render: (v: any) => String(v || '-') },
             { title: '颜色', dataIndex: 'color', key: 'color', width: 110, render: (v: any) => String(v || '-') },
             { title: '规格', dataIndex: 'specification', key: 'specification', width: 160, ellipsis: true, render: (v: any) => String(v || '-') },

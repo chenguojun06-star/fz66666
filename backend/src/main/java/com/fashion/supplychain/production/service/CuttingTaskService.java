@@ -19,4 +19,10 @@ public interface CuttingTaskService extends IService<CuttingTask> {
     boolean rollbackTask(String taskId);
 
     void insertRollbackLog(CuttingTask task, String operatorId, String operatorName, String remark);
+
+    /**
+     * 根据订单ID删除裁剪任务及其关联的裁剪单
+     * @param orderId 订单ID
+     */
+    void deleteByOrderId(String orderId);
 }

@@ -313,9 +313,9 @@ Page({
     },
 
     /**
-     * 触发扫码
+     * 触发扫码 (绑定到 WXML 的 onScan 事件)
      */
-    async handleScan() {
+    async onScan() {
         if (!this.data.scanEnabled || this.data.loading) return;
 
         // 获取当前选中的扫码类型

@@ -231,7 +231,11 @@ export const fetchProductionOrderDetail = async (
     if (result?.code === 200) return result?.data ?? null;
     if (opts?.acceptAnyData) return result?.data ?? null;
     return null;
-  } catch {
+  } catch (error: any) {
+    // 静默处理404错误（订单已删除）
+    if (error?.response?.status === 404) {
+      return null;
+    }
     return null;
   }
 };
@@ -249,7 +253,12 @@ export const primeProductionOrderFrozenCache = async (
   if (cached !== undefined) return cached;
 
   const detail = await fetchProductionOrderDetail(oid, { acceptAnyData: opts.acceptAnyData });
-  if (!detail) return undefined;
+  if (!detail) {
+    // 订单不存在或已删除，缓存false避免重复请求
+    cache.set(oid, false);
+    opts.onCacheUpdated?.();
+    return false;
+  }
 
   const frozen = opts.rule === 'status' ? isOrderFrozenByStatus(detail) : isOrderFrozenByStatusOrStock(detail);
   cache.set(oid, frozen);

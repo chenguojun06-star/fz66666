@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 import lombok.Data;
 
 /**
@@ -330,4 +332,11 @@ public class ProductionOrder {
      */
     @TableField(exist = false)
     private Integer repairQuantity;
+
+    /**
+     * SKU 明细列表（用于扫码场景）
+     * 从 orderDetails JSON 字段解析而来
+     */
+    @TableField(exist = false)
+    private List<Map<String, Object>> items;
 }
