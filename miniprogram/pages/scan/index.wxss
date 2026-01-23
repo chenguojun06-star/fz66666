@@ -931,6 +931,36 @@ page {
   overflow-y: auto;
 }
 
+/* ✅ SKU统计摘要样式 */
+.sku-summary {
+  display: flex;
+  gap: 12px;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
+  border-radius: 8px;
+  margin-bottom: 10px;
+  border-left: 3px solid #3b82f6;
+}
+
+.summary-stat {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.summary-label {
+  font-size: 11px;
+  color: #1e40af;
+  font-weight: 500;
+}
+
+.summary-value {
+  font-size: 13px;
+  color: #1f2937;
+  font-weight: 600;
+}
+
 .purchase-modal-item {
   background: #f9fafb;
   border-radius: 12px;

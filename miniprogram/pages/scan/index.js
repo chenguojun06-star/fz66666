@@ -24,6 +24,7 @@ import * as reminderManager from '../../utils/reminderManager';
 const { eventBus } = require('../../utils/eventBus');
 
 const ScanHandler = require('./handlers/ScanHandler');
+const SKUProcessor = require('./processors/SKUProcessor');
 
 // ==================== 全局变量 ====================
 
@@ -412,11 +413,18 @@ Page({
      * 显示确认弹窗
      */
     showConfirmModal(data) {
-        // 构造 SKU 列表 (用于通用工序)
-        const skuList = data.skuItems ? data.skuItems.map(item => ({
-            ...item,
-            inputQuantity: item.quantity || item.num || 0 // 默认为剩余/总数量
-        })) : [];
+        // ✅ 使用SKUProcessor统一标准化SKU列表
+        const skuList = data.skuItems ? SKUProcessor.normalizeOrderItems(
+            data.skuItems,
+            data.orderNo,
+            data.styleNo
+        ) : [];
+
+        // ✅ 构建表单项
+        const formItems = SKUProcessor.buildSKUInputList(skuList);
+        
+        // ✅ 计算统计摘要
+        const summary = SKUProcessor.getSummary(skuList);
 
         // 构造 Cutting 任务 (如果是裁剪工序)
         let cuttingTasks = [];
@@ -438,7 +446,8 @@ Page({
                     ...data,
                     isProcurement: this.data.scanTypeOptions[this.data.scanTypeIndex].value === 'procurement' || data.progressStage === '采购'
                 },
-                skuList: skuList,
+                skuList: formItems,
+                summary: summary, // ✅ 新增: 显示统计摘要
                 cuttingTasks: cuttingTasks,
                 materialPurchases: [] // 采购逻辑暂未集成到此处，通常由 Handler 返回
             }
@@ -492,22 +501,33 @@ Page({
                 // 这里我们暂且按普通工序提交
             }
 
-            // 2. 通用批量提交 (SKU List)
+            // 2. ✅ 通用批量提交 (使用SKUProcessor验证)
             if (skuList && skuList.length > 0) {
-                const tasks = skuList
-                    .filter(item => Number(item.inputQuantity) > 0)
-                    .map(item => {
-                        // 构造请求
-                        return api.production.executeScan({
-                            orderNo: detail.orderNo,
-                            styleNo: detail.styleNo,
-                            color: item.color,
-                            size: item.size,
-                            quantity: Number(item.inputQuantity),
-                            action: 'scan',
-                            scanType: this.mapScanType(detail.progressStage)
-                        });
+                // ✅ 批量验证 (最重要的改动)
+                const validation = SKUProcessor.validateSKUInputBatch(skuList);
+                if (!validation.valid) {
+                    wx.showToast({
+                        title: validation.errors[0],
+                        icon: 'none'
                     });
+                    return;
+                }
+
+                // ✅ 生成扫码请求
+                const requests = SKUProcessor.generateScanRequests(
+                    validation.validList,
+                    detail.orderNo,
+                    detail.styleNo,
+                    detail.progressStage
+                );
+
+                // ✅ 批量提交
+                const tasks = requests.map(req =>
+                    api.production.executeScan({
+                        ...req,
+                        scanType: this.mapScanType(detail.progressStage)
+                    })
+                );
 
                 if (tasks.length === 0) {
                     throw new Error('请至少输入一个数量');
