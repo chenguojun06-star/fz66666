@@ -257,6 +257,14 @@ class StageDetector {
       // === 步骤4：从订单获取工序时间配置 ===
       const processTimeConfig = this._extractProcessTimeConfig(orderDetail);
 
+      console.log('[StageDetector] 菲号检测上下文:', {
+        orderNo,
+        bundleNo,
+        scanCount,
+        sewingProcessList,
+        nextProcess: scanCount < sewingProcessList.length ? sewingProcessList[scanCount] : '大烫'
+      });
+
       // === 步骤5：防重复扫码检查 ===
       if (scanCount > 0) {
         const duplicateCheck = this._checkDuplicate(
@@ -351,6 +359,8 @@ class StageDetector {
       .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
       .map(node => node.name)
       .filter(name => name && name.trim());
+
+    console.log('[StageDetector] 提取车缝工序列表:', sewingProcesses, '节点数:', nodes.length);
 
     // 如果没有配置，使用默认
     return sewingProcesses.length > 0 ? sewingProcesses : [...this.defaultSewingProcesses];
