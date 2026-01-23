@@ -228,12 +228,12 @@ const StyleInfoPage: React.FC = () => {
       if (oldData !== null && newData) {
         setData(newData.records);
         setTotal(newData.total);
-        // // console.log('[实时同步] 款式信息数据已更新', {
-          oldCount: oldData.records.length,
-          newCount: newData.records.length,
-          oldTotal: oldData.total,
-          newTotal: newData.total
-        });
+        // console.log('[实时同步] 款式信息数据已更新', {
+        //   oldCount: oldData.records.length,
+        //   newCount: newData.records.length,
+        //   oldTotal: oldData.total,
+        //   newTotal: newData.total
+        // });
       }
     },
     {
