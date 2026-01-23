@@ -74,7 +74,6 @@
       <view class="home-entry" data-tab="warehousing" bindtap="goWork">入库</view>
       <view class="home-entry" data-tab="exceptions" bindtap="goWork">异常</view>
       <view class="home-entry" bindtap="goScan">扫码</view>
-      <view class="home-entry test-entry" bindtap="goScanTest">🧪测试</view>
       <view class="home-entry" bindtap="goAdmin">个人</view>
     </view>
 
