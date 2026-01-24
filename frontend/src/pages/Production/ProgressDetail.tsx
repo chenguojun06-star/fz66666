@@ -72,7 +72,18 @@ const isCuttingStageKey = (k: string) => {
 const isProductionStageKey = (k: string) => {
   const n = normalizeStageKey(k);
   if (!n) return false;
-  return n.includes('生产') || n.includes('车缝') || n.includes('缝制') || n.includes('缝纫') || n.includes('车工');
+  return n.includes('生产');
+};
+
+/**
+ * 判断是否为车缝阶段
+ * @param k 阶段名称
+ * @returns 是否为车缝阶段
+ */
+const isSewingStageKey = (k: string) => {
+  const n = normalizeStageKey(k);
+  if (!n) return false;
+  return n.includes('车缝') || n.includes('缝制') || n.includes('缝纫') || n.includes('车工');
 };
 
 /**
@@ -125,10 +136,9 @@ const canonicalStageKey = (k: string) => {
     面辅料采购: '采购',
     备料: '采购',
     到料: '采购',
-    车缝: '生产',
-    缝制: '生产',
-    缝纫: '生产',
-    车工: '生产',
+    缝制: '车缝',
+    缝纫: '车缝',
+    车工: '车缝',
     后整: '包装',
     打包: '包装',
     装箱: '包装',
@@ -162,6 +172,7 @@ const stageNameMatches = (a: any, b: any) => {
   if (isShipmentStageKey(x) && isShipmentStageKey(y)) return true;
   if (isIroningStageKey(x) && isIroningStageKey(y)) return true;
   if (isProductionStageKey(x) && isProductionStageKey(y)) return true;
+  if (isSewingStageKey(x) && isSewingStageKey(y)) return true;
   return x.includes(y) || y.includes(x);
 };
 
