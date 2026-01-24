@@ -193,7 +193,17 @@ public class CuttingTaskOrchestrator {
         if (StringUtils.hasText(orderId)) {
             ProductionOrder order = productionOrderService.getById(orderId.trim());
             int rate = order == null || order.getMaterialArrivalRate() == null ? 0 : order.getMaterialArrivalRate();
-            if (rate < 100) {
+            
+            // 检查物料是否完成：要么到货率100%，要么已手动确认完成
+            boolean materialReady = false;
+            if (rate >= 100) {
+                materialReady = true;
+            } else if (order != null && order.getProcurementManuallyCompleted() != null 
+                    && order.getProcurementManuallyCompleted() == 1) {
+                materialReady = true;
+            }
+            
+            if (!materialReady) {
                 throw new IllegalStateException("物料未到齐，无法领取裁剪任务");
             }
         }
