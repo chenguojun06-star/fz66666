@@ -29,6 +29,7 @@ interface CuttingBundleRow {
   productionOrderId?: string;
   productionOrderNo?: string;
   styleNo?: string;
+  skuNo?: string;
   color: string;
   size: string;
   quantity: number;
@@ -72,6 +73,7 @@ const CuttingManagement: React.FC = () => {
 
   const editSectionRef = useRef<HTMLDivElement | null>(null);
   const [bundlesInput, setBundlesInput] = useState<CuttingBundleRow[]>([{
+    skuNo: '',
     color: '',
     size: '',
     quantity: 0,
@@ -779,7 +781,7 @@ const CuttingManagement: React.FC = () => {
     setActiveTask(null);
     setOrderId('');
     setImportLocked(false);
-    setBundlesInput([{ color: '', size: '', quantity: 0 }]);
+    setBundlesInput([{ skuNo: '', color: '', size: '', quantity: 0 }]);
     setEntryPurchases([]);
     setEntryPurchaseLoading(false);
     setDataSource([]);
@@ -848,7 +850,7 @@ const CuttingManagement: React.FC = () => {
       setActiveTask(nextTask);
       setOrderId(String(nextTask.productionOrderId || '').trim());
       setImportLocked(false);
-      setBundlesInput([{ color: '', size: '', quantity: 0 }]);
+      setBundlesInput([{ skuNo: '', color: '', size: '', quantity: 0 }]);
       setQueryParams((prev) => ({ ...prev, page: 1 }));
     })();
   }, [routeOrderNo, user?.id, user?.name]);
@@ -906,7 +908,7 @@ const CuttingManagement: React.FC = () => {
               setActiveTask(null);
               setOrderId('');
               setImportLocked(false);
-              setBundlesInput([{ color: '', size: '', quantity: 0 }]);
+              setBundlesInput([{ skuNo: '', color: '', size: '', quantity: 0 }]);
               setEntryPurchases([]);
               setEntryPurchaseLoading(false);
               setDataSource([]);
@@ -953,7 +955,7 @@ const CuttingManagement: React.FC = () => {
   };
 
   const handleAddRow = () => {
-    setBundlesInput(prev => ([...prev, { color: '', size: '', quantity: 0 }]));
+    setBundlesInput(prev => ([...prev, { skuNo: '', color: '', size: '', quantity: 0 }]));
   };
 
   const handleRemoveRow = (index: number) => {
@@ -1084,8 +1086,9 @@ const CuttingManagement: React.FC = () => {
       const quantity = Number(l.quantity || 0) || 0;
       if (!color || !size || quantity <= 0) continue;
       const chunks = splitQuantity(quantity, 20);
+      const skuNo = String(l.skuNo || '').trim();
       for (const q of chunks) {
-        next.push({ color, size, quantity: q });
+        next.push({ skuNo, color, size, quantity: q });
       }
     }
 
@@ -1093,13 +1096,18 @@ const CuttingManagement: React.FC = () => {
       const fallbackQty = Number((detail as any)?.orderQuantity ?? activeTask.orderQuantity ?? 0) || 0;
       const fallbackColor = String((detail as any)?.color ?? activeTask.color ?? '').trim();
       const fallbackSize = String((detail as any)?.size ?? activeTask.size ?? '').trim();
+      const fallbackOrderNo = String((detail as any)?.orderNo ?? activeTask.productionOrderNo ?? '').trim();
+      const fallbackStyleNo = String((detail as any)?.styleNo ?? activeTask.styleNo ?? '').trim();
+      const fallbackSkuNo = fallbackOrderNo && fallbackStyleNo && fallbackColor && fallbackSize
+        ? `SKU-${fallbackOrderNo}-${fallbackStyleNo}-${fallbackColor}-${fallbackSize}`
+        : '';
       if (!fallbackQty || !fallbackColor || !fallbackSize) {
         message.error('订单明细未包含颜色/尺码/数量');
         return;
       }
       const chunks = splitQuantity(fallbackQty, 20);
       for (const q of chunks) {
-        next.push({ color: fallbackColor, size: fallbackSize, quantity: q });
+        next.push({ skuNo: fallbackSkuNo, color: fallbackColor, size: fallbackSize, quantity: q });
       }
     }
 
@@ -1633,6 +1641,13 @@ const CuttingManagement: React.FC = () => {
                                 disabled={importLocked}
                                 onChange={(e) => handleChangeRow(index, 'size', e.target.value)}
                               />
+                              <Input
+                                placeholder="SKU"
+                                style={{ width: 200 }}
+                                value={row.skuNo}
+                                disabled={importLocked}
+                                onChange={(e) => handleChangeRow(index, 'skuNo', e.target.value)}
+                              />
                               <InputNumber
                                 placeholder="数量"
                                 style={{ width: 120 }}
@@ -1656,7 +1671,7 @@ const CuttingManagement: React.FC = () => {
                               <Button
                                 onClick={() => {
                                   setImportLocked(false);
-                                  setBundlesInput([{ color: '', size: '', quantity: 0 }]);
+                                  setBundlesInput([{ skuNo: '', color: '', size: '', quantity: 0 }]);
                                 }}
                                 disabled={!activeTask}
                               >
