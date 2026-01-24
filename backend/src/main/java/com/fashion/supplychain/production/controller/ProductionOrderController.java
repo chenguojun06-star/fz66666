@@ -13,6 +13,7 @@ import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.util.Map;
 
@@ -142,6 +143,16 @@ public class ProductionOrderController {
     @PostMapping("/progress-workflow/rollback")
     public Result<?> rollbackProgressWorkflow(@Valid @RequestBody RollbackProgressWorkflowRequest body) {
         ProductionOrder updated = productionOrderOrchestrator.rollbackProgressWorkflow(body.getId(), body.getReason());
+        return Result.success(updated);
+    }
+
+    /**
+     * 手动确认采购完成（允许50%物料差异）
+     * 适用场景：物料到货率在50%-99%之间，需要人工确认后才能进入下一阶段
+     */
+    @PostMapping("/confirm-procurement")
+    public Result<?> confirmProcurement(@Valid @RequestBody ConfirmProcurementRequest body) {
+        ProductionOrder updated = productionOrderOrchestrator.confirmProcurement(body.getId(), body.getRemark());
         return Result.success(updated);
     }
 
@@ -341,6 +352,31 @@ public class ProductionOrderController {
 
         public void setReason(String reason) {
             this.reason = reason;
+        }
+    }
+
+    public static class ConfirmProcurementRequest {
+        @NotBlank(message = "订单ID不能为空")
+        private String id;
+
+        @NotBlank(message = "确认备注不能为空")
+        @Size(min = 10, message = "确认备注至少需要10个字符，请详细说明确认原因")
+        private String remark;
+
+        public String getId() {
+            return id;
+        }
+
+        public void setId(String id) {
+            this.id = id;
+        }
+
+        public String getRemark() {
+            return remark;
+        }
+
+        public void setRemark(String remark) {
+            this.remark = remark;
         }
     }
 }

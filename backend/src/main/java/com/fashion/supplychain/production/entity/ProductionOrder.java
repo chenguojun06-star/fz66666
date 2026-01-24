@@ -97,6 +97,37 @@ public class ProductionOrder {
     private Integer materialArrivalRate;
 
     /**
+     * 采购人工确认完成(0=未确认, 1=已确认)
+     * 用于物料到货率≥50%但<100%时，人为确认采购完成
+     */
+    @TableField("procurement_manually_completed")
+    private Integer procurementManuallyCompleted;
+
+    /**
+     * 采购确认人ID
+     */
+    @TableField("procurement_confirmed_by")
+    private String procurementConfirmedBy;
+
+    /**
+     * 采购确认人姓名
+     */
+    @TableField("procurement_confirmed_by_name")
+    private String procurementConfirmedByName;
+
+    /**
+     * 采购确认时间
+     */
+    @TableField("procurement_confirmed_at")
+    private LocalDateTime procurementConfirmedAt;
+
+    /**
+     * 采购确认备注（说明为什么物料未到齐就确认）
+     */
+    @TableField("procurement_confirm_remark")
+    private String procurementConfirmRemark;
+
+    /**
      * 生产进度(%)
      */
     @TableField("production_progress")

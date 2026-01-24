@@ -137,17 +137,28 @@ public class ProductionOrderOrchestrator {
             throw new NoSuchElementException("生产订单不存在");
         }
         
-        // 解析 orderDetails JSON 并填充 items 字段（用于小程序扫码场景）
         if (StringUtils.hasText(order.getOrderDetails())) {
             try {
-                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                java.util.List<java.util.Map<String, Object>> items = mapper.readValue(
-                    order.getOrderDetails(), 
-                    new com.fasterxml.jackson.core.type.TypeReference<java.util.List<java.util.Map<String, Object>>>() {}
-                );
+                List<Map<String, Object>> items = resolveOrderLines(order.getOrderDetails());
+                if (items != null && !items.isEmpty()) {
+                    String styleNo = StringUtils.hasText(order.getStyleNo()) ? order.getStyleNo().trim() : "";
+                    String orderNoFinal = StringUtils.hasText(order.getOrderNo()) ? order.getOrderNo().trim() : "";
+                    for (Map<String, Object> item : items) {
+                        if (item == null || item.isEmpty()) {
+                            continue;
+                        }
+                        String color = item.get("color") == null ? null : String.valueOf(item.get("color")).trim();
+                        String size = item.get("size") == null ? null : String.valueOf(item.get("size")).trim();
+                        if (!StringUtils.hasText(color) || !StringUtils.hasText(size)) {
+                            continue;
+                        }
+                        String skuNo = buildSkuNo(orderNoFinal, styleNo, color, size);
+                        item.put("skuNo", skuNo);
+                        item.put("skuKey", skuNo);
+                    }
+                }
                 order.setItems(items);
             } catch (Exception e) {
-                // JSON 解析失败，items 保持为 null
                 System.err.println("解析订单明细失败: " + e.getMessage());
             }
         }
@@ -293,6 +304,14 @@ public class ProductionOrderOrchestrator {
         } catch (Exception ignore) {
         }
         return List.of();
+    }
+
+    private String buildSkuNo(String orderNo, String styleNo, String color, String size) {
+        String on = StringUtils.hasText(orderNo) ? orderNo.trim() : "";
+        String sn = StringUtils.hasText(styleNo) ? styleNo.trim() : "";
+        String c = StringUtils.hasText(color) ? color.trim() : "";
+        String s = StringUtils.hasText(size) ? size.trim() : "";
+        return String.format("%s:%s:%s:%s", on, sn, c, s);
     }
 
     private String pickFirstText(Map<String, Object> row, String... keys) {
@@ -1276,5 +1295,87 @@ public class ProductionOrderOrchestrator {
         } catch (Exception e) {
             log.warn("Failed to check pattern complete for styleId={}: {}", styleId, e.getMessage());
         }
+    }
+
+    /**
+     * 手动确认采购完成（允许50%物料差异）
+     * 业务规则：
+     * - materialArrivalRate < 50%: 不允许确认，必须继续采购
+     * - materialArrivalRate >= 50%: 允许人工确认"回料完成"，需填写备注原因（即使100%也需要人工确认）
+     * 
+     * @param orderId 订单ID
+     * @param remark 确认备注（说明物料到货情况和确认原因）
+     * @return 更新后的订单
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public ProductionOrder confirmProcurement(String orderId, String remark) {
+        if (!StringUtils.hasText(orderId)) {
+            throw new IllegalArgumentException("订单ID不能为空");
+        }
+        if (!StringUtils.hasText(remark) || remark.trim().length() < 10) {
+            throw new IllegalArgumentException("确认备注至少需要10个字符，请详细说明确认原因");
+        }
+
+        // 获取订单详情（包含物料到货率）
+        ProductionOrder order = productionOrderQueryService.getDetailById(orderId);
+        if (order == null) {
+            throw new NoSuchElementException("订单不存在: " + orderId);
+        }
+
+        // 验证物料到货率
+        Integer materialArrivalRate = order.getMaterialArrivalRate();
+        if (materialArrivalRate == null) {
+            materialArrivalRate = 0;
+        }
+
+        // 物料到货率<50%：不允许确认
+        if (materialArrivalRate < 50) {
+            throw new IllegalStateException(
+                String.format("物料到货率不足50%%（当前%d%%），不允许确认采购完成，请继续采购", 
+                    materialArrivalRate)
+            );
+        }
+
+        // 已经确认过了
+        Integer manuallyCompleted = order.getProcurementManuallyCompleted();
+        if (manuallyCompleted != null && manuallyCompleted == 1) {
+            throw new IllegalStateException("该订单采购已确认完成，无需重复确认");
+        }
+
+        // 更新确认信息
+        LocalDateTime now = LocalDateTime.now();
+        String userId = UserContext.userId();
+        String username = UserContext.username();
+
+        ProductionOrder updateEntity = new ProductionOrder();
+        updateEntity.setId(orderId);
+        updateEntity.setProcurementManuallyCompleted(1);
+        updateEntity.setProcurementConfirmedBy(userId);
+        updateEntity.setProcurementConfirmedByName(username);
+        updateEntity.setProcurementConfirmedAt(now);
+        updateEntity.setProcurementConfirmRemark(remark.trim());
+
+        boolean updated = productionOrderService.updateById(updateEntity);
+        if (!updated) {
+            throw new RuntimeException("更新采购确认信息失败");
+        }
+
+        log.info("Order procurement manually confirmed: orderId={}, materialArrivalRate={}%, confirmedBy={}, remark={}",
+                orderId, materialArrivalRate, username, remark);
+
+        // 记录扫码日志（用于追踪）
+        try {
+            scanRecordDomainService.insertRollbackRecord(
+                order, 
+                "采购手动确认", 
+                String.format("物料到货率%d%%，确认人：%s，备注：%s", materialArrivalRate, username, remark),
+                now
+            );
+        } catch (Exception e) {
+            log.warn("Failed to log procurement confirmation: orderId={}", orderId, e);
+        }
+
+        // 返回更新后的完整订单信息
+        return productionOrderQueryService.getDetailById(orderId);
     }
 }

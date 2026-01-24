@@ -1053,6 +1053,18 @@ page {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.cf-item.compact .cf-k {
+  font-size: 10px;
+}
+.cf-item.compact .cf-v {
+  font-size: 10px;
+  max-width: 220px;
+}
+.cf-v.wrap {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+}
 
 .cf-input {
   flex: 1;

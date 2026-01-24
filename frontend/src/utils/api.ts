@@ -106,6 +106,7 @@ export type ProductionOrderLine = {
   size: string;
   quantity: number;
   warehousedQuantity?: number;
+  skuNo?: string;
 };
 
 export const parseProductionOrderLines = (
@@ -121,12 +122,22 @@ export const parseProductionOrderLines = (
     const color = String(r?.color ?? r?.colour ?? r?.colorName ?? r?.['颜色'] ?? '').trim();
     const size = String(r?.size ?? r?.sizeName ?? r?.spec ?? r?.尺码 ?? r?.['尺码'] ?? '').trim();
     const quantity = toNumberSafe(r?.quantity ?? r?.qty ?? r?.count ?? r?.num ?? r?.数量 ?? r?.['数量']);
+    const lineSku = String(r?.skuNo ?? r?.skuKey ?? r?.sku ?? r?.sku_code ?? r?.skuCode ?? '').trim();
+    const orderNo = String((order as any)?.orderNo ?? r?.orderNo ?? '').trim();
+    const styleNo = String((order as any)?.styleNo ?? r?.styleNo ?? '').trim();
+    const normalizedLineSku = lineSku
+      ? (lineSku.toUpperCase().startsWith('SKU') ? lineSku : `SKU-${lineSku}`)
+      : '';
+    const composedSku = orderNo && styleNo && color && size
+      ? `SKU-${orderNo}-${styleNo}-${color}-${size}`
+      : '';
+    const skuNo = normalizedLineSku || composedSku;
     const warehousedQuantity = toNumberSafe(
       r?.warehousedQuantity ?? r?.warehousingQualifiedQuantity ?? r?.warehousingQuantity ?? r?.qualifiedQuantity ?? r?.入库数量 ?? r?.['入库数量']
     );
 
-    if (includeWarehousedQuantity) return { color, size, quantity, warehousedQuantity };
-    return { color, size, quantity };
+    if (includeWarehousedQuantity) return { color, size, quantity, warehousedQuantity, skuNo };
+    return { color, size, quantity, skuNo };
   };
 
   let parsed: unknown = null;

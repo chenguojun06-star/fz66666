@@ -48,11 +48,30 @@ class QRCodeParser {
       };
     }
 
-    // 1. 尝试解析 JSON 格式
     const first = raw[0];
+    let parseTarget = raw;
+    let skuNo = '';
+    if (first !== '{' && first !== '[' && raw.includes('|')) {
+      const parts = raw
+        .split('|')
+        .map((p) => (p == null ? '' : String(p)).trim())
+        .filter((p) => p);
+      if (parts.length > 1) {
+        parseTarget = parts[0];
+        const skuPart = parts.find((p) => String(p).toUpperCase().startsWith('SKU'));
+        if (skuPart) {
+          skuNo = skuPart;
+        }
+      }
+    }
+
+    // 1. 尝试解析 JSON 格式
     if (first === '{' || first === '[') {
-      const jsonResult = this._parseJSON(raw);
+      const jsonResult = this._parseJSON(parseTarget);
       if (jsonResult) {
+        if (skuNo) {
+          jsonResult.skuNo = skuNo;
+        }
         return {
           success: true,
           message: '解析成功 (JSON)',
@@ -62,8 +81,11 @@ class QRCodeParser {
     }
 
     // 2. 尝试解析 URL 参数格式
-    const urlResult = this._parseURLParams(raw);
+    const urlResult = this._parseURLParams(parseTarget);
     if (urlResult) {
+      if (skuNo) {
+        urlResult.skuNo = skuNo;
+      }
       return {
         success: true,
         message: '解析成功 (URL)',
@@ -72,12 +94,15 @@ class QRCodeParser {
     }
 
     // 3. 尝试解析菲号格式
-    const bundleResult = this._parseFeiNo(raw);
+    const bundleResult = this._parseFeiNo(parseTarget);
 
     // 4. 如果不是菲号，判断是否为订单号
     if (!bundleResult) {
-      const orderResult = this._parseOrderNo(raw);
+      const orderResult = this._parseOrderNo(parseTarget);
       if (orderResult) {
+        if (skuNo) {
+          orderResult.skuNo = skuNo;
+        }
         return {
           success: true,
           message: '解析成功 (订单号)',
@@ -103,6 +128,7 @@ class QRCodeParser {
           color: bundleResult.color,
           size: bundleResult.size,
           bundleNo: bundleResult.bundleNo != null ? String(bundleResult.bundleNo) : '',
+          skuNo: skuNo || '',
           isOrderQR: false,
           isSkuQR: isSku
         }
@@ -115,12 +141,13 @@ class QRCodeParser {
       message: '无法识别的二维码格式',
       data: {
         scanCode: raw,
-        quantity: this._parseQuantityFromText(raw),
+        quantity: this._parseQuantityFromText(parseTarget),
         orderNo: '',
         styleNo: '',
         color: '',
         size: '',
         bundleNo: '',
+        skuNo: skuNo || '',
         isOrderQR: false,
       }
     };

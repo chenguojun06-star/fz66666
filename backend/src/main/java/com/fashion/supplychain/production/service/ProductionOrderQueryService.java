@@ -724,17 +724,40 @@ public class ProductionOrderQueryService {
 
             // 检查是否还在采购阶段
             boolean inProcurement = false;
-            if (byProc.containsKey("采购") || byProc.containsKey("物料采购")) {
-                long procurementDone = sumDoneByStageName(byProc, "采购") + sumDoneByStageName(byProc, "物料采购");
-                // 如果采购未完成（数量小于订单数量），说明还在采购阶段
-                if (orderQty > 0 && procurementDone < orderQty) {
+            
+            // 获取物料到货率和人工确认状态
+            Integer materialArrivalRate = order.getMaterialArrivalRate();
+            Integer manuallyCompleted = order.getProcurementManuallyCompleted();
+            boolean isManuallyConfirmed = (manuallyCompleted != null && manuallyCompleted == 1);
+            
+            // 采购完成判断规则：
+            // 1. 物料到货率=100%：自动认为采购完成
+            // 2. 物料到货率≥50%且已人工确认：可以进入下一步
+            // 3. 物料到货率<50%：必须停留在采购阶段，不允许人工确认
+            boolean procurementComplete = false;
+            if (materialArrivalRate != null && materialArrivalRate >= 100) {
+                procurementComplete = true;
+            } else if (materialArrivalRate != null && materialArrivalRate >= 50 && isManuallyConfirmed) {
+                procurementComplete = true;
+            }
+            
+            // 如果采购未完成，必须停留在采购阶段
+            if (!procurementComplete) {
+                if (byProc.containsKey("采购") || byProc.containsKey("物料采购")) {
+                    long procurementDone = sumDoneByStageName(byProc, "采购") + sumDoneByStageName(byProc, "物料采购");
+                    // 如果采购未完成（数量小于订单数量），说明还在采购阶段
+                    if (orderQty > 0 && procurementDone < orderQty) {
+                        inProcurement = true;
+                    } else if (orderQty <= 0 && procurementDone <= 0) {
+                        inProcurement = true;
+                    }
+                } else if (!realStarted && !stageStarted) {
+                    // 如果没有任何扫码记录，也认为在采购阶段
                     inProcurement = true;
-                } else if (orderQty <= 0 && procurementDone <= 0) {
+                } else {
+                    // 默认情况：物料未完成且未确认，停留在采购阶段
                     inProcurement = true;
                 }
-            } else if (!realStarted && !stageStarted) {
-                // 如果没有任何扫码记录，也认为在采购阶段
-                inProcurement = true;
             }
 
             if (inProcurement) {
@@ -976,9 +999,7 @@ public class ProductionOrderQueryService {
                 o.setOrderOperatorName(orderOperator);
                 o.setOrderCompletionRate(orderRate);
 
-                o.setProcurementStartTime(procurementStart);
-                o.setProcurementEndTime(procurementEnd);
-                o.setProcurementOperatorName(procurementOperator);
+                // 采购完成率：优先使用物料到货率
                 Integer procurementRate;
                 if (o.getMaterialArrivalRate() != null) {
                     procurementRate = scanRecordDomainService.clampPercent(o.getMaterialArrivalRate());
@@ -988,14 +1009,53 @@ public class ProductionOrderQueryService {
                     procurementRate = 0;
                 }
                 o.setProcurementCompletionRate(procurementRate);
+                
+                // 检查是否人工确认完成
+                Integer manuallyCompleted = o.getProcurementManuallyCompleted();
+                boolean isManuallyConfirmed = (manuallyCompleted != null && manuallyCompleted == 1);
+                
+                // 采购时间显示逻辑：
+                // 1. 物料到货率>0%：显示采购开始时间
+                // 2. 物料到货率=100% 或 (物料到货率≥50%且已人工确认)：显示采购完成时间
+                if (procurementRate != null && procurementRate > 0) {
+                    o.setProcurementStartTime(procurementStart);
+                    
+                    boolean showCompleted = false;
+                    if (procurementRate >= 100) {
+                        showCompleted = true;
+                    } else if (procurementRate >= 50 && isManuallyConfirmed) {
+                        showCompleted = true;
+                        // 人工确认时，使用确认时间和确认人
+                        if (o.getProcurementConfirmedAt() != null) {
+                            procurementEnd = o.getProcurementConfirmedAt();
+                        }
+                        if (o.getProcurementConfirmedByName() != null) {
+                            procurementOperator = o.getProcurementConfirmedByName();
+                        }
+                    }
+                    
+                    if (showCompleted) {
+                        o.setProcurementEndTime(procurementEnd);
+                        o.setProcurementOperatorName(procurementOperator);
+                    } else {
+                        o.setProcurementEndTime(null);
+                        o.setProcurementOperatorName(null);
+                    }
+                } else {
+                    o.setProcurementStartTime(null);
+                    o.setProcurementEndTime(null);
+                    o.setProcurementOperatorName(null);
+                }
 
                 o.setCuttingStartTime(cuttingStart);
                 o.setCuttingEndTime(cuttingEnd);
                 o.setCuttingOperatorName(cuttingOperator);
                 int cuttingQtyForRate = o.getCuttingQuantity() == null ? cuttingQty : o.getCuttingQuantity();
-                Integer cuttingRate = (o.getOrderQuantity() == null || o.getOrderQuantity() <= 0) ? 0
+                int orderQtyForRate = o.getOrderQuantity() == null ? 0 : o.getOrderQuantity();
+                int baseQtyForRate = cuttingQtyForRate > 0 ? cuttingQtyForRate : orderQtyForRate;
+                Integer cuttingRate = baseQtyForRate <= 0 ? 0
                         : scanRecordDomainService.clampPercent(
-                                (int) Math.round(Math.max(0, cuttingQtyForRate) * 100.0 / o.getOrderQuantity()));
+                                (int) Math.round(Math.max(0, cuttingQtyForRate) * 100.0 / baseQtyForRate));
                 o.setCuttingCompletionRate(cuttingRate);
 
                 o.setSewingStartTime(sewingStart);
@@ -1012,35 +1072,35 @@ public class ProductionOrderQueryService {
                 o.setCarSewingStartTime(carSewingStart);
                 o.setCarSewingEndTime(carSewingEnd);
                 o.setCarSewingOperatorName(carSewingOperator);
-                Integer carSewingRate = (o.getOrderQuantity() == null || o.getOrderQuantity() <= 0) ? 0
+                Integer carSewingRate = baseQtyForRate <= 0 ? 0
                         : scanRecordDomainService.clampPercent(
-                                (int) Math.round(Math.max(0, wareQtyForRate) * 100.0 / o.getOrderQuantity()));
+                                (int) Math.round(Math.max(0, wareQtyForRate) * 100.0 / baseQtyForRate));
                 o.setCarSewingCompletionRate(carSewingRate);
 
                 // 设置大烫环节（新增）
                 o.setIroningStartTime(ironingStart);
                 o.setIroningEndTime(ironingEnd);
                 o.setIroningOperatorName(ironingOperator);
-                Integer ironingRate = (o.getOrderQuantity() == null || o.getOrderQuantity() <= 0) ? 0
+                Integer ironingRate = baseQtyForRate <= 0 ? 0
                         : scanRecordDomainService.clampPercent(
-                                (int) Math.round(Math.max(0, wareQtyForRate) * 100.0 / o.getOrderQuantity()));
+                                (int) Math.round(Math.max(0, wareQtyForRate) * 100.0 / baseQtyForRate));
                 o.setIroningCompletionRate(ironingRate);
 
                 // 设置包装环节（新增）
                 o.setPackagingStartTime(packagingStart);
                 o.setPackagingEndTime(packagingEnd);
                 o.setPackagingOperatorName(packagingOperator);
-                Integer packagingRate = (o.getOrderQuantity() == null || o.getOrderQuantity() <= 0) ? 0
+                Integer packagingRate = baseQtyForRate <= 0 ? 0
                         : scanRecordDomainService.clampPercent(
-                                (int) Math.round(Math.max(0, wareQtyForRate) * 100.0 / o.getOrderQuantity()));
+                                (int) Math.round(Math.max(0, wareQtyForRate) * 100.0 / baseQtyForRate));
                 o.setPackagingCompletionRate(packagingRate);
 
                 o.setQualityStartTime(qualityStart);
                 o.setQualityEndTime(qualityEnd);
                 o.setQualityOperatorName(qualityOperator);
-                Integer qualityRate = (o.getOrderQuantity() == null || o.getOrderQuantity() <= 0) ? 0
+                Integer qualityRate = baseQtyForRate <= 0 ? 0
                         : scanRecordDomainService
-                                .clampPercent((int) Math.round(qualityQty * 100.0 / o.getOrderQuantity()));
+                                .clampPercent((int) Math.round(qualityQty * 100.0 / baseQtyForRate));
                 o.setQualityCompletionRate(qualityRate);
 
                 o.setWarehousingStartTime(wareStart);
@@ -1048,9 +1108,9 @@ public class ProductionOrderQueryService {
                 o.setWarehousingOperatorName(wareOperator);
                 wareQtyForRate = o.getWarehousingQualifiedQuantity() == null ? wareQty
                         : o.getWarehousingQualifiedQuantity();
-                Integer wareRate = (o.getOrderQuantity() == null || o.getOrderQuantity() <= 0) ? 0
+                Integer wareRate = baseQtyForRate <= 0 ? 0
                         : scanRecordDomainService.clampPercent(
-                                (int) Math.round(Math.max(0, wareQtyForRate) * 100.0 / o.getOrderQuantity()));
+                                (int) Math.round(Math.max(0, wareQtyForRate) * 100.0 / baseQtyForRate));
                 o.setWarehousingCompletionRate(wareRate);
             }
             return;
@@ -1284,9 +1344,7 @@ public class ProductionOrderQueryService {
             o.setOrderOperatorName(orderOperator);
             o.setOrderCompletionRate(orderRate);
 
-            o.setProcurementStartTime(procurementStart);
-            o.setProcurementEndTime(procurementEnd);
-            o.setProcurementOperatorName(procurementOperator);
+            // 采购完成率：优先使用物料到货率
             Integer procurementRate;
             if (o.getMaterialArrivalRate() != null) {
                 procurementRate = scanRecordDomainService.clampPercent(o.getMaterialArrivalRate());
@@ -1296,6 +1354,43 @@ public class ProductionOrderQueryService {
                 procurementRate = 0;
             }
             o.setProcurementCompletionRate(procurementRate);
+            
+            // 检查是否人工确认完成
+            Integer manuallyCompleted = o.getProcurementManuallyCompleted();
+            boolean isManuallyConfirmed = (manuallyCompleted != null && manuallyCompleted == 1);
+            
+            // 采购时间显示逻辑：
+            // 1. 物料到货率>0%：显示采购开始时间
+            // 2. 物料到货率=100% 或 (物料到货率≥50%且已人工确认)：显示采购完成时间
+            if (procurementRate != null && procurementRate > 0) {
+                o.setProcurementStartTime(procurementStart);
+                
+                boolean showCompleted = false;
+                if (procurementRate >= 100) {
+                    showCompleted = true;
+                } else if (procurementRate >= 50 && isManuallyConfirmed) {
+                    showCompleted = true;
+                    // 人工确认时，使用确认时间和确认人
+                    if (o.getProcurementConfirmedAt() != null) {
+                        procurementEnd = o.getProcurementConfirmedAt();
+                    }
+                    if (o.getProcurementConfirmedByName() != null) {
+                        procurementOperator = o.getProcurementConfirmedByName();
+                    }
+                }
+                
+                if (showCompleted) {
+                    o.setProcurementEndTime(procurementEnd);
+                    o.setProcurementOperatorName(procurementOperator);
+                } else {
+                    o.setProcurementEndTime(null);
+                    o.setProcurementOperatorName(null);
+                }
+            } else {
+                o.setProcurementStartTime(null);
+                o.setProcurementEndTime(null);
+                o.setProcurementOperatorName(null);
+            }
 
             o.setCuttingStartTime(cuttingStart);
             o.setCuttingEndTime(cuttingEnd);

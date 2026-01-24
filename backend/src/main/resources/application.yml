@@ -11,7 +11,7 @@ server:
 
 spring:
   main:
-    allow-circular-references: false
+    allow-circular-references: true
   servlet:
     multipart:
       max-file-size: 20MB

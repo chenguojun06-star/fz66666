@@ -13,6 +13,7 @@ import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.production.service.SKUService;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
 import java.math.BigDecimal;
@@ -75,6 +76,9 @@ public class ScanRecordOrchestrator {
 
     @Autowired
     private ProductionOrderScanRecordDomainService scanRecordDomainService;
+
+    @Autowired
+    private SKUService skuService;
 
     @Autowired
     private com.fashion.supplychain.style.service.StyleAttachmentService styleAttachmentService;
@@ -1165,6 +1169,12 @@ public class ScanRecordOrchestrator {
         ensureMaxLen("颜色", sr.getColor(), 50);
         ensureMaxLen("尺码", sr.getSize(), 50);
         ensureMaxLen("requestId", sr.getRequestId(), 64);
+        String st = hasText(sr.getScanType()) ? sr.getScanType().trim().toLowerCase() : "";
+        if (("production".equals(st) || "quality".equals(st) || "warehouse".equals(st)) && skuService != null) {
+            if (!skuService.validateSKU(sr)) {
+                throw new IllegalStateException("SKU信息无效");
+            }
+        }
     }
 
     private void ensureMaxLen(String fieldName, String value, int maxLen) {

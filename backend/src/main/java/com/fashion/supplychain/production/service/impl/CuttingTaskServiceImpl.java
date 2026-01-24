@@ -72,7 +72,10 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
                 .distinct()
                 .collect(Collectors.toList());
         if (!orderIds.isEmpty()) {
-            Map<String, ProductionOrder> orderMap = productionOrderService.listByIds(orderIds).stream()
+            List<ProductionOrder> orders = productionOrderService.listByIds(orderIds);
+            Map<String, ProductionOrder> orderMap = (orders == null ? java.util.Collections.<ProductionOrder>emptyList()
+                    : orders)
+                    .stream()
                     .filter(o -> o != null && StringUtils.hasText(o.getId()))
                     .collect(Collectors.toMap(o -> o.getId().trim(), o -> o, (a, b) -> a));
             records = records.stream()
@@ -210,8 +213,12 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
         if (!StringUtils.hasText(taskId)) {
             return false;
         }
+        String taskIdTrim = taskId.trim();
+        if (!StringUtils.hasText(taskIdTrim)) {
+            return false;
+        }
 
-        CuttingTask task = this.getById(taskId);
+        CuttingTask task = this.getById(taskIdTrim);
         if (task == null) {
             return false;
         }
@@ -219,6 +226,9 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
         String status = task.getStatus() == null ? "" : task.getStatus().trim();
         String rid = StringUtils.hasText(receiverId) ? receiverId.trim() : null;
         String rname = StringUtils.hasText(receiverName) ? receiverName.trim() : null;
+        if (!StringUtils.hasText(rid) && !StringUtils.hasText(rname)) {
+            return false;
+        }
 
         // 如果不是 pending 状态，检查是否是同一个人重复领取
         if (!"pending".equals(status)) {
@@ -226,7 +236,7 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
             if (isSameReceiver(task, rid, rname)) {
                 LocalDateTime now = LocalDateTime.now();
                 LambdaUpdateWrapper<CuttingTask> uw = new LambdaUpdateWrapper<CuttingTask>()
-                        .eq(CuttingTask::getId, taskId)
+                        .eq(CuttingTask::getId, taskIdTrim)
                         .set(CuttingTask::getReceivedTime, now)
                         .set(CuttingTask::getUpdateTime, now);
                 this.update(uw);
@@ -237,7 +247,7 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
 
         LocalDateTime now = LocalDateTime.now();
         LambdaUpdateWrapper<CuttingTask> uw = new LambdaUpdateWrapper<CuttingTask>()
-                .eq(CuttingTask::getId, taskId)
+                .eq(CuttingTask::getId, taskIdTrim)
                 .eq(CuttingTask::getStatus, "pending")
                 .set(CuttingTask::getStatus, "received")
                 .set(CuttingTask::getReceiverId, rid)
@@ -250,7 +260,7 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
             return true;
         }
 
-        CuttingTask latest = this.getById(taskId);
+        CuttingTask latest = this.getById(taskIdTrim);
         if (latest == null) {
             return false;
         }
@@ -280,9 +290,14 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
             return false;
         }
 
+        String oid = productionOrderId.trim();
+        if (!StringUtils.hasText(oid)) {
+            return false;
+        }
+
         CuttingTask task = this.getOne(
                 new LambdaQueryWrapper<CuttingTask>()
-                        .eq(CuttingTask::getProductionOrderId, productionOrderId)
+                        .eq(CuttingTask::getProductionOrderId, oid)
                         .last("limit 1"));
         if (task == null) {
             return false;
@@ -297,7 +312,6 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
             return false;
         }
 
-        String oid = productionOrderId.trim();
         String requestId = "CUTTING_BUNDLED:" + oid;
         try {
             ScanRecord existing = scanRecordMapper.selectOne(new LambdaQueryWrapper<ScanRecord>()
@@ -445,7 +459,8 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
         }
         LocalDateTime now = LocalDateTime.now();
         ScanRecord sr = new ScanRecord();
-        sr.setRequestId("CUTTING_TASK_ROLLBACK:" + task.getId().trim() + ":" + UUID.randomUUID().toString().replace("-", ""));
+        sr.setRequestId(
+                "CUTTING_TASK_ROLLBACK:" + task.getId().trim() + ":" + UUID.randomUUID().toString().replace("-", ""));
         sr.setOrderId(task.getProductionOrderId());
         sr.setOrderNo(task.getProductionOrderNo());
         sr.setStyleId(task.getStyleId());
