@@ -16,6 +16,7 @@ const StyleInfo = React.lazy(() => import('./pages/StyleInfo'));
 const ProductionList = React.lazy(() => import('./pages/Production/List'));
 const CuttingManagement = React.lazy(() => import('./pages/Production/Cutting'));
 const MaterialPurchase = React.lazy(() => import('./pages/Production/MaterialPurchase'));
+const ProcurementConfirmation = React.lazy(() => import('./pages/Production/ProcurementConfirmation'));
 const ProductWarehousing = React.lazy(() => import('./pages/Production/ProductWarehousing'));
 const OrderTransfer = React.lazy(() => import('./pages/Production/OrderTransfer'));
 const OrderFlow = React.lazy(() => import('./pages/Production/OrderFlow'));
@@ -186,6 +187,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.cutting} element={<Suspense fallback={<Spin />}><CuttingManagement /></Suspense>} />
           <Route path={paths.cuttingTask} element={<Suspense fallback={<Spin />}><CuttingManagement /></Suspense>} />
           <Route path={paths.materialPurchase} element={<Suspense fallback={<Spin />}><MaterialPurchase /></Suspense>} />
+          <Route path={paths.procurementConfirmation} element={<Suspense fallback={<Spin />}><ProcurementConfirmation /></Suspense>} />
           <Route path={paths.warehousing} element={<Suspense fallback={<Spin />}><ProductWarehousing /></Suspense>} />
           <Route path={paths.warehousingDetail} element={<Suspense fallback={<Spin />}><ProductWarehousing /></Suspense>} />
           <Route path={paths.orderTransfer} element={<Suspense fallback={<Spin />}><OrderTransfer /></Suspense>} />

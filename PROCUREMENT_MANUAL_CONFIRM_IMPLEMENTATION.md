@@ -150,9 +150,34 @@ mvn clean compile -DskipTests
 
 ## 前端集成待办
 
-### PC端（React）
+### ✅ PC端（React）- 已完成
 
-需要在订单列表页面添加"确认采购完成"按钮：
+**页面路径**: `/production/procurement-confirmation`
+
+**实现方式**:
+- 创建独立页面 `ProcurementConfirmation.tsx`
+- 使用统一的 `ResizableTable` 通用表格组件
+- PO号做成可点击链接，跳转到订单详情页
+
+**页面功能**:
+- 自动筛选：物料到货率≥50% 且未确认的订单
+- 搜索条件：PO号、款号、工厂名称
+- 表格展示：封面、款号、款式、数量、物料到货率、工厂等
+- 操作按钮：
+  - "查看详情"：跳转到订单列表详情
+  - "确认回料完成"：打开确认对话框
+
+**确认对话框**:
+- 显示订单基本信息（PO号、款号、订单数量、物料到货率）
+- 备注输入框（必填，最少10字符，最多500字符）
+- 温馨提示（业务规则说明）
+
+**菜单配置**:
+- 位置：生产管理 > 采购确认
+- 路由：`/production/procurement-confirmation`
+- 权限码：`MENU_PROCUREMENT_CONFIRMATION`
+
+### 小程序端
 
 **显示条件**:
 - `materialArrivalRate >= 50`
