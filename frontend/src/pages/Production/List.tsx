@@ -1,24 +1,28 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Button, Card, Input, Select, Space, Tag, Form, Row, Col, Timeline, InputNumber, message, Modal, Table } from 'antd';
-import { SearchOutlined, EyeOutlined, DownloadOutlined, DeleteOutlined } from '@ant-design/icons';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Button, Card, Input, Select, Space, Tag, Form, Table, App, DatePicker, Modal } from 'antd';
+import { SearchOutlined, EyeOutlined, DownloadOutlined, DeleteOutlined, CheckCircleOutlined, EditOutlined } from '@ant-design/icons';
 import Layout from '../../components/Layout';
 import ResizableModal from '../../components/common/ResizableModal';
+import QuickEditModal from '../../components/common/QuickEditModal';
 import { ProductionOrder, ProductionQueryParams } from '../../types/production';
+import type { PaginatedResponse } from '../../types/api';
 import api, {
-  generateRequestId,
   isOrderFrozenByStatus,
   isOrderFrozenByStatusOrStock,
   parseProductionOrderLines,
   toNumberSafe,
   withQuery,
+  isApiSuccess,
 } from '../../utils/api';
+import { productionOrderApi } from '../../services/production/productionApi';
 import { isSupervisorOrAboveUser, useAuth } from '../../utils/authContext';
 import './styles.css';
 import dayjs from 'dayjs';
 import ResizableTable from '../../components/common/ResizableTable';
 import RowActions from '../../components/common/RowActions';
+import SortableColumnTitle from '../../components/common/SortableColumnTitle';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { QRCodeCanvas } from 'qrcode.react';
+import QRCodeBox from '../../components/common/QRCodeBox';
 import { StyleAttachmentsButton, StyleCoverThumb } from '../../components/StyleAssets';
 import { formatDateTime } from '../../utils/datetime';
 import { useSync } from '../../utils/syncManager';
@@ -26,7 +30,16 @@ import { useViewport } from '../../utils/useViewport';
 
 const { Option } = Select;
 
+// 工具函数
+const safeString = (value: any, defaultValue: string = '-') => {
+  const str = String(value || '').trim();
+  return str || defaultValue;
+};
+
 const ProductionList: React.FC = () => {
+  // 使用 App Context 以支持动态主题
+  const { message, modal } = App.useApp();
+
   // 状态管理
   const { isMobile, modalWidth } = useViewport();
   const [visible, setVisible] = useState(false);
@@ -36,12 +49,25 @@ const ProductionList: React.FC = () => {
     pageSize: 10
   });
 
+  const [sortField, setSortField] = useState<string>('createTime');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  const handleSort = (field: string, order: 'asc' | 'desc') => {
+    setSortField(field);
+    setSortOrder(order);
+  };
+
   // 真实数据状态
   const [productionList, setProductionList] = useState<ProductionOrder[]>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [selectedRows, setSelectedRows] = useState<ProductionOrder[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
+
+  // 快速编辑状态
+  const [quickEditVisible, setQuickEditVisible] = useState(false);
+  const [quickEditRecord, setQuickEditRecord] = useState<ProductionOrder | null>(null);
+  const [quickEditSaving, setQuickEditSaving] = useState(false);
 
   const { user } = useAuth();
   const isSupervisorOrAbove = useMemo(() => isSupervisorOrAboveUser(user), [user]);
@@ -54,99 +80,110 @@ const ProductionList: React.FC = () => {
   const detailColors = (() => {
     const s = new Set(
       orderDetailLines
-        .map((l) => String(l?.color || '').trim())
+        .map((l) => safeString(l?.color, ''))
         .filter((v) => v)
     );
     const joined = Array.from(s).join('、');
-    if (joined) return joined;
-    return String((currentOrder as any)?.color || '').trim() || '-';
+    return joined || safeString((currentOrder as Record<string, unknown>)?.color);
   })();
 
   const detailSizes = (() => {
     const s = new Set(
       orderDetailLines
-        .map((l) => String(l?.size || '').trim())
+        .map((l) => safeString(l?.size, ''))
         .filter((v) => v)
     );
     const joined = Array.from(s).join('、');
-    if (joined) return joined;
-    return String((currentOrder as any)?.size || '').trim() || '-';
+    return joined || safeString((currentOrder as Record<string, unknown>)?.size);
   })();
 
   const detailQuantity = (() => {
     const sum = orderDetailLines.reduce((acc, l) => acc + (Number(l?.quantity) || 0), 0);
     if (sum > 0) return sum;
-    const q = Number((currentOrder as any)?.orderQuantity);
+    const q = Number((currentOrder as Record<string, unknown>)?.orderQuantity);
     return Number.isFinite(q) && q > 0 ? q : 0;
   })();
 
   const detailWarehousedQuantity = (() => {
     const sum = orderDetailLines.reduce((acc, l) => acc + (Number(l?.warehousedQuantity) || 0), 0);
     if (sum > 0) return sum;
-    const q = toNumberSafe((currentOrder as any)?.warehousingQualifiedQuantity);
+    const q = toNumberSafe((currentOrder as Record<string, unknown>)?.warehousingQualifiedQuantity);
     return q > 0 ? q : 0;
   })();
 
   const detailSkuRows = (() => {
-    const map = new Map<string, { color: string; size: string; orderQuantity: number; warehousedQuantity?: number }>();
+    const map = new Map<string, { color: string; size: string; orderQuantity: number; cuttingQuantity?: number; warehousedQuantity?: number }>();
     for (const l of orderDetailLines) {
-      const color = String(l?.color || '').trim();
-      const size = String(l?.size || '').trim();
+      const color = safeString(l?.color, '');
+      const size = safeString(l?.size, '');
       const orderQuantity = Number(l?.quantity) || 0;
+      const cuttingQuantity = Number((l as Record<string, unknown>)?.cuttingQuantity) || 0;
       const warehousedQuantity = Number(l?.warehousedQuantity) || 0;
       if (!color || !size) continue;
-      if (orderQuantity <= 0 && warehousedQuantity <= 0) continue;
+      if (orderQuantity <= 0 && cuttingQuantity <= 0 && warehousedQuantity <= 0) continue;
       const key = `${color}|||${size}`;
       const prev = map.get(key);
       map.set(key, {
         color,
         size,
         orderQuantity: (prev?.orderQuantity || 0) + orderQuantity,
+        cuttingQuantity: (prev?.cuttingQuantity || 0) + cuttingQuantity,
         warehousedQuantity: (prev?.warehousedQuantity || 0) + warehousedQuantity,
       });
     }
 
     const rows = Array.from(map.values())
       .map((r) => {
+        const c = Number(r.cuttingQuantity) || 0;
+        const hasC = c > 0;
         const w = Number(r.warehousedQuantity) || 0;
         const hasW = w > 0;
         return {
           key: `${r.color}|||${r.size}`,
+          sku: `${r.color}-${r.size}`,
           color: r.color,
           size: r.size,
           orderQuantity: Math.max(0, Number(r.orderQuantity) || 0),
+          cuttingQuantity: hasC ? c : undefined,
           warehousedQuantity: hasW ? w : undefined,
           unwarehousedQuantity: hasW ? Math.max(0, (Number(r.orderQuantity) || 0) - w) : undefined,
         };
       })
-      .filter((r) => r.orderQuantity > 0 || (Number(r.warehousedQuantity) || 0) > 0);
+      .filter((r) => r.orderQuantity > 0 || (Number(r.cuttingQuantity) || 0) > 0 || (Number(r.warehousedQuantity) || 0) > 0);
 
     if (rows.length) return rows;
 
-    const color = String((currentOrder as any)?.color || '').trim() || '-';
-    const size = String((currentOrder as any)?.size || '').trim() || '-';
-    const orderQuantity = Math.max(0, toNumberSafe((currentOrder as any)?.orderQuantity) || detailQuantity);
+    const color = safeString((currentOrder as Record<string, unknown>)?.color);
+    const size = safeString((currentOrder as Record<string, unknown>)?.size);
+    const orderQuantity = Math.max(0, toNumberSafe((currentOrder as Record<string, unknown>)?.orderQuantity) || detailQuantity);
+    const c = toNumberSafe((currentOrder as Record<string, unknown>)?.cuttingQuantity) || 0;
     const w = detailWarehousedQuantity;
     return [
       {
         key: '_single',
+        sku: `${color}-${size}`,
         color,
         size,
         orderQuantity,
+        cuttingQuantity: c > 0 ? c : undefined,
         warehousedQuantity: w > 0 ? w : undefined,
         unwarehousedQuantity: w > 0 ? Math.max(0, orderQuantity - w) : undefined,
       },
     ];
   })();
 
-  const detailSkuHasWarehoused = detailSkuRows.some((r) => (Number((r as any)?.warehousedQuantity) || 0) > 0);
+  const detailSkuHasCutting = detailSkuRows.some((r) => (Number((r as Record<string, unknown>)?.cuttingQuantity) || 0) > 0);
+  const detailSkuHasWarehoused = detailSkuRows.some((r) => (Number((r as Record<string, unknown>)?.warehousedQuantity) || 0) > 0);
   const detailSkuTotals = (() => {
-    const totalOrder = detailSkuRows.reduce((acc, r) => acc + (Number((r as any)?.orderQuantity) || 0), 0);
+    const totalOrder = detailSkuRows.reduce((acc, r) => acc + (Number((r as Record<string, unknown>)?.orderQuantity) || 0), 0);
+    const totalCutting = detailSkuHasCutting
+      ? detailSkuRows.reduce((acc, r) => acc + (Number((r as Record<string, unknown>)?.cuttingQuantity) || 0), 0)
+      : 0;
     const totalWarehoused = detailSkuHasWarehoused
-      ? detailSkuRows.reduce((acc, r) => acc + (Number((r as any)?.warehousedQuantity) || 0), 0)
+      ? detailSkuRows.reduce((acc, r) => acc + (Number((r as Record<string, unknown>)?.warehousedQuantity) || 0), 0)
       : detailWarehousedQuantity;
     const totalUnwarehoused = Math.max(0, totalOrder - totalWarehoused);
-    return { totalOrder, totalWarehoused, totalUnwarehoused };
+    return { totalOrder, totalCutting, totalWarehoused, totalUnwarehoused };
   })();
 
 
@@ -155,13 +192,19 @@ const ProductionList: React.FC = () => {
   const fetchProductionList = async () => {
     setLoading(true);
     try {
-      const response = await api.get<any>('/production/order/list', { params: queryParams });
-      const result = response as any;
-      if (result.code === 200) {
-        setProductionList(result.data.records || []);
-        setTotal(result.data.total || 0);
+      const response = await api.get<PaginatedResponse<ProductionOrder>>(
+        '/production/order/list',
+        { params: queryParams }
+      );
+      if (isApiSuccess(response)) {
+        setProductionList(response.data.records || []);
+        setTotal(response.data.total || 0);
       } else {
-        message.error(result.message || '获取生产订单列表失败');
+        message.error(
+          typeof response === 'object' && response !== null && 'message' in response
+            ? String(response.message) || '获取生产订单列表失败'
+            : '获取生产订单列表失败'
+        );
       }
     } catch (error) {
       message.error('获取生产订单列表失败');
@@ -182,10 +225,12 @@ const ProductionList: React.FC = () => {
     'production-orders',
     async () => {
       try {
-        const response = await api.get<any>('/production/order/list', { params: queryParams });
-        const result = response as any;
-        if (result.code === 200) {
-          return result.data.records || [];
+        const response = await api.get<PaginatedResponse<ProductionOrder>>(
+          '/production/order/list',
+          { params: queryParams }
+        );
+        if (isApiSuccess(response)) {
+          return response.data.records || [];
         }
         return [];
       } catch (error) {
@@ -216,7 +261,7 @@ const ProductionList: React.FC = () => {
     }
   );
 
-  const formatCsvCell = (value: any) => {
+  const formatCsvCell = (value: unknown) => {
     const v = value == null ? '' : String(value);
     const escaped = v.replace(/"/g, '""');
     return `"${escaped}"`;
@@ -274,27 +319,27 @@ const ProductionList: React.FC = () => {
         r.styleName,
         r.factoryName,
         r.orderQuantity,
-        (r as any).orderOperatorName || '',
-        formatDateTime((r as any).createTime),
-        formatDateTime((r as any).procurementStartTime),
-        formatDateTime((r as any).procurementEndTime),
-        (r as any).procurementOperatorName || '',
-        (r as any).procurementCompletionRate == null ? '' : `${(r as any).procurementCompletionRate}%`,
-        formatDateTime((r as any).cuttingStartTime),
-        formatDateTime((r as any).cuttingEndTime),
-        (r as any).cuttingOperatorName || '',
-        (r as any).cuttingCompletionRate == null ? '' : `${(r as any).cuttingCompletionRate}%`,
-        formatDateTime((r as any).sewingStartTime),
-        formatDateTime((r as any).sewingEndTime),
-        (r as any).sewingCompletionRate == null ? '' : `${(r as any).sewingCompletionRate}%`,
-        formatDateTime((r as any).qualityStartTime),
-        formatDateTime((r as any).qualityEndTime),
-        (r as any).qualityOperatorName || '',
-        (r as any).qualityCompletionRate == null ? '' : `${(r as any).qualityCompletionRate}%`,
-        formatDateTime((r as any).warehousingStartTime),
-        formatDateTime((r as any).warehousingEndTime),
-        (r as any).warehousingOperatorName || '',
-        (r as any).warehousingCompletionRate == null ? '' : `${(r as any).warehousingCompletionRate}%`,
+        (r as Record<string, unknown>).orderOperatorName || '',
+        formatDateTime((r as Record<string, unknown>).createTime),
+        formatDateTime((r as Record<string, unknown>).procurementStartTime),
+        formatDateTime((r as Record<string, unknown>).procurementEndTime),
+        (r as Record<string, unknown>).procurementOperatorName || '',
+        (r as Record<string, unknown>).procurementCompletionRate == null ? '' : `${(r as Record<string, unknown>).procurementCompletionRate}%`,
+        formatDateTime((r as Record<string, unknown>).cuttingStartTime),
+        formatDateTime((r as Record<string, unknown>).cuttingEndTime),
+        (r as Record<string, unknown>).cuttingOperatorName || '',
+        (r as Record<string, unknown>).cuttingCompletionRate == null ? '' : `${(r as Record<string, unknown>).cuttingCompletionRate}%`,
+        formatDateTime((r as Record<string, unknown>).sewingStartTime),
+        formatDateTime((r as Record<string, unknown>).sewingEndTime),
+        (r as Record<string, unknown>).sewingCompletionRate == null ? '' : `${(r as Record<string, unknown>).sewingCompletionRate}%`,
+        formatDateTime((r as Record<string, unknown>).qualityStartTime),
+        formatDateTime((r as Record<string, unknown>).qualityEndTime),
+        (r as Record<string, unknown>).qualityOperatorName || '',
+        (r as Record<string, unknown>).qualityCompletionRate == null ? '' : `${(r as Record<string, unknown>).qualityCompletionRate}%`,
+        formatDateTime((r as Record<string, unknown>).warehousingStartTime),
+        formatDateTime((r as Record<string, unknown>).warehousingEndTime),
+        (r as Record<string, unknown>).warehousingOperatorName || '',
+        (r as Record<string, unknown>).warehousingCompletionRate == null ? '' : `${(r as Record<string, unknown>).warehousingCompletionRate}%`,
         r.productionProgress == null ? '' : `${r.productionProgress}%`,
         getStatusConfig(r.status).text,
       ].map(formatCsvCell).join(',');
@@ -348,7 +393,7 @@ const ProductionList: React.FC = () => {
       completed: { text: '已完成', color: 'success' },
       delayed: { text: '已逾期', color: 'error' },
     };
-    const key = String(status || '').trim();
+    const key = safeString(status, '');
     return statusMap[key] || { text: '未知', color: 'default' };
   };
 
@@ -358,19 +403,39 @@ const ProductionList: React.FC = () => {
     return Math.ceil(cq * 0.9);
   };
 
+  // 快速编辑保存
+  const handleQuickEditSave = async (values: { remarks: string; expectedShipDate: string | null }) => {
+    setQuickEditSaving(true);
+    try {
+      await productionOrderApi.quickEdit({
+        id: quickEditRecord?.id,
+        ...values,
+      });
+      message.success('保存成功');
+      setQuickEditVisible(false);
+      setQuickEditRecord(null);
+      await fetchProductionList();
+    } catch (error: any) {
+      message.error(error?.response?.data?.message || '保存失败');
+      throw error;
+    } finally {
+      setQuickEditSaving(false);
+    }
+  };
+
   const handleCloseOrder = (order: ProductionOrder) => {
-    const orderId = String((order as any)?.id || '').trim();
+    const orderId = safeString((order as Record<string, unknown>)?.id, '');
     if (!orderId) {
       message.error('订单ID为空，无法关单');
       return;
     }
 
-    const cuttingQty = Number((order as any)?.cuttingQuantity ?? 0) || 0;
+    const cuttingQty = Number((order as Record<string, unknown>)?.cuttingQuantity ?? 0) || 0;
     const minRequired = getCloseMinRequired(cuttingQty);
-    const orderQty = Number((order as any)?.orderQuantity ?? 0) || 0;
-    const warehousingQualified = Number((order as any)?.warehousingQualifiedQuantity ?? 0) || 0;
+    const orderQty = Number((order as Record<string, unknown>)?.orderQuantity ?? 0) || 0;
+    const warehousingQualified = Number((order as Record<string, unknown>)?.warehousingQualifiedQuantity ?? 0) || 0;
 
-    if ((order as any)?.status === 'completed') {
+    if ((order as Record<string, unknown>)?.status === 'completed') {
       message.info('该订单已完成，无需关单');
       return;
     }
@@ -385,8 +450,8 @@ const ProductionList: React.FC = () => {
       return;
     }
 
-    Modal.confirm({
-      title: `确认关单：${String((order as any)?.orderNo || '').trim() || '-'}`,
+    modal.confirm({
+      title: `确认关单：${safeString((order as Record<string, unknown>)?.orderNo)}`,
       okText: '确认关单',
       cancelText: '取消',
       okButtonProps: { danger: true },
@@ -400,9 +465,15 @@ const ProductionList: React.FC = () => {
         </div>
       ),
       onOk: async () => {
-        const result = await api.post<any>('/production/order/close', { id: orderId, sourceModule: 'myOrders' });
-        if ((result as any)?.code !== 200) {
-          throw new Error((result as any)?.message || '关单失败');
+        const result = await api.post<{ code: number; message?: string; data: ProductionOrder }>(
+          '/production/order/close',
+          { id: orderId, sourceModule: 'myOrders' }
+        );
+        if (!isApiSuccess(result)) {
+          const msg = typeof result === 'object' && result !== null && 'message' in result
+            ? String(result.message) || '关单失败'
+            : '关单失败';
+          throw new Error(msg);
         }
         message.success('关单成功');
         fetchProductionList();
@@ -415,7 +486,7 @@ const ProductionList: React.FC = () => {
       message.error('无权限报废');
       return;
     }
-    const orderId = String((order as any)?.id || '').trim();
+    const orderId = safeString((order as Record<string, unknown>)?.id, '');
     if (!orderId) {
       message.error('订单ID为空，无法报废');
       return;
@@ -426,8 +497,8 @@ const ProductionList: React.FC = () => {
     }
 
     let remark = '';
-    Modal.confirm({
-      title: `确认报废：${String((order as any)?.orderNo || '').trim() || '-'}`,
+    modal.confirm({
+      title: `确认报废：${safeString((order as Record<string, unknown>)?.orderNo)}`,
       okText: '确认报废',
       cancelText: '取消',
       okButtonProps: { danger: true },
@@ -451,9 +522,15 @@ const ProductionList: React.FC = () => {
           message.error('请输入报废原因');
           return Promise.reject(new Error('请输入报废原因'));
         }
-        const result = await api.post<any>('/production/order/scrap', { id: orderId, remark: opRemark });
-        if ((result as any)?.code !== 200) {
-          throw new Error((result as any)?.message || '报废失败');
+        const result = await api.post<{ code: number; message?: string; data: ProductionOrder }>(
+          '/production/order/scrap',
+          { id: orderId, remark: opRemark }
+        );
+        if (!isApiSuccess(result)) {
+          const msg = typeof result === 'object' && result !== null && 'message' in result
+            ? String(result.message) || '报废失败'
+            : '报废失败';
+          throw new Error(msg);
         }
         message.success('报废成功');
         fetchProductionList();
@@ -462,20 +539,38 @@ const ProductionList: React.FC = () => {
   };
 
   // 表格列定义
-  const renderStageTime = (value: any) => {
-    const s = String(value ?? '').trim();
-    return s ? formatDateTime(value) : '-';
+  const renderStageTime = (value: unknown) => {
+    return value ? formatDateTime(value) : '-';
   };
 
-  const renderStageText = (value: any) => {
-    return String(value ?? '').trim() || '-';
+  const renderStageText = (value: unknown) => {
+    return safeString(value);
   };
 
-  const renderStageRate = (value: any) => {
+  const renderStageRate = (value: unknown) => {
     if (value === null || value === undefined || String(value).trim() === '') return '-';
     const n = Number(value);
     return Number.isFinite(n) ? `${n}%` : '-';
   };
+
+  // 添加排序逻辑
+  const sortedProductionList = useMemo(() => {
+    const sorted = [...productionList];
+    sorted.sort((a: any, b: any) => {
+      const aVal = a[sortField];
+      const bVal = b[sortField];
+
+      // 时间字段排序
+      if (sortField === 'createTime') {
+        const aTime = aVal ? new Date(aVal).getTime() : 0;
+        const bTime = bVal ? new Date(bVal).getTime() : 0;
+        return sortOrder === 'desc' ? bTime - aTime : aTime - bTime;
+      }
+
+      return 0;
+    });
+    return sorted;
+  }, [productionList, sortField, sortOrder]);
 
   const stageColumns = (
     prefix: string,
@@ -505,7 +600,24 @@ const ProductionList: React.FC = () => {
             dataIndex: `${prefix}OperatorName`,
             key: `${prefix}OperatorName`,
             width: 120,
-            render: renderStageText,
+            render: (value: unknown, record: ProductionOrder) => {
+              const operatorName = renderStageText(value);
+              if (!operatorName || operatorName === '-') return '-';
+              const orderNo = String((record as Record<string, unknown>)?.orderNo || '').trim();
+              const processName = titles.operator.replace('员', '');
+              return (
+                <a
+                  style={{ cursor: 'pointer', color: '#1890ff' }}
+                  onClick={() => {
+                    if (orderNo) {
+                      navigate(`/finance/payroll-operator-summary?orderNo=${orderNo}&processName=${processName}`);
+                    }
+                  }}
+                >
+                  {operatorName}
+                </a>
+              );
+            },
           },
         ]
         : []),
@@ -536,9 +648,9 @@ const ProductionList: React.FC = () => {
       key: 'orderNo',
       width: 120,
       render: (v: any, record: ProductionOrder) => {
-        const orderNo = String(v || '').trim();
-        const styleNo = String((record as any)?.styleNo || '').trim();
-        const orderId = String((record as any)?.id || '').trim();
+        const orderNo = safeString(v, '');
+        const styleNo = safeString((record as Record<string, unknown>)?.styleNo, '');
+        const orderId = safeString((record as Record<string, unknown>)?.id, '');
         return (
           <a
             className="order-no-compact"
@@ -594,15 +706,36 @@ const ProductionList: React.FC = () => {
       render: renderStageText,
     },
     {
-      title: '下单时间',
+      title: <SortableColumnTitle
+        title="下单时间"
+        sortField={sortField}
+        fieldName="createTime"
+        sortOrder={sortOrder}
+        onSort={handleSort}
+        align="left"
+      />,
       dataIndex: 'createTime',
       key: 'createTime',
       width: 170,
       render: renderStageTime,
     },
+    {
+      title: '备注',
+      dataIndex: 'remarks',
+      key: 'remarks',
+      width: 150,
+      ellipsis: true,
+      render: (v: any) => v || '-',
+    },
+    {
+      title: <SortableColumnTitle title="预计出货" field="expectedShipDate" onSort={handleSort} currentField={sortField} currentOrder={sortOrder} />,
+      dataIndex: 'expectedShipDate',
+      key: 'expectedShipDate',
+      width: 120,
+      render: (v: any) => v ? formatDateTime(v) : '-',
+    },
     ...stageColumns('procurement', { start: '采购时间', end: '采购完成', operator: '采购员', rate: '采购完成率' }),
     ...stageColumns('cutting', { start: '裁剪时间', end: '裁剪完成', operator: '裁剪员', rate: '裁剪完成率' }),
-    ...stageColumns('sewing', { start: '缝制开始', end: '缝制完成', operator: '缝制员', rate: '缝制完成率' }, { includeOperator: false }),
     ...stageColumns('carSewing', { start: '车缝开始', end: '车缝完成', operator: '车缝员', rate: '车缝完成率' }),
     ...stageColumns('ironing', { start: '大烫开始', end: '大烫完成', operator: '大烫员', rate: '大烫完成率' }),
     ...stageColumns('packaging', { start: '包装开始', end: '包装完成', operator: '包装员', rate: '包装完成率' }),
@@ -614,7 +747,7 @@ const ProductionList: React.FC = () => {
       key: 'cuttingQuantity',
       width: 90,
       align: 'right' as const,
-      render: (v: any) => Number(v ?? 0) || 0,
+      render: (v: unknown) => Number(v ?? 0) || 0,
     },
     {
       title: '扎数',
@@ -622,7 +755,7 @@ const ProductionList: React.FC = () => {
       key: 'cuttingBundleCount',
       width: 80,
       align: 'right' as const,
-      render: (v: any) => Number(v ?? 0) || 0,
+      render: (v: unknown) => Number(v ?? 0) || 0,
     },
     {
       title: '完成数量',
@@ -637,7 +770,7 @@ const ProductionList: React.FC = () => {
       key: 'warehousingQualifiedQuantity',
       width: 100,
       align: 'right' as const,
-      render: (v: any) => Number(v ?? 0) || 0,
+      render: (v: unknown) => Number(v ?? 0) || 0,
     },
     {
       title: '次品数',
@@ -645,7 +778,7 @@ const ProductionList: React.FC = () => {
       key: 'unqualifiedQuantity',
       width: 90,
       align: 'right' as const,
-      render: (v: any) => Number(v ?? 0) || 0,
+      render: (v: unknown) => Number(v ?? 0) || 0,
     },
     {
       title: '返修数',
@@ -653,7 +786,7 @@ const ProductionList: React.FC = () => {
       key: 'repairQuantity',
       width: 90,
       align: 'right' as const,
-      render: (v: any) => Number(v ?? 0) || 0,
+      render: (v: unknown) => Number(v ?? 0) || 0,
     },
     {
       title: '库存',
@@ -661,7 +794,7 @@ const ProductionList: React.FC = () => {
       key: 'inStockQuantity',
       width: 90,
       align: 'right' as const,
-      render: (v: any) => Number(v ?? 0) || 0,
+      render: (v: unknown) => Number(v ?? 0) || 0,
     },
     {
       title: '生产进度',
@@ -682,11 +815,11 @@ const ProductionList: React.FC = () => {
       },
     },
     {
-      title: '计划完成日期',
+      title: '完成时间',
       dataIndex: 'plannedEndDate',
       key: 'plannedEndDate',
       width: 120,
-      render: (value: any) => formatDateTime(value),
+      render: (value: unknown) => formatDateTime(value),
     },
     {
       title: '操作',
@@ -698,6 +831,7 @@ const ProductionList: React.FC = () => {
         return (
           <RowActions
             className="table-actions"
+            maxInline={1}
             actions={[
               {
                 key: 'detail',
@@ -708,23 +842,21 @@ const ProductionList: React.FC = () => {
                 primary: true,
               },
               {
-                key: 'close',
-                label: frozen ? '关单(已完成)' : '关单',
-                disabled: frozen,
-                onClick: () => handleCloseOrder(record),
+                key: 'quickEdit',
+                label: '编辑',
+                title: '快速编辑备注和预计出货',
+                icon: <EditOutlined />,
+                onClick: () => {
+                  setQuickEditRecord(record);
+                  setQuickEditVisible(true);
+                },
               },
               {
-                key: 'cutting',
-                label: frozen ? '裁剪管理(已完成)' : '裁剪管理',
+                key: 'close',
+                label: <span style={{ color: frozen ? undefined : '#1890ff' }}>{frozen ? '关单(已完成)' : '关单'}</span>,
+                icon: <CheckCircleOutlined style={{ color: frozen ? undefined : '#1890ff' }} />,
                 disabled: frozen,
-                onClick: () =>
-                  navigate(
-                    withQuery('/production/cutting', {
-                      orderId: (record as any)?.id,
-                      orderNo: (record as any)?.orderNo,
-                      styleNo: (record as any)?.styleNo,
-                    })
-                  ),
+                onClick: () => handleCloseOrder(record),
               },
               ...(isSupervisorOrAbove
                 ? [
@@ -815,8 +947,8 @@ const ProductionList: React.FC = () => {
           {/* 表格区 */}
           <ResizableTable<ProductionOrder>
             storageKey="production-order-table"
-            columns={columns as any}
-            dataSource={productionList}
+            columns={columns as Record<string, unknown>}
+            dataSource={sortedProductionList}
             rowKey="id"
             loading={loading}
             rowSelection={{
@@ -825,25 +957,6 @@ const ProductionList: React.FC = () => {
                 setSelectedRowKeys(keys);
                 setSelectedRows(rows);
               },
-            }}
-            rowClassName={() => 'clickable-row'}
-            onRow={(record) => {
-              return {
-                onClick: (e) => {
-                  const target = e.target as HTMLElement | null;
-                  if (!target) return;
-
-                  const interactive = target.closest(
-                    'a,button,input,textarea,select,option,[role="button"],[role="menuitem"],.ant-dropdown-trigger,.ant-btn'
-                  );
-                  if (interactive) return;
-
-                  const orderNo = String((record as any)?.orderNo || '').trim();
-                  const styleNo = String((record as any)?.styleNo || '').trim();
-                  const orderId = String((record as any)?.id || '').trim();
-                  navigate(withQuery('/production/order-flow', { orderId, orderNo, styleNo }));
-                },
-              };
             }}
             pagination={{
               current: queryParams.page,
@@ -868,116 +981,380 @@ const ProductionList: React.FC = () => {
         >
           {currentOrder ? (
             <>
-              <div className="modal-detail-header">
-                <div className="modal-detail-cover" style={{ flexDirection: 'column', gap: 10, padding: 10 }}>
-                  <StyleCoverThumb styleNo={String((currentOrder as any).styleNo || '').trim()} size={140} borderRadius={10} />
-                  {currentOrder?.qrCode ? <QRCodeCanvas value={String(currentOrder.qrCode)} size={96} includeMargin /> : null}
-                </div>
-                <div className="modal-detail-grid">
-                  <div className="modal-detail-item"><span className="modal-detail-label">订单号：</span><span className="modal-detail-value order-no-compact">{String((currentOrder as any).orderNo || '').trim() || '-'}</span></div>
-                  <div className="modal-detail-item"><span className="modal-detail-label">款号：</span><span className="modal-detail-value">{String((currentOrder as any).styleNo || '').trim() || '-'}</span></div>
-                  <div className="modal-detail-item"><span className="modal-detail-label">款名：</span><span className="modal-detail-value">{String((currentOrder as any).styleName || '').trim() || '-'}</span></div>
-                  <div className="modal-detail-item"><span className="modal-detail-label">颜色：</span><span className="modal-detail-value">{detailColors}</span></div>
-                  <div className="modal-detail-item"><span className="modal-detail-label">码数：</span><span className="modal-detail-value">{detailSizes}</span></div>
-                  <div className="modal-detail-item"><span className="modal-detail-label">数量：</span><span className="modal-detail-value">{detailQuantity || '-'}</span></div>
-                  <div className="modal-detail-item"><span className="modal-detail-label">加工厂：</span><span className="modal-detail-value">{String((currentOrder as any).factoryName || '').trim() || '-'}</span></div>
-                  <div className="modal-detail-item"><span className="modal-detail-label">订单数量：</span><span className="modal-detail-value">{String((currentOrder as any).orderQuantity ?? '-')}</span></div>
-                  <div className="modal-detail-item"><span className="modal-detail-label">完成数量：</span><span className="modal-detail-value">{String((currentOrder as any).completedQuantity ?? '-')}</span></div>
-                  <div className="modal-detail-item"><span className="modal-detail-label">入库数量：</span><span className="modal-detail-value">{detailWarehousedQuantity || '-'}</span></div>
-                  <div className="modal-detail-item"><span className="modal-detail-label">生产进度：</span><span className="modal-detail-value">{String((currentOrder as any).productionProgress ?? '-')}%</span></div>
-                  <div className="modal-detail-item"><span className="modal-detail-label">状态：</span><span className="modal-detail-value">{getStatusConfig((currentOrder as any).status).text}</span></div>
-                  <div className="modal-detail-item"><span className="modal-detail-label">计划开始：</span><span className="modal-detail-value">{formatDateTime((currentOrder as any).plannedStartDate)}</span></div>
-                  <div className="modal-detail-item"><span className="modal-detail-label">计划完成：</span><span className="modal-detail-value">{formatDateTime((currentOrder as any).plannedEndDate)}</span></div>
-                  <div className="modal-detail-item"><span className="modal-detail-label">实际开始：</span><span className="modal-detail-value">{formatDateTime((currentOrder as any).actualStartDate)}</span></div>
-                  <div className="modal-detail-item"><span className="modal-detail-label">实际完成：</span><span className="modal-detail-value">{formatDateTime((currentOrder as any).actualEndDate)}</span></div>
-                  <div className="modal-detail-item"><span className="modal-detail-label">采购员：</span><span className="modal-detail-value">{String((currentOrder as any).procurementOperatorName || '').trim() || '-'}</span></div>
-                  <div className="modal-detail-item"><span className="modal-detail-label">采购完成率：</span><span className="modal-detail-value">{((currentOrder as any).procurementCompletionRate ?? '-') + '%'}</span></div>
-                  <div className="modal-detail-item"><span className="modal-detail-label">采购时间：</span><span className="modal-detail-value">{formatDateTime((currentOrder as any).procurementStartTime)}</span></div>
-                  <div className="modal-detail-item"><span className="modal-detail-label">采购完成：</span><span className="modal-detail-value">{formatDateTime((currentOrder as any).procurementEndTime)}</span></div>
-                  <div className="modal-detail-item"><span className="modal-detail-label">裁剪时间：</span><span className="modal-detail-value">{formatDateTime((currentOrder as any).cuttingStartTime)}</span></div>
-                  <div className="modal-detail-item"><span className="modal-detail-label">裁剪完成：</span><span className="modal-detail-value">{formatDateTime((currentOrder as any).cuttingEndTime)}</span></div>
-                  <div className="modal-detail-item"><span className="modal-detail-label">裁剪员：</span><span className="modal-detail-value">{String((currentOrder as any).cuttingOperatorName || '').trim() || '-'}</span></div>
-                  <div className="modal-detail-item"><span className="modal-detail-label">裁剪完成率：</span><span className="modal-detail-value">{((currentOrder as any).cuttingCompletionRate ?? '-') + '%'}</span></div>
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '360px minmax(0, 1fr)', gap: 16, marginTop: 12, alignItems: 'start' }}>
-                <div>
-                  <h3 style={{ marginTop: 0 }}>生产节点时间线</h3>
-                  <Timeline
-                    style={{ marginTop: 8 }}
-                    items={[
-                      { content: <>计划开始：{formatDateTime(currentOrder.plannedStartDate)}</> },
-                      currentOrder.actualStartDate
-                        ? { content: <>实际开始：{formatDateTime(currentOrder.actualStartDate)}</> }
-                        : null,
-                      { content: <>计划完成：{formatDateTime(currentOrder.plannedEndDate)}</> },
-                      currentOrder.actualEndDate ? { content: <>实际完成：{formatDateTime(currentOrder.actualEndDate)}</> } : null,
-                    ].filter(Boolean) as any}
+              {/* 头部订单信息卡片 */}
+              <div style={{
+                display: 'flex',
+                gap: isMobile ? 12 : 16,
+                padding: isMobile ? 10 : 12,
+                background: '#f8f9fa',
+                borderRadius: 8,
+                marginBottom: 12
+              }}>
+                {/* 左侧：图片和二维码 */}
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 8
+                }}>
+                  <StyleCoverThumb
+                    styleNo={String((currentOrder as Record<string, unknown>).styleNo || '').trim()}
+                    size={isMobile ? 160 : 200}
+                    borderRadius={6}
                   />
+                  {currentOrder?.qrCode ? (
+                    <QRCodeBox
+                      value={String(currentOrder.qrCode)}
+                      label="订单扫码"
+                      variant="primary"
+                      size={isMobile ? 120 : 140}
+                    />
+                  ) : null}
                 </div>
 
-                <div>
-                  <h3 style={{ marginTop: 0 }}>详细</h3>
-                  <div style={{ border: '1px solid rgba(0,0,0,0.06)', borderRadius: 10, padding: 12 }}>
+                {/* 右侧：订单核心信息 */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  {/* 第一行：订单号 + 加工厂 + 码数表格 */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    justifyContent: 'space-between',
+                    gap: 16,
+                    marginBottom: 8
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 24,
+                      flexWrap: 'wrap'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{
+                          fontSize: 14,
+                          color: '#6b7280',
+                          fontWeight: 600
+                        }}>订单号</span>
+                        <span style={{
+                          fontSize: 18,
+                          fontWeight: 700,
+                          color: '#1f2937',
+                          letterSpacing: '0.5px'
+                        }}>{safeString((currentOrder as Record<string, unknown>).orderNo)}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ fontSize: 14, color: '#6b7280', fontWeight: 600 }}>加工厂</span>
+                        <span style={{ fontSize: 15, fontWeight: 600, color: '#111827' }}>
+                          {safeString((currentOrder as Record<string, unknown>).factoryName)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* 右侧：码数与数量表格 */}
+                    <div style={{
+                      padding: 6,
+                      background: '#fff',
+                      borderRadius: 6,
+                      border: '2px solid #d1d5db',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                      flexShrink: 0
+                    }}>
+                      {(() => {
+                        const sizeArray = detailSizes.split('、').filter(Boolean);
+                        const skuArray = detailSkuRows || [];
+
+                        return (
+                          <table style={{ borderCollapse: 'collapse' }}>
+                            <tbody>
+                              {/* 第一行：码数 */}
+                              <tr>
+                                <td style={{
+                                  padding: '8px 12px',
+                                  fontSize: 14,
+                                  color: '#374151',
+                                  fontWeight: 600,
+                                  borderRight: '1px solid #d1d5db',
+                                  borderBottom: '1px solid #d1d5db',
+                                  width: '60px',
+                                  background: '#f3f4f6'
+                                }}>
+                                  码数
+                                </td>
+                                {sizeArray.map((size: string, idx: number) => (
+                                  <td key={idx} style={{
+                                    padding: '8px 14px',
+                                    fontSize: 15,
+                                    color: '#111827',
+                                    fontWeight: 700,
+                                    textAlign: 'center',
+                                    borderRight: idx < sizeArray.length - 1 ? '1px solid #d1d5db' : 'none',
+                                    borderBottom: '1px solid #d1d5db',
+                                    minWidth: '50px'
+                                  }}>
+                                    {size}
+                                  </td>
+                                ))}
+                                <td style={{
+                                  padding: '8px 14px',
+                                  fontSize: 14,
+                                  color: '#111827',
+                                  fontWeight: 700,
+                                  textAlign: 'center',
+                                  borderLeft: '1px solid #d1d5db',
+                                  borderBottom: '1px solid #d1d5db',
+                                  background: '#fef3c7',
+                                  whiteSpace: 'nowrap'
+                                }} rowSpan={2}>
+                                  总下单数：{detailQuantity || '-'}
+                                </td>
+                              </tr>
+                              {/* 第二行：数量 */}
+                              <tr>
+                                <td style={{
+                                  padding: '8px 12px',
+                                  fontSize: 14,
+                                  color: '#374151',
+                                  fontWeight: 600,
+                                  borderRight: '1px solid #d1d5db',
+                                  background: '#f3f4f6'
+                                }}>
+                                  数量
+                                </td>
+                                {sizeArray.map((size: string, idx: number) => {
+                                  const sku = skuArray.find((s: any) => s.size === size);
+                                  const qty = sku?.orderQuantity || 0;
+                                  return (
+                                    <td key={idx} style={{
+                                      padding: '8px 14px',
+                                      fontSize: 15,
+                                      color: '#111827',
+                                      fontWeight: 700,
+                                      textAlign: 'center',
+                                      borderRight: idx < sizeArray.length - 1 ? '1px solid #d1d5db' : 'none',
+                                      minWidth: '50px'
+                                    }}>
+                                      {qty}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            </tbody>
+                          </table>
+                        );
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* 第二行：款号 + 款名 + 颜色 */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 24,
+                    flexWrap: 'wrap',
+                    marginBottom: 12
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 14, color: '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>款号</span>
+                      <span style={{ fontSize: 15, fontWeight: 600, color: '#111827' }}>
+                        {safeString((currentOrder as Record<string, unknown>).styleNo)}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 14, color: '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>款名</span>
+                      <span style={{ fontSize: 15, fontWeight: 600, color: '#111827' }}>
+                        {safeString((currentOrder as Record<string, unknown>).styleName)}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 14, color: '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>颜色</span>
+                      <span style={{ fontSize: 15, fontWeight: 600, color: '#111827' }}>
+                        {detailColors}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 其他信息区域 */}
+                  <div style={{
+                    padding: 6,
+                    background: '#fff',
+                    borderRadius: 4,
+                    border: '1px solid #e5e7eb'
+                  }}>
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+                      gap: isMobile ? '4px 6px' : '4px 8px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>订单数量</span>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>
+                          {String((currentOrder as Record<string, unknown>).orderQuantity ?? '-')}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>完成数量</span>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>
+                          {String((currentOrder as Record<string, unknown>).completedQuantity ?? '-')}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>入库数量</span>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>
+                          {detailWarehousedQuantity || '-'}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>生产进度</span>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: '#059669' }}>
+                          {String((currentOrder as Record<string, unknown>).productionProgress ?? '-')}%
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>状态</span>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>
+                          {getStatusConfig((currentOrder as Record<string, unknown>).status).text}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>采购员</span>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>
+                          {safeString((currentOrder as Record<string, unknown>).procurementOperatorName)}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>采购完成率</span>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>
+                          {((currentOrder as Record<string, unknown>).procurementCompletionRate ?? '-') + '%'}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>采购时间</span>
+                        <span style={{ fontSize: 13, color: '#111827' }}>
+                          {formatDateTime((currentOrder as Record<string, unknown>).procurementStartTime)}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>采购完成时间</span>
+                        <span style={{ fontSize: 13, color: '#111827' }}>
+                          {formatDateTime((currentOrder as Record<string, unknown>).procurementEndTime)}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>裁剪员</span>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>
+                          {safeString((currentOrder as Record<string, unknown>).cuttingOperatorName)}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>裁剪完成率</span>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>
+                          {((currentOrder as Record<string, unknown>).cuttingCompletionRate ?? '-') + '%'}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>裁剪时间</span>
+                        <span style={{ fontSize: 13, color: '#111827' }}>
+                          {formatDateTime((currentOrder as Record<string, unknown>).cuttingStartTime)}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>裁剪完成时间</span>
+                        <span style={{ fontSize: 13, color: '#111827' }}>
+                          {formatDateTime((currentOrder as Record<string, unknown>).cuttingEndTime)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 详细信息表格 - 在其他信息下方 */}
+                  <div style={{ marginTop: 8 }}>
                     <Table
                       size="small"
                       bordered
                       pagination={false}
-                      dataSource={detailSkuRows as any}
+                      dataSource={detailSkuRows as Record<string, unknown>}
                       rowKey="key"
+                      style={{
+                        border: '1px solid #e5e7eb',
+                        borderRadius: 4,
+                        overflow: 'hidden',
+                        fontSize: 11
+                      }}
                       columns={[
+                        {
+                          title: 'SKU',
+                          dataIndex: 'sku',
+                          key: 'sku',
+                          ellipsis: true,
+                          width: 100,
+                          render: (v: any, record: any) => {
+                            const hasCutting = (Number(record?.cuttingQuantity) || 0) > 0;
+                            return <span style={{ fontSize: 11 }}>{hasCutting ? v : '-'}</span>;
+                          },
+                        },
                         {
                           title: '颜色',
                           dataIndex: 'color',
                           key: 'color',
                           ellipsis: true,
+                          width: 50,
                         },
                         {
                           title: '码数',
                           dataIndex: 'size',
                           key: 'size',
                           ellipsis: true,
+                          width: 40,
                         },
                         {
                           title: '下单',
                           dataIndex: 'orderQuantity',
                           key: 'orderQuantity',
-                          width: 88,
+                          width: 45,
                           align: 'right' as const,
-                          render: (v: any) => Math.max(0, Number(v) || 0),
+                          render: (v: unknown) => <span style={{ fontSize: 11 }}>{Math.max(0, Number(v) || 0)}</span>,
+                        },
+                        {
+                          title: '裁剪',
+                          dataIndex: 'cuttingQuantity',
+                          key: 'cuttingQuantity',
+                          width: 45,
+                          align: 'right' as const,
+                          render: (v: unknown) => <span style={{ fontSize: 11 }}>{detailSkuHasCutting ? Math.max(0, Number(v) || 0) : '-'}</span>,
                         },
                         {
                           title: '入库',
                           dataIndex: 'warehousedQuantity',
                           key: 'warehousedQuantity',
-                          width: 88,
+                          width: 45,
                           align: 'right' as const,
-                          render: (v: any) => (detailSkuHasWarehoused ? Math.max(0, Number(v) || 0) : '-'),
+                          render: (v: unknown) => <span style={{ fontSize: 11 }}>{detailSkuHasWarehoused ? Math.max(0, Number(v) || 0) : '-'}</span>,
                         },
                         {
                           title: '未入库',
                           dataIndex: 'unwarehousedQuantity',
                           key: 'unwarehousedQuantity',
-                          width: 98,
+                          width: 50,
                           align: 'right' as const,
-                          render: (v: any) => (detailSkuHasWarehoused ? Math.max(0, Number(v) || 0) : '-'),
+                          render: (v: unknown) => <span style={{ fontSize: 11 }}>{detailSkuHasWarehoused ? Math.max(0, Number(v) || 0) : '-'}</span>,
                         },
                       ]}
                       summary={() => (
                         <Table.Summary>
-                          <Table.Summary.Row>
-                            <Table.Summary.Cell index={0} colSpan={2}>
-                              合计
+                          <Table.Summary.Row style={{ fontWeight: 600, background: '#f9fafb' }}>
+                            <Table.Summary.Cell index={0} colSpan={3}>
+                              <span style={{ fontSize: 11 }}>合计</span>
                             </Table.Summary.Cell>
                             <Table.Summary.Cell index={2} align="right">
-                              {detailSkuTotals.totalOrder || '-'}
+                              <span style={{ fontSize: 11 }}>{detailSkuTotals.totalOrder || '-'}</span>
                             </Table.Summary.Cell>
                             <Table.Summary.Cell index={3} align="right">
-                              {detailSkuTotals.totalWarehoused > 0 ? detailSkuTotals.totalWarehoused : '-'}
+                              <span style={{ fontSize: 11 }}>{detailSkuTotals.totalCutting > 0 ? detailSkuTotals.totalCutting : '-'}</span>
                             </Table.Summary.Cell>
                             <Table.Summary.Cell index={4} align="right">
-                              {detailSkuTotals.totalUnwarehoused > 0 ? detailSkuTotals.totalUnwarehoused : '-'}
+                              <span style={{ fontSize: 11 }}>{detailSkuTotals.totalWarehoused > 0 ? detailSkuTotals.totalWarehoused : '-'}</span>
+                            </Table.Summary.Cell>
+                            <Table.Summary.Cell index={5} align="right">
+                              <span style={{ fontSize: 11 }}>{detailSkuTotals.totalUnwarehoused > 0 ? detailSkuTotals.totalUnwarehoused : '-'}</span>
                             </Table.Summary.Cell>
                           </Table.Summary.Row>
                         </Table.Summary>
@@ -986,9 +1363,58 @@ const ProductionList: React.FC = () => {
                   </div>
                 </div>
               </div>
+
+              {/* 生产节点时间线 */}
+              <div style={{ marginBottom: 8 }}>
+                <div style={{
+                  padding: 6,
+                  background: '#f8f9fa',
+                  borderRadius: 4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 16,
+                  flexWrap: 'wrap'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>计划开始：</span>
+                    <span style={{ fontSize: 12, color: '#6b7280' }}>{formatDateTime(currentOrder.plannedStartDate)}</span>
+                  </div>
+                  {currentOrder.actualStartDate && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>实际开始：</span>
+                      <span style={{ fontSize: 12, color: '#059669' }}>{formatDateTime(currentOrder.actualStartDate)}</span>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>计划完成：</span>
+                    <span style={{ fontSize: 12, color: '#6b7280' }}>{formatDateTime(currentOrder.plannedEndDate)}</span>
+                  </div>
+                  {currentOrder.actualEndDate && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>实际完成：</span>
+                      <span style={{ fontSize: 12, color: '#059669' }}>{formatDateTime(currentOrder.actualEndDate)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
             </>
           ) : null}
         </ResizableModal>
+
+        {/* 快速编辑弹窗 */}
+        <QuickEditModal
+          visible={quickEditVisible}
+          loading={quickEditSaving}
+          initialValues={{
+            remarks: quickEditRecord?.remarks,
+            expectedShipDate: quickEditRecord?.expectedShipDate,
+          }}
+          onSave={handleQuickEditSave}
+          onCancel={() => {
+            setQuickEditVisible(false);
+            setQuickEditRecord(null);
+          }}
+        />
       </div>
     </Layout>
   );

@@ -27,15 +27,15 @@ const Register: React.FC = () => {
         email: values.email
       });
 
-      if (response && (response as any).code === 200) {
+      if (response && (response as Record<string, unknown>).code === 200) {
         message.success('注册成功！请等待管理员审批后登录');
         setTimeout(() => {
           navigate('/login');
         }, 2000);
       } else {
-        message.error((response as any)?.message || '注册失败，请稍后重试');
+        message.error((response as Record<string, unknown>)?.message || '注册失败，请稍后重试');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       message.error(error?.response?.data?.message || '注册失败，请稍后重试');
     } finally {
       setSubmitting(false);

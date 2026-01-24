@@ -32,9 +32,9 @@ App({
     setTabSelected(page, selected) {
         try {
             const idx = Number(selected);
-            if (!Number.isFinite(idx)) return;
+            if (!Number.isFinite(idx)) {return;}
             const tab = page && typeof page.getTabBar === 'function' ? page.getTabBar() : null;
-            if (tab && typeof tab.setData === 'function') tab.setData({ selected: idx });
+            if (tab && typeof tab.setData === 'function') {tab.setData({ selected: idx });}
         } catch (e) {
             null;
         }
@@ -42,13 +42,13 @@ App({
 
     requireAuth() {
         const token = getToken();
-        if (token) return true;
+        if (token) {return true;}
         this.redirectToLogin();
         return false;
     },
 
     redirectToLogin() {
-        if (redirectingToLogin) return;
+        if (redirectingToLogin) {return;}
         redirectingToLogin = true;
         if (redirectResetTimer) {
             clearTimeout(redirectResetTimer);
@@ -75,23 +75,23 @@ App({
     },
 
     hasMoreByPage(page) {
-        if (!page) return false;
+        if (!page) {return false;}
         const total = Number(page.total) || 0;
         const current = Number(page.current) || 1;
         const size = Number(page.size) || 0;
-        if (size <= 0) return false;
+        if (size <= 0) {return false;}
         return current * size < total;
     },
 
     async loadPagedList(pageCtx, listKey, reset, fetchPage, mapRecord) {
         const key = listKey != null ? String(listKey) : '';
-        if (!key) return;
+        if (!key) {return;}
         const data = pageCtx && pageCtx.data ? pageCtx.data : null;
         const state = data && data[key] ? data[key] : null;
-        if (!state || typeof state !== 'object') return;
-        if (state.loading) return;
-        if (!reset && state.hasMore === false) return;
-        if (typeof fetchPage !== 'function') return;
+        if (!state || typeof state !== 'object') {return;}
+        if (state.loading) {return;}
+        if (!reset && state.hasMore === false) {return;}
+        if (typeof fetchPage !== 'function') {return;}
 
         const nextPage = reset ? 1 : (Number(state.page) || 1) + 1;
         const pageSize = Number(state.pageSize) || 10;
@@ -119,7 +119,7 @@ App({
                 });
             }
         } catch (e) {
-            if (e && e.type === 'auth') return;
+            if (e && e.type === 'auth') {return;}
             this.toastError(e, '网络异常');
         } finally {
             if (pageCtx && typeof pageCtx.setData === 'function') {
@@ -130,7 +130,7 @@ App({
 
     resetPagedList(pageCtx, listKey) {
         const key = listKey != null ? String(listKey) : '';
-        if (!key || !pageCtx || typeof pageCtx.setData !== 'function') return;
+        if (!key || !pageCtx || typeof pageCtx.setData !== 'function') {return;}
         const data = pageCtx.data || {};
         const state = data[key] && typeof data[key] === 'object' ? data[key] : {};
         const pageSize = Number(state.pageSize) || 10;

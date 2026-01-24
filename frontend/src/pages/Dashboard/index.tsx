@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Button, Card, Input, Space, message } from 'antd';
 import {
   AccountBookOutlined,
@@ -65,7 +65,7 @@ const Dashboard: React.FC = () => {
     try {
       const response = (await api.get('/search/universal', {
         params: { keyword }
-      })) as ApiResult<any>;
+      })) as ApiResult<unknown>;
 
       if (response.code === 200) {
         const result = response.data;
@@ -89,7 +89,7 @@ const Dashboard: React.FC = () => {
       } else {
         message.error(response.message || '搜索失败');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error?.status !== 404) {
         errorHandler.handleError(error, '搜索失败');
       } else {
@@ -124,12 +124,11 @@ const Dashboard: React.FC = () => {
     return iconMap[type] || <FileTextOutlined />;
   };
 
-  const fetchDashboard = async () => {
+  const fetchDashboard = useCallback(async () => {
     try {
-      const response = await api.get<any>('/dashboard');
-      const result = response as any;
-      if (result.code === 200) {
-        const d = result.data || {};
+      const response = await api.get<{ code: number; data: unknown }>('/dashboard');
+      if (response.code === 200) {
+        const d = response.data || {};
         setStats({
           sampleDevelopmentCount: d.sampleDevelopmentCount ?? 0,
           productionOrderCount: d.productionOrderCount ?? 0,
@@ -142,27 +141,26 @@ const Dashboard: React.FC = () => {
         });
         setRecentActivities(d.recentActivities ?? []);
       } else {
-        errorHandler.handleError(new Error(result.message || '获取仪表盘数据失败'), '获取仪表盘数据失败');
+        errorHandler.handleError(new Error(response.message || '获取仪表盘数据失败'), '获取仪表盘数据失败');
         resetDashboardData();
       }
     } catch (error) {
       errorHandler.handleError(error, '获取仪表盘数据失败');
       resetDashboardData();
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchDashboard();
-  }, []);
+  }, [fetchDashboard]);
 
   // 实时同步：60秒自动轮询更新统计数据
   useSync(
     'dashboard-stats',
     async () => {
-      const response = await api.get<any>('/dashboard');
-      const result = response as any;
-      if (result?.code === 200) {
-        return result.data || {};
+      const response = await api.get<{ code: number; data: unknown }>('/dashboard');
+      if (response?.code === 200) {
+        return response.data || {};
       }
       // 返回 null 表示获取失败但不算错误
       return null;
@@ -187,7 +185,7 @@ const Dashboard: React.FC = () => {
     {
       interval: 60000, // 60秒轮询（统计数据不需要太频繁）
       pauseOnHidden: true,
-      onError: (error: any) => {
+      onError: (error: unknown) => {
         // 只在非认证错误时显示提示
         if (error?.status !== 401 && error?.status !== 403) {
           console.error('[实时同步] 仪表盘数据同步失败:', error?.message || error);

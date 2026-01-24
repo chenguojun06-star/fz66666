@@ -7,7 +7,7 @@ type MessageType = 'success' | 'error' | 'warning' | 'info';
 // 定义应用状态类型
 interface AppState {
   isLoading: boolean;
-  message: { 
+  message: {
     type: MessageType;
     content: string;
     visible: boolean;
@@ -45,6 +45,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setState(prev => ({ ...prev, isLoading: loading }));
   }, []);
 
+  // 隐藏消息
+  const hideMessage = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      message: {
+        ...prev.message,
+        visible: false
+      }
+    }));
+  }, []);
+
   // 显示消息
   const showMessage = useCallback((type: MessageType, content: string) => {
     // 使用Ant Design的message组件显示消息
@@ -62,27 +73,16 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setTimeout(() => {
       hideMessage();
     }, 3000);
-  }, []);
-
-  // 隐藏消息
-  const hideMessage = useCallback(() => {
-    setState(prev => ({
-      ...prev,
-      message: {
-        ...prev.message,
-        visible: false
-      }
-    }));
-  }, []);
+  }, [hideMessage]);
 
   return (
-    <AppContext.Provider 
-      value={{ 
-        ...state, 
-        setLoading, 
-        showMessage, 
-        hideMessage 
-      }} 
+    <AppContext.Provider
+      value={{
+        ...state,
+        setLoading,
+        showMessage,
+        hideMessage
+      }}
     >
       {children}
     </AppContext.Provider>

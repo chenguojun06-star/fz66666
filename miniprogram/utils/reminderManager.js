@@ -71,8 +71,8 @@ function removeRemindersByOrder(orderNo, type) {
     try {
         const reminders = getReminders();
         const filtered = reminders.filter(r => {
-            if (r.orderNo !== orderNo) return true;
-            if (type && r.type !== type) return true;
+            if (r.orderNo !== orderNo) {return true;}
+            if (type && r.type !== type) {return true;}
             return false;
         });
         saveReminders(filtered);
@@ -145,7 +145,7 @@ function checkAndShowReminders() {
  * 显示提醒通知
  */
 function showReminderNotification(reminders) {
-    if (!reminders || reminders.length === 0) return;
+    if (!reminders || reminders.length === 0) {return;}
 
     const typeNames = {
         procurement: '面辅料采购',
@@ -196,7 +196,7 @@ function showReminderNotification(reminders) {
 function getPendingCount(type) {
     try {
         const reminders = getReminders();
-        if (!type) return reminders.length;
+        if (!type) {return reminders.length;}
         return reminders.filter(r => r.type === type).length;
     } catch (e) {
         return 0;

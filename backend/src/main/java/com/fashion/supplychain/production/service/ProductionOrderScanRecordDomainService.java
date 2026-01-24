@@ -394,6 +394,7 @@ public class ProductionOrderScanRecordDomainService {
 
         String r = StringUtils.hasText(remark) ? remark.trim() : "";
         String finalRemark = StringUtils.hasText(r) ? (act + "：" + r) : act;
+        finalRemark = finalRemark == null ? "" : finalRemark;
         if (finalRemark.length() > 900) {
             finalRemark = finalRemark.substring(0, 900);
         }

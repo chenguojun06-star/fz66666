@@ -47,7 +47,7 @@ class Logger {
     timestamp: string;
     level: LogLevel;
     message: string;
-    data?: any;
+    data?: unknown;
     traceId?: string;
   }> = [];
 
@@ -142,8 +142,8 @@ class ErrorHandler {
   /**
    * 处理表单验证错误
    */
-  handleFormValidationError(error: any): string {
-    const errorFields = (error as any)?.errorFields;
+  handleFormValidationError(error: unknown): string {
+    const errorFields = (error as Record<string, unknown>)?.errorFields;
     if (errorFields && errorFields.length > 0) {
       const messages = errorFields.map((f: any) => f.errors[0]).filter(Boolean);
       const errorMsg = messages.length === 1
@@ -160,7 +160,7 @@ class ErrorHandler {
   /**
    * 处理网络错误
    */
-  handleNetworkError(error: any): string {
+  handleNetworkError(error: unknown): string {
     const traceId = logger.error('网络请求失败', error);
 
     let errorMsg = '网络请求失败，请检查您的网络连接';
@@ -244,7 +244,7 @@ class ErrorHandler {
    */
   handleError(error: any, defaultMsg = '操作失败'): string {
     // 判断错误类型并调用相应的处理方法
-    if ((error as any)?.errorFields) {
+    if ((error as Record<string, unknown>)?.errorFields) {
       // 表单验证错误
       return this.handleFormValidationError(error);
     } else if (error?.response || error?.request) {
@@ -300,7 +300,7 @@ class OperationLogger {
     status: 'success' | 'failure';
     duration: number;
     userId?: string;
-    details?: any;
+    details?: unknown;
     traceId?: string;
   }> = [];
 
@@ -331,7 +331,7 @@ class OperationLogger {
       /**
        * 记录操作失败
        */
-      failure: (error: any) => {
+      failure: (error: unknown) => {
         const duration = Date.now() - startTime;
         this.logOperation(action, module, 'failure', duration, traceId, error);
         logger.error(`操作失败: ${module}.${action}`, { traceId, duration: `${duration}ms`, error });

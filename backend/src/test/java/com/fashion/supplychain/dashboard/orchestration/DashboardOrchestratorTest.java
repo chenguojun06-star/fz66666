@@ -29,14 +29,13 @@ class DashboardOrchestratorTest {
     void dashboard_returnsExpectedKeys() {
         when(dashboardQueryService.countEnabledStyles()).thenReturn(10L);
         when(dashboardQueryService.countProductionOrders()).thenReturn(20L);
-        when(dashboardQueryService.countPendingMaterialReconciliations()).thenReturn(2L);
-        when(dashboardQueryService.countPendingShipmentReconciliations()).thenReturn(3L);
         when(dashboardQueryService.countApprovedMaterialReconciliations()).thenReturn(5L);
         when(dashboardQueryService.countApprovedShipmentReconciliations()).thenReturn(6L);
-        when(dashboardQueryService.countScansBetween(any(), any())).thenReturn(7L);
         when(dashboardQueryService.countWarehousingBetween(any(), any())).thenReturn(8L);
         when(dashboardQueryService.sumUnqualifiedQuantityBetween(any(), any())).thenReturn(9L);
-        when(dashboardQueryService.countUrgentEvents()).thenReturn(11L);
+        when(dashboardQueryService.sumTotalOrderQuantity()).thenReturn(12L);
+        when(dashboardQueryService.countOverdueOrders()).thenReturn(13L);
+        when(dashboardQueryService.countTotalWarehousing()).thenReturn(14L);
 
         when(dashboardQueryService.listRecentStyles(5)).thenReturn(List.of());
         when(dashboardQueryService.listRecentOrders(5)).thenReturn(List.of());
@@ -52,18 +51,20 @@ class DashboardOrchestratorTest {
         assertEquals(11L, data.getPaymentApprovalCount());    // paymentApprovalCount 保持不变
         assertEquals(8L, data.getTodayWarehousingCount());    // warehousingOrderCount -> todayWarehousingCount
         assertEquals(9L, data.getDefectiveQuantity());        // unqualifiedQuantity -> defectiveQuantity
+        assertEquals(12L, data.getOrderQuantityTotal());
+        assertEquals(13L, data.getOverdueOrderCount());
+        assertEquals(14L, data.getTotalWarehousingCount());
 
         assertTrue(data.getRecentActivities() instanceof List);
 
         verify(dashboardQueryService).countEnabledStyles();
         verify(dashboardQueryService).countProductionOrders();
-        verify(dashboardQueryService).countPendingMaterialReconciliations();
-        verify(dashboardQueryService).countPendingShipmentReconciliations();
         verify(dashboardQueryService).countApprovedMaterialReconciliations();
         verify(dashboardQueryService).countApprovedShipmentReconciliations();
-        verify(dashboardQueryService).countScansBetween(any(), any());
         verify(dashboardQueryService).countWarehousingBetween(any(), any());
         verify(dashboardQueryService).sumUnqualifiedQuantityBetween(any(), any());
-        verify(dashboardQueryService).countUrgentEvents();
+        verify(dashboardQueryService).sumTotalOrderQuantity();
+        verify(dashboardQueryService).countOverdueOrders();
+        verify(dashboardQueryService).countTotalWarehousing();
     }
 }

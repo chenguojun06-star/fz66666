@@ -18,7 +18,7 @@ function createBizError(resp, fallback) {
 
 async function ok(url, method, data, options) {
     const resp = await request({ url, method, data, ...(options || {}) });
-    if (resp && resp.code === 200) return resp.data;
+    if (resp && resp.code === 200) {return resp.data;}
     throw createBizError(resp, `${method} ${url}`);
 }
 
@@ -115,7 +115,7 @@ const production = {
         for (const url of candidates) {
             try {
                 const resp = await raw(url, 'POST', data);
-                if (resp && resp.code === 200) return resp.data;
+                if (resp && resp.code === 200) {return resp.data;}
                 lastErr = createBizError(resp, `POST ${url}`);
             } catch (e) {
                 lastErr = e;

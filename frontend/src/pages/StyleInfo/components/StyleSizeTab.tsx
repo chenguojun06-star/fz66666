@@ -66,23 +66,25 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
     const seq = (styleNoReqSeq.current += 1);
     setStyleNoLoading(true);
     try {
-      const res = await api.get<any>('/style/info/list', {
+      const res = await api.get<{ code: number; data: { records: unknown[]; total: number } }>('/style/info/list', {
         params: {
           page: 1,
           pageSize: 200,
           styleNo: String(keyword ?? '').trim(),
         },
       });
-      const result = res as any;
+      const result = res as Record<string, unknown>;
       if (seq !== styleNoReqSeq.current) return;
       if (result.code !== 200) return;
-      const records = (result.data?.records || []) as Array<any>;
+      const records = (result.data?.records || []) as Array<unknown>;
       const next = (Array.isArray(records) ? records : [])
         .map((r) => String(r?.styleNo || '').trim())
         .filter(Boolean)
         .map((sn) => ({ value: sn, label: sn }));
       setStyleNoOptions(next);
     } catch {
+    // Intentionally empty
+      // 忽略错误
     } finally {
       if (seq === styleNoReqSeq.current) setStyleNoLoading(false);
     }
@@ -101,7 +103,7 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
     const sn = String(sourceStyleNo ?? '').trim();
     setTemplateLoading(true);
     try {
-      const res = await api.get<any>('/template-library/list', {
+      const res = await api.get<{ code: number; data: { records: unknown[]; total: number } }>('/template-library/list', {
         params: {
           page: 1,
           pageSize: 200,
@@ -110,24 +112,28 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
           sourceStyleNo: sn,
         },
       });
-      const result = res as any;
+      const result = res as Record<string, unknown>;
       if (result.code === 200) {
         const records = (result.data?.records || []) as TemplateLibrary[];
         setSizeTemplates(Array.isArray(records) ? records : []);
         return;
       }
     } catch {
+    // Intentionally empty
+      // 忽略错误
     } finally {
       setTemplateLoading(false);
     }
 
     try {
-      const res = await api.get<any>('/template-library/type/size');
-      const result = res as any;
+      const res = await api.get<{ code: number; data: unknown[] }>('/template-library/type/size');
+      const result = res as Record<string, unknown>;
       if (result.code === 200) {
         setSizeTemplates(Array.isArray(result.data) ? result.data : []);
       }
     } catch {
+    // Intentionally empty
+      // 忽略错误
     }
   };
 
@@ -142,19 +148,19 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
     setLoading(true);
     try {
       const res = await api.get<StyleSize[]>(`/style/size/list?styleId=${styleId}`);
-      const result = res as any;
+      const result = res as Record<string, unknown>;
       if (result.code === 200) {
         const rawList: StyleSize[] = result.data || [];
         const combinedIds: Array<string | number> = [];
         const normalizedList: StyleSize[] = [];
         rawList.forEach((it) => {
-          const parts = splitSizeNames((it as any)?.sizeName);
+          const parts = splitSizeNames((it as Record<string, unknown>)?.sizeName);
           if (parts.length > 1 && it?.id != null && String(it.id).trim() !== '') {
             combinedIds.push(it.id);
           }
           const atomic = parts.length ? parts : [];
           atomic.forEach((sn) => {
-            const next: any = { ...it, sizeName: sn };
+            const next: unknown = { ...it, sizeName: sn };
             if (parts.length > 1) {
               delete next.id;
             }
@@ -169,7 +175,7 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
           Array.from(
             new Set(
               normalizedList
-                .flatMap((x) => splitSizeNames((x as any)?.sizeName))
+                .flatMap((x) => splitSizeNames((x as Record<string, unknown>)?.sizeName))
                 .map((x) => String(x || '').trim())
                 .filter(Boolean),
             ),
@@ -186,9 +192,9 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
         const nextRows: MatrixRow[] = Array.from(byPart.entries())
           .map(([partName, items]) => {
             const key = partName || (items.map((x) => String(x.id || '')).filter(Boolean)[0] || `tmp-${Date.now()}-${Math.random()}`);
-            const measureMethod = items.length ? String((items[0] as any).measureMethod || '') : '';
-            const tolerance = items.length ? toNumberSafe((items[0] as any).tolerance) : 0;
-            const sort = Math.min(...items.map((x) => toNumberSafe((x as any).sort)), 0);
+            const measureMethod = items.length ? String((items[0] as Record<string, unknown>).measureMethod || '') : '';
+            const tolerance = items.length ? toNumberSafe((items[0] as Record<string, unknown>).tolerance) : 0;
+            const sort = Math.min(...items.map((x) => toNumberSafe((x as Record<string, unknown>).sort)), 0);
             const cells: Record<string, MatrixCell> = {};
             sizes.forEach((sn) => {
               const cell = items.find((x) => String(x.sizeName || '').trim() === sn);
@@ -348,12 +354,12 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
       return;
     }
     try {
-      const res = await api.post<any>('/template-library/apply-to-style', {
+      const res = await api.post<{ code: number; message: string; data: boolean }>('/template-library/apply-to-style', {
         templateId,
         targetStyleId: sid,
         mode: 'overwrite',
       });
-      const result = res as any;
+      const result = res as Record<string, unknown>;
       if (result.code !== 200) {
         message.error(result.message || '导入失败');
         return;
@@ -361,7 +367,7 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
       message.success('已导入尺寸模板');
       setSizeTemplateKey(undefined);
       fetchSize();
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(e?.message || '导入失败');
     }
   };
@@ -421,12 +427,12 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
         await Promise.all(deleteTasks);
       }
 
-      const tasks: Array<Promise<any>> = [];
+      const tasks: Array<Promise<unknown>> = [];
       rows.forEach((r) => {
         sizeColumns.forEach((sn) => {
           const cell = r.cells[sn];
           const id = cell?.id;
-          const payload: any = {
+          const payload: unknown = {
             id: id != null ? id : undefined,
             styleId,
             sizeName: sn,
@@ -443,10 +449,10 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
               !old ||
               String(old.sizeName || '').trim() !== sn ||
               String(old.partName || '').trim() !== String(r.partName || '').trim() ||
-              String((old as any).measureMethod || '').trim() !== String(r.measureMethod || '').trim() ||
+              String((old as Record<string, unknown>).measureMethod || '').trim() !== String(r.measureMethod || '').trim() ||
               toNumberSafe(old.standardValue) !== toNumberSafe(payload.standardValue) ||
               toNumberSafe(old.tolerance) !== toNumberSafe(payload.tolerance) ||
-              toNumberSafe((old as any).sort) !== toNumberSafe(payload.sort);
+              toNumberSafe((old as Record<string, unknown>).sort) !== toNumberSafe(payload.sort);
             if (changed) {
               tasks.push(api.put('/style/size', payload));
             }
@@ -460,9 +466,9 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
 
       if (tasks.length) {
         const results = await Promise.all(tasks);
-        const bad = results.find((r: any) => (r as any)?.code !== 200);
+        const bad = results.find((r: Record<string, unknown>) => (r as Record<string, unknown>)?.code !== 200);
         if (bad) {
-          message.error((bad as any)?.message || '保存失败');
+          message.error((bad as Record<string, unknown>)?.message || '保存失败');
           return;
         }
       }
@@ -471,7 +477,7 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
       setEditMode(false);
       snapshotRef.current = null;
       await fetchSize();
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(e?.message || '保存失败');
     } finally {
       setSaving(false);
@@ -689,7 +695,7 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
       <ResizableTable
         bordered
         dataSource={rows}
-        columns={columns as any}
+        columns={columns as Record<string, unknown>}
         pagination={false}
         loading={loading}
         rowKey="key"

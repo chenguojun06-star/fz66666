@@ -36,7 +36,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const normalizePath = (path: string) => path.split('?')[0];
 
-  const backgroundLocation = (location.state as any)?.backgroundLocation;
+  const backgroundLocation = (location.state as Record<string, unknown>)?.backgroundLocation;
   const effectivePathname: string = backgroundLocation?.pathname || location.pathname;
   const effectiveSearch: string = backgroundLocation?.search || location.search;
   const effectiveFullPath = `${effectivePathname}${effectiveSearch || ''}`;
@@ -102,6 +102,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       }
       return deduped;
     } catch {
+    // Intentionally empty
+      // 忽略错误
       return [];
     }
   };
@@ -110,6 +112,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     try {
       localStorage.setItem(recentPagesStorageKey, JSON.stringify(pages));
     } catch {
+    // Intentionally empty
+      // 忽略错误
     }
   };
 
@@ -131,7 +135,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       if (response.code === 200) {
         setUrgentEvents(response.data || []);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       // 静默失败，不显示错误提示
       console.error('获取紧急事件失败:', error);
     }
@@ -392,7 +396,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   { key: 'profile', label: '个人中心', icon: <SettingOutlined /> },
                   { type: 'divider' },
                   { key: 'logout', label: '退出登录', icon: <LogoutOutlined /> },
-                ] as any,
+                ] as Record<string, unknown>,
                 onClick: ({ key }) => {
                   if (key === 'logout') handleLogout();
                   if (key === 'profile') navigate('/system/profile');
@@ -400,7 +404,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               }}
             >
               <Button type="text" className="user-trigger">
-                <Avatar size={28} className="user-avatar" src={(user as any)?.avatarUrl || undefined}>
+                <Avatar size={28} className="user-avatar" src={(user as Record<string, unknown>)?.avatarUrl || undefined}>
                   {userInitial}
                 </Avatar>
                 <span className="user-name">{userDisplayName}</span>

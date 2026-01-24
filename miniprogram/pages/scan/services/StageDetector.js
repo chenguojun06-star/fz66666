@@ -53,12 +53,12 @@ class StageDetector {
     this.stageMapping = {
       '采购': { processName: '采购', progressStage: '采购', scanType: 'procurement' },
       '裁剪': { processName: '裁剪', progressStage: '裁剪', scanType: 'cutting' },
-      '缝制': { processName: '缝制', progressStage: '缝制', scanType: 'sewing' },
+      '缝制': { processName: '缝制', progressStage: '缝制', scanType: 'production' },
       '车缝': { processName: '车缝', progressStage: '车缝', scanType: 'production' },
-      '大烫': { processName: '大烫', progressStage: '大烫', scanType: 'ironing' },
-      '整烫': { processName: '整烫', progressStage: '整烫', scanType: 'ironing' },
+      '大烫': { processName: '大烫', progressStage: '大烫', scanType: 'production' },
+      '整烫': { processName: '整烫', progressStage: '整烫', scanType: 'production' },
       '质检': { processName: '质检', progressStage: '质检', scanType: 'quality' },
-      '包装': { processName: '包装', progressStage: '包装', scanType: 'packaging' },
+      '包装': { processName: '包装', progressStage: '包装', scanType: 'production' },
       '入库': { processName: '入库', progressStage: '入库', scanType: 'warehouse' },
     };
   }
@@ -86,7 +86,7 @@ class StageDetector {
    * @returns {string} result.hint - 提示信息（可选）
    */
   detectNextStage(orderDetail) {
-    if (!orderDetail) return null;
+    if (!orderDetail) {return null;}
 
     // 获取订单当前进度
     const currentProgress = orderDetail.currentProcessName ||

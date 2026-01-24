@@ -78,7 +78,7 @@ public class StyleAttachmentOrchestrator {
             int dot = safeOriginal.lastIndexOf('.');
             String extension = dot >= 0 ? safeOriginal.substring(dot) : "";
 
-            if (("pattern".equalsIgnoreCase(type) || "pattern_grading".equalsIgnoreCase(type)) 
+            if (("pattern".equalsIgnoreCase(type) || "pattern_grading".equalsIgnoreCase(type))
                     && !isAllowedPatternExtension(extension)) {
                 throw new IllegalArgumentException("纸样文件仅支持dxf/plt/ets格式");
             }
@@ -214,27 +214,26 @@ public class StyleAttachmentOrchestrator {
      */
     public Map<String, Object> checkPatternComplete(String styleId) {
         Map<String, Object> result = new java.util.HashMap<>();
+        List<String> missingItems = new java.util.ArrayList<>();
         result.put("complete", false);
-        result.put("missingItems", new java.util.ArrayList<>());
+        result.put("missingItems", missingItems);
 
         if (!StringUtils.hasText(styleId)) {
-            ((List<String>) result.get("missingItems")).add("styleId不能为空");
+            missingItems.add("styleId不能为空");
             return result;
         }
 
-        List<String> missing = new java.util.ArrayList<>();
         StyleAttachment pattern = styleAttachmentService.getLatestPattern(styleId, "pattern");
         if (pattern == null) {
-            missing.add("纸样文件");
+            missingItems.add("纸样文件");
         }
 
         StyleAttachment grading = styleAttachmentService.getLatestPattern(styleId, "pattern_grading");
         if (grading == null) {
-            missing.add("放码文件");
+            missingItems.add("放码文件");
         }
 
-        result.put("missingItems", missing);
-        result.put("complete", missing.isEmpty());
+        result.put("complete", missingItems.isEmpty());
         result.put("patternFile", pattern);
         result.put("gradingFile", grading);
         return result;

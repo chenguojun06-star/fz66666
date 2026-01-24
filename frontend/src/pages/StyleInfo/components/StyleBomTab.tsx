@@ -37,13 +37,13 @@ const materialTypeOptions = [
 const sortBomRows = (rows: StyleBom[]) => {
   const list = Array.isArray(rows) ? [...rows] : [];
   list.sort((a, b) => {
-    const wa = getMaterialSortWeight((a as any)?.materialType);
-    const wb = getMaterialSortWeight((b as any)?.materialType);
+    const wa = getMaterialSortWeight((a as Record<string, unknown>)?.materialType);
+    const wb = getMaterialSortWeight((b as Record<string, unknown>)?.materialType);
     if (wa !== wb) return wa - wb;
-    const ca = String((a as any)?.materialCode || '');
-    const cb = String((b as any)?.materialCode || '');
+    const ca = String((a as Record<string, unknown>)?.materialCode || '');
+    const cb = String((b as Record<string, unknown>)?.materialCode || '');
     if (ca !== cb) return ca.localeCompare(cb);
-    return String((a as any)?.id || '').localeCompare(String((b as any)?.id || ''));
+    return String((a as Record<string, unknown>)?.id || '').localeCompare(String((b as Record<string, unknown>)?.id || ''));
   });
   return list;
 };
@@ -67,7 +67,7 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
 
   const [syncJobId, setSyncJobId] = useState('');
   const [syncModalOpen, setSyncModalOpen] = useState(false);
-  const [syncJob, setSyncJob] = useState<any>(null);
+  const [syncJob, setSyncJob] = useState<unknown>(null);
   const syncPollRef = useRef<number | undefined>(undefined);
 
   const [materialModalOpen, setMaterialModalOpen] = useState(false);
@@ -94,23 +94,25 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
     const seq = (styleNoReqSeq.current += 1);
     setStyleNoLoading(true);
     try {
-      const res = await api.get<any>('/style/info/list', {
+      const res = await api.get<{ code: number; data: { records: unknown[]; total: number } }>('/style/info/list', {
         params: {
           page: 1,
           pageSize: 200,
           styleNo: String(keyword ?? '').trim(),
         },
       });
-      const result = res as any;
+      const result = res as Record<string, unknown>;
       if (seq !== styleNoReqSeq.current) return;
       if (result.code !== 200) return;
-      const records = (result.data?.records || []) as Array<any>;
+      const records = (result.data?.records || []) as Array<unknown>;
       const next = (Array.isArray(records) ? records : [])
         .map((r) => String(r?.styleNo || '').trim())
         .filter(Boolean)
         .map((sn) => ({ value: sn, label: sn }));
       setStyleNoOptions(next);
     } catch {
+    // Intentionally empty
+      // 忽略错误
     } finally {
       if (seq === styleNoReqSeq.current) setStyleNoLoading(false);
     }
@@ -129,7 +131,7 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
     const sn = String(sourceStyleNo ?? '').trim();
     setTemplateLoading(true);
     try {
-      const res = await api.get<any>('/template-library/list', {
+      const res = await api.get<{ code: number; data: { records: unknown[]; total: number } }>('/template-library/list', {
         params: {
           page: 1,
           pageSize: 200,
@@ -138,24 +140,28 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
           sourceStyleNo: sn,
         },
       });
-      const result = res as any;
+      const result = res as Record<string, unknown>;
       if (result.code === 200) {
         const records = (result.data?.records || []) as TemplateLibrary[];
         setBomTemplates(Array.isArray(records) ? records : []);
         return;
       }
     } catch {
+    // Intentionally empty
+      // 忽略错误
     } finally {
       setTemplateLoading(false);
     }
 
     try {
-      const res = await api.get<any>('/template-library/type/bom');
-      const result = res as any;
+      const res = await api.get<{ code: number; data: unknown[] }>('/template-library/type/bom');
+      const result = res as Record<string, unknown>;
       if (result.code === 200) {
         setBomTemplates(Array.isArray(result.data) ? result.data : []);
       }
     } catch {
+    // Intentionally empty
+      // 忽略错误
     }
   };
 
@@ -165,13 +171,15 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
     return false;
   };
 
-  const debugValue = (value: any) => {
+  const debugValue = (value: unknown) => {
     if (value === undefined) return 'undefined';
     if (value === null) return 'null';
     if (typeof value === 'string') return value;
     try {
       return JSON.stringify(value);
     } catch {
+    // Intentionally empty
+      // 忽略错误
       return String(value);
     }
   };
@@ -190,12 +198,12 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
     setLoading(true);
     try {
       const res = await api.get<StyleBom[]>(`/style/bom/list?styleId=${styleId}`);
-      const result = res as any;
+      const result = res as Record<string, unknown>;
       if (result.code === 200) {
         const list = (result.data || []) as StyleBom[];
         const normalized = list.map((row) => ({
           ...row,
-          materialType: normalizeMaterialType<MaterialType>((row as any).materialType),
+          materialType: normalizeMaterialType<MaterialType>((row as Record<string, unknown>).materialType),
         }));
         nextData = sortBomRows(normalized);
         setData(nextData);
@@ -223,8 +231,8 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
     try {
       setSyncLoading(true);
       const sid = encodeURIComponent(String(styleId));
-      const res = await api.post<any>(`/style/bom/${sid}/sync-material-database/async`);
-      const result = res as any;
+      const res = await api.post<{ code: number; data: unknown }>(`/style/bom/${sid}/sync-material-database/async`);
+      const result = res as Record<string, unknown>;
       if (result.code === 200) {
         const d = result.data || {};
         const jid = String(d.jobId || '').trim();
@@ -238,7 +246,7 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
         return;
       }
       message.error(result?.message || '同步失败');
-    } catch (error: any) {
+    } catch (error: unknown) {
       message.error(`同步失败（${error?.message || '请求失败'}）`);
     } finally {
       setSyncLoading(false);
@@ -252,12 +260,14 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
       return;
     }
     try {
-      const res = await api.get<any>(`/style/info/${sid}`);
-      const result = res as any;
+      const res = await api.get<{ code: number; data: unknown }>(`/style/info/${sid}`);
+      const result = res as Record<string, unknown>;
       if (result.code === 200) {
         setCurrentStyleNo(String(result.data?.styleNo || '').trim());
       }
     } catch {
+    // Intentionally empty
+      // 忽略错误
       setCurrentStyleNo('');
     }
   };
@@ -266,8 +276,8 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
     const id = String(jid || '').trim();
     if (!id) return;
     try {
-      const res = await api.get<any>(`/style/bom/sync-jobs/${encodeURIComponent(id)}`);
-      const result = res as any;
+      const res = await api.get<{ code: number; data: unknown }>(`/style/bom/sync-jobs/${encodeURIComponent(id)}`);
+      const result = res as Record<string, unknown>;
       if (result.code === 200) {
         setSyncJob(result.data);
         const st = String(result.data?.status || '').trim().toLowerCase();
@@ -290,6 +300,8 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
         }
       }
     } catch {
+    // Intentionally empty
+      // 忽略错误
     }
   };
 
@@ -356,7 +368,7 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
     const kw = String(keyword ?? '').trim();
     setMaterialLoading(true);
     try {
-      const res = await api.get<any>('/material/database/list', {
+      const res = await api.get<{ code: number; data: { records: unknown[]; total: number } }>('/material/database/list', {
         params: {
           page: p,
           pageSize: 10,
@@ -364,7 +376,7 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
           materialName: kw,
         },
       });
-      const result = res as any;
+      const result = res as Record<string, unknown>;
       if (result.code === 200) {
         const records = Array.isArray(result.data?.records) ? result.data.records : [];
         setMaterialList(records);
@@ -372,6 +384,8 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
         setMaterialPage(p);
       }
     } catch {
+    // Intentionally empty
+      // 忽略错误
     } finally {
       setMaterialLoading(false);
     }
@@ -396,7 +410,7 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
     const rowId = String(rid || '').trim();
     if (!rowId) return;
     const m = material || {};
-    const patch: any = {
+    const patch: unknown = {
       materialCode: String(m.materialCode || '').trim(),
       materialName: String(m.materialName || '').trim(),
       unit: String(m.unit || '').trim(),
@@ -454,11 +468,11 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
   const rowName = (id: any, field: string) => [String(id), field];
 
   const buildFormValues = (rows: StyleBom[]) => {
-    const next: Record<string, any> = {};
+    const next: Record<string, unknown> = {};
     for (const r of Array.isArray(rows) ? rows : []) {
       const rid = String(r?.id ?? '');
       if (!rid) continue;
-      next[rid] = { ...r, materialType: normalizeMaterialType<MaterialType>((r as any).materialType) };
+      next[rid] = { ...r, materialType: normalizeMaterialType<MaterialType>((r as Record<string, unknown>).materialType) };
     }
     return next;
   };
@@ -487,7 +501,7 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
     }
     const rid = String(record.id!);
     form.setFieldsValue({
-      [rid]: { ...record, materialType: normalizeMaterialType<MaterialType>((record as any).materialType) },
+      [rid]: { ...record, materialType: normalizeMaterialType<MaterialType>((record as Record<string, unknown>).materialType) },
     });
     setEditingKey(rid);
   };
@@ -506,7 +520,7 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
       return;
     }
     try {
-      const requiredPaths: any[] = [
+      const requiredPaths: unknown[] = [
         rowName(key, 'materialCode'),
         rowName(key, 'materialName'),
         rowName(key, 'unit'),
@@ -521,20 +535,20 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
 
       if (index > -1) {
         const item = newData[index];
-        const newItem: any = { ...item, ...row };
+        const newItem: unknown = { ...item, ...row };
         newItem.totalPrice = calcTotalPrice(newItem);
         let res;
 
         if (isTempId(item.id)) {
           // 临时行，调用新增接口保存
-          const { id, ...payload } = newItem;
+          const { id: _id, ...payload } = newItem;
           res = await api.post('/style/bom', payload);
         } else {
           // 现有行，调用更新接口保存
           res = await api.put('/style/bom', newItem);
         }
 
-        const result = res as any;
+        const result = res as Record<string, unknown>;
         if (result.code === 200 && result.data) {
           message.success('保存成功');
           setEditingKey('');
@@ -552,6 +566,8 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
         try {
           form.scrollToField(first.name, { block: 'center' });
         } catch {
+    // Intentionally empty
+      // 忽略错误
         }
       }
     }
@@ -583,12 +599,12 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
 
     setLoading(true);
     try {
-      const res = await api.post<any>('/template-library/apply-to-style', {
+      const res = await api.post<{ code: number; message: string; data: boolean }>('/template-library/apply-to-style', {
         templateId: bomTemplateId,
         targetStyleId: sid,
         mode: importMode,
       });
-      const result = res as any;
+      const result = res as Record<string, unknown>;
       if (result.code !== 200) {
         message.error(result.message || '导入失败');
         return;
@@ -597,7 +613,7 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
       setBomTemplateId(undefined);
       const next = await fetchBom();
       if (Array.isArray(next) && next.length) enterTableEdit(next);
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(e?.message || '导入失败');
     } finally {
       setLoading(false);
@@ -611,7 +627,7 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
     }
     try {
       const ids = data.map((d) => String(d.id)).filter(Boolean);
-      const requiredPaths: any[] = [];
+      const requiredPaths: unknown[] = [];
       for (const id of ids) {
         requiredPaths.push(rowName(id, 'materialCode'));
         requiredPaths.push(rowName(id, 'materialName'));
@@ -628,20 +644,20 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
       for (const item of data) {
         const key = String(item.id);
         const row = allValues?.[key] || {};
-        const newItem: any = { ...item, ...row };
+        const newItem: unknown = { ...item, ...row };
         newItem.totalPrice = calcTotalPrice(newItem);
 
         if (isTempId(item.id)) {
-          const { id, ...payload } = newItem;
+          const { id: _id, ...payload } = newItem;
           const res = await api.post('/style/bom', payload);
-          const result = res as any;
+          const result = res as Record<string, unknown>;
           if (result.code !== 200) {
             message.error(result.message || '保存失败');
             return;
           }
         } else {
           const res = await api.put('/style/bom', newItem);
-          const result = res as any;
+          const result = res as Record<string, unknown>;
           if (result.code !== 200) {
             message.error(result.message || '保存失败');
             return;
@@ -661,6 +677,8 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
         try {
           form.scrollToField(first.name, { block: 'center' });
         } catch {
+    // Intentionally empty
+      // 忽略错误
         }
       }
     } finally {
@@ -718,12 +736,14 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
         try {
           form.resetFields([deletingId]);
         } catch {
+    // Intentionally empty
+      // 忽略错误
         }
         message.success('删除成功');
       } else {
         // 现有行，调用删除接口
         const res = await api.delete(`/style/bom/${encodeURIComponent(deletingId)}`);
-        const result = res as any;
+        const result = res as Record<string, unknown>;
         if (result.code === 200 && result.data === true) {
           message.success('删除成功');
           if (tableEditable) {
@@ -731,6 +751,8 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
             try {
               form.resetFields([deletingId]);
             } catch {
+    // Intentionally empty
+      // 忽略错误
             }
           } else {
             fetchBom();
@@ -740,7 +762,7 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
           message.error(`${result?.message || '删除失败'}（${detail}）`);
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       message.error(`删除失败（${error?.message || '请求失败'}）`);
     }
   };
@@ -759,7 +781,7 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
           return (
             <Form.Item name={rowName(record.id, 'materialType')} style={{ margin: 0 }}>
               <Select
-                options={materialTypeOptions as any}
+                options={materialTypeOptions as Record<string, unknown>}
                 style={{ width: '100%' }}
               />
             </Form.Item>
@@ -1182,7 +1204,7 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
         </div>
         <Table
           size="small"
-          rowKey={(r, index) => String((r as any)?.materialCode || (r as any)?.id || `detail-${index}`)}
+          rowKey={(r, index) => String((r as Record<string, unknown>)?.materialCode || (r as Record<string, unknown>)?.id || `detail-${index}`)}
           dataSource={Array.isArray(syncJob?.result?.details) ? syncJob.result.details : []}
           pagination={false}
           columns={[
@@ -1203,7 +1225,7 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
       >
         <Tabs
           activeKey={materialTab}
-          onChange={(k) => setMaterialTab(k as any)}
+          onChange={(k) => setMaterialTab(k as Record<string, unknown>)}
           items={[
             {
               key: 'select',
@@ -1225,7 +1247,7 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
                     size="small"
                     loading={materialLoading}
                     dataSource={materialList}
-                    rowKey={(r, index) => String((r as any)?.id || (r as any)?.materialCode || `material-${index}`)}
+                    rowKey={(r, index) => String((r as Record<string, unknown>)?.id || (r as Record<string, unknown>)?.materialCode || `material-${index}`)}
                     pagination={{
                       current: materialPage,
                       pageSize: 10,
@@ -1250,7 +1272,7 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
                         title: '单价',
                         dataIndex: 'unitPrice',
                         width: 90,
-                        render: (v: any) => `¥${Number(v || 0).toFixed(2)}`,
+                        render: (v: unknown) => `¥${Number(v || 0).toFixed(2)}`,
                       },
                       { title: '状态', dataIndex: 'status', width: 90 },
                       {
@@ -1290,7 +1312,7 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
                   layout="vertical"
                   onFinish={async (values) => {
                     try {
-                      const payload: any = {
+                      const payload: unknown = {
                         materialCode: String(values.materialCode || '').trim(),
                         materialName: String(values.materialName || '').trim(),
                         unit: String(values.unit || '').trim(),
@@ -1301,8 +1323,8 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
                         remark: String(values.remark || '').trim(),
                         styleNo: String(currentStyleNo || '').trim(),
                       };
-                      const res = await api.post<any>('/material/database', payload);
-                      const result = res as any;
+                      const res = await api.post<{ code: number; message: string; data: boolean }>('/material/database', payload);
+                      const result = res as Record<string, unknown>;
                       if (result.code !== 200 || result.data !== true) {
                         message.error(result.message || '创建失败');
                         return;
@@ -1310,7 +1332,7 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
                       message.success('已创建面辅料');
                       fillRowFromMaterial(materialTargetRowId, payload);
                       setMaterialModalOpen(false);
-                    } catch (e: any) {
+                    } catch (e: unknown) {
                       message.error(e?.message || '创建失败');
                     }
                   }}

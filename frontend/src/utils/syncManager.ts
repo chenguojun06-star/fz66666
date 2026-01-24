@@ -213,7 +213,7 @@ class SyncManager {
 
     } catch (error) {
       task.errorCount++;
-      const err = error as any;
+      const err = error as Record<string, unknown>;
       
       // 检查是否是认证错误 (401/403)
       const isAuthError = err?.status === 401 || err?.status === 403;
@@ -243,6 +243,8 @@ class SyncManager {
     try {
       return JSON.stringify(oldData) !== JSON.stringify(newData);
     } catch {
+    // Intentionally empty
+      // 忽略错误
       // JSON 序列化失败，认为数据有变化
       return true;
     }

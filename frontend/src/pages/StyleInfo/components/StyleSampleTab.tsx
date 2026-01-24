@@ -68,27 +68,29 @@ const StyleSampleTab: React.FC<Props> = ({
         api.get('/style/operation-log/list', { params: { styleId, bizType: 'sample' } }),
       ]);
 
-      const bomResult = bomRes as any;
+      const bomResult = bomRes as Record<string, unknown>;
       if (bomResult?.code === 200 && Array.isArray(bomResult?.data)) {
         setBomList(bomResult.data as StyleBom[]);
       } else {
         setBomList([]);
       }
 
-      const fileResult = fileRes as any;
+      const fileResult = fileRes as Record<string, unknown>;
       if (fileResult?.code === 200 && Array.isArray(fileResult?.data)) {
         setPatternAttachments(fileResult.data as StyleAttachment[]);
       } else {
         setPatternAttachments([]);
       }
 
-      const logResult = logRes as any;
+      const logResult = logRes as Record<string, unknown>;
       if (logResult?.code === 200 && Array.isArray(logResult?.data)) {
         setLogs(logResult.data as OperationLog[]);
       } else {
         setLogs([]);
       }
     } catch {
+    // Intentionally empty
+      // 忽略错误
       message.error('获取数据失败');
     } finally {
       setLoading(false);
@@ -103,7 +105,7 @@ const StyleSampleTab: React.FC<Props> = ({
     setSaving(true);
     try {
       const res = await api.post(url, body);
-      const result = res as any;
+      const result = res as Record<string, unknown>;
       if (result.code === 200) {
         message.success('操作成功');
         onRefresh();
@@ -112,6 +114,8 @@ const StyleSampleTab: React.FC<Props> = ({
       }
       message.error(result.message || '操作失败');
     } catch {
+    // Intentionally empty
+      // 忽略错误
       message.error('操作失败');
     } finally {
       setSaving(false);
@@ -186,7 +190,7 @@ const StyleSampleTab: React.FC<Props> = ({
     return { count, total };
   }, [bomList]);
 
-  const bomMaterialTypeLabel = (v: any) => {
+  const bomMaterialTypeLabel = (v: unknown) => {
     const type = String(v || '').trim();
     if (!type) return '-';
     if (type === 'fabric') return '面料';
@@ -205,7 +209,7 @@ const StyleSampleTab: React.FC<Props> = ({
         dataIndex: 'materialType',
         key: 'materialType',
         width: 110,
-        render: (v: any) => bomMaterialTypeLabel(v),
+        render: (v: unknown) => bomMaterialTypeLabel(v),
       },
       { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 120 },
       { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 160, ellipsis: true },
@@ -219,7 +223,7 @@ const StyleSampleTab: React.FC<Props> = ({
         key: 'usageAmount',
         width: 110,
         align: 'right' as const,
-        render: (v: any) => {
+        render: (v: unknown) => {
           const n = typeof v === 'number' ? v : Number(v);
           return Number.isFinite(n) ? n : '-';
         },
@@ -230,7 +234,7 @@ const StyleSampleTab: React.FC<Props> = ({
         key: 'lossRate',
         width: 110,
         align: 'right' as const,
-        render: (v: any) => {
+        render: (v: unknown) => {
           const n = typeof v === 'number' ? v : Number(v);
           return Number.isFinite(n) ? n : '-';
         },
@@ -241,7 +245,7 @@ const StyleSampleTab: React.FC<Props> = ({
         key: 'unitPrice',
         width: 100,
         align: 'right' as const,
-        render: (v: any) => {
+        render: (v: unknown) => {
           const n = typeof v === 'number' ? v : Number(v);
           return Number.isFinite(n) ? n.toFixed(2) : '-';
         },
@@ -252,7 +256,7 @@ const StyleSampleTab: React.FC<Props> = ({
         key: 'totalPrice',
         width: 100,
         align: 'right' as const,
-        render: (v: any) => {
+        render: (v: unknown) => {
           const n = typeof v === 'number' ? v : Number(v);
           return Number.isFinite(n) ? n.toFixed(2) : '-';
         },
@@ -356,7 +360,7 @@ const StyleSampleTab: React.FC<Props> = ({
                 : []),
             ];
 
-          return <RowActions maxInline={3} actions={actions as any} />;
+          return <RowActions maxInline={3} actions={actions as Record<string, unknown>} />;
         },
       },
     ];
@@ -388,10 +392,10 @@ const StyleSampleTab: React.FC<Props> = ({
         <ResizableModalFlex>
           <ResizableModalFlexFill ref={bomDetailTableWrapRef}>
             <ResizableTable
-              rowKey={(r: any) =>
+              rowKey={(r: Record<string, unknown>) =>
                 String(r?.id ?? `${r?.materialType || ''}-${r?.materialCode || ''}-${r?.color || ''}-${r?.size || ''}`)
               }
-              columns={bomDetailColumns as any}
+              columns={bomDetailColumns as Record<string, unknown>}
               dataSource={bomList}
               pagination={false}
               scroll={{ x: 'max-content', y: bomDetailTableScrollY }}
@@ -402,7 +406,7 @@ const StyleSampleTab: React.FC<Props> = ({
       </ResizableModal>
 
       <ResizableTable
-        columns={columns as any}
+        columns={columns as Record<string, unknown>}
         dataSource={[
           {
             key: String(styleId),

@@ -47,7 +47,7 @@ const RoleList: React.FC = () => {
     for (const c of children) collectSubtreeIds(c, into);
   };
 
-  const findFirstNode = (nodes: any[], predicate: (n: any) => boolean): any | null => {
+  const findFirstNode = (nodes: unknown[], predicate: (n: any) => boolean): unknown | null => {
     const stack = Array.isArray(nodes) ? [...nodes] : [];
     while (stack.length) {
       const n = stack.shift();
@@ -99,7 +99,7 @@ const RoleList: React.FC = () => {
   const fetchRoles = async () => {
     try {
       const response = await requestWithPathFallback('get', '/system/role/list', '/auth/role/list', undefined, { params: queryParams });
-      const result = response as any;
+      const result = response as Record<string, unknown>;
       if (result.code === 200) {
         setRoleList(result.data.records || []);
         setTotal(result.data.total || 0);
@@ -116,10 +116,9 @@ const RoleList: React.FC = () => {
   useEffect(() => {
     const fetchDict = async (type: string) => {
       try {
-        const res = await api.get<any>('/system/dict/list', { params: { page: 1, pageSize: 1000, dictType: type } });
-        const result = res as any;
-        if (result.code === 200) {
-          const items = result.data.records || [];
+        const res = await api.get<{ code: number; data: { records: Array<{ dictLabel: string; dictCode: string }> } }>('/system/dict/list', { params: { page: 1, pageSize: 1000, dictType: type } });
+        if (res.code === 200) {
+          const items = res.data.records || [];
           return items.map((it: any) => ({ label: it.dictLabel, value: it.dictCode }));
         }
       } catch (error) {
@@ -141,8 +140,8 @@ const RoleList: React.FC = () => {
       roleName: String(role?.roleName || ''),
       roleCode: String(role?.roleCode || ''),
       description: String(role?.description || ''),
-      status: (role?.status || 'active') as any,
-      dataScope: (role?.dataScope || 'all') as any,
+      status: (role?.status || 'active') as Record<string, unknown>,
+      dataScope: (role?.dataScope || 'all') as Record<string, unknown>,
       dataScopeBrands: Array.isArray(role?.dataScopeBrands) ? role?.dataScopeBrands : [],
       dataScopeDepartments: Array.isArray(role?.dataScopeDepartments) ? role?.dataScopeDepartments : [],
     });
@@ -158,7 +157,7 @@ const RoleList: React.FC = () => {
   const openRemarkModal = (
     title: string,
     okText: string,
-    okButtonProps: any,
+    okButtonProps: unknown,
     onConfirm: (remark: string) => Promise<void>
   ) => {
     let remarkValue = '';
@@ -200,14 +199,14 @@ const RoleList: React.FC = () => {
       const res = await api.get('/system/operation-log/list', {
         params: { bizType, bizId },
       });
-      const result = res as any;
+      const result = res as Record<string, unknown>;
       if (result.code === 200) {
         setLogRecords(Array.isArray(result.data) ? result.data : []);
       } else {
         message.error(result.message || '获取日志失败');
         setLogRecords([]);
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(e?.message || '获取日志失败');
       setLogRecords([]);
     } finally {
@@ -219,12 +218,12 @@ const RoleList: React.FC = () => {
     try {
       const values = await form.validateFields();
       const payload: Role = {
-        ...(currentRole || ({} as any)),
+        ...(currentRole || ({} as Record<string, unknown>)),
         ...values,
-        status: (values as any)?.status || 'active',
-        dataScope: (values as any)?.dataScope || 'all',
-        dataScopeBrands: Array.isArray((values as any)?.dataScopeBrands) ? (values as any).dataScopeBrands : [],
-        dataScopeDepartments: Array.isArray((values as any)?.dataScopeDepartments) ? (values as any).dataScopeDepartments : [],
+        status: (values as Record<string, unknown>)?.status || 'active',
+        dataScope: (values as Record<string, unknown>)?.dataScope || 'all',
+        dataScopeBrands: Array.isArray((values as Record<string, unknown>)?.dataScopeBrands) ? (values as Record<string, unknown>).dataScopeBrands : [],
+        dataScopeDepartments: Array.isArray((values as Record<string, unknown>)?.dataScopeDepartments) ? (values as Record<string, unknown>).dataScopeDepartments : [],
       };
 
       const submit = async (remark?: string) => {
@@ -238,7 +237,7 @@ const RoleList: React.FC = () => {
         } else {
           response = await requestWithPathFallback('post', '/system/role', '/auth/role', nextPayload);
         }
-        const result = response as any;
+        const result = response as Record<string, unknown>;
         if (result.code === 200) {
           message.success('保存成功');
           closeDialog();
@@ -254,7 +253,7 @@ const RoleList: React.FC = () => {
       }
 
       await submit();
-    } catch (error: any) {
+    } catch (error: unknown) {
       const msg = error?.message || '保存失败';
       message.error(msg);
     }
@@ -270,14 +269,14 @@ const RoleList: React.FC = () => {
           undefined,
           { params: { remark } }
         );
-        const result = response as any;
+        const result = response as Record<string, unknown>;
         if (result.code === 200) {
           message.success('删除成功');
           fetchRoles();
           return;
         }
         throw new Error(result.message || '删除失败');
-      } catch (error: any) {
+      } catch (error: unknown) {
         const msg = error?.message || '删除失败';
         message.error(msg);
         throw error;
@@ -290,8 +289,8 @@ const RoleList: React.FC = () => {
     try {
       const treeRes = await requestWithPathFallback('get', '/system/permission/tree', '/auth/permission/tree');
       const idsRes = await requestWithPathFallback('get', `/system/role/${role.id}/permission-ids`, `/auth/role/${role.id}/permission-ids`);
-      const treeResult = treeRes as any;
-      const idsResult = idsRes as any;
+      const treeResult = treeRes as Record<string, unknown>;
+      const idsResult = idsRes as Record<string, unknown>;
       if (treeResult.code === 200) {
         setPermTree(Array.isArray(treeResult.data) ? treeResult.data : []);
       } else {
@@ -325,11 +324,11 @@ const RoleList: React.FC = () => {
     const modules: Array<{
       moduleId: number;
       moduleName: string;
-      permissions: any[];
+      permissions: unknown[];
     }> = [];
 
-    const collectPermissions = (node: any) => {
-      const allPerms: any[] = [];
+    const collectPermissions = (node: unknown) => {
+      const allPerms: unknown[] = [];
 
       // 递归收集所有子权限
       const collectChildren = (n: any) => {
@@ -392,7 +391,7 @@ const RoleList: React.FC = () => {
           `/auth/role/${currentRole.id}/permission-ids`,
           { permissionIds: ids, remark }
         );
-        const result = res as any;
+        const result = res as Record<string, unknown>;
         if (result.code === 200) {
           message.success('授权成功');
           closePermDialog();
@@ -450,7 +449,7 @@ const RoleList: React.FC = () => {
       dataIndex: 'status',
       key: 'status',
       width: 110,
-      render: (v: any) => {
+      render: (v: unknown) => {
         const status = String(v || '').trim() || 'inactive';
         return <Tag color={status === 'active' ? 'green' : 'red'}>{getStatusText(status)}</Tag>;
       },
@@ -460,7 +459,7 @@ const RoleList: React.FC = () => {
       dataIndex: 'createTime',
       key: 'createTime',
       width: 180,
-      render: (v: any) => formatDateTime(v),
+      render: (v: unknown) => formatDateTime(v),
     },
     {
       title: '操作',
@@ -526,14 +525,14 @@ const RoleList: React.FC = () => {
                 placeholder="角色名称"
                 style={{ width: 220 }}
                 allowClear
-                value={String((queryParams as any)?.roleName || '')}
+                value={String((queryParams as Record<string, unknown>)?.roleName || '')}
                 onChange={(e) => setQueryParams((prev) => ({ ...prev, roleName: e.target.value, page: 1 }))}
               />
               <Input
                 placeholder="角色编码"
                 style={{ width: 220 }}
                 allowClear
-                value={String((queryParams as any)?.roleCode || '')}
+                value={String((queryParams as Record<string, unknown>)?.roleCode || '')}
                 onChange={(e) => setQueryParams((prev) => ({ ...prev, roleCode: e.target.value, page: 1 }))}
               />
               <Button type="primary" onClick={fetchRoles}>
@@ -546,7 +545,7 @@ const RoleList: React.FC = () => {
                     pageSize: prev.pageSize,
                     roleName: '',
                     roleCode: '',
-                  }) as any)
+                  }) as Record<string, unknown>)
                 }
               >
                 重置
@@ -558,7 +557,7 @@ const RoleList: React.FC = () => {
             <ResizableTable<Role>
               storageKey="system-role-table"
               rowKey={(r) => String(r.id || r.roleCode)}
-              columns={columns as any}
+              columns={columns as Record<string, unknown>}
               dataSource={roleList}
               pagination={{
                 current: queryParams.page,
@@ -780,7 +779,7 @@ const RoleList: React.FC = () => {
         scaleWithViewport
       >
         <ResizableTable
-          columns={logColumns as any}
+          columns={logColumns as Record<string, unknown>}
           dataSource={logRecords}
           rowKey={(r) => String(r.id || `${r.bizType}-${r.bizId}-${r.createTime}`)}
           loading={logLoading}

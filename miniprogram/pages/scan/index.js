@@ -1,15 +1,15 @@
 /**
  * 扫码页面 - 重构版本 (v2.2)
- * 
+ *
  * 架构：Page → Handler → Service → Utils
- * 
+ *
  * 核心改进：
  * 1. 使用 ScanHandler 编排扫码业务流程
  * 2. 集成 StageDetector 智能工序识别
  * 3. 集成 QRCodeParser 多格式解析
  * 4. 兼容现有 WXML UI 结构
  * 5. 修复 eventBus 和 API 调用问题
- * 
+ *
  * @version 2.2
  * @date 2026-01-23
  */
@@ -39,17 +39,17 @@ const recentScanExpires = new Map();
  * 清理过期的扫码记录
  */
 function cleanupRecentScans() {
-    if (recentScanExpires.size <= 80) return;
+    if (recentScanExpires.size <= 80) {return;}
     const now = Date.now();
     for (const [k, exp] of recentScanExpires.entries()) {
-        if (!exp || exp <= now) recentScanExpires.delete(k);
+        if (!exp || exp <= now) {recentScanExpires.delete(k);}
     }
-    if (recentScanExpires.size <= 80) return;
+    if (recentScanExpires.size <= 80) {return;}
     let removed = 0;
     for (const k of recentScanExpires.keys()) {
         recentScanExpires.delete(k);
         removed += 1;
-        if (removed >= 20) break;
+        if (removed >= 20) {break;}
     }
 }
 
@@ -59,8 +59,8 @@ function cleanupRecentScans() {
 function isRecentDuplicate(key) {
     const now = Date.now();
     const exp = recentScanExpires.get(key);
-    if (exp && exp > now) return true;
-    if (exp && exp <= now) recentScanExpires.delete(key);
+    if (exp && exp > now) {return true;}
+    if (exp && exp <= now) {recentScanExpires.delete(key);}
     return false;
 }
 
@@ -175,11 +175,17 @@ Page({
      * 生命周期函数--监听页面显示
      */
     async onShow() {
+        // 设置 tab-bar 选中状态（扫码页面是第3个tab，索引为2）
+        const app = getApp();
+        if (app && typeof app.setTabSelected === 'function') {
+            app.setTabSelected(this, 2);
+        }
 
         // 每次显示都检查登录状态和更新统计
         const isLogin = await this.checkLoginStatus();
         if (isLogin) {
             this.loadMyPanel(true);
+            this.loadMyProcurementTasks();  // ✅ 加载采购任务列表
 
             // 如果有参数传入 (如从其他页面带参数跳转)
             // 这里可以处理 options 中的扫码参数，但 onShow 没有 options 参数
@@ -259,10 +265,17 @@ Page({
     },
 
     /**
+     * 刷新我的面板（别名方法，供 WXML 调用）
+     */
+    refreshMy() {
+        this.loadMyPanel(true);
+    },
+
+    /**
      * 加载个人统计面板
      */
     async loadMyPanel(refresh = false) {
-        if (this.data.my.loadingStats && !refresh) return;
+        if (this.data.my.loadingStats && !refresh) {return;}
 
         this.setData({ 'my.loadingStats': true });
 
@@ -279,6 +292,20 @@ Page({
             // 不弹窗报错，以免打扰用户，只记录日志
         } finally {
             this.setData({ 'my.loadingStats': false });
+        }
+    },
+
+    /**
+     * 加载我的采购任务列表
+     */
+    async loadMyProcurementTasks() {
+        try {
+            const tasks = await api.production.myProcurementTasks();
+            this.setData({
+                'my.procurementTasks': tasks || []
+            });
+        } catch (e) {
+            console.error('[loadMyProcurementTasks] 加载失败:', e);
         }
     },
 
@@ -319,7 +346,7 @@ Page({
      * 触发扫码 (绑定到 WXML 的 onScan 事件)
      */
     async onScan() {
-        if (!this.data.scanEnabled || this.data.loading) return;
+        if (!this.data.scanEnabled || this.data.loading) {return;}
 
         // 获取当前选中的扫码类型
         const scanTypeOption = this.data.scanTypeOptions[this.data.scanTypeIndex];
@@ -350,7 +377,7 @@ Page({
      * 处理扫码结果 (核心入口)
      */
     async processScanCode(codeStr, scanType) {
-        if (!codeStr) return;
+        if (!codeStr) {return;}
 
         // 1. 客户端去重检查
         if (isRecentDuplicate(codeStr)) {
@@ -371,9 +398,13 @@ Page({
             // 3. 调用 Handler 处理
             const result = await this.scanHandler.handleScan(codeStr, options);
 
+            console.log('[processScanCode] 扫码结果:', result);
+
             // 2026-01-23: 处理需要确认明细的情况 (如订单扫码)
             if (result && result.needConfirm) {
+                console.log('[processScanCode] 调用 showConfirmModal');
                 this.showConfirmModal(result.data);
+                this.setData({ loading: false }); // 重置 loading 状态
                 return;
             }
 
@@ -416,18 +447,46 @@ Page({
      * 显示确认弹窗
      */
     showConfirmModal(data) {
-        // ✅ 使用SKUProcessor统一标准化SKU列表
-        const skuList = data.skuItems ? SKUProcessor.normalizeOrderItems(
-            data.skuItems,
-            data.orderNo,
-            data.styleNo
-        ) : [];
+        console.log('[showConfirmModal] 接收数据:', data);
+        console.log('[showConfirmModal] materialPurchases:', data.materialPurchases);
 
-        // ✅ 构建表单项
-        const formItems = SKUProcessor.buildSKUInputList(skuList);
+        // ✅ 判断是否为采购模式
+        const isProcurement = this.data.scanTypeOptions[this.data.scanTypeIndex].value === 'procurement' || data.progressStage === '采购';
 
-        // ✅ 计算统计摘要
-        const summary = SKUProcessor.getSummary(skuList);
+        let skuList = [];
+        let formItems = [];
+        let summary = {};
+        let materialPurchases = [];
+
+        if (isProcurement && data.materialPurchases && data.materialPurchases.length > 0) {
+            // 采购模式：使用面料采购单数据
+            materialPurchases = data.materialPurchases.map((item, idx) => ({
+                id: item.id || idx,
+                materialName: item.materialName || '未知面料',
+                materialCode: item.materialCode || '',
+                specifications: item.specifications || '',
+                unit: item.unit || '米',
+                purchaseQuantity: item.purchaseQuantity || 0,  // 需采购数量
+                arrivedQuantity: item.arrivedQuantity || 0,    // 已到货数量
+                pendingQuantity: (item.purchaseQuantity || 0) - (item.arrivedQuantity || 0),  // 待采购
+                inputQuantity: (item.purchaseQuantity || 0) - (item.arrivedQuantity || 0),    // 默认填充待采购数量
+                supplierId: item.supplierId,
+                supplierName: item.supplierName,
+                unitPrice: item.unitPrice
+            }));
+
+            console.log('[showConfirmModal] 面料采购单:', materialPurchases.length);
+        } else {
+            // 非采购模式：使用SKU列表
+            skuList = data.skuItems ? SKUProcessor.normalizeOrderItems(
+                data.skuItems,
+                data.orderNo,
+                data.styleNo
+            ) : [];
+
+            formItems = SKUProcessor.buildSKUInputList(skuList);
+            summary = SKUProcessor.getSummary(skuList);
+        }
 
         const sizeDetails = skuList.length > 0
             ? skuList.map(item => `${item.color || '-'}${item.size ? `/${item.size}` : ''}×${Number(item.totalQuantity || 0)}`).join('，')
@@ -448,18 +507,36 @@ Page({
             scanConfirm: {
                 visible: true,
                 loading: false,
-                remain: 30, // 30秒后自动关闭? (目前暂未实现倒计时逻辑)
+                remain: 30,
                 detail: {
                     ...data,
-                    isProcurement: this.data.scanTypeOptions[this.data.scanTypeIndex].value === 'procurement' || data.progressStage === '采购',
+                    isProcurement: isProcurement,
                     sizeDetails
                 },
                 skuList: formItems,
-                summary: summary, // ✅ 新增: 显示统计摘要
+                summary: summary,
                 cuttingTasks: cuttingTasks,
-                materialPurchases: [] // 采购逻辑暂未集成到此处，通常由 Handler 返回
+                materialPurchases: materialPurchases  // ✅ 面料采购单列表
             }
         });
+        console.log('[showConfirmModal] setData完成, visible=true, skuList长度:', formItems.length, 'materialPurchases长度:', materialPurchases.length, 'isProcurement:', isProcurement);
+    },
+
+    /**
+     * 面料采购数量输入
+     */
+    onMaterialInput(e) {
+        const id = e.currentTarget.dataset.id;
+        const value = e.detail.value;
+
+        const materialPurchases = this.data.scanConfirm.materialPurchases.map(item => {
+            if (item.id === id) {
+                return { ...item, inputQuantity: value };
+            }
+            return item;
+        });
+
+        this.setData({ 'scanConfirm.materialPurchases': materialPurchases });
     },
 
     /**
@@ -490,10 +567,177 @@ Page({
     },
 
     /**
+     * 只领取任务（不提交数据）
+     * 用于裁剪任务和采购任务的领取
+     */
+    async onReceiveOnly() {
+        if (this.data.scanConfirm.loading) {return;}
+        this.setData({ 'scanConfirm.loading': true });
+
+        try {
+            const detail = this.data.scanConfirm.detail;
+
+            // ✅ 使用正确的 getUserInfo 工具函数获取用户信息
+            const userInfo = getUserInfo();
+            if (!userInfo || !userInfo.id) {
+                throw new Error('请先登录');
+            }
+
+            // 调用领取任务接口
+            if (detail.progressStage === '裁剪') {
+                // 裁剪任务领取
+
+                // 获取裁剪任务
+                const taskData = await api.production.getCuttingTaskByOrderId(detail.orderId);
+                if (!taskData || !taskData.records || taskData.records.length === 0) {
+                    throw new Error('未找到裁剪任务');
+                }
+
+                const task = taskData.records[0];
+
+                // 调用领取接口
+                await api.production.receiveCuttingTaskById(
+                    task.id,
+                    userInfo.id,
+                    userInfo.realName || userInfo.username
+                );
+
+                wx.showToast({ title: '裁剪任务领取成功', icon: 'success' });
+
+                // 更新状态
+                this.setData({
+                    'scanConfirm.cuttingTaskReceived': true
+                });
+
+                // 刷新我的面板
+                this.loadMyPanel(true);
+
+            } else if (detail.isProcurement) {
+                // 采购任务领取 - 只标记领取，不需要输入数量
+                const materialPurchases = this.data.scanConfirm.materialPurchases || [];
+
+                if (materialPurchases.length === 0) {
+                    throw new Error('暂无面料采购单');
+                }
+
+                // ✅ 批量标记领取（更新 receiverId 和 receiverName）
+                const updates = materialPurchases.map(item => ({
+                    id: item.id,
+                    receiverId: userInfo.id,
+                    receiverName: userInfo.realName || userInfo.username,
+                    // 不更新到货数量，只标记领取
+                    arrivedQuantity: item.arrivedQuantity || 0
+                }));
+
+                // 批量更新领取信息
+                await Promise.all(updates.map(update =>
+                    api.production.updateArrivedQuantity(update)
+                ));
+
+                wx.showToast({ title: `已领取 ${updates.length} 个面料采购任务`, icon: 'success' });
+                // 关闭弹窗
+                this.setData({
+                    'scanConfirm.visible': false,
+                    'scanConfirm.loading': false
+                });
+
+                // 刷新我的面板和采购任务列表
+                this.loadMyPanel(true);
+                this.loadMyProcurementTasks();  // ✅ 刷新采购任务列表
+            }
+
+        } catch (e) {
+            wx.showToast({
+                title: e.message || '领取失败',
+                icon: 'none'
+            });
+        } finally {
+            this.setData({ 'scanConfirm.loading': false });
+        }
+    },
+
+    /**
+     * 重新生成裁剪菲号
+     * 用于已领取的裁剪任务修改数量后重新生成
+     */
+    async onRegenerateCuttingBundles() {
+        if (this.data.scanConfirm.loading) {return;}
+        this.setData({ 'scanConfirm.loading': true });
+
+        try {
+            const detail = this.data.scanConfirm.detail;
+            const cuttingTasks = this.data.scanConfirm.cuttingTasks;
+
+            // 验证数据
+            if (!cuttingTasks || cuttingTasks.length === 0) {
+                throw new Error('没有裁剪任务数据');
+            }
+
+            if (!detail.orderId) {
+                throw new Error('订单ID缺失');
+            }
+
+            // 构建菲号生成参数
+            const bundleParams = [];
+            for (const task of cuttingTasks) {
+                const inputQty = task.cuttingInput ? Number(task.cuttingInput) : 0;
+                if (inputQty <= 0) {continue;}
+
+                // 构建尺码分布
+                const sizeDistribution = {};
+                if (task.sizeDetails && task.sizeDetails.length > 0) {
+                    for (const size of task.sizeDetails) {
+                        if (size.quantity > 0) {
+                            sizeDistribution[size.size] = size.quantity;
+                        }
+                    }
+                }
+
+                bundleParams.push({
+                    color: task.color,
+                    totalQuantity: inputQty,
+                    sizeDistribution: sizeDistribution
+                });
+            }
+
+            if (bundleParams.length === 0) {
+                throw new Error('请至少输入一个颜色的数量');
+            }
+
+            // 调用生成菲号接口
+            await api.production.generateCuttingBundles(detail.orderId, bundleParams);
+
+            wx.showToast({ title: '菲号生成成功', icon: 'success' });
+
+            // 关闭弹窗
+            this.setData({
+                'scanConfirm.visible': false,
+                'scanConfirm.loading': false
+            });
+
+            // 刷新数据
+            this.loadMyPanel(true);
+
+            // 触发全局事件
+            if (eventBus && typeof eventBus.emit === 'function') {
+                eventBus.emit('DATA_REFRESH');
+            }
+
+        } catch (e) {
+            wx.showToast({
+                title: e.message || '生成失败',
+                icon: 'none'
+            });
+        } finally {
+            this.setData({ 'scanConfirm.loading': false });
+        }
+    },
+
+    /**
      * 确认提交
      */
     async onConfirmScan() {
-        if (this.data.scanConfirm.loading) return;
+        if (this.data.scanConfirm.loading) {return;}
         this.setData({ 'scanConfirm.loading': true });
 
         try {
@@ -574,14 +818,19 @@ Page({
             '采购': 'procurement',
             '裁剪': 'cutting',
             '车缝': 'production',
-            '大烫': 'ironing', // 假设
+            '大烫': 'production',
+            '整烫': 'production',
             '质检': 'quality',
-            '包装': 'packing', // 假设
+            '包装': 'production',
             '入库': 'warehouse'
         };
         // 如果当前选择了特定类型，优先使用
         const currentType = this.data.scanTypeOptions[this.data.scanTypeIndex].value;
-        if (currentType !== 'auto') return currentType;
+        if (currentType !== 'auto') {
+            if (currentType === 'ironing' || currentType === 'packaging') {return 'production';}
+            if (currentType === 'sewing') {return 'production';}
+            return currentType;
+        }
 
         return map[stageName] || 'production';
     },
@@ -695,7 +944,7 @@ Page({
         // 兼容 recordId 在 data 对象中的情况
         const recordId = record?.recordId || record?.data?.recordId || record?.data?.id;
 
-        if (!record || !recordId) return;
+        if (!record || !recordId) {return;}
 
         this.stopUndoTimer(); // 立即停止计时
 

@@ -30,14 +30,14 @@ export const buildProductionSheetHtml = (payload: any) => {
     return `${origin}/${s}`;
   };
 
-  const esc = (v: any) => String(v ?? '')
+  const esc = (v: unknown) => String(v ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
-  const toSeasonCn = (value: any): string => {
+  const toSeasonCn = (value: unknown): string => {
     const raw = String(value ?? '').trim();
     if (!raw) return '-';
     const upper = raw.toUpperCase();
@@ -100,7 +100,7 @@ export const buildProductionSheetHtml = (payload: any) => {
   const sizeNames = Array.from(new Set(sizeList.map((s: any) => String(s.sizeName || '').trim()).filter(Boolean)));
   const sortedSizeNames = [...sizeNames].sort(compareSizeAsc);
   const partNames = Array.from(new Set(sizeList.map((s: any) => String(s.partName || '').trim()).filter(Boolean)));
-  const sizeCellMap: Record<string, any> = {};
+  const sizeCellMap: Record<string, unknown> = {};
   const partMethodMap: Record<string, string> = {};
   for (const row of sizeList) {
     const key = `${String(row.partName || '').trim()}__${String(row.sizeName || '').trim()}`;
@@ -123,7 +123,7 @@ export const buildProductionSheetHtml = (payload: any) => {
     return `<tr><td>${esc(partKey)}</td><td>${esc(partMethodMap[partKey] || '')}</td>${tds}</tr>`;
   }).join('');
 
-  const coverFromAttachments = attachments.find((a: any) => String(a?.fileType || '').includes('image'))?.fileUrl;
+  const coverFromAttachments = attachments.find((a: unknown) => String(a?.fileType || '').includes('image'))?.fileUrl;
   const coverUrl = resolveUrl(style.cover || coverFromAttachments || '');
 
   const productionReqLines = (() => {
@@ -230,16 +230,17 @@ const AttachmentThumb: React.FC<{ styleId?: string | number; cover?: string | nu
     (async () => {
       setLoading(true);
       try {
-        const res = await api.get<any>(`/style/attachment/list?styleId=${styleId}`);
-        const result = res as any;
-        if (result.code === 200) {
-          const images = (result.data || []).filter((f: any) => String(f.fileType || '').includes('image'));
+        const res = await api.get<{ code: number; data: unknown[] }>(`/style/attachment/list?styleId=${styleId}`);
+        if (res.code === 200) {
+          const images = (res.data || []).filter((f: any) => String(f.fileType || '').includes('image'));
           const first = images[0]?.fileUrl || null;
           if (mounted) setUrl(first || cover || null);
           return;
         }
         if (mounted) setUrl(cover || null);
       } catch {
+    // Intentionally empty
+      // 忽略错误
         if (mounted) setUrl(cover || null);
       } finally {
         if (mounted) setLoading(false);
@@ -279,19 +280,18 @@ const DataCenter: React.FC = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await api.get<any>('/data-center/stats');
-      const result = response as any;
-      if (result.code === 200) {
-        const d = result.data || {};
+      const response = await api.get<{ code: number; message: string; data: unknown }>('/data-center/stats');
+      if (response.code === 200) {
+        const d = response.data || {};
         setStats({
           styleCount: d.styleCount ?? 0,
           materialCount: d.materialCount ?? 0,
           productionCount: d.productionCount ?? 0
         });
       } else {
-        message.error(result.message || '获取资料中心统计失败');
+        message.error(response.message || '获取资料中心统计失败');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       message.error(error?.message || '获取资料中心统计失败');
     }
   };
@@ -299,15 +299,14 @@ const DataCenter: React.FC = () => {
   const fetchStyles = async () => {
     setLoading(true);
     try {
-      const response = await api.get<any>('/style/info/list', { params: queryParams });
-      const result = response as any;
-      if (result.code === 200) {
-        setStyles(result.data.records || []);
-        setTotal(result.data.total || 0);
+      const response = await api.get<{ code: number; message: string; data: { records: unknown[]; total: number } }>('/style/info/list', { params: queryParams });
+      if (response.code === 200) {
+        setStyles(response.data.records || []);
+        setTotal(response.data.total || 0);
       } else {
-        message.error(result.message || '获取款号列表失败');
+        message.error(response.message || '获取款号列表失败');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       message.error(error?.message || '获取款号列表失败');
     } finally {
       setLoading(false);
@@ -328,29 +327,27 @@ const DataCenter: React.FC = () => {
 
   const downloadProductionSheet = async (style: StyleInfo) => {
     try {
-      const res = await api.get<any>('/data-center/production-sheet', { params: { styleNo: style.styleNo } });
-      const result = res as any;
-      if (result.code !== 200) {
-        message.error(result.message || '获取生产制单失败');
+      const res = await api.get<{ code: number; message: string; data: unknown }>('/data-center/production-sheet', { params: { styleNo: style.styleNo } });
+      if (res.code !== 200) {
+        message.error(res.message || '获取生产制单失败');
         return;
       }
-      const html = buildProductionSheetHtml(result.data);
+      const html = buildProductionSheetHtml(res.data);
       downloadFile(`生产制单-${style.styleNo}.html`, html, 'text/html;charset=utf-8');
       message.success('已下载生产制单');
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(e?.message || '下载失败');
     }
   };
 
   const printProductionSheet = async (style: StyleInfo) => {
     try {
-      const res = await api.get<any>('/data-center/production-sheet', { params: { styleNo: style.styleNo } });
-      const result = res as any;
-      if (result.code !== 200) {
-        message.error(result.message || '获取生产制单失败');
+      const res = await api.get<{ code: number; message: string; data: unknown }>('/data-center/production-sheet', { params: { styleNo: style.styleNo } });
+      if (res.code !== 200) {
+        message.error(res.message || '获取生产制单失败');
         return;
       }
-      const html = buildProductionSheetHtml(result.data);
+      const html = buildProductionSheetHtml(res.data);
       const w = window.open('', '_blank');
       if (!w) {
         message.error('浏览器拦截了新窗口');
@@ -363,7 +360,7 @@ const DataCenter: React.FC = () => {
       setTimeout(() => {
         w.print();
       }, 200);
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(e?.message || '打印失败');
     }
   };
@@ -383,17 +380,17 @@ const DataCenter: React.FC = () => {
         dataIndex: 'cover',
         key: 'cover',
         width: 72,
-        render: (_: any, record: StyleInfo) => <AttachmentThumb styleId={(record as any).id} cover={(record as any).cover || null} />
+        render: (_: any, record: StyleInfo) => <AttachmentThumb styleId={(record as Record<string, unknown>).id} cover={(record as Record<string, unknown>).cover || null} />
       },
       { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 140 },
       { title: '款名', dataIndex: 'styleName', key: 'styleName', ellipsis: true },
-      { title: '品类', dataIndex: 'category', key: 'category', width: 140, render: (v: any) => toCategoryCn(v) },
+      { title: '品类', dataIndex: 'category', key: 'category', width: 140, render: (v: unknown) => toCategoryCn(v) },
       {
         title: '附件',
         key: 'attachments',
         width: 100,
         render: (_: any, record: StyleInfo) => (
-          <StyleAttachmentsButton styleId={(record as any).id} styleNo={(record as any).styleNo} modalTitle={`附件（${(record as any).styleNo}）`} />
+          <StyleAttachmentsButton styleId={(record as Record<string, unknown>).id} styleNo={(record as Record<string, unknown>).styleNo} modalTitle={`附件（${(record as Record<string, unknown>).styleNo}）`} />
         )
       },
       {
@@ -469,8 +466,8 @@ const DataCenter: React.FC = () => {
         </Card>
 
         <ResizableTable
-          rowKey={(r) => String((r as any).id ?? r.styleNo)}
-          columns={columns as any}
+          rowKey={(r) => String((r as Record<string, unknown>).id ?? r.styleNo)}
+          columns={columns as Record<string, unknown>}
           dataSource={styles}
           loading={loading}
           pagination={{

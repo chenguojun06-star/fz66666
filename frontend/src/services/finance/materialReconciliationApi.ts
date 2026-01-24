@@ -11,7 +11,7 @@ export const materialReconciliationApi = {
    * @returns 物料对账列表数据
    */
   getMaterialReconciliationList: async (params: MaterialReconQueryParams) => {
-    return await api.get<any>('/finance/material-reconciliation/list', { params });
+    return await api.get<{ code: number; data: { records: unknown[]; total: number } }>('/finance/material-reconciliation/list', { params });
   },
 
   /**
@@ -19,7 +19,7 @@ export const materialReconciliationApi = {
    * @param data 物料对账数据
    * @returns 创建结果
    */
-  createMaterialReconciliation: async (data: any) => {
+  createMaterialReconciliation: async (data: unknown) => {
     const response = await api.post('/finance/material-reconciliation', data);
     return response;
   },
@@ -29,7 +29,7 @@ export const materialReconciliationApi = {
    * @param data 物料对账数据（包含id）
    * @returns 更新结果
    */
-  updateMaterialReconciliation: async (data: any) => {
+  updateMaterialReconciliation: async (data: unknown) => {
     const response = await api.put('/finance/material-reconciliation', data);
     return response;
   },

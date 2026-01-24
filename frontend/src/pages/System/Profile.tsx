@@ -23,17 +23,19 @@ const Profile: React.FC = () => {
     const [avatarUploading, setAvatarUploading] = useState(false);
     const [form] = Form.useForm();
     const avatarUrl = Form.useWatch('avatarUrl', form);
-    
+
     // 获取当前用户的主题存储key（每个账号独立）
     const getUserThemeKey = () => {
         const userId = String(user?.id || '').trim();
         return userId ? `app.theme.user.${userId}` : 'app.theme';
     };
-    
+
     const [theme, setTheme] = useState<string>(() => {
         try {
             return localStorage.getItem(getUserThemeKey()) || 'default';
         } catch {
+    // Intentionally empty
+      // 忽略错误
             return 'default';
         }
     });
@@ -55,10 +57,10 @@ const Profile: React.FC = () => {
     const loadProfile = async () => {
         setLoading(true);
         try {
-            const res: any = await api.get('/system/user/me');
+            const res: unknown = await api.get('/system/user/me');
             if (res?.code === 200 && res?.data) {
                 const data: ProfileMe = res.data;
-                const avatar = (res.data as any).avatarUrl || (res.data as any).avatar || (res.data as any).headUrl || undefined;
+                const avatar = (res.data as Record<string, unknown>).avatarUrl || (res.data as Record<string, unknown>).avatar || (res.data as Record<string, unknown>).headUrl || undefined;
                 form.setFieldsValue({
                     username: data.username,
                     roleName: data.roleName || initialRoleName,
@@ -80,7 +82,7 @@ const Profile: React.FC = () => {
                 return;
             }
             message.error(res?.message || '加载个人信息失败');
-        } catch (e: any) {
+        } catch (e: unknown) {
             message.error(e?.message || '加载个人信息失败');
         } finally {
             setLoading(false);
@@ -95,7 +97,7 @@ const Profile: React.FC = () => {
             name: user?.name,
             phone: user?.phone,
             email: user?.email,
-            avatarUrl: (user as any)?.avatarUrl,
+            avatarUrl: (user as Record<string, unknown>)?.avatarUrl,
         });
         loadProfile();
     }, []);
@@ -112,6 +114,8 @@ const Profile: React.FC = () => {
             // 触发自定义事件通知 ConfigProvider 更新主题
             window.dispatchEvent(new Event('theme-change'));
         } catch {
+    // Intentionally empty
+      // 忽略错误
         }
         message.success('主题已切换');
     };
@@ -129,21 +133,20 @@ const Profile: React.FC = () => {
         try {
             const formData = new FormData();
             formData.append('file', file);
-            const res = await api.post<any>('/common/upload', formData);
-            const result = res as any;
-            if (result?.code !== 200) {
-                message.error(result?.message || '上传失败');
+            const res = await api.post<{ code: number; message: string; data: string }>('/common/upload', formData);
+            if (res.code !== 200) {
+                message.error(res.message || '上传失败');
                 return Upload.LIST_IGNORE;
             }
-            const url = String(result?.data || '').trim();
+            const url = String(res.data || '').trim();
             if (!url) {
                 message.error('上传失败');
                 return Upload.LIST_IGNORE;
             }
             form.setFieldsValue({ avatarUrl: url });
-            updateUser({ avatarUrl: url } as any);
+            updateUser({ avatarUrl: url } as Record<string, unknown>);
             message.success('上传成功');
-        } catch (e: any) {
+        } catch (e: unknown) {
             message.error(e?.message || '上传失败');
         } finally {
             setAvatarUploading(false);
@@ -161,7 +164,7 @@ const Profile: React.FC = () => {
                 email: values.email,
                 avatarUrl: values.avatarUrl,
             };
-            const res: any = await api.put('/system/user/me', payload);
+            const res: unknown = await api.put('/system/user/me', payload);
             if (res?.code === 200 && res?.data) {
                 updateUser({
                     name: res.data.name,
@@ -173,7 +176,7 @@ const Profile: React.FC = () => {
                 return;
             }
             message.error(res?.message || '保存失败');
-        } catch (e: any) {
+        } catch (e: unknown) {
             if (e?.errorFields?.length) return;
             message.error(e?.message || '保存失败');
         } finally {
@@ -200,7 +203,7 @@ const Profile: React.FC = () => {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                             <Avatar
                                 size={72}
-                                src={String(avatarUrl || (user as any)?.avatarUrl || '').trim() || undefined}
+                                src={String(avatarUrl || (user as Record<string, unknown>)?.avatarUrl || '').trim() || undefined}
                                 style={{ fontWeight: 800 }}
                             >
                                 {(initialName || 'U').slice(0, 1).toUpperCase()}

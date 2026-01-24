@@ -32,7 +32,7 @@ const toDate = (input: DateInput): Date | null => {
     return Number.isNaN(d.getTime()) ? null : d;
   }
 
-  const anyInput = input as any;
+  const anyInput = input as Record<string, unknown>;
   if (anyInput && typeof anyInput.toDate === 'function') {
     const d = anyInput.toDate();
     if (d instanceof Date && !Number.isNaN(d.getTime())) return d;

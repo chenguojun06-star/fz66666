@@ -99,7 +99,7 @@ export interface ScanRecord {
   operatorId: string;
   operatorName: string;
   scanTime: string;
-  scanType: 'material' | 'production' | 'sewing' | 'quality' | 'warehouse' | 'cutting' | 'shipment';
+  scanType: 'material' | 'procurement' | 'production' | 'sewing' | 'ironing' | 'packaging' | 'quality' | 'warehouse' | 'cutting' | 'shipment';
   scanResult: 'success' | 'failure';
   remark?: string;
   settlementStatus?: string;
@@ -201,6 +201,9 @@ export interface MaterialPurchase {
   status: 'pending' | 'received' | 'partial' | 'completed' | 'cancelled';
   createTime?: string;
   updateTime?: string;
+  // 到货日期字段
+  expectedArrivalDate?: string;
+  actualArrivalDate?: string;
 }
 
 export interface ProductWarehousing {

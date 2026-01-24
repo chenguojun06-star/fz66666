@@ -28,7 +28,7 @@
 
   <view class="card">
     <view class="title">首页</view>
-    
+
     <global-search
       keyword="{{globalSearch.keyword}}"
       results="{{globalSearch.results}}"
@@ -70,7 +70,7 @@
 
     <view class="home-section-title">快捷入口</view>
     <view class="home-entries">
-      <view class="home-entry" data-tab="orders_production" bindtap="goWork">生产中</view>
+      <view class="home-entry" data-tab="orders_production" bindtap="goWork">生产</view>
       <view class="home-entry" data-tab="warehousing" bindtap="goWork">入库</view>
       <view class="home-entry" data-tab="exceptions" bindtap="goWork">异常</view>
       <view class="home-entry" bindtap="goScan">扫码</view>

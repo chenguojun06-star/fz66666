@@ -4,6 +4,7 @@ import com.fashion.supplychain.finance.orchestration.PayrollAggregationOrchestra
 import com.fashion.supplychain.finance.orchestration.PayrollAggregationOrchestrator.PayrollOperatorProcessSummaryDTO;
 import com.fashion.supplychain.common.Result;
 import lombok.AllArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -23,6 +24,11 @@ public class PayrollSettlementController {
 
     /**
      * 获取人员工序汇总数据
+     * 权限控制：需要 MENU_PAYROLL_OPERATOR_SUMMARY 权限
+     * 数据权限：
+     *   - 管理员(dataScope=all): 查看所有人员数据
+     *   - 组长(dataScope=team): 查看团队数据
+     *   - 普通员工(dataScope=own): 只能查看自己的数据
      *
      * @param params 查询参数：
      *        - orderNo: 订单号 (可选)
@@ -34,6 +40,7 @@ public class PayrollSettlementController {
      * @return 聚合结果列表
      */
     @PostMapping("/operator-summary")
+    @PreAuthorize("hasAuthority('MENU_PAYROLL_OPERATOR_SUMMARY')")
     public Result<List<PayrollOperatorProcessSummaryDTO>> getOperatorSummary(
             @RequestBody Map<String, Object> params) {
 

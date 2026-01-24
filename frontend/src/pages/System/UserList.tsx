@@ -89,13 +89,15 @@ const UserList: React.FC = () => {
           pageSize: 1000,
         },
       });
-      const result = response as any;
+      const result = response as Record<string, unknown>;
       if (result.code === 200) {
         setRoleOptions(Array.isArray(result.data?.records) ? result.data.records : []);
       } else {
         setRoleOptions([]);
       }
     } catch {
+    // Intentionally empty
+      // 忽略错误
       setRoleOptions([]);
     } finally {
       setRoleOptionsLoading(false);
@@ -108,7 +110,7 @@ const UserList: React.FC = () => {
       const response = await api.get('/system/user/pending', {
         params: { page: 1, pageSize: 1 }
       });
-      const result = response as any;
+      const result = response as Record<string, unknown>;
       if (result.code === 200) {
         const count = result.data?.total || 0;
         if (count > pendingUserCount && pendingUserCount > 0) {
@@ -132,7 +134,7 @@ const UserList: React.FC = () => {
   const getUserList = async () => {
     setLoading(true);
     try {
-      const response = await api.get<any>('/system/user/list', {
+      const response = await api.get<{ code: number; data: { records: unknown[]; total: number } }>('/system/user/list', {
         params: {
           page: queryParams.page,
           pageSize: queryParams.pageSize,
@@ -143,14 +145,14 @@ const UserList: React.FC = () => {
         }
       });
       // 响应拦截器返回的是统一结果对象，数据在返回体中
-      const result = response as any;
+      const result = response as Record<string, unknown>;
       if (result.code === 200) {
         setUserList(result.data.records || []);
         setTotal(result.data.total || 0);
       } else {
         message.error(result.message || '获取用户列表失败');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       message.error(error?.message || '获取用户列表失败');
     } finally {
       setLoading(false);
@@ -178,18 +180,17 @@ const UserList: React.FC = () => {
     'user-list',
     async () => {
       try {
-        const response = await api.get<any>('/system/user/list', {
+        const response = await api.get<{ code: number; data: { records: unknown[]; total: number } }>('/system/user/list', {
           params: queryParams,
         });
-        const result = response as any;
-        if (result.code === 200) {
+        if (response.code === 200) {
           return {
-            records: result.data.records || [],
-            total: result.data.total || 0
+            records: response.data.records || [],
+            total: response.data.total || 0
           };
         }
         return null;
-      } catch (error: any) {
+      } catch (error: unknown) {
         // 403权限错误不输出到控制台（普通用户正常情况）
         const status = error?.response?.status || error?.status;
         if (status !== 403) {
@@ -234,11 +235,11 @@ const UserList: React.FC = () => {
     const modules: Array<{
       moduleId: number;
       moduleName: string;
-      permissions: any[];
+      permissions: unknown[];
     }> = [];
 
-    const collectPermissions = (node: any) => {
-      const allPerms: any[] = [];
+    const collectPermissions = (node: unknown) => {
+      const allPerms: unknown[] = [];
 
       // 递归收集所有子权限
       const collectChildren = (n: any) => {
@@ -292,8 +293,8 @@ const UserList: React.FC = () => {
         requestWithPathFallback('get', '/system/permission/tree', '/auth/permission/tree'),
         requestWithPathFallback('get', `/system/role/${rid}/permission-ids`, `/auth/role/${rid}/permission-ids`),
       ]);
-      const treeResult = treeRes as any;
-      const idsResult = idsRes as any;
+      const treeResult = treeRes as Record<string, unknown>;
+      const idsResult = idsRes as Record<string, unknown>;
       if (treeResult.code === 200) {
         setPermTree(Array.isArray(treeResult.data) ? treeResult.data : []);
       } else {
@@ -302,6 +303,8 @@ const UserList: React.FC = () => {
       const idList: number[] = (idsResult.code === 200 && Array.isArray(idsResult.data)) ? idsResult.data : [];
       setPermCheckedIds(new Set(idList));
     } catch {
+    // Intentionally empty
+      // 忽略错误
       message.error('加载权限失败');
       setPermTree([]);
       setPermCheckedIds(new Set());
@@ -326,13 +329,15 @@ const UserList: React.FC = () => {
           `/auth/role/${rid}/permission-ids`,
           { permissionIds: ids, remark }
         );
-        const result = res as any;
+        const result = res as Record<string, unknown>;
         if (result.code === 200) {
           message.success('权限保存成功');
         } else {
           message.error(result.message || '权限保存失败');
         }
       } catch {
+    // Intentionally empty
+      // 忽略错误
         message.error('权限保存失败');
       } finally {
         setPermSaving(false);
@@ -353,7 +358,7 @@ const UserList: React.FC = () => {
     if (user) {
       const next = {
         ...user,
-        roleId: String((user as any).roleId ?? ''),
+        roleId: String((user as Record<string, unknown>).roleId ?? ''),
       };
       form.setFieldsValue(next);
     } else {
@@ -381,7 +386,7 @@ const UserList: React.FC = () => {
   const openRemarkModal = (
     title: string,
     okText: string,
-    okButtonProps: any,
+    okButtonProps: unknown,
     onConfirm: (remark: string) => Promise<void>
   ) => {
     let remarkValue = '';
@@ -423,14 +428,14 @@ const UserList: React.FC = () => {
       const res = await api.get('/system/operation-log/list', {
         params: { bizType, bizId },
       });
-      const result = res as any;
+      const result = res as Record<string, unknown>;
       if (result.code === 200) {
         setLogRecords(Array.isArray(result.data) ? result.data : []);
       } else {
         message.error(result.message || '获取日志失败');
         setLogRecords([]);
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(e?.message || '获取日志失败');
       setLogRecords([]);
     } finally {
@@ -444,7 +449,7 @@ const UserList: React.FC = () => {
       active: { text: '启用', color: 'success', icon: <CheckOutlined /> },
       inactive: { text: '停用', color: 'error', icon: <CloseOutlined /> }
     };
-    const resolved = (statusMap as any)[status];
+    const resolved = (statusMap as Record<string, unknown>)[status];
     if (resolved) return resolved;
     return { text: '未知', color: 'default', icon: null };
   };
@@ -486,7 +491,7 @@ const UserList: React.FC = () => {
             remark,
           }
         });
-        const result = response as any;
+        const result = response as Record<string, unknown>;
         if (result.code === 200) {
           message.success('状态更新成功');
           setUserList(prev => prev.map(user =>
@@ -495,7 +500,7 @@ const UserList: React.FC = () => {
         } else {
           message.error(result.message || '状态更新失败');
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         message.error(error?.message || '状态更新失败');
       }
     });
@@ -510,20 +515,20 @@ const UserList: React.FC = () => {
     }
 
     openRemarkModal('一键授权', '确定', undefined, async (remark) => {
-      const payload: any = {
+      const payload: unknown = {
         id: user.id,
         username: user.username,
         name: user.name,
         roleId: Number(role.id),
         roleName: role.roleName,
-        permissionRange: (user as any).permissionRange,
+        permissionRange: (user as Record<string, unknown>).permissionRange,
         status: user.status,
         phone: user.phone,
         email: user.email,
         operationRemark: remark,
       };
       const response = await api.put('/system/user', payload);
-      const result = response as any;
+      const result = response as Record<string, unknown>;
       if (result.code === 200) {
         message.success('授权成功');
         getUserList();
@@ -548,7 +553,7 @@ const UserList: React.FC = () => {
             response = await api.post('/system/user', values);
           }
 
-          const result = response as any;
+          const result = response as Record<string, unknown>;
           if (result.code === 200) {
             message.success(currentUser?.id ? '编辑人员成功' : '新增人员成功');
             closeDialog();
@@ -569,13 +574,12 @@ const UserList: React.FC = () => {
       await submit();
     } catch (error) {
       // 处理表单验证错误
-      if ((error as any).errorFields) {
-        const firstError = (error as any).errorFields[0];
+      if ((error as Record<string, unknown>).errorFields) {
+        const firstError = (error as Record<string, unknown>).errorFields[0];
         message.error(firstError.errors[0] || '表单验证失败');
       } else {
         message.error((error as Error).message || '保存失败');
       }
-    } finally {
     }
   };
 
@@ -881,7 +885,7 @@ const UserList: React.FC = () => {
           <Form form={form} layout="vertical" autoComplete="off">
             <Tabs
               activeKey={activeEditTab}
-              onChange={(k) => setActiveEditTab(k as any)}
+              onChange={(k) => setActiveEditTab(k as Record<string, unknown>)}
               items={[
                 {
                   key: 'base',
@@ -1088,7 +1092,7 @@ const UserList: React.FC = () => {
           scaleWithViewport
         >
           <ResizableTable
-            columns={logColumns as any}
+            columns={logColumns as Record<string, unknown>}
             dataSource={logRecords}
             rowKey={(r) => String(r.id || `${r.bizType}-${r.bizId}-${r.createTime}`)}
             loading={logLoading}

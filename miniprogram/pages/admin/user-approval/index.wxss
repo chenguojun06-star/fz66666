@@ -25,7 +25,7 @@ page {
   color: #6b7280;
   background: #f3f4f6;
   padding: 4px 12px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
 }
 
 .loading, .empty {
@@ -61,7 +61,7 @@ page {
 
 .user-card {
   background: #ffffff;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 16px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }

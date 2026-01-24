@@ -1,3 +1,12 @@
+/**
+ * 全局样式 - 服装供应链系统小程序
+ * @version 2.0
+ * @date 2026-01-24
+ */
+
+/* 引入设计 Token */
+@import './styles/design-tokens.wxss';
+
 page {
   background: #f7f8fa;
   color: #1f2937;
@@ -9,7 +18,7 @@ page {
 }
 
 /* 隐藏微信开发者工具的真机调试浮层 */
-wx-vconsole, 
+wx-vconsole,
 .wx-vconsole,
 .vconsole-switch,
 #__vconsole {
@@ -22,7 +31,7 @@ wx-vconsole,
 
 .card {
   background: #ffffff;
-  border-radius: 18px;
+  border-radius: var(--radius-xl);
   padding: 12px;
   border: 1px solid #e5e7eb;
   box-shadow: none;
@@ -64,7 +73,7 @@ wx-vconsole,
 
 .input {
   border: 1px solid #e5e7eb;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   padding: 8px 12px;
   background: #ffffff;
   font-size: 14px; /* 统一为正文字体14px */
@@ -85,10 +94,10 @@ wx-vconsole,
 
 /* 主要按钮 */
 .btn-primary {
-  background: linear-gradient(135deg, rgba(224, 242, 254, 0.9) 0%, rgba(224, 242, 254, 0.7) 100%);
+  background: var(--gradient-primary-alpha);
   color: #1f2937;
   border: 1px solid rgba(147, 197, 253, 0.5);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   padding: 10px 18px;
   text-align: center;
   font-size: 14px; /* 统一为按钮字体14px */
@@ -112,7 +121,7 @@ wx-vconsole,
   background: rgba(255, 255, 255, 0.6);
   color: #6b7280;
   border: 1px solid rgba(229, 231, 235, 0.8);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   padding: 10px 18px;
   text-align: center;
   font-size: 14px; /* 统一为按钮字体14px */
@@ -154,7 +163,7 @@ wx-vconsole,
 .tag {
   display: inline-block;
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   font-size: 11px; /* 保持标签文字11px */
   background: rgba(16, 185, 129, 0.12);
   color: #10b981;
@@ -177,7 +186,7 @@ wx-vconsole,
   box-sizing: border-box;
   padding: 12px;
   border: 1px solid #e5e7eb;
-  border-radius: 18px;
+  border-radius: var(--radius-xl);
   background: #ffffff;
   margin-top: 10px;
 }
@@ -194,14 +203,14 @@ wx-vconsole,
   flex: 1;
   height: 6px;
   background: #e5e7eb;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #10b981 0%, #3b82f6 100%);
-  border-radius: 999px;
+  background: var(--gradient-progress);
+  border-radius: var(--radius-full);
   transition: width 0.3s ease;
 }
 
@@ -229,7 +238,7 @@ wx-vconsole,
   padding: 3px 6px;
   background: #ffffff;
   border: 1px solid #e5e7eb;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
@@ -240,7 +249,7 @@ wx-vconsole,
   padding: 3px 10px;
   background: rgba(224, 242, 254, 0.3);
   border: 1px solid rgba(224, 242, 254, 0.5);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
 }
 
 .global-search .search-icon {
@@ -261,7 +270,7 @@ wx-vconsole,
   color: #1f2937;
   background: rgba(224, 242, 254, 0.8);
   border: 1px solid rgba(224, 242, 254, 0.9);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   box-shadow: 0 2px 6px rgba(59, 130, 246, 0.15);
   white-space: nowrap;
 }
@@ -272,7 +281,7 @@ wx-vconsole,
   color: #6b7280;
   background: #f3f4f6;
   border: 1px solid #e5e7eb;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   white-space: nowrap;
 }
 
@@ -281,7 +290,7 @@ wx-vconsole,
   margin-bottom: 12px;
   background: #ffffff;
   border: 1px solid #e5e7eb;
-  border-radius: 18px;
+  border-radius: var(--radius-xl);
   overflow: hidden;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
@@ -383,9 +392,9 @@ wx-vconsole,
   width: auto;
   max-width: 90vw;
   background: #fff;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-modal);
   animation: modalSlideIn 0.3s ease-out;
 }
 
@@ -421,7 +430,7 @@ wx-vconsole,
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: rgba(0, 0, 0, 0.04);
   font-size: 18px;
   color: #6b7280;
@@ -449,7 +458,7 @@ wx-vconsole,
 .modal-btn {
   flex: 1;
   height: 40px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   font-size: 14px;
   border: none;
   font-weight: 500;
@@ -470,10 +479,10 @@ wx-vconsole,
 }
 
 .modal-btn.confirm {
-  background: linear-gradient(135deg, rgba(224, 242, 254, 0.9) 0%, rgba(224, 242, 254, 0.7) 100%);
+  background: var(--gradient-primary-alpha);
   color: #1f2937;
   border: 1px solid rgba(147, 197, 253, 0.5);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+  box-shadow: var(--shadow-lg);
 }
 
 .modal-btn.confirm:active {

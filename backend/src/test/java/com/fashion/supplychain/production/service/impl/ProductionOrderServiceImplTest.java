@@ -10,7 +10,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -162,7 +161,7 @@ class ProductionOrderServiceImplTest {
         // Then: 验证结果
         assertTrue(deleted);
         // 逻辑删除后仍然能通过ID查到，但deleteFlag=1
-        ProductionOrder found = productionOrderService.getById(id);
+        productionOrderService.getById(id);
         // 如果使用逻辑删除，found应该为null；如果是物理删除，这个断言是正确的
         // 根据实际配置调整
     }

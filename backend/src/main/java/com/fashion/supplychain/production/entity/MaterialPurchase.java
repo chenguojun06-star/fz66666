@@ -13,34 +13,34 @@ import lombok.Data;
 @Data
 @TableName("t_material_purchase")
 public class MaterialPurchase {
-    
+
     @TableId(type = IdType.ASSIGN_UUID)
     private String id;
-    
+
     private String purchaseNo;
 
     private String materialId;
-    
+
     private String materialCode;
-    
+
     private String materialName;
 
     private String materialType;
-    
+
     private String specifications;
-    
+
     private String unit;
-    
+
     private Integer purchaseQuantity;
-    
+
     private Integer arrivedQuantity;
-    
+
     private String supplierId;
-    
+
     private String supplierName;
-    
+
     private BigDecimal unitPrice;
-    
+
     private BigDecimal totalAmount;
 
     private String receiverId;
@@ -50,9 +50,9 @@ public class MaterialPurchase {
     private LocalDateTime receivedTime;
 
     private String remark;
-    
+
     private String orderId;
-    
+
     private String orderNo;
 
     private String styleId;
@@ -72,17 +72,17 @@ public class MaterialPurchase {
     private String returnConfirmerName;
 
     private LocalDateTime returnConfirmTime;
-    
+
     private String status;
-    
+
     private LocalDateTime createTime;
-    
+
     private LocalDateTime updateTime;
-    
+
     private Integer deleteFlag;
 
     // ==================== 到货日期字段（新增）====================
-    
+
     /**
      * 预计到货日期
      */
@@ -92,4 +92,9 @@ public class MaterialPurchase {
      * 实际到货日期
      */
     private LocalDateTime actualArrivalDate;
+
+    /**
+     * 预计出货日期
+     */
+    private java.time.LocalDate expectedShipDate;
 }

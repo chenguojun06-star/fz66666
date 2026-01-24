@@ -16,6 +16,13 @@ import { StyleCoverThumb } from '../../components/StyleAssets';
 import api, { updateFinanceReconciliationStatus, returnFinanceReconciliation } from '../../utils/api';
 import { useSync } from '../../utils/syncManager';
 import { useViewport } from '../../utils/useViewport';
+import {
+  ModalHeaderCard,
+  ModalField,
+  ModalPrimaryField,
+  ModalFieldRow,
+  ModalFieldGrid,
+} from '../../components/common/ModalContentLayout';
 
 const { Option } = Select;
 
@@ -46,10 +53,10 @@ const ShipmentReconciliationList: React.FC = () => {
 
   const [filterForm] = Form.useForm();
 
-  const { modalWidth } = useViewport();
+  const { modalWidth, isMobile } = useViewport();
   const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
-  const escapeCsvCell = (value: any) => {
+  const escapeCsvCell = (value: unknown) => {
     const text = String(value ?? '');
     if (/[\r\n",]/.test(text)) {
       return `"${text.replace(/"/g, '""')}"`;
@@ -75,17 +82,17 @@ const ShipmentReconciliationList: React.FC = () => {
     return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
   };
 
-  const toNumberOrNull = (v: any) => {
+  const toNumberOrNull = (v: unknown) => {
     const n = typeof v === 'number' ? v : Number(v);
     return Number.isFinite(n) ? n : null;
   };
 
-  const toCsvMoneyText = (v: any) => {
+  const toCsvMoneyText = (v: unknown) => {
     const n = toNumberOrNull(v);
     return n == null ? '' : n.toFixed(2);
   };
 
-  const toMoney2 = (v: any) => {
+  const toMoney2 = (v: unknown) => {
     const n = toNumberOrNull(v);
     return n == null ? '-' : n.toFixed(2);
   };
@@ -98,20 +105,20 @@ const ShipmentReconciliationList: React.FC = () => {
   };
 
   const getBaseQty = (profitData: any | null, record: ShipmentReconciliation) => {
-    const w = toNumberOrNull((profitData as any)?.order?.warehousingQuantity);
+    const w = toNumberOrNull((profitData as Record<string, unknown>)?.order?.warehousingQuantity);
     if (w != null && w > 0) return w;
-    const q = toNumberOrNull((record as any)?.quantity);
+    const q = toNumberOrNull((record as Record<string, unknown>)?.quantity);
     if (q != null && q > 0) return q;
-    const c = toNumberOrNull((profitData as any)?.summary?.calcQty);
+    const c = toNumberOrNull((profitData as Record<string, unknown>)?.summary?.calcQty);
     if (c != null && c > 0) return c;
     return 0;
   };
 
-  const sumMaterialCostFromItems = (items: any[]) => {
+  const sumMaterialCostFromItems = (items: unknown[]) => {
     let total = 0;
     for (const it of items || []) {
-      const qty = toNumberOrNull((it as any)?.arrivedQuantity) ?? 0;
-      const unit = toNumberOrNull((it as any)?.unitPrice) ?? 0;
+      const qty = toNumberOrNull((it as Record<string, unknown>)?.arrivedQuantity) ?? 0;
+      const unit = toNumberOrNull((it as Record<string, unknown>)?.unitPrice) ?? 0;
       total += qty * unit;
     }
     return total;
@@ -119,13 +126,13 @@ const ShipmentReconciliationList: React.FC = () => {
 
   const normalizeDeductionItems = (items: DeductionItem[]) => {
     return (items || []).map((it) => {
-      const deductionType = String((it as any)?.deductionType || '').trim();
-      const description = String((it as any)?.description || '').trim();
-      const deductionAmountRaw = (it as any)?.deductionAmount;
+      const deductionType = String((it as Record<string, unknown>)?.deductionType || '').trim();
+      const description = String((it as Record<string, unknown>)?.description || '').trim();
+      const deductionAmountRaw = (it as Record<string, unknown>)?.deductionAmount;
       const deductionAmount = typeof deductionAmountRaw === 'number' ? deductionAmountRaw : Number(deductionAmountRaw);
       return {
-        id: String((it as any)?.id || '').trim() || undefined,
-        reconciliationId: String((it as any)?.reconciliationId || '').trim(),
+        id: String((it as Record<string, unknown>)?.id || '').trim() || undefined,
+        reconciliationId: String((it as Record<string, unknown>)?.reconciliationId || '').trim(),
         deductionType,
         description,
         deductionAmount: Number.isFinite(deductionAmount) && deductionAmount >= 0 ? deductionAmount : 0,
@@ -138,16 +145,15 @@ const ShipmentReconciliationList: React.FC = () => {
     if (!rid) return;
     setDeductionLoading(true);
     try {
-      const res = await api.get<any>(`/finance/shipment-reconciliation/deduction-items/${rid}`);
-      const result = res as any;
-      if (result.code === 200) {
-        const rows = normalizeDeductionItems((result.data || []) as DeductionItem[]);
+      const res = await api.get<{ code: number; message: string; data: DeductionItem[] }>(`/finance/shipment-reconciliation/deduction-items/${rid}`);
+      if (res.code === 200) {
+        const rows = normalizeDeductionItems((res.data || []) as DeductionItem[]);
         setDeductionItems(rows.map((r) => ({ ...r, reconciliationId: rid })));
       } else {
-        message.error(result.message || '获取扣款项失败');
+        message.error(res.message || '获取扣款项失败');
         setDeductionItems([]);
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(e?.message || '获取扣款项失败');
       setDeductionItems([]);
     } finally {
@@ -159,17 +165,18 @@ const ShipmentReconciliationList: React.FC = () => {
     const rid = String(reconciliationId || '').trim();
     if (!rid) return;
     try {
-      const res = await api.get<any>(`/finance/shipment-reconciliation/${rid}`);
-      const result = res as any;
-      if (result.code === 200) {
-        setCurrentRecon(result.data || null);
+      const res = await api.get<{ code: number; data: ShipmentReconciliation }>(`/finance/shipment-reconciliation/${rid}`);
+      if (res.code === 200) {
+        setCurrentRecon(res.data || null);
       }
     } catch {
+    // Intentionally empty
+      // 忽略错误
     }
   };
 
   const saveCurrentDeductionItems = async () => {
-    const rid = String((currentRecon as any)?.id || '').trim();
+    const rid = String((currentRecon as Record<string, unknown>)?.id || '').trim();
     if (!rid) return;
     setDeductionSaving(true);
     try {
@@ -182,16 +189,15 @@ const ShipmentReconciliationList: React.FC = () => {
         }))
         .filter((it) => it.deductionType || it.description || (it.deductionAmount || 0) > 0);
 
-      const res = await api.post<any>(`/finance/shipment-reconciliation/deduction-items/${rid}`, payload);
-      const result = res as any;
-      if (result.code === 200) {
+      const res = await api.post<{ code: number; message: string }>(`/finance/shipment-reconciliation/deduction-items/${rid}`, payload);
+      if (res.code === 200) {
         message.success('扣款项已保存');
         await Promise.all([fetchDeductionItems(rid), reloadCurrentRecon(rid)]);
         fetchReconciliationList();
       } else {
-        message.error(result.message || '保存失败');
+        message.error(res.message || '保存失败');
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(e?.message || '保存失败');
     } finally {
       setDeductionSaving(false);
@@ -199,24 +205,24 @@ const ShipmentReconciliationList: React.FC = () => {
   };
 
   const getMaterialTotalCost = (profitData: any | null) => {
-    const direct = toNumberOrNull((profitData as any)?.summary?.materialArrivedCost);
+    const direct = toNumberOrNull((profitData as Record<string, unknown>)?.summary?.materialArrivedCost);
     if (direct != null) return direct;
-    const items = ((profitData as any)?.materials || []) as any[];
+    const items = ((profitData as Record<string, unknown>)?.materials || []) as Record<string, unknown>[];
     return sumMaterialCostFromItems(items);
   };
 
   const getProcessingTotalCost = (profitData: any | null, baseQty: number) => {
-    const direct = toNumberOrNull((profitData as any)?.summary?.processingCost);
+    const direct = toNumberOrNull((profitData as Record<string, unknown>)?.summary?.processingCost);
     if (direct != null) return direct;
-    const actualUnit = toNumberOrNull((profitData as any)?.summary?.actualUnitCost);
+    const actualUnit = toNumberOrNull((profitData as Record<string, unknown>)?.summary?.actualUnitCost);
     if (actualUnit != null && baseQty > 0) return actualUnit * baseQty;
     return 0;
   };
 
   const getFinalUnitPrice = (profitData: any | null, baseQty: number) => {
-    const q = toNumberOrNull((profitData as any)?.summary?.quotationUnitPrice);
+    const q = toNumberOrNull((profitData as Record<string, unknown>)?.summary?.quotationUnitPrice);
     if (q != null) return q;
-    const rev = toNumberOrNull((profitData as any)?.summary?.revenue);
+    const rev = toNumberOrNull((profitData as Record<string, unknown>)?.summary?.revenue);
     if (rev != null && baseQty > 0) return rev / baseQty;
     return 0;
   };
@@ -230,7 +236,7 @@ const ShipmentReconciliationList: React.FC = () => {
     return revenue - material - processing;
   };
 
-  const escapeHtml = (value: any) => {
+  const escapeHtml = (value: unknown) => {
     const s = String(value ?? '');
     return s
       .replace(/&/g, '&amp;')
@@ -244,11 +250,12 @@ const ShipmentReconciliationList: React.FC = () => {
     const ono = String(orderNo || '').trim();
     if (!ono) return null;
     try {
-      const res = await api.get<any>('/finance/reconciliation/order-profit', { params: { orderNo: ono } });
-      const result = res as any;
-      if (result.code === 200) return (result.data || null) as any;
+      const res = await api.get<{ code: number; data: Record<string, unknown> | null }>('/finance/reconciliation/order-profit', { params: { orderNo: ono } });
+      if (res.code === 200) return (res.data || null);
       return null;
     } catch {
+    // Intentionally empty
+      // 忽略错误
       return null;
     }
   };
@@ -265,7 +272,7 @@ const ShipmentReconciliationList: React.FC = () => {
       const settled = await Promise.allSettled(batch.map((ono) => fetchOrderProfitOne(ono)));
       settled.forEach((r, idx) => {
         const ono = batch[idx];
-        next[ono] = r.status === 'fulfilled' ? (r.value as any) : null;
+        next[ono] = r.status === 'fulfilled' ? (r.value as Record<string, unknown>) : null;
       });
     }
     setOrderProfitByOrderNo((prev) => ({ ...prev, ...next }));
@@ -293,38 +300,38 @@ const ShipmentReconciliationList: React.FC = () => {
     ];
     const lines = [header.map(escapeCsvCell).join(',')];
     for (const r of rows) {
-      const st = getStatusConfig((r as any)?.status);
-      const orderNo = String((r as any)?.orderNo || '').trim();
+      const st = getStatusConfig((r as Record<string, unknown>)?.status);
+      const orderNo = String((r as Record<string, unknown>)?.orderNo || '').trim();
       const p = orderNo ? profitMap[orderNo] : null;
-      const order = (p as any)?.order;
-      const summary = (p as any)?.summary;
+      const order = (p as Record<string, unknown>)?.order;
+      const summary = (p as Record<string, unknown>)?.summary;
       const baseQty = getBaseQty(p, r);
-      const processingUnit = computeUnitPrice((summary as any)?.processingCost, baseQty);
+      const processingUnit = computeUnitPrice((summary as Record<string, unknown>)?.processingCost, baseQty);
       const materialTotalCost = getMaterialTotalCost(p);
       const processingTotalCost = getProcessingTotalCost(p, baseQty);
       const finalUnit = getFinalUnitPrice(p, baseQty);
       const revenue = finalUnit * (baseQty || 0);
       const profit = revenue - materialTotalCost - processingTotalCost;
       const warehousingQtyText = (() => {
-        const n = toNumberOrNull((order as any)?.warehousingQuantity);
+        const n = toNumberOrNull((order as Record<string, unknown>)?.warehousingQuantity);
         return n == null ? '' : String(n);
       })();
       const row = [
-        String((r as any)?.reconciliationNo || '').trim(),
-        String((r as any)?.customerName || '').trim(),
+        String((r as Record<string, unknown>)?.reconciliationNo || '').trim(),
+        String((r as Record<string, unknown>)?.customerName || '').trim(),
         orderNo,
-        String((r as any)?.styleNo || '').trim(),
-        String((order as any)?.color || (r as any)?.color || '').trim(),
-        String(Number((r as any)?.quantity ?? 0) || 0),
+        String((r as Record<string, unknown>)?.styleNo || '').trim(),
+        String((order as Record<string, unknown>)?.color || (r as Record<string, unknown>)?.color || '').trim(),
+        String(Number((r as Record<string, unknown>)?.quantity ?? 0) || 0),
         warehousingQtyText,
         processingUnit == null ? '' : String(processingUnit.toFixed(2)),
         String(Number(materialTotalCost || 0).toFixed(2)),
         String(Number(processingTotalCost || 0).toFixed(2)),
         String(Number(revenue || 0).toFixed(2)),
         String(Number(profit || 0).toFixed(2)),
-        toCsvMoneyText((r as any)?.unitPrice),
-        toCsvMoneyText((r as any)?.totalAmount),
-        String(formatDateTime((r as any)?.reconciliationDate) || ''),
+        toCsvMoneyText((r as Record<string, unknown>)?.unitPrice),
+        toCsvMoneyText((r as Record<string, unknown>)?.totalAmount),
+        String(formatDateTime((r as Record<string, unknown>)?.reconciliationDate) || ''),
         String(st?.text || ''),
       ];
       lines.push(row.map(escapeCsvCell).join(','));
@@ -352,26 +359,26 @@ const ShipmentReconciliationList: React.FC = () => {
 
     const rowsHtml = rows
       .map((r) => {
-        const st = getStatusConfig((r as any)?.status);
-        const orderNo = String((r as any)?.orderNo || '').trim();
+        const st = getStatusConfig((r as Record<string, unknown>)?.status);
+        const orderNo = String((r as Record<string, unknown>)?.orderNo || '').trim();
         const p = orderNo ? profitMap[orderNo] : null;
-        const order = (p as any)?.order;
-        const summary = (p as any)?.summary;
+        const order = (p as Record<string, unknown>)?.order;
+        const summary = (p as Record<string, unknown>)?.summary;
 
         const baseQty = getBaseQty(p, r);
         const finalUnit = getFinalUnitPrice(p, baseQty);
         const revenue = finalUnit * (baseQty || 0);
         const materialTotalCost = getMaterialTotalCost(p);
         const processingTotalCost = getProcessingTotalCost(p, baseQty);
-        const processingUnit = computeUnitPrice((summary as any)?.processingCost, baseQty) ?? 0;
+        const processingUnit = computeUnitPrice((summary as Record<string, unknown>)?.processingCost, baseQty) ?? 0;
         const profit = revenue - materialTotalCost - processingTotalCost;
 
         const cells = [
-          String((r as any)?.reconciliationNo || '').trim(),
-          String((r as any)?.customerName || '').trim(),
+          String((r as Record<string, unknown>)?.reconciliationNo || '').trim(),
+          String((r as Record<string, unknown>)?.customerName || '').trim(),
           orderNo,
-          String((r as any)?.styleNo || '').trim(),
-          String((order as any)?.color || (r as any)?.color || '').trim(),
+          String((r as Record<string, unknown>)?.styleNo || '').trim(),
+          String((order as Record<string, unknown>)?.color || (r as Record<string, unknown>)?.color || '').trim(),
           baseQty > 0 ? String(baseQty) : '',
           Number(finalUnit || 0).toFixed(2),
           Number(processingUnit || 0).toFixed(2),
@@ -379,7 +386,7 @@ const ShipmentReconciliationList: React.FC = () => {
           Number(processingTotalCost || 0).toFixed(2),
           Number(revenue || 0).toFixed(2),
           Number(profit || 0).toFixed(2),
-          String(formatDateTime((r as any)?.reconciliationDate) || ''),
+          String(formatDateTime((r as Record<string, unknown>)?.reconciliationDate) || ''),
           String(st?.text || ''),
         ];
 
@@ -403,15 +410,14 @@ const ShipmentReconciliationList: React.FC = () => {
     let total = Infinity;
     const all: ShipmentReconciliation[] = [];
     while (all.length < total) {
-      const response = await api.get<any>('/finance/shipment-reconciliation/list', {
+      const response = await api.get<{ code: number; message: string; data: { records: ShipmentReconciliation[]; total: number } }>('/finance/shipment-reconciliation/list', {
         params: { ...queryParams, page, pageSize },
       });
-      const result = response as any;
-      if (result.code !== 200) {
-        throw new Error(result.message || '获取出货对账列表失败');
+      if (response.code !== 200) {
+        throw new Error(response.message || '获取出货对账列表失败');
       }
-      const records = (result.data?.records || []) as ShipmentReconciliation[];
-      total = Number(result.data?.total ?? records.length ?? 0);
+      const records = (response.data?.records || []) as ShipmentReconciliation[];
+      total = Number(response.data?.total ?? records.length ?? 0);
       all.push(...records);
       if (!records.length) break;
       if (records.length < pageSize) break;
@@ -422,17 +428,17 @@ const ShipmentReconciliationList: React.FC = () => {
   };
 
   const exportSelectedCsv = async () => {
-    const picked = reconciliationList.filter((r) => selectedRowKeys.includes(String((r as any)?.id)));
+    const picked = reconciliationList.filter((r) => selectedRowKeys.includes(String((r as Record<string, unknown>)?.id)));
     if (!picked.length) {
       message.warning('请先勾选要导出的对账单');
       return;
     }
     setExporting(true);
     try {
-      const profitMap = await ensureOrderProfit(picked.map((r) => String((r as any)?.orderNo || '').trim()));
+      const profitMap = await ensureOrderProfit(picked.map((r) => String((r as Record<string, unknown>)?.orderNo || '').trim()));
       const csv = buildShipmentReconCsv(picked, profitMap);
       downloadTextFile(`成品结算_勾选_${fileStamp()}.csv`, csv, 'text/csv;charset=utf-8');
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(e?.message || '导出失败');
     } finally {
       setExporting(false);
@@ -447,10 +453,10 @@ const ShipmentReconciliationList: React.FC = () => {
         message.info('暂无记录可导出');
         return;
       }
-      const profitMap = await ensureOrderProfit(rows.map((r) => String((r as any)?.orderNo || '').trim()));
+      const profitMap = await ensureOrderProfit(rows.map((r) => String((r as Record<string, unknown>)?.orderNo || '').trim()));
       const csv = buildShipmentReconCsv(rows, profitMap);
       downloadTextFile(`成品结算_筛选_${fileStamp()}.csv`, csv, 'text/csv;charset=utf-8');
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(e?.message || '导出失败');
     } finally {
       setExporting(false);
@@ -466,17 +472,17 @@ const ShipmentReconciliationList: React.FC = () => {
   };
 
   const exportSelectedExcel = async () => {
-    const picked = reconciliationList.filter((r) => selectedRowKeys.includes(String((r as any)?.id)));
+    const picked = reconciliationList.filter((r) => selectedRowKeys.includes(String((r as Record<string, unknown>)?.id)));
     if (!picked.length) {
       message.warning('请先勾选要导出的对账单');
       return;
     }
     setExporting(true);
     try {
-      const profitMap = await ensureOrderProfit(picked.map((r) => String((r as any)?.orderNo || '').trim()));
+      const profitMap = await ensureOrderProfit(picked.map((r) => String((r as Record<string, unknown>)?.orderNo || '').trim()));
       const html = buildShipmentReconExcelHtml(picked, profitMap);
       downloadTextFile(`成品结算_勾选_${fileStamp()}.xls`, html, 'application/vnd.ms-excel;charset=utf-8');
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(e?.message || '导出失败');
     } finally {
       setExporting(false);
@@ -491,10 +497,10 @@ const ShipmentReconciliationList: React.FC = () => {
         message.info('暂无记录可导出');
         return;
       }
-      const profitMap = await ensureOrderProfit(rows.map((r) => String((r as any)?.orderNo || '').trim()));
+      const profitMap = await ensureOrderProfit(rows.map((r) => String((r as Record<string, unknown>)?.orderNo || '').trim()));
       const html = buildShipmentReconExcelHtml(rows, profitMap);
       downloadTextFile(`成品结算_筛选_${fileStamp()}.xls`, html, 'application/vnd.ms-excel;charset=utf-8');
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(e?.message || '导出失败');
     } finally {
       setExporting(false);
@@ -539,15 +545,14 @@ const ShipmentReconciliationList: React.FC = () => {
   const fetchReconciliationList = async () => {
     setLoading(true);
     try {
-      const response = await api.get<any>('/finance/shipment-reconciliation/list', { params: queryParams });
-      const result = response as any;
-      if (result.code === 200) {
-        setReconciliationList((result.data?.records || []) as ShipmentReconciliation[]);
-        setTotal(Number(result.data?.total || 0));
+      const response = await api.get<{ code: number; message: string; data: { records: ShipmentReconciliation[]; total: number } }>('/finance/shipment-reconciliation/list', { params: queryParams });
+      if (response.code === 200) {
+        setReconciliationList((response.data?.records || []) as ShipmentReconciliation[]);
+        setTotal(Number(response.data?.total || 0));
       } else {
-        message.error(result.message || '获取出货对账列表失败');
+        message.error(response.message || '获取出货对账列表失败');
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(e?.message || '获取出货对账列表失败');
     } finally {
       setLoading(false);
@@ -575,12 +580,11 @@ const ShipmentReconciliationList: React.FC = () => {
     'shipment-reconciliation-list',
     async () => {
       try {
-        const response = await api.get<any>('/finance/shipment-reconciliation/list', { params: queryParams });
-        const result = response as any;
-        if (result.code === 200) {
+        const response = await api.get<{ code: number; data: { records: ShipmentReconciliation[]; total: number } }>('/finance/shipment-reconciliation/list', { params: queryParams });
+        if (response.code === 200) {
           return {
-            records: (result.data?.records || []) as ShipmentReconciliation[],
-            total: Number(result.data?.total || 0)
+            records: (response.data?.records || []) as ShipmentReconciliation[],
+            total: Number(response.data?.total || 0)
           };
         }
         return null;
@@ -612,7 +616,7 @@ const ShipmentReconciliationList: React.FC = () => {
   );
 
   useEffect(() => {
-    const orderNos = reconciliationList.map((r) => String((r as any)?.orderNo || '').trim()).filter(Boolean);
+    const orderNos = reconciliationList.map((r) => String((r as Record<string, unknown>)?.orderNo || '').trim()).filter(Boolean);
     if (!orderNos.length) return;
     let cancelled = false;
     (async () => {
@@ -626,7 +630,7 @@ const ShipmentReconciliationList: React.FC = () => {
         const settled = await Promise.allSettled(batch.map((ono) => fetchOrderProfitOne(ono)));
         settled.forEach((r, idx) => {
           const ono = batch[idx];
-          next[ono] = r.status === 'fulfilled' ? (r.value as any) : null;
+          next[ono] = r.status === 'fulfilled' ? (r.value as Record<string, unknown>) : null;
         });
       }
       if (cancelled) return;
@@ -640,7 +644,7 @@ const ShipmentReconciliationList: React.FC = () => {
   const openDialog = (recon?: ShipmentReconciliation) => {
     setCurrentRecon(recon || null);
     setVisible(true);
-    const rid = String((recon as any)?.id || '').trim();
+    const rid = String((recon as Record<string, unknown>)?.id || '').trim();
     setDeductionItems([]);
     if (rid) {
       fetchDeductionItems(rid);
@@ -655,7 +659,7 @@ const ShipmentReconciliationList: React.FC = () => {
   };
 
   const openMaterialDetail = async (record: ShipmentReconciliation) => {
-    const orderNo = String((record as any)?.orderNo || '').trim();
+    const orderNo = String((record as Record<string, unknown>)?.orderNo || '').trim();
     if (!orderNo) return;
     setMaterialDetailOpen(true);
     setMaterialDetailLoading(true);
@@ -673,7 +677,7 @@ const ShipmentReconciliationList: React.FC = () => {
     setMaterialDetailLoading(false);
   };
 
-  const ignoreRowClick = (e: any) => {
+  const ignoreRowClick = (e: unknown) => {
     const el = e?.target as HTMLElement | null;
     if (!el) return false;
     return Boolean(
@@ -684,10 +688,10 @@ const ShipmentReconciliationList: React.FC = () => {
   };
 
   const materialGroups = useMemo(() => {
-    const items = ((materialDetailProfit as any)?.materials || []) as any[];
+    const items = ((materialDetailProfit as Record<string, unknown>)?.materials || []) as Record<string, unknown>[];
     const groups: Record<string, any[]> = {};
     for (const it of items || []) {
-      const raw = String((it as any)?.materialType || '').trim();
+      const raw = String((it as Record<string, unknown>)?.materialType || '').trim();
       const key = raw.includes('面') ? '面料' : raw.includes('辅') ? '辅料' : raw || '其他';
       if (!groups[key]) groups[key] = [];
       groups[key].push(it);
@@ -712,7 +716,7 @@ const ShipmentReconciliationList: React.FC = () => {
       const settled = await Promise.allSettled(
         normalized.map((p) => updateFinanceReconciliationStatus(p.id, p.status)),
       );
-      const okCount = settled.filter((r) => r.status === 'fulfilled' && (r.value as any)?.code === 200).length;
+      const okCount = settled.filter((r) => r.status === 'fulfilled' && (r.value as Record<string, unknown>)?.code === 200).length;
       const failed = normalized.length - okCount;
       if (okCount <= 0) {
         message.error('操作失败');
@@ -722,7 +726,7 @@ const ShipmentReconciliationList: React.FC = () => {
       else message.success(successText);
       setSelectedRowKeys([]);
       fetchReconciliationList();
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(e?.message || '操作失败');
     } finally {
       setApprovalSubmitting(false);
@@ -763,7 +767,7 @@ const ShipmentReconciliationList: React.FC = () => {
           const settled = await Promise.allSettled(
             normalized.map((id) => returnFinanceReconciliation(id, remark)),
           );
-          const okCount = settled.filter((r) => r.status === 'fulfilled' && (r.value as any)?.code === 200).length;
+          const okCount = settled.filter((r) => r.status === 'fulfilled' && (r.value as Record<string, unknown>)?.code === 200).length;
           const failed = normalized.length - okCount;
           if (okCount <= 0) {
             message.error('退回失败');
@@ -773,7 +777,7 @@ const ShipmentReconciliationList: React.FC = () => {
           else message.success('退回成功');
           setSelectedRowKeys([]);
           fetchReconciliationList();
-        } catch (e: any) {
+        } catch (e: unknown) {
           message.error(e?.message || '退回失败');
         } finally {
           setApprovalSubmitting(false);
@@ -800,7 +804,7 @@ const ShipmentReconciliationList: React.FC = () => {
       key: 'cover',
       width: 72,
       render: (_: any, record: ShipmentReconciliation) => (
-        <StyleCoverThumb styleNo={(record as any).styleNo} src={(record as any).cover || null} />
+        <StyleCoverThumb styleNo={(record as Record<string, unknown>).styleNo} src={(record as Record<string, unknown>).cover || null} />
       ),
     },
     {
@@ -820,30 +824,30 @@ const ShipmentReconciliationList: React.FC = () => {
       key: 'customerName',
       width: 140,
       ellipsis: true,
-      render: (v: any) => String(v || '').trim() || '-',
+      render: (v: unknown) => String(v || '').trim() || '-',
     },
     {
       title: '订单号',
       dataIndex: 'orderNo',
       key: 'orderNo',
       width: 120,
-      render: (v: any) => String(v || '').trim() || '-',
+      render: (v: unknown) => String(v || '').trim() || '-',
     },
     {
       title: '款号',
       dataIndex: 'styleNo',
       key: 'styleNo',
       width: 110,
-      render: (v: any) => String(v || '').trim() || '-',
+      render: (v: unknown) => String(v || '').trim() || '-',
     },
     {
       title: '颜色',
       key: 'color',
       width: 100,
       render: (_: any, record: ShipmentReconciliation) => {
-        const orderNo = String((record as any)?.orderNo || '').trim();
+        const orderNo = String((record as Record<string, unknown>)?.orderNo || '').trim();
         const p = orderNo ? orderProfitByOrderNo[orderNo] : null;
-        const c = String((p as any)?.order?.color || (record as any)?.color || '').trim();
+        const c = String((p as Record<string, unknown>)?.order?.color || (record as Record<string, unknown>)?.color || '').trim();
         return c || '-';
       },
     },
@@ -860,9 +864,9 @@ const ShipmentReconciliationList: React.FC = () => {
       width: 100,
       align: 'right' as const,
       render: (_: any, record: ShipmentReconciliation) => {
-        const orderNo = String((record as any)?.orderNo || '').trim();
+        const orderNo = String((record as Record<string, unknown>)?.orderNo || '').trim();
         const p = orderNo ? orderProfitByOrderNo[orderNo] : null;
-        const n = toNumberOrNull((p as any)?.order?.warehousingQuantity);
+        const n = toNumberOrNull((p as Record<string, unknown>)?.order?.warehousingQuantity);
         return n == null ? '-' : String(n);
       },
     },
@@ -872,16 +876,16 @@ const ShipmentReconciliationList: React.FC = () => {
       width: 130,
       align: 'right' as const,
       render: (_: any, record: ShipmentReconciliation) => {
-        const orderNo = String((record as any)?.orderNo || '').trim();
+        const orderNo = String((record as Record<string, unknown>)?.orderNo || '').trim();
         const p = orderNo ? orderProfitByOrderNo[orderNo] : null;
-        const summary = (p as any)?.summary;
+        const summary = (p as Record<string, unknown>)?.summary;
         const baseQty = getBaseQty(p, record);
-        const unit = computeUnitPrice((summary as any)?.processingCost, baseQty);
+        const unit = computeUnitPrice((summary as Record<string, unknown>)?.processingCost, baseQty);
         return unit == null ? '-' : unit.toFixed(2);
       },
       sorter: (a: any, b: any) => {
-        const pa = (orderProfitByOrderNo[String((a as any)?.orderNo || '').trim()] || null) as any;
-        const pb = (orderProfitByOrderNo[String((b as any)?.orderNo || '').trim()] || null) as any;
+        const pa = (orderProfitByOrderNo[String((a as Record<string, unknown>)?.orderNo || '').trim()] || null) as Record<string, unknown>;
+        const pb = (orderProfitByOrderNo[String((b as Record<string, unknown>)?.orderNo || '').trim()] || null) as Record<string, unknown>;
         const ua = computeUnitPrice(pa?.summary?.processingCost, getBaseQty(pa, a)) ?? -Infinity;
         const ub = computeUnitPrice(pb?.summary?.processingCost, getBaseQty(pb, b)) ?? -Infinity;
         return ua - ub;
@@ -893,13 +897,13 @@ const ShipmentReconciliationList: React.FC = () => {
       width: 140,
       align: 'right' as const,
       render: (_: any, record: ShipmentReconciliation) => {
-        const orderNo = String((record as any)?.orderNo || '').trim();
+        const orderNo = String((record as Record<string, unknown>)?.orderNo || '').trim();
         const p = orderNo ? orderProfitByOrderNo[orderNo] : null;
         return toMoney2(getMaterialTotalCost(p));
       },
       sorter: (a: any, b: any) => {
-        const pa = (orderProfitByOrderNo[String((a as any)?.orderNo || '').trim()] || null) as any;
-        const pb = (orderProfitByOrderNo[String((b as any)?.orderNo || '').trim()] || null) as any;
+        const pa = (orderProfitByOrderNo[String((a as Record<string, unknown>)?.orderNo || '').trim()] || null) as Record<string, unknown>;
+        const pb = (orderProfitByOrderNo[String((b as Record<string, unknown>)?.orderNo || '').trim()] || null) as Record<string, unknown>;
         return getMaterialTotalCost(pa) - getMaterialTotalCost(pb);
       },
     },
@@ -909,14 +913,14 @@ const ShipmentReconciliationList: React.FC = () => {
       width: 140,
       align: 'right' as const,
       render: (_: any, record: ShipmentReconciliation) => {
-        const orderNo = String((record as any)?.orderNo || '').trim();
+        const orderNo = String((record as Record<string, unknown>)?.orderNo || '').trim();
         const p = orderNo ? orderProfitByOrderNo[orderNo] : null;
         const qty = getBaseQty(p, record);
         return toMoney2(getProcessingTotalCost(p, qty));
       },
       sorter: (a: any, b: any) => {
-        const pa = (orderProfitByOrderNo[String((a as any)?.orderNo || '').trim()] || null) as any;
-        const pb = (orderProfitByOrderNo[String((b as any)?.orderNo || '').trim()] || null) as any;
+        const pa = (orderProfitByOrderNo[String((a as Record<string, unknown>)?.orderNo || '').trim()] || null) as Record<string, unknown>;
+        const pb = (orderProfitByOrderNo[String((b as Record<string, unknown>)?.orderNo || '').trim()] || null) as Record<string, unknown>;
         return getProcessingTotalCost(pa, getBaseQty(pa, a)) - getProcessingTotalCost(pb, getBaseQty(pb, b));
       },
     },
@@ -926,7 +930,7 @@ const ShipmentReconciliationList: React.FC = () => {
       width: 120,
       align: 'right' as const,
       render: (_: any, record: ShipmentReconciliation) => {
-        const orderNo = String((record as any)?.orderNo || '').trim();
+        const orderNo = String((record as Record<string, unknown>)?.orderNo || '').trim();
         const p = orderNo ? orderProfitByOrderNo[orderNo] : null;
         const v = getProfitByFormula(p, record);
         const n = toNumberOrNull(v) ?? 0;
@@ -934,8 +938,8 @@ const ShipmentReconciliationList: React.FC = () => {
         return <span style={{ color, fontWeight: 600 }}>{n.toFixed(2)}</span>;
       },
       sorter: (a: any, b: any) => {
-        const pa = (orderProfitByOrderNo[String((a as any)?.orderNo || '').trim()] || null) as any;
-        const pb = (orderProfitByOrderNo[String((b as any)?.orderNo || '').trim()] || null) as any;
+        const pa = (orderProfitByOrderNo[String((a as Record<string, unknown>)?.orderNo || '').trim()] || null) as Record<string, unknown>;
+        const pb = (orderProfitByOrderNo[String((b as Record<string, unknown>)?.orderNo || '').trim()] || null) as Record<string, unknown>;
         return getProfitByFormula(pa, a) - getProfitByFormula(pb, b);
       },
     },
@@ -945,7 +949,7 @@ const ShipmentReconciliationList: React.FC = () => {
       key: 'unitPrice',
       width: 100,
       align: 'right' as const,
-      render: (value: any) => Number(value || 0).toFixed(2),
+      render: (value: unknown) => Number(value || 0).toFixed(2),
     },
     {
       title: '总金额(元)',
@@ -953,14 +957,14 @@ const ShipmentReconciliationList: React.FC = () => {
       key: 'totalAmount',
       width: 120,
       align: 'right' as const,
-      render: (value: any) => Number(value || 0).toFixed(2),
+      render: (value: unknown) => Number(value || 0).toFixed(2),
     },
     {
       title: '对账日期',
       dataIndex: 'reconciliationDate',
       key: 'reconciliationDate',
       width: 120,
-      render: (value: any) => formatDateTime(value),
+      render: (value: unknown) => formatDateTime(value),
     },
     {
       title: '状态',
@@ -1167,11 +1171,11 @@ const ShipmentReconciliationList: React.FC = () => {
             allowFixedColumns
             onRow={(record) => {
               return {
-                onClick: (e: any) => {
+                onClick: (e: unknown) => {
                   if (ignoreRowClick(e)) return;
                   openMaterialDetail(record);
                 },
-              } as any;
+              } as Record<string, unknown>;
             }}
             rowSelection={{
               selectedRowKeys,
@@ -1227,9 +1231,9 @@ const ShipmentReconciliationList: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                 <h3 className="section-title" style={{ marginBottom: 0, fontWeight: 600 }}>扣款项</h3>
                 <Space wrap>
-                  <Tag color="blue">总金额：{Number((currentRecon as any)?.totalAmount || 0).toFixed(2)} 元</Tag>
-                  <Tag color="orange">扣款：{Number((currentRecon as any)?.deductionAmount || 0).toFixed(2)} 元</Tag>
-                  <Tag color="green">最终金额：{Number((currentRecon as any)?.finalAmount || 0).toFixed(2)} 元</Tag>
+                  <Tag color="blue">总金额：{Number((currentRecon as Record<string, unknown>)?.totalAmount || 0).toFixed(2)} 元</Tag>
+                  <Tag color="orange">扣款：{Number((currentRecon as Record<string, unknown>)?.deductionAmount || 0).toFixed(2)} 元</Tag>
+                  <Tag color="green">最终金额：{Number((currentRecon as Record<string, unknown>)?.finalAmount || 0).toFixed(2)} 元</Tag>
                 </Space>
               </div>
 
@@ -1243,9 +1247,9 @@ const ShipmentReconciliationList: React.FC = () => {
                       width: 180,
                       render: (_: any, record: DeductionItem, index: number) => (
                         <Input
-                          value={String((record as any)?.deductionType || '')}
+                          value={String((record as Record<string, unknown>)?.deductionType || '')}
                           placeholder="例如：质量扣款"
-                          disabled={String((currentRecon as any)?.status || '') === 'paid'}
+                          disabled={String((currentRecon as Record<string, unknown>)?.status || '') === 'paid'}
                           onChange={(e) => {
                             const v = e.target.value;
                             setDeductionItems((prev) => {
@@ -1265,11 +1269,11 @@ const ShipmentReconciliationList: React.FC = () => {
                       align: 'right' as const,
                       render: (_: any, record: DeductionItem, index: number) => (
                         <InputNumber
-                          value={Number((record as any)?.deductionAmount || 0)}
+                          value={Number((record as Record<string, unknown>)?.deductionAmount || 0)}
                           min={0}
                           step={0.01}
                           style={{ width: '100%' }}
-                          disabled={String((currentRecon as any)?.status || '') === 'paid'}
+                          disabled={String((currentRecon as Record<string, unknown>)?.status || '') === 'paid'}
                           onChange={(v) => {
                             const n = typeof v === 'number' ? v : Number(v);
                             setDeductionItems((prev) => {
@@ -1287,9 +1291,9 @@ const ShipmentReconciliationList: React.FC = () => {
                       key: 'description',
                       render: (_: any, record: DeductionItem, index: number) => (
                         <Input
-                          value={String((record as any)?.description || '')}
+                          value={String((record as Record<string, unknown>)?.description || '')}
                           placeholder="可选"
-                          disabled={String((currentRecon as any)?.status || '') === 'paid'}
+                          disabled={String((currentRecon as Record<string, unknown>)?.status || '') === 'paid'}
                           onChange={(e) => {
                             const v = e.target.value;
                             setDeductionItems((prev) => {
@@ -1309,7 +1313,7 @@ const ShipmentReconciliationList: React.FC = () => {
                         <Button
                           type="link"
                           danger
-                          disabled={String((currentRecon as any)?.status || '') === 'paid'}
+                          disabled={String((currentRecon as Record<string, unknown>)?.status || '') === 'paid'}
                           onClick={() => setDeductionItems((prev) => prev.filter((_, i) => i !== index))}
                         >
                           删除
@@ -1333,12 +1337,12 @@ const ShipmentReconciliationList: React.FC = () => {
               <div style={{ marginTop: 12, display: 'flex', gap: 8, justifyContent: 'space-between', flexWrap: 'wrap' }}>
                 <Button
                   type="dashed"
-                  disabled={String((currentRecon as any)?.status || '') === 'paid'}
+                  disabled={String((currentRecon as Record<string, unknown>)?.status || '') === 'paid'}
                   onClick={() =>
                     setDeductionItems((prev) => [
                       ...prev,
                       {
-                        reconciliationId: String((currentRecon as any)?.id || '').trim(),
+                        reconciliationId: String((currentRecon as Record<string, unknown>)?.id || '').trim(),
                         deductionType: '',
                         description: '',
                         deductionAmount: 0,
@@ -1350,9 +1354,9 @@ const ShipmentReconciliationList: React.FC = () => {
                 </Button>
                 <Space wrap>
                   <Button
-                    onClick={() => fetchDeductionItems(String((currentRecon as any)?.id || '').trim())}
+                    onClick={() => fetchDeductionItems(String((currentRecon as Record<string, unknown>)?.id || '').trim())}
                     loading={deductionLoading}
-                    disabled={!String((currentRecon as any)?.id || '').trim()}
+                    disabled={!String((currentRecon as Record<string, unknown>)?.id || '').trim()}
                   >
                     刷新
                   </Button>
@@ -1360,7 +1364,7 @@ const ShipmentReconciliationList: React.FC = () => {
                     type="primary"
                     onClick={saveCurrentDeductionItems}
                     loading={deductionSaving}
-                    disabled={String((currentRecon as any)?.status || '') === 'paid' || !String((currentRecon as any)?.id || '').trim()}
+                    disabled={String((currentRecon as Record<string, unknown>)?.status || '') === 'paid' || !String((currentRecon as Record<string, unknown>)?.id || '').trim()}
                   >
                     保存扣款项
                   </Button>
@@ -1377,7 +1381,7 @@ const ShipmentReconciliationList: React.FC = () => {
                   onClick={async () => {
                     try {
                       const res = await updateFinanceReconciliationStatus(String(currentRecon.id || ''), 'verified');
-                      const result = res as any;
+                      const result = res as Record<string, unknown>;
                       if (result.code === 200) {
                         message.success('已验证');
                         setVisible(false);
@@ -1397,7 +1401,7 @@ const ShipmentReconciliationList: React.FC = () => {
                   onClick={async () => {
                     try {
                       const res = await updateFinanceReconciliationStatus(String(currentRecon.id || ''), 'approved');
-                      const result = res as any;
+                      const result = res as Record<string, unknown>;
                       if (result.code === 200) {
                         message.success('已批准');
                         setVisible(false);
@@ -1417,7 +1421,7 @@ const ShipmentReconciliationList: React.FC = () => {
                   onClick={async () => {
                     try {
                       const res = await updateFinanceReconciliationStatus(String(currentRecon.id || ''), 'paid');
-                      const result = res as any;
+                      const result = res as Record<string, unknown>;
                       if (result.code === 200) {
                         message.success('已付款');
                         setVisible(false);
@@ -1438,7 +1442,7 @@ const ShipmentReconciliationList: React.FC = () => {
                   onClick={async () => {
                     try {
                       const res = await updateFinanceReconciliationStatus(String(currentRecon.id || ''), 'rejected');
-                      const result = res as any;
+                      const result = res as Record<string, unknown>;
                       if (result.code === 200) {
                         message.success('已拒绝');
                         setVisible(false);
@@ -1477,22 +1481,27 @@ const ShipmentReconciliationList: React.FC = () => {
         scaleWithViewport
       >
         <ResizableModalFlex style={{ gap: 12 }}>
-          <Card size="small" className="mb-sm" loading={materialDetailLoading}>
-            <Space wrap>
-              <Tag color="blue">订单号：{String((materialDetailProfit as any)?.order?.orderNo || '').trim() || '-'}</Tag>
-              <Tag>款号：{String((materialDetailProfit as any)?.order?.styleNo || '').trim() || '-'}</Tag>
-              <Tag>款名：{String((materialDetailProfit as any)?.order?.styleName || '').trim() || '-'}</Tag>
-              <Tag>入库数量：{toNumberOrNull((materialDetailProfit as any)?.order?.warehousingQuantity) ?? 0}</Tag>
-              <Tag color="green">面辅料总成本：{toMoney2(getMaterialTotalCost(materialDetailProfit))}</Tag>
-            </Space>
-          </Card>
+          <ModalHeaderCard isMobile={isMobile}>
+            <ModalPrimaryField
+              label="订单号"
+              value={String((materialDetailProfit as Record<string, unknown>)?.order?.orderNo || '').trim() || '-'}
+            />
+            <ModalFieldRow gap={24}>
+              <ModalField label="款号" value={String((materialDetailProfit as Record<string, unknown>)?.order?.styleNo || '').trim() || '-'} />
+              <ModalField label="款名" value={String((materialDetailProfit as Record<string, unknown>)?.order?.styleName || '').trim() || '-'} />
+            </ModalFieldRow>
+            <ModalFieldGrid columns={2}>
+              <ModalField label="入库数量" value={toNumberOrNull((materialDetailProfit as Record<string, unknown>)?.order?.warehousingQuantity) ?? 0} valueColor="#0891b2" />
+              <ModalField label="面辅料总成本" value={toMoney2(getMaterialTotalCost(materialDetailProfit))} valueColor="#059669" />
+            </ModalFieldGrid>
+          </ModalHeaderCard>
 
           <ResizableModalFlexFill ref={materialDetailTableWrapRef}>
             <Collapse
               accordion={false}
               size="small"
               items={materialGroups.map((g) => {
-                const data = (g.items || []) as any[];
+                const data = (g.items || []) as Record<string, unknown>[];
                 const groupAmount = sumMaterialCostFromItems(data);
                 return {
                   key: g.key,
@@ -1505,7 +1514,7 @@ const ShipmentReconciliationList: React.FC = () => {
                           dataIndex: 'materialName',
                           key: 'materialName',
                           ellipsis: true,
-                          render: (v: any) => String(v || '').trim() || '-',
+                          render: (v: unknown) => String(v || '').trim() || '-',
                         },
                         {
                           title: '单价(元)',
@@ -1513,7 +1522,7 @@ const ShipmentReconciliationList: React.FC = () => {
                           key: 'unitPrice',
                           width: 110,
                           align: 'right' as const,
-                          render: (v: any) => {
+                          render: (v: unknown) => {
                             const n = toNumberOrNull(v);
                             return n == null ? '-' : n.toFixed(2);
                           },
@@ -1525,7 +1534,7 @@ const ShipmentReconciliationList: React.FC = () => {
                           key: 'arrivedQuantity',
                           width: 110,
                           align: 'right' as const,
-                          render: (v: any) => {
+                          render: (v: unknown) => {
                             const n = toNumberOrNull(v);
                             return n == null ? '-' : String(n);
                           },
@@ -1550,8 +1559,8 @@ const ShipmentReconciliationList: React.FC = () => {
                           },
                         },
                       ]}
-                      dataSource={data as any}
-                      rowKey={(r: any) => {
+                      dataSource={data as Record<string, unknown>}
+                      rowKey={(r: Record<string, unknown>) => {
                         const id = String(r?.id || '').trim();
                         if (id) return id;
                         const purchaseNo = String(r?.purchaseNo || '').trim();
@@ -1562,7 +1571,7 @@ const ShipmentReconciliationList: React.FC = () => {
                       }}
                       pagination={false}
                       expandable={{
-                        expandedRowRender: (r: any) => {
+                        expandedRowRender: (r: Record<string, unknown>) => {
                           const purchaseNo = String(r?.purchaseNo || '').trim();
                           const materialCode = String(r?.materialCode || '').trim();
                           const specifications = String(r?.specifications || '').trim();
@@ -1580,7 +1589,7 @@ const ShipmentReconciliationList: React.FC = () => {
                             </div>
                           );
                         },
-                        rowExpandable: (r: any) =>
+                        rowExpandable: (r: Record<string, unknown>) =>
                           Boolean(String(r?.purchaseNo || '').trim() || String(r?.materialCode || '').trim()),
                       }}
                       scroll={{ x: 'max-content', y: materialDetailTableScrollY }}

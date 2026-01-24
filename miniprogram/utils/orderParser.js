@@ -7,7 +7,7 @@
  */
 
 function toNumberSafe(val) {
-  if (val === null || val === undefined) return 0;
+  if (val === null || val === undefined) {return 0;}
   const n = Number(val);
   return isNaN(n) ? 0 : n;
 }
@@ -18,10 +18,10 @@ function toNumberSafe(val) {
  * @returns {Array} SKU明细列表 [{color, size, quantity}]
  */
 function parseProductionOrderLines(order) {
-  if (!order) return [];
+  if (!order) {return [];}
 
   // 1. 尝试从 orderDetails 解析
-  let detailsRaw = order.orderDetails;
+  const detailsRaw = order.orderDetails;
   let parsed = null;
 
   if (detailsRaw != null && String(detailsRaw).trim()) {
@@ -64,7 +64,7 @@ function parseProductionOrderLines(order) {
     .map(normalizeLine)
     .filter(l => {
       // 过滤无效行：必须有颜色或尺码，且数量>0
-      if (!l.color || !l.size) return false;
+      if (!l.color || !l.size) {return false;}
       return l.quantity > 0;
     });
 

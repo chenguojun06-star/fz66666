@@ -1,18 +1,20 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Button, Card, Input, Select, Space, Tag, Form, Row, Col, InputNumber, Upload, message, Segmented, Dropdown, Collapse, Tabs, Modal, Tooltip } from 'antd';
+import { Button, Card, Input, Select, Space, Tag, Form, Row, Col, InputNumber, Upload, message, Segmented, Dropdown, Collapse, Tabs, Modal, Tooltip, DatePicker } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, SearchOutlined, EyeOutlined, EditOutlined, UploadOutlined, QuestionCircleOutlined, DownloadOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
-import { QRCodeCanvas } from 'qrcode.react';
+import QRCodeBox from '../../components/common/QRCodeBox';
 import Layout from '../../components/Layout';
 import ResizableModal from '../../components/common/ResizableModal';
 import ResizableTable from '../../components/common/ResizableTable';
+import QuickEditModal from '../../components/common/QuickEditModal';
 import RowActions from '../../components/common/RowActions';
-import { MaterialPurchase as MaterialPurchaseType, MaterialQueryParams, MaterialDatabase, MaterialDatabaseQueryParams } from '../../types/production';
+import SortableColumnTitle from '../../components/common/SortableColumnTitle';
+import { MaterialPurchase as MaterialPurchaseType, MaterialQueryParams, MaterialDatabase, MaterialDatabaseQueryParams, ProductionOrder } from '../../types/production';
 import api, { parseProductionOrderLines, sortSizeNames, unwrapApiData, useProductionOrderFrozenCache } from '../../utils/api';
 import { formatDateTime } from '../../utils/datetime';
 import { getMaterialTypeCategory, getMaterialTypeLabel, getMaterialTypeSortKey, normalizeMaterialType } from '../../utils/materialType';
-import { StyleAttachmentsButton, StyleCoverThumb } from '../../components/StyleAssets';
+import { ProductionOrderHeader, StyleAttachmentsButton, StyleCoverThumb } from '../../components/StyleAssets';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { isSupervisorOrAboveUser, useAuth } from '../../utils/authContext';
 import { useSync } from '../../utils/syncManager';
@@ -29,6 +31,7 @@ const PURCHASE_QUERY_STORAGE_KEY = 'MaterialPurchase.purchaseQueryParams';
 const MATERIAL_DB_QUERY_STORAGE_KEY = 'MaterialPurchase.materialDatabaseQueryParams';
 
 const MaterialPurchase: React.FC = () => {
+  const [messageApi, contextHolder] = message.useMessage();
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -43,6 +46,8 @@ const MaterialPurchase: React.FC = () => {
       const cached = sessionStorage.getItem(ACTIVE_TAB_STORAGE_KEY);
       if (cached === 'purchase' || cached === 'materialDatabase') return cached;
     } catch {
+      // Intentionally empty
+      // 忽略错误
     }
     return 'purchase';
   });
@@ -61,21 +66,31 @@ const MaterialPurchase: React.FC = () => {
       if (!raw) return base;
       const parsed = JSON.parse(raw);
       if (!parsed || typeof parsed !== 'object') return base;
-      const page = Number((parsed as any).page);
-      const pageSize = Number((parsed as any).pageSize);
-      const materialType = (parsed as any).materialType;
+      const page = Number((parsed as Record<string, unknown>).page);
+      const pageSize = Number((parsed as Record<string, unknown>).pageSize);
+      const materialType = (parsed as Record<string, unknown>).materialType;
       return {
         ...base,
-        ...(parsed as any),
+        ...(parsed as Record<string, unknown>),
         page: Number.isFinite(page) && page > 0 ? Math.floor(page) : base.page,
         pageSize: Number.isFinite(pageSize) && pageSize > 0 ? Math.floor(pageSize) : base.pageSize,
         materialType: typeof materialType === 'string' ? materialType : base.materialType,
       };
     } catch {
+      // Intentionally empty
+      // 忽略错误
       return base;
     }
   });
   const [form] = Form.useForm();
+
+  const [sortField, setSortField] = useState<string>('createTime');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  const handleSort = (field: string, order: 'asc' | 'desc') => {
+    setSortField(field);
+    setSortOrder(order);
+  };
 
   // 真实数据状态
   const [purchaseList, setPurchaseList] = useState<MaterialPurchaseType[]>([]);
@@ -92,46 +107,26 @@ const MaterialPurchase: React.FC = () => {
   const [returnConfirmForm] = Form.useForm();
   const [returnResetForm] = Form.useForm();
 
-  const [detailOrder, setDetailOrder] = useState<any>(null);
+  // 快速编辑状态
+  const [quickEditVisible, setQuickEditVisible] = useState(false);
+  const [quickEditRecord, setQuickEditRecord] = useState<MaterialPurchaseType | null>(null);
+  const [quickEditSaving, setQuickEditSaving] = useState(false);
+
+  const [purchaseSortField, setPurchaseSortField] = useState<string>('createTime');
+  const [purchaseSortOrder, setPurchaseSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  const handlePurchaseSort = (field: string, order: 'asc' | 'desc') => {
+    setPurchaseSortField(field);
+    setPurchaseSortOrder(order);
+  };
+
+  const [detailOrder, setDetailOrder] = useState<unknown>(null);
   const [detailOrderLines, setDetailOrderLines] = useState<Array<{ color: string; size: string; quantity: number }>>([]);
   const [detailPurchases, setDetailPurchases] = useState<MaterialPurchaseType[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
 
   const frozenOrderIds = useMemo(() => {
-    return Array.from(new Set(purchaseList.map((r: any) => String(r?.orderId || '').trim()).filter(Boolean)));
-  }, [purchaseList]);
-
-  // 按订单分组采购单数据
-  const groupedPurchaseList = useMemo(() => {
-    const groups = new Map<string, MaterialPurchaseType[]>();
-
-    purchaseList.forEach((item) => {
-      const orderNo = String(item.orderNo || '').trim();
-      if (!orderNo) return;
-
-      if (!groups.has(orderNo)) {
-        groups.set(orderNo, []);
-      }
-      groups.get(orderNo)!.push(item);
-    });
-
-    // 转换为表格需要的数据格式
-    return Array.from(groups.entries()).map(([orderNo, items]) => {
-      const first = items[0];
-      return {
-        key: orderNo,
-        orderNo,
-        styleNo: first.styleNo,
-        styleName: first.styleName,
-        styleId: first.styleId,
-        styleCover: first.styleCover,
-        orderId: (first as any).orderId,
-        purchaseCount: items.length,
-        totalQuantity: items.reduce((sum, item) => sum + (Number(item.purchaseQuantity) || 0), 0),
-        totalArrived: items.reduce((sum, item) => sum + (Number(item.arrivedQuantity) || 0), 0),
-        children: items,
-      };
-    });
+    return Array.from(new Set(purchaseList.map((r: Record<string, unknown>) => String(r?.orderNo || '').trim()).filter(Boolean)));
   }, [purchaseList]);
 
   const orderFrozen = useProductionOrderFrozenCache(frozenOrderIds, { rule: 'status', acceptAnyData: true });
@@ -155,15 +150,17 @@ const MaterialPurchase: React.FC = () => {
       if (!raw) return base;
       const parsed = JSON.parse(raw);
       if (!parsed || typeof parsed !== 'object') return base;
-      const page = Number((parsed as any).page);
-      const pageSize = Number((parsed as any).pageSize);
+      const page = Number((parsed as Record<string, unknown>).page);
+      const pageSize = Number((parsed as Record<string, unknown>).pageSize);
       return {
         ...base,
-        ...(parsed as any),
+        ...(parsed as Record<string, unknown>),
         page: Number.isFinite(page) && page > 0 ? Math.floor(page) : base.page,
         pageSize: Number.isFinite(pageSize) && pageSize > 0 ? Math.floor(pageSize) : base.pageSize,
       };
     } catch {
+      // Intentionally empty
+      // 忽略错误
       return base;
     }
   });
@@ -177,6 +174,8 @@ const MaterialPurchase: React.FC = () => {
     try {
       sessionStorage.setItem(ACTIVE_TAB_STORAGE_KEY, activeTabKey);
     } catch {
+      // Intentionally empty
+      // 忽略错误
     }
   }, [activeTabKey]);
 
@@ -185,6 +184,8 @@ const MaterialPurchase: React.FC = () => {
     try {
       sessionStorage.setItem(PURCHASE_QUERY_STORAGE_KEY, JSON.stringify(queryParams));
     } catch {
+      // Intentionally empty
+      // 忽略错误
     }
   }, [queryParams]);
 
@@ -193,6 +194,8 @@ const MaterialPurchase: React.FC = () => {
     try {
       sessionStorage.setItem(MATERIAL_DB_QUERY_STORAGE_KEY, JSON.stringify(materialDatabaseQueryParams));
     } catch {
+      // Intentionally empty
+      // 忽略错误
     }
   }, [materialDatabaseQueryParams]);
 
@@ -224,11 +227,11 @@ const MaterialPurchase: React.FC = () => {
   const detailSizePairs = useMemo(() => buildSizePairs(detailOrderLines), [detailOrderLines]);
 
   const postReturnConfirm = async (payload: { purchaseId: string; confirmerId?: string; confirmerName: string; returnQuantity: number }) => {
-    return api.post<any>('/production/purchase/return-confirm', payload);
+    return api.post<{ code: number; message: string; data: boolean }>('/production/purchase/return-confirm', payload);
   };
 
   const postReturnConfirmReset = async (payload: { purchaseId: string; reason?: string }) => {
-    return api.post<any>('/production/purchase/return-confirm/reset', payload);
+    return api.post<{ code: number; message: string; data: boolean }>('/production/purchase/return-confirm/reset', payload);
   };
 
   const openReturnConfirm = (targets: MaterialPurchaseType[]) => {
@@ -268,8 +271,8 @@ const MaterialPurchase: React.FC = () => {
         '到货数量': `${item.arrivedQuantity || 0} ${item.unit || ''}`,
         '待到数量': `${Math.max(0, (item.purchaseQuantity || 0) - (item.arrivedQuantity || 0))} ${item.unit || ''}`,
         '单价': Number.isFinite(Number(item.unitPrice)) ? `¥${Number(item.unitPrice).toFixed(2)}` : '-',
-        '总金额': Number.isFinite(Number(item.purchaseQuantity) * Number(item.unitPrice)) 
-          ? `¥${(Number(item.purchaseQuantity) * Number(item.unitPrice)).toFixed(2)}` 
+        '总金额': Number.isFinite(Number(item.purchaseQuantity) * Number(item.unitPrice))
+          ? `¥${(Number(item.purchaseQuantity) * Number(item.unitPrice)).toFixed(2)}`
           : '-',
         '状态': getStatusConfig(item.status).text,
         '领取人': item.receiverName || '-',
@@ -308,7 +311,7 @@ const MaterialPurchase: React.FC = () => {
       // 导出文件
       XLSX.writeFile(wb, fileName);
       message.success('导出成功');
-    } catch (error: any) {
+    } catch (error: unknown) {
       message.error(error?.message || '导出失败');
       console.error('Export error:', error);
     }
@@ -323,11 +326,11 @@ const MaterialPurchase: React.FC = () => {
       items: list.map((t) => ({
         purchaseId: String(t.id),
         materialName: t.materialName,
-        purchaseQuantity: Number((t as any).purchaseQuantity || 0) || 0,
-        arrivedQuantity: Number((t as any).arrivedQuantity || 0) || 0,
+        purchaseQuantity: Number((t as Record<string, unknown>).purchaseQuantity || 0) || 0,
+        arrivedQuantity: Number((t as Record<string, unknown>).arrivedQuantity || 0) || 0,
         returnQuantity:
-          Number((t as any).returnQuantity || 0)
-          || (Number((t as any).arrivedQuantity || 0) || Number((t as any).purchaseQuantity || 0) || 0),
+          Number((t as Record<string, unknown>).returnQuantity || 0)
+          || (Number((t as Record<string, unknown>).arrivedQuantity || 0) || Number((t as Record<string, unknown>).purchaseQuantity || 0) || 0),
       })),
     });
   }, [returnConfirmForm, returnConfirmOpen, returnConfirmTargets]);
@@ -354,11 +357,11 @@ const MaterialPurchase: React.FC = () => {
     setDetailLoading(true);
     try {
       const [orderRes, purchaseRes] = await Promise.all([
-        api.get<any>('/production/order/list', { params: { page: 1, pageSize: 1, orderNo: no } }),
-        api.get<any>('/production/purchase/list', { params: { page: 1, pageSize: 200, orderNo: no, materialType: '', status: '' } }),
+        api.get<{ code: number; data: { records: ProductionOrder[]; total: number } }>('/production/order/list', { params: { page: 1, pageSize: 1, orderNo: no } }),
+        api.get<{ code: number; data: { records: MaterialPurchaseType[]; total: number } }>('/production/purchase/list', { params: { page: 1, pageSize: 200, orderNo: no, materialType: '', status: '' } }),
       ]);
 
-      const orderResult = orderRes as any;
+      const orderResult = orderRes;
       const orderRecord = orderResult?.code === 200 ? (orderResult?.data?.records?.[0] || null) : null;
       setDetailOrder(orderRecord);
       const parsedLines = parseProductionOrderLines(orderRecord);
@@ -375,16 +378,17 @@ const MaterialPurchase: React.FC = () => {
         }
       }
 
-      const purchaseResult = purchaseRes as any;
-      const records = purchaseResult?.code === 200 ? (purchaseResult?.data?.records || []) : [];
+      const records = purchaseRes?.code === 200 ? (purchaseRes?.data?.records || []) : [];
       const sorted = [...records].sort((a: any, b: any) => {
         const ka = getMaterialTypeSortKey(a?.materialType);
         const kb = getMaterialTypeSortKey(b?.materialType);
         if (ka !== kb) return ka.localeCompare(kb);
         return String(a?.materialName || '').localeCompare(String(b?.materialName || ''), 'zh');
       });
-      setDetailPurchases(sorted as any);
+      setDetailPurchases(sorted as Record<string, unknown>);
     } catch {
+      // Intentionally empty
+      // 忽略错误
       setDetailOrder(null);
       setDetailOrderLines([]);
       setDetailPurchases([]);
@@ -405,13 +409,12 @@ const MaterialPurchase: React.FC = () => {
   const fetchMaterialPurchaseList = async () => {
     setLoading(true);
     try {
-      const response = await api.get<any>('/production/purchase/list', { params: queryParams });
-      const result = response as any;
-      if (result.code === 200) {
-        setPurchaseList(result.data.records || []);
-        setTotal(result.data.total || 0);
+      const response = await api.get<{ code: number; data: { records: MaterialPurchaseType[]; total: number } }>('/production/purchase/list', { params: queryParams });
+      if (response.code === 200) {
+        setPurchaseList(response.data.records || []);
+        setTotal(response.data.total || 0);
       } else {
-        message.error(result.message || '获取物料采购列表失败');
+        message.error(response.message || '获取物料采购列表失败');
       }
     } catch (error) {
       message.error('获取物料采购列表失败');
@@ -435,8 +438,8 @@ const MaterialPurchase: React.FC = () => {
     'material-purchase-list',
     async () => {
       try {
-        const response = await api.get<any>('/production/purchase/list', { params: queryParams });
-        const result = response as any;
+        const response = await api.get<{ code: number; data: { records: MaterialPurchaseType[]; total: number } }>('/production/purchase/list', { params: queryParams });
+        const result = response as Record<string, unknown>;
         if (result.code === 200) {
           return {
             records: result.data.records || [],
@@ -483,13 +486,13 @@ const MaterialPurchase: React.FC = () => {
   const fetchMaterialDatabaseList = async () => {
     setMaterialDatabaseLoading(true);
     try {
-      const res = await api.get<any>('/material/database/list', { params: materialDatabaseQueryParams });
-      const data = unwrapApiData<any>(res as any, '获取面辅料数据库列表失败');
+      const res = await api.get<{ code: number; data: { records: MaterialDatabase[]; total: number } }>('/material/database/list', { params: materialDatabaseQueryParams });
+      const data = unwrapApiData<unknown>(res as Record<string, unknown>, '获取面辅料数据库列表失败');
       const records = Array.isArray(data?.records) ? data.records : [];
       setMaterialDatabaseList(records as MaterialDatabase[]);
       setMaterialDatabaseTotal(Number(data?.total || 0) || 0);
     } catch (error) {
-      message.error((error as any)?.message || '获取面辅料数据库列表失败');
+      message.error((error as Record<string, unknown>)?.message || '获取面辅料数据库列表失败');
     } finally {
       setMaterialDatabaseLoading(false);
     }
@@ -506,7 +509,7 @@ const MaterialPurchase: React.FC = () => {
     return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
   };
 
-  const toDateTimeLocalValue = (v: any) => {
+  const toDateTimeLocalValue = (v: unknown) => {
     const s = String(v || '').trim();
     if (!s) return undefined;
 
@@ -534,7 +537,7 @@ const MaterialPurchase: React.FC = () => {
     const formData = new FormData();
     formData.append('file', file);
     try {
-      const url = String(unwrapApiData<string>(await api.post<any>('/common/upload', formData), '上传失败') || '').trim();
+      const url = String(unwrapApiData<string>(await api.post<{ code: number; message: string; data: string }>('/common/upload', formData), '上传失败') || '').trim();
       if (!url) {
         message.error('上传失败');
         return;
@@ -542,7 +545,7 @@ const MaterialPurchase: React.FC = () => {
       materialDatabaseForm.setFieldsValue({ image: url });
       setMaterialDatabaseImageFiles(buildImageFileList(url));
       message.success('上传成功');
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(String(e?.message || '上传失败'));
     }
   };
@@ -565,11 +568,11 @@ const MaterialPurchase: React.FC = () => {
     } else if (material) {
       const formattedMaterial = {
         ...material,
-        createTime: toDateTimeLocalValue((material as any)?.createTime),
-        completedTime: toDateTimeLocalValue((material as any)?.completedTime),
+        createTime: toDateTimeLocalValue((material as Record<string, unknown>)?.createTime),
+        completedTime: toDateTimeLocalValue((material as Record<string, unknown>)?.completedTime),
       };
       materialDatabaseForm.setFieldsValue(formattedMaterial);
-      setMaterialDatabaseImageFiles(buildImageFileList((material as any)?.image));
+      setMaterialDatabaseImageFiles(buildImageFileList((material as Record<string, unknown>)?.image));
     } else {
       materialDatabaseForm.resetFields();
       setMaterialDatabaseImageFiles([]);
@@ -592,8 +595,8 @@ const MaterialPurchase: React.FC = () => {
       const values = await materialDatabaseForm.validateFields();
       const status = String(values?.status || 'pending').trim();
 
-      const { createTime: _createTime, completedTime: _completedTime, ...rest } = values as any;
-      const payload: any = {
+      const { createTime: _createTime, completedTime: _completedTime, ...rest } = values as Record<string, unknown>;
+      const payload: unknown = {
         ...rest,
         materialType: normalizeMaterialType(values?.materialType || 'accessory'),
         status: status === 'completed' ? 'completed' : 'pending',
@@ -601,10 +604,10 @@ const MaterialPurchase: React.FC = () => {
       };
 
       if (materialDatabaseMode === 'create') {
-        unwrapApiData<boolean>(await api.post<any>('/material/database', payload), '新增失败');
+        unwrapApiData<boolean>(await api.post<{ code: number; message: string; data: boolean }>('/material/database', payload), '新增失败');
       } else {
         unwrapApiData<boolean>(
-          await api.put<any>('/material/database', { ...payload, id: currentMaterial?.id }),
+          await api.put<{ code: number; message: string; data: boolean }>('/material/database', { ...payload, id: currentMaterial?.id }),
           '保存失败'
         );
       }
@@ -614,8 +617,8 @@ const MaterialPurchase: React.FC = () => {
       fetchMaterialDatabaseList();
     } catch (error) {
       // 处理表单验证错误
-      if ((error as any).errorFields) {
-        const firstError = (error as any).errorFields[0];
+      if ((error as Record<string, unknown>).errorFields) {
+        const firstError = (error as Record<string, unknown>).errorFields[0];
         message.error(firstError.errors[0] || '表单验证失败');
       } else {
         message.error((error as Error).message || '保存失败');
@@ -626,7 +629,7 @@ const MaterialPurchase: React.FC = () => {
   };
 
   const handleMaterialDatabaseDelete = async (record: MaterialDatabase) => {
-    const id = String((record as any)?.id || '').trim();
+    const id = String((record as Record<string, unknown>)?.id || '').trim();
     if (!id) {
       message.error('记录缺少ID');
       return;
@@ -638,7 +641,7 @@ const MaterialPurchase: React.FC = () => {
       cancelText: '取消',
       okButtonProps: { danger: true },
       onOk: async () => {
-        unwrapApiData<boolean>(await api.delete<any>(`/material/database/${encodeURIComponent(id)}`), '删除失败');
+        unwrapApiData<boolean>(await api.delete<{ code: number; message: string; data: boolean }>(`/material/database/${encodeURIComponent(id)}`), '删除失败');
         message.success('删除成功');
         fetchMaterialDatabaseList();
       },
@@ -646,7 +649,7 @@ const MaterialPurchase: React.FC = () => {
   };
 
   const handleMaterialDatabaseComplete = async (record: MaterialDatabase) => {
-    const id = String((record as any)?.id || '').trim();
+    const id = String((record as Record<string, unknown>)?.id || '').trim();
     if (!id) {
       message.error('记录缺少ID');
       return;
@@ -657,7 +660,7 @@ const MaterialPurchase: React.FC = () => {
       okText: '确认',
       cancelText: '取消',
       onOk: async () => {
-        unwrapApiData<boolean>(await api.post<any>(`/material/database/${encodeURIComponent(id)}/complete`), '操作失败');
+        unwrapApiData<boolean>(await api.post<{ code: number; message: string; data: boolean }>(`/material/database/${encodeURIComponent(id)}/complete`), '操作失败');
         message.success('已标记为已完成');
         fetchMaterialDatabaseList();
       },
@@ -665,7 +668,7 @@ const MaterialPurchase: React.FC = () => {
   };
 
   const handleMaterialDatabaseReturn = async (record: MaterialDatabase) => {
-    const id = String((record as any)?.id || '').trim();
+    const id = String((record as Record<string, unknown>)?.id || '').trim();
     if (!id) {
       message.error('记录缺少ID');
       return;
@@ -696,7 +699,7 @@ const MaterialPurchase: React.FC = () => {
           return Promise.reject(new Error('请输入退回原因'));
         }
         unwrapApiData<boolean>(
-          await api.post<any>(`/material/database/${encodeURIComponent(id)}/return`, { reason: String(reason).trim() }),
+          await api.post<{ code: number; message: string; data: boolean }>(`/material/database/${encodeURIComponent(id)}/return`, { reason: String(reason).trim() }),
           '操作失败'
         );
         message.success('已退回为可编辑状态');
@@ -738,7 +741,7 @@ const MaterialPurchase: React.FC = () => {
     openDialog(mode, purchase);
   };
 
-  const escapeHtml = (v: any) => {
+  const escapeHtml = (v: unknown) => {
     const s = String(v ?? '');
     return s
       .replace(/&/g, '&amp;')
@@ -784,7 +787,7 @@ const MaterialPurchase: React.FC = () => {
       `;
     };
 
-    const buildRows = (list: any[]) => {
+    const buildRows = (list: unknown[]) => {
       const rows = list.map((r) => {
         const typeLabel = getMaterialTypeLabel(r?.materialType);
         const purchaseQty = Number(r?.purchaseQuantity) || 0;
@@ -792,7 +795,7 @@ const MaterialPurchase: React.FC = () => {
         const unitPrice = Number(r?.unitPrice);
         const amountText = Number.isFinite(unitPrice) ? (arrivedQty * unitPrice).toFixed(2) : '-';
         const unitPriceText = Number.isFinite(unitPrice) ? unitPrice.toFixed(2) : '-';
-        const statusText = getStatusConfig(r?.status as any).text;
+        const statusText = getStatusConfig(r?.status as Record<string, unknown>).text;
         const returnTime = Number(r?.returnConfirmed || 0) === 1 ? (formatDateTime(r?.returnConfirmTime) || '-') : '-';
         const returnBy = Number(r?.returnConfirmed || 0) === 1 ? (String(r?.returnConfirmerName || '').trim() || '-') : '-';
         return `
@@ -899,15 +902,15 @@ const MaterialPurchase: React.FC = () => {
 
         <div class="section">
           <h3>面料</h3>
-          ${buildRows(group.fabric as any)}
+          ${buildRows(group.fabric as Record<string, unknown>)}
         </div>
         <div class="section">
           <h3>里料</h3>
-          ${buildRows(group.lining as any)}
+          ${buildRows(group.lining as Record<string, unknown>)}
         </div>
         <div class="section">
           <h3>辅料</h3>
-          ${buildRows(group.accessory as any)}
+          ${buildRows(group.accessory as Record<string, unknown>)}
         </div>
       </body>
       </html>
@@ -930,6 +933,8 @@ const MaterialPurchase: React.FC = () => {
           w.focus();
           w.print();
         } catch {
+          // Intentionally empty
+          // 忽略错误
           null;
         }
       }, 250);
@@ -989,7 +994,7 @@ const MaterialPurchase: React.FC = () => {
       };
       const response = await api.post('/production/purchase', payload);
 
-      const result = response as any;
+      const result = response as Record<string, unknown>;
       if (result.code === 200) {
         message.success('新增采购单成功');
         // 关闭弹窗
@@ -1001,8 +1006,8 @@ const MaterialPurchase: React.FC = () => {
       }
     } catch (error) {
       // 处理表单验证错误
-      if ((error as any).errorFields) {
-        const firstError = (error as any).errorFields[0];
+      if ((error as Record<string, unknown>).errorFields) {
+        const firstError = (error as Record<string, unknown>).errorFields[0];
         message.error(firstError.errors[0] || '表单验证失败');
       } else {
         message.error((error as Error).message || '保存失败');
@@ -1020,11 +1025,11 @@ const MaterialPurchase: React.FC = () => {
       completed: { text: '全部到货', color: 'success' },
       cancelled: { text: '已取消', color: 'error' }
     };
-    return (statusMap as any)[status] || { text: '未知', color: 'default' };
+    return (statusMap as Record<string, unknown>)[status] || { text: '未知', color: 'default' };
   };
 
   const receivePurchaseTask = async (record: MaterialPurchaseType) => {
-    const id = String((record as any)?.id || '').trim();
+    const id = String((record as Record<string, unknown>)?.id || '').trim();
     if (!id) {
       message.error('采购任务缺少ID');
       return;
@@ -1037,12 +1042,12 @@ const MaterialPurchase: React.FC = () => {
     }
 
     try {
-      const res = await api.post<any>('/production/purchase/receive', {
+      const res = await api.post<{ code: number; message: string; data: boolean }>('/production/purchase/receive', {
         purchaseId: id,
         receiverId: String(user?.id || '').trim(),
         receiverName: String(receiverName).trim(),
       });
-      const result = res as any;
+      const result = res as Record<string, unknown>;
       if (result.code === 200) {
         message.success('已领取采购任务');
         fetchMaterialPurchaseList();
@@ -1051,7 +1056,7 @@ const MaterialPurchase: React.FC = () => {
         return;
       }
       message.error(result.message || '领取失败');
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(e?.message || '领取失败');
     }
   };
@@ -1074,7 +1079,7 @@ const MaterialPurchase: React.FC = () => {
         const returnQuantity = Number(it?.returnQuantity);
         if (!purchaseId) continue;
         const res = await postReturnConfirm({ purchaseId, confirmerId, confirmerName, returnQuantity });
-        const result = res as any;
+        const result = res as Record<string, unknown>;
         if (result?.code !== 200) {
           throw new Error(result?.message || '回料确认失败');
         }
@@ -1087,7 +1092,7 @@ const MaterialPurchase: React.FC = () => {
       fetchMaterialPurchaseList();
       const no = String(currentPurchase?.orderNo || '').trim();
       if (visible && dialogMode === 'view' && no) loadDetailByOrderNo(no);
-    } catch (e: any) {
+    } catch (e: unknown) {
       if (e?.errorFields?.length) return;
       message.error(e?.message || '回料确认失败');
     } finally {
@@ -1104,13 +1109,13 @@ const MaterialPurchase: React.FC = () => {
     try {
       setReturnResetSubmitting(true);
       const values = await returnResetForm.validateFields();
-      const purchaseId = String((returnResetTarget as any)?.id || '').trim();
+      const purchaseId = String((returnResetTarget as Record<string, unknown>)?.id || '').trim();
       if (!purchaseId) {
         message.error('采购任务缺少ID');
         return;
       }
       const res = await postReturnConfirmReset({ purchaseId, reason: String(values?.reason || '').trim() });
-      const result = res as any;
+      const result = res as Record<string, unknown>;
       if (result?.code !== 200) {
         throw new Error(result?.message || '退回失败');
       }
@@ -1121,7 +1126,7 @@ const MaterialPurchase: React.FC = () => {
       fetchMaterialPurchaseList();
       const no = String(currentPurchase?.orderNo || '').trim();
       if (visible && dialogMode === 'view' && no) loadDetailByOrderNo(no);
-    } catch (e: any) {
+    } catch (e: unknown) {
       if (e?.errorFields?.length) return;
       message.error(e?.message || '退回失败');
     } finally {
@@ -1129,20 +1134,60 @@ const MaterialPurchase: React.FC = () => {
     }
   };
 
+  // 快速编辑保存
+  const handleQuickEditSave = async (values: { remarks: string; expectedShipDate: string | null }) => {
+    setQuickEditSaving(true);
+    try {
+      await api.put('/production/purchase/quick-edit', {
+        id: quickEditRecord?.id,
+        remark: values.remarks,
+        expectedShipDate: values.expectedShipDate,
+      });
+      messageApi.success('保存成功');
+      setQuickEditVisible(false);
+      setQuickEditRecord(null);
+      fetchMaterialPurchaseList();
+    } catch (error: any) {
+      messageApi.error(error?.response?.data?.message || '保存失败');
+      throw error;
+    } finally {
+      setQuickEditSaving(false);
+    }
+  };
+
   const confirmReturnPurchaseTask = async (record: MaterialPurchaseType) => {
-    const id = String((record as any)?.id || '').trim();
+    const id = String((record as Record<string, unknown>)?.id || '').trim();
     if (!id) {
       message.error('采购任务缺少ID');
       return;
     }
 
-    if (Number((record as any)?.returnConfirmed || 0) === 1) {
+    if (Number((record as Record<string, unknown>)?.returnConfirmed || 0) === 1) {
       message.info('该采购任务已回料确认，如需调整请主管退回处理');
       return;
     }
 
     openReturnConfirm([record]);
   };
+
+  // 添加排序逻辑
+  const sortedPurchaseList = useMemo(() => {
+    const sorted = [...purchaseList];
+    sorted.sort((a: any, b: any) => {
+      const aVal = a[sortField];
+      const bVal = b[sortField];
+
+      // 时间字段排序
+      if (sortField === 'createTime' || sortField === 'returnConfirmTime') {
+        const aTime = aVal ? new Date(aVal).getTime() : 0;
+        const bTime = bVal ? new Date(bVal).getTime() : 0;
+        return sortOrder === 'desc' ? bTime - aTime : aTime - bTime;
+      }
+
+      return 0;
+    });
+    return sorted;
+  }, [purchaseList, sortField, sortOrder]);
 
   // 物料采购表格列定义（明细视图）
   const purchaseColumns: ColumnsType<MaterialPurchaseType> = [
@@ -1164,8 +1209,8 @@ const MaterialPurchase: React.FC = () => {
       render: (v: any, record: MaterialPurchaseType) => (
         <a
           onClick={() => {
-            if ((record as any).orderId) {
-              navigate(`/production/material/${(record as any).orderId}`);
+            if ((record as Record<string, unknown>).orderId) {
+              navigate(`/production/material/${(record as Record<string, unknown>).orderId}`);
             }
           }}
           style={{ cursor: 'pointer', color: '#1890ff' }}
@@ -1189,7 +1234,7 @@ const MaterialPurchase: React.FC = () => {
       render: (v: string) => (
         <Tag color={
           getMaterialTypeCategory(v) === 'accessory' ? 'purple' :
-          getMaterialTypeCategory(v) === 'lining' ? 'cyan' : 'geekblue'
+            getMaterialTypeCategory(v) === 'lining' ? 'cyan' : 'geekblue'
         }>
           {getMaterialTypeLabel(v)}
         </Tag>
@@ -1264,17 +1309,78 @@ const MaterialPurchase: React.FC = () => {
       dataIndex: 'status',
       key: 'status',
       width: 110,
-      render: (status: string) => {
-        const config = getStatusConfig(status);
+      render: (status: MaterialPurchaseType['status'] | string) => {
+        const config = getStatusConfig(status as MaterialPurchaseType['status']);
         return <Tag color={config.color}>{config.text}</Tag>;
       },
     },
     {
-      title: '领取人',
+      title: <SortableColumnTitle
+        title="下单时间"
+        sortField={sortField}
+        fieldName="createTime"
+        sortOrder={sortOrder}
+        onSort={handleSort}
+        align="left"
+      />,
+      dataIndex: 'createTime',
+      key: 'createTime',
+      width: 160,
+      render: (v: string) => v ? new Date(v).toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      }) : '-',
+    },
+    {
+      title: <SortableColumnTitle title="预计出货" field="expectedShipDate" onSort={handlePurchaseSort} currentField={purchaseSortField} currentOrder={purchaseSortOrder} />,
+      dataIndex: 'expectedShipDate',
+      key: 'expectedShipDate',
+      width: 120,
+      render: (v: any) => v ? formatDateTime(v) : '-',
+    },
+    {
+      title: '采购时间',
+      dataIndex: 'receivedTime',
+      key: 'receivedTime',
+      width: 160,
+      render: (v: string) => v ? new Date(v).toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      }) : '-',
+    },
+    {
+      title: '采购完成',
+      dataIndex: 'actualArrivalDate',
+      key: 'actualArrivalDate',
+      width: 160,
+      render: (v: string) => v ? new Date(v).toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      }) : '-',
+    },
+    {
+      title: '采购员',
       dataIndex: 'receiverName',
       key: 'receiverName',
       width: 100,
       ellipsis: true,
+    },
+    {
+      title: '备注',
+      dataIndex: 'remark',
+      key: 'remark',
+      width: 150,
+      ellipsis: true,
+      render: (v: string) => <span title={v}>{v || '-'}</span>,
     },
     {
       title: '操作',
@@ -1290,6 +1396,15 @@ const MaterialPurchase: React.FC = () => {
               icon: <EyeOutlined />,
               onClick: () => void openDialogSafe('view', record),
               primary: true,
+            },
+            {
+              key: 'quickEdit',
+              label: '编辑',
+              icon: <EditOutlined />,
+              onClick: () => {
+                setQuickEditRecord(record);
+                setQuickEditVisible(true);
+              },
             },
           ]}
         />
@@ -1345,7 +1460,7 @@ const MaterialPurchase: React.FC = () => {
       dataIndex: 'materialType',
       key: 'materialType',
       width: 120,
-      render: (v: any) => {
+      render: (v: unknown) => {
         const type = String(v || '').trim();
         const category = getMaterialTypeCategory(type);
         const text = getMaterialTypeLabel(type);
@@ -1379,7 +1494,7 @@ const MaterialPurchase: React.FC = () => {
       key: 'unitPrice',
       width: 100,
       align: 'right' as const,
-      render: (value: any) => {
+      render: (value: unknown) => {
         const n = Number(value);
         return Number.isFinite(n) ? n.toFixed(2) : '-';
       },
@@ -1396,7 +1511,7 @@ const MaterialPurchase: React.FC = () => {
       dataIndex: 'status',
       key: 'status',
       width: 100,
-      render: (v: any) => {
+      render: (v: unknown) => {
         const st = String(v || 'pending').trim().toLowerCase();
         if (st === 'completed') return <Tag color="green">已完成</Tag>;
         return <Tag color="orange">待完成</Tag>;
@@ -1408,7 +1523,7 @@ const MaterialPurchase: React.FC = () => {
       dataIndex: 'completedTime',
       key: 'completedTime',
       width: 160,
-      render: (v: any) => {
+      render: (v: unknown) => {
         const raw = String(v ?? '').trim();
         if (!raw) return '-';
         return formatDateTime(v) || '-';
@@ -1419,7 +1534,7 @@ const MaterialPurchase: React.FC = () => {
       dataIndex: 'createTime',
       key: 'createTime',
       width: 160,
-      render: (v: any) => {
+      render: (v: unknown) => {
         const raw = String(v ?? '').trim();
         if (!raw) return '-';
         return formatDateTime(v) || '-';
@@ -1433,7 +1548,7 @@ const MaterialPurchase: React.FC = () => {
       render: (_: any, record: MaterialDatabase) => {
         const isCompleted = record.status === 'completed';
         const moreItems = (() => {
-          const items: any[] = [];
+          const items: unknown[] = [];
           if (!isCompleted) {
             items.push({
               key: 'complete',
@@ -1475,7 +1590,7 @@ const MaterialPurchase: React.FC = () => {
                   {
                     key: 'more',
                     label: '更多',
-                    children: moreItems as any,
+                    children: moreItems as Record<string, unknown>,
                   },
                 ]
                 : []),
@@ -1488,6 +1603,7 @@ const MaterialPurchase: React.FC = () => {
 
   return (
     <Layout>
+      {contextHolder}
       <div>
         <Card className="page-card">
           {/* 页签切换 */}
@@ -1533,8 +1649,8 @@ const MaterialPurchase: React.FC = () => {
                         />
                       </div>
                       <Space wrap>
-                        <Button 
-                          icon={<DownloadOutlined />} 
+                        <Button
+                          icon={<DownloadOutlined />}
                           onClick={handleExport}
                           disabled={loading || !purchaseList || purchaseList.length === 0}
                         >
@@ -1545,14 +1661,14 @@ const MaterialPurchase: React.FC = () => {
                           if (!targetOrderNo) return;
 
                           try {
-                            const orderRes = await api.get<any>('/production/order/list', {
+                            const orderRes = await api.get<{ code: number; data: { records: ProductionOrder[]; total: number } }>('/production/order/list', {
                               params: {
                                 page: 1,
                                 pageSize: 1,
                                 orderNo: targetOrderNo,
                               }
                             });
-                            const orderResult = orderRes as any;
+                            const orderResult = orderRes;
                             const records = orderResult?.data?.records || [];
                             if (orderResult.code !== 200 || !records.length) {
                               message.error(orderResult?.message || '未找到该订单');
@@ -1572,19 +1688,18 @@ const MaterialPurchase: React.FC = () => {
                             setPreviewOrderId(String(order.id));
                             setQueryParams(prev => ({ ...prev, orderNo: String(order.orderNo || targetOrderNo), page: 1 }));
 
-                            const previewRes = await api.get<any>('/production/purchase/demand/preview', {
+                            const previewRes = await api.get<{ code: number; data: MaterialPurchaseType[] }>('/production/purchase/demand/preview', {
                               params: { orderId: order.id }
                             });
-                            const previewResult = previewRes as any;
-                            if (previewResult.code === 200) {
-                              const preview = previewResult.data || [];
+                            if (previewRes.code === 200) {
+                              const preview = previewRes.data || [];
                               setPreviewList(preview as MaterialPurchaseType[]);
                               openDialog('preview');
                               message.success(`已生成 ${preview.length} 条采购单预览，确认后保存生成`);
                             } else {
-                              message.error(previewResult.message || '生成采购单预览失败');
+                              message.error(previewRes.message || '生成采购单预览失败');
                             }
-                          } catch (e: any) {
+                          } catch (e: unknown) {
                             message.error(e?.message || '生成采购单失败');
                           }
                         }}>
@@ -1697,7 +1812,7 @@ const MaterialPurchase: React.FC = () => {
                     {/* 表格区 */}
                     <ResizableTable
                       columns={purchaseColumns}
-                      dataSource={purchaseList}
+                      dataSource={sortedPurchaseList}
                       rowKey="id"
                       loading={loading}
                       scroll={{ x: 'max-content', y: isMobile ? 360 : 560 }}
@@ -1814,7 +1929,7 @@ const MaterialPurchase: React.FC = () => {
                     <ResizableTable
                       columns={materialDatabaseColumns}
                       dataSource={materialDatabaseList}
-                      rowKey={(r: any) => String(r?.id || r?.materialCode || '')}
+                      rowKey={(r: Record<string, unknown>) => String(r?.id || r?.materialCode || '')}
                       loading={materialDatabaseLoading}
                       scroll={{ x: 'max-content', y: isMobile ? 360 : 560 }}
                       size={isMobile ? 'small' : 'middle'}
@@ -1869,7 +1984,7 @@ const MaterialPurchase: React.FC = () => {
                     try {
                       setSubmitLoading(true);
                       for (const t of targets) {
-                        await api.post<any>('/production/purchase/receive', {
+                        await api.post<{ code: number; message: string; data: boolean }>('/production/purchase/receive', {
                           purchaseId: String(t.id),
                           receiverId: String(user?.id || '').trim(),
                           receiverName: String(receiverName).trim(),
@@ -1880,6 +1995,8 @@ const MaterialPurchase: React.FC = () => {
                       const no = String(currentPurchase?.orderNo || '').trim();
                       if (no) loadDetailByOrderNo(no);
                     } catch {
+                      // Intentionally empty
+                      // 忽略错误
                       message.error('领取失败');
                     } finally {
                       setSubmitLoading(false);
@@ -1896,7 +2013,7 @@ const MaterialPurchase: React.FC = () => {
                     const targets = detailPurchases.filter((p) =>
                       (p.status === 'received' || p.status === 'partial' || p.status === 'completed')
                       && String(p.id || '').trim()
-                      && Number((p as any)?.returnConfirmed || 0) !== 1
+                      && Number((p as Record<string, unknown>)?.returnConfirmed || 0) !== 1
                     );
                     if (!targets.length) {
                       message.info('没有可回料确认的采购任务');
@@ -1954,7 +2071,7 @@ const MaterialPurchase: React.FC = () => {
                           orderId: previewOrderId,
                           overwrite: false,
                         });
-                        const result = res as any;
+                        const result = res as Record<string, unknown>;
                         if (result.code === 200) {
                           message.success('生成采购单成功');
                           closeDialog();
@@ -2001,7 +2118,7 @@ const MaterialPurchase: React.FC = () => {
                     key: 'orderNo',
                     width: 120,
                     ellipsis: true,
-                    render: (v: any) => (
+                    render: (v: unknown) => (
                       <span className="order-no-compact">{String(v || '').trim() || '-'}</span>
                     ),
                   },
@@ -2032,7 +2149,7 @@ const MaterialPurchase: React.FC = () => {
                     dataIndex: 'materialType',
                     key: 'materialType',
                     width: 120,
-                    render: (v: any) => {
+                    render: (v: unknown) => {
                       const type = String(v || '').trim();
                       const category = getMaterialTypeCategory(type);
                       const text = getMaterialTypeLabel(type);
@@ -2085,100 +2202,27 @@ const MaterialPurchase: React.FC = () => {
           ) : (
             dialogMode === 'view' ? (
               <div className="purchase-detail-view">
-                <Row gutter={16} className="purchase-detail-top">
-                  <Col xs={24} md={8} lg={6}>
-                    <div className="purchase-detail-right">
-                      {String(currentPurchase?.styleCover || '').trim() ? (
-                        <img src={String(currentPurchase?.styleCover || '').trim()} alt="" className="purchase-detail-cover" />
-                      ) : (
-                        <div className="purchase-detail-cover purchase-detail-cover-empty" />
-                      )}
-                      {currentPurchase?.orderNo && (
-                        <div style={{ marginTop: 12, textAlign: 'center' }}>
-                          <QRCodeCanvas
-                            value={JSON.stringify({
-                              type: 'order',
-                              orderNo: currentPurchase.orderNo,
-                              styleNo: currentPurchase.styleNo,
-                              styleName: currentPurchase.styleName,
-                              purchaseCount: detailPurchases.length
-                            })}
-                            size={120}
-                            level="M"
-                            includeMargin
-                          />
-                          <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>订单号</div>
-                          <div style={{ fontSize: 10, color: '#999', marginTop: 2 }}>{currentPurchase.orderNo}</div>
-                        </div>
-                      )}
-                    </div>
-                  </Col>
-                  <Col xs={24} md={16} lg={18}>
-                    <div className="purchase-detail-left">
-                      <Row gutter={16}>
-                        <Col xs={24} sm={12} lg={8}>
-                          <div className="purchase-detail-field">
-                            <div className="purchase-detail-label">订单号</div>
-                            <div className="purchase-detail-value order-no-compact">{currentPurchase?.orderNo || '-'}</div>
-                          </div>
-                        </Col>
-                        <Col xs={24} sm={12} lg={8}>
-                          <div className="purchase-detail-field">
-                            <div className="purchase-detail-label">采购单号</div>
-                            <div className="purchase-detail-value">{currentPurchase?.purchaseNo || '-'}</div>
-                          </div>
-                        </Col>
-                        <Col xs={24} sm={12} lg={8}>
-                          <div className="purchase-detail-field">
-                            <div className="purchase-detail-label">款号</div>
-                            <div className="purchase-detail-value">{currentPurchase?.styleNo || '-'}</div>
-                          </div>
-                        </Col>
-                        <Col xs={24} sm={12} lg={8}>
-                          <div className="purchase-detail-field">
-                            <div className="purchase-detail-label">款名</div>
-                            <div className="purchase-detail-value">{currentPurchase?.styleName || '-'}</div>
-                          </div>
-                        </Col>
-                        <Col xs={24} sm={12} lg={8}>
-                          <div className="purchase-detail-field">
-                            <div className="purchase-detail-label">颜色</div>
-                            <div className="purchase-detail-value">{String(detailOrder?.color || '').trim() || buildColorSummary(detailOrderLines) || '-'}</div>
-                          </div>
-                        </Col>
-                      </Row>
-
-                      <div className="purchase-detail-size-block">
-                        <div className="purchase-detail-size-table-wrap">
-                          <table className="purchase-detail-size-table">
-                            <tbody>
-                              <tr>
-                                <th className="purchase-detail-size-th">码数</th>
-                                {detailSizePairs.length
-                                  ? detailSizePairs.map((x) => (
-                                    <td key={x.size} className="purchase-detail-size-td">{x.size}</td>
-                                  ))
-                                  : <td className="purchase-detail-size-td">-</td>
-                                }
-                                <td className="purchase-detail-size-total-cell" />
-                              </tr>
-                              <tr>
-                                <th className="purchase-detail-size-th">数量</th>
-                                {detailSizePairs.length
-                                  ? detailSizePairs.map((x) => (
-                                    <td key={x.size} className="purchase-detail-size-td">{x.quantity}</td>
-                                  ))
-                                  : <td className="purchase-detail-size-td">-</td>
-                                }
-                                <td className="purchase-detail-size-total-cell">总下单数：{getOrderQtyTotal(detailOrderLines)}</td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </div>
-                  </Col>
-                </Row>
+                <ProductionOrderHeader
+                  orderNo={currentPurchase?.orderNo}
+                  styleNo={currentPurchase?.styleNo}
+                  styleName={currentPurchase?.styleName}
+                  styleId={(currentPurchase as Record<string, unknown>)?.styleId}
+                  styleCover={currentPurchase?.styleCover}
+                  color={String(detailOrder?.color || '').trim() || buildColorSummary(detailOrderLines) || ''}
+                  sizeItems={detailSizePairs.map((x) => ({ size: x.size, quantity: x.quantity }))}
+                  totalQuantity={getOrderQtyTotal(detailOrderLines)}
+                  qrCodeValue={currentPurchase?.orderNo
+                    ? JSON.stringify({
+                      type: 'order',
+                      orderNo: currentPurchase.orderNo,
+                      styleNo: currentPurchase.styleNo,
+                      styleName: currentPurchase.styleName,
+                      purchaseCount: detailPurchases.length,
+                    })
+                    : ''}
+                  coverSize={160}
+                  qrSize={120}
+                />
 
                 <Card
                   size="small"
@@ -2200,7 +2244,7 @@ const MaterialPurchase: React.FC = () => {
                             const res = await api.post('/production/purchase/batch-receive', {
                               purchaseIds: targets.map((t) => t.id),
                             });
-                            const result = res as any;
+                            const result = res as Record<string, unknown>;
                             if (result.code === 200) {
                               message.success(`成功领取${targets.length}个采购任务`);
                               const no = String(currentPurchase?.orderNo || '').trim();
@@ -2222,7 +2266,7 @@ const MaterialPurchase: React.FC = () => {
                         onClick={() => {
                           const targets = detailPurchases.filter((p) =>
                             (p.status === 'received' || p.status === 'partial' || p.status === 'completed') &&
-                            Number((p as any)?.returnConfirmed || 0) !== 1 &&
+                            Number((p as Record<string, unknown>)?.returnConfirmed || 0) !== 1 &&
                             String(p?.id || '').trim()
                           );
                           if (!targets.length) {
@@ -2254,7 +2298,7 @@ const MaterialPurchase: React.FC = () => {
                       label: `${sec.title}（${sec.data.length}）`,
                       children: (
                         <ResizableTable
-                          rowKey={(r) => String((r as any).id || `${(r as any).purchaseNo}-${(r as any).materialType}-${(r as any).materialCode}`)}
+                          rowKey={(r) => String((r as Record<string, unknown>).id || `${(r as Record<string, unknown>).purchaseNo}-${(r as Record<string, unknown>).materialType}-${(r as Record<string, unknown>).materialCode}`)}
                           dataSource={sec.data}
                           pagination={false}
                           size={isMobile ? 'small' : 'middle'}
@@ -2266,21 +2310,19 @@ const MaterialPurchase: React.FC = () => {
                               width: 100,
                               align: 'center' as const,
                               render: (_: any, record: any) => {
-                                const qrValue = JSON.stringify({
+                                const qrValue = {
                                   purchaseNo: record.purchaseNo,
                                   materialCode: record.materialCode,
                                   materialName: record.materialName,
                                   materialType: record.materialType,
                                   id: record.id
-                                });
+                                };
                                 return (
-                                  <div style={{ padding: 4 }}>
-                                    <QRCodeCanvas
-                                      value={qrValue}
-                                      size={60}
-                                      level="M"
-                                    />
-                                  </div>
+                                  <QRCodeBox
+                                    value={qrValue}
+                                    size={60}
+                                    variant="default"
+                                  />
                                 );
                               },
                             },
@@ -2289,7 +2331,7 @@ const MaterialPurchase: React.FC = () => {
                               dataIndex: 'materialType',
                               key: 'materialType',
                               width: 110,
-                              render: (v: any) => {
+                              render: (v: unknown) => {
                                 const type = String(v || '').trim();
                                 const category = getMaterialTypeCategory(type);
                                 const text = getMaterialTypeLabel(type);
@@ -2297,19 +2339,19 @@ const MaterialPurchase: React.FC = () => {
                                 return <Tag color={color}>{text}</Tag>;
                               },
                             },
-                            { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 120, render: (v: any) => v || '-' },
-                            { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 180, ellipsis: true, render: (v: any) => v || '-' },
-                            { title: '规格', dataIndex: 'specifications', key: 'specifications', width: 140, ellipsis: true, render: (v: any) => v || '-' },
-                            { title: '单位', dataIndex: 'unit', key: 'unit', width: 80, render: (v: any) => v || '-' },
-                            { title: '采购数量', dataIndex: 'purchaseQuantity', key: 'purchaseQuantity', width: 110, align: 'right' as const, render: (v: any) => Number(v) || 0 },
-                            { title: '到货数量', dataIndex: 'arrivedQuantity', key: 'arrivedQuantity', width: 110, align: 'right' as const, render: (v: any) => Number(v) || 0 },
+                            { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 120, render: (v: unknown) => v || '-' },
+                            { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 180, ellipsis: true, render: (v: unknown) => v || '-' },
+                            { title: '规格', dataIndex: 'specifications', key: 'specifications', width: 140, ellipsis: true, render: (v: unknown) => v || '-' },
+                            { title: '单位', dataIndex: 'unit', key: 'unit', width: 80, render: (v: unknown) => v || '-' },
+                            { title: '采购数量', dataIndex: 'purchaseQuantity', key: 'purchaseQuantity', width: 110, align: 'right' as const, render: (v: unknown) => Number(v) || 0 },
+                            { title: '到货数量', dataIndex: 'arrivedQuantity', key: 'arrivedQuantity', width: 110, align: 'right' as const, render: (v: unknown) => Number(v) || 0 },
                             {
                               title: '单价(元)',
                               dataIndex: 'unitPrice',
                               key: 'unitPrice',
                               width: 110,
                               align: 'right' as const,
-                              render: (v: any) => {
+                              render: (v: unknown) => {
                                 const n = Number(v);
                                 return Number.isFinite(n) ? n.toFixed(2) : '-';
                               },
@@ -2328,7 +2370,7 @@ const MaterialPurchase: React.FC = () => {
                                 return Number.isFinite(n) ? n.toFixed(2) : '-';
                               },
                             },
-                            { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 140, ellipsis: true, render: (v: any) => v || '-' },
+                            { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 140, ellipsis: true, render: (v: unknown) => v || '-' },
                             {
                               title: '状态',
                               dataIndex: 'status',
@@ -2340,13 +2382,20 @@ const MaterialPurchase: React.FC = () => {
                               },
                             },
                             {
-                              title: '回料时间',
+                              title: <SortableColumnTitle
+                                title="回料时间"
+                                sortField={sortField}
+                                fieldName="returnConfirmTime"
+                                sortOrder={sortOrder}
+                                onSort={handleSort}
+                                align="left"
+                              />,
                               dataIndex: 'returnConfirmTime',
                               key: 'returnConfirmTime',
                               width: 160,
                               render: (v: any, r: any) => (Number(r?.returnConfirmed || 0) === 1 ? (formatDateTime(v) || '-') : '-'),
                             },
-                            { title: '备注', dataIndex: 'remark', key: 'remark', width: 220, ellipsis: true, render: (v: any) => v || '-' },
+                            { title: '备注', dataIndex: 'remark', key: 'remark', width: 220, ellipsis: true, render: (v: unknown) => v || '-' },
                             {
                               title: '确认',
                               key: 'confirm',
@@ -2364,12 +2413,12 @@ const MaterialPurchase: React.FC = () => {
                                   <Button
                                     type="link"
                                     size="small"
-                                    disabled={!(record.status === 'received' || record.status === 'partial' || record.status === 'completed') || Number((record as any)?.returnConfirmed || 0) === 1}
+                                    disabled={!(record.status === 'received' || record.status === 'partial' || record.status === 'completed') || Number((record as Record<string, unknown>)?.returnConfirmed || 0) === 1}
                                     onClick={() => confirmReturnPurchaseTask(record)}
                                   >
-                                    {Number((record as any)?.returnConfirmed || 0) === 1 ? '已回料' : '回料确认'}
+                                    {Number((record as Record<string, unknown>)?.returnConfirmed || 0) === 1 ? '已回料' : '回料确认'}
                                   </Button>
-                                  {Number((record as any)?.returnConfirmed || 0) === 1 && (
+                                  {Number((record as Record<string, unknown>)?.returnConfirmed || 0) === 1 && (
                                     <Button
                                       type="link"
                                       size="small"
@@ -2393,7 +2442,7 @@ const MaterialPurchase: React.FC = () => {
                       <Collapse
                         size="small"
                         collapsible="icon"
-                        items={items as any}
+                        items={items as Record<string, unknown>}
                       />
                     );
                   })()}
@@ -2532,15 +2581,15 @@ const MaterialPurchase: React.FC = () => {
                 </thead>
                 <tbody>
                   {returnConfirmTargets.map((t, idx) => {
-                    const purchaseQty = Number((t as any)?.purchaseQuantity || 0) || 0;
-                    const arrivedQty = Number((t as any)?.arrivedQuantity || 0) || 0;
+                    const purchaseQty = Number((t as Record<string, unknown>)?.purchaseQuantity || 0) || 0;
+                    const arrivedQty = Number((t as Record<string, unknown>)?.arrivedQuantity || 0) || 0;
                     const max = arrivedQty > 0 ? arrivedQty : purchaseQty;
                     return (
-                      <tr key={String((t as any)?.id || idx)}>
+                      <tr key={String((t as Record<string, unknown>)?.id || idx)}>
                         <td style={{ padding: '8px 10px', borderBottom: '1px solid #f5f5f5' }}>
-                          <div style={{ fontWeight: 600, color: '#1f1f1f' }}>{String((t as any)?.materialName || '-')}</div>
-                          <div style={{ fontSize: 'var(--font-size-sm)', color: '#8c8c8c' }}>{String((t as any)?.materialCode || '')}</div>
-                          <Form.Item name={['items', idx, 'purchaseId']} initialValue={String((t as any)?.id || '')} hidden>
+                          <div style={{ fontWeight: 600, color: '#1f1f1f' }}>{String((t as Record<string, unknown>)?.materialName || '-')}</div>
+                          <div style={{ fontSize: 'var(--font-size-sm)', color: '#8c8c8c' }}>{String((t as Record<string, unknown>)?.materialCode || '')}</div>
+                          <Form.Item name={['items', idx, 'purchaseId']} initialValue={String((t as Record<string, unknown>)?.id || '')} hidden>
                             <Input />
                           </Form.Item>
                           <Form.Item name={['items', idx, 'purchaseQuantity']} initialValue={purchaseQty} hidden>
@@ -2555,7 +2604,7 @@ const MaterialPurchase: React.FC = () => {
                         <td style={{ padding: '8px 10px', borderBottom: '1px solid #f5f5f5', textAlign: 'right' }}>
                           <Form.Item
                             name={['items', idx, 'returnQuantity']}
-                            initialValue={Number((t as any)?.returnQuantity || 0) || (max || 0)}
+                            initialValue={Number((t as Record<string, unknown>)?.returnQuantity || 0) || (max || 0)}
                             style={{ margin: 0, display: 'inline-block' }}
                             rules={[
                               { required: true, message: '请输入实际回料数量' },
@@ -2802,6 +2851,21 @@ const MaterialPurchase: React.FC = () => {
             </Row>
           </Form>
         </ResizableModal>
+
+        {/* 快速编辑弹窗 */}
+        <QuickEditModal
+          visible={quickEditVisible}
+          loading={quickEditSaving}
+          initialValues={{
+            remark: quickEditRecord?.remark,
+            expectedShipDate: quickEditRecord?.expectedShipDate,
+          }}
+          onSave={handleQuickEditSave}
+          onCancel={() => {
+            setQuickEditVisible(false);
+            setQuickEditRecord(null);
+          }}
+        />
       </div>
     </Layout>
   );

@@ -6,7 +6,6 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
-import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.SKUService;
 import com.fashion.supplychain.production.service.ScanRecordService;
@@ -37,9 +36,6 @@ public class SKUServiceImpl implements SKUService {
 
     @Autowired
     private ScanRecordService scanRecordService;
-
-    @Autowired
-    private ScanRecordMapper scanRecordMapper;
 
     @Autowired
     private ProductionOrderService productionOrderService;
@@ -558,19 +554,7 @@ public class SKUServiceImpl implements SKUService {
                 return result;
             }
 
-            // 从数据库查询订单的工序配置
-            String progressWorkflowJson = null;
-            try {
-                Object obj = scanRecordService.getBaseMapper()
-                    .selectOne(new LambdaQueryWrapper<ScanRecord>()
-                        .eq(ScanRecord::getOrderNo, orderNo)
-                        .select(ScanRecord::getOrderNo)
-                        .last("limit 1"));
-                // 实际上需要查询ProductionOrder表，这里简化处理
-                log.debug("[SKUService] 从ScanRecord查询工序配置 - orderNo: {}", orderNo);
-            } catch (Exception e) {
-                log.debug("[SKUService] 查询工序配置异常", e);
-            }
+            log.debug("[SKUService] 工序配置读取未实现 - orderNo: {}", orderNo);
 
             // 返回示例数据（实际应该从ProductionOrder.progressWorkflowJson解析）
             return result;

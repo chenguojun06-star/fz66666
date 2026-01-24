@@ -166,7 +166,7 @@ class QRCodeParser {
    */
   _parseFeiNo(text) {
     const raw = (text || '').toString().trim();
-    if (!raw) return null;
+    if (!raw) {return null;}
 
     // 统一分隔符：将全角横线转为半角
     const normalized = raw.replace(/[\u2013\u2014]/g, '-');
@@ -178,7 +178,7 @@ class QRCodeParser {
       .filter((p) => p);
 
     // 至少需要3个部分：订单号-款号-颜色
-    if (parts.length < 3) return null;
+    if (parts.length < 3) {return null;}
 
     // 查找ST款号的位置
     const stIdx = this._findStyleIndex(parts);
@@ -202,7 +202,7 @@ class QRCodeParser {
     const stPrefix = 'ST';
     for (let i = 0; i < parts.length; i++) {
       const part = parts[i];
-      if (!part) continue;
+      if (!part) {continue;}
       if (String(part).toUpperCase().startsWith(stPrefix)) {
         return i;
       }
@@ -220,7 +220,7 @@ class QRCodeParser {
     const poPrefix = 'PO';
     for (let i = 0; i < parts.length; i++) {
       const part = parts[i];
-      if (!part) continue;
+      if (!part) {continue;}
       if (String(part).toUpperCase().startsWith(poPrefix)) {
         return i;
       }
@@ -237,12 +237,12 @@ class QRCodeParser {
    */
   _parseFeiNoByPosition(parts) {
     // 至少需要6个部分
-    if (parts.length < 6) return null;
+    if (parts.length < 6) {return null;}
 
     const orderNo = (parts[0] || '').trim();
     const styleNo = (parts[1] || '').trim();
 
-    if (!orderNo || !styleNo) return null;
+    if (!orderNo || !styleNo) {return null;}
 
     return {
       orderNo,
@@ -319,7 +319,7 @@ class QRCodeParser {
     };
 
     // 至少需要订单号和款号
-    if (!result.orderNo || !result.styleNo) return null;
+    if (!result.orderNo || !result.styleNo) {return null;}
 
     return result;
   }
@@ -337,7 +337,7 @@ class QRCodeParser {
   _parseJSON(raw) {
     try {
       const obj = JSON.parse(raw);
-      if (!obj || typeof obj !== 'object') return null;
+      if (!obj || typeof obj !== 'object') {return null;}
 
       // 检查是否为订单级别二维码
       if (obj.type === 'order' && obj.orderNo) {
@@ -391,7 +391,7 @@ class QRCodeParser {
    */
   _parseURLParams(raw) {
     const params = this._tryParseQueryParams(raw);
-    if (!params) return null;
+    if (!params) {return null;}
 
     const code = params.scanCode || params.code || params.qr || params.value;
     const qty = params.quantity || params.qty || params.num || params.count;
@@ -433,7 +433,7 @@ class QRCodeParser {
    * @returns {Object|null} 解析结果
    */
   _parseOrderNo(raw) {
-    if (!this.orderNoPattern.test(raw)) return null;
+    if (!this.orderNoPattern.test(raw)) {return null;}
 
     return {
       scanCode: raw,
@@ -455,7 +455,7 @@ class QRCodeParser {
    */
   _tryParseQueryParams(text) {
     const s = (text || '').toString().trim();
-    if (!s || !s.includes('=')) return null;
+    if (!s || !s.includes('=')) {return null;}
 
     // 移除开头的?或#
     const clean = s.replace(/^[?#]/, '');
@@ -464,7 +464,7 @@ class QRCodeParser {
     const out = {};
     for (const pair of pairs) {
       const [k, v] = pair.split('=').map((x) => decodeURIComponent(x).trim());
-      if (!k) continue;
+      if (!k) {continue;}
       out[k] = v;
     }
 
@@ -479,10 +479,10 @@ class QRCodeParser {
    */
   _parsePositiveInt(v) {
     const s = (v == null ? '' : String(v)).trim();
-    if (!/^\d{1,9}$/.test(s)) return null;
+    if (!/^\d{1,9}$/.test(s)) {return null;}
 
     const n = Number(s);
-    if (!Number.isFinite(n) || n <= 0) return null;
+    if (!Number.isFinite(n) || n <= 0) {return null;}
 
     return Math.floor(n);
   }
@@ -495,7 +495,7 @@ class QRCodeParser {
    */
   _parseQuantityFromText(text) {
     const s = (text || '').toString().trim();
-    if (!s) return null;
+    if (!s) {return null;}
 
     // 匹配数字
     // 修复: 增加安全检查，防止 s.match 报错
@@ -503,10 +503,10 @@ class QRCodeParser {
       return null;
     }
     const m = s.match(/\d+/);
-    if (!m) return null;
+    if (!m) {return null;}
 
     const n = Number(m[0]);
-    if (!Number.isFinite(n) || n <= 0) return null;
+    if (!Number.isFinite(n) || n <= 0) {return null;}
 
     return Math.floor(n);
   }

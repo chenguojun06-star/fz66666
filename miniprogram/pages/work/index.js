@@ -7,15 +7,15 @@ const reminderManager = require('../../utils/reminderManager');
 const { orderStatusText, qualityStatusText, scanResultText } = require('../../utils/orderStatusHelper');
 const { onDataRefresh, triggerDataRefresh, Events } = require('../../utils/eventBus');
 function toNumberSafe(val) {
-  if (val === null || val === undefined) return 0;
+  if (val === null || val === undefined) {return 0;}
   const n = Number(val);
   return isNaN(n) ? 0 : n;
 }
 
 function parseProductionOrderLines(order) {
-  if (!order) return [];
+  if (!order) {return [];}
 
-  let detailsRaw = order.orderDetails;
+  const detailsRaw = order.orderDetails;
   let parsed = null;
 
   if (detailsRaw != null && String(detailsRaw).trim()) {
@@ -46,7 +46,7 @@ function parseProductionOrderLines(order) {
       return { color, size, quantity };
     })
     .filter((l) => {
-      if (!l.color || !l.size) return false;
+      if (!l.color || !l.size) {return false;}
       return l.quantity > 0;
     });
 
@@ -90,7 +90,7 @@ function buildSizeMeta(order) {
   lines.forEach((line) => {
     const size = normalizeText(line && line.size);
     const qty = Number(line && line.quantity) || 0;
-    if (!size || qty <= 0) return;
+    if (!size || qty <= 0) {return;}
     total += qty;
     sizeMap.set(size, (sizeMap.get(size) || 0) + qty);
   });
@@ -148,25 +148,25 @@ const defaultNodes = [
 ];
 
 function clampPercent(value) {
-  if (Number.isNaN(value)) return 0;
+  if (Number.isNaN(value)) {return 0;}
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
 function getNodeIndexFromProgress(nodes, progress) {
-  if (!nodes || nodes.length <= 1) return 0;
+  if (!nodes || nodes.length <= 1) {return 0;}
   const idx = Math.round((clampPercent(progress) / 100) * (nodes.length - 1));
   return Math.max(0, Math.min(nodes.length - 1, idx));
 }
 
 function getProgressFromNodeIndex(nodes, index) {
-  if (!nodes || nodes.length <= 1) return 0;
+  if (!nodes || nodes.length <= 1) {return 0;}
   const idx = Math.max(0, Math.min(nodes.length - 1, index));
   return clampPercent((idx / (nodes.length - 1)) * 100);
 }
 
 function parseProgressNodes(raw) {
   const text = normalizeText(raw);
-  if (!text) return [];
+  if (!text) {return [];}
   try {
     const obj = JSON.parse(text);
     const nodesRaw = obj && Array.isArray(obj.nodes) ? obj.nodes : [];
@@ -241,8 +241,8 @@ Page({
 
   onShow() {
     const app = getApp();
-    if (app && typeof app.setTabSelected === 'function') app.setTabSelected(this, 1);
-    if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
+    if (app && typeof app.setTabSelected === 'function') {app.setTabSelected(this, 1);}
+    if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) {return;}
     try {
       const nextTab = wx.getStorageSync('work_active_tab');
       if (nextTab) {
@@ -316,11 +316,11 @@ Page({
 
   onTab(e) {
     const tab = e && e.currentTarget && e.currentTarget.dataset ? e.currentTarget.dataset.tab : '';
-    if (!tab || tab === this.data.activeTab) return;
+    if (!tab || tab === this.data.activeTab) {return;}
     this.setData({ activeTab: tab });
     // 切换标签页时强制重新加载订单
     const app = getApp();
-    if (app && typeof app.resetPagedList === 'function') app.resetPagedList(this, 'orders');
+    if (app && typeof app.resetPagedList === 'function') {app.resetPagedList(this, 'orders');}
     this.loadOrders(true);
   },
 
@@ -360,7 +360,7 @@ Page({
   },
 
   async submitBatchProgress() {
-    if (this.data.batchProgress.submitting) return;
+    if (this.data.batchProgress.submitting) {return;}
     const app = getApp();
     const ids = Array.isArray(this.data.batchProgress.selectedIds) ? this.data.batchProgress.selectedIds : [];
     if (!ids.length) {
@@ -409,12 +409,12 @@ Page({
         },
       });
 
-      if (app && typeof app.resetPagedList === 'function') app.resetPagedList(this, 'orders');
+      if (app && typeof app.resetPagedList === 'function') {app.resetPagedList(this, 'orders');}
       await this.loadOrders(true);
     } catch (e) {
-      if (e && e.type === 'auth') return;
-      if (app && typeof app.toastError === 'function') app.toastError(e, '更新失败');
-      else wx.showToast({ title: '更新失败', icon: 'none' });
+      if (e && e.type === 'auth') {return;}
+      if (app && typeof app.toastError === 'function') {app.toastError(e, '更新失败');}
+      else {wx.showToast({ title: '更新失败', icon: 'none' });}
     } finally {
       this.setData({ 'batchProgress.submitting': false });
     }
@@ -432,7 +432,7 @@ Page({
       },
       () => {
         const app = getApp();
-        if (app && typeof app.resetPagedList === 'function') app.resetPagedList(this, 'orders');
+        if (app && typeof app.resetPagedList === 'function') {app.resetPagedList(this, 'orders');}
         this.loadOrders(true);
       },
     );
@@ -441,7 +441,7 @@ Page({
 
   async openStepRollback(e) {
     const orderId = normalizeText(e && e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.id);
-    if (!orderId) return;
+    if (!orderId) {return;}
     const order = (this.data.orders.list || []).find((r) => normalizeText(r && r.id) === orderId);
     if (!order) {
       wx.showToast({ title: '未找到订单', icon: 'none' });
@@ -499,14 +499,14 @@ Page({
   },
 
   async submitStepRollback() {
-    if (this.data.rollbackStep.submitting) return;
+    if (this.data.rollbackStep.submitting) {return;}
     const app = getApp();
     const orderId = normalizeText(this.data.rollbackStep.orderId);
     const remark = normalizeText(this.data.rollbackStep.remark);
     const nextProgress = clampPercent(Number(this.data.rollbackStep.nextProgress) || 0);
     const nextProcessName = normalizeText(this.data.rollbackStep.nextProcessName) || '上一步';
 
-    if (!orderId) return;
+    if (!orderId) {return;}
     if (!remark) {
       wx.showToast({ title: '请填写问题点', icon: 'none' });
       return;
@@ -522,12 +522,12 @@ Page({
       });
       wx.showToast({ title: '回流成功', icon: 'success' });
       this.closeStepRollback();
-      if (app && typeof app.resetPagedList === 'function') app.resetPagedList(this, 'orders');
+      if (app && typeof app.resetPagedList === 'function') {app.resetPagedList(this, 'orders');}
       await this.loadOrders(true);
     } catch (e3) {
-      if (e3 && e3.type === 'auth') return;
-      if (app && typeof app.toastError === 'function') app.toastError(e3, '回流失败');
-      else wx.showToast({ title: '回流失败', icon: 'none' });
+      if (e3 && e3.type === 'auth') {return;}
+      if (app && typeof app.toastError === 'function') {app.toastError(e3, '回流失败');}
+      else {wx.showToast({ title: '回流失败', icon: 'none' });}
     } finally {
       this.setData({ 'rollbackStep.submitting': false });
     }
@@ -560,14 +560,14 @@ Page({
       onlyFromCamera: true,
       success: (res) => {
         const qr = res && res.result != null ? String(res.result).trim() : '';
-        if (!qr) return;
+        if (!qr) {return;}
         this.setData({ 'rollback.cuttingBundleQrCode': qr });
       },
     });
   },
 
   async submitRollback() {
-    if (this.data.rollback.submitting) return;
+    if (this.data.rollback.submitting) {return;}
     const app = getApp();
     const orderId = normalizeText(this.data.rollback.orderId);
     const cuttingBundleQrCode = normalizeText(this.data.rollback.cuttingBundleQrCode);
@@ -609,13 +609,13 @@ Page({
       });
       if (this.data.activeTab === 'warehousing') {
         const app2 = getApp();
-        if (app2 && typeof app2.resetPagedList === 'function') app2.resetPagedList(this, 'warehousing');
+        if (app2 && typeof app2.resetPagedList === 'function') {app2.resetPagedList(this, 'warehousing');}
         this.loadWarehousing(true);
       }
 
       // 无论在哪个标签页，都刷新订单列表，确保状态同步
       const app = getApp();
-      if (app && typeof app.resetPagedList === 'function') app.resetPagedList(this, 'orders');
+      if (app && typeof app.resetPagedList === 'function') {app.resetPagedList(this, 'orders');}
       await this.loadOrders(true);
 
       // 触发全局数据刷新事件
@@ -625,9 +625,9 @@ Page({
         bundleNo: this.data.rollback.cuttingBundleQrCode,
       });
     } catch (e) {
-      if (e && e.type === 'auth') return;
-      if (app && typeof app.toastError === 'function') app.toastError(e, '回退失败');
-      else wx.showToast({ title: '回退失败', icon: 'none' });
+      if (e && e.type === 'auth') {return;}
+      if (app && typeof app.toastError === 'function') {app.toastError(e, '回退失败');}
+      else {wx.showToast({ title: '回退失败', icon: 'none' });}
     } finally {
       this.setData({ 'rollback.submitting': false });
     }
@@ -644,7 +644,7 @@ Page({
       },
       () => {
         const app = getApp();
-        if (app && typeof app.resetPagedList === 'function') app.resetPagedList(this, 'exceptions');
+        if (app && typeof app.resetPagedList === 'function') {app.resetPagedList(this, 'exceptions');}
         if (this.data.activeTab === 'exceptions') {
           this.loadExceptions(true);
         }
@@ -662,7 +662,7 @@ Page({
 
   loadOrders(reset) {
     const app = getApp();
-    if (!app || typeof app.loadPagedList !== 'function') return Promise.resolve();
+    if (!app || typeof app.loadPagedList !== 'function') {return Promise.resolve();}
 
     return app.loadPagedList(
       this,
@@ -735,7 +735,7 @@ Page({
 
     // 数据变化时的处理
     const onDataChange = (newPage) => {
-      if (!newPage || !Array.isArray(newPage.records)) return;
+      if (!newPage || !Array.isArray(newPage.records)) {return;}
 
       // 更新列表
       const newList = newPage.records.map((r) => {

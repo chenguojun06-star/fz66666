@@ -4,6 +4,7 @@
     "pages/home/index",
     "pages/work/index",
     "pages/scan/index",
+    "pages/payroll/payroll",
     "pages/admin/index",
     "pages/admin/notification/index"
   ],

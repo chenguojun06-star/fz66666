@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
-import { ConfigProvider, theme } from 'antd';
+import { ConfigProvider, theme, App as AntApp } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import App from './App';
 import { AuthProvider } from './utils/authContext';
@@ -42,7 +42,7 @@ const shouldSuppressExternalError = (message: string, filename?: string, stack?:
 try {
   if (typeof window !== 'undefined') {
     window.addEventListener('unhandledrejection', (e) => {
-      const reason: any = (e as any)?.reason;
+      const reason: unknown = (e as Record<string, unknown>)?.reason;
       const msg = String(reason?.message || reason || '').trim();
       const stack = String(reason?.stack || '').trim();
       if (shouldSuppressExternalError(msg, undefined, stack)) {
@@ -51,7 +51,7 @@ try {
     });
 
     window.addEventListener('error', (e) => {
-      const ev: any = e as any;
+      const ev: unknown = e as Record<string, unknown>;
       const msg = String(ev?.message || '').trim();
       const file = String(ev?.filename || '').trim();
       const stack = String(ev?.error?.stack || '').trim();
@@ -61,11 +61,15 @@ try {
     });
   }
 } catch {
+    // Intentionally empty
+      // 忽略错误
 }
 
 try {
   applyTheme(localStorage.getItem(themeStorageKey));
 } catch {
+    // Intentionally empty
+      // 忽略错误
 }
 
 // 深色主题 token 配置
@@ -113,6 +117,8 @@ const AppWrapper: React.FC = () => {
     try {
       return localStorage.getItem(themeStorageKey) || 'default';
     } catch {
+    // Intentionally empty
+      // 忽略错误
       return 'default';
     }
   });
@@ -137,6 +143,8 @@ const AppWrapper: React.FC = () => {
           applyTheme(userTheme);
         }
       } catch {
+    // Intentionally empty
+      // 忽略错误
       }
     };
 
@@ -147,6 +155,8 @@ const AppWrapper: React.FC = () => {
         setCurrentTheme('default');
         applyTheme('default');
       } catch {
+    // Intentionally empty
+      // 忽略错误
       }
     };
 
@@ -205,11 +215,13 @@ const AppWrapper: React.FC = () => {
       locale={zhCN}
       theme={themeConfig}
     >
-      <AppProvider>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
-      </AppProvider>
+      <AntApp>
+        <AppProvider>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </AppProvider>
+      </AntApp>
     </ConfigProvider>
   );
 };

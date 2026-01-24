@@ -10,7 +10,6 @@ import com.fashion.supplychain.system.mapper.DictMapper;
 import com.fashion.supplychain.system.service.DictService;
 import java.util.HashMap;
 import java.util.Map;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;

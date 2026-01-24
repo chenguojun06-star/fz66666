@@ -13,8 +13,8 @@ Page({
 
     onShow() {
         const app = getApp();
-        if (app && typeof app.setTabSelected === 'function') app.setTabSelected(this, -1);
-        if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
+        if (app && typeof app.setTabSelected === 'function') {app.setTabSelected(this, -1);}
+        if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) {return;}
         
         // 检查是否为管理员
         if (!isAdminOrSupervisor()) {
@@ -33,7 +33,7 @@ Page({
     },
 
     async loadPendingUsers(reset) {
-        if (this.data.loading) return;
+        if (this.data.loading) {return;}
 
         const page = reset ? 1 : this.data.page;
         this.setData({ loading: true });
@@ -81,7 +81,7 @@ Page({
 
     onApprove(e) {
         const { user } = e.currentTarget.dataset;
-        if (!user) return;
+        if (!user) {return;}
 
         wx.showModal({
             title: '批准用户',
@@ -117,7 +117,7 @@ Page({
 
     onReject(e) {
         const { user } = e.currentTarget.dataset;
-        if (!user) return;
+        if (!user) {return;}
 
         wx.showModal({
             title: '拒绝用户',

@@ -9,7 +9,7 @@ import ResizableTable from '../../components/common/ResizableTable';
 import RowActions from '../../components/common/RowActions';
 import { ProductWarehousing as WarehousingType, ProductionOrder, WarehousingQueryParams } from '../../types/production';
 import api, { fetchProductionOrderDetail, parseProductionOrderLines, toNumberSafe, useProductionOrderFrozenCache } from '../../utils/api';
-import { StyleAttachmentsButton, StyleCoverThumb } from '../../components/StyleAssets';
+import { ProductionOrderHeader, StyleAttachmentsButton, StyleCoverThumb } from '../../components/StyleAssets';
 import { formatDateTime } from '../../utils/datetime';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { paths } from '../../routeConfig';
@@ -76,7 +76,7 @@ type OrderLine = {
   quantity: number;
 };
 
-const isBundleBlockedForWarehousing = (rawStatus: any) => {
+const isBundleBlockedForWarehousing = (rawStatus: unknown) => {
   const status = String(rawStatus || '').trim();
   if (!status) return false;
   const s = status.toLowerCase();
@@ -99,7 +99,7 @@ const isBundleBlockedForWarehousing = (rawStatus: any) => {
   return isUnqualified;
 };
 
-const parseUrlsValue = (value: any): string[] => {
+const parseUrlsValue = (value: unknown): string[] => {
   if (Array.isArray(value)) {
     return value.map((v) => String(v || '').trim()).filter(Boolean);
   }
@@ -111,6 +111,8 @@ const parseUrlsValue = (value: any): string[] => {
       return parsed.map((v) => String(v || '').trim()).filter(Boolean);
     }
   } catch {
+    // Intentionally empty
+      // 忽略错误
   }
   return raw
     .split(',')
@@ -118,17 +120,17 @@ const parseUrlsValue = (value: any): string[] => {
     .filter(Boolean);
 };
 
-const computeBundleRepairStats = (records: any[]): BundleRepairStats => {
+const computeBundleRepairStats = (records: unknown[]): BundleRepairStats => {
   let repairPool = 0;
   let repairedOut = 0;
   for (const r of Array.isArray(records) ? records : []) {
     if (!r) continue;
-    const uq = Number((r as any)?.unqualifiedQuantity ?? 0) || 0;
+    const uq = Number((r as Record<string, unknown>)?.unqualifiedQuantity ?? 0) || 0;
     if (uq > 0) repairPool += uq;
 
-    const rr = String((r as any)?.repairRemark || '').trim();
+    const rr = String((r as Record<string, unknown>)?.repairRemark || '').trim();
     if (rr) {
-      const q = Number((r as any)?.qualifiedQuantity ?? 0) || 0;
+      const q = Number((r as Record<string, unknown>)?.qualifiedQuantity ?? 0) || 0;
       if (q > 0) repairedOut += q;
     }
   }
@@ -151,14 +153,14 @@ const toUploadFileList = (urls: string[]): UploadFile[] => {
     .filter(Boolean) as UploadFile[];
 };
 
-const getDefectCategoryLabel = (value: any) => {
+const getDefectCategoryLabel = (value: unknown) => {
   const v = String(value || '').trim();
   if (!v) return '-';
   const hit = DEFECT_CATEGORY_OPTIONS.find((o) => o.value === v);
   return hit ? hit.label : v;
 };
 
-const getDefectRemarkLabel = (value: any) => {
+const getDefectRemarkLabel = (value: unknown) => {
   const v = String(value || '').trim();
   if (!v) return '-';
   const hit = DEFECT_REMARK_OPTIONS.find((o) => o.value === v);
@@ -171,11 +173,13 @@ const ProductWarehousing: React.FC = () => {
   const params = useParams();
 
   const routeWarehousingNo = useMemo(() => {
-    const raw = String((params as any)?.warehousingNo || '').trim();
+    const raw = String((params as Record<string, unknown>)?.warehousingNo || '').trim();
     if (!raw) return '';
     try {
       return decodeURIComponent(raw);
     } catch {
+    // Intentionally empty
+      // 忽略错误
       return raw;
     }
   }, [params]);
@@ -205,7 +209,7 @@ const ProductWarehousing: React.FC = () => {
   const [submitLoading, setSubmitLoading] = useState(false);
 
   const frozenOrderIds = useMemo(() => {
-    return Array.from(new Set(warehousingList.map((r: any) => String(r?.orderId || '').trim()).filter(Boolean)));
+    return Array.from(new Set(warehousingList.map((r: Record<string, unknown>) => String(r?.orderId || '').trim()).filter(Boolean)));
   }, [warehousingList]);
 
   const orderFrozen = useProductionOrderFrozenCache(frozenOrderIds, { rule: 'statusOrStock', acceptAnyData: true });
@@ -272,7 +276,7 @@ const ProductWarehousing: React.FC = () => {
   }, [bundles, singleSelectedQr]);
 
   const isSingleSelectedBundleBlocked = useMemo(() => {
-    const rawStatus = String((singleSelectedBundle as any)?.status || '').trim();
+    const rawStatus = String((singleSelectedBundle as Record<string, unknown>)?.status || '').trim();
     return Boolean(singleSelectedQr && isBundleBlockedForWarehousing(rawStatus));
   }, [singleSelectedBundle, singleSelectedQr]);
 
@@ -284,7 +288,7 @@ const ProductWarehousing: React.FC = () => {
   const bundleByQrForSummary = useMemo(() => {
     const m = new Map<string, CuttingBundleRow>();
     for (const b of bundles) {
-      const qr = String((b as any)?.qrCode || '').trim();
+      const qr = String((b as Record<string, unknown>)?.qrCode || '').trim();
       if (!qr) continue;
       m.set(qr, b);
     }
@@ -305,12 +309,12 @@ const ProductWarehousing: React.FC = () => {
 
     for (const qr of qrs) {
       const b = bundleByQrForSummary.get(qr);
-      const rawStatus = String((b as any)?.status || '').trim();
+      const rawStatus = String((b as Record<string, unknown>)?.status || '').trim();
       const isBlocked = isBundleBlockedForWarehousing(rawStatus);
       const remaining = isBlocked ? bundleRepairRemainingByQr[qr] : undefined;
       const maxQty = isBlocked
         ? Math.max(0, Number(remaining === undefined ? 0 : remaining) || 0)
-        : Math.max(0, Number((b as any)?.quantity ?? 0) || 0);
+        : Math.max(0, Number((b as Record<string, unknown>)?.quantity ?? 0) || 0);
       const currentQty = Math.max(0, Math.min(maxQty, Number(batchQtyByQr[qr] || 0) || 0));
 
       totalQty += currentQty;
@@ -360,16 +364,17 @@ const ProductWarehousing: React.FC = () => {
   const fetchOrderOptions = async () => {
     setOrderOptionsLoading(true);
     try {
-      const res = await api.get<any>('/production/order/list', { params: { page: 1, pageSize: 5000 } });
-      const result = res as any;
-      if (result.code === 200) {
-        const records: ProductionOrder[] = result.data.records || [];
+      const res = await api.get<{ code: number; data: { records: ProductionOrder[]; total: number } }>('/production/order/list', { params: { page: 1, pageSize: 5000 } });
+      if (res.code === 200) {
+        const records: ProductionOrder[] = res.data.records || [];
         setOrderOptions(records);
       } else {
         setOrderOptions([]);
-        message.error(result.message || '获取订单列表失败');
+        message.error(res.message || '获取订单列表失败');
       }
     } catch {
+    // Intentionally empty
+      // 忽略错误
       setOrderOptions([]);
       message.error('获取订单列表失败');
     } finally {
@@ -384,16 +389,17 @@ const ProductWarehousing: React.FC = () => {
       return;
     }
     try {
-      const res = await api.get<any>('/production/cutting/list', {
+      const res = await api.get<{ code: number; data: { records: CuttingBundleRow[]; total: number } }>('/production/cutting/list', {
         params: { page: 1, pageSize: 10000, orderNo: on },
       });
-      const result = res as any;
-      if (result.code === 200) {
-        setBundles((result.data?.records || []) as CuttingBundleRow[]);
+      if (res.code === 200) {
+        setBundles((res.data?.records || []) as CuttingBundleRow[]);
       } else {
         setBundles([]);
       }
     } catch {
+    // Intentionally empty
+      // 忽略错误
       setBundles([]);
     }
   };
@@ -404,7 +410,7 @@ const ProductWarehousing: React.FC = () => {
     if (!oid || !qr) return;
 
     try {
-      const res = await api.get<any>('/production/warehousing/list', {
+      const res = await api.get<{ code: number; data: { records: WarehousingType[]; total: number } }>('/production/warehousing/list', {
         params: {
           page: 1,
           pageSize: 10000,
@@ -412,13 +418,14 @@ const ProductWarehousing: React.FC = () => {
           cuttingBundleQrCode: qr,
         },
       });
-      const result = res as any;
-      if (result.code !== 200) return;
-      const records = (result.data?.records || []) as any[];
+      if (res.code !== 200) return;
+      const records = (res.data?.records || []) as Record<string, unknown>[];
       const stats = computeBundleRepairStats(records);
       setBundleRepairStatsByQr((prev) => ({ ...prev, [qr]: stats }));
       setBundleRepairRemainingByQr((prev) => ({ ...prev, [qr]: stats.remaining }));
     } catch {
+    // Intentionally empty
+      // 忽略错误
     }
   };
 
@@ -427,15 +434,14 @@ const ProductWarehousing: React.FC = () => {
     const list = Array.isArray(qrs) ? qrs.map((v) => String(v || '').trim()).filter(Boolean) : [];
     if (!oid || !list.length) return;
     try {
-      const res = await api.post<any>('/production/warehousing/repair-stats/batch', {
+      const res = await api.post<{ code: number; data: Record<string, unknown> }>('/production/warehousing/repair-stats/batch', {
         orderId: oid,
         qrs: list,
       });
-      const result = res as any;
-      if (result.code !== 200) {
-        throw new Error(result.message || '获取返修统计失败');
+      if (res.code !== 200) {
+        throw new Error(res.message || '获取返修统计失败');
       }
-      const items = (result.data?.items || []) as any[];
+      const items = (res.data?.items || []) as Record<string, unknown>[];
       if (!Array.isArray(items) || !items.length) return;
 
       setBundleRepairStatsByQr((prev) => {
@@ -462,6 +468,8 @@ const ProductWarehousing: React.FC = () => {
         return next;
       });
     } catch {
+    // Intentionally empty
+      // 忽略错误
       const concurrency = 6;
       const queue = list.slice();
       const workers = Array.from({ length: Math.min(concurrency, queue.length) }).map(async () => {
@@ -488,7 +496,7 @@ const ProductWarehousing: React.FC = () => {
     const oid = String(watchedOrderId || '').trim();
     if (!oid) return;
     const blockedQrs = bundles
-      .map((b: any) => {
+      .map((b: unknown) => {
         const qr = String(b?.qrCode || '').trim();
         if (!qr) return '';
         const rawStatus = String(b?.status || '').trim();
@@ -517,12 +525,11 @@ const ProductWarehousing: React.FC = () => {
       return;
     }
     try {
-      const res = await api.get<any>('/production/warehousing/list', {
+      const res = await api.get<{ code: number; data: { records: WarehousingType[]; total: number } }>('/production/warehousing/list', {
         params: { page: 1, pageSize: 10000, orderId: oid },
       });
-      const result = res as any;
-      if (result.code === 200) {
-        const records = (result.data?.records || []) as any[];
+      if (res.code === 200) {
+        const records = (res.data?.records || []) as Record<string, unknown>[];
         const whNo = String(records?.[0]?.warehousingNo || '').trim();
         form.setFieldsValue({ warehousingNo: whNo || undefined });
         const qrs = records
@@ -540,22 +547,24 @@ const ProductWarehousing: React.FC = () => {
         form.setFieldsValue({ warehousingNo: undefined });
       }
     } catch {
+    // Intentionally empty
+      // 忽略错误
       setQualifiedWarehousedBundleQrs([]);
       form.setFieldsValue({ warehousingNo: undefined });
     }
   };
 
   const loadWarehousingDetail = async (warehousing: WarehousingType) => {
-    const warehousingNo = String((warehousing as any)?.warehousingNo || '').trim();
-    const orderId = String((warehousing as any)?.orderId || '').trim();
-    const orderNo = String((warehousing as any)?.orderNo || '').trim();
+    const warehousingNo = String((warehousing as Record<string, unknown>)?.warehousingNo || '').trim();
+    const orderId = String((warehousing as Record<string, unknown>)?.orderId || '').trim();
+    const orderNo = String((warehousing as Record<string, unknown>)?.orderNo || '').trim();
 
     setDetailLoading(true);
     try {
       let records: WarehousingType[] = [];
 
       if (warehousingNo || orderId) {
-        const res = await api.get<any>('/production/warehousing/list', {
+        const res = await api.get<{ code: number; data: { records: WarehousingType[]; total: number } }>('/production/warehousing/list', {
           params: {
             page: 1,
             pageSize: 10000,
@@ -563,20 +572,21 @@ const ProductWarehousing: React.FC = () => {
             ...(!warehousingNo && orderId ? { orderId } : {}),
           },
         });
-        const result = res as any;
-        if (result.code === 200) {
-          records = (result.data?.records || []) as WarehousingType[];
+        if (res.code === 200) {
+          records = (res.data?.records || []) as WarehousingType[];
         }
       }
 
       setDetailWarehousingItems(records);
-      const resolvedOrderNo = orderNo || String((records as any)?.[0]?.orderNo || '').trim();
+      const resolvedOrderNo = orderNo || String((records as Record<string, unknown>)?.[0]?.orderNo || '').trim();
       if (resolvedOrderNo) {
         await fetchBundlesByOrderNo(resolvedOrderNo);
       } else {
         setBundles([]);
       }
     } catch {
+    // Intentionally empty
+      // 忽略错误
       setDetailWarehousingItems([]);
       setBundles([]);
     } finally {
@@ -588,13 +598,12 @@ const ProductWarehousing: React.FC = () => {
   const fetchWarehousingList = async () => {
     setLoading(true);
     try {
-      const response = await api.get<any>('/production/warehousing/list', { params: queryParams });
-      const result = response as any;
-      if (result.code === 200) {
-        setWarehousingList(result.data.records || []);
-        setTotal(result.data.total || 0);
+      const response = await api.get<{ code: number; data: { records: WarehousingType[]; total: number } }>('/production/warehousing/list', { params: queryParams });
+      if (response.code === 200) {
+        setWarehousingList(response.data.records || []);
+        setTotal(response.data.total || 0);
       } else {
-        message.error(result.message || '获取质检入库列表失败');
+        message.error(response.message || '获取质检入库列表失败');
       }
     } catch (error) {
       message.error('获取质检入库列表失败');
@@ -604,9 +613,9 @@ const ProductWarehousing: React.FC = () => {
   };
 
   const openWarehousingModal = (record: WarehousingType) => {
-    const oid = String((record as any)?.orderId || '').trim();
-    const whNo = String((record as any)?.warehousingNo || '').trim();
-    const on = String((record as any)?.orderNo || '').trim();
+    const oid = String((record as Record<string, unknown>)?.orderId || '').trim();
+    const whNo = String((record as Record<string, unknown>)?.warehousingNo || '').trim();
+    const on = String((record as Record<string, unknown>)?.orderNo || '').trim();
     if (!oid && !whNo) {
       message.error('缺少订单信息');
       return;
@@ -643,7 +652,7 @@ const ProductWarehousing: React.FC = () => {
 
     try {
       setWarehousingModalLoading(true);
-      const res = await api.get<any>('/production/warehousing/list', {
+      const res = await api.get<{ code: number; data: { records: WarehousingType[]; total: number } }>('/production/warehousing/list', {
         params: {
           page: 1,
           pageSize: 10000,
@@ -651,17 +660,16 @@ const ProductWarehousing: React.FC = () => {
           ...(!whNo && oid ? { orderId: oid } : {}),
         },
       });
-      const result = res as any;
-      if (result.code !== 200) {
-        message.error(result.message || '获取质检记录失败');
+      if (res.code !== 200) {
+        message.error(res.message || '获取质检记录失败');
         return;
       }
-      const records = (result.data?.records || []) as WarehousingType[];
+      const records = (res.data?.records || []) as WarehousingType[];
       const targets = records.filter((r) => {
-        const qs = String((r as any)?.qualityStatus || '').trim().toLowerCase();
+        const qs = String((r as Record<string, unknown>)?.qualityStatus || '').trim().toLowerCase();
         const qualified = !qs || qs === 'qualified';
-        const q = Number((r as any)?.qualifiedQuantity || 0) || 0;
-        const hasWarehouse = String((r as any)?.warehouse || '').trim();
+        const q = Number((r as Record<string, unknown>)?.qualifiedQuantity || 0) || 0;
+        const hasWarehouse = String((r as Record<string, unknown>)?.warehouse || '').trim();
         return qualified && q > 0 && !hasWarehouse;
       });
 
@@ -676,7 +684,7 @@ const ProductWarehousing: React.FC = () => {
         while (queue.length) {
           const r = queue.shift();
           if (!r) continue;
-          await api.put<any>('/production/warehousing', { id: (r as any)?.id, warehouse });
+          await api.put<{ code: number; message: string; data: boolean }>('/production/warehousing', { id: (r as Record<string, unknown>)?.id, warehouse });
         }
       });
       await Promise.all(workers);
@@ -703,12 +711,11 @@ const ProductWarehousing: React.FC = () => {
     'product-warehousing-list',
     async () => {
       try {
-        const response = await api.get<any>('/production/warehousing/list', { params: queryParams });
-        const result = response as any;
-        if (result.code === 200) {
+        const response = await api.get<{ code: number; data: { records: WarehousingType[]; total: number } }>('/production/warehousing/list', { params: queryParams });
+        if (response.code === 200) {
           return {
-            records: result.data.records || [],
-            total: result.data.total || 0
+            records: response.data.records || [],
+            total: response.data.total || 0
           };
         }
         return null;
@@ -761,25 +768,24 @@ const ProductWarehousing: React.FC = () => {
       setDetailLoading(true);
       setOrderDetailLoading(false);
       try {
-        const stateSummary = (location.state as any)?.warehousingSummary as WarehousingType | undefined;
-        if (stateSummary && String((stateSummary as any)?.warehousingNo || '').trim() === whNo) {
+        const stateSummary = (location.state as Record<string, unknown>)?.warehousingSummary as WarehousingType | undefined;
+        if (stateSummary && String((stateSummary as Record<string, unknown>)?.warehousingNo || '').trim() === whNo) {
           setEntryWarehousing(stateSummary);
         } else {
           setEntryWarehousing(null);
         }
 
-        const res = await api.get<any>('/production/warehousing/list', {
+        const res = await api.get<{ code: number; data: { records: WarehousingType[]; total: number } }>('/production/warehousing/list', {
           params: {
             page: 1,
             pageSize: 10000,
             warehousingNo: whNo,
           },
         });
-        const result = res as any;
-        if (result.code !== 200) {
-          throw new Error(result.message || '获取质检入库详情失败');
+        if (res.code !== 200) {
+          throw new Error(res.message || '获取质检入库详情失败');
         }
-        const records = (result.data?.records || []) as WarehousingType[];
+        const records = (res.data?.records || []) as WarehousingType[];
         if (!records.length) {
           throw new Error('未找到质检入库详情');
         }
@@ -803,9 +809,9 @@ const ProductWarehousing: React.FC = () => {
           }
         );
 
-        const base = (records[0] || {}) as any;
+        const base = (records[0] || {}) as Record<string, unknown>;
         const merged = {
-          ...(stateSummary && String((stateSummary as any)?.warehousingNo || '').trim() === whNo ? (stateSummary as any) : {}),
+          ...(stateSummary && String((stateSummary as Record<string, unknown>)?.warehousingNo || '').trim() === whNo ? (stateSummary as Record<string, unknown>) : {}),
           ...base,
           warehousingNo: whNo,
           warehousingQuantity: Math.max(0, totals.warehousingQuantity),
@@ -815,16 +821,16 @@ const ProductWarehousing: React.FC = () => {
         } as WarehousingType;
 
         setEntryWarehousing(merged);
-        setUnqualifiedFileList(toUploadFileList(parseUrlsValue((merged as any)?.unqualifiedImageUrls)));
+        setUnqualifiedFileList(toUploadFileList(parseUrlsValue((merged as Record<string, unknown>)?.unqualifiedImageUrls)));
 
-        const resolvedOrderNo = String((merged as any)?.orderNo || '').trim() || String((records as any)?.[0]?.orderNo || '').trim();
+        const resolvedOrderNo = String((merged as Record<string, unknown>)?.orderNo || '').trim() || String((records as Record<string, unknown>)?.[0]?.orderNo || '').trim();
         if (resolvedOrderNo) {
           await fetchBundlesByOrderNo(resolvedOrderNo);
         } else {
           setBundles([]);
         }
 
-        const resolvedOrderId = String((merged as any)?.orderId || '').trim();
+        const resolvedOrderId = String((merged as Record<string, unknown>)?.orderId || '').trim();
         if (resolvedOrderId) {
           setOrderDetailLoading(true);
           try {
@@ -833,21 +839,24 @@ const ProductWarehousing: React.FC = () => {
               setOrderDetail((detail || null) as ProductionOrder | null);
             }
           } catch {
+    // Intentionally empty
+      // 忽略错误
             if (!cancelled) setOrderDetail(null);
           } finally {
             if (!cancelled) setOrderDetailLoading(false);
           }
 
           try {
-            const whRes = await api.get<any>('/production/warehousing/list', {
+            const whRes = await api.get<{ code: number; data: { records: WarehousingType[]; total: number } }>('/production/warehousing/list', {
               params: { page: 1, pageSize: 10000, orderId: resolvedOrderId },
             });
-            const whResult = whRes as any;
             if (!cancelled) {
-              const list = (whResult?.data?.records || []) as any[];
+              const list = (whRes?.data?.records || []) as Record<string, unknown>[];
               setOrderWarehousingRecords(Array.isArray(list) ? list : []);
             }
           } catch {
+    // Intentionally empty
+      // 忽略错误
             if (!cancelled) {
               setOrderWarehousingRecords([]);
             }
@@ -857,7 +866,7 @@ const ProductWarehousing: React.FC = () => {
           setOrderDetail(null);
           setOrderWarehousingRecords([]);
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         if (!cancelled) {
           message.error(e?.message || '获取质检入库详情失败');
           navigate(paths.warehousing, { replace: true });
@@ -906,9 +915,9 @@ const ProductWarehousing: React.FC = () => {
     if (warehousing) {
       form.setFieldsValue({
         ...warehousing,
-        createTime: formatDateTime((warehousing as any)?.createTime),
+        createTime: formatDateTime((warehousing as Record<string, unknown>)?.createTime),
       });
-      const urls = parseUrlsValue((warehousing as any)?.unqualifiedImageUrls);
+      const urls = parseUrlsValue((warehousing as Record<string, unknown>)?.unqualifiedImageUrls);
       setUnqualifiedFileList(toUploadFileList(urls));
       setVisible(true);
       loadWarehousingDetail(warehousing);
@@ -973,22 +982,21 @@ const ProductWarehousing: React.FC = () => {
         return;
       }
 
-      const res = await api.post<any>('/production/warehousing/batch', {
+      const res = await api.post<{ code: number; message: string; data: boolean }>('/production/warehousing/batch', {
         orderId,
         warehousingType: 'manual',
         items,
       });
-      const result = res as any;
-      if (result.code === 200) {
+      if (res.code === 200) {
         message.success('批量合格质检成功');
         closeDialog();
         fetchWarehousingList();
       } else {
-        message.error(result.message || '批量入库失败');
+        message.error(res.message || '批量入库失败');
       }
     } catch (error) {
-      if ((error as any).errorFields) {
-        const firstError = (error as any).errorFields[0];
+      if ((error as Record<string, unknown>).errorFields) {
+        const firstError = (error as Record<string, unknown>).errorFields[0];
         message.error(firstError.errors[0] || '表单验证失败');
       } else {
         message.error((error as Error).message || '批量入库失败');
@@ -1007,7 +1015,7 @@ const ProductWarehousing: React.FC = () => {
       if (!(await ensureOrderUnlockedById(values.orderId))) return;
 
       const urls = unqualifiedFileList
-        .map((f) => String((f as any)?.url || '').trim())
+        .map((f) => String((f as Record<string, unknown>)?.url || '').trim())
         .filter(Boolean)
         .slice(0, 4);
       const warehousingQty = Number(values.warehousingQuantity || 0) || 0;
@@ -1018,7 +1026,7 @@ const ProductWarehousing: React.FC = () => {
       const defectCategory = String(values.defectCategory || '').trim();
       const defectRemark = String(values.defectRemark || '').trim();
 
-      const payload: any = {
+      const payload: unknown = {
         ...values,
         unqualifiedQuantity: unqualifiedQty,
         qualifiedQuantity: qualifiedQty,
@@ -1041,11 +1049,11 @@ const ProductWarehousing: React.FC = () => {
         response = await api.put('/production/warehousing', { ...payload, id: currentWarehousing.id });
       } else {
         // 新增质检入库
-        const { warehouse: _warehouse, ...safePayload } = payload as any;
+        const { warehouse: _warehouse, ...safePayload } = payload as Record<string, unknown>;
         response = await api.post('/production/warehousing', { ...safePayload, warehousingType: 'manual' });
       }
 
-      const result = response as any;
+      const result = response as Record<string, unknown>;
       if (result.code === 200) {
         message.success(currentWarehousing?.id ? '编辑质检入库成功' : '新增质检入库成功');
         // 关闭弹窗
@@ -1057,8 +1065,8 @@ const ProductWarehousing: React.FC = () => {
       }
     } catch (error) {
       // 处理表单验证错误
-      if ((error as any).errorFields) {
-        const firstError = (error as any).errorFields[0];
+      if ((error as Record<string, unknown>).errorFields) {
+        const firstError = (error as Record<string, unknown>).errorFields[0];
         message.error(firstError.errors[0] || '表单验证失败');
       } else {
         message.error((error as Error).message || '保存失败');
@@ -1079,7 +1087,7 @@ const ProductWarehousing: React.FC = () => {
     return statusMap[key] || { text: '未知', color: 'default' };
   };
 
-  const mapBundleStatusText = (rawStatus: any) => {
+  const mapBundleStatusText = (rawStatus: unknown) => {
     const s = String(rawStatus || '').trim();
     if (!s) return '';
     const key = s.toLowerCase();
@@ -1107,7 +1115,7 @@ const ProductWarehousing: React.FC = () => {
         const size = String(b.size || '').trim();
         const qty = Number(b.quantity || 0) || 0;
         const bundleNo = Number(b.bundleNo || 0) || 0;
-        const rawStatus = String((b as any)?.status || '').trim();
+        const rawStatus = String((b as Record<string, unknown>)?.status || '').trim();
         const isBlocked = isBundleBlockedForWarehousing(rawStatus);
         const remaining = isBlocked ? bundleRepairRemainingByQr[qr] : undefined;
         const availableQty = isBlocked ? (remaining === undefined ? 0 : Math.max(0, Number(remaining || 0) || 0)) : qty;
@@ -1157,7 +1165,7 @@ const ProductWarehousing: React.FC = () => {
       for (const qr of nextQrs) {
         const keep = Number(prev[qr] || 0) || 0;
         const row = selectedRows.find((r) => r.qr === qr) || batchSelectRows.find((r) => r.qr === qr);
-        const maxQty = Math.max(0, Number((row as any)?.availableQty ?? row?.quantity ?? 0) || 0);
+        const maxQty = Math.max(0, Number((row as Record<string, unknown>)?.availableQty ?? row?.quantity ?? 0) || 0);
         const base = keep > 0 ? keep : maxQty;
         next[qr] = Math.max(0, Math.min(maxQty || base, base));
       }
@@ -1186,8 +1194,8 @@ const ProductWarehousing: React.FC = () => {
       const b = bundles.find((x) => String(x.qrCode || '').trim() === qr) || null;
       form.setFieldsValue({
         cuttingBundleQrCode: qr,
-        cuttingBundleId: (b as any)?.id,
-        cuttingBundleNo: (b as any)?.bundleNo,
+        cuttingBundleId: (b as Record<string, unknown>)?.id,
+        cuttingBundleNo: (b as Record<string, unknown>)?.bundleNo,
       });
     } else {
       form.setFieldsValue({
@@ -1198,7 +1206,7 @@ const ProductWarehousing: React.FC = () => {
     }
 
     const total = qrs.reduce((sum, qr) => sum + (Number(batchQtyByQr[qr] || 0) || 0), 0);
-    const rawStatus = qrs.length === 1 ? String((bundles.find((x) => String(x.qrCode || '').trim() === qrs[0]) as any)?.status || '').trim() : '';
+    const rawStatus = qrs.length === 1 ? String((bundles.find((x) => String(x.qrCode || '').trim() === qrs[0]) as Record<string, unknown>)?.status || '').trim() : '';
     const isRepairFlow = qrs.length === 1 && isBundleBlockedForWarehousing(rawStatus);
     const baseUnq = qrs.length === 1 ? Number(form.getFieldValue('unqualifiedQuantity') || 0) || 0 : 0;
     const unq = isRepairFlow ? 0 : (qrs.length === 1 ? Math.max(0, Math.min(total, baseUnq)) : 0);
@@ -1226,8 +1234,8 @@ const ProductWarehousing: React.FC = () => {
   const orderLineWarehousingRows = useMemo((): OrderLineWarehousingRow[] => {
     if (!isEntryPage) return [];
 
-    const orderNo = String((orderDetail as any)?.orderNo || (entryWarehousing as any)?.orderNo || '').trim();
-    const styleNo = String((orderDetail as any)?.styleNo || (entryWarehousing as any)?.styleNo || '').trim();
+    const orderNo = String((orderDetail as Record<string, unknown>)?.orderNo || (entryWarehousing as Record<string, unknown>)?.orderNo || '').trim();
+    const styleNo = String((orderDetail as Record<string, unknown>)?.styleNo || (entryWarehousing as Record<string, unknown>)?.styleNo || '').trim();
     const lines = parseProductionOrderLines(orderDetail) as OrderLine[];
     if (!lines.length) return [];
 
@@ -1243,8 +1251,8 @@ const ProductWarehousing: React.FC = () => {
 
       const qr = String(r?.cuttingBundleQrCode || r?.qrCode || '').trim();
       const b = qr ? bundleByQrForSummary.get(qr) : undefined;
-      const color = String((b as any)?.color || r?.color || r?.colour || '').trim();
-      const size = String((b as any)?.size || r?.size || '').trim();
+      const color = String((b as Record<string, unknown>)?.color || r?.color || r?.colour || '').trim();
+      const size = String((b as Record<string, unknown>)?.size || r?.size || '').trim();
       if (!color || !size) continue;
 
       const k = `${color}@@${size}`;
@@ -1311,13 +1319,12 @@ const ProductWarehousing: React.FC = () => {
     const formData = new FormData();
     formData.append('file', file);
     try {
-      const res = await api.post<any>('/common/upload', formData);
-      const result = res as any;
-      if (result.code !== 200) {
-        message.error(result.message || '上传失败');
+      const res = await api.post<{ code: number; message: string; data: string }>('/common/upload', formData);
+      if (res.code !== 200) {
+        message.error(res.message || '上传失败');
         return Upload.LIST_IGNORE;
       }
-      const url = String(result.data || '').trim();
+      const url = String(res.data || '').trim();
       if (!url) {
         message.error('上传失败');
         return Upload.LIST_IGNORE;
@@ -1328,7 +1335,7 @@ const ProductWarehousing: React.FC = () => {
         form.setFieldsValue({
           unqualifiedImageUrls: JSON.stringify(
             next
-              .map((f) => String((f as any)?.url || '').trim())
+              .map((f) => String((f as Record<string, unknown>)?.url || '').trim())
               .filter(Boolean)
               .slice(0, MAX_UNQUALIFIED_IMAGES)
           ),
@@ -1336,7 +1343,7 @@ const ProductWarehousing: React.FC = () => {
         return next;
       });
       message.success('上传成功');
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(e?.message || '上传失败');
     }
     return Upload.LIST_IGNORE;
@@ -1350,13 +1357,13 @@ const ProductWarehousing: React.FC = () => {
   };
 
   const goToWarehousingDetail = (record: WarehousingType) => {
-    const whNo = String((record as any)?.warehousingNo || '').trim();
+    const whNo = String((record as Record<string, unknown>)?.warehousingNo || '').trim();
     if (!whNo) return;
     navigate(buildWarehousingDetailPath(whNo), { state: { warehousingSummary: record } });
   };
 
   const openIndependentDetailPopup = (record: WarehousingType) => {
-    const whNo = String((record as any)?.warehousingNo || '').trim();
+    const whNo = String((record as Record<string, unknown>)?.warehousingNo || '').trim();
     if (!whNo) {
       message.warning('质检入库号为空');
       return;
@@ -1402,7 +1409,7 @@ const ProductWarehousing: React.FC = () => {
       key: 'orderNo',
       width: 120,
       ellipsis: true,
-      render: (v: any) => (
+      render: (v: unknown) => (
         <span className="order-no-compact">{String(v || '').trim() || '-'}</span>
       ),
     },
@@ -1452,14 +1459,14 @@ const ProductWarehousing: React.FC = () => {
       dataIndex: 'color',
       key: 'color',
       width: 100,
-      render: (v: any) => v || '-',
+      render: (v: unknown) => v || '-',
     },
     {
       title: '尺码',
       dataIndex: 'size',
       key: 'size',
       width: 90,
-      render: (v: any) => v || '-',
+      render: (v: unknown) => v || '-',
     },
     {
       title: '仓库',
@@ -1483,7 +1490,7 @@ const ProductWarehousing: React.FC = () => {
       key: 'scanCode',
       width: 200,
       ellipsis: true,
-      render: (v: any) => v || '-',
+      render: (v: unknown) => v || '-',
     },
     {
       title: '次品处理',
@@ -1509,28 +1516,28 @@ const ProductWarehousing: React.FC = () => {
       dataIndex: 'qualityOperatorName',
       key: 'qualityOperatorName',
       width: 120,
-      render: (v: any) => v || '-',
+      render: (v: unknown) => v || '-',
     },
     {
       title: '质检时间',
       dataIndex: 'createTime',
       key: 'createTime',
       width: 150,
-      render: (value: any) => formatDateTime(value),
+      render: (value: unknown) => formatDateTime(value),
     },
     {
       title: '入库开始时间',
       dataIndex: 'warehousingStartTime',
       key: 'warehousingStartTime',
       width: 150,
-      render: (value: any) => formatDateTime(value),
+      render: (value: unknown) => formatDateTime(value),
     },
     {
       title: '入库完成时间',
       dataIndex: 'warehousingEndTime',
       key: 'warehousingEndTime',
       width: 150,
-      render: (value: any) => formatDateTime(value),
+      render: (value: unknown) => formatDateTime(value),
     },
     {
       title: '入库人员',
@@ -1543,7 +1550,7 @@ const ProductWarehousing: React.FC = () => {
       key: 'action',
       width: 110,
       render: (_: any, record: WarehousingType) => {
-        const orderId = String((record as any)?.orderId || '').trim();
+        const orderId = String((record as Record<string, unknown>)?.orderId || '').trim();
         const frozen = isOrderFrozenById(orderId);
 
         return (
@@ -1574,17 +1581,17 @@ const ProductWarehousing: React.FC = () => {
   ];
 
   const tableData = useMemo(() => {
-    const m = new Map<string, any>();
+    const m = new Map<string, unknown>();
     for (const r of warehousingList) {
       if (!r) continue;
-      const whNo = String((r as any)?.warehousingNo || '').trim();
-      const oid = String((r as any)?.orderId || '').trim();
-      const key = whNo || oid || String((r as any)?.id || '').trim() || String(Math.random());
+      const whNo = String((r as Record<string, unknown>)?.warehousingNo || '').trim();
+      const oid = String((r as Record<string, unknown>)?.orderId || '').trim();
+      const key = whNo || oid || String((r as Record<string, unknown>)?.id || '').trim() || String(Math.random());
       const existed = m.get(key);
-      const wq = Number((r as any)?.warehousingQuantity || 0) || 0;
-      const qq = Number((r as any)?.qualifiedQuantity || 0) || 0;
-      const uq = Number((r as any)?.unqualifiedQuantity || 0) || 0;
-      const qs = String((r as any)?.qualityStatus || '').trim().toLowerCase();
+      const wq = Number((r as Record<string, unknown>)?.warehousingQuantity || 0) || 0;
+      const qq = Number((r as Record<string, unknown>)?.qualifiedQuantity || 0) || 0;
+      const uq = Number((r as Record<string, unknown>)?.unqualifiedQuantity || 0) || 0;
+      const qs = String((r as Record<string, unknown>)?.qualityStatus || '').trim().toLowerCase();
 
       if (!existed) {
         m.set(key, {
@@ -1594,7 +1601,7 @@ const ProductWarehousing: React.FC = () => {
           qualifiedQuantity: Math.max(0, qq),
           unqualifiedQuantity: Math.max(0, uq),
           qualityStatus: qs === 'unqualified' ? 'unqualified' : 'qualified',
-          warehouse: String((r as any)?.warehouse || '').trim() || undefined,
+          warehouse: String((r as Record<string, unknown>)?.warehouse || '').trim() || undefined,
         });
         continue;
       }
@@ -1606,19 +1613,19 @@ const ProductWarehousing: React.FC = () => {
         existed.qualityStatus = 'unqualified';
       }
       if (!String(existed.warehouse || '').trim()) {
-        const wh = String((r as any)?.warehouse || '').trim();
+        const wh = String((r as Record<string, unknown>)?.warehouse || '').trim();
         if (wh) existed.warehouse = wh;
       }
       if (!String(existed.warehousingStartTime || '').trim()) {
-        const t = (r as any)?.warehousingStartTime;
+        const t = (r as Record<string, unknown>)?.warehousingStartTime;
         if (t) existed.warehousingStartTime = t;
       }
       if (!String(existed.warehousingEndTime || '').trim()) {
-        const t = (r as any)?.warehousingEndTime;
+        const t = (r as Record<string, unknown>)?.warehousingEndTime;
         if (t) existed.warehousingEndTime = t;
       }
       if (!String(existed.warehousingOperatorName || '').trim()) {
-        const n = String((r as any)?.warehousingOperatorName || '').trim();
+        const n = String((r as Record<string, unknown>)?.warehousingOperatorName || '').trim();
         if (n) existed.warehousingOperatorName = n;
       }
     }
@@ -1626,12 +1633,12 @@ const ProductWarehousing: React.FC = () => {
   }, [warehousingList]);
 
   const warehousingDetailColumns: ColumnsType<WarehousingType> = [
-    { title: '菲号', dataIndex: 'cuttingBundleQrCode', key: 'cuttingBundleQrCode', width: 260, ellipsis: true, render: (v: any) => String(v || '').trim() || '-' },
-    { title: '扎号', dataIndex: 'cuttingBundleNo', key: 'cuttingBundleNo', width: 90, align: 'right', render: (v: any) => toNumberSafe(v) || '-' },
-    { title: '尺码', dataIndex: 'size', key: 'size', width: 110, render: (v: any) => String(v || '').trim() || '-' },
-    { title: '质检数量', dataIndex: 'warehousingQuantity', key: 'warehousingQuantity', width: 110, align: 'right', render: (v: any) => toNumberSafe(v) },
-    { title: '合格', dataIndex: 'qualifiedQuantity', key: 'qualifiedQuantity', width: 90, align: 'right', render: (v: any) => toNumberSafe(v) },
-    { title: '不合格', dataIndex: 'unqualifiedQuantity', key: 'unqualifiedQuantity', width: 90, align: 'right', render: (v: any) => toNumberSafe(v) },
+    { title: '菲号', dataIndex: 'cuttingBundleQrCode', key: 'cuttingBundleQrCode', width: 260, ellipsis: true, render: (v: unknown) => String(v || '').trim() || '-' },
+    { title: '扎号', dataIndex: 'cuttingBundleNo', key: 'cuttingBundleNo', width: 90, align: 'right', render: (v: unknown) => toNumberSafe(v) || '-' },
+    { title: '尺码', dataIndex: 'size', key: 'size', width: 110, render: (v: unknown) => String(v || '').trim() || '-' },
+    { title: '质检数量', dataIndex: 'warehousingQuantity', key: 'warehousingQuantity', width: 110, align: 'right', render: (v: unknown) => toNumberSafe(v) },
+    { title: '合格', dataIndex: 'qualifiedQuantity', key: 'qualifiedQuantity', width: 90, align: 'right', render: (v: unknown) => toNumberSafe(v) },
+    { title: '不合格', dataIndex: 'unqualifiedQuantity', key: 'unqualifiedQuantity', width: 90, align: 'right', render: (v: unknown) => toNumberSafe(v) },
     {
       title: '质检',
       dataIndex: 'qualityStatus',
@@ -1640,18 +1647,18 @@ const ProductWarehousing: React.FC = () => {
       render: (status: WarehousingType['qualityStatus']) => {
         const s = String(status || '').trim();
         if (!s) return '-';
-        const { text, color } = getQualityStatusConfig(s as any);
+        const { text, color } = getQualityStatusConfig(s as Record<string, unknown>);
         return <Tag color={color}>{text}</Tag>;
       },
     },
-    { title: '仓库', dataIndex: 'warehouse', key: 'warehouse', width: 120, render: (v: any) => String(v || '').trim() || '-' },
-    { title: '入库人员', dataIndex: 'warehousingOperatorName', key: 'warehousingOperatorName', width: 120, render: (v: any) => String(v || '').trim() || '-' },
-    { title: '入库开始', dataIndex: 'warehousingStartTime', key: 'warehousingStartTime', width: 170, render: (v: any) => (String(v || '').trim() ? formatDateTime(v) : '-') },
-    { title: '入库完成', dataIndex: 'warehousingEndTime', key: 'warehousingEndTime', width: 170, render: (v: any) => (String(v || '').trim() ? formatDateTime(v) : '-') },
-    { title: '质检时间', dataIndex: 'createTime', key: 'createTime', width: 170, render: (v: any) => (String(v || '').trim() ? formatDateTime(v) : '-') },
-    { title: '次品类别', dataIndex: 'defectCategory', key: 'defectCategory', width: 150, ellipsis: true, render: (v: any) => getDefectCategoryLabel(v) },
-    { title: '处理方式', dataIndex: 'defectRemark', key: 'defectRemark', width: 110, ellipsis: true, render: (v: any) => getDefectRemarkLabel(v) },
-    { title: '返修备注', dataIndex: 'repairRemark', key: 'repairRemark', ellipsis: true, render: (v: any) => String(v || '').trim() || '-' },
+    { title: '仓库', dataIndex: 'warehouse', key: 'warehouse', width: 120, render: (v: unknown) => String(v || '').trim() || '-' },
+    { title: '入库人员', dataIndex: 'warehousingOperatorName', key: 'warehousingOperatorName', width: 120, render: (v: unknown) => String(v || '').trim() || '-' },
+    { title: '入库开始', dataIndex: 'warehousingStartTime', key: 'warehousingStartTime', width: 170, render: (v: unknown) => (String(v || '').trim() ? formatDateTime(v) : '-') },
+    { title: '入库完成', dataIndex: 'warehousingEndTime', key: 'warehousingEndTime', width: 170, render: (v: unknown) => (String(v || '').trim() ? formatDateTime(v) : '-') },
+    { title: '质检时间', dataIndex: 'createTime', key: 'createTime', width: 170, render: (v: unknown) => (String(v || '').trim() ? formatDateTime(v) : '-') },
+    { title: '次品类别', dataIndex: 'defectCategory', key: 'defectCategory', width: 150, ellipsis: true, render: (v: unknown) => getDefectCategoryLabel(v) },
+    { title: '处理方式', dataIndex: 'defectRemark', key: 'defectRemark', width: 110, ellipsis: true, render: (v: unknown) => getDefectRemarkLabel(v) },
+    { title: '返修备注', dataIndex: 'repairRemark', key: 'repairRemark', ellipsis: true, render: (v: unknown) => String(v || '').trim() || '-' },
   ];
 
   const IndependentWarehousingDetailPopup = () => {
@@ -1673,7 +1680,7 @@ const ProductWarehousing: React.FC = () => {
     const popupBundleByQr = useMemo(() => {
       const m = new Map<string, CuttingBundleRow>();
       for (const b of Array.isArray(popupBundles) ? popupBundles : []) {
-        const qr = String((b as any)?.qrCode || '').trim();
+        const qr = String((b as Record<string, unknown>)?.qrCode || '').trim();
         if (!qr) continue;
         if (!m.has(qr)) m.set(qr, b);
       }
@@ -1681,8 +1688,8 @@ const ProductWarehousing: React.FC = () => {
     }, [popupBundles]);
 
     const popupOrderLineWarehousingRows = useMemo(() => {
-      const orderNo = String((popupOrderDetail as any)?.orderNo || (popupEntryWarehousing as any)?.orderNo || '').trim();
-      const styleNo = String((popupOrderDetail as any)?.styleNo || (popupEntryWarehousing as any)?.styleNo || '').trim();
+      const orderNo = String((popupOrderDetail as Record<string, unknown>)?.orderNo || (popupEntryWarehousing as Record<string, unknown>)?.orderNo || '').trim();
+      const styleNo = String((popupOrderDetail as Record<string, unknown>)?.styleNo || (popupEntryWarehousing as Record<string, unknown>)?.styleNo || '').trim();
       const lines = parseProductionOrderLines(popupOrderDetail) as OrderLine[];
       if (!lines.length) return [] as Array<{
         key: string;
@@ -1707,8 +1714,8 @@ const ProductWarehousing: React.FC = () => {
 
         const qr = String(r?.cuttingBundleQrCode || r?.qrCode || '').trim();
         const b = qr ? popupBundleByQr.get(qr) : undefined;
-        const color = String((b as any)?.color || r?.color || r?.colour || '').trim();
-        const size = String((b as any)?.size || r?.size || '').trim();
+        const color = String((b as Record<string, unknown>)?.color || r?.color || r?.colour || '').trim();
+        const size = String((b as Record<string, unknown>)?.size || r?.size || '').trim();
         if (!color || !size) continue;
 
         const k = `${color}@@${size}`;
@@ -1748,16 +1755,17 @@ const ProductWarehousing: React.FC = () => {
         return;
       }
       try {
-        const res = await api.get<any>('/production/cutting/list', {
+        const res = await api.get<{ code: number; data: { records: CuttingBundleRow[]; total: number } }>('/production/cutting/list', {
           params: { page: 1, pageSize: 10000, orderNo: on },
         });
-        const result = res as any;
-        if (result.code === 200) {
-          setPopupBundles((result.data?.records || []) as CuttingBundleRow[]);
+        if (res.code === 200) {
+          setPopupBundles((res.data?.records || []) as CuttingBundleRow[]);
         } else {
           setPopupBundles([]);
         }
       } catch {
+    // Intentionally empty
+      // 忽略错误
         setPopupBundles([]);
       }
     }, []);
@@ -1784,24 +1792,23 @@ const ProductWarehousing: React.FC = () => {
         setPopupOrderDetailLoading(false);
         try {
           const stateSummary = independentDetailSummary;
-          if (stateSummary && String((stateSummary as any)?.warehousingNo || '').trim() === whNo) {
+          if (stateSummary && String((stateSummary as Record<string, unknown>)?.warehousingNo || '').trim() === whNo) {
             setPopupEntryWarehousing(stateSummary);
           } else {
             setPopupEntryWarehousing(null);
           }
 
-          const res = await api.get<any>('/production/warehousing/list', {
+          const res = await api.get<{ code: number; data: { records: WarehousingType[]; total: number } }>('/production/warehousing/list', {
             params: {
               page: 1,
               pageSize: 10000,
               warehousingNo: whNo,
             },
           });
-          const result = res as any;
-          if (result.code !== 200) {
-            throw new Error(result.message || '获取质检入库详情失败');
+          if (res.code !== 200) {
+            throw new Error(res.message || '获取质检入库详情失败');
           }
-          const records = (result.data?.records || []) as WarehousingType[];
+          const records = (res.data?.records || []) as WarehousingType[];
           if (!records.length) {
             throw new Error('未找到质检入库详情');
           }
@@ -1823,9 +1830,9 @@ const ProductWarehousing: React.FC = () => {
             }
           );
 
-          const base = (records[0] || {}) as any;
+          const base = (records[0] || {}) as Record<string, unknown>;
           const merged = {
-            ...(stateSummary && String((stateSummary as any)?.warehousingNo || '').trim() === whNo ? (stateSummary as any) : {}),
+            ...(stateSummary && String((stateSummary as Record<string, unknown>)?.warehousingNo || '').trim() === whNo ? (stateSummary as Record<string, unknown>) : {}),
             ...base,
             warehousingNo: whNo,
             warehousingQuantity: Math.max(0, totals.warehousingQuantity),
@@ -1838,14 +1845,14 @@ const ProductWarehousing: React.FC = () => {
 
           setPopupEntryWarehousing(merged);
 
-          const resolvedOrderNo = String((merged as any)?.orderNo || '').trim() || String((records as any)?.[0]?.orderNo || '').trim();
+          const resolvedOrderNo = String((merged as Record<string, unknown>)?.orderNo || '').trim() || String((records as Record<string, unknown>)?.[0]?.orderNo || '').trim();
           if (resolvedOrderNo) {
             await fetchPopupBundlesByOrderNo(resolvedOrderNo);
           } else {
             setPopupBundles([]);
           }
 
-          const resolvedOrderId = String((merged as any)?.orderId || '').trim();
+          const resolvedOrderId = String((merged as Record<string, unknown>)?.orderId || '').trim();
           if (resolvedOrderId) {
             setPopupOrderDetailLoading(true);
             try {
@@ -1854,21 +1861,24 @@ const ProductWarehousing: React.FC = () => {
                 setPopupOrderDetail((detail || null) as ProductionOrder | null);
               }
             } catch {
+    // Intentionally empty
+      // 忽略错误
               if (!cancelled) setPopupOrderDetail(null);
             } finally {
               if (!cancelled) setPopupOrderDetailLoading(false);
             }
 
             try {
-              const whRes = await api.get<any>('/production/warehousing/list', {
+              const whRes = await api.get<{ code: number; data: { records: WarehousingType[]; total: number } }>('/production/warehousing/list', {
                 params: { page: 1, pageSize: 10000, orderId: resolvedOrderId },
               });
-              const whResult = whRes as any;
               if (!cancelled) {
-                const list = (whResult?.data?.records || []) as any[];
+                const list = (whRes?.data?.records || []) as Record<string, unknown>[];
                 setPopupOrderWarehousingRecords(Array.isArray(list) ? list : []);
               }
             } catch {
+    // Intentionally empty
+      // 忽略错误
               if (!cancelled) {
                 setPopupOrderWarehousingRecords([]);
               }
@@ -1878,7 +1888,7 @@ const ProductWarehousing: React.FC = () => {
             setPopupOrderDetail(null);
             setPopupOrderWarehousingRecords([]);
           }
-        } catch (e: any) {
+        } catch (e: unknown) {
           if (!cancelled) {
             message.error(e?.message || '获取质检入库详情失败');
             setPopupEntryWarehousing(null);
@@ -1919,32 +1929,46 @@ const ProductWarehousing: React.FC = () => {
       >
         <div style={{ flex: 1, minHeight: 0 }}>
           <Card size="small" className="order-flow-detail" style={{ marginTop: 0, height: '100%' }} loading={popupEntryLoading}>
+            <div style={{ marginBottom: 12 }}>
+              <ProductionOrderHeader
+                order={popupOrderDetail || (popupEntryWarehousing as Record<string, unknown>)}
+                orderNo={String((popupOrderDetail as Record<string, unknown>)?.orderNo || (popupEntryWarehousing as Record<string, unknown>)?.orderNo || '').trim()}
+                styleNo={String((popupOrderDetail as Record<string, unknown>)?.styleNo || (popupEntryWarehousing as Record<string, unknown>)?.styleNo || '').trim()}
+                styleName={String((popupOrderDetail as Record<string, unknown>)?.styleName || (popupEntryWarehousing as Record<string, unknown>)?.styleName || '').trim()}
+                styleId={(popupOrderDetail as Record<string, unknown>)?.styleId || (popupEntryWarehousing as Record<string, unknown>)?.styleId}
+                styleCover={(popupOrderDetail as Record<string, unknown>)?.styleCover || (popupEntryWarehousing as Record<string, unknown>)?.styleCover || null}
+                color={String((popupOrderDetail as Record<string, unknown>)?.color || (popupEntryWarehousing as Record<string, unknown>)?.color || '').trim()}
+                totalQuantity={toNumberSafe((popupOrderDetail as Record<string, unknown>)?.orderQuantity)}
+                coverSize={160}
+                qrSize={120}
+              />
+            </div>
             <div className="order-flow-section">
               <div className="order-flow-section-title">本次质检入库</div>
               <div className="order-flow-summary-top">
                 <div className="order-flow-summary-left">
                   <StyleCoverThumb
-                    styleId={(popupEntryWarehousing as any)?.styleId}
-                    styleNo={(popupEntryWarehousing as any)?.styleNo}
-                    src={(popupOrderDetail as any)?.styleCover || (popupEntryWarehousing as any)?.styleCover || null}
+                    styleId={(popupEntryWarehousing as Record<string, unknown>)?.styleId}
+                    styleNo={(popupEntryWarehousing as Record<string, unknown>)?.styleNo}
+                    src={(popupOrderDetail as Record<string, unknown>)?.styleCover || (popupEntryWarehousing as Record<string, unknown>)?.styleCover || null}
                     size={84}
                     borderRadius={12}
                   />
                   <div className="order-flow-summary-meta">
                     <div className="order-flow-summary-title-row">
-                      <div className="order-flow-summary-title">{String((popupEntryWarehousing as any)?.warehousingNo || whNo || '').trim() || '-'}</div>
+                      <div className="order-flow-summary-title">{String((popupEntryWarehousing as Record<string, unknown>)?.warehousingNo || whNo || '').trim() || '-'}</div>
                       {(() => {
-                        const s = String((popupEntryWarehousing as any)?.qualityStatus || '').trim();
+                        const s = String((popupEntryWarehousing as Record<string, unknown>)?.qualityStatus || '').trim();
                         if (!s) return null;
-                        const { text, color } = getQualityStatusConfig(s as any);
+                        const { text, color } = getQualityStatusConfig(s as Record<string, unknown>);
                         return <Tag color={color}>{text}</Tag>;
                       })()}
                     </div>
                     <div className="order-flow-summary-sub">
-                      <span>订单号：{String((popupEntryWarehousing as any)?.orderNo || '').trim() || '-'}</span>
-                      <span>仓库：{String((popupEntryWarehousing as any)?.warehouse || '').trim() || '-'}</span>
-                      <span>质检时间：{String((popupEntryWarehousing as any)?.createTime || '').trim() ? formatDateTime((popupEntryWarehousing as any)?.createTime) : '-'}</span>
-                      <span>完成时间：{String((popupEntryWarehousing as any)?.warehousingEndTime || '').trim() ? formatDateTime((popupEntryWarehousing as any)?.warehousingEndTime) : '-'}</span>
+                      <span>订单号：{String((popupEntryWarehousing as Record<string, unknown>)?.orderNo || '').trim() || '-'}</span>
+                      <span>仓库：{String((popupEntryWarehousing as Record<string, unknown>)?.warehouse || '').trim() || '-'}</span>
+                      <span>质检时间：{String((popupEntryWarehousing as Record<string, unknown>)?.createTime || '').trim() ? formatDateTime((popupEntryWarehousing as Record<string, unknown>)?.createTime) : '-'}</span>
+                      <span>完成时间：{String((popupEntryWarehousing as Record<string, unknown>)?.warehousingEndTime || '').trim() ? formatDateTime((popupEntryWarehousing as Record<string, unknown>)?.warehousingEndTime) : '-'}</span>
                     </div>
                   </div>
                 </div>
@@ -1952,15 +1976,15 @@ const ProductWarehousing: React.FC = () => {
                 <div className="order-flow-metrics">
                   <div className="order-flow-metric">
                     <div className="order-flow-metric-label">质检数量</div>
-                    <div className="order-flow-metric-value">{toNumberSafe((popupEntryWarehousing as any)?.warehousingQuantity)}</div>
+                    <div className="order-flow-metric-value">{toNumberSafe((popupEntryWarehousing as Record<string, unknown>)?.warehousingQuantity)}</div>
                   </div>
                   <div className="order-flow-metric">
                     <div className="order-flow-metric-label">合格数量</div>
-                    <div className="order-flow-metric-value">{toNumberSafe((popupEntryWarehousing as any)?.qualifiedQuantity)}</div>
+                    <div className="order-flow-metric-value">{toNumberSafe((popupEntryWarehousing as Record<string, unknown>)?.qualifiedQuantity)}</div>
                   </div>
                   <div className="order-flow-metric">
                     <div className="order-flow-metric-label">不合格数量</div>
-                    <div className="order-flow-metric-value">{toNumberSafe((popupEntryWarehousing as any)?.unqualifiedQuantity)}</div>
+                    <div className="order-flow-metric-value">{toNumberSafe((popupEntryWarehousing as Record<string, unknown>)?.unqualifiedQuantity)}</div>
                   </div>
                 </div>
               </div>
@@ -1989,9 +2013,9 @@ const ProductWarehousing: React.FC = () => {
                   summary={(pageData) => {
                     const totals = pageData.reduce(
                       (acc, r) => {
-                        acc.quantity += toNumberSafe((r as any)?.quantity);
-                        acc.warehousedQuantity += toNumberSafe((r as any)?.warehousedQuantity);
-                        acc.unwarehousedQuantity += toNumberSafe((r as any)?.unwarehousedQuantity);
+                        acc.quantity += toNumberSafe((r as Record<string, unknown>)?.quantity);
+                        acc.warehousedQuantity += toNumberSafe((r as Record<string, unknown>)?.warehousedQuantity);
+                        acc.unwarehousedQuantity += toNumberSafe((r as Record<string, unknown>)?.unwarehousedQuantity);
                         return acc;
                       },
                       { quantity: 0, warehousedQuantity: 0, unwarehousedQuantity: 0 }
@@ -2019,19 +2043,19 @@ const ProductWarehousing: React.FC = () => {
               <div style={{ padding: 12 }}>
                 <div className="order-flow-field" style={{ marginBottom: 10 }}>
                   <div className="order-flow-field-label">次品类别</div>
-                  <div className="order-flow-field-value">{getDefectCategoryLabel((popupEntryWarehousing as any)?.defectCategory)}</div>
+                  <div className="order-flow-field-value">{getDefectCategoryLabel((popupEntryWarehousing as Record<string, unknown>)?.defectCategory)}</div>
                 </div>
                 <div className="order-flow-field" style={{ marginBottom: 10 }}>
                   <div className="order-flow-field-label">处理方式</div>
-                  <div className="order-flow-field-value">{getDefectRemarkLabel((popupEntryWarehousing as any)?.defectRemark)}</div>
+                  <div className="order-flow-field-value">{getDefectRemarkLabel((popupEntryWarehousing as Record<string, unknown>)?.defectRemark)}</div>
                 </div>
                 <div className="order-flow-field" style={{ marginBottom: 10 }}>
                   <div className="order-flow-field-label">返修备注</div>
-                  <div className="order-flow-field-value">{String((popupEntryWarehousing as any)?.repairRemark || '').trim() || '-'}</div>
+                  <div className="order-flow-field-value">{String((popupEntryWarehousing as Record<string, unknown>)?.repairRemark || '').trim() || '-'}</div>
                 </div>
 
                 {(() => {
-                  const urls = parseUrlsValue((popupEntryWarehousing as any)?.unqualifiedImageUrls);
+                  const urls = parseUrlsValue((popupEntryWarehousing as Record<string, unknown>)?.unqualifiedImageUrls);
                   if (!urls.length) return <div style={{ color: 'rgba(0,0,0,0.45)' }}>-</div>;
                   return (
                     <Space wrap size={10}>
@@ -2083,32 +2107,46 @@ const ProductWarehousing: React.FC = () => {
           {isEntryPage ? (
             <>
               <Card size="small" className="order-flow-detail" style={{ marginTop: 12 }} loading={entryLoading}>
+                <div style={{ marginBottom: 12 }}>
+                  <ProductionOrderHeader
+                    order={orderDetail || (entryWarehousing as Record<string, unknown>)}
+                    orderNo={String((orderDetail as Record<string, unknown>)?.orderNo || (entryWarehousing as Record<string, unknown>)?.orderNo || '').trim()}
+                    styleNo={String((orderDetail as Record<string, unknown>)?.styleNo || (entryWarehousing as Record<string, unknown>)?.styleNo || '').trim()}
+                    styleName={String((orderDetail as Record<string, unknown>)?.styleName || (entryWarehousing as Record<string, unknown>)?.styleName || '').trim()}
+                    styleId={(orderDetail as Record<string, unknown>)?.styleId || (entryWarehousing as Record<string, unknown>)?.styleId}
+                    styleCover={(orderDetail as Record<string, unknown>)?.styleCover || (entryWarehousing as Record<string, unknown>)?.styleCover || null}
+                    color={String((orderDetail as Record<string, unknown>)?.color || (entryWarehousing as Record<string, unknown>)?.color || '').trim()}
+                    totalQuantity={toNumberSafe((orderDetail as Record<string, unknown>)?.orderQuantity)}
+                    coverSize={160}
+                    qrSize={120}
+                  />
+                </div>
                 <div className="order-flow-section">
                   <div className="order-flow-section-title">本次质检入库</div>
                   <div className="order-flow-summary-top">
                     <div className="order-flow-summary-left">
                       <StyleCoverThumb
-                        styleId={(entryWarehousing as any)?.styleId}
-                        styleNo={(entryWarehousing as any)?.styleNo}
-                        src={(orderDetail as any)?.styleCover || (entryWarehousing as any)?.styleCover || null}
+                        styleId={(entryWarehousing as Record<string, unknown>)?.styleId}
+                        styleNo={(entryWarehousing as Record<string, unknown>)?.styleNo}
+                        src={(orderDetail as Record<string, unknown>)?.styleCover || (entryWarehousing as Record<string, unknown>)?.styleCover || null}
                         size={84}
                         borderRadius={12}
                       />
                       <div className="order-flow-summary-meta">
                         <div className="order-flow-summary-title-row">
-                          <div className="order-flow-summary-title">{String((entryWarehousing as any)?.warehousingNo || routeWarehousingNo || '').trim() || '-'}</div>
+                          <div className="order-flow-summary-title">{String((entryWarehousing as Record<string, unknown>)?.warehousingNo || routeWarehousingNo || '').trim() || '-'}</div>
                           {(() => {
-                            const s = String((entryWarehousing as any)?.qualityStatus || '').trim();
+                            const s = String((entryWarehousing as Record<string, unknown>)?.qualityStatus || '').trim();
                             if (!s) return null;
-                            const { text, color } = getQualityStatusConfig(s as any);
+                            const { text, color } = getQualityStatusConfig(s as Record<string, unknown>);
                             return <Tag color={color}>{text}</Tag>;
                           })()}
                         </div>
                         <div className="order-flow-summary-sub">
-                          <span>订单号：{String((entryWarehousing as any)?.orderNo || '').trim() || '-'}</span>
-                          <span>仓库：{String((entryWarehousing as any)?.warehouse || '').trim() || '-'}</span>
-                          <span>质检时间：{String((entryWarehousing as any)?.createTime || '').trim() ? formatDateTime((entryWarehousing as any)?.createTime) : '-'}</span>
-                          <span>完成时间：{String((entryWarehousing as any)?.warehousingEndTime || '').trim() ? formatDateTime((entryWarehousing as any)?.warehousingEndTime) : '-'}</span>
+                          <span>订单号：{String((entryWarehousing as Record<string, unknown>)?.orderNo || '').trim() || '-'}</span>
+                          <span>仓库：{String((entryWarehousing as Record<string, unknown>)?.warehouse || '').trim() || '-'}</span>
+                          <span>质检时间：{String((entryWarehousing as Record<string, unknown>)?.createTime || '').trim() ? formatDateTime((entryWarehousing as Record<string, unknown>)?.createTime) : '-'}</span>
+                          <span>完成时间：{String((entryWarehousing as Record<string, unknown>)?.warehousingEndTime || '').trim() ? formatDateTime((entryWarehousing as Record<string, unknown>)?.warehousingEndTime) : '-'}</span>
                         </div>
                       </div>
                     </div>
@@ -2116,15 +2154,15 @@ const ProductWarehousing: React.FC = () => {
                     <div className="order-flow-metrics">
                       <div className="order-flow-metric">
                         <div className="order-flow-metric-label">质检数量</div>
-                        <div className="order-flow-metric-value">{toNumberSafe((entryWarehousing as any)?.warehousingQuantity)}</div>
+                        <div className="order-flow-metric-value">{toNumberSafe((entryWarehousing as Record<string, unknown>)?.warehousingQuantity)}</div>
                       </div>
                       <div className="order-flow-metric">
                         <div className="order-flow-metric-label">合格数量</div>
-                        <div className="order-flow-metric-value">{toNumberSafe((entryWarehousing as any)?.qualifiedQuantity)}</div>
+                        <div className="order-flow-metric-value">{toNumberSafe((entryWarehousing as Record<string, unknown>)?.qualifiedQuantity)}</div>
                       </div>
                       <div className="order-flow-metric">
                         <div className="order-flow-metric-label">不合格数量</div>
-                        <div className="order-flow-metric-value">{toNumberSafe((entryWarehousing as any)?.unqualifiedQuantity)}</div>
+                        <div className="order-flow-metric-value">{toNumberSafe((entryWarehousing as Record<string, unknown>)?.unqualifiedQuantity)}</div>
                       </div>
                     </div>
                   </div>
@@ -2151,9 +2189,9 @@ const ProductWarehousing: React.FC = () => {
                     summary={(pageData) => {
                       const totals = pageData.reduce(
                         (acc, r) => {
-                          acc.quantity += toNumberSafe((r as any)?.quantity);
-                          acc.warehousedQuantity += toNumberSafe((r as any)?.warehousedQuantity);
-                          acc.unwarehousedQuantity += toNumberSafe((r as any)?.unwarehousedQuantity);
+                          acc.quantity += toNumberSafe((r as Record<string, unknown>)?.quantity);
+                          acc.warehousedQuantity += toNumberSafe((r as Record<string, unknown>)?.warehousedQuantity);
+                          acc.unwarehousedQuantity += toNumberSafe((r as Record<string, unknown>)?.unwarehousedQuantity);
                           return acc;
                         },
                         { quantity: 0, warehousedQuantity: 0, unwarehousedQuantity: 0 }
@@ -2182,7 +2220,7 @@ const ProductWarehousing: React.FC = () => {
                     <div className="order-flow-module-title">明细记录</div>
                     <Table
                       size="small"
-                      rowKey={(r) => String((r as any)?.id || `${(r as any)?.cuttingBundleQrCode || ''}-${(r as any)?.size || ''}-${(r as any)?.createTime || ''}`)}
+                      rowKey={(r) => String((r as Record<string, unknown>)?.id || `${(r as Record<string, unknown>)?.cuttingBundleQrCode || ''}-${(r as Record<string, unknown>)?.size || ''}-${(r as Record<string, unknown>)?.createTime || ''}`)}
                       columns={warehousingDetailColumns}
                       dataSource={detailWarehousingItems}
                       pagination={{ pageSize: 20, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], simple: true }}
@@ -2195,20 +2233,20 @@ const ProductWarehousing: React.FC = () => {
                     <div style={{ padding: 12 }}>
                       <div className="order-flow-field" style={{ marginBottom: 10 }}>
                         <div className="order-flow-field-label">次品类别</div>
-                        <div className="order-flow-field-value">{getDefectCategoryLabel((entryWarehousing as any)?.defectCategory)}</div>
+                        <div className="order-flow-field-value">{getDefectCategoryLabel((entryWarehousing as Record<string, unknown>)?.defectCategory)}</div>
                       </div>
                       <div className="order-flow-field" style={{ marginBottom: 10 }}>
                         <div className="order-flow-field-label">处理方式</div>
-                        <div className="order-flow-field-value">{getDefectRemarkLabel((entryWarehousing as any)?.defectRemark)}</div>
+                        <div className="order-flow-field-value">{getDefectRemarkLabel((entryWarehousing as Record<string, unknown>)?.defectRemark)}</div>
                       </div>
                       <div className="order-flow-field" style={{ marginBottom: 10 }}>
                         <div className="order-flow-field-label">返修备注</div>
-                        <div className="order-flow-field-value">{String((entryWarehousing as any)?.repairRemark || '').trim() || '-'}</div>
+                        <div className="order-flow-field-value">{String((entryWarehousing as Record<string, unknown>)?.repairRemark || '').trim() || '-'}</div>
                       </div>
                       {unqualifiedFileList.length ? (
                         <Space wrap size={10}>
                           {unqualifiedFileList
-                            .map((f) => String((f as any)?.url || '').trim())
+                            .map((f) => String((f as Record<string, unknown>)?.url || '').trim())
                             .filter(Boolean)
                             .map((url) => (
                               <img
@@ -2293,7 +2331,7 @@ const ProductWarehousing: React.FC = () => {
                 loading={loading}
                 scroll={{ x: 'max-content', y: isMobile ? 360 : 560 }}
                 rowClassName={() => 'clickable-row'}
-                onRow={(record: any) => {
+                onRow={(record: unknown) => {
                   return {
                     onClick: (e) => {
                       const target = e.target as HTMLElement | null;
@@ -2302,7 +2340,7 @@ const ProductWarehousing: React.FC = () => {
                         'a,button,input,textarea,select,option,[role="button"],[role="menuitem"],.ant-dropdown-trigger,.ant-btn'
                       );
                       if (interactive) return;
-                      goToWarehousingDetail(record as any);
+                      goToWarehousingDetail(record as Record<string, unknown>);
                     },
                   };
                 }}
@@ -2460,9 +2498,9 @@ const ProductWarehousing: React.FC = () => {
                         notFoundContent={orderOptionsLoading ? '加载中…' : '暂无数据'}
                         options={orderOptions
                           .filter((o) => {
-                            const st = String((o as any)?.status || '').trim().toLowerCase();
+                            const st = String((o as Record<string, unknown>)?.status || '').trim().toLowerCase();
                             if (st === 'completed') return false;
-                            const cuttingQty = Number((o as any)?.cuttingQuantity || 0) || 0;
+                            const cuttingQty = Number((o as Record<string, unknown>)?.cuttingQuantity || 0) || 0;
                             return cuttingQty > 0;
                           })
                           .map((o) => ({
@@ -2495,7 +2533,7 @@ const ProductWarehousing: React.FC = () => {
                             setBatchQtyByQr({});
                             return;
                           }
-                          const order = (option as any)?.data || orderOptions.find((o) => o.id === value);
+                          const order = (option as Record<string, unknown>)?.data || orderOptions.find((o) => o.id === value);
                           if (!order) return;
 
                           form.setFieldsValue({
@@ -2513,7 +2551,7 @@ const ProductWarehousing: React.FC = () => {
                             unqualifiedQuantity: 0,
                             qualityStatus: 'qualified',
                             unqualifiedImageUrls: JSON.stringify(
-                              unqualifiedFileList.map((f) => String((f as any)?.url || '').trim()).filter(Boolean).slice(0, 4)
+                              unqualifiedFileList.map((f) => String((f as Record<string, unknown>)?.url || '').trim()).filter(Boolean).slice(0, 4)
                             ),
                             defectCategory: undefined,
                             defectRemark: undefined,
@@ -2640,25 +2678,25 @@ const ProductWarehousing: React.FC = () => {
                                       title: '扎号',
                                       dataIndex: 'bundleNo',
                                       width: 80,
-                                      render: (v: any) => (v ? String(v) : '-'),
+                                      render: (v: unknown) => (v ? String(v) : '-'),
                                     },
                                     {
                                       title: '颜色',
                                       dataIndex: 'color',
                                       width: 100,
-                                      render: (v: any) => (String(v || '').trim() ? String(v) : '-'),
+                                      render: (v: unknown) => (String(v || '').trim() ? String(v) : '-'),
                                     },
                                     {
                                       title: '码数',
                                       dataIndex: 'size',
                                       width: 100,
-                                      render: (v: any) => (String(v || '').trim() ? String(v) : '-'),
+                                      render: (v: unknown) => (String(v || '').trim() ? String(v) : '-'),
                                     },
                                     {
                                       title: '数量',
                                       dataIndex: 'quantity',
                                       width: 80,
-                                      render: (v: any) => String(Number(v || 0) || 0),
+                                      render: (v: unknown) => String(Number(v || 0) || 0),
                                     },
                                     {
                                       title: '状态',
@@ -2726,7 +2764,7 @@ const ProductWarehousing: React.FC = () => {
                               >
                                 {batchSelectedBundleQrs.map((qr) => {
                                   const b = bundles.find((x) => String(x.qrCode || '').trim() === qr);
-                                  const rawStatus = String((b as any)?.status || '').trim();
+                                  const rawStatus = String((b as Record<string, unknown>)?.status || '').trim();
                                   const isBlocked = isBundleBlockedForWarehousing(rawStatus);
                                   const remaining = isBlocked ? bundleRepairRemainingByQr[qr] : undefined;
                                   const maxQty = isBlocked
@@ -2927,13 +2965,13 @@ const ProductWarehousing: React.FC = () => {
                           }
                           return Upload.LIST_IGNORE;
                         }
-                        return uploadOneUnqualifiedImage(file as any);
+                        return uploadOneUnqualifiedImage(file as Record<string, unknown>);
                       }}
                       onPreview={(file) => {
-                        const url = String((file as any)?.url || (file as any)?.thumbUrl || '').trim();
+                        const url = String((file as Record<string, unknown>)?.url || (file as Record<string, unknown>)?.thumbUrl || '').trim();
                         if (!url) return;
                         setPreviewUrl(url);
-                        setPreviewTitle(String((file as any)?.name || '图片预览'));
+                        setPreviewTitle(String((file as Record<string, unknown>)?.name || '图片预览'));
                         setPreviewOpen(true);
                       }}
                       onRemove={(file) => {
@@ -2942,7 +2980,7 @@ const ProductWarehousing: React.FC = () => {
                           form.setFieldsValue({
                             unqualifiedImageUrls: JSON.stringify(
                               next
-                                .map((f) => String((f as any)?.url || '').trim())
+                                .map((f) => String((f as Record<string, unknown>)?.url || '').trim())
                                 .filter(Boolean)
                                 .slice(0, MAX_UNQUALIFIED_IMAGES)
                             ),

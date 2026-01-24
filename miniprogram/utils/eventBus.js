@@ -22,7 +22,7 @@ class EventBus {
    */
   on(eventName, callback) {
     if (!eventName || typeof callback !== 'function') {
-      if (DEBUG) console.warn('[EventBus] Invalid event subscription');
+      if (DEBUG) {console.warn('[EventBus] Invalid event subscription');}
       return () => {};
     }
 
@@ -44,7 +44,7 @@ class EventBus {
    * @param {Function} callback - 回调函数（不传则取消该事件的所有订阅）
    */
   off(eventName, callback) {
-    if (!this.events.has(eventName)) return;
+    if (!this.events.has(eventName)) {return;}
 
     if (callback) {
       this.events.get(eventName).delete(callback);
@@ -59,7 +59,7 @@ class EventBus {
    * @param {*} data - 事件数据
    */
   emit(eventName, data) {
-    if (!this.events.has(eventName)) return;
+    if (!this.events.has(eventName)) {return;}
 
     const callbacks = this.events.get(eventName);
     callbacks.forEach(callback => {
