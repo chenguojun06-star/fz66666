@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Button, Card, Input, Select, Space, Tag, Form, Row, Col, InputNumber, Upload, message, Segmented, Dropdown, Collapse, Tabs, Modal, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { PlusOutlined, SearchOutlined, EyeOutlined, EditOutlined, UploadOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import { PlusOutlined, SearchOutlined, EyeOutlined, EditOutlined, UploadOutlined, QuestionCircleOutlined, DownloadOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { QRCodeCanvas } from 'qrcode.react';
 import Layout from '../../components/Layout';
@@ -17,6 +17,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { isSupervisorOrAboveUser, useAuth } from '../../utils/authContext';
 import { useSync } from '../../utils/syncManager';
 import { useViewport } from '../../utils/useViewport';
+import * as XLSX from 'xlsx';
 import './styles.css';
 
 const { Option } = Select;
@@ -243,6 +244,74 @@ const MaterialPurchase: React.FC = () => {
   const openReturnReset = (target: MaterialPurchaseType) => {
     setReturnResetTarget(target);
     setReturnResetOpen(true);
+  };
+
+  // 导出采购单数据到 Excel
+  const handleExport = () => {
+    if (!purchaseList || purchaseList.length === 0) {
+      message.warning('当前没有数据可导出');
+      return;
+    }
+
+    try {
+      // 准备导出数据
+      const exportData = purchaseList.map((item, index) => ({
+        '序号': index + 1,
+        '订单号': item.orderNo || '-',
+        '采购单号': item.purchaseNo || '-',
+        '物料类型': getMaterialTypeLabel(item.materialType),
+        '物料名称': item.materialName || '-',
+        '物料编码': item.materialCode || '-',
+        '规格': item.specifications || '-',
+        '供应商': item.supplierName || '-',
+        '采购数量': `${item.purchaseQuantity || 0} ${item.unit || ''}`,
+        '到货数量': `${item.arrivedQuantity || 0} ${item.unit || ''}`,
+        '待到数量': `${Math.max(0, (item.purchaseQuantity || 0) - (item.arrivedQuantity || 0))} ${item.unit || ''}`,
+        '单价': Number.isFinite(Number(item.unitPrice)) ? `¥${Number(item.unitPrice).toFixed(2)}` : '-',
+        '总金额': Number.isFinite(Number(item.purchaseQuantity) * Number(item.unitPrice)) 
+          ? `¥${(Number(item.purchaseQuantity) * Number(item.unitPrice)).toFixed(2)}` 
+          : '-',
+        '状态': getStatusConfig(item.status).text,
+        '领取人': item.receiverName || '-',
+        '创建时间': item.createTime ? formatDateTime(item.createTime) : '-',
+      }));
+
+      // 创建工作簿
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, '面辅料采购');
+
+      // 设置列宽
+      const colWidths = [
+        { wch: 6 },  // 序号
+        { wch: 18 }, // 订单号
+        { wch: 20 }, // 采购单号
+        { wch: 12 }, // 物料类型
+        { wch: 20 }, // 物料名称
+        { wch: 18 }, // 物料编码
+        { wch: 15 }, // 规格
+        { wch: 18 }, // 供应商
+        { wch: 15 }, // 采购数量
+        { wch: 15 }, // 到货数量
+        { wch: 15 }, // 待到数量
+        { wch: 12 }, // 单价
+        { wch: 12 }, // 总金额
+        { wch: 12 }, // 状态
+        { wch: 12 }, // 领取人
+        { wch: 20 }, // 创建时间
+      ];
+      ws['!cols'] = colWidths;
+
+      // 生成文件名
+      const fileName = `面辅料采购_${new Date().toLocaleDateString().replace(/\//g, '')}_${new Date().toLocaleTimeString().replace(/:/g, '')}.xlsx`;
+
+      // 导出文件
+      XLSX.writeFile(wb, fileName);
+      message.success('导出成功');
+    } catch (error: any) {
+      message.error(error?.message || '导出失败');
+      console.error('Export error:', error);
+    }
   };
 
   useEffect(() => {
@@ -1464,6 +1533,13 @@ const MaterialPurchase: React.FC = () => {
                         />
                       </div>
                       <Space wrap>
+                        <Button 
+                          icon={<DownloadOutlined />} 
+                          onClick={handleExport}
+                          disabled={loading || !purchaseList || purchaseList.length === 0}
+                        >
+                          导出
+                        </Button>
                         <Button type="default" onClick={async () => {
                           const targetOrderNo = (queryParams.orderNo || '').trim() || window.prompt('请输入订单号以生成采购单');
                           if (!targetOrderNo) return;
