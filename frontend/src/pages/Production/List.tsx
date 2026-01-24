@@ -151,29 +151,7 @@ const ProductionList: React.FC = () => {
     return { totalOrder, totalWarehoused, totalUnwarehoused };
   })();
 
-  const [scanVisible, setScanVisible] = useState(false);
-  const [scanOrder, setScanOrder] = useState<ProductionOrder | null>(null);
-  const [scanSubmitting, setScanSubmitting] = useState(false);
-  const [scanConfirmVisible, setScanConfirmVisible] = useState(false);
-  const [scanConfirmRemain, setScanConfirmRemain] = useState(0);
-  const [scanConfirmLoading, setScanConfirmLoading] = useState(false);
-  const [scanConfirmPayload, setScanConfirmPayload] = useState<any | null>(null);
-  const [scanConfirmDetail, setScanConfirmDetail] = useState<any | null>(null);
-  const [scanConfirmMeta, setScanConfirmMeta] = useState<any | null>(null);
-  const [scanHistoryLoading, setScanHistoryLoading] = useState(false);
-  const [scanHistory, setScanHistory] = useState<ScanRecord[]>([]);
-  const [scanProcessOptions, setScanProcessOptions] = useState<{ label: string; value: string }[]>([
-    { label: '裁剪', value: '裁剪' },
-    { label: '车缝', value: '车缝' },
-    { label: '整烫', value: '整烫' },
-    { label: '包装', value: '包装' },
-    { label: '质检', value: '质检' },
-  ]);
-  const scanInputRef = useRef<any>(null);
-  const scanSubmittingRef = useRef(false);
-  const lastFailedRequestRef = useRef<{ key: string; requestId: string } | null>(null);
-  const scanConfirmTimerRef = useRef<number | null>(null);
-  const scanConfirmTickRef = useRef<number | null>(null);
+
 
   // 获取生产订单列表
   const fetchProductionList = async () => {
@@ -996,15 +974,6 @@ const ProductionList: React.FC = () => {
                 title: '详情',
                 icon: <EyeOutlined />,
                 onClick: () => openDialog(record),
-                primary: true,
-              },
-              {
-                key: 'scan',
-                label: '扫码领取',
-                title: frozen ? '扫码领取(已完成)' : '扫码领取',
-                icon: <ScanOutlined />,
-                disabled: frozen,
-                onClick: () => openScanDialog(record),
                 primary: true,
               },
               {
