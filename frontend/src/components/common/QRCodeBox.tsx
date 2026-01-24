@@ -83,6 +83,11 @@ const variantStyles = {
  * 
  * 用于在全站统一展示二维码，支持多种主题样式和自定义配置
  * 
+ * **特性：**
+ * - 固定尺寸：二维码大小不随窗口缩放而变化，保持清晰可扫描
+ * - 多主题：支持 primary、default、success、warning 四种样式
+ * - 统一规范：全站统一的二维码展示样式
+ * 
  * @example
  * ```tsx
  * // 订单扫码（蓝色主题）
@@ -90,6 +95,7 @@ const variantStyles = {
  *   value={{ type: 'order', orderNo: 'PO20260122001' }}
  *   label="📱 订单扫码"
  *   variant="primary"
+ *   size={120}
  * />
  * 
  * // 裁剪单扫码（默认主题）
@@ -125,7 +131,7 @@ export const QRCodeBox: React.FC<QRCodeBoxProps> = ({
     <div
       className={className}
       style={{
-        display: 'flex',
+        display: 'inline-flex',
         flexDirection: 'column',
         alignItems: 'center',
         padding: '8px',
@@ -134,15 +140,30 @@ export const QRCodeBox: React.FC<QRCodeBoxProps> = ({
         border: `2px solid ${variantStyle.borderColor}`,
         boxShadow: variantStyle.boxShadow,
         flexShrink: 0,
+        width: 'fit-content',
+        minWidth: `${size + 16}px`, // size + 2*padding
+        maxWidth: `${size + 16}px`,
         ...style,
       }}
     >
-      <QRCodeCanvas
-        value={qrValue}
-        size={size}
-        level={level}
-        includeMargin={includeMargin}
-      />
+      <div
+        style={{
+          width: `${size}px`,
+          height: `${size}px`,
+          flexShrink: 0,
+        }}
+      >
+        <QRCodeCanvas
+          value={qrValue}
+          size={size}
+          level={level}
+          includeMargin={includeMargin}
+          style={{
+            width: '100%',
+            height: '100%',
+          }}
+        />
+      </div>
       {label && (
         <div
           style={{
@@ -152,6 +173,7 @@ export const QRCodeBox: React.FC<QRCodeBoxProps> = ({
             fontWeight: 600,
             textAlign: 'center',
             wordBreak: 'break-all',
+            width: `${size}px`,
           }}
         >
           {label}
