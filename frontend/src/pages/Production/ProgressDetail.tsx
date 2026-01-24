@@ -9,6 +9,7 @@ import ResizableTable from '../../components/common/ResizableTable';
 import RowActions from '../../components/common/RowActions';
 import SortableColumnTitle from '../../components/common/SortableColumnTitle';
 import QuickEditModal from '../../components/common/QuickEditModal';
+import { ProgressNodeCard } from '../../components/common/ProgressNodeCard';
 import { ProductionOrderHeader, StyleCoverThumb } from '../../components/StyleAssets';
 import { compareSizeAsc, generateRequestId, isDuplicateScanMessage, isOrderFrozenByStatus } from '../../utils/api';
 import { isAdminUser as isAdminUserFn, isSupervisorOrAboveUser as isSupervisorOrAboveUserFn, useAuth } from '../../utils/authContext';
@@ -173,7 +174,8 @@ const stageNameMatches = (a: any, b: any) => {
   if (isIroningStageKey(x) && isIroningStageKey(y)) return true;
   if (isProductionStageKey(x) && isProductionStageKey(y)) return true;
   if (isSewingStageKey(x) && isSewingStageKey(y)) return true;
-  return x.includes(y) || y.includes(x);
+  // 移除模糊匹配，避免"生产"和"车缝"互相匹配
+  return false;
 };
 
 /**
@@ -2657,11 +2659,10 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     const effectivePct = frozen ? 100 : pct;
     const currentIdx = getNodeIndexFromProgress(nodes, effectivePct);
     const canEditWorkflow = isSupervisorOrAbove && !nodeWorkflowSaving && !nodeWorkflowLocked && !isOrderFrozenByStatus(order);
-    const canReorderWorkflow = false;
     const totalUnitPrice = nodes.reduce((sum, n) => sum + (Number(n.unitPrice) || 0), 0);
     const orderQty = Number(order.orderQuantity) || 0;
     const totalOrderCost = totalUnitPrice * orderQty;
-    const cardWidth = Math.round((screens.md ? 260 : 240) * 0.6);
+    
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <Card size="small" styles={{ body: { padding: 12 } }}>
@@ -2676,92 +2677,36 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
           </Space>
         </Card>
         <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
-          <div className="mpb-detailCards">
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
             {nodes.map((n, idx) => {
               const stat = nodeStats.statsByName[n.name] || { done: 0, total: nodeStats.totalQty, remaining: nodeStats.totalQty, percent: 0 };
               const percent = clampPercent(stat.percent);
               const isDone = frozen || idx < currentIdx || effectivePct >= 100;
               const isCurrent = !frozen && idx === currentIdx && effectivePct > 0 && effectivePct < 100;
-              const fillPct = isDone ? 100 : percent;
               const unitPrice = Number(n.unitPrice) || 0;
-              const isDragging = draggingNodeId === String(n.id);
-              const isDragOver = !!draggingNodeId && draggingNodeId !== String(n.id) && dragOverNodeId === String(n.id);
+              
               return (
-                <div
+                <ProgressNodeCard
                   key={n.id}
-                  className={`mpb-detailCard mpb-pop${canReorderWorkflow ? ' mpb-draggable' : ''}${isDragging ? ' mpb-dragging' : ''}${isDragOver ? ' mpb-dragOver' : ''}${isDone ? ' mpb-detailDone' : ''}${isCurrent ? ' mpb-detailCurrent' : ''}${frozen ? ' mpb-detailFrozen' : ''}`}
-                  style={{ width: cardWidth, ['--p' as Record<string, unknown>]: `${fillPct}%` }}
-                  title={`${n.name} ${stat.done}/${stat.total} · 剩 ${stat.remaining} · ${percent.toFixed(0)}%`}
-                  onDragOver={(e) => {
-                    if (!canReorderWorkflow) return;
-                    if (!draggingNodeId) return;
-                    if (String(n.id) === String(draggingNodeId)) return;
-                    e.preventDefault();
-                    setDragOverNodeId(String(n.id));
-                  }}
-                  onDragLeave={() => {
-                    setDragOverNodeId((prev) => (prev === String(n.id) ? null : prev));
-                  }}
-                  onDrop={(e) => {
-                    if (!canReorderWorkflow) return;
-                    e.preventDefault();
-                    const fromId = String(draggingNodeId || e.dataTransfer.getData('text/plain') || '').trim();
-                    reorderNodeBefore(fromId, String(n.id));
-                    setDraggingNodeId(null);
-                    setDragOverNodeId(null);
-                  }}
-                >
-                  <div
-                    className="mpb-detailTrack"
-                    style={{ ['--p' as Record<string, unknown>]: `${fillPct}%` }}
-                    draggable={canReorderWorkflow}
-                    onDragStart={(e) => {
-                      if (!canReorderWorkflow) return;
-                      e.dataTransfer.setData('text/plain', String(n.id));
-                      e.dataTransfer.effectAllowed = 'move';
-                      setDraggingNodeId(String(n.id));
-                    }}
-                    onDragEnd={() => {
-                      setDraggingNodeId(null);
-                      setDragOverNodeId(null);
-                    }}
-                  >
-                    <div className="mpb-detailFill" />
-                    <div className="mpb-detailBarText">
-                      <span className="mpb-detailBarLeft">{n.name}</span>
-                      <span className="mpb-detailBarRight">
-                        {`${stat.done}/${stat.total} · ${percent.toFixed(0)}%`}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="mpb-detailBottomRow">
-                    <div className="mpb-detailPriceInline">
-                      <span className="mpb-detailLabel">单价</span>
-                      <InputNumber
-                        className="mpb-detailPriceInput"
-                        size="small"
-                        min={0}
-                        precision={2}
-                        value={unitPrice}
-                        aria-label={`单价-${n.name}`}
-                        disabled={!canEditWorkflow}
-                        onChange={(v) => updateNodeUnitPrice(n.id, Number(v) || 0)}
-                      />
-                    </div>
-
-                    <div className="mpb-detailActions">
-                      <Button type="text" size="small" danger icon={<DeleteOutlined />} aria-label="删除" disabled={!canEditWorkflow} onClick={() => removeNode(n.id)} />
-                    </div>
-                  </div>
-                </div>
+                  name={n.name}
+                  done={stat.done}
+                  total={stat.total}
+                  percent={percent}
+                  unitPrice={unitPrice}
+                  isDone={isDone}
+                  isCurrent={isCurrent}
+                  isFrozen={frozen}
+                  canEdit={canEditWorkflow}
+                  onPriceChange={(value) => updateNodeUnitPrice(n.id, value)}
+                  onDelete={() => removeNode(n.id)}
+                />
               );
             })}
           </div>
         </div>
       </div>
     );
-  }, [activeOrder, dragOverNodeId, draggingNodeId, isSupervisorOrAbove, nodeStats, nodeWorkflowLocked, nodeWorkflowSaving, nodes, screens.md]);
+  }, [activeOrder, isSupervisorOrAbove, nodeStats, nodeWorkflowLocked, nodeWorkflowSaving, nodes]);
 
   const autoOpenDetailOnceRef = useRef(false);
 
