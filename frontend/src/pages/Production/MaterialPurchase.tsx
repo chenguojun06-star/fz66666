@@ -1075,14 +1075,14 @@ const MaterialPurchase: React.FC = () => {
     openReturnConfirm([record]);
   };
 
-  // 物料采购表格列定义（分组视图）
-  const purchaseGroupColumns = [
+  // 物料采购表格列定义（明细视图）
+  const purchaseColumns: ColumnsType<MaterialPurchaseType> = [
     {
       title: '图片',
       dataIndex: 'styleCover',
       key: 'styleCover',
       width: 72,
-      render: (_: any, record: any) => (
+      render: (_: any, record: MaterialPurchaseType) => (
         <StyleCoverThumb styleId={record.styleId} styleNo={record.styleNo} src={record.styleCover || null} size={48} borderRadius={6} />
       )
     },
@@ -1090,13 +1090,13 @@ const MaterialPurchase: React.FC = () => {
       title: '订单号',
       dataIndex: 'orderNo',
       key: 'orderNo',
-      width: 120,
+      width: 140,
       ellipsis: true,
-      render: (v: any, record: any) => (
+      render: (v: any, record: MaterialPurchaseType) => (
         <a
           onClick={() => {
-            if (record.orderId) {
-              navigate(`/production/material/${record.orderId}`);
+            if ((record as any).orderId) {
+              navigate(`/production/material/${(record as any).orderId}`);
             }
           }}
           style={{ cursor: 'pointer', color: '#1890ff' }}
@@ -1106,72 +1106,125 @@ const MaterialPurchase: React.FC = () => {
       ),
     },
     {
-      title: '款号',
-      dataIndex: 'styleNo',
-      key: 'styleNo',
-      width: 100,
-      ellipsis: true,
-    },
-    {
-      title: '款名',
-      dataIndex: 'styleName',
-      key: 'styleName',
+      title: '采购单号',
+      dataIndex: 'purchaseNo',
+      key: 'purchaseNo',
       width: 140,
       ellipsis: true,
     },
     {
-      title: '采购单数',
-      dataIndex: 'purchaseCount',
-      key: 'purchaseCount',
+      title: '物料类型',
+      dataIndex: 'materialType',
+      key: 'materialType',
       width: 100,
-      align: 'center' as const,
-      render: (v: any) => `${v || 0} 个`,
+      render: (v: string) => (
+        <Tag color={
+          getMaterialTypeCategory(v) === 'accessory' ? 'purple' :
+          getMaterialTypeCategory(v) === 'lining' ? 'cyan' : 'geekblue'
+        }>
+          {getMaterialTypeLabel(v)}
+        </Tag>
+      ),
     },
     {
-      title: '总采购数量',
-      dataIndex: 'totalQuantity',
-      key: 'totalQuantity',
-      width: 110,
-      align: 'right' as const,
+      title: '物料名称',
+      dataIndex: 'materialName',
+      key: 'materialName',
+      width: 140,
+      ellipsis: true,
     },
     {
-      title: '总到货数量',
-      dataIndex: 'totalArrived',
-      key: 'totalArrived',
-      width: 110,
+      title: '物料编码',
+      dataIndex: 'materialCode',
+      key: 'materialCode',
+      width: 120,
+      ellipsis: true,
+    },
+    {
+      title: '规格',
+      dataIndex: 'specifications',
+      key: 'specifications',
+      width: 120,
+      ellipsis: true,
+    },
+    {
+      title: '供应商',
+      dataIndex: 'supplierName',
+      key: 'supplierName',
+      width: 140,
+      ellipsis: true,
+    },
+    {
+      title: '采购数量',
+      dataIndex: 'purchaseQuantity',
+      key: 'purchaseQuantity',
+      width: 100,
       align: 'right' as const,
+      render: (v: number, record: MaterialPurchaseType) => `${v || 0} ${record.unit || ''}`,
+    },
+    {
+      title: '到货数量',
+      dataIndex: 'arrivedQuantity',
+      key: 'arrivedQuantity',
+      width: 100,
+      align: 'right' as const,
+      render: (v: number, record: MaterialPurchaseType) => `${v || 0} ${record.unit || ''}`,
     },
     {
       title: '待到数量',
       key: 'remainingQuantity',
       width: 100,
       align: 'right' as const,
-      render: (_: any, record: any) => {
-        const total = Number(record?.totalQuantity || 0);
-        const arrived = Number(record?.totalArrived || 0);
-        return Math.max(0, total - arrived);
+      render: (_: any, record: MaterialPurchaseType) => {
+        const total = Number(record?.purchaseQuantity || 0);
+        const arrived = Number(record?.arrivedQuantity || 0);
+        const remaining = Math.max(0, total - arrived);
+        return `${remaining} ${record.unit || ''}`;
       },
+    },
+    {
+      title: '单价',
+      dataIndex: 'unitPrice',
+      key: 'unitPrice',
+      width: 100,
+      align: 'right' as const,
+      render: (v: number) => Number.isFinite(Number(v)) ? `¥${Number(v).toFixed(2)}` : '-',
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      width: 110,
+      render: (status: string) => {
+        const config = getStatusConfig(status);
+        return <Tag color={config.color}>{config.text}</Tag>;
+      },
+    },
+    {
+      title: '领取人',
+      dataIndex: 'receiverName',
+      key: 'receiverName',
+      width: 100,
+      ellipsis: true,
     },
     {
       title: '操作',
       key: 'action',
-      width: 110,
-      render: (_: any, record: any) => {
-        // 对于分组行，显示查看详情
-        if (record.children && record.children.length > 0) {
-          return (
-            <Button
-              type="link"
-              size="small"
-              icon={<EyeOutlined />}
-              onClick={() => void openDialogSafe('view', record.children[0])}
-            >
-              查看
-            </Button>
-          );
-        }
-        return null;
-      },
+      width: 80,
+      fixed: 'right' as const,
+      render: (_: any, record: MaterialPurchaseType) => (
+        <RowActions
+          actions={[
+            {
+              key: 'view',
+              label: '查看',
+              icon: <EyeOutlined />,
+              onClick: () => void openDialogSafe('view', record),
+              primary: true,
+            },
+          ]}
+        />
+      ),
     },
   ];
 
@@ -1567,9 +1620,9 @@ const MaterialPurchase: React.FC = () => {
 
                     {/* 表格区 */}
                     <ResizableTable
-                      columns={purchaseGroupColumns}
-                      dataSource={groupedPurchaseList}
-                      rowKey="key"
+                      columns={purchaseColumns}
+                      dataSource={purchaseList}
+                      rowKey="id"
                       loading={loading}
                       scroll={{ x: 'max-content', y: isMobile ? 360 : 560 }}
                       size={isMobile ? 'small' : 'middle'}
@@ -1578,6 +1631,8 @@ const MaterialPurchase: React.FC = () => {
                         pageSize: queryParams.pageSize,
                         total: total,
                         onChange: (page, pageSize) => setQueryParams({ ...queryParams, page, pageSize }),
+                        showTotal: (total) => `共 ${total} 条`,
+                        showSizeChanger: true,
                         size: isMobile ? 'small' : 'default',
                       }}
                     />
