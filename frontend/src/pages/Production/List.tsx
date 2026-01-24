@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Button, Card, Input, Select, Space, Tag, Form, Row, Col, Timeline, InputNumber, message, Modal, Table } from 'antd';
-import { SearchOutlined, EyeOutlined, ScanOutlined, DownloadOutlined, DeleteOutlined } from '@ant-design/icons';
+import { SearchOutlined, EyeOutlined, DownloadOutlined, DeleteOutlined } from '@ant-design/icons';
 import Layout from '../../components/Layout';
 import ResizableModal from '../../components/common/ResizableModal';
-import { ProductionOrder, ProductionQueryParams, ScanRecord } from '../../types/production';
+import { ProductionOrder, ProductionQueryParams } from '../../types/production';
 import api, {
   generateRequestId,
-  isDuplicateScanMessage,
   isOrderFrozenByStatus,
   isOrderFrozenByStatusOrStock,
   parseProductionOrderLines,
@@ -339,34 +338,6 @@ const ProductionList: React.FC = () => {
   const closeDialog = () => {
     setVisible(false);
     setCurrentOrder(null);
-  };
-
-  const clearScanConfirmTimers = () => {
-    if (scanConfirmTimerRef.current) {
-      window.clearTimeout(scanConfirmTimerRef.current);
-      scanConfirmTimerRef.current = null;
-    }
-    if (scanConfirmTickRef.current) {
-      window.clearInterval(scanConfirmTickRef.current);
-      scanConfirmTickRef.current = null;
-    }
-  };
-
-  useEffect(() => () => {
-    clearScanConfirmTimers();
-  }, []);
-
-  const closeScanConfirm = (silent?: boolean) => {
-    clearScanConfirmTimers();
-    setScanConfirmVisible(false);
-    setScanConfirmRemain(0);
-    setScanConfirmLoading(false);
-    setScanConfirmPayload(null);
-    setScanConfirmDetail(null);
-    setScanConfirmMeta(null);
-    if (!silent) {
-      message.info('已取消');
-    }
   };
 
   // 获取状态文本和标签颜色
