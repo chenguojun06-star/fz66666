@@ -71,6 +71,13 @@ export interface ProductionOrder {
 
   factoryUnitPrice?: number;
   quotationUnitPrice?: number;
+
+  // 采购手动确认相关字段
+  procurementManuallyCompleted?: number;
+  procurementConfirmedBy?: string;
+  procurementConfirmedByName?: string;
+  procurementConfirmedAt?: string;
+  procurementConfirmRemark?: string;
 }
 
 export interface ScanRecord {
