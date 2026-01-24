@@ -137,8 +137,9 @@ public class StyleInfoOrchestrator {
             throw new NoSuchElementException("款号不存在");
         }
 
-        String reason = body == null ? null : (body.get("reason") == null ? null : String.valueOf(body.get("reason")));
-        String remark = StringUtils.hasText(reason) ? reason.trim() : null;
+        Object reasonValue = body == null ? null : body.get("reason");
+        String reason = reasonValue == null ? "" : String.valueOf(reasonValue).trim();
+        String remark = StringUtils.hasText(reason) ? reason : "";
         if (!StringUtils.hasText(remark)) {
             throw new IllegalArgumentException("退回原因不能为空");
         }
@@ -241,8 +242,9 @@ public class StyleInfoOrchestrator {
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
-        String reason = body == null ? null : (body.get("reason") == null ? null : String.valueOf(body.get("reason")));
-        String remark = StringUtils.hasText(reason) ? reason.trim() : null;
+        Object reasonValue = body == null ? null : body.get("reason");
+        String reason = reasonValue == null ? "" : String.valueOf(reasonValue).trim();
+        String remark = StringUtils.hasText(reason) ? reason : "";
         if (!StringUtils.hasText(remark)) {
             throw new IllegalArgumentException("维护原因不能为空");
         }
@@ -352,8 +354,9 @@ public class StyleInfoOrchestrator {
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
-        String reason = body == null ? null : (body.get("reason") == null ? null : String.valueOf(body.get("reason")));
-        String remark = StringUtils.hasText(reason) ? reason.trim() : null;
+        Object reasonValue = body == null ? null : body.get("reason");
+        String reason = reasonValue == null ? "" : String.valueOf(reasonValue).trim();
+        String remark = StringUtils.hasText(reason) ? reason : "";
         if (!StringUtils.hasText(remark)) {
             throw new IllegalArgumentException("维护原因不能为空");
         }

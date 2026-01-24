@@ -132,7 +132,7 @@ Component({
      */
     cleanupRecentScans() {
       const recentScans = this.data.recentScans;
-      if (recentScans.size <= 80) return;
+      if (recentScans.size <= 80) {return;}
 
       const now = Date.now();
       const expiredKeys = [];

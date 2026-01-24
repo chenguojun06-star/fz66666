@@ -52,7 +52,7 @@ export function toString(value: any, fallback = ''): string {
  * @param value 输入值
  * @returns 布尔值
  */
-export function toBoolean(value: any): boolean {
+export function toBoolean(value: unknown): boolean {
   return Boolean(value);
 }
 
@@ -61,7 +61,7 @@ export function toBoolean(value: any): boolean {
  * @param value 输入值
  * @returns Date 对象或 null
  */
-export function toDate(value: any): Date | null {
+export function toDate(value: unknown): Date | null {
   if (!value) return null;
   const d = new Date(value);
   return isNaN(d.getTime()) ? null : d;
@@ -153,7 +153,7 @@ export function formatCurrency(value: number, currency = '¥'): string {
  * @param value 值
  * @returns 是否为空
  */
-export function isEmpty(value: any): boolean {
+export function isEmpty(value: unknown): boolean {
   if (value === null || value === undefined) return true;
   if (typeof value === 'string') return value.trim().length === 0;
   if (Array.isArray(value)) return value.length === 0;
@@ -166,7 +166,7 @@ export function isEmpty(value: any): boolean {
  * @param value 值
  * @returns 是否不为空
  */
-export function isNotEmpty(value: any): boolean {
+export function isNotEmpty(value: unknown): boolean {
   return !isEmpty(value);
 }
 
@@ -176,8 +176,8 @@ export function isNotEmpty(value: any): boolean {
  * @param schema 转换规则 { fieldName: transformFunction }
  * @returns 转换后的对象
  */
-export function transformData(data: Record<string, any>, schema: Record<string, (value: any) => any>): Record<string, any> {
-  const result: Record<string, any> = {};
+export function transformData(data: Record<string, unknown>, schema: Record<string, (value: unknown) => any>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
   for (const [key, transformer] of Object.entries(schema)) {
     try {
       result[key] = transformer(data[key]);
@@ -195,8 +195,8 @@ export function transformData(data: Record<string, any>, schema: Record<string, 
  * @returns 验证错误对象，无错误则返回空对象
  */
 export function validateData(
-  data: Record<string, any>,
-  validators: Record<string, (value: any) => string | null>
+  data: Record<string, unknown>,
+  validators: Record<string, (value: unknown) => string | null>
 ): Record<string, string> {
   const errors: Record<string, string> = {};
   for (const [key, validator] of Object.entries(validators)) {
@@ -215,13 +215,13 @@ export function validateData(
  */
 export function deepClone<T>(obj: T): T {
   if (obj === null || typeof obj !== 'object') return obj;
-  if (obj instanceof Date) return new Date(obj.getTime()) as any;
-  if (obj instanceof Array) return obj.map(item => deepClone(item)) as any;
+  if (obj instanceof Date) return new Date(obj.getTime()) as Record<string, unknown>;
+  if (obj instanceof Array) return obj.map(item => deepClone(item)) as Record<string, unknown>;
   if (obj instanceof Object) {
     const cloned = {} as T;
     for (const key in obj) {
       if (Object.prototype.hasOwnProperty.call(obj, key)) {
-        (cloned as any)[key] = deepClone((obj as any)[key]);
+        (cloned as Record<string, unknown>)[key] = deepClone((obj as Record<string, unknown>)[key]);
       }
     }
     return cloned;
@@ -235,7 +235,7 @@ export function deepClone<T>(obj: T): T {
  * @param keys 要提取的键名
  * @returns 子集对象
  */
-export function pick<T extends Record<string, any>>(obj: T, keys: (keyof T)[]): Partial<T> {
+export function pick<T extends Record<string, unknown>>(obj: T, keys: (keyof T)[]): Partial<T> {
   const result = {} as Partial<T>;
   for (const key of keys) {
     if (key in obj) {
@@ -251,7 +251,7 @@ export function pick<T extends Record<string, any>>(obj: T, keys: (keyof T)[]): 
  * @param keys 要排除的键名
  * @returns 排除后的对象
  */
-export function omit<T extends Record<string, any>>(obj: T, keys: (keyof T)[]): Partial<T> {
+export function omit<T extends Record<string, unknown>>(obj: T, keys: (keyof T)[]): Partial<T> {
   const result = { ...obj } as Partial<T>;
   for (const key of keys) {
     delete result[key];
@@ -265,7 +265,7 @@ export function omit<T extends Record<string, any>>(obj: T, keys: (keyof T)[]): 
  * @param source 源对象
  * @returns 合并后的对象
  */
-export function merge<T extends Record<string, any>>(target: T, source: Partial<T>): T {
+export function merge<T extends Record<string, unknown>>(target: T, source: Partial<T>): T {
   return { ...target, ...source };
 }
 
@@ -281,7 +281,7 @@ export function unique<T>(array: T[], key?: keyof T): T[] {
   }
   const seen = new Set();
   return array.filter(item => {
-    const val = (item as any)[key];
+    const val = (item as Record<string, unknown>)[key];
     if (seen.has(val)) return false;
     seen.add(val);
     return true;

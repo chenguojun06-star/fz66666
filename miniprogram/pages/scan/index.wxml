@@ -2,15 +2,15 @@
   // 格式化相对时间
   function formatRelativeTime(timeStr) {
     if (!timeStr) return '-';
-    
+
     var now = getDate().getTime();
     var time = getDate(timeStr).getTime();
     var diff = now - time;
-    
+
     var minute = 60 * 1000;
     var hour = 60 * minute;
     var day = 24 * hour;
-    
+
     if (diff < minute) {
       return '刚刚';
     } else if (diff < hour) {
@@ -25,16 +25,16 @@
       var dayNum = '' + date.getDate();
       var hours = '' + date.getHours();
       var minutes = '' + date.getMinutes();
-      
+
       if (month.length < 2) month = '0' + month;
       if (dayNum.length < 2) dayNum = '0' + dayNum;
       if (hours.length < 2) hours = '0' + hours;
       if (minutes.length < 2) minutes = '0' + minutes;
-      
+
       return month + '-' + dayNum + ' ' + hours + ':' + minutes;
     }
   }
-  
+
   module.exports = {
     formatRelativeTime: formatRelativeTime
   };
@@ -50,7 +50,7 @@
         <text class="picker-arrow">▼</text>
       </view>
     </picker>
-    
+
     <view class="scan-input">
       <input type="digit" placeholder="数量" value="{{quantity}}" bindinput="onQuantityInput" />
     </view>
@@ -127,7 +127,7 @@
       <text class="section-title">📋 扫码记录</text>
     </view>
     <view wx:if="{{my.groupedHistory.length === 0 && !my.loadingHistory}}" class="empty">暂无记录</view>
-    
+
     <!-- 聚合后的分组显示 -->
     <view wx:for="{{my.groupedHistory}}" wx:key="id" class="hist-group">
       <!-- 分组头部：折叠显示 -->
@@ -147,7 +147,7 @@
           <text class="hgh-expand">{{item.expanded ? '▲' : '▼'}}</text>
         </view>
       </view>
-      
+
       <!-- 分组详情：展开显示 -->
       <view wx:if="{{item.expanded}}" class="hist-group-details">
         <view wx:for="{{item.items}}" wx:for-item="record" wx:for-index="recordIdx" wx:key="id" class="hist-detail-item">
@@ -171,7 +171,7 @@
         </view>
       </view>
     </view>
-    
+
     <view class="load-more" bindtap="loadMoreMyHistory">
       <text wx:if="{{my.loadingHistory}}">加载中...</text>
       <text wx:elif="{{my.history.hasMore}}">加载更多</text>
@@ -183,7 +183,7 @@
   <view wx:if="{{scanConfirm.visible}}" class="modal">
     <view class="modal-box {{scanConfirm.detail.isProcurement ? 'wide' : ''}}">
       <view class="modal-head">
-        {{scanConfirm.detail.isProcurement ? '面辅料采购' : '确认提交'}} 
+        {{scanConfirm.detail.isProcurement ? '面辅料采购' : '确认提交'}}
         <text class="modal-cd">{{scanConfirm.remain}}s</text>
       </view>
       <view class="modal-body">
@@ -199,7 +199,7 @@
           <view wx:if="{{scanConfirm.detail.sizeDetails}}" class="cf-item compact"><text class="cf-k">码数明细</text><text class="cf-v wrap">{{scanConfirm.detail.sizeDetails}}</text></view>
           <view wx:if="{{scanConfirm.detail.progressStage && !scanConfirm.detail.isProcurement}}" class="cf-item"><text class="cf-k">环节</text><text class="cf-v">{{scanConfirm.detail.progressStage}}</text></view>
         </view>
-        
+
         <!-- 面辅料采购列表 - 在弹窗中显示 -->
         <view wx:if="{{scanConfirm.detail.isProcurement && scanConfirm.materialPurchases && scanConfirm.materialPurchases.length}}" class="purchase-modal-list">
           <view wx:for="{{scanConfirm.materialPurchases}}" wx:key="id" class="purchase-modal-item">
@@ -225,7 +225,7 @@
             </view>
           </view>
         </view>
-        
+
         <!--裁剪任务列表 - 在弹窗中显示 -->
         <view wx:if="{{scanConfirm.detail.progressStage === '裁剪' && scanConfirm.cuttingTasks && scanConfirm.cuttingTasks.length}}" class="purchase-modal-list">
           <view wx:for="{{scanConfirm.cuttingTasks}}" wx:key="index" class="purchase-modal-item">
@@ -238,14 +238,95 @@
             </view>
             <view class="pmi-row">
               <text class="pmi-label">裁剪数量</text>
-              <input 
-                class="pmi-input" 
-                type="digit" 
-                placeholder="请填写实际裁剪数量" 
-                value="{{item.cuttingInput}}" 
-                bindinput="onModalCuttingInput" 
-                data-color="{{item.color}}" 
-                data-size="{{item.size}}" 
+              <input
+                class="pmi-input"
+                type="digit"
+                placeholder="请填写实际裁剪数量"
+                value="{{item.cuttingInput}}"
+                bindinput="onModalCuttingInput"
+                data-color="{{item.color}}"
+                data-size="{{item.size}}"
+                data-idx="{{index}}"
+              />
+            </view>
+          </view>
+        </view>
+
+        <!-- ✅ 采购任务：显示面料采购明细 -->
+        <view wx:if="{{scanConfirm.detail.isProcurement && scanConfirm.materialPurchases && scanConfirm.materialPurchases.length > 0}}" class="purchase-modal-list">
+          <!-- 面料统计摘要 -->
+          <view class="sku-summary">
+            <view class="summary-stat">
+              <text class="summary-label">面料总数:</text>
+              <text class="summary-value">{{scanConfirm.materialPurchases.length}}</text>
+            </view>
+          </view>
+
+          <view wx:for="{{scanConfirm.materialPurchases}}" wx:key="id" class="purchase-modal-item">
+            <view class="pmi-header">
+              <text class="pmi-name">{{item.materialName}}</text>
+            </view>
+            <view wx:if="{{item.specifications}}" class="pmi-row">
+              <text class="pmi-label">规格:</text>
+              <text class="pmi-value">{{item.specifications}}</text>
+            </view>
+            <view class="pmi-row">
+              <text class="pmi-label">需采购</text>
+              <text class="pmi-value demand">{{item.purchaseQuantity || 0}} {{item.unit || '米'}}</text>
+            </view>
+            <view class="pmi-row">
+              <text class="pmi-label">已到货</text>
+              <text class="pmi-value">{{item.arrivedQuantity || 0}} {{item.unit || '米'}}</text>
+            </view>
+            <view class="pmi-row">
+              <text class="pmi-label">本次到货</text>
+              <input
+                class="pmi-input"
+                type="digit"
+                placeholder="数量"
+                value="{{item.inputQuantity}}"
+                bindinput="onMaterialInput"
+                data-id="{{item.id}}"
+              />
+              <text class="pmi-unit">{{item.unit || '米'}}</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- ✅ 非采购模式（或采购但没有面料数据）：显示 SKU 列表 -->
+        <view wx:if="{{scanConfirm.detail.isProcurement && scanConfirm.skuList && scanConfirm.skuList.length && (!scanConfirm.materialPurchases || scanConfirm.materialPurchases.length === 0)}}" class="purchase-modal-list">
+          <!-- SKU统计摘要 -->
+          <view wx:if="{{scanConfirm.summary}}" class="sku-summary">
+            <view class="summary-stat">
+              <text class="summary-label">SKU总数:</text>
+              <text class="summary-value">{{scanConfirm.summary.totalSKUs}}</text>
+            </view>
+            <view class="summary-stat">
+              <text class="summary-label">已选:</text>
+              <text class="summary-value">{{scanConfirm.summary.completedSKUs}}</text>
+            </view>
+            <view class="summary-stat">
+              <text class="summary-label">进度:</text>
+              <text class="summary-value">{{scanConfirm.summary.overallProgress}}%</text>
+            </view>
+          </view>
+
+          <view wx:for="{{scanConfirm.skuList}}" wx:key="index" class="purchase-modal-item">
+            <view class="pmi-header">
+              <text class="pmi-name">{{item.color}} - {{item.size}}</text>
+            </view>
+            <view class="pmi-row">
+              <text class="pmi-label">需采购</text>
+              <text class="pmi-value demand">{{item.totalQuantity || 0}}</text>
+            </view>
+            <view class="pmi-row">
+              <text class="pmi-label">本次采购</text>
+              <input
+                class="pmi-input"
+                type="digit"
+                placeholder="数量"
+                value="{{item.inputQuantity}}"
+                bindinput="onModalSkuInput"
                 data-idx="{{index}}"
               />
             </view>
@@ -280,23 +361,23 @@
             </view>
             <view class="pmi-row">
               <text class="pmi-label">本次完成</text>
-              <input 
-                class="pmi-input" 
-                type="digit" 
-                placeholder="数量" 
-                value="{{item.inputQuantity}}" 
-                bindinput="onModalSkuInput" 
+              <input
+                class="pmi-input"
+                type="digit"
+                placeholder="数量"
+                value="{{item.inputQuantity}}"
+                bindinput="onModalSkuInput"
                 data-idx="{{index}}"
               />
             </view>
           </view>
         </view>
-        
+
         <!-- 质检领取提示 -->
         <view wx:if="{{scanTypeOptions[scanTypeIndex].value === 'quality' && !scanConfirm.detail.isProcurement}}" class="qc-receive-tip">
           <text class="qc-tip-text">领取后可在"我的任务"中填写质检结果</text>
         </view>
-        
+
         <!-- 裁剪任务已领取提示 -->
         <view wx:if="{{scanConfirm.detail.progressStage === '裁剪' && scanConfirm.cuttingTaskReceived}}" class="qc-receive-tip" style="background: #f6ffed; border-color: #b7eb8f;">
           <text class="qc-tip-text" style="color: #52c41a;">✓ 任务已领取，可修改数量重新生成菲号</text>
@@ -335,7 +416,7 @@
       <text class="modal-title">质检结果</text>
       <view class="modal-close" catchtap="closeQualityModal">×</view>
     </view>
-    
+
     <view class="modal-body">
       <!-- 订单信息 -->
       <view class="qm-info">
@@ -372,7 +453,7 @@
           <text class="qm-field-label">次品数量</text>
           <input class="qm-input" type="number" placeholder="请输入次品数量" value="{{qualityModal.defectiveQuantity}}" bindinput="onDefectiveQuantityInput" />
         </view>
-        
+
         <view class="qm-field">
           <text class="qm-field-label">问题类型</text>
           <picker mode="multiSelector" range="{{defectTypes}}" value="{{qualityModal.selectedDefectTypes}}" bindchange="onDefectTypesChange">
@@ -429,7 +510,7 @@
       <text class="modal-title">物料采购</text>
       <view class="modal-close" catchtap="closeProcurementModal">×</view>
     </view>
-    
+
     <view class="modal-body">
       <!-- 订单信息 -->
       <view class="pm-info">
@@ -444,22 +525,22 @@
             <text class="pm-item-name">{{item.materialName || item.materialCode || '物料'}}</text>
             <text class="pm-item-unit">{{item.unit || '米'}}</text>
           </view>
-          
+
           <view wx:if="{{item.purchaseNo}}" class="pm-field">
             <text class="pm-field-label">采购单号</text>
             <text class="pm-field-value" style="font-size: 12px; color: #666;">{{item.purchaseNo}}</text>
           </view>
-          
+
           <view class="pm-field">
             <text class="pm-field-label">需求数量</text>
             <text class="pm-field-value demand">{{item.demandQuantity || item.purchaseQuantity || 0}}</text>
           </view>
-          
+
           <view class="pm-field">
             <text class="pm-field-label">采购数量</text>
             <input class="pm-input" type="digit" placeholder="请填写实际采购数量" value="{{item.purchaseInput}}" bindinput="onProcurementQuantityInput" data-idx="{{index}}" />
           </view>
-          
+
           <view class="pm-field">
             <text class="pm-field-label">备注</text>
             <input class="pm-input" placeholder="选填" value="{{item.remarkInput}}" bindinput="onProcurementRemarkInput" data-idx="{{index}}" />

@@ -3,13 +3,13 @@
  * 生产环境自动禁用debug和info日志
  */
 
-const isDev = Boolean((import.meta as any)?.env?.DEV);
+const isDev = Boolean((import.meta as Record<string, unknown>)?.env?.DEV);
 
 export const logger = {
   /**
    * 调试日志（仅开发环境）
    */
-  debug: (message: string, ...args: any[]) => {
+  debug: (message: string, ...args: unknown[]) => {
     if (isDev) {
       console.log(`%c[DEBUG] ${message}`, 'color: #888', ...args);
     }
@@ -18,7 +18,7 @@ export const logger = {
   /**
    * 信息日志（仅开发环境）
    */
-  info: (message: string, ...args: any[]) => {
+  info: (message: string, ...args: unknown[]) => {
     if (isDev) {
       console.log(`%c[INFO] ${message}`, 'color: #0066cc', ...args);
     }
@@ -27,14 +27,14 @@ export const logger = {
   /**
    * 警告日志（所有环境）
    */
-  warn: (message: string, ...args: any[]) => {
+  warn: (message: string, ...args: unknown[]) => {
     console.warn(`[WARN] ${message}`, ...args);
   },
 
   /**
    * 错误日志（所有环境）
    */
-  error: (message: string, ...args: any[]) => {
+  error: (message: string, ...args: unknown[]) => {
     console.error(`[ERROR] ${message}`, ...args);
   },
 };

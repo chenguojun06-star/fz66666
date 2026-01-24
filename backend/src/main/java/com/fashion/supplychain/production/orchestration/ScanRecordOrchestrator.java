@@ -349,6 +349,7 @@ public class ScanRecordOrchestrator {
         if (order == null) {
             throw new IllegalStateException("未匹配到订单");
         }
+        order = Objects.requireNonNull(order);
 
         String st = order.getStatus() == null ? "" : order.getStatus().trim();
         if ("completed".equalsIgnoreCase(st)) {
@@ -867,8 +868,9 @@ public class ScanRecordOrchestrator {
         if (order == null) {
             throw new IllegalStateException("未匹配到订单");
         }
+        final ProductionOrder orderFinal = order;
 
-        String st = order.getStatus() == null ? "" : order.getStatus().trim();
+        String st = orderFinal.getStatus() == null ? "" : orderFinal.getStatus().trim();
         if ("completed".equalsIgnoreCase(st)) {
             throw new IllegalStateException("订单已关单，已停止扫码");
         }
@@ -880,7 +882,7 @@ public class ScanRecordOrchestrator {
         String pricingProcessName = hasText(processName) ? processName.trim() : null;
 
         if (!hasText(stageName) || autoProcess) {
-            String auto = resolveAutoProcessName(order);
+            String auto = resolveAutoProcessName(orderFinal);
             if (hasText(auto)) {
                 stageName = auto.trim();
             }
@@ -918,8 +920,8 @@ public class ScanRecordOrchestrator {
         }
         
         // 裁剪环节检查纸样是否齐全（只警告，不阻止）
-        if (isCutting && order != null && hasText(order.getStyleId())) {
-            checkPatternForCutting(order.getStyleId());
+        if (isCutting && hasText(orderFinal.getStyleId())) {
+            checkPatternForCutting(orderFinal.getStyleId());
         }
         
         String finalScanType = isCutting ? "cutting" : scanType;
@@ -932,21 +934,21 @@ public class ScanRecordOrchestrator {
             throw new IllegalArgumentException("数量必须大于0");
         }
 
-        validateNotExceedOrderQuantity(order, finalScanType, stageNameFinal, qty, bundle);
+        validateNotExceedOrderQuantity(orderFinal, finalScanType, stageNameFinal, qty, bundle);
 
         ScanRecord sr = new ScanRecord();
         sr.setRequestId(requestId);
         sr.setScanCode(scanCode);
-        sr.setOrderId(order.getId());
-        sr.setOrderNo(order.getOrderNo());
-        sr.setStyleId(order.getStyleId());
-        sr.setStyleNo(order.getStyleNo());
-        sr.setColor(resolveColor(params, bundle, order));
-        sr.setSize(resolveSize(params, bundle, order));
+        sr.setOrderId(orderFinal.getId());
+        sr.setOrderNo(orderFinal.getOrderNo());
+        sr.setStyleId(orderFinal.getStyleId());
+        sr.setStyleNo(orderFinal.getStyleNo());
+        sr.setColor(resolveColor(params, bundle, orderFinal));
+        sr.setSize(resolveSize(params, bundle, orderFinal));
         sr.setQuantity(qty);
         BigDecimal unitPrice = parseBigDecimal(params.get("unitPrice"));
         if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
-            BigDecimal resolved = resolveUnitPriceFromTemplate(order.getStyleNo(), pricingProcessNameFinal);
+            BigDecimal resolved = resolveUnitPriceFromTemplate(orderFinal.getStyleNo(), pricingProcessNameFinal);
             if (resolved != null && resolved.compareTo(BigDecimal.ZERO) > 0) {
                 unitPrice = resolved;
             }
@@ -971,7 +973,7 @@ public class ScanRecordOrchestrator {
         validateScanRecordForSave(sr);
 
         if (bundle != null && hasText(bundle.getId())) {
-            Map<String, Object> updated = tryUpdateExistingBundleScanRecord(bundle, order, requestId, scanCode,
+            Map<String, Object> updated = tryUpdateExistingBundleScanRecord(bundle, orderFinal, requestId, scanCode,
                     finalScanType, stageNameFinal, pricingProcessNameFinal, qty, unitPrice, operatorId, operatorName,
                     sr.getColor(), sr.getSize(), sr.getProcessCode(), sr.getRemark(), isCutting);
             if (updated != null) {
@@ -982,7 +984,7 @@ public class ScanRecordOrchestrator {
         try {
             scanRecordService.saveScanRecord(sr);
         } catch (DuplicateKeyException e) {
-            Map<String, Object> updatedAfterDup = tryUpdateExistingBundleScanRecord(bundle, order, requestId, scanCode,
+            Map<String, Object> updatedAfterDup = tryUpdateExistingBundleScanRecord(bundle, orderFinal, requestId, scanCode,
                     finalScanType, stageNameFinal, pricingProcessNameFinal, qty, unitPrice, operatorId, operatorName,
                     sr.getColor(), sr.getSize(), sr.getProcessCode(), sr.getRemark(), isCutting);
             if (updatedAfterDup != null) {
@@ -998,11 +1000,11 @@ public class ScanRecordOrchestrator {
         }
 
         try {
-            productionOrderService.recomputeProgressFromRecords(order.getId());
+            productionOrderService.recomputeProgressFromRecords(orderFinal.getId());
         } catch (Exception e) {
-            log.warn("Failed to recompute progress after scan: orderId={}", order.getId(), e);
+            log.warn("Failed to recompute progress after scan: orderId={}", orderFinal.getId(), e);
             scanRecordDomainService.insertOrchestrationFailure(
-                    order,
+                    orderFinal,
                     "recomputeProgressFromRecords",
                     e == null ? "recomputeProgressFromRecords failed"
                             : ("recomputeProgressFromRecords failed: " + e.getMessage()),
@@ -1014,8 +1016,8 @@ public class ScanRecordOrchestrator {
         result.put("message", "扫码成功");
         result.put("scanRecord", sr);
         Map<String, Object> orderInfo = new HashMap<>();
-        orderInfo.put("orderNo", order.getOrderNo());
-        orderInfo.put("styleNo", order.getStyleNo());
+        orderInfo.put("orderNo", orderFinal.getOrderNo());
+        orderInfo.put("styleNo", orderFinal.getStyleNo());
         result.put("orderInfo", orderInfo);
         if (templateLibraryService.progressStageNameMatches("采购", stageNameFinal)) {
             List<MaterialPurchase> purchases = materialPurchaseService.list(new LambdaQueryWrapper<MaterialPurchase>()

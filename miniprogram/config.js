@@ -12,14 +12,14 @@ const DEBUG_MODE = true;
 
 function normalizeBaseUrl(url) {
     const raw = (url == null ? '' : String(url)).trim();
-    if (!raw) return '';
+    if (!raw) {return '';}
     const withProto = raw.includes('://') ? raw : `http://${raw}`;
     return withProto.replace(/\/+$/, '');
 }
 
 function replaceLoopback(url) {
     const v = normalizeBaseUrl(url);
-    if (!v) return '';
+    if (!v) {return '';}
     if (/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?(\/|$)/i.test(v)) {
         return DEFAULT_BASE_URL;
     }
@@ -30,7 +30,7 @@ function getBaseUrl() {
     try {
         if (typeof wx !== 'undefined' && wx.getStorageSync) {
             const v = replaceLoopback(wx.getStorageSync('api_base_url'));
-            if (v) return v;
+            if (v) {return v;}
         }
     } catch (e) {
         null;

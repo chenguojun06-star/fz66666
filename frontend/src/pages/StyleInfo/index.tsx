@@ -67,7 +67,7 @@ const StyleInfoPage: React.FC = () => {
   const productionReqRowCount = 15;
   const [productionReqRows, setProductionReqRows] = useState<string[]>(() => Array.from({ length: productionReqRowCount }).map(() => ''));
 
-  const parseProductionReqRows = (value: any) => {
+  const parseProductionReqRows = (value: unknown) => {
     const raw = String(value ?? '');
     const lines = raw
       .split(/\r?\n/)
@@ -87,12 +87,12 @@ const StyleInfoPage: React.FC = () => {
 
   const isSupervisorOrAbove = useMemo(() => isSupervisorOrAboveUser(user), [user]);
 
-  const isStageDoneRow = (record: any) => {
+  const isStageDoneRow = (record: unknown) => {
     const node = String(record?.progressNode || '').trim();
     return node === '样衣完成';
   };
 
-  const toCategoryCn = (value: any) => toCategoryCnUtil(value, categoryOptions);
+  const toCategoryCn = (value: unknown) => toCategoryCnUtil(value, categoryOptions);
 
   const openMaintenance = (record: StyleInfoType) => {
     setMaintenanceRecord(record);
@@ -108,7 +108,7 @@ const StyleInfoPage: React.FC = () => {
   };
 
   const submitMaintenance = async () => {
-    const record = maintenanceRecord as any;
+    const record = maintenanceRecord as Record<string, unknown>;
     if (!record?.id) {
       closeMaintenance();
       return;
@@ -137,7 +137,7 @@ const StyleInfoPage: React.FC = () => {
     setMaintenanceSaving(true);
     try {
       const res = await api.post(url, { reason: remark });
-      const result = res as any;
+      const result = res as Record<string, unknown>;
       if (result.code === 200) {
         message.success('维护成功');
         closeMaintenance();
@@ -148,7 +148,7 @@ const StyleInfoPage: React.FC = () => {
         return;
       }
       message.error(result.message || '维护失败');
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(e?.message || '维护失败');
     } finally {
       setMaintenanceSaving(false);
@@ -185,13 +185,12 @@ const StyleInfoPage: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await api.get<any>('/style/info/list', { params: queryParams });
-      const result = response as any;
-      if (result.code === 200) {
-        setData(result.data.records || []);
-        setTotal(result.data.total || 0);
+      const response = await api.get<{ code: number; data: { records: StyleInfoType[]; total: number } }>('/style/info/list', { params: queryParams });
+      if (response.code === 200) {
+        setData(response.data.records || []);
+        setTotal(response.data.total || 0);
       } else {
-        message.error(result.message || '获取款号列表失败');
+        message.error(response.message || '获取款号列表失败');
       }
     } catch (error) {
       message.error('获取款号列表失败');
@@ -210,12 +209,11 @@ const StyleInfoPage: React.FC = () => {
     'style-info-list',
     async () => {
       try {
-        const response = await api.get<any>('/style/info/list', { params: queryParams });
-        const result = response as any;
-        if (result.code === 200) {
+        const response = await api.get<{ code: number; data: { records: StyleInfoType[]; total: number } }>('/style/info/list', { params: queryParams });
+        if (response.code === 200) {
           return {
-            records: result.data.records || [],
-            total: result.data.total || 0
+            records: response.data.records || [],
+            total: response.data.total || 0
           };
         }
         return null;
@@ -258,10 +256,9 @@ const StyleInfoPage: React.FC = () => {
   useEffect(() => {
     const fetchDict = async (type: string) => {
       try {
-        const res = await api.get<any>('/system/dict/list', { params: { page: 1, pageSize: 1000, dictType: type } });
-        const result = res as any;
-        if (result.code === 200) {
-          const items = result.data.records || [];
+        const res = await api.get<{ code: number; data: { records: unknown[]; total: number } }>('/system/dict/list', { params: { page: 1, pageSize: 1000, dictType: type } });
+        if (res.code === 200) {
+          const items = res.data.records || [];
           return items.map((it: any) => ({ label: it.dictLabel, value: it.dictCode }));
         }
       } catch (error) {
@@ -338,7 +335,7 @@ const StyleInfoPage: React.FC = () => {
       title: '品类',
       dataIndex: 'category',
       key: 'category',
-      render: (value: any) => toCategoryCn(value),
+      render: (value: unknown) => toCategoryCn(value),
     },
     {
       title: '单价',
@@ -356,7 +353,7 @@ const StyleInfoPage: React.FC = () => {
       dataIndex: 'createTime',
       key: 'createTime',
       width: 170,
-      render: (value: any) => formatDateTime(value),
+      render: (value: unknown) => formatDateTime(value),
     },
     {
       title: '进度节点',
@@ -364,8 +361,8 @@ const StyleInfoPage: React.FC = () => {
       key: 'progressNode',
       width: 120,
       render: (_: any, record: StyleInfoType) => {
-        const node = String((record as any).progressNode || '未开始');
-        const progress = Number((record as any).sampleProgress);
+        const node = String((record as Record<string, unknown>).progressNode || '未开始');
+        const progress = Number((record as Record<string, unknown>).sampleProgress);
         const showProgress = Number.isFinite(progress) && progress > 0 && progress < 100 && (node === '样衣制作中');
         const text = showProgress ? `${node} ${progress}%` : node;
         const color =
@@ -386,14 +383,14 @@ const StyleInfoPage: React.FC = () => {
       dataIndex: 'completedTime',
       key: 'completedTime',
       width: 170,
-      render: (value: any) => formatDateTime(value),
+      render: (value: unknown) => formatDateTime(value),
     },
     {
       title: '维护时间',
       dataIndex: 'maintenanceTime',
       key: 'maintenanceTime',
       width: 170,
-      render: (value: any) => formatDateTime(value),
+      render: (value: unknown) => formatDateTime(value),
     },
     {
       title: '备注原因',
@@ -401,7 +398,7 @@ const StyleInfoPage: React.FC = () => {
       key: 'maintenanceRemark',
       width: 220,
       ellipsis: true,
-      render: (value: any) => {
+      render: (value: unknown) => {
         const v = String(value || '').trim();
         return v || '-';
       }
@@ -414,11 +411,11 @@ const StyleInfoPage: React.FC = () => {
         const moreItems: MenuProps['items'] = (() => {
           const items: MenuProps['items'] = [];
 
-          if (isStageDoneRow(record as any)) {
+          if (isStageDoneRow(record as Record<string, unknown>)) {
             items.push({
               key: 'order',
               label: '下单',
-              onClick: () => navigate(withQuery('/order-management', { styleNo: (record as any).styleNo })),
+              onClick: () => navigate(withQuery('/order-management', { styleNo: (record as Record<string, unknown>).styleNo })),
             });
 
             if (isSupervisorOrAbove) {
@@ -485,14 +482,15 @@ const StyleInfoPage: React.FC = () => {
   const fetchDetail = async (id: string) => {
     try {
       setLoading(true);
-      const res = await api.get<any>(`/style/info/${id}`);
-      const result = res as any;
-      if (result.code === 200) {
-        setCurrentStyle(result.data || null);
+      const res = await api.get<{ code: number; message: string; data: StyleInfoType }>(`/style/info/${id}`);
+      if (res.code === 200) {
+        setCurrentStyle(res.data || null);
         return;
       }
-      message.error(result.message || '获取款号详情失败');
+      message.error(res.message || '获取款号详情失败');
     } catch {
+    // Intentionally empty
+      // 忽略错误
       message.error('获取款号详情失败');
     } finally {
       setLoading(false);
@@ -510,8 +508,8 @@ const StyleInfoPage: React.FC = () => {
   useEffect(() => {
     if (isEditorOpen) {
       if (currentStyle) {
-        const nextValues: any = { ...currentStyle };
-        const rawCreateTime = (currentStyle as any)?.createTime;
+        const nextValues: unknown = { ...currentStyle };
+        const rawCreateTime = (currentStyle as Record<string, unknown>)?.createTime;
         nextValues.createTime = rawCreateTime ? dayjs(rawCreateTime) : undefined;
         form.setFieldsValue(nextValues);
         setProductionReqRows(parseProductionReqRows(nextValues.description));
@@ -523,10 +521,9 @@ const StyleInfoPage: React.FC = () => {
         // 生成款号
         (async () => {
           try {
-            const res = await api.get<any>('/system/serial/generate', { params: { ruleCode: 'STYLE_NO' } });
-            const result = res as any;
-            if (result.code === 200 && result.data) {
-              form.setFieldsValue({ styleNo: result.data });
+            const res = await api.get<{ code: number; data: string }>('/system/serial/generate', { params: { ruleCode: 'STYLE_NO' } });
+            if (res.code === 200 && res.data) {
+              form.setFieldsValue({ styleNo: res.data });
             }
           } catch (error) {
             console.error('[款号资料] 生成款号失败:', error);
@@ -566,8 +563,8 @@ const StyleInfoPage: React.FC = () => {
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
-      const normalizedValues: any = { ...values };
-      const ct = (values as any)?.createTime;
+      const normalizedValues: unknown = { ...values };
+      const ct = (values as Record<string, unknown>)?.createTime;
       if (ct) {
         const formatted = formatDateTimeSecond(ct);
         if (formatted && formatted !== '-') {
@@ -580,14 +577,14 @@ const StyleInfoPage: React.FC = () => {
       }
       let res;
       if (currentStyle?.id) {
-        const payload: any = { ...currentStyle, ...normalizedValues };
+        const payload: unknown = { ...currentStyle, ...normalizedValues };
         delete payload.createTime;
         delete payload.description;
         res = await api.put('/style/info', payload);
       } else {
         res = await api.post('/style/info', normalizedValues);
       }
-      const result = res as any;
+      const result = res as Record<string, unknown>;
       if (result.code === 200) {
         message.success(currentStyle?.id ? '更新成功' : '创建成功');
         if (isDetailPage) {
@@ -617,7 +614,7 @@ const StyleInfoPage: React.FC = () => {
     try {
       try {
         const res = await api.put(`/style/info/${currentStyle.id}/production-requirements`, { description: desc });
-        const result = res as any;
+        const result = res as Record<string, unknown>;
         if (result.code === 200) {
           message.success('保存成功');
           setCurrentStyle((prev) => (prev ? { ...prev, description: desc } : prev));
@@ -635,10 +632,10 @@ const StyleInfoPage: React.FC = () => {
         }
       }
 
-      const payload: any = { ...currentStyle, description: desc };
+      const payload: unknown = { ...currentStyle, description: desc };
       delete payload.createTime;
       const res2 = await api.put('/style/info', payload);
-      const result2 = res2 as any;
+      const result2 = res2 as Record<string, unknown>;
       if (result2.code === 200) {
         message.success('保存成功');
         setCurrentStyle((prev) => (prev ? { ...prev, description: desc } : prev));
@@ -649,7 +646,7 @@ const StyleInfoPage: React.FC = () => {
         return;
       }
       message.error(result2.message || '保存失败');
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(e?.message || '保存失败');
     } finally {
       setProductionSaving(false);
@@ -657,7 +654,7 @@ const StyleInfoPage: React.FC = () => {
   };
 
   const resetProductionReqFromCurrent = () => {
-    const desc = String((currentStyle as any)?.description ?? '');
+    const desc = String((currentStyle as Record<string, unknown>)?.description ?? '');
     setProductionReqRows(parseProductionReqRows(desc));
   };
 
@@ -671,7 +668,7 @@ const StyleInfoPage: React.FC = () => {
   };
 
   const resolvedCompletedDate = (() => {
-    const style = currentStyle as any;
+    const style = currentStyle as Record<string, unknown>;
     const sampleStatus = String(style?.sampleStatus ?? '').trim().toUpperCase();
     const patternStatus = String(style?.patternStatus ?? '').trim().toUpperCase();
 
@@ -681,7 +678,7 @@ const StyleInfoPage: React.FC = () => {
   })();
 
   const editLocked = useMemo(() => {
-    const style = currentStyle as any;
+    const style = currentStyle as Record<string, unknown>;
     const node = String(style?.progressNode ?? '').trim();
     const sampleStatus = String(style?.sampleStatus ?? '').trim().toUpperCase();
     const patternStatus = String(style?.patternStatus ?? '').trim().toUpperCase();
@@ -699,13 +696,11 @@ const StyleInfoPage: React.FC = () => {
     setProductionReqLockLoading(true);
     try {
       const [saveRes, rollbackRes] = await Promise.all([
-        api.get<any>('/style/operation-log/list', { params: { styleId, action: 'PRODUCTION_REQUIREMENTS_SAVE' } }),
-        api.get<any>('/style/operation-log/list', { params: { styleId, action: 'PRODUCTION_REQUIREMENTS_ROLLBACK' } }),
+        api.get<{ code: number; data: unknown[] }>('/style/operation-log/list', { params: { styleId, action: 'PRODUCTION_REQUIREMENTS_SAVE' } }),
+        api.get<{ code: number; data: unknown[] }>('/style/operation-log/list', { params: { styleId, action: 'PRODUCTION_REQUIREMENTS_ROLLBACK' } }),
       ]);
-      const saveResult = saveRes as any;
-      const rollbackResult = rollbackRes as any;
-      const saves: any[] = saveResult?.code === 200 ? saveResult.data || [] : [];
-      const rollbacks: any[] = rollbackResult?.code === 200 ? rollbackResult.data || [] : [];
+      const saves: unknown[] = saveRes?.code === 200 ? saveRes.data || [] : [];
+      const rollbacks: unknown[] = rollbackRes?.code === 200 ? rollbackRes.data || [] : [];
 
       const saveTime = saves.length ? dayjs(saves[0]?.createTime || saves[0]?.create_time || null) : null;
       const rollbackTime = rollbacks.length ? dayjs(rollbacks[0]?.createTime || rollbacks[0]?.create_time || null) : null;
@@ -715,6 +710,8 @@ const StyleInfoPage: React.FC = () => {
       const locked = Boolean(latestSave && (!latestRollback || latestRollback.isBefore(latestSave)));
       setProductionReqLocked(locked);
     } catch {
+    // Intentionally empty
+      // 忽略错误
       setProductionReqLocked(false);
     } finally {
       setProductionReqLockLoading(false);
@@ -766,7 +763,7 @@ const StyleInfoPage: React.FC = () => {
         setProductionRollbackSaving(true);
         try {
           const res = await api.post(`/style/info/${styleId}/production-requirements/rollback`, { reason: remark });
-          const result = res as any;
+          const result = res as Record<string, unknown>;
           if (result.code === 200) {
             message.success('已退回');
             setProductionReqLocked(false);
@@ -774,7 +771,7 @@ const StyleInfoPage: React.FC = () => {
             return;
           }
           message.error(result.message || '退回失败');
-        } catch (e: any) {
+        } catch (e: unknown) {
           message.error(e?.message || '退回失败');
         } finally {
           setProductionRollbackSaving(false);
@@ -788,7 +785,7 @@ const StyleInfoPage: React.FC = () => {
     if (window.confirm('确定删除该款号吗？')) {
       try {
         const res = await api.delete(`/style/info/${id}`);
-        const result = res as any;
+        const result = res as Record<string, unknown>;
         if (result.code === 200) {
           message.success('删除成功');
           fetchData();
@@ -927,9 +924,9 @@ const StyleInfoPage: React.FC = () => {
                     children: (
                       <StylePatternTab
                         styleId={currentStyle.id}
-                        patternStatus={(currentStyle as any).patternStatus}
-                        patternStartTime={(currentStyle as any).patternStartTime}
-                        patternCompletedTime={(currentStyle as any).patternCompletedTime}
+                        patternStatus={(currentStyle as Record<string, unknown>).patternStatus}
+                        patternStartTime={(currentStyle as Record<string, unknown>).patternStartTime}
+                        patternCompletedTime={(currentStyle as Record<string, unknown>).patternCompletedTime}
                         activeSectionKey={patternSectionKey}
                         readOnly={editLocked}
                         productionReqRows={productionReqRows}
@@ -953,10 +950,10 @@ const StyleInfoPage: React.FC = () => {
                     children: (
                       <StyleSampleTab
                         styleId={currentStyle.id}
-                        styleNo={(currentStyle as any).styleNo}
-                        color={(currentStyle as any).color}
-                        sampleStatus={(currentStyle as any).sampleStatus}
-                        sampleCompletedTime={(currentStyle as any).sampleCompletedTime}
+                        styleNo={(currentStyle as Record<string, unknown>).styleNo}
+                        color={(currentStyle as Record<string, unknown>).color}
+                        sampleStatus={(currentStyle as Record<string, unknown>).sampleStatus}
+                        sampleCompletedTime={(currentStyle as Record<string, unknown>).sampleCompletedTime}
                         onRefresh={() => fetchDetail(String(currentStyle.id))}
                       />
                     )
@@ -1168,9 +1165,9 @@ const StyleInfoPage: React.FC = () => {
                   children: (
                     <StylePatternTab
                       styleId={currentStyle.id}
-                      patternStatus={(currentStyle as any).patternStatus}
-                      patternStartTime={(currentStyle as any).patternStartTime}
-                      patternCompletedTime={(currentStyle as any).patternCompletedTime}
+                      patternStatus={(currentStyle as Record<string, unknown>).patternStatus}
+                      patternStartTime={(currentStyle as Record<string, unknown>).patternStartTime}
+                      patternCompletedTime={(currentStyle as Record<string, unknown>).patternCompletedTime}
                       activeSectionKey={patternSectionKey}
                       readOnly={editLocked}
                       productionReqRows={productionReqRows}
@@ -1194,10 +1191,10 @@ const StyleInfoPage: React.FC = () => {
                   children: (
                     <StyleSampleTab
                       styleId={currentStyle.id}
-                      styleNo={(currentStyle as any).styleNo}
-                      color={(currentStyle as any).color}
-                      sampleStatus={(currentStyle as any).sampleStatus}
-                      sampleCompletedTime={(currentStyle as any).sampleCompletedTime}
+                      styleNo={(currentStyle as Record<string, unknown>).styleNo}
+                      color={(currentStyle as Record<string, unknown>).color}
+                      sampleStatus={(currentStyle as Record<string, unknown>).sampleStatus}
+                      sampleCompletedTime={(currentStyle as Record<string, unknown>).sampleCompletedTime}
                       onRefresh={() => fetchDetail(String(currentStyle.id))}
                     />
                   )
@@ -1263,13 +1260,14 @@ const AttachmentThumb: React.FC<{ styleId: string | number }> = ({ styleId }) =>
     (async () => {
       setLoading(true);
       try {
-        const res = await api.get<any>(`/style/attachment/list?styleId=${styleId}`);
-        const result = res as any;
-        if (result.code === 200) {
-          const images = (result.data || []).filter((f: any) => String(f.fileType || '').includes('image'));
+        const res = await api.get<{ code: number; data: unknown[] }>(`/style/attachment/list?styleId=${styleId}`);
+        if (res.code === 200) {
+          const images = (res.data || []).filter((f: any) => String(f.fileType || '').includes('image'));
           if (mounted) setUrl(images[0]?.fileUrl || null);
         }
       } catch {
+    // Intentionally empty
+      // 忽略错误
         if (mounted) setUrl(null);
       } finally {
         if (mounted) setLoading(false);
@@ -1313,13 +1311,14 @@ const CoverImageUpload: React.FC<{ styleId?: string | number; enabled: boolean }
     if (!styleId) return;
     setLoading(true);
     try {
-      const res = await api.get<any>(`/style/attachment/list?styleId=${styleId}`);
-      const result = res as any;
-      if (result.code === 200) {
-        const images = (result.data || []).filter((f: any) => String(f.fileType || '').includes('image'));
+      const res = await api.get<{ code: number; data: unknown[] }>(`/style/attachment/list?styleId=${styleId}`);
+      if (res.code === 200) {
+        const images = (res.data || []).filter((f: any) => String(f.fileType || '').includes('image'));
         setUrl(images[0]?.fileUrl || null);
       }
     } catch {
+    // Intentionally empty
+      // 忽略错误
       setUrl(null);
     } finally {
       setLoading(false);
@@ -1347,14 +1346,14 @@ const CoverImageUpload: React.FC<{ styleId?: string | number; enabled: boolean }
 
     try {
       const res = await api.post('/style/attachment/upload', formData);
-      const result = res as any;
+      const result = res as Record<string, unknown>;
       if (result.code === 200) {
         message.success('上传成功');
         fetchCover();
       } else {
         message.error(result.message || '上传失败');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       message.error(error?.message || '上传失败');
     }
     return false;

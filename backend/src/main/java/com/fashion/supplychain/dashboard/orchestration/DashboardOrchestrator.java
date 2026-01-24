@@ -35,9 +35,6 @@ public class DashboardOrchestrator {
         long styleCount = dashboardQueryService.countEnabledStyles();
         long productionCount = dashboardQueryService.countProductionOrders();
 
-        long pendingReconciliationCount = dashboardQueryService.countPendingMaterialReconciliations()
-                + dashboardQueryService.countPendingShipmentReconciliations();
-
         long paymentApprovalCount = dashboardQueryService.countApprovedMaterialReconciliations()
                 + dashboardQueryService.countApprovedShipmentReconciliations();
 
@@ -45,10 +42,8 @@ public class DashboardOrchestrator {
         LocalDateTime startOfDay = LocalDateTime.of(today, LocalTime.MIN);
         LocalDateTime endOfDay = LocalDateTime.of(today, LocalTime.MAX);
 
-        long todayScanCount = dashboardQueryService.countScansBetween(startOfDay, endOfDay);
         long warehousingOrderCount = dashboardQueryService.countWarehousingBetween(startOfDay, endOfDay);
         long unqualifiedQuantity = dashboardQueryService.sumUnqualifiedQuantityBetween(rangeStartTime, rangeEndTime);
-        long urgentEventCount = dashboardQueryService.countUrgentEvents();
 
         List<Activity> activities = new ArrayList<>();
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");

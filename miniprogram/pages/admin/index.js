@@ -21,8 +21,8 @@ Page({
 
     onShow() {
         const app = getApp();
-        if (app && typeof app.setTabSelected === 'function') app.setTabSelected(this, 3);
-        if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
+        if (app && typeof app.setTabSelected === 'function') {app.setTabSelected(this, 3);}
+        if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) {return;}
         
         // 加载用户信息
         this.loadUserInfo();
@@ -79,7 +79,7 @@ Page({
     },
 
     async loadSystemInfo() {
-        if (this.data.loadingSystemInfo) return;
+        if (this.data.loadingSystemInfo) {return;}
         this.setData({ loadingSystemInfo: true });
         try {
             // 加载在线人数
@@ -128,22 +128,22 @@ Page({
     },
 
     async loadStats() {
-        if (this.data.loadingStats) return;
+        if (this.data.loadingStats) {return;}
         this.setData({ loadingStats: true });
         try {
             const stats = await api.production.personalScanStats({});
             this.setData({ stats: stats || null });
         } catch (e) {
-            if (e && e.type === 'auth') return;
+            if (e && e.type === 'auth') {return;}
             const app = getApp();
-            if (app && typeof app.toastError === 'function') app.toastError(e, '加载失败');
+            if (app && typeof app.toastError === 'function') {app.toastError(e, '加载失败');}
         } finally {
             this.setData({ loadingStats: false });
         }
     },
 
     async loadHistory(reset) {
-        if (this.data.loadingHistory) return;
+        if (this.data.loadingHistory) {return;}
         const history = {
             page: 1,
             pageSize: 10,
@@ -151,7 +151,7 @@ Page({
             list: [],
             ...(this.data.history || {}),
         };
-        if (!reset && history.hasMore === false) return;
+        if (!reset && history.hasMore === false) {return;}
 
         const nextPage = reset ? 1 : (Number(history.page) || 1) + 1;
         const pageSize = Number(history.pageSize) || 10;
@@ -183,9 +183,9 @@ Page({
                 },
             });
         } catch (e) {
-            if (e && e.type === 'auth') return;
+            if (e && e.type === 'auth') {return;}
             const app = getApp();
-            if (app && typeof app.toastError === 'function') app.toastError(e, '加载失败');
+            if (app && typeof app.toastError === 'function') {app.toastError(e, '加载失败');}
         } finally {
             this.setData({ loadingHistory: false });
         }
@@ -197,8 +197,8 @@ Page({
 
     onLogout() {
         const app = getApp();
-        if (app && typeof app.logout === 'function') app.logout();
-        else wx.reLaunch({ url: '/pages/login/index' });
+        if (app && typeof app.logout === 'function') {app.logout();}
+        else {wx.reLaunch({ url: '/pages/login/index' });}
     },
 
     onGoToUserApproval() {

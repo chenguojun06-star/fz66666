@@ -20,7 +20,7 @@ function orderStatusText(status) {
     paused: '已暂停',
     returned: '已退回',
   };
-  if (!s) return '';
+  if (!s) {return '';}
   return map[s] || '未知';
 }
 
@@ -36,7 +36,7 @@ function qualityStatusText(status) {
     unqualified: '次品待返修',
     repaired: '返修完成',
   };
-  if (!s) return '';
+  if (!s) {return '';}
   return map[s] || '未知';
 }
 
@@ -51,7 +51,7 @@ function scanResultText(status) {
     success: '成功',
     failure: '失败',
   };
-  if (!s) return '';
+  if (!s) {return '';}
   return map[s] || '未知';
 }
 

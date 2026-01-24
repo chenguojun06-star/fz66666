@@ -46,6 +46,10 @@ public class CuttingTask {
 
     private LocalDateTime updateTime;
 
+    private String remarks;
+
+    private java.time.LocalDate expectedShipDate;
+
     @TableField(exist = false)
     private Integer cuttingQuantity;
 

@@ -174,6 +174,8 @@ export interface PayrollOperatorProcessSummaryRow {
   orderId?: string;
   orderNo?: string;
   styleNo?: string;
+  color?: string;
+  size?: string;
   operatorId?: string;
   operatorName?: string;
   processName?: string;
@@ -181,4 +183,6 @@ export interface PayrollOperatorProcessSummaryRow {
   quantity?: number;
   unitPrice?: number;
   totalAmount?: number;
+  startTime?: string;
+  endTime?: string;
 }

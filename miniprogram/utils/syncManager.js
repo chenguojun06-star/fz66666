@@ -30,9 +30,9 @@ class SyncManager {
    * @returns {boolean} 是否启动成功
    */
   startSync(taskId, fetchFn, interval = 30000, options) {
-    if (!taskId || !fetchFn) return false;
+    if (!taskId || !fetchFn) {return false;}
     if (this.syncTasks.has(taskId)) {
-      if (DEBUG) console.warn(`[同步管理器] 任务 ${taskId} 已在运行中`);
+      if (DEBUG) {console.warn(`[同步管理器] 任务 ${taskId} 已在运行中`);}
       return false;
     }
 
@@ -61,7 +61,7 @@ class SyncManager {
       config
     });
 
-    if (DEBUG_MODE) if (DEBUG) console.log(`[同步管理器] 同步任务已启动: ${taskId}, 间隔: ${config.interval}ms`);
+    if (DEBUG_MODE) {if (DEBUG) {console.log(`[同步管理器] 同步任务已启动: ${taskId}, 间隔: ${config.interval}ms`);}}
     return true;
   }
 
@@ -72,14 +72,14 @@ class SyncManager {
    */
   stopSync(taskId) {
     const task = this.syncTasks.get(taskId);
-    if (!task) return false;
+    if (!task) {return false;}
 
     clearInterval(task.timer);
     this.syncTasks.delete(taskId);
     this.listeners.delete(taskId);
     this.syncErrors.delete(taskId);
 
-    if (DEBUG_MODE) if (DEBUG) console.log(`[同步管理器] 同步任务已停止: ${taskId}`);
+    if (DEBUG_MODE) {if (DEBUG) {console.log(`[同步管理器] 同步任务已停止: ${taskId}`);}}
     return true;
   }
 
@@ -99,7 +99,7 @@ class SyncManager {
    * @returns {Function} 取消监听函数
    */
   onDataChange(taskId, callback) {
-    if (!taskId || !callback) return () => { };
+    if (!taskId || !callback) {return () => { };}
 
     if (!this.listeners.has(taskId)) {
       this.listeners.set(taskId, new Set());
@@ -126,7 +126,7 @@ class SyncManager {
    */
   getSyncStatus(taskId) {
     const task = this.syncTasks.get(taskId);
-    if (!task) return null;
+    if (!task) {return null;}
 
     const errors = this.syncErrors.get(taskId) || { count: 0, lastError: null };
     const lastSync = this.lastSyncTime.get(taskId) || 0;
@@ -188,7 +188,7 @@ class SyncManager {
       const newData = await fetchFn();
       const task = this.syncTasks.get(taskId);
 
-      if (!task) return;
+      if (!task) {return;}
 
       const lastData = task.lastData;
       const hasChanged = compareData(newData, lastData);
@@ -201,7 +201,7 @@ class SyncManager {
 
       // 如果数据变化，触发回调
       if (hasChanged) {
-        if (DEBUG_MODE) if (DEBUG) console.log(`[同步管理器] 任务数据已变更: ${taskId}`);
+        if (DEBUG_MODE) {if (DEBUG) {console.log(`[同步管理器] 任务数据已变更: ${taskId}`);}}
 
         // 更新缓存
         task.lastData = this._deepClone(newData);
@@ -257,7 +257,7 @@ class SyncManager {
    * @private
    */
   _defaultCompare(newData, oldData) {
-    if (!oldData) return true; // 首次同步总是认为有变化
+    if (!oldData) {return true;} // 首次同步总是认为有变化
     return JSON.stringify(newData) !== JSON.stringify(oldData);
   }
 

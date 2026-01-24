@@ -8,11 +8,12 @@ import Layout from '../../components/Layout';
 import api, { parseProductionOrderLines, withQuery } from '../../utils/api';
 import { StyleBom, StyleInfo, StyleQueryParams } from '../../types/style';
 import { Factory } from '../../types/system';
+import { ProductionOrder } from '../../types/production';
 import { formatDateTime } from '../../utils/datetime';
 import ResizableModal from '../../components/common/ResizableModal';
 import ResizableTable from '../../components/common/ResizableTable';
 import RowActions from '../../components/common/RowActions';
-import { QRCodeCanvas } from 'qrcode.react';
+import QRCodeBox from '../../components/common/QRCodeBox';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { StyleAttachmentsButton, StyleCoverThumb } from '../../components/StyleAssets';
 import { getMaterialTypeCategory } from '../../utils/materialType';
@@ -53,11 +54,13 @@ const OrderManagement: React.FC = () => {
   const location = useLocation();
   const params = useParams();
   const routeStyleNo = useMemo(() => {
-    const raw = String((params as any)?.styleNo || '').trim();
+    const raw = String((params as Record<string, unknown>)?.styleNo || '').trim();
     if (!raw) return '';
     try {
       return decodeURIComponent(raw).trim();
     } catch {
+    // Intentionally empty
+      // 忽略错误
       return raw;
     }
   }, [params]);
@@ -86,7 +89,7 @@ const OrderManagement: React.FC = () => {
   const [activeTabKey, setActiveTabKey] = useState('base');
   const [bomLoading, setBomLoading] = useState(false);
   const [bomList, setBomList] = useState<StyleBom[]>([]);
-  const [createdOrder, setCreatedOrder] = useState<any>(null);
+  const [createdOrder, setCreatedOrder] = useState<unknown>(null);
 
   const [orderLines, setOrderLines] = useState<OrderLine[]>([]);
 
@@ -94,7 +97,7 @@ const OrderManagement: React.FC = () => {
 
   const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
-  const normalizeMatchKey = (v: any) => String(v || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  const normalizeMatchKey = (v: unknown) => String(v || '').trim().replace(/\s+/g, ' ').toLowerCase();
 
   const buildOptionSet = (raw: any) => {
     const list = splitOptions(String(raw || '')).map(normalizeMatchKey).filter(Boolean);
@@ -129,23 +132,22 @@ const OrderManagement: React.FC = () => {
   const fetchOrderDetailRows = async (styleNo: string) => {
     setDetailLoading(true);
     try {
-      const response = await api.get<any>('/production/order/list', {
+      const response = await api.get<{ code: number; message: string; data: { records: ProductionOrder[]; total: number } }>('/production/order/list', {
         params: {
           page: detailQuery.page,
           pageSize: detailQuery.pageSize,
           styleNo,
         },
       });
-      const result = response as any;
-      if (result.code !== 200) {
-        message.error(result.message || '获取下单明细失败');
+      if (response.code !== 200) {
+        message.error(response.message || '获取下单明细失败');
         setDetailRows([]);
         setDetailTotal(0);
         return;
       }
 
-      const orders = result?.data?.records || [];
-      const rows: any[] = [];
+      const orders = response?.data?.records || [];
+      const rows: unknown[] = [];
 
       const list = Array.isArray(orders) ? [...orders] : [];
       list.sort((a: any, b: any) => {
@@ -167,7 +169,7 @@ const OrderManagement: React.FC = () => {
         );
       };
 
-      const joinUniq = (items: any[]) => {
+      const joinUniq = (items: unknown[]) => {
         const set = new Set<string>();
         for (const it of items) {
           const t = String(it || '').trim();
@@ -178,15 +180,15 @@ const OrderManagement: React.FC = () => {
 
       const detailSizes = ['S', 'M', 'L', 'XL', 'XXL'];
 
-      const buildSizeQty = (lines: any[]) => {
+      const buildSizeQty = (lines: unknown[]) => {
         const sizeQty: Record<string, number> = {};
         detailSizes.forEach((s) => {
           sizeQty[s] = 0;
         });
         for (const l of lines) {
-          const sizeRaw = String((l as any)?.size || '').trim();
+          const sizeRaw = String((l as Record<string, unknown>)?.size || '').trim();
           if (!sizeRaw) continue;
-          const q = Number((l as any)?.quantity || 0) || 0;
+          const q = Number((l as Record<string, unknown>)?.quantity || 0) || 0;
           if (!q) continue;
           const matched = detailSizes.find((s) => normalizeMatchKey(s) === normalizeMatchKey(sizeRaw));
           if (!matched) continue;
@@ -197,30 +199,30 @@ const OrderManagement: React.FC = () => {
 
       const pickCompletedQty = (o: any, fallbackOrderQty: number) => {
         const candidates = [
-          (o as any)?.completedQuantity,
-          (o as any)?.completedQty,
-          (o as any)?.finishedQuantity,
-          (o as any)?.finishQuantity,
-          (o as any)?.actualQuantity,
-          (o as any)?.warehousingQualifiedQuantity,
-          (o as any)?.warehousingQuantity,
-          (o as any)?.inStockQuantity,
+          (o as Record<string, unknown>)?.completedQuantity,
+          (o as Record<string, unknown>)?.completedQty,
+          (o as Record<string, unknown>)?.finishedQuantity,
+          (o as Record<string, unknown>)?.finishQuantity,
+          (o as Record<string, unknown>)?.actualQuantity,
+          (o as Record<string, unknown>)?.warehousingQualifiedQuantity,
+          (o as Record<string, unknown>)?.warehousingQuantity,
+          (o as Record<string, unknown>)?.inStockQuantity,
         ];
         for (const c of candidates) {
           const n = Number(c);
           if (Number.isFinite(n) && n >= 0) return n;
         }
-        const status = String((o as any)?.status || '').trim().toLowerCase();
-        const closed = status === 'completed' || status === 'closed' || status === 'finished' || !!String((o as any)?.actualEndDate || '').trim();
+        const status = String((o as Record<string, unknown>)?.status || '').trim().toLowerCase();
+        const closed = status === 'completed' || status === 'closed' || status === 'finished' || !!String((o as Record<string, unknown>)?.actualEndDate || '').trim();
         if (closed) {
-          const orderQty = Number((o as any)?.orderQuantity);
+          const orderQty = Number((o as Record<string, unknown>)?.orderQuantity);
           return Number.isFinite(orderQty) && orderQty >= 0 ? orderQty : fallbackOrderQty;
         }
         return 0;
       };
 
-      const buildRow = (o: any, key: string, lines: any[], baseOverride?: Partial<any>) => {
-        const base: any = {
+      const buildRow = (o: any, key: string, lines: unknown[], baseOverride?: Partial<unknown>) => {
+        const base: unknown = {
           orderId: o?.id,
           orderNo: o?.orderNo,
           styleNo,
@@ -231,8 +233,8 @@ const OrderManagement: React.FC = () => {
         };
 
         const effectiveLines = lines.length ? lines : [{ color: '-', size: '-', quantity: 0 }];
-        const sumQty = effectiveLines.reduce((acc, l) => acc + (Number((l as any)?.quantity || 0) || 0), 0);
-        const colors = joinUniq(effectiveLines.map((l) => (l as any)?.color)) || '-';
+        const sumQty = effectiveLines.reduce((acc, l) => acc + (Number((l as Record<string, unknown>)?.quantity || 0) || 0), 0);
+        const colors = joinUniq(effectiveLines.map((l) => (l as Record<string, unknown>)?.color)) || '-';
         const sizeQty = buildSizeQty(effectiveLines);
         const completedQuantity = base?.completedQuantity != null ? (Number(base?.completedQuantity) || 0) : pickCompletedQty(o, sumQty);
 
@@ -252,8 +254,8 @@ const OrderManagement: React.FC = () => {
       }
 
       setDetailRows(rows);
-      setDetailTotal(Number(result?.data?.total || 0) || 0);
-    } catch (e: any) {
+      setDetailTotal(Number(response?.data?.total || 0) || 0);
+    } catch (e: unknown) {
       message.error(e?.message || '获取下单明细失败');
       setDetailRows([]);
       setDetailTotal(0);
@@ -335,16 +337,16 @@ const OrderManagement: React.FC = () => {
   };
 
   const calcBomBudgetQty = (record: StyleBom) => {
-    const matchedQty = getMatchedQty((record as any).color, (record as any).size);
-    const usage = Number((record as any).usageAmount) || 0;
-    const loss = Number((record as any).lossRate) || 0;
+    const matchedQty = getMatchedQty((record as Record<string, unknown>).color, (record as Record<string, unknown>).size);
+    const usage = Number((record as Record<string, unknown>).usageAmount) || 0;
+    const loss = Number((record as Record<string, unknown>).lossRate) || 0;
     const required = usage * (1 + loss / 100) * matchedQty;
     if (!Number.isFinite(required)) return 0;
     return Number(required.toFixed(4));
   };
 
   const calcBomTotalPrice = (record: StyleBom) => {
-    const unitPrice = Number((record as any).unitPrice) || 0;
+    const unitPrice = Number((record as Record<string, unknown>).unitPrice) || 0;
     const budgetQty = calcBomBudgetQty(record);
     if (!Number.isFinite(budgetQty) || !Number.isFinite(unitPrice)) return 0;
     return Number((budgetQty * unitPrice).toFixed(2));
@@ -362,7 +364,7 @@ const OrderManagement: React.FC = () => {
       key: 'matchedQty',
       width: 130,
       align: 'right' as const,
-      render: (_: any, record: StyleBom) => getMatchedQty((record as any).color, (record as any).size),
+      render: (_: any, record: StyleBom) => getMatchedQty((record as Record<string, unknown>).color, (record as Record<string, unknown>).size),
     },
     { title: '单件用量', dataIndex: 'usageAmount', key: 'usageAmount', width: 110 },
     { title: '损耗率(%)', dataIndex: 'lossRate', key: 'lossRate', width: 110 },
@@ -428,44 +430,44 @@ const OrderManagement: React.FC = () => {
   }, [location.search]);
 
   const demandRows = useMemo(() => {
-    const grouped: Record<string, any> = {};
+    const grouped: Record<string, unknown> = {};
 
     for (const bom of bomList) {
-      const materialType = String((bom as any).materialType || 'fabric');
-      const bomColor = String((bom as any).color || '').trim();
-      const bomSize = String((bom as any).size || '').trim();
+      const materialType = String((bom as Record<string, unknown>).materialType || 'fabric');
+      const bomColor = String((bom as Record<string, unknown>).color || '').trim();
+      const bomSize = String((bom as Record<string, unknown>).size || '').trim();
 
       const matchedQty = getMatchedQty(bomColor, bomSize);
 
       if (!matchedQty) continue;
 
-      const usage = Number((bom as any).usageAmount) || 0;
-      const loss = Number((bom as any).lossRate) || 0;
+      const usage = Number((bom as Record<string, unknown>).usageAmount) || 0;
+      const loss = Number((bom as Record<string, unknown>).lossRate) || 0;
       const required = usage * (1 + loss / 100) * matchedQty;
       if (!Number.isFinite(required) || required <= 0) continue;
 
       const key = [
         materialType,
-        (bom as any).materialCode || '',
-        (bom as any).specification || '',
-        (bom as any).unit || '',
+        (bom as Record<string, unknown>).materialCode || '',
+        (bom as Record<string, unknown>).specification || '',
+        (bom as Record<string, unknown>).unit || '',
         bomColor,
         bomSize,
-        (bom as any).supplier || '',
+        (bom as Record<string, unknown>).supplier || '',
       ].join('|');
 
       if (!grouped[key]) {
         grouped[key] = {
           key,
           materialType,
-          materialCode: (bom as any).materialCode,
-          materialName: (bom as any).materialName,
-          specification: (bom as any).specification,
-          unit: (bom as any).unit,
+          materialCode: (bom as Record<string, unknown>).materialCode,
+          materialName: (bom as Record<string, unknown>).materialName,
+          specification: (bom as Record<string, unknown>).specification,
+          unit: (bom as Record<string, unknown>).unit,
           color: bomColor,
           size: bomSize,
-          supplierName: (bom as any).supplier,
-          unitPrice: Number((bom as any).unitPrice) || 0,
+          supplierName: (bom as Record<string, unknown>).supplier,
+          unitPrice: Number((bom as Record<string, unknown>).unitPrice) || 0,
           budgetQty: 0,
         };
       }
@@ -474,7 +476,7 @@ const OrderManagement: React.FC = () => {
     }
 
     return Object.values(grouped)
-      .map((r: any) => {
+      .map((r: Record<string, unknown>) => {
         const budgetQty = Number(r.budgetQty.toFixed(4));
         const totalAmount = Number((budgetQty * (Number(r.unitPrice) || 0)).toFixed(2));
         return { ...r, budgetQty, totalAmount };
@@ -483,16 +485,16 @@ const OrderManagement: React.FC = () => {
   }, [bomList, getMatchedQty]);
 
   const bomByType = useMemo(() => {
-    const fabric = bomList.filter((b) => getMaterialTypeCategory((b as any).materialType) === 'fabric');
-    const lining = bomList.filter((b) => getMaterialTypeCategory((b as any).materialType) === 'lining');
-    const accessory = bomList.filter((b) => getMaterialTypeCategory((b as any).materialType) === 'accessory');
+    const fabric = bomList.filter((b) => getMaterialTypeCategory((b as Record<string, unknown>).materialType) === 'fabric');
+    const lining = bomList.filter((b) => getMaterialTypeCategory((b as Record<string, unknown>).materialType) === 'lining');
+    const accessory = bomList.filter((b) => getMaterialTypeCategory((b as Record<string, unknown>).materialType) === 'accessory');
     return { fabric, lining, accessory };
   }, [bomList]);
 
   const demandRowsByType = useMemo(() => {
-    const fabric = demandRows.filter((r: any) => getMaterialTypeCategory(r.materialType) === 'fabric');
-    const lining = demandRows.filter((r: any) => getMaterialTypeCategory(r.materialType) === 'lining');
-    const accessory = demandRows.filter((r: any) => getMaterialTypeCategory(r.materialType) === 'accessory');
+    const fabric = demandRows.filter((r: Record<string, unknown>) => getMaterialTypeCategory(r.materialType) === 'fabric');
+    const lining = demandRows.filter((r: Record<string, unknown>) => getMaterialTypeCategory(r.materialType) === 'lining');
+    const accessory = demandRows.filter((r: Record<string, unknown>) => getMaterialTypeCategory(r.materialType) === 'accessory');
     return { fabric, lining, accessory };
   }, [demandRows]);
 
@@ -504,10 +506,9 @@ const OrderManagement: React.FC = () => {
     }
 
     try {
-      const res = await api.post<any>('/production/purchase/demand/generate', { orderId: createdOrder.id, overwrite: false });
-      const result = res as any;
-      if (result.code === 200) {
-        const generated = Array.isArray(result.data) ? result.data.length : undefined;
+      const res = await api.post<{ code: number; message: string; data: unknown[] }>('/production/purchase/demand/generate', { orderId: createdOrder.id, overwrite: false });
+      if (res.code === 200) {
+        const generated = Array.isArray(res.data) ? res.data.length : undefined;
         if (generated === 0) {
           message.warning('未生成采购需求：请检查BOM颜色/尺码是否与订单明细匹配');
         } else {
@@ -516,22 +517,21 @@ const OrderManagement: React.FC = () => {
         navigate(withQuery('/production/material', { orderNo: createdOrder.orderNo }));
         return;
       }
-      const msg = result.message || '生成采购单失败';
+      const msg = res.message || '生成采购单失败';
       if (String(msg).includes('已生成')) {
         const ok = window.confirm('该订单已存在采购单，是否覆盖重新生成？');
         if (!ok) return;
-        const res2 = await api.post<any>('/production/purchase/demand/generate', { orderId: createdOrder.id, overwrite: true });
-        const result2 = res2 as any;
-        if (result2.code === 200) {
+        const res2 = await api.post<{ code: number; message: string }>('/production/purchase/demand/generate', { orderId: createdOrder.id, overwrite: true });
+        if (res2.code === 200) {
           message.success('已覆盖生成采购单');
           navigate(withQuery('/production/material', { orderNo: createdOrder.orderNo }));
         } else {
-          message.error(result2.message || '覆盖生成失败');
+          message.error(res2.message || '覆盖生成失败');
         }
       } else {
         message.error(msg);
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(e?.message || '生成采购单失败');
     }
   };
@@ -623,12 +623,12 @@ const OrderManagement: React.FC = () => {
       .map((n) => {
         const name = String(n?.name || '').trim();
         const id = String(n?.id || name || '').trim() || name;
-        const processes = (Array.isArray(n?.processes) ? (n as any).processes : []) as PricingProcess[];
+        const processes = (Array.isArray(n?.processes) ? (n as Record<string, unknown>).processes : []) as PricingProcess[];
         const safeProcesses = processes
           .map((p) => {
-            const pname = String((p as any)?.processName || '').trim();
-            const pid = String((p as any)?.id || `${id}-${pname}` || '').trim() || `${id}-${Date.now()}`;
-            const unitPrice = Number((p as any)?.unitPrice);
+            const pname = String((p as Record<string, unknown>)?.processName || '').trim();
+            const pid = String((p as Record<string, unknown>)?.id || `${id}-${pname}` || '').trim() || `${id}-${Date.now()}`;
+            const unitPrice = Number((p as Record<string, unknown>)?.unitPrice);
             return {
               id: pid,
               processName: pname,
@@ -656,7 +656,7 @@ const OrderManagement: React.FC = () => {
       }));
     const processesByNode: Record<string, { id: string; name: string; unitPrice: number }[]> = {};
     for (const n of ensuredNodes) {
-      processesByNode[String(n.id)] = (Array.isArray((n as any).processes) ? (n as any).processes : []).map((p: any) => ({
+      processesByNode[String(n.id)] = (Array.isArray((n as Record<string, unknown>).processes) ? (n as Record<string, unknown>).processes : []).map((p: any) => ({
         id: String(p.id),
         name: String(p.processName || '').trim(),
         unitPrice: Number(p.unitPrice) || 0,
@@ -712,15 +712,14 @@ const OrderManagement: React.FC = () => {
   const fetchStyles = async () => {
     setLoading(true);
     try {
-      const response = await api.get<any>('/style/info/list', { params: queryParams });
-      const result = response as any;
-      if (result.code === 200) {
-        setStyles(result.data.records || []);
-        setTotal(result.data.total || 0);
+      const response = await api.get<{ code: number; message: string; data: { records: StyleInfo[]; total: number } }>('/style/info/list', { params: queryParams });
+      if (response.code === 200) {
+        setStyles(response.data.records || []);
+        setTotal(response.data.total || 0);
       } else {
-        message.error(result.message || '获取款号列表失败');
+        message.error(response.message || '获取款号列表失败');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       message.error(error?.message || '获取款号列表失败');
     } finally {
       setLoading(false);
@@ -729,12 +728,13 @@ const OrderManagement: React.FC = () => {
 
   const fetchFactories = async () => {
     try {
-      const response = await api.get<any>('/system/factory/list', { params: { page: 1, pageSize: 1000 } });
-      const result = response as any;
-      if (result.code === 200) {
-        setFactories(result.data.records || []);
+      const response = await api.get<{ code: number; data: { records: Factory[] } }>('/system/factory/list', { params: { page: 1, pageSize: 1000 } });
+      if (response.code === 200) {
+        setFactories(response.data.records || []);
       }
     } catch {
+    // Intentionally empty
+      // 忽略错误
       setFactories([]);
     }
   };
@@ -748,12 +748,11 @@ const OrderManagement: React.FC = () => {
     'order-management-styles',
     async () => {
       try {
-        const response = await api.get<any>('/style/info/list', { params: queryParams });
-        const result = response as any;
-        if (result.code === 200) {
+        const response = await api.get<{ code: number; data: { records: StyleInfo[]; total: number } }>('/style/info/list', { params: queryParams });
+        if (response.code === 200) {
           return {
-            records: result.data.records || [],
-            total: result.data.total || 0
+            records: response.data.records || [],
+            total: response.data.total || 0
           };
         }
         return null;
@@ -822,26 +821,28 @@ const OrderManagement: React.FC = () => {
 
   const generateOrderNo = async () => {
     try {
-      const res = await api.get<any>('/system/serial/generate', { params: { ruleCode: 'ORDER_NO' } });
-      const result = res as any;
-      if (result.code === 200 && typeof result.data === 'string' && result.data) {
-        form.setFieldsValue({ orderNo: result.data });
+      const res = await api.get<{ code: number; data: string }>('/system/serial/generate', { params: { ruleCode: 'ORDER_NO' } });
+      if (res.code === 200 && typeof res.data === 'string' && res.data) {
+        form.setFieldsValue({ orderNo: res.data });
       }
     } catch {
+    // Intentionally empty
+      // 忽略错误
     }
   };
 
   const fetchBom = async (styleId: string | number) => {
     setBomLoading(true);
     try {
-      const res = await api.get<any>(`/style/bom/list?styleId=${styleId}`);
-      const result = res as any;
-      if (result.code === 200) {
-        setBomList(result.data || []);
+      const res = await api.get<{ code: number; data: StyleBom[] }>(`/style/bom/list?styleId=${styleId}`);
+      if (res.code === 200) {
+        setBomList(res.data || []);
       } else {
         setBomList([]);
       }
     } catch {
+    // Intentionally empty
+      // 忽略错误
       setBomList([]);
     } finally {
       setBomLoading(false);
@@ -928,10 +929,9 @@ const OrderManagement: React.FC = () => {
 
       let ensuredOrderNo = values.orderNo;
       if (!ensuredOrderNo) {
-        const res = await api.get<any>('/system/serial/generate', { params: { ruleCode: 'ORDER_NO' } });
-        const result = res as any;
-        if (result.code === 200 && typeof result.data === 'string' && result.data) {
-          ensuredOrderNo = result.data;
+        const res = await api.get<{ code: number; data: string }>('/system/serial/generate', { params: { ruleCode: 'ORDER_NO' } });
+        if (res.code === 200 && typeof res.data === 'string' && res.data) {
+          ensuredOrderNo = res.data;
           form.setFieldsValue({ orderNo: ensuredOrderNo });
         }
       }
@@ -956,7 +956,7 @@ const OrderManagement: React.FC = () => {
         materialPriceVersion,
       })));
 
-      const payload: any = {
+      const payload: unknown = {
         orderNo: ensuredOrderNo,
         styleId: String(selectedStyle.id ?? ''),
         styleNo: selectedStyle.styleNo,
@@ -971,17 +971,16 @@ const OrderManagement: React.FC = () => {
         plannedEndDate: values.plannedEndDate ? values.plannedEndDate.format('YYYY-MM-DDTHH:mm:ss') : undefined,
         progressWorkflowJson: buildProgressWorkflowJson(progressNodes),
       };
-      const response = await api.post<any>('/production/order', payload);
-      const result = response as any;
-      if (result.code === 200) {
-        setCreatedOrder(result.data || payload);
+      const response = await api.post<{ code: number; message: string; data: ProductionOrder }>('/production/order', payload);
+      if (response.code === 200) {
+        setCreatedOrder(response.data || payload);
         setActiveTabKey('bom');
         message.success('已下单');
         fetchStyles();
       } else {
-        message.error(result.message || '下单失败');
+        message.error(response.message || '下单失败');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error?.errorFields) {
         message.error(error.errorFields?.[0]?.errors?.[0] || '表单校验失败');
       } else {
@@ -999,7 +998,7 @@ const OrderManagement: React.FC = () => {
       key: 'cover',
       width: 72,
       render: (_: any, record: StyleInfo) => (
-        <StyleCoverThumb styleId={(record as any).id} styleNo={record.styleNo} src={(record as any).cover || null} />
+        <StyleCoverThumb styleId={(record as Record<string, unknown>).id} styleNo={record.styleNo} src={(record as Record<string, unknown>).cover || null} />
       )
     },
     {
@@ -1011,7 +1010,7 @@ const OrderManagement: React.FC = () => {
         <a
           style={{ cursor: 'pointer' }}
           onClick={() => {
-            const sn = String((record as any)?.styleNo || '').trim();
+            const sn = String((record as Record<string, unknown>)?.styleNo || '').trim();
             if (!sn) return;
             navigate(`/order-management/${encodeURIComponent(sn)}`);
           }}
@@ -1026,21 +1025,21 @@ const OrderManagement: React.FC = () => {
       dataIndex: 'category',
       key: 'category',
       width: 120,
-      render: (v: any) => toCategoryCn(v),
+      render: (v: unknown) => toCategoryCn(v),
     },
     {
       title: '下单次数',
       dataIndex: 'orderCount',
       key: 'orderCount',
       width: 110,
-      render: (v: any) => Number(v) || 0,
+      render: (v: unknown) => Number(v) || 0,
     },
     {
       title: '是否下单',
       key: 'hasOrder',
       width: 100,
       render: (_: any, record: StyleInfo) => {
-        const c = Number((record as any)?.orderCount || 0) || 0;
+        const c = Number((record as Record<string, unknown>)?.orderCount || 0) || 0;
         return c > 0 ? <Tag color="green">有</Tag> : <Tag>无</Tag>;
       },
     },
@@ -1050,7 +1049,7 @@ const OrderManagement: React.FC = () => {
       width: 100,
       render: (_: any, record: StyleInfo) => (
         <StyleAttachmentsButton
-          styleId={(record as any).id}
+          styleId={(record as Record<string, unknown>).id}
           styleNo={record.styleNo}
           modalTitle={`附件（${record.styleNo}）`}
         />
@@ -1090,7 +1089,7 @@ const OrderManagement: React.FC = () => {
           </div>
 
           <ResizableTable
-            rowKey={(r) => String((r as any).key)}
+            rowKey={(r) => String((r as Record<string, unknown>).key)}
             loading={detailLoading}
             dataSource={detailRows}
             style={{ color: '#000' }}
@@ -1107,17 +1106,17 @@ const OrderManagement: React.FC = () => {
               { title: <span style={{ color: '#000' }}>订单号</span>, dataIndex: 'orderNo', key: 'orderNo', width: 150 },
               { title: <span style={{ color: '#000' }}>款号</span>, dataIndex: 'styleNo', key: 'styleNo', width: 140 },
               { title: <span style={{ color: '#000' }}>颜色</span>, dataIndex: 'color', key: 'color', width: 140 },
-              { title: <span style={{ color: '#000' }}>S</span>, dataIndex: ['sizeQty', 'S'], key: 'size_S', width: 90, align: 'right', render: (v: any) => Number(v) || 0 },
-              { title: <span style={{ color: '#000' }}>M</span>, dataIndex: ['sizeQty', 'M'], key: 'size_M', width: 90, align: 'right', render: (v: any) => Number(v) || 0 },
-              { title: <span style={{ color: '#000' }}>L</span>, dataIndex: ['sizeQty', 'L'], key: 'size_L', width: 90, align: 'right', render: (v: any) => Number(v) || 0 },
-              { title: <span style={{ color: '#000' }}>XL</span>, dataIndex: ['sizeQty', 'XL'], key: 'size_XL', width: 90, align: 'right', render: (v: any) => Number(v) || 0 },
-              { title: <span style={{ color: '#000' }}>XXL</span>, dataIndex: ['sizeQty', 'XXL'], key: 'size_XXL', width: 90, align: 'right', render: (v: any) => Number(v) || 0 },
-              { title: <span style={{ color: '#000' }}>下单数</span>, dataIndex: 'orderQuantity', key: 'orderQuantity', width: 110, align: 'right', render: (v: any) => Number(v) || 0 },
-              { title: <span style={{ color: '#000' }}>完成数</span>, dataIndex: 'completedQuantity', key: 'completedQuantity', width: 110, align: 'right', render: (v: any) => Number(v) || 0 },
+              { title: <span style={{ color: '#000' }}>S</span>, dataIndex: ['sizeQty', 'S'], key: 'size_S', width: 90, align: 'right', render: (v: unknown) => Number(v) || 0 },
+              { title: <span style={{ color: '#000' }}>M</span>, dataIndex: ['sizeQty', 'M'], key: 'size_M', width: 90, align: 'right', render: (v: unknown) => Number(v) || 0 },
+              { title: <span style={{ color: '#000' }}>L</span>, dataIndex: ['sizeQty', 'L'], key: 'size_L', width: 90, align: 'right', render: (v: unknown) => Number(v) || 0 },
+              { title: <span style={{ color: '#000' }}>XL</span>, dataIndex: ['sizeQty', 'XL'], key: 'size_XL', width: 90, align: 'right', render: (v: unknown) => Number(v) || 0 },
+              { title: <span style={{ color: '#000' }}>XXL</span>, dataIndex: ['sizeQty', 'XXL'], key: 'size_XXL', width: 90, align: 'right', render: (v: unknown) => Number(v) || 0 },
+              { title: <span style={{ color: '#000' }}>下单数</span>, dataIndex: 'orderQuantity', key: 'orderQuantity', width: 110, align: 'right', render: (v: unknown) => Number(v) || 0 },
+              { title: <span style={{ color: '#000' }}>完成数</span>, dataIndex: 'completedQuantity', key: 'completedQuantity', width: 110, align: 'right', render: (v: unknown) => Number(v) || 0 },
               { title: <span style={{ color: '#000' }}>下单人</span>, dataIndex: 'orderOperatorName', key: 'orderOperatorName', width: 140 },
-              { title: <span style={{ color: '#000' }}>下单时间</span>, dataIndex: 'orderTime', key: 'orderTime', width: 170, render: (v: any) => formatDateTime(v) },
-              { title: <span style={{ color: '#000' }}>完成时间</span>, dataIndex: 'completedTime', key: 'completedTime', width: 170, render: (v: any) => formatDateTime(v) },
-            ] as any}
+              { title: <span style={{ color: '#000' }}>下单时间</span>, dataIndex: 'orderTime', key: 'orderTime', width: 170, render: (v: unknown) => formatDateTime(v) },
+              { title: <span style={{ color: '#000' }}>完成时间</span>, dataIndex: 'completedTime', key: 'completedTime', width: 170, render: (v: unknown) => formatDateTime(v) },
+            ] as Record<string, unknown>}
           />
         </Card>
       </Layout>
@@ -1158,7 +1157,7 @@ const OrderManagement: React.FC = () => {
 
         <ResizableTable
           rowKey={(r) => String(r.id ?? r.styleNo)}
-          columns={columns as any}
+          columns={columns as Record<string, unknown>}
           dataSource={styles}
           loading={loading}
           scroll={{ x: 'max-content', y: isMobile ? 360 : 560 }}
@@ -1401,7 +1400,7 @@ const OrderManagement: React.FC = () => {
                           label: '面料',
                           children: (
                             <ResizableTable
-                              rowKey={(r) => String((r as any).id ?? (r as any).materialCode)}
+                              rowKey={(r) => String((r as Record<string, unknown>).id ?? (r as Record<string, unknown>).materialCode)}
                               loading={bomLoading}
                               dataSource={bomByType.fabric}
                               pagination={false}
@@ -1416,7 +1415,7 @@ const OrderManagement: React.FC = () => {
                           label: '里料',
                           children: (
                             <ResizableTable
-                              rowKey={(r) => String((r as any).id ?? (r as any).materialCode)}
+                              rowKey={(r) => String((r as Record<string, unknown>).id ?? (r as Record<string, unknown>).materialCode)}
                               loading={bomLoading}
                               dataSource={bomByType.lining}
                               pagination={false}
@@ -1431,7 +1430,7 @@ const OrderManagement: React.FC = () => {
                           label: '辅料',
                           children: (
                             <ResizableTable
-                              rowKey={(r) => String((r as any).id ?? (r as any).materialCode)}
+                              rowKey={(r) => String((r as Record<string, unknown>).id ?? (r as Record<string, unknown>).materialCode)}
                               loading={bomLoading}
                               dataSource={bomByType.accessory}
                               pagination={false}
@@ -1469,8 +1468,8 @@ const OrderManagement: React.FC = () => {
                           label: '面料需求',
                           children: (
                             <ResizableTable
-                              rowKey={(r) => String((r as any).key)}
-                              dataSource={demandRowsByType.fabric as any}
+                              rowKey={(r) => String((r as Record<string, unknown>).key)}
+                              dataSource={demandRowsByType.fabric as Record<string, unknown>}
                               pagination={false}
                               scroll={{ x: 'max-content', y: isMobile ? 260 : 360 }}
                               size={isMobile ? 'small' : 'middle'}
@@ -1483,8 +1482,8 @@ const OrderManagement: React.FC = () => {
                           label: '里料需求',
                           children: (
                             <ResizableTable
-                              rowKey={(r) => String((r as any).key)}
-                              dataSource={demandRowsByType.lining as any}
+                              rowKey={(r) => String((r as Record<string, unknown>).key)}
+                              dataSource={demandRowsByType.lining as Record<string, unknown>}
                               pagination={false}
                               scroll={{ x: 'max-content', y: isMobile ? 260 : 360 }}
                               size={isMobile ? 'small' : 'middle'}
@@ -1497,8 +1496,8 @@ const OrderManagement: React.FC = () => {
                           label: '辅料需求',
                           children: (
                             <ResizableTable
-                              rowKey={(r) => String((r as any).key)}
-                              dataSource={demandRowsByType.accessory as any}
+                              rowKey={(r) => String((r as Record<string, unknown>).key)}
+                              dataSource={demandRowsByType.accessory as Record<string, unknown>}
                               pagination={false}
                               scroll={{ x: 'max-content', y: isMobile ? 260 : 360 }}
                               size={isMobile ? 'small' : 'middle'}
@@ -1516,9 +1515,12 @@ const OrderManagement: React.FC = () => {
                 label: '二维码',
                 children: (
                   <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexDirection: isMobile ? 'column' : 'row', minWidth: 0 }}>
-                    <div style={{ border: '1px solid rgba(0,0,0,0.06)', borderRadius: 8, padding: 12 }}>
-                      <QRCodeCanvas value={(createdOrder?.qrCode || ' ') as string} size={220} />
-                    </div>
+                    <QRCodeBox
+                      value={createdOrder?.qrCode || ' '}
+                      label="订单扫码"
+                      variant="primary"
+                      size={220}
+                    />
                     <div style={{ lineHeight: 1.8, minWidth: 0, maxWidth: '100%', wordBreak: 'break-all', overflowWrap: 'anywhere' }}>
                       <div>订单号：{createdOrder?.orderNo || watchedOrderNo || '-'}</div>
                       <div>二维码内容：{createdOrder?.qrCode || '-'}</div>

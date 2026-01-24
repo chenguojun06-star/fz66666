@@ -8,10 +8,10 @@ import ResizableModal from '../../components/common/ResizableModal';
 import RowActions from '../../components/common/RowActions';
 import type { ColumnsType } from 'antd/es/table';
 import { MaterialPurchase as MaterialPurchaseType } from '../../types/production';
-import api from '../../utils/api';
+import api, { fetchProductionOrderDetail } from '../../utils/api';
 import { formatDateTime } from '../../utils/datetime';
 import { getMaterialTypeCategory, getMaterialTypeLabel } from '../../utils/materialType';
-import { StyleCoverThumb } from '../../components/StyleAssets';
+import { ProductionOrderHeader, StyleCoverThumb } from '../../components/StyleAssets';
 import { useViewport } from '../../utils/useViewport';
 
 const { TextArea } = Input;
@@ -35,7 +35,7 @@ const MaterialPurchaseDetail: React.FC = () => {
   const { isMobile } = useViewport();
 
   const [loading, setLoading] = useState(false);
-  const [order, setOrder] = useState<any>(null);
+  const [order, setOrder] = useState<unknown>(null);
   const [purchaseList, setPurchaseList] = useState<MaterialPurchaseType[]>([]);
   
   const [viewVisible, setViewVisible] = useState(false);
@@ -47,12 +47,11 @@ const MaterialPurchaseDetail: React.FC = () => {
 
   // 计算物料到货率
   const materialArrivalRate = React.useMemo(() => {
-    if (!order) return 0;
     const totalRequired = purchaseList.reduce((sum, item) => sum + (Number(item.purchaseQuantity) || 0), 0);
     const totalArrived = purchaseList.reduce((sum, item) => sum + (Number(item.arrivedQuantity) || 0), 0);
     if (totalRequired === 0) return 0;
     return Math.round((totalArrived / totalRequired) * 100);
-  }, [order, purchaseList]);
+  }, [purchaseList]);
 
   // 加载订单和采购单数据
   const loadData = async () => {
@@ -61,20 +60,40 @@ const MaterialPurchaseDetail: React.FC = () => {
     setLoading(true);
     try {
       // 加载订单信息
-      const orderRes = await api.get(`/production/order/${orderId}`);
-      setOrder(orderRes.data);
+      const orderDetail = await fetchProductionOrderDetail(orderId, { acceptAnyData: true });
+      setOrder(orderDetail);
 
-      // 加载该订单的所有采购单
-      const purchaseRes = await api.get('/production/material-purchase/list', {
+      const purchaseRes = await api.get('/production/purchase/list', {
         params: { orderId, page: 1, pageSize: 1000 }
       });
-      setPurchaseList(purchaseRes.data?.records || []);
-    } catch (error: any) {
+      const purchaseResult = purchaseRes as Record<string, unknown>;
+      if (purchaseResult?.code === 200) {
+        setPurchaseList(purchaseResult?.data?.records || []);
+      } else {
+        setPurchaseList(purchaseResult?.data?.records || purchaseResult?.records || []);
+      }
+    } catch (error: unknown) {
       message.error(error.message || '加载数据失败');
     } finally {
       setLoading(false);
     }
   };
+
+  const headerOrder = order || purchaseList[0] || null;
+  const headerOrderNo = String(order?.orderNo ?? (purchaseList[0] as Record<string, unknown>)?.orderNo ?? '').trim();
+  const headerStyleNo = String(order?.styleNo ?? (purchaseList[0] as Record<string, unknown>)?.styleNo ?? '').trim();
+  const headerStyleName = String(order?.styleName ?? (purchaseList[0] as Record<string, unknown>)?.styleName ?? '').trim();
+  const headerStyleId = order?.styleId ?? (purchaseList[0] as Record<string, unknown>)?.styleId;
+  const headerStyleCover = order?.styleCover ?? (purchaseList[0] as Record<string, unknown>)?.styleCover ?? null;
+  const headerColor = String(order?.color ?? (purchaseList[0] as Record<string, unknown>)?.color ?? '').trim();
+  const headerQrValue = headerOrderNo
+    ? JSON.stringify({
+      type: 'order',
+      orderNo: headerOrderNo,
+      styleNo: headerStyleNo,
+      styleName: headerStyleName,
+    })
+    : '';
 
   useEffect(() => {
     loadData();
@@ -125,7 +144,7 @@ const MaterialPurchaseDetail: React.FC = () => {
       
       // 重新加载数据
       await loadData();
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error.errorFields) {
         // 表单验证错误
         return;
@@ -302,24 +321,24 @@ const MaterialPurchaseDetail: React.FC = () => {
           <div style={{ textAlign: 'center', padding: 48 }}>
             <Spin size="large" />
           </div>
-        ) : order ? (
+        ) : headerOrder ? (
           <Card size="small" style={{ marginBottom: 16 }}>
-            <Row gutter={[16, 12]}>
-              <Col xs={24} sm={8} md={6}>
-                <div style={{ fontSize: 12, color: '#999' }}>订单号</div>
-                <div style={{ fontWeight: 500 }}>{order.orderNo || '-'}</div>
-              </Col>
-              <Col xs={24} sm={8} md={6}>
-                <div style={{ fontSize: 12, color: '#999' }}>款号</div>
-                <div>{order.styleNo || '-'}</div>
-              </Col>
-              <Col xs={24} sm={8} md={6}>
-                <div style={{ fontSize: 12, color: '#999' }}>款名</div>
-                <div>{order.styleName || '-'}</div>
-              </Col>
+            <ProductionOrderHeader
+              order={order}
+              orderNo={headerOrderNo}
+              styleNo={headerStyleNo}
+              styleName={headerStyleName}
+              styleId={headerStyleId}
+              styleCover={headerStyleCover}
+              color={headerColor}
+              qrCodeValue={headerQrValue}
+              coverSize={160}
+              qrSize={120}
+            />
+            <Row gutter={[16, 12]} style={{ marginTop: 12 }}>
               <Col xs={24} sm={8} md={6}>
                 <div style={{ fontSize: 12, color: '#999' }}>工厂</div>
-                <div>{order.factoryName || '-'}</div>
+                <div>{order?.factoryName || '-'}</div>
               </Col>
               <Col xs={24} sm={8} md={6}>
                 <div style={{ fontSize: 12, color: '#999' }}>采购单数</div>
@@ -339,14 +358,16 @@ const MaterialPurchaseDetail: React.FC = () => {
               <Col xs={24} sm={8} md={6}>
                 <div style={{ fontSize: 12, color: '#999' }}>回料完成状态</div>
                 <div>
-                  {order.procurementManuallyCompleted === 1 ? (
+                  {order?.procurementManuallyCompleted === 1 ? (
                     <Tag color="success">已确认</Tag>
-                  ) : (
+                  ) : order ? (
                     <Tag color="default">未确认</Tag>
+                  ) : (
+                    <Tag color="default">未知</Tag>
                   )}
                 </div>
               </Col>
-              {order.procurementManuallyCompleted === 1 && (
+              {order?.procurementManuallyCompleted === 1 && (
                 <>
                   <Col xs={24} sm={8} md={6}>
                     <div style={{ fontSize: 12, color: '#999' }}>确认人</div>
@@ -403,8 +424,8 @@ const MaterialPurchaseDetail: React.FC = () => {
               关闭
             </Button>
           ]}
-          defaultWidth="70vw"
-          defaultHeight="75vh"
+          width="70vw"
+          initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.75 : 720}
         >
           {currentPurchase && (
             <div style={{ padding: 16 }}>
@@ -463,11 +484,11 @@ const MaterialPurchaseDetail: React.FC = () => {
                 </Col>
                 <Col xs={24} sm={12}>
                   <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>颜色</div>
-                  <div>{currentPurchase.color || '-'}</div>
+                  <div>{(currentPurchase as Record<string, unknown>).color || '-'}</div>
                 </Col>
                 <Col xs={24} sm={12}>
                   <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>尺码</div>
-                  <div>{currentPurchase.size || '-'}</div>
+                  <div>{(currentPurchase as Record<string, unknown>).size || '-'}</div>
                 </Col>
                 <Col xs={24} sm={12}>
                   <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>供应商</div>

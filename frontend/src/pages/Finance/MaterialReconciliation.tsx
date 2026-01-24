@@ -44,7 +44,7 @@ const MaterialReconciliation: React.FC = () => {
   const [approvalSubmitting, setApprovalSubmitting] = useState(false); // 状态更新加载状态
   const [exporting, setExporting] = useState(false);
 
-  const escapeCsvCell = (value: any) => {
+  const escapeCsvCell = (value: unknown) => {
     const text = String(value ?? '');
     if (/[\r\n",]/.test(text)) {
       return `"${text.replace(/"/g, '""')}"`;
@@ -74,19 +74,19 @@ const MaterialReconciliation: React.FC = () => {
     const header = ['对账单号', '供应商', '物料编码', '物料名称', '采购单号', '订单号', '款号', '数量', '单价(元)', '总金额(元)', '对账日期', '状态'];
     const lines = [header.map(escapeCsvCell).join(',')];
     for (const r of rows) {
-      const st = getMaterialReconStatusConfig((r as any)?.status);
+      const st = getMaterialReconStatusConfig((r as Record<string, unknown>)?.status);
       const row = [
-        String((r as any)?.reconciliationNo || '').trim(),
-        String((r as any)?.supplierName || '').trim(),
-        String((r as any)?.materialCode || '').trim(),
-        String((r as any)?.materialName || '').trim(),
-        String((r as any)?.purchaseNo || '').trim(),
-        String((r as any)?.orderNo || '').trim(),
-        String((r as any)?.styleNo || '').trim(),
-        String(Number((r as any)?.quantity ?? 0) || 0),
-        (r as any)?.unitPrice == null ? '' : String(Number((r as any)?.unitPrice || 0).toFixed(2)),
-        (r as any)?.totalAmount == null ? '' : String(Number((r as any)?.totalAmount || 0).toFixed(2)),
-        String(formatDateTime((r as any)?.reconciliationDate) || ''),
+        String((r as Record<string, unknown>)?.reconciliationNo || '').trim(),
+        String((r as Record<string, unknown>)?.supplierName || '').trim(),
+        String((r as Record<string, unknown>)?.materialCode || '').trim(),
+        String((r as Record<string, unknown>)?.materialName || '').trim(),
+        String((r as Record<string, unknown>)?.purchaseNo || '').trim(),
+        String((r as Record<string, unknown>)?.orderNo || '').trim(),
+        String((r as Record<string, unknown>)?.styleNo || '').trim(),
+        String(Number((r as Record<string, unknown>)?.quantity ?? 0) || 0),
+        (r as Record<string, unknown>)?.unitPrice == null ? '' : String(Number((r as Record<string, unknown>)?.unitPrice || 0).toFixed(2)),
+        (r as Record<string, unknown>)?.totalAmount == null ? '' : String(Number((r as Record<string, unknown>)?.totalAmount || 0).toFixed(2)),
+        String(formatDateTime((r as Record<string, unknown>)?.reconciliationDate) || ''),
         String(st?.text || ''),
       ];
       lines.push(row.map(escapeCsvCell).join(','));
@@ -101,7 +101,7 @@ const MaterialReconciliation: React.FC = () => {
     const all: MaterialReconType[] = [];
     while (all.length < total) {
       const res = await materialReconciliationApi.getMaterialReconciliationList({ ...queryParams, page, pageSize });
-      const data = unwrapApiData<any>(res, '获取物料对账列表失败');
+      const data = unwrapApiData<unknown>(res, '获取物料对账列表失败');
       const records = (data?.records || []) as MaterialReconType[];
       total = Number(data?.total ?? records.length ?? 0);
       all.push(...records);
@@ -114,7 +114,7 @@ const MaterialReconciliation: React.FC = () => {
   };
 
   const exportSelectedCsv = () => {
-    const picked = reconciliationList.filter((r) => selectedRowKeys.includes(String((r as any)?.id)));
+    const picked = reconciliationList.filter((r) => selectedRowKeys.includes(String((r as Record<string, unknown>)?.id)));
     if (!picked.length) {
       message.warning('请先勾选要导出的对账单');
       return;
@@ -133,7 +133,7 @@ const MaterialReconciliation: React.FC = () => {
       }
       const csv = buildMaterialReconCsv(rows);
       downloadTextFile(`物料对账_筛选_${fileStamp()}.csv`, csv, 'text/csv;charset=utf-8');
-    } catch (e: any) {
+    } catch (e: unknown) {
       errorHandler.handleApiError(e, '导出失败');
     } finally {
       setExporting(false);
@@ -229,7 +229,7 @@ const MaterialReconciliation: React.FC = () => {
         normalized.map((p) => materialReconciliationApi.updateMaterialReconciliationStatus(p.id, p.status)),
       );
       // 统计成功和失败数量
-      const okCount = settled.filter((r) => r.status === 'fulfilled' && (r.value as any)?.code === 200).length;
+      const okCount = settled.filter((r) => r.status === 'fulfilled' && (r.value as Record<string, unknown>)?.code === 200).length;
       const failed = normalized.length - okCount;
       if (okCount <= 0) {
         message.error('操作失败');
@@ -241,7 +241,7 @@ const MaterialReconciliation: React.FC = () => {
       setSelectedRowKeys([]);
       // 刷新物料对账列表
       fetchReconciliationList();
-    } catch (e: any) {
+    } catch (e: unknown) {
       errorHandler.handleApiError(e, '操作失败');
     } finally {
       setApprovalSubmitting(false);
@@ -282,7 +282,7 @@ const MaterialReconciliation: React.FC = () => {
           const settled = await Promise.allSettled(
             normalized.map((id) => materialReconciliationApi.returnMaterialReconciliation(id, remark)),
           );
-          const okCount = settled.filter((r) => r.status === 'fulfilled' && (r.value as any)?.code === 200).length;
+          const okCount = settled.filter((r) => r.status === 'fulfilled' && (r.value as Record<string, unknown>)?.code === 200).length;
           const failed = normalized.length - okCount;
           if (okCount <= 0) {
             message.error('退回失败');
@@ -292,7 +292,7 @@ const MaterialReconciliation: React.FC = () => {
           else message.success('退回成功');
           setSelectedRowKeys([]);
           fetchReconciliationList();
-        } catch (e: any) {
+        } catch (e: unknown) {
           errorHandler.handleApiError(e, '退回失败');
         } finally {
           setApprovalSubmitting(false);
@@ -310,11 +310,11 @@ const MaterialReconciliation: React.FC = () => {
     setLoading(true);
     try {
       const res = await materialReconciliationApi.getMaterialReconciliationList(queryParams);
-      const data = unwrapApiData<any>(res, '获取物料对账列表失败');
+      const data = unwrapApiData<unknown>(res, '获取物料对账列表失败');
       setReconciliationList(data.records || []);
       setTotal(data.total || 0);
     } catch (error) {
-      const err = error as any;
+      const err = error as Record<string, unknown>;
       if (err instanceof Error && err.message) {
         message.error(err.message);
       } else {
@@ -340,7 +340,7 @@ const MaterialReconciliation: React.FC = () => {
     async () => {
       try {
         const res = await materialReconciliationApi.getMaterialReconciliationList(queryParams);
-        const data = unwrapApiData<any>(res, '');
+        const data = unwrapApiData<unknown>(res, '');
         return {
           records: data.records || [],
           total: data.total || 0
@@ -406,7 +406,7 @@ const MaterialReconciliation: React.FC = () => {
         response = await materialReconciliationApi.createMaterialReconciliation(values);
       }
 
-      const result = response as any;
+      const result = response as Record<string, unknown>;
       if (result.code === 200) {
         message.success(currentRecon?.id ? '编辑物料对账成功' : '新增物料对账成功');
         // 关闭弹窗
@@ -506,7 +506,7 @@ const MaterialReconciliation: React.FC = () => {
       key: 'productionCompletedQuantity',
       width: 110,
       align: 'right' as const,
-      render: (v: any) => {
+      render: (v: unknown) => {
         // 将值转换为数字，非数字显示为'-'
         const n = typeof v === 'number' ? v : Number(v);
         return Number.isFinite(n) ? n : '-';
@@ -582,7 +582,7 @@ const MaterialReconciliation: React.FC = () => {
       dataIndex: 'reconciliationDate',
       key: 'reconciliationDate',
       width: 120,
-      render: (value: any) => formatDateTime(value),
+      render: (value: unknown) => formatDateTime(value),
     },
     {
       title: '对账周期',
@@ -600,14 +600,14 @@ const MaterialReconciliation: React.FC = () => {
       dataIndex: 'reconciliationOperatorName',
       key: 'reconciliationOperatorName',
       width: 100,
-      render: (v: any) => v || '-',
+      render: (v: unknown) => v || '-',
     },
     {
       title: '审核人',
       dataIndex: 'auditOperatorName',
       key: 'auditOperatorName',
       width: 100,
-      render: (v: any) => v || '-',
+      render: (v: unknown) => v || '-',
     },
     {
       title: '状态',
@@ -670,7 +670,7 @@ const MaterialReconciliation: React.FC = () => {
                     onClick: () => openReturnModal([id]),
                     danger: true,
                   },
-                ] as any,
+                ] as Record<string, unknown>,
               },
             ]}
           />

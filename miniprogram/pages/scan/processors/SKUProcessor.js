@@ -83,7 +83,7 @@ const SKUProcessor = {
    * @returns {SKU[]} 标准SKU列表
    */
   normalizeOrderItems(items, orderNo, styleNo) {
-    if (!Array.isArray(items)) return [];
+    if (!Array.isArray(items)) {return [];}
 
     return items.map(item => ({
       styleNo: styleNo || '',
@@ -103,7 +103,7 @@ const SKUProcessor = {
    * @returns {Object[]} 表单项列表
    */
   buildSKUInputList(skuList) {
-    if (!Array.isArray(skuList)) return [];
+    if (!Array.isArray(skuList)) {return [];}
 
     return skuList.map((sku, idx) => ({
       id: idx,
@@ -212,11 +212,11 @@ const SKUProcessor = {
    * @returns {{orderNo: string, color: string, bundleNo: string} | null}
    */
   parseBundleNo(bundleNo) {
-    if (!bundleNo) return null;
+    if (!bundleNo) {return null;}
 
     // 格式: PO20260122001-黑色-01
     const match = bundleNo.match(/^(PO\d+)-(.+)-(\d{2})$/);
-    if (!match) return null;
+    if (!match) {return null;}
 
     return {
       orderNo: match[1],
@@ -339,7 +339,7 @@ const SKUProcessor = {
    * @returns {Array} 工序单价列表 [{processName: '做领', unitPrice: 2.50}, ...]
    */
   getProcessUnitPrices(order) {
-    if (!order) return [];
+    if (!order) {return [];}
 
     // 优先从 progressNodeUnitPrices 字段读取
     if (Array.isArray(order.progressNodeUnitPrices)) {
@@ -379,7 +379,7 @@ const SKUProcessor = {
    * @returns {number} 单价，找不到返回0
    */
   getUnitPriceByProcess(order, processName) {
-    if (!order || !processName) return 0;
+    if (!order || !processName) {return 0;}
 
     const prices = this.getProcessUnitPrices(order);
     const found = prices.find(p => p.processName === processName);
@@ -400,7 +400,7 @@ const SKUProcessor = {
    * @returns {SKU[]} 附加了processUnitPrice的SKU列表
    */
   attachProcessUnitPricesToSKU(skuList, order) {
-    if (!Array.isArray(skuList) || !order) return skuList;
+    if (!Array.isArray(skuList) || !order) {return skuList;}
 
     return skuList.map(sku => ({
       ...sku,

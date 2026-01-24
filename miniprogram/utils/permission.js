@@ -24,7 +24,7 @@ const WORK_NODES = {
   SEWING: 'sewing',         // 车缝
   QUALITY: 'quality',       // 质检
   PACKAGING: 'packaging',   // 包装
-  WAREHOUSING: 'warehousing', // 入库
+  WAREHOUSING: 'warehouse', // 入库
 };
 
 /**
@@ -161,18 +161,18 @@ function filterOrders(orders) {
 function getAllowedScanTypes() {
   // 管理员和主管可以使用所有扫码类型
   if (isAdminOrSupervisor()) {
-    return ['quality', 'cutting', 'production', 'sewing', 'packaging', 'warehousing'];
+    return ['procurement', 'cutting', 'production', 'sewing', 'ironing', 'packaging', 'quality', 'warehouse'];
   }
 
   const role = getCurrentRole();
 
   const roleScanTypeMap = {
-    [ROLES.PURCHASER]: [],  // 采购员不使用扫码功能
+    [ROLES.PURCHASER]: ['procurement'],
     [ROLES.CUTTER]: ['cutting'],
-    [ROLES.SEWING]: ['production', 'sewing'],
+    [ROLES.SEWING]: ['production', 'sewing', 'ironing'],
     [ROLES.PACKAGER]: ['packaging'],
     [ROLES.QUALITY]: ['quality'],
-    [ROLES.WAREHOUSE]: ['warehousing'],
+    [ROLES.WAREHOUSE]: ['warehouse'],
   };
 
   return roleScanTypeMap[role] || [];

@@ -167,12 +167,14 @@ public class ProductionOrderOrchestrator {
     }
 
     public boolean saveOrUpdateOrder(ProductionOrder productionOrder) {
+        if (productionOrder == null) {
+            throw new IllegalArgumentException("参数错误");
+        }
         boolean isCreate = productionOrder != null && !StringUtils.hasText(productionOrder.getId());
         ProductionOrder existed = null;
         String remarkForLog = null;
         if (!isCreate) {
-            String oid = productionOrder == null ? null : productionOrder.getId();
-            String orderId = StringUtils.hasText(oid) ? oid.trim() : null;
+            String orderId = StringUtils.hasText(productionOrder.getId()) ? productionOrder.getId().trim() : null;
             if (!StringUtils.hasText(orderId)) {
                 throw new IllegalArgumentException("参数错误");
             }
@@ -184,8 +186,8 @@ public class ProductionOrderOrchestrator {
             if ("completed".equals(st)) {
                 throw new IllegalStateException("订单已完成，无法编辑");
             }
-            String remark = productionOrder == null ? null : productionOrder.getOperationRemark();
-            remarkForLog = StringUtils.hasText(remark) ? remark.trim() : null;
+            String remark = productionOrder.getOperationRemark();
+            remarkForLog = StringUtils.hasText(remark) ? remark.trim() : "";
             if (!StringUtils.hasText(remarkForLog)) {
                 throw new IllegalStateException("请填写操作备注");
             }
@@ -1007,9 +1009,6 @@ public class ProductionOrderOrchestrator {
         } catch (Exception e) {
             log.warn("Failed to cascade delete cutting tasks: orderId={}", oid, e);
         }
-        
-        // TODO: 如需级联删除其他关联数据（扫码记录、质检入库等），
-        // 需要在对应的 Service 中添加 deleteByOrderId 方法
         
         return true;
     }

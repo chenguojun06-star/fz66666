@@ -5,7 +5,6 @@ import {
   AppstoreOutlined,
   BookOutlined,
   BuildOutlined,
-  CheckCircleOutlined,
   DashboardOutlined,
   DatabaseOutlined,
   FileSearchOutlined,
@@ -135,7 +134,7 @@ export const menuConfig: MenuSection[] = [
       { label: '物料对账', path: paths.materialReconciliation, icon: React.createElement(AccountBookOutlined) },
       { label: '成品结算', path: paths.shipmentReconciliation, icon: React.createElement(AccountBookOutlined) },
       { label: '审批付款', path: paths.paymentApproval, icon: React.createElement(AccountBookOutlined) },
-      { label: '人员工序结算', path: paths.payrollOperatorSummary, icon: React.createElement(AccountBookOutlined) },
+      { label: '员工工序', path: paths.payrollOperatorSummary, icon: React.createElement(AccountBookOutlined) },
     ],
   },
   {

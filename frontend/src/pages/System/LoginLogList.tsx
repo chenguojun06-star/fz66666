@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
 import { LoginLog, LoginLogQueryParams } from '../../types/system';
 import api from '../../utils/api';
@@ -21,25 +21,24 @@ const LoginLogList: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const { isMobile } = useViewport();
 
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await api.get<any>('/system/login-log/list', { params: queryParams });
-      const result = response as any;
-      if (result.code === 200) {
-        setLoginLogs(result.data.records || []);
-        setTotal(result.data.total || 0);
+      const response = await api.get<{ code: number; data: { records: LoginLog[]; total: number } }>('/system/login-log/list', { params: queryParams });
+      if (response.code === 200) {
+        setLoginLogs(response.data.records || []);
+        setTotal(response.data.total || 0);
       }
     } catch (error) {
       message.error('获取登录日志失败');
     } finally {
       setLoading(false);
     }
-  };
+  }, [queryParams]);
 
   useEffect(() => {
     fetchLogs();
-  }, [queryParams]);
+  }, [fetchLogs]);
 
   const normalizeLoginStatus = (raw: any): 'success' | 'failure' => {
     const v = String(raw == null ? '' : raw).trim();
@@ -66,14 +65,14 @@ const LoginLogList: React.FC = () => {
       dataIndex: 'loginTime',
       key: 'loginTime',
       width: 180,
-      render: (v: any) => formatDateTimeSecond(v),
+      render: (v: unknown) => formatDateTimeSecond(v),
     },
     {
       title: '状态',
       dataIndex: 'loginStatus',
       key: 'loginStatus',
       width: 110,
-      render: (v: any) => {
+      render: (v: unknown) => {
         const status = normalizeLoginStatus(v);
         return <Tag color={status === 'success' ? 'green' : 'red'}>{getStatusText(status)}</Tag>;
       },
@@ -94,14 +93,14 @@ const LoginLogList: React.FC = () => {
               placeholder="用户名"
               style={{ width: 200 }}
               allowClear
-              value={String((queryParams as any)?.username || '')}
+              value={String((queryParams as Record<string, unknown>)?.username || '')}
               onChange={(e) => setQueryParams((prev) => ({ ...prev, username: e.target.value, page: 1 }))}
             />
             <Select
               placeholder="登录状态"
               style={{ width: 140 }}
               allowClear
-              value={String((queryParams as any)?.loginStatus || '') || undefined}
+              value={String((queryParams as Record<string, unknown>)?.loginStatus || '') || undefined}
               options={[
                 { value: 'SUCCESS', label: '成功' },
                 { value: 'FAILED', label: '失败' },
@@ -130,7 +129,7 @@ const LoginLogList: React.FC = () => {
                   loginStatus: '',
                   startDate: '',
                   endDate: '',
-                } as any)
+                } as Record<string, unknown>)
               }
             >
               重置
@@ -141,7 +140,7 @@ const LoginLogList: React.FC = () => {
         <ResizableTable<LoginLog>
           storageKey="system-loginlog-table"
           rowKey={(r) => String(r.id || `${r.username}-${r.loginTime}-${r.ip}`)}
-          columns={columns as any}
+          columns={columns as Record<string, unknown>}
           dataSource={loginLogs}
           loading={loading}
           pagination={{

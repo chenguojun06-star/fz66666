@@ -8,10 +8,10 @@ function toNumber(v) {
 }
 
 function pickNumber(data, keys) {
-    if (!data || typeof data !== 'object') return 0;
+    if (!data || typeof data !== 'object') {return 0;}
     for (let i = 0; i < keys.length; i += 1) {
         const key = keys[i];
-        if (data[key] != null) return toNumber(data[key]);
+        if (data[key] != null) {return toNumber(data[key]);}
     }
     return 0;
 }
@@ -87,8 +87,8 @@ Page({
 
     onShow() {
         const app = getApp();
-        if (app && typeof app.setTabSelected === 'function') app.setTabSelected(this, 0);
-        if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
+        if (app && typeof app.setTabSelected === 'function') {app.setTabSelected(this, 0);}
+        if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) {return;}
         this.loadStats();
 
         // 加载提醒列表
@@ -118,7 +118,7 @@ Page({
 
     buildDashboardParams() {
         const raw = String(this.data.keyword || '').trim();
-        if (!raw) return {};
+        if (!raw) {return {};}
         return {
             brand: raw,
             factory: raw,
@@ -146,7 +146,7 @@ Page({
     },
 
     async loadStats() {
-        if (this.data.loading) return;
+        if (this.data.loading) {return;}
         this.setData({ loading: true });
         try {
             const params = this.buildDashboardParams();
@@ -156,9 +156,9 @@ Page({
             const activities = normalizeActivities(payload);
             this.setData({ stats, statsLoaded: true, activities });
         } catch (e) {
-            if (e && e.type === 'auth') return;
+            if (e && e.type === 'auth') {return;}
             const app = getApp();
-            if (app && typeof app.toastError === 'function') app.toastError(e, '加载失败');
+            if (app && typeof app.toastError === 'function') {app.toastError(e, '加载失败');}
         } finally {
             this.setData({ loading: false });
         }
@@ -203,7 +203,7 @@ Page({
 
     handleReminderClick(e) {
         const reminder = e.currentTarget.dataset.reminder;
-        if (!reminder) return;
+        if (!reminder) {return;}
 
         // 关闭面板
         this.setData({ showReminderPanel: false });
@@ -242,7 +242,7 @@ Page({
     },
 
     // ============ 全局搜索功能 ============
-    
+
     onGlobalSearchInput(e) {
         const value = e && e.detail ? e.detail.value : '';
         this.setData({ 'globalSearch.keyword': value });
@@ -269,7 +269,7 @@ Page({
                     styleNo: keyword,
                     factoryName: keyword,
                 }).catch(() => ({ records: [] })),
-                
+
                 // 搜索入库
                 api.production.listWarehousing({
                     page: 1,
@@ -278,7 +278,7 @@ Page({
                     styleNo: keyword,
                     warehouse: keyword,
                 }).catch(() => ({ records: [] })),
-                
+
                 // 搜索异常（过滤掉采购记录，保持与其他页面一致）
                 api.production.listScans({
                     page: 1,
@@ -378,7 +378,7 @@ Page({
 
     onResultItemTap(e) {
         const item = (e && e.detail && e.detail.item) || (e && e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.item);
-        if (!item) return;
+        if (!item) {return;}
 
         // 根据类型跳转到对应Tab
         if (item.type === 'order') {
@@ -409,7 +409,7 @@ Page({
 
     // 以下方法已移至 utils/orderStatusHelper.js
     // - orderStatusText
-    // - qualityStatusText  
+    // - qualityStatusText
     // - getStatusColor
     // - getQualityColor
 });

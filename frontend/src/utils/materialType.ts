@@ -1,6 +1,6 @@
 export type MaterialTypeCategory = 'fabric' | 'lining' | 'accessory';
 
-export const normalizeMaterialType = <T extends string = string>(v: any): T => {
+export const normalizeMaterialType = <T extends string = string>(v: unknown): T => {
   const type = String(v || '').trim();
   if (!type || type === 'fabric') return 'fabricA' as T;
   if (type === 'lining') return 'liningA' as T;
@@ -8,7 +8,7 @@ export const normalizeMaterialType = <T extends string = string>(v: any): T => {
   return type as T;
 };
 
-export const getMaterialTypeCategory = (v: any): MaterialTypeCategory => {
+export const getMaterialTypeCategory = (v: unknown): MaterialTypeCategory => {
   const type = String(v || '').trim();
   if (!type || type === 'fabric' || type.startsWith('fabric')) return 'fabric';
   if (type === 'lining' || type.startsWith('lining')) return 'lining';
@@ -16,7 +16,7 @@ export const getMaterialTypeCategory = (v: any): MaterialTypeCategory => {
   return 'fabric';
 };
 
-export const getMaterialTypeLabel = (v: any): string => {
+export const getMaterialTypeLabel = (v: unknown): string => {
   const raw = String(v || '').trim();
   if (raw === 'fabric') return '面料';
   if (raw === 'lining') return '里料';
@@ -41,7 +41,7 @@ export const getMaterialTypeLabel = (v: any): string => {
   return raw ? raw : '-';
 };
 
-export const getMaterialTypeSortKey = (v: any): string => {
+export const getMaterialTypeSortKey = (v: unknown): string => {
   const type = String(v || '').trim();
   const category = getMaterialTypeCategory(type);
   const catIdx = category === 'fabric' ? 0 : category === 'lining' ? 1 : 2;
@@ -51,7 +51,7 @@ export const getMaterialTypeSortKey = (v: any): string => {
   return `${catIdx}-${String(letterIdx).padStart(2, '0')}-${type}`;
 };
 
-export const getMaterialSortWeight = (v: any): number => {
+export const getMaterialSortWeight = (v: unknown): number => {
   const type = String(normalizeMaterialType(v)).trim();
   const lower = type.toLowerCase();
 

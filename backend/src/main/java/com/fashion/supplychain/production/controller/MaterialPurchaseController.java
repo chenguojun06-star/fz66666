@@ -96,4 +96,24 @@ public class MaterialPurchaseController {
     public Result<List<MaterialPurchase>> getMyTasks() {
         return Result.success(materialPurchaseOrchestrator.getMyTasks());
     }
+
+    /**
+     * 快速编辑物料采购（备注和预计出货日期）
+     */
+    @PutMapping("/quick-edit")
+    public Result<?> quickEdit(@RequestBody Map<String, Object> payload) {
+        String id = (String) payload.get("id");
+        String remark = (String) payload.get("remark");
+        String expectedShipDate = (String) payload.get("expectedShipDate");
+
+        MaterialPurchase purchase = new MaterialPurchase();
+        purchase.setId(id);
+        purchase.setRemark(remark);
+        if (expectedShipDate != null && !expectedShipDate.isEmpty()) {
+            purchase.setExpectedShipDate(java.time.LocalDate.parse(expectedShipDate));
+        }
+
+        materialPurchaseOrchestrator.update(purchase);
+        return Result.success();
+    }
 }

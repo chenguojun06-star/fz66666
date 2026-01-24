@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.orchestration.ProductionOrderOrchestrator;
+import com.fashion.supplychain.production.service.ProductionOrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
@@ -26,6 +27,9 @@ public class ProductionOrderController {
 
     @Autowired
     private ProductionOrderOrchestrator productionOrderOrchestrator;
+
+    @Autowired
+    private ProductionOrderService productionOrderService;
 
     /**
      * 分页查询生产订单列表
@@ -378,5 +382,34 @@ public class ProductionOrderController {
         public void setRemark(String remark) {
             this.remark = remark;
         }
+    }
+
+    /**
+     * 快速编辑订单（备注和预计出货日期）
+     */
+    @PutMapping("/quick-edit")
+    public Result<?> quickEdit(@RequestBody Map<String, Object> payload) {
+        String id = (String) payload.get("id");
+        if (id == null || id.trim().isEmpty()) {
+            return Result.fail("缺少id参数");
+        }
+
+        ProductionOrder order = productionOrderService.getById(id);
+        if (order == null) {
+            return Result.fail("订单不存在");
+        }
+
+        String remarks = (String) payload.get("remarks");
+        String expectedShipDate = (String) payload.get("expectedShipDate");
+
+        order.setRemarks(remarks);
+        if (expectedShipDate != null && !expectedShipDate.isEmpty()) {
+            order.setExpectedShipDate(java.time.LocalDate.parse(expectedShipDate));
+        } else {
+            order.setExpectedShipDate(null);
+        }
+
+        boolean success = productionOrderService.updateById(order);
+        return success ? Result.success("更新成功") : Result.fail("更新失败");
     }
 }

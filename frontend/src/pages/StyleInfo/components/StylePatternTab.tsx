@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { Button, Input, Modal, Space, Table, Tabs, Tag, message } from 'antd';
 import api from '../../../utils/api';
 import { isSupervisorOrAboveUser, useAuth } from '../../../utils/authContext';
@@ -58,21 +58,22 @@ const StylePatternTab: React.FC<Props> = ({
   const [patternCheckResult, setPatternCheckResult] = useState<{ complete: boolean; missingItems: string[] } | null>(null);
 
   // 检查纸样是否齐全
-  const checkPatternComplete = async () => {
+  const checkPatternComplete = useCallback(async () => {
     try {
-      const res = await api.get<any>('/style/attachment/pattern/check', { params: { styleId } });
-      const result = res as any;
-      if (result.code === 200) {
-        setPatternCheckResult(result.data);
+      const res = await api.get<{ code: number; data: { complete: boolean; missingItems: string[] } }>('/style/attachment/pattern/check', { params: { styleId } });
+      if (res.code === 200) {
+        setPatternCheckResult(res.data);
       }
     } catch {
+    // Intentionally empty
+      // 忽略错误
       // ignore
     }
-  };
+  }, [styleId]);
 
   useEffect(() => {
     checkPatternComplete();
-  }, [styleId, patternFiles, gradingFiles]);
+  }, [checkPatternComplete, patternFiles, gradingFiles]);
 
   useEffect(() => {
     if (!activeSectionKey) return;
@@ -102,8 +103,8 @@ const StylePatternTab: React.FC<Props> = ({
   const hasValidPatternFile = useMemo(() => {
     const list = Array.isArray(patternFiles) ? patternFiles : [];
     return list.some((f) => {
-      const name = String((f as any)?.fileName || '').toLowerCase();
-      const url = String((f as any)?.fileUrl || '').toLowerCase();
+      const name = String((f as Record<string, unknown>)?.fileName || '').toLowerCase();
+      const url = String((f as Record<string, unknown>)?.fileUrl || '').toLowerCase();
       return (
         name.endsWith('.dxf') ||
         name.endsWith('.plt') ||
@@ -119,7 +120,7 @@ const StylePatternTab: React.FC<Props> = ({
     setSaving(true);
     try {
       const res = await api.post(url, body);
-      const result = res as any;
+      const result = res as Record<string, unknown>;
       if (result.code === 200) {
         message.success('操作成功');
         onRefresh();
@@ -127,6 +128,8 @@ const StylePatternTab: React.FC<Props> = ({
       }
       message.error(result.message || '操作失败');
     } catch {
+    // Intentionally empty
+      // 忽略错误
       message.error('操作失败');
     } finally {
       setSaving(false);
@@ -208,14 +211,13 @@ const StylePatternTab: React.FC<Props> = ({
 
   const fetchProductionSheetPayload = async () => {
     try {
-      const res = await api.get<any>('/data-center/production-sheet', { params: { styleId } });
-      const result = res as any;
-      if (result.code !== 200) {
-        message.error(result.message || '获取生产制单失败');
+      const res = await api.get<{ code: number; message: string; data: unknown }>('/data-center/production-sheet', { params: { styleId } });
+      if (res.code !== 200) {
+        message.error(res.message || '获取生产制单失败');
         return null;
       }
-      return result.data;
-    } catch (e: any) {
+      return res.data;
+    } catch (e: unknown) {
       message.error(e?.message || '获取生产制单失败');
       return null;
     }
@@ -328,7 +330,7 @@ const StylePatternTab: React.FC<Props> = ({
 
       <Tabs
         activeKey={sectionKey}
-        onChange={(k) => setSectionKey(k as any)}
+        onChange={(k) => setSectionKey(k as Record<string, unknown>)}
         items={[
           {
             key: 'files',
@@ -407,7 +409,7 @@ const StylePatternTab: React.FC<Props> = ({
 
                 <Table
                   size="small"
-                  rowKey={(r) => String((r as any).key)}
+                  rowKey={(r) => String((r as Record<string, unknown>).key)}
                   pagination={false}
                   scroll={{ y: productionReqScrollY, x: 'max-content' }}
                   sticky

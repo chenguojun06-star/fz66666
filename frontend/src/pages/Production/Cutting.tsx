@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Card, Col, Form, Input, InputNumber, Row, Select, Space, Tag, Typography } from 'antd';
-import { EyeOutlined, LoginOutlined, PlusOutlined, RollbackOutlined } from '@ant-design/icons';
+import { App, Button, Card, Form, Input, InputNumber, Select, Space, Tag, Typography, DatePicker, Modal } from 'antd';
+import { EyeOutlined, LoginOutlined, PlusOutlined, RollbackOutlined, EditOutlined } from '@ant-design/icons';
 import Layout from '../../components/Layout';
 import { useSync } from '../../utils/syncManager';
 import ResizableModal, {
@@ -10,15 +10,27 @@ import ResizableModal, {
 } from '../../components/common/ResizableModal';
 import ResizableTable from '../../components/common/ResizableTable';
 import RowActions from '../../components/common/RowActions';
+import SortableColumnTitle from '../../components/common/SortableColumnTitle';
+import QuickEditModal from '../../components/common/QuickEditModal';
 import api, { compareSizeAsc, fetchProductionOrderDetail, parseProductionOrderLines, useProductionOrderFrozenCache } from '../../utils/api';
 import { QRCodeCanvas } from 'qrcode.react';
+import QRCodeBox from '../../components/common/QRCodeBox';
 import { isSupervisorOrAboveUser, useAuth } from '../../utils/authContext';
 import type { CuttingTask, MaterialPurchase } from '../../types/production';
-import { StyleAttachmentsButton, StyleCoverThumb } from '../../components/StyleAssets';
+import { ProductionOrderHeader, StyleAttachmentsButton, StyleCoverThumb } from '../../components/StyleAssets';
 import { formatDateTime } from '../../utils/datetime';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getMaterialTypeLabel, getMaterialTypeSortKey } from '../../utils/materialType';
 import { useViewport } from '../../utils/useViewport';
+import {
+  ModalHeaderCard,
+  ModalField,
+  ModalPrimaryField,
+  ModalFieldRow,
+  ModalFieldGrid,
+  ModalSideLayout,
+  ModalVerticalStack,
+} from '../../components/common/ModalContentLayout';
 import './styles.css';
 
 const { Option } = Select;
@@ -60,11 +72,13 @@ const CuttingManagement: React.FC = () => {
   const { isMobile, modalWidth } = useViewport();
   const params = useParams();
   const routeOrderNo = useMemo(() => {
-    const raw = String((params as any)?.orderNo || '').trim();
+    const raw = String((params as Record<string, unknown>)?.orderNo || '').trim();
     if (!raw) return '';
     try {
       return decodeURIComponent(raw);
     } catch {
+      // Intentionally empty
+      // 忽略错误
       return raw;
     }
   }, [params]);
@@ -109,6 +123,14 @@ const CuttingManagement: React.FC = () => {
     qrSize: 84,
   });
 
+  const [cuttingSortField, setCuttingSortField] = useState<string>('receivedTime');
+  const [cuttingSortOrder, setCuttingSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  const handleCuttingSort = (field: string, order: 'asc' | 'desc') => {
+    setCuttingSortField(field);
+    setCuttingSortOrder(order);
+  };
+
   const [orderId, setOrderId] = useState<string>('');
   const [activeTask, setActiveTask] = useState<CuttingTask | null>(null);
 
@@ -119,6 +141,31 @@ const CuttingManagement: React.FC = () => {
   const [receiveTaskLoading, setReceiveTaskLoading] = useState(false);
   const [rollbackTaskLoading, setRollbackTaskLoading] = useState(false);
 
+  // 快速编辑状态
+  const [quickEditVisible, setQuickEditVisible] = useState(false);
+  const [quickEditRecord, setQuickEditRecord] = useState<CuttingTask | null>(null);
+  const [quickEditSaving, setQuickEditSaving] = useState(false);
+
+  // 快速编辑保存函数
+  const handleQuickEditSave = async (values: { remarks: string; expectedShipDate: string | null }) => {
+    setQuickEditSaving(true);
+    try {
+      await api.put('/production/cutting-task/quick-edit', {
+        id: quickEditRecord?.id,
+        ...values,
+      });
+      message.success('编辑成功');
+      setQuickEditVisible(false);
+      setQuickEditRecord(null);
+      await fetchTasks();
+    } catch (err: any) {
+      message.error(err?.response?.data?.message || '编辑失败');
+      throw err;
+    } finally {
+      setQuickEditSaving(false);
+    }
+  };
+
   const [sheetPreviewOpen, setSheetPreviewOpen] = useState(false);
   const [sheetPreviewLoading, setSheetPreviewLoading] = useState(false);
   const [sheetPreviewTask, setSheetPreviewTask] = useState<CuttingTask | null>(null);
@@ -126,6 +173,7 @@ const CuttingManagement: React.FC = () => {
   const [sheetPreviewPurchaseLoading, setSheetPreviewPurchaseLoading] = useState(false);
   const [sheetPreviewPurchases, setSheetPreviewPurchases] = useState<MaterialPurchase[]>([]);
   const sheetPreviewPurchaseReqSeq = useRef(0);
+  const [sheetPreviewOrderDetail, setSheetPreviewOrderDetail] = useState<any>(null);
 
   const sheetPreviewTableWrapRef = useRef<HTMLDivElement | null>(null);
   const sheetPreviewTableScrollY = useResizableModalTableScrollY({ open: sheetPreviewOpen, ref: sheetPreviewTableWrapRef });
@@ -151,15 +199,16 @@ const CuttingManagement: React.FC = () => {
     const on = String(orderNo || '').trim();
     if (!on) return [] as CuttingBundleRow[];
     try {
-      const res = await api.get<any>('/production/cutting/list', {
+      const res = await api.get<{ code: number; data: { records: CuttingBundleRow[] } }>('/production/cutting/list', {
         params: { page: 1, pageSize: 10000, orderNo: on },
       });
-      const result = res as any;
-      if (result.code === 200) {
-        return (result.data.records || []) as CuttingBundleRow[];
+      if (res.code === 200) {
+        return (res.data.records || []) as CuttingBundleRow[];
       }
       return [] as CuttingBundleRow[];
     } catch {
+      // Intentionally empty
+      // 忽略错误
       return [] as CuttingBundleRow[];
     }
   };
@@ -168,12 +217,11 @@ const CuttingManagement: React.FC = () => {
     const no = String(orderNo || '').trim();
     if (!no) return [] as MaterialPurchase[];
     try {
-      const res = await api.get<any>('/production/purchase/list', {
+      const res = await api.get<{ code: number; data: { records: MaterialPurchase[] } }>('/production/purchase/list', {
         params: { page: 1, pageSize: 200, orderNo: no, materialType: '', status: '' },
       });
-      const result = res as any;
-      if (result.code !== 200) return [] as MaterialPurchase[];
-      const records = (result.data?.records || []) as MaterialPurchase[];
+      if (res.code !== 200) return [] as MaterialPurchase[];
+      const records = (res.data?.records || []) as MaterialPurchase[];
       const sorted = [...records].sort((a: any, b: any) => {
         const ka = getMaterialTypeSortKey(a?.materialType);
         const kb = getMaterialTypeSortKey(b?.materialType);
@@ -183,8 +231,10 @@ const CuttingManagement: React.FC = () => {
         if (ca !== cb) return ca.localeCompare(cb);
         return String(a?.id || '').localeCompare(String(b?.id || ''));
       });
-      return sorted as any;
+      return sorted as Record<string, unknown>;
     } catch {
+      // Intentionally empty
+      // 忽略错误
       return [] as MaterialPurchase[];
     }
   };
@@ -192,12 +242,11 @@ const CuttingManagement: React.FC = () => {
   const fetchStyleInfoOptions = async (keyword?: string) => {
     setCreateStyleLoading(true);
     try {
-      const res = await api.get<any>('/style/info/list', {
+      const res = await api.get<{ code: number; data: { records: Array<{ id: string; styleNo: string; styleName: string }> } }>('/style/info/list', {
         params: { page: 1, pageSize: 20, styleNo: String(keyword || '').trim() },
       });
-      const result = res as any;
-      if (result.code === 200) {
-        const records = (result.data?.records || []) as any[];
+      if (res.code === 200) {
+        const records = (res.data?.records || []) as Record<string, unknown>[];
         setCreateStyleOptions(
           records
             .map((r) => ({
@@ -209,6 +258,8 @@ const CuttingManagement: React.FC = () => {
         );
       }
     } catch {
+      // Intentionally empty
+      // 忽略错误
     } finally {
       setCreateStyleLoading(false);
     }
@@ -226,7 +277,7 @@ const CuttingManagement: React.FC = () => {
   const handleCreateBundleChange = (index: number, key: keyof CuttingBundleRow, value: any) => {
     setCreateBundles((prev) => {
       const next = prev.slice();
-      const row = { ...next[index], [key]: value } as any;
+      const row = { ...next[index], [key]: value } as Record<string, unknown>;
       next[index] = row;
       return next;
     });
@@ -265,26 +316,27 @@ const CuttingManagement: React.FC = () => {
 
     setCreateTaskSubmitting(true);
     try {
-      const res = await api.post<any>('/production/cutting-task/custom/create', {
+      const res = await api.post<{ code: number; message: string }>('/production/cutting-task/custom/create', {
         orderNo: String(createOrderNo || '').trim() || undefined,
         styleNo,
         receiverId: user?.id,
-        receiverName: (user as any)?.name,
+        receiverName: (user as Record<string, unknown>)?.name,
         bundles: validItems,
       });
-      const result = res as any;
-      if (result.code === 200) {
+      if (res.code === 200) {
         message.success('新建裁剪任务成功');
         setCreateTaskOpen(false);
         fetchTasks();
-        const on = String(result.data?.productionOrderNo || '').trim();
+        const on = String(res.data?.productionOrderNo || '').trim();
         if (on) {
           navigate(`/production/cutting/task/${encodeURIComponent(on)}`);
         }
       } else {
-        message.error(result.message || '新建失败');
+        message.error(res.message || '新建失败');
       }
     } catch {
+      // Intentionally empty
+      // 忽略错误
       message.error('新建失败');
     } finally {
       setCreateTaskSubmitting(false);
@@ -293,7 +345,7 @@ const CuttingManagement: React.FC = () => {
 
   const downloadSheetCsvFrom = (task: CuttingTask | null, bundles: CuttingBundleRow[], purchases?: MaterialPurchase[]) => {
     const on = String(task?.productionOrderNo || '').trim() || 'unknown';
-    const escapeCsv = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const escapeCsv = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const headers = ['订单号', '款号', '颜色', '尺码', '扎号', '数量', '二维码内容'];
     const lines = [headers.join(',')];
     for (const r of bundles) {
@@ -317,7 +369,7 @@ const CuttingManagement: React.FC = () => {
       lines.push(escapeCsv('面辅料采购明细'));
       const purchaseHeaders = ['类型', '物料编码', '物料名称', '规格', '单位', '采购数量', '单价(元)', '总费用(元)', '供应商'];
       lines.push(purchaseHeaders.map(escapeCsv).join(','));
-      for (const r of purchaseRows as any[]) {
+      for (const r of purchaseRows as Record<string, unknown>[]) {
         const qty = Number(r?.purchaseQuantity ?? 0) || 0;
         const unitPrice = Number(r?.unitPrice);
         const unitPriceText = Number.isFinite(unitPrice) ? unitPrice.toFixed(2) : '';
@@ -367,7 +419,7 @@ const CuttingManagement: React.FC = () => {
     }
 
     const title = `裁剪单 - ${on}`;
-    const safe = (v: any) => String(v ?? '').replace(/[<>&]/g, (s) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' } as any)[s] || s);
+    const safe = (v: unknown) => String(v ?? '').replace(/[<>&]/g, (s) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' } as Record<string, unknown>)[s] || s);
 
     const rowsHtml = bundles
       .map(
@@ -452,14 +504,27 @@ const CuttingManagement: React.FC = () => {
     setSheetPreviewLoading(true);
     setSheetPreviewPurchaseLoading(true);
     setSheetPreviewPurchases([]);
+    setSheetPreviewOrderDetail(null);
     try {
-      const purchasePromise = fetchSortedPurchasesByOrderNo(on);
+      // 独立获取各个数据，避免一个失败影响其他
+      const bundlesPromise = fetchAllBundlesByOrderNo(on);
+      const purchasesPromise = fetchSortedPurchasesByOrderNo(on);
+      const orderDetailPromise = fetchProductionOrderDetail(on).catch((err) => {
+        console.error('❌ 订单详情获取失败:', err);
+        return null;
+      });
 
-      const [rows, purchases] = await Promise.all([
-        fetchAllBundlesByOrderNo(on),
-        purchasePromise,
+      const [rows, purchases, orderDetail] = await Promise.all([
+        bundlesPromise,
+        purchasesPromise,
+        orderDetailPromise,
       ]);
       setSheetPreviewBundles(rows);
+      if (orderDetail) {
+        setSheetPreviewOrderDetail(orderDetail);
+      } else {
+        console.warn('⚠️ 订单详情获取失败，将使用 bundles 或 task 数据作为备选');
+      }
       if (purchaseSeq === sheetPreviewPurchaseReqSeq.current) setSheetPreviewPurchases(purchases);
       if (afterLoad === 'download') {
         downloadSheetCsvFrom(task, rows, purchases);
@@ -476,7 +541,7 @@ const CuttingManagement: React.FC = () => {
   const downloadSheetCsv = () => downloadSheetCsvFrom(sheetPreviewTask, sheetPreviewBundles, sheetPreviewPurchases);
   const triggerSheetPrint = () => triggerSheetPrintFrom(sheetPreviewTask, sheetPreviewBundles);
 
-  const activeOrderNo = useMemo(() => String((activeTask as any)?.productionOrderNo ?? '').trim(), [activeTask]);
+  const activeOrderNo = useMemo(() => String((activeTask as Record<string, unknown>)?.productionOrderNo ?? '').trim(), [activeTask]);
 
   useEffect(() => {
     if (!isEntryPage) return;
@@ -541,6 +606,8 @@ const CuttingManagement: React.FC = () => {
           : `${printConfig.pageSize} ${printConfig.orientation}`;
       el.textContent = `@media print { @page { size: ${size}; margin: ${margin}; } }`;
     } catch {
+      // Intentionally empty
+      // 忽略错误
     }
 
     setPrintPreviewOpen(false);
@@ -553,7 +620,7 @@ const CuttingManagement: React.FC = () => {
 
   useEffect(() => {
     if (!isEntryPage) return;
-    const oid = String(orderId || (activeTask as any)?.productionOrderId || '').trim();
+    const oid = String(orderId || (activeTask as Record<string, unknown>)?.productionOrderId || '').trim();
     if (!oid) {
       setEntryOrderDetailLoading(false);
       setEntryColorText('');
@@ -577,11 +644,11 @@ const CuttingManagement: React.FC = () => {
           }
           return compareSizeAsc(String(a?.size || ''), String(b?.size || ''));
         });
-        const activeColor = String((activeTask as any)?.color || '').trim();
+        const activeColor = String((activeTask as Record<string, unknown>)?.color || '').trim();
         const uniqueColors = Array.from(
           new Set(lines.map((x: any) => String(x?.color || '').trim()).filter(Boolean))
         );
-        const derivedColor = uniqueColors.length ? uniqueColors.join(' / ') : String((detail as any)?.color || '').trim();
+        const derivedColor = uniqueColors.length ? uniqueColors.join(' / ') : String((detail as Record<string, unknown>)?.color || '').trim();
         setEntryColorText(activeColor || derivedColor);
 
         const filtered = activeColor
@@ -589,9 +656,9 @@ const CuttingManagement: React.FC = () => {
           : lines;
         const sizeMap = new Map<string, number>();
         for (const l of filtered) {
-          const size = String((l as any)?.size || '').trim();
+          const size = String((l as Record<string, unknown>)?.size || '').trim();
           if (!size) continue;
-          const qty = Number((l as any)?.quantity ?? 0) || 0;
+          const qty = Number((l as Record<string, unknown>)?.quantity ?? 0) || 0;
           sizeMap.set(size, (sizeMap.get(size) || 0) + qty);
         }
         const items = Array.from(sizeMap.entries())
@@ -599,6 +666,8 @@ const CuttingManagement: React.FC = () => {
           .sort((a, b) => compareSizeAsc(a.size, b.size));
         setEntrySizeItems(items);
       } catch {
+        // Intentionally empty
+        // 忽略错误
         if (cancelled) return;
         setEntryColorText('');
         setEntrySizeItems([]);
@@ -610,7 +679,7 @@ const CuttingManagement: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [isEntryPage, orderId, activeTask?.id, (activeTask as any)?.color]);
+  }, [isEntryPage, orderId, activeTask?.id, (activeTask as Record<string, unknown>)?.color]);
 
   const splitQuantity = (totalQty: number, perBundle = 20) => {
     const qty = Math.max(0, Number(totalQty) || 0);
@@ -628,13 +697,32 @@ const CuttingManagement: React.FC = () => {
     return Array.from(
       new Set(
         taskList
-          .map((r: any) => String(r?.productionOrderId || '').trim())
+          .map((r: Record<string, unknown>) => String(r?.productionOrderNo || '').trim())
           .filter(Boolean)
       )
     );
   }, [taskList]);
 
   const orderFrozen = useProductionOrderFrozenCache(frozenOrderIds, { rule: 'status', acceptAnyData: false });
+
+  // 添加排序逻辑
+  const sortedTaskList = useMemo(() => {
+    const sorted = [...taskList];
+    sorted.sort((a: any, b: any) => {
+      const aVal = a[cuttingSortField];
+      const bVal = b[cuttingSortField];
+
+      // 时间字段排序
+      if (cuttingSortField === 'receivedTime' || cuttingSortField === 'bundledTime') {
+        const aTime = aVal ? new Date(aVal).getTime() : 0;
+        const bTime = bVal ? new Date(bVal).getTime() : 0;
+        return cuttingSortOrder === 'desc' ? bTime - aTime : aTime - bTime;
+      }
+
+      return 0;
+    });
+    return sorted;
+  }, [taskList, cuttingSortField, cuttingSortOrder]);
 
   const ensureOrderUnlockedById = async (orderId: any) => {
     return await orderFrozen.ensureUnlocked(orderId, () => message.error('订单已完成，无法操作'));
@@ -652,18 +740,17 @@ const CuttingManagement: React.FC = () => {
     }
     setListLoading(true);
     try {
-      const res = await api.get<any>('/production/cutting/list', {
+      const res = await api.get<{ code: number; message: string; data: { records: CuttingBundleRow[]; total: number } }>('/production/cutting/list', {
         params: {
           ...queryParams,
           orderNo: activeTask.productionOrderNo,
         },
       });
-      const result = res as any;
-      if (result.code === 200) {
-        setDataSource(result.data.records || []);
-        setTotal(result.data.total || 0);
+      if (res.code === 200) {
+        setDataSource(res.data.records || []);
+        setTotal(res.data.total || 0);
       } else {
-        message.error(result.message || '获取裁剪列表失败');
+        message.error(res.message || '获取裁剪列表失败');
       }
     } catch (e) {
       message.error('获取裁剪列表失败');
@@ -675,15 +762,16 @@ const CuttingManagement: React.FC = () => {
   const fetchTasks = async () => {
     setTaskLoading(true);
     try {
-      const res = await api.get<any>('/production/cutting-task/list', { params: taskQuery });
-      const result = res as any;
-      if (result.code === 200) {
-        setTaskList(result.data.records || []);
-        setTaskTotal(result.data.total || 0);
+      const res = await api.get<{ code: number; message: string; data: { records: CuttingTask[]; total: number } }>('/production/cutting-task/list', { params: taskQuery });
+      if (res.code === 200) {
+        setTaskList(res.data.records || []);
+        setTaskTotal(res.data.total || 0);
       } else {
-        message.error(result.message || '获取裁剪任务失败');
+        message.error(res.message || '获取裁剪任务失败');
       }
     } catch {
+      // Intentionally empty
+      // 忽略错误
       message.error('获取裁剪任务失败');
     } finally {
       setTaskLoading(false);
@@ -700,14 +788,13 @@ const CuttingManagement: React.FC = () => {
     async () => {
       if (!activeTask?.productionOrderNo) return null;
       try {
-        const res = await api.get<any>('/production/cutting/list', {
+        const res = await api.get<{ code: number; data: { records: CuttingBundleRow[]; total: number } }>('/production/cutting/list', {
           params: { ...queryParams, orderNo: activeTask.productionOrderNo }
         });
-        const result = res as any;
-        if (result.code === 200) {
+        if (res.code === 200) {
           return {
-            records: result.data.records || [],
-            total: result.data.total || 0
+            records: res.data.records || [],
+            total: res.data.total || 0
           };
         }
         return null;
@@ -741,12 +828,11 @@ const CuttingManagement: React.FC = () => {
     'cutting-tasks',
     async () => {
       try {
-        const res = await api.get<any>('/production/cutting-task/list', { params: taskQuery });
-        const result = res as any;
-        if (result.code === 200) {
+        const res = await api.get<{ code: number; data: { records: CuttingTask[]; total: number } }>('/production/cutting-task/list', { params: taskQuery });
+        if (res.code === 200) {
           return {
-            records: result.data.records || [],
-            total: result.data.total || 0
+            records: res.data.records || [],
+            total: res.data.total || 0
           };
         }
         return null;
@@ -796,15 +882,16 @@ const CuttingManagement: React.FC = () => {
     const on = String(orderNo || '').trim();
     if (!on) return null;
     try {
-      const res = await api.get<any>('/production/cutting-task/list', {
+      const res = await api.get<{ code: number; data: { records: CuttingTask[] } }>('/production/cutting-task/list', {
         params: { page: 1, pageSize: 10, status: '', orderNo: on, styleNo: '' },
       });
-      const result = res as any;
-      if (result.code !== 200) return null;
-      const records: CuttingTask[] = result.data.records || [];
+      if (res.code !== 200) return null;
+      const records: CuttingTask[] = res.data.records || [];
       const matched = records.find((x) => String(x?.productionOrderNo || '').trim() === on) || records[0] || null;
       return matched;
     } catch {
+      // Intentionally empty
+      // 忽略错误
       return null;
     }
   };
@@ -825,30 +912,9 @@ const CuttingManagement: React.FC = () => {
         message.warning('未找到对应的裁剪任务');
         return;
       }
-      let nextTask = task;
-      if (String(task.status || '') === 'pending') {
-        if (!user?.id || !user?.name) {
-          message.error('未获取到当前登录人员信息');
-          return;
-        }
-        try {
-          const res = await api.post<any>('/production/cutting-task/receive', {
-            taskId: task.id,
-            receiverId: user?.id,
-            receiverName: user?.name,
-          });
-          const result = res as any;
-          if (result.code === 200) {
-            nextTask = result.data || task;
-          } else {
-            message.error(result.message || '领取任务失败');
-          }
-        } catch {
-          message.error('领取任务失败');
-        }
-      }
-      setActiveTask(nextTask);
-      setOrderId(String(nextTask.productionOrderId || '').trim());
+      // 直接设置任务，不自动领取
+      setActiveTask(task);
+      setOrderId(String(task.productionOrderId || '').trim());
       setImportLocked(false);
       setBundlesInput([{ skuNo: '', color: '', size: '', quantity: 0 }]);
       setQueryParams((prev) => ({ ...prev, page: 1 }));
@@ -866,7 +932,7 @@ const CuttingManagement: React.FC = () => {
 
   const handleRollbackTask = async (task: CuttingTask) => {
     if (!task?.id) return;
-    if (!(await ensureOrderUnlockedById((task as any)?.productionOrderId))) return;
+    if (!(await ensureOrderUnlockedById((task as Record<string, unknown>)?.productionOrderNo))) return;
     let reason = '';
     modal.confirm({
       title: '确认退回该裁剪任务？',
@@ -896,13 +962,12 @@ const CuttingManagement: React.FC = () => {
         }
         setRollbackTaskLoading(true);
         try {
-          const res = await api.post<any>('/production/cutting-task/rollback', {
+          const res = await api.post<{ code: number; message: string }>('/production/cutting-task/rollback', {
             taskId: task.id,
             operatorId: user?.id,
             reason: remark,
           });
-          const result = res as any;
-          if (result.code === 200) {
+          if (res.code === 200) {
             message.success('退回成功');
             if (activeTask?.id === task.id) {
               setActiveTask(null);
@@ -917,9 +982,11 @@ const CuttingManagement: React.FC = () => {
             }
             fetchTasks();
           } else {
-            message.error(result.message || '退回失败');
+            message.error(res.message || '退回失败');
           }
         } catch {
+          // Intentionally empty
+          // 忽略错误
           message.error('退回失败');
         } finally {
           setRollbackTaskLoading(false);
@@ -937,14 +1004,13 @@ const CuttingManagement: React.FC = () => {
         receiverId: user?.id,
         receiverName: user?.name,
       };
-      const res = await api.post<any>('/production/cutting-task/receive', payload);
-      const result = res as any;
-      if (result.code === 200) {
+      const res = await api.post<{ code: number; message: string; data: CuttingTask }>('/production/cutting-task/receive', payload);
+      if (res.code === 200) {
         message.success('领取任务成功');
         fetchTasks();
-        goToEntry(result.data || task);
+        goToEntry(res.data || task);
       } else {
-        message.error(result.message || '领取任务失败');
+        message.error(res.message || '领取任务失败');
       }
     } catch (err: any) {
       const errMsg = err?.response?.data?.message || err?.message || '领取任务失败';
@@ -965,7 +1031,7 @@ const CuttingManagement: React.FC = () => {
   const handleChangeRow = (index: number, key: keyof CuttingBundleRow, value: any) => {
     setBundlesInput(prev => {
       const next = [...prev];
-      (next[index] as any)[key] = value;
+      (next[index] as Record<string, unknown>)[key] = value;
       return next;
     });
   };
@@ -1017,9 +1083,8 @@ const CuttingManagement: React.FC = () => {
               quantity: item.quantity,
             })),
           };
-          const res = await api.post<any>('/production/cutting/receive', payload);
-          const result = res as any;
-          if (result.code === 200) {
+          const res = await api.post<{ code: number; message: string }>('/production/cutting/receive', payload);
+          if (res.code === 200) {
             message.success('保存并生成成功');
             clearBundleSelection();
             setPrintBundles([]);
@@ -1027,9 +1092,11 @@ const CuttingManagement: React.FC = () => {
             await syncActiveTaskByOrderNo(activeTask.productionOrderNo);
             setPrintUnlocked(true);
           } else {
-            message.error(result.message || '生成失败');
+            message.error(res.message || '生成失败');
           }
         } catch {
+          // Intentionally empty
+          // 忽略错误
           message.error('生成失败');
         } finally {
           setGenerateLoading(false);
@@ -1055,9 +1122,9 @@ const CuttingManagement: React.FC = () => {
       message.error('请先在上方裁剪任务中领取任务');
       return;
     }
-    const oid = String(orderId || activeTask.productionOrderId || '').trim();
+    const oid = String(orderId || activeTask.productionOrderNo || '').trim();
     if (!oid) {
-      message.error('未匹配到生产订单ID');
+      message.error('未匹配到生产订单号');
       return;
     }
 
@@ -1093,11 +1160,11 @@ const CuttingManagement: React.FC = () => {
     }
 
     if (!next.length) {
-      const fallbackQty = Number((detail as any)?.orderQuantity ?? activeTask.orderQuantity ?? 0) || 0;
-      const fallbackColor = String((detail as any)?.color ?? activeTask.color ?? '').trim();
-      const fallbackSize = String((detail as any)?.size ?? activeTask.size ?? '').trim();
-      const fallbackOrderNo = String((detail as any)?.orderNo ?? activeTask.productionOrderNo ?? '').trim();
-      const fallbackStyleNo = String((detail as any)?.styleNo ?? activeTask.styleNo ?? '').trim();
+      const fallbackQty = Number((detail as Record<string, unknown>)?.orderQuantity ?? activeTask.orderQuantity ?? 0) || 0;
+      const fallbackColor = String((detail as Record<string, unknown>)?.color ?? activeTask.color ?? '').trim();
+      const fallbackSize = String((detail as Record<string, unknown>)?.size ?? activeTask.size ?? '').trim();
+      const fallbackOrderNo = String((detail as Record<string, unknown>)?.orderNo ?? activeTask.productionOrderNo ?? '').trim();
+      const fallbackStyleNo = String((detail as Record<string, unknown>)?.styleNo ?? activeTask.styleNo ?? '').trim();
       const fallbackSkuNo = fallbackOrderNo && fallbackStyleNo && fallbackColor && fallbackSize
         ? `SKU-${fallbackOrderNo}-${fallbackStyleNo}-${fallbackColor}-${fallbackSize}`
         : '';
@@ -1124,7 +1191,7 @@ const CuttingManagement: React.FC = () => {
           dataIndex: 'materialType',
           key: 'materialType',
           width: 110,
-          render: (v: any) => getMaterialTypeLabel(v),
+          render: (v: unknown) => getMaterialTypeLabel(v),
         },
         { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 120, ellipsis: true },
         { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 180, ellipsis: true },
@@ -1134,7 +1201,7 @@ const CuttingManagement: React.FC = () => {
           key: 'specifications',
           width: 180,
           ellipsis: true,
-          render: (v: any) => String(v || '').trim() || '-',
+          render: (v: unknown) => String(v || '').trim() || '-',
         },
         { title: '单位', dataIndex: 'unit', key: 'unit', width: 90, ellipsis: true },
         {
@@ -1143,7 +1210,7 @@ const CuttingManagement: React.FC = () => {
           key: 'purchaseQuantity',
           width: 110,
           align: 'right' as const,
-          render: (v: any) => Number(v ?? 0) || 0,
+          render: (v: unknown) => Number(v ?? 0) || 0,
         },
         {
           title: '单价(元)',
@@ -1151,7 +1218,7 @@ const CuttingManagement: React.FC = () => {
           key: 'unitPrice',
           width: 110,
           align: 'right' as const,
-          render: (v: any) => {
+          render: (v: unknown) => {
             const n = Number(v);
             return Number.isFinite(n) ? n.toFixed(2) : '-';
           },
@@ -1172,7 +1239,7 @@ const CuttingManagement: React.FC = () => {
           },
         },
         { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 160, ellipsis: true },
-      ] as any,
+      ] as Record<string, unknown>,
     []
   );
 
@@ -1182,7 +1249,7 @@ const CuttingManagement: React.FC = () => {
       key: 'cover',
       width: 72,
       render: (_: any, record: any) => (
-        <StyleCoverThumb styleId={(activeTask as any)?.styleId} styleNo={record.styleNo || (activeTask as any)?.styleNo} size={24} borderRadius={4} />
+        <StyleCoverThumb styleId={(activeTask as Record<string, unknown>)?.styleId} styleNo={record.styleNo || (activeTask as Record<string, unknown>)?.styleNo} size={24} borderRadius={4} />
       )
     },
     {
@@ -1202,7 +1269,7 @@ const CuttingManagement: React.FC = () => {
       key: 'styleName',
       width: 160,
       ellipsis: true,
-      render: () => (activeTask as any)?.styleName || '-',
+      render: () => (activeTask as Record<string, unknown>)?.styleName || '-',
     },
     {
       title: '附件',
@@ -1210,9 +1277,9 @@ const CuttingManagement: React.FC = () => {
       width: 100,
       render: (_: any, record: any) => (
         <StyleAttachmentsButton
-          styleId={(activeTask as any)?.styleId}
-          styleNo={record.styleNo || (activeTask as any)?.styleNo}
-          modalTitle={(record.styleNo || (activeTask as any)?.styleNo) ? `附件（${record.styleNo || (activeTask as any)?.styleNo}）` : '附件'}
+          styleId={(activeTask as Record<string, unknown>)?.styleId}
+          styleNo={record.styleNo || (activeTask as Record<string, unknown>)?.styleNo}
+          modalTitle={(record.styleNo || (activeTask as Record<string, unknown>)?.styleNo) ? `附件（${record.styleNo || (activeTask as Record<string, unknown>)?.styleNo}）` : '附件'}
         />
       )
     },
@@ -1381,7 +1448,7 @@ const CuttingManagement: React.FC = () => {
                     dataIndex: 'styleNo',
                     key: 'styleNo',
                     width: 200,
-                    render: (v: any) => (
+                    render: (v: unknown) => (
                       <Text ellipsis={{ tooltip: String(v || '').trim() || '-' }} style={{ width: '100%', display: 'inline-block' }}>
                         {String(v || '').trim() || '-'}
                       </Text>
@@ -1403,7 +1470,7 @@ const CuttingManagement: React.FC = () => {
                     key: 'cuttingQuantity',
                     width: 90,
                     align: 'right' as const,
-                    render: (v: any) => Number(v ?? 0) || 0,
+                    render: (v: unknown) => Number(v ?? 0) || 0,
                   },
                   {
                     title: '扎数',
@@ -1411,7 +1478,7 @@ const CuttingManagement: React.FC = () => {
                     key: 'cuttingBundleCount',
                     width: 80,
                     align: 'right' as const,
-                    render: (v: any) => Number(v ?? 0) || 0,
+                    render: (v: unknown) => Number(v ?? 0) || 0,
                   },
                   {
                     title: '状态',
@@ -1419,7 +1486,7 @@ const CuttingManagement: React.FC = () => {
                     key: 'status',
                     width: 120,
                     render: (value: string) => {
-                      const map: any = {
+                      const map: unknown = {
                         pending: { text: '待领取', color: 'blue' },
                         received: { text: '已领取', color: 'gold' },
                         bundled: { text: '已完成', color: 'green' },
@@ -1428,17 +1495,57 @@ const CuttingManagement: React.FC = () => {
                       return <Tag color={cfg.color}>{cfg.text}</Tag>;
                     }
                   },
-                  { title: '领取账号', dataIndex: 'receiverName', key: 'receiverName', width: 110, render: (v: any) => String(v || '').trim() || '-' },
-                  { title: '账号ID', dataIndex: 'receiverId', key: 'receiverId', width: 120, render: (v: any) => String(v || '').trim() || '-' },
-                  { title: '领取时间', dataIndex: 'receivedTime', key: 'receivedTime', width: 170, render: (v: any) => (String(v ?? '').trim() ? (formatDateTime(v) || '-') : '-') },
-                  { title: '完成时间', dataIndex: 'bundledTime', key: 'bundledTime', width: 170, render: (v: any) => (String(v ?? '').trim() ? (formatDateTime(v) || '-') : '-') },
+                  { title: '裁剪员', dataIndex: 'receiverName', key: 'receiverName', width: 110, render: (v: unknown) => String(v || '').trim() || '-' },
+                  {
+                    title: <SortableColumnTitle
+                      title="领取时间"
+                      sortField={cuttingSortField}
+                      fieldName="receivedTime"
+                      sortOrder={cuttingSortOrder}
+                      onSort={handleCuttingSort}
+                      align="left"
+                    />,
+                    dataIndex: 'receivedTime',
+                    key: 'receivedTime',
+                    width: 170,
+                    render: (v: unknown) => (String(v ?? '').trim() ? (formatDateTime(v) || '-') : '-')
+                  },
+                  {
+                    title: <SortableColumnTitle
+                      title="完成时间"
+                      sortField={cuttingSortField}
+                      fieldName="bundledTime"
+                      sortOrder={cuttingSortOrder}
+                      onSort={handleCuttingSort}
+                      align="left"
+                    />,
+                    dataIndex: 'bundledTime',
+                    key: 'bundledTime',
+                    width: 170,
+                    render: (v: unknown) => (String(v ?? '').trim() ? (formatDateTime(v) || '-') : '-')
+                  },
+                  {
+                    title: '备注',
+                    dataIndex: 'remarks',
+                    key: 'remarks',
+                    width: 150,
+                    ellipsis: true,
+                    render: (v: any) => v || '-',
+                  },
+                  {
+                    title: <SortableColumnTitle title="预计出货" field="expectedShipDate" onSort={handleCuttingSort} currentField={cuttingSortField} currentOrder={cuttingSortOrder} />,
+                    dataIndex: 'expectedShipDate',
+                    key: 'expectedShipDate',
+                    width: 120,
+                    render: (v: any) => v ? formatDateTime(v) : '-',
+                  },
                   {
                     title: '操作',
                     key: 'action',
                     width: 92,
                     render: (_: any, record: CuttingTask) => {
-                      const orderId = String((record as any)?.productionOrderId || '').trim();
-                      const frozen = isOrderFrozenById(orderId);
+                      const orderNo = String((record as Record<string, unknown>)?.productionOrderNo || '').trim();
+                      const frozen = isOrderFrozenById(orderNo);
                       const entryLabel = record.status === 'pending' ? '领取并进入' : '进入';
                       const entryDisabled = frozen || (record.status === 'pending' && receiveTaskLoading);
                       return (
@@ -1451,6 +1558,16 @@ const CuttingManagement: React.FC = () => {
                               icon: <EyeOutlined />,
                               onClick: () => openSheetPreview(record),
                               primary: true,
+                            },
+                            {
+                              key: 'edit',
+                              label: '编辑',
+                              title: '编辑',
+                              icon: <EditOutlined />,
+                              onClick: () => {
+                                setQuickEditRecord(record);
+                                setQuickEditVisible(true);
+                              },
                             },
                             {
                               key: 'entry',
@@ -1484,8 +1601,8 @@ const CuttingManagement: React.FC = () => {
                       );
                     }
                   },
-                ] as any}
-                dataSource={taskList}
+                ] as Record<string, unknown>}
+                dataSource={sortedTaskList}
                 rowKey={(row) => row.id || row.productionOrderId}
                 loading={taskLoading}
                 minColumnWidth={110}
@@ -1508,104 +1625,27 @@ const CuttingManagement: React.FC = () => {
               <div className="cutting-entry-layout mb-sm">
                 <div className="cutting-entry-main">
                   <div className="cutting-entry-info">
-                    <Row gutter={16} className="purchase-detail-top">
-                      <Col xs={24} md={8} lg={6}>
-                        <div className="purchase-detail-right">
-                          <StyleCoverThumb
-                            styleId={(activeTask as any)?.styleId}
-                            styleNo={activeTask?.styleNo}
-                            size={160}
-                            borderRadius={8}
-                          />
-                          {activeTask?.productionOrderNo ? (
-                            <div style={{ marginTop: 12, textAlign: 'center' }}>
-                              <QRCodeCanvas
-                                value={JSON.stringify({
-                                  type: 'order',
-                                  orderNo: activeTask.productionOrderNo,
-                                  styleNo: activeTask.styleNo,
-                                  styleName: activeTask.styleName,
-                                })}
-                                size={120}
-                                level="M"
-                                includeMargin
-                              />
-                              <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>订单号</div>
-                              <div style={{ fontSize: 10, color: '#999', marginTop: 2 }}>{String(activeTask.productionOrderNo || '').trim() || '-'}</div>
-                            </div>
-                          ) : null}
-                        </div>
-                      </Col>
-                      <Col xs={24} md={16} lg={18}>
-                        <div className="purchase-detail-left">
-                          <Row gutter={16}>
-                            <Col xs={24} sm={12} lg={8}>
-                              <div className="purchase-detail-field">
-                                <div className="purchase-detail-label">订单号</div>
-                                <div className="purchase-detail-value order-no-compact">{String(activeTask.productionOrderNo || '').trim() || '-'}</div>
-                              </div>
-                            </Col>
-                            <Col xs={24} sm={12} lg={8}>
-                              <div className="purchase-detail-field">
-                                <div className="purchase-detail-label">款号</div>
-                                <div className="purchase-detail-value">{String(activeTask.styleNo || '').trim() || '-'}</div>
-                              </div>
-                            </Col>
-                            <Col xs={24} sm={12} lg={8}>
-                              <div className="purchase-detail-field">
-                                <div className="purchase-detail-label">款名</div>
-                                <div className="purchase-detail-value">{String(activeTask.styleName || '').trim() || '-'}</div>
-                              </div>
-                            </Col>
-                            <Col xs={24} sm={12} lg={8}>
-                              <div className="purchase-detail-field">
-                                <div className="purchase-detail-label">颜色</div>
-                                <div className="purchase-detail-value">{String(entryColorText || activeTask.color || '').trim() || '-'}</div>
-                              </div>
-                            </Col>
-                          </Row>
-
-                          <div className="purchase-detail-size-block">
-                            {entryOrderDetailLoading ? (
-                              <div className="purchase-detail-size-row">
-                                <span className="purchase-detail-size-item">加载中...</span>
-                              </div>
-                            ) : (
-                              <div className="purchase-detail-size-table-wrap">
-                                <table className="purchase-detail-size-table">
-                                  <tbody>
-                                    <tr>
-                                      <th className="purchase-detail-size-th">码数</th>
-                                      {entrySizeItems.length
-                                        ? entrySizeItems.map((x) => (
-                                          <td key={x.size} className="purchase-detail-size-td">{x.size}</td>
-                                        ))
-                                        : <td className="purchase-detail-size-td">-</td>
-                                      }
-                                      <td className="purchase-detail-size-total-cell" />
-                                    </tr>
-                                    <tr>
-                                      <th className="purchase-detail-size-th">数量</th>
-                                      {entrySizeItems.length
-                                        ? entrySizeItems.map((x) => (
-                                          <td key={x.size} className="purchase-detail-size-td">{Number(x.quantity || 0) || 0}</td>
-                                        ))
-                                        : <td className="purchase-detail-size-td">-</td>
-                                      }
-                                      <td className="purchase-detail-size-total-cell">
-                                        总下单数：{entrySizeItems.length
-                                          ? entrySizeItems.reduce((s, x) => s + (Number(x.quantity || 0) || 0), 0)
-                                          : (Number(activeTask?.orderQuantity ?? 0) || 0)}
-                                      </td>
-                                    </tr>
-                                  </tbody>
-                                </table>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </Col>
-                    </Row>
+                    <ProductionOrderHeader
+                      orderNo={String(activeTask.productionOrderNo || '').trim()}
+                      styleNo={String(activeTask.styleNo || '').trim()}
+                      styleName={String(activeTask.styleName || '').trim()}
+                      styleId={(activeTask as Record<string, unknown>)?.styleId}
+                      color={String(entryColorText || activeTask.color || '').trim()}
+                      sizeItems={entryOrderDetailLoading ? [] : entrySizeItems.map((x) => ({ size: x.size, quantity: Number(x.quantity || 0) || 0 }))}
+                      totalQuantity={entrySizeItems.length
+                        ? entrySizeItems.reduce((s, x) => s + (Number(x.quantity || 0) || 0), 0)
+                        : (Number(activeTask?.orderQuantity ?? 0) || 0)}
+                      qrCodeValue={activeTask?.productionOrderNo
+                        ? JSON.stringify({
+                          type: 'order',
+                          orderNo: activeTask.productionOrderNo,
+                          styleNo: activeTask.styleNo,
+                          styleName: activeTask.styleName,
+                        })
+                        : ''}
+                      coverSize={160}
+                      qrSize={120}
+                    />
                   </div>
 
                   <div>
@@ -1615,7 +1655,7 @@ const CuttingManagement: React.FC = () => {
                           danger
                           onClick={() => handleRollbackTask(activeTask)}
                           loading={rollbackTaskLoading}
-                          disabled={isOrderFrozenById((activeTask as any)?.productionOrderId)}
+                          disabled={isOrderFrozenById((activeTask as Record<string, unknown>)?.productionOrderNo)}
                         >
                           退回
                         </Button>
@@ -1694,11 +1734,11 @@ const CuttingManagement: React.FC = () => {
                         rowKey={(r) =>
                           String(
                             r?.id ??
-                            `${(r as any)?.materialType || ''}-${(r as any)?.materialCode || ''}-${(r as any)?.supplierName || ''}`
+                            `${(r as Record<string, unknown>)?.materialType || ''}-${(r as Record<string, unknown>)?.materialCode || ''}-${(r as Record<string, unknown>)?.supplierName || ''}`
                           )
                         }
                         loading={entryPurchaseLoading}
-                        pagination={false as any}
+                        pagination={false as Record<string, unknown>}
                         size="small"
                         scroll={{ x: 'max-content', y: isMobile ? 220 : 260 }}
                       />
@@ -1736,7 +1776,7 @@ const CuttingManagement: React.FC = () => {
 
               <ResizableTable<CuttingBundleRow>
                 storageKey="cutting-bundle-table"
-                columns={columns as any}
+                columns={columns as Record<string, unknown>}
                 dataSource={dataSource}
                 rowKey={(row) => row.id || `${row.productionOrderNo}-${row.bundleNo}-${row.color}-${row.size}`}
                 size="small"
@@ -1744,7 +1784,7 @@ const CuttingManagement: React.FC = () => {
                   selectedRowKeys: selectedBundleRowKeys,
                   onChange: (keys, rows) => {
                     setSelectedBundleRowKeys(keys);
-                    setSelectedBundles((rows as any) || []);
+                    setSelectedBundles((rows as Record<string, unknown>) || []);
                   },
                 }}
                 loading={listLoading}
@@ -1789,7 +1829,7 @@ const CuttingManagement: React.FC = () => {
                       { label: '多张排版', value: 'grid' },
                       { label: '每张一页', value: 'single' },
                     ]}
-                    onChange={(v) => setPrintConfig((p) => ({ ...p, mode: v as any }))}
+                    onChange={(v) => setPrintConfig((p) => ({ ...p, mode: v as Record<string, unknown> }))}
                   />
                   <span style={{ fontWeight: 600 }}>纸张</span>
                   <Select
@@ -1802,7 +1842,7 @@ const CuttingManagement: React.FC = () => {
                     onChange={(v) =>
                       setPrintConfig((p) => ({
                         ...p,
-                        pageSize: v as any,
+                        pageSize: v as Record<string, unknown>,
                         cols: v === 'A5' ? Math.min(p.cols, 2) : p.cols,
                       }))
                     }
@@ -1819,7 +1859,7 @@ const CuttingManagement: React.FC = () => {
                     onChange={(v) =>
                       setPrintConfig((p) => ({
                         ...p,
-                        orientation: v as any,
+                        orientation: v as Record<string, unknown>,
                         cols: v === 'landscape' ? Math.max(p.cols, 4) : p.cols,
                       }))
                     }
@@ -1885,132 +1925,266 @@ const CuttingManagement: React.FC = () => {
             scaleWithViewport
           >
             <ResizableModalFlex style={{ gap: 12 }}>
-              <Card
-                size="small"
-                loading={sheetPreviewLoading}
-                style={{
-                  background: 'linear-gradient(135deg, #f6f8fb 0%, #ffffff 100%)',
-                  border: '1px solid #e8edf5'
-                }}
-              >
-                <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-                  {/* 订单扫码二维码 - 左侧 */}
-                  {sheetPreviewTask?.productionOrderNo && (
-                    <div style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      padding: '8px',
-                      background: '#e6f7ff',
-                      borderRadius: '8px',
-                      border: '2px solid #1890ff',
-                      boxShadow: '0 4px 12px rgba(24, 144, 255, 0.15)',
-                      flexShrink: 0
-                    }}>
-                      <QRCodeCanvas
-                        value={JSON.stringify({
-                          type: 'order',
-                          orderNo: sheetPreviewTask.productionOrderNo
-                        })}
-                        size={120}
-                        level="M"
-                        includeMargin={false}
-                      />
-                      <div style={{
-                        marginTop: '8px',
-                        fontSize: '12px',
-                        color: '#1890ff',
-                        fontWeight: 600
-                      }}>
-                        📱 订单扫码
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 订单信息 - 中间 */}
-                  <div style={{ flex: 1, minWidth: 300 }}>
-                    <Space wrap size="small">
-                      <Tag color="blue">订单号：{String(sheetPreviewTask?.productionOrderNo || '').trim() || '-'}</Tag>
-                      <Tag>款号：{String(sheetPreviewTask?.styleNo || '').trim() || '-'}</Tag>
-                      <Tag>款名：{String(sheetPreviewTask?.styleName || '').trim() || '-'}</Tag>
-                      <Tag>下单数：{Number(sheetPreviewTask?.orderQuantity ?? 0) || 0}</Tag>
-                      <Tag>
-                        裁剪数：
-                        {(() => {
-                          const tv = Number((sheetPreviewTask as any)?.cuttingQuantity);
-                          if (Number.isFinite(tv) && tv > 0) return tv;
-                          const sum = sheetPreviewBundles.reduce((s, x) => s + (Number((x as any)?.quantity) || 0), 0);
-                          return Number(sum) || 0;
-                        })()}
-                      </Tag>
-                      <Tag>
-                        扎数：
-                        {(() => {
-                          const tv = Number((sheetPreviewTask as any)?.cuttingBundleCount);
-                          if (Number.isFinite(tv) && tv > 0) return tv;
-                          return Number(sheetPreviewBundles.length) || 0;
-                        })()}
-                      </Tag>
-                    </Space>
-                  </div>
-
-                  {/* 裁剪单二维码 - 右侧 */}
-                  {sheetPreviewTask?.qrCode && (
-                    <div style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      padding: '12px',
-                      background: '#ffffff',
-                      borderRadius: '8px',
-                      border: '1px solid #e8edf5',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                      flexShrink: 0
-                    }}>
-                      <div style={{
-                        padding: '8px',
-                        background: '#ffffff',
-                        borderRadius: '6px',
-                        border: '2px solid #e8edf5'
-                      }}>
-                        <QRCodeCanvas
-                          value={sheetPreviewTask.qrCode}
-                          size={100}
-                          level="M"
-                          includeMargin={false}
+              <ModalHeaderCard isMobile={isMobile}>
+                <ModalSideLayout
+                  left={
+                    <ModalVerticalStack gap={12}>
+                      {/* 款式图片 */}
+                      {sheetPreviewOrderDetail?.styleCover ? (
+                        <StyleCoverThumb
+                          src={sheetPreviewOrderDetail.styleCover}
+                          size={120}
+                          style={{ marginBottom: 8 }}
                         />
+                      ) : null}
+
+                      {/* 订单二维码 */}
+                      {sheetPreviewTask?.productionOrderNo && (
+                        <QRCodeBox
+                          value={{
+                            type: 'order',
+                            orderNo: sheetPreviewTask.productionOrderNo
+                          }}
+                          label="📱 订单扫码"
+                          variant="primary"
+                          size={120}
+                        />
+                      )}
+
+                      {/* 裁剪单二维码 */}
+                      {sheetPreviewTask?.qrCode && (
+                        <QRCodeBox
+                          value={sheetPreviewTask.qrCode}
+                          label="裁剪单"
+                          variant="default"
+                          size={100}
+                        />
+                      )}
+                    </ModalVerticalStack>
+                  }
+                  right={
+                    <>
+                      {/* 上半部分：订单信息（左）+ 尺码表格（右） */}
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24, marginBottom: 12 }}>
+                        {/* 左侧：订单信息 */}
+                        <div style={{ flex: '0 0 auto', maxWidth: '50%' }}>
+                          <ModalPrimaryField
+                            label="订单号"
+                            value={String(sheetPreviewTask?.productionOrderNo || '').trim() || '-'}
+                          />
+                          <ModalFieldRow gap={24} style={{ marginTop: 8 }}>
+                            <ModalField label="款号" value={String(sheetPreviewTask?.styleNo || '').trim() || '-'} />
+                            <ModalField label="款名" value={String(sheetPreviewTask?.styleName || '').trim() || '-'} />
+                          </ModalFieldRow>
+                          <ModalFieldRow gap={24} style={{ marginTop: 8 }}>
+                            <ModalField label="颜色" value={String(sheetPreviewTask?.color || sheetPreviewOrderDetail?.color || '').trim() || '-'} />
+                          </ModalFieldRow>
+                        </div>
+
+                        {/* 右侧：下单数量尺码表格 */}
+                        {(() => {
+                          // 如果弹窗未打开或还在加载，不显示尺码表格
+                          if (!sheetPreviewOpen || sheetPreviewLoading) {
+                            return null;
+                          }
+
+                          // 如果没有 task 数据，也不显示
+                          if (!sheetPreviewTask) {
+                            return null;
+                          }
+
+                          // 优先使用订单详情的 SKU 数据
+                          const orderDetail = sheetPreviewOrderDetail;
+                          let sizeArray: string[] = [];
+                          let sizeQuantityMap: Record<string, number> = {};
+                          let totalQty = Number(sheetPreviewTask?.orderQuantity ?? 0) || 0;
+
+                          if (orderDetail) {
+                            // 从订单详情获取 SKU
+                            const lines = parseProductionOrderLines(orderDetail);
+                            if (lines && lines.length > 0) {
+                              sizeArray = lines.map((l: any) => l.size).filter(Boolean);
+                              lines.forEach((l: any) => {
+                                if (l.size) {
+                                  sizeQuantityMap[l.size] = l.quantity || 0;
+                                }
+                              });
+                              totalQty = lines.reduce((sum: number, l: any) => sum + (l.quantity || 0), 0);
+                            }
+                          }
+
+                          // 如果订单详情没有SKU，尝试从 bundles 统计
+                          if (!sizeArray.length && sheetPreviewBundles.length > 0) {
+                            const sizeMap = new Map<string, number>();
+                            sheetPreviewBundles.forEach(bundle => {
+                              const size = String(bundle.size || '').trim();
+                              const qty = Number(bundle.quantity) || 0;
+                              if (size) {
+                                sizeMap.set(size, (sizeMap.get(size) || 0) + qty);
+                              }
+                            });
+                            sizeArray = Array.from(sizeMap.keys()).sort(compareSizeAsc);
+                            sizeArray.forEach(size => {
+                              sizeQuantityMap[size] = sizeMap.get(size) || 0;
+                            });
+                            totalQty = Array.from(sizeMap.values()).reduce((sum, qty) => sum + qty, 0);
+                          }
+
+                          // 如果都没有，尝试从 task 提取（这种情况很少，仅限单SKU订单）
+                          if (!sizeArray.length && sheetPreviewTask) {
+                            const taskSize = String(sheetPreviewTask.size || '').trim();
+                            const taskQty = Number(sheetPreviewTask.orderQuantity) || 0;
+                            if (taskSize && taskQty > 0) {
+                              sizeArray = [taskSize];
+                              sizeQuantityMap[taskSize] = taskQty;
+                              totalQty = taskQty;
+                            }
+                          }
+
+                          // 最终检查
+                          if (!sizeArray.length) {
+                            console.warn('❌ 无法显示尺码表格：所有数据源都无法提供SKU信息', {
+                              hasOrderDetail: !!orderDetail,
+                              bundlesCount: sheetPreviewBundles.length,
+                              hasTask: !!sheetPreviewTask,
+                              taskSize: sheetPreviewTask?.size
+                            });
+                            return null;
+                          }
+
+                          return (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                              <div style={{
+                                fontSize: 14,
+                                fontWeight: 600,
+                                color: '#374151',
+                                marginBottom: 6
+                              }}>
+                                下单数量
+                              </div>
+                              <div style={{
+                                padding: 6,
+                                background: '#fff',
+                                borderRadius: 6,
+                                border: '2px solid #d1d5db',
+                                boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                                flexShrink: 0
+                              }}>
+                                <table style={{ borderCollapse: 'collapse' }}>
+                                  <tbody>
+                                    {/* 第一行：码数 */}
+                                    <tr>
+                                      <td style={{
+                                        padding: '8px 12px',
+                                        fontSize: 14,
+                                        color: '#374151',
+                                        fontWeight: 600,
+                                        borderRight: '1px solid #d1d5db',
+                                        borderBottom: '1px solid #d1d5db',
+                                        width: '60px',
+                                        background: '#f3f4f6'
+                                      }}>
+                                        码数
+                                      </td>
+                                      {sizeArray.map((size: string, idx: number) => (
+                                        <td key={idx} style={{
+                                          padding: '8px 14px',
+                                          fontSize: 15,
+                                          color: '#111827',
+                                          fontWeight: 700,
+                                          textAlign: 'center',
+                                          borderRight: idx < sizeArray.length - 1 ? '1px solid #d1d5db' : 'none',
+                                          borderBottom: '1px solid #d1d5db',
+                                          minWidth: '50px'
+                                        }}>
+                                          {size}
+                                        </td>
+                                      ))}
+                                      <td style={{
+                                        padding: '8px 14px',
+                                        fontSize: 14,
+                                        color: '#111827',
+                                        fontWeight: 700,
+                                        textAlign: 'center',
+                                        borderLeft: '1px solid #d1d5db',
+                                        borderBottom: '1px solid #d1d5db',
+                                        background: '#fef3c7',
+                                        whiteSpace: 'nowrap'
+                                      }} rowSpan={2}>
+                                        总下单数：{totalQty}
+                                      </td>
+                                    </tr>
+                                    {/* 第二行：数量 */}
+                                    <tr>
+                                      <td style={{
+                                        padding: '8px 12px',
+                                        fontSize: 14,
+                                        color: '#374151',
+                                        fontWeight: 600,
+                                        borderRight: '1px solid #d1d5db',
+                                        background: '#f3f4f6'
+                                      }}>
+                                        数量
+                                      </td>
+                                      {sizeArray.map((size: string, idx: number) => {
+                                        const qty = sizeQuantityMap[size] || 0;
+                                        return (
+                                          <td key={idx} style={{
+                                            padding: '8px 14px',
+                                            fontSize: 15,
+                                            color: '#111827',
+                                            fontWeight: 700,
+                                            textAlign: 'center',
+                                            borderRight: idx < sizeArray.length - 1 ? '1px solid #d1d5db' : 'none',
+                                            minWidth: '50px'
+                                          }}>
+                                            {qty}
+                                          </td>
+                                        );
+                                      })}
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
-                      <div style={{
-                        marginTop: '8px',
-                        fontSize: '12px',
-                        color: '#666',
-                        fontWeight: 500
-                      }}>
-                        裁剪单二维码
-                      </div>
-                      <div style={{
-                        fontSize: '11px',
-                        color: '#999',
-                        maxWidth: '120px',
-                        textAlign: 'center',
-                        wordBreak: 'break-all',
-                        marginTop: '4px'
-                      }}>
-                        {sheetPreviewTask.qrCode}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </Card>
+
+                      <ModalFieldGrid columns={2}>
+                        <ModalField
+                          label="裁剪数"
+                          value={(() => {
+                            const tv = Number((sheetPreviewTask as Record<string, unknown>)?.cuttingQuantity);
+                            if (Number.isFinite(tv) && tv > 0) return tv;
+                            const sum = sheetPreviewBundles.reduce((s, x) => s + (Number((x as Record<string, unknown>)?.quantity) || 0), 0);
+                            return Number(sum) || 0;
+                          })()}
+                          valueColor="#0891b2"
+                        />
+                        <ModalField
+                          label="扎数"
+                          value={(() => {
+                            const tv = Number((sheetPreviewTask as Record<string, unknown>)?.cuttingBundleCount);
+                            if (Number.isFinite(tv) && tv > 0) return tv;
+                            return Number(sheetPreviewBundles.length) || 0;
+                          })()}
+                          valueColor="#7c3aed"
+                        />
+                      </ModalFieldGrid>
+                    </>
+                  }
+                />
+              </ModalHeaderCard>
 
               <Card size="small" title="面辅料采购明细" loading={sheetPreviewPurchaseLoading}>
                 <ResizableTable<MaterialPurchase>
                   storageKey="cutting-sheet-preview-purchase-table"
                   columns={purchaseColumns}
                   dataSource={sheetPreviewPurchases}
-                  rowKey={(r) => String(r?.id ?? `${(r as any)?.materialType || ''}-${(r as any)?.materialCode || ''}-${(r as any)?.supplierName || ''}`)}
+                  rowKey={(r) => String(r?.id ?? `${(r as Record<string, unknown>)?.materialType || ''}-${(r as Record<string, unknown>)?.materialCode || ''}-${(r as Record<string, unknown>)?.supplierName || ''}`)}
                   loading={sheetPreviewPurchaseLoading}
-                  pagination={false as any}
+                  pagination={false as Record<string, unknown>}
                   size="small"
                   scroll={{ x: 'max-content', y: isMobile ? 180 : 200 }}
                 />
@@ -2020,16 +2194,17 @@ const CuttingManagement: React.FC = () => {
                 <ResizableTable<CuttingBundleRow>
                   storageKey="cutting-sheet-preview-table"
                   columns={[
+                    { title: 'SKU', dataIndex: 'skuNo', key: 'skuNo', width: 150, ellipsis: true },
                     { title: '颜色', dataIndex: 'color', key: 'color', width: 120 },
                     { title: '尺码', dataIndex: 'size', key: 'size', width: 90 },
                     { title: '扎号', dataIndex: 'bundleNo', key: 'bundleNo', width: 90 },
                     { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 100, align: 'right' as const },
                     { title: '二维码内容', dataIndex: 'qrCode', key: 'qrCode', ellipsis: true },
-                  ] as any}
+                  ] as Record<string, unknown>}
                   dataSource={sheetPreviewBundles}
                   rowKey={(row) => row.id || `${row.productionOrderNo}-${row.bundleNo}-${row.color}-${row.size}`}
                   loading={sheetPreviewLoading}
-                  pagination={false as any}
+                  pagination={false as Record<string, unknown>}
                   scroll={{ x: 'max-content', y: sheetPreviewTableScrollY }}
                 />
               </ResizableModalFlexFill>
@@ -2040,11 +2215,11 @@ const CuttingManagement: React.FC = () => {
             className="cutting-qr-print-area"
             style={
               {
-                ['--cutting-print-cols' as any]: String(printConfig.cols),
-                ['--cutting-label-w' as any]: String(printConfig.labelW),
-                ['--cutting-label-h' as any]: String(printConfig.labelH),
-                ['--cutting-label-gap' as any]: String(printConfig.gap),
-              } as any
+                ['--cutting-print-cols' as Record<string, unknown>]: String(printConfig.cols),
+                ['--cutting-label-w' as Record<string, unknown>]: String(printConfig.labelW),
+                ['--cutting-label-h' as Record<string, unknown>]: String(printConfig.labelH),
+                ['--cutting-label-gap' as Record<string, unknown>]: String(printConfig.gap),
+              } as Record<string, unknown>
             }
           >
             {printConfig.mode === 'single' ? (
@@ -2169,6 +2344,20 @@ const CuttingManagement: React.FC = () => {
             </Card>
           </ResizableModal>
 
+          {/* 快速编辑弹窗 */}
+          <QuickEditModal
+            visible={quickEditVisible}
+            loading={quickEditSaving}
+            initialValues={{
+              remarks: quickEditRecord?.remarks,
+              expectedShipDate: quickEditRecord?.expectedShipDate,
+            }}
+            onSave={handleQuickEditSave}
+            onCancel={() => {
+              setQuickEditVisible(false);
+              setQuickEditRecord(null);
+            }}
+          />
 
         </Card>
       </div>

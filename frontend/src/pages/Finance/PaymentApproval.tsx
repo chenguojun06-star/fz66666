@@ -41,7 +41,7 @@ const isAdminUser = (user?: { role?: string; roleName?: string; username?: strin
   return lower.includes('admin') || role.includes('管理员');
 };
 
-const toArray = <T,>(value: any): T[] => {
+const toArray = <T,>(value: unknown): T[] => {
   if (Array.isArray(value)) return value as T[];
   return [];
 };
@@ -88,7 +88,7 @@ const getActionIcon = (key: string) => {
   return undefined;
 };
 
-const formatMoney2 = (value: any) => {
+const formatMoney2 = (value: unknown) => {
   const n = Number(value);
   return Number.isFinite(n) ? n.toFixed(2) : '-';
 };
@@ -119,7 +119,7 @@ const SimpleLineChart = <T extends { date?: string }>(
 
   const pts = Array.isArray(props.points) ? props.points : [];
   const series = Array.isArray(props.series) ? props.series : [];
-  const safeNum = (v: any) => {
+  const safeNum = (v: unknown) => {
     const n = Number(v);
     return Number.isFinite(n) ? n : 0;
   };
@@ -182,7 +182,7 @@ const SimpleLineChart = <T extends { date?: string }>(
 
         {pts.map((p, i) => {
           if (i % xLabelEvery !== 0 && i !== pts.length - 1) return null;
-          const label = String((p as any)?.date || '').trim();
+          const label = String((p as Record<string, unknown>)?.date || '').trim();
           if (!label) return null;
           return (
             <text key={i} x={x(i)} y={h - 16} fill="#666" textAnchor="middle" style={{ fontSize: 'var(--font-size-xs)' }}>
@@ -213,7 +213,7 @@ type ApprovalTablePagination = {
 
 type ApprovalTableProps = {
   kind: ApprovalListKind;
-  columns: any[];
+  columns: unknown[];
   dataSource: ApprovalRecord[];
   loading: boolean;
   pagination: ApprovalTablePagination;
@@ -222,7 +222,7 @@ type ApprovalTableProps = {
     onChange: (keys: React.Key[], rows: ApprovalRecord[]) => void;
   };
   onOpenDetail: (kind: ApprovalListKind, record: ApprovalRecord) => void;
-  ignoreRowClick: (e: any) => boolean;
+  ignoreRowClick: (e: unknown) => boolean;
 };
 
 const ApprovalTable: React.FC<ApprovalTableProps> = ({
@@ -237,16 +237,16 @@ const ApprovalTable: React.FC<ApprovalTableProps> = ({
 }) => {
   return (
     <ResizableTable
-      columns={columns as any}
+      columns={columns as Record<string, unknown>}
       dataSource={dataSource}
-      rowKey={(r: any) => String(r.id)}
+      rowKey={(r: Record<string, unknown>) => String(r.id)}
       onRow={(record: ApprovalRecord) => {
         return {
-          onClick: (e: any) => {
+          onClick: (e: unknown) => {
             if (ignoreRowClick(e)) return;
             onOpenDetail(kind, record);
           },
-        } as any;
+        } as Record<string, unknown>;
       }}
       rowSelection={rowSelection}
       loading={loading}
@@ -273,8 +273,8 @@ type OrderProfitPanelProps = {
   warehousingRevenue: number;
   shipmentRevenue: number;
   shipmentRevenueTotal: number;
-  orderTimelineColumns: any[];
-  orderMaterialColumns: any[];
+  orderTimelineColumns: unknown[];
+  orderMaterialColumns: unknown[];
   chartSeries: LineSeries<OrderProfitTimelinePoint>[];
   materials: OrderProfitMaterialItem[];
 };
@@ -470,8 +470,8 @@ const OrderProfitPanel: React.FC<OrderProfitPanelProps> = ({
 
       <Card size="small" className="mb-sm" title="趋势明细" loading={orderProfitLoading}>
         <ResizableTable
-          columns={orderTimelineColumns as any}
-          dataSource={timeline as any}
+          columns={orderTimelineColumns as Record<string, unknown>}
+          dataSource={timeline as Record<string, unknown>}
           rowKey="date"
           pagination={false}
           scroll={{ x: 'max-content', y: isMobile ? 260 : 360 }}
@@ -480,9 +480,9 @@ const OrderProfitPanel: React.FC<OrderProfitPanelProps> = ({
 
       <Card size="small" className="mb-sm" title="面辅料明细（到料数量/单价/金额）" loading={orderProfitLoading}>
         <ResizableTable
-          columns={orderMaterialColumns as any}
-          dataSource={materials as any}
-          rowKey={(r: any) => {
+          columns={orderMaterialColumns as Record<string, unknown>}
+          dataSource={materials as Record<string, unknown>}
+          rowKey={(r: Record<string, unknown>) => {
             const id = String(r?.id || '').trim();
             if (id) return id;
             const purchaseNo = String(r?.purchaseNo || '').trim();
@@ -563,40 +563,40 @@ const ApprovalDetailModal: React.FC<ApprovalDetailModalProps> = ({
 
               <div style={{ flex: 1, minWidth: 260 }}>
                 <Space wrap style={{ marginBottom: 8 }}>
-                  <Tag color="blue">{String((record as any)?.reconciliationNo || '').trim() || '-'}</Tag>
+                  <Tag color="blue">{String((record as Record<string, unknown>)?.reconciliationNo || '').trim() || '-'}</Tag>
                   <Tag>
                     状态：{(() => {
-                      const cfg = getStatusConfig((record as any)?.status as any);
+                      const cfg = getStatusConfig((record as Record<string, unknown>)?.status as Record<string, unknown>);
                       return cfg.text;
                     })()}
                   </Tag>
-                  <Tag>对账日期：{formatDateTime((record as any)?.reconciliationDate)}</Tag>
+                  <Tag>对账日期：{formatDateTime((record as Record<string, unknown>)?.reconciliationDate)}</Tag>
                 </Space>
 
                 <Descriptions size="small" column={{ xs: 1, sm: 2, md: 3, lg: 3 }}>
                   {kind === 'material' ? (
                     <>
-                      <Descriptions.Item label="供应商">{String((record as any)?.supplierName || '').trim() || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="订单号">{String((record as any)?.orderNo || '').trim() || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="款号">{String((record as any)?.styleNo || '').trim() || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="采购单号">{String((record as any)?.purchaseNo || '').trim() || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="物料编码">{String((record as any)?.materialCode || '').trim() || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="物料名称">{String((record as any)?.materialName || '').trim() || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="供应商">{String((record as Record<string, unknown>)?.supplierName || '').trim() || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="订单号">{String((record as Record<string, unknown>)?.orderNo || '').trim() || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="款号">{String((record as Record<string, unknown>)?.styleNo || '').trim() || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="采购单号">{String((record as Record<string, unknown>)?.purchaseNo || '').trim() || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="物料编码">{String((record as Record<string, unknown>)?.materialCode || '').trim() || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="物料名称">{String((record as Record<string, unknown>)?.materialName || '').trim() || '-'}</Descriptions.Item>
                     </>
                   ) : (
                     <>
-                      <Descriptions.Item label="客户">{String((record as any)?.customerName || '').trim() || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="订单号">{String((record as any)?.orderNo || '').trim() || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="款号">{String((record as any)?.styleNo || '').trim() || '-'}</Descriptions.Item>
-                      <Descriptions.Item label="数量">{Number((record as any)?.quantity ?? 0) || 0}</Descriptions.Item>
-                      <Descriptions.Item label="生产完成数">{Number((record as any)?.productionCompletedQuantity ?? 0) || 0}</Descriptions.Item>
+                      <Descriptions.Item label="客户">{String((record as Record<string, unknown>)?.customerName || '').trim() || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="订单号">{String((record as Record<string, unknown>)?.orderNo || '').trim() || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="款号">{String((record as Record<string, unknown>)?.styleNo || '').trim() || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="数量">{Number((record as Record<string, unknown>)?.quantity ?? 0) || 0}</Descriptions.Item>
+                      <Descriptions.Item label="生产完成数">{Number((record as Record<string, unknown>)?.productionCompletedQuantity ?? 0) || 0}</Descriptions.Item>
                     </>
                   )}
-                  <Descriptions.Item label="总金额(元)">{formatMoney2((record as any)?.totalAmount)}</Descriptions.Item>
-                  <Descriptions.Item label="扣款(元)">{formatMoney2((record as any)?.deductionAmount)}</Descriptions.Item>
-                  <Descriptions.Item label="最终金额(元)">{formatMoney2((record as any)?.finalAmount)}</Descriptions.Item>
-                  <Descriptions.Item label="上环节时间">{getPrevStageTime((record as any)?.status as any, record)}</Descriptions.Item>
-                  <Descriptions.Item label="付款时间">{getPaidAtTime((record as any)?.status as any, record)}</Descriptions.Item>
+                  <Descriptions.Item label="总金额(元)">{formatMoney2((record as Record<string, unknown>)?.totalAmount)}</Descriptions.Item>
+                  <Descriptions.Item label="扣款(元)">{formatMoney2((record as Record<string, unknown>)?.deductionAmount)}</Descriptions.Item>
+                  <Descriptions.Item label="最终金额(元)">{formatMoney2((record as Record<string, unknown>)?.finalAmount)}</Descriptions.Item>
+                  <Descriptions.Item label="上环节时间">{getPrevStageTime((record as Record<string, unknown>)?.status as Record<string, unknown>, record)}</Descriptions.Item>
+                  <Descriptions.Item label="付款时间">{getPaidAtTime((record as Record<string, unknown>)?.status as Record<string, unknown>, record)}</Descriptions.Item>
                 </Descriptions>
               </div>
             </div>
@@ -606,8 +606,8 @@ const ApprovalDetailModal: React.FC<ApprovalDetailModalProps> = ({
             <Space wrap>
               {buildActionItems(
                 kind,
-                ((record as any)?.status || 'pending') as ReconStatus,
-                String((record as any)?.id || '')
+                ((record as Record<string, unknown>)?.status || 'pending') as ReconStatus,
+                String((record as Record<string, unknown>)?.id || '')
               ).map((a) => {
                 return (
                   <Button
@@ -651,7 +651,7 @@ const PaymentApproval: React.FC = () => {
     setDetailRecord(null);
   };
 
-  const ignoreRowClick = (e: any) => {
+  const ignoreRowClick = (e: unknown) => {
     const el = e?.target as HTMLElement | null;
     if (!el) return false;
     return Boolean(
@@ -739,27 +739,27 @@ const PaymentApproval: React.FC = () => {
 
   const getPrevStageTime = (status: ReconStatus, record: any) => {
     if (!record) return '-';
-    if (status === 'approved') return formatDateTime((record as any).verifiedAt) || formatDateTime((record as any).updateTime) || '-';
-    if (status === 'paid') return formatDateTime((record as any).approvedAt) || formatDateTime((record as any).updateTime) || '-';
+    if (status === 'approved') return formatDateTime((record as Record<string, unknown>).verifiedAt) || formatDateTime((record as Record<string, unknown>).updateTime) || '-';
+    if (status === 'paid') return formatDateTime((record as Record<string, unknown>).approvedAt) || formatDateTime((record as Record<string, unknown>).updateTime) || '-';
     if (status === 'rejected') {
       return (
-        formatDateTime((record as any).approvedAt) ||
-        formatDateTime((record as any).verifiedAt) ||
-        formatDateTime((record as any).updateTime) ||
+        formatDateTime((record as Record<string, unknown>).approvedAt) ||
+        formatDateTime((record as Record<string, unknown>).verifiedAt) ||
+        formatDateTime((record as Record<string, unknown>).updateTime) ||
         '-'
       );
     }
-    if (status === 'verified') return formatDateTime((record as any).createTime) || formatDateTime((record as any).reconciliationDate || (record as any).settlementDate) || '-';
+    if (status === 'verified') return formatDateTime((record as Record<string, unknown>).createTime) || formatDateTime((record as Record<string, unknown>).reconciliationDate || (record as Record<string, unknown>).settlementDate) || '-';
     return '-';
   };
 
   const getPaidAtTime = (status: ReconStatus, record: any) => {
     if (status !== 'paid') return '-';
-    return formatDateTime((record as any).paidAt) || formatDateTime((record as any).updateTime) || '-';
+    return formatDateTime((record as Record<string, unknown>).paidAt) || formatDateTime((record as Record<string, unknown>).updateTime) || '-';
   };
 
   useEffect(() => {
-    const desired = (location.state as any)?.defaultTab;
+    const desired = (location.state as Record<string, unknown>)?.defaultTab;
     if (desired === 'material' || desired === 'shipment' || desired === 'orderProfit') setTab(desired);
     else if (desired === 'factory') setTab('material');
   }, [location.state]);
@@ -770,11 +770,11 @@ const PaymentApproval: React.FC = () => {
   }, [tab]);
 
   useEffect(() => {
-    const desiredTab = (location.state as any)?.defaultTab;
-    const desiredStatusRaw = (location.state as any)?.defaultStatus;
+    const desiredTab = (location.state as Record<string, unknown>)?.defaultTab;
+    const desiredStatusRaw = (location.state as Record<string, unknown>)?.defaultStatus;
     const desiredStatus = String(desiredStatusRaw || '').trim();
     const allowed: ReconStatus[] = ['pending', 'verified', 'approved', 'paid', 'rejected'];
-    if (!allowed.includes(desiredStatus as any)) return;
+    if (!allowed.includes(desiredStatus as Record<string, unknown>)) return;
     if (desiredTab === 'material') {
       setMaterialQuery((prev) => ({ ...prev, status: desiredStatus, page: 1 }));
     } else if (desiredTab === 'shipment') {
@@ -785,15 +785,14 @@ const PaymentApproval: React.FC = () => {
   const fetchMaterialApprovals = async () => {
     setMaterialLoading(true);
     try {
-      const res = await api.get<any>('/finance/material-reconciliation/list', { params: materialQuery });
-      const result = res as any;
-      if (result.code === 200) {
-        setMaterialList(toArray<MaterialReconciliation>(result.data?.records));
-        setMaterialTotal(Number(result.data?.total || 0));
+      const res = await api.get<{ code: number; message: string; data: { records: MaterialReconciliation[]; total: number } }>('/finance/material-reconciliation/list', { params: materialQuery });
+      if (res.code === 200) {
+        setMaterialList(toArray<MaterialReconciliation>(res.data?.records));
+        setMaterialTotal(Number(res.data?.total || 0));
       } else {
-        message.error(result.message || '获取物料审批付款列表失败');
+        message.error(res.message || '获取物料审批付款列表失败');
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(e?.message || '获取物料审批付款列表失败');
     } finally {
       setMaterialLoading(false);
@@ -803,15 +802,14 @@ const PaymentApproval: React.FC = () => {
   const fetchShipmentApprovals = async () => {
     setShipmentLoading(true);
     try {
-      const res = await api.get<any>('/finance/shipment-reconciliation/list', { params: shipmentQuery });
-      const result = res as any;
-      if (result.code === 200) {
-        setShipmentList(toArray<ShipmentReconciliation>(result.data?.records));
-        setShipmentTotal(Number(result.data?.total || 0));
+      const res = await api.get<{ code: number; message: string; data: { records: ShipmentReconciliation[]; total: number } }>('/finance/shipment-reconciliation/list', { params: shipmentQuery });
+      if (res.code === 200) {
+        setShipmentList(toArray<ShipmentReconciliation>(res.data?.records));
+        setShipmentTotal(Number(res.data?.total || 0));
       } else {
-        message.error(result.message || '获取出货审批付款列表失败');
+        message.error(res.message || '获取出货审批付款列表失败');
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(e?.message || '获取出货审批付款列表失败');
     } finally {
       setShipmentLoading(false);
@@ -826,18 +824,17 @@ const PaymentApproval: React.FC = () => {
     }
     setOrderProfitLoading(true);
     try {
-      const res = await api.get<any>('/finance/reconciliation/order-profit', {
+      const res = await api.get<{ code: number; message: string; data: Record<string, unknown> | null }>('/finance/reconciliation/order-profit', {
         params: {
           orderNo,
         },
       });
-      const result = res as any;
-      if (result.code === 200) {
-        setOrderProfitData((result.data || null) as any);
+      if (res.code === 200) {
+        setOrderProfitData((res.data || null) as Record<string, unknown>);
       } else {
-        message.error(result.message || '获取订单盈利失败');
+        message.error(res.message || '获取订单盈利失败');
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(e?.message || '获取订单盈利失败');
     } finally {
       setOrderProfitLoading(false);
@@ -853,12 +850,11 @@ const PaymentApproval: React.FC = () => {
     'material-approval-list',
     async () => {
       try {
-        const res = await api.get<any>('/finance/material-reconciliation/list', { params: materialQuery });
-        const result = res as any;
-        if (result.code === 200) {
+        const res = await api.get<{ code: number; data: { records: MaterialReconciliation[]; total: number } }>('/finance/material-reconciliation/list', { params: materialQuery });
+        if (res.code === 200) {
           return {
-            records: toArray<MaterialReconciliation>(result.data?.records),
-            total: Number(result.data?.total || 0)
+            records: toArray<MaterialReconciliation>(res.data?.records),
+            total: Number(res.data?.total || 0)
           };
         }
         return null;
@@ -891,12 +887,11 @@ const PaymentApproval: React.FC = () => {
     'shipment-approval-list',
     async () => {
       try {
-        const res = await api.get<any>('/finance/shipment-reconciliation/list', { params: shipmentQuery });
-        const result = res as any;
-        if (result.code === 200) {
+        const res = await api.get<{ code: number; data: { records: ShipmentReconciliation[]; total: number } }>('/finance/shipment-reconciliation/list', { params: shipmentQuery });
+        if (res.code === 200) {
           return {
-            records: toArray<ShipmentReconciliation>(result.data?.records),
-            total: Number(result.data?.total || 0)
+            records: toArray<ShipmentReconciliation>(res.data?.records),
+            total: Number(res.data?.total || 0)
           };
         }
         return null;
@@ -930,14 +925,14 @@ const PaymentApproval: React.FC = () => {
   const updateStatus = async (kind: ApprovalTab, id: string, status: ReconStatus) => {
     try {
       const res = await updateFinanceReconciliationStatus(id, status);
-      const result = res as any;
+      const result = res as Record<string, unknown>;
       if (result.code === 200) {
         message.success('操作成功');
-        if (detailOpen && detailRecord && String((detailRecord as any)?.id || '') === String(id || '')) {
+        if (detailOpen && detailRecord && String((detailRecord as Record<string, unknown>)?.id || '') === String(id || '')) {
           setDetailRecord((prev: any | null) => {
             if (!prev) return prev;
-            if (String((prev as any)?.id || '') !== String(id || '')) return prev;
-            return { ...(prev as any), status };
+            if (String((prev as Record<string, unknown>)?.id || '') !== String(id || '')) return prev;
+            return { ...(prev as Record<string, unknown>), status };
           });
         }
         if (kind === 'material') fetchMaterialApprovals();
@@ -945,7 +940,7 @@ const PaymentApproval: React.FC = () => {
       } else {
         message.error(result.message || '操作失败');
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(e?.message || '操作失败');
     }
   };
@@ -969,7 +964,7 @@ const PaymentApproval: React.FC = () => {
     }
 
     const label = getBatchStatusLabel(targetStatus);
-    const rowsById = new Map<string, any>(selectedRows.map((r) => [String((r as any)?.id || ''), r]));
+    const rowsById = new Map<string, unknown>(selectedRows.map((r) => [String((r as Record<string, unknown>)?.id || ''), r]));
     const keys = selectedRowKeys.map((k) => String(k));
 
     modalApi.confirm({
@@ -995,13 +990,15 @@ const PaymentApproval: React.FC = () => {
 
           try {
             const res = await updateFinanceReconciliationStatus(id, targetStatus);
-            const result = res as any;
+            const result = res as Record<string, unknown>;
             if (result.code === 200) {
               okCount += 1;
             } else {
               failCount += 1;
             }
           } catch {
+    // Intentionally empty
+      // 忽略错误
             failCount += 1;
           }
         });
@@ -1031,7 +1028,7 @@ const PaymentApproval: React.FC = () => {
   const returnToPrevious = async (kind: ApprovalTab, id: string, reason: string) => {
     try {
       const res = await returnFinanceReconciliation(id, reason);
-      const result = res as any;
+      const result = res as Record<string, unknown>;
       if (result.code === 200) {
         message.success('退回成功');
         if (kind === 'material') fetchMaterialApprovals();
@@ -1039,7 +1036,7 @@ const PaymentApproval: React.FC = () => {
       } else {
         message.error(result.message || '退回失败');
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(e?.message || '退回失败');
     }
   };
@@ -1108,16 +1105,15 @@ const PaymentApproval: React.FC = () => {
     }
 
     try {
-      const res = await api.post<any>('/finance/reconciliation/return', { id, reason });
-      const result = res as any;
-      if (result.code === 200) {
+      const res = await api.post<{ code: number; message: string }>('/finance/reconciliation/return', { id, reason });
+      if (res.code === 200) {
         message.success('已重审');
         if (kind === 'material') fetchMaterialApprovals();
         else fetchShipmentApprovals();
       } else {
-        message.error(result.message || '重审失败');
+        message.error(res.message || '重审失败');
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(e?.message || '重审失败');
     }
   };
@@ -1141,14 +1137,14 @@ const PaymentApproval: React.FC = () => {
         dataIndex: 'orderNo',
         key: 'orderNo',
         width: 140,
-        render: (v: any) => String(v || '').trim() || '-',
+        render: (v: unknown) => String(v || '').trim() || '-',
       },
       {
         title: '款号',
         dataIndex: 'styleNo',
         key: 'styleNo',
         width: 110,
-        render: (v: any) => String(v || '').trim() || '-',
+        render: (v: unknown) => String(v || '').trim() || '-',
       },
       {
         title: '采购单号',
@@ -1181,7 +1177,7 @@ const PaymentApproval: React.FC = () => {
         key: 'productionCompletedQuantity',
         width: 110,
         align: 'right' as const,
-        render: (v: any) => {
+        render: (v: unknown) => {
           const n = typeof v === 'number' ? v : Number(v);
           return Number.isFinite(n) ? n : '-';
         },
@@ -1192,7 +1188,7 @@ const PaymentApproval: React.FC = () => {
         key: 'finalAmount',
         width: 130,
         align: 'right' as const,
-        render: (v: any) => {
+        render: (v: unknown) => {
           const n = typeof v === 'number' ? v : Number(v);
           return Number.isFinite(n) ? n.toFixed(2) : '-';
         },
@@ -1202,7 +1198,7 @@ const PaymentApproval: React.FC = () => {
         dataIndex: 'reconciliationDate',
         key: 'reconciliationDate',
         width: 140,
-        render: (v: any) => formatDateTime(v),
+        render: (v: unknown) => formatDateTime(v),
       },
       {
         title: '状态',
@@ -1238,13 +1234,13 @@ const PaymentApproval: React.FC = () => {
         title: '重审时间',
         key: 'reReviewAt',
         width: 160,
-        render: (_: any, record: MaterialReconciliation) => formatDateTime((record as any).reReviewAt) || '-',
+        render: (_: any, record: MaterialReconciliation) => formatDateTime((record as Record<string, unknown>).reReviewAt) || '-',
       },
       {
         title: '重审原因',
         key: 'reReviewReason',
         width: 180,
-        render: (_: any, record: MaterialReconciliation) => String((record as any).reReviewReason || '').trim() || '-',
+        render: (_: any, record: MaterialReconciliation) => String((record as Record<string, unknown>).reReviewReason || '').trim() || '-',
       },
       {
         title: '操作',
@@ -1255,7 +1251,7 @@ const PaymentApproval: React.FC = () => {
           const status = record.status as ReconStatus;
           const id = String(record.id || '');
           const items = buildActionItems('material', status, id);
-          return <RowActions actions={[{ key: 'more', label: '更多', children: items as any }]} maxInline={0} />;
+          return <RowActions actions={[{ key: 'more', label: '更多', children: items as Record<string, unknown> }]} maxInline={0} />;
         },
       },
     ];
@@ -1306,7 +1302,7 @@ const PaymentApproval: React.FC = () => {
         key: 'productionCompletedQuantity',
         width: 110,
         align: 'right' as const,
-        render: (v: any) => {
+        render: (v: unknown) => {
           const n = typeof v === 'number' ? v : Number(v);
           return Number.isFinite(n) ? n : '-';
         },
@@ -1317,7 +1313,7 @@ const PaymentApproval: React.FC = () => {
         key: 'finalAmount',
         width: 130,
         align: 'right' as const,
-        render: (v: any) => {
+        render: (v: unknown) => {
           const n = typeof v === 'number' ? v : Number(v);
           return Number.isFinite(n) ? n.toFixed(2) : '-';
         },
@@ -1327,7 +1323,7 @@ const PaymentApproval: React.FC = () => {
         dataIndex: 'reconciliationDate',
         key: 'reconciliationDate',
         width: 140,
-        render: (v: any) => formatDateTime(v),
+        render: (v: unknown) => formatDateTime(v),
       },
       {
         title: '状态',
@@ -1363,13 +1359,13 @@ const PaymentApproval: React.FC = () => {
         title: '重审时间',
         key: 'reReviewAt',
         width: 160,
-        render: (_: any, record: ShipmentReconciliation) => formatDateTime((record as any).reReviewAt) || '-',
+        render: (_: any, record: ShipmentReconciliation) => formatDateTime((record as Record<string, unknown>).reReviewAt) || '-',
       },
       {
         title: '重审原因',
         key: 'reReviewReason',
         width: 180,
-        render: (_: any, record: ShipmentReconciliation) => String((record as any).reReviewReason || '').trim() || '-',
+        render: (_: any, record: ShipmentReconciliation) => String((record as Record<string, unknown>).reReviewReason || '').trim() || '-',
       },
       {
         title: '操作',
@@ -1380,7 +1376,7 @@ const PaymentApproval: React.FC = () => {
           const status = record.status as ReconStatus;
           const id = String(record.id || '');
           const items = buildActionItems('shipment', status, id);
-          return <RowActions actions={[{ key: 'more', label: '更多', children: items as any }]} maxInline={0} />;
+          return <RowActions actions={[{ key: 'more', label: '更多', children: items as Record<string, unknown> }]} maxInline={0} />;
         },
       },
     ];
@@ -1393,21 +1389,21 @@ const PaymentApproval: React.FC = () => {
         dataIndex: 'purchaseNo',
         key: 'purchaseNo',
         width: 140,
-        render: (v: any) => String(v || '').trim() || '-',
+        render: (v: unknown) => String(v || '').trim() || '-',
       },
       {
         title: '类型',
         dataIndex: 'materialType',
         key: 'materialType',
         width: 110,
-        render: (v: any) => String(v || '').trim() || '-',
+        render: (v: unknown) => String(v || '').trim() || '-',
       },
       {
         title: '物料编码',
         dataIndex: 'materialCode',
         key: 'materialCode',
         width: 120,
-        render: (v: any) => String(v || '').trim() || '-',
+        render: (v: unknown) => String(v || '').trim() || '-',
       },
       {
         title: '物料名称',
@@ -1415,7 +1411,7 @@ const PaymentApproval: React.FC = () => {
         key: 'materialName',
         width: 200,
         ellipsis: true,
-        render: (v: any) => String(v || '').trim() || '-',
+        render: (v: unknown) => String(v || '').trim() || '-',
       },
       {
         title: '规格',
@@ -1423,14 +1419,14 @@ const PaymentApproval: React.FC = () => {
         key: 'specifications',
         width: 160,
         ellipsis: true,
-        render: (v: any) => String(v || '').trim() || '-',
+        render: (v: unknown) => String(v || '').trim() || '-',
       },
       {
         title: '单位',
         dataIndex: 'unit',
         key: 'unit',
         width: 70,
-        render: (v: any) => String(v || '').trim() || '-',
+        render: (v: unknown) => String(v || '').trim() || '-',
       },
       {
         title: '采购数',
@@ -1438,7 +1434,7 @@ const PaymentApproval: React.FC = () => {
         key: 'purchaseQuantity',
         width: 90,
         align: 'right' as const,
-        render: (v: any) => Number(v) || 0,
+        render: (v: unknown) => Number(v) || 0,
       },
       {
         title: '到货数',
@@ -1446,7 +1442,7 @@ const PaymentApproval: React.FC = () => {
         key: 'arrivedQuantity',
         width: 90,
         align: 'right' as const,
-        render: (v: any) => Number(v) || 0,
+        render: (v: unknown) => Number(v) || 0,
       },
       {
         title: '单价(元)',
@@ -1454,7 +1450,7 @@ const PaymentApproval: React.FC = () => {
         key: 'unitPrice',
         width: 100,
         align: 'right' as const,
-        render: (v: any) => formatMoney2(v),
+        render: (v: unknown) => formatMoney2(v),
       },
       {
         title: '金额(元)',
@@ -1462,10 +1458,10 @@ const PaymentApproval: React.FC = () => {
         width: 110,
         align: 'right' as const,
         render: (_: any, r: OrderProfitMaterialItem) => {
-          const qty = Number((r as any)?.arrivedQuantity ?? 0);
-          const price = Number((r as any)?.unitPrice);
+          const qty = Number((r as Record<string, unknown>)?.arrivedQuantity ?? 0);
+          const price = Number((r as Record<string, unknown>)?.unitPrice);
           if (Number.isFinite(qty) && Number.isFinite(price)) return (qty * price).toFixed(2);
-          const v = Number((r as any)?.totalAmount);
+          const v = Number((r as Record<string, unknown>)?.totalAmount);
           return Number.isFinite(v) ? v.toFixed(2) : '-';
         },
       },
@@ -1475,21 +1471,21 @@ const PaymentApproval: React.FC = () => {
         key: 'supplierName',
         width: 160,
         ellipsis: true,
-        render: (v: any) => String(v || '').trim() || '-',
+        render: (v: unknown) => String(v || '').trim() || '-',
       },
       {
         title: '领料时间',
         dataIndex: 'receivedTime',
         key: 'receivedTime',
         width: 160,
-        render: (v: any) => formatDateTime(v) || '-',
+        render: (v: unknown) => formatDateTime(v) || '-',
       },
       {
         title: '状态',
         dataIndex: 'status',
         key: 'status',
         width: 100,
-        render: (v: any) => {
+        render: (v: unknown) => {
           const { text, color } = getMaterialPurchaseStatusConfig(String(v || '').trim() || undefined);
           return <Tag color={color}>{text}</Tag>;
         },
@@ -1506,7 +1502,7 @@ const PaymentApproval: React.FC = () => {
         key: 'materialArrivedCost',
         width: 140,
         align: 'right' as const,
-        render: (v: any) => formatMoney2(v),
+        render: (v: unknown) => formatMoney2(v),
       },
       {
         title: '加工成本(元)',
@@ -1514,7 +1510,7 @@ const PaymentApproval: React.FC = () => {
         key: 'processingCost',
         width: 120,
         align: 'right' as const,
-        render: (v: any) => formatMoney2(v),
+        render: (v: unknown) => formatMoney2(v),
       },
       {
         title: '核算收入(元)',
@@ -1522,7 +1518,7 @@ const PaymentApproval: React.FC = () => {
         key: 'revenue',
         width: 110,
         align: 'right' as const,
-        render: (v: any) => formatMoney2(v),
+        render: (v: unknown) => formatMoney2(v),
       },
       {
         title: '累计成本(元)',
@@ -1530,8 +1526,8 @@ const PaymentApproval: React.FC = () => {
         width: 130,
         align: 'right' as const,
         render: (_: any, r: OrderProfitTimelinePoint) => {
-          const a = Number((r as any)?.cumMaterialArrivedCost ?? 0) || 0;
-          const b = Number((r as any)?.cumProcessingCost ?? 0) || 0;
+          const a = Number((r as Record<string, unknown>)?.cumMaterialArrivedCost ?? 0) || 0;
+          const b = Number((r as Record<string, unknown>)?.cumProcessingCost ?? 0) || 0;
           return (a + b).toFixed(2);
         },
       },
@@ -1541,7 +1537,7 @@ const PaymentApproval: React.FC = () => {
         key: 'cumRevenue',
         width: 130,
         align: 'right' as const,
-        render: (v: any) => formatMoney2(v),
+        render: (v: unknown) => formatMoney2(v),
       },
       {
         title: '累计利润(元)',
@@ -1549,7 +1545,7 @@ const PaymentApproval: React.FC = () => {
         key: 'cumProfit',
         width: 130,
         align: 'right' as const,
-        render: (v: any) => formatMoney2(v),
+        render: (v: unknown) => formatMoney2(v),
       },
     ];
   }, []);
@@ -1741,20 +1737,20 @@ const PaymentApproval: React.FC = () => {
   const summary = orderProfitData?.summary;
   const orderInfo = orderProfitData?.order;
   const timeline = orderProfitData?.timeline || [];
-  const calcBasis = String((summary as any)?.calcBasis || '').trim();
-  const calcQty = summary ? Number((summary as any)?.calcQty) || 0 : 0;
-  const usingWarehousingQty = calcBasis === 'warehousing' || Number((orderInfo as any)?.warehousingQuantity) > 0;
-  const revenue = summary ? Number((summary as any).revenue) || 0 : 0;
-  const warehousingRevenue = summary ? Number((summary as any).warehousingRevenue) || 0 : 0;
-  const shipmentRevenue = summary ? Number((summary as any).shipmentRevenue) || 0 : 0;
-  const shipmentRevenueTotal = summary ? Number((summary as any).shipmentRevenueTotal) || 0 : 0;
-  const incurredCost = summary ? Number((summary as any).incurredCost) || 0 : 0;
+  const calcBasis = String((summary as Record<string, unknown>)?.calcBasis || '').trim();
+  const calcQty = summary ? Number((summary as Record<string, unknown>)?.calcQty) || 0 : 0;
+  const usingWarehousingQty = calcBasis === 'warehousing' || Number((orderInfo as Record<string, unknown>)?.warehousingQuantity) > 0;
+  const revenue = summary ? Number((summary as Record<string, unknown>).revenue) || 0 : 0;
+  const warehousingRevenue = summary ? Number((summary as Record<string, unknown>).warehousingRevenue) || 0 : 0;
+  const shipmentRevenue = summary ? Number((summary as Record<string, unknown>).shipmentRevenue) || 0 : 0;
+  const shipmentRevenueTotal = summary ? Number((summary as Record<string, unknown>).shipmentRevenueTotal) || 0 : 0;
+  const incurredCost = summary ? Number((summary as Record<string, unknown>).incurredCost) || 0 : 0;
 
-  const materialPlannedQty = summary ? Number((summary as any)?.materialPlannedQty) || 0 : 0;
-  const materialArrivedQty = summary ? Number((summary as any)?.materialArrivedQty) || 0 : 0;
-  const materialPlannedAmount = summary ? Number((summary as any)?.materialPlannedCost) || 0 : 0;
-  const materialArrivedAmount = summary ? Number((summary as any)?.materialArrivedCost) || 0 : 0;
-  const materialArrivalRate = summary ? Number((summary as any)?.materialArrivalRate) || 0 : 0;
+  const materialPlannedQty = summary ? Number((summary as Record<string, unknown>)?.materialPlannedQty) || 0 : 0;
+  const materialArrivedQty = summary ? Number((summary as Record<string, unknown>)?.materialArrivedQty) || 0 : 0;
+  const materialPlannedAmount = summary ? Number((summary as Record<string, unknown>)?.materialPlannedCost) || 0 : 0;
+  const materialArrivedAmount = summary ? Number((summary as Record<string, unknown>)?.materialArrivedCost) || 0 : 0;
+  const materialArrivalRate = summary ? Number((summary as Record<string, unknown>)?.materialArrivalRate) || 0 : 0;
 
   const totalCost = summary ? (Number(summary.materialPlannedCost) || 0) + (Number(summary.processingCost) || 0) : 0;
   const chartSeries = useMemo(() => {
@@ -1804,7 +1800,7 @@ const PaymentApproval: React.FC = () => {
           {tab === 'material' ? (
             <ApprovalTable
               kind="material"
-              columns={materialColumns as any}
+              columns={materialColumns as Record<string, unknown>}
               dataSource={materialList}
               onOpenDetail={openDetail}
               ignoreRowClick={ignoreRowClick}
@@ -1820,7 +1816,7 @@ const PaymentApproval: React.FC = () => {
           ) : tab === 'shipment' ? (
             <ApprovalTable
               kind="shipment"
-              columns={shipmentColumns as any}
+              columns={shipmentColumns as Record<string, unknown>}
               dataSource={shipmentList}
               onOpenDetail={openDetail}
               ignoreRowClick={ignoreRowClick}
@@ -1852,8 +1848,8 @@ const PaymentApproval: React.FC = () => {
               warehousingRevenue={warehousingRevenue}
               shipmentRevenue={shipmentRevenue}
               shipmentRevenueTotal={shipmentRevenueTotal}
-              orderTimelineColumns={orderTimelineColumns as any}
-              orderMaterialColumns={orderMaterialColumns as any}
+              orderTimelineColumns={orderTimelineColumns as Record<string, unknown>}
+              orderMaterialColumns={orderMaterialColumns as Record<string, unknown>}
               chartSeries={chartSeries}
               materials={orderProfitData?.materials || []}
             />

@@ -273,7 +273,7 @@ public class ProductionOrder {
     private Integer warehousingCompletionRate;
 
     // ==================== 车缝环节字段（新增）====================
-    
+
     /**
      * 车缝开始时间
      */
@@ -299,7 +299,7 @@ public class ProductionOrder {
     private Integer carSewingCompletionRate;
 
     // ==================== 大烫环节字段（新增）====================
-    
+
     /**
      * 大烫开始时间
      */
@@ -325,7 +325,7 @@ public class ProductionOrder {
     private Integer ironingCompletionRate;
 
     // ==================== 包装环节字段（新增）====================
-    
+
     /**
      * 包装开始时间
      */
@@ -351,7 +351,7 @@ public class ProductionOrder {
     private Integer packagingCompletionRate;
 
     // ==================== 质量统计字段（新增）====================
-    
+
     /**
      * 次品数量
      */
@@ -363,6 +363,16 @@ public class ProductionOrder {
      */
     @TableField(exist = false)
     private Integer repairQuantity;
+
+    /**
+     * 备注
+     */
+    private String remarks;
+
+    /**
+     * 预计出货日期
+     */
+    private java.time.LocalDate expectedShipDate;
 
     /**
      * SKU 明细列表（用于扫码场景）

@@ -3,7 +3,7 @@ import { Alert, Card, Space, Table, Tabs, Tag, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useLocation } from 'react-router-dom';
 import Layout from '../../components/Layout';
-import { StyleCoverThumb } from '../../components/StyleAssets';
+import { ProductionOrderHeader } from '../../components/StyleAssets';
 import api, { parseProductionOrderLines, toNumberSafe } from '../../utils/api';
 import { formatDateTime } from '../../utils/datetime';
 import type { CuttingBundle, CuttingTask, MaterialPurchase, ProductionOrder, ProductWarehousing, ScanRecord } from '../../types/production';
@@ -44,7 +44,7 @@ type OrderLine = {
   skuNo?: string;
 };
 
-const isSystemStageRecord = (r: any) => {
+const isSystemStageRecord = (r: Record<string, unknown>) => {
   const requestId = String(r?.requestId || '').trim();
   if (!requestId) return false;
   return requestId.startsWith('ORDER_CREATED:') || requestId.startsWith('ORDER_PROCUREMENT:');
@@ -110,15 +110,14 @@ const OrderFlow: React.FC = () => {
     if (!query.orderId) return;
     setLoading(true);
     try {
-      const res = await api.get<any>(`/production/order/flow/${query.orderId}`);
-      const result = res as any;
-      if (result.code === 200) {
-        setData(result.data || null);
+      const res = await api.get<{ code: number; message: string; data: unknown }>(`/production/order/flow/${query.orderId}`);
+      if (res.code === 200) {
+        setData(res.data || null);
       } else {
-        message.error(result.message || '获取订单全流程失败');
+        message.error(res.message || '获取订单全流程失败');
         setData(null);
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(e?.message || '获取订单全流程失败');
       setData(null);
     } finally {
@@ -136,14 +135,14 @@ const OrderFlow: React.FC = () => {
       dataIndex: 'processName',
       key: 'processName',
       width: 160,
-      render: (v: any) => String(v || '').trim() || '-',
+      render: (v: unknown) => String(v || '').trim() || '-',
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
       width: 110,
-      render: (v: any) => statusTag(String(v || 'not_started') as any),
+      render: (v: unknown) => statusTag(String(v || 'not_started') as Record<string, unknown>),
     },
     {
       title: '累计数量',
@@ -151,35 +150,35 @@ const OrderFlow: React.FC = () => {
       key: 'totalQuantity',
       width: 110,
       align: 'right',
-      render: (v: any) => Number(v ?? 0) || 0,
+      render: (v: unknown) => Number(v ?? 0) || 0,
     },
     {
       title: '开始时间',
       dataIndex: 'startTime',
       key: 'startTime',
       width: 170,
-      render: (v: any) => (String(v || '').trim() ? formatDateTime(v) : '-'),
+      render: (v: unknown) => (String(v || '').trim() ? formatDateTime(v) : '-'),
     },
     {
       title: '开始操作人',
       dataIndex: 'startOperatorName',
       key: 'startOperatorName',
       width: 120,
-      render: (v: any) => String(v || '').trim() || '-',
+      render: (v: unknown) => String(v || '').trim() || '-',
     },
     {
       title: '完成时间',
       dataIndex: 'completeTime',
       key: 'completeTime',
       width: 170,
-      render: (v: any) => (String(v || '').trim() ? formatDateTime(v) : '-'),
+      render: (v: unknown) => (String(v || '').trim() ? formatDateTime(v) : '-'),
     },
     {
       title: '完成操作人',
       dataIndex: 'completeOperatorName',
       key: 'completeOperatorName',
       width: 120,
-      render: (v: any) => String(v || '').trim() || '-',
+      render: (v: unknown) => String(v || '').trim() || '-',
     },
   ];
 
@@ -189,24 +188,28 @@ const OrderFlow: React.FC = () => {
       dataIndex: 'scanTime',
       key: 'scanTime',
       width: 170,
-      render: (v: any) => (String(v || '').trim() ? formatDateTime(v) : '-'),
+      render: (v: unknown) => (String(v || '').trim() ? formatDateTime(v) : '-'),
     },
     {
       title: '环节',
       dataIndex: 'processName',
       key: 'processName',
       width: 140,
-      render: (v: any) => String(v || '').trim() || '-',
+      render: (v: unknown) => String(v || '').trim() || '-',
     },
     {
       title: '类型',
       dataIndex: 'scanType',
       key: 'scanType',
       width: 110,
-      render: (v: any) => {
+      render: (v: unknown) => {
         const map: Record<string, { color: string; label: string }> = {
           material: { color: 'gold', label: '物料' },
+          procurement: { color: 'gold', label: '采购' },
           production: { color: 'blue', label: '生产' },
+          sewing: { color: 'blue', label: '车缝' },
+          ironing: { color: 'blue', label: '整烫' },
+          packaging: { color: 'blue', label: '包装' },
           quality: { color: 'purple', label: '质检' },
           warehouse: { color: 'green', label: '入库' },
           shipment: { color: 'orange', label: '出货' },
@@ -222,21 +225,21 @@ const OrderFlow: React.FC = () => {
       key: 'quantity',
       width: 90,
       align: 'right',
-      render: (v: any) => Number(v ?? 0) || 0,
+      render: (v: unknown) => Number(v ?? 0) || 0,
     },
     {
       title: '操作人',
       dataIndex: 'operatorName',
       key: 'operatorName',
       width: 120,
-      render: (v: any) => String(v || '').trim() || '-',
+      render: (v: unknown) => String(v || '').trim() || '-',
     },
     {
       title: '备注',
       dataIndex: 'remark',
       key: 'remark',
       ellipsis: true,
-      render: (v: any) => String(v || '').trim() || '-',
+      render: (v: unknown) => String(v || '').trim() || '-',
     },
   ];
 
@@ -247,54 +250,54 @@ const OrderFlow: React.FC = () => {
   const cuttingTasks = (data?.cuttingTasks || []) as CuttingTask[];
   const cuttingBundles = (data?.cuttingBundles || []) as CuttingBundle[];
   const warehousings = (data?.warehousings || []) as ProductWarehousing[];
-  const materialReconciliations = (data?.materialReconciliations || []) as any[];
-  const shipmentReconciliations = (data?.shipmentReconciliations || []) as any[];
+  const materialReconciliations = (data?.materialReconciliations || []) as Record<string, unknown>[];
+  const shipmentReconciliations = (data?.shipmentReconciliations || []) as Record<string, unknown>[];
 
   const scanRecords = (data?.records || []) as ScanRecord[];
   const userScanRecords = useMemo(() => {
-    return scanRecords.filter((r) => !isSystemStageRecord(r as any));
+    return scanRecords.filter((r) => !isSystemStageRecord(r as Record<string, unknown>));
   }, [scanRecords]);
   const materialScans = useMemo(
-    () => userScanRecords.filter((r) => String((r as any)?.scanType || '').trim() === 'material'),
+    () => userScanRecords.filter((r) => String((r as Record<string, unknown>)?.scanType || '').trim() === 'material'),
     [userScanRecords],
   );
   const cuttingScans = useMemo(
-    () => userScanRecords.filter((r) => String((r as any)?.scanType || '').trim() === 'cutting'),
+    () => userScanRecords.filter((r) => String((r as Record<string, unknown>)?.scanType || '').trim() === 'cutting'),
     [userScanRecords],
   );
   const productionScans = useMemo(
-    () => userScanRecords.filter((r) => String((r as any)?.scanType || '').trim() === 'production'),
+    () => userScanRecords.filter((r) => String((r as Record<string, unknown>)?.scanType || '').trim() === 'production'),
     [userScanRecords],
   );
   const qualityScans = useMemo(
-    () => userScanRecords.filter((r) => String((r as any)?.scanType || '').trim() === 'quality'),
+    () => userScanRecords.filter((r) => String((r as Record<string, unknown>)?.scanType || '').trim() === 'quality'),
     [userScanRecords],
   );
   const warehousingScans = useMemo(
-    () => userScanRecords.filter((r) => String((r as any)?.scanType || '').trim() === 'warehouse'),
+    () => userScanRecords.filter((r) => String((r as Record<string, unknown>)?.scanType || '').trim() === 'warehouse'),
     [userScanRecords],
   );
   const shipmentScans = useMemo(
-    () => userScanRecords.filter((r) => String((r as any)?.scanType || '').trim() === 'shipment'),
+    () => userScanRecords.filter((r) => String((r as Record<string, unknown>)?.scanType || '').trim() === 'shipment'),
     [userScanRecords],
   );
 
   const orderLineColumns: ColumnsType<OrderLine> = [
-    { title: 'SKU号', dataIndex: 'skuNo', key: 'skuNo', width: 260, ellipsis: true, render: (v: any) => String(v || '').trim() || '-' },
-    { title: '颜色', dataIndex: 'color', key: 'color', width: 160, render: (v: any) => String(v || '').trim() || '-' },
-    { title: '尺码', dataIndex: 'size', key: 'size', width: 120, render: (v: any) => String(v || '').trim() || '-' },
-    { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 110, align: 'right', render: (v: any) => toNumberSafe(v) },
+    { title: 'SKU号', dataIndex: 'skuNo', key: 'skuNo', width: 260, ellipsis: true, render: (v: unknown) => String(v || '').trim() || '-' },
+    { title: '颜色', dataIndex: 'color', key: 'color', width: 160, render: (v: unknown) => String(v || '').trim() || '-' },
+    { title: '尺码', dataIndex: 'size', key: 'size', width: 120, render: (v: unknown) => String(v || '').trim() || '-' },
+    { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 110, align: 'right', render: (v: unknown) => toNumberSafe(v) },
   ];
 
   const purchaseColumns: ColumnsType<MaterialPurchase> = [
-    { title: '采购单号', dataIndex: 'purchaseNo', key: 'purchaseNo', width: 140, render: (v: any) => String(v || '').trim() || '-' },
-    { title: '物料', dataIndex: 'materialName', key: 'materialName', width: 200, ellipsis: true, render: (v: any) => String(v || '').trim() || '-' },
-    { title: '规格', dataIndex: 'specifications', key: 'specifications', width: 160, ellipsis: true, render: (v: any) => String(v || '').trim() || '-' },
-    { title: '采购', dataIndex: 'purchaseQuantity', key: 'purchaseQuantity', width: 90, align: 'right', render: (v: any) => toNumberSafe(v) },
-    { title: '到货', dataIndex: 'arrivedQuantity', key: 'arrivedQuantity', width: 90, align: 'right', render: (v: any) => toNumberSafe(v) },
-    { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 140, ellipsis: true, render: (v: any) => String(v || '').trim() || '-' },
+    { title: '采购单号', dataIndex: 'purchaseNo', key: 'purchaseNo', width: 140, render: (v: unknown) => String(v || '').trim() || '-' },
+    { title: '物料', dataIndex: 'materialName', key: 'materialName', width: 200, ellipsis: true, render: (v: unknown) => String(v || '').trim() || '-' },
+    { title: '规格', dataIndex: 'specifications', key: 'specifications', width: 160, ellipsis: true, render: (v: unknown) => String(v || '').trim() || '-' },
+    { title: '采购', dataIndex: 'purchaseQuantity', key: 'purchaseQuantity', width: 90, align: 'right', render: (v: unknown) => toNumberSafe(v) },
+    { title: '到货', dataIndex: 'arrivedQuantity', key: 'arrivedQuantity', width: 90, align: 'right', render: (v: unknown) => toNumberSafe(v) },
+    { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 140, ellipsis: true, render: (v: unknown) => String(v || '').trim() || '-' },
     {
-      title: '状态', dataIndex: 'status', key: 'status', width: 100, render: (v: any) => {
+      title: '状态', dataIndex: 'status', key: 'status', width: 100, render: (v: unknown) => {
         const s = String(v || '').trim();
         const map: Record<string, { color: string; label: string }> = {
           pending: { color: 'default', label: '待采购' },
@@ -307,12 +310,12 @@ const OrderFlow: React.FC = () => {
         return <Tag color={t.color}>{t.label}</Tag>;
       }
     },
-    { title: '到货时间', dataIndex: 'receivedTime', key: 'receivedTime', width: 170, render: (v: any) => (String(v || '').trim() ? formatDateTime(v) : '-') },
+    { title: '到货时间', dataIndex: 'receivedTime', key: 'receivedTime', width: 170, render: (v: unknown) => (String(v || '').trim() ? formatDateTime(v) : '-') },
   ];
 
   const cuttingTaskColumns: ColumnsType<CuttingTask> = [
     {
-      title: '状态', dataIndex: 'status', key: 'status', width: 110, render: (v: any) => {
+      title: '状态', dataIndex: 'status', key: 'status', width: 110, render: (v: unknown) => {
         const s = String(v || '').trim();
         const map: Record<string, { color: string; label: string }> = {
           pending: { color: 'default', label: '待领取' },
@@ -323,40 +326,40 @@ const OrderFlow: React.FC = () => {
         return <Tag color={t.color}>{t.label}</Tag>;
       }
     },
-    { title: '领取人', dataIndex: 'receiverName', key: 'receiverName', width: 140, render: (v: any) => String(v || '').trim() || '-' },
-    { title: '领取时间', dataIndex: 'receivedTime', key: 'receivedTime', width: 170, render: (v: any) => (String(v || '').trim() ? formatDateTime(v) : '-') },
-    { title: '完成时间', dataIndex: 'bundledTime', key: 'bundledTime', width: 170, render: (v: any) => (String(v || '').trim() ? formatDateTime(v) : '-') },
-    { title: '裁剪数', dataIndex: 'cuttingQuantity', key: 'cuttingQuantity', width: 90, align: 'right', render: (v: any) => toNumberSafe(v) },
-    { title: '扎数', dataIndex: 'cuttingBundleCount', key: 'cuttingBundleCount', width: 90, align: 'right', render: (v: any) => toNumberSafe(v) },
+    { title: '领取人', dataIndex: 'receiverName', key: 'receiverName', width: 140, render: (v: unknown) => String(v || '').trim() || '-' },
+    { title: '领取时间', dataIndex: 'receivedTime', key: 'receivedTime', width: 170, render: (v: unknown) => (String(v || '').trim() ? formatDateTime(v) : '-') },
+    { title: '完成时间', dataIndex: 'bundledTime', key: 'bundledTime', width: 170, render: (v: unknown) => (String(v || '').trim() ? formatDateTime(v) : '-') },
+    { title: '裁剪数', dataIndex: 'cuttingQuantity', key: 'cuttingQuantity', width: 90, align: 'right', render: (v: unknown) => toNumberSafe(v) },
+    { title: '扎数', dataIndex: 'cuttingBundleCount', key: 'cuttingBundleCount', width: 90, align: 'right', render: (v: unknown) => toNumberSafe(v) },
   ];
 
   const cuttingBundleColumns: ColumnsType<CuttingBundle> = [
-    { title: '扎号', dataIndex: 'bundleNo', key: 'bundleNo', width: 90, align: 'right', render: (v: any) => toNumberSafe(v) },
-    { title: '颜色', dataIndex: 'color', key: 'color', width: 140, render: (v: any) => String(v || '').trim() || '-' },
-    { title: '尺码', dataIndex: 'size', key: 'size', width: 110, render: (v: any) => String(v || '').trim() || '-' },
-    { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 90, align: 'right', render: (v: any) => toNumberSafe(v) },
-    { title: '二维码内容', dataIndex: 'qrCode', key: 'qrCode', width: 240, ellipsis: true, render: (v: any) => String(v || '').trim() || '-' },
-    { title: '状态', dataIndex: 'status', key: 'status', width: 110, render: (v: any) => stageStatusText(v) },
-    { title: '生成时间', dataIndex: 'createTime', key: 'createTime', width: 170, render: (v: any) => (String(v || '').trim() ? formatDateTime(v) : '-') },
+    { title: '扎号', dataIndex: 'bundleNo', key: 'bundleNo', width: 90, align: 'right', render: (v: unknown) => toNumberSafe(v) },
+    { title: '颜色', dataIndex: 'color', key: 'color', width: 140, render: (v: unknown) => String(v || '').trim() || '-' },
+    { title: '尺码', dataIndex: 'size', key: 'size', width: 110, render: (v: unknown) => String(v || '').trim() || '-' },
+    { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 90, align: 'right', render: (v: unknown) => toNumberSafe(v) },
+    { title: '二维码内容', dataIndex: 'qrCode', key: 'qrCode', width: 240, ellipsis: true, render: (v: unknown) => String(v || '').trim() || '-' },
+    { title: '状态', dataIndex: 'status', key: 'status', width: 110, render: (v: unknown) => stageStatusText(v) },
+    { title: '生成时间', dataIndex: 'createTime', key: 'createTime', width: 170, render: (v: unknown) => (String(v || '').trim() ? formatDateTime(v) : '-') },
   ];
 
   const warehousingColumns: ColumnsType<ProductWarehousing> = [
-    { title: '入库单号', dataIndex: 'warehousingNo', key: 'warehousingNo', width: 150, render: (v: any) => String(v || '').trim() || '-' },
-    { title: '仓库', dataIndex: 'warehouse', key: 'warehouse', width: 120, render: (v: any) => String(v || '').trim() || '-' },
-    { title: '入库数量', dataIndex: 'warehousingQuantity', key: 'warehousingQuantity', width: 100, align: 'right', render: (v: any) => toNumberSafe(v) },
-    { title: '合格', dataIndex: 'qualifiedQuantity', key: 'qualifiedQuantity', width: 90, align: 'right', render: (v: any) => toNumberSafe(v) },
-    { title: '不合格', dataIndex: 'unqualifiedQuantity', key: 'unqualifiedQuantity', width: 90, align: 'right', render: (v: any) => toNumberSafe(v) },
-    { title: '质检', dataIndex: 'qualityStatus', key: 'qualityStatus', width: 110, render: (v: any) => stageStatusText(v) },
-    { title: '创建时间', dataIndex: 'createTime', key: 'createTime', width: 170, render: (v: any) => (String(v || '').trim() ? formatDateTime(v) : '-') },
+    { title: '入库单号', dataIndex: 'warehousingNo', key: 'warehousingNo', width: 150, render: (v: unknown) => String(v || '').trim() || '-' },
+    { title: '仓库', dataIndex: 'warehouse', key: 'warehouse', width: 120, render: (v: unknown) => String(v || '').trim() || '-' },
+    { title: '入库数量', dataIndex: 'warehousingQuantity', key: 'warehousingQuantity', width: 100, align: 'right', render: (v: unknown) => toNumberSafe(v) },
+    { title: '合格', dataIndex: 'qualifiedQuantity', key: 'qualifiedQuantity', width: 90, align: 'right', render: (v: unknown) => toNumberSafe(v) },
+    { title: '不合格', dataIndex: 'unqualifiedQuantity', key: 'unqualifiedQuantity', width: 90, align: 'right', render: (v: unknown) => toNumberSafe(v) },
+    { title: '质检', dataIndex: 'qualityStatus', key: 'qualityStatus', width: 110, render: (v: unknown) => stageStatusText(v) },
+    { title: '创建时间', dataIndex: 'createTime', key: 'createTime', width: 170, render: (v: unknown) => (String(v || '').trim() ? formatDateTime(v) : '-') },
   ];
 
-  const materialReconColumns: ColumnsType<any> = [
-    { title: '对账单号', dataIndex: 'reconciliationNo', key: 'reconciliationNo', width: 160, render: (v: any) => String(v || '').trim() || '-' },
-    { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 140, render: (v: any) => String(v || '').trim() || '-' },
-    { title: '物料', dataIndex: 'materialName', key: 'materialName', ellipsis: true, render: (v: any) => String(v || '').trim() || '-' },
-    { title: '采购单号', dataIndex: 'purchaseNo', key: 'purchaseNo', width: 140, render: (v: any) => String(v || '').trim() || '-' },
+  const materialReconColumns: ColumnsType<unknown> = [
+    { title: '对账单号', dataIndex: 'reconciliationNo', key: 'reconciliationNo', width: 160, render: (v: unknown) => String(v || '').trim() || '-' },
+    { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 140, render: (v: unknown) => String(v || '').trim() || '-' },
+    { title: '物料', dataIndex: 'materialName', key: 'materialName', ellipsis: true, render: (v: unknown) => String(v || '').trim() || '-' },
+    { title: '采购单号', dataIndex: 'purchaseNo', key: 'purchaseNo', width: 140, render: (v: unknown) => String(v || '').trim() || '-' },
     {
-      title: '状态', dataIndex: 'status', key: 'status', width: 100, render: (v: any) => {
+      title: '状态', dataIndex: 'status', key: 'status', width: 100, render: (v: unknown) => {
         const s = String(v || '').trim();
         const map: Record<string, { color: string; label: string }> = {
           pending: { color: 'default', label: '待审核' },
@@ -369,19 +372,19 @@ const OrderFlow: React.FC = () => {
         return <Tag color={t.color}>{t.label}</Tag>;
       }
     },
-    { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 90, align: 'right', render: (v: any) => toNumberSafe(v) },
-    { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 90, align: 'right', render: (v: any) => toNumberSafe(v).toFixed(2) },
-    { title: '总金额', dataIndex: 'totalAmount', key: 'totalAmount', width: 110, align: 'right', render: (v: any) => toNumberSafe(v).toFixed(2) },
-    { title: '扣款', dataIndex: 'deductionAmount', key: 'deductionAmount', width: 100, align: 'right', render: (v: any) => toNumberSafe(v).toFixed(2) },
-    { title: '最终', dataIndex: 'finalAmount', key: 'finalAmount', width: 100, align: 'right', render: (v: any) => toNumberSafe(v).toFixed(2) },
-    { title: '对账日期', dataIndex: 'reconciliationDate', key: 'reconciliationDate', width: 170, render: (v: any) => (String(v || '').trim() ? formatDateTime(v) : '-') },
+    { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 90, align: 'right', render: (v: unknown) => toNumberSafe(v) },
+    { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 90, align: 'right', render: (v: unknown) => toNumberSafe(v).toFixed(2) },
+    { title: '总金额', dataIndex: 'totalAmount', key: 'totalAmount', width: 110, align: 'right', render: (v: unknown) => toNumberSafe(v).toFixed(2) },
+    { title: '扣款', dataIndex: 'deductionAmount', key: 'deductionAmount', width: 100, align: 'right', render: (v: unknown) => toNumberSafe(v).toFixed(2) },
+    { title: '最终', dataIndex: 'finalAmount', key: 'finalAmount', width: 100, align: 'right', render: (v: unknown) => toNumberSafe(v).toFixed(2) },
+    { title: '对账日期', dataIndex: 'reconciliationDate', key: 'reconciliationDate', width: 170, render: (v: unknown) => (String(v || '').trim() ? formatDateTime(v) : '-') },
   ];
 
-  const shipmentReconColumns: ColumnsType<any> = [
+  const shipmentReconColumns: ColumnsType<unknown> = [
     { title: '对账单号', dataIndex: 'reconciliationNo', key: 'reconciliationNo', width: 160, render: (_: any, r: any) => String(r?.reconciliationNo || r?.settlementNo || '').trim() || '-' },
     { title: '客户', dataIndex: 'customerName', key: 'customerName', width: 140, render: (_: any, r: any) => String(r?.customerName || r?.customer || r?.customerId || '-').trim() || '-' },
     {
-      title: '状态', dataIndex: 'status', key: 'status', width: 100, render: (v: any) => {
+      title: '状态', dataIndex: 'status', key: 'status', width: 100, render: (v: unknown) => {
         const s = String(v || '').trim();
         const map: Record<string, { color: string; label: string }> = {
           pending: { color: 'default', label: '待审核' },
@@ -394,11 +397,11 @@ const OrderFlow: React.FC = () => {
         return <Tag color={t.color}>{t.label}</Tag>;
       }
     },
-    { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 90, align: 'right', render: (v: any) => toNumberSafe(v) },
-    { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 90, align: 'right', render: (v: any) => toNumberSafe(v).toFixed(2) },
-    { title: '总金额', dataIndex: 'totalAmount', key: 'totalAmount', width: 110, align: 'right', render: (v: any) => toNumberSafe(v).toFixed(2) },
-    { title: '扣款', dataIndex: 'deductionAmount', key: 'deductionAmount', width: 100, align: 'right', render: (v: any) => toNumberSafe(v).toFixed(2) },
-    { title: '最终', dataIndex: 'finalAmount', key: 'finalAmount', width: 100, align: 'right', render: (v: any) => toNumberSafe(v).toFixed(2) },
+    { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 90, align: 'right', render: (v: unknown) => toNumberSafe(v) },
+    { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 90, align: 'right', render: (v: unknown) => toNumberSafe(v).toFixed(2) },
+    { title: '总金额', dataIndex: 'totalAmount', key: 'totalAmount', width: 110, align: 'right', render: (v: unknown) => toNumberSafe(v).toFixed(2) },
+    { title: '扣款', dataIndex: 'deductionAmount', key: 'deductionAmount', width: 100, align: 'right', render: (v: unknown) => toNumberSafe(v).toFixed(2) },
+    { title: '最终', dataIndex: 'finalAmount', key: 'finalAmount', width: 100, align: 'right', render: (v: unknown) => toNumberSafe(v).toFixed(2) },
     {
       title: '对账日期', dataIndex: 'reconciliationDate', key: 'reconciliationDate', width: 170, render: (_: any, r: any) => {
         const v = r?.reconciliationDate || r?.settlementDate;
@@ -408,15 +411,15 @@ const OrderFlow: React.FC = () => {
   ];
 
   const warehousingTotal = useMemo(
-    () => warehousings.reduce((sum, w) => sum + toNumberSafe((w as any)?.warehousingQuantity), 0),
+    () => warehousings.reduce((sum, w) => sum + toNumberSafe((w as Record<string, unknown>)?.warehousingQuantity), 0),
     [warehousings],
   );
   const warehousingQualified = useMemo(
-    () => warehousings.reduce((sum, w) => sum + toNumberSafe((w as any)?.qualifiedQuantity), 0),
+    () => warehousings.reduce((sum, w) => sum + toNumberSafe((w as Record<string, unknown>)?.qualifiedQuantity), 0),
     [warehousings],
   );
   const warehousingUnqualified = useMemo(
-    () => warehousings.reduce((sum, w) => sum + toNumberSafe((w as any)?.unqualifiedQuantity), 0),
+    () => warehousings.reduce((sum, w) => sum + toNumberSafe((w as Record<string, unknown>)?.unqualifiedQuantity), 0),
     [warehousings],
   );
 
@@ -442,106 +445,35 @@ const OrderFlow: React.FC = () => {
           ) : null}
 
           <Card size="small" className="order-flow-detail" style={{ marginTop: 12 }} loading={loading}>
-            <div className="order-flow-section">
-              <div className="order-flow-section-title">产品信息</div>
-              <div className="order-flow-kv-grid">
-                <div className="order-flow-kv">
-                  <div className="order-flow-kv-label">款号</div>
-                  <div className="order-flow-kv-value">{(order as any)?.styleNo || query.styleNo || '-'}</div>
-                </div>
-                <div className="order-flow-kv">
-                  <div className="order-flow-kv-label">款名</div>
-                  <div className="order-flow-kv-value">{(order as any)?.styleName || '-'}</div>
-                </div>
-                <div className="order-flow-kv">
-                  <div className="order-flow-kv-label">加工厂</div>
-                  <div className="order-flow-kv-value">{(order as any)?.factoryName || '-'}</div>
-                </div>
-                <div className="order-flow-kv">
-                  <div className="order-flow-kv-label">订单状态</div>
-                  <div className="order-flow-kv-value">{orderStatusTag((order as any)?.status)}</div>
-                </div>
-
-                <div className="order-flow-kv">
-                  <div className="order-flow-kv-label">下单数</div>
-                  <div className="order-flow-kv-value">{toNumberSafe((order as any)?.orderQuantity)}</div>
-                </div>
-                <div className="order-flow-kv">
-                  <div className="order-flow-kv-label">已完成</div>
-                  <div className="order-flow-kv-value">{toNumberSafe((order as any)?.completedQuantity)}</div>
-                </div>
-                <div className="order-flow-kv">
-                  <div className="order-flow-kv-label">生产进度</div>
-                  <div className="order-flow-kv-value">{`${toNumberSafe((order as any)?.productionProgress)}%`}</div>
-                </div>
-                <div className="order-flow-kv">
-                  <div className="order-flow-kv-label">当前环节</div>
-                  <div className="order-flow-kv-value">{String((order as any)?.currentProcessName || '').trim() || '-'}</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="order-flow-section">
-              <div className="order-flow-section-title">订单信息</div>
-              <div className="order-flow-order-row">
-                <div className="order-flow-order-cover">
-                  <StyleCoverThumb
-                    styleId={(order as any)?.styleId}
-                    styleNo={(order as any)?.styleNo}
-                    src={(order as any)?.styleCover || null}
-                    size={92}
-                    borderRadius={12}
-                  />
-                </div>
-
-                <div className="order-flow-order-cols">
-                  <div className="order-flow-order-col">
-                    <div className="order-flow-kv">
-                      <div className="order-flow-kv-label">订单号</div>
-                      <div className="order-flow-kv-value order-no-compact">{(order as any)?.orderNo || query.orderNo || '-'}</div>
-                    </div>
-                    <div className="order-flow-kv">
-                      <div className="order-flow-kv-label">扎数</div>
-                      <div className="order-flow-kv-value">{toNumberSafe((order as any)?.cuttingBundleCount)}</div>
-                    </div>
-                    <div className="order-flow-kv">
-                      <div className="order-flow-kv-label">入库数</div>
-                      <div className="order-flow-kv-value">{warehousingTotal}</div>
-                    </div>
-                  </div>
-
-                  <div className="order-flow-order-col">
-                    <div className="order-flow-kv">
-                      <div className="order-flow-kv-label">计划开始</div>
-                      <div className="order-flow-kv-value">{(order as any)?.plannedStartDate ? formatDateTime((order as any)?.plannedStartDate) : '-'}</div>
-                    </div>
-                    <div className="order-flow-kv">
-                      <div className="order-flow-kv-label">计划交期</div>
-                      <div className="order-flow-kv-value">{(order as any)?.plannedEndDate ? formatDateTime((order as any)?.plannedEndDate) : '-'}</div>
-                    </div>
-                    <div className="order-flow-kv">
-                      <div className="order-flow-kv-label">入库合格/不合格</div>
-                      <div className="order-flow-kv-value">{warehousingQualified}/{warehousingUnqualified}</div>
-                    </div>
-                  </div>
-
-                  <div className="order-flow-order-col">
-                    <div className="order-flow-kv">
-                      <div className="order-flow-kv-label">下单时间</div>
-                      <div className="order-flow-kv-value">{(order as any)?.createTime ? formatDateTime((order as any)?.createTime) : '-'}</div>
-                    </div>
-                    <div className="order-flow-kv">
-                      <div className="order-flow-kv-label">实际完成</div>
-                      <div className="order-flow-kv-value">{(order as any)?.actualEndDate ? formatDateTime((order as any)?.actualEndDate) : '-'}</div>
-                    </div>
-                    <div className="order-flow-kv">
-                      <div className="order-flow-kv-label">更新时间</div>
-                      <div className="order-flow-kv-value">{(order as any)?.updateTime ? formatDateTime((order as any)?.updateTime) : '-'}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <ProductionOrderHeader
+              order={order}
+              orderLines={orderLines}
+              orderNo={String((order as Record<string, unknown>)?.orderNo || query.orderNo || '').trim()}
+              styleNo={String((order as Record<string, unknown>)?.styleNo || query.styleNo || '').trim()}
+              styleName={String((order as Record<string, unknown>)?.styleName || '').trim()}
+              styleId={(order as Record<string, unknown>)?.styleId}
+              styleCover={(order as Record<string, unknown>)?.styleCover || null}
+              color={String((order as Record<string, unknown>)?.color || '').trim()}
+              totalQuantity={toNumberSafe((order as Record<string, unknown>)?.orderQuantity)}
+              coverSize={160}
+              qrSize={120}
+              extraFields={[
+                { label: '加工厂', value: (order as Record<string, unknown>)?.factoryName || '-' },
+                { label: '订单状态', value: orderStatusTag((order as Record<string, unknown>)?.status) },
+                { label: '下单数', value: toNumberSafe((order as Record<string, unknown>)?.orderQuantity) },
+                { label: '已完成', value: toNumberSafe((order as Record<string, unknown>)?.completedQuantity) },
+                { label: '生产进度', value: `${toNumberSafe((order as Record<string, unknown>)?.productionProgress)}%` },
+                { label: '当前环节', value: String((order as Record<string, unknown>)?.currentProcessName || '').trim() || '-' },
+                { label: '扎数', value: toNumberSafe((order as Record<string, unknown>)?.cuttingBundleCount) },
+                { label: '入库数', value: warehousingTotal },
+                { label: '计划开始', value: (order as Record<string, unknown>)?.plannedStartDate ? formatDateTime((order as Record<string, unknown>)?.plannedStartDate) : '-' },
+                { label: '计划交期', value: (order as Record<string, unknown>)?.plannedEndDate ? formatDateTime((order as Record<string, unknown>)?.plannedEndDate) : '-' },
+                { label: '入库合格/不合格', value: `${warehousingQualified}/${warehousingUnqualified}` },
+                { label: '下单时间', value: (order as Record<string, unknown>)?.createTime ? formatDateTime((order as Record<string, unknown>)?.createTime) : '-' },
+                { label: '实际完成', value: (order as Record<string, unknown>)?.actualEndDate ? formatDateTime((order as Record<string, unknown>)?.actualEndDate) : '-' },
+                { label: '更新时间', value: (order as Record<string, unknown>)?.updateTime ? formatDateTime((order as Record<string, unknown>)?.updateTime) : '-' },
+              ]}
+            />
           </Card>
 
           <Card size="small" className="order-flow-tabs-card" style={{ marginTop: 12 }} loading={loading}>
@@ -574,7 +506,7 @@ const OrderFlow: React.FC = () => {
                         size="small"
                         columns={orderLineColumns}
                         dataSource={orderLines}
-                        rowKey={(r) => String((r as any)?.skuNo || `${r.color}-${r.size}`)}
+                        rowKey={(r) => String((r as Record<string, unknown>)?.skuNo || `${r.color}-${r.size}`)}
                         pagination={false}
                         scroll={{ x: 780 }}
                       />
@@ -592,7 +524,7 @@ const OrderFlow: React.FC = () => {
                           size="small"
                           columns={purchaseColumns}
                           dataSource={materialPurchases}
-                          rowKey={(r, index) => String((r as any)?.id || (r as any)?.purchaseNo || `purchase-${index}`)}
+                          rowKey={(r, index) => String((r as Record<string, unknown>)?.id || (r as Record<string, unknown>)?.purchaseNo || `purchase-${index}`)}
                           pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50'], simple: true, className: 'app-pagination-float' }}
                           scroll={{ x: 1150 }}
                         />
@@ -603,7 +535,7 @@ const OrderFlow: React.FC = () => {
                           size="small"
                           columns={recordColumns}
                           dataSource={materialScans}
-                          rowKey={(r) => String((r as any)?.id || `${(r as any)?.scanTime || ''}-${(r as any)?.processName || ''}`)}
+                          rowKey={(r) => String((r as Record<string, unknown>)?.id || `${(r as Record<string, unknown>)?.scanTime || ''}-${(r as Record<string, unknown>)?.processName || ''}`)}
                           pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50'], simple: true, className: 'app-pagination-float' }}
                           scroll={{ x: 980 }}
                         />
@@ -622,7 +554,7 @@ const OrderFlow: React.FC = () => {
                           size="small"
                           columns={cuttingTaskColumns}
                           dataSource={cuttingTasks}
-                          rowKey={(r, index) => String((r as any)?.id || (r as any)?.taskNo || `cutting-task-${index}`)}
+                          rowKey={(r, index) => String((r as Record<string, unknown>)?.id || (r as Record<string, unknown>)?.taskNo || `cutting-task-${index}`)}
                           pagination={false}
                           scroll={{ x: 820 }}
                         />
@@ -634,7 +566,7 @@ const OrderFlow: React.FC = () => {
                           size="small"
                           columns={cuttingBundleColumns}
                           dataSource={cuttingBundles}
-                          rowKey={(r, index) => String((r as any)?.id || (r as any)?.qrCode || `cutting-bundle-${index}`)}
+                          rowKey={(r, index) => String((r as Record<string, unknown>)?.id || (r as Record<string, unknown>)?.qrCode || `cutting-bundle-${index}`)}
                           pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], simple: true, className: 'app-pagination-float' }}
                           scroll={{ x: 1050 }}
                         />
@@ -646,7 +578,7 @@ const OrderFlow: React.FC = () => {
                           size="small"
                           columns={recordColumns}
                           dataSource={cuttingScans}
-                          rowKey={(r) => String((r as any)?.id || `${(r as any)?.scanTime || ''}-${(r as any)?.processName || ''}`)}
+                          rowKey={(r) => String((r as Record<string, unknown>)?.id || `${(r as Record<string, unknown>)?.scanTime || ''}-${(r as Record<string, unknown>)?.processName || ''}`)}
                           pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50'], simple: true, className: 'app-pagination-float' }}
                           scroll={{ x: 980 }}
                         />
@@ -662,7 +594,7 @@ const OrderFlow: React.FC = () => {
                       size="small"
                       columns={recordColumns}
                       dataSource={productionScans}
-                      rowKey={(r) => String((r as any)?.id || `${(r as any)?.scanTime || ''}-${(r as any)?.processName || ''}`)}
+                      rowKey={(r) => String((r as Record<string, unknown>)?.id || `${(r as Record<string, unknown>)?.scanTime || ''}-${(r as Record<string, unknown>)?.processName || ''}`)}
                       pagination={{ pageSize: 20, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], simple: true, className: 'app-pagination-float' }}
                       scroll={{ x: 980 }}
                     />
@@ -676,7 +608,7 @@ const OrderFlow: React.FC = () => {
                       size="small"
                       columns={recordColumns}
                       dataSource={qualityScans}
-                      rowKey={(r) => String((r as any)?.id || `${(r as any)?.scanTime || ''}-${(r as any)?.processName || ''}`)}
+                      rowKey={(r) => String((r as Record<string, unknown>)?.id || `${(r as Record<string, unknown>)?.scanTime || ''}-${(r as Record<string, unknown>)?.processName || ''}`)}
                       pagination={{ pageSize: 20, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], simple: true, className: 'app-pagination-float' }}
                       scroll={{ x: 980 }}
                     />
@@ -693,7 +625,7 @@ const OrderFlow: React.FC = () => {
                           size="small"
                           columns={warehousingColumns}
                           dataSource={warehousings}
-                          rowKey={(r, index) => String((r as any)?.id || (r as any)?.warehousingNo || `warehousing-${index}`)}
+                          rowKey={(r, index) => String((r as Record<string, unknown>)?.id || (r as Record<string, unknown>)?.warehousingNo || `warehousing-${index}`)}
                           pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50'], simple: true, className: 'app-pagination-float' }}
                           scroll={{ x: 900 }}
                         />
@@ -704,7 +636,7 @@ const OrderFlow: React.FC = () => {
                           size="small"
                           columns={recordColumns}
                           dataSource={warehousingScans}
-                          rowKey={(r) => String((r as any)?.id || `${(r as any)?.scanTime || ''}-${(r as any)?.processName || ''}`)}
+                          rowKey={(r) => String((r as Record<string, unknown>)?.id || `${(r as Record<string, unknown>)?.scanTime || ''}-${(r as Record<string, unknown>)?.processName || ''}`)}
                           pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50'], simple: true, className: 'app-pagination-float' }}
                           scroll={{ x: 980 }}
                         />
@@ -715,7 +647,7 @@ const OrderFlow: React.FC = () => {
                           size="small"
                           columns={recordColumns}
                           dataSource={shipmentScans}
-                          rowKey={(r) => String((r as any)?.id || `${(r as any)?.scanTime || ''}-${(r as any)?.processName || ''}`)}
+                          rowKey={(r) => String((r as Record<string, unknown>)?.id || `${(r as Record<string, unknown>)?.scanTime || ''}-${(r as Record<string, unknown>)?.processName || ''}`)}
                           pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50'], simple: true, className: 'app-pagination-float' }}
                           scroll={{ x: 980 }}
                         />
@@ -734,7 +666,7 @@ const OrderFlow: React.FC = () => {
                           size="small"
                           columns={materialReconColumns}
                           dataSource={materialReconciliations}
-                          rowKey={(r, index) => String((r as any)?.id || (r as any)?.reconciliationNo || `material-recon-${index}`)}
+                          rowKey={(r, index) => String((r as Record<string, unknown>)?.id || (r as Record<string, unknown>)?.reconciliationNo || `material-recon-${index}`)}
                           pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50'], simple: true, className: 'app-pagination-float' }}
                           scroll={{ x: 980 }}
                         />
@@ -746,7 +678,7 @@ const OrderFlow: React.FC = () => {
                           size="small"
                           columns={shipmentReconColumns}
                           dataSource={shipmentReconciliations}
-                          rowKey={(r, index) => String((r as any)?.id || (r as any)?.reconciliationNo || (r as any)?.settlementNo || `shipment-recon-${index}`)}
+                          rowKey={(r, index) => String((r as Record<string, unknown>)?.id || (r as Record<string, unknown>)?.reconciliationNo || (r as Record<string, unknown>)?.settlementNo || `shipment-recon-${index}`)}
                           pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50'], simple: true, className: 'app-pagination-float' }}
                           scroll={{ x: 980 }}
                         />
@@ -762,7 +694,7 @@ const OrderFlow: React.FC = () => {
                       size="small"
                       columns={recordColumns}
                       dataSource={userScanRecords}
-                      rowKey={(r) => String((r as any)?.id || `${(r as any)?.scanTime || ''}-${(r as any)?.processName || ''}`)}
+                      rowKey={(r) => String((r as Record<string, unknown>)?.id || `${(r as Record<string, unknown>)?.scanTime || ''}-${(r as Record<string, unknown>)?.processName || ''}`)}
                       pagination={{ pageSize: 20, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], simple: true, className: 'app-pagination-float' }}
                       scroll={{ x: 980 }}
                     />

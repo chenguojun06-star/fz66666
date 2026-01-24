@@ -203,7 +203,7 @@ export function getValidationRule(ruleName: keyof typeof formValidationRules) {
  * @param customRules 自定义规则
  * @returns 合并后的规则
  */
-export function mergeValidationRules(baseRules: any[] = [], customRules: any[] = []) {
+export function mergeValidationRules(baseRules: unknown[] = [], customRules: unknown[] = []) {
   return [...baseRules, ...customRules];
 }
 

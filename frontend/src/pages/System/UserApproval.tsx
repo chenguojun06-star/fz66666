@@ -39,7 +39,7 @@ const UserApproval: React.FC = () => {
       const response = await api.get('/system/role/list', {
         params: { page: 1, pageSize: 100 }
       });
-      const result = response as any;
+      const result = response as Record<string, unknown>;
       if (result.code === 200) {
         setRoleOptions(Array.isArray(result.data?.records) ? result.data.records : []);
       }
@@ -56,14 +56,14 @@ const UserApproval: React.FC = () => {
       const response = await api.get('/system/user/pending', {
         params: { page, pageSize }
       });
-      const result = response as any;
+      const result = response as Record<string, unknown>;
       if (result.code === 200) {
         setPendingUsers(result.data?.records || []);
         setTotal(result.data?.total || 0);
       } else {
         message.error(result.message || '获取待审批用户失败');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       message.error(error?.message || '获取待审批用户失败');
     } finally {
       setLoading(false);
@@ -95,7 +95,7 @@ const UserApproval: React.FC = () => {
       const approveResponse = await api.post(`/system/user/${currentUser.id}/approve`, {
         operationRemark: approveReason
       });
-      const approveResult = approveResponse as any;
+      const approveResult = approveResponse as Record<string, unknown>;
 
       if (approveResult.code === 200) {
         // 更新用户角色
@@ -106,7 +106,7 @@ const UserApproval: React.FC = () => {
           approvalStatus: 'approved',
           operationRemark: approveReason
         });
-        const updateResult = updateResponse as any;
+        const updateResult = updateResponse as Record<string, unknown>;
 
         if (updateResult.code === 200) {
           message.success('用户已批准并分配角色');
@@ -121,7 +121,7 @@ const UserApproval: React.FC = () => {
       } else {
         message.error(approveResult.message || '批准失败');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       message.error(error?.message || '操作失败');
     }
   };
@@ -144,7 +144,7 @@ const UserApproval: React.FC = () => {
       const response = await api.post(`/system/user/${currentUser.id}/reject`, {
         approvalRemark: rejectReason
       });
-      const result = response as any;
+      const result = response as Record<string, unknown>;
       if (result.code === 200) {
         message.success('用户已拒绝');
         setRejectModalVisible(false);
@@ -154,7 +154,7 @@ const UserApproval: React.FC = () => {
       } else {
         message.error(result.message || '拒绝失败');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       message.error(error?.message || '拒绝失败');
     }
   };

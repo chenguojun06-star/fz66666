@@ -1,9 +1,9 @@
 package com.fashion.supplychain.finance.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.fashion.supplychain.common.DataPermissionHelper;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.ScanRecordService;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import org.springframework.stereotype.Component;
 
@@ -69,6 +69,9 @@ public class PayrollAggregationOrchestrator {
             qw.le("scan_time", endTime);
         }
 
+        // 应用数据权限过滤（根据角色：all=全部, team=团队, own=仅自己）
+        DataPermissionHelper.applyOperatorFilter(qw, "operator_id", "operator_name");
+
         // 查询扫码记录
         List<ScanRecord> scanRecords = scanRecordService.list(qw);
 
@@ -112,7 +115,24 @@ public class PayrollAggregationOrchestrator {
                 ? first.getProcessUnitPrice()
                 : BigDecimal.ZERO;
 
+        // 获取最早和最晚的扫码时间
+        LocalDateTime startTime = records.stream()
+                .map(ScanRecord::getScanTime)
+                .filter(Objects::nonNull)
+                .min(LocalDateTime::compareTo)
+                .orElse(null);
+
+        LocalDateTime endTime = records.stream()
+                .map(ScanRecord::getScanTime)
+                .filter(Objects::nonNull)
+                .max(LocalDateTime::compareTo)
+                .orElse(null);
+
         PayrollOperatorProcessSummaryDTO dto = new PayrollOperatorProcessSummaryDTO();
+        dto.setOrderNo(first.getOrderNo());
+        dto.setStyleNo(first.getStyleNo());
+        dto.setColor(first.getColor());
+        dto.setSize(first.getSize());
         dto.setOperatorId(first.getOperatorId());
         dto.setOperatorName(first.getOperatorName());
         dto.setProcessName(first.getProcessName());
@@ -121,6 +141,8 @@ public class PayrollAggregationOrchestrator {
         dto.setTotalAmount(totalAmount);
         dto.setScanType("production"); // Phase 5 默认为 production
         dto.setRecordCount((long) records.size());
+        dto.setStartTime(startTime);
+        dto.setEndTime(endTime);
 
         return dto;
     }
@@ -132,6 +154,10 @@ public class PayrollAggregationOrchestrator {
     public static class PayrollOperatorProcessSummaryDTO implements Serializable {
         private static final long serialVersionUID = 1L;
 
+        private String orderNo;      // 订单号
+        private String styleNo;      // 款号
+        private String color;        // 颜色
+        private String size;         // 尺码
         private String operatorId;
         private String operatorName;
         private String processName;
@@ -140,5 +166,7 @@ public class PayrollAggregationOrchestrator {
         private BigDecimal totalAmount;
         private String scanType; // production / cutting
         private Long recordCount; // 扫码次数
+        private LocalDateTime startTime;  // 开始时间（最早扫码时间）
+        private LocalDateTime endTime;    // 完成时间（最晚扫码时间）
     }
 }

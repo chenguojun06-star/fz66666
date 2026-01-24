@@ -152,7 +152,7 @@ function getValidationRule(ruleName) {
  * @returns {string|null} 错误信息或 null
  */
 function validateByRule(value, rule) {
-  if (!rule) return '规则未定义';
+  if (!rule) {return '规则未定义';}
 
   // 检查必需字段
   if (rule.required && (value === null || value === undefined || value === '')) {
@@ -216,7 +216,7 @@ function validateBatch(data, rules) {
 
   for (const [fieldName, ruleName] of Object.entries(rules)) {
     const rule = getValidationRule(ruleName);
-    if (!rule) continue;
+    if (!rule) {continue;}
 
     const value = data[fieldName];
     const error = validateByRule(value, rule);
@@ -238,7 +238,7 @@ function validateBatch(data, rules) {
  */
 function isValid(value, ruleName) {
   const rule = getValidationRule(ruleName);
-  if (!rule) return false;
+  if (!rule) {return false;}
   return validateByRule(value, rule) === null;
 }
 

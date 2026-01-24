@@ -32,6 +32,8 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
         window.location.reload();
       }
     } catch {
+    // Intentionally empty
+      // 忽略错误
       /* 无操作：刷新失败时静默处理 */
     }
   };

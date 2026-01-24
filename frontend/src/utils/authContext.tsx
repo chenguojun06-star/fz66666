@@ -115,6 +115,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               }
             }
           } catch {
+    // Intentionally empty
+      // 忽略错误
           }
         };
 
@@ -126,11 +128,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             const parsedUser = JSON.parse(storedUser);
             setUser(parsedUser);
           } catch {
+    // Intentionally empty
+      // 忽略错误
           }
         }
 
         try {
-          const res: any = await api.get('/system/user/me');
+          const res: unknown = await api.get('/system/user/me');
           if (res?.code === 200 && res.data) {
             const u = res.data;
             const next: UserInfo = {
@@ -159,12 +163,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setIsAuthenticated(false);
           }
         } catch {
+    // Intentionally empty
+      // 忽略错误
           localStorage.removeItem(tokenStorageKey);
           localStorage.removeItem(userStorageKey);
           setUser(null);
           setIsAuthenticated(false);
         }
       } catch {
+    // Intentionally empty
+      // 忽略错误
         setUser(null);
         setIsAuthenticated(false);
       } finally {
@@ -178,7 +186,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // 登录函数
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
-      const response = await api.post('/system/user/login', { username, password }) as any;
+      const response = await api.post('/system/user/login', { username, password }) as Record<string, unknown>;
       const token = String(response?.data?.token || '').trim();
       const u = response?.data?.user || response?.data || null;
       if (response?.code === 200 && token && u) {
@@ -216,12 +224,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // 触发用户登录事件
           window.dispatchEvent(new CustomEvent('user-login', { detail: { userId: baseUser.id } }));
         } catch {
+    // Intentionally empty
+      // 忽略错误
         }
 
         try {
           const rid = baseUser.roleId;
           if (rid != null) {
-            const pRes: any = await api.get('/system/user/permissions', {
+            const pRes: unknown = await api.get('/system/user/permissions', {
               params: { roleId: rid },
             });
             if (pRes?.code === 200 && Array.isArray(pRes.data) && pRes.data.length) {
@@ -229,12 +239,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             }
           }
         } catch {
+    // Intentionally empty
+      // 忽略错误
         }
 
         return true;
       }
       return false;
     } catch {
+    // Intentionally empty
+      // 忽略错误
       return false;
     }
   };
@@ -247,6 +261,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         localStorage.setItem(userStorageKey, JSON.stringify(next));
       } catch {
+    // Intentionally empty
+      // 忽略错误
       }
       return next;
     });
@@ -270,6 +286,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // 触发用户退出事件
       window.dispatchEvent(new Event('user-logout'));
     } catch {
+    // Intentionally empty
+      // 忽略错误
     }
   };
 
@@ -293,15 +311,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context) return context;
-  if ((import.meta as any)?.env?.DEV) {
+  if ((import.meta as Record<string, unknown>)?.env?.DEV) {
     throw new Error('必须在认证上下文提供者内部使用该钩子');
   }
   return fallbackAuthContext;
 };
 
 export const isAdminUser = (user?: Partial<UserInfo> | null) => {
-  const role = String((user as any)?.role ?? (user as any)?.roleName ?? '').trim();
-  const username = String((user as any)?.username ?? '').trim();
+  const role = String((user as Record<string, unknown>)?.role ?? (user as Record<string, unknown>)?.roleName ?? '').trim();
+  const username = String((user as Record<string, unknown>)?.username ?? '').trim();
   if (username === 'admin') return true;
   if (role === '1') return true;
   const lower = role.toLowerCase();
@@ -310,10 +328,10 @@ export const isAdminUser = (user?: Partial<UserInfo> | null) => {
 
 export const isSupervisorOrAboveUser = (user?: Partial<UserInfo> | null) => {
   if (isAdminUser(user)) return true;
-  const role = String((user as any)?.role ?? (user as any)?.roleName ?? '').trim();
+  const role = String((user as Record<string, unknown>)?.role ?? (user as Record<string, unknown>)?.roleName ?? '').trim();
   if (!role) return false;
   const lower = role.toLowerCase();
   if (lower.includes('manager') || lower.includes('supervisor') || role.includes('主管')) return true;
-  const perms = Array.isArray((user as any)?.permissions) ? (user as any).permissions : [];
+  const perms = Array.isArray((user as Record<string, unknown>)?.permissions) ? (user as Record<string, unknown>).permissions : [];
   return perms.includes('all');
 };

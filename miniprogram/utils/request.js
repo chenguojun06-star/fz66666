@@ -28,7 +28,7 @@ function triggerLoginRedirect() {
         null;
     }
 
-    if (redirectingToLogin) return;
+    if (redirectingToLogin) {return;}
     redirectingToLogin = true;
     if (redirectResetTimer) {
         clearTimeout(redirectResetTimer);
@@ -128,11 +128,28 @@ function request(options) {
                         clearToken();
                         if (!skipAuthRedirect) {
                             triggerLoginRedirect();
-                            reject(createError('未登录', { type: 'auth', statusCode, data: body }));
+                            reject(createError('未登录或登录已过期，请重新登录', { type: 'auth', statusCode, data: body }));
                             return;
                         }
                     }
-                    reject(createError('无权限', { type: 'forbidden', statusCode, data: body }));
+                    // 有token但403，可能是权限不足或token过期
+                    // 尝试判断是否为token过期（后端返回特定消息）
+                    const isTokenExpired = serverMessage && (
+                        serverMessage.includes('过期') ||
+                        serverMessage.includes('expired') ||
+                        serverMessage.includes('invalid token')
+                    );
+
+                    if (isTokenExpired) {
+                        clearToken();
+                        if (!skipAuthRedirect) {
+                            triggerLoginRedirect();
+                            reject(createError('登录已过期，请重新登录', { type: 'auth', statusCode, data: body }));
+                            return;
+                        }
+                    }
+
+                    reject(createError(serverMessage || '无权限', { type: 'forbidden', statusCode, data: body }));
                     return;
                 }
 

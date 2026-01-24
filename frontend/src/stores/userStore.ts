@@ -93,13 +93,13 @@ export const useUserStore = create<UserState>()(
       fetchUser: async () => {
         set({ loading: true, error: null });
         try {
-          const response = await (api as any).getUserInfo();
+          const response = await (api as Record<string, unknown>).getUserInfo();
           if (response.code === 200) {
             set({ user: response.data, loading: false });
           } else {
             set({ error: response.message, loading: false });
           }
-        } catch (error: any) {
+        } catch (error: unknown) {
           set({ error: error.message || '获取用户信息失败', loading: false });
         }
       },
@@ -108,13 +108,13 @@ export const useUserStore = create<UserState>()(
       fetchPermissions: async () => {
         set({ loading: true, error: null });
         try {
-          const response = await (api as any).getUserPermissions();
+          const response = await (api as Record<string, unknown>).getUserPermissions();
           if (response.code === 200) {
             set({ permissions: response.data || [], loading: false });
           } else {
             set({ error: response.message, loading: false });
           }
-        } catch (error: any) {
+        } catch (error: unknown) {
           set({ error: error.message || '获取权限失败', loading: false });
         }
       },
@@ -123,7 +123,7 @@ export const useUserStore = create<UserState>()(
       login: async (username: string, password: string) => {
         set({ loading: true, error: null });
         try {
-          const response = await (api as any).login(username, password);
+          const response = await (api as Record<string, unknown>).login(username, password);
           if (response.code === 200 && response.data) {
             const { token, user } = response.data;
             get().setToken(token);
@@ -135,7 +135,7 @@ export const useUserStore = create<UserState>()(
             set({ error: response.message || '登录失败', loading: false });
             throw new Error(response.message || '登录失败');
           }
-        } catch (error: any) {
+        } catch (error: unknown) {
           const errorMessage = error.message || '登录失败';
           set({ error: errorMessage, loading: false });
           throw error;

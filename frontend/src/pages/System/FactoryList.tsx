@@ -57,10 +57,9 @@ const FactoryList: React.FC = () => {
     const formData = new FormData();
     formData.append('file', file);
     try {
-      const response = await api.post<any>('/common/upload', formData);
-      const result = response as any;
-      if (result.code === 200) {
-        const url = String(result.data || '').trim();
+      const response = await api.post<{ code: number; message: string; data: string }>('/common/upload', formData);
+      if (response.code === 200) {
+        const url = String(response.data || '').trim();
         if (!url) {
           message.error('上传失败');
           return;
@@ -69,9 +68,9 @@ const FactoryList: React.FC = () => {
         setLicenseFileList(buildImageFileList(url));
         message.success('上传成功');
       } else {
-        message.error(result.message || '上传失败');
+        message.error(response.message || '上传失败');
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(String(e?.message || '上传失败'));
     }
   };
@@ -79,15 +78,14 @@ const FactoryList: React.FC = () => {
   const fetchFactories = async () => {
     setLoading(true);
     try {
-      const response = await api.get<any>('/system/factory/list', { params: queryParams });
-      const result = response as any;
-      if (result.code === 200) {
-        setFactoryList(result.data.records || []);
-        setTotal(result.data.total || 0);
+      const response = await api.get<{ code: number; message: string; data: { records: FactoryType[]; total: number } }>('/system/factory/list', { params: queryParams });
+      if (response.code === 200) {
+        setFactoryList(response.data.records || []);
+        setTotal(response.data.total || 0);
       } else {
-        message.error(result.message || '获取供应商列表失败');
+        message.error(response.message || '获取供应商列表失败');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       message.error(error?.message || '获取供应商列表失败');
     } finally {
       setLoading(false);
@@ -120,9 +118,9 @@ const FactoryList: React.FC = () => {
         contactPhone: factory?.contactPhone,
         address: factory?.address,
         status: factory?.status || 'inactive',
-        businessLicense: (factory as any)?.businessLicense,
+        businessLicense: (factory as Record<string, unknown>)?.businessLicense,
       });
-      setLicenseFileList(buildImageFileList((factory as any)?.businessLicense));
+      setLicenseFileList(buildImageFileList((factory as Record<string, unknown>)?.businessLicense));
     }
     setVisible(true);
   };
@@ -137,7 +135,7 @@ const FactoryList: React.FC = () => {
   const openRemarkModal = (
     title: string,
     okText: string,
-    okButtonProps: any,
+    okButtonProps: unknown,
     onConfirm: (remark: string) => Promise<void>
   ) => {
     let remarkValue = '';
@@ -179,14 +177,14 @@ const FactoryList: React.FC = () => {
       const res = await api.get('/system/operation-log/list', {
         params: { bizType, bizId },
       });
-      const result = res as any;
+      const result = res as Record<string, unknown>;
       if (result.code === 200) {
         setLogRecords(Array.isArray(result.data) ? result.data : []);
       } else {
         message.error(result.message || '获取日志失败');
         setLogRecords([]);
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(e?.message || '获取日志失败');
       setLogRecords([]);
     } finally {
@@ -198,7 +196,7 @@ const FactoryList: React.FC = () => {
     const values = await form.validateFields();
 
     const submit = async (remark?: string) => {
-      const payload: any = {
+      const payload: unknown = {
         ...values,
         status: values.status || 'active',
         id: currentFactory?.id,
@@ -208,18 +206,17 @@ const FactoryList: React.FC = () => {
       setSubmitLoading(true);
       try {
         const response = dialogMode === 'edit'
-          ? await api.put<any>('/system/factory', payload)
-          : await api.post<any>('/system/factory', payload);
+          ? await api.put<{ code: number; message: string }>('/system/factory', payload)
+          : await api.post<{ code: number; message: string }>('/system/factory', payload);
 
-        const result = response as any;
-        if (result.code === 200) {
+        if (response.code === 200) {
           message.success('保存成功');
           closeDialog();
           fetchFactories();
         } else {
-          message.error(result.message || '保存失败');
+          message.error(response.message || '保存失败');
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         message.error(error?.message || '保存失败');
       } finally {
         setSubmitLoading(false);
@@ -238,14 +235,13 @@ const FactoryList: React.FC = () => {
     if (!id) return;
 
     openRemarkModal('确认删除', '删除', { danger: true }, async (remark) => {
-      const response = await api.delete<any>(`/system/factory/${id}`, { params: { remark } });
-      const result = response as any;
-      if (result.code === 200) {
+      const response = await api.delete<{ code: number; message: string }>(`/system/factory/${id}`, { params: { remark } });
+      if (response.code === 200) {
         message.success('删除成功');
         setQueryParams((prev) => ({ ...prev, page: 1 }));
         return;
       }
-      throw new Error(result.message || '删除失败');
+      throw new Error(response.message || '删除失败');
     });
   };
 
@@ -298,7 +294,7 @@ const FactoryList: React.FC = () => {
       dataIndex: 'status',
       key: 'status',
       width: 110,
-      render: (v: any) => {
+      render: (v: unknown) => {
         const status = String(v || '').trim() || 'inactive';
         if (status === 'active') return <Tag color="green">{getStatusText(status)}</Tag>;
         if (status === 'inactive') return <Tag>{getStatusText(status)}</Tag>;
@@ -310,7 +306,7 @@ const FactoryList: React.FC = () => {
       dataIndex: 'createTime',
       key: 'createTime',
       width: 180,
-      render: (v: any) => formatDateTime(v),
+      render: (v: unknown) => formatDateTime(v),
     },
     {
       title: '操作',
@@ -375,21 +371,21 @@ const FactoryList: React.FC = () => {
               placeholder="供应商编码"
               style={{ width: 180 }}
               allowClear
-              value={String((queryParams as any)?.factoryCode || '')}
+              value={String((queryParams as Record<string, unknown>)?.factoryCode || '')}
               onChange={(e) => setQueryParams((prev) => ({ ...prev, factoryCode: e.target.value, page: 1 }))}
             />
             <Input
               placeholder="供应商名称"
               style={{ width: 220 }}
               allowClear
-              value={String((queryParams as any)?.factoryName || '')}
+              value={String((queryParams as Record<string, unknown>)?.factoryName || '')}
               onChange={(e) => setQueryParams((prev) => ({ ...prev, factoryName: e.target.value, page: 1 }))}
             />
             <Select
               placeholder="状态"
               style={{ width: 140 }}
               allowClear
-              value={String((queryParams as any)?.status || '') || undefined}
+              value={String((queryParams as Record<string, unknown>)?.status || '') || undefined}
               options={[
                 { value: 'active', label: '启用' },
                 { value: 'inactive', label: '停用' },
@@ -406,7 +402,7 @@ const FactoryList: React.FC = () => {
         <ResizableTable<FactoryType>
           storageKey="system-factory-table"
           rowKey={(r) => String(r.id || r.factoryCode)}
-          columns={columns as any}
+          columns={columns as Record<string, unknown>}
           dataSource={factoryList}
           loading={loading}
           pagination={{
@@ -516,7 +512,7 @@ const FactoryList: React.FC = () => {
         scaleWithViewport
       >
         <ResizableTable
-          columns={logColumns as any}
+          columns={logColumns as Record<string, unknown>}
           dataSource={logRecords}
           rowKey={(r) => String(r.id || `${r.bizType}-${r.bizId}-${r.createTime}`)}
           loading={logLoading}

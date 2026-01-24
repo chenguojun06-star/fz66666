@@ -1,6 +1,6 @@
 import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { App as AntApp, Button, Spin } from 'antd';
+import { Button, Spin } from 'antd';
 import PrivateRoute from './components/PrivateRoute';
 import { useAuth } from './utils/authContext';
 import ResizableModal from './components/common/ResizableModal';
@@ -79,7 +79,7 @@ const GlobalImagePreview: React.FC = () => {
     };
 
     const pickSrc = (img: HTMLImageElement) => {
-      const current = (img as any).currentSrc;
+      const current = (img as Record<string, unknown>).currentSrc;
       if (typeof current === 'string' && current) return current;
       const s = img.getAttribute('src');
       return s || '';
@@ -149,14 +149,14 @@ const AppRoutes: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { modalWidth } = useViewport();
-  const backgroundLocation = (location.state as any)?.backgroundLocation;
+  const backgroundLocation = (location.state as Record<string, unknown>)?.backgroundLocation;
 
   React.useEffect(() => {
-    (window as any).__appAuthLogoutNavigate = () => navigate(paths.login, { replace: true });
+    (window as Record<string, unknown>).__appAuthLogoutNavigate = () => navigate(paths.login, { replace: true });
   }, [navigate]);
 
   React.useEffect(() => {
-    const w: any = window as any;
+    const w: unknown = window as Record<string, unknown>;
     if (w.__appAuthLogoutListenerInstalled) {
       return;
     }
@@ -167,6 +167,8 @@ const AppRoutes: React.FC = () => {
           w.__appAuthLogoutNavigate();
         }
       } catch {
+    // Intentionally empty
+      // 忽略错误
       }
     };
     window.addEventListener('app:auth:logout', w.__appAuthLogoutListener);
@@ -255,11 +257,9 @@ const AppRoutes: React.FC = () => {
 const App: React.FC = () => {
   return (
     <ErrorBoundary>
-      <AntApp>
-        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <AppRoutes />
-        </BrowserRouter>
-      </AntApp>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <AppRoutes />
+      </BrowserRouter>
     </ErrorBoundary>
   );
 };

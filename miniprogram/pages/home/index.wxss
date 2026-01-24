@@ -31,7 +31,7 @@ page {
   font-weight: 500;
   color: #ffffff;
   background: #3b82f6;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
 }
 
 .result-status {
@@ -66,7 +66,7 @@ page {
   padding: 40px 20px;
   background: #ffffff;
   border: 1px solid #e5e7eb;
-  border-radius: 18px;
+  border-radius: var(--radius-xl);
   margin-bottom: 16px;
 }
 
@@ -88,7 +88,7 @@ page {
   color: #1f2937;
   background: rgba(224, 242, 254, 0.8);
   border: 1px solid rgba(224, 242, 254, 0.9);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
 }
 
 /* 右上角提醒按钮 */
@@ -196,7 +196,7 @@ page {
 .reminder-item {
   background: #f9fafb;
   border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   padding: 12px;
   margin-bottom: 10px;
 }
@@ -267,7 +267,7 @@ page {
   margin-top: 8px;
   padding: 10px 12px;
   border: 1px solid #e5e7eb;
-  border-radius: 18px;
+  border-radius: var(--radius-xl);
   background: #ffffff;
   display: flex;
   flex-direction: column;
@@ -293,7 +293,7 @@ page {
 
 .filter-input {
   border: 1px solid #e5e7eb;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   padding: 8px 12px;
   font-size: 14px;
   color: #111827;
@@ -302,7 +302,7 @@ page {
 
 .filter-text {
   border: 1px solid #e5e7eb;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   padding: 8px 12px;
   font-size: 14px;
   color: #111827;
@@ -324,7 +324,7 @@ page {
   padding: 8px 12px;
   background: #ffffff;
   border: 1px solid #e5e7eb;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
@@ -337,7 +337,7 @@ page {
   padding: 4px 10px;
   background: rgba(224, 242, 254, 0.3);
   border: 1px solid rgba(224, 242, 254, 0.5);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   font-size: 12px;
   color: #1f2937;
 }
@@ -368,7 +368,7 @@ page {
 
 .home-stat {
   border: 1px solid #e5e7eb;
-  border-radius: 18px;
+  border-radius: var(--radius-xl);
   padding: 10px 12px;
   background: #ffffff;
 }
@@ -388,7 +388,7 @@ page {
 .home-stat-icon-wrap {
   width: 24px;
   height: 24px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -429,8 +429,8 @@ page {
 
 .home-entries {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
   margin-top: 10px;
 }
 
@@ -438,12 +438,12 @@ page {
   border: 1px solid rgba(224, 242, 254, 0.9);
   background: rgba(224, 242, 254, 0.8);
   color: #1f2937;
-  border-radius: 999px;
-  padding: 3px 18px;
+  border-radius: var(--radius-full);
+  padding: 3px 8px;
   text-align: center;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
-  min-height: 30px;
+  min-height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -457,7 +457,7 @@ page {
 .home-activity {
   padding: 10px 12px;
   border: 1px solid #e5e7eb;
-  border-radius: 18px;
+  border-radius: var(--radius-xl);
   margin-top: 10px;
   background: #ffffff;
 }

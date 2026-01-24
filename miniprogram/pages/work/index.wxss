@@ -24,7 +24,7 @@ page {
   font-weight: 500;
   color: #ffffff;
   background: #3b82f6;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
 }
 
 .result-status {
@@ -60,7 +60,7 @@ page {
   padding: 40px 20px;
   background: #ffffff;
   border: 1px solid #e5e7eb;
-  border-radius: 18px;
+  border-radius: var(--radius-xl);
   margin-bottom: 12px;
 }
 
@@ -82,7 +82,7 @@ page {
   color: #1f2937;
   background: rgba(224, 242, 254, 0.8);
   border: 1px solid rgba(224, 242, 254, 0.9);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
 }
 
 .tabbar-actions {
@@ -100,12 +100,12 @@ page {
   padding: 4px;
   background: #ffffff;
   border: 1px solid #e5e7eb;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
 }
 
 .tab {
   padding: 5px 6px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: rgba(255, 255, 255, 0.55);
   color: #6b7280;
   font-size: 11px;
@@ -135,7 +135,7 @@ page {
 .tabbar-scan {
   padding: 1px 18px;
   font-size: 12px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   white-space: nowrap;
 }
 
@@ -159,7 +159,7 @@ page {
 
 .stat-card {
   border: 1px solid #e5e7eb;
-  border-radius: 18px;
+  border-radius: var(--radius-xl);
   padding: 10px 12px;
   background: #ffffff;
 }
@@ -186,7 +186,7 @@ page {
   border: 1px solid #e5e7eb;
   background: #ffffff;
   color: #111827;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   padding: 8px 8px;
   text-align: center;
   font-size: 12px;
@@ -195,7 +195,7 @@ page {
 .home-activity {
   padding: 10px 12px;
   border: 1px solid #e5e7eb;
-  border-radius: 18px;
+  border-radius: var(--radius-xl);
   margin-top: 10px;
   background: #ffffff;
 }
@@ -332,7 +332,7 @@ page {
   margin-top: 10px;
   padding: 12px;
   border: 1px solid #e5e7eb;
-  border-radius: 18px;
+  border-radius: var(--radius-xl);
   background: #ffffff;
 }
 
@@ -340,7 +340,7 @@ page {
   margin-top: 10px;
   padding: 12px;
   border: 1px solid #e5e7eb;
-  border-radius: 18px;
+  border-radius: var(--radius-xl);
   background: #ffffff;
 }
 
@@ -359,7 +359,7 @@ page {
   padding: 3px 6px;
   background: #ffffff;
   border: 1px solid #e5e7eb;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
@@ -370,7 +370,7 @@ page {
   padding: 3px 10px;
   background: rgba(224, 242, 254, 0.3);
   border: 1px solid rgba(224, 242, 254, 0.5);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
 }
 
 .universal-search .search-icon {
@@ -391,7 +391,7 @@ page {
   color: #1f2937;
   background: rgba(224, 242, 254, 0.8);
   border: 1px solid rgba(224, 242, 254, 0.9);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   box-shadow: 0 2px 6px rgba(59, 130, 246, 0.15);
   white-space: nowrap;
 }
@@ -402,7 +402,7 @@ page {
   color: #6b7280;
   background: #f3f4f6;
   border: 1px solid #e5e7eb;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   white-space: nowrap;
 }
 
@@ -415,9 +415,9 @@ page {
 
 .action-btn {
   padding: 6px 12px;
-  background: linear-gradient(135deg, rgba(224, 242, 254, 0.9) 0%, rgba(224, 242, 254, 0.7) 100%);
+  background: var(--gradient-primary);
   border: 1px solid rgba(147, 197, 253, 0.5);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   font-size: 11px;
   font-weight: 500;
   color: #1f2937;
@@ -449,7 +449,7 @@ page {
   width: 100%;
   max-width: 90vw;
   background: #fff;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
   transform: scale(1);
   animation: modalFadeIn 0.2s ease-out;
@@ -493,7 +493,7 @@ page {
 
 .cf-list {
   background: #f9fafb;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 8px;
   margin-bottom: 10px;
 }
@@ -533,7 +533,7 @@ page {
 
 .bundle-input-item {
   background: #f9fafb;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   padding: 12px;
   margin-bottom: 10px;
   border: 1px solid #e5e7eb;
@@ -565,7 +565,7 @@ page {
   flex: 1;
   background: #fff;
   border: 1px solid #d1d5db;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 8px 12px;
   font-size: 13px;
   height: 36px;
@@ -579,7 +579,7 @@ page {
   color: #ef4444;
   background: #fef2f2;
   border: 1px solid #fecaca;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
 }
 
 .bii-remove:active {
@@ -595,7 +595,7 @@ page {
   color: #3b82f6;
   background: #eff6ff;
   border: 1px dashed #93c5fd;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
 }
 
 .bundle-add-btn:active {
@@ -613,7 +613,7 @@ page {
 .mbtn {
   flex: 1;
   padding: 10px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   text-align: center;
   font-size: 12px;
   font-weight: 500;
@@ -631,7 +631,7 @@ page {
 }
 
 .mbtn.ok {
-  background: linear-gradient(135deg, rgba(224, 242, 254, 0.9) 0%, rgba(224, 242, 254, 0.7) 100%);
+  background: var(--gradient-primary);
   color: #1f2937;
   border: 1px solid rgba(147, 197, 253, 0.5);
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);

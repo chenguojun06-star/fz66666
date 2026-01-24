@@ -11,7 +11,7 @@ page {
 /* ===== 顶部标签栏 ===== */
 .top-bar {
   background: #fff;
-  border-radius: 18px;
+  border-radius: var(--radius-xl);
   padding: 8px;
   margin-bottom: 8px;
   border: 1px solid #e5e7eb;
@@ -24,7 +24,7 @@ page {
   padding: 8px 12px;
   margin-bottom: 8px;
   background: #f9fafb;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   gap: 8px;
 }
 
@@ -39,8 +39,8 @@ page {
   align-items: center;
   justify-content: center;
   padding: 12px;
-  background: linear-gradient(135deg, #e0f2fe 0%, #e0e7ff 100%);
-  border-radius: 12px;
+  background: var(--gradient-primary-solid);
+  border-radius: var(--radius-md);
   gap: 8px;
 }
 
@@ -64,7 +64,7 @@ page {
   flex-direction: column;
   align-items: center;
   padding: 8px 10px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   font-size: 12px;
   color: #6b7280;
   background: rgba(255, 255, 255, 0.6);
@@ -74,7 +74,7 @@ page {
   -webkit-backdrop-filter: blur(8px);
 }
 .tab.on {
-  background: linear-gradient(135deg, rgba(224, 242, 254, 0.9) 0%, rgba(224, 242, 254, 0.7) 100%);
+  background: var(--gradient-primary-alpha);
   color: #1f2937;
   border: 1px solid rgba(147, 197, 253, 0.5);
 }
@@ -105,7 +105,7 @@ page {
   display: flex;
   gap: 8px;
   background: #fff;
-  border-radius: 18px;
+  border-radius: var(--radius-xl);
   padding: 8px;
   margin-bottom: 8px;
   border: 1px solid #e5e7eb;
@@ -119,8 +119,8 @@ page {
   display: flex;
   align-items: center;
   gap: 4px;
-  background: linear-gradient(135deg, #e0f2fe 0%, #e0e7ff 100%);
-  border-radius: 999px;
+  background: var(--gradient-primary-solid);
+  border-radius: var(--radius-full);
   padding: 0 14px;
   height: 34px;
   min-width: 80px;
@@ -142,7 +142,7 @@ page {
 .scan-input {
   flex: 1;
   background: #f9fafb;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   padding: 0 12px;
   height: 34px;
   display: flex;
@@ -162,7 +162,7 @@ page {
   background: rgba(255, 255, 255, 0.6);
   color: #1f2937;
   border: 1px solid rgba(255, 255, 255, 0.7);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   font-size: 14px;
   font-weight: 500;
   box-shadow:
@@ -187,7 +187,7 @@ page {
   display: flex;
   gap: 6px;
   background: #fff;
-  border-radius: 18px;
+  border-radius: var(--radius-xl);
   padding: 8px;
   margin-bottom: 8px;
   border: 1px solid #e5e7eb;
@@ -196,7 +196,7 @@ page {
   flex: 1;
   text-align: center;
   padding: 6px 4px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   font-size: 12px;
   color: #6b7280;
   background: #f3f4f6;
@@ -220,7 +220,7 @@ page {
 /* ===== 次品详情 ===== */
 .defect-box {
   background: #fff7ed;
-  border-radius: 18px;
+  border-radius: var(--radius-xl);
   padding: 10px;
   margin-bottom: 8px;
   border: 1px solid #fed7aa;
@@ -255,7 +255,7 @@ page {
   position: relative;
   width: 40px;
   height: 40px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   overflow: hidden;
 }
 .df-photo image {
@@ -273,13 +273,13 @@ page {
   font-size: 11px;
   text-align: center;
   line-height: 16px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
 }
 .df-add {
   width: 40px;
   height: 40px;
   border: 1px dashed #d1d5db;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -296,7 +296,7 @@ page {
   align-items: center;
   gap: 8px;
   background: #fff;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   padding: 8px 12px;
   margin-bottom: 8px;
   border: 1px solid #e5e7eb;
@@ -312,7 +312,7 @@ page {
 
 /* ===== 扫码结果 ===== */
 .result {
-  border-radius: 18px;
+  border-radius: var(--radius-xl);
   padding: 10px;
   margin-bottom: 8px;
 }
@@ -329,7 +329,7 @@ page {
 }
 .res-tag {
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   font-size: 11px;
   font-weight: 600;
 }
@@ -351,7 +351,7 @@ page {
   background: #fff;
   border: 1px solid #c62828;
   color: #c62828;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   font-size: 11px;
 }
 .res-undo:active {
@@ -376,7 +376,7 @@ page {
   padding: 2px 8px;
   background: rgba(148, 163, 184, 0.18);
   color: #475569;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   font-size: 11px;
 }
 
@@ -411,7 +411,7 @@ page {
 /* ===== 区块通用 ===== */
 .section {
   background: #fff;
-  border-radius: 18px;
+  border-radius: var(--radius-xl);
   padding: 10px;
   margin-bottom: 8px;
   border: 1px solid #e5e7eb;
@@ -433,7 +433,7 @@ page {
   background: rgba(255, 255, 255, 0.72);
   color: #1f2937;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   font-size: 11px;
   margin-left: 4px;
 }
@@ -461,7 +461,7 @@ page {
   text-align: center;
   padding: 8px 4px;
   background: #f5f6f8;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
 }
 .st.hl {
   background: #f3f5f9;
@@ -551,7 +551,7 @@ page {
 .procurement-task-card {
   margin-bottom: 12px;
   background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   border: 1px solid #fed7aa;
   padding: 12px;
 }
@@ -574,7 +574,7 @@ page {
   color: #ea580c;
   padding: 2px 8px;
   background: rgba(255, 255, 255, 0.6);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
 }
 
 .ptc-name {
@@ -597,11 +597,11 @@ page {
 
 .ptc-btn {
   padding: 6px 16px;
-  background: linear-gradient(135deg, rgba(224, 242, 254, 0.9) 0%, rgba(224, 242, 254, 0.7) 100%);
+  background: var(--gradient-primary-alpha);
   color: #1f2937;
   font-size: 12px;
   font-weight: 600;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   border: 1px solid rgba(147, 197, 253, 0.5);
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
 }
@@ -615,7 +615,7 @@ page {
 .hist-group {
   margin-bottom: 12px;
   background: #ffffff;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   border: 1px solid #e5e7eb;
   overflow: hidden;
 }
@@ -712,7 +712,7 @@ page {
   padding: 10px;
   margin-bottom: 8px;
   background: #f9fafb;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   border: 1px solid #e5e7eb;
 }
 
@@ -794,7 +794,7 @@ page {
   width: 100%;
   max-width: 300px;
   background: #fff;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
   transform: scale(1);
   animation: modalFadeIn 0.2s ease-out;
@@ -831,7 +831,7 @@ page {
   float: right;
   padding: 2px 8px;
   background: rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   font-size: 12px;
 }
 .modal-body {
@@ -843,7 +843,7 @@ page {
 }
 .cf-list {
   background: #f9fafb;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 8px;
   margin-bottom: 10px;
 }
@@ -865,7 +865,7 @@ page {
   width: 100%;
   height: 40px;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 0 12px;
   font-size: 14px;
   box-sizing: border-box;
@@ -893,7 +893,7 @@ page {
   flex: 1;
   text-align: center;
   padding: 8px 4px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   font-size: 12px;
   color: #6b7280;
   background: #f3f4f6;
@@ -919,7 +919,7 @@ page {
 .defect-modal-box {
   margin-top: 10px;
   background: #fff7ed;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   padding: 10px;
   border: 1px solid #fed7aa;
 }
@@ -937,7 +937,7 @@ page {
   gap: 12px;
   padding: 10px 12px;
   background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   margin-bottom: 10px;
   border-left: 3px solid #3b82f6;
 }
@@ -963,7 +963,7 @@ page {
 
 .purchase-modal-item {
   background: #f9fafb;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   padding: 12px;
   margin-bottom: 10px;
   border: 1px solid #e5e7eb;
@@ -993,7 +993,7 @@ page {
   color: #9ca3af;
   background: #f3f4f6;
   padding: 2px 8px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
 }
 
 .pmi-row {
@@ -1028,7 +1028,7 @@ page {
   flex: 1;
   background: #fff;
   border: 1px solid #d1d5db;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 6px 10px;
   font-size: 12px;
   height: 32px;
@@ -1095,7 +1095,7 @@ page {
 .mbtn {
   flex: 1;
   padding: 10px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   text-align: center;
   font-size: 12px;
   font-weight: 500;
@@ -1110,7 +1110,7 @@ page {
   border: 1px solid rgba(229, 231, 235, 0.8);
 }
 .mbtn.ok {
-  background: linear-gradient(135deg, rgba(224, 242, 254, 0.9) 0%, rgba(224, 242, 254, 0.7) 100%);
+  background: var(--gradient-primary-alpha);
   color: #1f2937;
   border: 1px solid rgba(147, 197, 253, 0.5);
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
@@ -1138,7 +1138,7 @@ page {
   transform: translate(-50%, -50%);
   z-index: 1000;
   background: #fff;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   max-width: 90vw;
   width: auto;
@@ -1196,7 +1196,7 @@ page {
 .modal-btn {
   flex: 1;
   height: 40px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   font-size: 12px;
   border: none;
   font-weight: 500;
@@ -1214,7 +1214,7 @@ page {
 }
 
 .modal-btn.confirm {
-  background: linear-gradient(135deg, rgba(224, 242, 254, 0.9) 0%, rgba(224, 242, 254, 0.7) 100%);
+  background: var(--gradient-primary-alpha);
   color: #1f2937;
   border: 1px solid rgba(147, 197, 253, 0.5);
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
@@ -1272,7 +1272,7 @@ page {
   gap: 6px;
   padding: 8px;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   font-size: 12px;
   color: #666;
   background: #fff;
@@ -1462,7 +1462,7 @@ page {
 .pm-item {
   padding: 12px;
   background: #f9fafb;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   border: 1px solid #e5e7eb;
 }
 
@@ -1562,7 +1562,7 @@ page {
 .pm-item {
   padding: 12px;
   background: #f9fafb;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   border: 1px solid #e5e7eb;
 }
 

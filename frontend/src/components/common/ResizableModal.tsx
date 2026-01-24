@@ -62,7 +62,7 @@ export const useResizableModalTableScrollY = <T extends HTMLElement>(args: {
   offset?: number;
   minY?: number;
   defaultY?: number;
-  watch?: any[];
+  watch?: unknown[];
 }) => {
   const { open, ref, offset = 56, minY = 180, defaultY = 320, watch = [] } = args;
   const [scrollY, setScrollY] = React.useState<number>(defaultY);
@@ -386,6 +386,8 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
       try {
         stopResize();
       } catch {
+    // Intentionally empty
+      // 忽略错误
       }
     };
   }, [stopResize]);
@@ -402,13 +404,13 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
       styles={{
         ...styles,
         body: {
-          ...(styles as any)?.body,
+          ...(styles as Record<string, unknown>)?.body,
           overflow: 'auto',
           minHeight: 0,
         },
       }}
       modalRender={(modal) => {
-        const element = modal as React.ReactElement<any>;
+        const element = modal as React.ReactElement<unknown>;
         return (
           <div
             data-resizable-modal-root

@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Button, Table, Modal, Tag, Space, Input, App } from 'antd';
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
+import SortableColumnTitle from '../../components/common/SortableColumnTitle';
 import Layout from '../../components/Layout';
 import api from '../../utils/api';
 import errorHandler from '../../utils/errorHandler';
@@ -30,6 +31,13 @@ const OrderTransferPage: React.FC = () => {
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
   const [selectedTransfer, setSelectedTransfer] = useState<OrderTransfer | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [sortField, setSortField] = useState<string>('createdTime');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  const handleSort = (field: string, order: 'asc' | 'desc') => {
+    setSortField(field);
+    setSortOrder(order);
+  };
 
   const fetchTransfers = async () => {
     setLoading(true);
@@ -37,7 +45,7 @@ const OrderTransferPage: React.FC = () => {
       const response = await api.get('/production/order/transfer/received', {
         params: { page: 1, pageSize: 100 }
       });
-      const result = response as any;
+      const result = response as Record<string, unknown>;
       if (result.code === 200) {
         setTransfers(result.data?.records || []);
       } else {
@@ -61,7 +69,7 @@ const OrderTransferPage: React.FC = () => {
       onOk: async () => {
         try {
           const response = await api.post(`/production/order/transfer/accept/${transfer.id}`, {});
-          const result = response as any;
+          const result = response as Record<string, unknown>;
           if (result.code === 200) {
             message.success('已接受转移');
             fetchTransfers();
@@ -81,6 +89,25 @@ const OrderTransferPage: React.FC = () => {
     setRejectModalVisible(true);
   };
 
+  // 添加排序逻辑
+  const sortedTransfers = useMemo(() => {
+    const sorted = [...transfers];
+    sorted.sort((a: OrderTransfer, b: OrderTransfer) => {
+      const aVal = a[sortField as keyof OrderTransfer];
+      const bVal = b[sortField as keyof OrderTransfer];
+
+      // 时间字段排序
+      if (sortField === 'createdTime' || sortField === 'handledTime') {
+        const aTime = aVal ? new Date(aVal as string).getTime() : 0;
+        const bTime = bVal ? new Date(bVal as string).getTime() : 0;
+        return sortOrder === 'desc' ? bTime - aTime : aTime - bTime;
+      }
+
+      return 0;
+    });
+    return sorted;
+  }, [transfers, sortField, sortOrder]);
+
   const submitReject = async () => {
     if (!rejectReason.trim()) {
       message.warning('请输入拒绝原因');
@@ -91,7 +118,7 @@ const OrderTransferPage: React.FC = () => {
       const response = await api.post(`/production/order/transfer/reject/${selectedTransfer!.id}`, {
         rejectReason: rejectReason.trim()
       });
-      const result = response as any;
+      const result = response as Record<string, unknown>;
       if (result.code === 200) {
         message.success('已拒绝转移');
         setRejectModalVisible(false);
@@ -143,13 +170,27 @@ const OrderTransferPage: React.FC = () => {
       render: (status: string) => getStatusTag(status),
     },
     {
-      title: '创建时间',
+      title: <SortableColumnTitle
+        title="创建时间"
+        sortField={sortField}
+        fieldName="createdTime"
+        sortOrder={sortOrder}
+        onSort={handleSort}
+        align="left"
+      />,
       dataIndex: 'createdTime',
       key: 'createdTime',
       width: 180,
     },
     {
-      title: '处理时间',
+      title: <SortableColumnTitle
+        title="处理时间"
+        sortField={sortField}
+        fieldName="handledTime"
+        sortOrder={sortOrder}
+        onSort={handleSort}
+        align="left"
+      />,
       dataIndex: 'handledTime',
       key: 'handledTime',
       width: 180,
@@ -200,7 +241,7 @@ const OrderTransferPage: React.FC = () => {
 
         <Table
           columns={columns}
-          dataSource={transfers}
+          dataSource={sortedTransfers}
           rowKey="id"
           loading={loading}
           pagination={{

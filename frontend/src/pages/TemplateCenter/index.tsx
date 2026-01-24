@@ -81,15 +81,15 @@ const TemplateCenter: React.FC = () => {
   const [editOpen, setEditOpen] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
   const [editingRow, setEditingRow] = useState<TemplateLibrary | null>(null);
-  const [editTableData, setEditTableData] = useState<any>(null);
+  const [editTableData, setEditTableData] = useState<unknown>(null);
   const [activeRow, setActiveRow] = useState<TemplateLibrary | null>(null);
   const [viewContent, setViewContent] = useState<string>('');
-  const [viewObj, setViewObj] = useState<any>(null);
+  const [viewObj, setViewObj] = useState<unknown>(null);
 
   const isAdminUser = useMemo(() => isAdminUserFn(user), [user]);
 
   const isLocked = (row?: TemplateLibrary | null) => {
-    const v = Number((row as any)?.locked);
+    const v = Number((row as Record<string, unknown>)?.locked);
     return Number.isFinite(v) && v === 1;
   };
 
@@ -98,7 +98,7 @@ const TemplateCenter: React.FC = () => {
     if (!text) return [];
     try {
       const obj = JSON.parse(text);
-      const nodesRaw = (obj as any)?.nodes;
+      const nodesRaw = (obj as Record<string, unknown>)?.nodes;
       if (!Array.isArray(nodesRaw)) return [];
       return nodesRaw
         .map((n: any) => {
@@ -109,6 +109,8 @@ const TemplateCenter: React.FC = () => {
         })
         .filter((n: any) => n.name);
     } catch {
+    // Intentionally empty
+      // 忽略错误
       return [];
     }
   };
@@ -118,7 +120,7 @@ const TemplateCenter: React.FC = () => {
     if (!text) return [];
     try {
       const obj = JSON.parse(text);
-      const stepsRaw = (obj as any)?.steps;
+      const stepsRaw = (obj as Record<string, unknown>)?.steps;
       if (!Array.isArray(stepsRaw)) return [];
       return stepsRaw
         .map((s: any) => {
@@ -131,11 +133,13 @@ const TemplateCenter: React.FC = () => {
         })
         .filter((s: any) => s.processName);
     } catch {
+    // Intentionally empty
+      // 忽略错误
       return [];
     }
   };
 
-  const normalizeStageName = (v: any) => String(v ?? '').trim().replace(/\s+/g, '');
+  const normalizeStageName = (v: unknown) => String(v ?? '').trim().replace(/\s+/g, '');
 
   const isProductionStage = (name: string) => {
     const n = normalizeStageName(name);
@@ -198,7 +202,7 @@ const TemplateCenter: React.FC = () => {
     if (!sn) return { tpl: null as TemplateLibrary | null, steps: [] as Array<{ processName: string; unitPrice: number; estimatedMinutes?: number }> };
     try {
       // 1. 尝试从 process_price 模板读取
-      const res = await api.get<any>('/template-library/list', {
+      const res = await api.get<{ code: number; data: PageResp<TemplateLibrary> }>('/template-library/list', {
         params: {
           page: 1,
           pageSize: 50,
@@ -207,12 +211,11 @@ const TemplateCenter: React.FC = () => {
           keyword: '',
         },
       });
-      const result = res as any;
       let tpl: TemplateLibrary | null = null;
       let templateSteps: Array<{ processName: string; unitPrice: number; estimatedMinutes?: number }> = [];
 
-      if (result.code === 200) {
-        const records = Array.isArray(result.data?.records) ? (result.data.records as TemplateLibrary[]) : [];
+      if (res.code === 200) {
+        const records = Array.isArray(res.data?.records) ? (res.data.records as TemplateLibrary[]) : [];
         const list = [...records];
         const expectedKey = `style_${sn}`;
         const picked = list.find((t) => String(t?.templateKey || '').trim() === expectedKey) || list[0] || null;
@@ -220,12 +223,13 @@ const TemplateCenter: React.FC = () => {
           tpl = picked;
           let content = String(picked.templateContent ?? '');
           try {
-            const det = await api.get<any>(`/template-library/${picked.id}`);
-            const detRes = det as any;
-            if (detRes.code === 200) {
-              content = String((detRes.data as any)?.templateContent ?? content);
+            const det = await api.get<{ code: number; data: TemplateLibrary }>(`/template-library/${picked.id}`);
+            if (det.code === 200) {
+              content = String(det.data?.templateContent ?? content);
             }
           } catch {
+    // Intentionally empty
+      // 忽略错误
           }
           templateSteps = parseProcessPriceSteps(content);
         }
@@ -235,18 +239,16 @@ const TemplateCenter: React.FC = () => {
       let processSteps: Array<{ processName: string; unitPrice: number; estimatedMinutes?: number }> = [];
       try {
         // 先获取款号ID
-        const styleRes = await api.get<any>('/style/info/list', {
+        const styleRes = await api.get<{ code: number; data: { records: Array<{ id: string }> } }>('/style/info/list', {
           params: { page: 1, pageSize: 1, styleNo: sn },
         });
-        const styleResult = styleRes as any;
-        if (styleResult.code === 200 && styleResult.data?.records?.length > 0) {
-          const styleId = styleResult.data.records[0].id;
-          const procRes = await api.get<any>('/style/process/list', {
+        if (styleRes.code === 200 && styleRes.data?.records?.length > 0) {
+          const styleId = styleRes.data.records[0].id;
+          const procRes = await api.get<{ code: number; data: Array<{ processName: string; price: number }> }>('/style/process/list', {
             params: { styleId },
           });
-          const procResult = procRes as any;
-          if (procResult.code === 200 && Array.isArray(procResult.data)) {
-            processSteps = procResult.data.map((p: any) => ({
+          if (procRes.code === 200 && Array.isArray(procRes.data)) {
+            processSteps = procRes.data.map((p: any) => ({
               processName: String(p?.processName || '').trim(),
               unitPrice: Number(p?.price) || 0,
               estimatedMinutes: 0,
@@ -254,6 +256,8 @@ const TemplateCenter: React.FC = () => {
           }
         }
       } catch {
+    // Intentionally empty
+      // 忽略错误
       }
 
       // 3. 合并数据：优先使用 t_style_process 的单价，回退到模板
@@ -261,6 +265,8 @@ const TemplateCenter: React.FC = () => {
 
       return { tpl, steps };
     } catch {
+    // Intentionally empty
+      // 忽略错误
       return { tpl: null, steps: [] };
     }
   };
@@ -315,12 +321,13 @@ const TemplateCenter: React.FC = () => {
     let content = String(row?.templateContent ?? '');
     if (row?.id) {
       try {
-        const res = await api.get<any>(`/template-library/${row.id}`);
-        const result = res as any;
-        if (result.code === 200) {
-          content = String((result.data as any)?.templateContent ?? content);
+        const res = await api.get<{ code: number; data: TemplateLibrary }>(`/template-library/${row.id}`);
+        if (res.code === 200) {
+          content = String(res.data?.templateContent ?? content);
         }
       } catch {
+    // Intentionally empty
+      // 忽略错误
       }
     }
 
@@ -388,13 +395,13 @@ const TemplateCenter: React.FC = () => {
         return;
       }
 
-      const priceStepsRaw = Array.isArray((v as any)?.priceSteps) ? ((v as any).priceSteps as ProcessPriceStepInput[]) : [];
+      const priceStepsRaw = Array.isArray((v as Record<string, unknown>)?.priceSteps) ? ((v as Record<string, unknown>).priceSteps as ProcessPriceStepInput[]) : [];
       const priceSteps = priceStepsRaw
         .map((s) => {
-          const processName = String((s as any)?.processName || '').trim();
-          const p = Number((s as any)?.unitPrice);
+          const processName = String((s as Record<string, unknown>)?.processName || '').trim();
+          const p = Number((s as Record<string, unknown>)?.unitPrice);
           const unitPrice = Number.isFinite(p) && p >= 0 ? p : 0;
-          const m = Number((s as any)?.estimatedMinutes);
+          const m = Number((s as Record<string, unknown>)?.estimatedMinutes);
           const estimatedMinutes = Number.isFinite(m) && m > 0 ? m : undefined;
           return { processName, unitPrice, estimatedMinutes };
         })
@@ -435,7 +442,7 @@ const TemplateCenter: React.FC = () => {
           }))
         });
         if (processPriceEditing?.id) {
-          const res = await api.put<any>('/template-library', {
+          const res = await api.put<{ code: number; message: string }>('/template-library', {
             id: processPriceEditing.id,
             templateType: 'process_price',
             templateKey: tplKey,
@@ -443,16 +450,15 @@ const TemplateCenter: React.FC = () => {
             sourceStyleNo: sn,
             templateContent: tplContent,
           });
-          const result = res as any;
-          if (result.code !== 200) {
-            throw new Error(result.message || '保存单价工序库失败');
+          if (res.code !== 200) {
+            throw new Error(res.message || '保存单价工序库失败');
           }
           return;
         }
         const existed = await loadProcessPriceForStyle(sn);
         if (existed.tpl?.id) {
           setProcessPriceEditing(existed.tpl);
-          const res = await api.put<any>('/template-library', {
+          const res = await api.put<{ code: number; message: string }>('/template-library', {
             id: existed.tpl.id,
             templateType: 'process_price',
             templateKey: tplKey,
@@ -460,22 +466,20 @@ const TemplateCenter: React.FC = () => {
             sourceStyleNo: sn,
             templateContent: tplContent,
           });
-          const result = res as any;
-          if (result.code !== 200) {
-            throw new Error(result.message || '保存单价工序库失败');
+          if (res.code !== 200) {
+            throw new Error(res.message || '保存单价工序库失败');
           }
           return;
         }
-        const res = await api.post<any>('/template-library', {
+        const res = await api.post<{ code: number; message: string }>('/template-library', {
           templateType: 'process_price',
           templateKey: tplKey,
           templateName: tplName,
           sourceStyleNo: sn,
           templateContent: tplContent,
         });
-        const result = res as any;
-        if (result.code !== 200) {
-          throw new Error(result.message || '保存单价工序库失败');
+        if (res.code !== 200) {
+          throw new Error(res.message || '保存单价工序库失败');
         }
       };
 
@@ -496,7 +500,7 @@ const TemplateCenter: React.FC = () => {
             unitPrice: s.unitPrice,
           }))
         });
-        const res = await api.put<any>('/template-library', {
+        const res = await api.put<{ code: number; message: string }>('/template-library', {
           id: progressEditing.id,
           templateType: 'process_price',
           templateKey,
@@ -504,9 +508,8 @@ const TemplateCenter: React.FC = () => {
           sourceStyleNo: sourceStyleNo || null,
           templateContent: tplContent,
         });
-        const result = res as any;
-        if (result.code !== 200) {
-          message.error(result.message || '保存失败');
+        if (res.code !== 200) {
+          message.error(res.message || '保存失败');
           return;
         }
         message.success('已保存并锁定');
@@ -514,7 +517,7 @@ const TemplateCenter: React.FC = () => {
         // 如果编辑的是进度单价模板，保存 nodes 并同时保存工序单价库
         await saveProcessPriceTemplate();
         if (progressEditing?.id) {
-          const res = await api.put<any>('/template-library', {
+          const res = await api.put<{ code: number; message: string }>('/template-library', {
             id: progressEditing.id,
             templateType: 'progress',
             templateKey,
@@ -522,23 +525,21 @@ const TemplateCenter: React.FC = () => {
             sourceStyleNo: sourceStyleNo || null,
             templateContent,
           });
-          const result = res as any;
-          if (result.code !== 200) {
-            message.error(result.message || '保存失败');
+          if (res.code !== 200) {
+            message.error(res.message || '保存失败');
             return;
           }
           message.success('已保存并锁定');
         } else {
-          const res = await api.post<any>('/template-library', {
+          const res = await api.post<{ code: number; message: string }>('/template-library', {
             templateType: 'progress',
             templateKey,
             templateName,
             sourceStyleNo: sourceStyleNo || null,
             templateContent,
           });
-          const result = res as any;
-          if (result.code !== 200) {
-            message.error(result.message || '保存失败');
+          if (res.code !== 200) {
+            message.error(res.message || '保存失败');
             return;
           }
           message.success('已创建并锁定');
@@ -548,7 +549,7 @@ const TemplateCenter: React.FC = () => {
       setProgressOpen(false);
       setProgressEditing(null);
       fetchList({ page: 1 });
-    } catch (e: any) {
+    } catch (e: unknown) {
       if (e?.errorFields) return;
       message.error(e?.message || '保存失败');
     } finally {
@@ -561,12 +562,13 @@ const TemplateCenter: React.FC = () => {
     let latestRow = row;
     if (row?.id) {
       try {
-        const res = await api.get<any>(`/template-library/${row.id}`);
-        const result = res as any;
-        if (result.code === 200 && result.data) {
-          latestRow = result.data as TemplateLibrary;
+        const res = await api.get<{ code: number; data: TemplateLibrary }>(`/template-library/${row.id}`);
+        if (res.code === 200 && res.data) {
+          latestRow = res.data as TemplateLibrary;
         }
       } catch {
+    // Intentionally empty
+      // 忽略错误
       }
     }
 
@@ -586,12 +588,13 @@ const TemplateCenter: React.FC = () => {
     let content = String(row?.templateContent ?? '');
     if (row?.id) {
       try {
-        const res = await api.get<any>(`/template-library/${row.id}`);
-        const result = res as any;
-        if (result.code === 200) {
-          content = String((result.data as any)?.templateContent ?? content);
+        const res = await api.get<{ code: number; data: TemplateLibrary }>(`/template-library/${row.id}`);
+        if (res.code === 200) {
+          content = String(res.data?.templateContent ?? content);
         }
       } catch {
+    // Intentionally empty
+      // 忽略错误
       }
     }
 
@@ -600,6 +603,8 @@ const TemplateCenter: React.FC = () => {
       const parsed = JSON.parse(content);
       setEditTableData(parsed);
     } catch {
+    // Intentionally empty
+      // 忽略错误
       setEditTableData(null);
     }
 
@@ -650,10 +655,9 @@ const TemplateCenter: React.FC = () => {
         templateContent,
       };
 
-      const res = await api.put<any>(`/template-library/${editingRow?.id}`, body);
-      const result = res as any;
-      if (result.code !== 200) {
-        message.error(result.message || '更新失败');
+      const res = await api.put<{ code: number; message: string }>(`/template-library/${editingRow?.id}`, body);
+      if (res.code !== 200) {
+        message.error(res.message || '更新失败');
         return;
       }
 
@@ -662,7 +666,7 @@ const TemplateCenter: React.FC = () => {
       setEditingRow(null);
       setEditTableData(null);
       fetchList({ page: 1 });
-    } catch (e: any) {
+    } catch (e: unknown) {
       if (e?.errorFields) return;
       message.error(e?.message || '更新失败');
     } finally {
@@ -703,10 +707,9 @@ const TemplateCenter: React.FC = () => {
           message.error('请输入退回原因');
           return Promise.reject(new Error('请输入退回原因'));
         }
-        const res = await api.post<any>(`/template-library/${row.id}/rollback`, { reason: remark });
-        const result = res as any;
-        if (result.code !== 200) {
-          message.error(result.message || '退回失败');
+        const res = await api.post<{ code: number; message: string }>(`/template-library/${row.id}/rollback`, { reason: remark });
+        if (res.code !== 200) {
+          message.error(res.message || '退回失败');
           return;
         }
         message.success('已退回，可修改');
@@ -719,23 +722,24 @@ const TemplateCenter: React.FC = () => {
     const seq = (styleNoReqSeq.current += 1);
     setStyleNoLoading(true);
     try {
-      const res = await api.get<any>('/style/info/list', {
+      const res = await api.get<{ code: number; data: { records: Array<{ styleNo: string }> } }>('/style/info/list', {
         params: {
           page: 1,
           pageSize: 200,
           styleNo: String(keyword ?? '').trim(),
         },
       });
-      const result = res as any;
       if (seq !== styleNoReqSeq.current) return;
-      if (result.code !== 200) return;
-      const records = (result.data?.records || []) as Array<any>;
+      if (res.code !== 200) return;
+      const records = (res.data?.records || []) as Array<unknown>;
       const next = (Array.isArray(records) ? records : [])
         .map((r) => String(r?.styleNo || '').trim())
         .filter(Boolean)
         .map((sn) => ({ value: sn, label: sn }));
       setStyleNoOptions(next);
     } catch {
+    // Intentionally empty
+      // 忽略错误
     } finally {
       if (seq === styleNoReqSeq.current) setStyleNoLoading(false);
     }
@@ -756,7 +760,7 @@ const TemplateCenter: React.FC = () => {
     setLoading(true);
     try {
       const v = queryForm.getFieldsValue();
-      const res = await api.get<any>('/template-library/list', {
+      const res = await api.get<{ code: number; message: string; data: PageResp<TemplateLibrary> }>('/template-library/list', {
         params: {
           page: p,
           pageSize: ps,
@@ -765,17 +769,16 @@ const TemplateCenter: React.FC = () => {
           sourceStyleNo: v.sourceStyleNo || '',
         },
       });
-      const result = res as any;
-      if (result.code !== 200) {
-        message.error(result.message || '获取模板列表失败');
+      if (res.code !== 200) {
+        message.error(res.message || '获取模板列表失败');
         return;
       }
-      const pageData: PageResp<TemplateLibrary> = result.data || { records: [], total: 0 };
+      const pageData: PageResp<TemplateLibrary> = res.data || { records: [], total: 0 };
       setData(Array.isArray(pageData.records) ? pageData.records : []);
       setTotal(Number(pageData.total || 0));
       setPage(p);
       setPageSize(ps);
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(e?.message || '获取模板列表失败');
     } finally {
       setLoading(false);
@@ -809,19 +812,18 @@ const TemplateCenter: React.FC = () => {
       }
       const templateTypes = Array.isArray(v.templateTypes) ? v.templateTypes : [];
 
-      const res = await api.post<any>('/template-library/create-from-style', {
+      const res = await api.post<{ code: number; message: string }>('/template-library/create-from-style', {
         sourceStyleNo,
         templateTypes,
       });
-      const result = res as any;
-      if (result.code !== 200) {
-        message.error(result.message || '生成模板失败');
+      if (res.code !== 200) {
+        message.error(res.message || '生成模板失败');
         return;
       }
       message.success('模板已生成/更新');
       setCreateOpen(false);
       fetchList({ page: 1 });
-    } catch (e: any) {
+    } catch (e: unknown) {
       if (e?.errorFields) return;
       message.error(e?.message || '生成模板失败');
     }
@@ -844,19 +846,18 @@ const TemplateCenter: React.FC = () => {
         message.error('请输入目标款号');
         return;
       }
-      const res = await api.post<any>('/template-library/apply-to-style', {
+      const res = await api.post<{ code: number; message: string }>('/template-library/apply-to-style', {
         templateId: activeRow.id,
         targetStyleNo,
         mode: v.mode,
       });
-      const result = res as any;
-      if (result.code !== 200) {
-        message.error(result.message || '导入失败');
+      if (res.code !== 200) {
+        message.error(res.message || '导入失败');
         return;
       }
       message.success('已套用到目标款号');
       setApplyOpen(false);
-    } catch (e: any) {
+    } catch (e: unknown) {
       if (e?.errorFields) return;
       message.error(e?.message || '套用失败');
     }
@@ -869,22 +870,23 @@ const TemplateCenter: React.FC = () => {
     setViewOpen(true);
     if (!row?.id) return;
     try {
-      const res = await api.get<any>(`/template-library/${row.id}`);
-      const result = res as any;
-      if (result.code !== 200) {
-        message.error(result.message || '获取模板失败');
+      const res = await api.get<{ code: number; message: string; data: TemplateLibrary }>(`/template-library/${row.id}`);
+      if (res.code !== 200) {
+        message.error(res.message || '获取模板失败');
         return;
       }
-      const tpl: TemplateLibrary = result.data;
+      const tpl: TemplateLibrary = res.data;
       const raw = String(tpl?.templateContent ?? '');
       try {
         const obj = JSON.parse(raw);
         setViewObj(obj);
         setViewContent(JSON.stringify(obj, null, 2));
       } catch {
+    // Intentionally empty
+      // 忽略错误
         setViewContent(raw);
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(e?.message || '获取模板失败');
     }
   };
@@ -902,7 +904,7 @@ const TemplateCenter: React.FC = () => {
     }
 
     if (t === 'progress') {
-      const nodes = Array.isArray((obj as any)?.nodes) ? (obj as any).nodes : [];
+      const nodes = Array.isArray((obj as Record<string, unknown>)?.nodes) ? (obj as Record<string, unknown>).nodes : [];
       return (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           <div style={{ border: '1px solid #d9d9d9', padding: 8, borderRadius: 4 }}>
@@ -925,7 +927,7 @@ const TemplateCenter: React.FC = () => {
                   <span style={{ fontWeight: 500 }}>¥ {Number(n?.unitPrice || 0).toFixed(2)}</span>
                 </div>
               ))}
-              {nodes.filter((n: any) => n?.unitPrice != null && n.unitPrice !== 0).length === 0 && 
+              {nodes.filter((n: any) => n?.unitPrice != null && n.unitPrice !== 0).length === 0 &&
                 <div style={{ padding: 12, textAlign: 'center', color: '#999' }}>暂无单价数据</div>
               }
             </div>
@@ -935,7 +937,7 @@ const TemplateCenter: React.FC = () => {
     }
 
     if (t === 'process' || t === 'process_price') {
-      const steps = Array.isArray((obj as any)?.steps) ? (obj as any).steps : [];
+      const steps = Array.isArray((obj as Record<string, unknown>)?.steps) ? (obj as Record<string, unknown>).steps : [];
       const unitField = t === 'process_price' ? 'unitPrice' : 'price';
       return (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -975,7 +977,7 @@ const TemplateCenter: React.FC = () => {
               {steps.filter((s: any) => {
                 const price = s?.[unitField];
                 return price != null && price !== 0;
-              }).length === 0 && 
+              }).length === 0 &&
                 <div style={{ padding: 12, textAlign: 'center', color: '#999' }}>暂无价格数据</div>
               }
             </div>
@@ -985,26 +987,26 @@ const TemplateCenter: React.FC = () => {
     }
 
     if (t === 'bom') {
-      const rows = Array.isArray((obj as any)?.rows) ? (obj as any).rows : [];
+      const rows = Array.isArray((obj as Record<string, unknown>)?.rows) ? (obj as Record<string, unknown>).rows : [];
       return (
         <Table
           size="small"
-          rowKey={(r: any) => String(r?.materialCode || r?.materialName || '')}
+          rowKey={(r: Record<string, unknown>) => String(r?.materialCode || r?.materialName || '')}
           pagination={false}
           scroll={{ x: 'max-content', y: 520 }}
           columns={[
-            { title: '类型', dataIndex: 'materialType', key: 'materialType', width: 140, render: (v: any) => getMaterialTypeLabel(v) },
-            { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 180, ellipsis: true, render: (v: any) => String(v || '-') },
-            { title: '颜色', dataIndex: 'color', key: 'color', width: 110, render: (v: any) => String(v || '-') },
-            { title: '规格', dataIndex: 'specification', key: 'specification', width: 160, ellipsis: true, render: (v: any) => String(v || '-') },
-            { title: '单位', dataIndex: 'unit', key: 'unit', width: 90, render: (v: any) => String(v || '-') },
+            { title: '类型', dataIndex: 'materialType', key: 'materialType', width: 140, render: (v: unknown) => getMaterialTypeLabel(v) },
+            { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 180, ellipsis: true, render: (v: unknown) => String(v || '-') },
+            { title: '颜色', dataIndex: 'color', key: 'color', width: 110, render: (v: unknown) => String(v || '-') },
+            { title: '规格', dataIndex: 'specification', key: 'specification', width: 160, ellipsis: true, render: (v: unknown) => String(v || '-') },
+            { title: '单位', dataIndex: 'unit', key: 'unit', width: 90, render: (v: unknown) => String(v || '-') },
             {
               title: '单件用量',
               dataIndex: 'usageAmount',
               key: 'usageAmount',
               width: 110,
               align: 'right',
-              render: (v: any) => {
+              render: (v: unknown) => {
                 const n = typeof v === 'number' ? v : Number(v);
                 return Number.isFinite(n) ? n : '-';
               },
@@ -1015,7 +1017,7 @@ const TemplateCenter: React.FC = () => {
               key: 'lossRate',
               width: 110,
               align: 'right',
-              render: (v: any) => {
+              render: (v: unknown) => {
                 const n = typeof v === 'number' ? v : Number(v);
                 return Number.isFinite(n) ? n : '-';
               },
@@ -1026,12 +1028,12 @@ const TemplateCenter: React.FC = () => {
               key: 'unitPrice',
               width: 110,
               align: 'right',
-              render: (v: any) => {
+              render: (v: unknown) => {
                 const n = typeof v === 'number' ? v : Number(v);
                 return Number.isFinite(n) ? n.toFixed(2) : '-';
               },
             },
-            { title: '供应商', dataIndex: 'supplier', key: 'supplier', width: 160, ellipsis: true, render: (v: any) => String(v || '-') },
+            { title: '供应商', dataIndex: 'supplier', key: 'supplier', width: 160, ellipsis: true, render: (v: unknown) => String(v || '-') },
           ]}
           dataSource={rows}
         />
@@ -1039,32 +1041,32 @@ const TemplateCenter: React.FC = () => {
     }
 
     if (t === 'size') {
-      const sizes = Array.isArray((obj as any)?.sizes) ? (obj as any).sizes.map((s: any) => String(s || '').trim()).filter(Boolean) : [];
-      const parts = Array.isArray((obj as any)?.parts) ? (obj as any).parts : [];
+      const sizes = Array.isArray((obj as Record<string, unknown>)?.sizes) ? (obj as Record<string, unknown>).sizes.map((s: any) => String(s || '').trim()).filter(Boolean) : [];
+      const parts = Array.isArray((obj as Record<string, unknown>)?.parts) ? (obj as Record<string, unknown>).parts : [];
 
-      const baseCols: any[] = [
-        { title: '部位', dataIndex: 'partName', key: 'partName', width: 160, render: (v: any) => String(v || '-') },
-        { title: '测量方式', dataIndex: 'measureMethod', key: 'measureMethod', width: 140, render: (v: any) => String(v || '-') },
+      const baseCols: unknown[] = [
+        { title: '部位', dataIndex: 'partName', key: 'partName', width: 160, render: (v: unknown) => String(v || '-') },
+        { title: '测量方式', dataIndex: 'measureMethod', key: 'measureMethod', width: 140, render: (v: unknown) => String(v || '-') },
         {
           title: '公差',
           dataIndex: 'tolerance',
           key: 'tolerance',
           width: 100,
           align: 'right',
-          render: (v: any) => {
+          render: (v: unknown) => {
             const n = typeof v === 'number' ? v : Number(v);
             return Number.isFinite(n) ? n : '-';
           },
         },
       ];
 
-      const sizeCols: any[] = sizes.map((sz: string) => ({
+      const sizeCols: unknown[] = sizes.map((sz: string) => ({
         title: sz,
         dataIndex: ['values', sz],
         key: `size_${sz}`,
         width: 110,
         align: 'right',
-        render: (v: any) => {
+        render: (v: unknown) => {
           const n = typeof v === 'number' ? v : Number(v);
           return Number.isFinite(n) ? n : '-';
         },
@@ -1073,7 +1075,7 @@ const TemplateCenter: React.FC = () => {
       return (
         <Table
           size="small"
-          rowKey={(r: any) => String(r?.partName || '')}
+          rowKey={(r: Record<string, unknown>) => String(r?.partName || '')}
           pagination={false}
           scroll={{ x: 'max-content', y: 520 }}
           columns={[...baseCols, ...sizeCols]}
@@ -1099,15 +1101,14 @@ const TemplateCenter: React.FC = () => {
       cancelText: '取消',
       onOk: async () => {
         try {
-          const res = await api.delete<any>(`/template-library/${row.id}`);
-          const result = res as any;
-          if (result.code !== 200) {
-            message.error(result.message || '删除失败');
+          const res = await api.delete<{ code: number; message: string }>(`/template-library/${row.id}`);
+          if (res.code !== 200) {
+            message.error(res.message || '删除失败');
             return;
           }
           message.success('已删除');
           fetchList({ page: 1 });
-        } catch (e: any) {
+        } catch (e: unknown) {
           message.error(e?.message || '删除失败');
         }
       },
@@ -1233,7 +1234,7 @@ const TemplateCenter: React.FC = () => {
                 onClick: () => openView(row),
                 primary: true,
               },
-              { ...(primaryAction as any), primary: true },
+              { ...(primaryAction as Record<string, unknown>), primary: true },
               {
                 key: 'delete',
                 label: '删除',
@@ -1711,6 +1712,8 @@ const TemplateCenter: React.FC = () => {
                                   e.dataTransfer.effectAllowed = 'move';
                                   e.dataTransfer.setData('text/plain', String(idx));
                                 } catch {
+    // Intentionally empty
+      // 忽略错误
                                 }
                               }}
                               onDragEnd={() => {

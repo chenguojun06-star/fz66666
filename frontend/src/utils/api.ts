@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { ApiResponse } from '../types/api';
 
 export type ApiResult<T = unknown> = {
   code: number;
@@ -9,12 +10,20 @@ export type ApiResult<T = unknown> = {
 };
 
 export const isApiSuccess = (result: unknown): result is ApiResult => {
-  return Number((result as any)?.code) === 200;
+  return (
+    typeof result === 'object' &&
+    result !== null &&
+    'code' in result &&
+    Number((result as ApiResult).code) === 200
+  );
 };
 
 export const getApiMessage = (result: unknown, fallback: string): string => {
-  const msg = String((result as any)?.message || '').trim();
-  return msg || fallback;
+  if (typeof result === 'object' && result !== null && 'message' in result) {
+    const msg = String((result as { message: unknown }).message || '').trim();
+    return msg || fallback;
+  }
+  return fallback;
 };
 
 export const unwrapApiData = <T = unknown>(result: unknown, fallbackMessage: string): T => {
@@ -24,11 +33,13 @@ export const unwrapApiData = <T = unknown>(result: unknown, fallbackMessage: str
 
 export const generateRequestId = () => {
   try {
-    const anyCrypto = typeof crypto !== 'undefined' ? (crypto as any) : undefined;
+    const anyCrypto = typeof crypto !== 'undefined' ? (crypto as Record<string, unknown>) : undefined;
     if (anyCrypto && typeof anyCrypto.randomUUID === 'function') {
       return String(anyCrypto.randomUUID());
     }
   } catch {
+    // Intentionally empty
+      // 忽略错误
   }
   const t = Date.now().toString(36);
   const r1 = Math.random().toString(36).slice(2, 10);
@@ -116,15 +127,15 @@ export const parseProductionOrderLines = (
   if (!order) return [];
 
   const includeWarehousedQuantity = Boolean(opts?.includeWarehousedQuantity);
-  const detailsRaw = (order as any)?.orderDetails;
+  const detailsRaw = (order as Record<string, unknown>)?.orderDetails;
 
-  const normalizeLine = (r: any): ProductionOrderLine => {
+  const normalizeLine = (r: Record<string, unknown>): ProductionOrderLine => {
     const color = String(r?.color ?? r?.colour ?? r?.colorName ?? r?.['颜色'] ?? '').trim();
     const size = String(r?.size ?? r?.sizeName ?? r?.spec ?? r?.尺码 ?? r?.['尺码'] ?? '').trim();
     const quantity = toNumberSafe(r?.quantity ?? r?.qty ?? r?.count ?? r?.num ?? r?.数量 ?? r?.['数量']);
     const lineSku = String(r?.skuNo ?? r?.skuKey ?? r?.sku ?? r?.sku_code ?? r?.skuCode ?? '').trim();
-    const orderNo = String((order as any)?.orderNo ?? r?.orderNo ?? '').trim();
-    const styleNo = String((order as any)?.styleNo ?? r?.styleNo ?? '').trim();
+    const orderNo = String((order as Record<string, unknown>)?.orderNo ?? r?.orderNo ?? '').trim();
+    const styleNo = String((order as Record<string, unknown>)?.styleNo ?? r?.styleNo ?? '').trim();
     const normalizedLineSku = lineSku
       ? (lineSku.toUpperCase().startsWith('SKU') ? lineSku : `SKU-${lineSku}`)
       : '';
@@ -145,6 +156,8 @@ export const parseProductionOrderLines = (
     try {
       parsed = typeof detailsRaw === 'string' ? JSON.parse(detailsRaw) : detailsRaw;
     } catch {
+    // Intentionally empty
+      // 忽略错误
       parsed = null;
     }
   }
@@ -153,7 +166,7 @@ export const parseProductionOrderLines = (
   if (Array.isArray(parsed)) {
     list = parsed;
   } else if (parsed && typeof parsed === 'object') {
-    const candidate = (parsed as any).lines || (parsed as any).items || (parsed as any).details || (parsed as any).list || (parsed as any).orderLines;
+    const candidate = (parsed as Record<string, unknown>).lines || (parsed as Record<string, unknown>).items || (parsed as Record<string, unknown>).details || (parsed as Record<string, unknown>).list || (parsed as Record<string, unknown>).orderLines;
     if (Array.isArray(candidate)) list = candidate;
     else list = [parsed];
   }
@@ -167,10 +180,10 @@ export const parseProductionOrderLines = (
     });
   if (normalized.length) return normalized;
 
-  const fallbackColor = String((order as any)?.color || '').trim();
-  const fallbackSize = String((order as any)?.size || '').trim();
-  const fallbackQty = toNumberSafe((order as any)?.orderQuantity);
-  const fallbackWarehousedQty = toNumberSafe((order as any)?.warehousingQualifiedQuantity);
+  const fallbackColor = String((order as Record<string, unknown>)?.color || '').trim();
+  const fallbackSize = String((order as Record<string, unknown>)?.size || '').trim();
+  const fallbackQty = toNumberSafe((order as Record<string, unknown>)?.orderQuantity);
+  const fallbackWarehousedQty = toNumberSafe((order as Record<string, unknown>)?.warehousingQualifiedQuantity);
 
   if (!fallbackColor || !fallbackSize) return [];
   if (includeWarehousedQuantity) {
@@ -233,18 +246,30 @@ export const isOrderFrozenByStatusOrStock = (source?: OrderFrozenSource | null):
 export const fetchProductionOrderDetail = async (
   orderId: unknown,
   opts?: { acceptAnyData?: boolean }
-): Promise<unknown | null> => {
+): Promise<Record<string, unknown> | null> => {
   const oid = String(orderId || '').trim();
   if (!oid) return null;
   try {
-    const res = await api.get<any>(`/production/order/detail/${encodeURIComponent(oid)}`);
-    const result = res as any;
-    if (result?.code === 200) return result?.data ?? null;
-    if (opts?.acceptAnyData) return result?.data ?? null;
+    // 优先尝试用订单号查询（支持扫码场景）
+    const res = await api.get<ApiResponse<Record<string, unknown>>>(
+      `/production/order/by-order-no/${encodeURIComponent(oid)}`
+    );
+    if (isApiSuccess(res)) return res.data ?? null;
+    if (opts?.acceptAnyData && typeof res === 'object' && res !== null && 'data' in res) {
+      return (res as { data: Record<string, unknown> }).data ?? null;
+    }
     return null;
-  } catch (error: any) {
+  } catch (error: unknown) {
     // 静默处理404错误（订单已删除）
-    if (error?.response?.status === 404) {
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'response' in error &&
+      typeof (error as { response: unknown }).response === 'object' &&
+      (error as { response: { status: unknown } }).response !== null &&
+      'status' in (error as { response: { status: unknown } }).response &&
+      (error as { response: { status: number } }).response.status === 404
+    ) {
       return null;
     }
     return null;
@@ -278,7 +303,7 @@ export const primeProductionOrderFrozenCache = async (
 };
 
 export const ensureProductionOrderUnlocked = async (
-  orderId: any,
+  orderId: unknown,
   cache: Map<string, boolean>,
   opts: {
     rule: ProductionOrderFrozenRule;
@@ -314,7 +339,10 @@ export type UseProductionOrderFrozenCacheOptions = {
   primeBatchSize?: number;
 };
 
-export const useProductionOrderFrozenCache = (ids: any[], opts: UseProductionOrderFrozenCacheOptions) => {
+export const useProductionOrderFrozenCache = (
+  ids: unknown[],
+  opts: UseProductionOrderFrozenCacheOptions
+) => {
   const cacheRef = useRef<Map<string, boolean>>(new Map());
   const [version, setVersion] = useState(0);
 
@@ -363,14 +391,14 @@ export const useProductionOrderFrozenCache = (ids: any[], opts: UseProductionOrd
     };
   }, [acceptAnyData, normalizedIds, primeBatchSize, rule]);
 
-  const isFrozenById = (orderId: any) => {
+  const isFrozenById = (orderId: unknown) => {
     void version;
     const oid = String(orderId || '').trim();
     if (!oid) return false;
     return cacheRef.current.get(oid) === true;
   };
 
-  const ensureUnlocked = async (orderId: any, onFrozen?: () => void) => {
+  const ensureUnlocked = async (orderId: unknown, onFrozen?: () => void) => {
     if (!rule) return true;
     return await ensureProductionOrderUnlocked(orderId, cacheRef.current, {
       rule,
@@ -383,28 +411,36 @@ export const useProductionOrderFrozenCache = (ids: any[], opts: UseProductionOrd
   return { cacheRef, isFrozenById, ensureUnlocked };
 };
 
-export const updateFinanceReconciliationStatus = async (id: string, status: string) => {
+export const updateFinanceReconciliationStatus = async (
+  id: string,
+  status: string
+): Promise<ApiResponse> => {
   const rid = String(id || '').trim();
   const st = String(status || '').trim();
   if (!rid || !st) {
-    return { code: 400, message: '参数错误' } as any;
+    return { code: 400, message: '参数错误', data: null };
   }
-  return api.put<any>('/finance/reconciliation/status', null, { params: { id: rid, status: st } });
+  return api.put<ApiResponse>('/finance/reconciliation/status', null, {
+    params: { id: rid, status: st },
+  });
 };
 
-export const returnFinanceReconciliation = async (id: string, reason: string) => {
+export const returnFinanceReconciliation = async (
+  id: string,
+  reason: string
+): Promise<ApiResponse> => {
   const rid = String(id || '').trim();
   const r = String(reason || '').trim();
   if (!rid || !r) {
-    return { code: 400, message: '参数错误' } as any;
+    return { code: 400, message: '参数错误', data: null };
   }
-  return api.post<any>('/finance/reconciliation/return', { id: rid, reason: r });
+  return api.post<{ code: number; message: string; data: unknown }>('/finance/reconciliation/return', { id: rid, reason: r });
 };
 
 // 创建请求实例
 const resolveApiBaseUrl = (): string => {
   try {
-    const raw = (import.meta as any)?.env?.VITE_API_BASE_URL;
+    const raw = (import.meta as Record<string, unknown>)?.env?.VITE_API_BASE_URL;
     const v = raw == null ? '' : String(raw).trim();
     if (!v) return '/api';
 
@@ -421,6 +457,8 @@ const resolveApiBaseUrl = (): string => {
 
     return '/api';
   } catch {
+    // Intentionally empty
+      // 忽略错误
     return '/api';
   }
 };
@@ -436,7 +474,7 @@ const api = axios.create({
 // 请求拦截器
 api.interceptors.request.use(
   config => {
-    const headers: any = config.headers || {};
+    const headers: unknown = config.headers || {};
 
     const toLatin1HeaderValue = (input: any) => {
       let val = input == null ? '' : String(input);
@@ -466,16 +504,20 @@ api.interceptors.request.use(
         setHeader('Authorization', `Bearer ${token}`);
       }
     } catch {
+    // Intentionally empty
+      // 忽略错误
     }
 
     try {
       setHeader('X-Request-Id', (headers && typeof headers.get === 'function' ? headers.get('X-Request-Id') : headers['X-Request-Id']) || generateRequestId());
     } catch {
+    // Intentionally empty
+      // 忽略错误
       setHeader('X-Request-Id', generateRequestId());
     }
 
     try {
-      const anyData: any = (config as any).data;
+      const anyData: unknown = (config as Record<string, unknown>).data;
       if (typeof FormData !== 'undefined' && anyData instanceof FormData) {
         delete headers['Content-Type'];
         delete headers['content-type'];
@@ -484,12 +526,14 @@ api.interceptors.request.use(
           headers.delete('content-type');
         }
 
-        const currentTimeout = Number((config as any).timeout);
+        const currentTimeout = Number((config as Record<string, unknown>).timeout);
         if (!Number.isFinite(currentTimeout) || currentTimeout < 60000) {
-          (config as any).timeout = 60000;
+          (config as Record<string, unknown>).timeout = 60000;
         }
       }
     } catch {
+    // Intentionally empty
+      // 忽略错误
       // 忽略异常，按默认超时与请求头继续
     }
 
@@ -526,6 +570,8 @@ api.interceptors.response.use(
           localStorage.removeItem('userInfo');
         }
       } catch {
+    // Intentionally empty
+      // 忽略错误
       }
       try {
         if (typeof window !== 'undefined') {
@@ -535,6 +581,8 @@ api.interceptors.response.use(
           }
         }
       } catch {
+    // Intentionally empty
+      // 忽略错误
       }
     }
 
@@ -566,7 +614,11 @@ api.interceptors.response.use(
 
     // 不重试时，构造错误信息
     let errorMessage = '请求失败';
-    const enrichedError: any = new Error(errorMessage);
+    const enrichedError = new Error(errorMessage) as Error & {
+      status?: number;
+      result?: unknown;
+      message: string;
+    };
 
     if (response) {
       // 服务器返回了错误响应
@@ -589,21 +641,23 @@ api.interceptors.response.use(
   }
 );
 
-export const requestWithPathFallback = async <T = any>(
+export const requestWithPathFallback = async <T = unknown>(
   method: 'get' | 'post' | 'put' | 'delete',
   primaryPath: string,
   fallbackPath: string,
-  payload?: any,
-  config?: any
+  payload?: unknown,
+  config?: Record<string, unknown>
 ): Promise<T> => {
   try {
-    const fn = (api as any)[method];
+    const fn = api[method] as (path: string, data?: unknown, cfg?: unknown) => Promise<T>;
     if (method === 'get' || method === 'delete') {
       return await fn(primaryPath, config);
     }
     return await fn(primaryPath, payload, config);
   } catch {
-    const fn = (api as any)[method];
+    // Intentionally empty
+      // 忽略错误
+    const fn = api[method] as (path: string, data?: unknown, cfg?: unknown) => Promise<T>;
     if (method === 'get' || method === 'delete') {
       return await fn(fallbackPath, config);
     }

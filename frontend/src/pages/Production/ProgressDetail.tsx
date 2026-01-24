@@ -1,14 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, App, Button, Card, Collapse, DatePicker, Form, Grid, Input, InputNumber, Modal, Select, Segmented, Space, Tag, Tooltip, Typography } from 'antd';
-import { DeleteOutlined, DownloadOutlined, EyeOutlined, PlusOutlined, RollbackOutlined, ScanOutlined } from '@ant-design/icons';
+import { DeleteOutlined, DownloadOutlined, EyeOutlined, PlusOutlined, RollbackOutlined, ScanOutlined, EditOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { QRCodeCanvas } from 'qrcode.react';
 import { useLocation } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import ResizableModal from '../../components/common/ResizableModal';
 import ResizableTable from '../../components/common/ResizableTable';
 import RowActions from '../../components/common/RowActions';
-import { StyleCoverThumb } from '../../components/StyleAssets';
+import SortableColumnTitle from '../../components/common/SortableColumnTitle';
+import QuickEditModal from '../../components/common/QuickEditModal';
+import { ProductionOrderHeader, StyleCoverThumb } from '../../components/StyleAssets';
 import { compareSizeAsc, generateRequestId, isDuplicateScanMessage, isOrderFrozenByStatus } from '../../utils/api';
 import { isAdminUser as isAdminUserFn, isSupervisorOrAboveUser as isSupervisorOrAboveUserFn, useAuth } from '../../utils/authContext';
 import { useViewport } from '../../utils/useViewport';
@@ -28,7 +29,7 @@ const { useBreakpoint } = Grid;
  * @param r 扫码记录对象
  * @returns 进度阶段名称
  */
-const getRecordStageName = (r: any) => {
+const getRecordStageName = (r: Record<string, unknown>) => {
   const stage = String(r?.progressStage || '').trim();
   if (stage) return stage;
   return String(r?.processName || '').trim();
@@ -39,7 +40,7 @@ const getRecordStageName = (r: any) => {
  * @param v 阶段名称
  * @returns 标准化后的阶段名称
  */
-const normalizeStageKey = (v: any) => String(v || '').trim().replace(/\s+/g, '');
+const normalizeStageKey = (v: unknown) => String(v || '').trim().replace(/\s+/g, '');
 
 /**
  * 判断是否为质检阶段
@@ -175,7 +176,7 @@ const findPricingProcessForStage = (list: StyleProcess[], stageName: string) => 
   if (!stage) return null;
   const sorted = [...(Array.isArray(list) ? list : [])].sort((a: any, b: any) => (Number(a?.sortOrder) || 0) - (Number(b?.sortOrder) || 0));
   for (const p of sorted) {
-    const name = String((p as any)?.processName || '').trim();
+    const name = String((p as Record<string, unknown>)?.processName || '').trim();
     if (!name) continue;
     if (stageNameMatches(stage, name)) {
       return p;
@@ -200,8 +201,8 @@ type ProgressNode = {
  */
 const stripWarehousingNode = (list: ProgressNode[]) => {
   return (Array.isArray(list) ? list : []).filter((n) => {
-    const id = String((n as any)?.id || '').trim().toLowerCase();
-    const name = String((n as any)?.name || '').trim();
+    const id = String((n as Record<string, unknown>)?.id || '').trim().toLowerCase();
+    const name = String((n as Record<string, unknown>)?.name || '').trim();
     return !(id === 'shipment' || name === '出货' || name === '发货' || name === '发运');
   });
 };
@@ -245,7 +246,7 @@ const formatTimeCompact = (value?: string) => formatDateTimeCompact(value);
  * @param value 单元格值
  * @returns 转义后的字符串
  */
-const escapeCsvCell = (value: any) => {
+const escapeCsvCell = (value: unknown) => {
   const text = String(value ?? '');
   if (/[\r\n",]/.test(text)) {
     return `"${text.replace(/"/g, '""')}"`;
@@ -481,8 +482,8 @@ const ModernProgressBoard: React.FC<ModernProgressBoardProps> = ({ nodes, progre
     const total = Number(totalQty) || 0;
     if (total <= 0) return 0;
     if (i > currentIdx) return 0;
-    const perNode = name && nodeDoneMap ? Number((nodeDoneMap as any)[name]) || 0 : undefined;
-    const done = Number.isFinite(perNode as any) ? (perNode as number) : safeDone;
+    const perNode = name && nodeDoneMap ? Number((nodeDoneMap as Record<string, unknown>)[name]) || 0 : undefined;
+    const done = Number.isFinite(perNode as Record<string, unknown>) ? (perNode as number) : safeDone;
     if (done <= 0) return 0;
     if (frozen) return total;
     if (i <= currentIdx) return Math.max(0, Math.min(done, total));
@@ -510,7 +511,7 @@ const ModernProgressBoard: React.FC<ModernProgressBoardProps> = ({ nodes, progre
                   <div
                     key={badgeKey}
                     className={`mpb-node mpb-pop${isDoneNode ? ' mpb-nodeDone' : ''}${isCurrent ? ' mpb-nodeCurrent' : ''}`}
-                    style={{ ['--p' as any]: `${fillPct}%` }}
+                    style={{ ['--p' as Record<string, unknown>]: `${fillPct}%` }}
                   >
                     <span className="mpb-nodeName">{name}</span>
                     <span className="mpb-nodeQty">{displayText}</span>
@@ -565,6 +566,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const [activeOrder, setActiveOrder] = useState<ProductionOrder | null>(null);
   const [scanHistoryLoading, setScanHistoryLoading] = useState(false);
   const [scanHistory, setScanHistory] = useState<ScanRecord[]>([]);
+  const [scanStageFilter, setScanStageFilter] = useState<string>('auto');
 
   const [detailFlowExpanded, setDetailFlowExpanded] = useState(false);
 
@@ -600,7 +602,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const [scanConfirmDetail, setScanConfirmDetail] = useState<any | null>(null);
   const [scanConfirmMeta, setScanConfirmMeta] = useState<any | null>(null);
   const [scanForm] = Form.useForm();
-  const scanInputRef = useRef<any>(null);
+  const scanInputRef = useRef<unknown>(null);
   const scanSubmittingRef = useRef(false);
   const orderSyncingRef = useRef(false);
   const activeOrderRef = useRef<ProductionOrder | null>(null);
@@ -620,6 +622,18 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const [rollbackBundles, setRollbackBundles] = useState<CuttingBundle[]>([]);
   const [rollbackForm] = Form.useForm();
 
+  const [quickEditVisible, setQuickEditVisible] = useState(false);
+  const [quickEditRecord, setQuickEditRecord] = useState<ProductionOrder | null>(null);
+  const [quickEditSaving, setQuickEditSaving] = useState(false);
+
+  const [orderSortField, setOrderSortField] = useState<string>('createTime');
+  const [orderSortOrder, setOrderSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  const handleOrderSort = (field: string, order: 'asc' | 'desc') => {
+    setOrderSortField(field);
+    setOrderSortOrder(order);
+  };
+
   const queryParamsRef = useRef(queryParams);
   const dateRangeRef = useRef(dateRange);
 
@@ -631,20 +645,51 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     dateRangeRef.current = dateRange;
   }, [dateRange]);
 
+  useEffect(() => {
+    if (!detailOpen) return;
+    setScanStageFilter('auto');
+  }, [detailOpen, activeOrder?.id]);
+
+  const scanStageOptions = useMemo(() => {
+    const names: string[] = [];
+    const seen = new Set<string>();
+    for (const n of nodes) {
+      const name = String((n as Record<string, unknown>)?.name || '').trim();
+      if (!name || seen.has(name)) continue;
+      seen.add(name);
+      names.push(name);
+    }
+    for (const r of scanHistory) {
+      const name = String(getRecordStageName(r as Record<string, unknown>) || '').trim();
+      if (!name || seen.has(name)) continue;
+      seen.add(name);
+      names.push(name);
+    }
+    return [
+      { value: 'auto', label: '自动识别（全部）' },
+      ...names.map((name) => ({ value: name, label: name })),
+    ];
+  }, [nodes, scanHistory]);
+
+  const filteredScanHistory = useMemo(() => {
+    if (!scanStageFilter || scanStageFilter === 'auto') return scanHistory;
+    return scanHistory.filter((r) => stageNameMatches(scanStageFilter, getRecordStageName(r)));
+  }, [scanHistory, scanStageFilter]);
+
   const fetchOrders = useCallback(async (options?: { silent?: boolean }) => {
     const silent = options?.silent === true;
     if (!silent) {
       setLoading(true);
     }
     try {
-      const params: any = { ...queryParamsRef.current };
+      const params: unknown = { ...queryParamsRef.current };
       const currentDateRange = dateRangeRef.current;
       if (currentDateRange?.[0] && currentDateRange?.[1]) {
         params.startDate = currentDateRange[0].startOf('day').toISOString();
         params.endDate = currentDateRange[1].endOf('day').toISOString();
       }
       const response = await productionOrderApi.list(params);
-      const result = response as any;
+      const result = response as Record<string, unknown>;
       if (result.code === 200) {
         const records = (result.data.records || []) as ProductionOrder[];
         setOrders(records);
@@ -653,7 +698,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         const styleNos = Array.from(
           new Set(
             records
-              .map((r) => String((r as any)?.styleNo || '').trim())
+              .map((r) => String((r as Record<string, unknown>)?.styleNo || '').trim())
               .filter((sn) => sn)
               .filter((sn) => !progressNodesByStyleNoRef.current[sn])
           )
@@ -663,7 +708,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             const settled = await Promise.allSettled(
               styleNos.map(async (sn) => {
                 const res = await templateLibraryApi.progressNodeUnitPrices(sn);
-                const r = res as any;
+                const r = res as Record<string, unknown>;
                 const rows = Array.isArray(r?.data) ? r.data : [];
                 const normalized: ProgressNode[] = rows
                   .map((n: any) => {
@@ -692,6 +737,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         message.error(result.message || '获取生产订单失败');
       }
     } catch {
+    // Intentionally empty
+      // 忽略错误
       if (!silent) {
         message.error('获取生产订单失败');
       }
@@ -757,7 +804,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     const values = meta.values || {};
     try {
       const response = await productionScanApi.execute(scanConfirmPayload);
-      const result = response as any;
+      const result = response as Record<string, unknown>;
       if (result.code === 200) {
         lastFailedRequestRef.current = null;
         const serverMsg = String(result?.data?.message || '').trim();
@@ -806,7 +853,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         }
       }
     } catch (error) {
-      const anyErr: any = error;
+      const anyErr: unknown = error;
       const hasStatus = anyErr?.status != null || anyErr?.response?.status != null;
       if (!hasStatus) {
         if (attemptKey && attemptRequestId) {
@@ -879,11 +926,13 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     (async () => {
       try {
         const res = await templateLibraryApi.listByType('progress');
-        const result = res as any;
+        const result = res as Record<string, unknown>;
         if (result.code === 200) {
           setProgressTemplates(Array.isArray(result.data) ? result.data : []);
         }
       } catch {
+    // Intentionally empty
+      // 忽略错误
       }
     })();
   }, []);
@@ -894,9 +943,9 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     try {
       const obj = JSON.parse(text);
       // 支持两种格式：nodes (进度节点) 和 steps (工序单价)
-      let itemsRaw = (obj as any)?.nodes;
+      let itemsRaw = (obj as Record<string, unknown>)?.nodes;
       if (!Array.isArray(itemsRaw)) {
-        itemsRaw = (obj as any)?.steps;
+        itemsRaw = (obj as Record<string, unknown>)?.steps;
       }
       if (!Array.isArray(itemsRaw)) return [];
 
@@ -911,12 +960,14 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         .filter((n: ProgressNode) => n.name);
       return stripWarehousingNode(normalized);
     } catch {
+    // Intentionally empty
+      // 忽略错误
       return [];
     }
   };
 
   const parseWorkflowNodesFromOrder = (order: ProductionOrder | null): ProgressNode[] => {
-    const raw = String((order as any)?.progressWorkflowJson ?? '').trim();
+    const raw = String((order as Record<string, unknown>)?.progressWorkflowJson ?? '').trim();
     if (!raw) return [];
     return parseProgressNodes(raw);
   };
@@ -925,7 +976,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     const tid = String(templateId || '').trim();
     if (!tid) return [];
     const res = await templateLibraryApi.getById(tid);
-    const result = res as any;
+    const result = res as Record<string, unknown>;
     if (result.code !== 200) return [];
     const tpl: TemplateLibrary = result.data;
     return parseProgressNodes(String(tpl?.templateContent ?? ''));
@@ -935,7 +986,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     const orderNodes = parseWorkflowNodesFromOrder(order);
     if (orderNodes.length) {
       // 如果订单有进度节点，但单价都是0，则从款号工序单价中回填
-      const styleNo = String((order as any)?.styleNo || '').trim();
+      const styleNo = String((order as Record<string, unknown>)?.styleNo || '').trim();
       const styleNodes = styleNo && progressNodesByStyleNo[styleNo] ? progressNodesByStyleNo[styleNo] : [];
       if (styleNodes.length > 0) {
         const hasAnyPrice = orderNodes.some(n => (Number(n.unitPrice) || 0) > 0);
@@ -954,7 +1005,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       }
       return orderNodes;
     }
-    const sn = String((order as any)?.styleNo || '').trim();
+    const sn = String((order as Record<string, unknown>)?.styleNo || '').trim();
     if (sn && progressNodesByStyleNo[sn]?.length) {
       return progressNodesByStyleNo[sn];
     }
@@ -1025,7 +1076,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     if (orderNodes.length) {
       return orderNodes;
     }
-    const sn = String((order as any)?.styleNo || '').trim();
+    const sn = String((order as Record<string, unknown>)?.styleNo || '').trim();
     if (sn && progressNodesByStyleNo[sn]?.length) {
       return progressNodesByStyleNo[sn];
     }
@@ -1042,7 +1093,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     if (!oid) return;
     const existing = boardStatsByOrderRef.current[oid];
     if (existing && ns.every((n) => {
-      const name = String((n as any)?.name || '').trim();
+      const name = String((n as Record<string, unknown>)?.name || '').trim();
       return !name || Object.prototype.hasOwnProperty.call(existing, name);
     })) {
       return;
@@ -1051,21 +1102,21 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     boardStatsLoadingRef.current[oid] = true;
     try {
       const res = await productionScanApi.listByOrderId(oid, { page: 1, pageSize: 500 });
-      const result = res as any;
+      const result = res as Record<string, unknown>;
       const records: ScanRecord[] = result?.code === 200 && Array.isArray(result?.data?.records) ? result.data.records : [];
       const valid = records
-        .filter((r) => String((r as any)?.scanResult || '').trim() === 'success')
-        .filter((r) => (Number((r as any)?.quantity) || 0) > 0);
+        .filter((r) => String((r as Record<string, unknown>)?.scanResult || '').trim() === 'success')
+        .filter((r) => (Number((r as Record<string, unknown>)?.quantity) || 0) > 0);
       const stats: Record<string, number> = {};
       for (const n of ns || []) {
-        const nodeName = String((n as any)?.name || '').trim();
+        const nodeName = String((n as Record<string, unknown>)?.name || '').trim();
         if (!nodeName) continue;
         const done = valid
           .filter((r) => stageNameMatches(nodeName, getRecordStageName(r)))
-          .reduce((acc, r) => acc + (Number((r as any)?.quantity) || 0), 0);
+          .reduce((acc, r) => acc + (Number((r as Record<string, unknown>)?.quantity) || 0), 0);
         stats[nodeName] = done;
       }
-      const cuttingVal = Number((order as any)?.cuttingQuantity) || 0;
+      const cuttingVal = Number((order as Record<string, unknown>)?.cuttingQuantity) || 0;
       if (cuttingVal > 0) {
         for (const key of Object.keys(stats)) {
           if (key.includes('裁剪')) {
@@ -1076,6 +1127,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       boardStatsByOrderRef.current[oid] = stats;
       setBoardStatsByOrder((prev) => ({ ...prev, [oid]: stats }));
     } catch {
+    // Intentionally empty
+      // 忽略错误
     } finally {
       boardStatsLoadingRef.current[oid] = false;
     }
@@ -1121,7 +1174,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
 
     try {
       const res = await templateLibraryApi.progressNodeUnitPrices(styleNo);
-      const result = res as any;
+      const result = res as Record<string, unknown>;
       if (result.code === 200) {
         const rows = Array.isArray(result.data) ? result.data : [];
         const normalized: ProgressNode[] = rows
@@ -1141,6 +1194,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         }
       }
     } catch {
+    // Intentionally empty
+      // 忽略错误
     }
 
     try {
@@ -1151,13 +1206,13 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         sourceStyleNo: styleNo,
         keyword: '',
       });
-      const result = res as any;
+      const result = res as Record<string, unknown>;
       if (result.code !== 200) return;
       const records = (result.data?.records || []) as TemplateLibrary[];
       const list = Array.isArray(records) ? [...records] : [];
       list.sort((a, b) => {
-        const ta = Date.parse(String((a as any)?.updateTime || (a as any)?.createTime || '')) || 0;
-        const tb = Date.parse(String((b as any)?.updateTime || (b as any)?.createTime || '')) || 0;
+        const ta = Date.parse(String((a as Record<string, unknown>)?.updateTime || (a as Record<string, unknown>)?.createTime || '')) || 0;
+        const tb = Date.parse(String((b as Record<string, unknown>)?.updateTime || (b as Record<string, unknown>)?.createTime || '')) || 0;
         return tb - ta;
       });
       const picked = list[0] || null;
@@ -1169,26 +1224,28 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         }
       }
     } catch {
+    // Intentionally empty
+      // 忽略错误
     }
 
     try {
       let list = progressTemplates;
       if (!list.length) {
         const res = await templateLibraryApi.listByType('progress');
-        const result = res as any;
+        const result = res as Record<string, unknown>;
         if (result.code === 200) {
           list = Array.isArray(result.data) ? result.data : [];
           list = [...list].sort((a, b) => {
-            const ta = Date.parse(String((a as any)?.updateTime || (a as any)?.createTime || '')) || 0;
-            const tb = Date.parse(String((b as any)?.updateTime || (b as any)?.createTime || '')) || 0;
+            const ta = Date.parse(String((a as Record<string, unknown>)?.updateTime || (a as Record<string, unknown>)?.createTime || '')) || 0;
+            const tb = Date.parse(String((b as Record<string, unknown>)?.updateTime || (b as Record<string, unknown>)?.createTime || '')) || 0;
             return tb - ta;
           });
           setProgressTemplates(list);
         }
       }
       const sorted = [...list].sort((a, b) => {
-        const ta = Date.parse(String((a as any)?.updateTime || (a as any)?.createTime || '')) || 0;
-        const tb = Date.parse(String((b as any)?.updateTime || (b as any)?.createTime || '')) || 0;
+        const ta = Date.parse(String((a as Record<string, unknown>)?.updateTime || (a as Record<string, unknown>)?.createTime || '')) || 0;
+        const tb = Date.parse(String((b as Record<string, unknown>)?.updateTime || (b as Record<string, unknown>)?.createTime || '')) || 0;
         return tb - ta;
       });
       const def = sorted.find((t) => String(t.templateKey || '').trim() === 'default') || sorted[0];
@@ -1199,6 +1256,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         }
       }
     } catch {
+    // Intentionally empty
+      // 忽略错误
     }
   };
 
@@ -1213,10 +1272,10 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   };
 
   useEffect(() => {
-    const locked = Number((activeOrder as any)?.progressWorkflowLocked) === 1;
+    const locked = Number((activeOrder as Record<string, unknown>)?.progressWorkflowLocked) === 1;
     setNodeWorkflowLocked(locked);
     setNodeWorkflowDirty(false);
-  }, [activeOrder?.id, (activeOrder as any)?.progressWorkflowLocked]);
+  }, [activeOrder?.id, (activeOrder as Record<string, unknown>)?.progressWorkflowLocked]);
 
   const fetchScanHistory = async (order: ProductionOrder, options?: { silent?: boolean }): Promise<ScanRecord[]> => {
     const silent = options?.silent === true;
@@ -1229,7 +1288,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     }
     try {
       const response = await productionScanApi.listByOrderId(String(order.id), { page: 1, pageSize: 200 });
-      const result = response as any;
+      const result = response as Record<string, unknown>;
       if (result.code === 200) {
         const records = Array.isArray(result.data?.records) ? result.data.records : [];
         setScanHistory(records);
@@ -1238,6 +1297,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         message.error(result.message || '获取扫码记录失败');
       }
     } catch {
+    // Intentionally empty
+      // 忽略错误
       if (!silent) {
         message.error('获取扫码记录失败');
       }
@@ -1264,7 +1325,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         orderNo: orderNo || undefined,
         orderId: orderId || undefined,
       });
-      const result = res as any;
+      const result = res as Record<string, unknown>;
       if (result.code === 200) {
         const data = result.data;
         const records = Array.isArray(data)
@@ -1279,7 +1340,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         return records;
       }
       message.error(result.message || '获取扎号列表失败');
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(e?.result?.message || e?.message || '获取扎号列表失败');
     } finally {
       setCuttingBundlesLoading(false);
@@ -1289,7 +1350,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   };
 
   const fetchPricingProcesses = async (order: ProductionOrder): Promise<StyleProcess[]> => {
-    const styleId = String((order as any)?.styleId || '').trim();
+    const styleId = String((order as Record<string, unknown>)?.styleId || '').trim();
     if (!styleId) {
       setPricingProcesses([]);
       return [];
@@ -1297,7 +1358,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     setPricingProcessLoading(true);
     try {
       const res = await styleProcessApi.listByStyleId(styleId);
-      const result = res as any;
+      const result = res as Record<string, unknown>;
       if (result.code === 200) {
         const list = Array.isArray(result.data) ? (result.data as StyleProcess[]) : [];
         setPricingProcesses(list);
@@ -1306,6 +1367,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       setPricingProcesses([]);
       return [];
     } catch {
+    // Intentionally empty
+      // 忽略错误
       setPricingProcesses([]);
       return [];
     } finally {
@@ -1317,7 +1380,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     const detail = order?.id ? await fetchOrderDetail(order.id) : null;
     const effective = detail || order;
     setActiveOrder(effective);
-    setNodeWorkflowLocked(Number((effective as any)?.progressWorkflowLocked) === 1);
+    setNodeWorkflowLocked(Number((effective as Record<string, unknown>)?.progressWorkflowLocked) === 1);
     setNodeWorkflowDirty(false);
     await ensureNodesFromTemplateIfNeeded(effective);
     setDetailOpen(true);
@@ -1358,7 +1421,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     const detail = order?.id ? await fetchOrderDetail(order.id) : null;
     const effective = detail || order;
     setActiveOrder(effective);
-    setNodeWorkflowLocked(Number((effective as any)?.progressWorkflowLocked) === 1);
+    setNodeWorkflowLocked(Number((effective as Record<string, unknown>)?.progressWorkflowLocked) === 1);
     setNodeWorkflowDirty(false);
     await ensureNodesFromTemplateIfNeeded(effective);
     await fetchScanHistory(effective);
@@ -1391,8 +1454,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     const matched = findPricingProcessForStage(procs, currentNodeName);
     const autoPicked = matched || (procs.length === 1 ? procs[0] : null);
     if (autoPicked) {
-      const name = String((autoPicked as any)?.processName || '').trim();
-      const price = Number((autoPicked as any)?.price);
+      const name = String((autoPicked as Record<string, unknown>)?.processName || '').trim();
+      const price = Number((autoPicked as Record<string, unknown>)?.price);
       scanForm.setFieldsValue({
         processName: name || undefined,
         unitPrice: Number.isFinite(price) && price >= 0 ? price : baseUnitPrice,
@@ -1435,7 +1498,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       setNodeWorkflowDirty(true);
       setProgressTemplateId(undefined);
       message.success('已导入进度模板');
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(e?.message || '导入失败');
     } finally {
       setTemplateApplying(false);
@@ -1486,12 +1549,12 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         id: activeOrder.id,
         workflowJson,
       });
-      const result = res as any;
+      const result = res as Record<string, unknown>;
       if (result.code === 200) {
         const updated = (result.data || null) as ProductionOrder | null;
         if (updated) {
           setActiveOrder(updated);
-          setNodeWorkflowLocked(Number((updated as any)?.progressWorkflowLocked) === 1);
+          setNodeWorkflowLocked(Number((updated as Record<string, unknown>)?.progressWorkflowLocked) === 1);
           await ensureNodesFromTemplateIfNeeded(updated);
         } else {
           lockNodeWorkflow();
@@ -1503,6 +1566,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         message.error(result.message || '保存失败');
       }
     } catch {
+    // Intentionally empty
+      // 忽略错误
       message.error('保存失败');
     } finally {
       setNodeWorkflowSaving(false);
@@ -1548,12 +1613,12 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         setNodeWorkflowSaving(true);
         try {
           const res = await productionOrderApi.rollbackProgressWorkflow({ id: activeOrder.id, reason: remark });
-          const result = res as any;
+          const result = res as Record<string, unknown>;
           if (result.code === 200) {
             const updated = (result.data || null) as ProductionOrder | null;
             if (updated) {
               setActiveOrder(updated);
-              setNodeWorkflowLocked(Number((updated as any)?.progressWorkflowLocked) === 1);
+              setNodeWorkflowLocked(Number((updated as Record<string, unknown>)?.progressWorkflowLocked) === 1);
               await ensureNodesFromTemplateIfNeeded(updated);
             } else {
               unlockNodeWorkflow();
@@ -1565,6 +1630,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             message.error(result.message || '退回失败');
           }
         } catch {
+    // Intentionally empty
+      // 忽略错误
           message.error('退回失败');
         } finally {
           setNodeWorkflowSaving(false);
@@ -1605,7 +1672,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         orderNo: String(order.orderNo || '').trim() || undefined,
         orderId: String(order.id || '').trim() || undefined,
       });
-      const result = res as any;
+      const result = res as Record<string, unknown>;
       if (result.code === 200) {
         const records = Array.isArray(result.data?.records) ? (result.data.records as CuttingBundle[]) : [];
         records.sort((a, b) => (Number(a?.bundleNo) || 0) - (Number(b?.bundleNo) || 0));
@@ -1614,6 +1681,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         setRollbackBundles([]);
       }
     } catch {
+    // Intentionally empty
+      // 忽略错误
       setRollbackBundles([]);
     } finally {
       setRollbackBundlesLoading(false);
@@ -1714,12 +1783,12 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     if (!pn) return {} as Record<string, number>;
     const map: Record<string, number> = {};
     for (const r of scanHistory) {
-      if (String((r as any)?.scanResult || '').trim() !== 'success') continue;
-      if (st && String((r as any)?.scanType || '').trim() !== st) continue;
+      if (String((r as Record<string, unknown>)?.scanResult || '').trim() !== 'success') continue;
+      if (st && String((r as Record<string, unknown>)?.scanType || '').trim() !== st) continue;
       if (getRecordStageName(r) !== pn) continue;
-      const qr = String((r as any)?.cuttingBundleQrCode || '').trim();
+      const qr = String((r as Record<string, unknown>)?.cuttingBundleQrCode || '').trim();
       if (!qr) continue;
-      map[qr] = (map[qr] || 0) + (Number((r as any)?.quantity) || 0);
+      map[qr] = (map[qr] || 0) + (Number((r as Record<string, unknown>)?.quantity) || 0);
     }
     return map;
   }, [scanHistory, watchProgressStage, watchScanType]);
@@ -1731,17 +1800,17 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
 
     const qtyByQr: Record<string, number> = {};
     for (const b of cuttingBundles) {
-      const qr = String((b as any)?.qrCode || '').trim();
+      const qr = String((b as Record<string, unknown>)?.qrCode || '').trim();
       if (!qr) continue;
-      qtyByQr[qr] = Number((b as any)?.quantity) || 0;
+      qtyByQr[qr] = Number((b as Record<string, unknown>)?.quantity) || 0;
     }
 
     const grouped: Record<string, ScanRecord[]> = {};
     for (const r of scanHistory) {
-      if (String((r as any)?.scanResult || '').trim() !== 'success') continue;
-      if (st && String((r as any)?.scanType || '').trim() !== st) continue;
+      if (String((r as Record<string, unknown>)?.scanResult || '').trim() !== 'success') continue;
+      if (st && String((r as Record<string, unknown>)?.scanType || '').trim() !== st) continue;
       if (getRecordStageName(r) !== pn) continue;
-      const qr = String((r as any)?.cuttingBundleQrCode || '').trim();
+      const qr = String((r as Record<string, unknown>)?.cuttingBundleQrCode || '').trim();
       if (!qr) continue;
       if (!grouped[qr]) grouped[qr] = [];
       grouped[qr].push(r);
@@ -1750,37 +1819,37 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     const meta: Record<string, { operatorId: string; operatorIds: string[]; receiveTime?: string; completeTime?: string }> = {};
     for (const [qr, records] of Object.entries(grouped)) {
       const sorted = [...records].sort((a, b) => {
-        const ta = dayjs(String((a as any)?.scanTime || '')).valueOf() || 0;
-        const tb = dayjs(String((b as any)?.scanTime || '')).valueOf() || 0;
+        const ta = dayjs(String((a as Record<string, unknown>)?.scanTime || '')).valueOf() || 0;
+        const tb = dayjs(String((b as Record<string, unknown>)?.scanTime || '')).valueOf() || 0;
         return ta - tb;
       });
 
       const operatorIds: string[] = [];
       const seen = new Set<string>();
       for (const r of sorted) {
-        const id = String((r as any)?.operatorId || '').trim();
+        const id = String((r as Record<string, unknown>)?.operatorId || '').trim();
         if (!id) continue;
         if (seen.has(id)) continue;
         seen.add(id);
         operatorIds.push(id);
       }
 
-      const receiveTime = String((sorted[0] as any)?.scanTime || '').trim() || undefined;
+      const receiveTime = String((sorted[0] as Record<string, unknown>)?.scanTime || '').trim() || undefined;
 
       const total = Number(qtyByQr[qr]) || 0;
       let cum = 0;
       let completeTime: string | undefined;
       if (total > 0) {
         for (const r of sorted) {
-          cum += Number((r as any)?.quantity) || 0;
+          cum += Number((r as Record<string, unknown>)?.quantity) || 0;
           if (!completeTime && cum >= total) {
-            completeTime = String((r as any)?.scanTime || '').trim() || undefined;
+            completeTime = String((r as Record<string, unknown>)?.scanTime || '').trim() || undefined;
             break;
           }
         }
       }
 
-      const lastOperatorId = String((sorted[sorted.length - 1] as any)?.operatorId || '').trim();
+      const lastOperatorId = String((sorted[sorted.length - 1] as Record<string, unknown>)?.operatorId || '').trim();
       meta[qr] = {
         operatorId: lastOperatorId || '-',
         operatorIds,
@@ -1863,15 +1932,15 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         if (looksLikeBundleQr) {
           try {
             const res = await productionCuttingApi.getByCode(scanCode);
-            const result = res as any;
+            const result = res as Record<string, unknown>;
             if (result.code !== 200) {
               message.error(result.message || '未找到对应的裁剪扎号');
               return;
             }
             if (result.data) {
               const fetched = result.data as CuttingBundle;
-              const fetchedOrderNo = String((fetched as any)?.productionOrderNo || '').trim();
-              const fetchedOrderId = String((fetched as any)?.productionOrderId || '').trim();
+              const fetchedOrderNo = String((fetched as Record<string, unknown>)?.productionOrderNo || '').trim();
+              const fetchedOrderId = String((fetched as Record<string, unknown>)?.productionOrderId || '').trim();
               const currentOrderNo = String(activeOrder.orderNo || '').trim();
               const currentOrderId = String(activeOrder.id || '').trim();
               const belongsToOrder =
@@ -1891,18 +1960,20 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 }
                 return next;
               });
-              const fetchedQty = Number((fetched as any)?.quantity);
+              const fetchedQty = Number((fetched as Record<string, unknown>)?.quantity);
               const formQty = Number(values.quantity);
               const nextQty = Number.isFinite(fetchedQty) && fetchedQty > 0
                 ? fetchedQty
                 : (Number.isFinite(formQty) && formQty > 0 ? formQty : undefined);
               scanForm.setFieldsValue({
-                color: (fetched as any)?.color || values.color || '',
-                size: (fetched as any)?.size || values.size || '',
+                color: (fetched as Record<string, unknown>)?.color || values.color || '',
+                size: (fetched as Record<string, unknown>)?.size || values.size || '',
                 quantity: nextQty,
               });
             }
           } catch {
+    // Intentionally empty
+      // 忽略错误
           }
         }
       }
@@ -1931,7 +2002,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         quantity: resolvedQty,
       };
 
-      const payloadBase: any = {
+      const payloadBase: unknown = {
         scanType: values.scanType || 'production',
         scanCode: scanCode || undefined,
         orderId: activeOrder.id,
@@ -1971,8 +2042,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       openScanConfirm(payload, detail, { attemptKey, attemptRequestId, values });
       return;
     } catch (error) {
-      if ((error as any).errorFields) {
-        const firstError = (error as any).errorFields[0];
+      if ((error as Record<string, unknown>).errorFields) {
+        const firstError = (error as Record<string, unknown>).errorFields[0];
         message.error(firstError.errors[0] || '表单验证失败');
       } else {
         message.error('系统繁忙');
@@ -1989,8 +2060,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     const bundlesTotalQty = cuttingBundles.reduce((acc, b) => acc + (Number(b?.quantity) || 0), 0);
     const totalQty = bundlesTotalQty > 0 ? bundlesTotalQty : (Number(activeOrder?.orderQuantity) || 0);
     const records = (scanHistory || []).filter((r) => {
-      if (String((r as any)?.scanResult || '').trim() !== 'success') return false;
-      const q = Number((r as any)?.quantity) || 0;
+      if (String((r as Record<string, unknown>)?.scanResult || '').trim() !== 'success') return false;
+      const q = Number((r as Record<string, unknown>)?.quantity) || 0;
       return q > 0;
     });
 
@@ -1998,11 +2069,11 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     const total = Math.max(0, totalQty);
 
     for (const n of nodes || []) {
-      const nodeName = String((n as any)?.name || '').trim();
+      const nodeName = String((n as Record<string, unknown>)?.name || '').trim();
       if (!nodeName) continue;
       const doneFromScans = records
         .filter((r) => stageNameMatches(nodeName, getRecordStageName(r)))
-        .reduce((acc, r) => acc + (Number((r as any)?.quantity) || 0), 0);
+        .reduce((acc, r) => acc + (Number((r as Record<string, unknown>)?.quantity) || 0), 0);
 
       let done = doneFromScans;
       if (nodeName.includes('裁剪') && bundlesTotalQty > 0) {
@@ -2094,8 +2165,12 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
 
     const typeLabel: Record<string, string> = {
       material: '物料',
+      procurement: '采购',
       cutting: '裁剪',
       production: '生产',
+      sewing: '车缝',
+      ironing: '整烫',
+      packaging: '包装',
       quality: '质检',
       warehouse: '入库',
       shipment: '出货',
@@ -2106,8 +2181,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     for (const r of scanHistory) {
       const row = [
         typeLabel[String(r.scanType || '')] || String(r.scanType || ''),
-        getRecordStageName(r as any) || '-',
-        String((r as any)?.processName || '-'),
+        getRecordStageName(r as Record<string, unknown>) || '-',
+        String((r as Record<string, unknown>)?.processName || '-'),
         String(r.operatorName || '-'),
         String(r.color || '-'),
         String(r.size || '-'),
@@ -2169,12 +2244,14 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     if (!oid) return null;
     try {
       const res = await productionOrderApi.detail(oid);
-      const result = res as any;
+      const result = res as Record<string, unknown>;
       if (result.code === 200) {
         return (result.data || null) as ProductionOrder | null;
       }
       return null;
     } catch {
+    // Intentionally empty
+      // 忽略错误
       return null;
     }
   };
@@ -2216,12 +2293,12 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   ) => {
     if (!order.id) return;
     try {
-      const payload: any = { id: order.id, progress: clampPercent(nextProgress) };
+      const payload: unknown = { id: order.id, progress: clampPercent(nextProgress) };
       if (opts?.rollbackRemark) payload.rollbackRemark = opts.rollbackRemark;
       if (opts?.rollbackToProcessName) payload.rollbackToProcessName = opts.rollbackToProcessName;
 
       const response = await productionOrderApi.updateProgress(payload);
-      const result = response as any;
+      const result = response as Record<string, unknown>;
       if (result.code === 200) {
         message.success('进度已更新');
         await fetchOrders();
@@ -2234,7 +2311,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
           const derivedName = String(effectiveNodes[idx]?.name || '').trim();
           const nextName = String(opts?.rollbackToProcessName || derivedName || '').trim();
           if (detail) {
-            setActiveOrder({ ...detail, currentProcessName: nextName || (detail as any).currentProcessName });
+            setActiveOrder({ ...detail, currentProcessName: nextName || (detail as Record<string, unknown>).currentProcessName });
             await ensureNodesFromTemplateIfNeeded(detail);
           } else {
             setActiveOrder((prev) => (prev ? { ...prev, productionProgress: p, currentProcessName: nextName || prev.currentProcessName } : prev));
@@ -2245,6 +2322,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         message.error(result.message || '更新进度失败');
       }
     } catch {
+    // Intentionally empty
+      // 忽略错误
       message.error('更新进度失败');
     }
   };
@@ -2261,11 +2340,11 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   };
 
   const getProgressPercentForTable = (order: ProductionOrder, nodes: ProgressNode[]) => {
-    const raw = Number((order as any).productionProgress);
+    const raw = Number((order as Record<string, unknown>).productionProgress);
     const direct = clampPercent(Number.isFinite(raw) ? raw : 0);
     if (direct > 0) return direct;
 
-    const cp = String((order as any).currentProcessName || '').trim();
+    const cp = String((order as Record<string, unknown>).currentProcessName || '').trim();
     if (cp && Array.isArray(nodes) && nodes.length) {
       const idx = nodes.findIndex((n) => String(n?.name || '').trim() === cp);
       if (idx >= 0) {
@@ -2273,13 +2352,13 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       }
     }
 
-    const rate = clampPercent(Number((order as any).materialArrivalRate) || 0);
+    const rate = clampPercent(Number((order as Record<string, unknown>).materialArrivalRate) || 0);
     const base = 5 + Math.round((15 * rate) / 100);
     return clampPercent(base);
   };
 
   const getQuotationUnitPriceForOrder = (order: ProductionOrder) => {
-    const v = Number((order as any)?.quotationUnitPrice);
+    const v = Number((order as Record<string, unknown>)?.quotationUnitPrice);
     if (Number.isFinite(v) && v > 0) {
       return v;
     }
@@ -2292,24 +2371,43 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     return Math.ceil(cq * 0.9);
   };
 
+  const handleQuickEditSave = async (values: { remarks: string; expectedShipDate: string | null }) => {
+    setQuickEditSaving(true);
+    try {
+      await productionOrderApi.quickEdit({
+        id: quickEditRecord?.id,
+        ...values,
+      });
+      message.success('编辑成功');
+      setQuickEditVisible(false);
+      setQuickEditRecord(null);
+      await fetchOrders();
+    } catch (err: any) {
+      message.error(err?.response?.data?.message || '编辑失败');
+      throw err;
+    } finally {
+      setQuickEditSaving(false);
+    }
+  };
+
   const handleCloseOrder = (order: ProductionOrder) => {
     if (!isSupervisorOrAbove) {
       message.error('无权限关单');
       return;
     }
 
-    const orderId = String((order as any)?.id || '').trim();
+    const orderId = String((order as Record<string, unknown>)?.id || '').trim();
     if (!orderId) {
       message.error('订单ID为空，无法关单');
       return;
     }
 
-    const cuttingQty = Number((order as any)?.cuttingQuantity ?? 0) || 0;
+    const cuttingQty = Number((order as Record<string, unknown>)?.cuttingQuantity ?? 0) || 0;
     const minRequired = getCloseMinRequired(cuttingQty);
-    const orderQty = Number((order as any)?.orderQuantity ?? 0) || 0;
-    const warehousingQualified = Number((order as any)?.warehousingQualifiedQuantity ?? 0) || 0;
+    const orderQty = Number((order as Record<string, unknown>)?.orderQuantity ?? 0) || 0;
+    const warehousingQualified = Number((order as Record<string, unknown>)?.warehousingQualifiedQuantity ?? 0) || 0;
 
-    if ((order as any)?.status === 'completed') {
+    if ((order as Record<string, unknown>)?.status === 'completed') {
       message.info('该订单已完成，无需关单');
       return;
     }
@@ -2325,7 +2423,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     }
 
     Modal.confirm({
-      title: `确认关单：${String((order as any)?.orderNo || '').trim() || '-'}`,
+      title: `确认关单：${String((order as Record<string, unknown>)?.orderNo || '').trim() || '-'}`,
       okText: '确认关单',
       cancelText: '取消',
       okButtonProps: { danger: true },
@@ -2340,8 +2438,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       ),
       onOk: async () => {
         const result = await productionOrderApi.close(orderId, 'productionProgress');
-        if ((result as any)?.code !== 200) {
-          throw new Error((result as any)?.message || '关单失败');
+        if ((result as Record<string, unknown>)?.code !== 200) {
+          throw new Error((result as Record<string, unknown>)?.message || '关单失败');
         }
         message.success('关单成功');
         await fetchOrders();
@@ -2355,7 +2453,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     });
   };
 
-  const columns: any[] = [
+  const columns: unknown[] = [
     {
       title: '图片',
       key: 'cover',
@@ -2364,7 +2462,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         <StyleCoverThumb
           styleId={record.styleId}
           styleNo={record.styleNo}
-          src={(record as any).styleCover || null}
+          src={(record as Record<string, unknown>).styleCover || null}
           size={48}
           borderRadius={6}
         />
@@ -2375,7 +2473,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       dataIndex: 'orderNo',
       key: 'orderNo',
       width: 160,
-      render: (v: any) => <span className="order-no-compact">{String(v || '').trim() || '-'}</span>,
+      render: (v: unknown) => <span className="order-no-compact">{String(v || '').trim() || '-'}</span>,
     },
     {
       title: '款号',
@@ -2398,7 +2496,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       key: 'warehousingQualifiedQuantity',
       width: 110,
       align: 'right' as const,
-      render: (_: any, record: ProductionOrder) => Number((record as any).warehousingQualifiedQuantity) || 0,
+      render: (_: any, record: ProductionOrder) => Number((record as Record<string, unknown>).warehousingQualifiedQuantity) || 0,
     },
     {
       title: '款名',
@@ -2414,6 +2512,21 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       render: (_: any, record: ProductionOrder) => formatTime(record.createTime),
     },
     {
+      title: '备注',
+      dataIndex: 'remarks',
+      key: 'remarks',
+      width: 150,
+      ellipsis: true,
+      render: (v: any) => v || '-',
+    },
+    {
+      title: <SortableColumnTitle title="预计出货" field="expectedShipDate" onSort={handleOrderSort} currentField={orderSortField} currentOrder={orderSortOrder} />,
+      dataIndex: 'expectedShipDate',
+      key: 'expectedShipDate',
+      width: 120,
+      render: (v: any) => v ? formatDateTime(v) : '-',
+    },
+    {
       title: '出货时间',
       key: 'shipTime',
       width: 170,
@@ -2425,7 +2538,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       key: 'status',
       width: 110,
       render: (value: ProductionOrder['status']) => {
-        const map: any = {
+        const map: unknown = {
           pending: { color: 'default', label: '待开始' },
           production: { color: 'processing', label: '生产中' },
           completed: { color: 'success', label: '已完成' },
@@ -2454,7 +2567,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             label={label}
             totalQty={totalQty}
             doneQty={done}
-            arrivalRate={Number((record as any).materialArrivalRate)}
+            arrivalRate={Number((record as Record<string, unknown>).materialArrivalRate)}
             frozen={frozen}
             nodeDoneMap={nodeDoneMap}
           />
@@ -2464,7 +2577,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     {
       title: '操作',
       key: 'action',
-      width: 160,
+      width: 200,
       render: (_: any, record: ProductionOrder) => {
         const frozen = isOrderFrozenByStatus(record);
         return (
@@ -2477,6 +2590,16 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 icon: <EyeOutlined />,
                 onClick: () => openDetail(record),
                 primary: true,
+              },
+              {
+                key: 'edit',
+                label: '编辑',
+                title: '编辑',
+                icon: <EditOutlined />,
+                onClick: () => {
+                  setQuickEditRecord(record);
+                  setQuickEditVisible(true);
+                },
               },
               {
                 key: 'register',
@@ -2544,8 +2667,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
           <div className="mpb-detailCards">
             {nodes.map((n, idx) => {
-              // 物料采购节点始终显示100%完成
-              // const isProcurementNode = String(n.name || '').includes('采购') || String(n.name || '').includes('物料');
               const stat = nodeStats.statsByName[n.name] || { done: 0, total: nodeStats.totalQty, remaining: nodeStats.totalQty, percent: 0 };
               const percent = clampPercent(stat.percent);
               const isDone = frozen || idx < currentIdx || effectivePct >= 100;
@@ -2558,7 +2679,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 <div
                   key={n.id}
                   className={`mpb-detailCard mpb-pop${canReorderWorkflow ? ' mpb-draggable' : ''}${isDragging ? ' mpb-dragging' : ''}${isDragOver ? ' mpb-dragOver' : ''}${isDone ? ' mpb-detailDone' : ''}${isCurrent ? ' mpb-detailCurrent' : ''}${frozen ? ' mpb-detailFrozen' : ''}`}
-                  style={{ width: cardWidth, ['--p' as any]: `${fillPct}%` }}
+                  style={{ width: cardWidth, ['--p' as Record<string, unknown>]: `${fillPct}%` }}
                   title={`${n.name} ${stat.done}/${stat.total} · 剩 ${stat.remaining} · ${percent.toFixed(0)}%`}
                   onDragOver={(e) => {
                     if (!canReorderWorkflow) return;
@@ -2581,7 +2702,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 >
                   <div
                     className="mpb-detailTrack"
-                    style={{ ['--p' as any]: `${fillPct}%` }}
+                    style={{ ['--p' as Record<string, unknown>]: `${fillPct}%` }}
                     draggable={canReorderWorkflow}
                     onDragStart={(e) => {
                       if (!canReorderWorkflow) return;
@@ -2669,7 +2790,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 />
               </Form.Item>
               <Form.Item label="下单时间">
-                <RangePicker value={dateRange as any} onChange={(v) => setDateRange(v as any)} />
+                <RangePicker value={dateRange as Record<string, unknown>} onChange={(v) => setDateRange(v as Record<string, unknown>)} />
               </Form.Item>
               <Form.Item className="filter-actions">
                 <Button
@@ -2726,7 +2847,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 />
               </Form.Item>
               <Form.Item label="下单时间">
-                <RangePicker value={dateRange as any} onChange={(v) => setDateRange(v as any)} />
+                <RangePicker value={dateRange as Record<string, unknown>} onChange={(v) => setDateRange(v as Record<string, unknown>)} />
               </Form.Item>
               <Form.Item className="filter-actions">
                 <Button
@@ -2804,90 +2925,83 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         {activeOrder && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <Card size="small" styles={{ body: { padding: 12 } }}>
+              <ProductionOrderHeader
+                order={activeOrder}
+                color={String(activeOrder?.color || '').trim()}
+                coverSize={160}
+                qrSize={120}
+              />
               <div
                 style={{
+                  marginTop: 12,
                   display: 'grid',
-                  gridTemplateColumns: screens.lg ? '160px 1fr' : '1fr',
-                  gap: 12,
+                  gridTemplateColumns: screens.lg ? 'repeat(4, minmax(0, 1fr))' : screens.md ? 'repeat(2, minmax(0, 1fr))' : '1fr',
+                  columnGap: 16,
+                  rowGap: 10,
                   alignItems: 'start',
                 }}
               >
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, justifySelf: screens.lg ? 'start' : 'start' }}>
-                  <QRCodeCanvas value={activeOrder.qrCode || ' '} size={120} includeMargin />
-                  <div style={{ textAlign: 'center', color: '#8c8c8c', fontSize: 'var(--font-size-sm)', lineHeight: 1.2 }}>{activeOrder.qrCode || '-'}</div>
+                <div>
+                  <Text type="secondary">订单数量</Text>
+                  <div style={{ fontWeight: 600 }}>{Number(activeOrder.orderQuantity) || 0}</div>
+                </div>
+                <div>
+                  <Text type="secondary">完成数量</Text>
+                  <div style={{ fontWeight: 600 }}>{Number(activeOrder.completedQuantity) || 0}</div>
+                </div>
+                <div>
+                  <Text type="secondary">物料到位率</Text>
+                  <div style={{ fontWeight: 600 }}>{clampPercent(Number(activeOrder.materialArrivalRate) || 0)}%</div>
+                </div>
+                <div>
+                  <Text type="secondary">生产进度</Text>
+                  <div style={{ fontWeight: 600 }}>{clampPercent(Number(activeOrder.productionProgress) || 0)}%</div>
                 </div>
 
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: screens.lg ? 'repeat(4, minmax(0, 1fr))' : screens.md ? 'repeat(2, minmax(0, 1fr))' : '1fr',
-                    columnGap: 16,
-                    rowGap: 10,
-                    alignItems: 'start',
-                  }}
-                >
-                  <div>
-                    <Text type="secondary">订单数量</Text>
-                    <div style={{ fontWeight: 600 }}>{Number(activeOrder.orderQuantity) || 0}</div>
-                  </div>
-                  <div>
-                    <Text type="secondary">完成数量</Text>
-                    <div style={{ fontWeight: 600 }}>{Number(activeOrder.completedQuantity) || 0}</div>
-                  </div>
-                  <div>
-                    <Text type="secondary">物料到位率</Text>
-                    <div style={{ fontWeight: 600 }}>{clampPercent(Number(activeOrder.materialArrivalRate) || 0)}%</div>
-                  </div>
-                  <div>
-                    <Text type="secondary">生产进度</Text>
-                    <div style={{ fontWeight: 600 }}>{clampPercent(Number(activeOrder.productionProgress) || 0)}%</div>
-                  </div>
+                <div>
+                  <Text type="secondary">下单时间</Text>
+                  <div>{formatTime(activeOrder.createTime)}</div>
+                </div>
+                <div>
+                  <Text type="secondary">出货时间</Text>
+                  <div>{formatTime(getOrderShipTime(activeOrder))}</div>
+                </div>
+                <div>
+                  <Text type="secondary">计划开始</Text>
+                  <div>{formatTime(activeOrder.plannedStartDate)}</div>
+                </div>
+                <div>
+                  <Text type="secondary">计划交期</Text>
+                  <div>{formatTime(activeOrder.plannedEndDate)}</div>
+                </div>
 
+                <div>
+                  <Text type="secondary">状态</Text>
                   <div>
-                    <Text type="secondary">下单时间</Text>
-                    <div>{formatTime(activeOrder.createTime)}</div>
+                    {(() => {
+                      const map: unknown = {
+                        pending: { color: 'default', label: '待开始' },
+                        production: { color: 'processing', label: '生产中' },
+                        completed: { color: 'success', label: '已完成' },
+                        delayed: { color: 'warning', label: '延期' },
+                      };
+                      const value: unknown = (activeOrder as Record<string, unknown>).status;
+                      const t = map[value] || { color: 'default', label: '未知' };
+                      return <Tag color={t.color}>{t.label}</Tag>;
+                    })()}
                   </div>
-                  <div>
-                    <Text type="secondary">出货时间</Text>
-                    <div>{formatTime(getOrderShipTime(activeOrder))}</div>
-                  </div>
-                  <div>
-                    <Text type="secondary">计划开始</Text>
-                    <div>{formatTime(activeOrder.plannedStartDate)}</div>
-                  </div>
-                  <div>
-                    <Text type="secondary">计划交期</Text>
-                    <div>{formatTime(activeOrder.plannedEndDate)}</div>
-                  </div>
-
-                  <div>
-                    <Text type="secondary">状态</Text>
-                    <div>
-                      {(() => {
-                        const map: any = {
-                          pending: { color: 'default', label: '待开始' },
-                          production: { color: 'processing', label: '生产中' },
-                          completed: { color: 'success', label: '已完成' },
-                          delayed: { color: 'warning', label: '延期' },
-                        };
-                        const value: any = (activeOrder as any).status;
-                        const t = map[value] || { color: 'default', label: '未知' };
-                        return <Tag color={t.color}>{t.label}</Tag>;
-                      })()}
-                    </div>
-                  </div>
-                  <div>
-                    <Text type="secondary">加工厂</Text>
-                    <div>{activeOrder.factoryName || '-'}</div>
-                  </div>
-                  <div>
-                    <Text type="secondary">实际开始</Text>
-                    <div>{formatTime(activeOrder.actualStartDate)}</div>
-                  </div>
-                  <div>
-                    <Text type="secondary">实际完成</Text>
-                    <div>{formatTime(activeOrder.actualEndDate)}</div>
-                  </div>
+                </div>
+                <div>
+                  <Text type="secondary">加工厂</Text>
+                  <div>{activeOrder.factoryName || '-'}</div>
+                </div>
+                <div>
+                  <Text type="secondary">实际开始</Text>
+                  <div>{formatTime(activeOrder.actualStartDate)}</div>
+                </div>
+                <div>
+                  <Text type="secondary">实际完成</Text>
+                  <div>{formatTime(activeOrder.actualEndDate)}</div>
                 </div>
               </div>
             </Card>
@@ -2967,16 +3081,30 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                       children: detailFlowExpanded ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-                            <Text type="secondary">共 {scanHistory.length} 条</Text>
-                            <Button icon={<DownloadOutlined />} onClick={exportScanHistoryCsv} disabled={!scanHistory.length}>
-                              导出CSV
-                            </Button>
+                            <Space size={6} wrap>
+                              <Text type="secondary">共 {filteredScanHistory.length} 条</Text>
+                              {filteredScanHistory.length !== scanHistory.length ? (
+                                <Text type="secondary">/ 全部 {scanHistory.length} 条</Text>
+                              ) : null}
+                            </Space>
+                            <Space size={8} wrap>
+                              <Select
+                                size="small"
+                                value={scanStageFilter}
+                                onChange={(v) => setScanStageFilter(String(v || 'auto'))}
+                                options={scanStageOptions}
+                                style={{ minWidth: 160 }}
+                              />
+                              <Button icon={<DownloadOutlined />} onClick={exportScanHistoryCsv} disabled={!scanHistory.length}>
+                                导出CSV
+                              </Button>
+                            </Space>
                           </div>
                           <div style={{ maxHeight: screens.lg ? 460 : 360, overflowY: 'auto' }}>
                             <ResizableTable
                               rowKey={(r) => String(r.id || `${r.scanTime}-${r.operatorId}-${r.processName}`)}
                               loading={scanHistoryLoading}
-                              dataSource={scanHistory}
+                              dataSource={filteredScanHistory}
                               pagination={false}
                               size="small"
                               scroll={{ x: 'max-content' }}
@@ -2987,10 +3115,14 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                                   key: 'scanType',
                                   width: 90,
                                   render: (v) => {
-                                    const map: any = {
+                                    const map: unknown = {
                                       material: { color: 'default', label: '物料' },
+                                      procurement: { color: 'gold', label: '采购' },
                                       cutting: { color: 'geekblue', label: '裁剪' },
                                       production: { color: 'processing', label: '生产' },
+                                      sewing: { color: 'processing', label: '车缝' },
+                                      ironing: { color: 'processing', label: '整烫' },
+                                      packaging: { color: 'processing', label: '包装' },
                                       quality: { color: 'purple', label: '质检' },
                                       warehouse: { color: 'success', label: '入库' },
                                       shipment: { color: 'gold', label: '出货' },
@@ -3156,7 +3288,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
 
                     <div style={{ maxHeight: screens.lg ? 440 : 320, overflowY: 'auto' }}>
                       <ResizableTable
-                        rowKey={(r: any) => String(r.qrCode || r.id || r.bundleNo)}
+                        rowKey={(r: Record<string, unknown>) => String(r.qrCode || r.id || r.bundleNo)}
                         size="small"
                         pagination={false}
                         scroll={{ x: 'max-content' }}
@@ -3165,8 +3297,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                         rowSelection={{
                           type: 'radio',
                           selectedRowKeys: matchedBundle ? [String(matchedBundle.qrCode || '')] : [],
-                          getCheckboxProps: (r: any) => ({ disabled: Boolean(r?.completed) }),
-                          onChange: (_keys: React.Key[], rows: any[]) => {
+                          getCheckboxProps: (r: Record<string, unknown>) => ({ disabled: Boolean(r?.completed) }),
+                          onChange: (_keys: React.Key[], rows: unknown[]) => {
                             const r = rows?.[0];
                             const code = String(r?.qrCode || '').trim();
                             if (!code) return;
@@ -3181,7 +3313,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                             setTimeout(() => scanInputRef.current?.focus?.(), 0);
                           },
                         }}
-                        onRow={(r: any) => ({
+                        onRow={(r: Record<string, unknown>) => ({
                           onClick: () => {
                             if (r?.completed) return;
                             const code = String(r?.qrCode || '').trim();
@@ -3203,7 +3335,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                           const done = Number(bundleDoneByQrForSelectedNode[qr]) || 0;
                           const remaining = Math.max(0, total - done);
                           const completed = total > 0 && done >= total;
-                          const meta = (bundleMetaByQrForSelectedNode as any)?.[qr] || {};
+                          const meta = (bundleMetaByQrForSelectedNode as Record<string, unknown>)?.[qr] || {};
                           return {
                             ...b,
                             done,
@@ -3213,7 +3345,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                             operatorIds: Array.isArray(meta.operatorIds) ? meta.operatorIds : [],
                             receiveTime: meta.receiveTime || '',
                             completeTime: meta.completeTime || '',
-                          } as any;
+                          } as Record<string, unknown>;
                         })}
                         columns={[
                           { title: '菲号', dataIndex: 'bundleNo', key: 'bundleNo', width: 70 },
@@ -3239,7 +3371,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                             dataIndex: 'completed',
                             key: 'completed',
                             width: 64,
-                            render: (v: any) => (v
+                            render: (v: unknown) => (v
                               ? <Tag color="success" style={{ marginInlineEnd: 0, paddingInline: 2, lineHeight: '16px', fontSize: 'var(--font-size-xs)' }}>已完成</Tag>
                               : <Tag style={{ marginInlineEnd: 0, paddingInline: 2, lineHeight: '16px', fontSize: 'var(--font-size-xs)' }}>未完成</Tag>),
                           },
@@ -3266,14 +3398,14 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                             dataIndex: 'receiveTime',
                             key: 'receiveTime',
                             width: 100,
-                            render: (v: any) => formatTimeCompact(v),
+                            render: (v: unknown) => formatTimeCompact(v),
                           },
                           {
                             title: '完成时间',
                             dataIndex: 'completeTime',
                             key: 'completeTime',
                             width: 100,
-                            render: (v: any) => formatTimeCompact(v),
+                            render: (v: unknown) => formatTimeCompact(v),
                           },
                         ]}
                       />
@@ -3354,8 +3486,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     scanForm.setFieldsValue({ unitPrice: scanForm.getFieldValue('baseUnitPrice') });
                     return;
                   }
-                  const picked = pricingProcesses.find((p) => String((p as any)?.processName || '').trim() === name);
-                  const price = Number((picked as any)?.price);
+                  const picked = pricingProcesses.find((p) => String((p as Record<string, unknown>)?.processName || '').trim() === name);
+                  const price = Number((picked as Record<string, unknown>)?.price);
                   if (Number.isFinite(price) && price >= 0) {
                     scanForm.setFieldsValue({ unitPrice: price });
                     return;
@@ -3486,7 +3618,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               rollbackQuantity: qty,
               rollbackRemark: remark,
             });
-            const result = res as any;
+            const result = res as Record<string, unknown>;
             if (result.code === 200) {
               message.success('回流成功');
               closeRollback();
@@ -3497,7 +3629,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             } else {
               message.error(result.message || '回流失败');
             }
-          } catch (e: any) {
+          } catch (e: unknown) {
             if (e?.errorFields) {
               const firstError = e.errorFields?.[0];
               message.error(firstError?.errors?.[0] || '表单验证失败');
@@ -3523,7 +3655,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 { label: '按扎号回退入库', value: 'bundle' },
               ]}
               onChange={(v) => {
-                const next = v as any;
+                const next = v as Record<string, unknown>;
                 setRollbackMode(next);
                 rollbackForm.resetFields();
                 if (next === 'bundle' && rollbackOrder) {
@@ -3597,6 +3729,21 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
           )}
         </Form>
       </ResizableModal>
+
+      {/* 快速编辑弹窗 */}
+      <QuickEditModal
+        visible={quickEditVisible}
+        loading={quickEditSaving}
+        initialValues={{
+          remarks: quickEditRecord?.remarks,
+          expectedShipDate: quickEditRecord?.expectedShipDate,
+        }}
+        onSave={handleQuickEditSave}
+        onCancel={() => {
+          setQuickEditVisible(false);
+          setQuickEditRecord(null);
+        }}
+      />
     </div>
   );
 

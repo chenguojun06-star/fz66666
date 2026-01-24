@@ -17,9 +17,9 @@ function validatePassword(password) {
 
 function validateApiBaseUrl(url) {
     const v = String(url || '').trim();
-    if (!v) return '';  // 可选字段
+    if (!v) {return '';}  // 可选字段
     const error = validateByRule(v, { name: 'API 地址', required: false, pattern: /^https?:\/\// });
-    if (error) return error;
+    if (error) {return error;}
     return '';
 }
 
@@ -116,7 +116,7 @@ Page({
     },
 
     async onWechatLogin() {
-        if (this.data.loading) return;
+        if (this.data.loading) {return;}
 
         const apiBaseUrl = (this.data.apiBaseUrl || '').trim();
         if (this.data.showDevFields && apiBaseUrl) {
@@ -150,15 +150,15 @@ Page({
             wx.showToast({ title: (resp && resp.message) || '登录失败', icon: 'none' });
         } catch (e) {
             const app = getApp();
-            if (app && typeof app.toastError === 'function') app.toastError(e, '网络异常');
-            else wx.showToast({ title: '网络异常', icon: 'none' });
+            if (app && typeof app.toastError === 'function') {app.toastError(e, '网络异常');}
+            else {wx.showToast({ title: '网络异常', icon: 'none' });}
         } finally {
             this.setData({ loading: false });
         }
     },
 
     async onDevLogin() {
-        if (this.data.loading) return;
+        if (this.data.loading) {return;}
 
         const username = (this.data.username || '').trim();
         const password = (this.data.password || '').trim();
@@ -210,8 +210,8 @@ Page({
             wx.showToast({ title: (resp && resp.message) || '登录失败', icon: 'none' });
         } catch (e) {
             const app = getApp();
-            if (app && typeof app.toastError === 'function') app.toastError(e, '网络异常');
-            else wx.showToast({ title: '网络异常', icon: 'none' });
+            if (app && typeof app.toastError === 'function') {app.toastError(e, '网络异常');}
+            else {wx.showToast({ title: '网络异常', icon: 'none' });}
         } finally {
             this.setData({ loading: false });
         }

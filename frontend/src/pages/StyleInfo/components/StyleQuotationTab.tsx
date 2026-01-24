@@ -22,7 +22,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
   const totalPrice = Number(Form.useWatch('totalPrice', form)) || 0;
   const profit = totalPrice - (materialCost + processCost + otherCost);
 
-  const calcBomCost = (items: any[]) => {
+  const calcBomCost = (items: unknown[]) => {
     return (items || []).reduce((sum: number, item: any) => {
       const rawTotalPrice = item?.totalPrice;
       const hasTotalPrice = rawTotalPrice !== undefined && rawTotalPrice !== null && String(rawTotalPrice).trim() !== '';
@@ -45,12 +45,12 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
     try {
       // 1. 获取现有报价单
       const quoteRes = await api.get<StyleQuotation>(`/style/quotation?styleId=${styleId}`);
-      const quoteResult = quoteRes as any;
-      const existing = quoteResult.code === 200 ? (quoteResult.data as any) : null;
+      const quoteResult = quoteRes as Record<string, unknown>;
+      const existing = quoteResult.code === 200 ? (quoteResult.data as Record<string, unknown>) : null;
 
       // 2. 自动计算物料清单成本
       const bomRes = await api.get<StyleBom[]>(`/style/bom/list?styleId=${styleId}`);
-      const bomResult = bomRes as any;
+      const bomResult = bomRes as Record<string, unknown>;
       let bomCost = 0;
       if (bomResult.code === 200) {
         bomCost = calcBomCost(bomResult.data || []);
@@ -58,7 +58,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
 
       // 3. 自动计算工序成本
       const processRes = await api.get<StyleProcess[]>(`/style/process/list?styleId=${styleId}`);
-      const processResult = processRes as any;
+      const processResult = processRes as Record<string, unknown>;
       let procCost = 0;
       if (processResult.code === 200) {
         procCost = (processResult.data || []).reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0);
@@ -122,7 +122,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
         styleId
       };
       const res = await api.post('/style/quotation', data);
-      const result = res as any;
+      const result = res as Record<string, unknown>;
       if (result.code === 200) {
         message.success('保存成功');
         onSaved?.();

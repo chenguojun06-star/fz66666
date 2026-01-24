@@ -42,7 +42,7 @@ Page({
   },
 
   async loadRoleOptions() {
-    if (this.data.roleLoading) return;
+    if (this.data.roleLoading) {return;}
     this.setData({ roleLoading: true });
     try {
       const result = await api.system.listRoles({ page: 1, pageSize: 100 });
@@ -56,7 +56,7 @@ Page({
   },
 
   async loadPendingUsers(reset = false) {
-    if (this.data.loading) return;
+    if (this.data.loading) {return;}
     
     const page = reset ? 1 : this.data.page;
     this.setData({ loading: true });
@@ -90,7 +90,7 @@ Page({
   },
 
   onLoadMore() {
-    if (!this.data.hasMore || this.data.loading) return;
+    if (!this.data.hasMore || this.data.loading) {return;}
     this.setData({ page: this.data.page + 1 });
     this.loadPendingUsers();
   },

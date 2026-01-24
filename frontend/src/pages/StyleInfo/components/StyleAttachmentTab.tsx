@@ -66,19 +66,21 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
   };
 
   const resolveFileType = (record: StyleAttachment) => {
-    const t = String((record as any)?.fileType || '').trim();
+    const t = String((record as Record<string, unknown>)?.fileType || '').trim();
     if (t) return t;
     const ext = getExt(record.fileName);
     return ext ? ext.slice(1) : '';
   };
 
-  const debugValue = (value: any) => {
+  const debugValue = (value: unknown) => {
     if (value === undefined) return 'undefined';
     if (value === null) return 'null';
     if (typeof value === 'string') return value;
     try {
       return JSON.stringify(value);
     } catch {
+    // Intentionally empty
+      // 忽略错误
       return String(value);
     }
   };
@@ -90,7 +92,7 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
       const res = await api.get<StyleAttachment[]>('/style/attachment/list', {
         params: { styleId, ...(bizType ? { bizType } : {}) },
       });
-      const result = res as any;
+      const result = res as Record<string, unknown>;
       if (result.code === 200) {
         const list = Array.isArray(result.data) ? (result.data as StyleAttachment[]) : [];
         setData(list);
@@ -111,7 +113,7 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
   const handleDelete = async (id: string | number) => {
     try {
       const res = await api.delete(`/style/attachment/${id}`);
-      const result = res as any;
+      const result = res as Record<string, unknown>;
       if (result.code === 200 && result.data === true) {
         message.success('删除成功');
         fetchList();
@@ -119,7 +121,7 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
         const detail = `code:${debugValue(result?.code)}, data:${debugValue(result?.data)}`;
         message.error(`${result?.message || '删除失败'}（${detail}）`);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       message.error(`删除失败（${error?.message || '请求失败'}）`);
     }
   };
@@ -162,14 +164,14 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
 
     try {
       const res = await api.post('/style/attachment/upload', formData);
-      const result = res as any;
+      const result = res as Record<string, unknown>;
       if (result.code === 200) {
         message.success('上传成功');
         fetchList();
       } else {
         message.error(result.message || '上传失败');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       message.error(error?.message || '上传失败');
     }
     return Upload.LIST_IGNORE;
@@ -191,7 +193,7 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
   };
 
   const isWorkorderRecord = (record: StyleAttachment) => {
-    const bt = String((record as any)?.bizType || '').trim().toLowerCase();
+    const bt = String((record as Record<string, unknown>)?.bizType || '').trim().toLowerCase();
     if (bt === 'workorder') return true;
     const name = String(record.fileName || '').trim();
     return name.includes('生产制单');
@@ -225,6 +227,8 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
       try {
         document.body.removeChild(iframe);
       } catch {
+    // Intentionally empty
+      // 忽略错误
         return;
       }
     };
@@ -233,6 +237,8 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
         iframe.contentWindow?.focus();
         iframe.contentWindow?.print();
       } catch {
+    // Intentionally empty
+      // 忽略错误
         return;
       } finally {
         setTimeout(cleanup, 1500);
@@ -244,6 +250,8 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
         iframe.contentWindow?.focus();
         iframe.contentWindow?.print();
       } catch {
+    // Intentionally empty
+      // 忽略错误
         return;
       }
     }, 900);
@@ -318,7 +326,7 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
       dataIndex: 'createTime',
       width: 180,
       ellipsis: true,
-      render: (value: any) => formatDateTime(value),
+      render: (value: unknown) => formatDateTime(value),
     },
     {
       title: '操作',
@@ -378,7 +386,7 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
           },
         ];
 
-        return <RowActions maxInline={3} actions={actions as any} />;
+        return <RowActions maxInline={3} actions={actions as Record<string, unknown>} />;
       },
     }
   ];
@@ -391,7 +399,7 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
           accept={acceptExts.join(',')}
           showUploadList={false}
           disabled={Boolean(readOnly)}
-          beforeUpload={(file: any, fileList: any[]) => {
+          beforeUpload={(file: any, fileList: unknown[]) => {
             if (readOnly) {
               return Upload.LIST_IGNORE;
             }
