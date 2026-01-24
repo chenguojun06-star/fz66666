@@ -1297,9 +1297,6 @@ const ProductionList: React.FC = () => {
           footer={[
             <Button key="cancel" onClick={closeScanDialog}>
               关闭
-            </Button>,
-            <Button key="submit" type="primary" icon={<ScanOutlined />} onClick={handleScanSubmit} loading={scanSubmitting}>
-              扫码领取
             </Button>
           ]}
           width={modalWidth}
