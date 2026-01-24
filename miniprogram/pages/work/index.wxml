@@ -29,25 +29,38 @@
       <view wx:if="{{orders.list.length === 0 && !orders.loading}}" class="hint">暂无数据</view>
         <view wx:for="{{orders.list}}" wx:key="id" class="list-item">
           <view class="item-head">
-            <view class="item-title">{{item.orderNo || '-'}}</view>
-            <text class="tag">{{item.statusText || '-'}}</text>
+            <view class="item-title {{item.isClosed ? 'item-title-closed' : ''}}">{{item.orderNo || '-'}}</view>
+            <view class="item-tags">
+              <text wx:if="{{item.currentProcessName}}" class="tag {{item.currentProcessName === '裁剪' ? 'tag-process' : ''}}">{{item.currentProcessName}}</text>
+              <view wx:if="{{item.currentProcessName === '裁剪'}}" class="action-btn action-btn-inline" bindtap="onGenerateBundle" data-order="{{item}}">
+                <text>📋 生成菲号</text>
+              </view>
+            </view>
           </view>
-          <view class="item-sub">款号：{{item.styleNo || '-'}}</view>
-          <view class="item-sub">工厂：{{item.factoryName || '-'}}</view>
-          <view class="item-sub">数量：{{item.orderQuantity || 0}}，完成：{{item.completedQuantity || 0}}</view>
+          <view class="item-sub item-sub-inline">
+            <text>工厂：{{item.factoryName || '-'}}</text>
+            <text class="item-sub-sep">｜</text>
+            <text>款号：{{item.styleNo || '-'}}</text>
+          </view>
+          <view wx:if="{{item.sizeList && item.sizeList.length}}" class="size-plain">
+            <view class="size-plain-row">
+              <text class="size-plain-label">码数</text>
+              <text wx:for="{{item.sizeList}}" wx:key="*this" class="size-plain-cell">{{item}}</text>
+              <text class="size-plain-summary">汇总：{{item.sizeTotal ? item.sizeTotal : (item.orderQuantity || 0)}}，完成：{{item.completedQuantity || 0}}</text>
+            </view>
+            <view class="size-plain-row">
+              <text class="size-plain-label">数量</text>
+              <text wx:for="{{item.sizeQtyList}}" wx:key="index" class="size-plain-cell">{{item}}</text>
+            </view>
+          </view>
+          <view wx:else class="item-sub">码数：-，汇总：{{item.orderQuantity || 0}}，完成：{{item.completedQuantity || 0}}</view>
           <view class="progress-wrapper">
             <view class="progress-bar {{item.status === 'completed' ? 'progress-closed' : 'progress-active'}}">
               <view class="progress-fill" style="width: {{item.productionProgress || 0}}%"></view>
             </view>
             <text class="progress-text progress-percent">{{item.productionProgress || 0}}%</text>
           </view>
-          <view class="current-process">{{item.currentProcessName || '待开始'}}</view>
-          <!-- 生成菲号按钮：仅在裁剪阶段显示 -->
-          <view wx:if="{{item.currentProcessName === '裁剪'}}" class="item-actions">
-            <view class="action-btn" bindtap="onGenerateBundle" data-order="{{item}}">
-              <text>📋 生成菲号</text>
-            </view>
-          </view>
+          <view wx:if="{{item.currentProcessName && item.currentProcessName !== '裁剪'}}" class="current-process">{{item.currentProcessName}}</view>
         </view>
 
       <view class="btn">

@@ -6,9 +6,99 @@ const { syncManager } = require('../../utils/syncManager');
 const reminderManager = require('../../utils/reminderManager');
 const { orderStatusText, qualityStatusText, scanResultText } = require('../../utils/orderStatusHelper');
 const { onDataRefresh, triggerDataRefresh, Events } = require('../../utils/eventBus');
+function toNumberSafe(val) {
+  if (val === null || val === undefined) return 0;
+  const n = Number(val);
+  return isNaN(n) ? 0 : n;
+}
+
+function parseProductionOrderLines(order) {
+  if (!order) return [];
+
+  let detailsRaw = order.orderDetails;
+  let parsed = null;
+
+  if (detailsRaw != null && String(detailsRaw).trim()) {
+    try {
+      parsed = typeof detailsRaw === 'string' ? JSON.parse(detailsRaw) : detailsRaw;
+    } catch (e) {
+      parsed = null;
+    }
+  }
+
+  let list = [];
+  if (Array.isArray(parsed)) {
+    list = parsed;
+  } else if (parsed && typeof parsed === 'object') {
+    const candidate = parsed.lines || parsed.items || parsed.details || parsed.list || parsed.orderLines;
+    if (Array.isArray(candidate)) {
+      list = candidate;
+    } else {
+      list = [parsed];
+    }
+  }
+
+  const normalized = list
+    .map((r) => {
+      const color = String(r.color || r.colour || r.colorName || r['颜色'] || '').trim();
+      const size = String(r.size || r.sizeName || r.spec || r.尺码 || r['尺码'] || '').trim();
+      const quantity = toNumberSafe(r.quantity || r.qty || r.count || r.num || r['数量']);
+      return { color, size, quantity };
+    })
+    .filter((l) => {
+      if (!l.color || !l.size) return false;
+      return l.quantity > 0;
+    });
+
+  if (normalized.length > 0) {
+    return normalized;
+  }
+
+  const fallbackColor = String(order.color || '').trim();
+  const fallbackSize = String(order.size || '').trim();
+  const fallbackQty = toNumberSafe(order.orderQuantity || order.quantity);
+
+  if (fallbackColor && fallbackSize && fallbackQty > 0) {
+    return [{
+      color: fallbackColor,
+      size: fallbackSize,
+      quantity: fallbackQty,
+    }];
+  }
+
+  return [];
+}
 
 function normalizeText(v) {
   return (v || '').toString().trim();
+}
+
+function isClosedStatus(status) {
+  const s = normalizeText(status).toLowerCase();
+  return s === 'completed' || s === 'cancelled' || s === 'canceled' || s === 'paused';
+}
+
+function buildSizeMeta(order) {
+  const lines = parseProductionOrderLines(order);
+  if (!lines.length) {
+    return { sizeList: [], sizeQtyList: [], sizeTotal: 0 };
+  }
+
+  const sizeMap = new Map();
+  let total = 0;
+
+  lines.forEach((line) => {
+    const size = normalizeText(line && line.size);
+    const qty = Number(line && line.quantity) || 0;
+    if (!size || qty <= 0) return;
+    total += qty;
+    sizeMap.set(size, (sizeMap.get(size) || 0) + qty);
+  });
+
+  const sizes = Array.from(sizeMap.keys());
+  const sizeQtyList = sizes.map((size) => sizeMap.get(size));
+
+  return { sizeList: sizes, sizeQtyList, sizeTotal: total };
 }
 /**
  * 验证并规范化订单数据
@@ -25,14 +115,14 @@ function validateAndNormalizeOrder(order) {
     progressWorkflowJson: { required: true, type: 'string', default: '{}' },
     status: { required: true, type: 'string' },
   });
-  
+
   // 验证
   const validation = validateProductionOrder(normalized);
   if (!validation.valid) {
     // 验证失败 - 使用错误处理而非日志
     return null;
   }
-  
+
   return normalized;
 }
 
@@ -165,16 +255,16 @@ Page({
     } catch (e) {
       null;
     }
-    
+
     // ⚠️ 强制刷新订单列表（应对后端数据变更）
     this.loadOrders(true);
-    
+
     // 检查是否有pending_order_hint，如果有则显示提示
     try {
       const pendingOrderHint = wx.getStorageSync('pending_order_hint');
       if (pendingOrderHint) {
-        wx.showToast({ 
-          title: `请处理订单: ${pendingOrderHint}`, 
+        wx.showToast({
+          title: `请处理订单: ${pendingOrderHint}`,
           icon: 'none',
           duration: 3000,
         });
@@ -183,25 +273,25 @@ Page({
     } catch (e) {
       console.error('检查pending_order_hint失败', e);
     }
-    
+
     // 加载提醒列表（不弹窗）
     this.loadReminders();
-    
+
     // 启动订单列表的实时同步 (30 秒轮询一次)
     this.setupOrderSync();
-    
+
     // 设置数据刷新监听
     this.setupDataRefreshListener();
-    
+
     this.ensureLoaded();
   },
-  
+
   setupDataRefreshListener() {
     // 如果已经设置监听，先取消旧的
     if (this._unsubscribeRefresh) {
       this._unsubscribeRefresh();
     }
-    
+
     // 订阅数据刷新事件
     this._unsubscribeRefresh = onDataRefresh((payload) => {
       // 刷新当前页面数据
@@ -527,7 +617,7 @@ Page({
       const app = getApp();
       if (app && typeof app.resetPagedList === 'function') app.resetPagedList(this, 'orders');
       await this.loadOrders(true);
-      
+
       // 触发全局数据刷新事件
       triggerDataRefresh('orders', {
         action: 'rollback',
@@ -587,7 +677,7 @@ Page({
           styleNo: normalizeText(f.styleNo),
           factoryName: normalizeText(f.factoryName),
         };
-        
+
         // 根据标签页添加当前工序节点过滤
         const tab = this.data.activeTab;
         const processMap = {
@@ -599,15 +689,21 @@ Page({
         if (tab !== 'all' && processMap[tab]) {
           params.currentProcessName = processMap[tab];
         }
-        
+
         return api.production.listOrders(params);
       },
       (r) => {
         // 验证并规范化订单数据
         const validated = validateAndNormalizeOrder(r);
+        const source = validated || r || {};
+        const sizeMeta = buildSizeMeta(source);
         return {
-          ...validated,
-          statusText: orderStatusText(validated.status),
+          ...source,
+          statusText: orderStatusText(source.status),
+          isClosed: isClosedStatus(source.status),
+          sizeList: sizeMeta.sizeList,
+          sizeQtyList: sizeMeta.sizeQtyList,
+          sizeTotal: sizeMeta.sizeTotal,
         };
       },
     );
@@ -644,9 +740,15 @@ Page({
       // 更新列表
       const newList = newPage.records.map((r) => {
         const validated = validateAndNormalizeOrder(r);
+        const source = validated || r || {};
+        const sizeMeta = buildSizeMeta(source);
         return {
-          ...validated,
-          statusText: orderStatusText(validated.status),
+          ...source,
+          statusText: orderStatusText(source.status),
+          isClosed: isClosedStatus(source.status),
+          sizeList: sizeMeta.sizeList,
+          sizeQtyList: sizeMeta.sizeQtyList,
+          sizeTotal: sizeMeta.sizeTotal,
         };
       });
 
@@ -683,7 +785,7 @@ Page({
       wx.showToast({ title: '订单信息错误', icon: 'none' });
       return;
     }
-    
+
     this.setData({
       bundleModal: {
         visible: true,
@@ -746,7 +848,7 @@ Page({
 
   async onConfirmBundle() {
     const modal = this.data.bundleModal;
-    
+
     // 验证数据
     const validItems = modal.items
       .map((item) => ({
@@ -773,7 +875,7 @@ Page({
     try {
       // 调用后端API生成菲号
       const res = await api.production.generateCuttingBundles(modal.orderId, validItems);
-      
+
       if (res.code === 200) {
         wx.showToast({ title: '菲号生成成功', icon: 'success' });
         this.onCancelBundle();
@@ -796,5 +898,3 @@ Page({
     syncManager.stopSync('work_orders');
   },
 });
-
-

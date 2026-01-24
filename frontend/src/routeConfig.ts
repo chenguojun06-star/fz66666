@@ -166,7 +166,6 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.materialReconciliation]: permissionCodes.materialRecon,
   [paths.shipmentReconciliation]: permissionCodes.shipmentRecon,
   [paths.paymentApproval]: permissionCodes.paymentApproval,
-  [paths.payrollSettlement]: permissionCodes.payrollSettlement,
   [paths.user]: permissionCodes.user,
   [paths.userApproval]: permissionCodes.userApproval,
   [paths.role]: permissionCodes.role,

@@ -41,6 +41,7 @@ type OrderLine = {
   color: string;
   size: string;
   quantity: number;
+  skuNo?: string;
 };
 
 const isSystemStageRecord = (r: any) => {
@@ -279,6 +280,7 @@ const OrderFlow: React.FC = () => {
   );
 
   const orderLineColumns: ColumnsType<OrderLine> = [
+    { title: 'SKU号', dataIndex: 'skuNo', key: 'skuNo', width: 260, ellipsis: true, render: (v: any) => String(v || '').trim() || '-' },
     { title: '颜色', dataIndex: 'color', key: 'color', width: 160, render: (v: any) => String(v || '').trim() || '-' },
     { title: '尺码', dataIndex: 'size', key: 'size', width: 120, render: (v: any) => String(v || '').trim() || '-' },
     { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 110, align: 'right', render: (v: any) => toNumberSafe(v) },
@@ -572,9 +574,9 @@ const OrderFlow: React.FC = () => {
                         size="small"
                         columns={orderLineColumns}
                         dataSource={orderLines}
-                        rowKey={(r) => `${r.color}-${r.size}`}
+                        rowKey={(r) => String((r as any)?.skuNo || `${r.color}-${r.size}`)}
                         pagination={false}
-                        scroll={{ x: 520 }}
+                        scroll={{ x: 780 }}
                       />
                     </div>
                   ),

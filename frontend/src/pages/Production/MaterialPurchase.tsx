@@ -2333,7 +2333,7 @@ const MaterialPurchase: React.FC = () => {
                     return (
                       <Collapse
                         size="small"
-                        defaultActiveKey={items.map(x => x.key)}
+                        collapsible="icon"
                         items={items as any}
                       />
                     );

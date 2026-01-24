@@ -3,7 +3,7 @@
  * 生产环境自动禁用debug和info日志
  */
 
-const isDev = import.meta.env.DEV;
+const isDev = Boolean((import.meta as any)?.env?.DEV);
 
 export const logger = {
   /**

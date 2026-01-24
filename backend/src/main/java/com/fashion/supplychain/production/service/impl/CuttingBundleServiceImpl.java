@@ -154,19 +154,19 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
         if (!result.isEmpty()) {
             this.saveBatch(result);
             cuttingTaskService.markBundledByOrderId(order.getId());
-            
+
             // 更新订单进度到下一阶段（车缝/缝制）
             try {
                 order.setCurrentProcessName("车缝");
                 order.setCuttingBundleCount(result.size());
                 order.setUpdateTime(LocalDateTime.now());
                 productionOrderService.updateById(order);
-                log.info("裁剪菲号生成完成，订单进度已更新到车缝: orderId={}, orderNo={}, bundleCount={}", 
-                    order.getId(), order.getOrderNo(), result.size());
+                log.info("裁剪菲号生成完成，订单进度已更新到车缝: orderId={}, orderNo={}, bundleCount={}",
+                        order.getId(), order.getOrderNo(), result.size());
             } catch (Exception e) {
                 log.warn("Failed to update order progress to sewing: orderId={}", order.getId(), e);
             }
-            
+
             try {
                 productionOrderService.recomputeProgressFromRecords(order.getId());
             } catch (Exception e) {
@@ -278,6 +278,18 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
         }
         sb.append("-").append(Math.max(quantity, 0));
         sb.append("-").append(bundleNo);
-        return sb.toString();
+        String base = sb.toString();
+        String on = StringUtils.hasText(orderNo) ? orderNo.trim() : null;
+        String sn = StringUtils.hasText(styleNo) ? styleNo.trim() : null;
+        String c = StringUtils.hasText(color) ? color.trim() : null;
+        String s = StringUtils.hasText(size) ? size.trim() : null;
+        String skuNo = null;
+        if (StringUtils.hasText(on) && StringUtils.hasText(sn) && StringUtils.hasText(c) && StringUtils.hasText(s)) {
+            skuNo = "SKU-" + on + "-" + sn + "-" + c + "-" + s;
+        }
+        if (StringUtils.hasText(skuNo)) {
+            return base + "|" + skuNo;
+        }
+        return base;
     }
 }

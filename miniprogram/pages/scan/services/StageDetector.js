@@ -49,15 +49,16 @@ class StageDetector {
       '打枣', '车线', '绷缝', '缝骨', '包边'
     ];
 
-    // 工序类型映射
+    // 工序类型映射（与PC端保持一致）
     this.stageMapping = {
       '采购': { processName: '采购', progressStage: '采购', scanType: 'procurement' },
       '裁剪': { processName: '裁剪', progressStage: '裁剪', scanType: 'cutting' },
       '缝制': { processName: '缝制', progressStage: '缝制', scanType: 'sewing' },
       '车缝': { processName: '车缝', progressStage: '车缝', scanType: 'production' },
-      '大烫': { processName: '大烫', progressStage: '大烫', scanType: 'production' },
+      '大烫': { processName: '大烫', progressStage: '大烫', scanType: 'ironing' },
+      '整烫': { processName: '整烫', progressStage: '整烫', scanType: 'ironing' },
       '质检': { processName: '质检', progressStage: '质检', scanType: 'quality' },
-      '包装': { processName: '包装', progressStage: '包装', scanType: 'production' },
+      '包装': { processName: '包装', progressStage: '包装', scanType: 'packaging' },
       '入库': { processName: '入库', progressStage: '入库', scanType: 'warehouse' },
     };
   }
@@ -196,22 +197,13 @@ class StageDetector {
       };
     }
 
-    // 情况3：有生产进度但物料未到齐 → 裁剪（可能是回流任务）
-    if (productionProgress > 0) {
-      return {
-        processName: '裁剪',
-        progressStage: '裁剪',
-        scanType: 'cutting',
-        hint: '继续裁剪任务'
-      };
-    }
-
-    // 情况4：真正的新订单 → 从采购开始
+    // 情况3：物料未到齐 → 必须停留在采购阶段
+    // 注意：即使有生产进度（productionProgress > 0），如果物料未到齐，也不能进入裁剪
     return {
       processName: '采购',
       progressStage: '采购',
       scanType: 'procurement',
-      hint: '订单开始，进行采购'
+      hint: materialArrivalRate > 0 ? `物料到货率 ${materialArrivalRate}%，继续采购` : '订单开始，进行采购'
     };
   }
 

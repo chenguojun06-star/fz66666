@@ -90,13 +90,16 @@ Page({
         quantity: '',
         warehouse: '',
 
-        // 扫码类型选项 (兼容 WXML)
+        // 扫码类型选项 (与PC端保持一致)
         scanTypeOptions: [
             { label: '自动识别', value: 'auto' },
             { label: '采购', value: 'procurement' },
             { label: '裁剪', value: 'cutting' },
-            { label: '车缝', value: 'production' }, // 对应后端 production
-            { label: '入库', value: 'warehouse' }   // 对应后端 warehouse
+            { label: '车缝', value: 'production' },
+            { label: '整烫', value: 'ironing' },
+            { label: '包装', value: 'packaging' },
+            { label: '质检', value: 'quality' },
+            { label: '入库', value: 'warehouse' }
         ],
         scanTypeIndex: 0,
 
@@ -422,9 +425,13 @@ Page({
 
         // ✅ 构建表单项
         const formItems = SKUProcessor.buildSKUInputList(skuList);
-        
+
         // ✅ 计算统计摘要
         const summary = SKUProcessor.getSummary(skuList);
+
+        const sizeDetails = skuList.length > 0
+            ? skuList.map(item => `${item.color || '-'}${item.size ? `/${item.size}` : ''}×${Number(item.totalQuantity || 0)}`).join('，')
+            : '';
 
         // 构造 Cutting 任务 (如果是裁剪工序)
         let cuttingTasks = [];
@@ -444,7 +451,8 @@ Page({
                 remain: 30, // 30秒后自动关闭? (目前暂未实现倒计时逻辑)
                 detail: {
                     ...data,
-                    isProcurement: this.data.scanTypeOptions[this.data.scanTypeIndex].value === 'procurement' || data.progressStage === '采购'
+                    isProcurement: this.data.scanTypeOptions[this.data.scanTypeIndex].value === 'procurement' || data.progressStage === '采购',
+                    sizeDetails
                 },
                 skuList: formItems,
                 summary: summary, // ✅ 新增: 显示统计摘要

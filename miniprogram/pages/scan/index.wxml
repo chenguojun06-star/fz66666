@@ -196,6 +196,7 @@
           </view>
           <view wx:if="{{scanConfirm.detail.orderNo}}" class="cf-item"><text class="cf-k">订单</text><text class="cf-v hl">{{scanConfirm.detail.orderNo}}</text></view>
           <view wx:if="{{scanConfirm.detail.styleNo}}" class="cf-item"><text class="cf-k">款号</text><text class="cf-v">{{scanConfirm.detail.styleNo}}</text></view>
+          <view wx:if="{{scanConfirm.detail.sizeDetails}}" class="cf-item compact"><text class="cf-k">码数明细</text><text class="cf-v wrap">{{scanConfirm.detail.sizeDetails}}</text></view>
           <view wx:if="{{scanConfirm.detail.progressStage && !scanConfirm.detail.isProcurement}}" class="cf-item"><text class="cf-k">环节</text><text class="cf-v">{{scanConfirm.detail.progressStage}}</text></view>
         </view>
         

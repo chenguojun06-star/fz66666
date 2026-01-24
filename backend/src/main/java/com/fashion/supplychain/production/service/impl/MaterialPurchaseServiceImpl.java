@@ -418,6 +418,17 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         int arrived = materialPurchase.getArrivedQuantity() == null ? 0 : materialPurchase.getArrivedQuantity();
         materialPurchase.setTotalAmount(materialPurchase.getUnitPrice().multiply(BigDecimal.valueOf(arrived)));
 
+        String status = materialPurchase.getStatus() == null ? "" : materialPurchase.getStatus().trim();
+        if (!"cancelled".equalsIgnoreCase(status)) {
+            int purchaseQty = materialPurchase.getPurchaseQuantity() == null ? 0 : materialPurchase.getPurchaseQuantity();
+            materialPurchase.setStatus(resolveStatusByArrived(status, arrived, purchaseQty));
+        }
+
+        if ("completed".equalsIgnoreCase(materialPurchase.getStatus())
+                && materialPurchase.getActualArrivalDate() == null) {
+            materialPurchase.setActualArrivalDate(now);
+        }
+
         ensureSnapshot(materialPurchase);
 
         // 保存物料采购记录
@@ -439,6 +450,17 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         }
         int arrived = materialPurchase.getArrivedQuantity() == null ? 0 : materialPurchase.getArrivedQuantity();
         materialPurchase.setTotalAmount(materialPurchase.getUnitPrice().multiply(BigDecimal.valueOf(arrived)));
+
+        String status = materialPurchase.getStatus() == null ? "" : materialPurchase.getStatus().trim();
+        if (!"cancelled".equalsIgnoreCase(status)) {
+            int purchaseQty = materialPurchase.getPurchaseQuantity() == null ? 0 : materialPurchase.getPurchaseQuantity();
+            materialPurchase.setStatus(resolveStatusByArrived(status, arrived, purchaseQty));
+        }
+
+        if ("completed".equalsIgnoreCase(materialPurchase.getStatus())
+                && materialPurchase.getActualArrivalDate() == null) {
+            materialPurchase.setActualArrivalDate(materialPurchase.getUpdateTime());
+        }
 
         ensureSnapshot(materialPurchase);
 
@@ -679,8 +701,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         if (purchaseQty <= 0) {
             return 0;
         }
-        long pq = purchaseQty;
-        return (int) ((pq * 20L + 99L) / 100L);
+        return purchaseQty;
     }
 
     private String resolveStatusByArrived(String previousStatus, int arrivedQty, int purchaseQty) {
@@ -733,7 +754,11 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
             int purchaseQty = materialPurchase.getPurchaseQuantity() == null ? 0
                     : materialPurchase.getPurchaseQuantity();
             int arrivedQty = arrivedQuantity == null ? 0 : arrivedQuantity;
-            materialPurchase.setStatus(resolveStatusByArrived(currentStatus, arrivedQty, purchaseQty));
+            String nextStatus = resolveStatusByArrived(currentStatus, arrivedQty, purchaseQty);
+            materialPurchase.setStatus(nextStatus);
+            if ("completed".equalsIgnoreCase(nextStatus) && materialPurchase.getActualArrivalDate() == null) {
+                materialPurchase.setActualArrivalDate(LocalDateTime.now());
+            }
         }
 
         // 更新物料采购记录
