@@ -61,11 +61,11 @@ const MaterialPurchaseDetail: React.FC = () => {
     setLoading(true);
     try {
       // 加载订单信息
-      const orderRes = await api.get(`/api/production/order/${orderId}`);
+      const orderRes = await api.get(`/production/order/${orderId}`);
       setOrder(orderRes.data);
 
       // 加载该订单的所有采购单
-      const purchaseRes = await api.get('/api/production/material-purchase/list', {
+      const purchaseRes = await api.get('/production/material-purchase/list', {
         params: { orderId, page: 1, pageSize: 1000 }
       });
       setPurchaseList(purchaseRes.data?.records || []);
@@ -114,7 +114,7 @@ const MaterialPurchaseDetail: React.FC = () => {
       
       setConfirmLoading(true);
       
-      await api.post('/api/production/order/confirm-procurement', {
+      await api.post('/production/order/confirm-procurement', {
         id: orderId,
         remark: values.remark.trim(),
       });
