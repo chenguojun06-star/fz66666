@@ -36,7 +36,7 @@ export const paths = {
 
   productionList: '/production',
   materialPurchase: '/production/material',
-  procurementConfirmation: '/production/procurement-confirmation',
+  materialPurchaseDetail: '/production/material/:orderId',
   cutting: '/production/cutting',
   cuttingTask: '/production/cutting/task/:orderNo',
   progressDetail: '/production/progress-detail',
@@ -67,7 +67,6 @@ export const permissionCodes = {
 
   productionList: 'MENU_PRODUCTION_LIST',
   materialPurchase: 'MENU_MATERIAL_PURCHASE',
-  procurementConfirmation: 'MENU_PROCUREMENT_CONFIRMATION',
   cutting: 'MENU_CUTTING',
   progress: 'MENU_PROGRESS',
   warehousing: 'MENU_WAREHOUSING',
@@ -123,7 +122,6 @@ export const menuConfig: MenuSection[] = [
     items: [
       { label: '我的订单', path: paths.productionList, icon: React.createElement(BuildOutlined) },
       { label: '物料采购', path: paths.materialPurchase, icon: React.createElement(ShoppingCartOutlined) },
-      { label: '采购确认', path: paths.procurementConfirmation, icon: React.createElement(CheckCircleOutlined) },
       { label: '裁剪管理', path: paths.cutting, icon: React.createElement(ScissorOutlined) },
       { label: '生产进度', path: paths.progressDetail, icon: React.createElement(FileSearchOutlined) },
       { label: '质检入库', path: paths.warehousing, icon: React.createElement(InboxOutlined) },
@@ -163,7 +161,6 @@ export const routeToPermissionCode: Record<string, string> = {
 
   [paths.productionList]: permissionCodes.productionList,
   [paths.materialPurchase]: permissionCodes.materialPurchase,
-  [paths.procurementConfirmation]: permissionCodes.procurementConfirmation,
   [paths.cutting]: permissionCodes.cutting,
   [paths.progressDetail]: permissionCodes.progress,
   [paths.warehousing]: permissionCodes.warehousing,

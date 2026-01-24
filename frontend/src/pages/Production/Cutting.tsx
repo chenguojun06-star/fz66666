@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Card, Form, Input, InputNumber, Select, Space, Tag, Typography } from 'antd';
+import { App, Button, Card, Col, Form, Input, InputNumber, Row, Select, Space, Tag, Typography } from 'antd';
 import { EyeOutlined, LoginOutlined, PlusOutlined, RollbackOutlined } from '@ant-design/icons';
 import Layout from '../../components/Layout';
 import { useSync } from '../../utils/syncManager';
@@ -1500,41 +1500,104 @@ const CuttingManagement: React.FC = () => {
               <div className="cutting-entry-layout mb-sm">
                 <div className="cutting-entry-main">
                   <div className="cutting-entry-info">
-                    <div className="cutting-entry-field">
-                      <div className="cutting-entry-label">订单号</div>
-                      <div className="cutting-entry-value">{String(activeTask.productionOrderNo || '').trim() || '-'}</div>
-                    </div>
-                    <div className="cutting-entry-field">
-                      <div className="cutting-entry-label">款号</div>
-                      <div className="cutting-entry-value">{String(activeTask.styleNo || '').trim() || '-'}</div>
-                    </div>
-                    <div className="cutting-entry-field">
-                      <div className="cutting-entry-label">款名</div>
-                      <div className="cutting-entry-value">{String(activeTask.styleName || '').trim() || '-'}</div>
-                    </div>
-                    <div className="cutting-entry-field">
-                      <div className="cutting-entry-label">颜色</div>
-                      <div className="cutting-entry-value">{String(entryColorText || activeTask.color || '').trim() || '-'}</div>
-                    </div>
-                    <div className="cutting-entry-size-block">
-                      <div className="cutting-entry-label">下单码数明细</div>
-                      {entryOrderDetailLoading ? (
-                        <div className="cutting-entry-size-row">
-                          <span className="cutting-entry-size-muted">加载中...</span>
+                    <Row gutter={16} className="purchase-detail-top">
+                      <Col xs={24} md={8} lg={6}>
+                        <div className="purchase-detail-right">
+                          <StyleCoverThumb
+                            styleId={(activeTask as any)?.styleId}
+                            styleNo={activeTask?.styleNo}
+                            size={160}
+                            borderRadius={8}
+                          />
+                          {activeTask?.productionOrderNo ? (
+                            <div style={{ marginTop: 12, textAlign: 'center' }}>
+                              <QRCodeCanvas
+                                value={JSON.stringify({
+                                  type: 'order',
+                                  orderNo: activeTask.productionOrderNo,
+                                  styleNo: activeTask.styleNo,
+                                  styleName: activeTask.styleName,
+                                })}
+                                size={120}
+                                level="M"
+                                includeMargin
+                              />
+                              <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>订单号</div>
+                              <div style={{ fontSize: 10, color: '#999', marginTop: 2 }}>{String(activeTask.productionOrderNo || '').trim() || '-'}</div>
+                            </div>
+                          ) : null}
                         </div>
-                      ) : (
-                        <div className="cutting-entry-size-row">
-                          {entrySizeItems.length ? (
-                            entrySizeItems.map((x) => (
-                              <div key={x.size} className="cutting-entry-size-item">{`${x.size}：${Number(x.quantity || 0) || 0}`}</div>
-                            ))
-                          ) : (
-                            <span className="cutting-entry-size-muted">-</span>
-                          )}
-                          <div className="cutting-entry-size-total">合计：{entrySizeItems.reduce((s, x) => s + (Number(x.quantity || 0) || 0), 0)}</div>
+                      </Col>
+                      <Col xs={24} md={16} lg={18}>
+                        <div className="purchase-detail-left">
+                          <Row gutter={16}>
+                            <Col xs={24} sm={12} lg={8}>
+                              <div className="purchase-detail-field">
+                                <div className="purchase-detail-label">订单号</div>
+                                <div className="purchase-detail-value order-no-compact">{String(activeTask.productionOrderNo || '').trim() || '-'}</div>
+                              </div>
+                            </Col>
+                            <Col xs={24} sm={12} lg={8}>
+                              <div className="purchase-detail-field">
+                                <div className="purchase-detail-label">款号</div>
+                                <div className="purchase-detail-value">{String(activeTask.styleNo || '').trim() || '-'}</div>
+                              </div>
+                            </Col>
+                            <Col xs={24} sm={12} lg={8}>
+                              <div className="purchase-detail-field">
+                                <div className="purchase-detail-label">款名</div>
+                                <div className="purchase-detail-value">{String(activeTask.styleName || '').trim() || '-'}</div>
+                              </div>
+                            </Col>
+                            <Col xs={24} sm={12} lg={8}>
+                              <div className="purchase-detail-field">
+                                <div className="purchase-detail-label">颜色</div>
+                                <div className="purchase-detail-value">{String(entryColorText || activeTask.color || '').trim() || '-'}</div>
+                              </div>
+                            </Col>
+                          </Row>
+
+                          <div className="purchase-detail-size-block">
+                            {entryOrderDetailLoading ? (
+                              <div className="purchase-detail-size-row">
+                                <span className="purchase-detail-size-item">加载中...</span>
+                              </div>
+                            ) : (
+                              <div className="purchase-detail-size-table-wrap">
+                                <table className="purchase-detail-size-table">
+                                  <tbody>
+                                    <tr>
+                                      <th className="purchase-detail-size-th">码数</th>
+                                      {entrySizeItems.length
+                                        ? entrySizeItems.map((x) => (
+                                          <td key={x.size} className="purchase-detail-size-td">{x.size}</td>
+                                        ))
+                                        : <td className="purchase-detail-size-td">-</td>
+                                      }
+                                      <td className="purchase-detail-size-total-cell" />
+                                    </tr>
+                                    <tr>
+                                      <th className="purchase-detail-size-th">数量</th>
+                                      {entrySizeItems.length
+                                        ? entrySizeItems.map((x) => (
+                                          <td key={x.size} className="purchase-detail-size-td">{Number(x.quantity || 0) || 0}</td>
+                                        ))
+                                        : <td className="purchase-detail-size-td">-</td>
+                                      }
+                                      <td className="purchase-detail-size-total-cell">
+                                        总下单数：{entrySizeItems.length
+                                          ? entrySizeItems.reduce((s, x) => s + (Number(x.quantity || 0) || 0), 0)
+                                          : (Number(activeTask?.orderQuantity ?? 0) || 0)}
+                                      </td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      )}
-                    </div>
+                      </Col>
+                    </Row>
                   </div>
 
                   <div>

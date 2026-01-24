@@ -13,7 +13,7 @@ import api, { parseProductionOrderLines, sortSizeNames, unwrapApiData, useProduc
 import { formatDateTime } from '../../utils/datetime';
 import { getMaterialTypeCategory, getMaterialTypeLabel, getMaterialTypeSortKey, normalizeMaterialType } from '../../utils/materialType';
 import { StyleAttachmentsButton, StyleCoverThumb } from '../../components/StyleAssets';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { isSupervisorOrAboveUser, useAuth } from '../../utils/authContext';
 import { useSync } from '../../utils/syncManager';
 import { useViewport } from '../../utils/useViewport';
@@ -29,6 +29,7 @@ const MATERIAL_DB_QUERY_STORAGE_KEY = 'MaterialPurchase.materialDatabaseQueryPar
 
 const MaterialPurchase: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { isMobile, modalWidth } = useViewport();
 
@@ -1091,8 +1092,17 @@ const MaterialPurchase: React.FC = () => {
       key: 'orderNo',
       width: 120,
       ellipsis: true,
-      render: (v: any) => (
-        <span className="order-no-compact">{String(v || '').trim() || '-'}</span>
+      render: (v: any, record: any) => (
+        <a
+          onClick={() => {
+            if (record.orderId) {
+              navigate(`/production/material/${record.orderId}`);
+            }
+          }}
+          style={{ cursor: 'pointer', color: '#1890ff' }}
+        >
+          {String(v || '').trim() || '-'}
+        </a>
       ),
     },
     {
@@ -1563,88 +1573,6 @@ const MaterialPurchase: React.FC = () => {
                       loading={loading}
                       scroll={{ x: 'max-content', y: isMobile ? 360 : 560 }}
                       size={isMobile ? 'small' : 'middle'}
-                      expandable={{
-                        expandedRowRender: (record: any) => {
-                          const items = record.children || [];
-                          return (
-                            <div style={{ padding: '12px 24px', background: '#fafafa' }}>
-                              <div style={{ marginBottom: 8, fontWeight: 500, color: '#666' }}>采购明细（{items.length}项）</div>
-                              {items.map((item: any, index: number) => (
-                                <Card
-                                  key={item.id || index}
-                                  size="small"
-                                  style={{ marginBottom: 8 }}
-                                  title={
-                                    <Space>
-                                      <Tag color={
-                                        getMaterialTypeCategory(item.materialType) === 'accessory' ? 'purple' :
-                                          getMaterialTypeCategory(item.materialType) === 'lining' ? 'cyan' : 'geekblue'
-                                      }>
-                                        {getMaterialTypeLabel(item.materialType)}
-                                      </Tag>
-                                      <span>{item.materialName || '-'}</span>
-                                    </Space>
-                                  }
-                                  extra={
-                                    <Space>
-                                      <Tag color={getStatusConfig(item.status).color}>
-                                        {getStatusConfig(item.status).text}
-                                      </Tag>
-                                      <RowActions
-                                        actions={[
-                                          {
-                                            key: 'view',
-                                            label: '查看',
-                                            icon: <EyeOutlined />,
-                                            onClick: () => void openDialogSafe('view', item),
-                                            primary: true,
-                                          },
-                                        ]}
-                                      />
-                                    </Space>
-                                  }
-                                >
-                                  <Row gutter={[16, 8]}>
-                                    <Col xs={12} sm={8} md={6}>
-                                      <div style={{ fontSize: 12, color: '#999' }}>采购单号</div>
-                                      <div>{item.purchaseNo || '-'}</div>
-                                    </Col>
-                                    <Col xs={12} sm={8} md={6}>
-                                      <div style={{ fontSize: 12, color: '#999' }}>物料编码</div>
-                                      <div>{item.materialCode || '-'}</div>
-                                    </Col>
-                                    <Col xs={12} sm={8} md={6}>
-                                      <div style={{ fontSize: 12, color: '#999' }}>规格</div>
-                                      <div>{item.specifications || '-'}</div>
-                                    </Col>
-                                    <Col xs={12} sm={8} md={6}>
-                                      <div style={{ fontSize: 12, color: '#999' }}>供应商</div>
-                                      <div>{item.supplierName || '-'}</div>
-                                    </Col>
-                                    <Col xs={12} sm={8} md={6}>
-                                      <div style={{ fontSize: 12, color: '#999' }}>采购数量</div>
-                                      <div>{item.purchaseQuantity || 0} {item.unit || ''}</div>
-                                    </Col>
-                                    <Col xs={12} sm={8} md={6}>
-                                      <div style={{ fontSize: 12, color: '#999' }}>到货数量</div>
-                                      <div>{item.arrivedQuantity || 0} {item.unit || ''}</div>
-                                    </Col>
-                                    <Col xs={12} sm={8} md={6}>
-                                      <div style={{ fontSize: 12, color: '#999' }}>单价</div>
-                                      <div>¥{Number.isFinite(Number(item.unitPrice)) ? Number(item.unitPrice).toFixed(2) : '-'}</div>
-                                    </Col>
-                                    <Col xs={12} sm={8} md={6}>
-                                      <div style={{ fontSize: 12, color: '#999' }}>领取人</div>
-                                      <div>{item.receiverName || '-'}</div>
-                                    </Col>
-                                  </Row>
-                                </Card>
-                              ))}
-                            </div>
-                          );
-                        },
-                        rowExpandable: (record: any) => (record.children && record.children.length > 0),
-                      }}
                       pagination={{
                         current: queryParams.page,
                         pageSize: queryParams.pageSize,
