@@ -264,7 +264,9 @@ const StyleInfoPage: React.FC = () => {
           const items = result.data.records || [];
           return items.map((it: any) => ({ label: it.dictLabel, value: it.dictCode }));
         }
-      } catch { }
+      } catch (error) {
+        console.error('[款号资料] 获取字典数据失败:', error);
+      }
       return [];
     };
     (async () => {
@@ -526,7 +528,9 @@ const StyleInfoPage: React.FC = () => {
             if (result.code === 200 && result.data) {
               form.setFieldsValue({ styleNo: result.data });
             }
-          } catch { }
+          } catch (error) {
+            console.error('[款号资料] 生成款号失败:', error);
+          }
         })();
       }
     }

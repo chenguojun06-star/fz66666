@@ -122,7 +122,9 @@ const RoleList: React.FC = () => {
           const items = result.data.records || [];
           return items.map((it: any) => ({ label: it.dictLabel, value: it.dictCode }));
         }
-      } catch { }
+      } catch (error) {
+        console.error('[角色管理] 获取字典数据失败:', error);
+      }
       return [];
     };
     (async () => {
