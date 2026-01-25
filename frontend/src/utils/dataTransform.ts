@@ -9,7 +9,7 @@
  * @param fallback 默认值
  * @returns 数字值
  */
-export function toNumber(value: any, fallback = 0): number {
+export function toNumber(value: unknown, fallback = 0): number {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
 }
@@ -20,7 +20,7 @@ export function toNumber(value: any, fallback = 0): number {
  * @param fallback 默认值
  * @returns 整数值
  */
-export function toInteger(value: any, fallback = 0): number {
+export function toInteger(value: unknown, fallback = 0): number {
   const n = toNumber(value, fallback);
   return Number.isInteger(n) ? n : Math.floor(n);
 }
@@ -31,7 +31,7 @@ export function toInteger(value: any, fallback = 0): number {
  * @param fallback 默认值
  * @returns 正整数值（最小为 1）
  */
-export function toPositiveInteger(value: any, fallback = 1): number {
+export function toPositiveInteger(value: unknown, fallback = 1): number {
   const n = toInteger(value, fallback);
   return Math.max(1, n);
 }
@@ -42,7 +42,7 @@ export function toPositiveInteger(value: any, fallback = 1): number {
  * @param fallback 默认值
  * @returns 字符串值
  */
-export function toString(value: any, fallback = ''): string {
+export function toString(value: unknown, fallback = ''): string {
   if (value === null || value === undefined) return fallback;
   return String(value);
 }
@@ -63,8 +63,12 @@ export function toBoolean(value: unknown): boolean {
  */
 export function toDate(value: unknown): Date | null {
   if (!value) return null;
-  const d = new Date(value);
-  return isNaN(d.getTime()) ? null : d;
+  if (value instanceof Date) return new Date(value.getTime());
+  if (typeof value === 'string' || typeof value === 'number') {
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  return null;
 }
 
 /**
@@ -176,7 +180,7 @@ export function isNotEmpty(value: unknown): boolean {
  * @param schema 转换规则 { fieldName: transformFunction }
  * @returns 转换后的对象
  */
-export function transformData(data: Record<string, unknown>, schema: Record<string, (value: unknown) => any>): Record<string, unknown> {
+export function transformData(data: Record<string, unknown>, schema: Record<string, (value: unknown) => unknown>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [key, transformer] of Object.entries(schema)) {
     try {
@@ -215,18 +219,14 @@ export function validateData(
  */
 export function deepClone<T>(obj: T): T {
   if (obj === null || typeof obj !== 'object') return obj;
-  if (obj instanceof Date) return new Date(obj.getTime()) as Record<string, unknown>;
-  if (obj instanceof Array) return obj.map(item => deepClone(item)) as Record<string, unknown>;
-  if (obj instanceof Object) {
-    const cloned = {} as T;
-    for (const key in obj) {
-      if (Object.prototype.hasOwnProperty.call(obj, key)) {
-        (cloned as Record<string, unknown>)[key] = deepClone((obj as Record<string, unknown>)[key]);
-      }
-    }
-    return cloned;
+  if (obj instanceof Date) return new Date(obj.getTime()) as T;
+  if (Array.isArray(obj)) return obj.map(item => deepClone(item)) as T;
+  const source = obj as Record<string, unknown>;
+  const cloned: Record<string, unknown> = {};
+  for (const key of Object.keys(source)) {
+    cloned[key] = deepClone(source[key]);
   }
-  return obj;
+  return cloned as T;
 }
 
 /**
@@ -279,9 +279,9 @@ export function unique<T>(array: T[], key?: keyof T): T[] {
   if (!key) {
     return [...new Set(array)];
   }
-  const seen = new Set();
+  const seen = new Set<unknown>();
   return array.filter(item => {
-    const val = (item as Record<string, unknown>)[key];
+    const val = (item as Record<string, unknown>)[String(key)];
     if (seen.has(val)) return false;
     seen.add(val);
     return true;

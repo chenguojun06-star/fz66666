@@ -20,7 +20,9 @@ function orderStatusText(status) {
     paused: '已暂停',
     returned: '已退回',
   };
-  if (!s) {return '';}
+  if (!s) {
+    return '';
+  }
   return map[s] || '未知';
 }
 
@@ -36,7 +38,9 @@ function qualityStatusText(status) {
     unqualified: '次品待返修',
     repaired: '返修完成',
   };
-  if (!s) {return '';}
+  if (!s) {
+    return '';
+  }
   return map[s] || '未知';
 }
 
@@ -51,7 +55,9 @@ function scanResultText(status) {
     success: '成功',
     failure: '失败',
   };
-  if (!s) {return '';}
+  if (!s) {
+    return '';
+  }
   return map[s] || '未知';
 }
 
@@ -63,14 +69,14 @@ function scanResultText(status) {
 function getStatusColor(status) {
   const s = (status || '').toString().trim().toLowerCase();
   const colorMap = {
-    pending: '#faad14',      // 橙色 - 待生产
-    production: '#1890ff',   // 蓝色 - 生产中
-    completed: '#52c41a',    // 绿色 - 已完成
-    delayed: '#f5222d',      // 红色 - 已逾期
-    cancelled: '#8c8c8c',    // 灰色 - 已取消
-    canceled: '#8c8c8c',     // 灰色 - 已取消
-    paused: '#d9d9d9',       // 浅灰 - 已暂停
-    returned: '#ff7a45',     // 橙红 - 已退回
+    pending: '#faad14', // 橙色 - 待生产
+    production: '#1890ff', // 蓝色 - 生产中
+    completed: '#52c41a', // 绿色 - 已完成
+    delayed: '#f5222d', // 红色 - 已逾期
+    cancelled: '#8c8c8c', // 灰色 - 已取消
+    canceled: '#8c8c8c', // 灰色 - 已取消
+    paused: '#d9d9d9', // 浅灰 - 已暂停
+    returned: '#ff7a45', // 橙红 - 已退回
   };
   return colorMap[s] || '#000000';
 }
@@ -83,9 +89,9 @@ function getStatusColor(status) {
 function getQualityColor(qualityStatus) {
   const s = (qualityStatus || '').toString().trim().toLowerCase();
   const colorMap = {
-    qualified: '#52c41a',       // 绿色 - 合格
-    unqualified: '#f5222d',     // 红色 - 次品待返修
-    repaired: '#1890ff',        // 蓝色 - 返修完成
+    qualified: '#52c41a', // 绿色 - 合格
+    unqualified: '#f5222d', // 红色 - 次品待返修
+    repaired: '#1890ff', // 蓝色 - 返修完成
   };
   return colorMap[s] || '#000000';
 }

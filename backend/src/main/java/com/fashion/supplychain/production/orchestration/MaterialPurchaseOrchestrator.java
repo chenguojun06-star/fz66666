@@ -409,6 +409,9 @@ public class MaterialPurchaseOrchestrator {
         if (!StringUtils.hasText(purchaseId)) {
             throw new IllegalArgumentException("参数错误");
         }
+        if (!StringUtils.hasText(receiverIdValue) && !StringUtils.hasText(receiverNameValue)) {
+            throw new IllegalArgumentException("领取人ID或姓名不能为空");
+        }
 
         MaterialPurchase purchase = materialPurchaseService.getById(purchaseId);
         if (purchase == null || (purchase.getDeleteFlag() != null && purchase.getDeleteFlag() != 0)) {
@@ -863,12 +866,18 @@ public class MaterialPurchaseOrchestrator {
     }
 
     public List<MaterialPurchase> getMyTasks() {
-        // 查询所有已领取但未完成的采购任务（暂不过滤用户，返回所有）
+        UserContext ctx = UserContext.get();
+        String userId = ctx == null ? null : ctx.getUserId();
+        if (!StringUtils.hasText(userId)) {
+            return new ArrayList<>();
+        }
+        
         List<MaterialPurchase> allPurchases = materialPurchaseService.list();
         return allPurchases.stream()
                 .filter(p -> p.getDeleteFlag() == null || p.getDeleteFlag() == 0)
                 .filter(p -> "received".equals(p.getStatus()))
                 .filter(p -> p.getReturnConfirmed() == null || p.getReturnConfirmed() == 0)
+                .filter(p -> Objects.equals(p.getReceiverId(), userId))
                 .collect(Collectors.toList());
     }
 

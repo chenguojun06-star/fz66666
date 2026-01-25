@@ -2,7 +2,7 @@ const { DEBUG } = require('../config/debug');
 /**
  * 小程序事件总线 - 用于跨页面通信
  * 实现多端数据同步通知
- * 
+ *
  * 使用场景：
  * - 扫码后通知其他页面刷新数据
  * - 撤回操作后通知所有页面更新
@@ -22,7 +22,9 @@ class EventBus {
    */
   on(eventName, callback) {
     if (!eventName || typeof callback !== 'function') {
-      if (DEBUG) {console.warn('[EventBus] Invalid event subscription');}
+      if (DEBUG) {
+        console.warn('[EventBus] Invalid event subscription');
+      }
       return () => {};
     }
 
@@ -44,7 +46,9 @@ class EventBus {
    * @param {Function} callback - 回调函数（不传则取消该事件的所有订阅）
    */
   off(eventName, callback) {
-    if (!this.events.has(eventName)) {return;}
+    if (!this.events.has(eventName)) {
+      return;
+    }
 
     if (callback) {
       this.events.get(eventName).delete(callback);
@@ -59,7 +63,9 @@ class EventBus {
    * @param {*} data - 事件数据
    */
   emit(eventName, data) {
-    if (!this.events.has(eventName)) {return;}
+    if (!this.events.has(eventName)) {
+      return;
+    }
 
     const callbacks = this.events.get(eventName);
     callbacks.forEach(callback => {
@@ -78,7 +84,7 @@ class EventBus {
    * @returns {Function} 取消订阅函数
    */
   once(eventName, callback) {
-    const wrappedCallback = (data) => {
+    const wrappedCallback = data => {
       callback(data);
       this.off(eventName, wrappedCallback);
     };
@@ -110,31 +116,31 @@ const eventBus = new EventBus();
 // 定义标准事件名
 const Events = {
   // 扫码相关
-  SCAN_SUCCESS: 'scan:success',          // 扫码成功
-  SCAN_UNDO: 'scan:undo',                // 撤销扫码
-  SCAN_ROLLBACK: 'scan:rollback',        // 回退操作
-  
+  SCAN_SUCCESS: 'scan:success', // 扫码成功
+  SCAN_UNDO: 'scan:undo', // 撤销扫码
+  SCAN_ROLLBACK: 'scan:rollback', // 回退操作
+
   // 订单相关
-  ORDER_UPDATED: 'order:updated',        // 订单更新
+  ORDER_UPDATED: 'order:updated', // 订单更新
   ORDER_PROGRESS_CHANGED: 'order:progress:changed', // 订单进度变更
-  ORDER_STATUS_CHANGED: 'order:status:changed',     // 订单状态变更
-  
+  ORDER_STATUS_CHANGED: 'order:status:changed', // 订单状态变更
+
   // 任务相关
-  TASK_RECEIVED: 'task:received',        // 领取任务
-  TASK_RETURNED: 'task:returned',        // 退回任务
-  TASK_COMPLETED: 'task:completed',      // 完成任务
-  TASK_BUNDLED: 'task:bundled',          // 生成菲号
-  
+  TASK_RECEIVED: 'task:received', // 领取任务
+  TASK_RETURNED: 'task:returned', // 退回任务
+  TASK_COMPLETED: 'task:completed', // 完成任务
+  TASK_BUNDLED: 'task:bundled', // 生成菲号
+
   // 质检相关
-  QUALITY_CHECKED: 'quality:checked',    // 质检完成
-  QUALITY_REPAIRED: 'quality:repaired',  // 返修完成
-  
+  QUALITY_CHECKED: 'quality:checked', // 质检完成
+  QUALITY_REPAIRED: 'quality:repaired', // 返修完成
+
   // 入库相关
-  WAREHOUSE_IN: 'warehouse:in',          // 入库操作
-  
+  WAREHOUSE_IN: 'warehouse:in', // 入库操作
+
   // 通用数据变更
-  DATA_CHANGED: 'data:changed',          // 通用数据变更
-  REFRESH_ALL: 'refresh:all',            // 请求刷新所有页面
+  DATA_CHANGED: 'data:changed', // 通用数据变更
+  REFRESH_ALL: 'refresh:all', // 请求刷新所有页面
 };
 
 /**
@@ -146,14 +152,14 @@ function triggerDataRefresh(dataType, payload = {}) {
   eventBus.emit(Events.DATA_CHANGED, {
     type: dataType,
     timestamp: Date.now(),
-    ...payload
+    ...payload,
   });
-  
+
   // 同时触发全局刷新事件
   eventBus.emit(Events.REFRESH_ALL, {
     source: dataType,
     timestamp: Date.now(),
-    ...payload
+    ...payload,
   });
 }
 
@@ -165,7 +171,7 @@ function triggerDataRefresh(dataType, payload = {}) {
 function onDataRefresh(callback) {
   const unsubscribe1 = eventBus.on(Events.DATA_CHANGED, callback);
   const unsubscribe2 = eventBus.on(Events.REFRESH_ALL, callback);
-  
+
   return () => {
     unsubscribe1();
     unsubscribe2();

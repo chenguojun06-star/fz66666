@@ -1,5 +1,6 @@
 import api from '../../../utils/api';
 import { isAdminOrSupervisor } from '../../../utils/permission';
+import { toast } from '../../../utils/uiHelper';
 
 Page({
   data: {
@@ -21,11 +22,7 @@ Page({
   onLoad() {
     const isAdmin = isAdminOrSupervisor();
     if (!isAdmin) {
-      wx.showToast({
-        title: '无权限访问',
-        icon: 'none',
-        duration: 2000
-      });
+      toast.error('无权限访问', 2000);
       setTimeout(() => {
         wx.navigateBack();
       }, 2000);
@@ -42,7 +39,9 @@ Page({
   },
 
   async loadRoleOptions() {
-    if (this.data.roleLoading) {return;}
+    if (this.data.roleLoading) {
+      return;
+    }
     this.setData({ roleLoading: true });
     try {
       const result = await api.system.listRoles({ page: 1, pageSize: 100 });
@@ -56,41 +55,42 @@ Page({
   },
 
   async loadPendingUsers(reset = false) {
-    if (this.data.loading) {return;}
-    
+    if (this.data.loading) {
+      return;
+    }
+
     const page = reset ? 1 : this.data.page;
     this.setData({ loading: true });
-    
+
     try {
       const result = await api.system.listPendingUsers({
         page,
-        pageSize: this.data.pageSize
+        pageSize: this.data.pageSize,
       });
-      
+
       const records = result?.records || [];
       const total = result?.total || 0;
       const list = reset ? records : [...this.data.pendingUsers, ...records];
       const hasMore = list.length < total;
-      
+
       this.setData({
         pendingUsers: list,
         total,
         page: page,
         hasMore,
-        loading: false
+        loading: false,
       });
     } catch (e) {
       console.error('加载待审批用户失败', e);
-      wx.showToast({
-        title: '加载失败',
-        icon: 'none'
-      });
+      toast.error('加载失败');
       this.setData({ loading: false });
     }
   },
 
   onLoadMore() {
-    if (!this.data.hasMore || this.data.loading) {return;}
+    if (!this.data.hasMore || this.data.loading) {
+      return;
+    }
     this.setData({ page: this.data.page + 1 });
     this.loadPendingUsers();
   },
@@ -100,7 +100,7 @@ Page({
     this.setData({
       currentUser: user,
       selectedRoleId: user.roleId ? String(user.roleId) : '',
-      showApprovalModal: true
+      showApprovalModal: true,
     });
   },
 
@@ -109,7 +109,7 @@ Page({
     this.setData({
       currentUser: user,
       rejectReason: '',
-      showRejectModal: true
+      showRejectModal: true,
     });
   },
 
@@ -127,85 +127,67 @@ Page({
 
   async confirmApprove() {
     const { currentUser, selectedRoleId } = this.data;
-    
+
     if (!selectedRoleId) {
-      wx.showToast({
-        title: '请选择角色',
-        icon: 'none'
-      });
+      toast.error('请选择角色');
       return;
     }
 
     wx.showLoading({ title: '处理中...' });
-    
+
     try {
       // 批准用户
       await api.system.approveUser(currentUser.id);
-      
+
       // 更新用户角色
       await api.system.updateUser(currentUser.id, {
         roleId: Number(selectedRoleId),
         status: 'active',
-        approvalStatus: 'approved'
+        approvalStatus: 'approved',
       });
-      
+
       wx.hideLoading();
-      wx.showToast({
-        title: '已批准',
-        icon: 'success'
-      });
-      
+      toast.success('已批准');
+
       this.setData({
         showApprovalModal: false,
         currentUser: null,
-        selectedRoleId: ''
+        selectedRoleId: '',
       });
-      
+
       this.loadPendingUsers(true);
     } catch (e) {
       wx.hideLoading();
-      wx.showToast({
-        title: e.message || '操作失败',
-        icon: 'none'
-      });
+      toast.error(e.message || '操作失败');
     }
   },
 
   async confirmReject() {
     const { currentUser, rejectReason } = this.data;
-    
+
     if (!rejectReason.trim()) {
-      wx.showToast({
-        title: '请输入拒绝原因',
-        icon: 'none'
-      });
+      toast.error('请输入拒绝原因');
       return;
     }
 
     wx.showLoading({ title: '处理中...' });
-    
+
     try {
       await api.system.rejectUser(currentUser.id, { approvalRemark: rejectReason });
-      
+
       wx.hideLoading();
-      wx.showToast({
-        title: '已拒绝',
-        icon: 'success'
-      });
-      
+      toast.success('已拒绝');
+
       this.setData({
         showRejectModal: false,
         currentUser: null,
-        rejectReason: ''
+        rejectReason: '',
       });
-      
+
       this.loadPendingUsers(true);
     } catch (e) {
       wx.hideLoading();
-      wx.showToast({
-        title: e.message || '操作失败',
-        icon: 'none'
-      });
+      toast.error(e.message || '操作失败');
     }
   },
 
@@ -213,7 +195,7 @@ Page({
     this.setData({
       showApprovalModal: false,
       currentUser: null,
-      selectedRoleId: ''
+      selectedRoleId: '',
     });
   },
 
@@ -221,7 +203,7 @@ Page({
     this.setData({
       showRejectModal: false,
       currentUser: null,
-      rejectReason: ''
+      rejectReason: '',
     });
-  }
+  },
 });

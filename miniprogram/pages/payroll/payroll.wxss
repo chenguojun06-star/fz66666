@@ -1,5 +1,5 @@
 /* pages/payroll/payroll.wxss */
-@import "../../styles/design-tokens.wxss";
+@import '../../styles/design-tokens.wxss';
 
 .page {
   min-height: 100vh;
@@ -64,7 +64,7 @@
 
 .summary-value.primary {
   font-size: 44rpx;
-  color: #FFD700;
+  color: #ffd700;
 }
 
 /* 筛选器 */
@@ -271,7 +271,11 @@
   align-items: center;
   margin-top: 24rpx;
   padding: 24rpx;
-  background: linear-gradient(90deg, rgba(var(--color-primary-rgb), 0.1) 0%, rgba(var(--color-primary-rgb), 0.05) 100%);
+  background: linear-gradient(
+    90deg,
+    rgba(var(--color-primary-rgb), 0.1) 0%,
+    rgba(var(--color-primary-rgb), 0.05) 100%
+  );
   border-radius: var(--border-radius-lg);
   border: 2rpx solid var(--color-primary-light);
 }

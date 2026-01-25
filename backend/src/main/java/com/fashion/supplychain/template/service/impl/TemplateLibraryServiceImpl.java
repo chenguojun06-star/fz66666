@@ -511,7 +511,7 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
         weights.put(STAGE_PROCUREMENT, new BigDecimal("15"));
 
         List<String> nodes = resolveProgressNodes(styleNo);
-        
+
         // 确保裁剪环节存在（如果模板中未定义，则默认插入到采购之后）
         boolean hasCutting = false;
         for (String n : nodes) {
@@ -760,11 +760,7 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
                     }
                     Map<String, Object> node = new LinkedHashMap<>();
                     node.put("name", name);
-                    BigDecimal price = p.getPrice() == null ? BigDecimal.ZERO : p.getPrice();
-                    if (price.compareTo(BigDecimal.ZERO) < 0) {
-                        price = BigDecimal.ZERO;
-                    }
-                    node.put("unitPrice", price);
+                    // 进度模板不再包含 unitPrice，只保留工序名称
                     nodes.add(node);
                 }
             } catch (Exception e) {
@@ -775,13 +771,14 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
             }
 
             if (nodes.isEmpty()) {
+                // 默认进度节点只包含名称，不包含单价
                 nodes = List.of(
-                        Map.of("name", "裁剪", "unitPrice", 0),
-                        Map.of("name", "生产", "unitPrice", 0),
-                        Map.of("name", "整烫", "unitPrice", 0),
-                        Map.of("name", "质检", "unitPrice", 0),
-                        Map.of("name", "包装", "unitPrice", 0),
-                        Map.of("name", "入库", "unitPrice", 0));
+                        Map.of("name", "裁剪"),
+                        Map.of("name", "生产"),
+                        Map.of("name", "整烫"),
+                        Map.of("name", "质检"),
+                        Map.of("name", "包装"),
+                        Map.of("name", "入库"));
             }
             content.put("nodes", nodes);
 

@@ -2,20 +2,20 @@ Component({
   properties: {
     keyword: {
       type: String,
-      value: ''
+      value: '',
     },
     results: {
       type: Array,
-      value: []
+      value: [],
     },
     hasSearched: {
       type: Boolean,
-      value: false
+      value: false,
     },
     placeholder: {
       type: String,
-      value: '搜索订单号/款号/工厂/仓库'
-    }
+      value: '搜索订单号/款号/工厂/仓库',
+    },
   },
 
   methods: {
@@ -34,6 +34,6 @@ Component({
     onItemTap(e) {
       const item = e.currentTarget.dataset.item;
       this.triggerEvent('itemtap', { item });
-    }
-  }
+    },
+  },
 });

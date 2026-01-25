@@ -48,4 +48,9 @@ public interface ProductionOrderService extends IService<ProductionOrder> {
      * 更新物料到位率
      */
     boolean updateMaterialArrivalRate(String id, Integer rate);
+
+    /**
+     * 根据订单号查询生产订单
+     */
+    ProductionOrder getByOrderNo(String orderNo);
 }

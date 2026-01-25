@@ -46,7 +46,7 @@ const buildColumnsSignature = (cols: any): string => {
   const parts: string[] = [];
   const walk = (list: unknown[], path: number[]) => {
     for (let i = 0; i < list.length; i += 1) {
-      const col = list[i];
+      const col = list[i] as Record<string, unknown>;
       const p = [...path, i];
       const key = col?.key ?? col?.dataIndex;
       const keyText = Array.isArray(key) ? key.join('.') : key == null ? '' : String(key);
@@ -58,7 +58,7 @@ const buildColumnsSignature = (cols: any): string => {
           : String(col.dataIndex);
       parts.push(`${p.join('.')}:${keyText}:${dataIndexText}:${titleText}`);
       if (Array.isArray(col?.children) && col.children.length > 0) {
-        walk(col.children, p);
+        walk(col.children as unknown[], p);
       }
     }
   };
@@ -126,7 +126,7 @@ const readStorage = (key: string) => {
     return parsed as Record<string, number>;
   } catch {
     // Intentionally empty
-      // 忽略错误
+    // 忽略错误
     return null;
   }
 };
@@ -141,7 +141,7 @@ const writeStorage = (key: string, value: Record<string, number>) => {
     localStorage.setItem(key, JSON.stringify(value));
   } catch {
     // Intentionally empty
-      // 忽略错误
+    // 忽略错误
   }
 };
 
@@ -159,7 +159,7 @@ const readArrayStorage = (key: string) => {
     return parsed.filter((x) => typeof x === 'string') as string[];
   } catch {
     // Intentionally empty
-      // 忽略错误
+    // 忽略错误
     return null;
   }
 };
@@ -174,7 +174,7 @@ const writeArrayStorage = (key: string, value: string[]) => {
     localStorage.setItem(key, JSON.stringify(value));
   } catch {
     // Intentionally empty
-      // 忽略错误
+    // 忽略错误
   }
 };
 
@@ -246,7 +246,7 @@ const ResizableHeaderCell: React.FC<HeaderCellProps> = (cellProps) => {
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
     } catch {
-    // Intentionally empty
+      // Intentionally empty
       // 忽略错误
     }
   };
@@ -257,16 +257,16 @@ const ResizableHeaderCell: React.FC<HeaderCellProps> = (cellProps) => {
     if (!canResize) return;
     e.preventDefault();
     e.stopPropagation();
-    
+
     // 取消上一次未执行的动画帧
     if (dragRef.current.rafId !== null) {
       cancelAnimationFrame(dragRef.current.rafId);
     }
-    
+
     const clientX = e.clientX;
     const startX = dragRef.current.startX;
     const startWidth = dragRef.current.startWidth;
-    
+
     // 用 requestAnimationFrame 合并本帧更新
     dragRef.current.rafId = requestAnimationFrame(() => {
       const delta = clientX - startX;
@@ -282,18 +282,18 @@ const ResizableHeaderCell: React.FC<HeaderCellProps> = (cellProps) => {
     if (!dragRef.current.dragging) return;
     e.preventDefault();
     e.stopPropagation();
-    
+
     // 清理待处理的动画帧
     if (dragRef.current.rafId !== null) {
       cancelAnimationFrame(dragRef.current.rafId);
       dragRef.current.rafId = null;
     }
-    
+
     dragRef.current.dragging = false;
     try {
       e.currentTarget.releasePointerCapture(e.pointerId);
     } catch {
-    // Intentionally empty
+      // Intentionally empty
       // 忽略错误
     }
   };
@@ -321,9 +321,11 @@ const ResizableHeaderCell: React.FC<HeaderCellProps> = (cellProps) => {
       <div
         className="resizable-table-header-content"
         style={{
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
+          overflow: 'visible',
+          textOverflow: 'clip',
+          whiteSpace: 'normal',
+          wordBreak: 'break-word',
+          overflowWrap: 'anywhere',
           position: 'relative',
           zIndex: 1,
         }}
@@ -378,6 +380,8 @@ const ResizableTable = <T extends AnyRecord>(props: ResizableTableProps<T>) => {
     ...rest
   } = props;
 
+  const actionColumnWidth = 72;
+
   const resolvedStorageKey = React.useMemo(() => {
     if (storageKeyProp) return storageKeyProp;
     if (typeof window === 'undefined') return undefined;
@@ -392,7 +396,7 @@ const ResizableTable = <T extends AnyRecord>(props: ResizableTableProps<T>) => {
 
   const mergedPagination = React.useMemo(() => {
     if (paginationProp === false) return false;
-    if (paginationProp === undefined || paginationProp === null) return paginationProp as Record<string, unknown>;
+    if (paginationProp === undefined || paginationProp === null) return paginationProp;
     const base = typeof paginationProp === 'object' ? paginationProp : ({} as Record<string, unknown>);
     const { position, placement, ...baseRest } = base as Record<string, unknown>;
     return {
@@ -461,16 +465,21 @@ const ResizableTable = <T extends AnyRecord>(props: ResizableTableProps<T>) => {
     if (!resizableColumns) return scroll;
     if (!scroll) return { x: 'max-content' as const };
     if ((scroll as Record<string, unknown>).x) return scroll;
-    return { ...(scroll as Record<string, unknown>), x: 'max-content' as const };
+    const baseScroll = typeof scroll === 'object' && scroll !== null ? (scroll as Record<string, unknown>) : {};
+    return { ...baseScroll, x: 'max-content' as const };
   }, [resizableColumns, scroll]);
 
   // 合并组件配置
   const mergedComponents = React.useMemo(() => {
     if (!resizableColumns) return components;
+    const baseComponents = typeof components === 'object' && components !== null ? (components as Record<string, unknown>) : {};
+    const header = typeof baseComponents.header === 'object' && baseComponents.header !== null
+      ? (baseComponents.header as Record<string, unknown>)
+      : {};
     return {
-      ...components,
+      ...baseComponents,
       header: {
-        ...(components as Record<string, unknown>)?.header,
+        ...header,
         cell: (cellProps: any) => (
           <ResizableHeaderCell
             {...cellProps}
@@ -487,20 +496,20 @@ const ResizableTable = <T extends AnyRecord>(props: ResizableTableProps<T>) => {
   const mergedColumns = React.useMemo(() => {
     if (!columns) return columns;
 
-    const rawCols = columns as Record<string, unknown>[];
+    const rawCols = (Array.isArray(columns) ? columns : []) as Record<string, unknown>[];
     const topLevelLeaf = rawCols.every((c) => isLeafColumn(c));
     const topLevelIds = rawCols.map((col, idx) => getColumnId(col, [idx]));
 
     // 应用列顺序
-    const applyOrder = (cols: unknown[]) => {
+    const applyOrder = (cols: Record<string, unknown>[]) => {
       if (!reorderableColumns) return cols;
       if (!topLevelLeaf) return cols;
-      const map = new Map<string, unknown>();
+      const map = new Map<string, Record<string, unknown>>();
       for (let i = 0; i < cols.length; i += 1) {
         map.set(topLevelIds[i], cols[i]);
       }
 
-      const ordered: unknown[] = [];
+      const ordered: Record<string, unknown>[] = [];
       for (const id of columnOrder) {
         const hit = map.get(id);
         if (!hit) continue;
@@ -522,32 +531,30 @@ const ResizableTable = <T extends AnyRecord>(props: ResizableTableProps<T>) => {
     const orderedTopLevel = applyOrder(rawCols);
 
     // 递归处理列配置
-    const mapColumns = (cols: unknown[], parentPath: number[] = []): unknown[] => {
+    const mapColumns = (cols: Record<string, unknown>[], parentPath: number[] = []): Record<string, unknown>[] => {
       return cols.map((col, idx) => {
         const indexPath = [...parentPath, idx];
         const id = getColumnId(col, indexPath);
         const isLeaf = isLeafColumn(col);
-
-        // 计算列宽
-        const baseWidthRaw = widths[id] ?? parseWidthPx(col.width) ?? defaultColumnWidth;
-        const baseWidth = clamp(baseWidthRaw, minColumnWidth, maxColumnWidth);
+        const colRecord = col as Record<string, unknown>;
 
         // 如果不是叶子列，递归处理子列
         if (!isLeaf) {
+          const children = Array.isArray(colRecord.children) ? (colRecord.children as Record<string, unknown>[]) : [];
           return {
-            ...col,
-            children: mapColumns(col.children || [], indexPath),
+            ...colRecord,
+            children: mapColumns(children, indexPath),
           };
         }
 
         // 提取列标题文本
-        const titleText = typeof col?.title === 'string' ? col.title : '';
-        const keyText = col?.key == null ? '' : String(col.key);
-        const dataIndexText = Array.isArray(col?.dataIndex)
-          ? col.dataIndex.join('.')
-          : col?.dataIndex == null
+        const titleText = typeof colRecord.title === 'string' ? colRecord.title : '';
+        const keyText = colRecord.key == null ? '' : String(colRecord.key);
+        const dataIndexText = Array.isArray(colRecord.dataIndex)
+          ? colRecord.dataIndex.join('.')
+          : colRecord.dataIndex == null
             ? ''
-            : String(col.dataIndex);
+            : String(colRecord.dataIndex);
 
         // 判断是否为操作列
         const maybeAction =
@@ -555,10 +562,14 @@ const ResizableTable = <T extends AnyRecord>(props: ResizableTableProps<T>) => {
           ['action', 'actions', 'operation', 'operate', 'op'].includes(keyText.toLowerCase()) ||
           ['action', 'actions', 'operation', 'operate', 'op'].includes(dataIndexText.toLowerCase());
 
+        const baseWidth = maybeAction
+          ? actionColumnWidth
+          : clamp(widths[id] ?? parseWidthPx(colRecord.width) ?? defaultColumnWidth, minColumnWidth, maxColumnWidth);
+
         // 判断是否可调整列宽
-        const resizable = (col as Record<string, unknown>).resizable === true
+        const resizable = colRecord.resizable === true
           ? true
-          : (col as Record<string, unknown>).resizable !== false && !maybeAction;
+          : colRecord.resizable !== false && !maybeAction;
 
         // 设置固定列
         const fixed = allowFixedColumns ? (maybeAction ? 'right' : undefined) : undefined;
@@ -567,7 +578,7 @@ const ResizableTable = <T extends AnyRecord>(props: ResizableTableProps<T>) => {
         const draggable = reorderableColumns && !maybeAction && topLevelLeaf && parentPath.length === 0;
 
         return {
-          ...col,
+          ...colRecord,
           width: baseWidth,
           fixed,
           onHeaderCell: () => ({
@@ -587,8 +598,8 @@ const ResizableTable = <T extends AnyRecord>(props: ResizableTableProps<T>) => {
                 e.dataTransfer.effectAllowed = 'move';
                 e.dataTransfer.setData('text/plain', id);
               } catch {
-    // Intentionally empty
-      // 忽略错误
+                // Intentionally empty
+                // 忽略错误
               }
             },
             onDragEnd: () => {
@@ -601,8 +612,8 @@ const ResizableTable = <T extends AnyRecord>(props: ResizableTableProps<T>) => {
               try {
                 e.dataTransfer.dropEffect = 'move';
               } catch {
-    // Intentionally empty
-      // 忽略错误
+                // Intentionally empty
+                // 忽略错误
               }
             },
             onDrop: (e: React.DragEvent<HTMLElement>) => {
@@ -612,8 +623,8 @@ const ResizableTable = <T extends AnyRecord>(props: ResizableTableProps<T>) => {
                 try {
                   return e.dataTransfer.getData('text/plain') || null;
                 } catch {
-    // Intentionally empty
-      // 忽略错误
+                  // Intentionally empty
+                  // 忽略错误
                   return null;
                 }
               })();
@@ -653,11 +664,11 @@ const ResizableTable = <T extends AnyRecord>(props: ResizableTableProps<T>) => {
         {...rest}
         rowKey={rowKey}
         className={mergedClassName}
-        columns={mergedColumns as Record<string, unknown>}
+        columns={mergedColumns as TableProps<T>['columns']}
         components={mergedComponents}
-        scroll={mergedScroll as Record<string, unknown>}
+        scroll={mergedScroll as TableProps<T>['scroll']}
         tableLayout={tableLayout ?? (resizableColumns ? 'fixed' : undefined)}
-        pagination={mergedPagination as Record<string, unknown>}
+        pagination={mergedPagination as TableProps<T>['pagination']}
       />
     </div>
   );

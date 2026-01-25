@@ -150,7 +150,7 @@ export interface CuttingTask {
   updateTime?: string;
 }
 
-export interface MaterialPurchase {
+export interface MaterialPurchase extends Record<string, unknown> {
   id?: string;
   purchaseNo: string;
   materialId?: string;
@@ -203,6 +203,7 @@ export interface MaterialPurchase {
   updateTime?: string;
   // 到货日期字段
   expectedArrivalDate?: string;
+  expectedShipDate?: string;
   actualArrivalDate?: string;
 }
 
@@ -305,7 +306,7 @@ export interface ScanResult {
 }
 
 // 面辅料数据库类型
-export interface MaterialDatabase {
+export interface MaterialDatabase extends Record<string, unknown> {
   id?: string;
   materialCode: string;
   materialName: string;

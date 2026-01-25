@@ -15,38 +15,38 @@ import lombok.Data;
 @Data
 @TableName("t_style_info")
 public class StyleInfo {
-    
+
     /**
      * 主键ID
      */
     @TableId(type = IdType.AUTO)
     private Long id;
-    
+
     /**
      * 款号
      */
     private String styleNo;
-    
+
     /**
      * 款名
      */
     private String styleName;
-    
+
     /**
      * 品类
      */
     private String category;
-    
+
     /**
      * 单价
      */
     private BigDecimal price;
-    
+
     /**
      * 生产周期(天)
      */
     private Integer cycle;
-    
+
     /**
      * 描述
      */
@@ -56,7 +56,7 @@ public class StyleInfo {
      * 年份
      */
     private Integer year;
-    
+
     /**
      * 月份
      */
@@ -66,12 +66,12 @@ public class StyleInfo {
      * 季节
      */
     private String season;
-    
+
     /**
      * 颜色
      */
     private String color;
-    
+
     /**
      * 码数
      */
@@ -86,13 +86,13 @@ public class StyleInfo {
      * 状态：ENABLED-启用，DISABLED-禁用
      */
     private String status;
-    
+
     /**
      * 创建时间
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;
-    
+
     /**
      * 更新时间
      */
@@ -127,6 +127,10 @@ public class StyleInfo {
 
     @TableField(exist = false)
     private String latestOrderStatus;
+
+    @TableField(exist = false)
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime latestOrderTime;
 
     @TableField(exist = false)
     private Integer latestProductionProgress;

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button, Card, Tag, Space, message, Modal, Form, Input, Row, Col, Spin } from 'antd';
+import { Button, Card, Tag, Space, message, Modal, Form, Input, Row, Col, Spin, Alert } from 'antd';
 import { ArrowLeftOutlined, CheckCircleOutlined, EyeOutlined } from '@ant-design/icons';
 import Layout from '../../components/Layout';
 import ResizableTable from '../../components/common/ResizableTable';
@@ -37,10 +37,10 @@ const MaterialPurchaseDetail: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [order, setOrder] = useState<unknown>(null);
   const [purchaseList, setPurchaseList] = useState<MaterialPurchaseType[]>([]);
-  
+
   const [viewVisible, setViewVisible] = useState(false);
   const [currentPurchase, setCurrentPurchase] = useState<MaterialPurchaseType | null>(null);
-  
+
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [confirmForm] = Form.useForm();
@@ -56,12 +56,18 @@ const MaterialPurchaseDetail: React.FC = () => {
   // 加载订单和采购单数据
   const loadData = async () => {
     if (!orderId) return;
-    
+
     setLoading(true);
     try {
-      // 加载订单信息
-      const orderDetail = await fetchProductionOrderDetail(orderId, { acceptAnyData: true });
-      setOrder(orderDetail);
+      // 加载订单信息（订单可能已删除，优雅处理404）
+      try {
+        const orderDetail = await fetchProductionOrderDetail(orderId, { acceptAnyData: true });
+        setOrder(orderDetail);
+      } catch (orderError: unknown) {
+        // 订单已删除或不存在，设置为null但继续加载采购列表
+        console.warn('[MaterialPurchaseDetail] 订单不存在或已删除:', orderId, orderError);
+        setOrder(null);
+      }
 
       const purchaseRes = await api.get('/production/purchase/list', {
         params: { orderId, page: 1, pageSize: 1000 }
@@ -111,12 +117,12 @@ const MaterialPurchaseDetail: React.FC = () => {
       message.warning('物料到货率不足50%，无法确认回料完成');
       return;
     }
-    
+
     if (order?.procurementManuallyCompleted === 1) {
       message.info('该订单已确认回料完成');
       return;
     }
-    
+
     confirmForm.resetFields();
     setConfirmVisible(true);
   };
@@ -125,23 +131,23 @@ const MaterialPurchaseDetail: React.FC = () => {
   const handleConfirm = async () => {
     try {
       const values = await confirmForm.validateFields();
-      
+
       if (values.remark.trim().length < 10) {
         message.warning('备注原因至少需要10个字符');
         return;
       }
-      
+
       setConfirmLoading(true);
-      
+
       await api.post('/production/order/confirm-procurement', {
         id: orderId,
         remark: values.remark.trim(),
       });
-      
+
       message.success('确认回料完成成功');
       setConfirmVisible(false);
       confirmForm.resetFields();
-      
+
       // 重新加载数据
       await loadData();
     } catch (error: unknown) {
@@ -284,17 +290,17 @@ const MaterialPurchaseDetail: React.FC = () => {
     <Layout>
       <div style={{ padding: isMobile ? 12 : 24 }}>
         {/* 头部 */}
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
           alignItems: 'center',
           marginBottom: 16,
           flexWrap: 'wrap',
           gap: 12,
         }}>
           <Space>
-            <Button 
-              icon={<ArrowLeftOutlined />} 
+            <Button
+              icon={<ArrowLeftOutlined />}
               onClick={() => navigate(-1)}
             >
               返回
@@ -303,7 +309,7 @@ const MaterialPurchaseDetail: React.FC = () => {
               订单物料采购明细
             </h2>
           </Space>
-          
+
           {order && (
             <Button
               type="primary"
@@ -321,6 +327,28 @@ const MaterialPurchaseDetail: React.FC = () => {
           <div style={{ textAlign: 'center', padding: 48 }}>
             <Spin size="large" />
           </div>
+        ) : !order ? (
+          <Card size="small" style={{ marginBottom: 16 }}>
+            <Alert
+              message="订单不存在或已删除"
+              description={`订单ID: ${orderId}。该订单可能已被删除，但关联的采购记录可能还保留在系统中。`}
+              type="warning"
+              showIcon
+            />
+            {purchaseList.length > 0 && (
+              <div style={{ marginTop: 12, fontSize: 12, color: '#666' }}>
+                <div><strong>采购单数：</strong>{purchaseList.length} 个</div>
+                <div style={{ marginTop: 4 }}><strong>物料到货率：</strong>
+                  <Tag color={
+                    materialArrivalRate >= 100 ? 'green' :
+                    materialArrivalRate >= 50 ? 'orange' : 'red'
+                  }>
+                    {materialArrivalRate}%
+                  </Tag>
+                </div>
+              </div>
+            )}
+          </Card>
         ) : headerOrder ? (
           <Card size="small" style={{ marginBottom: 16 }}>
             <ProductionOrderHeader
@@ -433,11 +461,11 @@ const MaterialPurchaseDetail: React.FC = () => {
                 <Col span={24}>
                   {currentPurchase.styleCover && (
                     <div style={{ marginBottom: 16 }}>
-                      <StyleCoverThumb 
-                        styleId={currentPurchase.styleId} 
+                      <StyleCoverThumb
+                        styleId={currentPurchase.styleId}
                         styleNo={currentPurchase.styleNo}
-                        src={currentPurchase.styleCover} 
-                        size={120} 
+                        src={currentPurchase.styleCover}
+                        size={120}
                         borderRadius={8}
                       />
                     </div>
@@ -505,8 +533,8 @@ const MaterialPurchaseDetail: React.FC = () => {
                 <Col xs={24} sm={12}>
                   <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>单价</div>
                   <div>
-                    {Number.isFinite(Number(currentPurchase.unitPrice)) 
-                      ? `¥${Number(currentPurchase.unitPrice).toFixed(2)}` 
+                    {Number.isFinite(Number(currentPurchase.unitPrice))
+                      ? `¥${Number(currentPurchase.unitPrice).toFixed(2)}`
                       : '-'}
                   </div>
                 </Col>
@@ -572,7 +600,7 @@ const MaterialPurchaseDetail: React.FC = () => {
               </div>
             </div>
           )}
-          
+
           <Form form={confirmForm} layout="vertical">
             <Form.Item
               name="remark"

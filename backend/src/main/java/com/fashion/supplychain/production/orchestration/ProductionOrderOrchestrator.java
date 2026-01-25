@@ -92,6 +92,9 @@ public class ProductionOrderOrchestrator {
     private ProductionOrderScanRecordDomainService scanRecordDomainService;
 
     @Autowired
+    private com.fashion.supplychain.production.service.ScanRecordService scanRecordService;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     @Autowired
@@ -136,7 +139,7 @@ public class ProductionOrderOrchestrator {
         if (order == null) {
             throw new NoSuchElementException("生产订单不存在");
         }
-        
+
         if (StringUtils.hasText(order.getOrderDetails())) {
             try {
                 List<Map<String, Object>> items = resolveOrderLines(order.getOrderDetails());
@@ -162,7 +165,7 @@ public class ProductionOrderOrchestrator {
                 System.err.println("解析订单明细失败: " + e.getMessage());
             }
         }
-        
+
         return order;
     }
 
@@ -193,12 +196,12 @@ public class ProductionOrderOrchestrator {
             }
         }
         validateUnitPriceSources(productionOrder);
-        
+
         // 创建订单时检查纸样是否齐全（只警告，不阻止）
         if (isCreate && productionOrder != null && StringUtils.hasText(productionOrder.getStyleId())) {
             checkPatternCompleteWarning(productionOrder.getStyleId());
         }
-        
+
         boolean ok = productionOrderService.saveOrUpdateOrder(productionOrder);
         if (!ok) {
             throw new IllegalStateException("操作失败");
@@ -995,21 +998,28 @@ public class ProductionOrderOrchestrator {
         if (!ok) {
             throw new IllegalStateException("删除失败");
         }
-        
+
         try {
             // 级联删除关联的采购任务
             materialPurchaseService.deleteByOrderId(oid);
         } catch (Exception e) {
             log.warn("Failed to cascade delete material purchases: orderId={}", oid, e);
         }
-        
+
         try {
             // 级联删除裁剪任务和裁剪单
             cuttingTaskService.deleteByOrderId(oid);
         } catch (Exception e) {
             log.warn("Failed to cascade delete cutting tasks: orderId={}", oid, e);
         }
-        
+
+        try {
+            // 级联删除扫码记录
+            scanRecordService.deleteByOrderId(oid);
+        } catch (Exception e) {
+            log.warn("Failed to cascade delete scan records: orderId={}", oid, e);
+        }
+
         return true;
     }
 
@@ -1285,7 +1295,7 @@ public class ProductionOrderOrchestrator {
             return;
         }
         try {
-            boolean complete = styleAttachmentOrchestrator != null 
+            boolean complete = styleAttachmentOrchestrator != null
                     && styleAttachmentOrchestrator.checkPatternComplete(styleId) != null
                     && Boolean.TRUE.equals(styleAttachmentOrchestrator.checkPatternComplete(styleId).get("complete"));
             if (!complete) {
@@ -1301,7 +1311,7 @@ public class ProductionOrderOrchestrator {
      * 业务规则：
      * - materialArrivalRate < 50%: 不允许确认，必须继续采购
      * - materialArrivalRate >= 50%: 允许人工确认"回料完成"，需填写备注原因（即使100%也需要人工确认）
-     * 
+     *
      * @param orderId 订单ID
      * @param remark 确认备注（说明物料到货情况和确认原因）
      * @return 更新后的订单
@@ -1330,7 +1340,7 @@ public class ProductionOrderOrchestrator {
         // 物料到货率<50%：不允许确认
         if (materialArrivalRate < 50) {
             throw new IllegalStateException(
-                String.format("物料到货率不足50%%（当前%d%%），不允许确认采购完成，请继续采购", 
+                String.format("物料到货率不足50%%（当前%d%%），不允许确认采购完成，请继续采购",
                     materialArrivalRate)
             );
         }
@@ -1365,8 +1375,8 @@ public class ProductionOrderOrchestrator {
         // 记录扫码日志（用于追踪）
         try {
             scanRecordDomainService.insertRollbackRecord(
-                order, 
-                "采购手动确认", 
+                order,
+                "采购手动确认",
                 String.format("物料到货率%d%%，确认人：%s，备注：%s", materialArrivalRate, username, remark),
                 now
             );

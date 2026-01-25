@@ -308,9 +308,9 @@ const UserApproval: React.FC = () => {
               批准后该用户可以正常登录系统
             </p>
             <div>
-              <label style={{ display: 'block', marginBottom: 8 }}>
+              <div style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>
                 选择角色<span style={{ color: '#ff4d4f' }}>*</span>
-              </label>
+              </div>
               <Select
                 style={{ width: '100%' }}
                 placeholder="请选择角色"
@@ -322,9 +322,9 @@ const UserApproval: React.FC = () => {
                   value: String(role.id)
                 }))}
               />
-              <label style={{ display: 'block', margin: '16px 0 8px' }}>
+              <div style={{ display: 'block', margin: '16px 0 8px', fontWeight: 500 }}>
                 批准原因<span style={{ color: '#ff4d4f' }}>*</span>
-              </label>
+              </div>
               <TextArea
                 rows={3}
                 maxLength={200}

@@ -3,17 +3,17 @@ import logger from './logger';
 /**
  * PC端数据同步管理器
  * 基于小程序 syncManager.js 改造的 TypeScript 版本
- * 
+ *
  * 功能：
  * - 定时轮询数据
  * - 数据变化检测
  * - 错误自动降级
  * - 页面可见性优化
- * 
+ *
  * @example
  * ```typescript
  * import { syncManager } from '@/utils/syncManager';
- * 
+ *
  * // 启动同步
  * syncManager.startSync({
  *   taskId: 'production-orders',
@@ -21,13 +21,13 @@ import logger from './logger';
  *   onDataChange: (data) => setOrders(data),
  *   interval: 30000
  * });
- * 
+ *
  * // 停止同步
  * syncManager.stopSync('production-orders');
  * ```
  */
 
-export type SyncConfig<T = any> = {
+export type SyncConfig<T = unknown> = {
   /** 任务唯一ID */
   taskId: string;
   /** 数据获取函数 */
@@ -46,7 +46,7 @@ export type SyncConfig<T = any> = {
   maxErrors?: number;
 };
 
-type SyncTask<T = any> = {
+type SyncTask<T = unknown> = {
   config: SyncConfig<T>;
   timer: number | null;
   lastData: T | null;
@@ -55,7 +55,7 @@ type SyncTask<T = any> = {
 };
 
 class SyncManager {
-  private tasks = new Map<string, SyncTask>();
+  private tasks = new Map<string, SyncTask<unknown>>();
   private visibilityHandler: (() => void) | null = null;
 
   constructor() {
@@ -65,7 +65,7 @@ class SyncManager {
   /**
    * 启动数据同步任务
    */
-  startSync<T = any>(config: SyncConfig<T>): boolean {
+  startSync<T = unknown>(config: SyncConfig<T>): boolean {
     const { taskId, fetchFn, interval = 30000, maxErrors = 3 } = config;
 
     if (!taskId || !fetchFn) {
@@ -93,7 +93,7 @@ class SyncManager {
       isPaused: false,
     };
 
-    this.tasks.set(taskId, task);
+    this.tasks.set(taskId, task as SyncTask<unknown>);
 
     // 立即执行一次
     this.executeSync(task);
@@ -116,7 +116,7 @@ class SyncManager {
   stopSync(taskId: string): boolean {
     const task = this.tasks.get(taskId);
     if (!task) {
-      logger.warn(`[同步管理器] 任务 ${taskId} 不存在`);
+      // 任务不存在时静默返回，因为可能是在清理阶段调用的
       return false;
     }
 
@@ -213,20 +213,22 @@ class SyncManager {
 
     } catch (error) {
       task.errorCount++;
-      const err = error as Record<string, unknown>;
-      
+      const err = error as { status?: number; message?: string };
+      const errorMessage = typeof err?.message === 'string' ? err.message : 'Unknown error';
+      const errorObj = error instanceof Error ? error : new Error(errorMessage);
+
       // 检查是否是认证错误 (401/403)
       const isAuthError = err?.status === 401 || err?.status === 403;
-      
+
       if (isAuthError) {
         logger.warn(`[实时同步] 任务 ${taskId} 认证失败，停止同步`);
         this.stopSync(taskId);
         // 不调用 onError，因为认证错误已经由拦截器处理（跳转登录）
         return;
       }
-      
+
       console.error(`[实时同步] 任务 ${taskId} 失败 (${task.errorCount}/${maxErrors})`, err);
-      onError?.(err);
+      onError?.(errorObj);
 
       // 错误次数过多，自动停止
       if (task.errorCount >= maxErrors) {
@@ -243,7 +245,7 @@ class SyncManager {
     try {
       return JSON.stringify(oldData) !== JSON.stringify(newData);
     } catch {
-    // Intentionally empty
+      // Intentionally empty
       // 忽略错误
       // JSON 序列化失败，认为数据有变化
       return true;
@@ -293,26 +295,26 @@ export const syncManager = new SyncManager();
 
 /**
  * React Hook：使用数据同步
- * 
+ *
  * @example
  * ```typescript
  * const MyComponent = () => {
  *   const [orders, setOrders] = useState([]);
- *   
+ *
  *   useSync(
  *     'my-orders',
  *     () => api.get('/orders'),
  *     (newData) => setOrders(newData),
  *     { interval: 30000 }
  *   );
- *   
+ *
  *   return <div>{orders.length} orders</div>;
  * };
  * ```
  */
 import { useEffect, useRef } from 'react';
 
-export function useSync<T = any>(
+export function useSync<T = unknown>(
   taskId: string,
   fetchFn: () => Promise<T>,
   onDataChange: (newData: T, oldData: T | null) => void,
@@ -325,27 +327,32 @@ export function useSync<T = any>(
 ): void {
   const enabledRef = useRef(options?.enabled ?? true);
   const optionsRef = useRef(options);
+  const fetchRef = useRef(fetchFn);
+  const onDataChangeRef = useRef(onDataChange);
 
   // 更新启用状态（enabled）
   useEffect(() => {
     enabledRef.current = options?.enabled ?? true;
     optionsRef.current = options;
-  }, [options]);
+    fetchRef.current = fetchFn;
+    onDataChangeRef.current = onDataChange;
+  }, [options, fetchFn, onDataChange]);
 
   useEffect(() => {
     if (!enabledRef.current) {
-      // 如果禁用，确保停止任务
+      // 如果禁用，尝试停止任务（如果任务存在的话）
       syncManager.stopSync(taskId);
       return;
     }
 
+    const currentOptions = optionsRef.current;
     const started = syncManager.startSync({
       taskId,
-      fetchFn,
-      onDataChange,
-      interval: options?.interval,
-      onError: options?.onError,
-      pauseOnHidden: options?.pauseOnHidden,
+      fetchFn: () => fetchRef.current(),
+      onDataChange: (newData, oldData) => onDataChangeRef.current(newData, oldData),
+      interval: currentOptions?.interval,
+      onError: currentOptions?.onError,
+      pauseOnHidden: currentOptions?.pauseOnHidden,
     });
 
     if (!started) {
@@ -355,11 +362,11 @@ export function useSync<T = any>(
     return () => {
       syncManager.stopSync(taskId);
     };
-  }, [taskId]); // 只在任务 ID 变化时重新启动
+  }, [taskId]);
 
   // 处理 fetchFn 与 onDataChange 的更新
   useEffect(() => {
-    const task = syncManager['tasks'].get(taskId);
+    const task = syncManager['tasks'].get(taskId) as SyncTask<T> | undefined;
     if (task) {
       // 更新配置
       task.config.fetchFn = fetchFn;

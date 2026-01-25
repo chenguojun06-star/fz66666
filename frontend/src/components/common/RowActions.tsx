@@ -38,6 +38,12 @@ const resolveText = (v: React.ReactNode) => {
     return '';
 };
 
+const isLogAction = (a: RowAction) => {
+    const key = String(a?.key || '').trim();
+    const labelText = resolveText(a?.label);
+    return key === 'log' || labelText === '日志';
+};
+
 /**
  * 行操作组件
  * 用于展示表格行的操作按钮，支持自动折叠溢出的操作到下拉菜单
@@ -51,7 +57,7 @@ const RowActions: React.FC<{
     size?: 'small' | 'middle' | 'large';
     /** 自定义类名 */
     className?: string;
-}> = ({ actions, maxInline = 2, size = 'small', className }) => {
+}> = ({ actions, size = 'small', className }) => {
     // 过滤无效操作项
     const list = (Array.isArray(actions) ? actions : []).filter((x) => x && String(x.key || '').trim());
     if (!list.length) return null;
@@ -72,10 +78,13 @@ const RowActions: React.FC<{
     const secondary = baseList.filter((x) => !x.primary);
     // 合并操作列表，主要操作优先显示
     const ordered = [...primary, ...secondary];
+    const logActions = ordered.filter((a) => isLogAction(a));
+    const nonLogActions = ordered.filter((a) => !isLogAction(a));
     // 行内显示的操作项
-    const inline = ordered.slice(0, Math.max(0, Math.min(ordered.length, maxInline)));
+    const effectiveMaxInline = 1;
+    const inline = nonLogActions.slice(0, Math.max(0, Math.min(nonLogActions.length, effectiveMaxInline)));
     // 溢出到下拉菜单的操作项
-    const rest = ordered.slice(inline.length);
+    const rest = [...logActions, ...nonLogActions.slice(inline.length)];
 
     // 构建下拉菜单操作项
     const menuItems: MenuProps['items'] = (() => {

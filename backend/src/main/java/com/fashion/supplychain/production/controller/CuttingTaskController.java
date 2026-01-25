@@ -65,4 +65,12 @@ public class CuttingTaskController {
         boolean success = cuttingTaskService.updateById(task);
         return success ? Result.success("更新成功") : Result.fail("更新失败");
     }
+
+    /**
+     * 获取当前用户的裁剪任务（已领取待完成）
+     */
+    @GetMapping("/my-tasks")
+    public Result<?> getMyTasks() {
+        return Result.success(cuttingTaskOrchestrator.getMyTasks());
+    }
 }

@@ -8,6 +8,9 @@
     "pages/admin/index",
     "pages/admin/notification/index"
   ],
+  "usingComponents": {
+    "floating-bell": "/components/floating-bell/index"
+  },
   "tabBar": {
     "custom": true,
     "color": "#8e8e93",

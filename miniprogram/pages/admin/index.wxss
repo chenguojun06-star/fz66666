@@ -10,6 +10,27 @@ page {
   margin-bottom: 16px;
 }
 
+.title-left-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logout-btn {
+  padding: 6px 12px;
+  background: #f3f4f6;
+  border-radius: 16px;
+}
+
+.logout-btn:active {
+  background: #e5e7eb;
+}
+
+.logout-text {
+  font-size: 12px;
+  color: #6b7280;
+}
+
 .title-right-group {
   display: flex;
   align-items: center;
@@ -66,7 +87,7 @@ page {
   padding: 10px 14px;
   background: #ffffff;
   border-radius: var(--radius-lg);
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
@@ -166,7 +187,7 @@ page {
   margin-bottom: 16px;
   padding: 8px 12px;
   background: #ffffff;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
@@ -181,7 +202,7 @@ page {
   padding: 12px;
   background: #ffffff;
   border-radius: var(--radius-sm);
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
 }
 
 .info-item {
@@ -215,7 +236,7 @@ page {
   border-radius: 4px;
   font-size: 12px;
   color: #4b5563;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
 }
 
 .admin-section {
@@ -313,7 +334,7 @@ page {
 }
 
 .stat-card {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: 12px 8px;
   background: #ffffff;
@@ -366,7 +387,7 @@ page {
 .salary-card {
   margin-top: 10px;
   padding: 12px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   background: #ffffff;
 }

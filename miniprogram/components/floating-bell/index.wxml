@@ -1,0 +1,170 @@
+<!-- 悬浮铃铛组件 - 显示待处理任务和紧急事件 -->
+<view class="floating-bell-container">
+  <!-- 悬浮铃铛按钮 -->
+  <view class="floating-bell {{expanded ? 'expanded' : ''}}" bindtap="togglePanel" catchtouchmove="preventMove">
+    <image class="bell-icon" src="/assets/icons/bell.svg" mode="aspectFit" />
+    <view wx:if="{{totalCount > 0}}" class="bell-badge">{{totalCount > 99 ? '99+' : totalCount}}</view>
+  </view>
+
+  <!-- 任务面板 -->
+  <view class="task-panel {{showPanel ? 'show' : ''}}">
+    <view class="panel-header">
+      <view class="panel-title">📋 待处理任务</view>
+      <view class="panel-close" bindtap="closePanel">✕</view>
+    </view>
+
+    <!-- 加载中 -->
+    <view wx:if="{{loading}}" class="panel-loading">
+      <view class="loading-spinner"></view>
+      <text>加载中...</text>
+    </view>
+
+    <!-- 任务内容 -->
+    <scroll-view wx:else class="panel-content" scroll-y>
+      <!-- 紧急事件 -->
+      <view wx:if="{{urgentEvents.length > 0}}" class="task-section">
+        <view class="section-title urgent">
+          <text class="section-icon">🚨</text>
+          <text>紧急事件 ({{urgentEvents.length}})</text>
+        </view>
+        <view
+          wx:for="{{urgentEvents}}"
+          wx:key="id"
+          class="task-item urgent"
+          bindtap="onTaskClick"
+          data-task="{{item}}"
+          data-type="urgent"
+        >
+          <view class="task-main">
+            <view class="task-title">{{item.title || '紧急事件'}}</view>
+            <view class="task-desc">{{item.description || item.orderNo}}</view>
+          </view>
+          <view class="task-action">
+            <text class="action-text">处理</text>
+            <text class="action-arrow">›</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 裁剪任务 -->
+      <view wx:if="{{cuttingTasks.length > 0}}" class="task-section">
+        <view class="section-title cutting">
+          <text class="section-icon">✂️</text>
+          <text>裁剪任务 ({{cuttingTasks.length}})</text>
+        </view>
+        <view
+          wx:for="{{cuttingTasks}}"
+          wx:key="id"
+          class="task-item"
+          bindtap="onTaskClick"
+          data-task="{{item}}"
+          data-type="cutting"
+        >
+          <view class="task-main">
+            <view class="task-title">{{item.productionOrderNo || item.orderNo}}</view>
+            <view class="task-desc">款号: {{item.styleNo}} · 数量: {{item.orderQuantity}}</view>
+            <view class="task-time">领取于 {{item.receivedTimeText}}</view>
+          </view>
+          <view class="task-action">
+            <text class="action-text">生成菲号</text>
+            <text class="action-arrow">›</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 采购任务 -->
+      <view wx:if="{{procurementTasks.length > 0}}" class="task-section">
+        <view class="section-title procurement">
+          <text class="section-icon">📦</text>
+          <text>采购任务 ({{procurementTasks.length}})</text>
+        </view>
+        <view
+          wx:for="{{procurementTasks}}"
+          wx:key="id"
+          class="task-item"
+          bindtap="onTaskClick"
+          data-task="{{item}}"
+          data-type="procurement"
+        >
+          <view class="task-main">
+            <view class="task-title">{{item.orderNo}}</view>
+            <view class="task-desc">物料: {{item.materialName}} · 数量: {{item.purchaseQuantity}}{{item.unit}}</view>
+            <view class="task-time">领取于 {{item.receivedTimeText}}</view>
+          </view>
+          <view class="task-action">
+            <text class="action-text">确认提交</text>
+            <text class="action-arrow">›</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 超时提醒 -->
+      <view wx:if="{{timeoutReminders.length > 0}}" class="task-section">
+        <view class="section-title timeout">
+          <text class="section-icon">⏰</text>
+          <text>超时提醒 ({{timeoutReminders.length}})</text>
+        </view>
+        <view
+          wx:for="{{timeoutReminders}}"
+          wx:key="id"
+          class="task-item timeout"
+          bindtap="onTaskClick"
+          data-task="{{item}}"
+          data-type="reminder"
+        >
+          <view class="task-main">
+            <view class="task-title">{{item.type}} - {{item.orderNo}}</view>
+            <view class="task-desc">已超过 {{item.timeAgo}}</view>
+          </view>
+          <view class="task-action">
+            <text class="action-text">处理</text>
+            <text class="action-arrow">›</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 待审批用户（仅管理员可见） -->
+      <view wx:if="{{isAdmin && pendingUsers.length > 0}}" class="task-section">
+        <view class="section-title approval">
+          <text class="section-icon">👤</text>
+          <text>待审批用户 ({{pendingUsers.length}})</text>
+        </view>
+        <view
+          wx:for="{{pendingUsers}}"
+          wx:key="id"
+          class="task-item"
+          bindtap="onTaskClick"
+          data-task="{{item}}"
+          data-type="approval"
+        >
+          <view class="task-main">
+            <view class="task-title">{{item.name}}</view>
+            <view class="task-desc">{{item.phone || '无手机号'}} · {{item.timeText}}</view>
+          </view>
+          <view class="task-action">
+            <text class="action-text">审批</text>
+            <text class="action-arrow">›</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 空状态 -->
+      <view wx:if="{{!hasAnyTask}}" class="empty-state">
+        <text class="empty-icon">✅</text>
+        <text class="empty-text">暂无待处理任务</text>
+        <text class="empty-hint">您的任务已全部完成</text>
+      </view>
+    </scroll-view>
+
+    <!-- 底部刷新按钮 -->
+    <view class="panel-footer">
+      <view class="refresh-btn" bindtap="refreshTasks">
+        <text class="refresh-icon">🔄</text>
+        <text>刷新</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 遮罩层 -->
+  <view wx:if="{{showPanel}}" class="panel-mask" bindtap="closePanel" catchtouchmove="preventMove"></view>
+</view>

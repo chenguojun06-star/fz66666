@@ -64,10 +64,17 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
     @Override
     @Transactional(rollbackFor = Exception.class)
     public List<CuttingBundle> generateBundles(String orderId, List<Map<String, Object>> bundles) {
+        // 支持订单号或订单ID查询
         ProductionOrder order = productionOrderService.getById(orderId);
+        if (order == null) {
+            // 如果按ID查不到，尝试按订单号查询
+            order = productionOrderService.getByOrderNo(orderId);
+        }
         if (order == null || bundles == null || bundles.isEmpty()) {
+            log.warn("generateBundles: 订单未找到或参数为空, orderId={}", orderId);
             return new ArrayList<>();
         }
+        log.info("generateBundles: 找到订单, orderNo={}, orderId={}", order.getOrderNo(), order.getId());
 
         int materialArrivalRate = order.getMaterialArrivalRate() == null ? 0 : order.getMaterialArrivalRate();
         if (materialArrivalRate < 100) {

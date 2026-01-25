@@ -1,4 +1,7 @@
 <view class="container">
+  <!-- 通用悬浮铃铛组件 -->
+  <floating-bell />
+
   <view class="card">
     <view class="title">生产</view>
 
@@ -80,27 +83,27 @@
           <view class="cf-item"><text class="cf-k">订单</text><text class="cf-v hl">{{bundleModal.orderNo}}</text></view>
           <view class="cf-item"><text class="cf-k">款号</text><text class="cf-v">{{bundleModal.styleNo}}</text></view>
         </view>
-        
+
         <view class="bundle-input-list">
           <view wx:for="{{bundleModal.items}}" wx:key="index" class="bundle-input-item">
             <view class="bii-row">
               <text class="bii-label">颜色</text>
-              <input class="bii-input" placeholder="如：红色" value="{{item.color}}" bindinput="onBundleColorInput" data-idx="{{index}}" />
+              <input class="bii-input" placeholder="如：红色" value="{{item.color}}" bindinput="onBundleFieldInput" data-idx="{{index}}" data-field="color" />
             </view>
             <view class="bii-row">
               <text class="bii-label">尺码</text>
-              <input class="bii-input" placeholder="如：L" value="{{item.size}}" bindinput="onBundleSizeInput" data-idx="{{index}}" />
+              <input class="bii-input" placeholder="如：L" value="{{item.size}}" bindinput="onBundleFieldInput" data-idx="{{index}}" data-field="size" />
             </view>
             <view class="bii-row">
               <text class="bii-label">数量</text>
-              <input class="bii-input" type="digit" placeholder="如：20" value="{{item.quantity}}" bindinput="onBundleQuantityInput" data-idx="{{index}}" />
+              <input class="bii-input" type="digit" placeholder="如：20" value="{{item.quantity}}" bindinput="onBundleFieldInput" data-idx="{{index}}" data-field="quantity" />
             </view>
             <view wx:if="{{bundleModal.items.length > 1}}" class="bii-remove" bindtap="onRemoveBundleItem" data-idx="{{index}}">
               <text>✕ 删除</text>
             </view>
           </view>
         </view>
-        
+
         <view class="bundle-add-btn" bindtap="onAddBundleItem">
           <text>+ 添加一行</text>
         </view>

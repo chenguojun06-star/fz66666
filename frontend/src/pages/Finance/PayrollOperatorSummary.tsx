@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Card, DatePicker, Input, Modal, Select, Space, Switch, Tabs, message } from 'antd';
+import { Button, Card, Input, Modal, Select, Space, Switch, Tabs, message } from 'antd';
+import { UnifiedRangePicker } from '../../components/common/UnifiedDatePicker';
 import { DownloadOutlined } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '../../components/Layout';
@@ -8,8 +9,6 @@ import SortableColumnTitle from '../../components/common/SortableColumnTitle';
 import api, { unwrapApiData } from '../../utils/api';
 import type { PayrollOperatorProcessSummaryRow } from '../../types/finance';
 import dayjs from 'dayjs';
-
-const { RangePicker } = DatePicker;
 
 const PayrollOperatorSummary: React.FC = () => {
     const [searchParams] = useSearchParams();
@@ -621,7 +620,7 @@ const PayrollOperatorSummary: React.FC = () => {
                             ]}
                             onChange={(v) => setScanType(v)}
                         />
-                        <RangePicker
+                        <UnifiedRangePicker
                             showTime
                             value={dateRange}
                             onChange={(v) => setDateRange(v as Record<string, unknown>)}

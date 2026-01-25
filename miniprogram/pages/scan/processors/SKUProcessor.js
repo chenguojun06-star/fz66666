@@ -1,12 +1,12 @@
 /**
  * SKU处理器 - 统一SKU相关的所有逻辑
- * 
+ *
  * 职责:
  * 1. SKU的定义和规范化
  * 2. SKU列表的处理和转换
  * 3. SKU的数量管理
  * 4. SKU和菲号的关联
- * 
+ *
  * @module SKUProcessor
  * @date 2026-01-23
  */
@@ -68,7 +68,7 @@ const SKUProcessor = {
   /**
    * 从SKU键反解出color和size
    * @param {string} skuKey - SKU键
-   * @returns {{color: string, size: string}} 
+   * @returns {{color: string, size: string}}
    */
   parseSKUKey(skuKey) {
     const [color, size] = skuKey.split('|');
@@ -83,7 +83,9 @@ const SKUProcessor = {
    * @returns {SKU[]} 标准SKU列表
    */
   normalizeOrderItems(items, orderNo, styleNo) {
-    if (!Array.isArray(items)) {return [];}
+    if (!Array.isArray(items)) {
+      return [];
+    }
 
     return items.map(item => ({
       styleNo: styleNo || '',
@@ -93,7 +95,7 @@ const SKUProcessor = {
       completedQuantity: item.completedQty || 0,
       pendingQuantity: (item.quantity || item.num || 0) - (item.completedQty || 0),
       orderNo: orderNo || '',
-      bundleNo: item.bundleNo || null
+      bundleNo: item.bundleNo || null,
     }));
   },
 
@@ -103,7 +105,9 @@ const SKUProcessor = {
    * @returns {Object[]} 表单项列表
    */
   buildSKUInputList(skuList) {
-    if (!Array.isArray(skuList)) {return [];}
+    if (!Array.isArray(skuList)) {
+      return [];
+    }
 
     return skuList.map((sku, idx) => ({
       id: idx,
@@ -113,7 +117,7 @@ const SKUProcessor = {
       totalQuantity: sku.totalQuantity,
       defaultQuantity: sku.totalQuantity, // 默认填充为总数
       inputQuantity: sku.totalQuantity, // 用户输入的数量
-      skuKey: this.generateSKUKey(sku.color, sku.size)
+      skuKey: this.generateSKUKey(sku.color, sku.size),
     }));
   },
 
@@ -136,7 +140,7 @@ const SKUProcessor = {
     if (quantity > skuInput.totalQuantity) {
       return {
         valid: false,
-        error: `${skuInput.label}数量(${quantity})超过订单数量(${skuInput.totalQuantity})`
+        error: `${skuInput.label}数量(${quantity})超过订单数量(${skuInput.totalQuantity})`,
       };
     }
 
@@ -156,7 +160,7 @@ const SKUProcessor = {
       return {
         valid: false,
         errors: ['请至少输入一个SKU数量'],
-        validList: []
+        validList: [],
       };
     }
 
@@ -173,14 +177,14 @@ const SKUProcessor = {
       return {
         valid: false,
         errors: errors.length > 0 ? errors : ['没有有效的SKU输入'],
-        validList: []
+        validList: [],
       };
     }
 
     return {
       valid: errors.length === 0, // 可能有部分有效
       errors: errors,
-      validList: validList
+      validList: validList,
     };
   },
 
@@ -202,7 +206,7 @@ const SKUProcessor = {
         size: input.size,
         quantity: Number(input.inputQuantity),
         processNode: processNode,
-        action: 'scan'
+        action: 'scan',
       }));
   },
 
@@ -212,17 +216,21 @@ const SKUProcessor = {
    * @returns {{orderNo: string, color: string, bundleNo: string} | null}
    */
   parseBundleNo(bundleNo) {
-    if (!bundleNo) {return null;}
+    if (!bundleNo) {
+      return null;
+    }
 
     // 格式: PO20260122001-黑色-01
     const match = bundleNo.match(/^(PO\d+)-(.+)-(\d{2})$/);
-    if (!match) {return null;}
+    if (!match) {
+      return null;
+    }
 
     return {
       orderNo: match[1],
       color: match[2],
       batchNo: match[3],
-      bundleNo: bundleNo
+      bundleNo: bundleNo,
     };
   },
 
@@ -257,7 +265,7 @@ const SKUProcessor = {
       return {
         totalQuantity: 0,
         completedQuantity: 0,
-        progress: 0
+        progress: 0,
       };
     }
 
@@ -268,7 +276,7 @@ const SKUProcessor = {
     return {
       totalQuantity,
       completedQuantity,
-      progress
+      progress,
     };
   },
 
@@ -328,7 +336,7 @@ const SKUProcessor = {
       totalQuantity: totalQuantity,
       completedQuantity: completedQuantity,
       pendingQuantity: totalQuantity - completedQuantity,
-      overallProgress: progress
+      overallProgress: progress,
     };
   },
 
@@ -339,30 +347,37 @@ const SKUProcessor = {
    * @returns {Array} 工序单价列表 [{processName: '做领', unitPrice: 2.50}, ...]
    */
   getProcessUnitPrices(order) {
-    if (!order) {return [];}
+    if (!order) {
+      return [];
+    }
 
     // 优先从 progressNodeUnitPrices 字段读取
     if (Array.isArray(order.progressNodeUnitPrices)) {
-      return order.progressNodeUnitPrices.map(node => ({
-        processName: node.name || node.processName || '',
-        unitPrice: Number(node.unitPrice) || 0,
-        id: node.id
-      })).filter(p => p.processName);
+      return order.progressNodeUnitPrices
+        .map(node => ({
+          processName: node.name || node.processName || '',
+          unitPrice: Number(node.unitPrice) || 0,
+          id: node.id,
+        }))
+        .filter(p => p.processName);
     }
 
     // 其次尝试从 progressWorkflowJson 解析
     if (order.progressWorkflowJson) {
       try {
-        const workflow = typeof order.progressWorkflowJson === 'string'
-          ? JSON.parse(order.progressWorkflowJson)
-          : order.progressWorkflowJson;
+        const workflow =
+          typeof order.progressWorkflowJson === 'string'
+            ? JSON.parse(order.progressWorkflowJson)
+            : order.progressWorkflowJson;
 
         if (workflow && Array.isArray(workflow.nodes)) {
-          return workflow.nodes.map(node => ({
-            processName: node.name || '',
-            unitPrice: Number(node.unitPrice) || 0,
-            id: node.id
-          })).filter(p => p.processName);
+          return workflow.nodes
+            .map(node => ({
+              processName: node.name || '',
+              unitPrice: Number(node.unitPrice) || 0,
+              id: node.id,
+            }))
+            .filter(p => p.processName);
         }
       } catch (e) {
         console.warn('[SKUProcessor] 解析progressWorkflowJson失败:', e);
@@ -379,13 +394,17 @@ const SKUProcessor = {
    * @returns {number} 单价，找不到返回0
    */
   getUnitPriceByProcess(order, processName) {
-    if (!order || !processName) {return 0;}
+    if (!order || !processName) {
+      return 0;
+    }
 
     const prices = this.getProcessUnitPrices(order);
     const found = prices.find(p => p.processName === processName);
 
     if (found) {
-      console.log(`[SKUProcessor] 查询工序单价 - processName: ${processName}, unitPrice: ${found.unitPrice}`);
+      console.log(
+        `[SKUProcessor] 查询工序单价 - processName: ${processName}, unitPrice: ${found.unitPrice}`
+      );
       return Number(found.unitPrice) || 0;
     }
 
@@ -400,12 +419,14 @@ const SKUProcessor = {
    * @returns {SKU[]} 附加了processUnitPrice的SKU列表
    */
   attachProcessUnitPricesToSKU(skuList, order) {
-    if (!Array.isArray(skuList) || !order) {return skuList;}
+    if (!Array.isArray(skuList) || !order) {
+      return skuList;
+    }
 
     return skuList.map(sku => ({
       ...sku,
       // 本SKU对应的工序单价会在API调用时动态获取
-      unitPrice: 0 // 占位符，实际值由API返回
+      unitPrice: 0, // 占位符，实际值由API返回
     }));
   },
 
@@ -420,7 +441,9 @@ const SKUProcessor = {
     const qty = Number(quantity) || 0;
     const cost = price * qty;
 
-    console.log(`[SKUProcessor] 计算扫码成本 - unitPrice: ${price}, quantity: ${qty}, cost: ${cost}`);
+    console.log(
+      `[SKUProcessor] 计算扫码成本 - unitPrice: ${price}, quantity: ${qty}, cost: ${cost}`
+    );
     return Math.round(cost * 100) / 100; // 保留2位小数
   },
 
@@ -435,7 +458,7 @@ const SKUProcessor = {
       return {
         totalCost: 0,
         scanCount: 0,
-        costBreakdown: []
+        costBreakdown: [],
       };
     }
 
@@ -453,7 +476,7 @@ const SKUProcessor = {
           processName: request.processNode,
           unitPrice: unitPrice,
           totalQuantity: 0,
-          totalCost: 0
+          totalCost: 0,
         };
       }
       costByProcess[request.processNode].totalQuantity += request.quantity;
@@ -463,9 +486,9 @@ const SKUProcessor = {
     return {
       totalCost: Math.round(totalCost * 100) / 100,
       scanCount: scanRequests.length,
-      costBreakdown: Object.values(costByProcess)
+      costBreakdown: Object.values(costByProcess),
     };
-  }
+  },
 };
 
 module.exports = SKUProcessor;

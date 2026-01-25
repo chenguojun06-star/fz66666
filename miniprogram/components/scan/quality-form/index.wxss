@@ -93,7 +93,8 @@
   font-weight: 500;
 }
 
-.form-input, .form-textarea {
+.form-input,
+.form-textarea {
   width: 100%;
   padding: 20rpx;
   border: 1rpx solid #e0e0e0;
@@ -113,7 +114,8 @@
   border-top: 1rpx solid #f0f0f0;
 }
 
-.cancel-btn, .submit-btn {
+.cancel-btn,
+.submit-btn {
   flex: 1;
   padding: 24rpx;
   border-radius: 10rpx;

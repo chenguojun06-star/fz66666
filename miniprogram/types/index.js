@@ -1,7 +1,7 @@
 /**
  * 小程序数据类型定义 (JSDoc)
  * 与网页端 TypeScript 类型保持一致
- * 
+ *
  * 使用方式:
  * @param {ProductionOrder} order
  */
@@ -111,4 +111,4 @@
  * @property {string} [unitPriceHint] - 单价提示信息（当单价为0时显示警告）
  */
 
-export { };
+export {};

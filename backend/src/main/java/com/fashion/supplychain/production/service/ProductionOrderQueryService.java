@@ -5,12 +5,14 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.production.entity.CuttingBundle;
+import com.fashion.supplychain.production.entity.CuttingTask;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductOutstock;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.mapper.CuttingBundleMapper;
+import com.fashion.supplychain.production.mapper.CuttingTaskMapper;
 import com.fashion.supplychain.production.mapper.MaterialPurchaseMapper;
 import com.fashion.supplychain.production.mapper.ProductOutstockMapper;
 import com.fashion.supplychain.production.mapper.ProductWarehousingMapper;
@@ -59,6 +61,9 @@ public class ProductionOrderQueryService {
 
     @Autowired
     private CuttingBundleMapper cuttingBundleMapper;
+
+    @Autowired
+    private CuttingTaskMapper cuttingTaskMapper;
 
     @Autowired
     private ProductWarehousingMapper productWarehousingMapper;
@@ -724,12 +729,12 @@ public class ProductionOrderQueryService {
 
             // 检查是否还在采购阶段
             boolean inProcurement = false;
-            
+
             // 获取物料到货率和人工确认状态
             Integer materialArrivalRate = order.getMaterialArrivalRate();
             Integer manuallyCompleted = order.getProcurementManuallyCompleted();
             boolean isManuallyConfirmed = (manuallyCompleted != null && manuallyCompleted == 1);
-            
+
             // 采购完成判断规则：
             // 1. 物料到货率=100%：自动认为采购完成
             // 2. 物料到货率≥50%且已人工确认：可以进入下一步
@@ -740,7 +745,7 @@ public class ProductionOrderQueryService {
             } else if (materialArrivalRate != null && materialArrivalRate >= 50 && isManuallyConfirmed) {
                 procurementComplete = true;
             }
-            
+
             // 如果采购未完成，必须停留在采购阶段
             if (!procurementComplete) {
                 if (byProc.containsKey("采购") || byProc.containsKey("物料采购")) {
@@ -1009,17 +1014,17 @@ public class ProductionOrderQueryService {
                     procurementRate = 0;
                 }
                 o.setProcurementCompletionRate(procurementRate);
-                
+
                 // 检查是否人工确认完成
                 Integer manuallyCompleted = o.getProcurementManuallyCompleted();
                 boolean isManuallyConfirmed = (manuallyCompleted != null && manuallyCompleted == 1);
-                
+
                 // 采购时间显示逻辑：
                 // 1. 物料到货率>0%：显示采购开始时间
                 // 2. 物料到货率=100% 或 (物料到货率≥50%且已人工确认)：显示采购完成时间
                 if (procurementRate != null && procurementRate > 0) {
                     o.setProcurementStartTime(procurementStart);
-                    
+
                     boolean showCompleted = false;
                     if (procurementRate >= 100) {
                         showCompleted = true;
@@ -1033,7 +1038,7 @@ public class ProductionOrderQueryService {
                             procurementOperator = o.getProcurementConfirmedByName();
                         }
                     }
-                    
+
                     if (showCompleted) {
                         o.setProcurementEndTime(procurementEnd);
                         o.setProcurementOperatorName(procurementOperator);
@@ -1354,17 +1359,17 @@ public class ProductionOrderQueryService {
                 procurementRate = 0;
             }
             o.setProcurementCompletionRate(procurementRate);
-            
+
             // 检查是否人工确认完成
             Integer manuallyCompleted = o.getProcurementManuallyCompleted();
             boolean isManuallyConfirmed = (manuallyCompleted != null && manuallyCompleted == 1);
-            
+
             // 采购时间显示逻辑：
             // 1. 物料到货率>0%：显示采购开始时间
             // 2. 物料到货率=100% 或 (物料到货率≥50%且已人工确认)：显示采购完成时间
             if (procurementRate != null && procurementRate > 0) {
                 o.setProcurementStartTime(procurementStart);
-                
+
                 boolean showCompleted = false;
                 if (procurementRate >= 100) {
                     showCompleted = true;
@@ -1378,7 +1383,7 @@ public class ProductionOrderQueryService {
                         procurementOperator = o.getProcurementConfirmedByName();
                     }
                 }
-                
+
                 if (showCompleted) {
                     o.setProcurementEndTime(procurementEnd);
                     o.setProcurementOperatorName(procurementOperator);
@@ -1594,6 +1599,7 @@ public class ProductionOrderQueryService {
             return;
         }
 
+        // 1. 查询裁剪菲号汇总
         List<Map<String, Object>> rows;
         try {
             QueryWrapper<CuttingBundle> qw = new QueryWrapper<CuttingBundle>()
@@ -1604,7 +1610,7 @@ public class ProductionOrderQueryService {
             rows = cuttingBundleMapper.selectMaps(qw);
         } catch (Exception e) {
             log.warn("Failed to query cutting summary: orderIdsCount={}", orderIds == null ? 0 : orderIds.size(), e);
-            return;
+            rows = null;
         }
 
         Map<String, int[]> agg = new HashMap<>();
@@ -1626,6 +1632,25 @@ public class ProductionOrderQueryService {
             }
         }
 
+        // 2. 查询裁剪任务详情（用于判断裁剪是否真正完成）
+        // 新业务规则：只有当裁剪任务的 bundled_time 不为空时，才算裁剪完成
+        Map<String, CuttingTask> cuttingTaskMap = new HashMap<>();
+        try {
+            List<CuttingTask> tasks = cuttingTaskMapper.selectList(
+                    new LambdaQueryWrapper<CuttingTask>()
+                            .in(CuttingTask::getProductionOrderId, orderIds));
+            if (tasks != null) {
+                for (CuttingTask task : tasks) {
+                    if (task != null && StringUtils.hasText(task.getProductionOrderId())) {
+                        cuttingTaskMap.put(task.getProductionOrderId().trim(), task);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to query cutting tasks: orderIdsCount={}", orderIds.size(), e);
+        }
+
+        // 3. 填充数据到订单
         for (ProductionOrder o : records) {
             if (o == null) {
                 continue;
@@ -1634,7 +1659,10 @@ public class ProductionOrderQueryService {
             if (!StringUtils.hasText(oid)) {
                 continue;
             }
-            int[] v = agg.get(oid.trim());
+            String oidTrimmed = oid.trim();
+
+            // 填充菲号汇总
+            int[] v = agg.get(oidTrimmed);
             if (v == null) {
                 o.setCuttingQuantity(0);
                 o.setCuttingBundleCount(0);
@@ -1642,7 +1670,12 @@ public class ProductionOrderQueryService {
                 o.setCuttingQuantity(Math.max(0, v[0]));
                 o.setCuttingBundleCount(Math.max(0, v[1]));
             }
+
+            // 填充裁剪任务详情（包含 receivedTime, bundledTime, status）
+            CuttingTask task = cuttingTaskMap.get(oidTrimmed);
+            o.setCuttingTask(task);
         }
     }
 
 }
+
