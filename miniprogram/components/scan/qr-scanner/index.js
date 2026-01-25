@@ -1,14 +1,14 @@
 /**
  * 扫码组件
- * 
+ *
  * 功能：
  * 1. 扫描二维码/条形码
  * 2. 解析扫描结果
  * 3. 防重复扫描
- * 
+ *
  * 使用示例：
- * <qr-scanner 
- *   bind:success="onScanSuccess" 
+ * <qr-scanner
+ *   bind:success="onScanSuccess"
  *   bind:error="onScanError">
  * </qr-scanner>
  */
@@ -17,18 +17,18 @@ Component({
     // 防重复扫描的时间间隔（毫秒）
     duplicateInterval: {
       type: Number,
-      value: 2000
+      value: 2000,
     },
     // 是否自动扫描
     autoScan: {
       type: Boolean,
-      value: false
-    }
+      value: false,
+    },
   },
 
   data: {
     scanning: false,
-    recentScans: new Map() // 最近扫描记录
+    recentScans: new Map(), // 最近扫描记录
   },
 
   lifetimes: {
@@ -40,7 +40,7 @@ Component({
     detached() {
       // 清理定时器
       this.clearRecentScans();
-    }
+    },
   },
 
   methods: {
@@ -57,18 +57,18 @@ Component({
       wx.scanCode({
         onlyFromCamera: true,
         scanType: ['qrCode', 'barCode'],
-        success: (res) => {
+        success: res => {
           this.handleScanResult(res.result, res.scanType);
         },
-        fail: (err) => {
+        fail: err => {
           this.triggerEvent('error', {
             message: '扫码失败',
-            error: err
+            error: err,
           });
         },
         complete: () => {
           this.setData({ scanning: false });
-        }
+        },
       });
     },
 
@@ -86,7 +86,7 @@ Component({
         wx.showToast({
           title: '重复扫描',
           icon: 'none',
-          duration: 1500
+          duration: 1500,
         });
         return;
       }
@@ -98,7 +98,7 @@ Component({
       this.triggerEvent('success', {
         code: result,
         scanType: scanType,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     },
 
@@ -108,11 +108,11 @@ Component({
     isRecentDuplicate(code) {
       const now = Date.now();
       const lastScanTime = this.data.recentScans.get(code);
-      
-      if (lastScanTime && (now - lastScanTime) < this.properties.duplicateInterval) {
+
+      if (lastScanTime && now - lastScanTime < this.properties.duplicateInterval) {
         return true;
       }
-      
+
       return false;
     },
 
@@ -122,7 +122,7 @@ Component({
     markRecent(code) {
       const recentScans = this.data.recentScans;
       recentScans.set(code, Date.now());
-      
+
       // 清理过期记录
       this.cleanupRecentScans();
     },
@@ -132,7 +132,9 @@ Component({
      */
     cleanupRecentScans() {
       const recentScans = this.data.recentScans;
-      if (recentScans.size <= 80) {return;}
+      if (recentScans.size <= 80) {
+        return;
+      }
 
       const now = Date.now();
       const expiredKeys = [];
@@ -166,6 +168,6 @@ Component({
      */
     scan() {
       this.startScan();
-    }
-  }
+    },
+  },
 });

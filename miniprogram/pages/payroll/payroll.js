@@ -1,22 +1,36 @@
 // pages/payroll/payroll.js
 const request = require('../../utils/request');
+const { toast } = require('../../utils/uiHelper');
 
-// 日期格式化工具函数
-function formatDate(date) {
+// 日期格式化工具函数（重构版 - 消除重复代码）
+
+/**
+ * 提取日期组件（公共函数）
+ */
+function extractDateComponents(date) {
   const d = new Date(date);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
+  return {
+    year: d.getFullYear(),
+    month: String(d.getMonth() + 1).padStart(2, '0'),
+    day: String(d.getDate()).padStart(2, '0'),
+    hours: String(d.getHours()).padStart(2, '0'),
+    minutes: String(d.getMinutes()).padStart(2, '0'),
+  };
+}
+
+/**
+ * 格式化为日期（YYYY-MM-DD）
+ */
+function formatDate(date) {
+  const { year, month, day } = extractDateComponents(date);
   return `${year}-${month}-${day}`;
 }
 
+/**
+ * 格式化为日期时间（YYYY-MM-DD HH:mm）
+ */
 function formatDateTime(date) {
-  const d = new Date(date);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  const hours = String(d.getHours()).padStart(2, '0');
-  const minutes = String(d.getMinutes()).padStart(2, '0');
+  const { year, month, day, hours, minutes } = extractDateComponents(date);
   return `${year}-${month}-${day} ${hours}:${minutes}`;
 }
 
@@ -98,44 +112,55 @@ Page({
       endDate = this.data.endDate;
     }
 
-    this.setData({
-      timeFilter: filter,
-      startDate,
-      endDate,
-    }, () => {
-      if (filter !== 'custom') {
-        this.loadData();
+    this.setData(
+      {
+        timeFilter: filter,
+        startDate,
+        endDate,
+      },
+      () => {
+        if (filter !== 'custom') {
+          this.loadData();
+        }
       }
-    });
+    );
   },
 
   /**
    * 选择开始日期
    */
   onStartDateChange(e) {
-    this.setData({
-      startDate: e.detail.value,
-    }, () => {
-      this.loadData();
-    });
+    this.setData(
+      {
+        startDate: e.detail.value,
+      },
+      () => {
+        this.loadData();
+      }
+    );
   },
 
   /**
    * 选择结束日期
    */
   onEndDateChange(e) {
-    this.setData({
-      endDate: e.detail.value,
-    }, () => {
-      this.loadData();
-    });
+    this.setData(
+      {
+        endDate: e.detail.value,
+      },
+      () => {
+        this.loadData();
+      }
+    );
   },
 
   /**
    * 加载数据
    */
   async loadData() {
-    if (this.data.loading) return;
+    if (this.data.loading) {
+      return;
+    }
 
     this.setData({ loading: true });
 
@@ -151,17 +176,11 @@ Page({
       if (res.code === 200 && Array.isArray(res.data)) {
         this.processData(res.data);
       } else {
-        wx.showToast({
-          title: '加载失败',
-          icon: 'none',
-        });
+        toast.error('加载失败');
       }
     } catch (error) {
       console.error('加载工资数据失败:', error);
-      wx.showToast({
-        title: error.message || '加载失败',
-        icon: 'none',
-      });
+      toast.error(error.message || '加载失败');
     } finally {
       this.setData({ loading: false });
     }
@@ -179,7 +198,9 @@ Page({
     const monthEnd = new Date(year, month, 0, 23, 59, 59);
 
     const monthData = data.filter(item => {
-      if (!item.startTime) return false;
+      if (!item.startTime) {
+        return false;
+      }
       const time = new Date(item.startTime);
       return time >= monthStart && time <= monthEnd;
     });
@@ -189,7 +210,7 @@ Page({
     const orderNos = new Set(monthData.map(item => item.orderNo).filter(Boolean));
 
     // 处理明细数据（当前筛选）
-    let records = data.map(item => ({
+    const records = data.map(item => ({
       orderNo: item.orderNo || '-',
       styleNo: item.styleNo || '-',
       color: item.color || '-',
@@ -212,7 +233,10 @@ Page({
       }
     });
 
-    const filteredTotalAmount = records.reduce((sum, item) => sum + parseFloat(item.totalAmount), 0);
+    const filteredTotalAmount = records.reduce(
+      (sum, item) => sum + parseFloat(item.totalAmount),
+      0
+    );
 
     this.setData({
       totalAmount: totalAmount.toFixed(2),
@@ -231,7 +255,7 @@ Page({
     const newSortOrder = this.data.sortOrder === 'desc' ? 'asc' : 'desc';
     this.setData({ sortOrder: newSortOrder }, () => {
       // 重新排序当前数据
-      let records = [...this.data.records];
+      const records = [...this.data.records];
       records.sort((a, b) => {
         if (newSortOrder === 'desc') {
           return b.totalAmountNum - a.totalAmountNum;

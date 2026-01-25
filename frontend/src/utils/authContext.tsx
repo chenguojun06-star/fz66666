@@ -44,6 +44,12 @@ export function canViewAllData(user: UserInfo | null): boolean {
   return user.permissionRange === 'all';
 }
 
+const toPermissionRange = (value: unknown): UserInfo['permissionRange'] => {
+  const v = String(value || '').trim();
+  if (v === 'team' || v === 'own') return v;
+  return 'all';
+};
+
 // 定义上下文类型
 interface AuthContextType {
   user: UserInfo | null;
@@ -115,8 +121,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               }
             }
           } catch {
-    // Intentionally empty
-      // 忽略错误
+            // Intentionally empty
+            // 忽略错误
           }
         };
 
@@ -128,30 +134,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             const parsedUser = JSON.parse(storedUser);
             setUser(parsedUser);
           } catch {
-    // Intentionally empty
-      // 忽略错误
+            // Intentionally empty
+            // 忽略错误
           }
         }
 
         try {
-          const res: unknown = await api.get('/system/user/me');
+          const res = (await api.get('/system/user/me')) as { code?: number; data?: Record<string, unknown> };
           if (res?.code === 200 && res.data) {
             const u = res.data;
             const next: UserInfo = {
-              id: String(u.id),
-              username: u.username,
-              name: u.name,
-              role: u.roleName || u.role || 'admin',
-              roleId: u.roleId ? String(u.roleId) : undefined,
-              permissions: Array.isArray(u.permissions) ? u.permissions : ['all'],
-              permissionRange: u.permissionRange || 'all',
-              phone: u.phone || undefined,
-              email: u.email || undefined,
-              avatarUrl: u.avatarUrl || u.avatar || u.headUrl || undefined,
+              id: String(u.id || ''),
+              username: String(u.username || ''),
+              name: String(u.name || ''),
+              role: String(u.roleName || u.role || 'admin'),
+              roleId: u.roleId != null ? String(u.roleId) : undefined,
+              permissions: Array.isArray(u.permissions) ? (u.permissions as string[]) : ['all'],
+              permissionRange: toPermissionRange(u.permissionRange),
+              phone: u.phone != null ? String(u.phone) : undefined,
+              email: u.email != null ? String(u.email) : undefined,
+              avatarUrl: u.avatarUrl != null ? String(u.avatarUrl) : u.avatar != null ? String(u.avatar) : u.headUrl != null ? String(u.headUrl) : undefined,
             };
             localStorage.setItem(userStorageKey, JSON.stringify(next));
             setUser(next);
-            
+
             // 恢复用户主题
             restoreUserTheme(next.id);
             // 触发用户登录事件
@@ -163,16 +169,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setIsAuthenticated(false);
           }
         } catch {
-    // Intentionally empty
-      // 忽略错误
+          // Intentionally empty
+          // 忽略错误
           localStorage.removeItem(tokenStorageKey);
           localStorage.removeItem(userStorageKey);
           setUser(null);
           setIsAuthenticated(false);
         }
       } catch {
-    // Intentionally empty
-      // 忽略错误
+        // Intentionally empty
+        // 忽略错误
         setUser(null);
         setIsAuthenticated(false);
       } finally {
@@ -186,21 +192,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // 登录函数
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
-      const response = await api.post('/system/user/login', { username, password }) as Record<string, unknown>;
+      const response = (await api.post('/system/user/login', { username, password })) as {
+        code?: number;
+        data?: Record<string, unknown> & { token?: unknown; user?: Record<string, unknown> };
+      };
       const token = String(response?.data?.token || '').trim();
       const u = response?.data?.user || response?.data || null;
       if (response?.code === 200 && token && u) {
         const baseUser: UserInfo = {
-          id: String(u.id),
-          username: u.username,
-          name: u.name,
-          role: u.roleName || u.role || 'admin',
-          roleId: u.roleId ? String(u.roleId) : undefined,
+          id: String(u.id || ''),
+          username: String(u.username || ''),
+          name: String(u.name || ''),
+          role: String(u.roleName || u.role || 'admin'),
+          roleId: u.roleId != null ? String(u.roleId) : undefined,
           permissions: ['all'],
-          permissionRange: u.permissionRange || 'all',
-          phone: u.phone || undefined,
-          email: u.email || undefined,
-          avatarUrl: u.avatarUrl || u.avatar || u.headUrl || undefined,
+          permissionRange: toPermissionRange(u.permissionRange),
+          phone: u.phone != null ? String(u.phone) : undefined,
+          email: u.email != null ? String(u.email) : undefined,
+          avatarUrl: u.avatarUrl != null ? String(u.avatarUrl) : u.avatar != null ? String(u.avatar) : u.headUrl != null ? String(u.headUrl) : undefined,
         };
 
         localStorage.setItem(tokenStorageKey, token);
@@ -224,30 +233,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // 触发用户登录事件
           window.dispatchEvent(new CustomEvent('user-login', { detail: { userId: baseUser.id } }));
         } catch {
-    // Intentionally empty
-      // 忽略错误
+          // Intentionally empty
+          // 忽略错误
         }
 
         try {
           const rid = baseUser.roleId;
           if (rid != null) {
-            const pRes: unknown = await api.get('/system/user/permissions', {
+            const pRes = (await api.get('/system/user/permissions', {
               params: { roleId: rid },
-            });
+            })) as { code?: number; data?: unknown };
             if (pRes?.code === 200 && Array.isArray(pRes.data) && pRes.data.length) {
               updateUser({ permissions: pRes.data as string[] });
             }
           }
         } catch {
-    // Intentionally empty
-      // 忽略错误
+          // Intentionally empty
+          // 忽略错误
         }
 
         return true;
       }
       return false;
     } catch {
-    // Intentionally empty
+      // Intentionally empty
       // 忽略错误
       return false;
     }
@@ -261,8 +270,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         localStorage.setItem(userStorageKey, JSON.stringify(next));
       } catch {
-    // Intentionally empty
-      // 忽略错误
+        // Intentionally empty
+        // 忽略错误
       }
       return next;
     });
@@ -276,7 +285,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // 更新状态
     setUser(null);
     setIsAuthenticated(false);
-    
+
     // 清除主题设置，恢复默认主题
     try {
       localStorage.setItem('app.theme', 'default');
@@ -286,18 +295,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // 触发用户退出事件
       window.dispatchEvent(new Event('user-logout'));
     } catch {
-    // Intentionally empty
+      // Intentionally empty
       // 忽略错误
     }
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isAuthenticated, 
-      loading, 
-      login, 
-      updateUser, 
+    <AuthContext.Provider value={{
+      user,
+      isAuthenticated,
+      loading,
+      login,
+      updateUser,
       logout,
       isAdmin: isAdmin(user),
       canViewAll: canViewAllData(user),
@@ -311,7 +320,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context) return context;
-  if ((import.meta as Record<string, unknown>)?.env?.DEV) {
+  const metaEnv = (import.meta as unknown as { env?: { DEV?: boolean } }).env;
+  if (metaEnv?.DEV) {
     throw new Error('必须在认证上下文提供者内部使用该钩子');
   }
   return fallbackAuthContext;
@@ -332,6 +342,8 @@ export const isSupervisorOrAboveUser = (user?: Partial<UserInfo> | null) => {
   if (!role) return false;
   const lower = role.toLowerCase();
   if (lower.includes('manager') || lower.includes('supervisor') || role.includes('主管')) return true;
-  const perms = Array.isArray((user as Record<string, unknown>)?.permissions) ? (user as Record<string, unknown>).permissions : [];
+  const perms = Array.isArray((user as Record<string, unknown>)?.permissions)
+    ? ((user as Record<string, unknown>).permissions as string[])
+    : [];
   return perms.includes('all');
 };

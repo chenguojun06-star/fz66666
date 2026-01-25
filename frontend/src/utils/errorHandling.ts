@@ -56,7 +56,7 @@ class Logger {
   /**
    * 记录日志
    */
-  private log(level: LogLevel, message: string, data?: any, traceId?: string) {
+  private log(level: LogLevel, message: string, data?: unknown, traceId?: string) {
     const timestamp = getTimestamp();
     const logEntry = { timestamp, level, message, data, traceId };
 
@@ -86,19 +86,19 @@ class Logger {
     }
   }
 
-  debug(message: string, data?: any) {
+  debug(message: string, data?: unknown) {
     this.log(LogLevel.Debug, message, data);
   }
 
-  info(message: string, data?: any) {
+  info(message: string, data?: unknown) {
     this.log(LogLevel.Info, message, data);
   }
 
-  warn(message: string, data?: any) {
+  warn(message: string, data?: unknown) {
     this.log(LogLevel.Warn, message, data);
   }
 
-  error(message: string, data?: any): string {
+  error(message: string, data?: unknown): string {
     const traceId = generateTraceId();
     this.log(LogLevel.Error, message, data, traceId);
     return traceId;
@@ -143,9 +143,11 @@ class ErrorHandler {
    * 处理表单验证错误
    */
   handleFormValidationError(error: unknown): string {
-    const errorFields = (error as Record<string, unknown>)?.errorFields;
-    if (errorFields && errorFields.length > 0) {
-      const messages = errorFields.map((f: any) => f.errors[0]).filter(Boolean);
+    const errorFields = (error as { errorFields?: Array<{ errors?: string[] }> })?.errorFields;
+    if (Array.isArray(errorFields) && errorFields.length > 0) {
+      const messages = errorFields
+        .map((f) => (Array.isArray(f?.errors) ? f.errors[0] : undefined))
+        .filter(Boolean) as string[];
       const errorMsg = messages.length === 1
         ? messages[0]
         : `表单验证失败：${messages.join('；')}`;
@@ -164,12 +166,13 @@ class ErrorHandler {
     const traceId = logger.error('网络请求失败', error);
 
     let errorMsg = '网络请求失败，请检查您的网络连接';
+    const err = error as { code?: string; response?: { status?: number }; message?: string };
 
-    if (error?.code === 'ECONNABORTED') {
+    if (err?.code === 'ECONNABORTED') {
       errorMsg = '请求超时，请稍后重试';
-    } else if (error?.response?.status === 0) {
+    } else if (err?.response?.status === 0) {
       errorMsg = '无法连接到服务器，请检查网络';
-    } else if (error?.message?.includes('Network')) {
+    } else if (err?.message?.includes('Network')) {
       errorMsg = '网络连接异常，请检查网络设置';
     }
 
@@ -180,14 +183,15 @@ class ErrorHandler {
   /**
    * 处理 API 错误
    */
-  handleApiError(error: any, defaultMsg = '操作失败'): string {
+  handleApiError(error: unknown, defaultMsg = '操作失败'): string {
     let errorMsg = defaultMsg;
     let errorType = ErrorType.Unknown;
+    const err = error as { response?: { status?: number; data?: { message?: string } }; request?: unknown; message?: string };
 
-    if (error?.response) {
+    if (err?.response) {
       // 服务器返回了错误响应
-      const status = error.response.status;
-      const data = error.response.data;
+      const status = typeof err.response.status === 'number' ? err.response.status : -1;
+      const data = err.response.data;
 
       if (status === 400) {
         errorMsg = data?.message || '请求参数错误';
@@ -211,17 +215,17 @@ class ErrorHandler {
         errorMsg = data?.message || `请求失败 (${status})`;
         errorType = ErrorType.Business;
       }
-    } else if (error?.request) {
+    } else if (err?.request) {
       // 请求已发送但没有收到响应
       errorMsg = '服务器无响应，请检查网络连接';
       errorType = ErrorType.Network;
-    } else if (error?.message) {
-      errorMsg = error.message;
+    } else if (err?.message) {
+      errorMsg = err.message;
       errorType = ErrorType.Unknown;
     }
 
     const traceId = logger.error('API 请求错误', {
-      status: error?.response?.status,
+      status: err?.response?.status,
       message: errorMsg,
       type: errorType
     });
@@ -233,7 +237,7 @@ class ErrorHandler {
   /**
    * 处理业务错误
    */
-  handleBusinessError(msg: string, data?: any): string {
+  handleBusinessError(msg: string, data?: unknown): string {
     const traceId = logger.error('业务错误', data);
     message.error(`${msg} (${traceId})`);
     return msg;
@@ -242,19 +246,20 @@ class ErrorHandler {
   /**
    * 通用错误处理
    */
-  handleError(error: any, defaultMsg = '操作失败'): string {
+  handleError(error: unknown, defaultMsg = '操作失败'): string {
+    const err = error as { response?: unknown; request?: unknown; message?: string; errorFields?: unknown };
     // 判断错误类型并调用相应的处理方法
-    if ((error as Record<string, unknown>)?.errorFields) {
+    if (err?.errorFields) {
       // 表单验证错误
       return this.handleFormValidationError(error);
-    } else if (error?.response || error?.request) {
+    } else if (err?.response || err?.request) {
       // 网络/接口错误
       return this.handleApiError(error, defaultMsg);
-    } else if (error?.message) {
+    } else if (err?.message) {
       // 其他错误
       const traceId = logger.error(defaultMsg, error);
       message.error(`${defaultMsg} (${traceId})`);
-      return error.message;
+      return err.message;
     }
 
     const traceId = logger.error(defaultMsg, error);
@@ -322,10 +327,14 @@ class OperationLogger {
       /**
        * 记录操作成功
        */
-      success: (details?: any) => {
+      success: (details?: unknown) => {
         const duration = Date.now() - startTime;
         this.logOperation(action, module, 'success', duration, traceId, details);
-        logger.info(`操作成功: ${module}.${action}`, { traceId, duration: `${duration}ms`, ...details });
+        const detailObj = typeof details === 'object' && details !== null ? (details as Record<string, unknown>) : undefined;
+        logger.info(
+          `操作成功: ${module}.${action}`,
+          detailObj ? { traceId, duration: `${duration}ms`, ...detailObj } : { traceId, duration: `${duration}ms`, detail: details }
+        );
       },
 
       /**
@@ -345,7 +354,7 @@ class OperationLogger {
     status: 'success' | 'failure',
     duration: number,
     traceId: string,
-    details?: any
+    details?: unknown
   ) {
     const operation = {
       timestamp: getTimestamp(),

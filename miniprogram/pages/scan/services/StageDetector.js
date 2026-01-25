@@ -1,22 +1,22 @@
 /**
  * 工序检测服务
- * 
+ *
  * 功能：
  * 1. 根据订单当前进度自动识别下一个工序节点
  * 2. 基于菲号扫码次数智能判断当前应该执行的车缝工序
  * 3. 防重复扫码保护（动态计算最小间隔时间）
  * 4. 支持从订单工艺模板动态读取工序列表和时间配置
- * 
+ *
  * 核心逻辑：
  * - 订单级别：按照 采购→裁剪→车缝→大烫→质检→包装→入库 流程判断
  * - 菲号级别：根据扫码次数匹配工序列表中的第N个工序
  * - 防重复：最小间隔 = max(30秒, 菲号数量 × 工序分钟 × 60 × 50%)
- * 
+ *
  * 使用示例：
  * const detector = new StageDetector(api);
  * const result = await detector.detectByBundle('PO001', 'bundle01', 50, orderDetail);
  * // result: { processName, progressStage, scanType, hint, isDuplicate }
- * 
+ *
  * @author GitHub Copilot
  * @date 2026-01-23
  */
@@ -31,113 +31,152 @@ class StageDetector {
 
     // 生产流程标准顺序（订单级别）
     this.stageSequence = [
-      '采购',      // 0 - 物料采购
-      '裁剪',      // 1 - 裁剪布料、生成菲号
-      '车缝',      // 2 - 车缝（原缝制已合并）
-      '大烫',      // 3 - 熨烫定型
-      '质检',      // 4 - 质量检验
-      '包装',      // 5 - 包装
-      '入库'       // 6 - 入库
+      '采购', // 0 - 物料采购
+      '裁剪', // 1 - 裁剪布料、生成菲号
+      '车缝', // 2 - 车缝（原缝制已合并）
+      '大烫', // 3 - 熨烫定型
+      '质检', // 4 - 质量检验
+      '包装', // 5 - 包装
+      '入库', // 6 - 入库
     ];
 
     // 车缝子工序列表（当订单未配置工艺模板时使用）
-    this.defaultSewingProcesses = ['车缝'];  // 默认整件车缝
+    this.defaultSewingProcesses = ['车缝']; // 默认整件车缝
 
     // 车缝相关子工序关键词（用于识别）
     this.sewingSubProcessKeywords = [
-      '钉扣', '锁边', '压线', '上拉链', '钉标',
-      '打枣', '车线', '绷缝', '缝骨', '包边'
+      '钉扣',
+      '锁边',
+      '压线',
+      '上拉链',
+      '钉标',
+      '打枣',
+      '车线',
+      '绷缝',
+      '缝骨',
+      '包边',
     ];
 
     // 工序类型映射（与PC端保持一致）
     this.stageMapping = {
-      '采购': { processName: '采购', progressStage: '采购', scanType: 'procurement' },
-      '裁剪': { processName: '裁剪', progressStage: '裁剪', scanType: 'cutting' },
-      '缝制': { processName: '缝制', progressStage: '缝制', scanType: 'production' },
-      '车缝': { processName: '车缝', progressStage: '车缝', scanType: 'production' },
-      '大烫': { processName: '大烫', progressStage: '大烫', scanType: 'production' },
-      '整烫': { processName: '整烫', progressStage: '整烫', scanType: 'production' },
-      '质检': { processName: '质检', progressStage: '质检', scanType: 'quality' },
-      '包装': { processName: '包装', progressStage: '包装', scanType: 'production' },
-      '入库': { processName: '入库', progressStage: '入库', scanType: 'warehouse' },
+      采购: { processName: '采购', progressStage: '采购', scanType: 'procurement' },
+      裁剪: { processName: '裁剪', progressStage: '裁剪', scanType: 'cutting' },
+      缝制: { processName: '缝制', progressStage: '缝制', scanType: 'production' },
+      车缝: { processName: '车缝', progressStage: '车缝', scanType: 'production' },
+      大烫: { processName: '大烫', progressStage: '大烫', scanType: 'production' },
+      整烫: { processName: '整烫', progressStage: '整烫', scanType: 'production' },
+      质检: { processName: '质检', progressStage: '质检', scanType: 'quality' },
+      包装: { processName: '包装', progressStage: '包装', scanType: 'production' },
+      入库: { processName: '入库', progressStage: '入库', scanType: 'warehouse' },
     };
   }
 
   /**
-   * 根据订单当前进度自动识别下一个工序节点
-   * 
-   * 特别处理：
-   * - 新订单且物料未到齐：返回"采购"
-   * - 新订单且物料已到齐：返回"裁剪"
-   * - 裁剪完成（有菲号）：返回"车缝"
-   * - 车缝子工序：继续车缝直到全部完成
-   * - 已入库：提示已完成
-   * 
-   * @param {Object} orderDetail - 订单详情对象
-   * @param {string} orderDetail.currentProcessName - 当前工序名称
-   * @param {number} orderDetail.productionProgress - 生产进度百分比
-   * @param {number} orderDetail.materialArrivalRate - 物料到货率
-   * @param {number} orderDetail.cuttingBundleCount - 裁剪菲号数量
-   * @param {Array} orderDetail.progressNodeUnitPrices - 工艺模板（可选）
-   * @returns {Object|null} 下一工序信息或null
-   * @returns {string} result.processName - 工序名称
-   * @returns {string} result.progressStage - 工序阶段
-   * @returns {string} result.scanType - 扫码类型
-   * @returns {string} result.hint - 提示信息（可选）
+   * 检查裁剪是否真正完成
+   * 新业务规则：只有满足以下全部条件才算裁剪完成：
+   * 1. 裁剪任务已领取（received_time 不为空）或 扫码/PC端设置了开始时间
+   * 2. 菲号已生成（bundled_time 不为空）- 一键导入菲号/手机生成菲号
+   * 3. 裁剪状态为 completed 或 bundled
+   *
+   * @private
+   * @param {Object} orderDetail - 订单详情
+   * @returns {boolean} 裁剪是否完成
    */
-  detectNextStage(orderDetail) {
-    if (!orderDetail) {return null;}
+  _checkCuttingCompleted(orderDetail) {
+    // 方式1：检查订单详情中的 cuttingTask 信息
+    const cuttingTask = orderDetail.cuttingTask || {};
 
-    // 获取订单当前进度
-    const currentProgress = orderDetail.currentProcessName ||
-      orderDetail.currentProgress ||
-      orderDetail.progressStage || '';
+    // 必须满足：菲号已生成（bundled_time 不为空）
+    const hasBundledTime = !!cuttingTask.bundledTime;
 
-    // 检查是否有裁剪菲号（标志裁剪已完成）
-    const hasCuttingBundles = (orderDetail.cuttingBundleCount || 0) > 0 ||
-      (orderDetail.bundleCount || 0) > 0;
+    // 必须满足：已领取开始（received_time 不为空）或状态已完成
+    const hasReceivedTime = !!cuttingTask.receivedTime;
+    const isStatusCompleted = ['completed', 'bundled', 'done'].includes(
+      (cuttingTask.status || '').toLowerCase()
+    );
 
-    // === 特殊情况1：新订单（未开始或待开始）===
-    if (!currentProgress || currentProgress === '待开始' || currentProgress === '未开始') {
-      return this._handleNewOrder(orderDetail, hasCuttingBundles);
+    // 方式2：检查订单级别的裁剪完成标志
+    const orderCuttingCompleted = orderDetail.cuttingCompleted === true;
+
+    // 方式3：检查是否有已完成的菲号数量
+    const hasBundleCount =
+      (orderDetail.completedBundleCount || 0) > 0 ||
+      (orderDetail.bundledCount || 0) > 0;
+
+    // 综合判断：必须满足"菲号已生成"条件
+    // 优先使用裁剪任务的详细信息
+    if (cuttingTask && Object.keys(cuttingTask).length > 0) {
+      // 有裁剪任务详情时，必须满足：已领取 + 已生成菲号
+      return hasBundledTime && (hasReceivedTime || isStatusCompleted);
     }
 
-    // === 特殊情况2：裁剪阶段但已有菲号 ===
-    if (currentProgress === '裁剪' && hasCuttingBundles) {
+    // 没有裁剪任务详情时，使用订单级别标志
+    return orderCuttingCompleted || hasBundleCount;
+  }
+
+  /**
+   * 检查是否为车缝及其子工序
+   * @private
+   */
+  _isSewingStage(currentProgress) {
+    const isSewingSubProcess = this.sewingSubProcessKeywords.some(keyword =>
+      currentProgress.includes(keyword)
+    );
+    return isSewingSubProcess || currentProgress === '车缝';
+  }
+
+  /**
+   * 处理特殊阶段（裁剪已完成、采购、车缝）
+   * @private
+   */
+  _handleSpecialStage(currentProgress, isCuttingCompleted) {
+    // 裁剪阶段：只有裁剪真正完成（菲号已生成）才能进入车缝
+    if (currentProgress === '裁剪') {
+      if (isCuttingCompleted) {
+        return {
+          processName: '车缝',
+          progressStage: '车缝',
+          scanType: 'production',
+          hint: '裁剪已完成，开始车缝',
+        };
+      }
+      // 裁剪未完成，继续停留在裁剪阶段
       return {
-        processName: '车缝',
-        progressStage: '车缝',
-        scanType: 'production',
-        hint: '裁剪已完成，开始车缝'
+        processName: '裁剪',
+        progressStage: '裁剪',
+        scanType: 'cutting',
+        hint: '裁剪进行中，请先完成菲号生成',
       };
     }
 
-    // === 特殊情况3：采购阶段 ===
+    // 采购阶段
     if (currentProgress === '采购') {
       return {
         processName: '采购',
         progressStage: '采购',
         scanType: 'procurement',
-        hint: '采购阶段进行中'
+        hint: '采购阶段进行中',
       };
     }
 
-    // === 特殊情况4：车缝阶段（包含子工序）===
-    const isSewingSubProcess = this.sewingSubProcessKeywords.some(
-      keyword => currentProgress.includes(keyword)
-    );
-
-    if (isSewingSubProcess || currentProgress === '车缝') {
-      // 继续车缝，使用当前子工序名称
+    // 车缝阶段（包含子工序）
+    if (this._isSewingStage(currentProgress)) {
       return {
         processName: currentProgress,
         progressStage: '车缝',
         scanType: 'production',
-        hint: '车缝阶段进行中，完成当前工序'
+        hint: '车缝阶段进行中，完成当前工序',
       };
     }
 
-    // === 标准流程：根据当前进度查找下一节点 ===
+    return null;
+  }
+
+  /**
+   * 处理标准流程（按节点顺序查找下一节点）
+   * @private
+   */
+  _handleStandardFlow(currentProgress) {
     const currentIndex = this.stageSequence.indexOf(currentProgress);
 
     // 无法识别当前进度（可能是车缝子工序）
@@ -145,19 +184,18 @@ class StageDetector {
       return {
         processName: currentProgress,
         progressStage: '车缝',
-        scanType: 'production'
+        scanType: 'production',
       };
     }
 
     // 已经是最后一个节点（入库）
     if (currentIndex >= this.stageSequence.length - 1) {
-      // 注意：这里不能直接调用 wx.showToast，应该在调用方处理
       return {
         processName: '入库',
         progressStage: '入库',
         scanType: 'warehouse',
         hint: '该订单已入库',
-        isCompleted: true  // 标记为已完成
+        isCompleted: true,
       };
     }
 
@@ -167,23 +205,66 @@ class StageDetector {
   }
 
   /**
+   * 检测订单的下一个工序
+   * @param {Object} orderDetail - 订单详情
+   * @returns {Object|null} 下一工序信息或null
+   * @returns {string} result.processName - 工序名称
+   * @returns {string} result.progressStage - 工序阶段
+   * @returns {string} result.scanType - 扫码类型
+   * @returns {string} result.hint - 提示信息（可选）
+   */
+  detectNextStage(orderDetail) {
+    if (!orderDetail) {
+      return null;
+    }
+
+    // 获取订单当前进度
+    const currentProgress =
+      orderDetail.currentProcessName ||
+      orderDetail.currentProgress ||
+      orderDetail.progressStage ||
+      '';
+
+    // 检查裁剪是否真正完成（新逻辑：必须有bundled_time才算完成）
+    // 条件：1. 裁剪任务已领取(received_time) 2. 菲号已生成(bundled_time) 3. 状态为completed
+    const isCuttingCompleted = this._checkCuttingCompleted(orderDetail);
+
+    // === 特殊情况1：新订单（未开始或待开始）===
+    if (!currentProgress || currentProgress === '待开始' || currentProgress === '未开始') {
+      return this._handleNewOrder(orderDetail, isCuttingCompleted);
+    }
+
+    // === 特殊情况2-4：处理裁剪已完成、采购、车缝 ===
+    const specialResult = this._handleSpecialStage(currentProgress, isCuttingCompleted);
+    if (specialResult) {return specialResult;}
+
+    // === 标准流程：根据当前进度查找下一节点 ===
+    return this._handleStandardFlow(currentProgress);
+  }
+
+
+  /**
    * 处理新订单的工序判断
    * @private
    * @param {Object} orderDetail - 订单详情
-   * @param {boolean} hasCuttingBundles - 是否有裁剪菲号
+   * @param {boolean} isCuttingCompleted - 裁剪是否真正完成（菲号已生成）
    * @returns {Object} 工序信息
    */
-  _handleNewOrder(orderDetail, hasCuttingBundles) {
-    const productionProgress = orderDetail.productionProgress || 0;
+  _handleNewOrder(orderDetail, isCuttingCompleted) {
+    // const productionProgress = orderDetail.productionProgress || 0;
     const materialArrivalRate = orderDetail.materialArrivalRate || 0;
 
-    // 情况1：已生成裁剪菲号 → 进入车缝
-    if (hasCuttingBundles) {
+    // 情况1：裁剪已完成（菲号已生成）→ 进入车缝
+    // 新逻辑：必须满足以下条件才能进入车缝：
+    // - 裁剪任务已领取（received_time 不为空）
+    // - 菲号已生成（bundled_time 不为空）
+    // - 裁剪状态为 completed
+    if (isCuttingCompleted) {
       return {
         processName: '车缝',
         progressStage: '车缝',
         scanType: 'production',
-        hint: '裁剪已完成，开始车缝'
+        hint: '裁剪已完成，开始车缝',
       };
     }
 
@@ -193,31 +274,34 @@ class StageDetector {
         processName: '裁剪',
         progressStage: '裁剪',
         scanType: 'cutting',
-        hint: '物料已到齐，开始裁剪'
+        hint: '物料已到齐，开始裁剪',
       };
     }
 
     // 情况3：物料未到齐 → 必须停留在采购阶段
-    // 注意：即使有生产进度（productionProgress > 0），如果物料未到齐，也不能进入裁剪
+    // 注意：即使有裁剪任务（pending状态），如果未生成菲号，也不能进入车缝
     return {
       processName: '采购',
       progressStage: '采购',
       scanType: 'procurement',
-      hint: materialArrivalRate > 0 ? `物料到货率 ${materialArrivalRate}%，继续采购` : '订单开始，进行采购'
+      hint:
+        materialArrivalRate > 0
+          ? `物料到货率 ${materialArrivalRate}%，继续采购`
+          : '订单开始，进行采购',
     };
   }
 
   /**
    * 基于菲号识别下一个工序（核心方法）
-   * 
+   *
    * 核心逻辑：
    * 1. 统计该菲号的扫码次数
    * 2. 根据次数匹配工序列表中的第N个工序
    * 3. 防重复检查：动态计算最小间隔时间
-   * 
+   *
    * 防重复公式：
    * 最小间隔 = max(30秒, 菲号数量 × 工序预计分钟 × 60 × 50%)
-   * 
+   *
    * @param {string} orderNo - 订单号
    * @param {string} bundleNo - 菲号
    * @param {number} bundleQuantity - 菲号数量（来自二维码）
@@ -264,12 +348,7 @@ class StageDetector {
       }
 
       // === 步骤6：根据扫码次数判断当前工序 ===
-      return this._determineCurrentProcess(
-        scanCount,
-        sewingProcessList,
-        accurateQuantity
-      );
-
+      return this._determineCurrentProcess(scanCount, sewingProcessList, accurateQuantity);
     } catch (e) {
       console.error('[StageDetector] 基于菲号识别进度失败:', e);
       return null;
@@ -295,7 +374,7 @@ class StageDetector {
     }
 
     // 查询失败或无数据，使用备用值
-    return fallbackQuantity || 10;  // 默认10件
+    return fallbackQuantity || 10; // 默认10件
   }
 
   /**
@@ -309,12 +388,12 @@ class StageDetector {
     try {
       const historyRes = await this.api.production.myScanHistory({
         pageNum: 1,
-        pageSize: 100,  // 获取所有记录
+        pageSize: 100, // 获取所有记录
         orderNo: orderNo,
-        bundleNo: bundleNo
+        bundleNo: bundleNo,
       });
 
-      return (historyRes && historyRes.records) ? historyRes.records : [];
+      return historyRes && historyRes.records ? historyRes.records : [];
     } catch (e) {
       console.error('[StageDetector] 查询扫码历史失败:', e);
       return [];
@@ -345,15 +424,15 @@ class StageDetector {
         const stage = node.progressStage || '';
         const name = node.name || '';
 
-        const isSewing = stage === '车缝' || stage === 'è½¦ç¼' ||
-          name === '车缝' || name === 'è½¦ç¼';
+        const isSewing =
+          stage === '车缝' || stage === 'è½¦ç¼' || name === '车缝' || name === 'è½¦ç¼';
 
         const match = isSewing;
         console.log('[StageDetector] 节点筛选:', {
           name: node.name,
           progressStage: node.progressStage,
           sortOrder: node.sortOrder,
-          match: match
+          match: match,
         });
         return match;
       })
@@ -397,12 +476,12 @@ class StageDetector {
 
   /**
    * 检查是否为重复扫码
-   * 
+   *
    * 判断逻辑：
    * - 距离上次扫码时间 < 预期时间的50%，视为重复
    * - 预期时间 = 菲号数量 × 工序分钟 × 60秒
    * - 最小间隔30秒（保底）
-   * 
+   *
    * @private
    * @param {Object} lastRecord - 最后一条扫码记录
    * @param {number} bundleQuantity - 菲号数量
@@ -433,9 +512,7 @@ class StageDetector {
     if (timeDiff < minIntervalTime) {
       const minutesAgo = Math.floor(timeDiff / 60);
       const secondsAgo = Math.floor(timeDiff % 60);
-      const timeText = minutesAgo > 0
-        ? `${minutesAgo}分${secondsAgo}秒前`
-        : `${secondsAgo}秒前`;
+      const timeText = minutesAgo > 0 ? `${minutesAgo}分${secondsAgo}秒前` : `${secondsAgo}秒前`;
 
       const expectedMinutes = Math.floor(expectedTime / 60);
 
@@ -444,8 +521,8 @@ class StageDetector {
         progressStage: '车缝',
         scanType: 'production',
         hint: `⚠️ ${bundleQuantity}件预计需${expectedMinutes}分钟，${timeText}已扫过`,
-        isDuplicate: true,  // 标记为重复
-        quantity: bundleQuantity
+        isDuplicate: true, // 标记为重复
+        quantity: bundleQuantity,
       };
     }
 
@@ -471,7 +548,7 @@ class StageDetector {
         scanType: 'production',
         hint: `${nextProcessName} (第${scanCount + 1}/${sewingProcessList.length}次)`,
         isDuplicate: false,
-        quantity: quantity
+        quantity: quantity,
       };
     }
 
@@ -482,7 +559,7 @@ class StageDetector {
       scanType: 'production',
       hint: '车缝已完成',
       isDuplicate: false,
-      quantity: quantity
+      quantity: quantity,
     };
   }
 }

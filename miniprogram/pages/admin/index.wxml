@@ -1,20 +1,17 @@
 <view class="container">
+  <!-- 通用悬浮铃铛组件 -->
+  <floating-bell />
+
   <view class="card">
     <view class="title-row">
-      <view class="title">个人</view>
-      <view class="title-right-group">
-        <view wx:if="{{showApprovalEntry}}" class="notification-bell" bindtap="onGoToNotification">
-          <image class="bell-icon" src="/assets/icons/bell.svg" mode="aspectFit" />
-          <view wx:if="{{pendingUserCount > 0}}" class="bell-badge">
-            {{pendingUserCount > 99 ? '99+' : pendingUserCount}}
-          </view>
-        </view>
-        <view class="user-info-item" bindtap="onLogout">
-          <text class="user-info-label">退出登录</text>
+      <view class="title-left-group">
+        <view class="title">个人</view>
+        <view class="logout-btn" bindtap="onLogout">
+          <text class="logout-text">退出</text>
         </view>
       </view>
     </view>
-    
+
     <!-- 用户信息 -->
     <view wx:if="{{userInfo}}" class="user-profile-card">
       <view class="profile-avatar">{{avatarLetter}}</view>

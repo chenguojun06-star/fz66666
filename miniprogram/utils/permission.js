@@ -7,23 +7,23 @@ import { getUserRole, getUserRoleName } from './storage';
 
 // 角色定义
 const ROLES = {
-  ADMIN: 'admin',           // 管理员 - 全部权限
+  ADMIN: 'admin', // 管理员 - 全部权限
   SUPERVISOR: 'supervisor', // 主管 - 全部权限
-  PURCHASER: 'purchaser',   // 采购员 - 只看物料采购
-  CUTTER: 'cutter',         // 裁剪员 - 只看裁剪任务和裁剪单
-  SEWING: 'sewing',         // 车缝员 - 只看车缝/生产扫码
-  PACKAGER: 'packager',     // 包装员 - 只看包装扫码
-  QUALITY: 'quality',       // 质检员 - 只看质检相关
-  WAREHOUSE: 'warehouse',   // 仓管员 - 只看入库/出库
+  PURCHASER: 'purchaser', // 采购员 - 只看物料采购
+  CUTTER: 'cutter', // 裁剪员 - 只看裁剪任务和裁剪单
+  SEWING: 'sewing', // 车缝员 - 只看车缝/生产扫码
+  PACKAGER: 'packager', // 包装员 - 只看包装扫码
+  QUALITY: 'quality', // 质检员 - 只看质检相关
+  WAREHOUSE: 'warehouse', // 仓管员 - 只看入库/出库
 };
 
 // 工作流程节点定义
 const WORK_NODES = {
-  CUTTING: 'cutting',       // 裁剪
+  CUTTING: 'cutting', // 裁剪
   PRODUCTION: 'production', // 生产/车缝
-  SEWING: 'sewing',         // 车缝
-  QUALITY: 'quality',       // 质检
-  PACKAGING: 'packaging',   // 包装
+  SEWING: 'sewing', // 车缝
+  QUALITY: 'quality', // 质检
+  PACKAGING: 'packaging', // 包装
   WAREHOUSING: 'warehouse', // 入库
 };
 
@@ -131,8 +131,12 @@ function filterOrders(orders) {
 
     // 车缝员：只看生产/车缝节点的订单
     if (role === ROLES.SEWING) {
-      return currentProcess.includes('生产') || currentProcess.includes('车缝') || 
-             currentProcess.includes('缝制') || currentProcess.includes('大烫');
+      return (
+        currentProcess.includes('生产') ||
+        currentProcess.includes('车缝') ||
+        currentProcess.includes('缝制') ||
+        currentProcess.includes('大烫')
+      );
     }
 
     // 包装员：只看包装节点的订单
@@ -147,7 +151,11 @@ function filterOrders(orders) {
 
     // 仓管员：只看入库/出库节点的订单
     if (role === ROLES.WAREHOUSE) {
-      return currentProcess.includes('入库') || currentProcess.includes('出库') || currentProcess.includes('仓库');
+      return (
+        currentProcess.includes('入库') ||
+        currentProcess.includes('出库') ||
+        currentProcess.includes('仓库')
+      );
     }
 
     return false;
@@ -161,7 +169,16 @@ function filterOrders(orders) {
 function getAllowedScanTypes() {
   // 管理员和主管可以使用所有扫码类型
   if (isAdminOrSupervisor()) {
-    return ['procurement', 'cutting', 'production', 'sewing', 'ironing', 'packaging', 'quality', 'warehouse'];
+    return [
+      'procurement',
+      'cutting',
+      'production',
+      'sewing',
+      'ironing',
+      'packaging',
+      'quality',
+      'warehouse',
+    ];
   }
 
   const role = getCurrentRole();
@@ -237,19 +254,34 @@ function hasFeaturePermission(feature) {
   // 功能权限映射
   const featurePermissions = {
     // 创建订单
-    'create_order': [ROLES.ADMIN, ROLES.SUPERVISOR],
+    create_order: [ROLES.ADMIN, ROLES.SUPERVISOR],
     // 编辑订单
-    'edit_order': [ROLES.ADMIN, ROLES.SUPERVISOR],
+    edit_order: [ROLES.ADMIN, ROLES.SUPERVISOR],
     // 删除订单
-    'delete_order': [ROLES.ADMIN, ROLES.SUPERVISOR],
+    delete_order: [ROLES.ADMIN, ROLES.SUPERVISOR],
     // 查看订单详情
-    'view_order': [ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.PURCHASER, ROLES.CUTTER, 
-                   ROLES.SEWING, ROLES.PACKAGER, ROLES.QUALITY, ROLES.WAREHOUSE],
+    view_order: [
+      ROLES.ADMIN,
+      ROLES.SUPERVISOR,
+      ROLES.PURCHASER,
+      ROLES.CUTTER,
+      ROLES.SEWING,
+      ROLES.PACKAGER,
+      ROLES.QUALITY,
+      ROLES.WAREHOUSE,
+    ],
     // 扫码
-    'scan': [ROLES.ADMIN, ROLES.SUPERVISOR, ROLES.CUTTER, ROLES.SEWING, 
-             ROLES.PACKAGER, ROLES.QUALITY, ROLES.WAREHOUSE],
+    scan: [
+      ROLES.ADMIN,
+      ROLES.SUPERVISOR,
+      ROLES.CUTTER,
+      ROLES.SEWING,
+      ROLES.PACKAGER,
+      ROLES.QUALITY,
+      ROLES.WAREHOUSE,
+    ],
     // 查看所有记录
-    'view_all_records': [ROLES.ADMIN, ROLES.SUPERVISOR],
+    view_all_records: [ROLES.ADMIN, ROLES.SUPERVISOR],
   };
 
   const allowedRoles = featurePermissions[feature] || [];

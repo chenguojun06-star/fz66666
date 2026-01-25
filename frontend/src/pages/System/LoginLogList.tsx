@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
 import { LoginLog, LoginLogQueryParams } from '../../types/system';
 import api from '../../utils/api';
-import { Button, Card, DatePicker, Input, Select, Space, Tag, message } from 'antd';
+import { Button, Card, Input, Select, Space, Tag, message } from 'antd';
+import { UnifiedDatePicker } from '../../components/common/UnifiedDatePicker';
 import { formatDateTimeSecond } from '../../utils/datetime';
 import ResizableTable from '../../components/common/ResizableTable';
 import { useViewport } from '../../utils/useViewport';
@@ -107,12 +108,12 @@ const LoginLogList: React.FC = () => {
               ]}
               onChange={(value) => setQueryParams((prev) => ({ ...prev, loginStatus: value, page: 1 }))}
             />
-            <DatePicker
+            <UnifiedDatePicker
               placeholder="开始日期"
               value={queryParams.startDate ? dayjs(String(queryParams.startDate)) : null}
               onChange={(d) => setQueryParams((prev) => ({ ...prev, startDate: d ? d.format('YYYY-MM-DD') : '', page: 1 }))}
             />
-            <DatePicker
+            <UnifiedDatePicker
               placeholder="结束日期"
               value={queryParams.endDate ? dayjs(String(queryParams.endDate)) : null}
               onChange={(d) => setQueryParams((prev) => ({ ...prev, endDate: d ? d.format('YYYY-MM-DD') : '', page: 1 }))}

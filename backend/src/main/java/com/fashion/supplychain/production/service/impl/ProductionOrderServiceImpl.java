@@ -218,4 +218,14 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
     public ProductionOrder recomputeProgressFromRecords(String orderId) {
         return progressRecomputeService.recomputeProgressFromRecords(orderId);
     }
+
+    @Override
+    public ProductionOrder getByOrderNo(String orderNo) {
+        if (!StringUtils.hasText(orderNo)) {
+            return null;
+        }
+        return this.getOne(new LambdaQueryWrapper<ProductionOrder>()
+                .eq(ProductionOrder::getOrderNo, orderNo.trim())
+                .last("LIMIT 1"));
+    }
 }

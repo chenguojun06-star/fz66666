@@ -1,73 +1,28 @@
 const api = require('../../utils/api');
 const { validateProductionOrder, normalizeData } = require('../../utils/dataValidator');
 const { errorHandler } = require('../../utils/errorHandler');
-const { validateByRule } = require('../../utils/validationRules');
 const { syncManager } = require('../../utils/syncManager');
-const reminderManager = require('../../utils/reminderManager');
-const { orderStatusText, qualityStatusText, scanResultText } = require('../../utils/orderStatusHelper');
-const { onDataRefresh, triggerDataRefresh, Events } = require('../../utils/eventBus');
-function toNumberSafe(val) {
-  if (val === null || val === undefined) {return 0;}
-  const n = Number(val);
-  return isNaN(n) ? 0 : n;
-}
+const { orderStatusText } = require('../../utils/orderStatusHelper');
+const { onDataRefresh, triggerDataRefresh } = require('../../utils/eventBus');
+const { toast } = require('../../utils/uiHelper');
+const { validateFields, validators } = require('../../utils/validator');
+const { parseProductionOrderLines } = require('../../utils/orderParser');
 
-function parseProductionOrderLines(order) {
-  if (!order) {return [];}
+// ==================== 常量定义 ====================
 
-  const detailsRaw = order.orderDetails;
-  let parsed = null;
+/**
+ * 菲号弹窗初始状态（消除重复代码）
+ */
+const INITIAL_BUNDLE_MODAL = {
+  visible: false,
+  loading: false,
+  orderId: '',
+  orderNo: '',
+  styleNo: '',
+  items: [{ color: '', size: '', quantity: '' }],
+};
 
-  if (detailsRaw != null && String(detailsRaw).trim()) {
-    try {
-      parsed = typeof detailsRaw === 'string' ? JSON.parse(detailsRaw) : detailsRaw;
-    } catch (e) {
-      parsed = null;
-    }
-  }
-
-  let list = [];
-  if (Array.isArray(parsed)) {
-    list = parsed;
-  } else if (parsed && typeof parsed === 'object') {
-    const candidate = parsed.lines || parsed.items || parsed.details || parsed.list || parsed.orderLines;
-    if (Array.isArray(candidate)) {
-      list = candidate;
-    } else {
-      list = [parsed];
-    }
-  }
-
-  const normalized = list
-    .map((r) => {
-      const color = String(r.color || r.colour || r.colorName || r['颜色'] || '').trim();
-      const size = String(r.size || r.sizeName || r.spec || r.尺码 || r['尺码'] || '').trim();
-      const quantity = toNumberSafe(r.quantity || r.qty || r.count || r.num || r['数量']);
-      return { color, size, quantity };
-    })
-    .filter((l) => {
-      if (!l.color || !l.size) {return false;}
-      return l.quantity > 0;
-    });
-
-  if (normalized.length > 0) {
-    return normalized;
-  }
-
-  const fallbackColor = String(order.color || '').trim();
-  const fallbackSize = String(order.size || '').trim();
-  const fallbackQty = toNumberSafe(order.orderQuantity || order.quantity);
-
-  if (fallbackColor && fallbackSize && fallbackQty > 0) {
-    return [{
-      color: fallbackColor,
-      size: fallbackSize,
-      quantity: fallbackQty,
-    }];
-  }
-
-  return [];
-}
+// ==================== 辅助函数 ====================
 
 function normalizeText(v) {
   return (v || '').toString().trim();
@@ -87,19 +42,42 @@ function buildSizeMeta(order) {
   const sizeMap = new Map();
   let total = 0;
 
-  lines.forEach((line) => {
+  lines.forEach(line => {
     const size = normalizeText(line && line.size);
     const qty = Number(line && line.quantity) || 0;
-    if (!size || qty <= 0) {return;}
+    if (!size || qty <= 0) {
+      return;
+    }
     total += qty;
     sizeMap.set(size, (sizeMap.get(size) || 0) + qty);
   });
 
   const sizes = Array.from(sizeMap.keys());
-  const sizeQtyList = sizes.map((size) => sizeMap.get(size));
+  const sizeQtyList = sizes.map(size => sizeMap.get(size));
 
   return { sizeList: sizes, sizeQtyList, sizeTotal: total };
 }
+
+/**
+ * 转换订单数据（消除重复代码）
+ * 将原始订单数据转换为页面所需的格式，包括尺码统计
+ * @param {Object} r - 原始订单数据
+ * @returns {Object} 转换后的订单数据
+ */
+function transformOrderData(r) {
+  const validated = validateAndNormalizeOrder(r);
+  const source = validated || r || {};
+  const sizeMeta = buildSizeMeta(source);
+  return {
+    ...source,
+    statusText: orderStatusText(source.status),
+    isClosed: isClosedStatus(source.status),
+    sizeList: sizeMeta.sizeList,
+    sizeQtyList: sizeMeta.sizeQtyList,
+    sizeTotal: sizeMeta.sizeTotal,
+  };
+}
+
 /**
  * 验证并规范化订单数据
  */
@@ -133,7 +111,7 @@ function validateAndNormalizeOrder(order) {
 
 function stripWarehousingNode(list) {
   const items = Array.isArray(list) ? list : [];
-  return items.filter((n) => {
+  return items.filter(n => {
     const id = normalizeText(n && n.id).toLowerCase();
     const name = normalizeText(n && n.name);
     return !(id === 'shipment' || name === '出货' || name === '发货' || name === '发运');
@@ -148,36 +126,44 @@ const defaultNodes = [
 ];
 
 function clampPercent(value) {
-  if (Number.isNaN(value)) {return 0;}
+  if (Number.isNaN(value)) {
+    return 0;
+  }
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
 function getNodeIndexFromProgress(nodes, progress) {
-  if (!nodes || nodes.length <= 1) {return 0;}
+  if (!nodes || nodes.length <= 1) {
+    return 0;
+  }
   const idx = Math.round((clampPercent(progress) / 100) * (nodes.length - 1));
   return Math.max(0, Math.min(nodes.length - 1, idx));
 }
 
 function getProgressFromNodeIndex(nodes, index) {
-  if (!nodes || nodes.length <= 1) {return 0;}
+  if (!nodes || nodes.length <= 1) {
+    return 0;
+  }
   const idx = Math.max(0, Math.min(nodes.length - 1, index));
   return clampPercent((idx / (nodes.length - 1)) * 100);
 }
 
 function parseProgressNodes(raw) {
   const text = normalizeText(raw);
-  if (!text) {return [];}
+  if (!text) {
+    return [];
+  }
   try {
     const obj = JSON.parse(text);
     const nodesRaw = obj && Array.isArray(obj.nodes) ? obj.nodes : [];
     return stripWarehousingNode(
       nodesRaw
-        .map((n) => {
+        .map(n => {
           const name = normalizeText(n && n.name);
           const id = normalizeText(n && n.id) || name;
           return name ? { id, name } : null;
         })
-        .filter((n) => n && n.name),
+        .filter(n => n && n.name)
     );
   } catch (e) {
     return [];
@@ -229,20 +215,17 @@ Page({
       progress: '',
       remark: '',
     },
-    bundleModal: {
-      visible: false,
-      loading: false,
-      orderId: '',
-      orderNo: '',
-      styleNo: '',
-      items: [{ color: '', size: '', quantity: '' }],
-    },
+    bundleModal: { ...INITIAL_BUNDLE_MODAL },
   },
 
   onShow() {
     const app = getApp();
-    if (app && typeof app.setTabSelected === 'function') {app.setTabSelected(this, 1);}
-    if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) {return;}
+    if (app && typeof app.setTabSelected === 'function') {
+      app.setTabSelected(this, 1);
+    }
+    if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) {
+      return;
+    }
     try {
       const nextTab = wx.getStorageSync('work_active_tab');
       if (nextTab) {
@@ -263,11 +246,7 @@ Page({
     try {
       const pendingOrderHint = wx.getStorageSync('pending_order_hint');
       if (pendingOrderHint) {
-        wx.showToast({
-          title: `请处理订单: ${pendingOrderHint}`,
-          icon: 'none',
-          duration: 3000,
-        });
+        toast.info(`请处理订单: ${pendingOrderHint}`, 3000);
         wx.removeStorageSync('pending_order_hint');
       }
     } catch (e) {
@@ -293,7 +272,7 @@ Page({
     }
 
     // 订阅数据刷新事件
-    this._unsubscribeRefresh = onDataRefresh((payload) => {
+    this._unsubscribeRefresh = onDataRefresh(_payload => {
       // 刷新当前页面数据
       this.loadOrders(true);
     });
@@ -316,11 +295,15 @@ Page({
 
   onTab(e) {
     const tab = e && e.currentTarget && e.currentTarget.dataset ? e.currentTarget.dataset.tab : '';
-    if (!tab || tab === this.data.activeTab) {return;}
+    if (!tab || tab === this.data.activeTab) {
+      return;
+    }
     this.setData({ activeTab: tab });
     // 切换标签页时强制重新加载订单
     const app = getApp();
-    if (app && typeof app.resetPagedList === 'function') {app.resetPagedList(this, 'orders');}
+    if (app && typeof app.resetPagedList === 'function') {
+      app.resetPagedList(this, 'orders');
+    }
     this.loadOrders(true);
   },
 
@@ -344,7 +327,9 @@ Page({
 
   onBatchSelectChange(e) {
     const ids = e && e.detail && Array.isArray(e.detail.value) ? e.detail.value : [];
-    this.setData({ 'batchProgress.selectedIds': ids.map((v) => String(v || '').trim()).filter(Boolean) });
+    this.setData({
+      'batchProgress.selectedIds': ids.map(v => String(v || '').trim()).filter(Boolean),
+    });
   },
 
   onBatchProgressInput(e) {
@@ -360,44 +345,51 @@ Page({
   },
 
   async submitBatchProgress() {
-    if (this.data.batchProgress.submitting) {return;}
+    if (this.data.batchProgress.submitting) {
+      return;
+    }
     const app = getApp();
-    const ids = Array.isArray(this.data.batchProgress.selectedIds) ? this.data.batchProgress.selectedIds : [];
-    if (!ids.length) {
-      wx.showToast({ title: '请选择订单', icon: 'none' });
-      return;
-    }
-
+    const ids = Array.isArray(this.data.batchProgress.selectedIds)
+      ? this.data.batchProgress.selectedIds
+      : [];
     const progressInput = Number(this.data.batchProgress.progress);
-    if (!Number.isFinite(progressInput)) {
-      wx.showToast({ title: '请输入进度', icon: 'none' });
-      return;
-    }
-    const targetProgress = clampPercent(progressInput);
     const remark = normalizeText(this.data.batchProgress.remark);
 
+    // 统一验证
+    const valid = validateFields([
+      { value: ids.length, message: '请选择订单' },
+      { value: progressInput, message: '请输入进度', validator: validators.nonNegative },
+    ]);
+    if (!valid) {
+      return;
+    }
+
+    const targetProgress = clampPercent(progressInput);
     const list = Array.isArray(this.data.orders.list) ? this.data.orders.list : [];
-    const selectedOrders = list.filter((o) => ids.includes(normalizeText(o && o.id)));
-    const needRemark = selectedOrders.some((o) => (Number(o && o.productionProgress) || 0) > targetProgress);
+    const selectedOrders = list.filter(o => ids.includes(normalizeText(o && o.id)));
+    const needRemark = selectedOrders.some(
+      o => (Number(o && o.productionProgress) || 0) > targetProgress
+    );
+
     if (needRemark && !remark) {
-      wx.showToast({ title: '请填写问题点', icon: 'none' });
+      toast.error('请填写问题点');
       return;
     }
 
     this.setData({ 'batchProgress.submitting': true });
     try {
       const settled = await Promise.allSettled(
-        selectedOrders.map((o) =>
+        selectedOrders.map(o =>
           api.production.updateProgress({
             id: normalizeText(o && o.id),
             progress: targetProgress,
             rollbackRemark: needRemark ? remark : undefined,
-          }),
-        ),
+          })
+        )
       );
-      const success = settled.filter((s) => s.status === 'fulfilled').length;
+      const success = settled.filter(s => s.status === 'fulfilled').length;
       const failed = settled.length - success;
-      wx.showToast({ title: `成功${success}，失败${failed}`, icon: failed ? 'none' : 'success' });
+      toast[failed ? 'error' : 'success'](`成功${success}，失败${failed}`);
 
       this.setData({
         batchProgress: {
@@ -409,12 +401,19 @@ Page({
         },
       });
 
-      if (app && typeof app.resetPagedList === 'function') {app.resetPagedList(this, 'orders');}
+      if (app && typeof app.resetPagedList === 'function') {
+        app.resetPagedList(this, 'orders');
+      }
       await this.loadOrders(true);
     } catch (e) {
-      if (e && e.type === 'auth') {return;}
-      if (app && typeof app.toastError === 'function') {app.toastError(e, '更新失败');}
-      else {wx.showToast({ title: '更新失败', icon: 'none' });}
+      if (e && e.type === 'auth') {
+        return;
+      }
+      if (app && typeof app.toastError === 'function') {
+        app.toastError(e, '更新失败');
+      } else {
+        toast.error('更新失败');
+      }
     } finally {
       this.setData({ 'batchProgress.submitting': false });
     }
@@ -432,19 +431,24 @@ Page({
       },
       () => {
         const app = getApp();
-        if (app && typeof app.resetPagedList === 'function') {app.resetPagedList(this, 'orders');}
+        if (app && typeof app.resetPagedList === 'function') {
+          app.resetPagedList(this, 'orders');
+        }
         this.loadOrders(true);
-      },
+      }
     );
   },
 
-
   async openStepRollback(e) {
-    const orderId = normalizeText(e && e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.id);
-    if (!orderId) {return;}
-    const order = (this.data.orders.list || []).find((r) => normalizeText(r && r.id) === orderId);
+    const orderId = normalizeText(
+      e && e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.id
+    );
+    if (!orderId) {
+      return;
+    }
+    const order = (this.data.orders.list || []).find(r => normalizeText(r && r.id) === orderId);
     if (!order) {
-      wx.showToast({ title: '未找到订单', icon: 'none' });
+      toast.error('未找到订单');
       return;
     }
 
@@ -460,7 +464,7 @@ Page({
     const progress = Number(nodeSource && nodeSource.productionProgress) || 0;
     const idx = getNodeIndexFromProgress(nodes, progress);
     if (idx <= 0) {
-      wx.showToast({ title: '当前已是第一步', icon: 'none' });
+      toast.info('当前已是第一步');
       return;
     }
     const nextIdx = idx - 1;
@@ -499,16 +503,20 @@ Page({
   },
 
   async submitStepRollback() {
-    if (this.data.rollbackStep.submitting) {return;}
+    if (this.data.rollbackStep.submitting) {
+      return;
+    }
     const app = getApp();
     const orderId = normalizeText(this.data.rollbackStep.orderId);
     const remark = normalizeText(this.data.rollbackStep.remark);
     const nextProgress = clampPercent(Number(this.data.rollbackStep.nextProgress) || 0);
     const nextProcessName = normalizeText(this.data.rollbackStep.nextProcessName) || '上一步';
 
-    if (!orderId) {return;}
+    if (!orderId) {
+      return;
+    }
     if (!remark) {
-      wx.showToast({ title: '请填写问题点', icon: 'none' });
+      toast.error('请填写问题点');
       return;
     }
 
@@ -520,14 +528,21 @@ Page({
         rollbackRemark: remark,
         rollbackToProcessName: nextProcessName,
       });
-      wx.showToast({ title: '回流成功', icon: 'success' });
+      toast.success('回流成功');
       this.closeStepRollback();
-      if (app && typeof app.resetPagedList === 'function') {app.resetPagedList(this, 'orders');}
+      if (app && typeof app.resetPagedList === 'function') {
+        app.resetPagedList(this, 'orders');
+      }
       await this.loadOrders(true);
     } catch (e3) {
-      if (e3 && e3.type === 'auth') {return;}
-      if (app && typeof app.toastError === 'function') {app.toastError(e3, '回流失败');}
-      else {wx.showToast({ title: '回流失败', icon: 'none' });}
+      if (e3 && e3.type === 'auth') {
+        return;
+      }
+      if (app && typeof app.toastError === 'function') {
+        app.toastError(e3, '回流失败');
+      } else {
+        toast.error('回流失败');
+      }
     } finally {
       this.setData({ 'rollbackStep.submitting': false });
     }
@@ -558,32 +573,75 @@ Page({
   onScanRollbackQr() {
     wx.scanCode({
       onlyFromCamera: true,
-      success: (res) => {
-        const qr = res && res.result != null ? String(res.result).trim() : '';
-        if (!qr) {return;}
+      success: res => {
+        const qr = res && res.result !== null ? String(res.result).trim() : '';
+        if (!qr) {
+          return;
+        }
         this.setData({ 'rollback.cuttingBundleQrCode': qr });
       },
     });
   },
 
+  /**
+   * 验证回退表单数据
+   * @private
+   * @param {string} cuttingBundleQrCode - 扎号二维码
+   * @param {number} qty - 回退数量
+   * @param {string} rollbackRemark - 回退原因
+   * @returns {boolean} 是否验证通过
+   */
+  _validateRollbackForm(cuttingBundleQrCode, qty, rollbackRemark) {
+    return validateFields([
+      { value: cuttingBundleQrCode, message: '请扫码扎号二维码' },
+      { value: qty, message: '请输入回退数量', validator: validators.positive },
+      { value: rollbackRemark, message: '请填写问题点' },
+    ]);
+  },
+
+  /**
+   * 刷新相关列表
+   * @private
+   * @param {string} orderId - 订单ID
+   * @param {string} bundleNo - 扎号
+   */
+  async _refreshAfterRollback(orderId, bundleNo) {
+    // 如果在入库标签页，刷新入库列表
+    if (this.data.activeTab === 'warehousing') {
+      const app2 = getApp();
+      if (app2 && typeof app2.resetPagedList === 'function') {
+        app2.resetPagedList(this, 'warehousing');
+      }
+      await this.loadWarehousing(true);
+    }
+
+    // 刷新订单列表
+    const app = getApp();
+    if (app && typeof app.resetPagedList === 'function') {
+      app.resetPagedList(this, 'orders');
+    }
+    await this.loadOrders(true);
+
+    // 触发全局数据刷新事件
+    triggerDataRefresh('orders', {
+      action: 'rollback',
+      orderId: orderId,
+      bundleNo: bundleNo,
+    });
+  },
+
   async submitRollback() {
-    if (this.data.rollback.submitting) {return;}
+    if (this.data.rollback.submitting) {
+      return;
+    }
     const app = getApp();
     const orderId = normalizeText(this.data.rollback.orderId);
     const cuttingBundleQrCode = normalizeText(this.data.rollback.cuttingBundleQrCode);
     const qty = Number(this.data.rollback.rollbackQuantity) || 0;
     const rollbackRemark = normalizeText(this.data.rollback.rollbackRemark);
 
-    if (!cuttingBundleQrCode) {
-      wx.showToast({ title: '请扫码扎号二维码', icon: 'none' });
-      return;
-    }
-    if (!qty || qty <= 0) {
-      wx.showToast({ title: '请输入回退数量', icon: 'none' });
-      return;
-    }
-    if (!rollbackRemark) {
-      wx.showToast({ title: '请填写问题点', icon: 'none' });
+    // 验证表单
+    if (!this._validateRollbackForm(cuttingBundleQrCode, qty, rollbackRemark)) {
       return;
     }
 
@@ -595,7 +653,9 @@ Page({
         rollbackQuantity: qty,
         rollbackRemark: rollbackRemark || undefined,
       });
-      wx.showToast({ title: '回退成功', icon: 'success' });
+      toast.success('回退成功');
+
+      // 重置表单
       this.setData({
         rollback: {
           ...this.data.rollback,
@@ -607,27 +667,18 @@ Page({
           rollbackRemark: '',
         },
       });
-      if (this.data.activeTab === 'warehousing') {
-        const app2 = getApp();
-        if (app2 && typeof app2.resetPagedList === 'function') {app2.resetPagedList(this, 'warehousing');}
-        this.loadWarehousing(true);
-      }
 
-      // 无论在哪个标签页，都刷新订单列表，确保状态同步
-      const app = getApp();
-      if (app && typeof app.resetPagedList === 'function') {app.resetPagedList(this, 'orders');}
-      await this.loadOrders(true);
-
-      // 触发全局数据刷新事件
-      triggerDataRefresh('orders', {
-        action: 'rollback',
-        orderId: orderId,
-        bundleNo: this.data.rollback.cuttingBundleQrCode,
-      });
+      // 刷新相关列表
+      await this._refreshAfterRollback(orderId, cuttingBundleQrCode);
     } catch (e) {
-      if (e && e.type === 'auth') {return;}
-      if (app && typeof app.toastError === 'function') {app.toastError(e, '回退失败');}
-      else {wx.showToast({ title: '回退失败', icon: 'none' });}
+      if (e && e.type === 'auth') {
+        return;
+      }
+      if (app && typeof app.toastError === 'function') {
+        app.toastError(e, '回退失败');
+      } else {
+        toast.error('回退失败');
+      }
     } finally {
       this.setData({ 'rollback.submitting': false });
     }
@@ -644,11 +695,13 @@ Page({
       },
       () => {
         const app = getApp();
-        if (app && typeof app.resetPagedList === 'function') {app.resetPagedList(this, 'exceptions');}
+        if (app && typeof app.resetPagedList === 'function') {
+          app.resetPagedList(this, 'exceptions');
+        }
         if (this.data.activeTab === 'exceptions') {
           this.loadExceptions(true);
         }
-      },
+      }
     );
   },
 
@@ -662,7 +715,9 @@ Page({
 
   loadOrders(reset) {
     const app = getApp();
-    if (!app || typeof app.loadPagedList !== 'function') {return Promise.resolve();}
+    if (!app || typeof app.loadPagedList !== 'function') {
+      return Promise.resolve();
+    }
 
     return app.loadPagedList(
       this,
@@ -692,24 +747,9 @@ Page({
 
         return api.production.listOrders(params);
       },
-      (r) => {
-        // 验证并规范化订单数据
-        const validated = validateAndNormalizeOrder(r);
-        const source = validated || r || {};
-        const sizeMeta = buildSizeMeta(source);
-        return {
-          ...source,
-          statusText: orderStatusText(source.status),
-          isClosed: isClosedStatus(source.status),
-          sizeList: sizeMeta.sizeList,
-          sizeQtyList: sizeMeta.sizeQtyList,
-          sizeTotal: sizeMeta.sizeTotal,
-        };
-      },
+      r => transformOrderData(r)
     );
   },
-
-
 
   /**
    * 设置订单列表的实时同步
@@ -734,23 +774,13 @@ Page({
     };
 
     // 数据变化时的处理
-    const onDataChange = (newPage) => {
-      if (!newPage || !Array.isArray(newPage.records)) {return;}
+    const onDataChange = newPage => {
+      if (!newPage || !Array.isArray(newPage.records)) {
+        return;
+      }
 
       // 更新列表
-      const newList = newPage.records.map((r) => {
-        const validated = validateAndNormalizeOrder(r);
-        const source = validated || r || {};
-        const sizeMeta = buildSizeMeta(source);
-        return {
-          ...source,
-          statusText: orderStatusText(source.status),
-          isClosed: isClosedStatus(source.status),
-          sizeList: sizeMeta.sizeList,
-          sizeQtyList: sizeMeta.sizeQtyList,
-          sizeTotal: sizeMeta.sizeTotal,
-        };
-      });
+      const newList = newPage.records.map(r => transformOrderData(r));
 
       console.log(`[Sync] Orders updated: ${newList.length} items`);
       this.setData({ 'orders.list': newList });
@@ -766,7 +796,7 @@ Page({
           syncManager.stopSync('work_orders');
           console.error('[Sync] Stopped orders sync due to repeated failures');
         }
-      }
+      },
     });
   },
 
@@ -782,7 +812,7 @@ Page({
   onGenerateBundle(e) {
     const order = e.currentTarget.dataset.order;
     if (!order || !order.id) {
-      wx.showToast({ title: '订单信息错误', icon: 'none' });
+      toast.error('订单信息错误');
       return;
     }
 
@@ -798,27 +828,12 @@ Page({
     });
   },
 
-  onBundleColorInput(e) {
-    const idx = e.currentTarget.dataset.idx;
+  // 通用菲号字段输入处理
+  onBundleFieldInput(e) {
+    const { idx, field } = e.currentTarget.dataset;
     const value = e.detail.value;
     const items = [...this.data.bundleModal.items];
-    items[idx].color = value;
-    this.setData({ 'bundleModal.items': items });
-  },
-
-  onBundleSizeInput(e) {
-    const idx = e.currentTarget.dataset.idx;
-    const value = e.detail.value;
-    const items = [...this.data.bundleModal.items];
-    items[idx].size = value;
-    this.setData({ 'bundleModal.items': items });
-  },
-
-  onBundleQuantityInput(e) {
-    const idx = e.currentTarget.dataset.idx;
-    const value = e.detail.value;
-    const items = [...this.data.bundleModal.items];
-    items[idx].quantity = value;
+    items[idx][field] = value;
     this.setData({ 'bundleModal.items': items });
   },
 
@@ -835,14 +850,7 @@ Page({
 
   onCancelBundle() {
     this.setData({
-      bundleModal: {
-        visible: false,
-        loading: false,
-        orderId: '',
-        orderNo: '',
-        styleNo: '',
-        items: [{ color: '', size: '', quantity: '' }],
-      },
+      bundleModal: { ...INITIAL_BUNDLE_MODAL },
     });
   },
 
@@ -851,21 +859,21 @@ Page({
 
     // 验证数据
     const validItems = modal.items
-      .map((item) => ({
+      .map(item => ({
         color: String(item.color || '').trim(),
         size: String(item.size || '').trim(),
         quantity: Number(item.quantity) || 0,
       }))
-      .filter((item) => item.quantity > 0);
+      .filter(item => item.quantity > 0);
 
     if (validItems.length === 0) {
-      wx.showToast({ title: '请至少填写一行有效数据', icon: 'none' });
+      toast.error('请至少填写一行有效数据');
       return;
     }
 
-    const invalid = validItems.find((item) => !item.color || !item.size);
+    const invalid = validItems.find(item => !item.color || !item.size);
     if (invalid) {
-      wx.showToast({ title: '颜色和尺码不能为空', icon: 'none' });
+      toast.error('颜色和尺码不能为空');
       return;
     }
 
@@ -877,17 +885,17 @@ Page({
       const res = await api.production.generateCuttingBundles(modal.orderId, validItems);
 
       if (res.code === 200) {
-        wx.showToast({ title: '菲号生成成功', icon: 'success' });
+        toast.success('菲号生成成功');
         this.onCancelBundle();
         // 刷新订单列表
         this.loadOrders();
       } else {
-        wx.showToast({ title: res.message || '生成失败', icon: 'none', duration: 2000 });
+        toast.error(res.message || '生成失败', 2000);
       }
     } catch (error) {
       console.error('生成菲号失败', error);
       const errMsg = error && error.errMsg ? error.errMsg : '生成失败，请重试';
-      wx.showToast({ title: errMsg, icon: 'none', duration: 2000 });
+      toast.error(errMsg, 2000);
     } finally {
       this.setData({ 'bundleModal.loading': false });
     }

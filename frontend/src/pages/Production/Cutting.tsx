@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Card, Form, Input, InputNumber, Select, Space, Tag, Typography, DatePicker, Modal } from 'antd';
+import { App, Button, Card, Form, Input, InputNumber, Select, Space, Tag, Typography, Modal } from 'antd';
 import { EyeOutlined, LoginOutlined, PlusOutlined, RollbackOutlined, EditOutlined } from '@ant-design/icons';
 import Layout from '../../components/Layout';
 import { useSync } from '../../utils/syncManager';
@@ -1006,9 +1006,9 @@ const CuttingManagement: React.FC = () => {
       };
       const res = await api.post<{ code: number; message: string; data: CuttingTask }>('/production/cutting-task/receive', payload);
       if (res.code === 200) {
-        message.success('领取任务成功');
+        message.success('领取成功，请点击「进入」填写数量生成菲号');
         fetchTasks();
-        goToEntry(res.data || task);
+        // 领取后不自动跳转，让用户手动点击「进入」
       } else {
         message.error(res.message || '领取任务失败');
       }
@@ -1257,6 +1257,7 @@ const CuttingManagement: React.FC = () => {
       dataIndex: 'productionOrderNo',
       key: 'productionOrderNo',
       width: 140,
+      render: (v: unknown) => <span className="order-no-wrap">{String(v || '').trim() || '-'}</span>,
     },
     {
       title: '款号',
@@ -1427,17 +1428,9 @@ const CuttingManagement: React.FC = () => {
                         size="small"
                         onClick={() => goToEntry(record)}
                         title={String(v || '').trim() || '-'}
-                        style={{ padding: 0, height: 'auto', color: '#2D7FF9' }}
+                        style={{ padding: 0, height: 'auto', color: '#2D7FF9', whiteSpace: 'normal' }}
                       >
-                        <span
-                          style={{
-                            display: 'block',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            width: '100%',
-                          }}
-                        >
+                        <span className="order-no-wrap" style={{ width: '100%' }}>
                           {String(v || '').trim() || '-'}
                         </span>
                       </Button>
@@ -1448,11 +1441,7 @@ const CuttingManagement: React.FC = () => {
                     dataIndex: 'styleNo',
                     key: 'styleNo',
                     width: 200,
-                    render: (v: unknown) => (
-                      <Text ellipsis={{ tooltip: String(v || '').trim() || '-' }} style={{ width: '100%', display: 'inline-block' }}>
-                        {String(v || '').trim() || '-'}
-                      </Text>
-                    ),
+                    render: (v: unknown) => <span className="order-no-wrap">{String(v || '').trim() || '-'}</span>,
                   },
                   { title: '款名', dataIndex: 'styleName', key: 'styleName', ellipsis: true },
                   {
@@ -1542,12 +1531,13 @@ const CuttingManagement: React.FC = () => {
                   {
                     title: '操作',
                     key: 'action',
-                    width: 92,
+                    width: 120,
                     render: (_: any, record: CuttingTask) => {
                       const orderNo = String((record as Record<string, unknown>)?.productionOrderNo || '').trim();
                       const frozen = isOrderFrozenById(orderNo);
-                      const entryLabel = record.status === 'pending' ? '领取并进入' : '进入';
-                      const entryDisabled = frozen || (record.status === 'pending' && receiveTaskLoading);
+                      // 领取和进入分开：pending状态显示领取，received/bundled状态显示进入
+                      const isPending = record.status === 'pending';
+                      const isReceived = record.status === 'received';
                       return (
                         <RowActions
                           actions={[
@@ -1569,20 +1559,34 @@ const CuttingManagement: React.FC = () => {
                                 setQuickEditVisible(true);
                               },
                             },
-                            {
-                              key: 'entry',
-                              label: entryLabel,
-                              title: entryLabel,
-                              icon: <LoginOutlined />,
-                              disabled: entryDisabled,
-                              onClick: () => {
-                                if (record.status === 'pending') {
-                                  return handleReceiveTask(record);
-                                }
-                                return goToEntry(record);
-                              },
-                              primary: true,
-                            },
+                            // 待领取状态：显示「领取」按钮
+                            ...(isPending
+                              ? [
+                                {
+                                  key: 'receive',
+                                  label: '领取',
+                                  title: '领取任务',
+                                  icon: <LoginOutlined />,
+                                  disabled: frozen || receiveTaskLoading,
+                                  onClick: () => handleReceiveTask(record),
+                                  primary: true,
+                                },
+                              ]
+                              : []),
+                            // 已领取/已完成状态：显示「进入」按钮
+                            ...(!isPending
+                              ? [
+                                {
+                                  key: 'entry',
+                                  label: isReceived ? '生成菲号' : '查看',
+                                  title: isReceived ? '进入填写数量生成菲号' : '查看详情',
+                                  icon: <LoginOutlined />,
+                                  disabled: frozen,
+                                  onClick: () => goToEntry(record),
+                                  primary: isReceived,
+                                },
+                              ]
+                              : []),
                             ...(isAdmin && record.status !== 'pending'
                               ? [
                                 {
@@ -1605,7 +1609,7 @@ const CuttingManagement: React.FC = () => {
                 dataSource={sortedTaskList}
                 rowKey={(row) => row.id || row.productionOrderId}
                 loading={taskLoading}
-                minColumnWidth={110}
+                minColumnWidth={70}
                 pagination={{
                   current: taskQuery.page,
                   pageSize: taskQuery.pageSize,
@@ -1718,7 +1722,7 @@ const CuttingManagement: React.FC = () => {
                                 清空
                               </Button>
                               <Button type="primary" loading={generateLoading} onClick={handleGenerate}>
-                                领取裁剪单并生成二维码
+                                生成菲号
                               </Button>
                             </Space>
                           </Form.Item>

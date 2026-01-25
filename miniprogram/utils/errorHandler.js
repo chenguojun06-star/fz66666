@@ -3,16 +3,17 @@ const { DEBUG } = require('../config/debug');
  * 小程序统一错误处理器
  * 将后端错误转换为用户友好的提示
  */
+const _DEBUG = DEBUG; // 避免未使用警告
 
 const ErrorType = {
-  VALIDATION: 'validation',      // 参数验证错误
-  AUTH: 'auth',                  // 认证错误
-  PERMISSION: 'permission',      // 权限错误
-  NETWORK: 'network',            // 网络错误
-  TIMEOUT: 'timeout',            // 超时错误
-  SERVER: 'server',              // 服务器错误
-  BUSINESS: 'business',          // 业务逻辑错误
-  UNKNOWN: 'unknown'             // 未知错误
+  VALIDATION: 'validation', // 参数验证错误
+  AUTH: 'auth', // 认证错误
+  PERMISSION: 'permission', // 权限错误
+  NETWORK: 'network', // 网络错误
+  TIMEOUT: 'timeout', // 超时错误
+  SERVER: 'server', // 服务器错误
+  BUSINESS: 'business', // 业务逻辑错误
+  UNKNOWN: 'unknown', // 未知错误
 };
 
 /**
@@ -31,10 +32,68 @@ class ErrorHandler {
     };
 
     this.networkErrorMap = {
-      'ECONNABORTED': { type: ErrorType.TIMEOUT, msg: '请求超时，请检查网络连接并重试' },
-      'ERR_NETWORK': { type: ErrorType.NETWORK, msg: '网络连接失败，请检查网络设置' },
-      'timeout': { type: ErrorType.TIMEOUT, msg: '请求超时，请检查网络连接并重试' },
+      ECONNABORTED: { type: ErrorType.TIMEOUT, msg: '请求超时，请检查网络连接并重试' },
+      ERR_NETWORK: { type: ErrorType.NETWORK, msg: '网络连接失败，请检查网络设置' },
+      timeout: { type: ErrorType.TIMEOUT, msg: '请求超时，请检查网络连接并重试' },
     };
+  }
+
+  /**
+   * 处理业务错误
+   * @private
+   */
+  _handleBusinessError(error) {
+    const code = error.code;
+    const errMsg = error.errMsg || error.message || '';
+
+    if (this.errorMap[code]) {
+      return {
+        type: this.errorMap[code].type,
+        msg: error.errMsg || this.errorMap[code].msg,
+        code,
+      };
+    }
+
+    // 服务端 5xx 错误
+    if (code >= 500) {
+      return {
+        type: ErrorType.SERVER,
+        msg: '服务暂时不可用，请稍后重试',
+        code,
+      };
+    }
+
+    // 其他接口错误
+    return {
+      type: ErrorType.BUSINESS,
+      msg: errMsg || '操作失败',
+      code,
+    };
+  }
+
+  /**
+   * 处理网络错误
+   * @private
+   */
+  _handleNetworkError(errMsg) {
+    for (const [key, value] of Object.entries(this.networkErrorMap)) {
+      if (errMsg.includes(key) || errMsg.toLowerCase().includes(key.toLowerCase())) {
+        return {
+          type: value.type,
+          msg: value.msg,
+        };
+      }
+    }
+
+    // 网络错误的其他情况
+    if (errMsg.includes('request')) {
+      return {
+        type: ErrorType.NETWORK,
+        msg: '网络请求失败，请检查网络连接',
+      };
+    }
+
+    return null;
   }
 
   /**
@@ -49,57 +108,20 @@ class ErrorHandler {
 
     // 处理接口业务错误
     if (error.type === 'biz') {
-      const code = error.code;
-      const errMsg = error.errMsg || error.message || '';
-
-      if (this.errorMap[code]) {
-        return {
-          type: this.errorMap[code].type,
-          msg: error.errMsg || this.errorMap[code].msg,
-          code
-        };
-      }
-
-      // 服务端 5xx 错误
-      if (code >= 500) {
-        return {
-          type: ErrorType.SERVER,
-          msg: '服务暂时不可用，请稍后重试',
-          code
-        };
-      }
-
-      // 其他接口错误
-      return {
-        type: ErrorType.BUSINESS,
-        msg: errMsg || '操作失败',
-        code
-      };
+      return this._handleBusinessError(error);
     }
 
     // 处理网络错误
     const errMsg = error.errMsg || error.message || '';
-    for (const [key, value] of Object.entries(this.networkErrorMap)) {
-      if (errMsg.includes(key) || errMsg.toLowerCase().includes(key.toLowerCase())) {
-        return {
-          type: value.type,
-          msg: value.msg
-        };
-      }
-    }
-
-    // 网络错误的其他情况
-    if (errMsg.includes('request')) {
-      return {
-        type: ErrorType.NETWORK,
-        msg: '网络请求失败，请检查网络连接'
-      };
+    const networkError = this._handleNetworkError(errMsg);
+    if (networkError) {
+      return networkError;
     }
 
     // 回退
     return {
       type: ErrorType.UNKNOWN,
-      msg: errMsg || '操作失败，请稍后重试'
+      msg: errMsg || '操作失败，请稍后重试',
     };
   }
 
@@ -124,7 +146,7 @@ class ErrorHandler {
     wx.showToast({
       title: msg,
       icon: 'error',
-      duration: 2000
+      duration: 2000,
     });
   }
 
@@ -142,7 +164,7 @@ class ErrorHandler {
       msg: result.msg,
       code: result.code,
       originalError: error,
-      raw: error
+      raw: error,
     });
   }
 
@@ -155,11 +177,7 @@ class ErrorHandler {
     const result = this.categorizeError(error);
 
     // 这些错误类型建议重试
-    const retryableTypes = [
-      ErrorType.TIMEOUT,
-      ErrorType.NETWORK,
-      ErrorType.SERVER
-    ];
+    const retryableTypes = [ErrorType.TIMEOUT, ErrorType.NETWORK, ErrorType.SERVER];
 
     return retryableTypes.includes(result.type);
   }
@@ -188,8 +206,4 @@ class ErrorHandler {
 // 创建全局错误处理器实例
 const errorHandler = new ErrorHandler();
 
-export {
-  ErrorType,
-  ErrorHandler,
-  errorHandler
-};
+export { ErrorType, ErrorHandler, errorHandler };

@@ -21,7 +21,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import * as api from '../utils/api';
+import api from '../utils/api';
 
 interface User {
   id: string;
@@ -89,18 +89,23 @@ export const useUserStore = create<UserState>()(
         set({ permissions });
       },
 
+      
+      
+      
+
       // 获取用户信息
       fetchUser: async () => {
         set({ loading: true, error: null });
         try {
-          const response = await (api as Record<string, unknown>).getUserInfo();
+          const response = await api.get<{ code: number; data: User; message?: string }>('/system/user/me');
           if (response.code === 200) {
             set({ user: response.data, loading: false });
           } else {
             set({ error: response.message, loading: false });
           }
         } catch (error: unknown) {
-          set({ error: error.message || '获取用户信息失败', loading: false });
+          const msg = error instanceof Error ? error.message : (typeof error === 'object' && error && 'message' in error ? String((error as { message?: unknown }).message || '') : '');
+          set({ error: msg || '获取用户信息失败', loading: false });
         }
       },
 
@@ -108,14 +113,15 @@ export const useUserStore = create<UserState>()(
       fetchPermissions: async () => {
         set({ loading: true, error: null });
         try {
-          const response = await (api as Record<string, unknown>).getUserPermissions();
+          const response = await api.get<{ code: number; data: Permission[]; message?: string }>('/system/user/permissions');
           if (response.code === 200) {
             set({ permissions: response.data || [], loading: false });
           } else {
             set({ error: response.message, loading: false });
           }
         } catch (error: unknown) {
-          set({ error: error.message || '获取权限失败', loading: false });
+          const msg = error instanceof Error ? error.message : (typeof error === 'object' && error && 'message' in error ? String((error as { message?: unknown }).message || '') : '');
+          set({ error: msg || '获取权限失败', loading: false });
         }
       },
 
@@ -123,11 +129,11 @@ export const useUserStore = create<UserState>()(
       login: async (username: string, password: string) => {
         set({ loading: true, error: null });
         try {
-          const response = await (api as Record<string, unknown>).login(username, password);
+          const response = await api.post<{ code: number; data?: { token?: string; user?: User }; message?: string }>('/system/user/login', { username, password });
           if (response.code === 200 && response.data) {
             const { token, user } = response.data;
-            get().setToken(token);
-            get().setUser(user);
+            get().setToken(token || null);
+            get().setUser(user || null);
             // 登录成功后获取权限
             await get().fetchPermissions();
             set({ loading: false });
@@ -136,9 +142,10 @@ export const useUserStore = create<UserState>()(
             throw new Error(response.message || '登录失败');
           }
         } catch (error: unknown) {
-          const errorMessage = error.message || '登录失败';
+          const msg = error instanceof Error ? error.message : (typeof error === 'object' && error && 'message' in error ? String((error as { message?: unknown }).message || '') : '');
+          const errorMessage = msg || '登录失败';
           set({ error: errorMessage, loading: false });
-          throw error;
+          throw new Error(errorMessage);
         }
       },
 

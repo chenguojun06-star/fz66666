@@ -1,15 +1,77 @@
-
 /**
  * 订单解析工具
- * 
+ *
  * 用于处理后端返回的生产订单数据，特别是解析 orderDetails JSON 字符串
  * 确保前端能获取到统一的 SKU 明细列表 (items)
  */
 
 function toNumberSafe(val) {
-  if (val === null || val === undefined) {return 0;}
+  if (val === null || val === undefined) {
+    return 0;
+  }
   const n = Number(val);
   return isNaN(n) ? 0 : n;
+}
+
+/**
+ * 解析 orderDetails JSON
+ */
+function parseOrderDetailsJSON(detailsRaw) {
+  if (!detailsRaw || !String(detailsRaw).trim()) {
+    return null;
+  }
+  try {
+    return typeof detailsRaw === 'string' ? JSON.parse(detailsRaw) : detailsRaw;
+  } catch (e) {
+    console.warn('[OrderParser] JSON解析失败:', e);
+    return null;
+  }
+}
+
+/**
+ * 从解析结果中提取列表数组
+ */
+function extractListArray(parsed) {
+  if (Array.isArray(parsed)) {
+    return parsed;
+  }
+  if (parsed && typeof parsed === 'object') {
+    const candidate =
+      parsed.lines || parsed.items || parsed.details || parsed.list || parsed.orderLines;
+    return Array.isArray(candidate) ? candidate : [parsed];
+  }
+  return [];
+}
+
+/**
+ * 标准化单个订单明细行
+ */
+function normalizeOrderLine(r) {
+  const color = String(r.color || r.colour || r.colorName || r['颜色'] || '').trim();
+  const size = String(r.size || r.sizeName || r.spec || r.尺码 || r['尺码'] || '').trim();
+  const quantity = toNumberSafe(r.quantity || r.qty || r.count || r.num || r['数量']);
+  return { color, size, quantity };
+}
+
+/**
+ * 验证明细行是否有效
+ */
+function isValidLine(line) {
+  return line.color && line.size && line.quantity > 0;
+}
+
+/**
+ * 从订单顶层提取兜底数据
+ */
+function extractFallbackLine(order) {
+  const color = String(order.color || '').trim();
+  const size = String(order.size || '').trim();
+  const quantity = toNumberSafe(order.orderQuantity || order.quantity);
+
+  if (color && size && quantity > 0) {
+    return [{ color, size, quantity }];
+  }
+  return [];
 }
 
 /**
@@ -18,76 +80,27 @@ function toNumberSafe(val) {
  * @returns {Array} SKU明细列表 [{color, size, quantity}]
  */
 function parseProductionOrderLines(order) {
-  if (!order) {return [];}
-
-  // 1. 尝试从 orderDetails 解析
-  const detailsRaw = order.orderDetails;
-  let parsed = null;
-
-  if (detailsRaw != null && String(detailsRaw).trim()) {
-    try {
-      parsed = typeof detailsRaw === 'string' ? JSON.parse(detailsRaw) : detailsRaw;
-    } catch (e) {
-      console.warn('[OrderParser] JSON解析失败:', e);
-      parsed = null;
-    }
+  if (!order) {
+    return [];
   }
 
-  // 2. 寻找列表数组
-  let list = [];
-  if (Array.isArray(parsed)) {
-    list = parsed;
-  } else if (parsed && typeof parsed === 'object') {
-    // 兼容多种字段名
-    const candidate = parsed.lines || parsed.items || parsed.details || parsed.list || parsed.orderLines;
-    if (Array.isArray(candidate)) {
-      list = candidate;
-    } else {
-      // 可能是单个对象
-      list = [parsed];
-    }
-  }
+  // 1. 解析 JSON
+  const parsed = parseOrderDetailsJSON(order.orderDetails);
 
-  // 3. 标准化每一行
-  const normalizeLine = (r) => {
-    // 兼容各种可能的字段名 (中英文)
-    const color = String(r.color || r.colour || r.colorName || r['颜色'] || '').trim();
-    const size = String(r.size || r.sizeName || r.spec || r.尺码 || r['尺码'] || '').trim();
-    
-    // 数量字段
-    const quantity = toNumberSafe(r.quantity || r.qty || r.count || r.num || r['数量']);
+  // 2. 提取列表
+  const list = extractListArray(parsed);
 
-    return { color, size, quantity };
-  };
-
-  const normalized = list
-    .map(normalizeLine)
-    .filter(l => {
-      // 过滤无效行：必须有颜色或尺码，且数量>0
-      if (!l.color || !l.size) {return false;}
-      return l.quantity > 0;
-    });
+  // 3. 标准化并过滤
+  const normalized = list.map(normalizeOrderLine).filter(isValidLine);
 
   if (normalized.length > 0) {
     return normalized;
   }
 
-  // 4. 兜底逻辑：如果解析不出列表，尝试使用订单顶层的 color/size/quantity
-  const fallbackColor = String(order.color || '').trim();
-  const fallbackSize = String(order.size || '').trim();
-  const fallbackQty = toNumberSafe(order.orderQuantity || order.quantity);
-
-  if (fallbackColor && fallbackSize && fallbackQty > 0) {
-    return [{
-      color: fallbackColor,
-      size: fallbackSize,
-      quantity: fallbackQty
-    }];
-  }
-
-  return [];
+  // 4. 兜底逻辑
+  return extractFallbackLine(order);
 }
 
 module.exports = {
-  parseProductionOrderLines
+  parseProductionOrderLines,
 };

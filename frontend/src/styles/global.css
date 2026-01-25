@@ -753,7 +753,7 @@ body {
 }
 
 .row-actions.ant-space {
-  width: 100%;
+  width: 72px;
   display: inline-flex;
   justify-content: center;
   column-gap: 4px;
@@ -938,6 +938,16 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.order-no-wrap {
+  font-size: inherit;
+  line-height: 1.5;
+  font-weight: inherit;
+  display: inline-block;
+  max-width: 100%;
+  white-space: normal;
+  word-break: break-all;
 }
 
 @media (min-width: 900px) {

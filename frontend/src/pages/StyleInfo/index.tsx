@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { App, Button, Card, Col, DatePicker, Form, Input, InputNumber, Row, Select, Space, Tabs, Tag, Upload } from 'antd';
+import { App, Button, Card, Col, Form, Input, InputNumber, Row, Select, Space, Tabs, Tag, Upload } from 'antd';
+import { UnifiedDatePicker } from '../../components/common/UnifiedDatePicker';
 import type { MenuProps } from 'antd';
 import { PlusOutlined, SearchOutlined, EyeOutlined } from '@ant-design/icons';
 import Layout from '../../components/Layout';
@@ -871,11 +872,10 @@ const StyleInfoPage: React.FC = () => {
                               <Row gutter={8}>
                                 <Col xs={24} sm={12}>
                                   <Form.Item name="createTime" label="创建日期">
-                                    <DatePicker
+                                    <UnifiedDatePicker
                                       disabled={Boolean(currentStyle?.id)}
                                       allowClear
-                                      showTime={{ format: 'HH:mm' }}
-                                      style={{ width: '100%' }}
+                                      showTime
                                       placeholder="请选择创建日期"
                                       format="YYYY-MM-DD HH:mm"
                                     />
@@ -883,11 +883,10 @@ const StyleInfoPage: React.FC = () => {
                                 </Col>
                                 <Col xs={24} sm={12}>
                                   <Form.Item label="完成日期">
-                                    <DatePicker
+                                    <UnifiedDatePicker
                                       disabled
                                       allowClear={false}
-                                      showTime={{ format: 'HH:mm' }}
-                                      style={{ width: '100%' }}
+                                      showTime
                                       placeholder="-"
                                       value={resolvedCompletedDate}
                                       format="YYYY-MM-DD HH:mm"
@@ -1109,11 +1108,10 @@ const StyleInfoPage: React.FC = () => {
                             <Row gutter={8}>
                               <Col xs={24} sm={12}>
                                 <Form.Item name="createTime" label="创建日期">
-                                  <DatePicker
+                                  <UnifiedDatePicker
                                     disabled={Boolean(currentStyle?.id)}
                                     allowClear
-                                    showTime={{ format: 'HH:mm' }}
-                                    style={{ width: '100%' }}
+                                    showTime
                                     placeholder="请选择创建日期"
                                     format="YYYY-MM-DD HH:mm"
                                   />
@@ -1121,11 +1119,10 @@ const StyleInfoPage: React.FC = () => {
                               </Col>
                               <Col xs={24} sm={12}>
                                 <Form.Item label="完成日期">
-                                  <DatePicker
+                                  <UnifiedDatePicker
                                     disabled
                                     allowClear={false}
-                                    showTime={{ format: 'HH:mm' }}
-                                    style={{ width: '100%' }}
+                                    showTime
                                     placeholder="-"
                                     value={resolvedCompletedDate}
                                     format="YYYY-MM-DD HH:mm"

@@ -193,16 +193,16 @@ public class CuttingTaskOrchestrator {
         if (StringUtils.hasText(orderId)) {
             ProductionOrder order = productionOrderService.getById(orderId.trim());
             int rate = order == null || order.getMaterialArrivalRate() == null ? 0 : order.getMaterialArrivalRate();
-            
+
             // 检查物料是否完成：要么到货率100%，要么已手动确认完成
             boolean materialReady = false;
             if (rate >= 100) {
                 materialReady = true;
-            } else if (order != null && order.getProcurementManuallyCompleted() != null 
+            } else if (order != null && order.getProcurementManuallyCompleted() != null
                     && order.getProcurementManuallyCompleted() == 1) {
                 materialReady = true;
             }
-            
+
             if (!materialReady) {
                 throw new IllegalStateException("物料未到齐，无法领取裁剪任务");
             }
@@ -212,7 +212,7 @@ public class CuttingTaskOrchestrator {
         String status = task.getStatus() == null ? "" : task.getStatus().trim();
         String existingReceiverId = task.getReceiverId() == null ? null : task.getReceiverId().trim();
         String existingReceiverName = task.getReceiverName() == null ? null : task.getReceiverName().trim();
-        
+
         if (!"pending".equals(status) && StringUtils.hasText(status)) {
             // 已被领取，检查是否是同一个人
             boolean isSame = false;
@@ -342,5 +342,24 @@ public class CuttingTaskOrchestrator {
         sb.append("-").append(Math.max(quantity, 0));
         sb.append("-").append(bundleNo);
         return sb.toString();
+    }
+
+    /**
+     * 获取当前用户的裁剪任务（已领取，待生成菲号）
+     */
+    public List<CuttingTask> getMyTasks() {
+        com.fashion.supplychain.common.UserContext ctx = com.fashion.supplychain.common.UserContext.get();
+        String userId = ctx == null ? null : ctx.getUserId();
+        if (!StringUtils.hasText(userId)) {
+            return new ArrayList<>();
+        }
+
+        // 查询当前用户已领取的裁剪任务（status = received）
+        LambdaQueryWrapper<CuttingTask> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(CuttingTask::getReceiverId, userId)
+               .eq(CuttingTask::getStatus, "received")
+               .orderByDesc(CuttingTask::getReceivedTime);
+
+        return cuttingTaskService.list(wrapper);
     }
 }

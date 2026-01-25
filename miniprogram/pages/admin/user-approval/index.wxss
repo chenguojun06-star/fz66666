@@ -28,7 +28,8 @@ page {
   border-radius: var(--radius-md);
 }
 
-.loading, .empty {
+.loading,
+.empty {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -93,7 +94,8 @@ page {
   gap: 12px;
 }
 
-.btn-approve, .btn-reject {
+.btn-approve,
+.btn-reject {
   flex: 1;
   height: 36px;
   line-height: 36px;

@@ -10,11 +10,11 @@
 const ProductionOrderShape = {
   id: { required: true, type: 'string' },
   orderNo: { required: true, type: 'string' },
-  styleId: { type: 'string', default: '' },  // 可能为空
-  styleNo: { type: 'string', default: '' },  // 可能为空（历史数据）
-  styleName: { type: 'string', default: '' },  // 可能为空
-  factoryId: { type: 'string', default: '' },  // 可能为空
-  factoryName: { type: 'string', default: '' },  // 可能为空
+  styleId: { type: 'string', default: '' }, // 可能为空
+  styleNo: { type: 'string', default: '' }, // 可能为空（历史数据）
+  styleName: { type: 'string', default: '' }, // 可能为空
+  factoryId: { type: 'string', default: '' }, // 可能为空
+  factoryName: { type: 'string', default: '' }, // 可能为空
   orderQuantity: { required: true, type: 'number', default: 0 },
   completedQuantity: { type: 'number', default: 0 },
   productionProgress: { type: 'number', default: 0 },
@@ -101,7 +101,7 @@ function validateDataShape(data, shape) {
 
   return {
     valid: errors.length === 0,
-    errors
+    errors,
   };
 }
 
@@ -144,7 +144,7 @@ function validateProductionOrder(order) {
 
   return {
     valid: additionalErrors.length === 0,
-    errors: additionalErrors
+    errors: additionalErrors,
   };
 }
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { App, AutoComplete, Button, Card, Col, DatePicker, Form, Input, InputNumber, Row, Select, Space, Tabs, Tag } from 'antd';
+import { App, AutoComplete, Button, Card, Col, Form, Input, InputNumber, Row, Select, Space, Tabs, Tag } from 'antd';
+import { UnifiedDatePicker } from '../../components/common/UnifiedDatePicker';
 import { ShoppingCartOutlined } from '@ant-design/icons';
 import { useSync } from '../../utils/syncManager';
 
@@ -1035,6 +1036,13 @@ const OrderManagement: React.FC = () => {
       render: (v: unknown) => Number(v) || 0,
     },
     {
+      title: '最近下单',
+      dataIndex: 'latestOrderTime',
+      key: 'latestOrderTime',
+      width: 160,
+      render: (v: string) => v ? formatDateTime(v) : '-',
+    },
+    {
       title: '是否下单',
       key: 'hasOrder',
       width: 100,
@@ -1220,16 +1228,21 @@ const OrderManagement: React.FC = () => {
                     <div style={{ minWidth: 0 }}>
                       <Row gutter={16}>
                         <Col xs={24} sm={12}>
-                          <Form.Item
-                            name="orderNo"
-                            label="订单号"
-                            rules={[{ required: true, message: '请输入订单号' }]}
-                          >
-                            <Space.Compact style={{ width: '100%' }}>
-                              <Input placeholder="例如：PO20260107001" />
-                              <Button onClick={generateOrderNo}>自动生成</Button>
-                            </Space.Compact>
-                          </Form.Item>
+                          <div>
+                            <div style={{ marginBottom: 8, fontSize: '14px', color: 'rgba(0, 0, 0, 0.88)' }}>
+                              订单号<span style={{ color: '#ff4d4f', marginLeft: 4 }}>*</span>
+                            </div>
+                            <Form.Item
+                              name="orderNo"
+                              rules={[{ required: true, message: '请输入订单号' }]}
+                              style={{ marginBottom: 0 }}
+                            >
+                              <Space.Compact style={{ width: '100%' }}>
+                                <Input placeholder="例如：PO20260107001" />
+                                <Button onClick={generateOrderNo}>自动生成</Button>
+                              </Space.Compact>
+                            </Form.Item>
+                          </div>
                         </Col>
                         <Col xs={24} sm={12}>
                           <Form.Item name="factoryId" label="加工厂" rules={[{ required: true, message: '请选择加工厂' }]}>
@@ -1261,7 +1274,7 @@ const OrderManagement: React.FC = () => {
                             label="计划开始时间"
                             rules={[{ required: true, message: '请选择计划开始时间' }]}
                           >
-                            <DatePicker showTime style={{ width: '100%' }} />
+                            <UnifiedDatePicker showTime />
                           </Form.Item>
                         </Col>
                         <Col xs={24} sm={8}>
@@ -1270,7 +1283,7 @@ const OrderManagement: React.FC = () => {
                             label="计划完成时间"
                             rules={[{ required: true, message: '请选择计划完成时间' }]}
                           >
-                            <DatePicker showTime style={{ width: '100%' }} />
+                            <UnifiedDatePicker showTime />
                           </Form.Item>
                         </Col>
                       </Row>

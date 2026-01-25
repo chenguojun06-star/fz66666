@@ -103,12 +103,16 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
 
         Map<String, Integer> countByStyleId = new HashMap<>();
         Map<String, Integer> countByStyleNo = new HashMap<>();
+        Map<String, LocalDateTime> latestOrderTimeByStyleId = new HashMap<>();
+        Map<String, LocalDateTime> latestOrderTimeByStyleNo = new HashMap<>();
 
         if (!styleIds.isEmpty() || !styleNos.isEmpty()) {
             ProductionOrderService productionOrderService = productionOrderServiceProvider.getIfAvailable();
             if (productionOrderService == null) {
                 return;
             }
+
+            // 统计订单数量
             QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
             qw.select("style_id as styleId", "style_no as styleNo", "count(1) as cnt")
                     .and(w -> {
@@ -150,6 +154,48 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
                     countByStyleNo.put(sno, cnt);
                 }
             }
+
+            // 查询最近下单时间
+            QueryWrapper<ProductionOrder> timeQw = new QueryWrapper<>();
+            timeQw.select("style_id as styleId", "style_no as styleNo", "MAX(create_time) as latestTime")
+                    .and(w -> {
+                        boolean hasPrev = false;
+                        if (!styleIds.isEmpty()) {
+                            w.in("style_id", styleIds);
+                            hasPrev = true;
+                        }
+                        if (!styleNos.isEmpty()) {
+                            if (hasPrev) {
+                                w.or();
+                            }
+                            w.in("style_no", styleNos);
+                        }
+                    })
+                    .and(w -> w.isNull("delete_flag").or().eq("delete_flag", 0))
+                    .groupBy("style_id", "style_no");
+
+            List<Map<String, Object>> timeRows = productionOrderService.listMaps(timeQw);
+            for (Map<String, Object> r : timeRows) {
+                if (r == null) {
+                    continue;
+                }
+                String sid = r.get("styleId") == null ? null : String.valueOf(r.get("styleId")).trim();
+                String sno = r.get("styleNo") == null ? null : String.valueOf(r.get("styleNo")).trim();
+                Object latestTimeObj = r.get("latestTime");
+                LocalDateTime latestTime = null;
+                if (latestTimeObj instanceof LocalDateTime) {
+                    latestTime = (LocalDateTime) latestTimeObj;
+                }
+
+                if (latestTime != null) {
+                    if (StringUtils.hasText(sid)) {
+                        latestOrderTimeByStyleId.put(sid, latestTime);
+                    }
+                    if (StringUtils.hasText(sno)) {
+                        latestOrderTimeByStyleNo.put(sno, latestTime);
+                    }
+                }
+            }
         }
 
         for (StyleInfo s : records) {
@@ -160,10 +206,16 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
             Integer byId = StringUtils.hasText(idKey) ? countByStyleId.get(idKey) : null;
             if (byId != null && byId > 0) {
                 s.setOrderCount(byId);
+                if (StringUtils.hasText(idKey)) {
+                    s.setLatestOrderTime(latestOrderTimeByStyleId.get(idKey));
+                }
                 continue;
             }
             String sno = StringUtils.hasText(s.getStyleNo()) ? s.getStyleNo().trim() : null;
             s.setOrderCount(StringUtils.hasText(sno) ? countByStyleNo.getOrDefault(sno, 0) : 0);
+            if (StringUtils.hasText(sno)) {
+                s.setLatestOrderTime(latestOrderTimeByStyleNo.get(sno));
+            }
         }
     }
 

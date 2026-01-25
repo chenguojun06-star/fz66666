@@ -3,7 +3,17 @@
  * 确保整个应用中表单验证的一致性
  */
 
-export const formValidationRules = {
+type FormRule = {
+  required?: boolean;
+  message?: string;
+  min?: number;
+  max?: number;
+  pattern?: RegExp;
+  type?: string;
+  validator?: (_: unknown, value: unknown) => Promise<void>;
+};
+
+export const formValidationRules: Record<string, FormRule[]> = {
   // ==================== 账号密码相关 ====================
   username: [
     { required: true, message: '请输入用户名' },
@@ -29,9 +39,10 @@ export const formValidationRules = {
   phone: [
     { required: false, message: '请输入手机号' },
     {
-      validator: (_: any, value: any) => {
+      validator: (_: unknown, value: unknown) => {
         if (!value) return Promise.resolve();
-        if (!/^1\d{10}$/.test(value)) {
+        const text = String(value ?? '');
+        if (!/^1\d{10}$/.test(text)) {
           return Promise.reject(new Error('请输入有效的手机号'));
         }
         return Promise.resolve();
@@ -70,7 +81,7 @@ export const formValidationRules = {
   quantity: [
     { required: true, message: '请输入数量' },
     {
-      validator: (_: any, value: any) => {
+      validator: (_: unknown, value: unknown) => {
         if (!value) return Promise.reject(new Error('请输入数量'));
         const n = Number(value);
         if (!Number.isInteger(n) || n <= 0) {
@@ -87,7 +98,7 @@ export const formValidationRules = {
   unitPrice: [
     { required: false, message: '请输入单价' },
     {
-      validator: (_: any, value: any) => {
+      validator: (_: unknown, value: unknown) => {
         if (!value && value !== 0) return Promise.resolve();
         const n = Number(value);
         if (!Number.isFinite(n) || n < 0) {
@@ -164,9 +175,10 @@ export const formValidationRules = {
   // 可选电话
   optionalPhone: [
     {
-      validator: (_: any, value: any) => {
+      validator: (_: unknown, value: unknown) => {
         if (!value) return Promise.resolve();
-        if (!/^\d{7,20}$/.test(value.replace(/[-\s]/g, ''))) {
+        const text = String(value ?? '').replace(/[-\s]/g, '');
+        if (!/^\d{7,20}$/.test(text)) {
           return Promise.reject(new Error('请输入有效的电话号码'));
         }
         return Promise.resolve();
@@ -177,9 +189,10 @@ export const formValidationRules = {
   // 可选邮箱
   optionalEmail: [
     {
-      validator: (_: any, value: any) => {
+      validator: (_: unknown, value: unknown) => {
         if (!value) return Promise.resolve();
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+        const text = String(value ?? '');
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text)) {
           return Promise.reject(new Error('请输入有效的邮箱地址'));
         }
         return Promise.resolve();
@@ -193,7 +206,7 @@ export const formValidationRules = {
  * @param ruleName 规则名称
  * @returns 规则数组
  */
-export function getValidationRule(ruleName: keyof typeof formValidationRules) {
+export function getValidationRule(ruleName: keyof typeof formValidationRules): FormRule[] {
   return formValidationRules[ruleName] || [];
 }
 
@@ -203,7 +216,7 @@ export function getValidationRule(ruleName: keyof typeof formValidationRules) {
  * @param customRules 自定义规则
  * @returns 合并后的规则
  */
-export function mergeValidationRules(baseRules: unknown[] = [], customRules: unknown[] = []) {
+export function mergeValidationRules(baseRules: FormRule[] = [], customRules: FormRule[] = []) {
   return [...baseRules, ...customRules];
 }
 
@@ -212,8 +225,8 @@ export function mergeValidationRules(baseRules: unknown[] = [], customRules: unk
  * @param ruleNames 规则名称数组
  * @returns 规则对象
  */
-export function getValidationRules(ruleNames: (keyof typeof formValidationRules)[]): Record<string, any[]> {
-  const result: Record<string, any[]> = {};
+export function getValidationRules(ruleNames: (keyof typeof formValidationRules)[]): Record<string, FormRule[]> {
+  const result: Record<string, FormRule[]> = {};
   for (const name of ruleNames) {
     result[name] = getValidationRule(name);
   }

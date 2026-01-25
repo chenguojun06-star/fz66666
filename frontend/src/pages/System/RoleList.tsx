@@ -1,11 +1,14 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { Alert, App, Button, Card, Checkbox, Form, Input, Select, Space, Tag } from 'antd';
+import type { ButtonProps } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
 import { DeleteOutlined, EditOutlined, SafetyOutlined, FileSearchOutlined } from '@ant-design/icons';
 import Layout from '../../components/Layout';
 import ResizableModal from '../../components/common/ResizableModal';
 import RowActions from '../../components/common/RowActions';
 import ResizableTable from '../../components/common/ResizableTable';
 import { Role, RoleQueryParams } from '../../types/system';
+import { getErrorMessage } from '../../types/api';
 import api, { requestWithPathFallback } from '../../utils/api';
 import { formatDateTime } from '../../utils/datetime';
 import { useViewport } from '../../utils/useViewport';
@@ -22,32 +25,59 @@ const RoleList: React.FC = () => {
     pageSize: 10
   });
 
-  const [roleList, setRoleList] = useState<Role[]>([]);
+  type RoleRecord = Role & Record<string, unknown>;
+
+  const [roleList, setRoleList] = useState<RoleRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [brandOptions, setBrandOptions] = useState<{ label: string; value: string }[]>([]);
   const [deptOptions, setDeptOptions] = useState<{ label: string; value: string }[]>([]);
 
   const [permVisible, setPermVisible] = useState(false);
-  const [permTree, setPermTree] = useState<any[]>([]);
+  type PermissionNode = {
+    id?: number | string;
+    parentId?: number;
+    permissionCode?: string;
+    permissionName?: string;
+    permissionType?: string;
+    children?: PermissionNode[];
+  };
+
+  type PermissionItem = {
+    id: number;
+    name?: string;
+    type?: string;
+  };
+
+  type OperationLog = {
+    id?: number | string;
+    bizType?: string;
+    bizId?: string;
+    action?: string;
+    operator?: string;
+    remark?: string;
+    createTime?: string;
+  };
+
+  const [permTree, setPermTree] = useState<PermissionNode[]>([]);
   const [checkedPermIds, setCheckedPermIds] = useState<Set<number>>(new Set());
   const [permKeyword, setPermKeyword] = useState('');
   const [permSaving, setPermSaving] = useState(false);
   const [logVisible, setLogVisible] = useState(false);
   const [logLoading, setLogLoading] = useState(false);
-  const [logRecords, setLogRecords] = useState<any[]>([]);
+  const [logRecords, setLogRecords] = useState<OperationLog[]>([]);
   const [logTitle, setLogTitle] = useState('操作日志');
 
   const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
-  const collectSubtreeIds = (node: any, into: Set<number>) => {
+  const collectSubtreeIds = useCallback((node: PermissionNode | undefined, into: Set<number>) => {
     if (!node) return;
     const id = Number(node.id);
     if (Number.isFinite(id)) into.add(id);
     const children = Array.isArray(node.children) ? node.children : [];
     for (const c of children) collectSubtreeIds(c, into);
-  };
+  }, []);
 
-  const findFirstNode = (nodes: unknown[], predicate: (n: any) => boolean): unknown | null => {
+  const findFirstNode = useCallback((nodes: PermissionNode[], predicate: (n: PermissionNode) => boolean): PermissionNode | null => {
     const stack = Array.isArray(nodes) ? [...nodes] : [];
     while (stack.length) {
       const n = stack.shift();
@@ -57,22 +87,22 @@ const RoleList: React.FC = () => {
       for (const c of children) stack.push(c);
     }
     return null;
-  };
+  }, []);
 
-  const getSubtreeIdSetByCodeOrName = (code: string, name: string) => {
+  const getSubtreeIdSetByCodeOrName = useCallback((code: string, name: string) => {
     const hit =
       findFirstNode(permTree, (n) => String(n.permissionCode || '').trim() === code)
       || findFirstNode(permTree, (n) => String(n.permissionName || '').trim() === name);
     const set = new Set<number>();
     if (hit) collectSubtreeIds(hit, set);
     return set;
-  };
+  }, [collectSubtreeIds, findFirstNode, permTree]);
 
   const allPermissionIds = useMemo(() => {
     const set = new Set<number>();
     for (const n of Array.isArray(permTree) ? permTree : []) collectSubtreeIds(n, set);
     return set;
-  }, [permTree]);
+  }, [collectSubtreeIds, permTree]);
 
   const templatePresets = useMemo(() => {
     const dashboard = getSubtreeIdSetByCodeOrName('MENU_DASHBOARD', '仪表盘');
@@ -94,24 +124,27 @@ const RoleList: React.FC = () => {
       { key: 'user', label: '普通用户', ids: union(dashboard, basic) },
       { key: 'system', label: '系统设置', ids: union(dashboard, system) },
     ].map((t) => ({ ...t, count: t.ids.size }));
-  }, [allPermissionIds, permTree]);
+  }, [allPermissionIds, getSubtreeIdSetByCodeOrName]);
 
-  const fetchRoles = async () => {
+  const fetchRoles = useCallback(async () => {
     try {
       const response = await requestWithPathFallback('get', '/system/role/list', '/auth/role/list', undefined, { params: queryParams });
-      const result = response as Record<string, unknown>;
+      const result = response as { code?: number; data?: unknown; message?: unknown };
       if (result.code === 200) {
-        setRoleList(result.data.records || []);
-        setTotal(result.data.total || 0);
+        const data = (result.data as { records?: RoleRecord[]; total?: number }) || {};
+        setRoleList(Array.isArray(data.records) ? data.records : []);
+        setTotal(Number(data.total || 0));
+        return;
       }
+      message.error(String(result.message || '获取角色列表失败'));
     } catch (error) {
-      message.error('获取角色列表失败');
+      message.error(getErrorMessage(error, '获取角色列表失败'));
     }
-  };
+  }, [message, queryParams]);
 
   useEffect(() => {
     fetchRoles();
-  }, [queryParams]);
+  }, [fetchRoles]);
 
   useEffect(() => {
     const fetchDict = async (type: string) => {
@@ -119,7 +152,7 @@ const RoleList: React.FC = () => {
         const res = await api.get<{ code: number; data: { records: Array<{ dictLabel: string; dictCode: string }> } }>('/system/dict/list', { params: { page: 1, pageSize: 1000, dictType: type } });
         if (res.code === 200) {
           const items = res.data.records || [];
-          return items.map((it: any) => ({ label: it.dictLabel, value: it.dictCode }));
+          return items.map((it) => ({ label: it.dictLabel, value: it.dictCode }));
         }
       } catch (error) {
         console.error('[角色管理] 获取字典数据失败:', error);
@@ -140,8 +173,8 @@ const RoleList: React.FC = () => {
       roleName: String(role?.roleName || ''),
       roleCode: String(role?.roleCode || ''),
       description: String(role?.description || ''),
-      status: (role?.status || 'active') as Record<string, unknown>,
-      dataScope: (role?.dataScope || 'all') as Record<string, unknown>,
+      status: role?.status || 'active',
+      dataScope: role?.dataScope || 'all',
       dataScopeBrands: Array.isArray(role?.dataScopeBrands) ? role?.dataScopeBrands : [],
       dataScopeDepartments: Array.isArray(role?.dataScopeDepartments) ? role?.dataScopeDepartments : [],
     });
@@ -157,7 +190,7 @@ const RoleList: React.FC = () => {
   const openRemarkModal = (
     title: string,
     okText: string,
-    okButtonProps: unknown,
+    okButtonProps: ButtonProps | undefined,
     onConfirm: (remark: string) => Promise<void>
   ) => {
     let remarkValue = '';
@@ -199,15 +232,15 @@ const RoleList: React.FC = () => {
       const res = await api.get('/system/operation-log/list', {
         params: { bizType, bizId },
       });
-      const result = res as Record<string, unknown>;
+      const result = res as { code?: number; data?: unknown; message?: unknown };
       if (result.code === 200) {
-        setLogRecords(Array.isArray(result.data) ? result.data : []);
+        setLogRecords(Array.isArray(result.data) ? (result.data as OperationLog[]) : []);
       } else {
-        message.error(result.message || '获取日志失败');
+        message.error(String(result.message || '获取日志失败'));
         setLogRecords([]);
       }
     } catch (e: unknown) {
-      message.error(e?.message || '获取日志失败');
+      message.error(getErrorMessage(e, '获取日志失败'));
       setLogRecords([]);
     } finally {
       setLogLoading(false);
@@ -237,13 +270,13 @@ const RoleList: React.FC = () => {
         } else {
           response = await requestWithPathFallback('post', '/system/role', '/auth/role', nextPayload);
         }
-        const result = response as Record<string, unknown>;
+        const result = response as { code?: number; message?: unknown };
         if (result.code === 200) {
           message.success('保存成功');
           closeDialog();
           fetchRoles();
         } else {
-          message.error(result.message || '保存失败');
+          message.error(String(result.message || '保存失败'));
         }
       };
 
@@ -254,31 +287,31 @@ const RoleList: React.FC = () => {
 
       await submit();
     } catch (error: unknown) {
-      const msg = error?.message || '保存失败';
-      message.error(msg);
+      message.error(getErrorMessage(error, '保存失败'));
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id?: string | number) => {
+    const rid = String(id ?? '').trim();
+    if (!rid) return;
     openRemarkModal('确认删除', '删除', { danger: true }, async (remark) => {
       try {
         const response = await requestWithPathFallback(
           'delete',
-          `/system/role/${id}`,
-          `/auth/role/${id}`,
+          `/system/role/${rid}`,
+          `/auth/role/${rid}`,
           undefined,
           { params: { remark } }
         );
-        const result = response as Record<string, unknown>;
+        const result = response as { code?: number; message?: unknown };
         if (result.code === 200) {
           message.success('删除成功');
           fetchRoles();
           return;
         }
-        throw new Error(result.message || '删除失败');
+        throw new Error(String(result.message || '删除失败'));
       } catch (error: unknown) {
-        const msg = error?.message || '删除失败';
-        message.error(msg);
+        message.error(getErrorMessage(error, '删除失败'));
         throw error;
       }
     });
@@ -324,20 +357,21 @@ const RoleList: React.FC = () => {
     const modules: Array<{
       moduleId: number;
       moduleName: string;
-      permissions: unknown[];
+      permissions: PermissionItem[];
     }> = [];
 
-    const collectPermissions = (node: unknown) => {
-      const allPerms: unknown[] = [];
+    const collectPermissions = (node: PermissionNode | undefined) => {
+      const allPerms: PermissionItem[] = [];
 
       // 递归收集所有子权限
-      const collectChildren = (n: any) => {
+      const collectChildren = (n: PermissionNode | undefined) => {
         if (!n) return;
 
         // 添加当前节点（如果不是顶级模块）
-        if (n.parentId && n.parentId !== 0) {
+        const id = Number(n.id);
+        if (n.parentId && n.parentId !== 0 && Number.isFinite(id)) {
           allPerms.push({
-            id: n.id,
+            id,
             name: n.permissionName,
             type: n.permissionType,
           });
@@ -357,6 +391,9 @@ const RoleList: React.FC = () => {
 
     // 遍历顶级节点
     for (const topNode of permTree || []) {
+      const moduleId = Number(topNode.id);
+      if (!Number.isFinite(moduleId)) continue;
+      const moduleName = String(topNode.permissionName || '');
       const perms = collectPermissions(topNode);
 
       // 如果有搜索关键词，过滤权限
@@ -369,8 +406,8 @@ const RoleList: React.FC = () => {
 
       if (filteredPerms.length > 0 || !kw) {
         modules.push({
-          moduleId: topNode.id,
-          moduleName: topNode.permissionName,
+          moduleId,
+          moduleName,
           permissions: filteredPerms,
         });
       }
@@ -391,12 +428,12 @@ const RoleList: React.FC = () => {
           `/auth/role/${currentRole.id}/permission-ids`,
           { permissionIds: ids, remark }
         );
-        const result = res as Record<string, unknown>;
+        const result = res as { code?: number; message?: unknown };
         if (result.code === 200) {
           message.success('授权成功');
           closePermDialog();
         } else {
-          message.error(result.message || '授权失败');
+          message.error(String(result.message || '授权失败'));
         }
       } catch (e) {
         message.error('授权失败');
@@ -410,7 +447,7 @@ const RoleList: React.FC = () => {
     return status === 'active' ? '启用' : '停用';
   };
 
-  const logColumns = [
+  const logColumns: ColumnsType<OperationLog> = [
     {
       title: '动作',
       dataIndex: 'action',
@@ -440,7 +477,7 @@ const RoleList: React.FC = () => {
     },
   ];
 
-  const columns = [
+  const columns: ColumnsType<RoleRecord> = [
     { title: '角色名称', dataIndex: 'roleName', key: 'roleName', width: 160 },
     { title: '角色编码', dataIndex: 'roleCode', key: 'roleCode', width: 160 },
     { title: '描述', dataIndex: 'description', key: 'description', ellipsis: true },
@@ -466,7 +503,7 @@ const RoleList: React.FC = () => {
       key: 'actions',
       width: 220,
       fixed: 'right' as const,
-      render: (_: any, role: Role) => (
+      render: (_: unknown, role: Role) => (
         <RowActions
           className="table-actions"
           maxInline={2}
@@ -500,7 +537,7 @@ const RoleList: React.FC = () => {
               title: '删除',
               icon: <DeleteOutlined />,
               danger: true,
-              onClick: () => handleDelete(role.id!),
+              onClick: () => handleDelete(role.id),
             },
           ]}
         />
@@ -525,14 +562,14 @@ const RoleList: React.FC = () => {
                 placeholder="角色名称"
                 style={{ width: 220 }}
                 allowClear
-                value={String((queryParams as Record<string, unknown>)?.roleName || '')}
+                value={String(queryParams.roleName || '')}
                 onChange={(e) => setQueryParams((prev) => ({ ...prev, roleName: e.target.value, page: 1 }))}
               />
               <Input
                 placeholder="角色编码"
                 style={{ width: 220 }}
                 allowClear
-                value={String((queryParams as Record<string, unknown>)?.roleCode || '')}
+                value={String(queryParams.roleCode || '')}
                 onChange={(e) => setQueryParams((prev) => ({ ...prev, roleCode: e.target.value, page: 1 }))}
               />
               <Button type="primary" onClick={fetchRoles}>
@@ -545,7 +582,7 @@ const RoleList: React.FC = () => {
                     pageSize: prev.pageSize,
                     roleName: '',
                     roleCode: '',
-                  }) as Record<string, unknown>)
+                  }))
                 }
               >
                 重置
@@ -554,10 +591,10 @@ const RoleList: React.FC = () => {
           </Card>
 
           <div className="table-section">
-            <ResizableTable<Role>
+            <ResizableTable<RoleRecord>
               storageKey="system-role-table"
               rowKey={(r) => String(r.id || r.roleCode)}
-              columns={columns as Record<string, unknown>}
+              columns={columns}
               dataSource={roleList}
               pagination={{
                 current: queryParams.page,
@@ -778,8 +815,8 @@ const RoleList: React.FC = () => {
         minWidth={isMobile ? 320 : 520}
         scaleWithViewport
       >
-        <ResizableTable
-          columns={logColumns as Record<string, unknown>}
+        <ResizableTable<OperationLog>
+          columns={logColumns}
           dataSource={logRecords}
           rowKey={(r) => String(r.id || `${r.bizType}-${r.bizId}-${r.createTime}`)}
           loading={logLoading}

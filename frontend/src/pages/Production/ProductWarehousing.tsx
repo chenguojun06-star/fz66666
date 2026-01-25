@@ -2002,7 +2002,7 @@ const ProductWarehousing: React.FC = () => {
                   sticky
                   scroll={{ x: 920, y: 260 }}
                   columns={[
-                    { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 170, ellipsis: true },
+                    { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 170, render: (v: unknown) => <span className="order-no-wrap">{String(v || '').trim() || '-'}</span> },
                     { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 140, ellipsis: true },
                     { title: '颜色', dataIndex: 'color', key: 'color', width: 120, ellipsis: true },
                     { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 90, align: 'right' as const },
@@ -2178,7 +2178,7 @@ const ProductWarehousing: React.FC = () => {
                     dataSource={orderLineWarehousingRows}
                     scroll={{ x: 920 }}
                     columns={[
-                      { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 170, ellipsis: true },
+                      { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 170, render: (v: unknown) => <span className="order-no-wrap">{String(v || '').trim() || '-'}</span> },
                       { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 140, ellipsis: true },
                       { title: '颜色', dataIndex: 'color', key: 'color', width: 120, ellipsis: true },
                       { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 90, align: 'right' as const },

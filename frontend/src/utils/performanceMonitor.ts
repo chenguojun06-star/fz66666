@@ -243,8 +243,9 @@ class PerformanceMonitor {
 }
 
 // 在开发环境下自动启用，并暴露到全局
-if (import.meta.env.DEV) {
-  (window as Record<string, unknown>).performanceMonitor = PerformanceMonitor;
+const perfMetaEnv = (import.meta as unknown as { env?: { DEV?: boolean } }).env;
+if (perfMetaEnv?.DEV) {
+  (window as Window & { performanceMonitor?: typeof PerformanceMonitor }).performanceMonitor = PerformanceMonitor;
 
   // 定时输出报告（每2分钟）
   setInterval(() => {

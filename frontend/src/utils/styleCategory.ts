@@ -1,6 +1,6 @@
 type CategoryOption = { label: string; value: string };
 
-export const toCategoryCn = (value: any, options?: CategoryOption[]): string => {
+export const toCategoryCn = (value: unknown, options?: CategoryOption[]): string => {
   const raw = String(value ?? '').trim();
   if (!raw) return '-';
   const upper = raw.toUpperCase();

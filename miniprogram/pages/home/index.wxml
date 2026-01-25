@@ -1,30 +1,6 @@
 <view class="container">
-  <!-- 右上角提醒按钮 -->
-  <view class="reminder-btn" bindtap="toggleReminderPanel">
-    <image class="reminder-icon" src="/assets/icons/bell.svg" mode="aspectFit" />
-    <view wx:if="{{reminderCount > 0}}" class="reminder-badge">{{reminderCount > 99 ? '99+' : reminderCount}}</view>
-  </view>
-
-  <!-- 提醒面板 -->
-  <view class="reminder-panel {{showReminderPanel ? 'show' : ''}}">
-    <view class="reminder-panel-header">
-      <view class="reminder-panel-title">待处理任务</view>
-      <view class="reminder-panel-close" bindtap="toggleReminderPanel">✕</view>
-    </view>
-    <view class="reminder-panel-content">
-      <view wx:if="{{reminders.length === 0}}" class="reminder-empty">暂无待处理任务</view>
-      <view wx:for="{{reminders}}" wx:key="id" class="reminder-item" bindtap="handleReminderClick" data-reminder="{{item}}">
-        <view class="reminder-item-header">
-          <view class="reminder-item-title">{{item.type}}</view>
-          <view class="reminder-item-time">{{item.timeAgo}}</view>
-        </view>
-        <view class="reminder-item-desc">订单号: {{item.orderNo}}</view>
-      </view>
-    </view>
-  </view>
-
-  <!-- 遮罩层 -->
-  <view wx:if="{{showReminderPanel}}" class="reminder-mask" bindtap="toggleReminderPanel"></view>
+  <!-- 通用悬浮铃铛组件 -->
+  <floating-bell />
 
   <view class="card">
     <view class="title">首页</view>
@@ -45,25 +21,33 @@
     <view class="home-section-title">数据概览</view>
     <view class="home-stats-row">
       <view class="home-stat-item">
-        <text class="home-stat-emoji">📋</text>
-        <text class="home-stat-label">订单</text>
+        <view class="home-stat-left">
+          <text class="home-stat-emoji">📋</text>
+          <text class="home-stat-label">生产</text>
+        </view>
         <text class="home-stat-value">{{stats.productionOrders}}</text>
       </view>
       <view class="home-stat-item">
-        <text class="home-stat-emoji">📥</text>
-        <text class="home-stat-label">入库</text>
+        <view class="home-stat-left">
+          <text class="home-stat-emoji">📥</text>
+          <text class="home-stat-label">入库</text>
+        </view>
         <text class="home-stat-value">{{stats.warehousingToday}}</text>
       </view>
     </view>
     <view class="home-stats-row">
       <view class="home-stat-item">
-        <text class="home-stat-emoji">🛒</text>
-        <text class="home-stat-label">采购</text>
+        <view class="home-stat-left">
+          <text class="home-stat-emoji">🛒</text>
+          <text class="home-stat-label">采购</text>
+        </view>
         <text class="home-stat-value">{{stats.materialPurchase}}</text>
       </view>
       <view class="home-stat-item">
-        <text class="home-stat-emoji">⚠️</text>
-        <text class="home-stat-label">次品</text>
+        <view class="home-stat-left">
+          <text class="home-stat-emoji">⚠️</text>
+          <text class="home-stat-label">次品</text>
+        </view>
         <text class="home-stat-value">{{stats.defectCount}}</text>
       </view>
     </view>

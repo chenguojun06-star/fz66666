@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, App, Button, Card, Collapse, DatePicker, Form, Grid, Input, InputNumber, Modal, Select, Segmented, Space, Tag, Tooltip, Typography } from 'antd';
+import { Alert, App, Button, Card, Collapse, Form, Grid, Input, InputNumber, Modal, Select, Segmented, Space, Tag, Tooltip, Typography } from 'antd';
+import { UnifiedRangePicker } from '../../components/common/UnifiedDatePicker';
 import { DeleteOutlined, DownloadOutlined, EyeOutlined, PlusOutlined, RollbackOutlined, ScanOutlined, EditOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useLocation } from 'react-router-dom';
@@ -9,7 +10,6 @@ import ResizableTable from '../../components/common/ResizableTable';
 import RowActions from '../../components/common/RowActions';
 import SortableColumnTitle from '../../components/common/SortableColumnTitle';
 import QuickEditModal from '../../components/common/QuickEditModal';
-import { ProgressNodeCard } from '../../components/common/ProgressNodeCard';
 import { ProductionOrderHeader, StyleCoverThumb } from '../../components/StyleAssets';
 import { compareSizeAsc, generateRequestId, isDuplicateScanMessage, isOrderFrozenByStatus } from '../../utils/api';
 import { isAdminUser as isAdminUserFn, isSupervisorOrAboveUser as isSupervisorOrAboveUserFn, useAuth } from '../../utils/authContext';
@@ -21,7 +21,6 @@ import { productionCuttingApi, productionOrderApi, productionScanApi, production
 import { styleProcessApi } from '../../services/style/styleApi';
 import { templateLibraryApi } from '../../services/template/templateLibraryApi';
 
-const { RangePicker } = DatePicker;
 const { Text } = Typography;
 const { useBreakpoint } = Grid;
 
@@ -174,8 +173,7 @@ const stageNameMatches = (a: any, b: any) => {
   if (isIroningStageKey(x) && isIroningStageKey(y)) return true;
   if (isProductionStageKey(x) && isProductionStageKey(y)) return true;
   if (isSewingStageKey(x) && isSewingStageKey(y)) return true;
-  // 移除模糊匹配，避免"生产"和"车缝"互相匹配
-  return false;
+  return x.includes(y) || y.includes(x);
 };
 
 /**
@@ -365,8 +363,8 @@ const modernProgressBoardCss = `
 .mpb-detailBarText{position:absolute;left:0;right:0;top:0;bottom:0;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 12px;color:rgba(15,23,42,.86);font-weight:700;font-size:12px;line-height:30px;pointer-events:none;text-shadow:0 1px 0 rgba(255,255,255,.62)}
 .mpb-detailBarLeft{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mpb-detailBarRight{flex:0 0 auto;white-space:nowrap;font-variant-numeric:tabular-nums}
-.mpb-detailCards{display:flex;gap:6px;min-width:max-content;align-items:stretch}
-.mpb-detailCard{position:relative;overflow:hidden;border-radius:10px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.30);backdrop-filter:blur(14px) saturate(150%);-webkit-backdrop-filter:blur(14px) saturate(150%);box-shadow:0 10px 18px rgba(15,23,42,.08);padding:6px;display:flex;flex-direction:column;gap:6px}
+.mpb-detailCards{display:flex;gap:4px;min-width:max-content;align-items:stretch}
+.mpb-detailCard{position:relative;overflow:hidden;border-radius:10px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.30);backdrop-filter:blur(14px) saturate(150%);-webkit-backdrop-filter:blur(14px) saturate(150%);box-shadow:0 10px 18px rgba(15,23,42,.08);padding:4px;display:flex;flex-direction:column;gap:6px}
 .mpb-detailCard.mpb-draggable .mpb-detailTrack{cursor:grab}
 .mpb-detailCard.mpb-draggable .mpb-detailTrack:active{cursor:grabbing}
 .mpb-detailCard.mpb-dragging{opacity:.55;transform:scale(.98)}
@@ -602,6 +600,10 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const [progressTemplates, setProgressTemplates] = useState<TemplateLibrary[]>([]);
   const [progressTemplateId, setProgressTemplateId] = useState<string | undefined>(undefined);
   const [templateApplying, setTemplateApplying] = useState(false);
+
+  const [processPriceTemplates, setProcessPriceTemplates] = useState<TemplateLibrary[]>([]);
+  const [processPriceTemplateId, setProcessPriceTemplateId] = useState<string | undefined>(undefined);
+  const [processPriceApplying, setProcessPriceApplying] = useState(false);
 
   const [pricingProcesses, setPricingProcesses] = useState<StyleProcess[]>([]);
   const [pricingProcessLoading, setPricingProcessLoading] = useState(false);
@@ -950,6 +952,21 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     })();
   }, []);
 
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await templateLibraryApi.listByType('process_price');
+        const result = res as Record<string, unknown>;
+        if (result.code === 200) {
+          setProcessPriceTemplates(Array.isArray(result.data) ? result.data : []);
+        }
+      } catch {
+    // Intentionally empty
+      // 忽略错误
+      }
+    })();
+  }, []);
+
   const parseProgressNodes = (raw: string): ProgressNode[] => {
     const text = String(raw ?? '').trim();
     if (!text) return [];
@@ -998,18 +1015,21 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const resolveNodesForOrder = (order: ProductionOrder | null): ProgressNode[] => {
     const orderNodes = parseWorkflowNodesFromOrder(order);
     if (orderNodes.length) {
-      // 如果订单有进度节点，但单价都是0，则从款号工序单价中回填
+      // 如果订单有进度节点，但单价都是0，则从款号工序单价中回填（只回填有单价的）
       const styleNo = String((order as Record<string, unknown>)?.styleNo || '').trim();
       const styleNodes = styleNo && progressNodesByStyleNo[styleNo] ? progressNodesByStyleNo[styleNo] : [];
       if (styleNodes.length > 0) {
         const hasAnyPrice = orderNodes.some(n => (Number(n.unitPrice) || 0) > 0);
         if (!hasAnyPrice) {
-          // 创建名称到单价的映射
+          // 创建名称到单价的映射（只保存有单价的工序）
           const priceMap = new Map<string, number>();
           styleNodes.forEach(sn => {
-            priceMap.set(sn.name, Number(sn.unitPrice) || 0);
+            const price = Number(sn.unitPrice) || 0;
+            if (price > 0) {
+              priceMap.set(sn.name, price);
+            }
           });
-          // 回填单价
+          // 回填单价（只回填有单价的）
           return orderNodes.map(n => ({
             ...n,
             unitPrice: priceMap.get(n.name) ?? (Number(n.unitPrice) || 0)
@@ -1020,7 +1040,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     }
     const sn = String((order as Record<string, unknown>)?.styleNo || '').trim();
     if (sn && progressNodesByStyleNo[sn]?.length) {
-      return progressNodesByStyleNo[sn];
+      // 从款号带入时，只带单价>0的工序
+      return progressNodesByStyleNo[sn].filter(n => (Number(n.unitPrice) || 0) > 0);
     }
     return nodes?.length ? nodes : defaultNodes;
   };
@@ -1515,6 +1536,69 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       message.error(e?.message || '导入失败');
     } finally {
       setTemplateApplying(false);
+    }
+  };
+
+  const applyProcessPriceTemplateToOrder = async () => {
+    if (!activeOrder?.id) {
+      message.error('未选择订单');
+      return;
+    }
+    if (isOrderFrozenByStatus(activeOrder)) {
+      message.error('订单已完成，无法操作');
+      return;
+    }
+    if (!isSupervisorOrAbove) {
+      message.error('无权限操作进度节点');
+      return;
+    }
+    if (nodeWorkflowLocked) {
+      message.error('流程已锁定，如需修改请先退回');
+      return;
+    }
+    if (!processPriceTemplateId) {
+      message.error('请选择工序单价模板');
+      return;
+    }
+    setProcessPriceApplying(true);
+    try {
+      const parsed = await fetchTemplateNodes(processPriceTemplateId);
+      if (!parsed.length) {
+        message.error('模板内容为空或不合法');
+        return;
+      }
+      // 将工序单价应用到现有节点中（只更新有单价的，没单价的不匹配）
+      const priceMap = new Map<string, number>();
+      parsed.forEach(p => {
+        const price = Number(p.unitPrice) || 0;
+        if (price > 0) {  // 只保存有单价的工序
+          priceMap.set(p.name, price);
+        }
+      });
+
+      let matchedCount = 0;
+      const updatedNodes = nodes.map(n => {
+        const newPrice = priceMap.get(n.name);
+        if (newPrice !== undefined) {  // 只更新模板中有单价的工序
+          matchedCount++;
+          return { ...n, unitPrice: newPrice };
+        }
+        return n;  // 保持原单价不变
+      });
+
+      saveNodes(updatedNodes);
+      setNodeWorkflowDirty(true);
+      setProcessPriceTemplateId(undefined);
+
+      if (matchedCount > 0) {
+        message.success(`已导入工序单价，更新了 ${matchedCount} 个工序的单价`);
+      } else {
+        message.warning('未匹配到任何工序，请先导入进度模板创建节点');
+      }
+    } catch (e: unknown) {
+      message.error(e?.message || '导入失败');
+    } finally {
+      setProcessPriceApplying(false);
     }
   };
 
@@ -2486,13 +2570,14 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       dataIndex: 'orderNo',
       key: 'orderNo',
       width: 160,
-      render: (v: unknown) => <span className="order-no-compact">{String(v || '').trim() || '-'}</span>,
+      render: (v: unknown) => <span className="order-no-wrap">{String(v || '').trim() || '-'}</span>,
     },
     {
       title: '款号',
       dataIndex: 'styleNo',
       key: 'styleNo',
       width: 140,
+      render: (v: unknown) => <span className="order-no-wrap">{String(v || '').trim() || '-'}</span>,
     },
     {
       title: '最终报价单价',
@@ -2659,12 +2744,13 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     const effectivePct = frozen ? 100 : pct;
     const currentIdx = getNodeIndexFromProgress(nodes, effectivePct);
     const canEditWorkflow = isSupervisorOrAbove && !nodeWorkflowSaving && !nodeWorkflowLocked && !isOrderFrozenByStatus(order);
+    const canReorderWorkflow = false;
     const totalUnitPrice = nodes.reduce((sum, n) => sum + (Number(n.unitPrice) || 0), 0);
     const orderQty = Number(order.orderQuantity) || 0;
     const totalOrderCost = totalUnitPrice * orderQty;
-    
+    const cardWidth = Math.round((screens.md ? 260 : 240) * 0.6);
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <Card size="small" styles={{ body: { padding: 12 } }}>
           <Space wrap size={16}>
             <Text>
@@ -2676,37 +2762,115 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             <Text type="secondary">（订单数量：{orderQty}）</Text>
           </Space>
         </Card>
-        <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-            {nodes.map((n, idx) => {
-              const stat = nodeStats.statsByName[n.name] || { done: 0, total: nodeStats.totalQty, remaining: nodeStats.totalQty, percent: 0 };
-              const percent = clampPercent(stat.percent);
-              const isDone = frozen || idx < currentIdx || effectivePct >= 100;
-              const isCurrent = !frozen && idx === currentIdx && effectivePct > 0 && effectivePct < 100;
-              const unitPrice = Number(n.unitPrice) || 0;
-              
-              return (
-                <ProgressNodeCard
-                  key={n.id}
-                  name={n.name}
-                  done={stat.done}
-                  total={stat.total}
-                  percent={percent}
-                  unitPrice={unitPrice}
-                  isDone={isDone}
-                  isCurrent={isCurrent}
-                  isFrozen={frozen}
-                  canEdit={canEditWorkflow}
-                  onPriceChange={(value) => updateNodeUnitPrice(n.id, value)}
-                  onDelete={() => removeNode(n.id)}
-                />
-              );
-            })}
+
+        {/* 进度节点区域 */}
+        <div>
+          <div style={{ marginBottom: 8 }}>
+            <Text strong style={{ fontSize: 14 }}>进度节点</Text>
           </div>
+          <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
+            <div className="mpb-detailCards">
+              {nodes.map((n, idx) => {
+                const stat = nodeStats.statsByName[n.name] || { done: 0, total: nodeStats.totalQty, remaining: nodeStats.totalQty, percent: 0 };
+                const percent = clampPercent(stat.percent);
+                const isDone = frozen || idx < currentIdx || effectivePct >= 100;
+                const isCurrent = !frozen && idx === currentIdx && effectivePct > 0 && effectivePct < 100;
+                const fillPct = isDone ? 100 : percent;
+                const isDragging = draggingNodeId === String(n.id);
+                const isDragOver = !!draggingNodeId && draggingNodeId !== String(n.id) && dragOverNodeId === String(n.id);
+                return (
+                  <div
+                    key={n.id}
+                    className={`mpb-detailCard mpb-pop${canReorderWorkflow ? ' mpb-draggable' : ''}${isDragging ? ' mpb-dragging' : ''}${isDragOver ? ' mpb-dragOver' : ''}${isDone ? ' mpb-detailDone' : ''}${isCurrent ? ' mpb-detailCurrent' : ''}${frozen ? ' mpb-detailFrozen' : ''}`}
+                    style={{ width: cardWidth, ['--p' as Record<string, unknown>]: `${fillPct}%` }}
+                    title={`${n.name} ${stat.done}/${stat.total} · 剩 ${stat.remaining} · ${percent.toFixed(0)}%`}
+                    onDragOver={(e) => {
+                      if (!canReorderWorkflow) return;
+                      if (!draggingNodeId) return;
+                      if (String(n.id) === String(draggingNodeId)) return;
+                      e.preventDefault();
+                      setDragOverNodeId(String(n.id));
+                    }}
+                    onDragLeave={() => {
+                      setDragOverNodeId((prev) => (prev === String(n.id) ? null : prev));
+                    }}
+                    onDrop={(e) => {
+                      if (!canReorderWorkflow) return;
+                      e.preventDefault();
+                      const fromId = String(draggingNodeId || e.dataTransfer.getData('text/plain') || '').trim();
+                      reorderNodeBefore(fromId, String(n.id));
+                      setDraggingNodeId(null);
+                      setDragOverNodeId(null);
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <div
+                        className="mpb-detailTrack"
+                        style={{ ['--p' as Record<string, unknown>]: `${fillPct}%`, flex: 1 }}
+                        draggable={canReorderWorkflow}
+                        onDragStart={(e) => {
+                          if (!canReorderWorkflow) return;
+                          e.dataTransfer.setData('text/plain', String(n.id));
+                          e.dataTransfer.effectAllowed = 'move';
+                          setDraggingNodeId(String(n.id));
+                        }}
+                        onDragEnd={() => {
+                          setDraggingNodeId(null);
+                          setDragOverNodeId(null);
+                        }}
+                      >
+                        <div className="mpb-detailFill" />
+                        <div className="mpb-detailBarText">
+                          <span className="mpb-detailBarLeft">{n.name}</span>
+                          <span className="mpb-detailBarRight">
+                            {`${stat.done}/${stat.total} · ${percent.toFixed(0)}%`}
+                          </span>
+                        </div>
+                      </div>
+                      <Button type="text" size="small" danger icon={<DeleteOutlined />} aria-label="删除" disabled={!canEditWorkflow} onClick={() => removeNode(n.id)} style={{ flexShrink: 0 }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* 工序单价区域 */}
+        <div>
+          <div style={{ marginBottom: 8 }}>
+            <Text strong style={{ fontSize: 14 }}>工序单价</Text>
+          </div>
+          <Card size="small" styles={{ body: { padding: 12 } }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12 }}>
+              {nodes.filter(n => (Number(n.unitPrice) || 0) > 0).map((n) => {
+                const unitPrice = Number(n.unitPrice) || 0;
+                return (
+                  <div key={`price-${n.id}`} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Text style={{ minWidth: 50, fontSize: 13 }}>{n.name}：</Text>
+                    <InputNumber
+                      size="small"
+                      min={0}
+                      precision={2}
+                      value={unitPrice}
+                      aria-label={`单价-${n.name}`}
+                      disabled={!canEditWorkflow}
+                      onChange={(v) => updateNodeUnitPrice(n.id, Number(v) || 0)}
+                      prefix="¥"
+                      style={{ flex: 1, minWidth: 80 }}
+                    />
+                  </div>
+                );
+              })}
+              {nodes.filter(n => (Number(n.unitPrice) || 0) > 0).length === 0 && (
+                <Text type="secondary">暂无工序单价，请先导入工序单价模板或手动设置</Text>
+              )}
+            </div>
+          </Card>
         </div>
       </div>
     );
-  }, [activeOrder, isSupervisorOrAbove, nodeStats, nodeWorkflowLocked, nodeWorkflowSaving, nodes]);
+  }, [activeOrder, dragOverNodeId, draggingNodeId, isSupervisorOrAbove, nodeStats, nodeWorkflowLocked, nodeWorkflowSaving, nodes, screens.md]);
 
   const autoOpenDetailOnceRef = useRef(false);
 
@@ -2746,7 +2910,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 />
               </Form.Item>
               <Form.Item label="下单时间">
-                <RangePicker value={dateRange as Record<string, unknown>} onChange={(v) => setDateRange(v as Record<string, unknown>)} />
+                <UnifiedRangePicker value={dateRange as Record<string, unknown>} onChange={(v) => setDateRange(v as Record<string, unknown>)} />
               </Form.Item>
               <Form.Item className="filter-actions">
                 <Button
@@ -2803,7 +2967,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 />
               </Form.Item>
               <Form.Item label="下单时间">
-                <RangePicker value={dateRange as Record<string, unknown>} onChange={(v) => setDateRange(v as Record<string, unknown>)} />
+                <UnifiedRangePicker value={dateRange as Record<string, unknown>} onChange={(v) => setDateRange(v as Record<string, unknown>)} />
               </Form.Item>
               <Form.Item className="filter-actions">
                 <Button
@@ -2967,55 +3131,78 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 title={
                   <div className="mpb-nodeHeaderRow">
                     <div className="mpb-nodeHeaderTitle">进度节点（支持添加节点）</div>
-                    <div className="mpb-nodeHeaderActions">
-                      {nodeWorkflowLocked ? (
-                        <Tag color="green">已锁定</Tag>
-                      ) : (
-                        <Tag color={nodeWorkflowDirty ? 'gold' : 'processing'}>{nodeWorkflowDirty ? '可编辑（未锁定）' : '可编辑'}</Tag>
-                      )}
-                      <Select
-                        allowClear
-                        size="small"
-                        style={{ width: 220 }}
-                        placeholder="导入进度模板"
-                        value={progressTemplateId}
-                        onChange={(v) => setProgressTemplateId(v)}
-                        options={progressTemplates.map((t) => ({ value: String(t.id || ''), label: t.templateName }))}
-                        disabled={templateApplying || nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(activeOrder)}
-                      />
-                      <Button size="small" onClick={applyProgressTemplateToOrder} loading={templateApplying} disabled={nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(activeOrder) || !progressTemplateId}>
-                        导入
-                      </Button>
-                      <Button size="small" type="primary" onClick={saveNodeWorkflow} loading={nodeWorkflowSaving} disabled={nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(activeOrder)}>
-                        保存并锁定
-                      </Button>
-                      {nodeWorkflowLocked ? (
-                        <Button size="small" danger onClick={rollbackNodeWorkflowLock} loading={nodeWorkflowSaving} disabled={nodeWorkflowSaving || !isAdminUser}>
-                          退回编辑
+                    <div className="mpb-nodeHeaderActions" style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-start', width: '100%' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', width: '100%' }}>
+                        {nodeWorkflowLocked ? (
+                          <Tag color="green">已锁定</Tag>
+                        ) : (
+                          <Tag color={nodeWorkflowDirty ? 'gold' : 'processing'}>{nodeWorkflowDirty ? '可编辑（未锁定）' : '可编辑'}</Tag>
+                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <Text type="secondary" style={{ fontSize: 13 }}>进度模板：</Text>
+                          <Select
+                            allowClear
+                            size="small"
+                            style={{ width: 180 }}
+                            placeholder="选择进度模板"
+                            value={progressTemplateId}
+                            onChange={(v) => setProgressTemplateId(v)}
+                            options={progressTemplates.map((t) => ({ value: String(t.id || ''), label: t.templateName }))}
+                            disabled={templateApplying || processPriceApplying || nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(activeOrder)}
+                          />
+                          <Button size="small" onClick={applyProgressTemplateToOrder} loading={templateApplying} disabled={processPriceApplying || nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(activeOrder) || !progressTemplateId}>
+                            导入节点
+                          </Button>
+                        </div>
+                        <Button size="small" type="primary" onClick={saveNodeWorkflow} loading={nodeWorkflowSaving} disabled={nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(activeOrder)}>
+                          保存并锁定
                         </Button>
-                      ) : null}
-                      <Input
-                        className="mpb-nodeCreateName"
-                        size="small"
-                        placeholder="新增节点名称（例如：后整、包装）"
-                        value={nodeInput}
-                        onChange={(e) => setNodeInput(e.target.value)}
-                        disabled={nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(activeOrder)}
-                      />
-                      <InputNumber
-                        className="mpb-nodeCreatePrice"
-                        size="small"
-                        min={0}
-                        precision={2}
-                        value={nodeUnitPriceInput}
-                        aria-label="新增节点单价"
-                        onChange={(v) => setNodeUnitPriceInput(Number(v) || 0)}
-                        placeholder="单价"
-                        disabled={nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(activeOrder)}
-                      />
-                      <Button className="mpb-nodeCreateBtn" size="small" icon={<PlusOutlined />} type="primary" onClick={addNode} disabled={nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(activeOrder)}>
-                        添加
-                      </Button>
+                        {nodeWorkflowLocked ? (
+                          <Button size="small" danger onClick={rollbackNodeWorkflowLock} loading={nodeWorkflowSaving} disabled={nodeWorkflowSaving || !isAdminUser}>
+                            退回编辑
+                          </Button>
+                        ) : null}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', width: '100%' }}>
+                        <Text type="secondary" style={{ fontSize: 13 }}>工序单价：</Text>
+                        <Select
+                          allowClear
+                          size="small"
+                          style={{ width: 180 }}
+                          placeholder="选择工序单价模板"
+                          value={processPriceTemplateId}
+                          onChange={(v) => setProcessPriceTemplateId(v)}
+                          options={processPriceTemplates.map((t) => ({ value: String(t.id || ''), label: t.templateName }))}
+                          disabled={templateApplying || processPriceApplying || nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(activeOrder)}
+                        />
+                        <Button size="small" onClick={applyProcessPriceTemplateToOrder} loading={processPriceApplying} disabled={templateApplying || nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(activeOrder) || !processPriceTemplateId}>
+                          导入单价
+                        </Button>
+                        <Input
+                          className="mpb-nodeCreateName"
+                          size="small"
+                          placeholder="新增节点名称（例如：后整、包装）"
+                          value={nodeInput}
+                          onChange={(e) => setNodeInput(e.target.value)}
+                          disabled={nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(activeOrder)}
+                          style={{ width: 180 }}
+                        />
+                        <InputNumber
+                          className="mpb-nodeCreatePrice"
+                          size="small"
+                          min={0}
+                          precision={2}
+                          value={nodeUnitPriceInput}
+                          aria-label="新增节点单价"
+                          onChange={(v) => setNodeUnitPriceInput(Number(v) || 0)}
+                          placeholder="单价"
+                          disabled={nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(activeOrder)}
+                          style={{ width: 100 }}
+                        />
+                        <Button className="mpb-nodeCreateBtn" size="small" icon={<PlusOutlined />} type="primary" onClick={addNode} disabled={nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(activeOrder)}>
+                          添加
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 }
@@ -3383,9 +3570,10 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             <Form.Item label="订单号" name="orderNo" style={{ marginBottom: 8 }}>
               <Input disabled />
             </Form.Item>
-            <Form.Item label="类型" style={{ marginBottom: 8 }}>
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ marginBottom: 8, fontSize: '14px', color: 'rgba(0, 0, 0, 0.88)' }}>类型</div>
               <Input value="生产" disabled />
-            </Form.Item>
+            </div>
             <Form.Item name="scanType" hidden>
               <Input />
             </Form.Item>

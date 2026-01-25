@@ -13,8 +13,8 @@ page {
   font-size: 14px; /* 统一基础字体为14px */
   line-height: 1.5;
   font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
-    "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', Arial, sans-serif;
 }
 
 /* 隐藏微信开发者工具的真机调试浮层 */
@@ -33,7 +33,7 @@ wx-vconsole,
   background: #ffffff;
   border-radius: var(--radius-xl);
   padding: 12px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
   box-shadow: none;
 }
 
@@ -72,7 +72,7 @@ wx-vconsole,
 }
 
 .input {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
   padding: 8px 12px;
   background: #ffffff;
@@ -106,7 +106,9 @@ wx-vconsole,
   align-items: center;
   justify-content: center;
   font-weight: 500;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  box-shadow:
+    0 4px 12px rgba(59, 130, 246, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
@@ -120,7 +122,7 @@ wx-vconsole,
 .btn-secondary {
   background: rgba(255, 255, 255, 0.6);
   color: #6b7280;
-  border: 1px solid rgba(229, 231, 235, 0.8);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
   padding: 10px 18px;
   text-align: center;
@@ -130,7 +132,9 @@ wx-vconsole,
   align-items: center;
   justify-content: center;
   font-weight: 500;
-  box-shadow: 0 4px 8px rgba(15, 23, 42, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  box-shadow:
+    0 4px 8px rgba(15, 23, 42, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
@@ -185,7 +189,7 @@ wx-vconsole,
   width: 100%;
   box-sizing: border-box;
   padding: 12px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   background: #ffffff;
   margin-top: 10px;
@@ -202,7 +206,7 @@ wx-vconsole,
 .progress-bar {
   flex: 1;
   height: 6px;
-  background: #e5e7eb;
+  background: rgba(224, 242, 254, 0.8);
   border-radius: var(--radius-full);
   overflow: hidden;
 }
@@ -237,9 +241,9 @@ wx-vconsole,
   margin-bottom: 8px;
   padding: 3px 6px;
   background: #ffffff;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.06);
 }
 
 .global-search .search-box {
@@ -279,8 +283,8 @@ wx-vconsole,
   padding: 3px 18px;
   font-size: 12px;
   color: #6b7280;
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
+  background: rgba(224, 242, 254, 0.3);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
   white-space: nowrap;
 }
@@ -289,10 +293,10 @@ wx-vconsole,
 .global-results {
   margin-bottom: 12px;
   background: #ffffff;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);
 }
 
 .results-header {
@@ -301,7 +305,7 @@ wx-vconsole,
   justify-content: space-between;
   padding: 12px 14px;
   background: rgba(224, 242, 254, 0.5);
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .results-title {
@@ -322,7 +326,7 @@ wx-vconsole,
 
 .result-item {
   padding: 12px 14px;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 /* ============ 空状态 ============ */
@@ -358,14 +362,16 @@ wx-vconsole,
 .loading-spinner {
   width: 32px;
   height: 32px;
-  border: 3px solid #e5e7eb;
+  border: 3px solid rgba(224, 242, 254, 0.8);
   border-top-color: #3b82f6;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .loading-text {
@@ -414,8 +420,8 @@ wx-vconsole,
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid rgba(229, 231, 235, 0.5);
-  background: linear-gradient(180deg, #fafafa 0%, #ffffff 100%);
+  border-bottom: 1px solid var(--color-border);
+  background: linear-gradient(180deg, rgba(224, 242, 254, 0.3) 0%, #ffffff 100%);
 }
 
 .modal-title {
@@ -451,8 +457,8 @@ wx-vconsole,
   display: flex;
   gap: 12px;
   padding: 16px 20px;
-  border-top: 1px solid rgba(229, 231, 235, 0.5);
-  background: #fafafa;
+  border-top: 1px solid var(--color-border);
+  background: rgba(224, 242, 254, 0.2);
 }
 
 .modal-btn {
@@ -470,7 +476,7 @@ wx-vconsole,
 .modal-btn.cancel {
   background: rgba(255, 255, 255, 0.8);
   color: #6b7280;
-  border: 1px solid rgba(229, 231, 235, 0.8);
+  border: 1px solid var(--color-border);
 }
 
 .modal-btn.cancel:active {
@@ -500,4 +506,3 @@ wx-vconsole,
   opacity: 0.8;
   transform: scale(0.98);
 }
-

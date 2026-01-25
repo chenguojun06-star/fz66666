@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Button, Card, Input, Select, Space, Tag, Form, Table, App, DatePicker, Modal } from 'antd';
-import { SearchOutlined, EyeOutlined, DownloadOutlined, DeleteOutlined, CheckCircleOutlined, EditOutlined } from '@ant-design/icons';
+import { Button, Card, Input, Select, Space, Tag, Form, Table, App, Modal, Dropdown, Checkbox } from 'antd';
+import { SearchOutlined, EyeOutlined, DownloadOutlined, DeleteOutlined, CheckCircleOutlined, EditOutlined, SettingOutlined, FileSearchOutlined } from '@ant-design/icons';
 import Layout from '../../components/Layout';
 import ResizableModal from '../../components/common/ResizableModal';
 import QuickEditModal from '../../components/common/QuickEditModal';
-import { ProductionOrder, ProductionQueryParams } from '../../types/production';
+import { ProductionOrder, ProductionQueryParams, ScanRecord } from '../../types/production';
 import type { PaginatedResponse } from '../../types/api';
 import api, {
   isOrderFrozenByStatus,
@@ -14,7 +14,7 @@ import api, {
   withQuery,
   isApiSuccess,
 } from '../../utils/api';
-import { productionOrderApi } from '../../services/production/productionApi';
+import { productionOrderApi, productionScanApi } from '../../services/production/productionApi';
 import { isSupervisorOrAboveUser, useAuth } from '../../utils/authContext';
 import './styles.css';
 import dayjs from 'dayjs';
@@ -57,6 +57,35 @@ const ProductionList: React.FC = () => {
     setSortOrder(order);
   };
 
+  const openLogModal = async (order: ProductionOrder) => {
+    const orderId = String(order?.id || '').trim();
+    if (!orderId) {
+      message.error('订单ID为空');
+      return;
+    }
+    const orderNo = String(order?.orderNo || '').trim();
+    setLogTitle(orderNo ? `订单 ${orderNo} 日志` : '订单日志');
+    setLogVisible(true);
+    setLogLoading(true);
+    try {
+      const res = await productionScanApi.listByOrderId(orderId, { page: 1, pageSize: 200 });
+      const result = res as { code?: number; message?: string; data?: { records?: ScanRecord[] } };
+      if (result.code === 200) {
+        const records = Array.isArray(result.data?.records) ? result.data?.records ?? [] : [];
+        setLogRecords(records);
+      } else {
+        message.error(result.message || '获取日志失败');
+        setLogRecords([]);
+      }
+    } catch (e: unknown) {
+      const errMsg = (e as { message?: unknown })?.message;
+      message.error(typeof errMsg === 'string' && errMsg ? errMsg : '获取日志失败');
+      setLogRecords([]);
+    } finally {
+      setLogLoading(false);
+    }
+  };
+
   // 真实数据状态
   const [productionList, setProductionList] = useState<ProductionOrder[]>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
@@ -68,6 +97,51 @@ const ProductionList: React.FC = () => {
   const [quickEditVisible, setQuickEditVisible] = useState(false);
   const [quickEditRecord, setQuickEditRecord] = useState<ProductionOrder | null>(null);
   const [quickEditSaving, setQuickEditSaving] = useState(false);
+  const [logVisible, setLogVisible] = useState(false);
+  const [logLoading, setLogLoading] = useState(false);
+  const [logRecords, setLogRecords] = useState<ScanRecord[]>([]);
+  const [logTitle, setLogTitle] = useState('日志');
+
+  // 列显示/隐藏状态
+  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(() => {
+    const saved = localStorage.getItem('production-list-visible-columns');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return {};
+      }
+    }
+    // 默认全部显示
+    return {
+      styleCover: true,
+      orderNo: true,
+      styleNo: true,
+      styleName: true,
+      attachments: true,
+      factoryName: true,
+      orderQuantity: true,
+      cuttingQuantity: true,
+      sewingCompletionRate: true,
+      warehousingQualifiedQuantity: true,
+      productionProgress: true,
+      status: true,
+      plannedEndDate: true,
+    };
+  });
+
+  // 保存列显示状态到 localStorage
+  useEffect(() => {
+    localStorage.setItem('production-list-visible-columns', JSON.stringify(visibleColumns));
+  }, [visibleColumns]);
+
+  // 切换列显示/隐藏
+  const toggleColumnVisible = (key: string) => {
+    setVisibleColumns(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
 
   const { user } = useAuth();
   const isSupervisorOrAbove = useMemo(() => isSupervisorOrAboveUser(user), [user]);
@@ -632,7 +706,69 @@ const ProductionList: React.FC = () => {
     ];
   };
 
-  const columns = [
+  const scanTypeLabel: Record<string, string> = {
+    material: '物料',
+    procurement: '采购',
+    cutting: '裁剪',
+    production: '生产',
+    sewing: '车缝',
+    ironing: '整烫',
+    packaging: '包装',
+    quality: '质检',
+    warehouse: '入库',
+    shipment: '出货',
+  };
+
+  const logColumns = [
+    {
+      title: '类型',
+      dataIndex: 'scanType',
+      key: 'scanType',
+      width: 90,
+      render: (v: unknown) => scanTypeLabel[String(v || '')] || String(v || '-'),
+    },
+    {
+      title: '环节',
+      dataIndex: 'progressStage',
+      key: 'progressStage',
+      width: 140,
+      render: (v: unknown, record: ScanRecord) => String(v || record.processName || '-') || '-',
+    },
+    {
+      title: '操作人',
+      dataIndex: 'operatorName',
+      key: 'operatorName',
+      width: 120,
+      render: (v: unknown) => String(v || '-') || '-',
+    },
+    {
+      title: '结果',
+      dataIndex: 'scanResult',
+      key: 'scanResult',
+      width: 90,
+      render: (v: unknown) => {
+        const text = String(v || '').trim();
+        if (text === 'success') return <Tag color="green">成功</Tag>;
+        if (text === 'failure') return <Tag color="red">失败</Tag>;
+        return String(v || '-') || '-';
+      },
+    },
+    {
+      title: '时间',
+      dataIndex: 'scanTime',
+      key: 'scanTime',
+      width: 170,
+      render: (v: unknown) => formatDateTime(v),
+    },
+    {
+      title: '备注',
+      dataIndex: 'remark',
+      key: 'remark',
+      render: (v: unknown) => String(v || '-') || '-',
+    },
+  ];
+
+  const allColumns = [
     {
       title: '图片',
       dataIndex: 'styleCover',
@@ -653,7 +789,7 @@ const ProductionList: React.FC = () => {
         const orderId = safeString((record as Record<string, unknown>)?.id, '');
         return (
           <a
-            className="order-no-compact"
+            className="order-no-wrap"
             style={{ cursor: 'pointer' }}
             onClick={(e) => {
               e.preventDefault();
@@ -824,10 +960,505 @@ const ProductionList: React.FC = () => {
     {
       title: '操作',
       key: 'action',
+      fixed: 'right' as const,
       width: 110,
       render: (_: any, record: ProductionOrder) => {
         const frozen = isOrderFrozenByStatusOrStock(record);
         const completed = isOrderFrozenByStatus(record);
+
+        // 列设置下拉菜单
+        const columnSettingsMenu = {
+          items: [
+            { type: 'divider' as const },
+            {
+              key: 'column-settings-title',
+              label: <div style={{ fontWeight: 600, color: '#666', padding: '0 4px' }}>显示列</div>,
+              disabled: true,
+            },
+            { type: 'divider' as const },
+            {
+              key: 'styleCover',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.styleCover !== false} onChange={() => toggleColumnVisible('styleCover')}>
+                    图片
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'styleNo',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.styleNo !== false} onChange={() => toggleColumnVisible('styleNo')}>
+                    款号
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'styleName',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.styleName !== false} onChange={() => toggleColumnVisible('styleName')}>
+                    款名
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'attachments',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.attachments !== false} onChange={() => toggleColumnVisible('attachments')}>
+                    附件
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'factoryName',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.factoryName !== false} onChange={() => toggleColumnVisible('factoryName')}>
+                    加工厂
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'orderQuantity',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.orderQuantity !== false} onChange={() => toggleColumnVisible('orderQuantity')}>
+                    订单数量
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'orderOperatorName',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.orderOperatorName !== false} onChange={() => toggleColumnVisible('orderOperatorName')}>
+                    下单人
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'createTime',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.createTime !== false} onChange={() => toggleColumnVisible('createTime')}>
+                    下单时间
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'remarks',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.remarks !== false} onChange={() => toggleColumnVisible('remarks')}>
+                    备注
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'expectedShipDate',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.expectedShipDate !== false} onChange={() => toggleColumnVisible('expectedShipDate')}>
+                    预计出货
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'procurementStartTime',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.procurementStartTime !== false} onChange={() => toggleColumnVisible('procurementStartTime')}>
+                    采购时间
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'procurementEndTime',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.procurementEndTime !== false} onChange={() => toggleColumnVisible('procurementEndTime')}>
+                    采购完成
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'procurementOperatorName',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.procurementOperatorName !== false} onChange={() => toggleColumnVisible('procurementOperatorName')}>
+                    采购员
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'procurementCompletionRate',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.procurementCompletionRate !== false} onChange={() => toggleColumnVisible('procurementCompletionRate')}>
+                    采购完成率
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'cuttingStartTime',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.cuttingStartTime !== false} onChange={() => toggleColumnVisible('cuttingStartTime')}>
+                    裁剪时间
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'cuttingEndTime',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.cuttingEndTime !== false} onChange={() => toggleColumnVisible('cuttingEndTime')}>
+                    裁剪完成
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'cuttingOperatorName',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.cuttingOperatorName !== false} onChange={() => toggleColumnVisible('cuttingOperatorName')}>
+                    裁剪员
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'cuttingCompletionRate',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.cuttingCompletionRate !== false} onChange={() => toggleColumnVisible('cuttingCompletionRate')}>
+                    裁剪完成率
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'carSewingStartTime',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.carSewingStartTime !== false} onChange={() => toggleColumnVisible('carSewingStartTime')}>
+                    车缝开始
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'carSewingEndTime',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.carSewingEndTime !== false} onChange={() => toggleColumnVisible('carSewingEndTime')}>
+                    车缝完成
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'carSewingOperatorName',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.carSewingOperatorName !== false} onChange={() => toggleColumnVisible('carSewingOperatorName')}>
+                    车缝员
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'carSewingCompletionRate',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.carSewingCompletionRate !== false} onChange={() => toggleColumnVisible('carSewingCompletionRate')}>
+                    车缝完成率
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'ironingStartTime',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.ironingStartTime !== false} onChange={() => toggleColumnVisible('ironingStartTime')}>
+                    大烫开始
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'ironingEndTime',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.ironingEndTime !== false} onChange={() => toggleColumnVisible('ironingEndTime')}>
+                    大烫完成
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'ironingOperatorName',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.ironingOperatorName !== false} onChange={() => toggleColumnVisible('ironingOperatorName')}>
+                    大烫员
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'ironingCompletionRate',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.ironingCompletionRate !== false} onChange={() => toggleColumnVisible('ironingCompletionRate')}>
+                    大烫完成率
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'packagingStartTime',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.packagingStartTime !== false} onChange={() => toggleColumnVisible('packagingStartTime')}>
+                    包装开始
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'packagingEndTime',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.packagingEndTime !== false} onChange={() => toggleColumnVisible('packagingEndTime')}>
+                    包装完成
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'packagingOperatorName',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.packagingOperatorName !== false} onChange={() => toggleColumnVisible('packagingOperatorName')}>
+                    包装员
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'packagingCompletionRate',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.packagingCompletionRate !== false} onChange={() => toggleColumnVisible('packagingCompletionRate')}>
+                    包装完成率
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'qualityStartTime',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.qualityStartTime !== false} onChange={() => toggleColumnVisible('qualityStartTime')}>
+                    质检时间
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'qualityEndTime',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.qualityEndTime !== false} onChange={() => toggleColumnVisible('qualityEndTime')}>
+                    质检完成
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'qualityOperatorName',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.qualityOperatorName !== false} onChange={() => toggleColumnVisible('qualityOperatorName')}>
+                    质检员
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'qualityCompletionRate',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.qualityCompletionRate !== false} onChange={() => toggleColumnVisible('qualityCompletionRate')}>
+                    质检完成率
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'warehousingStartTime',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.warehousingStartTime !== false} onChange={() => toggleColumnVisible('warehousingStartTime')}>
+                    入库时间
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'warehousingEndTime',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.warehousingEndTime !== false} onChange={() => toggleColumnVisible('warehousingEndTime')}>
+                    入库完成
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'warehousingOperatorName',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.warehousingOperatorName !== false} onChange={() => toggleColumnVisible('warehousingOperatorName')}>
+                    入库员
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'warehousingCompletionRate',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.warehousingCompletionRate !== false} onChange={() => toggleColumnVisible('warehousingCompletionRate')}>
+                    入库完成率
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'cuttingQuantity',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.cuttingQuantity !== false} onChange={() => toggleColumnVisible('cuttingQuantity')}>
+                    裁剪数量
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'cuttingBundleCount',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.cuttingBundleCount !== false} onChange={() => toggleColumnVisible('cuttingBundleCount')}>
+                    扎数
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'completedQuantity',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.completedQuantity !== false} onChange={() => toggleColumnVisible('completedQuantity')}>
+                    完成数量
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'warehousingQualifiedQuantity',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.warehousingQualifiedQuantity !== false} onChange={() => toggleColumnVisible('warehousingQualifiedQuantity')}>
+                    合格入库
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'unqualifiedQuantity',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.unqualifiedQuantity !== false} onChange={() => toggleColumnVisible('unqualifiedQuantity')}>
+                    次品数
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'repairQuantity',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.repairQuantity !== false} onChange={() => toggleColumnVisible('repairQuantity')}>
+                    返修数
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'inStockQuantity',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.inStockQuantity !== false} onChange={() => toggleColumnVisible('inStockQuantity')}>
+                    库存
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'productionProgress',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.productionProgress !== false} onChange={() => toggleColumnVisible('productionProgress')}>
+                    生产进度
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'status',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.status !== false} onChange={() => toggleColumnVisible('status')}>
+                    状态
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'plannedEndDate',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.plannedEndDate !== false} onChange={() => toggleColumnVisible('plannedEndDate')}>
+                    完成时间
+                  </Checkbox>
+                </div>
+              ),
+            },
+          ],
+        };
+
         return (
           <RowActions
             className="table-actions"
@@ -852,6 +1483,13 @@ const ProductionList: React.FC = () => {
                 },
               },
               {
+                key: 'log',
+                label: '日志',
+                title: '日志',
+                icon: <FileSearchOutlined />,
+                onClick: () => openLogModal(record),
+              },
+              {
                 key: 'close',
                 label: <span style={{ color: frozen ? undefined : '#1890ff' }}>{frozen ? '关单(已完成)' : '关单'}</span>,
                 icon: <CheckCircleOutlined style={{ color: frozen ? undefined : '#1890ff' }} />,
@@ -870,12 +1508,33 @@ const ProductionList: React.FC = () => {
                   },
                 ]
                 : []),
+              {
+                key: 'columnSettings',
+                label: (
+                  <Dropdown menu={columnSettingsMenu} trigger={['click']} placement="bottomRight">
+                    <span onClick={(e) => e.stopPropagation()}>
+                      <SettingOutlined style={{ fontSize: 14 }} />
+                    </span>
+                  </Dropdown>
+                ),
+                title: '列设置',
+                icon: <SettingOutlined />,
+                onClick: (e) => {
+                  e?.stopPropagation?.();
+                },
+              },
             ]}
           />
         );
       },
     },
   ];
+
+  // 根据 visibleColumns 过滤列
+  const columns = allColumns.filter(col => {
+    if (col.key === 'action' || col.key === 'orderNo') return true; // 操作列和订单号始终显示
+    return visibleColumns[col.key as string] !== false;
+  });
 
   return (
     <Layout>
@@ -1399,6 +2058,29 @@ const ProductionList: React.FC = () => {
               </div>
             </>
           ) : null}
+        </ResizableModal>
+
+        <ResizableModal
+          open={logVisible}
+          title={logTitle}
+          onCancel={() => {
+            setLogVisible(false);
+            setLogRecords([]);
+          }}
+          footer={null}
+          width={modalWidth}
+          initialHeight={modalInitialHeight}
+          minWidth={isMobile ? 320 : 520}
+          scaleWithViewport
+        >
+          <ResizableTable
+            columns={logColumns as Record<string, unknown>}
+            dataSource={logRecords}
+            rowKey={(r) => String(r.id || r.requestId || `${r.orderId}-${r.scanTime}`)}
+            loading={logLoading}
+            pagination={false}
+            scroll={{ x: 'max-content', y: isMobile ? 320 : 420 }}
+          />
         </ResizableModal>
 
         {/* 快速编辑弹窗 */}

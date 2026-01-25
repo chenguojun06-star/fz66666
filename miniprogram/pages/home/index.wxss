@@ -65,7 +65,7 @@ page {
   align-items: center;
   padding: 40px 20px;
   background: #ffffff;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   margin-bottom: 16px;
 }
@@ -153,7 +153,7 @@ page {
 
 .reminder-panel-header {
   padding: 16px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--color-border);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -195,7 +195,7 @@ page {
 
 .reminder-item {
   background: #f9fafb;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: 12px;
   margin-bottom: 10px;
@@ -266,7 +266,7 @@ page {
 .home-filter {
   margin-top: 8px;
   padding: 10px 12px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   background: #ffffff;
   display: flex;
@@ -292,7 +292,7 @@ page {
 }
 
 .filter-input {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
   padding: 8px 12px;
   font-size: 14px;
@@ -301,7 +301,7 @@ page {
 }
 
 .filter-text {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
   padding: 8px 12px;
   font-size: 14px;
@@ -319,12 +319,12 @@ page {
 .home-stats-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 16px;
   margin-bottom: 12px;
-  padding: 8px 12px;
+  padding: 6px 16px;
   background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  border-radius: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
@@ -332,14 +332,19 @@ page {
   flex: 1;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 4px 10px;
+  justify-content: space-between;
+  padding: 3px 14px;
   background: rgba(224, 242, 254, 0.3);
   border: 1px solid rgba(224, 242, 254, 0.5);
-  border-radius: var(--radius-full);
+  border-radius: 20px;
   font-size: 12px;
   color: #1f2937;
+}
+
+.home-stat-left {
+  display: flex;
+  align-items: center;
+  gap: 2px;
 }
 
 .home-stat-emoji {
@@ -367,7 +372,7 @@ page {
 }
 
 .home-stat {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   padding: 10px 12px;
   background: #ffffff;
@@ -456,7 +461,7 @@ page {
 
 .home-activity {
   padding: 10px 12px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   margin-top: 10px;
   background: #ffffff;

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { App, Button, Card, Form, Input, InputNumber, Select, Space, Table, Tag, Tooltip, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { DeleteOutlined, EditOutlined, EyeOutlined, HolderOutlined, PlusOutlined, RollbackOutlined } from '@ant-design/icons';
@@ -6,6 +6,7 @@ import Layout from '../../components/Layout';
 import ResizableModal from '../../components/common/ResizableModal';
 import ResizableTable from '../../components/common/ResizableTable';
 import RowActions from '../../components/common/RowActions';
+import type { RowAction } from '../../components/common/RowActions';
 import api from '../../utils/api';
 import { isAdminUser as isAdminUserFn, useAuth } from '../../utils/authContext';
 import { useViewport } from '../../utils/useViewport';
@@ -43,13 +44,71 @@ const typeColor = (t: string) => {
   return 'default';
 };
 
-const formatTemplateKey = (raw: any) => {
+const formatTemplateKey = (raw: unknown) => {
   const key = String(raw ?? '').trim();
   if (!key) return { text: '-', full: '' };
   if (key === 'default') return { text: '系统默认', full: key };
   if (key.startsWith('style_')) return { text: key.slice(6) || key, full: key };
   if (key.startsWith('progress_custom_')) return { text: '自定义', full: key };
   return { text: key, full: key };
+};
+
+const hasErrorFields = (err: unknown): err is { errorFields: unknown } => {
+  return typeof err === 'object' && err !== null && 'errorFields' in err;
+};
+
+const getErrorMessage = (err: unknown, fallback: string) => {
+  if (err instanceof Error) return err.message || fallback;
+  if (typeof err === 'object' && err !== null && 'message' in err) {
+    const msg = (err as { message?: unknown }).message;
+    if (typeof msg === 'string' && msg.trim()) return msg;
+  }
+  if (typeof err === 'string' && err.trim()) return err;
+  return fallback;
+};
+
+const parseProgressNodeItems = (raw: string): Array<{ name: string; unitPrice: number }> => {
+  const text = String(raw ?? '').trim();
+  if (!text) return [];
+  try {
+    const obj = JSON.parse(text);
+    const nodesRaw = (obj as Record<string, unknown>)?.nodes;
+    if (!Array.isArray(nodesRaw)) return [];
+    return nodesRaw
+      .map((n) => {
+        const item = n as { name?: unknown; unitPrice?: unknown };
+        const name = String(item?.name || '').trim();
+        const p = Number(item?.unitPrice);
+        const unitPrice = Number.isFinite(p) && p >= 0 ? p : 0;
+        return { name, unitPrice };
+      })
+      .filter((n) => n.name);
+  } catch {
+    return [];
+  }
+};
+
+const parseProcessPriceSteps = (raw: string): Array<{ processName: string; unitPrice: number; estimatedMinutes?: number }> => {
+  const text = String(raw ?? '').trim();
+  if (!text) return [];
+  try {
+    const obj = JSON.parse(text);
+    const stepsRaw = (obj as Record<string, unknown>)?.steps;
+    if (!Array.isArray(stepsRaw)) return [];
+    return stepsRaw
+      .map((s) => {
+        const item = s as { processName?: unknown; unitPrice?: unknown; price?: unknown; estimatedMinutes?: unknown };
+        const processName = String(item?.processName || '').trim();
+        const p = Number(item?.unitPrice ?? item?.price);
+        const unitPrice = Number.isFinite(p) && p >= 0 ? p : 0;
+        const m = Number(item?.estimatedMinutes);
+        const estimatedMinutes = Number.isFinite(m) && m > 0 ? m : undefined;
+        return { processName, unitPrice, estimatedMinutes };
+      })
+      .filter((s) => s.processName);
+  } catch {
+    return [];
+  }
 };
 
 const TemplateCenter: React.FC = () => {
@@ -60,6 +119,7 @@ const TemplateCenter: React.FC = () => {
   const [createForm] = Form.useForm();
   const [applyForm] = Form.useForm();
   const [progressForm] = Form.useForm();
+  const [processPriceForm] = Form.useForm();
 
   const [styleNoOptions, setStyleNoOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [styleNoLoading, setStyleNoLoading] = useState(false);
@@ -71,6 +131,8 @@ const TemplateCenter: React.FC = () => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
+  const pageRef = useRef(1);
+  const pageSizeRef = useRef(10);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [applyOpen, setApplyOpen] = useState(false);
@@ -78,6 +140,9 @@ const TemplateCenter: React.FC = () => {
   const [progressOpen, setProgressOpen] = useState(false);
   const [progressSaving, setProgressSaving] = useState(false);
   const [progressEditing, setProgressEditing] = useState<TemplateLibrary | null>(null);
+  const [processPriceOpen, setProcessPriceOpen] = useState(false);
+  const [processPriceSaving, setProcessPriceSaving] = useState(false);
+  const [processPriceEditingRow, setProcessPriceEditingRow] = useState<TemplateLibrary | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
   const [editingRow, setEditingRow] = useState<TemplateLibrary | null>(null);
@@ -89,55 +154,10 @@ const TemplateCenter: React.FC = () => {
   const isAdminUser = useMemo(() => isAdminUserFn(user), [user]);
 
   const isLocked = (row?: TemplateLibrary | null) => {
-    const v = Number((row as Record<string, unknown>)?.locked);
+    const v = Number(row?.locked);
     return Number.isFinite(v) && v === 1;
   };
 
-  const parseProgressNodeItems = (raw: string): Array<{ name: string; unitPrice: number }> => {
-    const text = String(raw ?? '').trim();
-    if (!text) return [];
-    try {
-      const obj = JSON.parse(text);
-      const nodesRaw = (obj as Record<string, unknown>)?.nodes;
-      if (!Array.isArray(nodesRaw)) return [];
-      return nodesRaw
-        .map((n: any) => {
-          const name = String(n?.name || '').trim();
-          const p = Number(n?.unitPrice);
-          const unitPrice = Number.isFinite(p) && p >= 0 ? p : 0;
-          return { name, unitPrice };
-        })
-        .filter((n: any) => n.name);
-    } catch {
-    // Intentionally empty
-      // 忽略错误
-      return [];
-    }
-  };
-
-  const parseProcessPriceSteps = (raw: string): Array<{ processName: string; unitPrice: number; estimatedMinutes?: number }> => {
-    const text = String(raw ?? '').trim();
-    if (!text) return [];
-    try {
-      const obj = JSON.parse(text);
-      const stepsRaw = (obj as Record<string, unknown>)?.steps;
-      if (!Array.isArray(stepsRaw)) return [];
-      return stepsRaw
-        .map((s: any) => {
-          const processName = String(s?.processName || '').trim();
-          const p = Number(s?.unitPrice ?? s?.price);
-          const unitPrice = Number.isFinite(p) && p >= 0 ? p : 0;
-          const m = Number(s?.estimatedMinutes);
-          const estimatedMinutes = Number.isFinite(m) && m > 0 ? m : undefined;
-          return { processName, unitPrice, estimatedMinutes };
-        })
-        .filter((s: any) => s.processName);
-    } catch {
-    // Intentionally empty
-      // 忽略错误
-      return [];
-    }
-  };
 
   const normalizeStageName = (v: unknown) => String(v ?? '').trim().replace(/\s+/g, '');
 
@@ -197,7 +217,7 @@ const TemplateCenter: React.FC = () => {
   const draggingNodeIndexRef = useRef<number | null>(null);
   const [nodeDragOverIndex, setNodeDragOverIndex] = useState<number | null>(null);
 
-  const loadProcessPriceForStyle = async (styleNo: string) => {
+  const loadProcessPriceForStyle = useCallback(async (styleNo: string) => {
     const sn = String(styleNo || '').trim();
     if (!sn) return { tpl: null as TemplateLibrary | null, steps: [] as Array<{ processName: string; unitPrice: number; estimatedMinutes?: number }> };
     try {
@@ -228,8 +248,8 @@ const TemplateCenter: React.FC = () => {
               content = String(det.data?.templateContent ?? content);
             }
           } catch {
-    // Intentionally empty
-      // 忽略错误
+            // Intentionally empty
+            // 忽略错误
           }
           templateSteps = parseProcessPriceSteps(content);
         }
@@ -248,16 +268,16 @@ const TemplateCenter: React.FC = () => {
             params: { styleId },
           });
           if (procRes.code === 200 && Array.isArray(procRes.data)) {
-            processSteps = procRes.data.map((p: any) => ({
+            processSteps = procRes.data.map((p) => ({
               processName: String(p?.processName || '').trim(),
               unitPrice: Number(p?.price) || 0,
               estimatedMinutes: 0,
-            })).filter((s: any) => s.processName);
+            })).filter((s) => s.processName);
           }
         }
       } catch {
-    // Intentionally empty
-      // 忽略错误
+        // Intentionally empty
+        // 忽略错误
       }
 
       // 3. 合并数据：优先使用 t_style_process 的单价，回退到模板
@@ -265,11 +285,11 @@ const TemplateCenter: React.FC = () => {
 
       return { tpl, steps };
     } catch {
-    // Intentionally empty
+      // Intentionally empty
       // 忽略错误
       return { tpl: null, steps: [] };
     }
-  };
+  }, []);
 
   const watchProgressStyleNo = Form.useWatch('sourceStyleNo', progressForm);
 
@@ -293,20 +313,39 @@ const TemplateCenter: React.FC = () => {
         progressForm.setFieldsValue({ priceSteps: loaded.steps });
       }
     })();
-  }, [progressOpen, watchProgressStyleNo, progressForm]);
+  }, [progressOpen, watchProgressStyleNo, progressForm, loadProcessPriceForStyle]);
 
   const openProgressCreate = () => {
     setProgressEditing(null);
     setProcessPriceEditing(null);
     progressForm.resetFields();
     progressForm.setFieldsValue({
-      templateName: '进度单价',
+      templateName: '进度模板',
       templateKey: '',
       sourceStyleNo: undefined,
       nodes: [{ name: '采购' }, { name: '裁剪' }, { name: '车缝' }, { name: '大烫' }, { name: '质检' }, { name: '包装' }, { name: '入库' }],
-      priceSteps: [{ processName: '采购', unitPrice: 0 }, { processName: '裁剪', unitPrice: 0 }, { processName: '车缝', unitPrice: 0 }, { processName: '大烫', unitPrice: 0 }, { processName: '质检', unitPrice: 0 }, { processName: '包装', unitPrice: 0 }, { processName: '入库', unitPrice: 0 }],
     });
     setProgressOpen(true);
+  };
+
+  const openProcessPriceCreate = () => {
+    setProcessPriceEditingRow(null);
+    processPriceForm.resetFields();
+    processPriceForm.setFieldsValue({
+      templateName: '工序单价模板',
+      templateKey: '',
+      sourceStyleNo: undefined,
+      priceSteps: [
+        { processName: '采购', unitPrice: 0, estimatedMinutes: 0 },
+        { processName: '裁剪', unitPrice: 0, estimatedMinutes: 0 },
+        { processName: '车缝', unitPrice: 0, estimatedMinutes: 0 },
+        { processName: '大烫', unitPrice: 0, estimatedMinutes: 0 },
+        { processName: '质检', unitPrice: 0, estimatedMinutes: 0 },
+        { processName: '包装', unitPrice: 0, estimatedMinutes: 0 },
+        { processName: '入库', unitPrice: 0, estimatedMinutes: 0 },
+      ],
+    });
+    setProcessPriceOpen(true);
   };
 
   const openProgressEdit = async (row: TemplateLibrary) => {
@@ -326,8 +365,8 @@ const TemplateCenter: React.FC = () => {
           content = String(res.data?.templateContent ?? content);
         }
       } catch {
-    // Intentionally empty
-      // 忽略错误
+        // Intentionally empty
+        // 忽略错误
       }
     }
 
@@ -367,7 +406,7 @@ const TemplateCenter: React.FC = () => {
       nodes: (items.length
         ? items
         : ['采购', '裁剪', '车缝', '大烫', '质检', '包装', '入库'].map((n) => ({ name: n }))
-      ).map((n: any) => ({ name: String(n?.name || '').trim() })),
+      ).map((n) => ({ name: String(n?.name || '').trim() })),
       priceSteps: finalPriceSteps,
     });
     setProgressOpen(true);
@@ -550,10 +589,95 @@ const TemplateCenter: React.FC = () => {
       setProgressEditing(null);
       fetchList({ page: 1 });
     } catch (e: unknown) {
-      if (e?.errorFields) return;
-      message.error(e?.message || '保存失败');
+      if (hasErrorFields(e)) return;
+      message.error(getErrorMessage(e, '保存失败'));
     } finally {
       setProgressSaving(false);
+    }
+  };
+
+  const submitProcessPrice = async () => {
+    try {
+      const v = await processPriceForm.validateFields();
+      const templateName = String(v.templateName || '').trim();
+      if (!templateName) {
+        message.error('请输入模板名称');
+        return;
+      }
+      const templateKey = String(v.templateKey || '').trim();
+      const sourceStyleNo = String(v.sourceStyleNo || '').trim();
+
+      const priceStepsRaw = Array.isArray((v as Record<string, unknown>)?.priceSteps) ? ((v as Record<string, unknown>).priceSteps as ProcessPriceStepInput[]) : [];
+      const priceSteps = priceStepsRaw
+        .map((s) => {
+          const processName = String((s as Record<string, unknown>)?.processName || '').trim();
+          const p = Number((s as Record<string, unknown>)?.unitPrice);
+          const unitPrice = Number.isFinite(p) && p >= 0 ? p : 0;
+          const m = Number((s as Record<string, unknown>)?.estimatedMinutes);
+          const estimatedMinutes = Number.isFinite(m) && m > 0 ? m : undefined;
+          return { processName, unitPrice, estimatedMinutes };
+        })
+        .filter((s) => s.processName);
+
+      if (!priceSteps.length) {
+        message.error('请至少添加一个工序');
+        return;
+      }
+
+      const priceNames = priceSteps.map((s) => s.processName);
+      const uniqPriceNames = Array.from(new Set(priceNames));
+      if (uniqPriceNames.length !== priceNames.length) {
+        message.error('工序名称不能重复');
+        return;
+      }
+
+      const templateContent = JSON.stringify({
+        steps: priceSteps.map((s) => ({
+          processName: s.processName,
+          unitPrice: s.unitPrice,
+          estimatedMinutes: s.estimatedMinutes || undefined
+        }))
+      });
+
+      setProcessPriceSaving(true);
+
+      if (processPriceEditingRow?.id) {
+        const res = await api.put<{ code: number; message: string }>('/template-library', {
+          id: processPriceEditingRow.id,
+          templateType: 'process_price',
+          templateKey,
+          templateName,
+          sourceStyleNo: sourceStyleNo || null,
+          templateContent,
+        });
+        if (res.code !== 200) {
+          message.error(res.message || '保存失败');
+          return;
+        }
+        message.success('已保存并锁定');
+      } else {
+        const res = await api.post<{ code: number; message: string }>('/template-library', {
+          templateType: 'process_price',
+          templateKey,
+          templateName,
+          sourceStyleNo: sourceStyleNo || null,
+          templateContent,
+        });
+        if (res.code !== 200) {
+          message.error(res.message || '保存失败');
+          return;
+        }
+        message.success('已创建并锁定');
+      }
+
+      setProcessPriceOpen(false);
+      setProcessPriceEditingRow(null);
+      fetchList({ page: 1 });
+    } catch (e: unknown) {
+      if (hasErrorFields(e)) return;
+      message.error(getErrorMessage(e, '保存失败'));
+    } finally {
+      setProcessPriceSaving(false);
     }
   };
 
@@ -567,8 +691,8 @@ const TemplateCenter: React.FC = () => {
           latestRow = res.data as TemplateLibrary;
         }
       } catch {
-    // Intentionally empty
-      // 忽略错误
+        // Intentionally empty
+        // 忽略错误
       }
     }
 
@@ -593,8 +717,8 @@ const TemplateCenter: React.FC = () => {
           content = String(res.data?.templateContent ?? content);
         }
       } catch {
-    // Intentionally empty
-      // 忽略错误
+        // Intentionally empty
+        // 忽略错误
       }
     }
 
@@ -603,7 +727,7 @@ const TemplateCenter: React.FC = () => {
       const parsed = JSON.parse(content);
       setEditTableData(parsed);
     } catch {
-    // Intentionally empty
+      // Intentionally empty
       // 忽略错误
       setEditTableData(null);
     }
@@ -667,8 +791,8 @@ const TemplateCenter: React.FC = () => {
       setEditTableData(null);
       fetchList({ page: 1 });
     } catch (e: unknown) {
-      if (e?.errorFields) return;
-      message.error(e?.message || '更新失败');
+      if (hasErrorFields(e)) return;
+      message.error(getErrorMessage(e, '更新失败'));
     } finally {
       setEditSaving(false);
     }
@@ -718,7 +842,7 @@ const TemplateCenter: React.FC = () => {
     });
   };
 
-  const fetchStyleNoOptions = async (keyword?: string) => {
+  const fetchStyleNoOptions = useCallback(async (keyword?: string) => {
     const seq = (styleNoReqSeq.current += 1);
     setStyleNoLoading(true);
     try {
@@ -731,19 +855,19 @@ const TemplateCenter: React.FC = () => {
       });
       if (seq !== styleNoReqSeq.current) return;
       if (res.code !== 200) return;
-      const records = (res.data?.records || []) as Array<unknown>;
+      const records = (res.data?.records || []) as Array<{ styleNo?: unknown }>;
       const next = (Array.isArray(records) ? records : [])
         .map((r) => String(r?.styleNo || '').trim())
         .filter(Boolean)
         .map((sn) => ({ value: sn, label: sn }));
       setStyleNoOptions(next);
     } catch {
-    // Intentionally empty
+      // Intentionally empty
       // 忽略错误
     } finally {
       if (seq === styleNoReqSeq.current) setStyleNoLoading(false);
     }
-  };
+  }, []);
 
   const scheduleFetchStyleNos = (keyword: string) => {
     if (styleNoTimerRef.current != null) {
@@ -754,9 +878,9 @@ const TemplateCenter: React.FC = () => {
     }, 250);
   };
 
-  const fetchList = async (next?: { page?: number; pageSize?: number }) => {
-    const p = next?.page ?? page;
-    const ps = next?.pageSize ?? pageSize;
+  const fetchList = useCallback(async (next?: { page?: number; pageSize?: number }) => {
+    const p = next?.page ?? pageRef.current;
+    const ps = next?.pageSize ?? pageSizeRef.current;
     setLoading(true);
     try {
       const v = queryForm.getFieldsValue();
@@ -776,19 +900,21 @@ const TemplateCenter: React.FC = () => {
       const pageData: PageResp<TemplateLibrary> = res.data || { records: [], total: 0 };
       setData(Array.isArray(pageData.records) ? pageData.records : []);
       setTotal(Number(pageData.total || 0));
+      pageRef.current = p;
+      pageSizeRef.current = ps;
       setPage(p);
       setPageSize(ps);
     } catch (e: unknown) {
-      message.error(e?.message || '获取模板列表失败');
+      message.error(getErrorMessage(e, '获取模板列表失败'));
     } finally {
       setLoading(false);
     }
-  };
+  }, [queryForm, message]);
 
   useEffect(() => {
-    fetchList({ page: 1, pageSize });
+    fetchList({ page: 1, pageSize: pageSizeRef.current });
     fetchStyleNoOptions('');
-  }, []);
+  }, [fetchList, fetchStyleNoOptions]);
 
   const templateTypeOptions = useMemo(
     () => [
@@ -824,8 +950,8 @@ const TemplateCenter: React.FC = () => {
       setCreateOpen(false);
       fetchList({ page: 1 });
     } catch (e: unknown) {
-      if (e?.errorFields) return;
-      message.error(e?.message || '生成模板失败');
+      if (hasErrorFields(e)) return;
+      message.error(getErrorMessage(e, '生成模板失败'));
     }
   };
 
@@ -858,8 +984,8 @@ const TemplateCenter: React.FC = () => {
       message.success('已套用到目标款号');
       setApplyOpen(false);
     } catch (e: unknown) {
-      if (e?.errorFields) return;
-      message.error(e?.message || '套用失败');
+      if (hasErrorFields(e)) return;
+      message.error(getErrorMessage(e, '套用失败'));
     }
   };
 
@@ -882,12 +1008,12 @@ const TemplateCenter: React.FC = () => {
         setViewObj(obj);
         setViewContent(JSON.stringify(obj, null, 2));
       } catch {
-    // Intentionally empty
-      // 忽略错误
+        // Intentionally empty
+        // 忽略错误
         setViewContent(raw);
       }
     } catch (e: unknown) {
-      message.error(e?.message || '获取模板失败');
+      message.error(getErrorMessage(e, '获取模板失败'));
     }
   };
 
@@ -904,13 +1030,21 @@ const TemplateCenter: React.FC = () => {
     }
 
     if (t === 'progress') {
-      const nodes = Array.isArray((obj as Record<string, unknown>)?.nodes) ? (obj as Record<string, unknown>).nodes : [];
+      const nodesRaw = Array.isArray((obj as Record<string, unknown>)?.nodes)
+        ? ((obj as Record<string, unknown>).nodes as Array<Record<string, unknown>>)
+        : [];
+      const nodes = nodesRaw.map((n) => {
+        const name = String(n?.name ?? '').trim();
+        const unitPriceValue = Number(n?.unitPrice);
+        const unitPrice = Number.isFinite(unitPriceValue) ? unitPriceValue : undefined;
+        return { name, unitPrice };
+      });
       return (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           <div style={{ border: '1px solid #d9d9d9', padding: 8, borderRadius: 4 }}>
             <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>进度节点</div>
             <div style={{ maxHeight: 480, overflow: 'auto' }}>
-              {nodes.map((n: any, idx: number) => (
+              {nodes.map((n, idx) => (
                 <div key={idx} style={{ padding: '6px 8px', borderBottom: '1px solid #f0f0f0', fontSize: 13 }}>
                   {String(n?.name || '-')}
                 </div>
@@ -921,13 +1055,13 @@ const TemplateCenter: React.FC = () => {
           <div style={{ border: '1px solid #d9d9d9', padding: 8, borderRadius: 4 }}>
             <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>单价工序库</div>
             <div style={{ maxHeight: 480, overflow: 'auto' }}>
-              {nodes.filter((n: any) => n?.unitPrice != null && n.unitPrice !== 0).map((n: any, idx: number) => (
+              {nodes.filter((n) => n?.unitPrice != null && n.unitPrice !== 0).map((n, idx) => (
                 <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderBottom: '1px solid #f0f0f0', fontSize: 13 }}>
                   <span>{String(n?.name || '-')}</span>
                   <span style={{ fontWeight: 500 }}>¥ {Number(n?.unitPrice || 0).toFixed(2)}</span>
                 </div>
               ))}
-              {nodes.filter((n: any) => n?.unitPrice != null && n.unitPrice !== 0).length === 0 &&
+              {nodes.filter((n) => n?.unitPrice != null && n.unitPrice !== 0).length === 0 &&
                 <div style={{ padding: 12, textAlign: 'center', color: '#999' }}>暂无单价数据</div>
               }
             </div>
@@ -937,7 +1071,18 @@ const TemplateCenter: React.FC = () => {
     }
 
     if (t === 'process' || t === 'process_price') {
-      const steps = Array.isArray((obj as Record<string, unknown>)?.steps) ? (obj as Record<string, unknown>).steps : [];
+      const stepsRaw = Array.isArray((obj as Record<string, unknown>)?.steps)
+        ? ((obj as Record<string, unknown>).steps as Array<Record<string, unknown>>)
+        : [];
+      const steps = stepsRaw.map((s) => {
+        const processName = String(s?.processName ?? '').trim();
+        const processCode = s?.processCode == null ? '' : String(s.processCode);
+        const machineType = s?.machineType == null ? '' : String(s.machineType);
+        const standardTime = s?.standardTime == null ? '' : String(s.standardTime);
+        const unitPrice = s?.unitPrice;
+        const price = s?.price;
+        return { processName, processCode, machineType, standardTime, unitPrice, price };
+      });
       const unitField = t === 'process_price' ? 'unitPrice' : 'price';
       return (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -946,7 +1091,7 @@ const TemplateCenter: React.FC = () => {
               {t === 'process_price' ? '工序节点' : '工艺节点'}
             </div>
             <div style={{ maxHeight: 480, overflow: 'auto' }}>
-              {steps.map((s: any, idx: number) => (
+              {steps.map((s, idx) => (
                 <div key={idx} style={{ padding: '6px 8px', borderBottom: '1px solid #f0f0f0', fontSize: 13 }}>
                   <div>{String(s?.processName || '-')}</div>
                   {s?.processCode && <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>编码: {s.processCode}</div>}
@@ -962,10 +1107,10 @@ const TemplateCenter: React.FC = () => {
               {t === 'process_price' ? '单价工序库' : '工价工序库'}
             </div>
             <div style={{ maxHeight: 480, overflow: 'auto' }}>
-              {steps.filter((s: any) => {
+              {steps.filter((s) => {
                 const price = s?.[unitField];
                 return price != null && price !== 0;
-              }).map((s: any, idx: number) => {
+              }).map((s, idx) => {
                 const price = Number(s?.[unitField] || 0);
                 return (
                   <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderBottom: '1px solid #f0f0f0', fontSize: 13 }}>
@@ -974,7 +1119,7 @@ const TemplateCenter: React.FC = () => {
                   </div>
                 );
               })}
-              {steps.filter((s: any) => {
+              {steps.filter((s) => {
                 const price = s?.[unitField];
                 return price != null && price !== 0;
               }).length === 0 &&
@@ -987,7 +1132,7 @@ const TemplateCenter: React.FC = () => {
     }
 
     if (t === 'bom') {
-      const rows = Array.isArray((obj as Record<string, unknown>)?.rows) ? (obj as Record<string, unknown>).rows : [];
+      const rows = Array.isArray((obj as Record<string, unknown>)?.rows) ? ((obj as Record<string, unknown>).rows as Record<string, unknown>[]) : [];
       return (
         <Table
           size="small"
@@ -1040,11 +1185,11 @@ const TemplateCenter: React.FC = () => {
       );
     }
 
-    if (t === 'size') {
-      const sizes = Array.isArray((obj as Record<string, unknown>)?.sizes) ? (obj as Record<string, unknown>).sizes.map((s: any) => String(s || '').trim()).filter(Boolean) : [];
-      const parts = Array.isArray((obj as Record<string, unknown>)?.parts) ? (obj as Record<string, unknown>).parts : [];
+    if (t === 'size' && isSizeTableData(obj)) {
+      const sizes = obj.sizes.map((s) => String(s || '').trim()).filter(Boolean);
+      const parts = obj.parts as Record<string, unknown>[];
 
-      const baseCols: unknown[] = [
+      const baseCols: ColumnsType<Record<string, unknown>> = [
         { title: '部位', dataIndex: 'partName', key: 'partName', width: 160, render: (v: unknown) => String(v || '-') },
         { title: '测量方式', dataIndex: 'measureMethod', key: 'measureMethod', width: 140, render: (v: unknown) => String(v || '-') },
         {
@@ -1060,7 +1205,7 @@ const TemplateCenter: React.FC = () => {
         },
       ];
 
-      const sizeCols: unknown[] = sizes.map((sz: string) => ({
+      const sizeCols: ColumnsType<Record<string, unknown>> = sizes.map((sz) => ({
         title: sz,
         dataIndex: ['values', sz],
         key: `size_${sz}`,
@@ -1109,13 +1254,30 @@ const TemplateCenter: React.FC = () => {
           message.success('已删除');
           fetchList({ page: 1 });
         } catch (e: unknown) {
-          message.error(e?.message || '删除失败');
+          const msg = e instanceof Error
+            ? e.message
+            : (typeof e === 'object' && e && 'message' in e ? String((e as { message?: unknown }).message || '') : '');
+          message.error(msg || '删除失败');
         }
       },
     });
   };
 
-  const columns: ColumnsType<TemplateLibrary> = [
+  type TemplateLibraryRecord = TemplateLibrary & Record<string, unknown>;
+  type SizeTablePart = { partName: string; values?: Record<string, string> };
+  type SizeTableData = { sizes: string[]; parts: SizeTablePart[] };
+  type BomTableRow = { materialName?: string; spec?: string; quantity?: string | number; unit?: string };
+  type BomTableData = BomTableRow[];
+
+  const isSizeTableData = (data: unknown): data is SizeTableData => {
+    if (!data || typeof data !== 'object') return false;
+    const rec = data as Record<string, unknown>;
+    return Array.isArray(rec.sizes) && Array.isArray(rec.parts);
+  };
+
+  const isBomTableData = (data: unknown): data is BomTableData => Array.isArray(data);
+
+  const columns: ColumnsType<TemplateLibraryRecord> = [
     {
       title: '名称',
       dataIndex: 'templateName',
@@ -1181,7 +1343,7 @@ const TemplateCenter: React.FC = () => {
       dataIndex: 'locked',
       key: 'locked',
       width: 110,
-      render: (_: any, row) => (isLocked(row) ? <Tag color="green">已锁定</Tag> : <Tag color="gold">可编辑</Tag>),
+      render: (_: unknown, row) => (isLocked(row) ? <Tag color="green">已锁定</Tag> : <Tag color="gold">可编辑</Tag>),
     },
     {
       title: '操作',
@@ -1191,7 +1353,7 @@ const TemplateCenter: React.FC = () => {
         const isProgress = String(row?.templateType || '').trim().toLowerCase() === 'progress';
         const locked = isLocked(row);
 
-        const primaryAction = isProgress
+        const primaryAction: RowAction = isProgress
           ? (locked
             ? {
               key: 'rollback',
@@ -1234,7 +1396,7 @@ const TemplateCenter: React.FC = () => {
                 onClick: () => openView(row),
                 primary: true,
               },
-              { ...(primaryAction as Record<string, unknown>), primary: true },
+              { ...primaryAction, primary: true },
               {
                 key: 'delete',
                 label: '删除',
@@ -1256,7 +1418,10 @@ const TemplateCenter: React.FC = () => {
         className="page-card"
         title="单价流程"
         extra={
-          <Button type="primary" onClick={openProgressCreate}>进度单价</Button>
+          <Space>
+            <Button type="primary" onClick={openProgressCreate}>进度模板</Button>
+            <Button onClick={openProcessPriceCreate}>工序单价</Button>
+          </Space>
         }
       >
         <Form form={queryForm} layout="inline" initialValues={{ templateType: '' }}>
@@ -1269,13 +1434,11 @@ const TemplateCenter: React.FC = () => {
           <Form.Item name="sourceStyleNo" label="来源款号">
             <Select
               allowClear
-              showSearch
-              filterOption={false}
+              showSearch={{ filterOption: false, onSearch: scheduleFetchStyleNos }}
               loading={styleNoLoading}
               style={{ width: 200 }}
               placeholder="搜索/选择款号"
               options={styleNoOptions}
-              onSearch={scheduleFetchStyleNos}
               onOpenChange={(open) => {
                 if (open && !styleNoOptions.length) fetchStyleNoOptions('');
               }}
@@ -1300,10 +1463,10 @@ const TemplateCenter: React.FC = () => {
 
         <div style={{ height: 12 }} />
 
-        <ResizableTable
+        <ResizableTable<TemplateLibraryRecord>
           rowKey={(r) => String(r.id || r.templateKey)}
           columns={columns}
-          dataSource={data}
+          dataSource={data as TemplateLibraryRecord[]}
           loading={loading}
           scroll={{ x: 'max-content', y: isMobile ? 360 : 560 }}
           pagination={{
@@ -1330,12 +1493,10 @@ const TemplateCenter: React.FC = () => {
           <Form.Item name="sourceStyleNo" label="来源款号" rules={[{ required: true, message: '请输入来源款号' }]}>
             <Select
               allowClear
-              showSearch
-              filterOption={false}
+              showSearch={{ filterOption: false, onSearch: scheduleFetchStyleNos }}
               loading={styleNoLoading}
               placeholder="搜索/选择款号"
               options={styleNoOptions}
-              onSearch={scheduleFetchStyleNos}
               onOpenChange={(open) => {
                 if (open && !styleNoOptions.length) fetchStyleNoOptions('');
               }}
@@ -1373,12 +1534,10 @@ const TemplateCenter: React.FC = () => {
           <Form.Item name="targetStyleNo" label="目标款号" rules={[{ required: true, message: '请输入目标款号' }]}>
             <Select
               allowClear
-              showSearch
-              filterOption={false}
+              showSearch={{ filterOption: false, onSearch: scheduleFetchStyleNos }}
               loading={styleNoLoading}
               placeholder="搜索/选择款号"
               options={styleNoOptions}
-              onSearch={scheduleFetchStyleNos}
               onOpenChange={(open) => {
                 if (open && !styleNoOptions.length) fetchStyleNoOptions('');
               }}
@@ -1433,12 +1592,10 @@ const TemplateCenter: React.FC = () => {
           <Form.Item name="sourceStyleNo" label="来源款号(可选)">
             <Select
               allowClear
-              showSearch
-              filterOption={false}
+              showSearch={{ filterOption: false, onSearch: scheduleFetchStyleNos }}
               loading={styleNoLoading}
               placeholder="搜索/选择款号"
               options={styleNoOptions}
-              onSearch={scheduleFetchStyleNos}
               onOpenChange={(open) => {
                 if (open && !styleNoOptions.length) fetchStyleNoOptions('');
               }}
@@ -1450,7 +1607,7 @@ const TemplateCenter: React.FC = () => {
                 {(() => {
                   const type = editingRow?.templateType;
                   // 尺寸表模板
-                  if (type === 'size' && editTableData.sizes && editTableData.parts) {
+                  if (type === 'size' && isSizeTableData(editTableData)) {
                     return (
                       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
@@ -1473,15 +1630,17 @@ const TemplateCenter: React.FC = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {editTableData.parts.map((part: any, pIdx: number) => (
+                          {editTableData.parts.map((part: SizeTablePart, pIdx: number) => (
                             <tr key={pIdx}>
                               <td style={{ border: '1px solid #ccc', padding: 4 }}>
                                 <Input
                                   size="small"
                                   value={part.partName}
                                   onChange={(e) => {
-                                    const newData = { ...editTableData };
-                                    newData.parts[pIdx].partName = e.target.value;
+                                    const newData = { ...editTableData, parts: [...editTableData.parts] };
+                                    const part = newData.parts[pIdx];
+                                    if (!part) return;
+                                    newData.parts[pIdx] = { ...part, partName: e.target.value };
                                     setEditTableData(newData);
                                   }}
                                   style={{ border: 'none' }}
@@ -1493,9 +1652,12 @@ const TemplateCenter: React.FC = () => {
                                     size="small"
                                     value={part.values?.[size] || ''}
                                     onChange={(e) => {
-                                      const newData = { ...editTableData };
-                                      if (!newData.parts[pIdx].values) newData.parts[pIdx].values = {};
-                                      newData.parts[pIdx].values[size] = e.target.value;
+                                      const newData = { ...editTableData, parts: [...editTableData.parts] };
+                                      const part = newData.parts[pIdx];
+                                      if (!part) return;
+                                      const values = { ...(part.values || {}) } as Record<string, string>;
+                                      values[size] = e.target.value;
+                                      newData.parts[pIdx] = { ...part, values };
                                       setEditTableData(newData);
                                     }}
                                     style={{ border: 'none' }}
@@ -1509,7 +1671,7 @@ const TemplateCenter: React.FC = () => {
                     );
                   }
                   // BOM表模板
-                  if (type === 'bom' && Array.isArray(editTableData)) {
+                  if (type === 'bom' && isBomTableData(editTableData)) {
                     return (
                       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
@@ -1521,7 +1683,7 @@ const TemplateCenter: React.FC = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {editTableData.map((item: any, idx: number) => (
+                          {editTableData.map((item: BomTableRow, idx: number) => (
                             <tr key={idx}>
                               <td style={{ border: '1px solid #ccc', padding: 4 }}>
                                 <Input
@@ -1614,13 +1776,12 @@ const TemplateCenter: React.FC = () => {
       </ResizableModal>
 
       <ResizableModal
-        title={progressEditing?.id ? '编辑进度单价' : '进度单价'}
+        title={progressEditing?.id ? '编辑进度模板' : '进度模板'}
         open={progressOpen}
         centered
         onCancel={() => {
           setProgressOpen(false);
           setProgressEditing(null);
-          setProcessPriceEditing(null);
         }}
         onOk={submitProgress}
         okText="保存"
@@ -1644,186 +1805,205 @@ const TemplateCenter: React.FC = () => {
             <Form.Item name="sourceStyleNo" label="绑定款号(可选)" style={{ marginBottom: 12 }}>
               <Select
                 allowClear
-                showSearch
+                showSearch={{ filterOption: false, onSearch: scheduleFetchStyleNos }}
                 size="small"
-                filterOption={false}
                 loading={styleNoLoading}
                 placeholder="绑定后打开该款订单会自动尝试套用"
                 options={styleNoOptions}
-                onSearch={scheduleFetchStyleNos}
                 onOpenChange={(open) => {
                   if (open && !styleNoOptions.length) fetchStyleNoOptions('');
                 }}
               />
             </Form.Item>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <div style={{ border: '1px solid #d9d9d9', padding: 8, borderRadius: 4 }}>
-                <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>进度节点</div>
-                <Form.List name="nodes">
-                  {(fields, { add, remove, move }) => (
-                    <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, fontSize: 11, color: '#666' }}>
-                        <span>仅维护顺序；单价来自右侧工序库</span>
-                        <Button
-                          type="primary"
-                          size="small"
-                          icon={<PlusOutlined />}
-                          onClick={() => add({ name: '' })}
-                          disabled={progressSaving}
-                        />
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        {fields.map((f, idx) => (
-                          <div
-                            key={f.key}
-                            onDragOver={(e) => {
+            <div style={{ border: '1px solid #d9d9d9', padding: 8, borderRadius: 4 }}>
+              <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>进度节点</div>
+              <Form.List name="nodes">
+                {(fields, { add, remove, move }) => (
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, fontSize: 11, color: '#666' }}>
+                      <span>定义生产进度的工序顺序</span>
+                      <Button
+                        type="primary"
+                        size="small"
+                        icon={<PlusOutlined />}
+                        onClick={() => add({ name: '' })}
+                        disabled={progressSaving}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {fields.map((f, idx) => (
+                        <div
+                          key={f.key}
+                          onDragOver={(e) => {
+                            if (progressSaving) return;
+                            e.preventDefault();
+                            if (nodeDragOverIndex !== idx) setNodeDragOverIndex(idx);
+                          }}
+                          onDragLeave={() => {
+                            if (nodeDragOverIndex === idx) setNodeDragOverIndex(null);
+                          }}
+                          onDrop={(e) => {
+                            if (progressSaving) return;
+                            e.preventDefault();
+                            const from = draggingNodeIndexRef.current;
+                            if (from == null || from === idx) return;
+                            move(from, idx);
+                            draggingNodeIndexRef.current = idx;
+                            setNodeDragOverIndex(null);
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: 4,
+                            padding: 2,
+                            background: nodeDragOverIndex === idx ? '#e6f7ff' : 'transparent',
+                          }}
+                        >
+                          <span
+                            draggable={!progressSaving}
+                            onDragStart={(e) => {
                               if (progressSaving) return;
-                              e.preventDefault();
-                              if (nodeDragOverIndex !== idx) setNodeDragOverIndex(idx);
-                            }}
-                            onDragLeave={() => {
-                              if (nodeDragOverIndex === idx) setNodeDragOverIndex(null);
-                            }}
-                            onDrop={(e) => {
-                              if (progressSaving) return;
-                              e.preventDefault();
-                              const from = draggingNodeIndexRef.current;
-                              if (from == null || from === idx) return;
-                              move(from, idx);
                               draggingNodeIndexRef.current = idx;
+                              setNodeDragOverIndex(null);
+                              try {
+                                e.dataTransfer.effectAllowed = 'move';
+                                e.dataTransfer.setData('text/plain', String(idx));
+                              } catch {
+                                // Intentionally empty
+                                // 忽略错误
+                              }
+                            }}
+                            onDragEnd={() => {
+                              draggingNodeIndexRef.current = null;
                               setNodeDragOverIndex(null);
                             }}
                             style={{
-                              display: 'flex',
-                              alignItems: 'flex-start',
-                              gap: 4,
-                              padding: 2,
-                              background: nodeDragOverIndex === idx ? '#e6f7ff' : 'transparent',
+                              width: 20,
+                              height: 20,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: '#999',
+                              cursor: progressSaving ? 'not-allowed' : 'grab',
+                              userSelect: 'none',
+                              fontSize: 12,
                             }}
                           >
-                            <span
-                              draggable={!progressSaving}
-                              onDragStart={(e) => {
-                                if (progressSaving) return;
-                                draggingNodeIndexRef.current = idx;
-                                setNodeDragOverIndex(null);
-                                try {
-                                  e.dataTransfer.effectAllowed = 'move';
-                                  e.dataTransfer.setData('text/plain', String(idx));
-                                } catch {
-    // Intentionally empty
-      // 忽略错误
-                                }
-                              }}
-                              onDragEnd={() => {
-                                draggingNodeIndexRef.current = null;
-                                setNodeDragOverIndex(null);
-                              }}
-                              style={{
-                                width: 20,
-                                height: 20,
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: '#999',
-                                cursor: progressSaving ? 'not-allowed' : 'grab',
-                                userSelect: 'none',
-                                fontSize: 12,
-                              }}
-                            >
-                              <HolderOutlined />
-                            </span>
-                            <Form.Item
-                              name={[f.name, 'name']}
-                              rules={[{ required: true, message: '请输入节点名称' }]}
-                              style={{ margin: 0, flex: 1 }}
-                            >
-                              <Input placeholder="生产进度" size="small" />
-                            </Form.Item>
-                            <Button
-                              type="text"
-                              size="small"
-                              danger
-                              icon={<DeleteOutlined />}
-                              disabled={progressSaving}
-                              onClick={() => remove(f.name)}
-                            />
-                          </div>
-                        ))}
-                      </div>
+                            <HolderOutlined />
+                          </span>
+                          <Form.Item
+                            name={[f.name, 'name']}
+                            rules={[{ required: true, message: '请输入节点名称' }]}
+                            style={{ margin: 0, flex: 1 }}
+                          >
+                            <Input placeholder="生产进度" size="small" />
+                          </Form.Item>
+                          <Button
+                            type="text"
+                            size="small"
+                            danger
+                            icon={<DeleteOutlined />}
+                            disabled={progressSaving}
+                            onClick={() => remove(f.name)}
+                          />
+                        </div>
+                      ))}
                     </div>
-                  )}
-                </Form.List>
-              </div>
+                  </div>
+                )}
+              </Form.List>
+            </div>
+          </Form>
+        </div>
+      </ResizableModal>
 
-              <div style={{ border: '1px solid #d9d9d9', padding: 8, borderRadius: 4 }}>
-                <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>单价工序库</span>
-                  {processPriceEditing?.id ? <Tag color="cyan" style={{ margin: 0, fontSize: 11 }}>已存在</Tag> : <Tag style={{ margin: 0, fontSize: 11 }}>未创建</Tag>}
-                </div>
-                <div style={{ fontSize: 11, color: '#666', marginBottom: 6 }}>绑定款号后会保存为该款号的工序单价模板</div>
-                <Form.List name="priceSteps">
-                  {(fields, { add, remove }) => (
-                    <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                        <Button
-                          size="small"
-                          onClick={() => {
-                            const nodes = (progressForm.getFieldValue('nodes') || []) as Array<{ name?: string }>;
-                            const names = nodes.map((n) => String(n?.name || '').trim()).filter(Boolean);
-                            const current = (progressForm.getFieldValue('priceSteps') || []) as Array<{ processName?: string; unitPrice?: number; estimatedMinutes?: number }>;
-                            const map = new Map(current.map((s) => [String(s?.processName || '').trim(), { unitPrice: Number(s?.unitPrice) || 0, estimatedMinutes: Number(s?.estimatedMinutes) || 0 }]));
-                            const next = Array.from(new Set(names)).map((n) => {
-                              const existing = map.get(n) || { unitPrice: 0, estimatedMinutes: 0 };
-                              return { processName: n, unitPrice: existing.unitPrice, estimatedMinutes: existing.estimatedMinutes };
-                            });
-                            progressForm.setFieldsValue({ priceSteps: next });
-                          }}
-                          disabled={progressSaving}
-                          style={{ fontSize: 11 }}
-                        >
-                          从节点生成
-                        </Button>
-                        <Button
-                          type="primary"
-                          size="small"
-                          icon={<PlusOutlined />}
-                          onClick={() => add({ processName: '', unitPrice: 0, estimatedMinutes: 0 })}
-                          disabled={progressSaving}
-                        />
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        {fields.map((f) => (
-                          <div key={f.key} style={{ display: 'flex', gap: 4, alignItems: 'flex-start' }}>
-                            <Form.Item
-                              name={[f.name, 'processName']}
-                              rules={[{ required: true, message: '请输入工序名称' }]}
-                              style={{ margin: 0, flex: 1 }}
-                            >
-                              <Input placeholder="工序名称" size="small" />
-                            </Form.Item>
-                            <Form.Item name={[f.name, 'estimatedMinutes']} style={{ margin: 0 }} tooltip="预计耗时(分钟/件)，不填则使用默认">
-                              <InputNumber min={0} step={1} precision={0} placeholder="时间(分)" size="small" style={{ width: 90 }} />
-                            </Form.Item>
-                            <Form.Item name={[f.name, 'unitPrice']} style={{ margin: 0 }}>
-                              <InputNumber min={0} step={0.01} precision={2} prefix="¥" placeholder="单价" size="small" style={{ width: 100 }} />
-                            </Form.Item>
-                            <Button
-                              type="text"
-                              size="small"
-                              danger
-                              icon={<DeleteOutlined />}
-                              disabled={progressSaving}
-                              onClick={() => remove(f.name)}
-                            />
-                          </div>
-                        ))}
-                      </div>
+      {/* 工序单价弹窗 */}
+      <ResizableModal
+        title={processPriceEditingRow?.id ? '编辑工序单价' : '工序单价'}
+        open={processPriceOpen}
+        centered
+        onCancel={() => {
+          setProcessPriceOpen(false);
+          setProcessPriceEditingRow(null);
+        }}
+        onOk={submitProcessPrice}
+        okText="保存"
+        cancelText="取消"
+        confirmLoading={processPriceSaving}
+        width={modalWidth}
+        initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
+        scaleWithViewport
+      >
+        <div style={{ maxHeight: '60vh', overflow: 'auto', padding: '0 2px' }}>
+          <Form form={processPriceForm} layout="vertical">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <Form.Item name="templateName" label="模板名称" rules={[{ required: true, message: '请输入模板名称' }]} style={{ marginBottom: 8 }}>
+                <Input placeholder="例如：外协款-工序单价" size="small" />
+              </Form.Item>
+              <Form.Item name="templateKey" label="模板标识(可选)" style={{ marginBottom: 8 }}>
+                <Input placeholder="不填则自动生成" size="small" />
+              </Form.Item>
+            </div>
+
+            <Form.Item name="sourceStyleNo" label="绑定款号(可选)" style={{ marginBottom: 12 }}>
+              <Select
+                allowClear
+                showSearch={{ filterOption: false, onSearch: scheduleFetchStyleNos }}
+                size="small"
+                loading={styleNoLoading}
+                placeholder="绑定后打开该款订单会自动尝试套用"
+                options={styleNoOptions}
+                onOpenChange={(open) => {
+                  if (open && !styleNoOptions.length) fetchStyleNoOptions('');
+                }}
+              />
+            </Form.Item>
+
+            <div style={{ border: '1px solid #d9d9d9', padding: 8, borderRadius: 4 }}>
+              <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>工序单价列表</div>
+              <Form.List name="priceSteps">
+                {(fields, { add, remove }) => (
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: 6 }}>
+                      <Button
+                        type="primary"
+                        size="small"
+                        icon={<PlusOutlined />}
+                        onClick={() => add({ processName: '', unitPrice: 0, estimatedMinutes: 0 })}
+                        disabled={processPriceSaving}
+                      />
                     </div>
-                  )}
-                </Form.List>
-              </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {fields.map((f) => (
+                        <div key={f.key} style={{ display: 'flex', gap: 4, alignItems: 'flex-start' }}>
+                          <Form.Item
+                            name={[f.name, 'processName']}
+                            rules={[{ required: true, message: '请输入工序名称' }]}
+                            style={{ margin: 0, flex: 1 }}
+                          >
+                            <Input placeholder="工序名称" size="small" />
+                          </Form.Item>
+                          <Form.Item name={[f.name, 'estimatedMinutes']} style={{ margin: 0 }} tooltip="预计耗时(分钟/件)，不填则使用默认">
+                            <InputNumber min={0} step={1} precision={0} placeholder="时间(分)" size="small" style={{ width: 90 }} />
+                          </Form.Item>
+                          <Form.Item name={[f.name, 'unitPrice']} style={{ margin: 0 }}>
+                            <InputNumber min={0} step={0.01} precision={2} prefix="¥" placeholder="单价" size="small" style={{ width: 100 }} />
+                          </Form.Item>
+                          <Button
+                            type="text"
+                            size="small"
+                            danger
+                            icon={<DeleteOutlined />}
+                            disabled={processPriceSaving}
+                            onClick={() => remove(f.name)}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </Form.List>
             </div>
           </Form>
         </div>

@@ -1,6 +1,6 @@
 import React from 'react';
-import { Modal, Form, DatePicker, Input } from 'antd';
-import dayjs from 'dayjs';
+import { Modal, Form, Input } from 'antd';
+import { UnifiedDatePicker, dayjs } from './UnifiedDatePicker';
 
 interface QuickEditModalProps {
   visible: boolean;
@@ -71,7 +71,7 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({
           label="预计出货日期"
           name="expectedShipDate"
         >
-          <DatePicker style={{ width: '100%' }} placeholder="请选择日期" />
+          <UnifiedDatePicker />
         </Form.Item>
         <Form.Item
           label="备注"

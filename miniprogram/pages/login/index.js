@@ -2,218 +2,250 @@ const { getToken, setToken, setUserInfo } = require('../../utils/storage');
 const { DEFAULT_BASE_URL, setBaseUrl, normalizeBaseUrl } = require('../../config');
 const api = require('../../utils/api');
 const { validateByRule } = require('../../utils/validationRules');
-const { errorHandler } = require('../../utils/errorHandler');
+const { toast } = require('../../utils/uiHelper');
 
 let autoWechatTried = false;
 
 // 验证函数 (使用统一的规则库)
 function validateUsername(username) {
-    return validateByRule(username, { name: '账号', required: true, minLength: 3, maxLength: 20, pattern: /^[a-zA-Z0-9_\-]+$/ }) || '';
+  return (
+    validateByRule(username, {
+      name: '账号',
+      required: true,
+      minLength: 3,
+      maxLength: 20,
+      pattern: /^[a-zA-Z0-9_\-]+$/,
+    }) || ''
+  );
 }
 
 function validatePassword(password) {
-    return validateByRule(password, { name: '密码', required: true, minLength: 6, maxLength: 20 }) || '';
+  return (
+    validateByRule(password, { name: '密码', required: true, minLength: 6, maxLength: 20 }) || ''
+  );
 }
 
 function validateApiBaseUrl(url) {
-    const v = String(url || '').trim();
-    if (!v) {return '';}  // 可选字段
-    const error = validateByRule(v, { name: 'API 地址', required: false, pattern: /^https?:\/\// });
-    if (error) {return error;}
+  const v = String(url || '').trim();
+  if (!v) {
     return '';
+  } // 可选字段
+  const error = validateByRule(v, { name: 'API 地址', required: false, pattern: /^https?:\/\// });
+  if (error) {
+    return error;
+  }
+  return '';
 }
 
 function resolveAppId() {
-    try {
-        if (wx && typeof wx.getAccountInfoSync === 'function') {
-            const info = wx.getAccountInfoSync();
-            const mp = info && info.miniProgram;
-            return mp && mp.appId ? String(mp.appId) : '';
-        }
-    } catch (e) {
-        null;
+  try {
+    if (wx && typeof wx.getAccountInfoSync === 'function') {
+      const info = wx.getAccountInfoSync();
+      const mp = info && info.miniProgram;
+      return mp && mp.appId ? String(mp.appId) : '';
     }
-    return '';
+  } catch (e) {
+    null;
+  }
+  return '';
 }
 
 async function resolveLoginCode() {
-    const appId = resolveAppId();
-    if (!appId || appId === 'touristappid') {
-        return '';
-    }
-    const loginRes = await new Promise((resolve, reject) => {
-        wx.login({
-            success: resolve,
-            fail: reject,
-        });
+  const appId = resolveAppId();
+  if (!appId || appId === 'touristappid') {
+    return '';
+  }
+  const loginRes = await new Promise((resolve, reject) => {
+    wx.login({
+      success: resolve,
+      fail: reject,
     });
-    return loginRes && loginRes.code ? String(loginRes.code) : '';
+  });
+  return loginRes && loginRes.code ? String(loginRes.code) : '';
 }
 
 function resolveEnvVersion() {
-    try {
-        if (wx && typeof wx.getAccountInfoSync === 'function') {
-            const info = wx.getAccountInfoSync();
-            const mp = info && info.miniProgram;
-            const v = mp && mp.envVersion ? String(mp.envVersion) : '';
-            return v || 'develop';
-        }
-    } catch (e) {
-        null;
+  try {
+    if (wx && typeof wx.getAccountInfoSync === 'function') {
+      const info = wx.getAccountInfoSync();
+      const mp = info && info.miniProgram;
+      const v = mp && mp.envVersion ? String(mp.envVersion) : '';
+      return v || 'develop';
     }
-    return 'develop';
+  } catch (e) {
+    null;
+  }
+  return 'develop';
+}
+
+/**
+ * 执行登录（通用函数 - 消除重复代码）
+ * @param {Object} params - 登录参数 { code, username?, password? }
+ * @returns {Promise<boolean>} 是否成功
+ */
+async function executeLogin(params) {
+  try {
+    const resp = await api.wechat.miniProgramLogin(params);
+
+    if (resp && resp.code === 200 && resp.data && resp.data.token) {
+      setToken(resp.data.token);
+      // 保存用户信息（包含角色）
+      if (resp.data.user) {
+        setUserInfo(resp.data.user);
+      }
+      wx.switchTab({ url: '/pages/home/index' });
+      return true;
+    }
+    toast.error((resp && resp.message) || '登录失败');
+    return false;
+  } catch (e) {
+    const app = getApp();
+    if (app && typeof app.toastError === 'function') {
+      app.toastError(e, '网络异常');
+    } else {
+      toast.error('网络异常');
+    }
+    return false;
+  }
+}
+
+/**
+ * 验证并设置 API 地址（通用函数）
+ * @param {string} apiBaseUrl - API 地址
+ * @returns {string|null} 错误信息或 null
+ */
+function validateAndSetBaseUrl(apiBaseUrl) {
+  if (apiBaseUrl) {
+    const err = validateApiBaseUrl(apiBaseUrl);
+    if (err) {
+      return err;
+    }
+    setBaseUrl(apiBaseUrl);
+  }
+  return null;
 }
 
 Page({
-    data: {
-        username: '',
-        password: '',
-        apiBaseUrl: '',
-        loading: false,
-        envVersion: '',
-        showDevFields: false,
-    },
+  data: {
+    username: '',
+    password: '',
+    apiBaseUrl: '',
+    loading: false,
+    envVersion: '',
+    showDevFields: false,
+  },
 
-    onShow() {
-        const token = getToken();
-        if (token) {
-            wx.switchTab({ url: '/pages/home/index' });
-            return;
-        }
+  onShow() {
+    const token = getToken();
+    if (token) {
+      wx.switchTab({ url: '/pages/home/index' });
+      return;
+    }
 
-        const envVersion = resolveEnvVersion();
-        const showDevFields = envVersion !== 'release';
+    const envVersion = resolveEnvVersion();
+    const showDevFields = envVersion !== 'release';
 
-        let apiBaseUrl = DEFAULT_BASE_URL;
-        if (showDevFields) {
-            try {
-                const saved = wx.getStorageSync('api_base_url');
-                apiBaseUrl = normalizeBaseUrl(saved) || DEFAULT_BASE_URL;
-            } catch (e) {
-                apiBaseUrl = DEFAULT_BASE_URL;
-            }
-        }
-        setBaseUrl(apiBaseUrl);
-        this.setData({ envVersion, showDevFields, apiBaseUrl });
+    let apiBaseUrl = DEFAULT_BASE_URL;
+    if (showDevFields) {
+      try {
+        const saved = wx.getStorageSync('api_base_url');
+        apiBaseUrl = normalizeBaseUrl(saved) || DEFAULT_BASE_URL;
+      } catch (e) {
+        apiBaseUrl = DEFAULT_BASE_URL;
+      }
+    }
+    setBaseUrl(apiBaseUrl);
+    this.setData({ envVersion, showDevFields, apiBaseUrl });
 
-        const shouldAutoWechat = envVersion === 'trial' || envVersion === 'release';
-        if (shouldAutoWechat && !autoWechatTried) {
-            autoWechatTried = true;
-            this.onWechatLogin();
-        }
-    },
+    const shouldAutoWechat = envVersion === 'trial' || envVersion === 'release';
+    if (shouldAutoWechat && !autoWechatTried) {
+      autoWechatTried = true;
+      this.onWechatLogin();
+    }
+  },
 
-    onUsernameInput(e) {
-        this.setData({ username: (e && e.detail && e.detail.value) || '' });
-    },
+  onUsernameInput(e) {
+    this.setData({ username: (e && e.detail && e.detail.value) || '' });
+  },
 
-    onPasswordInput(e) {
-        this.setData({ password: (e && e.detail && e.detail.value) || '' });
-    },
+  onPasswordInput(e) {
+    this.setData({ password: (e && e.detail && e.detail.value) || '' });
+  },
 
-    onApiBaseUrlInput(e) {
-        this.setData({ apiBaseUrl: (e && e.detail && e.detail.value) || '' });
-    },
+  onApiBaseUrlInput(e) {
+    this.setData({ apiBaseUrl: (e && e.detail && e.detail.value) || '' });
+  },
 
-    async onWechatLogin() {
-        if (this.data.loading) {return;}
+  async onWechatLogin() {
+    if (this.data.loading) {
+      return;
+    }
 
-        const apiBaseUrl = (this.data.apiBaseUrl || '').trim();
-        if (this.data.showDevFields && apiBaseUrl) {
-            const err = validateApiBaseUrl(apiBaseUrl);
-            if (err) {
-                wx.showToast({ title: err, icon: 'none' });
-                return;
-            }
-            setBaseUrl(apiBaseUrl);
-        }
+    // 验证并设置 API 地址
+    const apiBaseUrl = (this.data.apiBaseUrl || '').trim();
+    if (this.data.showDevFields && apiBaseUrl) {
+      const err = validateAndSetBaseUrl(apiBaseUrl);
+      if (err) {
+        toast.error(err);
+        return;
+      }
+    }
 
-        this.setData({ loading: true });
-        try {
-            const code = await resolveLoginCode();
-            if (!code) {
-                wx.showToast({ title: '获取登录code失败', icon: 'none' });
-                return;
-            }
+    this.setData({ loading: true });
+    try {
+      const code = await resolveLoginCode();
+      if (!code) {
+        toast.error('获取登录code失败');
+        return;
+      }
 
-            const resp = await api.wechat.miniProgramLogin({ code });
+      await executeLogin({ code });
+    } finally {
+      this.setData({ loading: false });
+    }
+  },
 
-            if (resp && resp.code === 200 && resp.data && resp.data.token) {
-                setToken(resp.data.token);
-                // 保存用户信息（包含角色）
-                if (resp.data.user) {
-                    setUserInfo(resp.data.user);
-                }
-                wx.switchTab({ url: '/pages/home/index' });
-                return;
-            }
-            wx.showToast({ title: (resp && resp.message) || '登录失败', icon: 'none' });
-        } catch (e) {
-            const app = getApp();
-            if (app && typeof app.toastError === 'function') {app.toastError(e, '网络异常');}
-            else {wx.showToast({ title: '网络异常', icon: 'none' });}
-        } finally {
-            this.setData({ loading: false });
-        }
-    },
+  async onDevLogin() {
+    if (this.data.loading) {
+      return;
+    }
 
-    async onDevLogin() {
-        if (this.data.loading) {return;}
+    const username = (this.data.username || '').trim();
+    const password = (this.data.password || '').trim();
+    const apiBaseUrl = (this.data.apiBaseUrl || '').trim();
 
-        const username = (this.data.username || '').trim();
-        const password = (this.data.password || '').trim();
-        const apiBaseUrl = (this.data.apiBaseUrl || '').trim();
+    // 验证账号
+    let err = validateUsername(username);
+    if (err) {
+      toast.error(err);
+      return;
+    }
 
-        // 验证账号
-        let err = validateUsername(username);
-        if (err) {
-            wx.showToast({ title: err, icon: 'none' });
-            return;
-        }
+    // 验证密码
+    err = validatePassword(password);
+    if (err) {
+      toast.error(err);
+      return;
+    }
 
-        // 验证密码
-        err = validatePassword(password);
-        if (err) {
-            wx.showToast({ title: err, icon: 'none' });
-            return;
-        }
+    // 验证并设置 API 地址
+    err = validateAndSetBaseUrl(apiBaseUrl);
+    if (err) {
+      toast.error(err);
+      return;
+    }
 
-        // 验证 API 地址（如果有）
-        if (apiBaseUrl) {
-            err = validateApiBaseUrl(apiBaseUrl);
-            if (err) {
-                wx.showToast({ title: err, icon: 'none' });
-                return;
-            }
-            setBaseUrl(apiBaseUrl);
-        }
+    this.setData({ loading: true });
+    try {
+      const code = await resolveLoginCode();
+      if (!code) {
+        toast.error('获取登录code失败');
+        return;
+      }
 
-        this.setData({ loading: true });
-        try {
-            const code = await resolveLoginCode();
-            if (!code) {
-                wx.showToast({ title: '获取登录code失败', icon: 'none' });
-                return;
-            }
-
-            const resp = await api.wechat.miniProgramLogin({ code, username, password });
-
-            if (resp && resp.code === 200 && resp.data && resp.data.token) {
-                setToken(resp.data.token);
-                // 保存用户信息（包含角色）
-                if (resp.data.user) {
-                    setUserInfo(resp.data.user);
-                }
-                wx.switchTab({ url: '/pages/home/index' });
-                return;
-            }
-            wx.showToast({ title: (resp && resp.message) || '登录失败', icon: 'none' });
-        } catch (e) {
-            const app = getApp();
-            if (app && typeof app.toastError === 'function') {app.toastError(e, '网络异常');}
-            else {wx.showToast({ title: '网络异常', icon: 'none' });}
-        } finally {
-            this.setData({ loading: false });
-        }
-    },
+      await executeLogin({ code, username, password });
+    } finally {
+      this.setData({ loading: false });
+    }
+  },
 });

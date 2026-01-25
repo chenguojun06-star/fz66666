@@ -36,6 +36,7 @@ export interface StyleInfo {
   maintenanceRemark?: string;
 
   orderCount?: number;
+  latestOrderTime?: string;
 }
 
 export interface StyleBom {

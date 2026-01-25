@@ -6,18 +6,18 @@ export interface QRCodeBoxProps {
    * 二维码的值（纯字符串或JSON对象，会自动stringify）
    */
   value: string | Record<string, unknown>;
-  
+
   /**
    * 二维码尺寸（像素）
    * @default 120
    */
   size?: number;
-  
+
   /**
    * 底部显示的标签文字
    */
   label?: string;
-  
+
   /**
    * 样式变体
    * - 'primary': 蓝色主题（默认，用于重要扫码）
@@ -27,24 +27,24 @@ export interface QRCodeBoxProps {
    * @default 'primary'
    */
   variant?: 'primary' | 'default' | 'success' | 'warning';
-  
+
   /**
    * 纠错级别
    * @default 'M'
    */
   level?: 'L' | 'M' | 'Q' | 'H';
-  
+
   /**
    * 是否包含边距
    * @default false
    */
   includeMargin?: boolean;
-  
+
   /**
    * 自定义样式
    */
   style?: React.CSSProperties;
-  
+
   /**
    * 自定义类名
    */
@@ -80,14 +80,14 @@ const variantStyles = {
 
 /**
  * 通用二维码展示组件
- * 
+ *
  * 用于在全站统一展示二维码，支持多种主题样式和自定义配置
- * 
+ *
  * **特性：**
  * - 固定尺寸：二维码大小不随窗口缩放而变化，保持清晰可扫描
  * - 多主题：支持 primary、default、success、warning 四种样式
  * - 统一规范：全站统一的二维码展示样式
- * 
+ *
  * @example
  * ```tsx
  * // 订单扫码（蓝色主题）
@@ -97,7 +97,7 @@ const variantStyles = {
  *   variant="primary"
  *   size={120}
  * />
- * 
+ *
  * // 裁剪单扫码（默认主题）
  * <QRCodeBox
  *   value={task.qrCode}
@@ -105,7 +105,7 @@ const variantStyles = {
  *   variant="default"
  *   size={100}
  * />
- * 
+ *
  * // 质检合格（绿色主题）
  * <QRCodeBox
  *   value={qualityRecord.qrCode}

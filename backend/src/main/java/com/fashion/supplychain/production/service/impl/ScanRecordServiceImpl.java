@@ -64,7 +64,7 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
          */
         private void applyDataPermissionFilter(LambdaQueryWrapper<ScanRecord> wrapper) {
                 String dataScope = UserContext.getDataScope();
-                
+
                 switch (dataScope) {
                         case "all":
                                 // 管理员看全部，不添加过滤
@@ -79,9 +79,9 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
                                 // 普通工人只看自己
                                 String currentUserId = UserContext.userId();
                                 String currentUsername = UserContext.username();
-                                log.debug("数据权限: 工人, 仅查看自己数据, userId={}, username={}", 
+                                log.debug("数据权限: 工人, 仅查看自己数据, userId={}, username={}",
                                                 currentUserId, currentUsername);
-                                
+
                                 if (StringUtils.hasText(currentUserId)) {
                                         wrapper.eq(ScanRecord::getOperatorId, currentUserId);
                                 } else if (StringUtils.hasText(currentUsername)) {
@@ -123,5 +123,23 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
         @Override
         public Map<String, Object> getPersonalStats(String operatorId, String scanType) {
                 return baseMapper.selectPersonalStats(operatorId, scanType);
+        }
+
+        @Override
+        public int deleteByOrderId(String orderId) {
+                if (orderId == null || orderId.trim().isEmpty()) {
+                        return 0;
+                }
+                return baseMapper.delete(new LambdaQueryWrapper<ScanRecord>()
+                                .eq(ScanRecord::getOrderId, orderId.trim()));
+        }
+
+        @Override
+        public int deleteByOrderNo(String orderNo) {
+                if (orderNo == null || orderNo.trim().isEmpty()) {
+                        return 0;
+                }
+                return baseMapper.delete(new LambdaQueryWrapper<ScanRecord>()
+                                .eq(ScanRecord::getOrderNo, orderNo.trim()));
         }
 }
