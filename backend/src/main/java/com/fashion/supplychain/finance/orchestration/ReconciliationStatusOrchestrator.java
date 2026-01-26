@@ -3,6 +3,7 @@ package com.fashion.supplychain.finance.orchestration;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.finance.entity.MaterialReconciliation;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
+import com.fashion.supplychain.finance.helper.OrderReconciliationApprovalHelper;
 import com.fashion.supplychain.finance.service.MaterialReconciliationService;
 import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
 import java.time.LocalDateTime;
@@ -11,7 +12,9 @@ import java.util.NoSuchElementException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 public class ReconciliationStatusOrchestrator {
 
@@ -26,6 +29,9 @@ public class ReconciliationStatusOrchestrator {
 
     @Autowired
     private ShipmentReconciliationService shipmentReconciliationService;
+
+    @Autowired
+    private OrderReconciliationApprovalHelper orderReconciliationApprovalHelper;
 
     public String updateMaterialStatus(String id, String status) {
         return updateStatus(Scope.MATERIAL, id, status);
@@ -159,6 +165,17 @@ public class ReconciliationStatusOrchestrator {
                 if (!ok) {
                     throw new IllegalStateException("状态更新失败");
                 }
+
+                // 订单结算审核通过后，自动创建审批付款记录
+                if ("approved".equals(to)) {
+                    try {
+                        orderReconciliationApprovalHelper.createApprovalOnReconciliationApproved(rid);
+                    } catch (Exception e) {
+                        log.error("创建订单结算审批付款记录失败: reconciliationId={}, error={}", rid, e.getMessage(), e);
+                        // 不影响主流程，仅记录错误
+                    }
+                }
+
                 return "状态更新成功";
             }
             if (scope == Scope.SHIPMENT) {
