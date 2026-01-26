@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Form, InputNumber, Button, Row, Col, Statistic, Divider, Space, App } from 'antd';
 import { SaveOutlined } from '@ant-design/icons';
-import { StyleQuotation, StyleBom, StyleProcess } from '../../../../../types/style';
-import api from '../../../../../utils/api';
+import { StyleQuotation, StyleBom, StyleProcess } from '@/types/style';
+import api from '@/utils/api';
 
 interface Props {
   styleId: string | number;

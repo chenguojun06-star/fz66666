@@ -9,12 +9,12 @@ import {
   FilePdfOutlined,
   PrinterOutlined,
 } from '@ant-design/icons';
-import { StyleAttachment } from '../../../../../types/style';
-import api from '../../../../../utils/api';
-import ResizableTable from '../../../../../components/common/ResizableTable';
-import RowActions from '../../../../../components/common/RowActions';
-import { formatDateTime } from '../../../../../utils/datetime';
-import { useViewport } from '../../../../../utils/useViewport';
+import { StyleAttachment } from '@/types/style';
+import api from '@/utils/api';
+import ResizableTable from '@/components/common/ResizableTable';
+import RowActions from '@/components/common/RowActions';
+import { formatDateTime } from '@/utils/datetime';
+import { useViewport } from '@/utils/useViewport';
 
 interface Props {
   styleId: string | number;
@@ -79,7 +79,7 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
     try {
       return JSON.stringify(value);
     } catch {
-      // Intentionally empty
+    // Intentionally empty
       // 忽略错误
       return String(value);
     }
@@ -227,8 +227,8 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
       try {
         document.body.removeChild(iframe);
       } catch {
-        // Intentionally empty
-        // 忽略错误
+    // Intentionally empty
+      // 忽略错误
         return;
       }
     };
@@ -237,8 +237,8 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
         iframe.contentWindow?.focus();
         iframe.contentWindow?.print();
       } catch {
-        // Intentionally empty
-        // 忽略错误
+    // Intentionally empty
+      // 忽略错误
         return;
       } finally {
         setTimeout(cleanup, 1500);
@@ -250,8 +250,8 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
         iframe.contentWindow?.focus();
         iframe.contentWindow?.print();
       } catch {
-        // Intentionally empty
-        // 忽略错误
+    // Intentionally empty
+      // 忽略错误
         return;
       }
     }, 900);
