@@ -330,6 +330,13 @@ class StageDetector {
       // === 步骤3：从订单获取车缝工序列表 ===
       const sewingProcessList = this._extractSewingProcesses(orderDetail);
 
+      // 🔍 调试：打印关键参数
+      console.log('[StageDetector] detectByBundle 关键参数:', {
+        scanCount: scanCount,
+        sewingProcessList: sewingProcessList,
+        isLegacyConfig: sewingProcessList.length === 1 && sewingProcessList[0] === '车缝',
+      });
+
       // === 步骤4：从订单获取工序时间配置 ===
       const processTimeConfig = this._extractProcessTimeConfig(orderDetail);
 
@@ -348,10 +355,54 @@ class StageDetector {
       }
 
       // === 步骤6：根据扫码次数判断当前工序 ===
-      return this._determineCurrentProcess(scanCount, sewingProcessList, accurateQuantity);
+      const processResult = this._determineCurrentProcess(scanCount, sewingProcessList, accurateQuantity);
+
+      // === 步骤7：如果是入库工序，检查是否已入库 ===
+      if (processResult && processResult.scanType === 'warehouse' && !processResult.isCompleted) {
+        const isWarehoused = await this._checkBundleWarehoused(orderNo, bundleNo);
+        if (isWarehoused) {
+          return {
+            ...processResult,
+            isCompleted: true,
+            hint: '该菲号已入库完成',
+          };
+        }
+      }
+
+      return processResult;
     } catch (e) {
       console.error('[StageDetector] 基于菲号识别进度失败:', e);
       return null;
+    }
+  }
+
+  /**
+   * 检查菲号是否已入库
+   * @private
+   * @param {string} orderNo - 订单号
+   * @param {string} bundleNo - 菲号
+   * @returns {Promise<boolean>} 是否已入库
+   */
+  async _checkBundleWarehoused(orderNo, bundleNo) {
+    try {
+      // 先获取菲号ID
+      const bundleInfo = await this.api.production.getCuttingBundle(orderNo, bundleNo);
+      if (!bundleInfo || !bundleInfo.id) {
+        return false;
+      }
+
+      // 查询入库记录
+      const res = await this.api.production.listWarehousing({
+        cuttingBundleId: bundleInfo.id,
+        pageNum: 1,
+        pageSize: 1,
+      });
+
+      const records = res && res.records ? res.records : [];
+      return records.length > 0;
+    } catch (e) {
+      console.warn('[StageDetector] 检查入库状态失败:', e);
+      return false;
     }
   }
 
@@ -393,7 +444,36 @@ class StageDetector {
         bundleNo: bundleNo,
       });
 
-      return historyRes && historyRes.records ? historyRes.records : [];
+      const allRecords = historyRes && historyRes.records ? historyRes.records : [];
+
+      // ✅ 修复：过滤掉系统自动生成的记录
+      // 统计手动扫码的【生产工序】记录（车缝、大烫、质检等）
+      const manualRecords = allRecords.filter(record => {
+        const requestId = (record.requestId || '').trim();
+        const scanType = (record.scanType || '').toLowerCase();
+
+        // 排除系统自动生成的记录（根据 requestId 前缀判断）
+        const isSystemGenerated =
+          requestId.startsWith('ORDER_CREATED:') ||
+          requestId.startsWith('CUTTING_BUNDLED:') ||
+          requestId.startsWith('ORDER_PROCUREMENT:') ||
+          requestId.startsWith('SYSTEM:');
+
+        // 🔧 修复：统计 production 和 quality 类型的扫码记录
+        // production: 车缝、大烫、包装
+        // quality: 质检（领取、验收、确认）
+        const isValidScan = scanType === 'production' || scanType === 'quality';
+
+        return !isSystemGenerated && isValidScan;
+      });
+
+      console.log('[StageDetector] 扫码历史统计:', {
+        总记录数: allRecords.length,
+        手动扫码数: manualRecords.length,
+        系统记录数: allRecords.length - manualRecords.length,
+      });
+
+      return manualRecords;
     } catch (e) {
       console.error('[StageDetector] 查询扫码历史失败:', e);
       return [];
@@ -439,6 +519,17 @@ class StageDetector {
       .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
       .map(node => node.name)
       .filter(name => name && name.trim());
+
+    // ✅ 新增：兼容旧订单 - 如果只筛选到1个"车缝"节点且没有 progressStage，
+    // 说明是旧版本数据，不展开为多个工序，直接保持1个车缝工序
+    if (sewingProcesses.length === 1) {
+      const singleNode = nodes.find(n => n.name === '车缝' || n.name === 'è½¦ç¼');
+      // 如果这个节点没有 progressStage 字段，说明是旧版本配置
+      if (singleNode && !singleNode.progressStage) {
+        console.log('[StageDetector] 检测到旧版本配置（无progressStage），保持1个车缝工序');
+        return sewingProcesses; // 返回 ["车缝"]，扫1次就进入大烫
+      }
+    }
 
     // 如果没有配置，使用默认
     return sewingProcesses.length > 0 ? sewingProcesses : [...this.defaultSewingProcesses];
@@ -539,27 +630,58 @@ class StageDetector {
    * @returns {Object} 工序信息
    */
   _determineCurrentProcess(scanCount, sewingProcessList, quantity) {
+    // 完整的生产工序流程（车缝之后的工序）
+    // 🔧 简化：质检只需要1次扫码（领取），结果录入通过点击记录完成
+    const postSewingStages = [
+      { processName: '大烫', progressStage: '大烫', scanType: 'production' },
+      { processName: '质检', progressStage: '质检', scanType: 'quality', qualityStage: 'receive' },
+      { processName: '包装', progressStage: '包装', scanType: 'production' },
+      { processName: '入库', progressStage: '入库', scanType: 'warehouse' },
+    ];
+
+    // 计算车缝工序数量（旧版本只有1个"车缝"，新版本可能有多个子工序）
+    const sewingStageCount = sewingProcessList.length;
+
     // 还在车缝工序内
-    if (scanCount < sewingProcessList.length) {
+    if (scanCount < sewingStageCount) {
       const nextProcessName = sewingProcessList[scanCount];
       return {
         processName: nextProcessName,
         progressStage: '车缝',
         scanType: 'production',
-        hint: `${nextProcessName} (第${scanCount + 1}/${sewingProcessList.length}次)`,
+        hint: sewingStageCount > 1
+          ? `${nextProcessName} (第${scanCount + 1}/${sewingStageCount}次)`
+          : '车缝',
         isDuplicate: false,
         quantity: quantity,
       };
     }
 
-    // 车缝工序都完成了，进入下一阶段（大烫）
+    // 车缝工序都完成了，进入后续阶段
+    const postSewingIndex = scanCount - sewingStageCount;
+
+    if (postSewingIndex < postSewingStages.length) {
+      const stage = postSewingStages[postSewingIndex];
+      return {
+        processName: stage.processName,
+        progressStage: stage.progressStage,
+        scanType: stage.scanType,
+        qualityStage: stage.qualityStage || null,
+        hint: `${stage.processName}`,
+        isDuplicate: false,
+        quantity: quantity,
+      };
+    }
+
+    // 所有工序都完成了
     return {
-      processName: '大烫',
-      progressStage: '大烫',
-      scanType: 'production',
-      hint: '车缝已完成',
+      processName: '入库',
+      progressStage: '入库',
+      scanType: 'warehouse',
+      hint: '所有工序已完成',
       isDuplicate: false,
       quantity: quantity,
+      isCompleted: true,
     };
   }
 }

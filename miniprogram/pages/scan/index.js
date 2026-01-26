@@ -157,6 +157,25 @@ Page({
       fromMyTasks: false,
     },
 
+    // 🔧 质检结果弹窗数据（简化版）
+    qualityModal: {
+      show: false,
+      detail: null,
+      result: '', // qualified 或 unqualified，默认为空让用户选择
+      unqualifiedQuantity: '',  // 不合格数量
+      defectCategory: 0,  // 原因大类索引
+      handleMethod: 0,    // 处理方式索引（返修/报废）
+      remark: '',         // 备注
+      images: [],         // 照片（可选）
+      warehouseIndex: 0,  // 仓库选择索引
+    },
+    // 仓库选项（与PC端一致）
+    warehouseOptions: ['A仓', 'B仓'],
+    // 不合格原因大类
+    defectCategories: ['线头问题', '脏污', '破损', '色差', '尺寸不符', '缝制问题', '其他'],
+    // 处理方式
+    handleMethods: ['返修', '报废'],
+
     // 调试模式
     debug: DEBUG_MODE,
   },
@@ -211,9 +230,196 @@ Page({
       this.loadMyProcurementTasks(); // ✅ 加载采购任务列表
       this.loadMyCuttingTasks(); // ✅ 加载裁剪任务列表
 
-      // 如果有参数传入 (如从其他页面带参数跳转)
-      // 这里可以处理 options 中的扫码参数，但 onShow 没有 options 参数
-      // 通常在 onLoad 处理，或者通过全局变量/Storage 传递
+      // 检查是否有待处理任务（从铃铛点击过来）
+      this.checkPendingTasks();
+    }
+  },
+
+  /**
+   * 检查是否有待处理的任务（从铃铛点击过来）
+   */
+  checkPendingTasks() {
+    // 优先检查质检任务
+    this.checkPendingQualityTask();
+    // 检查裁剪任务
+    this.checkPendingCuttingTask();
+    // 检查采购任务
+    this.checkPendingProcurementTask();
+  },
+
+  /**
+   * 检查是否有待处理的质检任务
+   */
+  checkPendingQualityTask() {
+    try {
+      const taskStr = wx.getStorageSync('pending_quality_task');
+      if (taskStr) {
+        wx.removeStorageSync('pending_quality_task');
+        const task = JSON.parse(taskStr);
+        // 延迟弹出质检弹窗，确保页面已渲染
+        setTimeout(() => {
+          this.showQualityModal({
+            orderId: task.orderId || '',        // 订单ID（warehousing需要）
+            orderNo: task.orderNo || '',
+            bundleId: task.bundleId || task.cuttingBundleId || '',  // 菲号ID
+            bundleNo: task.bundleNo || task.cuttingBundleNo || '',
+            styleNo: task.styleNo || '',
+            color: task.color || '',
+            size: task.size || '',
+            quantity: task.quantity || 1,
+            scanCode: task.scanCode || '',
+            recordId: task.id || task.scanId,
+          });
+        }, 300);
+      }
+    } catch (e) {
+      console.error('检查质检任务失败:', e);
+    }
+  },
+
+  /**
+   * 检查是否有待处理的裁剪任务（从铃铛点击过来）
+   */
+  checkPendingCuttingTask() {
+    try {
+      const taskStr = wx.getStorageSync('pending_cutting_task');
+      if (taskStr) {
+        wx.removeStorageSync('pending_cutting_task');
+        const task = JSON.parse(taskStr);
+        // 延迟触发，确保页面数据已加载
+        setTimeout(() => {
+          this.handleCuttingTaskFromBell(task);
+        }, 500);
+      }
+    } catch (e) {
+      console.error('检查裁剪任务失败:', e);
+    }
+  },
+
+  /**
+   * 处理从铃铛点击的裁剪任务
+   */
+  async handleCuttingTaskFromBell(task) {
+    this.setData({ loading: true });
+
+    try {
+      const orderNo = task.productionOrderNo || task.orderNo;
+      const orderId = task.productionOrderId || task.id;
+
+      // 获取订单SKU列表
+      let skuItems = [];
+      try {
+        const orderDetail = await api.production.orderDetailByOrderNo(orderNo);
+        if (orderDetail && orderDetail.items) {
+          skuItems = orderDetail.items;
+        } else if (orderDetail && orderDetail.orderLines) {
+          skuItems = orderDetail.orderLines;
+        }
+      } catch (err) {
+        console.warn('[handleCuttingTaskFromBell] 获取订单详情失败:', err);
+      }
+
+      // 如果没有SKU明细，使用任务本身的颜色尺码
+      if (!skuItems || skuItems.length === 0) {
+        skuItems = [{
+          color: task.color,
+          size: task.size,
+          quantity: task.orderQuantity || 0,
+        }];
+      }
+
+      // 构建裁剪任务列表
+      const cuttingTasks = skuItems.map(item => ({
+        color: item.color,
+        size: item.size,
+        plannedQuantity: item.quantity || item.num || 0,
+        cuttingInput: item.quantity || item.num || 0,
+      }));
+
+      // 打开弹窗
+      this.setData({
+        scanConfirm: {
+          visible: true,
+          loading: false,
+          remain: 30,
+          detail: {
+            orderId: orderId,
+            orderNo: orderNo,
+            styleNo: task.styleNo,
+            progressStage: '裁剪',
+            taskId: task.id,
+          },
+          cuttingTasks: cuttingTasks,
+          cuttingTaskReceived: true,
+          fromMyTasks: true,
+          skuList: [],
+          materialPurchases: [],
+        },
+      });
+
+      toast.success('已打开裁剪任务');
+    } catch (e) {
+      console.error('[handleCuttingTaskFromBell] 失败:', e);
+      toast.error('加载裁剪任务失败');
+    } finally {
+      this.setData({ loading: false });
+    }
+  },
+
+  /**
+   * 检查是否有待处理的采购任务（从铃铛点击过来）
+   */
+  checkPendingProcurementTask() {
+    try {
+      const taskStr = wx.getStorageSync('pending_procurement_task');
+      if (taskStr) {
+        wx.removeStorageSync('pending_procurement_task');
+        const task = JSON.parse(taskStr);
+        // 延迟触发，确保页面数据已加载
+        setTimeout(() => {
+          this.handleProcurementTaskFromBell(task);
+        }, 500);
+      }
+    } catch (e) {
+      console.error('检查采购任务失败:', e);
+    }
+  },
+
+  /**
+   * 处理从铃铛点击的采购任务
+   */
+  async handleProcurementTaskFromBell(task) {
+    this.setData({ loading: true });
+
+    try {
+      const orderNo = task.orderNo;
+      const styleNo = task.styleNo || '';
+
+      // 获取采购单列表
+      const res = await api.production.getMaterialPurchases({ orderNo });
+      const materialPurchases = res || [];
+
+      if (!materialPurchases || materialPurchases.length === 0) {
+        toast.error('未找到采购单');
+        return;
+      }
+
+      // 打开确认弹窗
+      this.showConfirmModal({
+        isProcurement: true,
+        materialPurchases: materialPurchases,
+        orderNo: orderNo,
+        styleNo: styleNo,
+        progressStage: '采购',
+        fromMyTasks: true,
+      });
+
+      toast.success('已打开采购任务');
+    } catch (e) {
+      console.error('[handleProcurementTaskFromBell] 失败:', e);
+      toast.error('加载采购任务失败');
+    } finally {
+      this.setData({ loading: false });
     }
   },
 
@@ -306,6 +512,8 @@ Page({
         'my.stats': {
           scanCount: res.todayCount || 0,
           orderCount: res.orderCount || 0,
+          totalQuantity: res.totalQuantity || 0,
+          totalAmount: res.totalAmount || 0,
         },
       });
     } catch (e) {
@@ -380,6 +588,7 @@ Page({
         }
         group.items.push({
           id: record.id,
+          bundleNo: record.bundleNo || '',
           color: record.color,
           size: record.size,
           quantity: record.quantity || 1,
@@ -387,6 +596,7 @@ Page({
           createdAt: record.scanTime,
           scanType: record.scanType,
           scanResult: record.scanResult,
+          scanCode: record.scanCode || '',
         });
       });
 
@@ -455,6 +665,35 @@ Page({
         [`my.groupedHistory[${idx}].expanded`]: !groupedHistory[idx].expanded,
       });
     }
+  },
+
+  /**
+   * 处理质检记录（点击"处理"按钮）
+   */
+  onHandleQuality(e) {
+    const groupId = e.currentTarget.dataset.groupId;
+    const recordIdx = e.currentTarget.dataset.recordIdx;
+
+    const { groupedHistory } = this.data.my;
+    const group = groupedHistory.find(g => g.id === groupId);
+    if (!group || !group.items || !group.items[recordIdx]) {
+      toast.error('记录不存在');
+      return;
+    }
+
+    const record = group.items[recordIdx];
+
+    // 打开质检结果弹窗
+    this.showQualityModal({
+      orderNo: group.orderNo,
+      bundleNo: record.bundleNo || '',
+      styleNo: group.styleNo || '',
+      color: record.color || '',
+      size: record.size || '',
+      quantity: record.quantity || 1,
+      scanCode: record.scanCode || '',
+      recordId: record.id,
+    });
   },
 
   /**
@@ -632,6 +871,21 @@ Page({
         markRecent(codeStr, 2000);
       }
     } catch (e) {
+      // 处理入库工序：需要打开质检入库弹窗
+      if (e.needWarehousing && e.warehousingData) {
+        console.log('[扫码页] 检测到入库工序，打开质检入库弹窗:', e.warehousingData);
+        this.showQualityModal(e.warehousingData);
+        this.setData({ loading: false });
+        return;
+      }
+
+      // 已入库完成：显示成功提示而不是错误
+      if (e.isCompleted) {
+        toast.success(e.message || '该菲号已入库完成');
+        this.setData({ loading: false });
+        return;
+      }
+
       toast.error(e.message || '系统异常');
       errorHandler.handle(e);
     } finally {
@@ -684,11 +938,11 @@ Page({
     const sizeDetails =
       skuList.length > 0
         ? skuList
-            .map(
-              item =>
-                `${item.color || '-'}${item.size ? `/${item.size}` : ''}×${Number(item.totalQuantity || 0)}`
-            )
-            .join('，')
+          .map(
+            item =>
+              `${item.color || '-'}${item.size ? `/${item.size}` : ''}×${Number(item.totalQuantity || 0)}`
+          )
+          .join('，')
         : '';
 
     // 构造 Cutting 任务 (如果是裁剪工序)
@@ -1287,7 +1541,7 @@ Page({
         console.error('更新数量失败详情:', err);
         // 如果已经领取成功但更新失败，提示用户
         if (receives.length > 0) {
-           throw new Error('任务已领取，但更新数量失败：' + (err.message || '请重试'));
+          throw new Error('任务已领取，但更新数量失败：' + (err.message || '请重试'));
         }
         throw new Error('提交数据失败：' + (err.message || '未知错误'));
       }
@@ -1355,6 +1609,201 @@ Page({
       throw new Error('用户信息不完整(无姓名)');
     }
     return { userInfo, receiverName };
+  },
+
+  // ==================== 质检结果录入弹窗 ====================
+
+  /**
+   * 显示质检结果弹窗（入库确认弹窗）
+   */
+  showQualityModal(detail) {
+    this.setData({
+      'qualityModal.show': true,
+      'qualityModal.detail': detail,
+      'qualityModal.result': 'qualified',  // 入库默认合格
+      'qualityModal.unqualifiedQuantity': '',
+      'qualityModal.defectCategory': 0,
+      'qualityModal.handleMethod': 0,
+      'qualityModal.remark': '',
+      'qualityModal.images': [],
+      'qualityModal.warehouseIndex': 0,  // 默认选择A仓
+    });
+  },
+
+  /**
+   * 关闭质检弹窗
+   */
+  closeQualityModal() {
+    this.setData({ 'qualityModal.show': false });
+  },
+
+  /**
+   * 阻止事件冒泡（用于弹窗内容区）
+   */
+  stopPropagation() {
+    // 空方法，仅用于阻止事件冒泡
+  },
+
+  /**
+   * 选择仓库
+   */
+  onWarehouseChange(e) {
+    this.setData({ 'qualityModal.warehouseIndex': e.detail.value });
+  },
+
+  /**
+   * 选择质检结果（合格/不合格）
+   */
+  onSelectQualityResult(e) {
+    const value = e.currentTarget.dataset.value;
+    this.setData({ 'qualityModal.result': value });
+  },
+
+  /**
+   * 输入不合格数量
+   */
+  onDefectiveQuantityInput(e) {
+    this.setData({ 'qualityModal.unqualifiedQuantity': e.detail.value });
+  },
+
+  /**
+   * 选择原因大类
+   */
+  onDefectTypesChange(e) {
+    this.setData({ 'qualityModal.defectCategory': e.detail.value });
+  },
+
+  /**
+   * 选择处理方式（返修/报废）
+   */
+  onHandleMethodChange(e) {
+    this.setData({ 'qualityModal.handleMethod': e.detail.value });
+  },
+
+  /**
+   * 输入备注
+   */
+  onRemarkInput(e) {
+    this.setData({ 'qualityModal.remark': e.detail.value });
+  },
+
+  /**
+   * 上传照片（可选）
+   */
+  onUploadQualityImage() {
+    const currentCount = this.data.qualityModal.images.length;
+    if (currentCount >= 5) {
+      toast.info('最多上传5张照片');
+      return;
+    }
+    wx.chooseMedia({
+      count: 5 - currentCount,
+      mediaType: ['image'],
+      sourceType: ['album', 'camera'],
+      success: (res) => {
+        const newImages = res.tempFiles.map(f => f.tempFilePath);
+        this.setData({
+          'qualityModal.images': [...this.data.qualityModal.images, ...newImages],
+        });
+      },
+    });
+  },
+
+  /**
+   * 删除照片
+   */
+  onDeleteQualityImage(e) {
+    const index = e.currentTarget.dataset.index;
+    const images = [...this.data.qualityModal.images];
+    images.splice(index, 1);
+    this.setData({ 'qualityModal.images': images });
+  },
+
+  /**
+   * 提交入库结果（使用 warehousing API，与 PC 端一致）
+   */
+  async submitQualityResult() {
+    const { qualityModal, warehouseOptions } = this.data;
+    const detail = qualityModal.detail;
+
+    if (!detail) {
+      toast.error('入库数据异常');
+      return;
+    }
+
+    const totalQty = detail.quantity || 1;
+    // 入库默认全部合格
+    const qualifiedQty = totalQty;
+    const unqualifiedQty = 0;
+
+    // 获取用户信息
+    const userInfo = getUserInfo();
+    if (!userInfo || !userInfo.id) {
+      toast.error('请先登录');
+      return;
+    }
+
+    // 获取选择的仓库
+    const selectedWarehouse = warehouseOptions[qualityModal.warehouseIndex] || 'A仓';
+
+    wx.showLoading({ title: '提交中...' });
+
+    try {
+      // 构建 warehousing 保存数据（与 PC 端一致）
+      // cuttingBundleNo 需要转成数字
+      const bundleNoNum = detail.bundleNo ? parseInt(detail.bundleNo, 10) : null;
+      const payload = {
+        orderNo: detail.orderNo,
+        orderId: detail.orderId || '',
+        styleNo: detail.styleNo || '',
+        cuttingBundleId: detail.bundleId || '',
+        cuttingBundleNo: (bundleNoNum && !isNaN(bundleNoNum)) ? bundleNoNum : null,
+        warehousingQuantity: totalQty,
+        qualifiedQuantity: qualifiedQty,
+        unqualifiedQuantity: unqualifiedQty,
+        qualityStatus: qualityModal.result,  // qualified 或 unqualified
+        warehousingType: 'manual',  // 手动入库
+        warehouse: selectedWarehouse,  // 仓库
+        receiverId: userInfo.id,
+        receiverName: userInfo.realName || userInfo.username,
+      };
+
+      // 不合格详情
+      if (qualityModal.result === 'unqualified') {
+        const { defectCategories, handleMethods } = this.data;
+        // defectCategory 映射
+        const categoryMap = {
+          '外观完整性': 'appearance_integrity',
+          '尺寸精确度': 'size_accuracy',
+          '工艺合规性': 'process_compliance',
+          '功能有效性': 'functional_effectiveness',
+          '其他': 'other',
+        };
+        const selectedCategory = defectCategories[qualityModal.defectCategory] || '其他';
+        payload.defectCategory = categoryMap[selectedCategory] || 'other';
+
+        // defectRemark = 处理方式
+        const selectedMethod = handleMethods[qualityModal.handleMethod] || '返修';
+        payload.defectRemark = selectedMethod;  // 返修 或 报废
+
+        // 照片URL（如果有）
+        if (qualityModal.images && qualityModal.images.length > 0) {
+          payload.unqualifiedImageUrls = JSON.stringify(qualityModal.images);
+        }
+      }
+
+      // 调用 warehousing 保存 API
+      await api.production.saveWarehousing(payload);
+
+      toast.success(qualityModal.result === 'qualified' ? '质检合格，已入库' : '已记录不合格');
+      this.closeQualityModal();
+      this.loadMyPanel(true);  // 刷新统计
+    } catch (e) {
+      console.error('[submitQualityResult] 提交失败:', e);
+      toast.error(e.message || '提交失败');
+    } finally {
+      wx.hideLoading();
+    }
   },
 
   /**
@@ -1598,12 +2047,25 @@ Page({
     setStorageValue('scan_history_v2', history);
   },
 
-  // 兼容 WXML 点击事件
+  // 🔧 修改：点击历史记录，如果是质检记录且未完成结果录入，弹出质检弹窗
   onTapHistoryItem(e) {
     const index = e.currentTarget.dataset.index;
     const item = this.data.scanHistory[index];
-    if (item) {
-      // 可以显示详情
+
+    if (!item) return;
+
+    // 如果是质检记录，弹出质检结果录入弹窗
+    if (item.data && item.data.scanType === 'quality') {
+      this.showQualityModal({
+        orderNo: item.data.orderNo,
+        bundleNo: item.data.bundleNo,
+        styleNo: item.data.styleNo || '',
+        color: item.data.color || '',
+        size: item.data.size || '',
+        quantity: item.data.quantity || 1,
+        scanCode: item.data.scanCode || '',
+        recordId: item.data.scanId || item.data.recordId,
+      });
     }
   },
 });

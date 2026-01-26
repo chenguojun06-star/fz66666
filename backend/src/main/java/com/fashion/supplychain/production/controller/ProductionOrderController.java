@@ -412,4 +412,35 @@ public class ProductionOrderController {
         boolean success = productionOrderService.updateById(order);
         return success ? Result.success("更新成功") : Result.fail("更新失败");
     }
+
+    /**
+     * 重新计算订单进度（基于扫描记录）
+     * 用于修复进度不同步的问题
+     */
+    @PostMapping("/recompute-progress")
+    public Result<?> recomputeProgress(@RequestBody Map<String, Object> payload) {
+        String id = (String) payload.get("id");
+        String orderNo = (String) payload.get("orderNo");
+
+        String targetId = id;
+        if (!StringUtils.hasText(targetId) && StringUtils.hasText(orderNo)) {
+            ProductionOrder order = productionOrderService.lambdaQuery()
+                    .eq(ProductionOrder::getOrderNo, orderNo.trim())
+                    .last("LIMIT 1")
+                    .one();
+            if (order != null) {
+                targetId = order.getId();
+            }
+        }
+
+        if (!StringUtils.hasText(targetId)) {
+            return Result.fail("缺少id或orderNo参数");
+        }
+
+        ProductionOrder updated = productionOrderService.recomputeProgressFromRecords(targetId);
+        if (updated == null) {
+            return Result.fail("订单不存在或重计算失败");
+        }
+        return Result.success(updated);
+    }
 }

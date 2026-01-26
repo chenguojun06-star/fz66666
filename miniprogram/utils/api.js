@@ -51,6 +51,10 @@ const production = {
   listWarehousing(params) {
     return ok('/api/production/warehousing/list', 'GET', params || {});
   },
+  // 保存质检入库（新增）
+  saveWarehousing(payload) {
+    return ok('/api/production/warehousing', 'POST', payload || {});
+  },
   listScans(params) {
     return ok('/api/production/scan/list', 'GET', params || {});
   },
@@ -86,6 +90,10 @@ const production = {
   // 获取我的裁剪任务
   myCuttingTasks() {
     return ok('/api/production/cutting-task/my-tasks', 'GET', {});
+  },
+  // 获取我的质检待处理任务（已领取未确认结果）
+  myQualityTasks() {
+    return ok('/api/production/scan/my-quality-tasks', 'GET', {});
   },
   // 提交质检结果（通过更新扫码记录）
   submitQualityResult(payload) {

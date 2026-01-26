@@ -1,0 +1,8 @@
+import React from 'react';
+
+export const UserList = React.lazy(() => import('./pages/System/UserList'));
+export const UserApproval = React.lazy(() => import('./pages/System/UserApproval'));
+export const RoleList = React.lazy(() => import('./pages/System/RoleList'));
+export const FactoryList = React.lazy(() => import('./pages/System/FactoryList'));
+export const LoginLogList = React.lazy(() => import('./pages/System/LoginLogList'));
+export const Profile = React.lazy(() => import('./pages/System/Profile'));

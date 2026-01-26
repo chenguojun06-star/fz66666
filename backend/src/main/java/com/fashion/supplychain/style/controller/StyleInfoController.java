@@ -101,6 +101,15 @@ public class StyleInfoController {
     }
 
     /**
+     * 检查生产要求是否被锁定（是否被订单引用）
+     */
+    @GetMapping("/{id}/production-req/lock")
+    public Result<?> checkProductionReqLock(@PathVariable Long id) {
+        boolean locked = styleInfoOrchestrator.isProductionReqLocked(id);
+        return Result.success(Map.of("locked", locked));
+    }
+
+    /**
      * 根据ID删除款号资料
      */
     @DeleteMapping("/{id}")

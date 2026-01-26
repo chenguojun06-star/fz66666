@@ -1,8 +1,10 @@
-import React, { useEffect } from 'react';
-import { Form, Row, Col, Input, Select } from 'antd';
+import React, { useEffect, useMemo, useState } from 'react';
+import { AutoComplete, Form, Row, Col, Input, Select } from 'antd';
 import { MaterialReconciliation as MaterialReconType } from '../../types/finance';
 import { formatDateTime } from '../../utils/datetime';
 import { getMaterialReconStatusConfig } from '../../constants/finance';
+import api from '../../utils/api';
+import { Factory } from '../../types/system';
 
 interface MaterialReconModalContentProps {
   currentRecon: MaterialReconType | null;
@@ -22,6 +24,19 @@ const MaterialReconModalContent: React.FC<MaterialReconModalContentProps> = ({
   onSave
 }) => {
   const [form] = Form.useForm();
+  const [suppliers, setSuppliers] = useState<Factory[]>([]);
+  const [supplierLoading, setSupplierLoading] = useState(false);
+
+  const supplierOptions = useMemo(() => {
+    const list = Array.isArray(suppliers) ? suppliers : [];
+    return list
+      .map((s) => ({
+        value: String(s.factoryName || '').trim(),
+        label: `${String(s.factoryName || '').trim()}（${String(s.factoryCode || '').trim()}）`,
+        id: s.id,
+      }))
+      .filter((o) => o.value);
+  }, [suppliers]);
 
   /**
    * 当前对账单变化时，更新表单数据
@@ -35,6 +50,30 @@ const MaterialReconModalContent: React.FC<MaterialReconModalContentProps> = ({
       form.resetFields();
     }
   }, [currentRecon, form]);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchSuppliers = async () => {
+      setSupplierLoading(true);
+      try {
+        const response = await api.get<{ code: number; data: { records: Factory[] } }>('/system/factory/list', { params: { page: 1, pageSize: 1000 } });
+        if (!mounted) return;
+        if (response.code === 200) {
+          setSuppliers(response.data.records || []);
+        } else {
+          setSuppliers([]);
+        }
+      } catch {
+        if (mounted) setSuppliers([]);
+      } finally {
+        if (mounted) setSupplierLoading(false);
+      }
+    };
+    fetchSuppliers();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   /**
    * 暴露保存方法给父组件
@@ -79,48 +118,65 @@ const MaterialReconModalContent: React.FC<MaterialReconModalContentProps> = ({
             <Form.Item name="reconciliationNo" label="对账单号">
               <Input placeholder="自动生成" disabled />
             </Form.Item>
-            <Form.Item 
-              name="supplierId" 
-              label="供应商" 
-              rules={[ 
+            <Form.Item
+              name="supplierName"
+              label="供应商"
+              rules={[
                 { required: true, message: '请选择供应商' },
-                { type: 'string', min: 1, message: '供应商ID不能为空' } 
+                { type: 'string', min: 1, message: '供应商名称不能为空' }
               ]}>
-              <Select placeholder="请选择供应商">
-                <Option value="1">纺织有限公司</Option>
-                <Option value="2">拉链厂</Option>
-              </Select>
+              <AutoComplete
+                placeholder="请选择或输入供应商"
+                options={supplierOptions}
+                notFoundContent={supplierLoading ? '加载中...' : undefined}
+                onSelect={(_, option) => {
+                  form.setFieldsValue({
+                    supplierId: (option as Record<string, unknown>)?.id,
+                    supplierName: String((option as Record<string, unknown>)?.value || '').trim(),
+                  });
+                }}
+                onChange={(value) => {
+                  form.setFieldsValue({ supplierId: undefined, supplierName: String(value || '').trim() });
+                }}
+                filterOption={(inputValue, option) =>
+                  String((option as Record<string, unknown>)?.value || '').toLowerCase().includes(String(inputValue || '').toLowerCase())
+                  || String((option as Record<string, unknown>)?.label || '').toLowerCase().includes(String(inputValue || '').toLowerCase())
+                }
+              />
+            </Form.Item>
+            <Form.Item name="supplierId" hidden>
+              <Input />
             </Form.Item>
           </Col>
           <Col span={8}>
-            <Form.Item 
-              name="purchaseId" 
-              label="采购单号" 
-              rules={[ 
+            <Form.Item
+              name="purchaseId"
+              label="采购单号"
+              rules={[
                 { required: true, message: '请选择采购单号' },
-                { type: 'string', min: 1, message: '采购单ID不能为空' } 
+                { type: 'string', min: 1, message: '采购单ID不能为空' }
               ]}>
               <Select placeholder="请选择采购单号">
                 <Option value="1">MC2024001</Option>
                 <Option value="2">MC2024002</Option>
               </Select>
             </Form.Item>
-            <Form.Item 
-              name="reconciliationDate" 
-              label="对账日期" 
-              rules={[ 
+            <Form.Item
+              name="reconciliationDate"
+              label="对账日期"
+              rules={[
                 { required: true, message: '请选择对账日期' },
-                { type: 'string', min: 10, message: '请选择有效的对账日期' } 
+                { type: 'string', min: 10, message: '请选择有效的对账日期' }
               ]}>
               <Input type="date" style={{ width: '100%' }} />
             </Form.Item>
           </Col>
           <Col span={8}>
-            <Form.Item 
-              name="remark" 
-              label="备注" 
-              rules={[ 
-                { type: 'string', max: 500, message: '备注长度不能超过500个字符' } 
+            <Form.Item
+              name="remark"
+              label="备注"
+              rules={[
+                { type: 'string', max: 500, message: '备注长度不能超过500个字符' }
               ]}>
               <Input placeholder="请输入备注" />
             </Form.Item>

@@ -1,7 +1,10 @@
 package com.fashion.supplychain.style.orchestration;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.StyleAttachment;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleOperationLog;
@@ -35,6 +38,9 @@ public class StyleInfoOrchestrator {
 
     @Autowired
     private TemplateLibraryService templateLibraryService;
+
+    @Autowired
+    private ProductionOrderService productionOrderService;
 
     public IPage<StyleInfo> list(Map<String, Object> params) {
         return styleInfoService.queryPage(params);
@@ -463,6 +469,34 @@ public class StyleInfoOrchestrator {
     private boolean isCompleted(String status) {
         String s = String.valueOf(status == null ? "" : status).trim();
         return "COMPLETED".equalsIgnoreCase(s);
+    }
+
+    /**
+     * 检查生产要求是否被锁定（是否被生产订单引用）
+     */
+    public boolean isProductionReqLocked(Long styleId) {
+        if (styleId == null) {
+            return false;
+        }
+
+        // 获取款号信息
+        StyleInfo styleInfo = styleInfoService.getById(styleId);
+        if (styleInfo == null || !StringUtils.hasText(styleInfo.getStyleNo())) {
+            return false;
+        }
+
+        // 检查是否有生产订单引用了这个款号
+        QueryWrapper<ProductionOrder> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("style_no", styleInfo.getStyleNo());
+        queryWrapper.last("LIMIT 1");
+
+        try {
+            long count = productionOrderService.count(queryWrapper);
+            return count > 0;
+        } catch (Exception e) {
+            log.error("检查生产要求锁定状态失败: styleId={}, styleNo={}", styleId, styleInfo.getStyleNo(), e);
+            return false;
+        }
     }
 
     private void validateStyleInfo(StyleInfo styleInfo) {

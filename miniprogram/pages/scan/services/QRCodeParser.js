@@ -68,8 +68,12 @@ class QRCodeParser {
   /**
    * 尝试按优先级解析各种格式
    * @private
+   * @param {string} parseTarget - 解析目标（可能是截断后的）
+   * @param {string} first - 第一个字符
+   * @param {string} skuNo - SKU编号
+   * @param {string} rawScanCode - 原始完整扫码内容（用于 scanCode 字段）
    */
-  _tryParseFormats(parseTarget, first, skuNo) {
+  _tryParseFormats(parseTarget, first, skuNo, rawScanCode) {
     // 1. JSON格式
     if (first === '{' || first === '[') {
       const jsonResult = this._parseJSON(parseTarget);
@@ -86,10 +90,10 @@ class QRCodeParser {
       return { success: true, message: '解析成功 (URL)', data: urlResult };
     }
 
-    // 3. 菲号格式
+    // 3. 菲号格式（🔧 修复：使用原始完整扫码内容作为 scanCode）
     const bundleResult = this._parseFeiNo(parseTarget);
     if (bundleResult) {
-      return this._buildBundleResult(bundleResult, parseTarget, skuNo);
+      return this._buildBundleResult(bundleResult, rawScanCode, skuNo);
     }
 
     // 4. 订单号格式
@@ -141,8 +145,8 @@ class QRCodeParser {
     // 预处理
     const { parseTarget, skuNo, first } = this._preprocessScanCode(raw);
 
-    // 尝试解析
-    const result = this._tryParseFormats(parseTarget, first, skuNo);
+    // 尝试解析（传入原始扫码内容用于 scanCode 字段）
+    const result = this._tryParseFormats(parseTarget, first, skuNo, raw);
     if (result) {return result;}
 
     // 无法识别

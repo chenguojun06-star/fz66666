@@ -30,12 +30,15 @@
     <view>
 
       <view wx:if="{{orders.list.length === 0 && !orders.loading}}" class="hint">暂无数据</view>
-        <view wx:for="{{orders.list}}" wx:key="id" class="list-item">
+        <view wx:for="{{orders.list}}" wx:key="id" class="list-item {{item.isClosed ? 'list-item-closed' : ''}}">
           <view class="item-head">
             <view class="item-title {{item.isClosed ? 'item-title-closed' : ''}}">{{item.orderNo || '-'}}</view>
             <view class="item-tags">
-              <text wx:if="{{item.currentProcessName}}" class="tag {{item.currentProcessName === '裁剪' ? 'tag-process' : ''}}">{{item.currentProcessName}}</text>
-              <view wx:if="{{item.currentProcessName === '裁剪'}}" class="action-btn action-btn-inline" bindtap="onGenerateBundle" data-order="{{item}}">
+              <!-- 已完成显示"已完成"标签，否则显示当前工序 -->
+              <text wx:if="{{item.isClosed}}" class="tag tag-completed">已完成</text>
+              <text wx:elif="{{item.currentProcessName}}" class="tag {{item.currentProcessName === '裁剪' ? 'tag-process' : ''}}">{{item.currentProcessName}}</text>
+              <!-- 只有在裁剪阶段且没有菲号时才显示生成菲号按钮 -->
+              <view wx:if="{{!item.isClosed && item.currentProcessName === '裁剪' && (!item.cuttingBundleCount || item.cuttingBundleCount === 0)}}" class="action-btn action-btn-inline" bindtap="onGenerateBundle" data-order="{{item}}">
                 <text>📋 生成菲号</text>
               </view>
             </view>
@@ -58,12 +61,13 @@
           </view>
           <view wx:else class="item-sub">码数：-，汇总：{{item.orderQuantity || 0}}，完成：{{item.completedQuantity || 0}}</view>
           <view class="progress-wrapper">
-            <view class="progress-bar {{item.status === 'completed' ? 'progress-closed' : 'progress-active'}}">
+            <view class="progress-bar {{item.isClosed ? 'progress-completed' : ''}}">
               <view class="progress-fill" style="width: {{item.productionProgress || 0}}%"></view>
             </view>
             <text class="progress-text progress-percent">{{item.productionProgress || 0}}%</text>
           </view>
-          <view wx:if="{{item.currentProcessName && item.currentProcessName !== '裁剪'}}" class="current-process">{{item.currentProcessName}}</view>
+          <!-- 已完成订单不显示当前工序 -->
+          <view wx:if="{{!item.isClosed && item.currentProcessName && item.currentProcessName !== '裁剪'}}" class="current-process">{{item.currentProcessName}}</view>
         </view>
 
       <view class="btn">

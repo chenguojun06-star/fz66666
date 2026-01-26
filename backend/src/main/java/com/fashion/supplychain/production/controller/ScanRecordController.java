@@ -98,6 +98,14 @@ public class ScanRecordController {
         return Result.success(scanRecordOrchestrator.cleanup(from));
     }
 
+    /**
+     * 获取我的质检待处理任务（已领取未确认结果）
+     */
+    @GetMapping("/my-quality-tasks")
+    public Result<?> getMyQualityTasks() {
+        return Result.success(scanRecordOrchestrator.getMyQualityTasks());
+    }
+
     @PostMapping("/delete-full-link/{orderId}")
     public Result<?> deleteFullLinkByOrderId(@PathVariable String orderId) {
         return Result.success(scanRecordOrchestrator.deleteFullLinkByOrderId(orderId));

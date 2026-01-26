@@ -195,7 +195,7 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
     public ProductionOrder closeOrder(String id) {
         ProductionOrderFinanceOrchestrationService svc = financeOrchestrationServiceProvider.getIfAvailable();
         if (svc == null) {
-            throw new IllegalStateException("财务关单服务不可用");
+            throw new IllegalStateException("财务完成服务不可用");
         }
         return svc.closeOrder(id);
     }

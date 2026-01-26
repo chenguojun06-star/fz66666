@@ -461,7 +461,7 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
 
         String st = order.getStatus() == null ? "" : order.getStatus().trim();
         if ("completed".equalsIgnoreCase(st)) {
-            throw new IllegalStateException("订单已关单，已停止入库");
+            throw new IllegalStateException("订单已完成，已停止入库");
         }
 
         String existingWarehousingNo = findExistingWarehousingNoByOrderId(order.getId());
@@ -556,6 +556,24 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
         if (!StringUtils.hasText(productWarehousing.getWarehousingType())) {
             productWarehousing.setWarehousingType("manual");
         }
+
+        // 设置入库时间（入库开始时间和完成时间同时设置为当前时间）
+        if (productWarehousing.getWarehousingStartTime() == null) {
+            productWarehousing.setWarehousingStartTime(now);
+        }
+        if (productWarehousing.getWarehousingEndTime() == null) {
+            productWarehousing.setWarehousingEndTime(now);
+        }
+        // 入库人员信息（如果未设置，尝试从receiver复制）
+        if (!StringUtils.hasText(productWarehousing.getWarehousingOperatorId())
+                && StringUtils.hasText(productWarehousing.getReceiverId())) {
+            productWarehousing.setWarehousingOperatorId(productWarehousing.getReceiverId());
+        }
+        if (!StringUtils.hasText(productWarehousing.getWarehousingOperatorName())
+                && StringUtils.hasText(productWarehousing.getReceiverName())) {
+            productWarehousing.setWarehousingOperatorName(productWarehousing.getReceiverName());
+        }
+
         productWarehousing.setCreateTime(now);
         productWarehousing.setUpdateTime(now);
         productWarehousing.setDeleteFlag(0);
@@ -650,7 +668,7 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
         }
         String st = order.getStatus() == null ? "" : order.getStatus().trim();
         if ("completed".equalsIgnoreCase(st)) {
-            throw new IllegalStateException("订单已关单，已停止入库");
+            throw new IllegalStateException("订单已完成，已停止入库");
         }
         int batchSum = 0;
         for (ProductWarehousing w : list) {
@@ -714,7 +732,7 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
             ProductionOrder order = productionOrderService.getById(oldWarehousing.getOrderId());
             String st = order == null ? "" : (order.getStatus() == null ? "" : order.getStatus().trim());
             if ("completed".equalsIgnoreCase(st)) {
-                throw new IllegalStateException("订单已关单，已停止入库");
+                throw new IllegalStateException("订单已完成，已停止入库");
             }
         }
 

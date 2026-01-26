@@ -69,6 +69,9 @@ public class PayrollAggregationOrchestrator {
             qw.le("scan_time", endTime);
         }
 
+        // 排除采购类型的扫码记录（采购不计入工资统计）
+        qw.ne("scan_type", "procurement");
+
         // 应用数据权限过滤（根据角色：all=全部, team=团队, own=仅自己）
         DataPermissionHelper.applyOperatorFilter(qw, "operator_id", "operator_name");
 
@@ -85,9 +88,12 @@ public class PayrollAggregationOrchestrator {
         // 转换为 DTO
         return grouped.values().stream()
                 .map(this::convertToDTO)
+                .filter(Objects::nonNull)
                 .sorted(Comparator
-                        .comparing((PayrollOperatorProcessSummaryDTO d) -> d.getOperatorName())
-                        .thenComparing(PayrollOperatorProcessSummaryDTO::getProcessName))
+                        .comparing((PayrollOperatorProcessSummaryDTO d) -> d.getOperatorName() != null ? d.getOperatorName() : "",
+                                Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(d -> d.getProcessName() != null ? d.getProcessName() : "",
+                                Comparator.nullsLast(Comparator.naturalOrder())))
                 .collect(Collectors.toList());
     }
 

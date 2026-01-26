@@ -59,6 +59,7 @@ Component({
     urgentEvents: [],      // 紧急事件
     cuttingTasks: [],      // 裁剪任务
     procurementTasks: [],  // 采购任务
+    qualityTasks: [],      // 质检待处理任务
     timeoutReminders: [],  // 超时提醒
     pendingUsers: [],      // 待审批用户
     isAdmin: false,        // 是否管理员
@@ -147,9 +148,10 @@ Component({
         this.setData({ isAdmin });
 
         // 并行加载所有任务
-        const [cuttingTasks, procurementTasks, timeoutReminders, pendingUsers] = await Promise.all([
+        const [cuttingTasks, procurementTasks, qualityTasks, timeoutReminders, pendingUsers] = await Promise.all([
           this.loadCuttingTasks(),
           this.loadProcurementTasks(),
+          this.loadQualityTasks(),
           this.loadTimeoutReminders(),
           isAdmin ? this.loadPendingUsers() : Promise.resolve([]),
         ]);
@@ -162,6 +164,7 @@ Component({
           urgentEvents.length +
           cuttingTasks.length +
           procurementTasks.length +
+          qualityTasks.length +
           timeoutReminders.length +
           pendingUsers.length;
 
@@ -171,6 +174,7 @@ Component({
           urgentEvents,
           cuttingTasks,
           procurementTasks,
+          qualityTasks,
           timeoutReminders,
           pendingUsers,
           totalCount,
@@ -219,6 +223,34 @@ Component({
         }));
       } catch (err) {
         console.error('加载采购任务失败:', err);
+        return [];
+      }
+    },
+
+    /**
+     * 加载质检待处理任务（已领取待确认结果）
+     */
+    async loadQualityTasks() {
+      try {
+        const res = await api.production.myQualityTasks();
+        const list = Array.isArray(res) ? res : (res?.records || []);
+
+        return list.map(item => ({
+          ...item,
+          id: item.id || item.scanId,
+          orderId: item.orderId || '',  // 订单ID
+          orderNo: item.orderNo,
+          bundleId: item.cuttingBundleId || '',  // 菲号ID
+          bundleNo: item.cuttingBundleNo || item.bundleNo || '',
+          styleNo: item.styleNo || '',
+          color: item.color || '',
+          size: item.size || '',
+          quantity: item.quantity || 1,
+          scanCode: item.scanCode || '',
+          receivedTimeText: formatTimeAgo(item.scanTime || item.createdAt),
+        }));
+      } catch (err) {
+        console.error('加载质检任务失败:', err);
         return [];
       }
     },
@@ -312,6 +344,9 @@ Component({
         case 'procurement':
           this.handleProcurementTask(task);
           break;
+        case 'quality':
+          this.handleQualityTask(task);
+          break;
         case 'approval':
           this.handleApprovalTask(task);
           break;
@@ -356,10 +391,67 @@ Component({
     },
 
     /**
-     * 处理审批任务（待审批用户）
+     * 处理质检任务（跳转到扫码页并弹出质检弹窗）
+     */
+    handleQualityTask(task) {
+      try {
+        // 存储质检任务信息，扫码页会读取并弹出质检弹窗
+        wx.setStorageSync('pending_quality_task', JSON.stringify(task));
+        wx.setStorageSync('pending_order_hint', task.orderNo || '');
+      } catch (e) {
+        console.error('存储失败', e);
+      }
+      wx.switchTab({ url: '/pages/scan/index' });
+    },
+
+    /**
+     * 处理审批任务（待审批用户）- 点击用户信息时跳转详情
      */
     handleApprovalTask(task) {
       wx.navigateTo({ url: '/pages/admin/notification/index' });
+    },
+
+    /**
+     * 直接审批用户（通过/拒绝）
+     */
+    async onApproveUser(e) {
+      const { userId, action } = e.currentTarget.dataset;
+      if (!userId) return;
+
+      const isApprove = action === 'approve';
+      const actionText = isApprove ? '通过' : '拒绝';
+
+      // 确认操作
+      const confirmRes = await new Promise(resolve => {
+        wx.showModal({
+          title: '确认操作',
+          content: `确定要${actionText}该用户的注册申请吗？`,
+          success: res => resolve(res.confirm),
+          fail: () => resolve(false),
+        });
+      });
+
+      if (!confirmRes) return;
+
+      wx.showLoading({ title: '处理中...' });
+
+      try {
+        if (isApprove) {
+          await api.system.approveUser(userId);
+        } else {
+          await api.system.rejectUser(userId);
+        }
+
+        wx.showToast({ title: `${actionText}成功`, icon: 'success' });
+
+        // 刷新任务列表
+        this.loadTasks();
+      } catch (err) {
+        console.error('审批失败:', err);
+        wx.showToast({ title: err.message || '操作失败', icon: 'none' });
+      } finally {
+        wx.hideLoading();
+      }
     },
 
     /**

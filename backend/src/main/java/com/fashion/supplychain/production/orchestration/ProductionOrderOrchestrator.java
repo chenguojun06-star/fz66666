@@ -1043,6 +1043,12 @@ public class ProductionOrderOrchestrator {
             throw new IllegalStateException("订单已完成，无法报废");
         }
 
+        ProductionOrder detail = productionOrderQueryService.getDetailById(oid);
+        ProductionOrder check = detail != null ? detail : existed;
+        if (isProcurementCompleted(check)) {
+            throw new IllegalStateException("物料采购完成，无法报废");
+        }
+
         boolean ok = productionOrderService.deleteById(oid);
         if (!ok) {
             throw new IllegalStateException("报废失败");
@@ -1080,12 +1086,24 @@ public class ProductionOrderOrchestrator {
     public ProductionOrder closeOrder(String id, String sourceModule) {
         String src = StringUtils.hasText(sourceModule) ? sourceModule.trim() : null;
         if (!StringUtils.hasText(src)) {
-            throw new AccessDeniedException("仅允许在指定模块关单");
+            throw new AccessDeniedException("仅允许在指定模块完成");
         }
         if (!CLOSE_SOURCE_MY_ORDERS.equals(src) && !CLOSE_SOURCE_PRODUCTION_PROGRESS.equals(src)) {
-            throw new AccessDeniedException("仅允许在我的订单或生产进度关单");
+            throw new AccessDeniedException("仅允许在我的订单或生产进度完成");
         }
         return financeOrchestrationService.closeOrder(id);
+    }
+
+    private boolean isProcurementCompleted(ProductionOrder order) {
+        if (order == null) {
+            return false;
+        }
+        Integer manual = order.getProcurementManuallyCompleted();
+        boolean manualDone = manual != null && manual == 1;
+        boolean endTimeDone = order.getProcurementEndTime() != null;
+        Integer rate = order.getProcurementCompletionRate();
+        boolean rateDone = rate != null && rate >= 100;
+        return manualDone || endTimeDone || rateDone;
     }
 
     @Transactional(rollbackFor = Exception.class)

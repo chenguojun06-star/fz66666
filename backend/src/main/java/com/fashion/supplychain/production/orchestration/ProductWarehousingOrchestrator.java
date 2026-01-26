@@ -111,13 +111,62 @@ public class ProductWarehousingOrchestrator {
         if (productWarehousing == null) {
             throw new IllegalArgumentException("参数错误");
         }
+
+        // 如果没有orderId但有orderNo，自动查找orderId
+        String orderId = StringUtils.hasText(productWarehousing.getOrderId())
+            ? productWarehousing.getOrderId().trim() : null;
+        String orderNo = StringUtils.hasText(productWarehousing.getOrderNo())
+            ? productWarehousing.getOrderNo().trim() : null;
+
+        if (!StringUtils.hasText(orderId) && StringUtils.hasText(orderNo)) {
+            ProductionOrder order = productionOrderService.getByOrderNo(orderNo);
+            if (order == null || !StringUtils.hasText(order.getId())) {
+                throw new IllegalArgumentException("订单不存在: " + orderNo);
+            }
+            productWarehousing.setOrderId(order.getId());
+            orderId = order.getId();
+        }
+
+        // 如果没有cuttingBundleId，尝试通过qrCode或bundleNo查找
+        String bundleId = StringUtils.hasText(productWarehousing.getCuttingBundleId())
+            ? productWarehousing.getCuttingBundleId().trim() : null;
+        String bundleQrCode = StringUtils.hasText(productWarehousing.getCuttingBundleQrCode())
+            ? productWarehousing.getCuttingBundleQrCode().trim() : null;
+        Integer bundleNo = productWarehousing.getCuttingBundleNo();
+
+        if (!StringUtils.hasText(bundleId)) {
+            CuttingBundle bundle = null;
+            // 方式1：通过二维码查找
+            if (StringUtils.hasText(bundleQrCode)) {
+                bundle = cuttingBundleService.getByQrCode(bundleQrCode);
+            }
+            // 方式2：通过订单号+菲号序号查找
+            if (bundle == null && StringUtils.hasText(orderNo) && bundleNo != null && bundleNo > 0) {
+                bundle = cuttingBundleService.lambdaQuery()
+                    .eq(CuttingBundle::getProductionOrderNo, orderNo)
+                    .eq(CuttingBundle::getBundleNo, bundleNo)
+                    .last("LIMIT 1")
+                    .one();
+            }
+            if (bundle != null && StringUtils.hasText(bundle.getId())) {
+                productWarehousing.setCuttingBundleId(bundle.getId());
+                // 同步填充其他菲号信息
+                if (!StringUtils.hasText(bundleQrCode)) {
+                    productWarehousing.setCuttingBundleQrCode(bundle.getQrCode());
+                }
+                if (bundleNo == null || bundleNo <= 0) {
+                    productWarehousing.setCuttingBundleNo(bundle.getBundleNo());
+                }
+            }
+        }
+
         normalizeAndValidateDefectInfo(productWarehousing);
         boolean ok = productWarehousingService.saveWarehousingAndUpdateOrder(productWarehousing);
         if (!ok) {
             throw new IllegalStateException("保存失败");
         }
 
-        String orderId = StringUtils.hasText(productWarehousing.getOrderId()) ? productWarehousing.getOrderId().trim()
+        orderId = StringUtils.hasText(productWarehousing.getOrderId()) ? productWarehousing.getOrderId().trim()
                 : null;
         if (StringUtils.hasText(orderId)) {
             try {
@@ -130,7 +179,7 @@ public class ProductWarehousingOrchestrator {
             }
             productionOrderService.recomputeProgressFromRecords(orderId);
 
-            // 已禁用系统自动关单
+        // 已禁用系统自动完成
         }
         return true;
     }
@@ -204,7 +253,7 @@ public class ProductWarehousingOrchestrator {
         }
         productionOrderService.recomputeProgressFromRecords(oid);
 
-        // 已禁用系统自动关单
+        // 已禁用系统自动完成
         return true;
     }
 
@@ -243,7 +292,7 @@ public class ProductWarehousingOrchestrator {
             }
             productionOrderService.recomputeProgressFromRecords(orderId);
 
-            // 已禁用系统自动关单
+            // 已禁用系统自动完成
         }
         return true;
     }

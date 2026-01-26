@@ -102,7 +102,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       }
       return deduped;
     } catch {
-    // Intentionally empty
+      // Intentionally empty
       // 忽略错误
       return [];
     }
@@ -112,7 +112,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     try {
       localStorage.setItem(recentPagesStorageKey, JSON.stringify(pages));
     } catch {
-    // Intentionally empty
+      // Intentionally empty
       // 忽略错误
     }
   };

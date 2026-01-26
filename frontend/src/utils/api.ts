@@ -3,23 +3,23 @@ import type { AxiosInstance, AxiosRequestConfig, AxiosRequestHeaders } from 'axi
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ApiResponse } from '../types/api';
 
-export type ApiResult<T = unknown> = {
+export type ApiResult<T = any> = {
   code: number;
   data: T;
   message?: string;
-  [key: string]: unknown;
+  [key: string]: any;
 };
 
 type ApiClient = Omit<AxiosInstance, 'request' | 'get' | 'delete' | 'head' | 'options' | 'post' | 'put' | 'patch'> & {
-  <T = unknown, R = T, D = unknown>(config: AxiosRequestConfig<D>): Promise<R>;
-  request<T = unknown, R = T, D = unknown>(config: AxiosRequestConfig<D>): Promise<R>;
-  get<T = unknown, R = T, D = unknown>(url: string, config?: AxiosRequestConfig<D>): Promise<R>;
-  delete<T = unknown, R = T, D = unknown>(url: string, config?: AxiosRequestConfig<D>): Promise<R>;
-  head<T = unknown, R = T, D = unknown>(url: string, config?: AxiosRequestConfig<D>): Promise<R>;
-  options<T = unknown, R = T, D = unknown>(url: string, config?: AxiosRequestConfig<D>): Promise<R>;
-  post<T = unknown, R = T, D = unknown>(url: string, data?: D, config?: AxiosRequestConfig<D>): Promise<R>;
-  put<T = unknown, R = T, D = unknown>(url: string, data?: D, config?: AxiosRequestConfig<D>): Promise<R>;
-  patch<T = unknown, R = T, D = unknown>(url: string, data?: D, config?: AxiosRequestConfig<D>): Promise<R>;
+  <T = any, R = T, D = any>(config: AxiosRequestConfig<D>): Promise<R>;
+  request<T = any, R = T, D = any>(config: AxiosRequestConfig<D>): Promise<R>;
+  get<T = any, R = T, D = any>(url: string, config?: AxiosRequestConfig<D>): Promise<R>;
+  delete<T = any, R = T, D = any>(url: string, config?: AxiosRequestConfig<D>): Promise<R>;
+  head<T = any, R = T, D = any>(url: string, config?: AxiosRequestConfig<D>): Promise<R>;
+  options<T = any, R = T, D = any>(url: string, config?: AxiosRequestConfig<D>): Promise<R>;
+  post<T = any, R = T, D = any>(url: string, data?: D, config?: AxiosRequestConfig<D>): Promise<R>;
+  put<T = any, R = T, D = any>(url: string, data?: D, config?: AxiosRequestConfig<D>): Promise<R>;
+  patch<T = any, R = T, D = any>(url: string, data?: D, config?: AxiosRequestConfig<D>): Promise<R>;
 };
 
 export const isApiSuccess = (result: unknown): result is ApiResult => {
@@ -258,47 +258,36 @@ export const isOrderFrozenByStatusOrStock = (source?: OrderFrozenSource | null):
 };
 
 export const fetchProductionOrderDetail = async (
-  orderId: unknown,
+  orderNo: unknown,
   opts?: { acceptAnyData?: boolean; silent404?: boolean }
 ): Promise<Record<string, unknown> | null> => {
-  const oid = String(orderId || '').trim();
+  const oid = String(orderNo || '').trim();
   if (!oid) return null;
 
-  // 优先用订单号查询（系统统一使用订单号），再尝试用ID查询
-  const endpoints = [
-    `/production/order/by-order-no/${encodeURIComponent(oid)}`,
-    `/production/order/detail/${encodeURIComponent(oid)}`
-  ];
-
-  for (const endpoint of endpoints) {
-    try {
-      const res = await api.get<ApiResponse<Record<string, unknown>>>(endpoint);
-      if (isApiSuccess(res) && res.data) return res.data;
-      if (opts?.acceptAnyData && typeof res === 'object' && res !== null && 'data' in res) {
-        const data = (res as { data: Record<string, unknown> }).data;
-        if (data) return data;
+  try {
+    const endpoint = `/production/order/by-order-no/${encodeURIComponent(oid)}`;
+    const res = await api.get<ApiResponse<Record<string, unknown>>>(endpoint);
+    if (isApiSuccess(res) && res.data) return res.data;
+    if (opts?.acceptAnyData && typeof res === 'object' && res !== null && 'data' in res) {
+      const data = (res as { data: Record<string, unknown> }).data;
+      if (data) return data;
+    }
+  } catch (error: unknown) {
+    const is404 = typeof error === 'object' &&
+      error !== null &&
+      'response' in error &&
+      typeof (error as { response: unknown }).response === 'object' &&
+      (error as { response: { status: unknown } }).response !== null &&
+      'status' in (error as { response: { status: unknown } }).response &&
+      (error as { response: { status: number } }).response.status === 404;
+    if (!is404) {
+      if (!opts?.silent404) {
+        console.debug('[fetchProductionOrderDetail] 请求失败:', oid, error);
       }
-    } catch (error: unknown) {
-      // 404 继续尝试下一个接口
-      const is404 = typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        typeof (error as { response: unknown }).response === 'object' &&
-        (error as { response: { status: unknown } }).response !== null &&
-        'status' in (error as { response: { status: unknown } }).response &&
-        (error as { response: { status: number } }).response.status === 404;
-      if (!is404) {
-        // 非404错误，记录并返回null
-        if (!opts?.silent404) {
-          console.debug('[fetchProductionOrderDetail] 请求失败:', oid, error);
-        }
-        return null;
-      }
-      // 404错误，继续尝试下一个接口
+      return null;
     }
   }
 
-  // 所有接口都返回404
   if (!opts?.silent404) {
     console.debug('[fetchProductionOrderDetail] 订单不存在或已删除:', oid);
   }

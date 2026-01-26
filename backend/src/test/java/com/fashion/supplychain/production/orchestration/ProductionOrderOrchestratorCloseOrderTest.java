@@ -27,14 +27,14 @@ class ProductionOrderOrchestratorCloseOrderTest {
     void closeOrder_requiresSourceModule() {
         AccessDeniedException ex = assertThrows(AccessDeniedException.class,
                 () -> orchestrator.closeOrder("o1", " "));
-        assertEquals("仅允许在指定模块关单", ex.getMessage());
+        assertEquals("仅允许在指定模块完成", ex.getMessage());
     }
 
     @Test
     void closeOrder_rejectsUnknownSourceModule() {
         AccessDeniedException ex = assertThrows(AccessDeniedException.class,
                 () -> orchestrator.closeOrder("o1", "other"));
-        assertEquals("仅允许在我的订单或生产进度关单", ex.getMessage());
+        assertEquals("仅允许在我的订单或生产进度完成", ex.getMessage());
     }
 
     @Test
@@ -59,4 +59,3 @@ class ProductionOrderOrchestratorCloseOrderTest {
         verify(financeOrchestrationService).closeOrder("o1");
     }
 }
-
