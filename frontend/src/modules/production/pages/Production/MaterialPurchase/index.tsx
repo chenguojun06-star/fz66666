@@ -237,17 +237,27 @@ const MaterialPurchase: React.FC = () => {
     return api.post<{ code: number; message: string; data: boolean }>('/production/purchase/return-confirm/reset', payload);
   };
 
-  const openReturnConfirm = (targets: MaterialPurchaseType[]) => {
+  const openReturnConfirm = async (targets: MaterialPurchaseType[]) => {
     const list = targets.filter((t) => String(t?.id || '').trim());
     if (!list.length) {
       message.info('没有可回料确认的采购任务');
       return;
     }
+    const orderKey = String(list[0]?.orderId || list[0]?.orderNo || '').trim();
+    if (orderKey) {
+      const ok = await ensureOrderUnlocked(orderKey);
+      if (!ok) return;
+    }
     setReturnConfirmTargets(list);
     setReturnConfirmOpen(true);
   };
 
-  const openReturnReset = (target: MaterialPurchaseType) => {
+  const openReturnReset = async (target: MaterialPurchaseType) => {
+    const orderKey = String(target?.orderId || target?.orderNo || '').trim();
+    if (orderKey) {
+      const ok = await ensureOrderUnlocked(orderKey);
+      if (!ok) return;
+    }
     setReturnResetTarget(target);
     setReturnResetOpen(true);
   };
@@ -781,11 +791,33 @@ const MaterialPurchase: React.FC = () => {
   };
 
   const openDialogSafe = async (mode: 'view' | 'create' | 'preview', purchase?: MaterialPurchaseType) => {
-    if (mode !== 'view' && purchase?.orderId) {
-      const ok = await ensureOrderUnlocked(purchase.orderId);
-      if (!ok) return;
+    if (mode !== 'view') {
+      const orderKey = String(purchase?.orderId || purchase?.orderNo || '').trim();
+      if (orderKey) {
+        const ok = await ensureOrderUnlocked(orderKey);
+        if (!ok) return;
+      }
     }
     openDialog(mode, purchase);
+  };
+
+  const isOrderFrozenForRecord = (record?: Record<string, unknown> | null) => {
+    if (!record) return false;
+    const orderNo = String(record?.orderNo || '').trim();
+    const orderId = String(record?.orderId || record?.id || '').trim();
+    const status = String(record?.status || '').trim().toLowerCase();
+    if (status === 'completed') return true;
+    return orderFrozen.isFrozenById(orderNo) || orderFrozen.isFrozenById(orderId);
+  };
+
+  const openQuickEditSafe = async (record: MaterialPurchaseType) => {
+    const orderKey = String(record?.orderId || record?.orderNo || '').trim();
+    if (orderKey) {
+      const ok = await ensureOrderUnlocked(orderKey);
+      if (!ok) return;
+    }
+    setQuickEditRecord(record);
+    setQuickEditVisible(true);
   };
 
   const escapeHtml = (v: unknown) => {
@@ -1081,6 +1113,12 @@ const MaterialPurchase: React.FC = () => {
       return;
     }
 
+    const orderKey = String(record?.orderId || record?.orderNo || '').trim();
+    if (orderKey) {
+      const ok = await ensureOrderUnlocked(orderKey);
+      if (!ok) return;
+    }
+
     const receiverName = String(user?.name || user?.username || '').trim() || window.prompt('请输入领取人姓名') || '';
     if (!String(receiverName).trim()) {
       message.error('未填写领取人');
@@ -1109,6 +1147,11 @@ const MaterialPurchase: React.FC = () => {
   const submitReturnConfirm = async () => {
     try {
       setReturnConfirmSubmitting(true);
+      const orderKey = String(returnConfirmTargets[0]?.orderId || returnConfirmTargets[0]?.orderNo || '').trim();
+      if (orderKey) {
+        const ok = await ensureOrderUnlocked(orderKey);
+        if (!ok) return;
+      }
       const values = (await returnConfirmForm.validateFields()) as { items?: Array<{ purchaseId?: string; returnQuantity?: number }> };
       const confirmerName = String(user?.name || user?.username || '未命名').trim() || '未命名';
       const items = Array.isArray(values?.items) ? values.items : [];
@@ -1119,10 +1162,15 @@ const MaterialPurchase: React.FC = () => {
         return;
       }
 
-      for (const it of items) {
+      const validItems = items.filter((it) => String(it?.purchaseId || '').trim());
+      if (!validItems.length) {
+        message.error('采购任务缺少ID');
+        return;
+      }
+
+      for (const it of validItems) {
         const purchaseId = String(it?.purchaseId || '').trim();
         const returnQuantity = Number(it?.returnQuantity);
-        if (!purchaseId) continue;
         const res = await postReturnConfirm({ purchaseId, confirmerId, confirmerName, returnQuantity });
         const result = res as { code?: number; message?: string };
         if (result?.code !== 200) {
@@ -1154,6 +1202,11 @@ const MaterialPurchase: React.FC = () => {
     }
     try {
       setReturnResetSubmitting(true);
+      const orderKey = String(returnResetTarget?.orderId || returnResetTarget?.orderNo || '').trim();
+      if (orderKey) {
+        const ok = await ensureOrderUnlocked(orderKey);
+        if (!ok) return;
+      }
       const values = (await returnResetForm.validateFields()) as { reason?: string };
       const purchaseId = String(returnResetTarget?.id || '').trim();
       if (!purchaseId) {
@@ -1443,28 +1496,29 @@ const MaterialPurchase: React.FC = () => {
       key: 'action',
       width: 80,
       fixed: 'right' as const,
-      render: (_: any, record: MaterialPurchaseType) => (
-        <RowActions
-          actions={[
-            {
-              key: 'view',
-              label: '查看',
-              icon: <EyeOutlined />,
-              onClick: () => void openDialogSafe('view', record),
-              primary: true,
-            },
-            {
-              key: 'quickEdit',
-              label: '编辑',
-              icon: <EditOutlined />,
-              onClick: () => {
-                setQuickEditRecord(record);
-                setQuickEditVisible(true);
+      render: (_: any, record: MaterialPurchaseType) => {
+        const frozen = isOrderFrozenForRecord(record);
+        return (
+          <RowActions
+            actions={[
+              {
+                key: 'view',
+                label: '查看',
+                icon: <EyeOutlined />,
+                onClick: () => void openDialogSafe('view', record),
+                primary: true,
               },
-            },
-          ]}
-        />
-      ),
+              {
+                key: 'quickEdit',
+                label: '编辑',
+                icon: <EditOutlined />,
+                disabled: frozen,
+                onClick: () => void openQuickEditSafe(record),
+              },
+            ]}
+          />
+        );
+      },
     },
   ];
 
@@ -1656,6 +1710,8 @@ const MaterialPurchase: React.FC = () => {
       },
     },
   ];
+
+  const detailFrozen = isOrderFrozenForRecord(detailOrder || currentPurchase);
 
   return (
     <Layout>
@@ -2292,8 +2348,14 @@ const MaterialPurchase: React.FC = () => {
                       <Button
                         size="small"
                         type="primary"
-                        disabled={!detailPurchases.some((p) => p.status === 'pending')}
+                        disabled={detailFrozen || !detailPurchases.some((p) => p.status === 'pending')}
                         onClick={async () => {
+                          if (detailFrozen) return;
+                          const orderKey = String(currentPurchase?.orderId || currentPurchase?.orderNo || detailOrder?.id || detailOrder?.orderNo || '').trim();
+                          if (orderKey) {
+                            const ok = await ensureOrderUnlocked(orderKey);
+                            if (!ok) return;
+                          }
                           const targets = detailPurchases.filter((p) => p.status === 'pending' && String(p.id || '').trim());
                           if (!targets.length) {
                             message.info('没有待领取的采购任务');
@@ -2321,7 +2383,7 @@ const MaterialPurchase: React.FC = () => {
                       </Button>
                       <Button
                         size="small"
-                        disabled={!detailPurchases.some((p) => p.status === 'received' || p.status === 'partial' || p.status === 'completed')}
+                        disabled={detailFrozen || !detailPurchases.some((p) => p.status === 'received' || p.status === 'partial' || p.status === 'completed')}
                         onClick={() => {
                           const targets = detailPurchases.filter((p) =>
                             (p.status === 'received' || p.status === 'partial' || p.status === 'completed') &&
@@ -2332,7 +2394,7 @@ const MaterialPurchase: React.FC = () => {
                             message.info('没有可回料确认的采购任务');
                             return;
                           }
-                          openReturnConfirm(targets);
+                          void openReturnConfirm(targets);
                         }}
                       >
                         批量回料确认
@@ -2459,36 +2521,43 @@ const MaterialPurchase: React.FC = () => {
                               title: '确认',
                               key: 'confirm',
                               width: 140,
-                              render: (_: any, record: MaterialPurchaseType) => (
-                                <Space size={4}>
-                                  <Button
-                                    type="link"
-                                    size="small"
-                                    disabled={record.status !== 'pending'}
-                                    onClick={() => receivePurchaseTask(record)}
-                                  >
-                                    领取
-                                  </Button>
-                                  <Button
-                                    type="link"
-                                    size="small"
-                                    disabled={!(record.status === 'received' || record.status === 'partial' || record.status === 'completed') || Number(record?.returnConfirmed || 0) === 1}
-                                    onClick={() => confirmReturnPurchaseTask(record)}
-                                  >
-                                    {Number(record?.returnConfirmed || 0) === 1 ? '已回料' : '回料确认'}
-                                  </Button>
-                                  {Number(record?.returnConfirmed || 0) === 1 && (
+                              render: (_: any, record: MaterialPurchaseType) => {
+                                const frozen = isOrderFrozenForRecord(record);
+                                return (
+                                  <Space size={4}>
                                     <Button
                                       type="link"
                                       size="small"
-                                      disabled={!isSupervisorOrAbove}
-                                      onClick={() => openReturnReset(record)}
+                                      disabled={frozen || record.status !== 'pending'}
+                                      onClick={() => receivePurchaseTask(record)}
                                     >
-                                      退回
+                                      领取
                                     </Button>
-                                  )}
-                                </Space>
-                              ),
+                                    <Button
+                                      type="link"
+                                      size="small"
+                                      disabled={
+                                        frozen
+                                        || !(record.status === 'received' || record.status === 'partial' || record.status === 'completed')
+                                        || Number(record?.returnConfirmed || 0) === 1
+                                      }
+                                      onClick={() => confirmReturnPurchaseTask(record)}
+                                    >
+                                      {Number(record?.returnConfirmed || 0) === 1 ? '已回料' : '回料确认'}
+                                    </Button>
+                                    {Number(record?.returnConfirmed || 0) === 1 && (
+                                      <Button
+                                        type="link"
+                                        size="small"
+                                        disabled={frozen || !isSupervisorOrAbove}
+                                        onClick={() => void openReturnReset(record)}
+                                      >
+                                        退回
+                                      </Button>
+                                    )}
+                                  </Space>
+                                );
+                              },
                             },
                           ]}
                         />

@@ -11,11 +11,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.entity.ScanRecord;
+import com.fashion.supplychain.production.helper.OrderReconciliationHelper;
 import com.fashion.supplychain.production.mapper.CuttingBundleMapper;
 import com.fashion.supplychain.production.service.ProductOutstockService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleQuotation;
 import com.fashion.supplychain.style.service.StyleInfoService;
@@ -56,6 +59,9 @@ public class ProductionOrderFinanceOrchestrationService {
 
     @Autowired
     private ProductionOrderScanRecordDomainService scanRecordDomainService;
+    
+    @Autowired
+    private ScanRecordService scanRecordService;
 
     @Autowired
     private StyleInfoService styleInfoService;
@@ -65,6 +71,9 @@ public class ProductionOrderFinanceOrchestrationService {
 
     @Autowired
     private ObjectMapper objectMapper;
+    
+    @Autowired
+    private OrderReconciliationHelper orderReconciliationHelper;
 
     @Transactional(rollbackFor = Exception.class)
     public boolean completeProduction(String id, BigDecimal tolerancePercent) {
@@ -213,6 +222,14 @@ public class ProductionOrderFinanceOrchestrationService {
                 .update();
         if (!ok) {
             throw new IllegalStateException("完成失败");
+        }
+
+        // 【关键】关单时自动创建订单结算（本厂+加工厂统一处理）
+        try {
+            orderReconciliationHelper.createShipmentReconciliationOnClose(order);
+        } catch (Exception e) {
+            log.error("创建订单结算失败: orderId={}", oid, e);
+            // 不阻断关单流程，只记录错误
         }
 
         ProductionOrder detail = productionOrderService.getDetailById(oid);

@@ -112,6 +112,14 @@ public class ShipmentReconciliation implements com.fashion.supplychain.finance.s
     private BigDecimal profitMargin;
 
     /**
+     * 是否本厂(0:加工厂, 1:本厂)
+     * 本厂订单：汇总扫码工资成本
+     * 加工厂订单：按单价计算加工费
+     */
+    @TableField("is_own_factory")
+    private Integer isOwnFactory;
+
+    /**
      * 对账日期
      */
     private LocalDateTime reconciliationDate;
