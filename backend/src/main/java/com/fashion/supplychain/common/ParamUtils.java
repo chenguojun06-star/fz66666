@@ -163,8 +163,7 @@ public final class ParamUtils {
             return LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
         }
 
-        String s = String.valueOf(raw);
-        s = s == null ? null : s.trim();
+        String s = String.valueOf(raw).trim();
         if (!StringUtils.hasText(s) || "undefined".equalsIgnoreCase(s) || "null".equalsIgnoreCase(s)) {
             return null;
         }
