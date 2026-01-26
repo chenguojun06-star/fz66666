@@ -1650,7 +1650,7 @@ const ProductionList: React.FC = () => {
                 display: 'flex',
                 gap: isMobile ? 12 : 16,
                 padding: isMobile ? 10 : 12,
-                background: '#f8f9fa',
+                background: 'var(--neutral-light)',
                 borderRadius: 8,
                 marginBottom: 12
               }}>
@@ -1695,19 +1695,19 @@ const ProductionList: React.FC = () => {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <span style={{
                           fontSize: 14,
-                          color: '#6b7280',
+                          color: 'var(--neutral-text-light)',
                           fontWeight: 600
                         }}>订单号</span>
                         <span style={{
                           fontSize: 18,
                           fontWeight: 700,
-                          color: '#1f2937',
+                          color: 'var(--neutral-text)',
                           letterSpacing: '0.5px'
                         }}>{safeString((currentOrder as Record<string, unknown>).orderNo)}</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span style={{ fontSize: 14, color: '#6b7280', fontWeight: 600 }}>加工厂</span>
-                        <span style={{ fontSize: 15, fontWeight: 600, color: '#111827' }}>
+                        <span style={{ fontSize: 14, color: 'var(--neutral-text-light)', fontWeight: 600 }}>加工厂</span>
+                        <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--neutral-text)' }}>
                           {safeString((currentOrder as Record<string, unknown>).factoryName)}
                         </span>
                       </div>
@@ -1716,9 +1716,9 @@ const ProductionList: React.FC = () => {
                     {/* 右侧：码数与数量表格 */}
                     <div style={{
                       padding: 6,
-                      background: '#fff',
+                      background: 'var(--neutral-white)',
                       borderRadius: 6,
-                      border: '2px solid #d1d5db',
+                      border: '2px solid var(--table-border-color)',
                       boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
                       flexShrink: 0
                     }}>
@@ -1734,12 +1734,12 @@ const ProductionList: React.FC = () => {
                                 <td style={{
                                   padding: '8px 12px',
                                   fontSize: 14,
-                                  color: '#374151',
+                                  color: 'var(--neutral-text-light)',
                                   fontWeight: 600,
-                                  borderRight: '1px solid #d1d5db',
-                                  borderBottom: '1px solid #d1d5db',
+                                  borderRight: '1px solid var(--table-border-color)',
+                                  borderBottom: '1px solid var(--table-border-color)',
                                   width: '60px',
-                                  background: '#f3f4f6'
+                                  background: 'var(--neutral-medium)'
                                 }}>
                                   码数
                                 </td>
@@ -1747,11 +1747,11 @@ const ProductionList: React.FC = () => {
                                   <td key={idx} style={{
                                     padding: '8px 14px',
                                     fontSize: 15,
-                                    color: '#111827',
+                                    color: 'var(--neutral-text)',
                                     fontWeight: 700,
                                     textAlign: 'center',
-                                    borderRight: idx < sizeArray.length - 1 ? '1px solid #d1d5db' : 'none',
-                                    borderBottom: '1px solid #d1d5db',
+                                    borderRight: idx < sizeArray.length - 1 ? '1px solid var(--table-border-color)' : 'none',
+                                    borderBottom: '1px solid var(--table-border-color)',
                                     minWidth: '50px'
                                   }}>
                                     {size}
@@ -1760,12 +1760,12 @@ const ProductionList: React.FC = () => {
                                 <td style={{
                                   padding: '8px 14px',
                                   fontSize: 14,
-                                  color: '#111827',
+                                  color: 'var(--neutral-text)',
                                   fontWeight: 700,
                                   textAlign: 'center',
-                                  borderLeft: '1px solid #d1d5db',
-                                  borderBottom: '1px solid #d1d5db',
-                                  background: '#fef3c7',
+                                  borderLeft: '1px solid var(--table-border-color)',
+                                  borderBottom: '1px solid var(--table-border-color)',
+                                  background: 'rgba(250, 173, 20, 0.18)',
                                   whiteSpace: 'nowrap'
                                 }} rowSpan={2}>
                                   总下单数：{detailQuantity || '-'}
@@ -1776,10 +1776,10 @@ const ProductionList: React.FC = () => {
                                 <td style={{
                                   padding: '8px 12px',
                                   fontSize: 14,
-                                  color: '#374151',
+                                  color: 'var(--neutral-text-light)',
                                   fontWeight: 600,
-                                  borderRight: '1px solid #d1d5db',
-                                  background: '#f3f4f6'
+                                  borderRight: '1px solid var(--table-border-color)',
+                                  background: 'var(--neutral-medium)'
                                 }}>
                                   数量
                                 </td>
@@ -1790,10 +1790,10 @@ const ProductionList: React.FC = () => {
                                     <td key={idx} style={{
                                       padding: '8px 14px',
                                       fontSize: 15,
-                                      color: '#111827',
+                                      color: 'var(--neutral-text)',
                                       fontWeight: 700,
                                       textAlign: 'center',
-                                      borderRight: idx < sizeArray.length - 1 ? '1px solid #d1d5db' : 'none',
+                                      borderRight: idx < sizeArray.length - 1 ? '1px solid var(--table-border-color)' : 'none',
                                       minWidth: '50px'
                                     }}>
                                       {qty}
@@ -1817,20 +1817,20 @@ const ProductionList: React.FC = () => {
                     marginBottom: 12
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 14, color: '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>款号</span>
-                      <span style={{ fontSize: 15, fontWeight: 600, color: '#111827' }}>
+                      <span style={{ fontSize: 14, color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap' }}>款号</span>
+                      <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--neutral-text)' }}>
                         {safeString((currentOrder as Record<string, unknown>).styleNo)}
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 14, color: '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>款名</span>
-                      <span style={{ fontSize: 15, fontWeight: 600, color: '#111827' }}>
+                      <span style={{ fontSize: 14, color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap' }}>款名</span>
+                      <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--neutral-text)' }}>
                         {safeString((currentOrder as Record<string, unknown>).styleName)}
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 14, color: '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>颜色</span>
-                      <span style={{ fontSize: 15, fontWeight: 600, color: '#111827' }}>
+                      <span style={{ fontSize: 14, color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap' }}>颜色</span>
+                      <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--neutral-text)' }}>
                         {detailColors}
                       </span>
                     </div>
@@ -1839,9 +1839,9 @@ const ProductionList: React.FC = () => {
                   {/* 其他信息区域 */}
                   <div style={{
                     padding: 6,
-                    background: '#fff',
+                    background: 'var(--neutral-white)',
                     borderRadius: 4,
-                    border: '1px solid #e5e7eb'
+                    border: '1px solid var(--table-border-color)'
                   }}>
                     <div style={{
                       display: 'grid',
@@ -1849,80 +1849,80 @@ const ProductionList: React.FC = () => {
                       gap: isMobile ? '4px 6px' : '4px 8px'
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>订单数量</span>
-                        <span style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>
+                        <span style={{ fontSize: 13, color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap' }}>订单数量</span>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-text)' }}>
                           {String((currentOrder as Record<string, unknown>).orderQuantity ?? '-')}
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>完成数量</span>
-                        <span style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>
+                        <span style={{ fontSize: 13, color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap' }}>完成数量</span>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-text)' }}>
                           {String((currentOrder as Record<string, unknown>).completedQuantity ?? '-')}
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>入库数量</span>
-                        <span style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>
+                        <span style={{ fontSize: 13, color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap' }}>入库数量</span>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-text)' }}>
                           {detailWarehousedQuantity || '-'}
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>生产进度</span>
-                        <span style={{ fontSize: 14, fontWeight: 600, color: '#059669' }}>
+                        <span style={{ fontSize: 13, color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap' }}>生产进度</span>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--success-color)' }}>
                           {String((currentOrder as Record<string, unknown>).productionProgress ?? '-')}%
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>状态</span>
-                        <span style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>
+                        <span style={{ fontSize: 13, color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap' }}>状态</span>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-text)' }}>
                           {getStatusConfig((currentOrder as Record<string, unknown>).status).text}
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>采购员</span>
-                        <span style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>
+                        <span style={{ fontSize: 13, color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap' }}>采购员</span>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-text)' }}>
                           {safeString((currentOrder as Record<string, unknown>).procurementOperatorName)}
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>采购完成率</span>
-                        <span style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>
+                        <span style={{ fontSize: 13, color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap' }}>采购完成率</span>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-text)' }}>
                           {((currentOrder as Record<string, unknown>).procurementCompletionRate ?? '-') + '%'}
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>采购时间</span>
-                        <span style={{ fontSize: 13, color: '#111827' }}>
+                        <span style={{ fontSize: 13, color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap' }}>采购时间</span>
+                        <span style={{ fontSize: 13, color: 'var(--neutral-text)' }}>
                           {formatDateTime((currentOrder as Record<string, unknown>).procurementStartTime)}
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>采购完成时间</span>
-                        <span style={{ fontSize: 13, color: '#111827' }}>
+                        <span style={{ fontSize: 13, color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap' }}>采购完成时间</span>
+                        <span style={{ fontSize: 13, color: 'var(--neutral-text)' }}>
                           {formatDateTime((currentOrder as Record<string, unknown>).procurementEndTime)}
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>裁剪员</span>
-                        <span style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>
+                        <span style={{ fontSize: 13, color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap' }}>裁剪员</span>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-text)' }}>
                           {safeString((currentOrder as Record<string, unknown>).cuttingOperatorName)}
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>裁剪完成率</span>
-                        <span style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>
+                        <span style={{ fontSize: 13, color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap' }}>裁剪完成率</span>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-text)' }}>
                           {((currentOrder as Record<string, unknown>).cuttingCompletionRate ?? '-') + '%'}
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>裁剪时间</span>
-                        <span style={{ fontSize: 13, color: '#111827' }}>
+                        <span style={{ fontSize: 13, color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap' }}>裁剪时间</span>
+                        <span style={{ fontSize: 13, color: 'var(--neutral-text)' }}>
                           {formatDateTime((currentOrder as Record<string, unknown>).cuttingStartTime)}
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>裁剪完成时间</span>
-                        <span style={{ fontSize: 13, color: '#111827' }}>
+                        <span style={{ fontSize: 13, color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap' }}>裁剪完成时间</span>
+                        <span style={{ fontSize: 13, color: 'var(--neutral-text)' }}>
                           {formatDateTime((currentOrder as Record<string, unknown>).cuttingEndTime)}
                         </span>
                       </div>
@@ -1938,7 +1938,7 @@ const ProductionList: React.FC = () => {
                       dataSource={detailSkuRows as Record<string, unknown>}
                       rowKey="key"
                       style={{
-                        border: '1px solid #e5e7eb',
+                        border: '1px solid var(--table-border-color)',
                         borderRadius: 4,
                         overflow: 'hidden',
                         fontSize: 11
@@ -2004,7 +2004,7 @@ const ProductionList: React.FC = () => {
                       ]}
                       summary={() => (
                         <Table.Summary>
-                          <Table.Summary.Row style={{ fontWeight: 600, background: '#f9fafb' }}>
+                          <Table.Summary.Row style={{ fontWeight: 600, background: 'var(--neutral-light)' }}>
                             <Table.Summary.Cell index={0} colSpan={3}>
                               <span style={{ fontSize: 11 }}>合计</span>
                             </Table.Summary.Cell>
@@ -2032,7 +2032,7 @@ const ProductionList: React.FC = () => {
               <div style={{ marginBottom: 8 }}>
                 <div style={{
                   padding: 6,
-                  background: '#f8f9fa',
+                  background: 'var(--neutral-light)',
                   borderRadius: 4,
                   display: 'flex',
                   alignItems: 'center',
@@ -2040,23 +2040,23 @@ const ProductionList: React.FC = () => {
                   flexWrap: 'wrap'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>计划开始：</span>
-                    <span style={{ fontSize: 12, color: '#6b7280' }}>{formatDateTime(currentOrder.plannedStartDate)}</span>
+                    <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--neutral-text-light)' }}>计划开始：</span>
+                    <span style={{ fontSize: 12, color: 'var(--neutral-text-light)' }}>{formatDateTime(currentOrder.plannedStartDate)}</span>
                   </div>
                   {currentOrder.actualStartDate && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>实际开始：</span>
-                      <span style={{ fontSize: 12, color: '#059669' }}>{formatDateTime(currentOrder.actualStartDate)}</span>
+                      <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--neutral-text-light)' }}>实际开始：</span>
+                      <span style={{ fontSize: 12, color: 'var(--success-color)' }}>{formatDateTime(currentOrder.actualStartDate)}</span>
                     </div>
                   )}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>计划完成：</span>
-                    <span style={{ fontSize: 12, color: '#6b7280' }}>{formatDateTime(currentOrder.plannedEndDate)}</span>
+                    <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--neutral-text-light)' }}>计划完成：</span>
+                    <span style={{ fontSize: 12, color: 'var(--neutral-text-light)' }}>{formatDateTime(currentOrder.plannedEndDate)}</span>
                   </div>
                   {currentOrder.actualEndDate && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>实际完成：</span>
-                      <span style={{ fontSize: 12, color: '#059669' }}>{formatDateTime(currentOrder.actualEndDate)}</span>
+                      <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--neutral-text-light)' }}>实际完成：</span>
+                      <span style={{ fontSize: 12, color: 'var(--success-color)' }}>{formatDateTime(currentOrder.actualEndDate)}</span>
                     </div>
                   )}
                 </div>

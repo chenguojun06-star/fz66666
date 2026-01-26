@@ -1,7 +1,7 @@
 import React, { ReactNode, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Avatar, Badge, Button, Drawer, Dropdown, Layout as AntLayout, Menu, message, Popover } from 'antd';
-import { BellOutlined, CloseOutlined, DownOutlined, LogoutOutlined, MenuFoldOutlined, MenuOutlined, MenuUnfoldOutlined, SettingOutlined } from '@ant-design/icons';
+import { Avatar, Badge, Button, Dropdown, Layout as AntLayout, Menu, message, Popover } from 'antd';
+import { BellOutlined, CloseOutlined, DownOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined, SettingOutlined } from '@ant-design/icons';
 import { isAdminUser as isAdminUserFn, useAuth } from '../../utils/authContext';
 import { menuConfig, resolvePermissionCode } from '../../routeConfig';
 import { useViewport } from '../../utils/useViewport';
@@ -32,6 +32,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const recentPagesStorageKey = 'layout.header.recentPages';
+  const sidebarCollapsedStorageKey = 'layout.sidebar.collapsed';
   const maxRecentPages = 12;
 
   const normalizePath = (path: string) => path.split('?')[0];
@@ -108,6 +109,17 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
   };
 
+  const readSidebarCollapsed = () => {
+    if (typeof window === 'undefined') return isMobile;
+    try {
+      const raw = localStorage.getItem(sidebarCollapsedStorageKey);
+      if (raw === null) return isMobile;
+      return raw === 'true';
+    } catch {
+      return isMobile;
+    }
+  };
+
   const writeRecentPages = (pages: RecentPage[]) => {
     try {
       localStorage.setItem(recentPagesStorageKey, JSON.stringify(pages));
@@ -124,9 +136,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [urgentEvents, setUrgentEvents] = useState<UrgentEvent[]>([]);
 
   const { isMobile } = useViewport();
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => readSidebarCollapsed());
   const collapsed = sidebarCollapsed;
+  const sidebarIsCollapsed = isMobile ? true : collapsed;
   const [menuOpenKeys, setMenuOpenKeys] = useState<string[]>(() => (activeSectionKey ? [activeSectionKey] : []));
 
   // 获取紧急事件
@@ -192,23 +204,41 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }, [getActivePath]);
 
   const handleMenuOpenChange = (openKeys: string[]) => {
-    if (collapsed) return;
+    if (sidebarIsCollapsed) return;
     setMenuOpenKeys(openKeys);
   };
 
   useEffect(() => {
-    if (!isMobile) {
-      setMobileNavOpen(false);
+    if (isMobile) {
+      setSidebarCollapsed(true);
+      if (menuOpenKeys.length) setMenuOpenKeys([]);
+    }
+  }, [isMobile, menuOpenKeys.length]);
+
+  useEffect(() => {
+    if (isMobile) return;
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = localStorage.getItem(sidebarCollapsedStorageKey);
+      if (raw === null) return;
+      setSidebarCollapsed(raw === 'true');
+    } catch {
+      return;
     }
   }, [isMobile]);
 
   useEffect(() => {
-    if (!isMobile) return;
-    setMobileNavOpen(false);
-  }, [isMobile, effectivePathname]);
+    if (isMobile) return;
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(sidebarCollapsedStorageKey, String(sidebarCollapsed));
+    } catch {
+      return;
+    }
+  }, [isMobile, sidebarCollapsed]);
 
   useEffect(() => {
-    if (collapsed) return;
+    if (sidebarIsCollapsed) return;
     if (!activeSectionKey) {
       if (menuOpenKeys.length) setMenuOpenKeys([]);
       return;
@@ -216,7 +246,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (!menuOpenKeys.includes(activeSectionKey)) {
       setMenuOpenKeys([activeSectionKey]);
     }
-  }, [activeSectionKey, collapsed, menuOpenKeys]);
+  }, [activeSectionKey, menuOpenKeys, sidebarIsCollapsed]);
 
   // 加载紧急事件
   useEffect(() => {
@@ -302,15 +332,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <header className="layout-header">
         <div className="header-content">
           <div className="header-left">
-            {isMobile ? (
-              <Button
-                type="text"
-                icon={<MenuOutlined />}
-                aria-label="打开菜单"
-                onClick={() => setMobileNavOpen(true)}
-                className="header-menu-btn"
-              />
-            ) : null}
             <h1 className="header-title header-brand">衣富ERP供应链生态</h1>
             {recentPages.length ? (
               <div className="header-recents" role="tablist" aria-label="最近打开的页面">
@@ -428,57 +449,37 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </header>
 
       <div className="layout-main">
-        {!isMobile ? (
-          <AntLayout.Sider
-            collapsible
-            collapsed={collapsed}
-            onCollapse={setSidebarCollapsed}
-            width={180}
-            collapsedWidth={64}
-            trigger={null}
-            className="layout-sidebar"
-          >
+        <AntLayout.Sider
+          collapsible={!isMobile}
+          collapsed={sidebarIsCollapsed}
+          onCollapse={isMobile ? undefined : setSidebarCollapsed}
+          width={180}
+          collapsedWidth={64}
+          trigger={null}
+          className="layout-sidebar"
+        >
+          {!isMobile ? (
             <div className="sidebar-tools">
               <Button
                 type="text"
                 className="sidebar-collapse-btn"
-                icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-                aria-label={collapsed ? '展开侧边栏' : '收起侧边栏'}
+                icon={sidebarIsCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+                aria-label={sidebarIsCollapsed ? '展开侧边栏' : '收起侧边栏'}
                 onClick={() => setSidebarCollapsed((prev) => !prev)}
               />
             </div>
-            <Menu
-              mode="inline"
-              selectedKeys={selectedKeys}
-              openKeys={collapsed ? undefined : menuOpenKeys}
-              onOpenChange={handleMenuOpenChange}
-              items={menuItems}
-              inlineCollapsed={collapsed}
-              triggerSubMenuAction={collapsed ? 'hover' : 'click'}
-              className="sidebar-menu"
-            />
-          </AntLayout.Sider>
-        ) : (
-          <Drawer
-            title="菜单"
-            placement="left"
-            size={260}
-            className="mobile-nav-drawer"
-            open={mobileNavOpen}
-            onClose={() => setMobileNavOpen(false)}
-          >
-            <Menu
-              mode="inline"
-              selectedKeys={selectedKeys}
-              openKeys={menuOpenKeys}
-              onOpenChange={setMenuOpenKeys}
-              items={menuItems}
-              triggerSubMenuAction="hover"
-              className="sidebar-menu"
-              onClick={() => setMobileNavOpen(false)}
-            />
-          </Drawer>
-        )}
+          ) : null}
+          <Menu
+            mode="inline"
+            selectedKeys={selectedKeys}
+            openKeys={sidebarIsCollapsed ? undefined : menuOpenKeys}
+            onOpenChange={handleMenuOpenChange}
+            items={menuItems}
+            inlineCollapsed={sidebarIsCollapsed}
+            triggerSubMenuAction={sidebarIsCollapsed ? (isMobile ? 'click' : 'hover') : 'click'}
+            className="sidebar-menu"
+          />
+        </AntLayout.Sider>
 
         <main className="layout-content">
           <div className="content-wrapper">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, DatePicker, Tooltip, Spin, Space, Statistic } from 'antd';
+import { Card, Row, Col, DatePicker, Tooltip, Spin, Space, Statistic, Select } from 'antd';
 import { InfoCircleOutlined, CaretUpOutlined, CaretDownOutlined } from '@ant-design/icons';
 import { Line } from '@ant-design/charts';
 import api from '@/utils/api';
@@ -7,23 +7,28 @@ import dayjs from 'dayjs';
 import styles from './index.module.css';
 
 const { RangePicker } = DatePicker;
+const { Option } = Select;
 
 // 统计卡片数据接口
 interface StatCardData {
   totalAmount: number;
   totalAmountChange: number; // 对比变化
+  prevTotalAmount: number;   // 上期总金额
 
   warehousedCount: number;
   warehousedChange: number;
   warehousedTrend: number[];
+  prevWarehousedCount: number; // 上期入库数量
 
   orderCount: number;
   orderChange: number;
+  prevOrderCount: number;      // 上期订单数量
 
   defectCount: number;
   defectChange: number;
   defectRate: number;
   orderTrend: number[];
+  prevDefectCount: number;     // 上期次品数量
 
   profitRate: number;
   profitRateChange: number;
@@ -52,6 +57,8 @@ interface SettlementRow {
   orderId: string;
   orderNo: string;
   status: string;
+  factoryId: string;
+  factoryName: string;
   warehousedQuantity: number;
   defectQuantity: number;
   totalAmount: number;
@@ -65,23 +72,37 @@ interface SettlementRow {
 // 日/周/月/年 时间范围类型
 type TimeRangeType = 'day' | 'week' | 'month' | 'year' | 'custom';
 
+// 工厂数据接口
+interface Factory {
+  id: string;
+  factoryName: string;
+}
+
 const DashboardContent: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [timeRange, setTimeRange] = useState<TimeRangeType>('month');
   const [customRange, setCustomRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
 
+  // 筛选条件
+  const [selectedFactory, setSelectedFactory] = useState<string | undefined>(undefined); // 工厂筛选（单选）
+  const [factories, setFactories] = useState<Factory[]>([]);
+
   const [statData, setStatData] = useState<StatCardData>({
     totalAmount: 0,
     totalAmountChange: 0,
+    prevTotalAmount: 0,
     warehousedCount: 0,
     warehousedChange: 0,
     warehousedTrend: [],
+    prevWarehousedCount: 0,
     orderCount: 0,
     orderChange: 0,
+    prevOrderCount: 0,
     defectCount: 0,
     defectChange: 0,
     defectRate: 0,
     orderTrend: [],
+    prevDefectCount: 0,
     profitRate: 0,
     profitRateChange: 0,
     materialCost: 0,
@@ -102,6 +123,28 @@ const DashboardContent: React.FC = () => {
       default: return '对比';
     }
   };
+
+  // 加载工厂列表
+  const loadFactories = async () => {
+    try {
+      const response = await api.get<{ code: number; data: { records: Factory[] } }>('/system/factory/list', {
+        params: { page: 1, pageSize: 1000 }
+      });
+      if (response.code === 200) {
+        setFactories(response.data.records || []);
+      }
+    } catch (error) {
+      console.error('加载工厂列表失败:', error);
+      setFactories([]);
+    }
+  };
+
+
+
+  // 初始化加载工厂列表
+  useEffect(() => {
+    loadFactories();
+  }, []);
 
   // 加载真实数据
   const loadData = async () => {
@@ -150,17 +193,39 @@ const DashboardContent: React.FC = () => {
           break;
       }
 
+      // 构建查询参数
+      const queryParams: any = { page: 1, pageSize: 1000, startDate, endDate };
+      // 添加工厂筛选
+      if (selectedFactory) {
+        queryParams.factoryId = selectedFactory;
+      }
+
       // 获取当前周期数据
       const response = await api.get('/finance/finished-settlement/page', {
-        params: { page: 1, pageSize: 1000, startDate, endDate }
+        params: queryParams
       });
-      const records: SettlementRow[] = response.data?.records || [];
+      let records: SettlementRow[] = response.data?.records || [];
+
+      // 前端按工厂筛选（因为后端Controller暂不支持factoryId参数）
+      if (selectedFactory) {
+        records = records.filter(r => r.factoryId === selectedFactory);
+      }
 
       // 获取上一周期数据
+      const prevQueryParams: any = { page: 1, pageSize: 1000, startDate: prevStartDate, endDate: prevEndDate };
+      if (selectedFactory) {
+        prevQueryParams.factoryId = selectedFactory;
+      }
+
       const prevResponse = await api.get('/finance/finished-settlement/page', {
-        params: { page: 1, pageSize: 1000, startDate: prevStartDate, endDate: prevEndDate }
+        params: prevQueryParams
       });
-      const prevRecords: SettlementRow[] = prevResponse.data?.records || [];
+      let prevRecords: SettlementRow[] = prevResponse.data?.records || [];
+
+      // 前端按工厂筛选
+      if (selectedFactory) {
+        prevRecords = prevRecords.filter(r => r.factoryId === selectedFactory);
+      }
 
       // 计算当前周期统计
       const totalAmount = records.reduce((sum, r) => sum + (r.totalAmount || 0), 0);
@@ -246,15 +311,19 @@ const DashboardContent: React.FC = () => {
       setStatData({
         totalAmount,
         totalAmountChange: calcChange(totalAmount, prevTotalAmount),
+        prevTotalAmount,
         warehousedCount,
         warehousedChange: calcChange(warehousedCount, prevWarehousedCount),
         warehousedTrend,
+        prevWarehousedCount,
         orderCount,
         orderChange: calcChange(orderCount, prevOrderCount),
+        prevOrderCount,
         defectCount,
         defectChange: calcChange(defectCount, prevDefectCount),
         defectRate,
         orderTrend,
+        prevDefectCount,
         profitRate,
         profitRateChange: calcChange(profitRate, prevProfitRate),
         materialCost,
@@ -264,26 +333,21 @@ const DashboardContent: React.FC = () => {
 
       setTrendData(trendPoints);
 
-      // 工序成本排名
-      const processMap: Record<string, number> = {
-        '车缝工序': 0,
-        '裁剪工序': 0,
-        '整烫工序': 0,
-        '包装工序': 0,
-        '质检工序': 0,
-      };
-
+      // 工厂总金额排名
+      const factoryMap: Record<string, number> = {};
+      
       records.forEach(r => {
-        const prodCost = r.productionCost || 0;
-        processMap['车缝工序'] += prodCost * 0.4;
-        processMap['裁剪工序'] += prodCost * 0.25;
-        processMap['整烫工序'] += prodCost * 0.15;
-        processMap['包装工序'] += prodCost * 0.1;
-        processMap['质检工序'] += prodCost * 0.1;
+        const factoryName = r.factoryName || '未知工厂';
+        const amount = r.totalAmount || 0;
+        if (!factoryMap[factoryName]) {
+          factoryMap[factoryName] = 0;
+        }
+        factoryMap[factoryName] += amount;
       });
 
-      const rank = Object.entries(processMap)
+      const rank = Object.entries(factoryMap)
         .sort((a, b) => b[1] - a[1])
+        .slice(0, 10) // 只显示前10名
         .map(([name, value], index) => ({
           rank: index + 1,
           name,
@@ -294,11 +358,12 @@ const DashboardContent: React.FC = () => {
     } catch (error) {
       console.error('加载数据失败:', error);
       setStatData({
-        totalAmount: 0, totalAmountChange: 0,
-        warehousedCount: 0, warehousedChange: 0, warehousedTrend: [0,0,0,0,0,0,0],
-        orderCount: 0, orderChange: 0,
-        defectCount: 0, defectChange: 0, defectRate: 0, orderTrend: [0,0,0,0,0,0,0],
+        totalAmount: 0, totalAmountChange: 0, prevTotalAmount: 0,
+        warehousedCount: 0, warehousedChange: 0, warehousedTrend: [0,0,0,0,0,0,0], prevWarehousedCount: 0,
+        orderCount: 0, orderChange: 0, prevOrderCount: 0,
+        defectCount: 0, defectChange: 0, defectRate: 0, orderTrend: [0,0,0,0,0,0,0], prevDefectCount: 0,
         profitRate: 0, profitRateChange: 0,
+        materialCost: 0, productionCost: 0, totalProfit: 0,
       });
       setTrendData([]);
       setRankData([]);
@@ -309,7 +374,7 @@ const DashboardContent: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, [timeRange, customRange]);
+  }, [timeRange, customRange, selectedFactory]);
 
   // 时间范围选择器
   const TimeRangeSelector = () => (
@@ -338,13 +403,18 @@ const DashboardContent: React.FC = () => {
     </Space>
   );
 
-  // 变化百分比渲染
-  const renderChange = (value: number) => {
+  // 变化百分比渲染（显示具体数值和百分比）
+  const renderChange = (value: number, currentValue: number, prevValue: number, isMoney: boolean = false) => {
     const isUp = value >= 0;
+    const diff = currentValue - prevValue;
+    const diffText = isMoney
+      ? `¥${Math.abs(diff).toLocaleString()}`
+      : Math.abs(diff).toLocaleString();
+
     return (
       <span className={isUp ? styles.changeUp : styles.changeDown}>
         {isUp ? <CaretUpOutlined /> : <CaretDownOutlined />}
-        {Math.abs(value).toFixed(1)}%
+        {Math.abs(value).toFixed(1)}% ({isUp ? '+' : '-'}{diffText})
       </span>
     );
   };
@@ -401,9 +471,26 @@ const DashboardContent: React.FC = () => {
 
   return (
     <Spin spinning={loading}>
-      {/* 时间范围选择器 */}
+      {/* 顶部筛选区域：时间范围 + 工厂选择 */}
       <div className={styles.periodSelector}>
-        <TimeRangeSelector />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
+          <TimeRangeSelector />
+          <Select
+            placeholder="选择工厂（全局筛选）"
+            allowClear
+            style={{ width: 220 }}
+            value={selectedFactory}
+            onChange={setSelectedFactory}
+            showSearch
+            optionFilterProp="children"
+          >
+            {factories.map((factory) => (
+              <Option key={factory.id} value={factory.id}>
+                {factory.factoryName}
+              </Option>
+            ))}
+          </Select>
+        </div>
       </div>
 
       {/* 顶部统计卡片 - 等高布局 */}
@@ -423,7 +510,7 @@ const DashboardContent: React.FC = () => {
             </div>
             <div className={styles.compareRow}>
               <span className={styles.subLabel}>{getCompareLabel()}</span>
-              {renderChange(statData.totalAmountChange)}
+              {renderChange(statData.totalAmountChange, statData.totalAmount, statData.prevTotalAmount, true)}
             </div>
           </Card>
         </Col>
@@ -443,7 +530,7 @@ const DashboardContent: React.FC = () => {
             </div>
             <div className={styles.compareRow}>
               <span className={styles.subLabel}>{getCompareLabel()}</span>
-              {renderChange(statData.warehousedChange)}
+              {renderChange(statData.warehousedChange, statData.warehousedCount, statData.prevWarehousedCount)}
             </div>
           </Card>
         </Col>
@@ -463,7 +550,7 @@ const DashboardContent: React.FC = () => {
             </div>
             <div className={styles.compareRow}>
               <span className={styles.subLabel}>{getCompareLabel()}</span>
-              {renderChange(statData.orderChange)}
+              {renderChange(statData.orderChange, statData.orderCount, statData.prevOrderCount)}
             </div>
           </Card>
         </Col>
@@ -490,7 +577,7 @@ const DashboardContent: React.FC = () => {
             </div>
             <div className={styles.compareRow}>
               <span className={styles.subLabel}>{getCompareLabel()}</span>
-              {renderChange(statData.defectChange)}
+              {renderChange(statData.defectChange, statData.defectCount, statData.prevDefectCount)}
             </div>
           </Card>
         </Col>
@@ -551,7 +638,7 @@ const DashboardContent: React.FC = () => {
           </Col>
           <Col span={8}>
             <div className={styles.rankSection}>
-              <h4 className={styles.sectionTitle}>工序成本排名</h4>
+              <h4 className={styles.sectionTitle}>工厂总金额排名</h4>
               <div className={styles.rankList}>
                 {rankData.map((item) => (
                   <div key={item.rank} className={styles.rankItem}>

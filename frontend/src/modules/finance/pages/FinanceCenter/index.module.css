@@ -229,6 +229,11 @@
   align-items: center;
   padding: 12px 16px;
   border-bottom: 1px solid var(--color-border-light, #f0f0f0);
+  gap: 12px;
+}
+
+.chartHeader .sectionTitle {
+  margin-bottom: 0;
 }
 
 .timeSelector {
