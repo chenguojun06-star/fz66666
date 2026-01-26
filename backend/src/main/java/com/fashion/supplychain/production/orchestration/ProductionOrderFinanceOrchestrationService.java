@@ -59,7 +59,7 @@ public class ProductionOrderFinanceOrchestrationService {
 
     @Autowired
     private ProductionOrderScanRecordDomainService scanRecordDomainService;
-    
+
     @Autowired
     private ScanRecordService scanRecordService;
 
@@ -71,7 +71,7 @@ public class ProductionOrderFinanceOrchestrationService {
 
     @Autowired
     private ObjectMapper objectMapper;
-    
+
     @Autowired
     private OrderReconciliationHelper orderReconciliationHelper;
 

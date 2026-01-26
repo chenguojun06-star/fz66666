@@ -66,6 +66,16 @@ const OrderManagement: React.FC = () => {
     }
   }, [params]);
   const { isMobile, isTablet, modalWidth } = useViewport();
+  const tooltipTheme = useMemo(() => {
+    const theme = typeof document !== 'undefined' ? document.documentElement.getAttribute('data-theme') : '';
+    const isDark = theme === 'dark';
+    return {
+      background: isDark ? '#ffffff' : '#111827',
+      text: isDark ? '#1f1f1f' : '#f8fafc',
+      border: isDark ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.18)',
+      divider: isDark ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.2)',
+    };
+  }, []);
   const [queryParams, setQueryParams] = useState<StyleQueryParams>({
     page: 1,
     pageSize: 10,
@@ -1247,15 +1257,15 @@ const OrderManagement: React.FC = () => {
                           </div>
                         </Col>
                         <Col xs={24} sm={12}>
-                          <Form.Item 
-                            name="factoryId" 
+                          <Form.Item
+                            name="factoryId"
                             label={
                               <Space size={4}>
                                 <span>加工厂</span>
-                                <Tooltip 
+                                <Tooltip
                                   title={
-                                    <div style={{ fontSize: 13 }}>
-                                      <div style={{ marginBottom: 8, fontWeight: 600 }}>📋 加工方式说明</div>
+                                    <div style={{ fontSize: 13, color: tooltipTheme.text }}>
+                                      <div style={{ marginBottom: 8, fontWeight: 600, color: tooltipTheme.text }}>📋 加工方式说明</div>
                                       <div style={{ marginBottom: 6 }}>
                                         <span style={{ color: '#40a9ff' }}>● 本厂生产：</span>
                                         选择"本厂"，订单完成后数据流向<strong>工资结算</strong>（按人员工序统计扫码工资）
@@ -1264,12 +1274,13 @@ const OrderManagement: React.FC = () => {
                                         <span style={{ color: '#ff7875' }}>● 加工厂生产：</span>
                                         选择其他加工厂，订单完成后数据流向<strong>订单结算</strong>（按工厂结算加工费）
                                       </div>
-                                      <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.2)', fontSize: 12, opacity: 0.9 }}>
+                                      <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${tooltipTheme.divider}`, fontSize: 12, opacity: 0.9 }}>
                                         💡 所有数据最终在"订单结算数据看板"统一查看
                                       </div>
                                     </div>
                                   }
                                   overlayStyle={{ maxWidth: 380 }}
+                                  overlayInnerStyle={{ background: tooltipTheme.background, color: tooltipTheme.text, border: `1px solid ${tooltipTheme.border}` }}
                                 >
                                   <QuestionCircleOutlined style={{ color: '#1890ff', cursor: 'help' }} />
                                 </Tooltip>
