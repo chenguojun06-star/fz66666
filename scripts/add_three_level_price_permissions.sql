@@ -9,11 +9,13 @@
 --
 -- 🟡 权限2: FINANCE_SEWING_PRICE_ONLY（中级权限）
 --    - 只能查看车缝工序的单价和金额，其他工序隐藏
---    - 分配角色：workshop_director（车间主任）
+--    - 分配角色：workshop_director, cutter, sewing, quality（车间主任和生产一线员工）
+--    - 说明：生产相关员工都能看车缝单价，方便了解车缝工序成本
 --
 -- 🟢 权限3: FINANCE_BASIC_DATA_ONLY（基础权限）
 --    - 只能查看基础数据（订单号、数量、进度），所有单价隐藏
---    - 分配角色：cutter, sewing, quality, packager, warehouse
+--    - 分配角色：packager, warehouse（后勤人员）
+--    - 说明：非生产线员工不涉及单价，只看基础信息
 -- =====================================================
 
 USE fashion_supplychain;
@@ -127,24 +129,24 @@ AND NOT EXISTS (
   WHERE rp.role_id = r.id AND rp.permission_id = p.id
 );
 
--- 🟡 中级权限角色：车间主任（只查看车缝单价）
+-- 🟡 中级权限角色：车间主任+生产一线员工（都能看车缝单价）
 INSERT INTO t_role_permission (role_id, permission_id, create_time)
 SELECT r.id, p.id, NOW()
 FROM t_role r
 CROSS JOIN t_permission p
-WHERE r.role_code = 'workshop_director'
+WHERE r.role_code IN ('workshop_director', 'cutter', 'sewing', 'quality')
 AND p.permission_code = 'FINANCE_SEWING_PRICE_ONLY'
 AND NOT EXISTS (
   SELECT 1 FROM t_role_permission rp 
   WHERE rp.role_id = r.id AND rp.permission_id = p.id
 );
 
--- 🟢 基础权限角色：普通员工（只查看基础数据，不看任何单价）
+-- 🟢 基础权限角色：后勤人员（只看基础数据，不看任何单价）
 INSERT INTO t_role_permission (role_id, permission_id, create_time)
 SELECT r.id, p.id, NOW()
 FROM t_role r
 CROSS JOIN t_permission p
-WHERE r.role_code IN ('cutter', 'sewing', 'quality', 'packager', 'warehouse')
+WHERE r.role_code IN ('packager', 'warehouse')
 AND p.permission_code = 'FINANCE_BASIC_DATA_ONLY'
 AND NOT EXISTS (
   SELECT 1 FROM t_role_permission rp 
