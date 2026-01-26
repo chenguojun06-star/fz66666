@@ -56,13 +56,13 @@ Component({
     hasAnyTask: false,
 
     // 各类任务列表
-    urgentEvents: [],      // 紧急事件
-    cuttingTasks: [],      // 裁剪任务
-    procurementTasks: [],  // 采购任务
-    qualityTasks: [],      // 质检待处理任务
-    timeoutReminders: [],  // 超时提醒
-    pendingUsers: [],      // 待审批用户
-    isAdmin: false,        // 是否管理员
+    urgentEvents: [], // 紧急事件
+    cuttingTasks: [], // 裁剪任务
+    procurementTasks: [], // 采购任务
+    qualityTasks: [], // 质检待处理任务
+    timeoutReminders: [], // 超时提醒
+    pendingUsers: [], // 待审批用户
+    isAdmin: false, // 是否管理员
   },
 
   lifetimes: {
@@ -148,13 +148,14 @@ Component({
         this.setData({ isAdmin });
 
         // 并行加载所有任务
-        const [cuttingTasks, procurementTasks, qualityTasks, timeoutReminders, pendingUsers] = await Promise.all([
-          this.loadCuttingTasks(),
-          this.loadProcurementTasks(),
-          this.loadQualityTasks(),
-          this.loadTimeoutReminders(),
-          isAdmin ? this.loadPendingUsers() : Promise.resolve([]),
-        ]);
+        const [cuttingTasks, procurementTasks, qualityTasks, timeoutReminders, pendingUsers] =
+          await Promise.all([
+            this.loadCuttingTasks(),
+            this.loadProcurementTasks(),
+            this.loadQualityTasks(),
+            this.loadTimeoutReminders(),
+            isAdmin ? this.loadPendingUsers() : Promise.resolve([]),
+          ]);
 
         // 紧急事件（可以从后端API获取，这里先用空数组）
         const urgentEvents = [];
@@ -181,7 +182,6 @@ Component({
           hasAnyTask,
           loading: false,
         });
-
       } catch (err) {
         console.error('加载任务失败:', err);
         this.setData({ loading: false });
@@ -194,7 +194,7 @@ Component({
     async loadCuttingTasks() {
       try {
         const res = await api.production.myCuttingTasks();
-        const list = Array.isArray(res) ? res : (res?.records || []);
+        const list = Array.isArray(res) ? res : res?.records || [];
 
         return list.map(item => ({
           ...item,
@@ -214,7 +214,7 @@ Component({
     async loadProcurementTasks() {
       try {
         const res = await api.production.myProcurementTasks();
-        const list = Array.isArray(res) ? res : (res?.records || []);
+        const list = Array.isArray(res) ? res : res?.records || [];
 
         return list.map(item => ({
           ...item,
@@ -233,14 +233,14 @@ Component({
     async loadQualityTasks() {
       try {
         const res = await api.production.myQualityTasks();
-        const list = Array.isArray(res) ? res : (res?.records || []);
+        const list = Array.isArray(res) ? res : res?.records || [];
 
         return list.map(item => ({
           ...item,
           id: item.id || item.scanId,
-          orderId: item.orderId || '',  // 订单ID
+          orderId: item.orderId || '', // 订单ID
           orderNo: item.orderNo,
-          bundleId: item.cuttingBundleId || '',  // 菲号ID
+          bundleId: item.cuttingBundleId || '', // 菲号ID
           bundleNo: item.cuttingBundleNo || item.bundleNo || '',
           styleNo: item.styleNo || '',
           color: item.color || '',

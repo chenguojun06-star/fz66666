@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Button, Card, Input, Select, Space, Tag, Form, Table, App, Modal, Dropdown, Checkbox } from 'antd';
+import { Button, Card, Input, Select, Space, Tag, Form, Table, App, Dropdown, Checkbox } from 'antd';
 import { SearchOutlined, EyeOutlined, DownloadOutlined, DeleteOutlined, CheckCircleOutlined, EditOutlined, SettingOutlined, FileSearchOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -462,10 +462,10 @@ const ProductionList: React.FC = () => {
   // 获取状态文本和标签颜色
   const getStatusConfig = (status: ProductionOrder['status'] | string | undefined | null) => {
     const statusMap: Record<string, { text: string; color: string }> = {
-      pending: { text: '待生产', color: 'blue' },
-      production: { text: '生产中', color: 'green' },
-      completed: { text: '已完成', color: 'success' },
-      delayed: { text: '已逾期', color: 'error' },
+      pending: { text: '待生产', color: 'default' },
+      production: { text: '生产中', color: 'success' },
+      completed: { text: '已完成', color: 'default' },
+      delayed: { text: '已逾期', color: 'warning' },
     };
     const key = safeString(status, '');
     return statusMap[key] || { text: '未知', color: 'default' };
@@ -748,8 +748,8 @@ const ProductionList: React.FC = () => {
       width: 90,
       render: (v: unknown) => {
         const text = String(v || '').trim();
-        if (text === 'success') return <Tag color="green">成功</Tag>;
-        if (text === 'failure') return <Tag color="red">失败</Tag>;
+        if (text === 'success') return <Tag color="success">成功</Tag>;
+        if (text === 'failure') return <Tag color="error">失败</Tag>;
         return String(v || '-') || '-';
       },
     },
@@ -818,7 +818,12 @@ const ProductionList: React.FC = () => {
       key: 'attachments',
       width: 100,
       render: (_: any, record: any) => (
-        <StyleAttachmentsButton styleId={record.styleId} styleNo={record.styleNo} modalTitle={record.styleNo ? `附件（${record.styleNo}）` : '附件'} />
+        <StyleAttachmentsButton
+          styleId={record.styleId}
+          styleNo={record.styleNo}
+          modalTitle={record.styleNo ? `放码纸样（${record.styleNo}）` : '放码纸样'}
+          onlyGradingPattern={true}
+        />
       )
     },
     {

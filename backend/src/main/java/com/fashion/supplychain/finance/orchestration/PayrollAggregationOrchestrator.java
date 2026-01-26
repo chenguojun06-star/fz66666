@@ -113,13 +113,23 @@ public class PayrollAggregationOrchestrator {
                 .mapToLong(r -> r.getQuantity() != null ? r.getQuantity() : 0)
                 .sum();
 
+        // 优先使用 scanCost，如果为空则使用 quantity * unitPrice 计算
         BigDecimal totalAmount = records.stream()
-                .map(r -> r.getScanCost() != null ? r.getScanCost() : BigDecimal.ZERO)
+                .map(r -> {
+                    if (r.getScanCost() != null && r.getScanCost().compareTo(BigDecimal.ZERO) > 0) {
+                        return r.getScanCost();
+                    }
+                    // 如果 scanCost 为空，使用 quantity * unitPrice 计算
+                    BigDecimal price = r.getUnitPrice() != null ? r.getUnitPrice() : BigDecimal.ZERO;
+                    long qty = r.getQuantity() != null ? r.getQuantity() : 0;
+                    return price.multiply(BigDecimal.valueOf(qty));
+                })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        // 优先使用 processUnitPrice，如果为空则使用 unitPrice
         BigDecimal unitPrice = first.getProcessUnitPrice() != null
                 ? first.getProcessUnitPrice()
-                : BigDecimal.ZERO;
+                : (first.getUnitPrice() != null ? first.getUnitPrice() : BigDecimal.ZERO);
 
         // 获取最早和最晚的扫码时间
         LocalDateTime startTime = records.stream()

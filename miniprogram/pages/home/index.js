@@ -409,7 +409,7 @@ Page({
           orderNo: item.orderNo,
           styleNo: item.styleNo,
           statusText: '失败',
-          statusColor: '#ef4444',
+          statusColor: 'var(--color-error)',
           rawData: item,
         });
       });

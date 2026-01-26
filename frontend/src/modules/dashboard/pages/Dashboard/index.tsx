@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Button, Card, Input, Space, message } from 'antd';
+import { AutoComplete, Button, Card, Input, Space, message } from 'antd';
 import {
   AccountBookOutlined,
   ApartmentOutlined,
@@ -35,10 +35,18 @@ interface RecentActivity {
   time: string;
 }
 
+interface SearchOption {
+  value: string;
+  label: string;
+  type: 'order' | 'style' | 'factory';
+  data: any;
+}
+
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
+  const [searchOptions, setSearchOptions] = useState<SearchOption[]>([]);
 
   const [stats, setStats] = useState<DashboardStats>({
     sampleDevelopmentCount: 0,
@@ -53,48 +61,99 @@ const Dashboard: React.FC = () => {
 
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
 
-  // 全能搜索功能
+  // 实时搜索建议
+  const handleSearchInput = async (value: string) => {
+    setSearchKeyword(value);
+
+    if (!value || value.trim().length < 2) {
+      setSearchOptions([]);
+      return;
+    }
+
+    try {
+      const keyword = value.trim();
+      const options: SearchOption[] = [];
+
+      // 并发搜索订单、款号、工厂
+      const [ordersRes, stylesRes, factoriesRes] = await Promise.all([
+        api.get('/production/order/list', { params: { orderNo: keyword, pageSize: 5 } }).catch(() => null),
+        api.get('/style/info/list', { params: { styleNo: keyword, pageSize: 5 } }).catch(() => null),
+        api.get('/system/factory/list', { params: { factoryName: keyword, pageSize: 5 } }).catch(() => null),
+      ]);
+
+      // 添加订单选项
+      if (ordersRes?.code === 200 && Array.isArray(ordersRes.data?.records)) {
+        ordersRes.data.records.forEach((order: any) => {
+          options.push({
+            value: order.orderNo,
+            label: `📦 订单: ${order.orderNo} - ${order.styleName || order.styleNo}`,
+            type: 'order',
+            data: order
+          });
+        });
+      }
+
+      // 添加款号选项
+      if (stylesRes?.code === 200 && Array.isArray(stylesRes.data?.records)) {
+        stylesRes.data.records.forEach((style: any) => {
+          options.push({
+            value: style.styleNo,
+            label: `👔 款号: ${style.styleNo} - ${style.styleName || ''}`,
+            type: 'style',
+            data: style
+          });
+        });
+      }
+
+      // 添加工厂选项
+      if (factoriesRes?.code === 200 && Array.isArray(factoriesRes.data?.records)) {
+        factoriesRes.data.records.forEach((factory: any) => {
+          options.push({
+            value: factory.factoryName,
+            label: `🏭 工厂: ${factory.factoryName}`,
+            type: 'factory',
+            data: factory
+          });
+        });
+      }
+
+      setSearchOptions(options);
+    } catch (error) {
+      // 静默失败，不影响用户输入
+      console.error('搜索建议失败:', error);
+    }
+  };
+
+  // 选择搜索建议
+  const handleSelect = (value: string, option: SearchOption) => {
+    setSearchKeyword(value);
+
+    // 根据类型跳转
+    if (option.type === 'order') {
+      navigate(`/production?orderNo=${option.data.orderNo}`);
+    } else if (option.type === 'style') {
+      navigate(`/style-info?styleNo=${option.data.styleNo}`);
+    } else if (option.type === 'factory') {
+      navigate(`/system/factory?factoryName=${option.data.factoryName}`);
+    }
+  };
+
+  // 盲收搜索功能 - 直接跳转到成品入库页面
   const handleSearch = async () => {
     const keyword = searchKeyword.trim();
     if (!keyword) {
-      message.warning('请输入搜索关键词');
+      message.warning('请输入订单号或扫码');
       return;
     }
 
     setSearchLoading(true);
     try {
-      const response = (await api.get('/search/universal', {
-        params: { keyword }
-      })) as ApiResult<unknown>;
-
-      if (response.code === 200) {
-        const result = response.data;
-
-        // 优先跳转到最相关的结果
-        if (result.orderNo) {
-          // 找到订单号，跳转到生产进度
-          navigate(`/production?orderNo=${result.orderNo}`);
-        } else if (result.styleNo) {
-          // 找到款号，跳转到款号资料
-          navigate(`/style-info?styleNo=${result.styleNo}`);
-        } else if (result.bundleQr) {
-          // 找到扎号，跳转到生产进度
-          navigate(`/production?bundleQr=${result.bundleQr}`);
-        } else if (result.supplierName) {
-          // 找到供应商，跳转到供应商管理
-          navigate(`/system/factory?keyword=${keyword}`);
-        } else {
-          message.info('未找到相关结果，请尝试其他关键词');
-        }
-      } else {
-        message.error(response.message || '搜索失败');
-      }
+      // 直接跳转到成品入库页面，带上搜索关键词
+      // 支持订单号、菲号、SKU等多种格式
+      navigate(`/production/warehousing?search=${encodeURIComponent(keyword)}`);
+      message.success('已跳转到成品入库页面');
     } catch (error: unknown) {
-      if (error?.status !== 404) {
-        errorHandler.handleError(error, '搜索失败');
-      } else {
-        message.info('未找到相关结果');
-      }
+      errorHandler.handleError(error, '跳转失败');
     } finally {
       setSearchLoading(false);
     }
@@ -201,25 +260,31 @@ const Dashboard: React.FC = () => {
           <h2 className="page-title">仪表盘</h2>
         </div>
 
-        {/* 全能搜索框 */}
+        {/* 智能搜索入口 */}
         <Card size="small" className="filter-card mb-sm">
           <Space.Compact style={{ width: '100%', maxWidth: 600 }}>
-            <Input
-              size="large"
-              placeholder="输入款号、订单号、扎号、供应商等关键词搜索..."
-              prefix={<SearchOutlined />}
+            <AutoComplete
+              style={{ flex: 1 }}
               value={searchKeyword}
-              onChange={(e) => setSearchKeyword(e.target.value)}
-              onPressEnter={handleSearch}
-              allowClear
-            />
+              options={searchOptions}
+              onSearch={handleSearchInput}
+              onSelect={handleSelect}
+            >
+              <Input
+                size="large"
+                prefix={<SearchOutlined />}
+                placeholder="输入订单号、款号、工厂名..."
+                onPressEnter={handleSearch}
+                allowClear
+              />
+            </AutoComplete>
             <Button
               size="large"
               type="primary"
               loading={searchLoading}
               onClick={handleSearch}
             >
-              搜索
+              盲收
             </Button>
           </Space.Compact>
         </Card>

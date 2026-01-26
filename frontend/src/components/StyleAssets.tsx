@@ -4,8 +4,6 @@ import QRCodeBox from './common/QRCodeBox';
 import api, { parseProductionOrderLines, sortSizeNames, toNumberSafe, ProductionOrderLine } from '../utils/api';
 import { StyleAttachment } from '../types/style';
 import ResizableModal, {
-  ResizableModalFlex,
-  ResizableModalFlexFill,
   useResizableModalTableScrollY,
 } from './common/ResizableModal';
 import ResizableTable from './common/ResizableTable';
@@ -254,7 +252,9 @@ export const StyleAttachmentsButton: React.FC<{
   buttonText?: string;
   /** 模态框标题，默认"附件" */
   modalTitle?: string;
-}> = ({ styleId, styleNo, buttonText = '附件', modalTitle = '附件' }) => {
+  /** 是否只显示放码纸样，默认false */
+  onlyGradingPattern?: boolean;
+}> = ({ styleId, styleNo, buttonText = '附件', modalTitle = '附件', onlyGradingPattern = false }) => {
   const { modalWidth } = useViewport();
   // 模态框打开状态
   const [open, setOpen] = React.useState(false);
@@ -276,7 +276,15 @@ export const StyleAttachmentsButton: React.FC<{
     try {
       const res = await api.get<{ code: number; message: string; data: unknown[] }>('/style/attachment/list', { params: { styleId, styleNo } });
       if (res.code === 200) {
-        setData(res.data || []);
+        let attachments = res.data || [];
+        // 如果只显示放码纸样，过滤出 bizType 为 'pattern_grading' 的附件
+        if (onlyGradingPattern) {
+          attachments = attachments.filter((item: any) => {
+            const bizType = String((item as Record<string, unknown>)?.bizType || '').trim();
+            return bizType === 'pattern_grading';
+          });
+        }
+        setData(attachments);
       } else {
         setData([]);
         message.error(res.message || '获取附件失败');
@@ -287,7 +295,7 @@ export const StyleAttachmentsButton: React.FC<{
     } finally {
       setLoading(false);
     }
-  }, [styleId, styleNo]);
+  }, [styleId, styleNo, onlyGradingPattern]);
 
   // 当模态框打开时获取附件列表
   React.useEffect(() => {
@@ -347,8 +355,8 @@ export const StyleAttachmentsButton: React.FC<{
         tableDensity="auto"
         scaleWithViewport
       >
-        <ResizableModalFlex>
-          <ResizableModalFlexFill ref={tableWrapRef}>
+        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+          <div ref={tableWrapRef} style={{ flex: '1 1 auto', minHeight: 0 }}>
             <ResizableTable
               rowKey={(r) => String((r as Record<string, unknown>).id)}
               columns={columns as Record<string, unknown>}
@@ -359,8 +367,8 @@ export const StyleAttachmentsButton: React.FC<{
               storageKey={storageKey}
               minColumnWidth={70}
             />
-          </ResizableModalFlexFill>
-        </ResizableModalFlex>
+          </div>
+        </div>
       </ResizableModal>
     </>
   );

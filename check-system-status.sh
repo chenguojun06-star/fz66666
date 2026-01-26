@@ -11,7 +11,7 @@ DB_CMD="docker exec fashion-mysql-simple mysql -uroot -pchangeme fashion_supplyc
 
 # 1. 订单统计
 echo "📦 1. 订单统计"
-$DB_CMD "SELECT 
+$DB_CMD "SELECT
   COUNT(*) as 订单总数,
   SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END) as 已完成,
   SUM(CASE WHEN status='in_progress' THEN 1 ELSE 0 END) as 进行中,
@@ -21,7 +21,7 @@ echo ""
 
 # 2. 扫码记录
 echo "📱 2. 扫码记录统计"
-$DB_CMD "SELECT 
+$DB_CMD "SELECT
   COUNT(*) as 总扫码次数,
   COUNT(DISTINCT order_no) as 涉及订单数,
   COUNT(DISTINCT operator_id) as 操作员工数,
@@ -31,7 +31,7 @@ echo ""
 
 # 3. 质检入库
 echo "✅ 3. 质检入库统计"
-$DB_CMD "SELECT 
+$DB_CMD "SELECT
   COUNT(*) as 入库批次,
   COALESCE(SUM(warehousing_quantity), 0) as 总入库数量,
   COALESCE(SUM(CASE WHEN quality_status='qualified' THEN warehousing_quantity ELSE 0 END), 0) as 合格数量
@@ -40,7 +40,7 @@ echo ""
 
 # 4. 菲号统计
 echo "🎫 4. 裁剪菲号统计"
-$DB_CMD "SELECT 
+$DB_CMD "SELECT
   COUNT(*) as 菲号总数,
   COUNT(DISTINCT production_order_no) as 关联订单数,
   COUNT(DISTINCT color) as 颜色数
@@ -63,7 +63,7 @@ echo ""
 
 # 6. 数据一致性检查
 echo "🔄 6. 数据一致性检查"
-$DB_CMD "SELECT 
+$DB_CMD "SELECT
   o.order_no,
   o.order_quantity as 订单数量,
   COALESCE(SUM(s.quantity), 0) as 扫码数量,

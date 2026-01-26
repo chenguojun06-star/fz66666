@@ -1080,7 +1080,7 @@ const ProductWarehousing: React.FC = () => {
     const statusMap: Record<string, { text: string; color: string }> = {
       qualified: { text: '合格', color: 'success' },
       unqualified: { text: '不合格', color: 'error' },
-      repaired: { text: '返修完成', color: 'processing' },
+      repaired: { text: '返修完成', color: 'default' },
     };
     const key = String(status || '').trim().toLowerCase();
     if (!key) return { text: '未开始', color: 'default' };
@@ -1430,7 +1430,12 @@ const ProductWarehousing: React.FC = () => {
       key: 'attachments',
       width: 100,
       render: (_: any, record: any) => (
-        <StyleAttachmentsButton styleId={record.styleId} styleNo={record.styleNo} modalTitle={record.styleNo ? `附件（${record.styleNo}）` : '附件'} />
+        <StyleAttachmentsButton
+          styleId={record.styleId}
+          styleNo={record.styleNo}
+          modalTitle={record.styleNo ? `放码纸样（${record.styleNo}）` : '放码纸样'}
+          onlyGradingPattern={true}
+        />
       )
     },
     {

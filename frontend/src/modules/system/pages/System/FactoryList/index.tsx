@@ -296,7 +296,7 @@ const FactoryList: React.FC = () => {
       width: 110,
       render: (v: unknown) => {
         const status = String(v || '').trim() || 'inactive';
-        if (status === 'active') return <Tag color="green">{getStatusText(status)}</Tag>;
+        if (status === 'active') return <Tag color="success">{getStatusText(status)}</Tag>;
         if (status === 'inactive') return <Tag>{getStatusText(status)}</Tag>;
         return <Tag>{getStatusText(status)}</Tag>;
       },

@@ -1,7 +1,7 @@
 import React, { ReactNode, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Avatar, Badge, Button, Drawer, Dropdown, Layout as AntLayout, Menu, message, Popover } from 'antd';
-import { BellOutlined, CloseOutlined, DownOutlined, LogoutOutlined, MenuOutlined, SettingOutlined } from '@ant-design/icons';
+import { BellOutlined, CloseOutlined, DownOutlined, LogoutOutlined, MenuFoldOutlined, MenuOutlined, MenuUnfoldOutlined, SettingOutlined } from '@ant-design/icons';
 import { isAdminUser as isAdminUserFn, useAuth } from '../../utils/authContext';
 import { menuConfig, resolvePermissionCode } from '../../routeConfig';
 import { useViewport } from '../../utils/useViewport';
@@ -127,6 +127,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const collapsed = sidebarCollapsed;
+  const [menuOpenKeys, setMenuOpenKeys] = useState<string[]>(() => (activeSectionKey ? [activeSectionKey] : []));
 
   // 获取紧急事件
   const fetchUrgentEvents = async () => {
@@ -190,10 +191,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     return getActivePath ? [getActivePath] : [];
   }, [getActivePath]);
 
-  // 获取展开的菜单项
-  const defaultOpenKeys = useMemo(() => {
-    return activeSectionKey ? [activeSectionKey] : [];
-  }, [activeSectionKey]);
+  const handleMenuOpenChange = (openKeys: string[]) => {
+    if (collapsed) return;
+    setMenuOpenKeys(openKeys);
+  };
 
   useEffect(() => {
     if (!isMobile) {
@@ -205,6 +206,17 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (!isMobile) return;
     setMobileNavOpen(false);
   }, [isMobile, effectivePathname]);
+
+  useEffect(() => {
+    if (collapsed) return;
+    if (!activeSectionKey) {
+      if (menuOpenKeys.length) setMenuOpenKeys([]);
+      return;
+    }
+    if (!menuOpenKeys.includes(activeSectionKey)) {
+      setMenuOpenKeys([activeSectionKey]);
+    }
+  }, [activeSectionKey, collapsed, menuOpenKeys]);
 
   // 加载紧急事件
   useEffect(() => {
@@ -426,12 +438,23 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             trigger={null}
             className="layout-sidebar"
           >
+            <div className="sidebar-tools">
+              <Button
+                type="text"
+                className="sidebar-collapse-btn"
+                icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+                aria-label={collapsed ? '展开侧边栏' : '收起侧边栏'}
+                onClick={() => setSidebarCollapsed((prev) => !prev)}
+              />
+            </div>
             <Menu
               mode="inline"
               selectedKeys={selectedKeys}
-              defaultOpenKeys={defaultOpenKeys}
+              openKeys={collapsed ? undefined : menuOpenKeys}
+              onOpenChange={handleMenuOpenChange}
               items={menuItems}
               inlineCollapsed={collapsed}
+              triggerSubMenuAction={collapsed ? 'hover' : 'click'}
               className="sidebar-menu"
             />
           </AntLayout.Sider>
@@ -447,8 +470,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <Menu
               mode="inline"
               selectedKeys={selectedKeys}
-              defaultOpenKeys={defaultOpenKeys}
+              openKeys={menuOpenKeys}
+              onOpenChange={setMenuOpenKeys}
               items={menuItems}
+              triggerSubMenuAction="hover"
               className="sidebar-menu"
               onClick={() => setMobileNavOpen(false)}
             />

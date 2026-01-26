@@ -29,6 +29,7 @@
         <hutool.version>5.8.27</hutool.version>
         <openhtmltopdf.version>1.0.10</openhtmltopdf.version>
         <zxing.version>3.5.3</zxing.version>
+        <poi.version>5.2.5</poi.version>
         <!-- 编译和构建 -->
         <maven.compiler.version>3.14.1</maven.compiler.version>
         <maven.jar.version>3.3.0</maven.jar.version>
@@ -63,14 +64,14 @@
             <artifactId>springdoc-openapi-ui</artifactId>
             <version>${springdoc-openapi.version}</version>
         </dependency>
-        
+
         <!-- MyBatis Plus -->
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-boot-starter</artifactId>
             <version>${mybatis-plus.version}</version>
         </dependency>
-        
+
         <!-- MySQL 驱动 -->
         <dependency>
             <groupId>com.mysql</groupId>
@@ -78,7 +79,7 @@
             <version>${mysql-connector.version}</version>
             <scope>runtime</scope>
         </dependency>
-        
+
         <!-- 工具类 -->
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -108,11 +109,23 @@
             <version>${zxing.version}</version>
         </dependency>
 
+        <!-- Apache POI for Excel Export -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi</artifactId>
+            <version>${poi.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>${poi.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-core</artifactId>
         </dependency>
-        
+
         <!-- 测试依赖 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -126,7 +139,7 @@
             <version>${h2.version}</version>
             <scope>test</scope>
         </dependency>
-        
+
         <!-- SnakeYAML 版本覆盖，修复 CVE -->
         <dependency>
             <groupId>org.yaml</groupId>

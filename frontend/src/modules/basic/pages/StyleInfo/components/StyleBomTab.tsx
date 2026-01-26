@@ -977,7 +977,7 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
         if (locked) {
           return (
             <Space>
-              <Tag color="green">已完成</Tag>
+              <Tag color="default">已完成</Tag>
               <span style={{ color: 'var(--neutral-text-lighter)' }}>无法操作</span>
             </Space>
           );

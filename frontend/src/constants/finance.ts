@@ -9,9 +9,9 @@
  */
 export const getMaterialReconStatusConfig = (status: any) => {
   const statusMap: Record<string, { text: string; color: string }> = {
-    pending: { text: '待审核', color: 'blue' },
-    verified: { text: '已验证', color: 'green' },
-    approved: { text: '已批准', color: 'cyan' },
+    pending: { text: '待审核', color: 'default' },
+    verified: { text: '已验证', color: 'success' },
+    approved: { text: '已批准', color: 'success' },
     paid: { text: '已付款', color: 'success' },
     rejected: { text: '已拒绝', color: 'error' },
   };

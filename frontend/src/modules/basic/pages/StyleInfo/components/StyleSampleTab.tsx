@@ -3,8 +3,6 @@ import { Button, Input, Modal, Space, Tag, message } from 'antd';
 import { CheckCircleOutlined, PlayCircleOutlined, ToolOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal, {
-  ResizableModalFlex,
-  ResizableModalFlexFill,
   useResizableModalTableScrollY,
 } from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
@@ -64,7 +62,7 @@ const StyleSampleTab: React.FC<Props> = ({
     try {
       const [bomRes, fileRes, logRes] = await Promise.all([
         api.get('/style/bom/list', { params: { styleId } }),
-        api.get('/style/attachment/list', { params: { styleId, bizType: 'pattern' } }),
+        api.get('/style/attachment/list', { params: { styleId, bizType: 'pattern_grading' } }),
         api.get('/style/operation-log/list', { params: { styleId, bizType: 'sample' } }),
       ]);
 
@@ -174,8 +172,8 @@ const StyleSampleTab: React.FC<Props> = ({
   const canRollback = useMemo(() => isSupervisorOrAboveUser(user), [user]);
 
   const statusTag = useMemo(() => {
-    if (status === 'COMPLETED') return <Tag color="green">已完成</Tag>;
-    if (status === 'IN_PROGRESS') return <Tag color="gold">制作中</Tag>;
+    if (status === 'COMPLETED') return <Tag color="default">已完成</Tag>;
+    if (status === 'IN_PROGRESS') return <Tag color="success">制作中</Tag>;
     return <Tag>未开始</Tag>;
   }, [status]);
 
@@ -389,8 +387,8 @@ const StyleSampleTab: React.FC<Props> = ({
         scaleWithViewport
         destroyOnHidden
       >
-        <ResizableModalFlex>
-          <ResizableModalFlexFill ref={bomDetailTableWrapRef}>
+        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+          <div ref={bomDetailTableWrapRef} style={{ flex: '1 1 auto', minHeight: 0 }}>
             <ResizableTable
               rowKey={(r: Record<string, unknown>) =>
                 String(r?.id ?? `${r?.materialType || ''}-${r?.materialCode || ''}-${r?.color || ''}-${r?.size || ''}`)
@@ -401,8 +399,8 @@ const StyleSampleTab: React.FC<Props> = ({
               scroll={{ x: 'max-content', y: bomDetailTableScrollY }}
               size="small"
             />
-          </ResizableModalFlexFill>
-        </ResizableModalFlex>
+          </div>
+        </div>
       </ResizableModal>
 
       <ResizableTable

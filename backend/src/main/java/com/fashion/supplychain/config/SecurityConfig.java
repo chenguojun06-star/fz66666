@@ -70,6 +70,7 @@ public class SecurityConfig implements WebMvcConfigurer {
                         .antMatchers("/api/system/user/*/reject").hasAnyAuthority("ROLE_admin", "ROLE_ADMIN", "ROLE_1")
                         .antMatchers("/api/wechat/mini-program/login").permitAll()
                         .antMatchers("/api/production/order/by-order-no/**").permitAll()
+                        .antMatchers("/api/production/order/detail/**").permitAll()
                         .antMatchers("/api/production/cutting-bundle/by-no").permitAll()
                         .antMatchers("/api/production/cutting/summary").permitAll()
                         .antMatchers("/actuator/health", "/actuator/health/**", "/actuator/info", "/actuator/info/**").permitAll()

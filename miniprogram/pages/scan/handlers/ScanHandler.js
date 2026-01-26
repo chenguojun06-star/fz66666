@@ -221,7 +221,9 @@ class ScanHandler {
    * @private
    */
   async _handleSKUQuantity(parsedData, orderDetail) {
-    if (parsedData.quantity) {return;} // 已有数量，无需处理
+    if (parsedData.quantity) {
+      return;
+    } // 已有数量，无需处理
 
     // 尝试从订单明细中找到该SKU的数量
     if (orderDetail.items && orderDetail.items.length > 0) {
@@ -252,11 +254,14 @@ class ScanHandler {
    * @private
    */
   _handleOrderQuantity(parsedData, orderDetail) {
-    if (parsedData.quantity) {return;} // 已有数量
-    if (parsedData.skuItems) {return;} // 有明细，无需总数
+    if (parsedData.quantity) {
+      return;
+    } // 已有数量
+    if (parsedData.skuItems) {
+      return;
+    } // 有明细，无需总数
 
-    const orderQuantity =
-      orderDetail.quantity || orderDetail.totalQuantity || orderDetail.totalNum;
+    const orderQuantity = orderDetail.quantity || orderDetail.totalQuantity || orderDetail.totalNum;
 
     if (orderQuantity && orderQuantity > 0) {
       parsedData.quantity = Number(orderQuantity);
@@ -274,7 +279,9 @@ class ScanHandler {
    * @private
    */
   async _processOrderScan(scanMode, parsedData, orderDetail, manualScanType) {
-    if (scanMode !== this.SCAN_MODE.ORDER) {return null;}
+    if (scanMode !== this.SCAN_MODE.ORDER) {
+      return null;
+    }
 
     console.log('[ScanHandler] 订单扫码, manualScanType:', manualScanType);
 
@@ -331,7 +338,7 @@ class ScanHandler {
       // 如果已经入库完成，抛出特殊提示（不是错误）
       if (stageResult.isCompleted) {
         const err = new Error(stageResult.hint || '该菲号已入库完成');
-        err.isCompleted = true;  // 标记为已完成状态，页面会显示成功提示
+        err.isCompleted = true; // 标记为已完成状态，页面会显示成功提示
         throw err;
       }
       // 抛出特殊错误，让页面打开入库弹窗
@@ -447,8 +454,15 @@ class ScanHandler {
         }
 
         // 订单模式：处理采购/明细/数量
-        const orderResult = await this._processOrderScan(scanMode, parsedData, orderDetail, manualScanType);
-        if (orderResult) {return orderResult;}
+        const orderResult = await this._processOrderScan(
+          scanMode,
+          parsedData,
+          orderDetail,
+          manualScanType
+        );
+        if (orderResult) {
+          return orderResult;
+        }
       } catch (e) {
         if (e.needInput) {
           return {
@@ -462,13 +476,23 @@ class ScanHandler {
       }
 
       // === 步骤4：检测工序并验证 ===
-      const stageResult = await this._processStageDetection(scanMode, parsedData, orderDetail, manualScanType);
+      const stageResult = await this._processStageDetection(
+        scanMode,
+        parsedData,
+        orderDetail,
+        manualScanType
+      );
 
       // === 步骤5：准备扫码数据 ===
       const scanData = this._prepareScanData(parsedData, stageResult, orderDetail, manualWarehouse);
 
       // === 步骤6：提交并构建结果 ===
-      const finalResult = await this._submitAndBuildResult(scanMode, parsedData, stageResult, scanData);
+      const finalResult = await this._submitAndBuildResult(
+        scanMode,
+        parsedData,
+        stageResult,
+        scanData
+      );
 
       // === 步骤7：触发成功回调 ===
       if (this.options.onSuccess) {
@@ -497,7 +521,6 @@ class ScanHandler {
       return this._errorResult(errorMsg);
     }
   }
-
 
   /**
    * 获取订单详情（带缓存）

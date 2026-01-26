@@ -168,6 +168,14 @@ const PayrollOperatorSummary: React.FC = () => {
                 };
                 doFetchData(payload);
             }, 100);
+        } else if (!hasAutoFetched.current) {
+            // 首次加载：自动查询全部数据
+            hasAutoFetched.current = true;
+
+            // 延迟执行查询
+            setTimeout(() => {
+                doFetchData();
+            }, 100);
         }
     }, [searchParams]);
 
@@ -221,13 +229,7 @@ const PayrollOperatorSummary: React.FC = () => {
     };
 
     const fetchData = async () => {
-        const hasOrderNo = Boolean(String(orderNo || '').trim());
-        const hasRange = Boolean(dateRange?.[0] && dateRange?.[1]);
-        if (!hasOrderNo && !hasRange) {
-            message.warning('请至少选择时间范围或填写订单号');
-            return;
-        }
-
+        // 允许任意条件查询，不强制要求时间范围或订单号
         await doFetchData();
     };
     const reset = () => {
@@ -283,7 +285,7 @@ const PayrollOperatorSummary: React.FC = () => {
         const link = document.createElement('a');
         link.href = url;
         const timestamp = dayjs().format('YYYYMMDDHHmmss');
-        link.download = `员工工序_${timestamp}.csv`;
+        link.download = `工资结算_${timestamp}.csv`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -571,7 +573,7 @@ const PayrollOperatorSummary: React.FC = () => {
         <Layout>
             <Card className="page-card">
                 <div className="page-header">
-                    <h2 className="page-title">员工工序</h2>
+                    <h2 className="page-title">工资结算</h2>
                 </div>
 
                 <Card size="small" className="filter-card mb-sm">
@@ -652,7 +654,7 @@ const PayrollOperatorSummary: React.FC = () => {
                     items={[
                         {
                             key: 'detail',
-                            label: '员工工序',
+                            label: '工序明细',
                             children: (
                                 <>
                                     <Card size="small" className="mb-sm">

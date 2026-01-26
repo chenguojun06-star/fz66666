@@ -78,7 +78,9 @@ class QRCodeParser {
     if (first === '{' || first === '[') {
       const jsonResult = this._parseJSON(parseTarget);
       if (jsonResult) {
-        if (skuNo) {jsonResult.skuNo = skuNo;}
+        if (skuNo) {
+          jsonResult.skuNo = skuNo;
+        }
         return { success: true, message: '解析成功 (JSON)', data: jsonResult };
       }
     }
@@ -86,7 +88,9 @@ class QRCodeParser {
     // 2. URL参数格式
     const urlResult = this._parseURLParams(parseTarget);
     if (urlResult) {
-      if (skuNo) {urlResult.skuNo = skuNo;}
+      if (skuNo) {
+        urlResult.skuNo = skuNo;
+      }
       return { success: true, message: '解析成功 (URL)', data: urlResult };
     }
 
@@ -99,7 +103,9 @@ class QRCodeParser {
     // 4. 订单号格式
     const orderResult = this._parseOrderNo(parseTarget);
     if (orderResult) {
-      if (skuNo) {orderResult.skuNo = skuNo;}
+      if (skuNo) {
+        orderResult.skuNo = skuNo;
+      }
       return { success: true, message: '解析成功 (订单号)', data: orderResult };
     }
 
@@ -147,7 +153,9 @@ class QRCodeParser {
 
     // 尝试解析（传入原始扫码内容用于 scanCode 字段）
     const result = this._tryParseFormats(parseTarget, first, skuNo, raw);
-    if (result) {return result;}
+    if (result) {
+      return result;
+    }
 
     // 无法识别
     return {
@@ -166,7 +174,6 @@ class QRCodeParser {
       },
     };
   }
-
 
   /**
    * 解析菲号格式
@@ -388,7 +395,6 @@ class QRCodeParser {
     return result;
   }
 
-
   /**
    * 解析JSON格式二维码
    * 支持格式：
@@ -426,7 +432,9 @@ class QRCodeParser {
    */
   _getField(obj, ...keys) {
     for (const key of keys) {
-      if (obj[key]) {return obj[key];}
+      if (obj[key]) {
+        return obj[key];
+      }
     }
     return undefined;
   }
@@ -466,7 +474,9 @@ class QRCodeParser {
 
       // 检查订单类型
       const orderResult = this._handleOrderTypeJSON(obj);
-      if (orderResult) {return orderResult;}
+      if (orderResult) {
+        return orderResult;
+      }
 
       // 提取字段并构建结果
       const fields = this._extractJSONFields(obj);
@@ -475,7 +485,6 @@ class QRCodeParser {
       return null;
     }
   }
-
 
   /**
    * 解析URL参数格式二维码

@@ -372,15 +372,16 @@ const StyleInfoPage: React.FC = () => {
         const progress = Number((record as Record<string, unknown>).sampleProgress);
         const showProgress = Number.isFinite(progress) && progress > 0 && progress < 100 && (node === '样衣制作中');
         const text = showProgress ? `${node} ${progress}%` : node;
+        const tone = node.trim();
         const color =
-          node === '样衣完成'
-            ? 'green'
-            : node === '样衣制作中'
-              ? 'gold'
-              : node === '纸样完成'
-                ? 'blue'
-                : node === '纸样开发中'
-                  ? 'purple'
+          /紧急/.test(tone)
+            ? 'warning'
+            : /(错误|失败|异常|次品)/.test(tone)
+              ? 'error'
+              : /完成/.test(tone)
+                ? 'default'
+                : /(制作中|开发中|进行中)/.test(tone)
+                  ? 'success'
                   : 'default';
         return <Tag color={color}>{text}</Tag>;
       }
@@ -616,14 +617,13 @@ const StyleInfoPage: React.FC = () => {
       return;
     }
 
-    const payload: Record<string, unknown> = {
-      id: currentStyle.id,
+    const payload = {
       description: serializeProductionReqRows(productionReqRows)
     };
 
     setProductionSaving(true);
     try {
-      const res = await api.put('/style/info', payload);
+      const res = await api.put(`/style/info/${currentStyle.id}/production-requirements`, payload);
       const result = res as Record<string, unknown>;
       if (result.code === 200) {
         message.success('更新成功');
@@ -892,7 +892,7 @@ const StyleInfoPage: React.FC = () => {
                 {
                   key: '6',
                   label: '文件管理',
-                  children: <StyleAttachmentTab styleId={currentStyle.id} readOnly={editLocked} />
+                  children: <StyleAttachmentTab styleId={currentStyle.id} bizType="pattern_grading" readOnly={editLocked} />
                 }
               ] : [])
             ]}
@@ -1134,7 +1134,7 @@ const StyleInfoPage: React.FC = () => {
                 {
                   key: '6',
                   label: '文件管理',
-                  children: <StyleAttachmentTab styleId={currentStyle.id} readOnly={editLocked} />
+                  children: <StyleAttachmentTab styleId={currentStyle.id} bizType="pattern_grading" readOnly={editLocked} />
                 }
               ] : [])
             ]}

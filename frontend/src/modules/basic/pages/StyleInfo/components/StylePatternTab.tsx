@@ -87,8 +87,8 @@ const StylePatternTab: React.FC<Props> = ({
   const canRollback = useMemo(() => isSupervisorOrAboveUser(user), [user]);
 
   const statusTag = useMemo(() => {
-    if (status === 'COMPLETED') return <Tag color="green">已完成</Tag>;
-    if (status === 'IN_PROGRESS') return <Tag color="gold">开发中</Tag>;
+    if (status === 'COMPLETED') return <Tag color="default">已完成</Tag>;
+    if (status === 'IN_PROGRESS') return <Tag color="success">开发中</Tag>;
     return <Tag>未开始</Tag>;
   }, [status]);
 
@@ -115,6 +115,22 @@ const StylePatternTab: React.FC<Props> = ({
       );
     });
   }, [patternFiles]);
+
+  const hasValidGradingFile = useMemo(() => {
+    const list = Array.isArray(gradingFiles) ? gradingFiles : [];
+    return list.some((f) => {
+      const name = String((f as Record<string, unknown>)?.fileName || '').toLowerCase();
+      const url = String((f as Record<string, unknown>)?.fileUrl || '').toLowerCase();
+      return (
+        name.endsWith('.dxf') ||
+        name.endsWith('.plt') ||
+        name.endsWith('.ets') ||
+        url.includes('.dxf') ||
+        url.includes('.plt') ||
+        url.includes('.ets')
+      );
+    });
+  }, [gradingFiles]);
 
   const call = async (url: string, body?: any) => {
     setSaving(true);
@@ -296,7 +312,7 @@ const StylePatternTab: React.FC<Props> = ({
         <Space size="large" wrap>
           {locked ? (
             <>
-              <Tag color="green">已完成</Tag>
+              <Tag color="default">已完成</Tag>
               <span style={{ color: 'var(--neutral-text-lighter)' }}>无法操作</span>
               {canRollback ? (
                 <Button danger loading={saving} onClick={openMaintenance}>维护</Button>
@@ -308,10 +324,14 @@ const StylePatternTab: React.FC<Props> = ({
               <Button
                 type="primary"
                 loading={saving}
-                disabled={!hasValidPatternFile}
+                disabled={!hasValidPatternFile || !hasValidGradingFile}
                 onClick={() => {
                   if (!hasValidPatternFile) {
                     message.error('请先上传纸样文件（dxf/plt/ets）');
+                    return;
+                  }
+                  if (!hasValidGradingFile) {
+                    message.error('请先上传放码纸样（dxf/plt/ets）');
                     return;
                   }
                   call(`/style/info/${styleId}/pattern/complete`);
@@ -322,7 +342,15 @@ const StylePatternTab: React.FC<Props> = ({
               {canRollback ? (
                 <Button danger loading={saving} onClick={openMaintenance}>维护</Button>
               ) : null}
-              {!hasValidPatternFile ? <span style={{ color: 'var(--neutral-text-lighter)' }}>需先上传纸样(dxf/plt/ets)</span> : null}
+              {!hasValidPatternFile || !hasValidGradingFile ? (
+                <span style={{ color: 'var(--neutral-text-lighter)' }}>
+                  {!hasValidPatternFile && !hasValidGradingFile
+                    ? '需先上传纸样和放码文件(dxf/plt/ets)'
+                    : !hasValidPatternFile
+                      ? '需先上传纸样(dxf/plt/ets)'
+                      : '需先上传放码文件(dxf/plt/ets)'}
+                </span>
+              ) : null}
             </>
           )}
         </Space>
@@ -381,7 +409,7 @@ const StylePatternTab: React.FC<Props> = ({
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
                   <Space size={8} wrap>
                     <span style={{ fontWeight: 500 }}>生产要求</span>
-                    {productionReqLocked ? <Tag color="gold">已保存</Tag> : <Tag color="blue">可编辑</Tag>}
+                    {productionReqLocked ? <Tag color="warning">已保存</Tag> : <Tag color="default">可编辑</Tag>}
                   </Space>
                   <Space size={8} wrap>
                     <Button size="small" onClick={downloadWorkorder}>

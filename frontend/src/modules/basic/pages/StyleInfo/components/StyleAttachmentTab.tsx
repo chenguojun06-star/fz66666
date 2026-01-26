@@ -293,8 +293,8 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
         const status = record?.status || 'active';
         return (
           <Space size={4}>
-            <Tag color={status === 'active' ? 'green' : 'default'}>V{version}</Tag>
-            {status === 'archived' && <Tag color="orange">历史</Tag>}
+            <Tag color={status === 'active' ? 'success' : 'default'}>V{version}</Tag>
+            {status === 'archived' && <Tag color="default">历史</Tag>}
           </Space>
         );
       }

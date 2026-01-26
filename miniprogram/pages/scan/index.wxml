@@ -154,18 +154,19 @@
       <!-- 分组头部：折叠显示 -->
       <view class="hist-group-header" bindtap="toggleGroupExpand" data-group-id="{{item.id}}">
         <view class="hgh-main">
-          <text class="hgh-order">📦 {{item.orderNo}}</text>
+          <text class="hgh-order">{{item.orderNo}}</text>
           <text class="hgh-style">款号: {{item.styleNo}}</text>
           <text class="hgh-stage">{{item.stage}}</text>
         </view>
         <view class="hgh-summary">
-          <text class="hgh-total">共{{item.totalQuantity}}件</text>
-          <text wx:if="{{item.qualifiedCount > 0}}" class="hgh-stat qualified">✓{{item.qualifiedCount}}</text>
-          <text wx:if="{{item.defectiveCount > 0}}" class="hgh-stat defective">✗{{item.defectiveCount}}</text>
-        </view>
-        <view class="hgh-footer">
-          <text class="hgh-time">最新: {{utils.formatRelativeTime(item.latestTime)}}</text>
-          <text class="hgh-expand">{{item.expanded ? '▲' : '▼'}}</text>
+          <view class="hgh-left">
+            <text class="hgh-total">共{{item.totalQuantity}}件</text>
+            <text wx:if="{{item.qualifiedCount > 0}}" class="hgh-stat qualified">✓{{item.qualifiedCount}}</text>
+            <text wx:if="{{item.defectiveCount > 0}}" class="hgh-stat defective">✗{{item.defectiveCount}}</text>
+          </view>
+          <view class="hgh-right">
+            <text class="hgh-time">最新: {{utils.formatRelativeTime(item.latestTime)}}</text>
+          </view>
         </view>
       </view>
 

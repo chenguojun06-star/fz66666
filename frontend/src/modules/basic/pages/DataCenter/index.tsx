@@ -390,7 +390,12 @@ const DataCenter: React.FC = () => {
         key: 'attachments',
         width: 100,
         render: (_: any, record: StyleInfo) => (
-          <StyleAttachmentsButton styleId={(record as Record<string, unknown>).id} styleNo={(record as Record<string, unknown>).styleNo} modalTitle={`附件（${(record as Record<string, unknown>).styleNo}）`} />
+          <StyleAttachmentsButton
+            styleId={(record as Record<string, unknown>).id}
+            styleNo={(record as Record<string, unknown>).styleNo}
+            modalTitle={`放码纸样（${(record as Record<string, unknown>).styleNo}）`}
+            onlyGradingPattern={true}
+          />
         )
       },
       {
