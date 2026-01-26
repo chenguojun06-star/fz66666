@@ -472,23 +472,23 @@ const MaterialPurchaseDetail: React.FC = () => {
                   )}
                 </Col>
                 <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>采购单号</div>
+                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>采购单号</div>
                   <div>{currentPurchase.purchaseNo || '-'}</div>
                 </Col>
                 <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>订单号</div>
+                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>订单号</div>
                   <div>{currentPurchase.orderNo || '-'}</div>
                 </Col>
                 <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>款号</div>
+                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>款号</div>
                   <div>{currentPurchase.styleNo || '-'}</div>
                 </Col>
                 <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>款名</div>
+                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>款名</div>
                   <div>{currentPurchase.styleName || '-'}</div>
                 </Col>
                 <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>物料类型</div>
+                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>物料类型</div>
                   <div>
                     <Tag color={
                       getMaterialTypeCategory(currentPurchase.materialType) === 'accessory' ? 'purple' :
@@ -499,39 +499,39 @@ const MaterialPurchaseDetail: React.FC = () => {
                   </div>
                 </Col>
                 <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>物料名称</div>
+                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>物料名称</div>
                   <div>{currentPurchase.materialName || '-'}</div>
                 </Col>
                 <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>物料编码</div>
+                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>物料编码</div>
                   <div>{currentPurchase.materialCode || '-'}</div>
                 </Col>
                 <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>规格</div>
+                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>规格</div>
                   <div>{currentPurchase.specifications || '-'}</div>
                 </Col>
                 <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>颜色</div>
+                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>颜色</div>
                   <div>{(currentPurchase as Record<string, unknown>).color || '-'}</div>
                 </Col>
                 <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>尺码</div>
+                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>尺码</div>
                   <div>{(currentPurchase as Record<string, unknown>).size || '-'}</div>
                 </Col>
                 <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>供应商</div>
+                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>供应商</div>
                   <div>{currentPurchase.supplierName || '-'}</div>
                 </Col>
                 <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>采购数量</div>
+                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>采购数量</div>
                   <div>{currentPurchase.purchaseQuantity || 0} {currentPurchase.unit || ''}</div>
                 </Col>
                 <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>到货数量</div>
+                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>到货数量</div>
                   <div>{currentPurchase.arrivedQuantity || 0} {currentPurchase.unit || ''}</div>
                 </Col>
                 <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>单价</div>
+                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>单价</div>
                   <div>
                     {Number.isFinite(Number(currentPurchase.unitPrice))
                       ? `¥${Number(currentPurchase.unitPrice).toFixed(2)}`
@@ -539,7 +539,7 @@ const MaterialPurchaseDetail: React.FC = () => {
                   </div>
                 </Col>
                 <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>总金额</div>
+                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>总金额</div>
                   <div>
                     {Number.isFinite(Number(currentPurchase.purchaseQuantity) * Number(currentPurchase.unitPrice))
                       ? `¥${(Number(currentPurchase.purchaseQuantity) * Number(currentPurchase.unitPrice)).toFixed(2)}`
@@ -547,7 +547,7 @@ const MaterialPurchaseDetail: React.FC = () => {
                   </div>
                 </Col>
                 <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>状态</div>
+                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>状态</div>
                   <div>
                     <Tag color={getStatusConfig(currentPurchase.status).color}>
                       {getStatusConfig(currentPurchase.status).text}
@@ -555,21 +555,21 @@ const MaterialPurchaseDetail: React.FC = () => {
                   </div>
                 </Col>
                 <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>领取人</div>
+                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>领取人</div>
                   <div>{currentPurchase.receiverName || '-'}</div>
                 </Col>
                 {currentPurchase.remark && (
                   <Col span={24}>
-                    <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>备注</div>
+                    <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>备注</div>
                     <div>{currentPurchase.remark}</div>
                   </Col>
                 )}
                 <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>创建时间</div>
+                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>创建时间</div>
                   <div>{currentPurchase.createTime ? formatDateTime(currentPurchase.createTime) : '-'}</div>
                 </Col>
                 <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>更新时间</div>
+                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>更新时间</div>
                   <div>{currentPurchase.updateTime ? formatDateTime(currentPurchase.updateTime) : '-'}</div>
                 </Col>
               </Row>
@@ -590,7 +590,7 @@ const MaterialPurchaseDetail: React.FC = () => {
           width={600}
         >
           {order && (
-            <div style={{ marginBottom: 16, padding: 16, background: '#f5f5f5', borderRadius: 4 }}>
+            <div style={{ marginBottom: 16, padding: 16, background: 'var(--color-bg-light)', borderRadius: 4 }}>
               <div><strong>订单号：</strong>{order.orderNo}</div>
               <div><strong>款号：</strong>{order.styleNo}</div>
               <div><strong>物料到货率：</strong>

@@ -2,7 +2,7 @@
 -- 财务数据三级权限配置脚本
 -- =====================================================
 -- 功能：添加3个细粒度权限，实现总单价、车缝单价、基础数据的分级控制
--- 
+--
 -- 🔴 权限1: FINANCE_TOTAL_AMOUNT_VIEW（最高权限）
 --    - 查看所有单价和金额（订单总价、所有工序单价、员工工资等）
 --    - 分配角色：admin, finance_supervisor, purchaser
@@ -24,22 +24,18 @@ USE fashion_supplychain;
 
 -- 🔴 权限1：查看总单价和总金额（最高权限）
 INSERT INTO t_permission (
-  permission_code, 
-  permission_name, 
-  permission_type, 
+  permission_code,
+  permission_name,
+  permission_type,
   parent_id,
-  sort_order,
-  create_time,
-  update_time
-) 
-SELECT 
+  sort
+)
+SELECT
   'FINANCE_TOTAL_AMOUNT_VIEW',
   '查看总单价和总金额',
   'button',
   4,
-  10,
-  NOW(),
-  NOW()
+  10
 FROM DUAL
 WHERE NOT EXISTS (
   SELECT 1 FROM t_permission WHERE permission_code = 'FINANCE_TOTAL_AMOUNT_VIEW'
@@ -47,22 +43,18 @@ WHERE NOT EXISTS (
 
 -- 🟡 权限2：只能查看车缝单价（中级权限）
 INSERT INTO t_permission (
-  permission_code, 
-  permission_name, 
-  permission_type, 
+  permission_code,
+  permission_name,
+  permission_type,
   parent_id,
-  sort_order,
-  create_time,
-  update_time
-) 
-SELECT 
+  sort
+)
+SELECT
   'FINANCE_SEWING_PRICE_ONLY',
   '只能查看车缝单价',
   'button',
   4,
-  20,
-  NOW(),
-  NOW()
+  20
 FROM DUAL
 WHERE NOT EXISTS (
   SELECT 1 FROM t_permission WHERE permission_code = 'FINANCE_SEWING_PRICE_ONLY'
@@ -70,22 +62,18 @@ WHERE NOT EXISTS (
 
 -- 🟢 权限3：只能查看基础数据（无单价）
 INSERT INTO t_permission (
-  permission_code, 
-  permission_name, 
-  permission_type, 
+  permission_code,
+  permission_name,
+  permission_type,
   parent_id,
-  sort_order,
-  create_time,
-  update_time
-) 
-SELECT 
+  sort
+)
+SELECT
   'FINANCE_BASIC_DATA_ONLY',
   '只能查看基础数据（无单价）',
   'button',
   4,
-  30,
-  NOW(),
-  NOW()
+  30
 FROM DUAL
 WHERE NOT EXISTS (
   SELECT 1 FROM t_permission WHERE permission_code = 'FINANCE_BASIC_DATA_ONLY'
@@ -94,89 +82,89 @@ WHERE NOT EXISTS (
 -- ========== 第2步：分配权限给不同角色 ==========
 
 -- 🔴 高权限角色：管理员（查看所有数据）
-INSERT INTO t_role_permission (role_id, permission_id, create_time)
-SELECT r.id, p.id, NOW()
+INSERT INTO t_role_permission (role_id, permission_id)
+SELECT r.id, p.id
 FROM t_role r
 CROSS JOIN t_permission p
 WHERE r.role_code = 'admin'
 AND p.permission_code = 'FINANCE_TOTAL_AMOUNT_VIEW'
 AND NOT EXISTS (
-  SELECT 1 FROM t_role_permission rp 
+  SELECT 1 FROM t_role_permission rp
   WHERE rp.role_id = r.id AND rp.permission_id = p.id
 );
 
 -- 🔴 高权限角色：财务主管（查看所有数据）
-INSERT INTO t_role_permission (role_id, permission_id, create_time)
-SELECT r.id, p.id, NOW()
+INSERT INTO t_role_permission (role_id, permission_id)
+SELECT r.id, p.id
 FROM t_role r
 CROSS JOIN t_permission p
 WHERE r.role_code = 'finance_supervisor'
 AND p.permission_code = 'FINANCE_TOTAL_AMOUNT_VIEW'
 AND NOT EXISTS (
-  SELECT 1 FROM t_role_permission rp 
+  SELECT 1 FROM t_role_permission rp
   WHERE rp.role_id = r.id AND rp.permission_id = p.id
 );
 
 -- 🔴 高权限角色：采购主管（查看所有数据）
-INSERT INTO t_role_permission (role_id, permission_id, create_time)
-SELECT r.id, p.id, NOW()
+INSERT INTO t_role_permission (role_id, permission_id)
+SELECT r.id, p.id
 FROM t_role r
 CROSS JOIN t_permission p
 WHERE r.role_code = 'purchaser'
 AND p.permission_code = 'FINANCE_TOTAL_AMOUNT_VIEW'
 AND NOT EXISTS (
-  SELECT 1 FROM t_role_permission rp 
+  SELECT 1 FROM t_role_permission rp
   WHERE rp.role_id = r.id AND rp.permission_id = p.id
 );
 
 -- 🟡 中级权限角色：车间主任+生产一线员工（都能看车缝单价）
-INSERT INTO t_role_permission (role_id, permission_id, create_time)
-SELECT r.id, p.id, NOW()
+INSERT INTO t_role_permission (role_id, permission_id)
+SELECT r.id, p.id
 FROM t_role r
 CROSS JOIN t_permission p
 WHERE r.role_code IN ('workshop_director', 'cutter', 'sewing', 'quality')
 AND p.permission_code = 'FINANCE_SEWING_PRICE_ONLY'
 AND NOT EXISTS (
-  SELECT 1 FROM t_role_permission rp 
+  SELECT 1 FROM t_role_permission rp
   WHERE rp.role_id = r.id AND rp.permission_id = p.id
 );
 
 -- 🟢 基础权限角色：后勤人员（只看基础数据，不看任何单价）
-INSERT INTO t_role_permission (role_id, permission_id, create_time)
-SELECT r.id, p.id, NOW()
+INSERT INTO t_role_permission (role_id, permission_id)
+SELECT r.id, p.id
 FROM t_role r
 CROSS JOIN t_permission p
 WHERE r.role_code IN ('packager', 'warehouse')
 AND p.permission_code = 'FINANCE_BASIC_DATA_ONLY'
 AND NOT EXISTS (
-  SELECT 1 FROM t_role_permission rp 
+  SELECT 1 FROM t_role_permission rp
   WHERE rp.role_id = r.id AND rp.permission_id = p.id
 );
 
 -- ========== 第3步：验证配置结果 ==========
 
 -- 查看3个权限是否添加成功
-SELECT 
+SELECT
   p.id AS '权限ID',
   p.permission_code AS '权限码',
   p.permission_name AS '权限名称',
   p.permission_type AS '类型',
-  p.sort_order AS '排序'
+  p.sort AS '排序'
 FROM t_permission p
 WHERE p.permission_code IN (
   'FINANCE_TOTAL_AMOUNT_VIEW',
   'FINANCE_SEWING_PRICE_ONLY',
   'FINANCE_BASIC_DATA_ONLY'
 )
-ORDER BY p.sort_order;
+ORDER BY p.sort;
 
 -- 查看各角色拥有的财务权限
-SELECT 
+SELECT
   r.role_code AS '角色代码',
   r.role_name AS '角色名称',
   p.permission_code AS '权限码',
   p.permission_name AS '权限名称',
-  CASE 
+  CASE
     WHEN p.permission_code = 'FINANCE_TOTAL_AMOUNT_VIEW' THEN '🔴 最高权限 - 查看所有单价和金额'
     WHEN p.permission_code = 'FINANCE_SEWING_PRICE_ONLY' THEN '🟡 中级权限 - 只看车缝单价'
     WHEN p.permission_code = 'FINANCE_BASIC_DATA_ONLY' THEN '🟢 基础权限 - 只看基础数据'
@@ -190,12 +178,12 @@ WHERE p.permission_code IN (
   'FINANCE_SEWING_PRICE_ONLY',
   'FINANCE_BASIC_DATA_ONLY'
 )
-ORDER BY 
+ORDER BY
   FIELD(p.permission_code, 'FINANCE_TOTAL_AMOUNT_VIEW', 'FINANCE_SEWING_PRICE_ONLY', 'FINANCE_BASIC_DATA_ONLY'),
   r.role_code;
 
 -- 统计每个角色的财务权限数量
-SELECT 
+SELECT
   r.role_code AS '角色代码',
   r.role_name AS '角色名称',
   COUNT(p.id) AS '拥有的财务权限数',
@@ -244,7 +232,7 @@ WHERE p.permission_code IN (
 );
 
 -- 删除权限定义
-DELETE FROM t_permission 
+DELETE FROM t_permission
 WHERE permission_code IN (
   'FINANCE_TOTAL_AMOUNT_VIEW',
   'FINANCE_SEWING_PRICE_ONLY',
@@ -252,8 +240,8 @@ WHERE permission_code IN (
 );
 
 -- 验证删除结果
-SELECT COUNT(*) AS '剩余财务权限数' 
-FROM t_permission 
+SELECT COUNT(*) AS '剩余财务权限数'
+FROM t_permission
 WHERE permission_code IN (
   'FINANCE_TOTAL_AMOUNT_VIEW',
   'FINANCE_SEWING_PRICE_ONLY',

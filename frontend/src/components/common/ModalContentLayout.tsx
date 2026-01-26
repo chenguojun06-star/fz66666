@@ -23,7 +23,7 @@ export const ModalHeaderCard: React.FC<HeaderCardProps> = ({ children, isMobile 
         display: 'flex',
         gap: isMobile ? 12 : 16,
         padding: isMobile ? 10 : 12,
-        background: '#f8f9fa',
+        background: 'var(--color-bg-gray)',
         borderRadius: 8,
         marginBottom: 12,
         ...style,
@@ -55,7 +55,7 @@ export const ModalField: React.FC<FieldProps> = ({
   labelSize = 13,
   valueSize = 14,
   valueWeight = 600,
-  valueColor = '#111827',
+  valueColor = 'var(--neutral-text)',
   style,
 }) => {
   return (
@@ -63,7 +63,7 @@ export const ModalField: React.FC<FieldProps> = ({
       <span
         style={{
           fontSize: labelSize,
-          color: '#6b7280',
+          color: 'var(--neutral-text-light)',
           fontWeight: 600,
           whiteSpace: 'nowrap',
         }}
@@ -100,12 +100,12 @@ export const ModalPrimaryField: React.FC<PrimaryFieldProps> = ({
 }) => {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, ...style }}>
-      <span style={{ fontSize: 14, color: '#6b7280', fontWeight: 600 }}>{label}</span>
+      <span style={{ fontSize: 14, color: 'var(--neutral-text-light)', fontWeight: 600 }}>{label}</span>
       <span
         style={{
           fontSize: valueSize,
           fontWeight: 700,
-          color: '#1f2937',
+          color: 'var(--neutral-text)',
           letterSpacing: '0.5px',
         }}
       >
@@ -167,9 +167,9 @@ export const ModalFieldGrid: React.FC<FieldGridProps> = ({
     <div
       style={{
         padding: 6,
-        background: '#fff',
+        background: 'var(--neutral-white)',
         borderRadius: 4,
-        border: '1px solid #e5e7eb',
+        border: '1px solid var(--table-border-color)',
         ...style,
       }}
     >
@@ -199,10 +199,10 @@ export const ModalInfoCard: React.FC<InfoCardProps> = ({ children, padding = 6, 
     <div
       style={{
         padding,
-        background: '#fff',
+        background: 'var(--neutral-white)',
         borderRadius: 6,
-        border: '2px solid #d1d5db',
-        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+        border: '2px solid var(--table-border-color)',
+        boxShadow: 'var(--shadow-sm)',
         ...style,
       }}
     >
@@ -274,7 +274,7 @@ export const ModalSectionTitle: React.FC<SectionTitleProps> = ({ children, size 
       style={{
         fontSize: size,
         fontWeight: 700,
-        color: '#111827',
+        color: 'var(--neutral-text)',
         marginTop: 12,
         marginBottom: 8,
         ...style,

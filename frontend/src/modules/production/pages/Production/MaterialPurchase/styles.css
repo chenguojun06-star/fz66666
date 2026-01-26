@@ -21,12 +21,12 @@
 
 .purchase-detail-label {
   font-size: var(--font-size-sm);
-  color: #8c8c8c;
+  color: var(--neutral-text-lighter);
 }
 
 .purchase-detail-value {
   font-size: var(--font-size-base);
-  color: #1f1f1f;
+  color: var(--neutral-text);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -40,7 +40,7 @@
   margin-top: 12px;
   padding: 12px;
   border-radius: 10px;
-  background: #f6f7fb;
+  background: var(--color-bg-light);
 }
 
 .purchase-detail-size-line {
@@ -60,14 +60,14 @@
 
 .purchase-detail-size-item {
   font-size: var(--font-size-base);
-  color: #1f1f1f;
+  color: var(--neutral-text);
   font-weight: 600;
 }
 
 .purchase-detail-size-total-inline {
   margin-left: auto;
   font-size: var(--font-size-base);
-  color: #1f1f1f;
+  color: var(--neutral-text);
   font-weight: 700;
   white-space: nowrap;
 }
@@ -76,7 +76,7 @@
   font-size: var(--font-size-xl);
   font-weight: 700;
   line-height: 1;
-  color: #1f1f1f;
+  color: var(--neutral-text);
   text-align: center;
 }
 
@@ -115,13 +115,13 @@
 }
 
 .order-flow-section + .order-flow-section {
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--table-border-color);
 }
 
 .order-flow-section-title {
   font-size: var(--font-size-base);
   font-weight: 800;
-  color: #1f1f1f;
+  color: var(--neutral-text);
   margin: 0 0 10px;
 }
 
@@ -140,14 +140,14 @@
 
 .order-flow-kv-label {
   font-size: var(--font-size-sm);
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--neutral-text-lighter);
   white-space: nowrap;
 }
 
 .order-flow-kv-value {
   font-size: var(--font-size-base);
   font-weight: 700;
-  color: rgba(0, 0, 0, 0.88);
+  color: var(--neutral-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -198,18 +198,18 @@
 }
 
 .order-flow-module {
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--table-border-color);
   border-radius: 12px;
-  background: #fff;
+  background: var(--neutral-white);
   overflow: hidden;
 }
 
 .order-flow-module-title {
   padding: 10px 12px;
   font-weight: 800;
-  color: #1f1f1f;
-  border-bottom: 1px solid #f0f0f0;
-  background: #fff;
+  color: var(--neutral-text);
+  border-bottom: 1px solid var(--table-border-color);
+  background: var(--neutral-white);
 }
 
 .order-flow-module .ant-table-wrapper .ant-table-container {
@@ -218,11 +218,11 @@
 }
 
 .order-flow-module .ant-table-wrapper .ant-table-thead > tr > th {
-  background: #fafafa;
+  background: var(--table-header-bg);
 }
 
 .order-flow-row-highlight > td {
-  background: #e6f4ff !important;
+  background: var(--table-row-hover-bg) !important;
 }
 
 .order-flow-summary-top {
@@ -258,14 +258,14 @@
 .order-flow-summary-title {
   font-size: var(--font-size-lg);
   font-weight: 700;
-  color: #1f1f1f;
+  color: var(--neutral-text);
 }
 
 .order-flow-summary-sub {
   display: flex;
   flex-wrap: wrap;
   gap: 6px 12px;
-  color: #595959;
+  color: var(--neutral-text-light);
   font-size: var(--font-size-sm);
 }
 
@@ -278,7 +278,7 @@
 }
 
 .order-flow-metric {
-  background: #f6f7fb;
+  background: var(--color-bg-light);
   border-radius: 10px;
   padding: 10px 12px;
   min-width: 120px;
@@ -286,14 +286,14 @@
 
 .order-flow-metric-label {
   font-size: var(--font-size-sm);
-  color: #8c8c8c;
+  color: var(--neutral-text-lighter);
 }
 
 .order-flow-metric-value {
   margin-top: 2px;
   font-size: var(--font-size-xl);
   font-weight: 700;
-  color: #1f1f1f;
+  color: var(--neutral-text);
   line-height: 1.2;
 }
 
@@ -313,7 +313,7 @@
 
 .order-flow-field-label {
   font-size: var(--font-size-sm);
-  color: #8c8c8c;
+  color: var(--neutral-text-lighter);
   white-space: nowrap;
 }
 
@@ -544,16 +544,16 @@
 .purchase-detail-size-total-cell {
   padding: 6px 10px;
   font-size: var(--font-size-base);
-  color: #1f1f1f;
+  color: var(--neutral-text);
   font-weight: 600;
   white-space: nowrap;
-  border: 1px solid #e6e8f0;
-  background: #fff;
+  border: 1px solid var(--table-border-color);
+  background: var(--neutral-white);
 }
 
 .purchase-detail-size-th {
-  background: #f3f5fb;
-  color: #3a3a3a;
+  background: var(--color-bg-light);
+  color: var(--neutral-text);
   font-weight: 700;
 }
 
@@ -563,7 +563,7 @@
 
 .purchase-detail-size-summary {
   font-size: var(--font-size-base);
-  color: #1f1f1f;
+  color: var(--neutral-text);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -581,11 +581,11 @@
   object-fit: cover;
   border-radius: 8px;
   display: block;
-  background: #f5f5f5;
+  background: var(--color-bg-light);
 }
 
 .purchase-detail-cover-empty {
-  border: 1px dashed #d9d9d9;
+  border: 1px dashed var(--table-border-color);
 }
 
 .purchase-detail-section {
@@ -595,7 +595,7 @@
 .purchase-detail-section-title {
   font-size: var(--font-size-base);
   font-weight: 700;
-  color: #1f1f1f;
+  color: var(--neutral-text);
   margin: 8px 0;
 }
 

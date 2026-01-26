@@ -25,7 +25,7 @@ CROSS JOIN t_permission p
 WHERE r.role_code IN ('admin', 'supervisor', 'purchaser')  -- 管理类角色
 AND p.permission_code = 'FINANCE_PRICE_VIEW'
 AND NOT EXISTS (
-  SELECT 1 FROM t_role_permission rp 
+  SELECT 1 FROM t_role_permission rp
   WHERE rp.role_id = r.id AND rp.permission_id = p.id
 );
 
@@ -34,7 +34,7 @@ AND NOT EXISTS (
 -- ========================================
 
 -- 查看权限是否添加成功
-SELECT 
+SELECT
   p.id,
   p.permission_code,
   p.permission_name,
@@ -43,7 +43,7 @@ FROM t_permission p
 WHERE p.permission_code = 'FINANCE_PRICE_VIEW';
 
 -- 查看哪些角色有查看单价权限
-SELECT 
+SELECT
   r.role_code,
   r.role_name,
   r.data_scope,
@@ -91,6 +91,6 @@ INNER JOIN t_permission p ON rp.permission_id = p.id
 WHERE p.permission_code = 'FINANCE_PRICE_VIEW';
 
 -- 删除权限定义
-DELETE FROM t_permission 
+DELETE FROM t_permission
 WHERE permission_code = 'FINANCE_PRICE_VIEW';
 */

@@ -1896,7 +1896,7 @@ const CuttingManagement: React.FC = () => {
                 <div className="cutting-qr-print-grid cutting-qr-print-grid--screen">
                   {printBundles.map((b, idx) => (
                     <div className="cutting-qr-label" key={b.id || `${b.qrCode || ''}-${idx}`}
-                      style={{ background: '#fff' }}
+                      style={{ background: 'var(--neutral-white)' }}
                     >
                       <div className="cutting-qr-label-qr">
                         {b.qrCode ? <QRCodeCanvas value={b.qrCode} size={printConfig.qrSize} includeMargin /> : null}
@@ -2071,17 +2071,17 @@ const CuttingManagement: React.FC = () => {
                               <div style={{
                                 fontSize: 14,
                                 fontWeight: 600,
-                                color: '#374151',
+                                color: 'var(--neutral-text)',
                                 marginBottom: 6
                               }}>
                                 下单数量
                               </div>
                               <div style={{
                                 padding: 6,
-                                background: '#fff',
+                                background: 'var(--neutral-white)',
                                 borderRadius: 6,
-                                border: '2px solid #d1d5db',
-                                boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                                border: '2px solid var(--table-border-color)',
+                                boxShadow: 'var(--shadow-sm)',
                                 flexShrink: 0
                               }}>
                                 <table style={{ borderCollapse: 'collapse' }}>
@@ -2091,12 +2091,12 @@ const CuttingManagement: React.FC = () => {
                                       <td style={{
                                         padding: '8px 12px',
                                         fontSize: 14,
-                                        color: '#374151',
+                                        color: 'var(--neutral-text)',
                                         fontWeight: 600,
-                                        borderRight: '1px solid #d1d5db',
-                                        borderBottom: '1px solid #d1d5db',
+                                        borderRight: '1px solid var(--table-border-color)',
+                                        borderBottom: '1px solid var(--table-border-color)',
                                         width: '60px',
-                                        background: '#f3f4f6'
+                                        background: 'var(--color-bg-gray)'
                                       }}>
                                         码数
                                       </td>
@@ -2104,11 +2104,11 @@ const CuttingManagement: React.FC = () => {
                                         <td key={idx} style={{
                                           padding: '8px 14px',
                                           fontSize: 15,
-                                          color: '#111827',
+                                          color: 'var(--neutral-text)',
                                           fontWeight: 700,
                                           textAlign: 'center',
-                                          borderRight: idx < sizeArray.length - 1 ? '1px solid #d1d5db' : 'none',
-                                          borderBottom: '1px solid #d1d5db',
+                                          borderRight: idx < sizeArray.length - 1 ? '1px solid var(--table-border-color)' : 'none',
+                                          borderBottom: '1px solid var(--table-border-color)',
                                           minWidth: '50px'
                                         }}>
                                           {size}
@@ -2117,12 +2117,12 @@ const CuttingManagement: React.FC = () => {
                                       <td style={{
                                         padding: '8px 14px',
                                         fontSize: 14,
-                                        color: '#111827',
+                                        color: 'var(--neutral-text)',
                                         fontWeight: 700,
                                         textAlign: 'center',
-                                        borderLeft: '1px solid #d1d5db',
-                                        borderBottom: '1px solid #d1d5db',
-                                        background: '#fef3c7',
+                                        borderLeft: '1px solid var(--table-border-color)',
+                                        borderBottom: '1px solid var(--table-border-color)',
+                                        background: 'var(--color-bg-light)',
                                         whiteSpace: 'nowrap'
                                       }} rowSpan={2}>
                                         总下单数：{totalQty}
@@ -2133,10 +2133,10 @@ const CuttingManagement: React.FC = () => {
                                       <td style={{
                                         padding: '8px 12px',
                                         fontSize: 14,
-                                        color: '#374151',
+                                        color: 'var(--neutral-text)',
                                         fontWeight: 600,
-                                        borderRight: '1px solid #d1d5db',
-                                        background: '#f3f4f6'
+                                        borderRight: '1px solid var(--table-border-color)',
+                                        background: 'var(--color-bg-gray)'
                                       }}>
                                         数量
                                       </td>
@@ -2146,10 +2146,10 @@ const CuttingManagement: React.FC = () => {
                                           <td key={idx} style={{
                                             padding: '8px 14px',
                                             fontSize: 15,
-                                            color: '#111827',
+                                            color: 'var(--neutral-text)',
                                             fontWeight: 700,
                                             textAlign: 'center',
-                                            borderRight: idx < sizeArray.length - 1 ? '1px solid #d1d5db' : 'none',
+                                            borderRight: idx < sizeArray.length - 1 ? '1px solid var(--table-border-color)' : 'none',
                                             minWidth: '50px'
                                           }}>
                                             {qty}

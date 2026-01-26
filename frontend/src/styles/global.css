@@ -784,8 +784,8 @@ body {
   margin-right: -24px;
   padding-left: 24px;
   padding-right: 24px;
-  background: linear-gradient(to top, #fff 0%, #fff 85%, rgba(255,255,255,0.96) 95%, rgba(255,255,255,0) 100%);
-  border-top: 1px solid rgba(0,0,0,0.06);
+  background: var(--neutral-white);
+  border-top: 1px solid var(--table-border-color);
 }
 
 /* ========================================

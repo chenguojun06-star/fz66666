@@ -956,7 +956,7 @@ const ProductionList: React.FC = () => {
       },
     },
     {
-      title: '完成时间',
+      title: '订单交期',
       dataIndex: 'plannedEndDate',
       key: 'plannedEndDate',
       width: 120,
@@ -1456,7 +1456,7 @@ const ProductionList: React.FC = () => {
               label: (
                 <div onClick={(e) => e.stopPropagation()}>
                   <Checkbox checked={visibleColumns.plannedEndDate !== false} onChange={() => toggleColumnVisible('plannedEndDate')}>
-                    完成时间
+                    订单交期
                   </Checkbox>
                 </div>
               ),
