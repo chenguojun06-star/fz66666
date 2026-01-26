@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { App, AutoComplete, Button, Card, Col, Form, Input, InputNumber, Row, Select, Space, Tabs, Tag } from 'antd';
+import { App, AutoComplete, Button, Card, Col, Form, Input, InputNumber, Row, Select, Space, Tabs, Tag, Tooltip } from 'antd';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
-import { ShoppingCartOutlined } from '@ant-design/icons';
+import { ShoppingCartOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { useSync } from '@/utils/syncManager';
 
 import dayjs from 'dayjs';
@@ -1247,9 +1247,38 @@ const OrderManagement: React.FC = () => {
                           </div>
                         </Col>
                         <Col xs={24} sm={12}>
-                          <Form.Item name="factoryId" label="加工厂" rules={[{ required: true, message: '请选择加工厂' }]}>
+                          <Form.Item 
+                            name="factoryId" 
+                            label={
+                              <Space size={4}>
+                                <span>加工厂</span>
+                                <Tooltip 
+                                  title={
+                                    <div style={{ fontSize: 13 }}>
+                                      <div style={{ marginBottom: 8, fontWeight: 600 }}>📋 加工方式说明</div>
+                                      <div style={{ marginBottom: 6 }}>
+                                        <span style={{ color: '#40a9ff' }}>● 本厂生产：</span>
+                                        选择"本厂"，订单完成后数据流向<strong>工资结算</strong>（按人员工序统计扫码工资）
+                                      </div>
+                                      <div>
+                                        <span style={{ color: '#ff7875' }}>● 加工厂生产：</span>
+                                        选择其他加工厂，订单完成后数据流向<strong>订单结算</strong>（按工厂结算加工费）
+                                      </div>
+                                      <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.2)', fontSize: 12, opacity: 0.9 }}>
+                                        💡 所有数据最终在"订单结算数据看板"统一查看
+                                      </div>
+                                    </div>
+                                  }
+                                  overlayStyle={{ maxWidth: 380 }}
+                                >
+                                  <QuestionCircleOutlined style={{ color: '#1890ff', cursor: 'help' }} />
+                                </Tooltip>
+                              </Space>
+                            }
+                            rules={[{ required: true, message: '请选择加工厂' }]}
+                          >
                             <Select
-                              placeholder="请选择加工厂"
+                              placeholder="请选择加工厂（本厂或外发加工）"
                               options={factories.map(f => ({ value: f.id!, label: `${f.factoryName}（${f.factoryCode}）` }))}
                               showSearch
                               optionFilterProp="label"
