@@ -31,12 +31,22 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
                 Page<ScanRecord> pageInfo = new Page<>(page, pageSize);
 
                 // 构建查询条件
-                String orderNo = (String) params.getOrDefault("orderNo", "");
-                String styleNo = (String) params.getOrDefault("styleNo", "");
-                String scanType = (String) params.getOrDefault("scanType", "");
-                String scanResult = (String) params.getOrDefault("scanResult", "");
-                String operatorId = (String) params.getOrDefault("operatorId", "");
-                String operatorName = (String) params.getOrDefault("operatorName", "");
+                String orderNo = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(params, "orderNo"));
+                String styleNo = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(params, "styleNo"));
+                String scanType = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(params, "scanType"));
+                String scanResult = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(params, "scanResult"));
+                String operatorId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(params, "operatorId"));
+                String operatorName = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(params, "operatorName"));
+                if (!StringUtils.hasText(operatorName)) {
+                        operatorName = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(params, "workerName"));
+                }
+                LocalDateTime startTime = ParamUtils.getLocalDateTime(params, "startTime");
+                LocalDateTime endTime = ParamUtils.getLocalDateTime(params, "endTime");
+                if (startTime != null && endTime != null && endTime.isBefore(startTime)) {
+                        LocalDateTime tmp = startTime;
+                        startTime = endTime;
+                        endTime = tmp;
+                }
 
                 // 构建Lambda查询包装器
                 LambdaQueryWrapper<ScanRecord> wrapper = new LambdaQueryWrapper<ScanRecord>()
@@ -46,6 +56,8 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
                                 .eq(StringUtils.hasText(scanResult), ScanRecord::getScanResult, scanResult)
                                 .eq(StringUtils.hasText(operatorId), ScanRecord::getOperatorId, operatorId)
                                 .like(StringUtils.hasText(operatorName), ScanRecord::getOperatorName, operatorName)
+                                .ge(startTime != null, ScanRecord::getScanTime, startTime)
+                                .le(endTime != null, ScanRecord::getScanTime, endTime)
                                 .orderByDesc(ScanRecord::getScanTime);
 
                 // 如果没有指定operatorId，根据数据权限添加过滤条件

@@ -84,8 +84,10 @@ public class ScanRecordController {
     public Result<?> getMyHistory(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int pageSize,
-            @RequestParam(required = false) String scanType) {
-        return Result.success(scanRecordOrchestrator.getMyHistory(page, pageSize, scanType));
+            @RequestParam(required = false) String scanType,
+            @RequestParam(required = false) String startTime,
+            @RequestParam(required = false) String endTime) {
+        return Result.success(scanRecordOrchestrator.getMyHistory(page, pageSize, scanType, startTime, endTime));
     }
 
     @GetMapping("/personal-stats")

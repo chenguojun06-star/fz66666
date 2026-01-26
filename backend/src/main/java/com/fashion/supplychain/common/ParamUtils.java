@@ -2,6 +2,15 @@ package com.fashion.supplychain.common;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -119,6 +128,77 @@ public final class ParamUtils {
             log.warn("Failed to parse long value: key={}, value={}", key, v, e);
             return defaultValue;
         }
+    }
+
+    public static LocalDateTime getLocalDateTime(Map<String, ?> params, String key) {
+        if (params == null || params.isEmpty() || !StringUtils.hasText(key)) {
+            return null;
+        }
+        Object v = params.get(key);
+        if (v == null) {
+            v = getIgnoreCase(params, key);
+        }
+        return parseDateTime(v);
+    }
+
+    public static LocalDateTime parseDateTime(Object raw) {
+        if (raw == null) {
+            return null;
+        }
+        if (raw instanceof LocalDateTime time) {
+            return time;
+        }
+        if (raw instanceof java.sql.Timestamp ts) {
+            return ts.toLocalDateTime();
+        }
+        if (raw instanceof Date d) {
+            return LocalDateTime.ofInstant(d.toInstant(), ZoneId.systemDefault());
+        }
+        if (raw instanceof Number number) {
+            long epoch = number.longValue();
+            if (epoch <= 0) {
+                return null;
+            }
+            Instant instant = epoch < 100000000000L ? Instant.ofEpochSecond(epoch) : Instant.ofEpochMilli(epoch);
+            return LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
+        }
+
+        String s = String.valueOf(raw);
+        s = s == null ? null : s.trim();
+        if (!StringUtils.hasText(s) || "undefined".equalsIgnoreCase(s) || "null".equalsIgnoreCase(s)) {
+            return null;
+        }
+        try {
+            if (s.length() == 10) {
+                LocalDate d = LocalDate.parse(s);
+                return d.atTime(LocalTime.of(0, 0));
+            }
+        } catch (Exception e) {
+            log.warn("Failed to parse date: value={}", s, e);
+        }
+
+        List<DateTimeFormatter> fmts = List.of(
+                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),
+                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"),
+                DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        for (DateTimeFormatter f : fmts) {
+            try {
+                return LocalDateTime.parse(s, f);
+            } catch (Exception e) {
+                log.warn("Failed to parse date with formatter: value={}, formatter={}", s, f, e);
+            }
+        }
+        try {
+            return OffsetDateTime.parse(s).toLocalDateTime();
+        } catch (Exception e) {
+            log.warn("Failed to parse offset datetime: value={}", s, e);
+        }
+        try {
+            return LocalDateTime.parse(s);
+        } catch (Exception e) {
+            log.warn("Failed to parse date: value={}", s, e);
+        }
+        return null;
     }
 
     public static int getPage(Map<String, ?> params) {

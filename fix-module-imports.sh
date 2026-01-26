@@ -10,17 +10,17 @@ echo "🔧 开始修复导入路径..."
 # 修复函数
 fix_imports() {
   local file="$1"
-  
+
   # 跳过已经使用 @ 的文件
   if ! grep -q "from ['\"]\.\./" "$file" 2>/dev/null; then
     return
   fi
-  
+
   echo "  修复: $file"
-  
+
   # 创建临时文件
   local temp_file="${file}.tmp"
-  
+
   # 替换导入路径
   sed -E \
     -e "s|from ['\"]\.\./(\.\./)?(\.\./)?(components/[^'\"]+)['\"]|from '@/\3'|g" \
@@ -30,7 +30,7 @@ fix_imports() {
     -e "s|from ['\"]\.\./(\.\./)?(\.\./)?(stores/[^'\"]+)['\"]|from '@/\3'|g" \
     -e "s|from ['\"]\.\./(\.\./)?(\.\./)?(constants/[^'\"]+)['\"]|from '@/\3'|g" \
     "$file" > "$temp_file"
-  
+
   # 替换原文件
   mv "$temp_file" "$file"
 }
