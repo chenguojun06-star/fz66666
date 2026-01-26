@@ -17,7 +17,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # 检查是否为root用户
-if [ "$EUID" -ne 0 ]; then 
+if [ "$EUID" -ne 0 ]; then
     echo -e "${RED}❌ 请使用 root 用户运行此脚本${NC}"
     echo "请执行: sudo su - 切换到root用户"
     exit 1
@@ -92,7 +92,7 @@ if [ ! -f ".env" ]; then
     fi
 else
     echo -e "${GREEN}✅ .env 文件已存在${NC}"
-    
+
     # 检查是否修改了默认密码
     if grep -q "your_strong_password_here_change_me" .env; then
         echo -e "${RED}❌ 检测到默认密码未修改${NC}"
