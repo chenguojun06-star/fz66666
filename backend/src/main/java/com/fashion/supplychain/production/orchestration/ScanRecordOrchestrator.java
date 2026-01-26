@@ -1744,7 +1744,8 @@ public class ScanRecordOrchestrator {
         return scanRecordService.queryPage(params);
     }
 
-    public IPage<ScanRecord> getMyHistory(int page, int pageSize, String scanType, String startTime, String endTime) {
+    public IPage<ScanRecord> getMyHistory(int page, int pageSize, String scanType, String startTime, String endTime,
+            String orderNo, String bundleNo, String workerName, String operatorName) {
         UserContext ctx = UserContext.get();
         String operatorId = ctx == null ? null : ctx.getUserId();
         if (!hasText(operatorId)) {
@@ -1763,6 +1764,16 @@ public class ScanRecordOrchestrator {
         }
         if (hasText(endTime)) {
             params.put("endTime", endTime.trim());
+        }
+        if (hasText(orderNo)) {
+            params.put("orderNo", orderNo.trim());
+        }
+        if (hasText(bundleNo)) {
+            params.put("bundleNo", bundleNo.trim());
+        }
+        String name = hasText(operatorName) ? operatorName : workerName;
+        if (hasText(name)) {
+            params.put("operatorName", name.trim());
         }
         return scanRecordService.queryPage(params);
     }
