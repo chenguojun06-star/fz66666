@@ -12,7 +12,7 @@ import api, { fetchProductionOrderDetail, parseProductionOrderLines, toNumberSaf
 import { ProductionOrderHeader, StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
 import { formatDateTime } from '@/utils/datetime';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { paths } from '../../routeConfig';
+import { paths } from '@/routeConfig';
 import { useSync } from '@/utils/syncManager';
 import { useViewport } from '@/utils/useViewport';
 import './styles.css';
