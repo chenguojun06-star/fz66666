@@ -1,83 +1,83 @@
-# fz66666
-
 # 🎯 服装供应链管理系统
 
-*最后更新：2026-01-23*  
+*最后更新：2026-01-26*  
 *系统评分：96/100 ⭐⭐⭐⭐⭐*  
+*文档数量：15份核心文档（已精简56%）*  
 *GitHub：[chenguojun06-star/fz66666](https://github.com/chenguojun06-star/fz66666)*
 
 ---
 
-## 📌 快速导航
+## 📖 快速导航
 
-### 📖 核心文档（推荐阅读顺序）
-1. **[SYSTEM_STATUS.md](SYSTEM_STATUS.md)** - 📊 系统当前状态与文档索引（开始这里！）
-2. **[xindiedai.md](xindiedai.md)** - 🏗️ 系统架构评估报告（96/100分）
-3. **[PROJECT_DOCUMENTATION.md](PROJECT_DOCUMENTATION.md)** - 📚 完整技术文档
-4. **[TECH_SUMMARY.md](TECH_SUMMARY.md)** - 💡 技术总结
+### ⭐ 核心文档（推荐阅读顺序）
 
-### 🛠️ 功能指南
-- [SKU_QUICK_REFERENCE.md](SKU_QUICK_REFERENCE.md) - **SKU系统快速参考**（款号+颜色+尺码统一）
-- [SCAN_SYSTEM_LOGIC.md](SCAN_SYSTEM_LOGIC.md) - 扫码系统逻辑（订单/菲号/SKU三种模式）
-- [WORKFLOW_EXPLANATION.md](WORKFLOW_EXPLANATION.md) - 工作流说明
-- [MINIPROGRAM_BUNDLE_GENERATION_GUIDE.md](MINIPROGRAM_BUNDLE_GENERATION_GUIDE.md) - 菲号生成指南
-- [USER_APPROVAL_GUIDE.md](USER_APPROVAL_GUIDE.md) - 用户审批指南
-- [QUICK_TEST_GUIDE.md](QUICK_TEST_GUIDE.md) - 快速测试指南
+1. **[系统状态.md](系统状态.md)** - 📊 **从这里开始**！系统状态与文档索引
+2. **[开发指南.md](开发指南.md)** - 🔥 **最重要**！完整开发指南和最佳实践
+3. **[架构评估报告.md](架构评估报告.md)** - 🏗️ 架构评估（96/100分）
+4. **[项目技术文档.md](项目技术文档.md)** - 📚 完整技术文档
+5. **[业务流程说明.md](业务流程说明.md)** - 💼 业务流程说明
+6. **[快速测试指南.md](快速测试指南.md)** - 🧪 快速测试流程
+7. **[代码和流程梳理报告.md](代码和流程梳理报告.md)** - 📊 代码质量分析
 
-### 🏗️ 架构设计
-- [ARCHITECTURE_QUALITY_ASSESSMENT.md](ARCHITECTURE_QUALITY_ASSESSMENT.md) - 架构质量评估
-- [DATA_SYNC_ANALYSIS.md](DATA_SYNC_ANALYSIS.md) - 数据同步分析
-- [DATA_PERMISSION_DESIGN.md](DATA_PERMISSION_DESIGN.md) - 数据权限设计
+### 📚 技术文档（docs/）
 
-### 🚀 部署运维
-- [deployment/README.md](deployment/README.md) - 部署指南
-- [deployment/DATABASE_CONFIG.md](deployment/DATABASE_CONFIG.md) - 数据库配置
-- [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md) - 部署清单
+- **[功能实现指南.md](docs/功能实现指南.md)** - 排序、工序、权限等功能实现
+- **[扫码和SKU系统完整指南.md](docs/扫码和SKU系统完整指南.md)** - 扫码系统和SKU系统
+- **[小程序开发完整指南.md](docs/小程序开发完整指南.md)** - 小程序开发工具和业务优化
+- **[统一日期选择器完整指南.md](docs/统一日期选择器完整指南.md)** - 日期选择器实施和使用
+- **[代码质量工具完整指南.md](docs/代码质量工具完整指南.md)** - 30+代码质量工具
+
+### 🔧 部署文档
+
+- **[backend/后端说明.md](backend/后端说明.md)** - 后端项目说明
+- **[deployment/数据库配置.md](deployment/数据库配置.md)** - 数据库配置和管理
+- **[deployment/部署说明.md](deployment/部署说明.md)** - 部署流程说明
 
 ---
 
 ## 🚀 快速启动
 
 ### 环境要求
-- Java 17+
-- Node.js 18+
-- MySQL 8.0
-- Docker（推荐）
+- **Java 17+**
+- **Node.js 18+**
+- **MySQL 8.0**
+- **Docker**（推荐）
 
-### 启动步骤
+### 一键启动（推荐）
 
-**⚠️ 重要：开发环境必须使用启动脚本，否则会因缺少环境变量导致API 403错误**
+**⚠️ 重要**：开发环境必须使用启动脚本，否则会因缺少环境变量导致 API 403 错误
 
 ```bash
-# 推荐方式：使用一键启动脚本（会自动加载环境变量）
+# 一键启动所有服务
 ./dev-public.sh
-
-# 该脚本会自动：
-# 1. 启动 MySQL Docker 容器
-# 2. 加载 .run/backend.env 环境变量
-# 3. 启动后端 Spring Boot (端口 8088)
-# 4. 启动前端 Vite dev server (端口 5173)
-# 5. 启动 Cloudflare Tunnel (可选，用于外网访问)
-
-# 访问地址：
-# - PC端：http://localhost:5173 或 http://192.168.2.248:5173
-# - 后端：http://localhost:8088 或 http://192.168.2.248:8088
-# - 小程序：使用微信开发者工具打开 miniprogram/ 目录
 ```
 
-**首次启动前准备：**
+该脚本会自动：
+1. 启动 MySQL Docker 容器
+2. 加载 `.run/backend.env` 环境变量
+3. 启动后端 Spring Boot（端口 8088）
+4. 启动前端 Vite dev server（端口 5173）
+5. 启动 Cloudflare Tunnel（可选，用于外网访问）
+
+**访问地址**：
+- 📱 PC端：http://localhost:5173
+- 🔧 后端：http://localhost:8088
+- 📱 小程序：使用微信开发者工具打开 `miniprogram/` 目录
+
+### 首次启动准备
+
 ```bash
 # 1. 创建环境变量文件（如果不存在）
 mkdir -p .run
 cat > .run/backend.env << 'EOF'
-SPRING_DATASOURCE_URL=jdbc:mysql://127.0.0.1:3308/fashion_supplychain?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
+SPRING_DATASOURCE_URL=jdbc:mysql://127.0.0.1:3308/fashion_supplychain?useUnicode=true&characterEncoding=utf-8
 SPRING_DATASOURCE_USERNAME=root
 SPRING_DATASOURCE_PASSWORD=changeme
 APP_AUTH_JWT_SECRET=ThisIsA_LocalJwtSecret_OnlyForDev_0123456789
 WECHAT_MINI_PROGRAM_MOCK_ENABLED=true
 EOF
 
-# 2. 确保 MySQL 容器存在并运行
+# 2. 启动 MySQL 容器
 docker start fashion-mysql-simple || docker run -d \
   --name fashion-mysql-simple \
   -p 3308:3306 \
@@ -86,17 +86,33 @@ docker start fashion-mysql-simple || docker run -d \
   mysql:8.0
 ```
 
-**详细配置说明：**
-- 查看 [ENV_CONFIG_GUIDE.md](ENV_CONFIG_GUIDE.md) - 环境变量完整配置指南
-
 ### 一键同步代码
+
 ```bash
 ./git-sync.sh "你的提交信息"
 ```
 
 ---
 
-## ✨ 最新更新（2026-01-24）
+## ✨ 最新更新（2026-01-26）
+
+### 文档大整合完成 🎉
+- ✅ **文档精简**：从 34份 → 15份核心文档（-56%）
+- ✅ **功能整合**：合并 5个功能文档为 [功能实现指南.md](docs/功能实现指南.md)
+- ✅ **临时归档**：4个临时文档归档到 `archive/临时文档和报告/`
+- ✅ **重复清理**：删除已合并的重复文档
+- ✅ **索引更新**：[系统状态.md](系统状态.md) 更新文档导航
+
+### 前端模块化完成（2026-01-25）
+- ✅ **模块化架构**：23个页面 + 7个子组件迁移到 `modules/`
+- ✅ **统一导入**：使用 `@/` 别名替代相对路径
+- ✅ **旧代码清理**：删除 41个文件（35,911行）
+- ✅ **构建优化**：构建时间优化到 19.54秒
+
+### SKU系统整合（2026-01-24）
+- ✅ **三端统一**：款号+颜色+尺码统一的SKU定义
+- ✅ **三种扫码**：订单/菲号/SKU扫码支持
+- ✅ **文档合并**：扫码和SKU文档整合
 
 - ✅ **修复Dashboard API 403错误**（环境变量配置问题）
 - ✅ 添加环境变量配置完整指南（ENV_CONFIG_GUIDE.md）
@@ -116,16 +132,101 @@ docker start fashion-mysql-simple || docker run -d \
 
 ## 📊 系统状态
 
-| 模块 | 状态 | 评分 |
-|------|------|------|
-| 手机端小程序 | ✅ 运行中 | 95/100 |
-| PC端网页 | ✅ 运行中 | 96/100 |
-| 后端服务 | ✅ 运行中 | 96/100 |
-| 数据库 | ✅ 运行中 | 100% |
-| 部署环境 | ✅ 就绪 | 100% |
-| 版本控制 | ✅ GitHub | 100% |
+| 模块 | 状态 | 评分 | 说明 |
+|------|------|------|------|
+| 手机端小程序 | ✅ 运行中 | 95/100 | 功能完整，已优化 |
+| PC端网页 | ✅ 运行中 | 96/100 | 模块化完成 |
+| 后端服务 | ✅ 运行中 | 96/100 | 26个Orchestrator编排器 |
+| 数据库 | ✅ 运行中 | 100% | MySQL 8.0 稳定 |
+| 部署环境 | ✅ 就绪 | 100% | Docker + Nginx |
+| 版本控制 | ✅ GitHub | 100% | 文档已精简56% |
 
 **综合评分：96/100 ⭐⭐⭐⭐⭐**
+
+---
+
+## 🎯 核心特性
+
+### ✅ 已完成功能
+- 生产订单全流程管理
+- **SKU系统**（款号+颜色+尺码三端统一）
+- 扫码生产流程（采购→裁剪→缝制→质检→入库）
+- 菲号生成与管理（PC端+手机端）
+- **三种扫码模式**（订单/菲号/SKU）
+- 自动工序识别
+- 财务对账系统
+- 用户权限管理
+- 实时数据同步
+
+### 🚀 技术亮点
+- **Orchestrator模式**：26个业务编排器
+- **ResizableModal优化**：INP<200ms
+- **前端模块化**：5大模块，@/ 别名统一导入
+- **代码注释全中文化**：93%覆盖率
+- **TypeScript类型完整**：96%
+- **统一错误处理**：7种错误类型
+- **三端验证规则一致**
+
+---
+
+## 📁 项目结构
+
+```
+服装66666/
+├── README.md                       # 📖 项目总览（本文件）
+├── 系统状态.md                     # 📊 系统状态与文档索引
+├── 开发指南.md                     # 🔥 开发指南（最重要）
+├── 架构评估报告.md                 # 🏗️ 架构评估（96分）
+├── 项目技术文档.md                 # 📚 完整技术文档
+├── 业务流程说明.md                 # 💼 业务流程
+├── 快速测试指南.md                 # 🧪 测试指南
+├── 代码和流程梳理报告.md           # 📊 质量分析
+│
+├── docs/                           # 📚 技术文档
+│   ├── 功能实现指南.md             # 功能实现
+│   ├── 扫码和SKU系统完整指南.md    # 扫码和SKU
+│   ├── 小程序开发完整指南.md       # 小程序开发
+│   ├── 统一日期选择器完整指南.md   # 日期选择器
+│   └── 代码质量工具完整指南.md     # 代码质量工具
+│
+├── backend/                        # ☕ 后端（Spring Boot）
+│   ├── 后端说明.md
+│   └── src/
+│
+├── frontend/                       # ⚛️ 前端（React + Vite）
+│   └── src/
+│       └── modules/                # 模块化目录
+│           ├── basic/              # 基础模块
+│           ├── production/         # 生产模块
+│           ├── finance/            # 财务模块
+│           ├── system/             # 系统模块
+│           └── dashboard/          # 仪表板
+│
+├── miniprogram/                    # 📱 小程序（微信原生）
+│   ├── pages/
+│   ├── components/
+│   └── utils/
+│
+├── deployment/                     # 🚀 部署配置
+│   ├── 数据库配置.md
+│   ├── 部署说明.md
+│   └── docker-compose.yml
+│
+└── archive/                        # 📦 归档文档
+    ├── 临时文档和报告/
+    ├── 前端模块化迁移/
+    ├── 优化记录/
+    └── 历史报告/
+```
+
+---
+
+## 📞 获取帮助
+
+1. 查看 [系统状态.md](系统状态.md) 了解当前状态
+2. 阅读 [开发指南.md](开发指南.md) 获取开发最佳实践
+3. 使用 [快速测试指南.md](快速测试指南.md) 快速测试
+4. 查看 [docs/](docs/) 目录查找详细技术文档
 
 ---
 
@@ -134,62 +235,9 @@ docker start fashion-mysql-simple || docker run -d \
 - **仓库**：github.com/chenguojun06-star/fz66666
 - **认证**：SSH（ed25519）
 - **首次推送**：2026-01-23（265文件，28,625行代码）
+- **最新优化**：2026-01-26（文档精简56%）
 
 ---
 
-## 📁 文档结构
-
-```
-服装66666/
-├── README.md                    # 本文件（总入口）
-├── SYSTEM_STATUS.md             # 系统状态与文档索引 ⭐
-├── xindiedai.md                 # 架构评估报告 ⭐
-├── PROJECT_DOCUMENTATION.md     # 完整技术文档 ⭐
-├── TECH_SUMMARY.md              # 技术总结 ⭐
-├── 功能指南/ (9份)              # 具体功能说明
-├── docs/archived/               # 已完成文档归档（34份）
-│   ├── reports/                 # 完成报告（21份）
-│   ├── guides/                  # 已完成指南（7份）
-│   ├── tests/                   # 已执行测试（3份）
-│   └── summaries/               # 工作总结（3份）
-├── backend/                     # 后端代码
-├── frontend/                    # 前端代码
-├── miniprogram/                 # 小程序代码
-└── deployment/                  # 部署配置
-```
-
----
-
-## 🎯 核心特性
-
-### 已完成功能
-- ✅ 生产订单全流程管理
-- ✅ 扫码生产追踪（采购→裁剪→缝制→质检→入库）
-- ✅ 菲号生成（PC端+手机端）
-- ✅ 订单级别二维码（一码贯穿全流程）
-- ✅ 自动工序识别
-- ✅ 财务对账系统
-- ✅ 用户权限管理
-- ✅ 实时数据同步
-
-### 技术亮点
-- 🚀 ResizableModal性能优化（INP<200ms）
-- 📝 代码注释全中文化（93%覆盖率）
-- 🔒 TypeScript类型完整（96%）
-- ⚡ 统一错误处理（7种类型）
-- 🔄 三端验证规则一致
-- 🏗️ 业务编排层设计（12个编排器）
-
----
-
-## 📞 获取帮助
-
-1. 查看 [SYSTEM_STATUS.md](SYSTEM_STATUS.md) 了解当前状态
-2. 阅读 [PROJECT_DOCUMENTATION.md](PROJECT_DOCUMENTATION.md) 获取技术细节
-3. 使用 [QUICK_TEST_GUIDE.md](QUICK_TEST_GUIDE.md) 快速测试
-4. 查看 `docs/archived/` 目录获取历史文档
-
----
-
-*项目评估：96/100 ⭐⭐⭐⭐⭐*  
+*项目评分：96/100 ⭐⭐⭐⭐⭐*  
 *生产就绪 | 已建立版本控制 | 文档完善*
