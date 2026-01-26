@@ -35,6 +35,7 @@ interface FinishedSettlementRow {
   remark?: string; // 备注
   approvalTime?: string; // 审批时间
   approvalBy?: string; // 审批人
+  [key: string]: unknown; // 索引签名，兼容 ResizableTable
 }
 
 interface PageParams {
@@ -265,7 +266,7 @@ const FinishedSettlementContent: React.FC = () => {
       ellipsis: {
         showTitle: false,
       },
-      render: (text: string | undefined, record: FinishedSettlementRow) => (
+      render: (text: string | undefined, _record: FinishedSettlementRow) => (
         <Tooltip title={text || '暂无备注'}>
           <span style={{ cursor: 'pointer', color: text ? '#1890ff' : '#999' }}>
             {text || '暂无'}
@@ -527,10 +528,10 @@ const FinishedSettlementContent: React.FC = () => {
           </Form.Item>
         </Form>
 
-        <ResizableTable
+        <ResizableTable<FinishedSettlementRow>
           storageKey="finance-finished-settlement"
           columns={columns}
-          dataSource={data as unknown as Record<string, unknown>[]}
+          dataSource={data}
           loading={loading}
           rowKey="orderId"
           rowSelection={{
