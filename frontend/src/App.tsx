@@ -13,6 +13,7 @@ import { StyleInfo, OrderManagement, DataCenter, TemplateCenter } from './module
 import {
   MaterialReconciliation,
   PaymentApproval,
+  OrderReconciliationApproval,
   PayrollOperatorSummary,
   FinanceCenter,
 } from './modules/finance';
@@ -201,6 +202,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.orderFlow} element={<Suspense fallback={<Spin />}><OrderFlow /></Suspense>} />
           <Route path={paths.materialReconciliation} element={<Suspense fallback={<Spin />}><MaterialReconciliation /></Suspense>} />
           <Route path={paths.paymentApproval} element={<Suspense fallback={<Spin />}><PaymentApproval /></Suspense>} />
+          <Route path={paths.orderReconciliationApproval} element={<Suspense fallback={<Spin />}><OrderReconciliationApproval /></Suspense>} />
           <Route path={paths.payrollOperatorSummary} element={<Suspense fallback={<Spin />}><PayrollOperatorSummary /></Suspense>} />
           <Route path={paths.financeCenter} element={<Suspense fallback={<Spin />}><FinanceCenter /></Suspense>} />
           <Route path={paths.user} element={<Suspense fallback={<Spin />}><UserList /></Suspense>} />
