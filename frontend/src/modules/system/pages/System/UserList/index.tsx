@@ -1019,7 +1019,7 @@ const UserList: React.FC = () => {
                                 style={{
                                   minWidth: 120,
                                   maxWidth: 160,
-                                  border: '1px solid #d1d5db',
+                                  border: '1px solid var(--table-border-color)',
                                   padding: '2px 6px'
                                 }}
                               >

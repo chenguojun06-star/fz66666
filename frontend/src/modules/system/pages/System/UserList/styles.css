@@ -23,7 +23,7 @@
 
 .loading-container p {
   font-size: 14px;
-  color: #8c8c8c;
+  color: var(--neutral-text-lighter);
   margin: 0;
 }
 
@@ -31,7 +31,7 @@
 .empty-state {
   text-align: center;
   padding: 40px 0;
-  color: #8c8c8c;
+  color: var(--neutral-text-lighter);
   font-size: 14px;
 }
 
@@ -49,14 +49,14 @@
 }
 
 .user-perm-role {
-  color: rgba(0, 0, 0, 0.65);
+  color: var(--neutral-text-light);
 }
 
 .user-perm-tree {
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--table-border-color);
   border-radius: 8px;
   padding: 12px;
-  background: #fff;
+  background: var(--neutral-white);
 }
 
 .user-perm-loading {
@@ -66,9 +66,9 @@
 }
 
 .permission-tree {
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--table-border-color);
   padding: 12px;
-  background: #fff;
+  background: var(--neutral-white);
   max-height: 300px;
   overflow-y: auto;
 }

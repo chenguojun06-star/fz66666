@@ -1101,7 +1101,7 @@ const OrderManagement: React.FC = () => {
             rowKey={(r) => String((r as Record<string, unknown>).key)}
             loading={detailLoading}
             dataSource={detailRows}
-            style={{ color: '#000' }}
+            style={{ color: 'var(--neutral-text)' }}
             scroll={{ x: 'max-content', y: isMobile ? 360 : 560 }}
             size={isMobile ? 'small' : 'middle'}
             pagination={{
@@ -1112,19 +1112,19 @@ const OrderManagement: React.FC = () => {
               onChange: (page, pageSize) => setDetailQuery({ page, pageSize }),
             }}
             columns={[
-              { title: <span style={{ color: '#000' }}>订单号</span>, dataIndex: 'orderNo', key: 'orderNo', width: 150 },
-              { title: <span style={{ color: '#000' }}>款号</span>, dataIndex: 'styleNo', key: 'styleNo', width: 140 },
-              { title: <span style={{ color: '#000' }}>颜色</span>, dataIndex: 'color', key: 'color', width: 140 },
-              { title: <span style={{ color: '#000' }}>S</span>, dataIndex: ['sizeQty', 'S'], key: 'size_S', width: 90, align: 'right', render: (v: unknown) => Number(v) || 0 },
-              { title: <span style={{ color: '#000' }}>M</span>, dataIndex: ['sizeQty', 'M'], key: 'size_M', width: 90, align: 'right', render: (v: unknown) => Number(v) || 0 },
-              { title: <span style={{ color: '#000' }}>L</span>, dataIndex: ['sizeQty', 'L'], key: 'size_L', width: 90, align: 'right', render: (v: unknown) => Number(v) || 0 },
-              { title: <span style={{ color: '#000' }}>XL</span>, dataIndex: ['sizeQty', 'XL'], key: 'size_XL', width: 90, align: 'right', render: (v: unknown) => Number(v) || 0 },
-              { title: <span style={{ color: '#000' }}>XXL</span>, dataIndex: ['sizeQty', 'XXL'], key: 'size_XXL', width: 90, align: 'right', render: (v: unknown) => Number(v) || 0 },
-              { title: <span style={{ color: '#000' }}>下单数</span>, dataIndex: 'orderQuantity', key: 'orderQuantity', width: 110, align: 'right', render: (v: unknown) => Number(v) || 0 },
-              { title: <span style={{ color: '#000' }}>完成数</span>, dataIndex: 'completedQuantity', key: 'completedQuantity', width: 110, align: 'right', render: (v: unknown) => Number(v) || 0 },
-              { title: <span style={{ color: '#000' }}>下单人</span>, dataIndex: 'orderOperatorName', key: 'orderOperatorName', width: 140 },
-              { title: <span style={{ color: '#000' }}>下单时间</span>, dataIndex: 'orderTime', key: 'orderTime', width: 170, render: (v: unknown) => formatDateTime(v) },
-              { title: <span style={{ color: '#000' }}>完成时间</span>, dataIndex: 'completedTime', key: 'completedTime', width: 170, render: (v: unknown) => formatDateTime(v) },
+              { title: <span style={{ color: 'var(--neutral-text)' }}>订单号</span>, dataIndex: 'orderNo', key: 'orderNo', width: 150 },
+              { title: <span style={{ color: 'var(--neutral-text)' }}>款号</span>, dataIndex: 'styleNo', key: 'styleNo', width: 140 },
+              { title: <span style={{ color: 'var(--neutral-text)' }}>颜色</span>, dataIndex: 'color', key: 'color', width: 140 },
+              { title: <span style={{ color: 'var(--neutral-text)' }}>S</span>, dataIndex: ['sizeQty', 'S'], key: 'size_S', width: 90, align: 'right', render: (v: unknown) => Number(v) || 0 },
+              { title: <span style={{ color: 'var(--neutral-text)' }}>M</span>, dataIndex: ['sizeQty', 'M'], key: 'size_M', width: 90, align: 'right', render: (v: unknown) => Number(v) || 0 },
+              { title: <span style={{ color: 'var(--neutral-text)' }}>L</span>, dataIndex: ['sizeQty', 'L'], key: 'size_L', width: 90, align: 'right', render: (v: unknown) => Number(v) || 0 },
+              { title: <span style={{ color: 'var(--neutral-text)' }}>XL</span>, dataIndex: ['sizeQty', 'XL'], key: 'size_XL', width: 90, align: 'right', render: (v: unknown) => Number(v) || 0 },
+              { title: <span style={{ color: 'var(--neutral-text)' }}>XXL</span>, dataIndex: ['sizeQty', 'XXL'], key: 'size_XXL', width: 90, align: 'right', render: (v: unknown) => Number(v) || 0 },
+              { title: <span style={{ color: 'var(--neutral-text)' }}>下单数</span>, dataIndex: 'orderQuantity', key: 'orderQuantity', width: 110, align: 'right', render: (v: unknown) => Number(v) || 0 },
+              { title: <span style={{ color: 'var(--neutral-text)' }}>完成数</span>, dataIndex: 'completedQuantity', key: 'completedQuantity', width: 110, align: 'right', render: (v: unknown) => Number(v) || 0 },
+              { title: <span style={{ color: 'var(--neutral-text)' }}>下单人</span>, dataIndex: 'orderOperatorName', key: 'orderOperatorName', width: 140 },
+              { title: <span style={{ color: 'var(--neutral-text)' }}>下单时间</span>, dataIndex: 'orderTime', key: 'orderTime', width: 170, render: (v: unknown) => formatDateTime(v) },
+              { title: <span style={{ color: 'var(--neutral-text)' }}>完成时间</span>, dataIndex: 'completedTime', key: 'completedTime', width: 170, render: (v: unknown) => formatDateTime(v) },
             ] as Record<string, unknown>}
           />
         </Card>
@@ -1231,7 +1231,7 @@ const OrderManagement: React.FC = () => {
                       <Row gutter={16}>
                         <Col xs={24} sm={12}>
                           <div>
-                            <div style={{ marginBottom: 8, fontSize: '14px', color: 'rgba(0, 0, 0, 0.88)' }}>
+                            <div style={{ marginBottom: 8, fontSize: '14px', color: 'var(--neutral-text)' }}>
                               订单号<span style={{ color: '#ff4d4f', marginLeft: 4 }}>*</span>
                             </div>
                             <Form.Item
@@ -1290,21 +1290,21 @@ const OrderManagement: React.FC = () => {
                         </Col>
                       </Row>
 
-                      <div style={{ border: '1px solid rgba(0,0,0,0.06)', borderRadius: 10, padding: 12 }}>
+                      <div style={{ border: '1px solid var(--table-border-color)', borderRadius: 10, padding: 12 }}>
                         <div style={{ fontWeight: 600, marginBottom: 10 }}>信息</div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '72px 1fr', rowGap: 8, columnGap: 8, color: 'rgba(0,0,0,0.65)' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '72px 1fr', rowGap: 8, columnGap: 8, color: 'var(--neutral-text-light)' }}>
                           <div>款号</div>
-                          <div style={{ color: 'rgba(0,0,0,0.88)' }}>{selectedStyle?.styleNo || '-'}</div>
+                          <div style={{ color: 'var(--neutral-text)' }}>{selectedStyle?.styleNo || '-'}</div>
                           <div>款名</div>
-                          <div style={{ color: 'rgba(0,0,0,0.88)' }}>{selectedStyle?.styleName || '-'}</div>
+                          <div style={{ color: 'var(--neutral-text)' }}>{selectedStyle?.styleName || '-'}</div>
                           <div>颜色</div>
-                          <div style={{ color: 'rgba(0,0,0,0.88)' }}>{styleColorText}</div>
+                          <div style={{ color: 'var(--neutral-text)' }}>{styleColorText}</div>
                           <div>码数</div>
-                          <div style={{ color: 'rgba(0,0,0,0.88)' }}>{styleSizeText}</div>
+                          <div style={{ color: 'var(--neutral-text)' }}>{styleSizeText}</div>
                           <div>下单色</div>
-                          <div style={{ color: 'rgba(0,0,0,0.88)' }}>{orderColorText}</div>
+                          <div style={{ color: 'var(--neutral-text)' }}>{orderColorText}</div>
                           <div>下单码</div>
-                          <div style={{ color: 'rgba(0,0,0,0.88)' }}>{orderSizeText}</div>
+                          <div style={{ color: 'var(--neutral-text)' }}>{orderSizeText}</div>
                         </div>
                       </div>
 
@@ -1318,7 +1318,7 @@ const OrderManagement: React.FC = () => {
                 children: (
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                      <div style={{ color: 'rgba(0,0,0,0.65)' }}>
+                      <div style={{ color: 'var(--neutral-text-light)' }}>
                         总数量：<span style={{ fontWeight: 600 }}>{totalOrderQuantity}</span>
                       </div>
                       <Space>
@@ -1405,7 +1405,7 @@ const OrderManagement: React.FC = () => {
                 label: '面辅料与预算',
                 children: (
                   <div>
-                    <div style={{ marginBottom: 8, color: 'rgba(0,0,0,0.65)' }}>
+                    <div style={{ marginBottom: 8, color: 'var(--neutral-text-light)' }}>
                       预算采购数量 = 匹配到的订单数量 × 单件用量 × (1 + 损耗率%)
                     </div>
                     <Tabs
@@ -1466,7 +1466,7 @@ const OrderManagement: React.FC = () => {
                 children: (
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                      <div style={{ color: 'rgba(0,0,0,0.65)' }}>
+                      <div style={{ color: 'var(--neutral-text-light)' }}>
                         汇总条数：<span style={{ fontWeight: 600 }}>{demandRows.length}</span>
                       </div>
                       <Space>

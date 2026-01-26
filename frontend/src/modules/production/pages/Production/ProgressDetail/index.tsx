@@ -2625,7 +2625,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       render: (v: any) => v ? formatDateTime(v) : '-',
     },
     {
-      title: '出货时间',
+      title: '订单交期',
       key: 'shipTime',
       width: 170,
       render: (_: any, record: ProductionOrder) => formatTime(getOrderShipTime(record)),
@@ -3083,7 +3083,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                   <div>{formatTime(activeOrder.createTime)}</div>
                 </div>
                 <div>
-                  <Text type="secondary">出货时间</Text>
+                  <Text type="secondary">订单交期</Text>
                   <div>{formatTime(getOrderShipTime(activeOrder))}</div>
                 </div>
                 <div>
