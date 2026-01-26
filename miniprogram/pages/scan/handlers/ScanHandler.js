@@ -807,7 +807,7 @@ class ScanHandler {
    * @param {string} workerName - 工人姓名
    * @returns {Promise<Object>} 统计信息
    */
-  async getScanStatistics(workerName) {
+  async getScanStatistics(_workerName) {
     try {
       const today = new Date();
       const startTime = new Date(today.setHours(0, 0, 0, 0)).toISOString();

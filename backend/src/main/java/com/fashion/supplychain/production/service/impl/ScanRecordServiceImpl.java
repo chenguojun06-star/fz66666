@@ -40,6 +40,15 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
                 if (!StringUtils.hasText(operatorName)) {
                         operatorName = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(params, "workerName"));
                 }
+                String bundleNo = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(params, "bundleNo"));
+                Integer bundleNoValue = null;
+                if (StringUtils.hasText(bundleNo)) {
+                        int parsed = ParamUtils.toIntSafe(bundleNo);
+                        if (parsed > 0) {
+                                bundleNoValue = parsed;
+                        }
+                }
+
                 LocalDateTime startTime = ParamUtils.getLocalDateTime(params, "startTime");
                 LocalDateTime endTime = ParamUtils.getLocalDateTime(params, "endTime");
                 if (startTime != null && endTime != null && endTime.isBefore(startTime)) {
@@ -56,6 +65,7 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
                                 .eq(StringUtils.hasText(scanResult), ScanRecord::getScanResult, scanResult)
                                 .eq(StringUtils.hasText(operatorId), ScanRecord::getOperatorId, operatorId)
                                 .like(StringUtils.hasText(operatorName), ScanRecord::getOperatorName, operatorName)
+                                .eq(bundleNoValue != null, ScanRecord::getCuttingBundleNo, bundleNoValue)
                                 .ge(startTime != null, ScanRecord::getScanTime, startTime)
                                 .le(endTime != null, ScanRecord::getScanTime, endTime)
                                 .orderByDesc(ScanRecord::getScanTime);
