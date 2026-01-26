@@ -25,3 +25,10 @@ backend/logs/
 
 # Deployment / platform
 .vercel/
+
+# 临时文件和备份文件
+*.bak
+*~
+*.tmp
+*.swp
+.DS_Store

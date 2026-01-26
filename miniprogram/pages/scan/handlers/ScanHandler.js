@@ -816,7 +816,6 @@ class ScanHandler {
       const res = await this.api.production.myScanHistory({
         page: 1,
         pageSize: 100,
-        workerName: workerName,
         startTime: startTime,
         endTime: endTime,
       });
