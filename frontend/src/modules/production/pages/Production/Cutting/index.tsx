@@ -1,11 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Card, Form, Input, InputNumber, Select, Space, Tag, Typography, Modal } from 'antd';
+import { App, Button, Card, Form, Input, InputNumber, Select, Space, Tag } from 'antd';
 import { EyeOutlined, LoginOutlined, PlusOutlined, RollbackOutlined, EditOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import { useSync } from '@/utils/syncManager';
 import ResizableModal, {
-  ResizableModalFlex,
-  ResizableModalFlexFill,
   useResizableModalTableScrollY,
 } from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -34,7 +32,6 @@ import {
 import './styles.css';
 
 const { Option } = Select;
-const { Text } = Typography;
 
 interface CuttingBundleRow {
   id?: string;
@@ -1280,7 +1277,8 @@ const CuttingManagement: React.FC = () => {
         <StyleAttachmentsButton
           styleId={(activeTask as Record<string, unknown>)?.styleId}
           styleNo={record.styleNo || (activeTask as Record<string, unknown>)?.styleNo}
-          modalTitle={(record.styleNo || (activeTask as Record<string, unknown>)?.styleNo) ? `附件（${record.styleNo || (activeTask as Record<string, unknown>)?.styleNo}）` : '附件'}
+          modalTitle={(record.styleNo || (activeTask as Record<string, unknown>)?.styleNo) ? `放码纸样（${record.styleNo || (activeTask as Record<string, unknown>)?.styleNo}）` : '放码纸样'}
+          onlyGradingPattern={true}
         />
       )
     },
@@ -1339,7 +1337,14 @@ const CuttingManagement: React.FC = () => {
           qualified: '合格',
           unqualified: '不合格',
         };
-        return <Tag color="blue">{s ? (map[s] || '未知') : '已生成'}</Tag>;
+        const colorMap: Record<string, string> = {
+          pending: 'default',
+          received: 'success',
+          bundled: 'default',
+          qualified: 'default',
+          unqualified: 'error',
+        };
+        return <Tag color={colorMap[s] || 'default'}>{s ? (map[s] || '未知') : '已生成'}</Tag>;
       },
     },
   ];
@@ -1449,7 +1454,12 @@ const CuttingManagement: React.FC = () => {
                     key: 'attachments',
                     width: 100,
                     render: (_: any, record: any) => (
-                      <StyleAttachmentsButton styleId={record.styleId} styleNo={record.styleNo} modalTitle={record.styleNo ? `附件（${record.styleNo}）` : '附件'} />
+                      <StyleAttachmentsButton
+                        styleId={record.styleId}
+                        styleNo={record.styleNo}
+                        modalTitle={record.styleNo ? `放码纸样（${record.styleNo}）` : '放码纸样'}
+                        onlyGradingPattern={true}
+                      />
                     )
                   },
                   { title: '数量', dataIndex: 'orderQuantity', key: 'orderQuantity', width: 90, align: 'right' as const },
@@ -1928,7 +1938,7 @@ const CuttingManagement: React.FC = () => {
             initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
             scaleWithViewport
           >
-            <ResizableModalFlex style={{ gap: 12 }}>
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0, gap: 12 }}>
               <ModalHeaderCard isMobile={isMobile}>
                 <ModalSideLayout
                   left={
@@ -2194,7 +2204,7 @@ const CuttingManagement: React.FC = () => {
                 />
               </Card>
 
-              <ResizableModalFlexFill ref={sheetPreviewTableWrapRef}>
+              <div ref={sheetPreviewTableWrapRef} style={{ flex: '1 1 auto', minHeight: 0 }}>
                 <ResizableTable<CuttingBundleRow>
                   storageKey="cutting-sheet-preview-table"
                   columns={[
@@ -2211,8 +2221,8 @@ const CuttingManagement: React.FC = () => {
                   pagination={false as Record<string, unknown>}
                   scroll={{ x: 'max-content', y: sheetPreviewTableScrollY }}
                 />
-              </ResizableModalFlexFill>
-            </ResizableModalFlex>
+              </div>
+            </div>
           </ResizableModal>
 
           <div

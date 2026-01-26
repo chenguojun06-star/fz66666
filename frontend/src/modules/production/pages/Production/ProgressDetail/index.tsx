@@ -2638,8 +2638,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       render: (value: ProductionOrder['status']) => {
         const map: unknown = {
           pending: { color: 'default', label: '待开始' },
-          production: { color: 'processing', label: '生产中' },
-          completed: { color: 'success', label: '已完成' },
+          production: { color: 'success', label: '生产中' },
+          completed: { color: 'default', label: '已完成' },
           delayed: { color: 'warning', label: '延期' },
         };
         const t = map[value] || { color: 'default', label: value };
@@ -3101,8 +3101,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     {(() => {
                       const map: unknown = {
                         pending: { color: 'default', label: '待开始' },
-                        production: { color: 'processing', label: '生产中' },
-                        completed: { color: 'success', label: '已完成' },
+                        production: { color: 'success', label: '生产中' },
+                        completed: { color: 'default', label: '已完成' },
                         delayed: { color: 'warning', label: '延期' },
                       };
                       const value: unknown = (activeOrder as Record<string, unknown>).status;
@@ -3134,9 +3134,9 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     <div className="mpb-nodeHeaderActions" style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-start', width: '100%' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', width: '100%' }}>
                         {nodeWorkflowLocked ? (
-                          <Tag color="green">已锁定</Tag>
+                          <Tag color="default">已锁定</Tag>
                         ) : (
-                          <Tag color={nodeWorkflowDirty ? 'gold' : 'processing'}>{nodeWorkflowDirty ? '可编辑（未锁定）' : '可编辑'}</Tag>
+                          <Tag color={nodeWorkflowDirty ? 'warning' : 'default'}>{nodeWorkflowDirty ? '可编辑（未锁定）' : '可编辑'}</Tag>
                         )}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <Text type="secondary" style={{ fontSize: 13 }}>进度模板：</Text>
@@ -3379,7 +3379,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     <Space size={8}>
                       <Text type="secondary">共 {cuttingBundles.length} 扎</Text>
                       <Text type="secondary">合计 {bundleSummary.totalQty}</Text>
-                      {matchedBundle ? <Tag color="processing">已匹配：{matchedBundle.bundleNo}</Tag> : null}
+                      {matchedBundle ? <Tag color="success">已匹配：{matchedBundle.bundleNo}</Tag> : null}
                     </Space>
                   </div>
                 ),

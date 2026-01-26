@@ -1343,7 +1343,7 @@ const TemplateCenter: React.FC = () => {
       dataIndex: 'locked',
       key: 'locked',
       width: 110,
-      render: (_: unknown, row) => (isLocked(row) ? <Tag color="green">已锁定</Tag> : <Tag color="gold">可编辑</Tag>),
+      render: (_: unknown, row) => (isLocked(row) ? <Tag color="default">已锁定</Tag> : <Tag color="success">可编辑</Tag>),
     },
     {
       title: '操作',

@@ -12,9 +12,9 @@ import Register from './pages/Register';
 import { StyleInfo, OrderManagement, DataCenter, TemplateCenter } from './modules/basic';
 import {
   MaterialReconciliation,
-  ShipmentReconciliationList,
   PaymentApproval,
   PayrollOperatorSummary,
+  FinanceCenter,
 } from './modules/finance';
 import { Dashboard } from './modules/dashboard';
 import { UserList, UserApproval, RoleList, FactoryList, LoginLogList, Profile } from './modules/system';
@@ -200,9 +200,9 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.materialPurchaseDetail} element={<Suspense fallback={<Spin />}><MaterialPurchaseDetail /></Suspense>} />
           <Route path={paths.orderFlow} element={<Suspense fallback={<Spin />}><OrderFlow /></Suspense>} />
           <Route path={paths.materialReconciliation} element={<Suspense fallback={<Spin />}><MaterialReconciliation /></Suspense>} />
-          <Route path={paths.shipmentReconciliation} element={<Suspense fallback={<Spin />}><ShipmentReconciliationList /></Suspense>} />
           <Route path={paths.paymentApproval} element={<Suspense fallback={<Spin />}><PaymentApproval /></Suspense>} />
           <Route path={paths.payrollOperatorSummary} element={<Suspense fallback={<Spin />}><PayrollOperatorSummary /></Suspense>} />
+          <Route path={paths.financeCenter} element={<Suspense fallback={<Spin />}><FinanceCenter /></Suspense>} />
           <Route path={paths.user} element={<Suspense fallback={<Spin />}><UserList /></Suspense>} />
           <Route path={paths.userApproval} element={<Suspense fallback={<Spin />}><UserApproval /></Suspense>} />
           <Route path={paths.role} element={<Suspense fallback={<Spin />}><RoleList /></Suspense>} />

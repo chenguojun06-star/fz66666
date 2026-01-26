@@ -3,6 +3,12 @@
  * 统一管理订单、质检等状态文本转换
  */
 
+const COLOR_DEFAULT = 'var(--color-text-disabled)';
+const COLOR_SUCCESS = 'var(--color-success)';
+const COLOR_WARNING = 'var(--color-warning)';
+const COLOR_ERROR = 'var(--color-error)';
+const COLOR_FALLBACK = 'var(--color-text-secondary)';
+
 /**
  * 将订单状态码转换为中文文本
  * @param {string} status - 状态码
@@ -69,16 +75,16 @@ function scanResultText(status) {
 function getStatusColor(status) {
   const s = (status || '').toString().trim().toLowerCase();
   const colorMap = {
-    pending: '#faad14', // 橙色 - 待生产
-    production: '#1890ff', // 蓝色 - 生产中
-    completed: '#52c41a', // 绿色 - 已完成
-    delayed: '#f5222d', // 红色 - 已逾期
-    cancelled: '#8c8c8c', // 灰色 - 已取消
-    canceled: '#8c8c8c', // 灰色 - 已取消
-    paused: '#d9d9d9', // 浅灰 - 已暂停
-    returned: '#ff7a45', // 橙红 - 已退回
+    pending: COLOR_DEFAULT,
+    production: COLOR_SUCCESS,
+    completed: COLOR_DEFAULT,
+    delayed: COLOR_WARNING,
+    cancelled: COLOR_ERROR,
+    canceled: COLOR_ERROR,
+    paused: COLOR_DEFAULT,
+    returned: COLOR_ERROR,
   };
-  return colorMap[s] || '#000000';
+  return colorMap[s] || COLOR_FALLBACK;
 }
 
 /**
@@ -89,11 +95,11 @@ function getStatusColor(status) {
 function getQualityColor(qualityStatus) {
   const s = (qualityStatus || '').toString().trim().toLowerCase();
   const colorMap = {
-    qualified: '#52c41a', // 绿色 - 合格
-    unqualified: '#f5222d', // 红色 - 次品待返修
-    repaired: '#1890ff', // 蓝色 - 返修完成
+    qualified: COLOR_SUCCESS,
+    unqualified: COLOR_ERROR,
+    repaired: COLOR_DEFAULT,
   };
-  return colorMap[s] || '#000000';
+  return colorMap[s] || COLOR_FALLBACK;
 }
 
 module.exports = {

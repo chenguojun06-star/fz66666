@@ -19,43 +19,6 @@ type ContentPadding =
     left: number;
   };
 
-export const ResizableModalFlex = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ style, ...rest }, ref) => {
-    return (
-      <div
-        {...rest}
-        ref={ref}
-        style={{
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          minHeight: 0,
-          ...(style || {}),
-        }}
-      />
-    );
-  }
-);
-
-export const ResizableModalFlexFill = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ style, ...rest }, ref) => {
-    return (
-      <div
-        {...rest}
-        ref={ref}
-        style={{
-          flex: '1 1 auto',
-          minHeight: 0,
-          ...(style || {}),
-        }}
-      />
-    );
-  }
-);
-
-ResizableModalFlex.displayName = 'ResizableModalFlex';
-ResizableModalFlexFill.displayName = 'ResizableModalFlexFill';
-
 export const useResizableModalTableScrollY = <T extends HTMLElement>(args: {
   open: boolean;
   ref: React.RefObject<T | null>;
@@ -140,23 +103,7 @@ export type ResizableModalProps = ModalProps & {
   minHeight?: number;
   /** 初始高度 */
   initialHeight?: number;
-  /** 是否自动调整字体大小，默认true */
-  autoFontSize?: boolean;
-  /** 最小字体大小，默认12px */
-  minFontSize?: number;
-  /** 最大字体大小，默认16px */
-  maxFontSize?: number;
-  /** 表格密度，自动根据宽度调整 */
-  tableDensity?: 'auto' | 'loose' | 'default' | 'compact' | 'dense';
-  /** 表格单元格水平内边距 */
-  tablePaddingX?: number;
-  /** 表格单元格垂直内边距 */
-  tablePaddingY?: number;
-  /** 内容水平偏移量 */
-  contentShiftX?: number;
   contentPadding?: ContentPadding;
-  /** 是否随视口缩放，默认false */
-  scaleWithViewport?: boolean;
 };
 
 /**
@@ -173,15 +120,7 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
   minHeight = 320,
   initialHeight,
   centered: centeredProp,
-  autoFontSize = true,
-  minFontSize = 12,
-  maxFontSize = 16,
-  tableDensity = 'auto',
-  tablePaddingX,
-  tablePaddingY,
-  contentShiftX = 0,
   contentPadding,
-  scaleWithViewport = true,
   footer,
   title,
   ...rest
@@ -220,37 +159,8 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
   const maxWidth = typeof window !== 'undefined' ? Math.round(window.innerWidth * 0.98) : 1400;
   const maxHeight = typeof window !== 'undefined' ? Math.round(window.innerHeight * 0.95) : 900;
 
-  // 自动计算字体大小
-  const fontSize = React.useMemo(() => {
-    if (!autoFontSize) return undefined;
-    const min = minFontSize;
-    const max = maxFontSize;
-    const t = (size.width - 640) / (1200 - 640);
-    const next = min + t * (max - min);
-    return clamp(next, min, max);
-  }, [autoFontSize, maxFontSize, minFontSize, size.width]);
-
   // 是否居中显示
   const centered = centeredProp ?? true;
-
-  // 解析表格内边距
-  const resolvedTablePadding = React.useMemo(() => {
-    if (typeof tablePaddingX === 'number' || typeof tablePaddingY === 'number') {
-      return {
-        x: typeof tablePaddingX === 'number' ? tablePaddingX : 6,
-        y: typeof tablePaddingY === 'number' ? tablePaddingY : 4,
-      };
-    }
-
-    if (tableDensity === 'dense') return { x: 4, y: 2 };
-    if (tableDensity === 'compact') return { x: 6, y: 4 };
-    if (tableDensity === 'default') return { x: 8, y: 6 };
-    if (tableDensity === 'loose') return { x: 12, y: 8 };
-
-    if (size.width < 820) return { x: 4, y: 2 };
-    if (size.width < 1100) return { x: 6, y: 4 };
-    return { x: 8, y: 6 };
-  }, [size.width, tableDensity, tablePaddingX, tablePaddingY]);
 
   // 动态生成模态框样式
   const modalCss = React.useMemo(() => {
@@ -269,28 +179,15 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
       return { top: 16, right: 24, bottom: 16, left: 24 };
     })();
 
-    const paddingLeft = resolvedPadding.left + contentShiftX;
-    const paddingRight = resolvedPadding.right;
-    const paddingTop = resolvedPadding.top;
-    const paddingBottom = resolvedPadding.bottom;
-    const tablePadding = `${resolvedTablePadding.y}px ${resolvedTablePadding.x}px`;
-
     return (
       '[data-resizable-modal-root] .ant-modal-content{height:100%;display:flex;flex-direction:column;overflow:hidden;}' +
       '[data-resizable-modal-root] .ant-modal-header,[data-resizable-modal-root] .ant-modal-footer{flex:0 0 auto;}' +
       '[data-resizable-modal-root] .ant-modal-body{flex:1 1 auto;min-height:0;overflow:auto;padding:' +
-      `${paddingTop}px ${paddingRight}px ${paddingBottom}px ${paddingLeft}px` +
+      `${resolvedPadding.top}px ${resolvedPadding.right}px ${resolvedPadding.bottom}px ${resolvedPadding.left}px` +
       '!important;}' +
-      '[data-resizable-modal-root] .ant-form-item{margin-bottom:10px;}' +
-      '[data-resizable-modal-root] .ant-table{font-size:inherit;}' +
-      '[data-resizable-modal-root] .ant-table-cell{line-height:inherit;}' +
-      '[data-resizable-modal-root] .ant-table-thead > tr > th,[data-resizable-modal-root] .ant-table-tbody > tr > td{padding:' +
-      tablePadding +
-      '!important;}' +
-      '[data-resizable-modal-root] .ant-table-wrapper .ant-table{margin:0;}' +
-      '[data-resizable-modal-root] .ant-table-thead > tr > th{font-weight:600;}'
+      '[data-resizable-modal-root] .ant-form-item{margin-bottom:10px;}'
     );
-  }, [contentPadding, contentShiftX, resolvedTablePadding.x, resolvedTablePadding.y]);
+  }, [contentPadding]);
 
   const rafIdRef = React.useRef<number | null>(null);
 
@@ -328,57 +225,6 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
       height: clamp(initHeight, safeMinHeight, viewportMaxHeight),
     });
   }, [initialHeight, maxHeight, maxWidth, minHeight, minWidth, open, width]);
-
-  // 监听视口变化，自动缩放模态框
-  React.useEffect(() => {
-    if (!open) return;
-    if (!scaleWithViewport) return;
-    if (typeof window === 'undefined') return;
-
-    const viewportRef = { w: window.innerWidth, h: window.innerHeight };
-    let resizeTimer: ReturnType<typeof setTimeout> | null = null;
-
-    const onResize = () => {
-      // 防抖优化性能
-      if (resizeTimer) clearTimeout(resizeTimer);
-
-      resizeTimer = setTimeout(() => {
-        const next = { w: window.innerWidth, h: window.innerHeight };
-        const scaleW = viewportRef.w > 0 ? next.w / viewportRef.w : 1;
-        const scaleH = viewportRef.h > 0 ? next.h / viewportRef.h : 1;
-
-        // 只在变化超过5%时才缩放，避免微小抖动
-        const shouldScale = Math.abs(scaleW - 1) > 0.05 || Math.abs(scaleH - 1) > 0.05;
-
-        if (shouldScale) {
-          viewportRef.w = next.w;
-          viewportRef.h = next.h;
-
-          setSize((prev) => {
-            const viewportMaxWidth = Math.round(next.w * 0.98);
-            const viewportMaxHeight = Math.round(next.h * 0.95);
-            const safeMinWidth = Math.min(minWidth, viewportMaxWidth);
-            const safeMinHeight = Math.min(minHeight, viewportMaxHeight);
-
-            // 智能缩放：保持弹窗占视口的相对比例
-            const newWidth = clamp(prev.width * scaleW, safeMinWidth, viewportMaxWidth);
-            const newHeight = clamp(prev.height * scaleH, safeMinHeight, viewportMaxHeight);
-
-            return {
-              width: Math.round(newWidth),
-              height: Math.round(newHeight),
-            };
-          });
-        }
-      }, 150); // 150 毫秒防抖
-    };
-
-    window.addEventListener('resize', onResize);
-    return () => {
-      window.removeEventListener('resize', onResize);
-      if (resizeTimer) clearTimeout(resizeTimer);
-    };
-  }, [maxHeight, maxWidth, minHeight, minWidth, open, scaleWithViewport]);
 
   // 组件卸载时清理
   React.useEffect(() => {
@@ -418,7 +264,6 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
               position: 'relative',
               width: size.width,
               height: size.height,
-              fontSize,
               lineHeight: 1.4,
             }}
           >
@@ -428,7 +273,6 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
                 ...element.props.style,
                 width: size.width,
                 height: size.height,
-                fontSize,
                 lineHeight: 1.4,
               },
             })}

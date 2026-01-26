@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Avatar, Button, Card, Form, Input, Select, Space, Spin, Upload, message } from 'antd';
+import { App, Avatar, Button, Card, Form, Input, Select, Space, Spin, Upload } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import api from '@/utils/api';
@@ -18,6 +18,7 @@ type ProfileMe = {
 
 const Profile: React.FC = () => {
     const { user, updateUser } = useAuth();
+    const { message } = App.useApp();
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [avatarUploading, setAvatarUploading] = useState(false);
@@ -222,7 +223,7 @@ const Profile: React.FC = () => {
                                 onChange={onThemeChange}
                                 options={[
                                     { value: 'default', label: '默认主题（浅色）' },
-                                    { value: 'blue', label: '雾霾蓝主题（浅色）' },
+                                    { value: 'lightblue', label: '浅蓝主题（浅色）' },
                                     { value: 'white', label: '纯白主题（浅色）' },
                                     { value: 'dark', label: '深色主题（雾黑）' },
                                 ]}

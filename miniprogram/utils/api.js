@@ -36,9 +36,20 @@ const production = {
   listOrders(params) {
     return ok('/api/production/order/list', 'GET', params || {});
   },
-  orderDetail(id) {
-    const oid = String(id || '').trim();
-    return ok(`/api/production/order/detail/${encodeURIComponent(oid)}`, 'GET', {});
+  /**
+   * 查询订单详情（智能识别UUID或订单号）
+   * @param {string} idOrOrderNo - 订单ID（UUID）或订单号
+   * @returns {Promise} 订单详情
+   */
+  orderDetail(idOrOrderNo) {
+    const value = String(idOrOrderNo || '').trim();
+    // UUID格式检测：32位hex或标准UUID格式
+    const uuidPattern =
+      /^[a-f0-9]{32}$|^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
+    const endpoint = uuidPattern.test(value)
+      ? `/api/production/order/detail/${encodeURIComponent(value)}`
+      : `/api/production/order/by-order-no/${encodeURIComponent(value)}`;
+    return ok(endpoint, 'GET', {});
   },
   // 通过订单号查询订单详情（用于扫码场景）
   orderDetailByOrderNo(orderNo) {

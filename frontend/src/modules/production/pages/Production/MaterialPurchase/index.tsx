@@ -1065,10 +1065,10 @@ const MaterialPurchase: React.FC = () => {
 
   const getStatusConfig = (status: MaterialPurchaseType['status']) => {
     const statusMap: Record<MaterialPurchaseType['status'], { text: string; color: string }> = {
-      pending: { text: '待采购', color: 'blue' },
-      received: { text: '已领取', color: 'gold' },
-      partial: { text: '部分到货', color: 'orange' },
-      completed: { text: '全部到货', color: 'success' },
+      pending: { text: '待采购', color: 'default' },
+      received: { text: '已领取', color: 'warning' },
+      partial: { text: '部分到货', color: 'warning' },
+      completed: { text: '全部到货', color: 'default' },
       cancelled: { text: '已取消', color: 'error' }
     };
     return statusMap[status] || { text: '未知', color: 'default' };
@@ -1569,8 +1569,8 @@ const MaterialPurchase: React.FC = () => {
       width: 100,
       render: (v: unknown) => {
         const st = String(v || 'pending').trim().toLowerCase();
-        if (st === 'completed') return <Tag color="green">已完成</Tag>;
-        return <Tag color="orange">待完成</Tag>;
+        if (st === 'completed') return <Tag color="default">已完成</Tag>;
+        return <Tag color="warning">待完成</Tag>;
       },
     },
 
@@ -2195,7 +2195,12 @@ const MaterialPurchase: React.FC = () => {
                     key: 'attachments',
                     width: 100,
                     render: (_: any, record: any) => (
-                      <StyleAttachmentsButton styleId={record.styleId} styleNo={record.styleNo} modalTitle={record.styleNo ? `附件（${record.styleNo}）` : '附件'} />
+                      <StyleAttachmentsButton
+                        styleId={record.styleId}
+                        styleNo={record.styleNo}
+                        modalTitle={record.styleNo ? `放码纸样（${record.styleNo}）` : '放码纸样'}
+                        onlyGradingPattern={true}
+                      />
                     )
                   },
                   {

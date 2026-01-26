@@ -10,7 +10,9 @@
 function extractTextFromObject(obj, fallback) {
   // 尝试从常见错误字段提取
   const text = obj.errMsg || obj.message || obj.msg || obj.error;
-  if (text) {return String(text);}
+  if (text) {
+    return String(text);
+  }
 
   // 尝试 JSON 序列化
   try {

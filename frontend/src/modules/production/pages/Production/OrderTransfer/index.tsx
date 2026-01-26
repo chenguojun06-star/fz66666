@@ -135,9 +135,9 @@ const OrderTransferPage: React.FC = () => {
 
   const getStatusTag = (status: string) => {
     const statusMap: Record<string, { color: string; text: string }> = {
-      pending: { color: 'orange', text: '待处理' },
-      accepted: { color: 'green', text: '已接受' },
-      rejected: { color: 'red', text: '已拒绝' },
+      pending: { color: 'default', text: '待处理' },
+      accepted: { color: 'success', text: '已接受' },
+      rejected: { color: 'error', text: '已拒绝' },
     };
     const config = statusMap[status] || { color: 'default', text: status };
     return <Tag color={config.color}>{config.text}</Tag>;

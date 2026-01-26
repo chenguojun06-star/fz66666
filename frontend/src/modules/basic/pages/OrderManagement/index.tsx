@@ -1059,7 +1059,8 @@ const OrderManagement: React.FC = () => {
         <StyleAttachmentsButton
           styleId={(record as Record<string, unknown>).id}
           styleNo={record.styleNo}
-          modalTitle={`附件（${record.styleNo}）`}
+          modalTitle={`放码纸样（${record.styleNo}）`}
+          onlyGradingPattern={true}
         />
       )
     },
@@ -1220,7 +1221,8 @@ const OrderManagement: React.FC = () => {
                           styleId={selectedStyle?.id}
                           styleNo={selectedStyle?.styleNo}
                           buttonText="查看附件"
-                          modalTitle={selectedStyle?.styleNo ? `附件（${selectedStyle.styleNo}）` : '附件'}
+                          modalTitle={selectedStyle?.styleNo ? `放码纸样（${selectedStyle.styleNo}）` : '放码纸样'}
+                          onlyGradingPattern={true}
                         />
                       </div>
                     </div>

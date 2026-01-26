@@ -152,7 +152,7 @@ Page({
     } finally {
       this.setData({ loadingStats: false });
     }
-    },
+  },
 
   // 辅助函数：检查记录是否有效（只排除失败记录）
   _isValidHistoryRecord(item) {
@@ -198,9 +198,7 @@ Page({
     const merged = this._mergeHistoryList(history, records, reset);
 
     const app = getApp();
-    const hasMore = app && typeof app.hasMoreByPage === 'function'
-      ? app.hasMoreByPage(page)
-      : true;
+    const hasMore = app && typeof app.hasMoreByPage === 'function' ? app.hasMoreByPage(page) : true;
 
     return {
       ...history,
@@ -212,7 +210,9 @@ Page({
   },
 
   async loadHistory(reset) {
-    if (this.data.loadingHistory) {return;}
+    if (this.data.loadingHistory) {
+      return;
+    }
 
     const history = {
       page: 1,
@@ -222,7 +222,9 @@ Page({
       ...(this.data.history || {}),
     };
 
-    if (!reset && history.hasMore === false) {return;}
+    if (!reset && history.hasMore === false) {
+      return;
+    }
 
     const { nextPage, pageSize } = this._getPageConfig(history, reset);
 
@@ -233,7 +235,9 @@ Page({
       const historyData = this._buildHistoryData(page, history, reset, nextPage, pageSize);
       this.setData({ history: historyData });
     } catch (e) {
-      if (e && e.type === 'auth') {return;}
+      if (e && e.type === 'auth') {
+        return;
+      }
 
       const app = getApp();
       if (app && typeof app.toastError === 'function') {
@@ -243,7 +247,6 @@ Page({
       this.setData({ loadingHistory: false });
     }
   },
-
 
   loadMoreHistory() {
     this.loadHistory(false);

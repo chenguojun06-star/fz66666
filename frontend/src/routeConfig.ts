@@ -45,9 +45,9 @@ export const paths = {
   orderTransfer: '/production/transfer',
 
   materialReconciliation: '/finance/material-reconciliation',
-  shipmentReconciliation: '/finance/shipment-reconciliation',
   paymentApproval: '/finance/payment-approval',
   payrollOperatorSummary: '/finance/payroll-operator-summary',
+  financeCenter: '/finance/center',
 
   profile: '/system/profile',
   user: '/system/user',
@@ -72,8 +72,8 @@ export const permissionCodes = {
   orderTransfer: 'MENU_ORDER_TRANSFER',
 
   materialRecon: 'MENU_MATERIAL_RECON',
-  shipmentRecon: 'MENU_SHIPMENT_RECON',
   paymentApproval: 'MENU_PAYMENT_APPROVAL',
+  financeCenter: 'MENU_FINANCE_CENTER',
 
   user: 'MENU_USER',
   userApproval: 'MENU_USER_APPROVAL',
@@ -132,9 +132,9 @@ export const menuConfig: MenuSection[] = [
     icon: React.createElement(AccountBookOutlined),
     items: [
       { label: '物料对账', path: paths.materialReconciliation, icon: React.createElement(AccountBookOutlined) },
-      { label: '成品结算', path: paths.shipmentReconciliation, icon: React.createElement(AccountBookOutlined) },
       { label: '审批付款', path: paths.paymentApproval, icon: React.createElement(AccountBookOutlined) },
-      { label: '员工工序', path: paths.payrollOperatorSummary, icon: React.createElement(AccountBookOutlined) },
+      { label: '工资结算', path: paths.payrollOperatorSummary, icon: React.createElement(AccountBookOutlined) },
+      { label: '订单结算', path: paths.financeCenter, icon: React.createElement(AccountBookOutlined) },
     ],
   },
   {
@@ -165,8 +165,8 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.warehousing]: permissionCodes.warehousing,
 
   [paths.materialReconciliation]: permissionCodes.materialRecon,
-  [paths.shipmentReconciliation]: permissionCodes.shipmentRecon,
   [paths.paymentApproval]: permissionCodes.paymentApproval,
+  [paths.financeCenter]: permissionCodes.financeCenter,
   [paths.user]: permissionCodes.user,
   [paths.userApproval]: permissionCodes.userApproval,
   [paths.role]: permissionCodes.role,

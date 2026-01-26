@@ -20,6 +20,8 @@ import com.fashion.supplychain.production.service.ProductOutstockService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
+import com.fashion.supplychain.style.entity.StyleQuotation;
+import com.fashion.supplychain.style.mapper.StyleQuotationMapper;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -47,6 +49,7 @@ public class ProductionOrderFlowOrchestrationService {
         private final List<ProductOutstock> outstocks;
         private final List<ShipmentReconciliation> shipmentReconciliations;
         private final List<MaterialReconciliation> materialReconciliations;
+        private final StyleQuotation styleQuotation;
 
         public OrderFlowResponse(
                 ProductionOrder order,
@@ -58,7 +61,8 @@ public class ProductionOrderFlowOrchestrationService {
                 List<ProductWarehousing> warehousings,
                 List<ProductOutstock> outstocks,
                 List<ShipmentReconciliation> shipmentReconciliations,
-                List<MaterialReconciliation> materialReconciliations) {
+                List<MaterialReconciliation> materialReconciliations,
+                StyleQuotation styleQuotation) {
             this.order = order;
             this.stages = stages;
             this.records = records;
@@ -69,6 +73,7 @@ public class ProductionOrderFlowOrchestrationService {
             this.outstocks = outstocks;
             this.shipmentReconciliations = shipmentReconciliations;
             this.materialReconciliations = materialReconciliations;
+            this.styleQuotation = styleQuotation;
         }
 
         public ProductionOrder getOrder() {
@@ -110,6 +115,10 @@ public class ProductionOrderFlowOrchestrationService {
         public List<MaterialReconciliation> getMaterialReconciliations() {
             return materialReconciliations;
         }
+
+        public StyleQuotation getStyleQuotation() {
+            return styleQuotation;
+        }
     }
 
     @Autowired
@@ -141,6 +150,9 @@ public class ProductionOrderFlowOrchestrationService {
 
     @Autowired
     private TemplateLibraryService templateLibraryService;
+
+    @Autowired
+    private StyleQuotationMapper styleQuotationMapper;
 
     public OrderFlowResponse getOrderFlow(String orderId) {
         String oid = StringUtils.hasText(orderId) ? orderId.trim() : null;
@@ -197,6 +209,19 @@ public class ProductionOrderFlowOrchestrationService {
                 .orderByDesc(MaterialReconciliation::getCreateTime)
                 .list();
 
+        // 查询款号报价单
+        StyleQuotation styleQuotation = null;
+        if (order.getStyleId() != null) {
+            try {
+                styleQuotation = styleQuotationMapper.selectOne(
+                    new LambdaQueryWrapper<StyleQuotation>()
+                        .eq(StyleQuotation::getStyleId, Long.valueOf(order.getStyleId()))
+                );
+            } catch (Exception e) {
+                log.warn("Failed to load style quotation: orderId={}, styleId={}", oid, order.getStyleId(), e);
+            }
+        }
+
         return new OrderFlowResponse(
                 order,
                 stages,
@@ -207,7 +232,8 @@ public class ProductionOrderFlowOrchestrationService {
                 warehousings,
                 outstocks,
                 shipmentReconciliations,
-                materialReconciliations);
+                materialReconciliations,
+                styleQuotation);
     }
 
     private List<Map<String, Object>> buildProductionStageFlow(ProductionOrder order, List<ScanRecord> records) {

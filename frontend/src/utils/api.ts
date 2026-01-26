@@ -258,14 +258,18 @@ export const isOrderFrozenByStatusOrStock = (source?: OrderFrozenSource | null):
 };
 
 export const fetchProductionOrderDetail = async (
-  orderNo: unknown,
+  orderNoOrId: unknown,
   opts?: { acceptAnyData?: boolean; silent404?: boolean }
 ): Promise<Record<string, unknown> | null> => {
-  const oid = String(orderNo || '').trim();
+  const oid = String(orderNoOrId || '').trim();
   if (!oid) return null;
 
   try {
-    const endpoint = `/production/order/by-order-no/${encodeURIComponent(oid)}`;
+    // 智能判断：如果是32位UUID（无连字符）或带连字符的UUID格式，用ID查询；否则用订单号查询
+    const isUUID = /^[a-f0-9]{32}$|^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(oid);
+    const endpoint = isUUID
+      ? `/production/order/detail/${encodeURIComponent(oid)}`
+      : `/production/order/by-order-no/${encodeURIComponent(oid)}`;
     const res = await api.get<ApiResponse<Record<string, unknown>>>(endpoint);
     if (isApiSuccess(res) && res.data) return res.data;
     if (opts?.acceptAnyData && typeof res === 'object' && res !== null && 'data' in res) {
@@ -296,12 +300,18 @@ export const fetchProductionOrderDetail = async (
 
 export type ProductionOrderFrozenRule = 'status' | 'statusOrStock';
 
+/**
+ * 预加载订单详情并缓存其冻结状态
+ * @param orderNoOrId 订单号(如 PO20260125003)或订单ID(UUID)，优先使用订单号
+ * @param cache 缓存Map
+ * @param opts 选项
+ */
 export const primeProductionOrderFrozenCache = async (
-  orderId: unknown,
+  orderNoOrId: unknown,
   cache: Map<string, boolean>,
   opts: { rule: ProductionOrderFrozenRule; acceptAnyData?: boolean; onCacheUpdated?: () => void }
 ): Promise<boolean | undefined> => {
-  const oid = String(orderId || '').trim();
+  const oid = String(orderNoOrId || '').trim();
   if (!oid) return undefined;
   const cached = cache.get(oid);
   if (cached !== undefined) return cached;

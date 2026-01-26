@@ -3,6 +3,23 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 优化所有文本元素的渲染 */
+body,
+button,
+input,
+select,
+textarea,
+.ant-btn,
+.ant-input,
+.ant-select,
+.ant-table,
+.ant-modal {
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'kern' 1;
 }
 
 body {
@@ -11,6 +28,8 @@ body {
     'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Arial Unicode MS', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'kern' 1;
+  text-rendering: optimizeLegibility;
   background-color: var(--app-bg);
   color: var(--neutral-text);
   font-size: 14px;
@@ -84,17 +103,17 @@ body {
   --font-size-lg: 16px;
   --font-size-xl: 18px;
   --font-size-xxl: 20px;
-  
+
   /* 字体粗细 */
   --font-weight-normal: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
-  
+
   /* 表格专用颜色 */
   --table-border-color: rgba(0, 0, 0, 0.06);
   --table-border-light: rgba(0, 0, 0, 0.04);
-  
+
   /* 边框 */
   --border-width: 1px;
   --border-radius: 4px;
@@ -121,6 +140,83 @@ body {
   --user-avatar-gradient-end: #0b2d5c;
 }
 
+/* 浅蓝色主题（与小程序统一） */
+:root[data-theme="lightblue"] {
+  /* 主色调 - 浅蓝渐变 */
+  --primary-color: #3b82f6;
+  --color-primary-light: rgba(224, 242, 254, 0.8);
+  --color-primary-lighter: rgba(224, 242, 254, 0.3);
+  --gradient-primary: linear-gradient(135deg, #e0f2fe 0%, #e0e7ff 100%);
+  --gradient-primary-alpha: linear-gradient(135deg, rgba(224, 242, 254, 0.9) 0%, rgba(224, 231, 255, 0.7) 100%);
+
+  /* 中性色 */
+  --neutral-white: #ffffff;
+  --neutral-light: rgba(224, 242, 254, 0.5);
+  --neutral-medium: rgba(224, 242, 254, 0.3);
+  --neutral-dark: rgba(147, 197, 253, 0.5);
+  --neutral-text: #111827;
+  --neutral-text-light: #6b7280;
+  --neutral-text-lighter: #9ca3af;
+
+  /* 背景色 */
+  --app-bg: #f7f8fa;
+  --color-bg-page: #f7f8fa;
+  --color-bg-card: #ffffff;
+  --color-bg-gray: #f3f4f6;
+  --color-bg-light: #f9fafb;
+
+  /* 表格 */
+  --table-header-bg: rgba(224, 242, 254, 0.5);
+  --table-row-stripe-bg: rgba(224, 242, 254, 0.1);
+  --table-row-hover-bg: rgba(224, 242, 254, 0.3);
+  --table-border-color: rgba(147, 197, 253, 0.3);
+
+  /* 边框 */
+  --color-border: rgba(147, 197, 253, 0.5);
+  --color-border-light: rgba(224, 242, 254, 0.6);
+  --color-border-blue: rgba(147, 197, 253, 0.5);
+
+  /* 侧边栏 - 浅蓝渐变（与小程序统一） */
+  --sidebar-bg-start: #e0f2fe;
+  --sidebar-bg-end: #dbeafe;
+  --sidebar-text: #000000;
+  --sidebar-text-strong: #000000;
+  --sidebar-text-muted: rgba(0, 0, 0, 0.7);
+  --sidebar-text-disabled: rgba(0, 0, 0, 0.4);
+  --sidebar-item-bg-hover: rgba(59, 130, 246, 0.08);
+  --sidebar-item-border-hover: rgba(59, 130, 246, 0.15);
+  --sidebar-item-bg-active: rgba(59, 130, 246, 0.15);
+  --sidebar-item-border-active: rgba(59, 130, 246, 0.25);
+  --sidebar-icon-bg: rgba(59, 130, 246, 0.1);
+  --sidebar-icon-border: rgba(59, 130, 246, 0.2);
+  --sidebar-section-active-bg: rgba(59, 130, 246, 0.12);
+  --sidebar-section-active-border: rgba(59, 130, 246, 0.22);
+
+  /* 头部用户区域 */
+  --header-user-border: rgba(147, 197, 253, 0.3);
+  --header-user-bg: rgba(255, 255, 255, 0.7);
+  --header-user-bg-hover: rgba(255, 255, 255, 0.9);
+  --header-caret: rgba(59, 130, 246, 0.65);
+
+  /* 用户头像 */
+  --user-avatar-gradient-start: #3b82f6;
+  --user-avatar-gradient-end: #1e40af;
+
+  /* 标签页 */
+  --recent-tab-border: rgba(147, 197, 253, 0.3);
+  --recent-tab-bg: rgba(224, 242, 254, 0.2);
+  --recent-tab-active-border: rgba(59, 130, 246, 0.5);
+  --recent-tab-active-bg: rgba(224, 242, 254, 0.5);
+
+  /* 玻璃态效果 */
+  --glass-border: rgba(147, 197, 253, 0.3);
+  --glass-border-strong: rgba(59, 130, 246, 0.42);
+  --glass-text: rgba(17, 24, 39, 0.88);
+  --glass-text-muted: rgba(107, 114, 128, 0.72);
+  --glass-shadow: 0 10px 30px rgba(59, 130, 246, 0.08);
+  --glass-shadow-hover: 0 14px 36px rgba(59, 130, 246, 0.12);
+}
+
 :root[data-theme="white"] {
   --primary-color: #2D7FF9;
   --neutral-white: #ffffff;
@@ -136,10 +232,10 @@ body {
   --table-row-hover-bg: #f5f7ff;
   --sidebar-bg-start: #ffffff;
   --sidebar-bg-end: #ffffff;
-  --sidebar-text: rgba(31, 31, 31, 0.84);
-  --sidebar-text-strong: rgba(31, 31, 31, 0.95);
-  --sidebar-text-muted: rgba(31, 31, 31, 0.6);
-  --sidebar-text-disabled: rgba(31, 31, 31, 0.35);
+  --sidebar-text: #000000;
+  --sidebar-text-strong: #000000;
+  --sidebar-text-muted: rgba(0, 0, 0, 0.7);
+  --sidebar-text-disabled: rgba(0, 0, 0, 0.4);
   --sidebar-item-bg-hover: rgba(45, 127, 249, 0.06);
   --sidebar-item-border-hover: rgba(45, 127, 249, 0.12);
   --sidebar-item-bg-active: rgba(45, 127, 249, 0.10);
@@ -161,46 +257,165 @@ body {
   --glass-shadow-hover: 0 14px 36px rgba(31, 31, 31, 0.08);
 }
 
+/* 深色主题（雾黑色调） */
 :root[data-theme="dark"] {
-  --primary-color: #4f8dff;
-  --neutral-white: #121316;
-  --neutral-light: #0d0e11;
-  --neutral-medium: rgba(255, 255, 255, 0.08);
-  --neutral-dark: rgba(255, 255, 255, 0.14);
-  --neutral-text: rgba(255, 255, 255, 0.88);
-  --neutral-text-light: rgba(255, 255, 255, 0.72);
-  --neutral-text-lighter: rgba(255, 255, 255, 0.5);
-  --app-bg: #07080a;
-  --table-header-bg: rgba(255, 255, 255, 0.06);
-  --table-row-stripe-bg: rgba(255, 255, 255, 0.03);
-  --table-row-hover-bg: rgba(79, 141, 255, 0.10);
-  --sidebar-bg-start: #0a0b0d;
-  --sidebar-bg-end: #000000;
-  --sidebar-item-bg-hover: rgba(255, 255, 255, 0.07);
-  --sidebar-item-border-hover: rgba(255, 255, 255, 0.10);
-  --sidebar-item-bg-active: rgba(255, 255, 255, 0.10);
-  --sidebar-item-border-active: rgba(255, 255, 255, 0.14);
-  --sidebar-icon-bg: rgba(255, 255, 255, 0.08);
-  --sidebar-icon-border: rgba(255, 255, 255, 0.10);
-  --sidebar-section-active-bg: rgba(255, 255, 255, 0.08);
-  --sidebar-section-active-border: rgba(255, 255, 255, 0.12);
-  --recent-tab-border: rgba(255, 255, 255, 0.12);
-  --recent-tab-bg: rgba(255, 255, 255, 0.06);
-  --recent-tab-active-border: rgba(79, 141, 255, 0.40);
-  --recent-tab-active-bg: rgba(79, 141, 255, 0.14);
-  --header-user-border: rgba(255, 255, 255, 0.12);
-  --header-user-bg: rgba(255, 255, 255, 0.06);
-  --header-user-bg-hover: rgba(255, 255, 255, 0.10);
-  --header-caret: rgba(255, 255, 255, 0.55);
-  --glass-border: rgba(255, 255, 255, 0.14);
-  --glass-border-strong: rgba(79, 141, 255, 0.42);
-  --glass-border-danger: rgba(245, 34, 45, 0.42);
-  --glass-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
-  --glass-shadow-hover: 0 14px 36px rgba(0, 0, 0, 0.65);
-  --glass-text: rgba(255, 255, 255, 0.90);
-  --glass-text-muted: rgba(255, 255, 255, 0.60);
-  --user-avatar-gradient-start: #4f8dff;
-  --user-avatar-gradient-end: #000000;
+  --primary-color: #6ba3ff;
+
+  /* 中性色 - 雾黑色调 */
+  --neutral-white: #1a1d24;
+  --neutral-light: #0f1115;
+  --neutral-medium: rgba(255, 255, 255, 0.06);
+  --neutral-dark: rgba(255, 255, 255, 0.1);
+  --neutral-text: #f0f2f5;
+  --neutral-text-light: #b8bdc6;
+  --neutral-text-lighter: #8b92a0;
+
+  /* 背景色 */
+  --app-bg: #0a0c0f;
+  --color-bg-page: #0a0c0f;
+  --color-bg-card: #1a1d24;
+  --color-bg-gray: #23272f;
+  --color-bg-light: #2a2f38;
+
+  /* 表格 */
+  --table-header-bg: rgba(255, 255, 255, 0.04);
+  --table-row-stripe-bg: rgba(255, 255, 255, 0.02);
+  --table-row-hover-bg: rgba(107, 163, 255, 0.08);
+  --table-border-color: rgba(255, 255, 255, 0.06);
+
+  /* 侧边栏 */
+  --sidebar-bg-start: #f8f9fb;
+  --sidebar-bg-end: #ffffff;
+  --sidebar-text: #000000;
+  --sidebar-text-strong: #000000;
+  --sidebar-text-muted: rgba(0, 0, 0, 0.7);
+  --sidebar-text-disabled: rgba(0, 0, 0, 0.4);
+  --sidebar-item-bg-hover: rgba(0, 0, 0, 0.06);
+  --sidebar-item-border-hover: rgba(0, 0, 0, 0.1);
+  --sidebar-item-bg-active: rgba(0, 0, 0, 0.08);
+  --sidebar-item-border-active: rgba(0, 0, 0, 0.12);
+  --sidebar-icon-bg: rgba(0, 0, 0, 0.06);
+  --sidebar-icon-border: rgba(0, 0, 0, 0.1);
+  --sidebar-section-active-bg: rgba(0, 0, 0, 0.06);
+  --sidebar-section-active-border: rgba(0, 0, 0, 0.1);
+
+  /* 标签页 */
+  --recent-tab-border: rgba(255, 255, 255, 0.1);
+  --recent-tab-bg: rgba(255, 255, 255, 0.04);
+  --recent-tab-active-border: rgba(107, 163, 255, 0.4);
+  --recent-tab-active-bg: rgba(107, 163, 255, 0.12);
+
+  /* 头部用户区域 */
+  --header-user-border: rgba(255, 255, 255, 0.1);
+  --header-user-bg: rgba(255, 255, 255, 0.04);
+  --header-user-bg-hover: rgba(255, 255, 255, 0.08);
+  --header-caret: rgba(255, 255, 255, 0.6);
+
+  /* 玻璃态效果 */
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-border-strong: rgba(107, 163, 255, 0.4);
+  --glass-border-danger: rgba(255, 95, 95, 0.4);
+  --glass-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  --glass-shadow-hover: 0 14px 36px rgba(0, 0, 0, 0.7);
+  --glass-text: #f0f2f5;
+  --glass-text-muted: #b8bdc6;
+
+  /* 用户头像 */
+  --user-avatar-gradient-start: #6ba3ff;
+  --user-avatar-gradient-end: #1a1d24;
+
+  /* 边框 */
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-border-light: rgba(255, 255, 255, 0.06);
+}
+
+/* 深色主题特殊样式 */
+:root[data-theme="dark"] .ant-table {
+  color: #f0f2f5 !important;
+}
+
+:root[data-theme="dark"] .ant-table-thead > tr > th {
+  color: #f0f2f5 !important;
+  background: #0f1115 !important;
+}
+
+:root[data-theme="dark"] .ant-table-tbody > tr > td {
+  color: #f0f2f5 !important;
+  border-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+:root[data-theme="dark"] .ant-table-tbody > tr:hover > td {
+  background: rgba(107, 163, 255, 0.08) !important;
+}
+
+:root[data-theme="dark"] .ant-input,
+:root[data-theme="dark"] .ant-input-number-input,
+:root[data-theme="dark"] .ant-select-selector {
+  color: #f0f2f5 !important;
+  background: #1a1d24 !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+:root[data-theme="dark"] .ant-input::placeholder,
+:root[data-theme="dark"] .ant-input-number-input::placeholder,
+:root[data-theme="dark"] .ant-select-selection-placeholder {
+  color: #8b92a0 !important;
+}
+
+:root[data-theme="dark"] .ant-select-dropdown {
+  background: #1a1d24 !important;
+}
+
+:root[data-theme="dark"] .ant-select-item {
+  color: #f0f2f5 !important;
+}
+
+:root[data-theme="dark"] .ant-select-item-option-selected {
+  background: rgba(107, 163, 255, 0.18) !important;
+}
+
+:root[data-theme="dark"] .ant-picker {
+  background: #1a1d24 !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+:root[data-theme="dark"] .ant-picker-input > input {
+  color: #f0f2f5 !important;
+}
+
+:root[data-theme="dark"] .ant-picker-input > input::placeholder {
+  color: #8b92a0 !important;
+}
+
+:root[data-theme="dark"] .ant-card {
+  background: #1a1d24 !important;
+  border-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+:root[data-theme="dark"] .ant-card-head {
+  background: #0f1115 !important;
+  border-color: rgba(255, 255, 255, 0.06) !important;
+  color: #f0f2f5 !important;
+}
+
+:root[data-theme="dark"] .ant-card-head-title {
+  color: #f0f2f5 !important;
+}
+
+:root[data-theme="dark"] .ant-card-body {
+  color: #f0f2f5 !important;
+}
+
+:root[data-theme="dark"] .ant-form-item-label > label {
+  color: #f0f2f5 !important;
+}
+
+:root[data-theme="dark"] .ant-statistic-title {
+  color: #b8bdc6 !important;
+}
+
+:root[data-theme="dark"] .ant-statistic-content {
+  color: #f0f2f5 !important;
 }
 
 /* 布局规范 */

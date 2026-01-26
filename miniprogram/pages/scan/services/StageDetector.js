@@ -100,8 +100,7 @@ class StageDetector {
 
     // 方式3：检查是否有已完成的菲号数量
     const hasBundleCount =
-      (orderDetail.completedBundleCount || 0) > 0 ||
-      (orderDetail.bundledCount || 0) > 0;
+      (orderDetail.completedBundleCount || 0) > 0 || (orderDetail.bundledCount || 0) > 0;
 
     // 综合判断：必须满足"菲号已生成"条件
     // 优先使用裁剪任务的详细信息
@@ -236,12 +235,13 @@ class StageDetector {
 
     // === 特殊情况2-4：处理裁剪已完成、采购、车缝 ===
     const specialResult = this._handleSpecialStage(currentProgress, isCuttingCompleted);
-    if (specialResult) {return specialResult;}
+    if (specialResult) {
+      return specialResult;
+    }
 
     // === 标准流程：根据当前进度查找下一节点 ===
     return this._handleStandardFlow(currentProgress);
   }
-
 
   /**
    * 处理新订单的工序判断
@@ -355,7 +355,11 @@ class StageDetector {
       }
 
       // === 步骤6：根据扫码次数判断当前工序 ===
-      const processResult = this._determineCurrentProcess(scanCount, sewingProcessList, accurateQuantity);
+      const processResult = this._determineCurrentProcess(
+        scanCount,
+        sewingProcessList,
+        accurateQuantity
+      );
 
       // === 步骤7：如果是入库工序，检查是否已入库 ===
       if (processResult && processResult.scanType === 'warehouse' && !processResult.isCompleted) {
@@ -649,9 +653,10 @@ class StageDetector {
         processName: nextProcessName,
         progressStage: '车缝',
         scanType: 'production',
-        hint: sewingStageCount > 1
-          ? `${nextProcessName} (第${scanCount + 1}/${sewingStageCount}次)`
-          : '车缝',
+        hint:
+          sewingStageCount > 1
+            ? `${nextProcessName} (第${scanCount + 1}/${sewingStageCount}次)`
+            : '车缝',
         isDuplicate: false,
         quantity: quantity,
       };

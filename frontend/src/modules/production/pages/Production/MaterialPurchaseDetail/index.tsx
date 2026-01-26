@@ -19,11 +19,11 @@ const { TextArea } = Input;
 const getStatusConfig = (status?: string) => {
   switch (status) {
     case 'waiting_procurement':
-      return { color: 'blue', text: '待采购' };
+      return { color: 'default', text: '待采购' };
     case 'procurement_in_progress':
-      return { color: 'orange', text: '采购中' };
+      return { color: 'warning', text: '采购中' };
     case 'procurement_completed':
-      return { color: 'green', text: '采购完成' };
+      return { color: 'default', text: '采购完成' };
     default:
       return { color: 'default', text: status || '-' };
   }
