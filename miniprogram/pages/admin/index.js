@@ -154,18 +154,13 @@ Page({
     }
     },
 
-  // 辅助函数：检查记录是否有效（排除采购和失败记录）
+  // 辅助函数：检查记录是否有效（只排除失败记录）
   _isValidHistoryRecord(item) {
-    const scanType = (item.scanType || '').toLowerCase();
-    const processName = (item.processName || '').toLowerCase();
     const scanResult = (item.scanResult || '').toLowerCase();
-
-    const isProcurement = scanType === 'procurement' ||
-                         processName.includes('采购') ||
-                         processName.includes('物料');
     const isFailure = scanResult === 'failure';
 
-    return !isProcurement && !isFailure;
+    // ✅ 保留采购记录（用于追踪谁处理了采购，虽然不计算工资）
+    return !isFailure;
   },
 
   // 辅助函数：合并历史记录列表

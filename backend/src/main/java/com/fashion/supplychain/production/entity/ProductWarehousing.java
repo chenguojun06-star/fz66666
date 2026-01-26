@@ -39,6 +39,28 @@ public class ProductWarehousing {
 
     private String warehouse;
 
+    // ==================== 入库时间/人员字段 ====================
+
+    /**
+     * 入库开始时间
+     */
+    private LocalDateTime warehousingStartTime;
+
+    /**
+     * 入库完成时间
+     */
+    private LocalDateTime warehousingEndTime;
+
+    /**
+     * 入库人员ID
+     */
+    private String warehousingOperatorId;
+
+    /**
+     * 入库人员姓名
+     */
+    private String warehousingOperatorName;
+
     private String qualityStatus;
 
     private String cuttingBundleId;
@@ -70,7 +92,7 @@ public class ProductWarehousing {
     private Integer deleteFlag;
 
     // ==================== 颜色尺码字段（临时字段，查询时填充）====================
-    
+
     /**
      * 颜色（从ScanRecord填充）
      */
@@ -90,7 +112,7 @@ public class ProductWarehousing {
     private String scanCode;
 
     // ==================== 质检人员字段（新增数据库字段）====================
-    
+
     /**
      * 质检人员ID
      */

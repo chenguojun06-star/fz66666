@@ -6,11 +6,11 @@
 /**
  * 标准 API 响应格式
  */
-export interface ApiResponse<T = unknown> {
+export interface ApiResponse<T = any> {
   code: number;
   message?: string;
   data: T;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 /**
@@ -150,7 +150,7 @@ export interface ErrorResponse extends ApiResponse<null> {
 /**
  * 检查是否为成功的 API 响应
  */
-export function isApiSuccess<T = unknown>(
+export function isApiSuccess<T = any>(
   response: unknown
 ): response is ApiResponse<T> {
   return (
@@ -164,7 +164,7 @@ export function isApiSuccess<T = unknown>(
 /**
  * 检查是否为分页响应
  */
-export function isPaginatedResponse<T = unknown>(
+export function isPaginatedResponse<T = any>(
   response: unknown
 ): response is PaginatedResponse<T> {
   if (!isApiSuccess(response)) return false;
@@ -182,7 +182,7 @@ export function isPaginatedResponse<T = unknown>(
 /**
  * 检查是否为列表响应
  */
-export function isListResponse<T = unknown>(
+export function isListResponse<T = any>(
   response: unknown
 ): response is ListResponse<T> {
   return (
@@ -194,7 +194,7 @@ export function isListResponse<T = unknown>(
 /**
  * 安全地解包 API 响应数据
  */
-export function unwrapApiResponse<T = unknown>(
+export function unwrapApiResponse<T = any>(
   response: unknown,
   fallbackMessage = '操作失败'
 ): T {

@@ -384,6 +384,21 @@ page {
   line-height: 1.5;
 }
 
+.item-fields {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #374151;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
+.item-field {
+  flex-shrink: 0;
+}
+
 .salary-card {
   margin-top: 10px;
   padding: 12px;

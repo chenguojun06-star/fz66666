@@ -240,6 +240,22 @@ page {
   color: #10b981;
 }
 
+/* 已完成标签样式 */
+.tag-completed {
+  background: rgba(156, 163, 175, 0.15);
+  color: #6b7280;
+}
+
+/* 已完成订单列表项样式 */
+.list-item-closed {
+  opacity: 0.7;
+}
+
+/* 已完成进度条样式 */
+.progress-fill-completed {
+  background: linear-gradient(90deg, #9ca3af 0%, #6b7280 100%) !important;
+}
+
 .item-head-actions {
   display: flex;
   align-items: center;

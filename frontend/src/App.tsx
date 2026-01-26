@@ -9,31 +9,27 @@ import { paths } from './routeConfig';
 import { useViewport } from './utils/useViewport';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import { StyleInfo, OrderManagement, DataCenter, TemplateCenter } from './modules/basic';
+import {
+  MaterialReconciliation,
+  ShipmentReconciliationList,
+  PaymentApproval,
+  PayrollOperatorSummary,
+} from './modules/finance';
+import { Dashboard } from './modules/dashboard';
+import { UserList, UserApproval, RoleList, FactoryList, LoginLogList, Profile } from './modules/system';
+import {
+  ProductionList,
+  CuttingManagement,
+  MaterialPurchase,
+  MaterialPurchaseDetail,
+  ProductWarehousing,
+  OrderTransfer,
+  OrderFlow,
+  ProgressDetail,
+} from './modules/production';
 
 // 懒加载组件
-const Dashboard = React.lazy(() => import('./pages/Dashboard'));
-const StyleInfo = React.lazy(() => import('./pages/StyleInfo'));
-const ProductionList = React.lazy(() => import('./pages/Production/List'));
-const CuttingManagement = React.lazy(() => import('./pages/Production/Cutting'));
-const MaterialPurchase = React.lazy(() => import('./pages/Production/MaterialPurchase'));
-const MaterialPurchaseDetail = React.lazy(() => import('./pages/Production/MaterialPurchaseDetail'));
-const ProductWarehousing = React.lazy(() => import('./pages/Production/ProductWarehousing'));
-const OrderTransfer = React.lazy(() => import('./pages/Production/OrderTransfer'));
-const OrderFlow = React.lazy(() => import('./pages/Production/OrderFlow'));
-const MaterialReconciliation = React.lazy(() => import('./pages/Finance/MaterialReconciliation'));
-const ShipmentReconciliationList = React.lazy(() => import('./pages/Finance/ShipmentReconciliationList'));
-const PaymentApproval = React.lazy(() => import('./pages/Finance/PaymentApproval'));
-const PayrollOperatorSummary = React.lazy(() => import('./pages/Finance/PayrollOperatorSummary'));
-const UserList = React.lazy(() => import('./pages/System/UserList'));
-const UserApproval = React.lazy(() => import('./pages/System/UserApproval'));
-const RoleList = React.lazy(() => import('./pages/System/RoleList'));
-const FactoryList = React.lazy(() => import('./pages/System/FactoryList'));
-const LoginLogList = React.lazy(() => import('./pages/System/LoginLogList'));
-const Profile = React.lazy(() => import('./pages/System/Profile'));
-const OrderManagement = React.lazy(() => import('./pages/OrderManagement'));
-const DataCenter = React.lazy(() => import('./pages/DataCenter'));
-const TemplateCenter = React.lazy(() => import('./pages/TemplateCenter'));
-const ProgressDetail = React.lazy(() => import('./pages/Production/ProgressDetail'));
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 
 const RootRedirect: React.FC = () => {
@@ -167,8 +163,8 @@ const AppRoutes: React.FC = () => {
           w.__appAuthLogoutNavigate();
         }
       } catch {
-    // Intentionally empty
-      // 忽略错误
+        // Intentionally empty
+        // 忽略错误
       }
     };
     window.addEventListener('app:auth:logout', w.__appAuthLogoutListener);

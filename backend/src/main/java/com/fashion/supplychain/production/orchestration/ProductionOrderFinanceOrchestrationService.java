@@ -152,7 +152,7 @@ public class ProductionOrderFinanceOrchestrationService {
     @Transactional(rollbackFor = Exception.class)
     public ProductionOrder closeOrder(String id) {
         if (!UserContext.isSupervisorOrAbove()) {
-            throw new AccessDeniedException("无权限关单");
+            throw new AccessDeniedException("无权限完成");
         }
         String oid = StringUtils.hasText(id) ? id.trim() : null;
         if (!StringUtils.hasText(oid)) {
@@ -174,7 +174,7 @@ public class ProductionOrderFinanceOrchestrationService {
 
         int orderQty = order.getOrderQuantity() == null ? 0 : order.getOrderQuantity();
         if (orderQty <= 0) {
-            throw new IllegalStateException("订单数量异常，无法关单");
+            throw new IllegalStateException("订单数量异常，无法完成");
         }
 
         int cuttingQty = 0;
@@ -194,12 +194,12 @@ public class ProductionOrderFinanceOrchestrationService {
 
         int warehousingQualified = productWarehousingService.sumQualifiedByOrderId(oid);
         if (cuttingQty <= 0) {
-            throw new IllegalStateException("裁剪数量不足，无法关单");
+            throw new IllegalStateException("裁剪数量不足，无法完成");
         }
 
         int minRequired = (int) Math.ceil(cuttingQty * 0.9);
         if (warehousingQualified < minRequired) {
-            throw new IllegalStateException("成品合格入库数量不足，无法关单");
+            throw new IllegalStateException("成品合格入库数量不足，无法完成");
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -212,7 +212,7 @@ public class ProductionOrderFinanceOrchestrationService {
                 .set(ProductionOrder::getUpdateTime, now)
                 .update();
         if (!ok) {
-            throw new IllegalStateException("关单失败");
+            throw new IllegalStateException("完成失败");
         }
 
         ProductionOrder detail = productionOrderService.getDetailById(oid);
@@ -272,7 +272,7 @@ public class ProductionOrderFinanceOrchestrationService {
                 .set(ProductionOrder::getUpdateTime, now)
                 .update();
         if (!ok) {
-            throw new IllegalStateException("关单失败");
+            throw new IllegalStateException("完成失败");
         }
 
         return true;

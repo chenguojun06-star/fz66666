@@ -316,6 +316,41 @@ class ScanHandler {
       throw new Error('无法识别当前工序,请联系管理员');
     }
 
+    // ⚠️ 质检工序必须扫描菲号二维码
+    // 因为质检是按菲号（每扎）进行的，不是按整个订单
+    if (stageResult.scanType === 'quality' && scanMode === this.SCAN_MODE.ORDER) {
+      throw new Error('⚠️ 质检请扫描裁剪单上的菲号二维码');
+    }
+
+    // ⚠️ 入库工序需要走质检入库流程（需要选择仓库）
+    // 入库必须扫描菲号二维码，并打开入库弹窗
+    if (stageResult.scanType === 'warehouse') {
+      if (scanMode === this.SCAN_MODE.ORDER) {
+        throw new Error('⚠️ 入库请扫描裁剪单上的菲号二维码');
+      }
+      // 如果已经入库完成，抛出特殊提示（不是错误）
+      if (stageResult.isCompleted) {
+        const err = new Error(stageResult.hint || '该菲号已入库完成');
+        err.isCompleted = true;  // 标记为已完成状态，页面会显示成功提示
+        throw err;
+      }
+      // 抛出特殊错误，让页面打开入库弹窗
+      const err = new Error('需要入库确认');
+      err.needWarehousing = true;
+      err.warehousingData = {
+        orderNo: parsedData.orderNo,
+        orderId: orderDetail?.id,
+        bundleNo: parsedData.bundleNo,
+        bundleId: parsedData.bundleId,
+        color: parsedData.color,
+        size: parsedData.size,
+        quantity: stageResult.quantity || parsedData.quantity || 1,
+        styleName: orderDetail?.styleName,
+        styleNo: orderDetail?.styleNo,
+      };
+      throw err;
+    }
+
     if (stageResult.isDuplicate) {
       throw new Error(stageResult.hint || '扫码过于频繁,请稍后再试');
     }
@@ -395,6 +430,15 @@ class ScanHandler {
         return this._errorResult('订单不存在或已删除');
       }
 
+      // 🔍 调试：打印订单详情中的关键工序字段
+      console.log('[ScanHandler] 订单详情工序信息:', {
+        currentProcessName: orderDetail.currentProcessName,
+        currentProgress: orderDetail.currentProgress,
+        progressStage: orderDetail.progressStage,
+        productionProgress: orderDetail.productionProgress,
+        isOrderQR: parsedData.isOrderQR,
+      });
+
       // === 步骤3：处理SKU/订单模式的特殊逻辑 ===
       try {
         // SKU 模式：获取数量
@@ -433,6 +477,16 @@ class ScanHandler {
 
       return finalResult;
     } catch (e) {
+      // 入库工序特殊处理：重新抛出让页面捕获
+      if (e.needWarehousing) {
+        throw e;
+      }
+
+      // 已入库完成：重新抛出让页面显示成功提示
+      if (e.isCompleted) {
+        throw e;
+      }
+
       console.error('[ScanHandler] 扫码处理异常:', e);
       const errorMsg = e.message || '扫码失败，请重试';
 
@@ -529,6 +583,9 @@ class ScanHandler {
       bundleNo: parsedData.bundleNo || '',
       quantity: stageResult.quantity || parsedData.quantity || 0,
 
+      // 🔧 修复：添加 scanCode 字段，质检等工序需要此字段
+      scanCode: parsedData.scanCode || '',
+
       // 扩展信息：SKU明细
       skuItems: parsedData.skuItems || [],
 
@@ -536,6 +593,9 @@ class ScanHandler {
       processName: stageResult.processName,
       progressStage: stageResult.progressStage,
       scanType: stageResult.scanType,
+
+      // 🔧 新增：质检子步骤（领取/验收/确认）
+      qualityStage: stageResult.qualityStage || '',
 
       // 订单信息
       styleNo: parsedData.styleNo || orderDetail.styleNo || '',

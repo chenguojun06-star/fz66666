@@ -428,7 +428,7 @@ public class MaterialPurchaseOrchestrator {
         String existingReceiverName = purchase.getReceiverName() == null ? "" : purchase.getReceiverName().trim();
         String rid = safe(receiverIdValue);
         String rname = safe(receiverNameValue);
-        
+
         boolean alreadyReceived = !"pending".equals(status) && StringUtils.hasText(status);
         if (alreadyReceived) {
             // 检查是否是同一个人
@@ -752,7 +752,7 @@ public class MaterialPurchaseOrchestrator {
 
     /**
      * 通过扫码获取关联的采购单列表
-     * @param params 包含 scanCode 和 orderNo 
+     * @param params 包含 scanCode 和 orderNo
      * @return 采购单列表
      */
     public List<MaterialPurchase> getByScanCode(Map<String, Object> params) {
@@ -766,7 +766,7 @@ public class MaterialPurchaseOrchestrator {
             wrapper.eq(MaterialPurchase::getPurchaseNo, scanCode);
             wrapper.eq(MaterialPurchase::getDeleteFlag, 0);
             List<MaterialPurchase> purchases = materialPurchaseService.list(wrapper);
-            
+
             if (purchases != null && !purchases.isEmpty()) {
                 return purchases;
             }
@@ -780,7 +780,7 @@ public class MaterialPurchaseOrchestrator {
                 wrapper.eq(MaterialPurchase::getDeleteFlag, 0);
                 wrapper.orderByDesc(MaterialPurchase::getCreateTime);
                 purchases = materialPurchaseService.list(wrapper);
-                
+
                 if (purchases != null && !purchases.isEmpty()) {
                     return purchases;
                 }
@@ -794,7 +794,7 @@ public class MaterialPurchaseOrchestrator {
             wrapper.eq(MaterialPurchase::getDeleteFlag, 0);
             wrapper.orderByDesc(MaterialPurchase::getCreateTime);
             List<MaterialPurchase> purchases = materialPurchaseService.list(wrapper);
-            
+
             if (purchases != null && !purchases.isEmpty()) {
                 return purchases;
             }
@@ -811,19 +811,19 @@ public class MaterialPurchaseOrchestrator {
         if (!StringUtils.hasText(code)) {
             return null;
         }
-        
+
         String trimmed = code.trim();
-        
+
         // 如果已经是 PO 开头，直接返回
         if (trimmed.startsWith("PO")) {
             return trimmed;
         }
-        
+
         // P0 开头的转换为 PO
         if (trimmed.startsWith("P0")) {
             return "PO" + trimmed.substring(2);
         }
-        
+
         return null;
     }
 
@@ -871,7 +871,7 @@ public class MaterialPurchaseOrchestrator {
         if (!StringUtils.hasText(userId)) {
             return new ArrayList<>();
         }
-        
+
         List<MaterialPurchase> allPurchases = materialPurchaseService.list();
         return allPurchases.stream()
                 .filter(p -> p.getDeleteFlag() == null || p.getDeleteFlag() == 0)

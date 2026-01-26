@@ -23,6 +23,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -353,7 +354,7 @@ public class ScanRecordOrchestrator {
 
         String st = order.getStatus() == null ? "" : order.getStatus().trim();
         if ("completed".equalsIgnoreCase(st)) {
-            throw new IllegalStateException("订单已关单，已停止质检");
+            throw new IllegalStateException("订单已完成，已停止质检");
         }
 
         validateNotExceedOrderQuantity(order, "quality", "质检", qty, bundle);
@@ -431,6 +432,11 @@ public class ScanRecordOrchestrator {
             sr.setCuttingBundleId(bundle.getId());
             sr.setCuttingBundleNo(bundle.getBundleNo());
             sr.setCuttingBundleQrCode(bundle.getQrCode());
+
+            // 关联工序单价
+            if (skuService != null) {
+                skuService.attachProcessUnitPrice(sr);
+            }
 
             validateScanRecordForSave(sr);
             scanRecordService.saveScanRecord(sr);
@@ -754,7 +760,7 @@ public class ScanRecordOrchestrator {
 
         String st = order.getStatus() == null ? "" : order.getStatus().trim();
         if ("completed".equalsIgnoreCase(st)) {
-            throw new IllegalStateException("订单已关单，已停止入库");
+            throw new IllegalStateException("订单已完成，已停止入库");
         }
 
         validateNotExceedOrderQuantity(order, "warehouse", "入库", qty, bundle);
@@ -798,6 +804,11 @@ public class ScanRecordOrchestrator {
             sr.setCuttingBundleId(bundle.getId());
             sr.setCuttingBundleNo(bundle.getBundleNo());
             sr.setCuttingBundleQrCode(bundle.getQrCode());
+        }
+
+        // 关联工序单价
+        if (skuService != null) {
+            skuService.attachProcessUnitPrice(sr);
         }
 
         validateScanRecordForSave(sr);
@@ -872,7 +883,7 @@ public class ScanRecordOrchestrator {
 
         String st = orderFinal.getStatus() == null ? "" : orderFinal.getStatus().trim();
         if ("completed".equalsIgnoreCase(st)) {
-            throw new IllegalStateException("订单已关单，已停止扫码");
+            throw new IllegalStateException("订单已完成，已停止扫码");
         }
 
         String progressStage = trimToNull(params.get("progressStage"));
@@ -918,12 +929,12 @@ public class ScanRecordOrchestrator {
         if (!isCutting && bundle == null && templateLibraryService.progressStageNameMatches("裁剪", stageNameFinal)) {
             throw new IllegalStateException("裁剪环节需先在PC端生成菲号，再进行扫码操作");
         }
-        
+
         // 裁剪环节检查纸样是否齐全（只警告，不阻止）
         if (isCutting && hasText(orderFinal.getStyleId())) {
             checkPatternForCutting(orderFinal.getStyleId());
         }
-        
+
         String finalScanType = isCutting ? "cutting" : scanType;
 
         Integer qty = quantity;
@@ -971,6 +982,11 @@ public class ScanRecordOrchestrator {
         }
 
         validateScanRecordForSave(sr);
+
+        // 关联工序单价
+        if (skuService != null) {
+            skuService.attachProcessUnitPrice(sr);
+        }
 
         if (bundle != null && hasText(bundle.getId())) {
             Map<String, Object> updated = tryUpdateExistingBundleScanRecord(bundle, orderFinal, requestId, scanCode,
@@ -1094,6 +1110,10 @@ public class ScanRecordOrchestrator {
             patch.setCuttingBundleNo(bundle.getBundleNo());
             patch.setCuttingBundleQrCode(bundle.getQrCode());
             patch.setUpdateTime(LocalDateTime.now());
+
+            if (skuService != null) {
+                skuService.attachProcessUnitPrice(patch);
+            }
             validateScanRecordForSave(patch);
             scanRecordService.updateById(patch);
 
@@ -1739,6 +1759,66 @@ public class ScanRecordOrchestrator {
             params.put("scanType", scanType.trim());
         }
         return scanRecordService.queryPage(params);
+    }
+
+    /**
+     * 获取我的质检待处理任务（已领取未确认结果）
+     * 查询 scanType='quality' 且 processCode='quality_receive' 但没有对应的 'quality_confirm' 记录
+     */
+    public List<ScanRecord> getMyQualityTasks() {
+        UserContext ctx = UserContext.get();
+        String operatorId = ctx == null ? null : ctx.getUserId();
+        if (!hasText(operatorId)) {
+            throw new AccessDeniedException("未登录");
+        }
+
+        // 查询质检领取记录
+        Map<String, Object> params = new HashMap<>();
+        params.put("operatorId", operatorId);
+        params.put("scanType", "quality");
+        params.put("processCode", "quality_receive");
+        params.put("page", 1);
+        params.put("pageSize", 100);
+
+        IPage<ScanRecord> receivedPage = scanRecordService.queryPage(params);
+        List<ScanRecord> receivedRecords = receivedPage.getRecords();
+
+        if (receivedRecords == null || receivedRecords.isEmpty()) {
+            return List.of();
+        }
+
+        // 过滤出还没有确认结果的记录
+        List<ScanRecord> pendingTasks = new ArrayList<>();
+        for (ScanRecord received : receivedRecords) {
+            // 检查是否有对应的确认记录
+            String orderId = received.getOrderId();
+            String bundleId = received.getCuttingBundleId();
+
+            // 1. 检查是否已有质检确认记录
+            ScanRecord confirmed = findQualityStageRecord(orderId, bundleId, "quality_confirm");
+            if (confirmed != null && hasText(confirmed.getId())) {
+                // 有确认记录，跳过
+                continue;
+            }
+
+            // 2. 检查该菲号是否已入库（可能通过PC端入库）
+            if (hasText(bundleId)) {
+                long warehousingCount = productWarehousingService.count(
+                    new LambdaQueryWrapper<ProductWarehousing>()
+                        .eq(ProductWarehousing::getCuttingBundleId, bundleId)
+                        .eq(ProductWarehousing::getDeleteFlag, 0)
+                );
+                if (warehousingCount > 0) {
+                    // 已入库，跳过
+                    continue;
+                }
+            }
+
+            // 没有确认记录且未入库，添加到待处理列表
+            pendingTasks.add(received);
+        }
+
+        return pendingTasks;
     }
 
     public Map<String, Object> getPersonalStats(String scanType) {

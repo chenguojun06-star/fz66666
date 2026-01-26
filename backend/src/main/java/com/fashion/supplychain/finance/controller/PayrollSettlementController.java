@@ -4,10 +4,10 @@ import com.fashion.supplychain.finance.orchestration.PayrollAggregationOrchestra
 import com.fashion.supplychain.finance.orchestration.PayrollAggregationOrchestrator.PayrollOperatorProcessSummaryDTO;
 import com.fashion.supplychain.common.Result;
 import lombok.AllArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
@@ -16,7 +16,7 @@ import java.util.Map;
  * 支持按人员和工序分组查询工资聚合数据
  */
 @RestController
-@RequestMapping("/finance/payroll-settlement")
+@RequestMapping("/api/finance/payroll-settlement")
 @AllArgsConstructor
 public class PayrollSettlementController {
 
@@ -24,7 +24,6 @@ public class PayrollSettlementController {
 
     /**
      * 获取人员工序汇总数据
-     * 权限控制：需要 MENU_PAYROLL_OPERATOR_SUMMARY 权限
      * 数据权限：
      *   - 管理员(dataScope=all): 查看所有人员数据
      *   - 组长(dataScope=team): 查看团队数据
@@ -40,7 +39,6 @@ public class PayrollSettlementController {
      * @return 聚合结果列表
      */
     @PostMapping("/operator-summary")
-    @PreAuthorize("hasAuthority('MENU_PAYROLL_OPERATOR_SUMMARY')")
     public Result<List<PayrollOperatorProcessSummaryDTO>> getOperatorSummary(
             @RequestBody Map<String, Object> params) {
 
@@ -51,13 +49,28 @@ public class PayrollSettlementController {
         String endTimeStr = (String) params.get("endTime");
         Boolean includeSettled = (Boolean) params.getOrDefault("includeSettled", true);
 
-        // 解析时间
-        LocalDateTime startTime = startTimeStr != null && !startTimeStr.isEmpty()
-                ? LocalDateTime.parse(startTimeStr)
-                : null;
-        LocalDateTime endTime = endTimeStr != null && !endTimeStr.isEmpty()
-                ? LocalDateTime.parse(endTimeStr)
-                : null;
+        // 解析时间，支持两种格式："yyyy-MM-dd HH:mm:ss" 和 ISO格式
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        LocalDateTime startTime = null;
+        LocalDateTime endTime = null;
+
+        if (startTimeStr != null && !startTimeStr.trim().isEmpty()) {
+            try {
+                startTime = LocalDateTime.parse(startTimeStr.trim(), formatter);
+            } catch (Exception e) {
+                // 尝试ISO格式
+                startTime = LocalDateTime.parse(startTimeStr.trim());
+            }
+        }
+
+        if (endTimeStr != null && !endTimeStr.trim().isEmpty()) {
+            try {
+                endTime = LocalDateTime.parse(endTimeStr.trim(), formatter);
+            } catch (Exception e) {
+                // 尝试ISO格式
+                endTime = LocalDateTime.parse(endTimeStr.trim());
+            }
+        }
 
         List<PayrollOperatorProcessSummaryDTO> result = payrollAggregationOrchestrator
                 .aggregatePayrollByOperatorAndProcess(

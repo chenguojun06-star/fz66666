@@ -65,11 +65,13 @@
         <view class="item-title">{{item.orderNo || '-'}}</view>
         <text class="tag">{{item.processName || item.progressStage || item.scanType || '-'}}</text>
       </view>
-      <view class="item-sub">颜色：{{item.color || '-'}}</view>
-      <view class="item-sub">尺码：{{item.size || '-'}}</view>
-      <view class="item-sub">数量：{{item.quantity || 0}}</view>
-      <view class="item-sub">单价：{{item.unitPrice == null || item.unitPrice === '' ? '-' : item.unitPrice}}</view>
-      <view class="item-sub">金额：{{item.amount || item.totalAmount || item.salaryAmount || 0}}</view>
+      <view class="item-fields">
+        <text class="item-field">颜色：{{item.color || '-'}}</text>
+        <text class="item-field">尺码：{{item.size || '-'}}</text>
+        <text class="item-field">数量：{{item.quantity || 0}}</text>
+        <text class="item-field">单价：{{item.unitPrice == null || item.unitPrice === '' ? '-' : item.unitPrice}}</text>
+        <text class="item-field">金额：{{item.amount || item.totalAmount || item.salaryAmount || 0}}</text>
+      </view>
       <view wx:if="{{item.scanTime}}" class="item-sub">时间：{{item.scanTime}}</view>
     </view>
   </view>

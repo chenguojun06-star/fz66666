@@ -636,6 +636,28 @@ public class SKUServiceImpl implements SKUService {
                 }
             }
 
+            if (unitPrice.compareTo(java.math.BigDecimal.ZERO) <= 0
+                && StringUtils.hasText(scanRecord.getProgressStage())) {
+                String stageName = scanRecord.getProgressStage().trim();
+                if (!stageName.equalsIgnoreCase(scanRecord.getProcessName().trim())) {
+                    Map<String, Object> stagePriceInfo = getUnitPriceByProcess(
+                        scanRecord.getOrderNo(),
+                        stageName
+                    );
+                    Object stageUnitPriceObj = stagePriceInfo.get("unitPrice");
+                    if (stageUnitPriceObj != null) {
+                        try {
+                            java.math.BigDecimal stagePrice = new java.math.BigDecimal(stageUnitPriceObj.toString());
+                            if (stagePrice.compareTo(java.math.BigDecimal.ZERO) > 0) {
+                                unitPrice = stagePrice;
+                            }
+                        } catch (Exception e) {
+                            log.warn("[SKUService] 单价转换失败: {}", stageUnitPriceObj);
+                        }
+                    }
+                }
+            }
+
             // 设置工序单价
             scanRecord.setProcessUnitPrice(unitPrice);
 
@@ -643,6 +665,18 @@ public class SKUServiceImpl implements SKUService {
             int qty = scanRecord.getQuantity() != null ? scanRecord.getQuantity() : 0;
             java.math.BigDecimal scanCost = unitPrice.multiply(new java.math.BigDecimal(qty));
             scanRecord.setScanCost(scanCost);
+
+            java.math.BigDecimal currentUnitPrice = scanRecord.getUnitPrice();
+            if ((currentUnitPrice == null || currentUnitPrice.compareTo(java.math.BigDecimal.ZERO) <= 0)
+                && unitPrice.compareTo(java.math.BigDecimal.ZERO) > 0) {
+                scanRecord.setUnitPrice(unitPrice);
+            }
+
+            java.math.BigDecimal currentTotalAmount = scanRecord.getTotalAmount();
+            if ((currentTotalAmount == null || currentTotalAmount.compareTo(java.math.BigDecimal.ZERO) <= 0)
+                && scanCost.compareTo(java.math.BigDecimal.ZERO) > 0) {
+                scanRecord.setTotalAmount(scanCost);
+            }
 
             log.debug("[SKUService] 附加工序单价 - processName: {}, unitPrice: {}, quantity: {}, scanCost: {}",
                 scanRecord.getProcessName(), unitPrice, qty, scanCost);

@@ -1,0 +1,771 @@
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Button, Card, Input, Modal, Select, Space, Switch, Tabs, message } from 'antd';
+import { UnifiedRangePicker } from '@/components/common/UnifiedDatePicker';
+import { DownloadOutlined } from '@ant-design/icons';
+import { useSearchParams } from 'react-router-dom';
+import Layout from '@/components/Layout';
+import ResizableTable from '@/components/common/ResizableTable';
+import SortableColumnTitle from '@/components/common/SortableColumnTitle';
+import api, { unwrapApiData } from '@/utils/api';
+import type { PayrollOperatorProcessSummaryRow } from '@/types/finance';
+import dayjs from 'dayjs';
+
+const PayrollOperatorSummary: React.FC = () => {
+    const [searchParams] = useSearchParams();
+    const [activeTab, setActiveTab] = useState('detail');
+    const [orderNo, setOrderNo] = useState('');
+    const [styleNo, setStyleNo] = useState('');
+    const [operatorName, setOperatorName] = useState('');
+    const [processName, setProcessName] = useState('');
+    const [scanType, setScanType] = useState<string | undefined>(undefined);
+    const [includeSettled, setIncludeSettled] = useState(true);
+    const [dateRange, setDateRange] = useState<unknown>(null);
+
+    const [rows, setRows] = useState<PayrollOperatorProcessSummaryRow[]>([]);
+    const [loading, setLoading] = useState(false);
+    const hasAutoFetched = useRef(false);
+    const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
+    const [rejectVisible, setRejectVisible] = useState(false);
+    const [rejectOperator, setRejectOperator] = useState<string>('');
+    const [rejectReason, setRejectReason] = useState('');
+    const [sortField, setSortField] = useState<string>('totalAmount'); // 当前排序字段
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc'); // 排序方向
+    const [detailSortField, setDetailSortField] = useState<string>('startTime'); // 明细表排序字段
+    const [detailSortOrder, setDetailSortOrder] = useState<'asc' | 'desc'>('desc'); // 明细表排序方向
+
+    const toNumberOrZero = (v: unknown) => {
+        const n = typeof v === 'number' ? v : Number(v);
+        return Number.isFinite(n) ? n : 0;
+    };
+
+    const toMoneyText = (v: unknown) => {
+        const n = typeof v === 'number' ? v : Number(v);
+        return Number.isFinite(n) ? n.toFixed(2) : '-';
+    };
+
+    const totalQuantity = useMemo(() => rows.reduce((sum, r) => sum + toNumberOrZero((r as Record<string, unknown>)?.quantity), 0), [rows]);
+    const totalAmount = useMemo(() => rows.reduce((sum, r) => sum + toNumberOrZero((r as Record<string, unknown>)?.totalAmount), 0), [rows]);
+
+    // 排序后的明细数据
+    const sortedRows = useMemo(() => {
+        const sorted = [...rows];
+        sorted.sort((a: any, b: any) => {
+            const aVal = a[detailSortField];
+            const bVal = b[detailSortField];
+
+            // 处理时间字段
+            if (detailSortField === 'startTime' || detailSortField === 'endTime') {
+                const aTime = aVal ? new Date(aVal).getTime() : 0;
+                const bTime = bVal ? new Date(bVal).getTime() : 0;
+                return detailSortOrder === 'desc' ? bTime - aTime : aTime - bTime;
+            }
+
+            // 处理数值字段
+            if (typeof aVal === 'number' && typeof bVal === 'number') {
+                return detailSortOrder === 'desc' ? bVal - aVal : aVal - bVal;
+            }
+
+            // 处理字符串字段
+            const aStr = String(aVal || '');
+            const bStr = String(bVal || '');
+            return detailSortOrder === 'desc'
+                ? bStr.localeCompare(aStr, 'zh-CN')
+                : aStr.localeCompare(bStr, 'zh-CN');
+        });
+        return sorted;
+    }, [rows, detailSortField, detailSortOrder]);
+
+    // 工资汇总数据：按人员聚合
+    const summaryRows = useMemo(() => {
+        const grouped = rows.reduce((acc, row) => {
+            const name = String((row as Record<string, unknown>)?.operatorName || '').trim();
+            if (!name) return acc;
+
+            if (!acc[name]) {
+                acc[name] = {
+                    operatorName: name,
+                    totalQuantity: 0,
+                    totalAmount: 0,
+                    recordCount: 0,
+                    orderNos: new Set<string>(),
+                    remark: '',
+                    approvalTime: null,
+                    paymentTime: null,
+                };
+            }
+
+            acc[name].totalQuantity += toNumberOrZero((row as Record<string, unknown>)?.quantity);
+            acc[name].totalAmount += toNumberOrZero((row as Record<string, unknown>)?.totalAmount);
+            acc[name].recordCount += 1;
+
+            const orderNo = String((row as Record<string, unknown>)?.orderNo || '').trim();
+            if (orderNo) {
+                acc[name].orderNos.add(orderNo);
+            }
+
+            return acc;
+        }, {} as Record<string, any>);
+
+        const result = Object.values(grouped).map((item: any) => ({
+            operatorName: item.operatorName,
+            totalQuantity: item.totalQuantity,
+            totalAmount: item.totalAmount,
+            recordCount: item.recordCount,
+            orderCount: item.orderNos.size,
+            remark: item.remark,
+            approvalTime: item.approvalTime,
+            paymentTime: item.paymentTime,
+        }));
+
+        // 按指定字段排序
+        result.sort((a: any, b: any) => {
+            const aVal = a[sortField];
+            const bVal = b[sortField];
+
+            // 处理时间字段
+            if (sortField === 'approvalTime' || sortField === 'paymentTime') {
+                const aTime = aVal ? new Date(aVal).getTime() : 0;
+                const bTime = bVal ? new Date(bVal).getTime() : 0;
+                return sortOrder === 'desc' ? bTime - aTime : aTime - bTime;
+            }
+
+            // 处理数值字段
+            if (typeof aVal === 'number' && typeof bVal === 'number') {
+                return sortOrder === 'desc' ? bVal - aVal : aVal - bVal;
+            }
+
+            // 处理字符串字段
+            const aStr = String(aVal || '');
+            const bStr = String(bVal || '');
+            return sortOrder === 'desc'
+                ? bStr.localeCompare(aStr, 'zh-CN')
+                : aStr.localeCompare(bStr, 'zh-CN');
+        });
+
+        return result;
+    }, [rows, sortField, sortOrder]);
+
+    // 处理URL参数，自动填充筛选条件并查询
+    useEffect(() => {
+        const urlOrderNo = searchParams.get('orderNo');
+        const urlProcessName = searchParams.get('processName');
+
+        if (urlOrderNo && !hasAutoFetched.current) {
+            hasAutoFetched.current = true;
+            setOrderNo(urlOrderNo);
+            if (urlProcessName) {
+                setProcessName(urlProcessName);
+            }
+            // 延迟执行查询，确保状态已更新
+            setTimeout(() => {
+                const payload: unknown = {
+                    orderNo: urlOrderNo,
+                    styleNo: '',
+                    operatorName: '',
+                    processName: urlProcessName || '',
+                    scanType: undefined,
+                    includeSettled: true,
+                };
+                doFetchData(payload);
+            }, 100);
+        }
+    }, [searchParams]);
+
+    const scanTypeText = (raw: any) => {
+        const v = String(raw || '').trim();
+        if (!v) return '-';
+        if (v === 'production') return '生产';
+        if (v === 'cutting') return '裁剪';
+        if (v === 'procurement') return '采购';
+        if (v === 'quality') return '质检';
+        if (v === 'pressing') return '大烫';
+        if (v === 'packaging') return '包装';
+        if (v === 'warehousing') return '入库';
+        if (v === 'sewing' || v === 'carSewing') return '车缝';
+        return v;
+    };
+
+    const buildPayload = () => {
+        const payload: unknown = {
+            orderNo: String(orderNo || '').trim(),
+            styleNo: String(styleNo || '').trim(),
+            operatorName: String(operatorName || '').trim(),
+            processName: String(processName || '').trim(),
+            scanType: scanType ? String(scanType || '').trim() : undefined,
+            includeSettled,
+        };
+
+        if (dateRange?.[0] && dateRange?.[1]) {
+            payload.startTime = dayjs(dateRange[0]).format('YYYY-MM-DD HH:mm:ss');
+            payload.endTime = dayjs(dateRange[1]).format('YYYY-MM-DD HH:mm:ss');
+        }
+
+        return payload;
+    };
+
+    // 核心查询函数，可以传入自定义 payload
+    const doFetchData = async (customPayload?: unknown) => {
+        const payload = customPayload || buildPayload();
+
+        setLoading(true);
+        try {
+            const res = await api.post<{ code: number; message: string; data: PayrollOperatorProcessSummaryRow[] }>('/finance/payroll-settlement/operator-summary', payload);
+            const data = unwrapApiData<PayrollOperatorProcessSummaryRow[]>(res, '获取人员工序统计失败');
+            setRows(Array.isArray(data) ? data : []);
+        } catch (e: unknown) {
+            message.error(String(e?.message || '获取人员工序统计失败'));
+            setRows([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchData = async () => {
+        const hasOrderNo = Boolean(String(orderNo || '').trim());
+        const hasRange = Boolean(dateRange?.[0] && dateRange?.[1]);
+        if (!hasOrderNo && !hasRange) {
+            message.warning('请至少选择时间范围或填写订单号');
+            return;
+        }
+
+        await doFetchData();
+    };
+    const reset = () => {
+        setOrderNo('');
+        setStyleNo('');
+        setOperatorName('');
+        setProcessName('');
+        setScanType(undefined);
+        setIncludeSettled(true);
+        setDateRange(null);
+        setRows([]);
+        hasAutoFetched.current = false;
+    };
+
+    const exportToExcel = () => {
+        if (rows.length === 0) {
+            message.warning('无数据可导出');
+            return;
+        }
+
+        const headers = ['订单号', '款号', '颜色', '尺码', '人员', '工序', '生产节点', '开始时间', '完成时间', '数量', '单价(元)', '金额(元)'];
+        const csvRows = [headers.join(',')];
+
+        rows.forEach((row: unknown) => {
+            const csvRow = [
+                String(row?.orderNo || ''),
+                String(row?.styleNo || ''),
+                String(row?.color || ''),
+                String(row?.size || ''),
+                String(row?.operatorName || ''),
+                String(row?.processName || ''),
+                scanTypeText(row?.scanType),
+                row?.startTime ? dayjs(row.startTime).format('YYYY-MM-DD HH:mm:ss') : '-',
+                row?.endTime ? dayjs(row.endTime).format('YYYY-MM-DD HH:mm:ss') : '-',
+                String(toNumberOrZero(row?.quantity)),
+                toMoneyText(row?.unitPrice),
+                toMoneyText(row?.totalAmount),
+            ].map(escapeCsvCell);
+            csvRows.push(csvRow.join(','));
+        });
+
+        // 添加合计行
+        csvRows.push([
+            '合计', '', '', '', '', '',
+            String(totalQuantity),
+            '',
+            totalAmount.toFixed(2),
+        ].map(escapeCsvCell).join(','));
+
+        const csvContent = '\uFEFF' + csvRows.join('\n'); // UTF-8 的 BOM 头，避免中文乱码
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        const timestamp = dayjs().format('YYYYMMDDHHmmss');
+        link.download = `员工工序_${timestamp}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        message.success('导出成功');
+    };
+
+    const escapeCsvCell = (value: unknown) => {
+        const text = String(value ?? '');
+        if (/[\r\n",]/.test(text)) {
+            return `"${text.replace(/"/g, '""')}"`;
+        }
+        return text;
+    };
+
+    // 单条审核
+    const handleApprove = (operatorName: string) => {
+        const now = dayjs().format('YYYY-MM-DD HH:mm:ss');
+        setRows(prev => prev.map(row => {
+            if ((row as Record<string, unknown>).operatorName === operatorName) {
+                return { ...row, approvalTime: now } as PayrollOperatorProcessSummaryRow;
+            }
+            return row;
+        }));
+        message.success(`已审核 ${operatorName} 的工资`);
+    };
+
+    // 批量审核
+    const handleBatchApprove = () => {
+        if (selectedRowKeys.length === 0) {
+            message.warning('请选择要审核的人员');
+            return;
+        }
+        const now = dayjs().format('YYYY-MM-DD HH:mm:ss');
+        setRows(prev => prev.map(row => {
+            if (selectedRowKeys.includes((row as Record<string, unknown>).operatorName as string)) {
+                return { ...row, approvalTime: now } as PayrollOperatorProcessSummaryRow;
+            }
+            return row;
+        }));
+        message.success(`已批量审核 ${selectedRowKeys.length} 人`);
+        setSelectedRowKeys([]);
+    };
+
+    // 打开退回弹窗
+    const openRejectModal = (operatorName: string) => {
+        setRejectOperator(operatorName);
+        setRejectReason('');
+        setRejectVisible(true);
+    };
+
+    // 确认退回
+    const handleReject = () => {
+        if (!rejectReason.trim()) {
+            message.warning('请填写退回原因');
+            return;
+        }
+        setRows(prev => prev.map(row => {
+            if ((row as Record<string, unknown>).operatorName === rejectOperator) {
+                return {
+                    ...row,
+                    approvalTime: null,
+                    remark: `【退回】${rejectReason}`
+                } as PayrollOperatorProcessSummaryRow;
+            }
+            return row;
+        }));
+        message.success(`已退回 ${rejectOperator} 的工资审核`);
+        setRejectVisible(false);
+        setRejectOperator('');
+        setRejectReason('');
+    };
+
+    // 排序回调函数
+    const handleSort = (field: string, order: 'asc' | 'desc') => {
+        setSortField(field);
+        setSortOrder(order);
+    };
+
+    // 明细表排序回调函数
+    const handleDetailSort = (field: string, order: 'asc' | 'desc') => {
+        setDetailSortField(field);
+        setDetailSortOrder(order);
+    };
+
+    // 工资汇总表格列定义
+    const summaryColumns: unknown[] = [
+        { title: '人员', dataIndex: 'operatorName', key: 'operatorName', width: 140, ellipsis: true },
+        {
+            title: <SortableColumnTitle
+                title="总数量"
+                sortField={sortField}
+                fieldName="totalQuantity"
+                sortOrder={sortOrder}
+                onSort={handleSort}
+            />,
+            dataIndex: 'totalQuantity',
+            key: 'totalQuantity',
+            width: 120,
+            align: 'right' as const,
+            render: (v: unknown) => toNumberOrZero(v) || 0,
+        },
+        {
+            title: <SortableColumnTitle
+                title="总金额(元)"
+                sortField={sortField}
+                fieldName="totalAmount"
+                sortOrder={sortOrder}
+                onSort={handleSort}
+            />,
+            dataIndex: 'totalAmount',
+            key: 'totalAmount',
+            width: 140,
+            align: 'right' as const,
+            render: (v: unknown) => toMoneyText(v),
+        },
+        {
+            title: <SortableColumnTitle
+                title="扫码次数"
+                sortField={sortField}
+                fieldName="recordCount"
+                sortOrder={sortOrder}
+                onSort={handleSort}
+            />,
+            dataIndex: 'recordCount',
+            key: 'recordCount',
+            width: 120,
+            align: 'right' as const,
+            render: (v: unknown) => toNumberOrZero(v) || 0,
+        },
+        {
+            title: <SortableColumnTitle
+                title="订单数"
+                sortField={sortField}
+                fieldName="orderCount"
+                sortOrder={sortOrder}
+                onSort={handleSort}
+            />,
+            dataIndex: 'orderCount',
+            key: 'orderCount',
+            width: 100,
+            align: 'right' as const,
+            render: (v: unknown) => toNumberOrZero(v) || 0,
+        },
+        {
+            title: '备注',
+            dataIndex: 'remark',
+            key: 'remark',
+            width: 200,
+            ellipsis: true,
+            render: (v: unknown) => String(v || '').trim() || '-',
+        },
+        {
+            title: <SortableColumnTitle
+                title="审核时间"
+                sortField={sortField}
+                fieldName="approvalTime"
+                sortOrder={sortOrder}
+                onSort={handleSort}
+                align="left"
+            />,
+            dataIndex: 'approvalTime',
+            key: 'approvalTime',
+            width: 160,
+            ellipsis: true,
+            render: (v: unknown) => v ? dayjs(v as string).format('YYYY-MM-DD HH:mm:ss') : '-',
+        },
+        {
+            title: <SortableColumnTitle
+                title="付款时间"
+                sortField={sortField}
+                fieldName="paymentTime"
+                sortOrder={sortOrder}
+                onSort={handleSort}
+                align="left"
+            />,
+            dataIndex: 'paymentTime',
+            key: 'paymentTime',
+            width: 160,
+            ellipsis: true,
+            render: (v: unknown) => v ? dayjs(v as string).format('YYYY-MM-DD HH:mm:ss') : '-',
+        },
+        {
+            title: '操作',
+            key: 'action',
+            width: 150,
+            fixed: 'right' as const,
+            render: (_: unknown, record: Record<string, unknown>) => {
+                const approved = Boolean(record.approvalTime);
+                return (
+                    <Space size="small">
+                        <Button
+                            type="link"
+                            size="small"
+                            disabled={approved}
+                            onClick={() => handleApprove(String(record.operatorName))}
+                        >
+                            {approved ? '已审核' : '审核'}
+                        </Button>
+                        {approved && (
+                            <Button
+                                type="link"
+                                size="small"
+                                danger
+                                onClick={() => openRejectModal(String(record.operatorName))}
+                            >
+                                退回
+                            </Button>
+                        )}
+                    </Space>
+                );
+            },
+        },
+    ];
+
+    // 员工工序表格列定义
+    const columns: unknown[] = [
+        { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 140, ellipsis: true },
+        { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 120, ellipsis: true },
+        { title: '颜色', dataIndex: 'color', key: 'color', width: 100, ellipsis: true, render: (v: unknown) => String(v || '').trim() || '-' },
+        { title: '尺码', dataIndex: 'size', key: 'size', width: 80, ellipsis: true, render: (v: unknown) => String(v || '').trim() || '-' },
+        { title: '人员', dataIndex: 'operatorName', key: 'operatorName', width: 120, ellipsis: true },
+        { title: '工序', dataIndex: 'processName', key: 'processName', width: 120, ellipsis: true },
+        { title: '生产节点', dataIndex: 'scanType', key: 'scanType', width: 100, render: (v: unknown) => scanTypeText(v) },
+        {
+            title: <SortableColumnTitle
+                title="开始时间"
+                sortField={detailSortField}
+                fieldName="startTime"
+                sortOrder={detailSortOrder}
+                onSort={handleDetailSort}
+                align="left"
+            />,
+            dataIndex: 'startTime',
+            key: 'startTime',
+            width: 160,
+            ellipsis: true,
+            render: (v: unknown) => v ? dayjs(v as string).format('YYYY-MM-DD HH:mm:ss') : '-',
+        },
+        {
+            title: <SortableColumnTitle
+                title="完成时间"
+                sortField={detailSortField}
+                fieldName="endTime"
+                sortOrder={detailSortOrder}
+                onSort={handleDetailSort}
+                align="left"
+            />,
+            dataIndex: 'endTime',
+            key: 'endTime',
+            width: 160,
+            ellipsis: true,
+            render: (v: unknown) => v ? dayjs(v as string).format('YYYY-MM-DD HH:mm:ss') : '-',
+        },
+        {
+            title: '数量',
+            dataIndex: 'quantity',
+            key: 'quantity',
+            width: 90,
+            align: 'right' as const,
+            render: (v: unknown) => {
+                const n = toNumberOrZero(v);
+                return n ? String(n) : '0';
+            },
+        },
+        {
+            title: '单价(元)',
+            dataIndex: 'unitPrice',
+            key: 'unitPrice',
+            width: 110,
+            align: 'right' as const,
+            render: (v: unknown) => toMoneyText(v),
+        },
+        {
+            title: '金额(元)',
+            dataIndex: 'totalAmount',
+            key: 'totalAmount',
+            width: 120,
+            align: 'right' as const,
+            render: (v: unknown) => toMoneyText(v),
+        },
+    ];
+
+    return (
+        <Layout>
+            <Card className="page-card">
+                <div className="page-header">
+                    <h2 className="page-title">员工工序</h2>
+                </div>
+
+                <Card size="small" className="filter-card mb-sm">
+                    <Space wrap>
+                        <Input
+                            placeholder="订单号"
+                            style={{ width: 180 }}
+                            allowClear
+                            value={orderNo}
+                            onChange={(e) => setOrderNo(e.target.value)}
+                        />
+                        <Input
+                            placeholder="款号"
+                            style={{ width: 160 }}
+                            allowClear
+                            value={styleNo}
+                            onChange={(e) => setStyleNo(e.target.value)}
+                        />
+                        <Input
+                            placeholder="人员"
+                            style={{ width: 160 }}
+                            allowClear
+                            value={operatorName}
+                            onChange={(e) => setOperatorName(e.target.value)}
+                        />
+                        <Input
+                            placeholder="工序"
+                            style={{ width: 160 }}
+                            allowClear
+                            value={processName}
+                            onChange={(e) => setProcessName(e.target.value)}
+                        />
+                        <Select
+                            placeholder="生产节点"
+                            style={{ width: 140 }}
+                            allowClear
+                            value={scanType}
+                            options={[
+                                { value: 'production', label: '生产' },
+                                { value: 'cutting', label: '裁剪' },
+                                { value: 'procurement', label: '采购' },
+                                { value: 'quality', label: '质检' },
+                                { value: 'pressing', label: '大烫' },
+                                { value: 'packaging', label: '包装' },
+                                { value: 'warehousing', label: '入库' },
+                            ]}
+                            onChange={(v) => setScanType(v)}
+                        />
+                        <UnifiedRangePicker
+                            showTime
+                            value={dateRange}
+                            onChange={(v) => setDateRange(v as Record<string, unknown>)}
+                            style={{ width: 320 }}
+                        />
+                        <Space>
+                            <span style={{ color: '#6b7280' }}>包含已结算</span>
+                            <Switch checked={includeSettled} onChange={setIncludeSettled} />
+                        </Space>
+                        <Button type="primary" onClick={fetchData} loading={loading}>
+                            查询
+                        </Button>
+                        <Button onClick={reset} disabled={loading}>
+                            重置
+                        </Button>
+                        <Button
+                            icon={<DownloadOutlined />}
+                            onClick={exportToExcel}
+                            disabled={loading || rows.length === 0}
+                        >
+                            导出Excel
+                        </Button>
+                    </Space>
+                </Card>
+
+                <Tabs
+                    activeKey={activeTab}
+                    onChange={setActiveTab}
+                    items={[
+                        {
+                            key: 'detail',
+                            label: '员工工序',
+                            children: (
+                                <>
+                                    <Card size="small" className="mb-sm">
+                                        <Space wrap>
+                                            <span style={{ color: '#6b7280' }}>行数 {rows.length}</span>
+                                            <span style={{ color: '#6b7280' }}>数量合计 {totalQuantity}</span>
+                                            <span style={{ color: '#6b7280' }}>金额合计 {totalAmount.toFixed(2)}</span>
+                                            {dateRange?.[0] && dateRange?.[1] && (
+                                                <span style={{ color: '#6b7280' }}>
+                                                    统计周期：{dayjs(dateRange[0]).format('YYYY-MM-DD')} ~ {dayjs(dateRange[1]).format('YYYY-MM-DD')}
+                                                </span>
+                                            )}
+                                        </Space>
+                                    </Card>
+
+                                    <ResizableTable
+                                        storageKey="finance-payroll-operator-detail"
+                                        rowKey={(r: Record<string, unknown>) =>
+                                            [
+                                                String(r?.orderNo || ''),
+                                                String(r?.styleNo || ''),
+                                                String(r?.operatorId || r?.operatorName || ''),
+                                                String(r?.processName || ''),
+                                                String(r?.scanType || ''),
+                                            ].join('|')
+                                        }
+                                        columns={columns}
+                                        dataSource={sortedRows as Record<string, unknown>}
+                                        loading={loading}
+                                        pagination={{
+                                            showSizeChanger: true,
+                                            pageSizeOptions: ['10', '20', '50', '100'],
+                                            defaultPageSize: 20,
+                                        }}
+                                        scroll={{ x: 1400 }}
+                                    />
+                                </>
+                            ),
+                        },
+                        {
+                            key: 'summary',
+                            label: '工资汇总',
+                            children: (
+                                <>
+                                    <Card size="small" className="mb-sm">
+                                        <Space wrap>
+                                            <span style={{ color: '#6b7280' }}>人员数 {summaryRows.length}</span>
+                                            <span style={{ color: '#6b7280' }}>总数量 {summaryRows.reduce((sum, r) => sum + toNumberOrZero(r.totalQuantity), 0)}</span>
+                                            <span style={{ color: '#6b7280' }}>总金额 {summaryRows.reduce((sum, r) => sum + toNumberOrZero(r.totalAmount), 0).toFixed(2)}</span>
+                                            <Button
+                                                type="primary"
+                                                onClick={handleBatchApprove}
+                                                disabled={selectedRowKeys.length === 0}
+                                            >
+                                                批量审核 ({selectedRowKeys.length})
+                                            </Button>
+                                        </Space>
+                                    </Card>
+
+                                    <ResizableTable
+                                        storageKey="finance-payroll-operator-summary"
+                                        rowKey={(r: Record<string, unknown>) => String(r?.operatorName || '')}
+                                        rowSelection={{
+                                            selectedRowKeys,
+                                            onChange: (keys: React.Key[]) => setSelectedRowKeys(keys as string[]),
+                                            getCheckboxProps: (record: Record<string, unknown>) => ({
+                                                disabled: Boolean(record.approvalTime),
+                                            }),
+                                        }}
+                                        columns={summaryColumns}
+                                        dataSource={summaryRows as Record<string, unknown>}
+                                        loading={loading}
+                                        pagination={{
+                                            showSizeChanger: true,
+                                            pageSizeOptions: ['10', '20', '50', '100'],
+                                            defaultPageSize: 20,
+                                        }}
+                                        scroll={{ x: 1300 }}
+                                    />
+                                </>
+                            ),
+                        },
+                    ]}
+                />
+
+                {/* 退回原因弹窗 */}
+                <Modal
+                    title="管理退回"
+                    open={rejectVisible}
+                    onOk={handleReject}
+                    onCancel={() => {
+                        setRejectVisible(false);
+                        setRejectOperator('');
+                        setRejectReason('');
+                    }}
+                    okText="确认退回"
+                    cancelText="取消"
+                >
+                    <div style={{ marginBottom: 16 }}>
+                        <div style={{ marginBottom: 8, color: '#6b7280' }}>退回人员：{rejectOperator}</div>
+                        <Input.TextArea
+                            placeholder="请输入退回原因（必填）"
+                            rows={4}
+                            value={rejectReason}
+                            onChange={(e) => setRejectReason(e.target.value)}
+                            maxLength={200}
+                            showCount
+                        />
+                    </div>
+                </Modal>
+            </Card>
+        </Layout>
+    );
+};
+
+export default PayrollOperatorSummary;

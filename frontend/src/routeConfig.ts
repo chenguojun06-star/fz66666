@@ -35,7 +35,7 @@ export const paths = {
 
   productionList: '/production',
   materialPurchase: '/production/material',
-  materialPurchaseDetail: '/production/material/:orderId',
+  materialPurchaseDetail: '/production/material/:orderNo',
   cutting: '/production/cutting',
   cuttingTask: '/production/cutting/task/:orderNo',
   progressDetail: '/production/progress-detail',
