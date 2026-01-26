@@ -88,6 +88,31 @@ public class ShipmentReconciliationController {
         return Result.successMessage("操作成功");
     }
 
+    /**
+     * 更新订单备注
+     */
+    @PostMapping("/{orderId}/remark")
+    public Result<?> updateRemark(@PathVariable String orderId, @RequestBody Map<String, String> request) {
+        String remark = request.get("remark");
+        ShipmentReconciliation reconciliation = shipmentReconciliationOrchestrator.getById(orderId);
+        if (reconciliation == null) {
+            return Result.fail("订单结算不存在");
+        }
+        reconciliation.setRemark(remark);
+        shipmentReconciliationOrchestrator.update(reconciliation);
+        return Result.success("备注更新成功");
+    }
+
+    /**
+     * 获取订单操作日志
+     */
+    @GetMapping("/{orderId}/logs")
+    public Result<?> getOrderLogs(@PathVariable String orderId) {
+        // TODO: 实现操作日志功能
+        // 暂时返回空数组，后续可以从审计日志表或状态变更记录中获取
+        return Result.success(Collections.emptyList());
+    }
+
     public static class UpdateStatusRequest {
         @NotBlank(message = "id不能为空")
         private String id;
