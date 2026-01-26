@@ -67,7 +67,7 @@ public class OrderReconciliationHelper {
                 .eq(ShipmentReconciliation::getOrderId, orderId)
                 .eq(ShipmentReconciliation::getDeleteFlag, 0)
         );
-        
+
         if (existingCount > 0) {
             log.info("订单结算记录已存在，跳过创建: orderId={}, orderNo={}", orderId, orderNo);
             return;
@@ -75,7 +75,7 @@ public class OrderReconciliationHelper {
 
         // 判断是否本厂
         boolean isOwn = isOwnFactory(order);
-        
+
         // 创建结算记录
         ShipmentReconciliation recon = new ShipmentReconciliation();
         recon.setReconciliationNo(buildReconciliationNo());
@@ -88,35 +88,36 @@ public class OrderReconciliationHelper {
         recon.setStyleName(order.getStyleName());
         recon.setQuantity(order.getCompletedQuantity());
         recon.setIsOwnFactory(isOwn ? 1 : 0);
-        
+
+        // 计算扫码工资成本（本厂和加工厂都可能有扫码记录）
+        BigDecimal scanCost = calculateScanCostForOrder(orderId);
+        recon.setScanCost(scanCost);
+
         // 计算金额
         if (isOwn) {
-            // 本厂：汇总扫码工资成本
-            BigDecimal scanCost = calculateScanCostForOrder(orderId);
-            recon.setScanCost(scanCost);
+            // 本厂：只用扫码工资成本
             recon.setTotalAmount(scanCost);
             recon.setFinalAmount(scanCost);
             log.info("本厂订单关单，工资成本: orderId={}, scanCost={}", orderId, scanCost);
         } else {
-            // 加工厂：使用订单单价×数量
+            // 加工厂：扫码成本 + 加工费
             BigDecimal unitPrice = order.getUnitPrice() != null ? order.getUnitPrice() : BigDecimal.ZERO;
             BigDecimal quantity = new BigDecimal(order.getCompletedQuantity() != null ? order.getCompletedQuantity() : 0);
-            BigDecimal totalAmount = unitPrice.multiply(quantity);
-            
+            BigDecimal processingFee = unitPrice.multiply(quantity);
+            BigDecimal totalAmount = scanCost.add(processingFee);
+
             recon.setUnitPrice(unitPrice);
             recon.setTotalAmount(totalAmount);
             recon.setFinalAmount(totalAmount);
-            log.info("加工厂订单关单，加工费: orderId={}, unitPrice={}, quantity={}, totalAmount={}", 
-                orderId, unitPrice, quantity, totalAmount);
-        }
-        
+            log.info("加工厂订单关单，扫码成本: {}, 加工费: {}, 总计: {}",
+                scanCost, processingFee, totalAmount);
         recon.setStatus("pending");
         recon.setReconciliationDate(LocalDateTime.now());
         recon.setDeleteFlag(0);
-        
+
         boolean saved = shipmentReconciliationService.save(recon);
         if (saved) {
-            log.info("订单结算记录创建成功: orderId={}, reconciliationNo={}, isOwnFactory={}", 
+            log.info("订单结算记录创建成功: orderId={}, reconciliationNo={}, isOwnFactory={}",
                 orderId, recon.getReconciliationNo(), isOwn);
         } else {
             log.error("订单结算记录创建失败: orderId={}", orderId);
@@ -132,11 +133,11 @@ public class OrderReconciliationHelper {
                 new LambdaQueryWrapper<ScanRecord>()
                     .eq(ScanRecord::getOrderId, orderId)
             );
-            
+
             BigDecimal total = scans.stream()
                 .map(s -> s.getScanCost() != null ? s.getScanCost() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-            
+
             return total;
         } catch (Exception e) {
             log.error("计算扫码成本失败: orderId={}", orderId, e);
