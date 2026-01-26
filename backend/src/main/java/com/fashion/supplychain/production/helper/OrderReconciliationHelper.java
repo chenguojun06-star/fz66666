@@ -100,7 +100,8 @@ public class OrderReconciliationHelper {
             log.info("本厂订单关单，工资成本: orderId={}, scanCost={}", orderId, scanCost);
         } else {
             // 加工厂：扫码成本 + 加工费
-            BigDecimal unitPrice = order.getProcessUnitPrice() != null ? order.getProcessUnitPrice() : BigDecimal.ZERO;
+            // 使用 factoryUnitPrice（加工厂单价）计算加工费
+            BigDecimal unitPrice = order.getFactoryUnitPrice() != null ? order.getFactoryUnitPrice() : BigDecimal.ZERO;
             BigDecimal quantity = new BigDecimal(order.getCompletedQuantity() != null ? order.getCompletedQuantity() : 0);
             BigDecimal processingFee = unitPrice.multiply(quantity);
             BigDecimal totalAmount = scanCost.add(processingFee);
@@ -111,7 +112,7 @@ public class OrderReconciliationHelper {
             log.info("加工厂订单关单，扫码成本: {}, 加工费: {}, 总计: {}",
                 scanCost, processingFee, totalAmount);
         }
-        
+
         recon.setStatus("pending");
         recon.setReconciliationDate(LocalDateTime.now());
 
