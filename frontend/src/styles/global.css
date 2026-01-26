@@ -284,20 +284,20 @@ body {
   --table-border-color: rgba(255, 255, 255, 0.06);
 
   /* 侧边栏 */
-  --sidebar-bg-start: #f8f9fb;
-  --sidebar-bg-end: #ffffff;
-  --sidebar-text: #000000;
-  --sidebar-text-strong: #000000;
-  --sidebar-text-muted: rgba(0, 0, 0, 0.7);
-  --sidebar-text-disabled: rgba(0, 0, 0, 0.4);
-  --sidebar-item-bg-hover: rgba(0, 0, 0, 0.06);
-  --sidebar-item-border-hover: rgba(0, 0, 0, 0.1);
-  --sidebar-item-bg-active: rgba(0, 0, 0, 0.08);
-  --sidebar-item-border-active: rgba(0, 0, 0, 0.12);
-  --sidebar-icon-bg: rgba(0, 0, 0, 0.06);
-  --sidebar-icon-border: rgba(0, 0, 0, 0.1);
-  --sidebar-section-active-bg: rgba(0, 0, 0, 0.06);
-  --sidebar-section-active-border: rgba(0, 0, 0, 0.1);
+  --sidebar-bg-start: #1a1d24;
+  --sidebar-bg-end: #0f1115;
+  --sidebar-text: rgba(240, 242, 245, 0.9);
+  --sidebar-text-strong: #f0f2f5;
+  --sidebar-text-muted: rgba(240, 242, 245, 0.72);
+  --sidebar-text-disabled: rgba(240, 242, 245, 0.45);
+  --sidebar-item-bg-hover: rgba(255, 255, 255, 0.08);
+  --sidebar-item-border-hover: rgba(255, 255, 255, 0.14);
+  --sidebar-item-bg-active: rgba(255, 255, 255, 0.12);
+  --sidebar-item-border-active: rgba(255, 255, 255, 0.18);
+  --sidebar-icon-bg: rgba(255, 255, 255, 0.1);
+  --sidebar-icon-border: rgba(255, 255, 255, 0.16);
+  --sidebar-section-active-bg: rgba(255, 255, 255, 0.1);
+  --sidebar-section-active-border: rgba(255, 255, 255, 0.16);
 
   /* 标签页 */
   --recent-tab-border: rgba(255, 255, 255, 0.1);
