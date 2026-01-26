@@ -46,6 +46,7 @@ export const paths = {
 
   materialReconciliation: '/finance/material-reconciliation',
   paymentApproval: '/finance/payment-approval',
+  orderReconciliationApproval: '/finance/order-reconciliation-approval',
   payrollOperatorSummary: '/finance/payroll-operator-summary',
   financeCenter: '/finance/center',
 
@@ -73,6 +74,7 @@ export const permissionCodes = {
 
   materialRecon: 'MENU_MATERIAL_RECON',
   paymentApproval: 'MENU_PAYMENT_APPROVAL',
+  orderReconciliationApproval: 'MENU_ORDER_RECON_APPROVAL',
   financeCenter: 'MENU_FINANCE_CENTER',
 
   user: 'MENU_USER',
@@ -132,7 +134,8 @@ export const menuConfig: MenuSection[] = [
     icon: React.createElement(AccountBookOutlined),
     items: [
       { label: '物料对账', path: paths.materialReconciliation, icon: React.createElement(AccountBookOutlined) },
-      { label: '审批付款', path: paths.paymentApproval, icon: React.createElement(AccountBookOutlined) },
+      { label: '工资审批', path: paths.paymentApproval, icon: React.createElement(AccountBookOutlined) },
+      { label: '订单审批', path: paths.orderReconciliationApproval, icon: React.createElement(AccountBookOutlined) },
       { label: '工资结算', path: paths.payrollOperatorSummary, icon: React.createElement(AccountBookOutlined) },
       { label: '订单结算', path: paths.financeCenter, icon: React.createElement(AccountBookOutlined) },
     ],
@@ -166,6 +169,7 @@ export const routeToPermissionCode: Record<string, string> = {
 
   [paths.materialReconciliation]: permissionCodes.materialRecon,
   [paths.paymentApproval]: permissionCodes.paymentApproval,
+  [paths.orderReconciliationApproval]: permissionCodes.orderReconciliationApproval,
   [paths.financeCenter]: permissionCodes.financeCenter,
   [paths.user]: permissionCodes.user,
   [paths.userApproval]: permissionCodes.userApproval,
