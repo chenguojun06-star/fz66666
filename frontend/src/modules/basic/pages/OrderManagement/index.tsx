@@ -60,7 +60,7 @@ const OrderManagement: React.FC = () => {
     try {
       return decodeURIComponent(raw).trim();
     } catch {
-    // Intentionally empty
+      // Intentionally empty
       // 忽略错误
       return raw;
     }
@@ -744,7 +744,7 @@ const OrderManagement: React.FC = () => {
         setFactories(response.data.records || []);
       }
     } catch {
-    // Intentionally empty
+      // Intentionally empty
       // 忽略错误
       setFactories([]);
     }
@@ -837,7 +837,7 @@ const OrderManagement: React.FC = () => {
         form.setFieldsValue({ orderNo: res.data });
       }
     } catch {
-    // Intentionally empty
+      // Intentionally empty
       // 忽略错误
     }
   };
@@ -852,7 +852,7 @@ const OrderManagement: React.FC = () => {
         setBomList([]);
       }
     } catch {
-    // Intentionally empty
+      // Intentionally empty
       // 忽略错误
       setBomList([]);
     } finally {
@@ -1263,6 +1263,7 @@ const OrderManagement: React.FC = () => {
                               <Space size={4}>
                                 <span>加工厂</span>
                                 <Tooltip
+                                  color={tooltipTheme.background}
                                   title={
                                     <div style={{ fontSize: 13, color: tooltipTheme.text }}>
                                       <div style={{ marginBottom: 8, fontWeight: 600, color: tooltipTheme.text }}>📋 加工方式说明</div>
@@ -1272,15 +1273,17 @@ const OrderManagement: React.FC = () => {
                                       </div>
                                       <div>
                                         <span style={{ color: '#ff7875' }}>● 加工厂生产：</span>
-                                        选择其他加工厂，订单完成后数据流向<strong>订单结算</strong>（按工厂结算加工费）
+                                        选择其他加工厂，订单完成后数据流向<strong>订单结算</strong>（按工厂扫码结算加工费）
                                       </div>
                                       <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${tooltipTheme.divider}`, fontSize: 12, opacity: 0.9 }}>
                                         💡 所有数据最终在"订单结算数据看板"统一查看
                                       </div>
                                     </div>
                                   }
-                                  overlayStyle={{ maxWidth: 380 }}
-                                  overlayInnerStyle={{ background: tooltipTheme.background, color: tooltipTheme.text, border: `1px solid ${tooltipTheme.border}` }}
+                                  styles={{
+                                    root: { maxWidth: 380 },
+                                    body: { background: tooltipTheme.background, color: tooltipTheme.text, border: `1px solid ${tooltipTheme.border}` },
+                                  }}
                                 >
                                   <QuestionCircleOutlined style={{ color: '#1890ff', cursor: 'help' }} />
                                 </Tooltip>
