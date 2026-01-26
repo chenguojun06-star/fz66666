@@ -814,7 +814,7 @@ class ScanHandler {
       const endTime = new Date(today.setHours(23, 59, 59, 999)).toISOString();
 
       const res = await this.api.production.myScanHistory({
-        pageNum: 1,
+        page: 1,
         pageSize: 100,
         workerName: workerName,
         startTime: startTime,

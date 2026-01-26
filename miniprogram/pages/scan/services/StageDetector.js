@@ -394,7 +394,7 @@ class StageDetector {
       // 查询入库记录
       const res = await this.api.production.listWarehousing({
         cuttingBundleId: bundleInfo.id,
-        pageNum: 1,
+        page: 1,
         pageSize: 1,
       });
 
@@ -438,7 +438,7 @@ class StageDetector {
   async _getScanHistory(orderNo, bundleNo) {
     try {
       const historyRes = await this.api.production.myScanHistory({
-        pageNum: 1,
+        page: 1,
         pageSize: 100, // 获取所有记录
         orderNo: orderNo,
         bundleNo: bundleNo,

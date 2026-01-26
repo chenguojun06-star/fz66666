@@ -11,10 +11,10 @@ import {
   WarningOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import Layout from '../../../../components/Layout';
-import api, { ApiResult } from '../../../../utils/api';
-import errorHandler from '../../../../utils/errorHandler';
-import { useSync } from '../../../../utils/syncManager';
+import Layout from '@/components/Layout';
+import api, { ApiResult } from '@/utils/api';
+import errorHandler from '@/utils/errorHandler';
+import { useSync } from '@/utils/syncManager';
 import './styles.css';
 
 interface DashboardStats {
