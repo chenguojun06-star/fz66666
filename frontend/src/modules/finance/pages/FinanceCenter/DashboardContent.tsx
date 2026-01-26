@@ -335,7 +335,7 @@ const DashboardContent: React.FC = () => {
 
       // 工厂总金额排名
       const factoryMap: Record<string, number> = {};
-      
+
       records.forEach(r => {
         const factoryName = r.factoryName || '未知工厂';
         const amount = r.totalAmount || 0;
