@@ -49,8 +49,7 @@ public class OrderReconciliationApprovalController {
             wrapper.eq(OrderReconciliationApproval::getStatus, status.trim());
         }
 
-        // 排序：pending优先，然后按创建时间倒序
-        wrapper.orderBy(true, true, "CASE status WHEN 'pending' THEN 1 WHEN 'verified' THEN 2 WHEN 'approved' THEN 3 WHEN 'paid' THEN 4 ELSE 5 END");
+        // 排序：按创建时间倒序
         wrapper.orderByDesc(OrderReconciliationApproval::getCreateTime);
 
         IPage<OrderReconciliationApproval> iPage = orderReconciliationApprovalService.page(

@@ -287,7 +287,7 @@ const OrderReconciliationApproval: React.FC = () => {
 
   return (
     <Layout>
-      <Card title="订单结算审批付款" bordered={false}>
+      <Card title="订单结算审批付款">
         <Space style={{ marginBottom: 16 }} wrap>
           <Input
             placeholder="搜索工厂名称"

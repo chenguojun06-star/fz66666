@@ -65,7 +65,6 @@ public class OrderReconciliationHelper {
         long existingCount = shipmentReconciliationService.count(
             new LambdaQueryWrapper<ShipmentReconciliation>()
                 .eq(ShipmentReconciliation::getOrderId, orderId)
-                .eq(ShipmentReconciliation::getDeleteFlag, 0)
         );
 
         if (existingCount > 0) {
@@ -81,8 +80,8 @@ public class OrderReconciliationHelper {
         recon.setReconciliationNo(buildReconciliationNo());
         recon.setOrderId(orderId);
         recon.setOrderNo(orderNo);
-        recon.setFactoryId(order.getFactoryId());
-        recon.setFactoryName(order.getFactoryName());
+        recon.setCustomerId(order.getFactoryId());
+        recon.setCustomerName(order.getFactoryName());
         recon.setStyleId(order.getStyleId());
         recon.setStyleNo(order.getStyleNo());
         recon.setStyleName(order.getStyleName());
@@ -101,7 +100,7 @@ public class OrderReconciliationHelper {
             log.info("本厂订单关单，工资成本: orderId={}, scanCost={}", orderId, scanCost);
         } else {
             // 加工厂：扫码成本 + 加工费
-            BigDecimal unitPrice = order.getUnitPrice() != null ? order.getUnitPrice() : BigDecimal.ZERO;
+            BigDecimal unitPrice = order.getProcessUnitPrice() != null ? order.getProcessUnitPrice() : BigDecimal.ZERO;
             BigDecimal quantity = new BigDecimal(order.getCompletedQuantity() != null ? order.getCompletedQuantity() : 0);
             BigDecimal processingFee = unitPrice.multiply(quantity);
             BigDecimal totalAmount = scanCost.add(processingFee);
@@ -111,9 +110,10 @@ public class OrderReconciliationHelper {
             recon.setFinalAmount(totalAmount);
             log.info("加工厂订单关单，扫码成本: {}, 加工费: {}, 总计: {}",
                 scanCost, processingFee, totalAmount);
+        }
+        
         recon.setStatus("pending");
         recon.setReconciliationDate(LocalDateTime.now());
-        recon.setDeleteFlag(0);
 
         boolean saved = shipmentReconciliationService.save(recon);
         if (saved) {

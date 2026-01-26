@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Form, Input, Button, Space, message, DatePicker, Select, Modal } from 'antd';
+import { Card, Form, Input, Button, Space, message, DatePicker, Select, Modal, Tooltip, Timeline } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { SearchOutlined, ReloadOutlined, DownloadOutlined, FileExcelOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { SearchOutlined, ReloadOutlined, DownloadOutlined, FileExcelOutlined, CheckCircleOutlined, EditOutlined, HistoryOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
@@ -32,6 +32,9 @@ interface FinishedSettlementRow {
   profitMargin: number;
   createTime: string;
   completeTime?: string;
+  remark?: string; // 备注
+  approvalTime?: string; // 审批时间
+  approvalBy?: string; // 审批人
 }
 
 interface PageParams {
@@ -52,6 +55,11 @@ const FinishedSettlementContent: React.FC = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
   const [verifyModalVisible, setVerifyModalVisible] = useState(false);
   const [currentRecord, setCurrentRecord] = useState<FinishedSettlementRow | null>(null);
+  const [remarkModalVisible, setRemarkModalVisible] = useState(false);
+  const [editingOrderId, setEditingOrderId] = useState<string>('');
+  const [remarkText, setRemarkText] = useState<string>('');
+  const [logModalVisible, setLogModalVisible] = useState(false);
+  const [orderLogs, setOrderLogs] = useState<any[]>([]);
   const [pageParams, setPageParams] = useState<PageParams>({
     page: 1,
     pageSize: 20,
@@ -243,9 +251,32 @@ const FinishedSettlementContent: React.FC = () => {
       ),
     },
     {
+      title: '审批时间',
+      dataIndex: 'approvalTime',
+      key: 'approvalTime',
+      width: 160,
+      render: (val) => val ? dayjs(val).format('YYYY-MM-DD HH:mm') : '-',
+    },
+    {
+      title: '备注',
+      dataIndex: 'remark',
+      key: 'remark',
+      width: 200,
+      ellipsis: {
+        showTitle: false,
+      },
+      render: (text: string | undefined, record: FinishedSettlementRow) => (
+        <Tooltip title={text || '暂无备注'}>
+          <span style={{ cursor: 'pointer', color: text ? '#1890ff' : '#999' }}>
+            {text || '暂无'}
+          </span>
+        </Tooltip>
+      ),
+    },
+    {
       title: '操作',
       key: 'action',
-      width: 80,
+      width: 180,
       fixed: 'right' as const,
       render: (_: unknown, record: FinishedSettlementRow) => (
         <RowActions
@@ -259,6 +290,18 @@ const FinishedSettlementContent: React.FC = () => {
                   label: '审批核实',
                   icon: <CheckCircleOutlined />,
                   onClick: () => handleVerify(record),
+                },
+                {
+                  key: 'remark',
+                  label: '编辑备注',
+                  icon: <EditOutlined />,
+                  onClick: () => openRemarkModal(record),
+                },
+                {
+                  key: 'log',
+                  label: '查看日志',
+                  icon: <HistoryOutlined />,
+                  onClick: () => openLogModal(record.orderId),
                 },
               ],
             },
@@ -349,6 +392,42 @@ const FinishedSettlementContent: React.FC = () => {
   const handleVerifyCancel = () => {
     setVerifyModalVisible(false);
     setCurrentRecord(null);
+  };
+
+  // 打开备注弹窗
+  const openRemarkModal = (record: FinishedSettlementRow) => {
+    setEditingOrderId(record.orderId);
+    setRemarkText(record.remark || '');
+    setRemarkModalVisible(true);
+  };
+
+  // 保存备注
+  const saveRemark = async () => {
+    if (!editingOrderId) return;
+
+    try {
+      await api.post(`/finance/finished-settlement/${editingOrderId}/remark`, {
+        remark: remarkText,
+      });
+      message.success('备注保存成功');
+      setRemarkModalVisible(false);
+      loadData();
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : '保存备注失败';
+      message.error(errMsg);
+    }
+  };
+
+  // 打开日志弹窗
+  const openLogModal = async (orderId: string) => {
+    try {
+      const response = await api.get(`/finance/finished-settlement/${orderId}/logs`);
+      setOrderLogs(response.data || []);
+      setLogModalVisible(true);
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : '获取日志失败';
+      message.error(errMsg);
+    }
   };
 
   // 导出全部
@@ -535,7 +614,62 @@ const FinishedSettlementContent: React.FC = () => {
           </div>
         )}
       </Modal>
-    </>
+      {/* 备注编辑弹窗 */}
+      <Modal
+        title="编辑备注"
+        open={remarkModalVisible}
+        onOk={saveRemark}
+        onCancel={() => setRemarkModalVisible(false)}
+        width={600}
+        okText="保存"
+        cancelText="取消"
+      >
+        <Form.Item label="备注内容">
+          <Input.TextArea
+            rows={6}
+            value={remarkText}
+            onChange={(e) => setRemarkText(e.target.value)}
+            placeholder="请输入备注内容..."
+            maxLength={500}
+            showCount
+          />
+        </Form.Item>
+      </Modal>
+
+      {/* 操作日志弹窗 */}
+      <Modal
+        title="操作日志"
+        open={logModalVisible}
+        onCancel={() => setLogModalVisible(false)}
+        footer={<Button onClick={() => setLogModalVisible(false)}>关闭</Button>}
+        width={700}
+      >
+        {orderLogs.length > 0 ? (
+          <Timeline
+            items={orderLogs.map((log: any) => ({
+              children: (
+                <div>
+                  <div style={{ fontWeight: 600, marginBottom: 4 }}>
+                    {log.action || log.operationType}
+                  </div>
+                  <div style={{ color: '#666', fontSize: '13px', marginBottom: 4 }}>
+                    {log.description || log.content}
+                  </div>
+                  <div style={{ color: '#999', fontSize: '12px' }}>
+                    <span>{log.operatorName || log.userName || '系统'}</span>
+                    <span style={{ margin: '0 8px' }}>·</span>
+                    <span>{log.createTime ? dayjs(log.createTime).format('YYYY-MM-DD HH:mm:ss') : '-'}</span>
+                  </div>
+                </div>
+              ),
+            }))}
+          />
+        ) : (
+          <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
+            暂无操作日志
+          </div>
+        )}
+      </Modal>    </>
   );
 };
 
