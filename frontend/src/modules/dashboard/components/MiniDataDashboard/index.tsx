@@ -12,6 +12,8 @@ interface QualityStats {
   repairIssues: number;
 }
 
+type TimeRange = 'day' | 'week' | 'month';
+
 const MiniDataDashboard: React.FC = () => {
   const [stats, setStats] = useState<QualityStats>({
     totalWarehousing: 0,
@@ -21,11 +23,14 @@ const MiniDataDashboard: React.FC = () => {
     repairIssues: 0,
   });
   const [loading, setLoading] = useState(false);
+  const [timeRange, setTimeRange] = useState<TimeRange>('week');
 
   const fetchStats = async () => {
     setLoading(true);
     try {
-      const response = await api.get<{ code: number; message: string; data: QualityStats }>('/dashboard/quality-stats');
+      const response = await api.get<{ code: number; message: string; data: QualityStats }>('/dashboard/quality-stats', {
+        params: { range: timeRange }
+      });
       if (response.code === 200) {
         const d = response.data as QualityStats || {} as QualityStats;
         setStats({
@@ -48,10 +53,35 @@ const MiniDataDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchStats();
-  }, []);
+  }, [timeRange]);
 
   return (
-    <Card className="mini-data-dashboard" title="� 质检统计概览">
+    <Card 
+      className="mini-data-dashboard" 
+      title="🔍 质检统计概览"
+      extra={
+        <div className="time-range-selector">
+          <button
+            className={`time-range-btn ${timeRange === 'day' ? 'active' : ''}`}
+            onClick={() => setTimeRange('day')}
+          >
+            日
+          </button>
+          <button
+            className={`time-range-btn ${timeRange === 'week' ? 'active' : ''}`}
+            onClick={() => setTimeRange('week')}
+          >
+            周
+          </button>
+          <button
+            className={`time-range-btn ${timeRange === 'month' ? 'active' : ''}`}
+            onClick={() => setTimeRange('month')}
+          >
+            月
+          </button>
+        </div>
+      }
+    >
       {loading ? (
         <div className="mini-dashboard-loading">
           <Spin />

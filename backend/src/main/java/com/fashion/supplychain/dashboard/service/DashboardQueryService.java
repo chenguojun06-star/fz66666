@@ -25,8 +25,6 @@ public interface DashboardQueryService {
 
     long countWarehousingBetween(LocalDateTime start, LocalDateTime end);
 
-    long sumUnqualifiedQuantityBetween(LocalDateTime start, LocalDateTime end);
-
     long countUrgentEvents();
 
     List<StyleInfo> listRecentStyles(int limit);
@@ -52,4 +50,11 @@ public interface DashboardQueryService {
     long sumTotalUnqualifiedQuantity();
 
     long countRepairIssues();
+
+    // 带时间范围的质检统计方法
+    long sumQualifiedQuantityBetween(LocalDateTime start, LocalDateTime end);
+
+    long sumUnqualifiedQuantityBetween(LocalDateTime start, LocalDateTime end);
+
+    long countRepairIssuesBetween(LocalDateTime start, LocalDateTime end);
 }
