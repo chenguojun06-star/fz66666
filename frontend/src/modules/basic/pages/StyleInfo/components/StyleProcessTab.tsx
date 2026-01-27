@@ -10,6 +10,7 @@ import RowActions from '@/components/common/RowActions';
 interface Props {
   styleId: string | number;
   readOnly?: boolean;
+  hidePrice?: boolean; // 是否隐藏单价列
 }
 
 const norm = (v: unknown) => String(v || '').trim();
@@ -20,7 +21,7 @@ const isTempId = (id: any) => {
   return s.startsWith('-');
 };
 
-const StyleProcessTab: React.FC<Props> = ({ styleId, readOnly }) => {
+const StyleProcessTab: React.FC<Props> = ({ styleId, readOnly, hidePrice = false }) => {
   const [data, setData] = useState<StyleProcess[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -169,6 +170,7 @@ const StyleProcessTab: React.FC<Props> = ({ styleId, readOnly }) => {
       styleId,
       processCode: '',
       processName: '',
+      progressStage: '车缝', // 默认车缝节点
       machineType: '',
       standardTime: 0,
       price: 0,
@@ -260,6 +262,7 @@ const StyleProcessTab: React.FC<Props> = ({ styleId, readOnly }) => {
           styleId,
           processCode: norm(r.processCode),
           processName: norm(r.processName),
+          progressStage: norm(r.progressStage) || '车缝',
           machineType: norm(r.machineType),
           standardTime: toNumberSafe(r.standardTime),
           price: toNumberSafe(r.price),
@@ -321,6 +324,29 @@ const StyleProcessTab: React.FC<Props> = ({ styleId, readOnly }) => {
           ),
       },
       {
+        title: '进度节点',
+        dataIndex: 'progressStage',
+        width: 130,
+        ellipsis: true,
+        render: (text: string, record: StyleProcess) =>
+          editableMode ? (
+            <Select
+              value={record.progressStage || '车缝'}
+              style={{ width: '100%' }}
+              onChange={(v) => updateField(record.id!, 'progressStage', v)}
+              options={[
+                { label: '采购', value: '采购' },
+                { label: '裁剪', value: '裁剪' },
+                { label: '车缝', value: '车缝' },
+                { label: '尾部', value: '尾部' },
+                { label: '入库', value: '入库' },
+              ]}
+            />
+          ) : (
+            text || '车缝'
+          ),
+      },
+      {
         title: '机器类型',
         dataIndex: 'machineType',
         width: 130,
@@ -352,7 +378,7 @@ const StyleProcessTab: React.FC<Props> = ({ styleId, readOnly }) => {
             text
           ),
       },
-      {
+      ...(!hidePrice ? [{
         title: '工价(元)',
         dataIndex: 'price',
         width: 130,
@@ -369,7 +395,7 @@ const StyleProcessTab: React.FC<Props> = ({ styleId, readOnly }) => {
           ) : (
             `¥${toNumberSafe(text)}`
           ),
-      },
+      }] : []),
       {
         title: '排序',
         dataIndex: 'sortOrder',

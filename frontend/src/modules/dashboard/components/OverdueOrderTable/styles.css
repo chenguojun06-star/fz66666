@@ -16,7 +16,20 @@
 }
 
 .overdue-order-table-card .ant-card-body {
-  padding: 20px;
+  padding: 0;
+}
+
+.overdue-order-table {
+  margin-bottom: 0 !important;
+}
+
+.overdue-order-table .ant-table {
+  margin-bottom: 0 !important;
+}
+
+.overdue-order-table .ant-pagination {
+  margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
 }
 
 .overdue-order-table .ant-table-thead > tr > th {

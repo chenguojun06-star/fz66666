@@ -31,16 +31,16 @@ const OrderCuttingChart: React.FC = () => {
         date.setDate(date.getDate() - 29 + i);
         return `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
       });
-      
+
       const mockOrderQuantities = Array.from({ length: 30 }, () => Math.floor(Math.random() * 2000) + 3000);
       const mockCuttingQuantities = Array.from({ length: 30 }, () => Math.floor(Math.random() * 1800) + 2500);
-      
+
       setData({
         dates: mockDates,
         orderQuantities: mockOrderQuantities,
         cuttingQuantities: mockCuttingQuantities,
       });
-      
+
       // TODO: 替换为真实API
       // const result = await api.get<ChartData>('/api/dashboard/order-cutting-chart');
       // if (result.success && result.data) {
@@ -82,7 +82,7 @@ const OrderCuttingChart: React.FC = () => {
     },
     legend: {
       data: ['下单数量', '裁剪数量'],
-      top: 10,
+      top: 5,
       textStyle: {
         fontSize: 13,
         color: '#666',
@@ -91,8 +91,8 @@ const OrderCuttingChart: React.FC = () => {
     grid: {
       left: '3%',
       right: '4%',
-      bottom: '3%',
-      top: 60,
+      bottom: '5px',
+      top: 35,
       containLabel: true,
     },
     xAxis: {
@@ -188,12 +188,12 @@ const OrderCuttingChart: React.FC = () => {
     <Card
       title="下单数量 vs 裁剪数量"
       className="order-cutting-chart-card"
-      bordered={false}
+      variant="borderless"
     >
       <Spin spinning={loading}>
         <div className="chart-container">
           {data.dates.length > 0 ? (
-            <ReactECharts option={option} style={{ height: '350px' }} />
+            <ReactECharts option={option} style={{ height: '250px' }} />
           ) : (
             <div className="empty-chart">暂无数据</div>
           )}

@@ -77,9 +77,13 @@ const TopStats: React.FC = () => {
   const fetchStats = async () => {
     setLoading(true);
     try {
-      const response = await api.get<TopStatsData>('/api/dashboard/top-stats');
-      if (response.success && response.data) {
+      const response = await api.get<{ code: number; message?: string; data: TopStatsData }>('/dashboard/top-stats', {
+        params: { range: 'week' }
+      });
+      if (response.code === 200 && response.data) {
         setStatsData(response.data);
+      } else {
+        message.error(response.message || '获取统计数据失败');
       }
     } catch (error) {
       message.error('获取统计数据失败');

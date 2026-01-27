@@ -33,6 +33,11 @@ public class StyleProcess {
     private String processName;
 
     /**
+     * 进度节点（采购/裁剪/车缝/尾部/入库）
+     */
+    private String progressStage;
+
+    /**
      * 机器类型
      */
     private String machineType;

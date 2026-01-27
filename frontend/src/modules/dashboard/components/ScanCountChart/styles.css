@@ -16,12 +16,14 @@
 }
 
 .scan-count-chart-card .ant-card-body {
-  padding: 20px;
+  padding: 0;
 }
 
 .chart-container {
   width: 100%;
-  min-height: 350px;
+  height: 250px;
+  margin: 0;
+  padding: 0;
 }
 
 .empty-chart {
