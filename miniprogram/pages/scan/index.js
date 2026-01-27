@@ -532,6 +532,133 @@ Page({
   },
 
   /**
+   * 创建分组键
+   * @private
+   */
+  _createGroupKey(orderNo, progressStage) {
+    return `${orderNo || '未知订单'}_${progressStage || '未知工序'}`;
+  },
+
+  /**
+   * 创建新分组
+   * @private
+   */
+  _createNewGroup(groupKey, record) {
+    return {
+      id: groupKey,
+      orderNo: record.orderNo || '未知订单',
+      styleNo: record.styleNo || '-',
+      stage: record.progressStage || record.processName || '未知工序',
+      totalQuantity: 0,
+      qualifiedCount: 0,
+      defectiveCount: 0,
+      latestTime: record.scanTime,
+      expanded: false,
+      items: [],
+    };
+  },
+
+  /**
+   * 将记录添加到分组
+   * @private
+   */
+  _addRecordToGroup(group, record) {
+    // 更新统计数量
+    group.totalQuantity += record.quantity || 1;
+    
+    // 根据扫码结果分类统计
+    if (record.scanResult === 'success' || record.scanResult === 'qualified') {
+      group.qualifiedCount += record.quantity || 1;
+    } else if (record.scanResult === 'defective' || record.scanResult === 'failure') {
+      group.defectiveCount += record.quantity || 1;
+    } else {
+      // 默认算作合格
+      group.qualifiedCount += record.quantity || 1;
+    }
+    
+    // 更新最新时间
+    if (record.scanTime && (!group.latestTime || record.scanTime > group.latestTime)) {
+      group.latestTime = record.scanTime;
+    }
+    
+    // 添加明细记录
+    group.items.push({
+      id: record.id,
+      bundleNo: record.bundleNo || '',
+      color: record.color,
+      size: record.size,
+      quantity: record.quantity || 1,
+      unitPrice: record.unitPrice,
+      createdAt: record.scanTime,
+      scanType: record.scanType,
+      scanResult: record.scanResult,
+      scanCode: record.scanCode || '',
+    });
+  },
+
+  /**
+   * 按订单+工序分组扫码记录
+   * @private
+   */
+  _groupScanRecords(records) {
+    const groupedMap = {};
+    
+    records.forEach(record => {
+      const groupKey = this._createGroupKey(record.orderNo, record.progressStage);
+      
+      // 如果分组不存在，创建新分组
+      if (!groupedMap[groupKey]) {
+        groupedMap[groupKey] = this._createNewGroup(groupKey, record);
+      }
+      
+      // 将记录添加到分组
+      this._addRecordToGroup(groupedMap[groupKey], record);
+    });
+    
+    // 转为数组并按时间排序
+    const groupedList = Object.values(groupedMap);
+    groupedList.sort((a, b) => (b.latestTime || '').localeCompare(a.latestTime || ''));
+    
+    return groupedList;
+  },
+
+  /**
+   * 合并新旧分组数据
+   * @private
+   */
+  _mergeGroupedHistory(existingGroups, newGroups) {
+    const existingMap = {};
+    
+    // 构建已有分组的映射
+    existingGroups.forEach(g => {
+      existingMap[g.id] = g;
+    });
+    
+    // 合并新分组数据
+    newGroups.forEach(g => {
+      if (existingMap[g.id]) {
+        // 合并同一分组的数据
+        existingMap[g.id].items = existingMap[g.id].items.concat(g.items);
+        existingMap[g.id].totalQuantity += g.totalQuantity;
+        existingMap[g.id].qualifiedCount += g.qualifiedCount;
+        existingMap[g.id].defectiveCount += g.defectiveCount;
+        if (g.latestTime > existingMap[g.id].latestTime) {
+          existingMap[g.id].latestTime = g.latestTime;
+        }
+      } else {
+        // 新分组，直接添加
+        existingMap[g.id] = g;
+      }
+    });
+    
+    // 转为数组并排序
+    const mergedList = Object.values(existingMap);
+    mergedList.sort((a, b) => (b.latestTime || '').localeCompare(a.latestTime || ''));
+    
+    return mergedList;
+  },
+
+  /**
    * 加载我的扫码历史记录
    * @param {boolean} refresh - 是否刷新（重置分页）
    */
@@ -561,78 +688,11 @@ Page({
       const hasMore = page * pageSize < total;
 
       // 将扁平记录按 orderNo + progressStage 聚合分组
-      const groupedMap = {};
-      records.forEach(record => {
-        const groupKey = `${record.orderNo || '未知订单'}_${record.progressStage || '未知工序'}`;
-        if (!groupedMap[groupKey]) {
-          groupedMap[groupKey] = {
-            id: groupKey,
-            orderNo: record.orderNo || '未知订单',
-            styleNo: record.styleNo || '-',
-            stage: record.progressStage || record.processName || '未知工序',
-            totalQuantity: 0,
-            qualifiedCount: 0,
-            defectiveCount: 0,
-            latestTime: record.scanTime,
-            expanded: false,
-            items: [],
-          };
-        }
-        const group = groupedMap[groupKey];
-        group.totalQuantity += record.quantity || 1;
-        if (record.scanResult === 'success' || record.scanResult === 'qualified') {
-          group.qualifiedCount += record.quantity || 1;
-        } else if (record.scanResult === 'defective' || record.scanResult === 'failure') {
-          group.defectiveCount += record.quantity || 1;
-        } else {
-          // 默认算作合格
-          group.qualifiedCount += record.quantity || 1;
-        }
-        // 更新最新时间
-        if (record.scanTime && (!group.latestTime || record.scanTime > group.latestTime)) {
-          group.latestTime = record.scanTime;
-        }
-        group.items.push({
-          id: record.id,
-          bundleNo: record.bundleNo || '',
-          color: record.color,
-          size: record.size,
-          quantity: record.quantity || 1,
-          unitPrice: record.unitPrice,
-          createdAt: record.scanTime,
-          scanType: record.scanType,
-          scanResult: record.scanResult,
-          scanCode: record.scanCode || '',
-        });
-      });
-
-      // 转为数组并按最新时间排序
-      let groupedHistory = Object.values(groupedMap);
-      groupedHistory.sort((a, b) => (b.latestTime || '').localeCompare(a.latestTime || ''));
+      let groupedHistory = this._groupScanRecords(records);
 
       // 如果是加载更多，合并已有数据
       if (!refresh && my.groupedHistory.length > 0) {
-        // 合并分组（同一分组的数据合并到一起）
-        const existingMap = {};
-        my.groupedHistory.forEach(g => {
-          existingMap[g.id] = g;
-        });
-        groupedHistory.forEach(g => {
-          if (existingMap[g.id]) {
-            // 合并 items，更新统计
-            existingMap[g.id].items = existingMap[g.id].items.concat(g.items);
-            existingMap[g.id].totalQuantity += g.totalQuantity;
-            existingMap[g.id].qualifiedCount += g.qualifiedCount;
-            existingMap[g.id].defectiveCount += g.defectiveCount;
-            if (g.latestTime > existingMap[g.id].latestTime) {
-              existingMap[g.id].latestTime = g.latestTime;
-            }
-          } else {
-            existingMap[g.id] = g;
-          }
-        });
-        groupedHistory = Object.values(existingMap);
-        groupedHistory.sort((a, b) => (b.latestTime || '').localeCompare(a.latestTime || ''));
+        groupedHistory = this._mergeGroupedHistory(my.groupedHistory, groupedHistory);
       }
 
       this.setData({
@@ -1322,6 +1382,34 @@ Page({
   },
 
   /**
+   * 构建采购更新列表（仅更新数量，不领取）
+   * @private
+   */
+  _buildProcurementUpdatesOnly(materialPurchases) {
+    const updates = [];
+    
+    for (const item of materialPurchases) {
+      const inputQty = Number(item.inputQuantity);
+      if (inputQty > 0) {
+        const newArrived = (Number(item.arrivedQuantity) || 0) + inputQty;
+        const remark = this._validateProcurementArrival(item, inputQty, newArrived);
+        
+        updates.push({
+          id: item.id,
+          arrivedQuantity: newArrived,
+          remark: remark,
+        });
+      }
+    }
+    
+    if (updates.length === 0) {
+      throw new Error('请至少填写一项到货数量');
+    }
+    
+    return updates;
+  },
+
+  /**
    * 提交采购任务（来自"我的任务"列表，只更新到货数量）
    */
   async onSubmitProcurement() {
@@ -1335,37 +1423,12 @@ Page({
       return;
     }
 
-    // 验证输入
-    const updates = [];
-    for (const item of materialPurchases) {
-      const inputQty = Number(item.inputQuantity);
-      if (inputQty > 0) {
-        const newArrived = (Number(item.arrivedQuantity) || 0) + inputQty;
-        const purchaseQty = Number(item.purchaseQuantity) || 0;
-        const remark = (item.remarkInput || '').trim();
-
-        // 检查：到货数量小于70%时必须填写备注
-        if (purchaseQty > 0 && newArrived * 100 < purchaseQty * 70 && !remark) {
-          toast.error(`${item.materialName || '物料'}到货不足70%，请填写备注说明原因`);
-          return;
-        }
-
-        updates.push({
-          id: item.id,
-          arrivedQuantity: newArrived,
-          remark: remark,
-        });
-      }
-    }
-
-    if (updates.length === 0) {
-      toast.error('请至少填写一项到货数量');
-      return;
-    }
-
     this.setData({ 'scanConfirm.loading': true });
 
     try {
+      // 构建更新列表（复用验证逻辑）
+      const updates = this._buildProcurementUpdatesOnly(materialPurchases);
+      
       // 只调用 updateArrivedQuantity（不再调用 receivePurchase，因为已经领取了）
       await Promise.all(updates.map(u => api.production.updateArrivedQuantity(u)));
 
@@ -1507,33 +1570,47 @@ Page({
   },
 
   /**
-   * 处理采购任务提交
+   * 验证采购到货数量（70%检查）
+   * @private
    */
-  async processProcurementSubmit({ userInfo, materialPurchases }) {
-    const receiverName = userInfo.realName || userInfo.username;
-    const updates = [];
-    const receives = [];
+  _validateProcurementArrival(item, inputQty, newArrived) {
+    const purchaseQty = Number(item.purchaseQuantity) || 0;
+    const remark = (item.remarkInput || '').trim();
+    
+    // 检查：到货数量小于70%时必须填写备注
+    if (purchaseQty > 0 && newArrived * 100 < purchaseQty * 70 && !remark) {
+      throw new Error(
+        `${item.materialName || '物料'}到货不足70%（${newArrived}/${purchaseQty}），请填写备注说明原因`
+      );
+    }
+    
+    return remark;
+  },
 
+  /**
+   * 构建采购更新数据
+   * @private
+   */
+  _buildProcurementUpdates(materialPurchases) {
+    const receives = [];
+    const updates = [];
+    const userInfo = getUserInfo();
+    const receiverName = userInfo.realName || userInfo.username;
+    
     for (const item of materialPurchases) {
+      // 领取任务
       receives.push({
         purchaseId: item.id,
         receiverId: userInfo.id,
         receiverName: receiverName,
       });
-
+      
+      // 处理到货数量
       const inputQty = Number(item.inputQuantity);
       if (inputQty > 0) {
         const newArrived = (Number(item.arrivedQuantity) || 0) + inputQty;
-        const purchaseQty = Number(item.purchaseQuantity) || 0;
-        const remark = (item.remarkInput || '').trim();
-
-        // 检查：到货数量小于70%时必须填写备注
-        if (purchaseQty > 0 && newArrived * 100 < purchaseQty * 70 && !remark) {
-          throw new Error(
-            `${item.materialName || '物料'}到货不足70%（${newArrived}/${purchaseQty}），请填写备注说明原因`
-          );
-        }
-
+        const remark = this._validateProcurementArrival(item, inputQty, newArrived);
+        
         updates.push({
           id: item.id,
           arrivedQuantity: newArrived,
@@ -1541,7 +1618,16 @@ Page({
         });
       }
     }
+    
+    return { receives, updates };
+  },
 
+  /**
+   * 执行采购提交
+   * @private
+   */
+  async _executeProcurementSubmit(receives, updates) {
+    // 领取任务
     if (receives.length > 0) {
       try {
         await Promise.all(receives.map(r => api.production.receivePurchase(r)));
@@ -1550,7 +1636,8 @@ Page({
         throw new Error('领取任务失败：' + (err.message || '网络或服务器错误'));
       }
     }
-
+    
+    // 更新到货数量
     if (updates.length > 0) {
       try {
         await Promise.all(updates.map(u => api.production.updateArrivedQuantity(u)));
@@ -1563,10 +1650,26 @@ Page({
         throw new Error('提交数据失败：' + (err.message || '未知错误'));
       }
     }
+  },
 
-    toast.success('提交成功');
-    this.loadMyPanel(true);
-    this.loadMyProcurementTasks();
+  /**
+   * 处理采购任务提交
+   */
+  async processProcurementSubmit({ materialPurchases }) {
+    try {
+      // 构建更新数据
+      const { receives, updates } = this._buildProcurementUpdates(materialPurchases);
+      
+      // 执行提交
+      await this._executeProcurementSubmit(receives, updates);
+      
+      toast.success('提交成功');
+      this.loadMyPanel(true);
+      this.loadMyProcurementTasks();
+    } catch (err) {
+      // 错误已绋在私有方法中处理，直接抛出
+      throw err;
+    }
   },
 
   /**
@@ -1737,26 +1840,85 @@ Page({
   },
 
   /**
+   * 验证质检输入
+   * @private
+   */
+  _validateQualityInput(detail, userInfo) {
+    if (!detail) {
+      throw new Error('入库数据异常');
+    }
+    if (!userInfo || !userInfo.id) {
+      throw new Error('请先登录');
+    }
+  },
+
+  /**
+   * 构建质检payload基础数据
+   * @private
+   */
+  _buildQualityBasePayload(detail, qualityModal, userInfo, warehouse) {
+    const totalQty = detail.quantity || 1;
+    const bundleNoNum = detail.bundleNo ? parseInt(detail.bundleNo, 10) : null;
+    
+    return {
+      orderNo: detail.orderNo,
+      orderId: detail.orderId || '',
+      styleNo: detail.styleNo || '',
+      cuttingBundleId: detail.bundleId || '',
+      cuttingBundleNo: bundleNoNum && !isNaN(bundleNoNum) ? bundleNoNum : null,
+      warehousingQuantity: totalQty,
+      qualifiedQuantity: totalQty, // 入库默认全部合格
+      unqualifiedQuantity: 0,
+      qualityStatus: qualityModal.result, // qualified 或 unqualified
+      warehousingType: 'manual', // 手动入库
+      warehouse: warehouse,
+      receiverId: userInfo.id,
+      receiverName: userInfo.realName || userInfo.username,
+    };
+  },
+
+  /**
+   * 处理不合格质检信息
+   * @private
+   */
+  _handleUnqualifiedInfo(qualityModal, payload) {
+    const { defectCategories, handleMethods } = this.data;
+    
+    // 缺陷分类映射
+    const categoryMap = {
+      外观完整性: 'appearance_integrity',
+      尺寸精确度: 'size_accuracy',
+      工艺合规性: 'process_compliance',
+      功能有效性: 'functional_effectiveness',
+      其他: 'other',
+    };
+    
+    const selectedCategory = defectCategories[qualityModal.defectCategory] || '其他';
+    payload.defectCategory = categoryMap[selectedCategory] || 'other';
+    
+    // 处理方式
+    const selectedMethod = handleMethods[qualityModal.handleMethod] || '返修';
+    payload.defectRemark = selectedMethod; // 返修 或 报废
+    
+    // 照片URL
+    if (qualityModal.images && qualityModal.images.length > 0) {
+      payload.unqualifiedImageUrls = JSON.stringify(qualityModal.images);
+    }
+  },
+
+  /**
    * 提交入库结果（使用 warehousing API，与 PC 端一致）
    */
   async submitQualityResult() {
     const { qualityModal, warehouseOptions } = this.data;
     const detail = qualityModal.detail;
-
-    if (!detail) {
-      toast.error('入库数据异常');
-      return;
-    }
-
-    const totalQty = detail.quantity || 1;
-    // 入库默认全部合格
-    const qualifiedQty = totalQty;
-    const unqualifiedQty = 0;
-
-    // 获取用户信息
     const userInfo = getUserInfo();
-    if (!userInfo || !userInfo.id) {
-      toast.error('请先登录');
+
+    try {
+      // 验证输入
+      this._validateQualityInput(detail, userInfo);
+    } catch (e) {
+      toast.error(e.message);
       return;
     }
 
@@ -1766,47 +1928,12 @@ Page({
     wx.showLoading({ title: '提交中...' });
 
     try {
-      // 构建 warehousing 保存数据（与 PC 端一致）
-      // cuttingBundleNo 需要转成数字
-      const bundleNoNum = detail.bundleNo ? parseInt(detail.bundleNo, 10) : null;
-      const payload = {
-        orderNo: detail.orderNo,
-        orderId: detail.orderId || '',
-        styleNo: detail.styleNo || '',
-        cuttingBundleId: detail.bundleId || '',
-        cuttingBundleNo: bundleNoNum && !isNaN(bundleNoNum) ? bundleNoNum : null,
-        warehousingQuantity: totalQty,
-        qualifiedQuantity: qualifiedQty,
-        unqualifiedQuantity: unqualifiedQty,
-        qualityStatus: qualityModal.result, // qualified 或 unqualified
-        warehousingType: 'manual', // 手动入库
-        warehouse: selectedWarehouse, // 仓库
-        receiverId: userInfo.id,
-        receiverName: userInfo.realName || userInfo.username,
-      };
+      // 构建基础payload
+      const payload = this._buildQualityBasePayload(detail, qualityModal, userInfo, selectedWarehouse);
 
-      // 不合格详情
+      // 处理不合格情况
       if (qualityModal.result === 'unqualified') {
-        const { defectCategories, handleMethods } = this.data;
-        // defectCategory 映射
-        const categoryMap = {
-          外观完整性: 'appearance_integrity',
-          尺寸精确度: 'size_accuracy',
-          工艺合规性: 'process_compliance',
-          功能有效性: 'functional_effectiveness',
-          其他: 'other',
-        };
-        const selectedCategory = defectCategories[qualityModal.defectCategory] || '其他';
-        payload.defectCategory = categoryMap[selectedCategory] || 'other';
-
-        // defectRemark = 处理方式
-        const selectedMethod = handleMethods[qualityModal.handleMethod] || '返修';
-        payload.defectRemark = selectedMethod; // 返修 或 报废
-
-        // 照片URL（如果有）
-        if (qualityModal.images && qualityModal.images.length > 0) {
-          payload.unqualifiedImageUrls = JSON.stringify(qualityModal.images);
-        }
+        this._handleUnqualifiedInfo(qualityModal, payload);
       }
 
       // 调用 warehousing 保存 API
@@ -1837,9 +1964,9 @@ Page({
 
       // 采购任务处理
       if (detail.isProcurement && materialPurchases?.length > 0) {
-        const userData = this.validateProcurementData();
+        // 验证用户数据
+        this.validateProcurementData();
         await this.processProcurementSubmit({
-          userInfo: userData.userInfo,
           materialPurchases,
         });
         this.setData({
