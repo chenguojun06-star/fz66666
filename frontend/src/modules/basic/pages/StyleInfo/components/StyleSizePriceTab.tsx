@@ -67,19 +67,19 @@ const StyleSizePriceTab: React.FC<Props> = ({ styleId, readOnly }) => {
     setLoading(true);
     try {
       const [sizeList, processList] = await Promise.all([fetchSizes(), fetchProcesses()]);
-      
+
       const res = await api.get<{ code: number; data: SizePrice[] }>(`/style/size-price/list?styleId=${styleId}`);
-      
+
       if (res.code === 200) {
         const sizePriceData = res.data || [];
-        
+
         // 构建表格数据：每个工序一行，尺码作为列
         const rows: ProcessRow[] = processList.map(proc => {
           const row: ProcessRow = {
             processCode: proc.processCode,
             processName: proc.processName,
           };
-          
+
           // 为每个尺码添加价格列
           sizeList.forEach(size => {
             const found = sizePriceData.find(
@@ -87,10 +87,10 @@ const StyleSizePriceTab: React.FC<Props> = ({ styleId, readOnly }) => {
             );
             row[`price_${size}`] = found ? toNumberSafe(found.price) : toNumberSafe(proc.price);
           });
-          
+
           return row;
         });
-        
+
         setData(rows);
         setEditMode(false);
       }

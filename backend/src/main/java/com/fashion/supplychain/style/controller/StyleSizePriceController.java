@@ -37,15 +37,15 @@ public class StyleSizePriceController {
     @PostMapping("/batch-save")
     public Result<Boolean> batchSave(@RequestBody List<StyleSizePrice> list) {
         if (list == null || list.isEmpty()) {
-            return Result.error("数据不能为空");
+            return Result.fail("数据不能为空");
         }
-        
+
         // 先删除该款号的所有多码单价数据
         Long styleId = list.get(0).getStyleId();
         QueryWrapper<StyleSizePrice> qw = new QueryWrapper<>();
         qw.eq("style_id", styleId);
         styleSizePriceService.remove(qw);
-        
+
         // 批量插入新数据
         boolean success = styleSizePriceService.saveBatch(list);
         return Result.success(success);
