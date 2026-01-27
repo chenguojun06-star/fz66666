@@ -1,0 +1,147 @@
+/* 顶部统计看板 - 4个胶囊形状卡片 */
+.top-stats-card {
+  margin-bottom: 24px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.top-stats-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
+/* 时间选择器 */
+.time-selector {
+  display: flex;
+  gap: 8px;
+  background: #f3f4f6;
+  padding: 4px;
+  border-radius: 20px;
+}
+
+.time-button {
+  padding: 6px 16px;
+  border: none;
+  background: transparent;
+  border-radius: 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.time-button:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #374151;
+}
+
+.time-button.active {
+  background: white;
+  color: #3b82f6;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* 统计卡片网格 */
+.top-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 1200px) {
+  .top-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .top-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 单个统计项 - 胶囊形状 */
+.top-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+  border-radius: 24px; /* 胶囊形状 */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.top-stat-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* 图标 */
+.top-stat-icon {
+  font-size: 32px;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* 内容区 */
+.top-stat-content {
+  flex: 1;
+  text-align: left;
+}
+
+.top-stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: white;
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+
+.top-stat-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* 深色主题适配 */
+@media (prefers-color-scheme: dark) {
+  .top-stats-card {
+    background: #1f2937;
+    border-color: #374151;
+  }
+
+  .time-selector {
+    background: #374151;
+  }
+
+  .time-button {
+    color: #9ca3af;
+  }
+
+  .time-button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #d1d5db;
+  }
+
+  .time-button.active {
+    background: #4b5563;
+    color: #60a5fa;
+  }
+
+  .top-stat-item {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  .top-stat-item:hover {
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  }
+}
