@@ -4,6 +4,7 @@ import com.fashion.supplychain.dashboard.dto.DashboardActivityDto;
 import com.fashion.supplychain.dashboard.dto.DashboardResponse;
 import com.fashion.supplychain.dashboard.dto.DeliveryAlertOrderDto;
 import com.fashion.supplychain.dashboard.dto.DeliveryAlertResponse;
+import com.fashion.supplychain.dashboard.dto.QualityStatsResponse;
 import com.fashion.supplychain.dashboard.dto.UrgentEventDto;
 import com.fashion.supplychain.dashboard.service.DashboardQueryService;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
@@ -262,6 +263,40 @@ public class DashboardOrchestrator {
 
         response.setUrgentOrders(urgentOrders);
         response.setWarningOrders(warningOrders);
+
+        return response;
+    }
+
+    /**
+     * 获取质检统计数据
+     */
+    public QualityStatsResponse getQualityStats() {
+        QualityStatsResponse response = new QualityStatsResponse();
+
+        // 获取入库总数
+        long totalWarehousing = dashboardQueryService.countTotalWarehousing();
+        response.setTotalWarehousing(totalWarehousing);
+
+        // 获取合格品和次品数量
+        long qualifiedCount = dashboardQueryService.sumTotalQualifiedQuantity();
+        long defectiveCount = dashboardQueryService.sumTotalUnqualifiedQuantity();
+        response.setDefectiveCount(defectiveCount);
+
+        // 计算次品率和合格率
+        long totalQuantity = qualifiedCount + defectiveCount;
+        if (totalQuantity > 0) {
+            double defectRate = (defectiveCount * 100.0) / totalQuantity;
+            double qualifiedRate = (qualifiedCount * 100.0) / totalQuantity;
+            response.setDefectRate(Math.round(defectRate * 100.0) / 100.0); // 保留两位小数
+            response.setQualifiedRate(Math.round(qualifiedRate * 100.0) / 100.0);
+        } else {
+            response.setDefectRate(0.0);
+            response.setQualifiedRate(0.0);
+        }
+
+        // 获取返修问题数量
+        long repairIssues = dashboardQueryService.countRepairIssues();
+        response.setRepairIssues(repairIssues);
 
         return response;
     }

@@ -51,4 +51,13 @@ public class DashboardController {
     public Result<?> deliveryAlert() {
         return Result.success(dashboardOrchestrator.getDeliveryAlert());
     }
+
+    /**
+     * 获取质检统计数据
+     * - 入库数、次品数、次品率、合格率、返修问题
+     */
+    @GetMapping("/quality-stats")
+    public Result<?> qualityStats() {
+        return Result.success(dashboardOrchestrator.getQualityStats());
+    }
 }
