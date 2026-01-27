@@ -27,10 +27,27 @@ const OverdueOrderTable: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const result = await api.get<OverdueOrder[]>('/api/dashboard/overdue-orders');
-      if (result.success && result.data) {
-        setDataSource(result.data);
-      }
+      // 暂时使用虚拟数据
+      const mockData: OverdueOrder[] = Array.from({ length: 25 }, (_, i) => {
+        const date = new Date();
+        date.setDate(date.getDate() - (30 - i));
+        return {
+          id: i + 1,
+          orderNo: `PO2026${String(date.getMonth() + 1).padStart(2, '0')}${String(i + 1).padStart(3, '0')}`,
+          styleNo: `ST${String(Math.floor(Math.random() * 100) + 1).padStart(3, '0')}`,
+          quantity: Math.floor(Math.random() * 800) + 200,
+          deliveryDate: date.toISOString().split('T')[0],
+          overdueDays: Math.floor(Math.random() * 20) + 1,
+        };
+      });
+      
+      setDataSource(mockData);
+      
+      // TODO: 替换为真实API
+      // const result = await api.get<OverdueOrder[]>('/api/dashboard/overdue-orders');
+      // if (result.success && result.data) {
+      //   setDataSource(result.data);
+      // }
     } catch (error) {
       console.error('Failed to load overdue orders:', error);
     } finally {
@@ -40,7 +57,7 @@ const OverdueOrderTable: React.FC = () => {
 
   const handleSort = (field: 'deliveryDate' | 'overdueDays') => {
     let newOrder: 'ascend' | 'descend' = 'ascend';
-    
+
     if (sortField === field) {
       if (sortOrder === 'ascend') {
         newOrder = 'descend';
@@ -51,7 +68,7 @@ const OverdueOrderTable: React.FC = () => {
         return;
       }
     }
-    
+
     setSortField(field);
     setSortOrder(newOrder);
   };
@@ -65,13 +82,13 @@ const OverdueOrderTable: React.FC = () => {
         </span>
       );
     }
-    
+
     return (
       <span className="sort-icon-container">
-        <CaretUpOutlined 
+        <CaretUpOutlined
           className={`sort-icon ${sortOrder === 'ascend' ? 'sort-icon-active' : 'sort-icon-inactive'}`}
         />
-        <CaretDownOutlined 
+        <CaretDownOutlined
           className={`sort-icon ${sortOrder === 'descend' ? 'sort-icon-active' : 'sort-icon-inactive'}`}
         />
       </span>
@@ -103,7 +120,7 @@ const OverdueOrderTable: React.FC = () => {
     },
     {
       title: (
-        <div 
+        <div
           className="sortable-header"
           onClick={() => handleSort('deliveryDate')}
         >
@@ -125,7 +142,7 @@ const OverdueOrderTable: React.FC = () => {
     },
     {
       title: (
-        <div 
+        <div
           className="sortable-header"
           onClick={() => handleSort('overdueDays')}
         >
@@ -148,8 +165,8 @@ const OverdueOrderTable: React.FC = () => {
   ];
 
   return (
-    <Card 
-      title="延期订单列表" 
+    <Card
+      title="延期订单列表"
       className="overdue-order-table-card"
       bordered={false}
     >

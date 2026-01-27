@@ -372,6 +372,9 @@ const Dashboard: React.FC = () => {
         {/* 顶部4个统计看板 */}
         <TopStats />
 
+        {/* 质检数据看板 */}
+        <MiniDataDashboard />
+
         {/* 数据分析区域 */}
         <div className="dashboard-analysis-section">
           {/* 左侧折线图区域 */}
@@ -438,9 +441,6 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
         </div>
-
-        {/* 迷你数据看板 */}
-        <MiniDataDashboard />
       </Card>
 
       {/* 快捷入口设置弹窗 */}
