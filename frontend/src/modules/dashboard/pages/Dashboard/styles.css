@@ -223,6 +223,9 @@
 .card-header {
   padding: 16px 20px;
   border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .card-title {
@@ -356,6 +359,22 @@
   border-color: #595959;
 }
 
+.quick-entry-item--order {
+  border-color: #2f54eb;
+}
+
+.quick-entry-item--cutting {
+  border-color: #fa8c16;
+}
+
+.quick-entry-item--factory-recon {
+  border-color: #eb2f96;
+}
+
+.quick-entry-item--shipment {
+  border-color: #722ed1;
+}
+
 .entry-icon {
   font-size: var(--font-size-xl);
   margin-bottom: 8px;
@@ -407,6 +426,26 @@
 .entry-icon--factory {
   color: #595959;
   background: #f5f5f5;
+}
+
+.entry-icon--order {
+  color: #2f54eb;
+  background: #f0f5ff;
+}
+
+.entry-icon--cutting {
+  color: #fa8c16;
+  background: #fff7e6;
+}
+
+.entry-icon--factory-recon {
+  color: #eb2f96;
+  background: #fff0f6;
+}
+
+.entry-icon--shipment {
+  color: #722ed1;
+  background: #f9f0ff;
 }
 
 .entry-label {

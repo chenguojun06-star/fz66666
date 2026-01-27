@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { AutoComplete, Button, Card, Input, Space, message } from 'antd';
+import { AutoComplete, Button, Card, Checkbox, Input, Modal, Space, message } from 'antd';
 import {
   AccountBookOutlined,
   ApartmentOutlined,
   FileTextOutlined,
   InboxOutlined,
   SearchOutlined,
+  SettingOutlined,
   ShoppingCartOutlined,
   TagsOutlined,
   WarningOutlined,
@@ -43,11 +44,53 @@ interface SearchOption {
   data: any;
 }
 
+interface QuickEntryConfig {
+  id: string;
+  icon: React.ReactNode;
+  label: string;
+  href: string;
+  className: string;
+  enabled: boolean;
+}
+
+// 所有可用的快捷入口配置
+const ALL_QUICK_ENTRIES: QuickEntryConfig[] = [
+  { id: 'style', icon: <TagsOutlined />, label: '款号资料', href: '/style-info', className: 'style', enabled: true },
+  { id: 'production', icon: <InboxOutlined />, label: '生产进度', href: '/production', className: 'production', enabled: true },
+  { id: 'material', icon: <ShoppingCartOutlined />, label: '物料采购', href: '/production/material', className: 'material', enabled: true },
+  { id: 'warehousing', icon: <InboxOutlined />, label: '质检入库', href: '/production/warehousing', className: 'warehousing', enabled: true },
+  { id: 'material-reconciliation', icon: <FileTextOutlined />, label: '物料对账', href: '/finance/material-reconciliation', className: 'report', enabled: true },
+  { id: 'factory', icon: <ApartmentOutlined />, label: '供应商管理', href: '/system/factory', className: 'factory', enabled: true },
+  { id: 'order-management', icon: <FileTextOutlined />, label: '订单管理', href: '/order-management', className: 'order', enabled: false },
+  { id: 'cutting', icon: <InboxOutlined />, label: '裁剪管理', href: '/production/cutting', className: 'cutting', enabled: false },
+  { id: 'factory-reconciliation', icon: <AccountBookOutlined />, label: '工厂对账', href: '/finance/factory-reconciliation', className: 'factory-recon', enabled: false },
+  { id: 'shipment-reconciliation', icon: <FileTextOutlined />, label: '发货对账', href: '/finance/shipment-reconciliation', className: 'shipment', enabled: false },
+];
+
+const STORAGE_KEY = 'dashboard_quick_entries';
+
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchOptions, setSearchOptions] = useState<SearchOption[]>([]);
+  const [settingsVisible, setSettingsVisible] = useState(false);
+  const [quickEntries, setQuickEntries] = useState<QuickEntryConfig[]>(() => {
+    // 从localStorage加载用户配置
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const savedConfig = JSON.parse(saved);
+        return ALL_QUICK_ENTRIES.map(entry => ({
+          ...entry,
+          enabled: savedConfig[entry.id] !== false,
+        }));
+      } catch (e) {
+        console.error('Failed to parse quick entries config:', e);
+      }
+    }
+    return ALL_QUICK_ENTRIES;
+  });
 
   const [stats, setStats] = useState<DashboardStats>({
     sampleDevelopmentCount: 0,
@@ -61,6 +104,38 @@ const Dashboard: React.FC = () => {
   });
 
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
+
+  // 保存快捷入口配置
+  const saveQuickEntriesConfig = (entries: QuickEntryConfig[]) => {
+    const config: Record<string, boolean> = {};
+    entries.forEach(entry => {
+      config[entry.id] = entry.enabled;
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+  };
+
+  // 切换快捷入口显示状态
+  const handleToggleEntry = (entryId: string) => {
+    const updated = quickEntries.map(entry =>
+      entry.id === entryId ? { ...entry, enabled: !entry.enabled } : entry
+    );
+    setQuickEntries(updated);
+  };
+
+  // 保存快捷入口设置
+  const handleSaveSettings = () => {
+    saveQuickEntriesConfig(quickEntries);
+    setSettingsVisible(false);
+    message.success('快捷入口设置已保存');
+  };
+
+  // 重置为默认设置
+  const handleResetSettings = () => {
+    const resetEntries = ALL_QUICK_ENTRIES.map(entry => ({ ...entry, enabled: true }));
+    setQuickEntries(resetEntries);
+    saveQuickEntriesConfig(resetEntries);
+    message.success('已重置为默认设置');
+  };
 
   // 实时搜索建议
   const handleSearchInput = async (value: string) => {
@@ -380,38 +455,75 @@ const Dashboard: React.FC = () => {
           <div className="dashboard-card">
             <div className="card-header">
               <h3 className="card-title">快捷入口</h3>
+              <Button 
+                type="text" 
+                icon={<SettingOutlined />} 
+                onClick={() => setSettingsVisible(true)}
+                title="设置快捷入口"
+                style={{ color: '#666' }}
+              />
             </div>
             <div className="card-content">
               <div className="quick-entry-grid">
-                <a href="/style-info" className="quick-entry-item quick-entry-item--style">
-                  <span className="entry-icon entry-icon--style"><TagsOutlined /></span>
-                  <span className="entry-label">款号资料</span>
-                </a>
-                <a href="/production" className="quick-entry-item quick-entry-item--production">
-                  <span className="entry-icon entry-icon--production"><InboxOutlined /></span>
-                  <span className="entry-label">生产进度</span>
-                </a>
-                <a href="/production/material" className="quick-entry-item quick-entry-item--material">
-                  <span className="entry-icon entry-icon--material"><ShoppingCartOutlined /></span>
-                  <span className="entry-label">物料采购</span>
-                </a>
-                <a href="/production/warehousing" className="quick-entry-item quick-entry-item--warehousing">
-                  <span className="entry-icon entry-icon--warehousing"><InboxOutlined /></span>
-                  <span className="entry-label">质检入库</span>
-                </a>
-                <a href="/finance/material-reconciliation" className="quick-entry-item quick-entry-item--report">
-                  <span className="entry-icon entry-icon--report"><FileTextOutlined /></span>
-                  <span className="entry-label">物料对账</span>
-                </a>
-                <a href="/system/factory" className="quick-entry-item quick-entry-item--factory">
-                  <span className="entry-icon entry-icon--factory"><ApartmentOutlined /></span>
-                  <span className="entry-label">供应商管理</span>
-                </a>
+                {quickEntries
+                  .filter(entry => entry.enabled)
+                  .map(entry => (
+                    <a 
+                      key={entry.id}
+                      href={entry.href} 
+                      className={`quick-entry-item quick-entry-item--${entry.className}`}
+                    >
+                      <span className={`entry-icon entry-icon--${entry.className}`}>{entry.icon}</span>
+                      <span className="entry-label">{entry.label}</span>
+                    </a>
+                  ))
+                }
               </div>
             </div>
           </div>
         </div>
       </Card>
+
+      {/* 快捷入口设置弹窗 */}
+      <Modal
+        title="快捷入口设置"
+        open={settingsVisible}
+        onOk={handleSaveSettings}
+        onCancel={() => setSettingsVisible(false)}
+        width={600}
+        footer={[
+          <Button key="reset" onClick={handleResetSettings}>
+            重置默认
+          </Button>,
+          <Button key="cancel" onClick={() => setSettingsVisible(false)}>
+            取消
+          </Button>,
+          <Button key="submit" type="primary" onClick={handleSaveSettings}>
+            保存
+          </Button>,
+        ]}
+      >
+        <div style={{ padding: '16px 0' }}>
+          <p style={{ marginBottom: 16, color: '#666' }}>
+            勾选需要在首页显示的快捷入口（至少保留一个）
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+            {quickEntries.map(entry => (
+              <Checkbox
+                key={entry.id}
+                checked={entry.enabled}
+                onChange={() => handleToggleEntry(entry.id)}
+                disabled={quickEntries.filter(e => e.enabled).length === 1 && entry.enabled}
+              >
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                  {entry.icon}
+                  {entry.label}
+                </span>
+              </Checkbox>
+            ))}
+          </div>
+        </div>
+      </Modal>
     </Layout>
   );
 };
