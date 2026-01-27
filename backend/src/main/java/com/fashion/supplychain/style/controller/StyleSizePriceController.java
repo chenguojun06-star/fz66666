@@ -13,7 +13,7 @@ import java.util.List;
  * 样衣多码单价配置Controller
  */
 @RestController
-@RequestMapping("/style/size-price")
+@RequestMapping("/api/style/size-price")
 public class StyleSizePriceController {
 
     @Autowired

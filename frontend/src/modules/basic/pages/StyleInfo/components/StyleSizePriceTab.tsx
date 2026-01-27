@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Input, InputNumber, message, Table } from 'antd';
+import { App, Button, InputNumber, Table } from 'antd';
 import { SaveOutlined, EditOutlined } from '@ant-design/icons';
 import api, { toNumberSafe } from '@/utils/api';
 
@@ -24,6 +24,7 @@ interface ProcessRow {
 }
 
 const StyleSizePriceTab: React.FC<Props> = ({ styleId, readOnly }) => {
+  const { message } = App.useApp();
   const [data, setData] = useState<ProcessRow[]>([]);
   const [sizes, setSizes] = useState<string[]>([]);
   const [processes, setProcesses] = useState<any[]>([]);
