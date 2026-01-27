@@ -15,6 +15,7 @@ import Layout from '@/components/Layout';
 import api, { ApiResult } from '@/utils/api';
 import errorHandler from '@/utils/errorHandler';
 import { useSync } from '@/utils/syncManager';
+import DeliveryAlert from '../../components/DeliveryAlert';
 import './styles.css';
 
 interface DashboardStats {
@@ -354,6 +355,9 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* 交期预警看板 */}
+        <DeliveryAlert />
 
         <div className="dashboard-grid">
           <div className="dashboard-card">
