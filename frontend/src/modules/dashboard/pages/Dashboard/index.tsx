@@ -18,6 +18,7 @@ import errorHandler from '@/utils/errorHandler';
 import { useSync } from '@/utils/syncManager';
 import DeliveryAlert from '../../components/DeliveryAlert';
 import MiniDataDashboard from '../../components/MiniDataDashboard';
+import TopStats from '../../components/TopStats';
 import './styles.css';
 
 interface DashboardStats {
@@ -366,71 +367,8 @@ const Dashboard: React.FC = () => {
           </Space.Compact>
         </Card>
 
-        <div className="stats-section">
-          <div className="stat-card stat-card--sample" onClick={() => navigate('/style-info')} style={{ cursor: 'pointer' }}>
-            <div className="stat-icon stat-icon--sample"><TagsOutlined /></div>
-            <div className="stat-content">
-              <div className="stat-value">{stats.sampleDevelopmentCount}</div>
-              <div className="stat-label">样衣开发</div>
-            </div>
-          </div>
-
-          <div className="stat-card stat-card--production" onClick={() => navigate('/production')} style={{ cursor: 'pointer' }}>
-            <div className="stat-icon stat-icon--production"><InboxOutlined /></div>
-            <div className="stat-content">
-              <div className="stat-value">{stats.productionOrderCount}</div>
-              <div className="stat-label">生产订单</div>
-            </div>
-          </div>
-
-          <div className="stat-card stat-card--quantity" onClick={() => navigate('/production')} style={{ cursor: 'pointer' }}>
-            <div className="stat-icon stat-icon--quantity"><ShoppingCartOutlined /></div>
-            <div className="stat-content">
-              <div className="stat-value">{stats.orderQuantityTotal}</div>
-              <div className="stat-label">订单数量</div>
-            </div>
-          </div>
-
-          <div className="stat-card stat-card--overdue" onClick={() => navigate('/production')} style={{ cursor: 'pointer' }}>
-            <div className="stat-icon stat-icon--overdue"><WarningOutlined /></div>
-            <div className="stat-content">
-              <div className="stat-value">{stats.overdueOrderCount}</div>
-              <div className="stat-label">延期订单</div>
-            </div>
-          </div>
-
-          <div className="stat-card stat-card--today-warehousing" onClick={() => navigate('/production/warehousing')} style={{ cursor: 'pointer' }}>
-            <div className="stat-icon stat-icon--today-warehousing"><InboxOutlined /></div>
-            <div className="stat-content">
-              <div className="stat-value">{stats.todayWarehousingCount}</div>
-              <div className="stat-label">当天入库</div>
-            </div>
-          </div>
-
-          <div className="stat-card stat-card--total-warehousing" onClick={() => navigate('/production/warehousing')} style={{ cursor: 'pointer' }}>
-            <div className="stat-icon stat-icon--total-warehousing"><ApartmentOutlined /></div>
-            <div className="stat-content">
-              <div className="stat-value">{stats.totalWarehousingCount}</div>
-              <div className="stat-label">入库总数</div>
-            </div>
-          </div>
-
-          <div className="stat-card stat-card--defective" onClick={() => navigate('/production/warehousing')} style={{ cursor: 'pointer' }}>
-            <div className="stat-icon stat-icon--defective"><WarningOutlined /></div>
-            <div className="stat-content">
-              <div className="stat-value">{stats.defectiveQuantity}</div>
-              <div className="stat-label">次品数量</div>
-            </div>
-          </div>
-
-          <div className="stat-card stat-card--payment" onClick={() => navigate('/finance/payment-approval')} style={{ cursor: 'pointer' }}>
-            <div className="stat-icon stat-icon--payment"><AccountBookOutlined /></div>
-            <div className="stat-content">
-              <div className="stat-value">{stats.paymentApprovalCount}</div>
-              <div className="stat-label">审批付款</div>
-            </div>
-          </div>
-        </div>
+        {/* 顶部4个统计看板 */}
+        <TopStats />
 
         {/* 交期预警看板 */}
         <DeliveryAlert />

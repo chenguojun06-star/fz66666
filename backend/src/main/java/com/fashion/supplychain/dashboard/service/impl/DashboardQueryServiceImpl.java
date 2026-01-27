@@ -308,5 +308,55 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
                 .like(ProductWarehousing::getDefectRemark, "返修")
                 .count();
     }
+
+    @Override
+    public long countSampleStylesBetween(LocalDateTime start, LocalDateTime end) {
+        // 统计样衣开发数量：is_sample=1 且在时间范围内创建的款号
+        return styleInfoService.lambdaQuery()
+                .eq(StyleInfo::getDeleteFlag, 0)
+                .eq(StyleInfo::getIsSample, 1)
+                .ge(start != null, StyleInfo::getCreateTime, start)
+                .le(end != null, StyleInfo::getCreateTime, end)
+                .count();
+    }
+
+    @Override
+    public long countProductionOrdersBetween(LocalDateTime start, LocalDateTime end) {
+        // 统计大货下单数量：在时间范围内创建的生产订单
+        return productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .ge(start != null, ProductionOrder::getCreateTime, start)
+                .le(end != null, ProductionOrder::getCreateTime, end)
+                .count();
+    }
+
+    @Override
+    public long sumCuttingQuantityBetween(LocalDateTime start, LocalDateTime end) {
+        // 统计裁剪数量：使用 ProductionOrder 中的 cuttingQuantity 字段
+        List<ProductionOrder> orders = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .ge(start != null, ProductionOrder::getCreateTime, start)
+                .le(end != null, ProductionOrder::getCreateTime, end)
+                .isNotNull(ProductionOrder::getCuttingQuantity)
+                .list();
+
+        return orders.stream()
+                .mapToInt(ProductionOrder::getCuttingQuantity)
+                .sum();
+    }
+
+    @Override
+    public long sumWarehousingQuantityBetween(LocalDateTime start, LocalDateTime end) {
+        // 统计出入库数量：质检入库的 qualifiedQuantity + unqualifiedQuantity
+        List<ProductWarehousing> warehousing = productWarehousingService.lambdaQuery()
+                .eq(ProductWarehousing::getDeleteFlag, 0)
+                .ge(start != null, ProductWarehousing::getWarehousingEndTime, start)
+                .le(end != null, ProductWarehousing::getWarehousingEndTime, end)
+                .list();
+
+        return warehousing.stream()
+                .mapToInt(w -> w.getQualifiedQuantity() + w.getUnqualifiedQuantity())
+                .sum();
+    }
 }
 

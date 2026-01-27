@@ -56,8 +56,8 @@ const MiniDataDashboard: React.FC = () => {
   }, [timeRange]);
 
   return (
-    <Card 
-      className="mini-data-dashboard" 
+    <Card
+      className="mini-data-dashboard"
       title="🔍 质检统计概览"
       extra={
         <div className="time-range-selector">

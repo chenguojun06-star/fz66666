@@ -57,4 +57,13 @@ public interface DashboardQueryService {
     long sumUnqualifiedQuantityBetween(LocalDateTime start, LocalDateTime end);
 
     long countRepairIssuesBetween(LocalDateTime start, LocalDateTime end);
+
+    // 顶部统计看板方法
+    long countSampleStylesBetween(LocalDateTime start, LocalDateTime end);
+
+    long countProductionOrdersBetween(LocalDateTime start, LocalDateTime end);
+
+    long sumCuttingQuantityBetween(LocalDateTime start, LocalDateTime end);
+
+    long sumWarehousingQuantityBetween(LocalDateTime start, LocalDateTime end);
 }

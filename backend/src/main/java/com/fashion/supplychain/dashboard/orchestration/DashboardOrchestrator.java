@@ -5,6 +5,7 @@ import com.fashion.supplychain.dashboard.dto.DashboardResponse;
 import com.fashion.supplychain.dashboard.dto.DeliveryAlertOrderDto;
 import com.fashion.supplychain.dashboard.dto.DeliveryAlertResponse;
 import com.fashion.supplychain.dashboard.dto.QualityStatsResponse;
+import com.fashion.supplychain.dashboard.dto.TopStatsResponse;
 import com.fashion.supplychain.dashboard.dto.UrgentEventDto;
 import com.fashion.supplychain.dashboard.service.DashboardQueryService;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
@@ -311,13 +312,64 @@ public class DashboardOrchestrator {
      */
     private LocalDateTime calculateStartTime(String range) {
         LocalDate today = LocalDate.now();
-        
+
         if ("day".equalsIgnoreCase(range)) {
             // 今日：从今天凌晨开始
             return LocalDateTime.of(today, LocalTime.MIN);
         } else if ("month".equalsIgnoreCase(range)) {
             // 本月：从本月1号开始
             return LocalDateTime.of(today.withDayOfMonth(1), LocalTime.MIN);
+        } else {
+            // 默认本周：从本周一开始
+            LocalDate monday = today.minusDays(today.getDayOfWeek().getValue() - 1);
+            return LocalDateTime.of(monday, LocalTime.MIN);
+        }
+    }
+
+    /**
+     * 获取顶部4个核心统计看板数据
+     * @param range 时间范围：day(日)、week(周)、month(月)、year(年)
+     */
+    public TopStatsResponse getTopStats(String range) {
+        TopStatsResponse response = new TopStatsResponse();
+
+        LocalDateTime startTime = calculateTopStatsStartTime(range);
+        LocalDateTime endTime = LocalDateTime.now();
+
+        // 1. 样衣开发数量 - 统计款号表中 is_sample=1 且在时间范围内创建的数量
+        long sampleCount = dashboardQueryService.countSampleStylesBetween(startTime, endTime);
+        response.setSampleDevelopmentCount((int) sampleCount);
+
+        // 2. 大货下单数量 - 统计生产订单在时间范围内创建的数量
+        long bulkOrderCount = dashboardQueryService.countProductionOrdersBetween(startTime, endTime);
+        response.setBulkOrderCount((int) bulkOrderCount);
+
+        // 3. 裁剪数量 - 统计裁剪任务在时间范围内创建的总裁剪数量
+        long cuttingCount = dashboardQueryService.sumCuttingQuantityBetween(startTime, endTime);
+        response.setCuttingCount((int) cuttingCount);
+
+        // 4. 出入库数量 - 统计质检入库在时间范围内的总入库数量
+        long warehousingCount = dashboardQueryService.sumWarehousingQuantityBetween(startTime, endTime);
+        response.setWarehousingCount((int) warehousingCount);
+
+        return response;
+    }
+
+    /**
+     * 根据时间范围计算起始时间（支持年度统计）
+     */
+    private LocalDateTime calculateTopStatsStartTime(String range) {
+        LocalDate today = LocalDate.now();
+
+        if ("day".equalsIgnoreCase(range)) {
+            // 今日：从今天凌晨开始
+            return LocalDateTime.of(today, LocalTime.MIN);
+        } else if ("month".equalsIgnoreCase(range)) {
+            // 本月：从本月1号开始
+            return LocalDateTime.of(today.withDayOfMonth(1), LocalTime.MIN);
+        } else if ("year".equalsIgnoreCase(range)) {
+            // 本年：从今年1月1日开始
+            return LocalDateTime.of(today.withDayOfYear(1), LocalTime.MIN);
         } else {
             // 默认本周：从本周一开始
             LocalDate monday = today.minusDays(today.getDayOfWeek().getValue() - 1);

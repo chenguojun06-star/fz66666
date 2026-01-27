@@ -61,4 +61,14 @@ public class DashboardController {
     public Result<?> qualityStats(@RequestParam(required = false, defaultValue = "week") String range) {
         return Result.success(dashboardOrchestrator.getQualityStats(range));
     }
+
+    /**
+     * 获取顶部统计数据（4个核心看板）
+     * - 样衣开发数量、大货下单数量、裁剪数量、出入库数量
+     * @param range 时间范围：day(日)、week(周)、month(月)、year(年)
+     */
+    @GetMapping("/top-stats")
+    public Result<?> topStats(@RequestParam(required = false, defaultValue = "week") String range) {
+        return Result.success(dashboardOrchestrator.getTopStats(range));
+    }
 }
