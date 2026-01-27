@@ -639,6 +639,11 @@ const StyleInfoPage: React.FC = () => {
       await progressForm.validateFields();
       const values = progressForm.getFieldsValue();
 
+      // 自动填充款号和模板名称
+      const styleNo = currentStyle?.styleNo || '';
+      const finalTemplateName = values.templateName || `${styleNo}-进度模板`;
+      const finalSourceStyleNo = styleNo; // 自动绑定当前款号
+
       setProgressSaving(true);
       const content = JSON.stringify({
         nodes: (values.nodes || []).map((n: any) => ({
@@ -649,14 +654,19 @@ const StyleInfoPage: React.FC = () => {
 
       const res = await api.post('/template-library/save', {
         templateType: 'progress',
-        templateKey: values.templateKey || `style_${values.sourceStyleNo}`,
+        templateKey: values.templateKey || `progress_${finalSourceStyleNo}`,
         content,
-        sourceStyleNo: values.sourceStyleNo,
-        name: values.templateName,
+        sourceStyleNo: finalSourceStyleNo,
+        name: finalTemplateName,
       });
 
       if (res.code === 200) {
         message.success('保存成功');
+        // 更新表单显示的款号和名称
+        progressForm.setFieldsValue({
+          sourceStyleNo: finalSourceStyleNo,
+          templateName: finalTemplateName,
+        });
         setProductionModalVisible(false);
         // 刷新数据
         if (currentStyle?.styleNo) {
@@ -1360,8 +1370,8 @@ const StyleInfoPage: React.FC = () => {
             }
           }}
           footer={null}
-          width="50vw"
-          initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.6 : 600}
+          width="80vw"
+          initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
         >
           {currentStyle?.id && <StyleProcessTab styleId={currentStyle.id} readOnly={editLocked} />}
         </ResizableModal>
@@ -1378,7 +1388,7 @@ const StyleInfoPage: React.FC = () => {
           okText="保存"
           cancelText="取消"
           confirmLoading={progressSaving}
-          width="50vw"
+          width="80vw"
           initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
           afterOpenChange={(open) => {
             if (open && currentStyle?.styleNo) {

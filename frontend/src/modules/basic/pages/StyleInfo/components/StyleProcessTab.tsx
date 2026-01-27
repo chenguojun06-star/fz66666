@@ -165,16 +165,19 @@ const StyleProcessTab: React.FC<Props> = ({ styleId, readOnly, hidePrice = false
     if (!editMode) enterEdit();
     const maxSort = data.length ? Math.max(...data.map((d) => toNumberSafe(d.sortOrder))) : 0;
     const newId = -Date.now();
+    const nextSort = maxSort + 1;
+    // 自动生成工序编码：01、02、03...
+    const autoCode = String(nextSort).padStart(2, '0');
     const newProcess: StyleProcess = {
       id: newId,
       styleId,
-      processCode: '',
+      processCode: autoCode,
       processName: '',
       progressStage: '车缝', // 默认车缝节点
       machineType: '',
       standardTime: 0,
       price: 0,
-      sortOrder: maxSort + 1,
+      sortOrder: nextSort,
     };
     setData((prev) => [...prev, newProcess]);
   };
@@ -214,7 +217,15 @@ const StyleProcessTab: React.FC<Props> = ({ styleId, readOnly, hidePrice = false
     if (readOnly) return;
     if (!editMode) enterEdit();
     if (!isTempId(id)) setDeletedIds((prev) => [...prev, id]);
-    setData((prev) => prev.filter((x) => x.id !== id));
+    setData((prev) => {
+      const filtered = prev.filter((x) => x.id !== id);
+      // 删除后自动重新排序和重新生成编码
+      return filtered.map((item, index) => ({
+        ...item,
+        sortOrder: index + 1,
+        processCode: String(index + 1).padStart(2, '0'),
+      }));
+    });
   };
 
   const updateField = (id: string | number, field: keyof StyleProcess, value: any) => {
@@ -300,16 +311,27 @@ const StyleProcessTab: React.FC<Props> = ({ styleId, readOnly, hidePrice = false
     const editableMode = editMode && !readOnly;
     return [
       {
-        title: '工序编码',
-        dataIndex: 'processCode',
-        width: 120,
-        ellipsis: true,
-        render: (text: string, record: StyleProcess) =>
+        title: '排序',
+        dataIndex: 'sortOrder',
+        width: 80,
+        render: (text: number, record: StyleProcess) =>
           editableMode ? (
-            <Input value={record.processCode} onChange={(e) => updateField(record.id!, 'processCode', e.target.value)} />
+            <InputNumber
+              value={record.sortOrder}
+              min={0}
+              style={{ width: '100%' }}
+              onChange={(v) => updateField(record.id!, 'sortOrder', toNumberSafe(v))}
+            />
           ) : (
             text
           ),
+      },
+      {
+        title: '工序编码',
+        dataIndex: 'processCode',
+        width: 100,
+        ellipsis: true,
+        render: (text: string) => text || '-',
       },
       {
         title: '工序名称',
@@ -396,22 +418,6 @@ const StyleProcessTab: React.FC<Props> = ({ styleId, readOnly, hidePrice = false
             `¥${toNumberSafe(text)}`
           ),
       }] : []),
-      {
-        title: '排序',
-        dataIndex: 'sortOrder',
-        width: 80,
-        render: (text: number, record: StyleProcess) =>
-          editableMode ? (
-            <InputNumber
-              value={record.sortOrder}
-              min={0}
-              style={{ width: '100%' }}
-              onChange={(v) => updateField(record.id!, 'sortOrder', toNumberSafe(v))}
-            />
-          ) : (
-            text
-          ),
-      },
       {
         title: '操作',
         dataIndex: 'operation',
@@ -538,7 +544,7 @@ const StyleProcessTab: React.FC<Props> = ({ styleId, readOnly, hidePrice = false
         pagination={false}
         loading={loading}
         rowKey="id"
-        scroll={{ x: 'max-content', y: tableScrollY }}
+        scroll={{ x: 'max-content', y: tableScrollY + 150 }}
         storageKey={`style-process-${String(styleId)}`}
         minColumnWidth={70}
       />
