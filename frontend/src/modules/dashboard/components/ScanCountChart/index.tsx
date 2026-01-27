@@ -7,6 +7,7 @@ import './styles.css';
 interface ChartData {
   dates: string[];
   scanCounts: number[];
+  scanQuantities: number[];
 }
 
 const ScanCountChart: React.FC = () => {
@@ -14,6 +15,7 @@ const ScanCountChart: React.FC = () => {
   const [data, setData] = useState<ChartData>({
     dates: [],
     scanCounts: [],
+    scanQuantities: [],
   });
 
   useEffect(() => {
@@ -23,46 +25,57 @@ const ScanCountChart: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const result = await api.get<ChartData>('/api/dashboard/scan-count-chart');
-      if (result.success && result.data) {
-        setData(result.data);
-      }
+      // 暂时使用虚拟数据
+      const mockDates = Array.from({ length: 30 }, (_, i) => {
+        const date = new Date();
+        date.setDate(date.getDate() - 29 + i);
+        return `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      });
+      
+      const mockCounts = Array.from({ length: 30 }, () => Math.floor(Math.random() * 50) + 80);
+      const mockQuantities = Array.from({ length: 30 }, () => Math.floor(Math.random() * 3000) + 5000);
+      
+      setData({
+        dates: mockDates,
+        scanCounts: mockCounts,
+        scanQuantities: mockQuantities,
+      });
+      
+      // TODO: 替换为真实API
+      // const result = await api.get<ChartData>('/api/dashboard/scan-count-chart');
+      // if (result.success && result.data) {
+      //   setData(result.data);
+      // }
     } catch (error) {
       console.error('Failed to load scan count chart:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const option = {
-    tooltip: {
-      trigger: 'axis',
-      backgroundColor: 'rgba(255, 255, 255, 0.95)',
-      borderColor: '#ddd',
-      borderWidth: 1,
-      textStyle: {
-        color: '#333',
-        fontSize: 13,
-      },
-      formatter: (params: any) => {
-        const date = params[0].axisValue;
-        const value = params[0].value;
-        return `
-          <div style="padding: 4px 0;">
-            <div style="font-weight: 600; margin-bottom: 4px;">${date}</div>
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: ${params[0].color};"></span>
-              <span>扫菲次数：<strong>${value.toLocaleString()}</strong> 次</span>
+    } filet html = `<div style="padding: 4px 0; font-weight: 600;">${date}</div>`;
+        params.forEach((item: any) => {
+          html += `
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 2px 0;">
+              <span style="display: flex; align-items: center; gap: 6px;">
+                <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: ${item.color};"></span>
+                <span>${item.seriesName}</span>
+              </span>
+              <span style="font-weight: 600;">${item.value.toLocaleString()}</span>
             </div>
-          </div>
-        `;
+          `;
+        });
+        return html;
+      },
+    },
+    legend: {
+      data: ['扫菲次数', '扫菲数量'],
+      top: 10,
+      textStyle: {
+        fontSize: 13,
+        color: '#666',
       },
     },
     grid: {
       left: '3%',
       right: '4%',
       bottom: '3%',
-      top: 40,
+      top: 60,
       containLabel: true,
     },
     xAxis: {
@@ -125,12 +138,55 @@ const ScanCountChart: React.FC = () => {
           },
         },
       },
+      {
+        name: '扫菲数量',
+        type: 'line',
+        smooth: true,
+        data: data.scanQuantities,
+        lineStyle: {
+          width: 3,
+          color: '#f59e0b',
+        },
+        itemStyle: {
+          color: '#f59e0b',
+      title="扫菲次数 vs 扫菲数量" 
+        areaStyle: {
+          color: {
+            type: 'linear',
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(245, 158, 11, 0.2)' },
+              { offset: 1, color: 'rgba(245, 158, 11
+        lineStyle: {
+          width: 3,
+          color: '#8b5cf6',
+        },
+        itemStyle: {
+          color: '#8b5cf6',
+        },
+        areaStyle: {
+          color: {
+            type: 'linear',
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(139, 92, 246, 0.2)' },
+              { offset: 1, color: 'rgba(139, 92, 246, 0.02)' },
+            ],
+          },
+        },
+      },
     ],
   };
 
   return (
-    <Card 
-      title="扫菲次数统计" 
+    <Card
+      title="扫菲次数统计"
       className="scan-count-chart-card"
       bordered={false}
     >

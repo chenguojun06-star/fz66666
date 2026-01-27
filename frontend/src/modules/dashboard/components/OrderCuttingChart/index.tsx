@@ -25,10 +25,27 @@ const OrderCuttingChart: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const result = await api.get<ChartData>('/api/dashboard/order-cutting-chart');
-      if (result.success && result.data) {
-        setData(result.data);
-      }
+      // 暂时使用虚拟数据
+      const mockDates = Array.from({ length: 30 }, (_, i) => {
+        const date = new Date();
+        date.setDate(date.getDate() - 29 + i);
+        return `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      });
+      
+      const mockOrderQuantities = Array.from({ length: 30 }, () => Math.floor(Math.random() * 2000) + 3000);
+      const mockCuttingQuantities = Array.from({ length: 30 }, () => Math.floor(Math.random() * 1800) + 2500);
+      
+      setData({
+        dates: mockDates,
+        orderQuantities: mockOrderQuantities,
+        cuttingQuantities: mockCuttingQuantities,
+      });
+      
+      // TODO: 替换为真实API
+      // const result = await api.get<ChartData>('/api/dashboard/order-cutting-chart');
+      // if (result.success && result.data) {
+      //   setData(result.data);
+      // }
     } catch (error) {
       console.error('Failed to load order cutting chart:', error);
     } finally {
@@ -168,8 +185,8 @@ const OrderCuttingChart: React.FC = () => {
   };
 
   return (
-    <Card 
-      title="下单数量 vs 裁剪数量" 
+    <Card
+      title="下单数量 vs 裁剪数量"
       className="order-cutting-chart-card"
       bordered={false}
     >

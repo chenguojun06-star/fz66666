@@ -17,12 +17,12 @@ public class OrderCuttingChartResponse {
      * 日期列表
      */
     private List<String> dates;
-    
+
     /**
      * 下单数量列表
      */
     private List<Integer> orderQuantities;
-    
+
     /**
      * 裁剪数量列表
      */

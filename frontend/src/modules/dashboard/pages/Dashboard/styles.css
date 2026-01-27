@@ -480,7 +480,7 @@
   .dashboard-analysis-section {
     grid-template-columns: 1fr;
   }
-  
+
   .dashboard-table-right {
     min-height: 500px;
   }
