@@ -544,7 +544,7 @@ const StyleProcessTab: React.FC<Props> = ({ styleId, readOnly, hidePrice = false
         pagination={false}
         loading={loading}
         rowKey="id"
-        scroll={{ x: 'max-content', y: tableScrollY + 150 }}
+        scroll={{ x: 'max-content', y: tableScrollY }}
         storageKey={`style-process-${String(styleId)}`}
         minColumnWidth={70}
       />

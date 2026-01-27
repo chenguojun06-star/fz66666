@@ -28,6 +28,7 @@ import StyleSampleTab from './components/StyleSampleTab';
 import StyleSizeTab from './components/StyleSizeTab';
 import StyleProcessTab from './components/StyleProcessTab';
 import StyleProductionTab from './components/StyleProductionTab';
+import StyleSizePriceTab from './components/StyleSizePriceTab';
 
 const StyleInfoPage: React.FC = () => {
   const { message } = App.useApp();
@@ -60,6 +61,7 @@ const StyleInfoPage: React.FC = () => {
   // 工序表和生产制单弹窗
   const [processModalVisible, setProcessModalVisible] = useState(false);
   const [productionModalVisible, setProductionModalVisible] = useState(false);
+  const [sizePriceModalVisible, setSizePriceModalVisible] = useState(false);
   const [processData, setProcessData] = useState<any[]>([]);
   const [productionData, setProductionData] = useState<any[]>([]);
   const [progressForm] = Form.useForm();
@@ -586,6 +588,9 @@ const StyleInfoPage: React.FC = () => {
 
   // 加载进度模版数据
   const loadProgressTemplate = async (styleNo: string) => {
+    // 自动生成模板名称：款号-进度模板
+    const autoTemplateName = `${styleNo}-进度模板`;
+
     try {
       // 尝试加载该款号的进度模版
       const res = await api.get<{ code: number; data: { records: any[] } }>('/template-library/list', {
@@ -601,16 +606,16 @@ const StyleInfoPage: React.FC = () => {
         const tpl = res.data.records[0];
         const content = JSON.parse(tpl.content || '{}');
         progressForm.setFieldsValue({
-          templateName: tpl.name,
+          templateName: autoTemplateName, // 总是使用自动生成的名称
           templateKey: tpl.templateKey,
-          sourceStyleNo: tpl.sourceStyleNo,
+          sourceStyleNo: styleNo, // 总是使用当前款号
           nodes: content.nodes || [],
         });
       } else {
         // 没有找到模版，设置默认的5个进度节点
         progressForm.setFieldsValue({
-          templateName: `${styleNo}进度模板`,
-          templateKey: `style_${styleNo}`,
+          templateName: autoTemplateName,
+          templateKey: `progress_${styleNo}`,
           sourceStyleNo: styleNo,
           nodes: [
             { name: '采购' },
@@ -625,10 +630,16 @@ const StyleInfoPage: React.FC = () => {
       console.error('加载进度模版失败', error);
       // 设置默认值
       progressForm.setFieldsValue({
-        templateName: `${styleNo}进度模板`,
-        templateKey: `style_${styleNo}`,
+        templateName: autoTemplateName,
+        templateKey: `progress_${styleNo}`,
         sourceStyleNo: styleNo,
-        nodes: [],
+        nodes: [
+          { name: '采购' },
+          { name: '裁剪' },
+          { name: '车缝' },
+          { name: '尾部' },
+          { name: '入库' },
+        ],
       });
     }
   };
@@ -1215,6 +1226,20 @@ const StyleInfoPage: React.FC = () => {
                       </Col>
                     </Row>
                   )}
+
+                  {/* 第9行：多码单价 */}
+                  {currentStyle?.id && (
+                    <Row gutter={[12, 8]}>
+                      <Col span={24}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <Button size="small" onClick={() => setSizePriceModalVisible(true)}>多码单价</Button>
+                          <div style={{ flex: 1, fontSize: 12, color: '#666' }}>
+                            配置不同尺码下的工序单价
+                          </div>
+                        </div>
+                      </Col>
+                    </Row>
+                  )}
                 </Col>
               </Row>
               <Row gutter={16}>
@@ -1370,8 +1395,8 @@ const StyleInfoPage: React.FC = () => {
             }
           }}
           footer={null}
-          width="80vw"
-          initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
+          width="60vw"
+          initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.7 : 600}
         >
           {currentStyle?.id && <StyleProcessTab styleId={currentStyle.id} readOnly={editLocked} />}
         </ResizableModal>
@@ -1388,8 +1413,8 @@ const StyleInfoPage: React.FC = () => {
           okText="保存"
           cancelText="取消"
           confirmLoading={progressSaving}
-          width="80vw"
-          initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
+          width="60vw"
+          initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.7 : 600}
           afterOpenChange={(open) => {
             if (open && currentStyle?.styleNo) {
               loadProgressTemplate(currentStyle.styleNo);
@@ -1510,6 +1535,18 @@ const StyleInfoPage: React.FC = () => {
               </div>
             </Form>
           </div>
+        </ResizableModal>
+
+        {/* 多码单价弹窗 */}
+        <ResizableModal
+          title="多码单价配置"
+          open={sizePriceModalVisible}
+          onCancel={() => setSizePriceModalVisible(false)}
+          footer={null}
+          width="60vw"
+          initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.7 : 600}
+        >
+          {currentStyle?.id && <StyleSizePriceTab styleId={currentStyle.id} readOnly={editLocked} />}
         </ResizableModal>
       </Layout>
     );
