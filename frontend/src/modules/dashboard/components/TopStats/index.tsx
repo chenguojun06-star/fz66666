@@ -55,7 +55,7 @@ const StatCard: React.FC<StatCardProps> = ({ icon, label, dataKey, color, bgGrad
               <div className="stat-value" style={{ color }}>{data?.month.toLocaleString() || 0}</div>
               <div className="stat-value" style={{ color }}>{data?.year.toLocaleString() || 0}</div>
             </div>
-            
+
             {/* 第2行：4个时间标签 */}
             <div className="stat-labels-row">
               <div className="stat-time-label" style={{ color: `${color}99` }}>日</div>

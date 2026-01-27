@@ -71,4 +71,28 @@ public class DashboardController {
     public Result<?> topStats(@RequestParam(required = false, defaultValue = "week") String range) {
         return Result.success(dashboardOrchestrator.getTopStats(range));
     }
+
+    /**
+     * 获取订单与裁剪数量折线图数据（最近30天）
+     */
+    @GetMapping("/order-cutting-chart")
+    public Result<?> orderCuttingChart() {
+        return Result.success(dashboardOrchestrator.getOrderCuttingChart());
+    }
+
+    /**
+     * 获取扫菲次数折线图数据（最近30天）
+     */
+    @GetMapping("/scan-count-chart")
+    public Result<?> scanCountChart() {
+        return Result.success(dashboardOrchestrator.getScanCountChart());
+    }
+
+    /**
+     * 获取延期订单列表
+     */
+    @GetMapping("/overdue-orders")
+    public Result<?> overdueOrders() {
+        return Result.success(dashboardOrchestrator.getOverdueOrders());
+    }
 }

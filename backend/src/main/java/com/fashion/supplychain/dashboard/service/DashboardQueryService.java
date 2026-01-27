@@ -66,4 +66,25 @@ public interface DashboardQueryService {
     long sumCuttingQuantityBetween(LocalDateTime start, LocalDateTime end);
 
     long sumWarehousingQuantityBetween(LocalDateTime start, LocalDateTime end);
+
+    // 折线图数据查询方法
+    /**
+     * 获取指定日期范围内每天的订单数量
+     */
+    List<Integer> getDailyOrderQuantities(LocalDateTime start, LocalDateTime end);
+
+    /**
+     * 获取指定日期范围内每天的裁剪数量
+     */
+    List<Integer> getDailyCuttingQuantities(LocalDateTime start, LocalDateTime end);
+
+    /**
+     * 获取指定日期范围内每天的扫菲次数
+     */
+    List<Integer> getDailyScanCounts(LocalDateTime start, LocalDateTime end);
+
+    /**
+     * 获取延期订单列表
+     */
+    List<ProductionOrder> listAllOverdueOrders();
 }

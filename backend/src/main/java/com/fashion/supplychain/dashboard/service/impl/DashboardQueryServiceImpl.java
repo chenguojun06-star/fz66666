@@ -311,10 +311,9 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
 
     @Override
     public long countSampleStylesBetween(LocalDateTime start, LocalDateTime end) {
-        // 统计样衣开发数量：is_sample=1 且在时间范围内创建的款号
+        // 统计样衣开发数量：sampleStatus不为空且在时间范围内创建的款号
         return styleInfoService.lambdaQuery()
-                .eq(StyleInfo::getDeleteFlag, 0)
-                .eq(StyleInfo::getIsSample, 1)
+                .isNotNull(StyleInfo::getSampleStatus)
                 .ge(start != null, StyleInfo::getCreateTime, start)
                 .le(end != null, StyleInfo::getCreateTime, end)
                 .count();
@@ -357,6 +356,80 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         return warehousing.stream()
                 .mapToInt(w -> w.getQualifiedQuantity() + w.getUnqualifiedQuantity())
                 .sum();
+    }
+
+    @Override
+    public List<Integer> getDailyOrderQuantities(LocalDateTime start, LocalDateTime end) {
+        // 获取每天的订单总数量
+        List<ProductionOrder> orders = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .ge(start != null, ProductionOrder::getCreateTime, start)
+                .le(end != null, ProductionOrder::getCreateTime, end)
+                .orderByAsc(ProductionOrder::getCreateTime)
+                .list();
+
+        // 按日期分组统计数量
+        Map<String, Integer> dailyQuantities = new java.util.HashMap<>();
+        for (ProductionOrder order : orders) {
+            String date = order.getCreateTime().toLocalDate().toString();
+            int quantity = order.getOrderQuantity() != null ? order.getOrderQuantity() : 0;
+            dailyQuantities.merge(date, quantity, Integer::sum);
+        }
+
+        return new java.util.ArrayList<>(dailyQuantities.values());
+    }
+
+    @Override
+    public List<Integer> getDailyCuttingQuantities(LocalDateTime start, LocalDateTime end) {
+        // 获取每天的裁剪总数量
+        List<ProductionOrder> orders = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .ge(start != null, ProductionOrder::getCreateTime, start)
+                .le(end != null, ProductionOrder::getCreateTime, end)
+                .isNotNull(ProductionOrder::getCuttingQuantity)
+                .orderByAsc(ProductionOrder::getCreateTime)
+                .list();
+
+        // 按日期分组统计数量
+        Map<String, Integer> dailyQuantities = new java.util.HashMap<>();
+        for (ProductionOrder order : orders) {
+            String date = order.getCreateTime().toLocalDate().toString();
+            int quantity = order.getCuttingQuantity();
+            dailyQuantities.merge(date, quantity, Integer::sum);
+        }
+
+        return new java.util.ArrayList<>(dailyQuantities.values());
+    }
+
+    @Override
+    public List<Integer> getDailyScanCounts(LocalDateTime start, LocalDateTime end) {
+        // 获取每天的扫菲次数
+        List<ScanRecord> scans = scanRecordService.lambdaQuery()
+                .ge(start != null, ScanRecord::getScanTime, start)
+                .le(end != null, ScanRecord::getScanTime, end)
+                .orderByAsc(ScanRecord::getScanTime)
+                .list();
+
+        // 按日期分组统计次数
+        Map<String, Integer> dailyCounts = new java.util.HashMap<>();
+        for (ScanRecord scan : scans) {
+            String date = scan.getScanTime().toLocalDate().toString();
+            dailyCounts.merge(date, 1, Integer::sum);
+        }
+
+        return new java.util.ArrayList<>(dailyCounts.values());
+    }
+
+    @Override
+    public List<ProductionOrder> listAllOverdueOrders() {
+        // 获取所有延期订单：交货日期 < 今天 且 未完成
+        LocalDateTime now = LocalDateTime.now();
+        return productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .lt(ProductionOrder::getPlannedEndDate, now)
+                .ne(ProductionOrder::getStatus, "已完成")
+                .orderByAsc(ProductionOrder::getPlannedEndDate)
+                .list();
     }
 }
 
