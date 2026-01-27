@@ -17,6 +17,7 @@ import api, { ApiResult } from '@/utils/api';
 import errorHandler from '@/utils/errorHandler';
 import { useSync } from '@/utils/syncManager';
 import DeliveryAlert from '../../components/DeliveryAlert';
+import MiniDataDashboard from '../../components/MiniDataDashboard';
 import './styles.css';
 
 interface DashboardStats {
@@ -455,9 +456,9 @@ const Dashboard: React.FC = () => {
           <div className="dashboard-card">
             <div className="card-header">
               <h3 className="card-title">快捷入口</h3>
-              <Button 
-                type="text" 
-                icon={<SettingOutlined />} 
+              <Button
+                type="text"
+                icon={<SettingOutlined />}
                 onClick={() => setSettingsVisible(true)}
                 title="设置快捷入口"
                 style={{ color: '#666' }}
@@ -468,9 +469,9 @@ const Dashboard: React.FC = () => {
                 {quickEntries
                   .filter(entry => entry.enabled)
                   .map(entry => (
-                    <a 
+                    <a
                       key={entry.id}
-                      href={entry.href} 
+                      href={entry.href}
                       className={`quick-entry-item quick-entry-item--${entry.className}`}
                     >
                       <span className={`entry-icon entry-icon--${entry.className}`}>{entry.icon}</span>
@@ -482,6 +483,9 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* 迷你数据看板 */}
+        <MiniDataDashboard />
       </Card>
 
       {/* 快捷入口设置弹窗 */}
