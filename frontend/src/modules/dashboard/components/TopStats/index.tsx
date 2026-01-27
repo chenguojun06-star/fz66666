@@ -38,7 +38,7 @@ const StatCard: React.FC<StatCardProps> = ({ icon, label, dataKey, color, bgGrad
     <div className="top-stat-item" style={{ borderColor: color }}>
       <Spin spinning={loading}>
         <div className="stat-card-content">
-          {/* 图标和标签 */}
+          {/* 头部：图标和标签 */}
           <div className="stat-header">
             <div className="stat-icon-circle" style={{ borderColor: color }}>
               <span className="stat-icon" style={{ color }}>{icon}</span>
@@ -46,22 +46,21 @@ const StatCard: React.FC<StatCardProps> = ({ icon, label, dataKey, color, bgGrad
             <div className="stat-label" style={{ color }}>{label}</div>
           </div>
 
-          {/* 4个时间维度的数据 */}
-          <div className="stat-time-grid">
-            <div className="stat-time-item">
-              <div className="stat-time-value" style={{ color }}>{data?.day.toLocaleString() || 0}</div>
+          {/* 数据展示：上下两行 */}
+          <div className="stat-data-container">
+            {/* 第1行：4个数量 */}
+            <div className="stat-values-row">
+              <div className="stat-value" style={{ color }}>{data?.day.toLocaleString() || 0}</div>
+              <div className="stat-value" style={{ color }}>{data?.week.toLocaleString() || 0}</div>
+              <div className="stat-value" style={{ color }}>{data?.month.toLocaleString() || 0}</div>
+              <div className="stat-value" style={{ color }}>{data?.year.toLocaleString() || 0}</div>
+            </div>
+            
+            {/* 第2行：4个时间标签 */}
+            <div className="stat-labels-row">
               <div className="stat-time-label" style={{ color: `${color}99` }}>日</div>
-            </div>
-            <div className="stat-time-item">
-              <div className="stat-time-value" style={{ color }}>{data?.week.toLocaleString() || 0}</div>
               <div className="stat-time-label" style={{ color: `${color}99` }}>周</div>
-            </div>
-            <div className="stat-time-item">
-              <div className="stat-time-value" style={{ color }}>{data?.month.toLocaleString() || 0}</div>
               <div className="stat-time-label" style={{ color: `${color}99` }}>月</div>
-            </div>
-            <div className="stat-time-item">
-              <div className="stat-time-value" style={{ color }}>{data?.year.toLocaleString() || 0}</div>
               <div className="stat-time-label" style={{ color: `${color}99` }}>年</div>
             </div>
           </div>
