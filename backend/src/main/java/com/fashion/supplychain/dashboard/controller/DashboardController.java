@@ -41,4 +41,14 @@ public class DashboardController {
     public Result<?> urgentEvents() {
         return Result.success(dashboardOrchestrator.getUrgentEvents());
     }
+
+    /**
+     * 获取交期预警数据
+     * - 紧急订单：距离交期1-4天
+     * - 预警订单：距离交期5-7天
+     */
+    @GetMapping("/delivery-alert")
+    public Result<?> deliveryAlert() {
+        return Result.success(dashboardOrchestrator.getDeliveryAlert());
+    }
 }

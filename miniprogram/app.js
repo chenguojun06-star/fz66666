@@ -16,7 +16,9 @@ const eventBus = {
     this._events[event].push(callback);
   },
   off(event, callback) {
-    if (!this._events[event]) return;
+    if (!this._events[event]) {
+      return;
+    }
     if (callback) {
       this._events[event] = this._events[event].filter(cb => cb !== callback);
     } else {
@@ -24,7 +26,9 @@ const eventBus = {
     }
   },
   emit(event, ...args) {
-    if (!this._events[event]) return;
+    if (!this._events[event]) {
+      return;
+    }
     this._events[event].forEach(cb => {
       try {
         cb(...args);

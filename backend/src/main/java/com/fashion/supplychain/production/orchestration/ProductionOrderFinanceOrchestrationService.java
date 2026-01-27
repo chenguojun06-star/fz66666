@@ -11,14 +11,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionOrder;
-import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.helper.OrderReconciliationHelper;
 import com.fashion.supplychain.production.mapper.CuttingBundleMapper;
 import com.fashion.supplychain.production.service.ProductOutstockService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
-import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleQuotation;
 import com.fashion.supplychain.style.service.StyleInfoService;
@@ -59,9 +57,6 @@ public class ProductionOrderFinanceOrchestrationService {
 
     @Autowired
     private ProductionOrderScanRecordDomainService scanRecordDomainService;
-
-    @Autowired
-    private ScanRecordService scanRecordService;
 
     @Autowired
     private StyleInfoService styleInfoService;

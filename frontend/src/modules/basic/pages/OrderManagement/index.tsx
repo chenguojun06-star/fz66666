@@ -20,6 +20,7 @@ import { StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAsset
 import { getMaterialTypeCategory } from '@/utils/materialType';
 import { normalizeCategoryQuery, toCategoryCn } from '@/utils/styleCategory';
 import { useViewport } from '@/utils/useViewport';
+import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 type OrderLine = {
   id: string;
   color: string;
@@ -629,6 +630,41 @@ const OrderManagement: React.FC = () => {
       });
     });
 
+  const buildProgressNodesFromTemplate = (rows: unknown[]): ProgressNode[] => {
+    return (Array.isArray(rows) ? rows : [])
+      .map((n: any) => {
+        const name = String(n?.name || n?.processName || '').trim();
+        if (!name) return null;
+        const id = String(n?.id || n?.processCode || name || '').trim() || name;
+        const p = Number(n?.unitPrice);
+        const unitPrice = Number.isFinite(p) && p >= 0 ? p : 0;
+        return {
+          id,
+          name,
+          processes: [{ id: `${id}-0`, processName: name, unitPrice }],
+        } as ProgressNode;
+      })
+      .filter(Boolean) as ProgressNode[];
+  };
+
+  const loadProgressNodesForStyle = async (styleNo: string) => {
+    const sn = String(styleNo || '').trim();
+    if (!sn) return;
+    try {
+      const res = await templateLibraryApi.progressNodeUnitPrices(sn);
+      const result = res as Record<string, unknown>;
+      if (result.code !== 200) return;
+      const rows = Array.isArray(result.data) ? result.data : [];
+      const normalized = buildProgressNodesFromTemplate(rows);
+      if (normalized.length) {
+        setProgressNodes(normalized);
+      }
+    } catch {
+      // Intentionally empty
+      // 忽略错误
+    }
+  };
+
   const buildProgressWorkflowJson = (nodes: ProgressNode[]) => {
     const normalizedNodes = (Array.isArray(nodes) ? nodes : [])
       .map((n) => {
@@ -866,6 +902,7 @@ const OrderManagement: React.FC = () => {
     setActiveTabKey('base');
     setCreatedOrder(null);
     setProgressNodes(defaultProgressNodes);
+    void loadProgressNodesForStyle(String(style.styleNo || '').trim());
     if (style.id !== undefined && style.id !== null && String(style.id)) {
       fetchBom(style.id);
     } else {

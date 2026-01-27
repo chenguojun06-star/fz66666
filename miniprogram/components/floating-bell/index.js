@@ -11,9 +11,13 @@ import * as reminderManager from '../../utils/reminderManager';
  * @returns {string}
  */
 function formatTimeAgo(time) {
-  if (!time) return '';
+  if (!time) {
+    return '';
+  }
   const date = new Date(time);
-  if (isNaN(date.getTime())) return '';
+  if (isNaN(date.getTime())) {
+    return '';
+  }
 
   const now = Date.now();
   const diff = now - date.getTime();
@@ -21,10 +25,18 @@ function formatTimeAgo(time) {
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
 
-  if (minutes < 1) return '刚刚';
-  if (minutes < 60) return `${minutes}分钟前`;
-  if (hours < 24) return `${hours}小时前`;
-  if (days < 7) return `${days}天前`;
+  if (minutes < 1) {
+    return '刚刚';
+  }
+  if (minutes < 60) {
+    return `${minutes}分钟前`;
+  }
+  if (hours < 24) {
+    return `${hours}小时前`;
+  }
+  if (days < 7) {
+    return `${days}天前`;
+  }
 
   // 超过7天显示具体日期
   const month = date.getMonth() + 1;
@@ -138,7 +150,9 @@ Component({
      * 加载所有待处理任务
      */
     async loadTasks() {
-      if (this.data.loading) return;
+      if (this.data.loading) {
+        return;
+      }
 
       this.setData({ loading: true });
 
@@ -294,7 +308,9 @@ Component({
     checkIsAdmin() {
       try {
         const userInfo = wx.getStorageSync('userInfo');
-        if (!userInfo) return false;
+        if (!userInfo) {
+          return false;
+        }
         const role = String(userInfo.role || userInfo.roleCode || '').toLowerCase();
         return ['admin', 'supervisor', 'super_admin', 'manager'].includes(role);
       } catch (e) {
@@ -328,7 +344,9 @@ Component({
      */
     onTaskClick(e) {
       const { task, type } = e.currentTarget.dataset;
-      if (!task) return;
+      if (!task) {
+        return;
+      }
 
       // 关闭面板
       this.closePanel();
@@ -407,7 +425,7 @@ Component({
     /**
      * 处理审批任务（待审批用户）- 点击用户信息时跳转详情
      */
-    handleApprovalTask(task) {
+    handleApprovalTask(_task) {
       wx.navigateTo({ url: '/pages/admin/notification/index' });
     },
 
@@ -416,7 +434,9 @@ Component({
      */
     async onApproveUser(e) {
       const { userId, action } = e.currentTarget.dataset;
-      if (!userId) return;
+      if (!userId) {
+        return;
+      }
 
       const isApprove = action === 'approve';
       const actionText = isApprove ? '通过' : '拒绝';
@@ -431,7 +451,9 @@ Component({
         });
       });
 
-      if (!confirmRes) return;
+      if (!confirmRes) {
+        return;
+      }
 
       wx.showLoading({ title: '处理中...' });
 
@@ -478,7 +500,7 @@ Component({
     /**
      * 处理紧急事件
      */
-    handleUrgentEvent(task) {
+    handleUrgentEvent(_task) {
       // 根据紧急事件类型跳转
       wx.switchTab({ url: '/pages/scan/index' });
     },

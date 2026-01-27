@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, App, Button, Card, Collapse, Form, Grid, Input, InputNumber, Modal, Select, Segmented, Space, Tag, Tooltip, Typography } from 'antd';
 import { UnifiedRangePicker } from '@/components/common/UnifiedDatePicker';
-import { DeleteOutlined, DownloadOutlined, EyeOutlined, PlusOutlined, RollbackOutlined, ScanOutlined, EditOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EyeOutlined, RollbackOutlined, ScanOutlined, EditOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useLocation } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -12,7 +12,7 @@ import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import QuickEditModal from '@/components/common/QuickEditModal';
 import { ProductionOrderHeader, StyleCoverThumb } from '@/components/StyleAssets';
 import { compareSizeAsc, generateRequestId, isDuplicateScanMessage, isOrderFrozenByStatus } from '@/utils/api';
-import { isAdminUser as isAdminUserFn, isSupervisorOrAboveUser as isSupervisorOrAboveUserFn, useAuth } from '@/utils/authContext';
+import { isSupervisorOrAboveUser as isSupervisorOrAboveUserFn, useAuth } from '@/utils/authContext';
 import { useViewport } from '@/utils/useViewport';
 import { formatDateTime, formatDateTimeCompact } from '@/utils/datetime';
 import { CuttingBundle, ProductionOrder, ProductionQueryParams, ScanRecord } from '@/types/production';
@@ -257,31 +257,6 @@ const formatTimeCompact = (value?: string) => formatDateTimeCompact(value);
  * @param value 单元格值
  * @returns 转义后的字符串
  */
-const escapeCsvCell = (value: unknown) => {
-  const text = String(value ?? '');
-  if (/[\r\n",]/.test(text)) {
-    return `"${text.replace(/"/g, '""')}"`;
-  }
-  return text;
-};
-
-/**
- * 下载文本文件
- * @param filename 文件名
- * @param content 文件内容
- * @param mime MIME类型
- */
-const downloadTextFile = (filename: string, content: string, mime: string) => {
-  const blob = new Blob([content], { type: mime });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-};
 
 /**
  * 获取订单发货时间
@@ -562,7 +537,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const { user } = useAuth();
   const { modalWidth } = useViewport();
   const isSupervisorOrAbove = useMemo(() => isSupervisorOrAboveUserFn(user), [user]);
-  const isAdminUser = useMemo(() => isAdminUserFn(user), [user]);
   const location = useLocation();
   const screens = useBreakpoint();
   const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
@@ -575,11 +549,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
 
   const [detailOpen, setDetailOpen] = useState(false);
   const [activeOrder, setActiveOrder] = useState<ProductionOrder | null>(null);
-  const [scanHistoryLoading, setScanHistoryLoading] = useState(false);
   const [scanHistory, setScanHistory] = useState<ScanRecord[]>([]);
-  const [scanStageFilter, setScanStageFilter] = useState<string>('auto');
-
-  const [detailFlowExpanded, setDetailFlowExpanded] = useState(false);
 
   const [cuttingBundlesLoading, setCuttingBundlesLoading] = useState(false);
   const [cuttingBundles, setCuttingBundles] = useState<CuttingBundle[]>([]);
@@ -587,8 +557,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const [nodes, setNodes] = useState<ProgressNode[]>(defaultNodes);
   const [progressNodesByStyleNo, setProgressNodesByStyleNo] = useState<Record<string, ProgressNode[]>>({});
   const progressNodesByStyleNoRef = useRef<Record<string, ProgressNode[]>>({});
-  const [nodeInput, setNodeInput] = useState('');
-  const [nodeUnitPriceInput, setNodeUnitPriceInput] = useState<number>(0);
   const [nodeWorkflowLocked, setNodeWorkflowLocked] = useState(false);
   const [nodeWorkflowSaving, setNodeWorkflowSaving] = useState(false);
   const [nodeWorkflowDirty, setNodeWorkflowDirty] = useState(false);
@@ -660,36 +628,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     dateRangeRef.current = dateRange;
   }, [dateRange]);
 
-  useEffect(() => {
-    if (!detailOpen) return;
-    setScanStageFilter('auto');
-  }, [detailOpen, activeOrder?.id]);
-
-  const scanStageOptions = useMemo(() => {
-    const names: string[] = [];
-    const seen = new Set<string>();
-    for (const n of nodes) {
-      const name = String((n as Record<string, unknown>)?.name || '').trim();
-      if (!name || seen.has(name)) continue;
-      seen.add(name);
-      names.push(name);
-    }
-    for (const r of scanHistory) {
-      const name = String(getRecordStageName(r as Record<string, unknown>) || '').trim();
-      if (!name || seen.has(name)) continue;
-      seen.add(name);
-      names.push(name);
-    }
-    return [
-      { value: 'auto', label: '自动识别（全部）' },
-      ...names.map((name) => ({ value: name, label: name })),
-    ];
-  }, [nodes, scanHistory]);
-
-  const filteredScanHistory = useMemo(() => {
-    if (!scanStageFilter || scanStageFilter === 'auto') return scanHistory;
-    return scanHistory.filter((r) => stageNameMatches(scanStageFilter, getRecordStageName(r)));
-  }, [scanHistory, scanStageFilter]);
 
   const fetchOrders = useCallback(async (options?: { silent?: boolean }) => {
     const silent = options?.silent === true;
@@ -752,7 +690,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         message.error(result.message || '获取生产订单失败');
       }
     } catch {
-    // Intentionally empty
+      // Intentionally empty
       // 忽略错误
       if (!silent) {
         message.error('获取生产订单失败');
@@ -946,8 +884,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
           setProgressTemplates(Array.isArray(result.data) ? result.data : []);
         }
       } catch {
-    // Intentionally empty
-      // 忽略错误
+        // Intentionally empty
+        // 忽略错误
       }
     })();
   }, []);
@@ -961,8 +899,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
           setProcessPriceTemplates(Array.isArray(result.data) ? result.data : []);
         }
       } catch {
-    // Intentionally empty
-      // 忽略错误
+        // Intentionally empty
+        // 忽略错误
       }
     })();
   }, []);
@@ -990,7 +928,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         .filter((n: ProgressNode) => n.name);
       return stripWarehousingNode(normalized);
     } catch {
-    // Intentionally empty
+      // Intentionally empty
       // 忽略错误
       return [];
     }
@@ -1161,7 +1099,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       boardStatsByOrderRef.current[oid] = stats;
       setBoardStatsByOrder((prev) => ({ ...prev, [oid]: stats }));
     } catch {
-    // Intentionally empty
+      // Intentionally empty
       // 忽略错误
     } finally {
       boardStatsLoadingRef.current[oid] = false;
@@ -1228,7 +1166,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         }
       }
     } catch {
-    // Intentionally empty
+      // Intentionally empty
       // 忽略错误
     }
 
@@ -1258,7 +1196,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         }
       }
     } catch {
-    // Intentionally empty
+      // Intentionally empty
       // 忽略错误
     }
 
@@ -1290,18 +1228,13 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         }
       }
     } catch {
-    // Intentionally empty
+      // Intentionally empty
       // 忽略错误
     }
   };
 
   const lockNodeWorkflow = () => {
     setNodeWorkflowLocked(true);
-    setNodeWorkflowDirty(false);
-  };
-
-  const unlockNodeWorkflow = () => {
-    setNodeWorkflowLocked(false);
     setNodeWorkflowDirty(false);
   };
 
@@ -1317,9 +1250,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       setScanHistory([]);
       return [];
     }
-    if (!silent) {
-      setScanHistoryLoading(true);
-    }
     try {
       const response = await productionScanApi.listByOrderId(String(order.id), { page: 1, pageSize: 200 });
       const result = response as Record<string, unknown>;
@@ -1331,15 +1261,12 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         message.error(result.message || '获取扫码记录失败');
       }
     } catch {
-    // Intentionally empty
+      // Intentionally empty
       // 忽略错误
       if (!silent) {
         message.error('获取扫码记录失败');
       }
     } finally {
-      if (!silent) {
-        setScanHistoryLoading(false);
-      }
     }
     return [];
   };
@@ -1401,7 +1328,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       setPricingProcesses([]);
       return [];
     } catch {
-    // Intentionally empty
+      // Intentionally empty
       // 忽略错误
       setPricingProcesses([]);
       return [];
@@ -1418,9 +1345,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     setNodeWorkflowDirty(false);
     await ensureNodesFromTemplateIfNeeded(effective);
     setDetailOpen(true);
-    setDetailFlowExpanded(false);
-    setNodeInput('');
-    setNodeUnitPriceInput(0);
     await fetchScanHistory(effective);
     await fetchCuttingBundles(effective);
     await fetchPricingProcesses(effective);
@@ -1663,78 +1587,12 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         message.error(result.message || '保存失败');
       }
     } catch {
-    // Intentionally empty
+      // Intentionally empty
       // 忽略错误
       message.error('保存失败');
     } finally {
       setNodeWorkflowSaving(false);
     }
-  };
-
-  const rollbackNodeWorkflowLock = async () => {
-    if (!activeOrder?.id) {
-      message.error('未选择订单');
-      return;
-    }
-    if (!isAdminUser) {
-      message.error('仅管理员可退回编辑');
-      return;
-    }
-    let reason = '';
-    Modal.confirm({
-      title: '退回编辑',
-      content: (
-        <div>
-          <div style={{ marginBottom: 12, fontWeight: 600 }}>退回原因</div>
-          <Input.TextArea
-            placeholder="请输入退回原因"
-            autoSize={{ minRows: 3, maxRows: 6 }}
-            maxLength={200}
-            showCount
-            onChange={(e) => {
-              reason = String(e?.target?.value || '');
-            }}
-          />
-        </div>
-      ),
-      okText: '确认退回',
-      cancelText: '取消',
-      okButtonProps: { danger: true },
-      onOk: async () => {
-        const remark = String(reason || '').trim();
-        if (!remark) {
-          message.error('请输入退回原因');
-          return Promise.reject(new Error('请输入退回原因'));
-        }
-        if (nodeWorkflowSaving) return;
-        setNodeWorkflowSaving(true);
-        try {
-          const res = await productionOrderApi.rollbackProgressWorkflow({ id: activeOrder.id, reason: remark });
-          const result = res as Record<string, unknown>;
-          if (result.code === 200) {
-            const updated = (result.data || null) as ProductionOrder | null;
-            if (updated) {
-              setActiveOrder(updated);
-              setNodeWorkflowLocked(Number((updated as Record<string, unknown>)?.progressWorkflowLocked) === 1);
-              await ensureNodesFromTemplateIfNeeded(updated);
-            } else {
-              unlockNodeWorkflow();
-            }
-            setNodeWorkflowDirty(false);
-            message.success('已退回，可编辑');
-            await fetchOrders();
-          } else {
-            message.error(result.message || '退回失败');
-          }
-        } catch {
-    // Intentionally empty
-      // 忽略错误
-          message.error('退回失败');
-        } finally {
-          setNodeWorkflowSaving(false);
-        }
-      },
-    });
   };
 
   const closeScan = () => {
@@ -1778,7 +1636,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         setRollbackBundles([]);
       }
     } catch {
-    // Intentionally empty
+      // Intentionally empty
       // 忽略错误
       setRollbackBundles([]);
     } finally {
@@ -2069,8 +1927,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               });
             }
           } catch {
-    // Intentionally empty
-      // 忽略错误
+            // Intentionally empty
+            // 忽略错误
           }
         }
       }
@@ -2250,91 +2108,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     setNodeWorkflowDirty(true);
   };
 
-  const exportScanHistoryCsv = () => {
-    if (!activeOrder?.orderNo) {
-      message.error('未选择订单');
-      return;
-    }
-    if (!scanHistory.length) {
-      message.info('暂无记录可导出');
-      return;
-    }
-
-    const typeLabel: Record<string, string> = {
-      material: '物料',
-      procurement: '采购',
-      cutting: '裁剪',
-      production: '生产',
-      sewing: '车缝',
-      ironing: '整烫',
-      packaging: '包装',
-      quality: '质检',
-      warehouse: '入库',
-      shipment: '出货',
-    };
-
-    const header = ['类型', '进度环节', '计价工序', '操作人员', '颜色', '码数', '数量', '单价', '金额', '结果', '时间', '备注'];
-    const lines = [header.map(escapeCsvCell).join(',')];
-    for (const r of scanHistory) {
-      const row = [
-        typeLabel[String(r.scanType || '')] || String(r.scanType || ''),
-        getRecordStageName(r as Record<string, unknown>) || '-',
-        String((r as Record<string, unknown>)?.processName || '-'),
-        String(r.operatorName || '-'),
-        String(r.color || '-'),
-        String(r.size || '-'),
-        String(Number(r.quantity) || 0),
-        r.unitPrice === null || r.unitPrice === undefined ? '' : String(Number(r.unitPrice).toFixed(2)),
-        r.totalAmount === null || r.totalAmount === undefined ? '' : String(Number(r.totalAmount).toFixed(2)),
-        String(r.scanResult || ''),
-        String(formatTime(r.scanTime) || ''),
-        String(r.remark || ''),
-      ];
-      lines.push(row.map(escapeCsvCell).join(','));
-    }
-
-    const stamp = dayjs().format('YYYYMMDD_HHmmss');
-    const filename = `${activeOrder.orderNo}_操作记录_${stamp}.csv`;
-    const content = `\ufeff${lines.join('\n')}`;
-    downloadTextFile(filename, content, 'text/csv;charset=utf-8');
-  };
-
-  const addNode = () => {
-    const name = nodeInput.trim();
-    if (!activeOrder?.id) {
-      message.error('未选择订单');
-      return;
-    }
-    if (isOrderFrozenByStatus(activeOrder)) {
-      message.error('订单已完成，无法操作');
-      return;
-    }
-    if (!isSupervisorOrAbove) {
-      message.error('无权限操作进度节点');
-      return;
-    }
-    if (nodeWorkflowLocked) {
-      message.error('流程已锁定，如需修改请先退回');
-      return;
-    }
-    if (!name) {
-      message.error('请输入节点名称');
-      return;
-    }
-    const exists = nodes.some((n) => String(n.name || '').trim() === name);
-    if (exists) {
-      message.error('该节点已存在');
-      return;
-    }
-    const p = Number(nodeUnitPriceInput);
-    const unitPrice = Number.isFinite(p) && p >= 0 ? p : 0;
-    const next = [...nodes, { id: `${Date.now()}`, name, unitPrice }];
-    saveNodes(next);
-    setNodeWorkflowDirty(true);
-    setNodeInput('');
-    setNodeUnitPriceInput(0);
-    message.success('节点已添加');
-  };
 
   const fetchOrderDetail = async (orderId: string): Promise<ProductionOrder | null> => {
     const oid = String(orderId || '').trim();
@@ -2347,7 +2120,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       }
       return null;
     } catch {
-    // Intentionally empty
+      // Intentionally empty
       // 忽略错误
       return null;
     }
@@ -2419,7 +2192,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         message.error(result.message || '更新进度失败');
       }
     } catch {
-    // Intentionally empty
+      // Intentionally empty
       // 忽略错误
       message.error('更新进度失败');
     }
@@ -2752,22 +2525,55 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <Card size="small" styles={{ body: { padding: 12 } }}>
-          <Space wrap size={16}>
-            <Text>
-              单件工价合计：<Text strong>¥{totalUnitPrice.toFixed(2)}</Text>
-            </Text>
-            <Text>
-              订单工价合计：<Text strong>¥{totalOrderCost.toFixed(2)}</Text>
-            </Text>
-            <Text type="secondary">（订单数量：{orderQty}）</Text>
-          </Space>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+            <Space wrap size={16}>
+              <Text>
+                单件工价合计：<Text strong>¥{totalUnitPrice.toFixed(2)}</Text>
+              </Text>
+              <Text>
+                订单工价合计：<Text strong>¥{totalOrderCost.toFixed(2)}</Text>
+              </Text>
+              <Text type="secondary">（订单数量：{orderQty}）</Text>
+            </Space>
+            <Text strong style={{ fontSize: 14 }}>进度节点</Text>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Text type="secondary" style={{ fontSize: 13 }}>进度模板：</Text>
+                <Select
+                  allowClear
+                  size="small"
+                  style={{ width: 180 }}
+                  placeholder="选择进度模板"
+                  value={progressTemplateId}
+                  onChange={(v) => setProgressTemplateId(v)}
+                  options={progressTemplates.map((t) => ({ value: String(t.id || ''), label: t.templateName }))}
+                  disabled={templateApplying || processPriceApplying || nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(order)}
+                />
+                <Button size="small" onClick={applyProgressTemplateToOrder} loading={templateApplying} disabled={processPriceApplying || nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(order) || !progressTemplateId}>
+                  导入节点
+                </Button>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Text type="secondary" style={{ fontSize: 13 }}>工序单价：</Text>
+                <Select
+                  allowClear
+                  size="small"
+                  style={{ width: 180 }}
+                  placeholder="选择工序单价模板"
+                  value={processPriceTemplateId}
+                  onChange={(v) => setProcessPriceTemplateId(v)}
+                  options={processPriceTemplates.map((t) => ({ value: String(t.id || ''), label: t.templateName }))}
+                  disabled={templateApplying || processPriceApplying || nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(order)}
+                />
+                <Button size="small" onClick={applyProcessPriceTemplateToOrder} loading={processPriceApplying} disabled={templateApplying || nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(order) || !processPriceTemplateId}>
+                  导入单价
+                </Button>
+              </div>
+            </div>
+          </div>
         </Card>
 
-        {/* 进度节点区域 */}
         <div>
-          <div style={{ marginBottom: 8 }}>
-            <Text strong style={{ fontSize: 14 }}>进度节点</Text>
-          </div>
           <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
             <div className="mpb-detailCards">
               {nodes.map((n, idx) => {
@@ -3130,7 +2936,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               <Card
                 title={
                   <div className="mpb-nodeHeaderRow">
-                    <div className="mpb-nodeHeaderTitle">进度节点（支持添加节点）</div>
                     <div className="mpb-nodeHeaderActions" style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-start', width: '100%' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', width: '100%' }}>
                         {nodeWorkflowLocked ? (
@@ -3138,69 +2943,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                         ) : (
                           <Tag color={nodeWorkflowDirty ? 'warning' : 'default'}>{nodeWorkflowDirty ? '可编辑（未锁定）' : '可编辑'}</Tag>
                         )}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <Text type="secondary" style={{ fontSize: 13 }}>进度模板：</Text>
-                          <Select
-                            allowClear
-                            size="small"
-                            style={{ width: 180 }}
-                            placeholder="选择进度模板"
-                            value={progressTemplateId}
-                            onChange={(v) => setProgressTemplateId(v)}
-                            options={progressTemplates.map((t) => ({ value: String(t.id || ''), label: t.templateName }))}
-                            disabled={templateApplying || processPriceApplying || nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(activeOrder)}
-                          />
-                          <Button size="small" onClick={applyProgressTemplateToOrder} loading={templateApplying} disabled={processPriceApplying || nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(activeOrder) || !progressTemplateId}>
-                            导入节点
-                          </Button>
-                        </div>
                         <Button size="small" type="primary" onClick={saveNodeWorkflow} loading={nodeWorkflowSaving} disabled={nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(activeOrder)}>
                           保存并锁定
-                        </Button>
-                        {nodeWorkflowLocked ? (
-                          <Button size="small" danger onClick={rollbackNodeWorkflowLock} loading={nodeWorkflowSaving} disabled={nodeWorkflowSaving || !isAdminUser}>
-                            退回编辑
-                          </Button>
-                        ) : null}
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', width: '100%' }}>
-                        <Text type="secondary" style={{ fontSize: 13 }}>工序单价：</Text>
-                        <Select
-                          allowClear
-                          size="small"
-                          style={{ width: 180 }}
-                          placeholder="选择工序单价模板"
-                          value={processPriceTemplateId}
-                          onChange={(v) => setProcessPriceTemplateId(v)}
-                          options={processPriceTemplates.map((t) => ({ value: String(t.id || ''), label: t.templateName }))}
-                          disabled={templateApplying || processPriceApplying || nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(activeOrder)}
-                        />
-                        <Button size="small" onClick={applyProcessPriceTemplateToOrder} loading={processPriceApplying} disabled={templateApplying || nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(activeOrder) || !processPriceTemplateId}>
-                          导入单价
-                        </Button>
-                        <Input
-                          className="mpb-nodeCreateName"
-                          size="small"
-                          placeholder="新增节点名称（例如：后整、包装）"
-                          value={nodeInput}
-                          onChange={(e) => setNodeInput(e.target.value)}
-                          disabled={nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(activeOrder)}
-                          style={{ width: 180 }}
-                        />
-                        <InputNumber
-                          className="mpb-nodeCreatePrice"
-                          size="small"
-                          min={0}
-                          precision={2}
-                          value={nodeUnitPriceInput}
-                          aria-label="新增节点单价"
-                          onChange={(v) => setNodeUnitPriceInput(Number(v) || 0)}
-                          placeholder="单价"
-                          disabled={nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(activeOrder)}
-                          style={{ width: 100 }}
-                        />
-                        <Button className="mpb-nodeCreateBtn" size="small" icon={<PlusOutlined />} type="primary" onClick={addNode} disabled={nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(activeOrder)}>
-                          添加
                         </Button>
                       </div>
                     </div>
@@ -3210,118 +2954,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               >
                 {detailNodeCards}
 
-                <Collapse
-                  size="small"
-                  activeKey={detailFlowExpanded ? ['flow'] : []}
-                  onChange={(keys) => {
-                    const list = Array.isArray(keys) ? keys : [keys];
-                    setDetailFlowExpanded(list.map((k) => String(k)).includes('flow'));
-                  }}
-                  items={[
-                    {
-                      key: 'flow',
-                      label: '操作记录（全流程）',
-                      children: detailFlowExpanded ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-                            <Space size={6} wrap>
-                              <Text type="secondary">共 {filteredScanHistory.length} 条</Text>
-                              {filteredScanHistory.length !== scanHistory.length ? (
-                                <Text type="secondary">/ 全部 {scanHistory.length} 条</Text>
-                              ) : null}
-                            </Space>
-                            <Space size={8} wrap>
-                              <Select
-                                size="small"
-                                value={scanStageFilter}
-                                onChange={(v) => setScanStageFilter(String(v || 'auto'))}
-                                options={scanStageOptions}
-                                style={{ minWidth: 160 }}
-                              />
-                              <Button icon={<DownloadOutlined />} onClick={exportScanHistoryCsv} disabled={!scanHistory.length}>
-                                导出CSV
-                              </Button>
-                            </Space>
-                          </div>
-                          <div style={{ maxHeight: screens.lg ? 460 : 360, overflowY: 'auto' }}>
-                            <ResizableTable
-                              rowKey={(r) => String(r.id || `${r.scanTime}-${r.operatorId}-${r.processName}`)}
-                              loading={scanHistoryLoading}
-                              dataSource={filteredScanHistory}
-                              pagination={false}
-                              size="small"
-                              scroll={{ x: 'max-content' }}
-                              columns={[
-                                {
-                                  title: '类型',
-                                  dataIndex: 'scanType',
-                                  key: 'scanType',
-                                  width: 90,
-                                  render: (v) => {
-                                    const map: unknown = {
-                                      material: { color: 'default', label: '物料' },
-                                      procurement: { color: 'gold', label: '采购' },
-                                      cutting: { color: 'geekblue', label: '裁剪' },
-                                      production: { color: 'processing', label: '生产' },
-                                      sewing: { color: 'processing', label: '车缝' },
-                                      ironing: { color: 'processing', label: '整烫' },
-                                      packaging: { color: 'processing', label: '包装' },
-                                      quality: { color: 'purple', label: '质检' },
-                                      warehouse: { color: 'success', label: '入库' },
-                                      shipment: { color: 'gold', label: '出货' },
-                                    };
-                                    const t = map[String(v)] || { color: 'default', label: '未知' };
-                                    return <Tag color={t.color}>{t.label}</Tag>;
-                                  },
-                                },
-                                { title: '进度环节', dataIndex: 'progressStage', key: 'progressStage', width: 120, render: (_v, r: any) => getRecordStageName(r) || '-' },
-                                { title: '工序', dataIndex: 'processName', key: 'processName', width: 120, render: (v) => v || '-' },
-                                { title: '领取人', dataIndex: 'operatorName', key: 'operatorName', width: 120 },
-                                { title: '颜色', dataIndex: 'color', key: 'color', width: 100, render: (v) => v || '-' },
-                                { title: '码数', dataIndex: 'size', key: 'size', width: 90, render: (v) => v || '-' },
-                                { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 90, render: (v) => Number(v) || 0 },
-                                {
-                                  title: '单价',
-                                  dataIndex: 'unitPrice',
-                                  key: 'unitPrice',
-                                  width: 90,
-                                  render: (v) => {
-                                    if (v === null || v === undefined || v === '') return '-';
-                                    const n = Number(v);
-                                    return Number.isFinite(n) ? n.toFixed(2) : String(v);
-                                  },
-                                },
-                                {
-                                  title: '金额',
-                                  dataIndex: 'totalAmount',
-                                  key: 'totalAmount',
-                                  width: 100,
-                                  render: (v) => {
-                                    if (v === null || v === undefined || v === '') return '-';
-                                    const n = Number(v);
-                                    return Number.isFinite(n) ? n.toFixed(2) : String(v);
-                                  },
-                                },
-                                { title: '扫码时间', dataIndex: 'scanTime', key: 'scanTime', width: 160, render: (v) => formatTime(v) },
-                                {
-                                  title: '结果',
-                                  dataIndex: 'scanResult',
-                                  key: 'scanResult',
-                                  width: 90,
-                                  render: (v) => {
-                                    const ok = String(v || '') === 'success';
-                                    return <Tag color={ok ? 'success' : 'error'}>{ok ? '成功' : '失败'}</Tag>;
-                                  },
-                                },
-                                { title: '备注', dataIndex: 'remark', key: 'remark', ellipsis: true, render: (v) => v || '-' },
-                              ]}
-                            />
-                          </div>
-                        </div>
-                      ) : null,
-                    },
-                  ]}
-                />
               </Card>
             </div>
           </div>

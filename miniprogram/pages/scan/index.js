@@ -537,10 +537,14 @@ Page({
    */
   async loadMyHistory(refresh = false) {
     const { my } = this.data;
-    if (my.loadingHistory) return;
+    if (my.loadingHistory) {
+      return;
+    }
 
     // 如果不是刷新且没有更多数据，直接返回
-    if (!refresh && !my.history.hasMore) return;
+    if (!refresh && !my.history.hasMore) {
+      return;
+    }
 
     const page = refresh ? 1 : my.history.page;
     const pageSize = my.history.pageSize || 20;
@@ -1321,7 +1325,9 @@ Page({
    * 提交采购任务（来自"我的任务"列表，只更新到货数量）
    */
   async onSubmitProcurement() {
-    if (this.data.scanConfirm.loading) return;
+    if (this.data.scanConfirm.loading) {
+      return;
+    }
 
     const materialPurchases = this.data.scanConfirm.materialPurchases || [];
     if (materialPurchases.length === 0) {
@@ -2063,7 +2069,9 @@ Page({
     const index = e.currentTarget.dataset.index;
     const item = this.data.scanHistory[index];
 
-    if (!item) return;
+    if (!item) {
+      return;
+    }
 
     // 如果是质检记录，弹出质检结果录入弹窗
     if (item.data && item.data.scanType === 'quality') {

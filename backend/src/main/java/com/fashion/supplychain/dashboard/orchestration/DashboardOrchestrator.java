@@ -2,16 +2,20 @@ package com.fashion.supplychain.dashboard.orchestration;
 
 import com.fashion.supplychain.dashboard.dto.DashboardActivityDto;
 import com.fashion.supplychain.dashboard.dto.DashboardResponse;
+import com.fashion.supplychain.dashboard.dto.DeliveryAlertOrderDto;
+import com.fashion.supplychain.dashboard.dto.DeliveryAlertResponse;
 import com.fashion.supplychain.dashboard.dto.UrgentEventDto;
 import com.fashion.supplychain.dashboard.service.DashboardQueryService;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
+import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -21,9 +25,13 @@ import org.springframework.stereotype.Service;
 public class DashboardOrchestrator {
 
     private final DashboardQueryService dashboardQueryService;
+    private final ProductionOrderService productionOrderService;
 
-    public DashboardOrchestrator(DashboardQueryService dashboardQueryService) {
+    public DashboardOrchestrator(
+            DashboardQueryService dashboardQueryService,
+            ProductionOrderService productionOrderService) {
         this.dashboardQueryService = dashboardQueryService;
+        this.productionOrderService = productionOrderService;
     }
 
     public DashboardResponse dashboard(String startDate, String endDate, String brand, String factory) {
@@ -163,7 +171,7 @@ public class DashboardOrchestrator {
     public List<UrgentEventDto> getUrgentEvents() {
         List<UrgentEventDto> events = new ArrayList<>();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-        
+
         // 获取延期订单
         List<ProductionOrder> overdueOrders = dashboardQueryService.listOverdueOrders(10);
         for (ProductionOrder order : overdueOrders) {
@@ -175,11 +183,86 @@ public class DashboardOrchestrator {
             event.setTime(order.getPlannedEndDate() == null ? "" : order.getPlannedEndDate().format(formatter));
             events.add(event);
         }
-        
+
         // 注意：当前未实现紧急事件追踪
         // 未来可添加：次品数超标、付款审批超时等紧急事件
         // 这里可以根据实际业务需求添加更多事件类型
-        
+
         return events;
+    }
+
+    /**
+     * 获取交期预警数据
+     * - 紧急订单：距离交期1-4天，且未完成
+     * - 预警订单：距离交期5-7天，且未完成
+     *
+     * @return 交期预警响应数据
+     */
+    public DeliveryAlertResponse getDeliveryAlert() {
+        DeliveryAlertResponse response = new DeliveryAlertResponse();
+        LocalDate today = LocalDate.now();
+
+        // 获取所有生产订单（优化：未来可添加数据库查询条件）
+        List<ProductionOrder> allOrders = productionOrderService.list();
+
+        // 如果没有订单，直接返回空结果
+        if (allOrders == null || allOrders.isEmpty()) {
+            response.setUrgentOrders(new ArrayList<>());
+            response.setWarningOrders(new ArrayList<>());
+            return response;
+        }
+
+        List<DeliveryAlertOrderDto> urgentOrders = new ArrayList<>();
+        List<DeliveryAlertOrderDto> warningOrders = new ArrayList<>();
+
+        for (ProductionOrder order : allOrders) {
+            // 跳过已完成或已取消的订单
+            if ("completed".equals(order.getStatus()) || "cancelled".equals(order.getStatus())) {
+                continue;
+            }
+
+            // 跳过没有交期的订单
+            if (order.getPlannedEndDate() == null) {
+                continue;
+            }
+
+            // 计算距离交期的天数
+            LocalDate deliveryDate = order.getPlannedEndDate().toLocalDate();
+            long daysUntilDelivery = ChronoUnit.DAYS.between(today, deliveryDate);
+
+            // 只处理未来7天内的订单
+            if (daysUntilDelivery < 1 || daysUntilDelivery > 7) {
+                continue;
+            }
+
+            // 构建DTO
+            DeliveryAlertOrderDto dto = new DeliveryAlertOrderDto();
+            dto.setId(order.getId());
+            dto.setOrderNo(order.getOrderNo());
+            dto.setStyleNo(order.getStyleNo());
+            dto.setStyleName(order.getStyleName());
+            dto.setFactoryName(order.getFactoryName());
+            dto.setOrderQuantity(order.getOrderQuantity());
+            dto.setCompletedQuantity(order.getCompletedQuantity() == null ? 0 : order.getCompletedQuantity());
+            dto.setProductionProgress(order.getProductionProgress() == null ? 0 : order.getProductionProgress());
+            dto.setPlannedEndDate(order.getPlannedEndDate());
+            dto.setDaysUntilDelivery((int) daysUntilDelivery);
+
+            // 分类：1-4天为紧急，5-7天为预警
+            if (daysUntilDelivery >= 1 && daysUntilDelivery <= 4) {
+                urgentOrders.add(dto);
+            } else if (daysUntilDelivery >= 5 && daysUntilDelivery <= 7) {
+                warningOrders.add(dto);
+            }
+        }
+
+        // 按照距离交期天数排序（越近的越靠前）
+        urgentOrders.sort(Comparator.comparing(DeliveryAlertOrderDto::getDaysUntilDelivery));
+        warningOrders.sort(Comparator.comparing(DeliveryAlertOrderDto::getDaysUntilDelivery));
+
+        response.setUrgentOrders(urgentOrders);
+        response.setWarningOrders(warningOrders);
+
+        return response;
     }
 }
