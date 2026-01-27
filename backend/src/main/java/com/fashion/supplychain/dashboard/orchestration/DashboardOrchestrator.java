@@ -269,17 +269,22 @@ public class DashboardOrchestrator {
 
     /**
      * 获取质检统计数据
+     * @param range 时间范围：day、week、month
      */
-    public QualityStatsResponse getQualityStats() {
+    public QualityStatsResponse getQualityStats(String range) {
         QualityStatsResponse response = new QualityStatsResponse();
 
-        // 获取入库总数
-        long totalWarehousing = dashboardQueryService.countTotalWarehousing();
+        // 计算时间范围
+        LocalDateTime startTime = calculateStartTime(range);
+        LocalDateTime endTime = LocalDateTime.now();
+
+        // 获取入库总数（指定时间范围内）
+        long totalWarehousing = dashboardQueryService.countWarehousingBetween(startTime, endTime);
         response.setTotalWarehousing(totalWarehousing);
 
-        // 获取合格品和次品数量
-        long qualifiedCount = dashboardQueryService.sumTotalQualifiedQuantity();
-        long defectiveCount = dashboardQueryService.sumTotalUnqualifiedQuantity();
+        // 获取合格品和次品数量（指定时间范围内）
+        long qualifiedCount = dashboardQueryService.sumQualifiedQuantityBetween(startTime, endTime);
+        long defectiveCount = dashboardQueryService.sumUnqualifiedQuantityBetween(startTime, endTime);
         response.setDefectiveCount(defectiveCount);
 
         // 计算次品率和合格率
@@ -294,10 +299,29 @@ public class DashboardOrchestrator {
             response.setQualifiedRate(0.0);
         }
 
-        // 获取返修问题数量
-        long repairIssues = dashboardQueryService.countRepairIssues();
+        // 获取返修问题数量（指定时间范围内）
+        long repairIssues = dashboardQueryService.countRepairIssuesBetween(startTime, endTime);
         response.setRepairIssues(repairIssues);
 
         return response;
+    }
+
+    /**
+     * 根据时间范围计算起始时间
+     */
+    private LocalDateTime calculateStartTime(String range) {
+        LocalDate today = LocalDate.now();
+        
+        if ("day".equalsIgnoreCase(range)) {
+            // 今日：从今天凌晨开始
+            return LocalDateTime.of(today, LocalTime.MIN);
+        } else if ("month".equalsIgnoreCase(range)) {
+            // 本月：从本月1号开始
+            return LocalDateTime.of(today.withDayOfMonth(1), LocalTime.MIN);
+        } else {
+            // 默认本周：从本周一开始
+            LocalDate monday = today.minusDays(today.getDayOfWeek().getValue() - 1);
+            return LocalDateTime.of(monday, LocalTime.MIN);
+        }
     }
 }

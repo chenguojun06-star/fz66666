@@ -55,9 +55,10 @@ public class DashboardController {
     /**
      * 获取质检统计数据
      * - 入库数、次品数、次品率、合格率、返修问题
+     * @param range 时间范围：day(今日)、week(本周)、month(本月)
      */
     @GetMapping("/quality-stats")
-    public Result<?> qualityStats() {
-        return Result.success(dashboardOrchestrator.getQualityStats());
+    public Result<?> qualityStats(@RequestParam(required = false, defaultValue = "week") String range) {
+        return Result.success(dashboardOrchestrator.getQualityStats(range));
     }
 }

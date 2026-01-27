@@ -1,14 +1,27 @@
-/* 迷你数据看板样式 */
+/* 迷你数据看板样式 - 支持深色主题 */
 .mini-data-dashboard {
   margin-top: 24px;
-  border-radius: 12px;
+  border-radius: 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+}
+
+/* 深色主题适配 */
+@media (prefers-color-scheme: dark) {
+  .mini-data-dashboard {
+    background: #1f2937;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+  .mini-data-dashboard .ant-card-head {
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+  }
 }
 
 .mini-data-dashboard .ant-card-head {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  border-radius: 12px 12px 0 0;
+  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+  border-radius: 20px 20px 0 0;
   padding: 12px 20px;
+  border-bottom: none;
 }
 
 .mini-data-dashboard .ant-card-head-title {
@@ -19,7 +32,48 @@
 }
 
 .mini-data-dashboard .ant-card-body {
-  padding: 16px 20px;
+  padding: 20px;
+  background: transparent;
+}
+
+@media (prefers-color-scheme: dark) {
+  .mini-data-dashboard .ant-card-body {
+    background: #1f2937;
+  }
+}
+
+/* 时间范围选择器 */
+.time-range-selector {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.time-range-btn {
+  padding: 6px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(8px);
+}
+
+.time-range-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-1px);
+}
+
+.time-range-btn.active {
+  background: white;
+  color: #4b5563;
+  border-color: white;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 .mini-dashboard-loading {
@@ -35,22 +89,63 @@
   gap: 12px;
 }
 
+/* 统计卡片 - 胶囊椭圆形 */
 .mini-stat-card {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
-  background: #fafafa;
-  border-radius: 8px;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+  border-radius: 24px;
   transition: all 0.3s ease;
-  border: 1px solid transparent;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
 }
 
-.mini-stat-card:hover {
-  background: white;
-  border-color: #e5e7eb;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-  transform: translateY(-1px);
+/* 深色主题卡片 */
+@media (prefers-color-scheme: dark) {
+  .mini-stat-card {
+/* 图标 - 柔和配色 */
+.mini-stat-icon {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  font-size: 18px;
+  color: white;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  transition: transform 0.3s ease;
+}
+
+.mini-stat-card:hover .mini-stat-icon {
+  transform: scale(1.05);
+}
+
+.mini-stat-icon--warehousing {
+  background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%);
+}
+
+.mini-stat-icon--defective {
+  background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
+}
+
+.mini-stat-icon--defect-rate {
+  background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+}
+
+.mini-stat-icon--qualified {
+  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+}
+
+.mini-stat-icon--repair {
+  background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6
+    border-color: rgba(255, 255, 255, 0.15);
+  }
 }
 
 .mini-stat-icon {
@@ -87,13 +182,27 @@
 
 .mini-stat-content {
   flex: 1;
+}3px;
+  transition: color 0.3s ease;
 }
 
-.mini-stat-value {
-  font-size: 22px;
-  font-weight: 700;
-  color: #1f2937;
-  line-height: 1.2;
+@media (prefers-color-scheme: dark) {
+  .mini-stat-value {
+    color: #f3f4f6;
+  }
+}
+
+.mini-stat-label {
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+@media (prefers-color-scheme: dark) {
+  .mini-stat-label {
+    color: #9ca3af;
+  }
   margin-bottom: 2px;
 }
 

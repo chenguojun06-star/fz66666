@@ -283,5 +283,30 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
                 .like(ProductWarehousing::getDefectRemark, "返修")
                 .count();
     }
+
+    @Override
+    public long sumQualifiedQuantityBetween(LocalDateTime start, LocalDateTime end) {
+        // 统计指定时间范围内的合格品数量
+        List<ProductWarehousing> warehouses = productWarehousingService.lambdaQuery()
+                .eq(ProductWarehousing::getDeleteFlag, 0)
+                .ge(start != null, ProductWarehousing::getWarehousingEndTime, start)
+                .le(end != null, ProductWarehousing::getWarehousingEndTime, end)
+                .select(ProductWarehousing::getQualifiedQuantity)
+                .list();
+        return warehouses.stream()
+                .mapToLong(w -> w.getQualifiedQuantity() != null ? w.getQualifiedQuantity() : 0L)
+                .sum();
+    }
+
+    @Override
+    public long countRepairIssuesBetween(LocalDateTime start, LocalDateTime end) {
+        // 统计指定时间范围内的返修问题数量
+        return productWarehousingService.lambdaQuery()
+                .eq(ProductWarehousing::getDeleteFlag, 0)
+                .ge(start != null, ProductWarehousing::getWarehousingEndTime, start)
+                .le(end != null, ProductWarehousing::getWarehousingEndTime, end)
+                .like(ProductWarehousing::getDefectRemark, "返修")
+                .count();
+    }
 }
 
