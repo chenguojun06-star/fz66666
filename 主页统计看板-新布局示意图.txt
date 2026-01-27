@@ -267,7 +267,7 @@ After:
           <div className="stat-label">标签</div>
         </div>
       </div>
-      
+
       {/* 第2行 */}
       <div className="stat-time-selector">
         <button>日</button>

@@ -4,7 +4,10 @@ import com.fashion.supplychain.dashboard.dto.DashboardActivityDto;
 import com.fashion.supplychain.dashboard.dto.DashboardResponse;
 import com.fashion.supplychain.dashboard.dto.DeliveryAlertOrderDto;
 import com.fashion.supplychain.dashboard.dto.DeliveryAlertResponse;
+import com.fashion.supplychain.dashboard.dto.OrderCuttingChartResponse;
+import com.fashion.supplychain.dashboard.dto.OverdueOrderDto;
 import com.fashion.supplychain.dashboard.dto.QualityStatsResponse;
+import com.fashion.supplychain.dashboard.dto.ScanCountChartResponse;
 import com.fashion.supplychain.dashboard.dto.TopStatsResponse;
 import com.fashion.supplychain.dashboard.dto.UrgentEventDto;
 import com.fashion.supplychain.dashboard.service.DashboardQueryService;
@@ -396,5 +399,87 @@ public class DashboardOrchestrator {
             LocalDate monday = today.minusDays(today.getDayOfWeek().getValue() - 1);
             return LocalDateTime.of(monday, LocalTime.MIN);
         }
+    }
+
+    /**
+     * 获取订单与裁剪数量折线图数据（最近30天）
+     */
+    public OrderCuttingChartResponse getOrderCuttingChart() {
+        LocalDateTime endTime = LocalDateTime.now();
+        LocalDateTime startTime = endTime.minusDays(30);
+
+        List<Integer> orderQuantities = dashboardQueryService.getDailyOrderQuantities(startTime, endTime);
+        List<Integer> cuttingQuantities = dashboardQueryService.getDailyCuttingQuantities(startTime, endTime);
+
+        // 生成日期列表
+        List<String> dates = new ArrayList<>();
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("MM-dd");
+        for (int i = 0; i < 30; i++) {
+            dates.add(startTime.plusDays(i).format(dateFormatter));
+        }
+
+        // 确保数据长度一致
+        while (orderQuantities.size() < 30) {
+            orderQuantities.add(0);
+        }
+        while (cuttingQuantities.size() < 30) {
+            cuttingQuantities.add(0);
+        }
+
+        return new OrderCuttingChartResponse(dates, orderQuantities, cuttingQuantities);
+    }
+
+    /**
+     * 获取扫菲次数折线图数据（最近30天）
+     */
+    public ScanCountChartResponse getScanCountChart() {
+        LocalDateTime endTime = LocalDateTime.now();
+        LocalDateTime startTime = endTime.minusDays(30);
+
+        List<Integer> scanCounts = dashboardQueryService.getDailyScanCounts(startTime, endTime);
+
+        // 生成日期列表
+        List<String> dates = new ArrayList<>();
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("MM-dd");
+        for (int i = 0; i < 30; i++) {
+            dates.add(startTime.plusDays(i).format(dateFormatter));
+        }
+
+        // 确保数据长度一致
+        while (scanCounts.size() < 30) {
+            scanCounts.add(0);
+        }
+
+        return new ScanCountChartResponse(dates, scanCounts);
+    }
+
+    /**
+     * 获取延期订单列表
+     */
+    public List<OverdueOrderDto> getOverdueOrders() {
+        List<ProductionOrder> orders = dashboardQueryService.listAllOverdueOrders();
+        List<OverdueOrderDto> result = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
+
+        for (ProductionOrder order : orders) {
+            OverdueOrderDto dto = new OverdueOrderDto();
+            dto.setId(order.getId());
+            dto.setOrderNo(order.getOrderNo());
+            dto.setStyleNo(order.getStyleNo());
+            dto.setQuantity(order.getOrderQuantity());
+
+            if (order.getPlannedEndDate() != null) {
+                dto.setDeliveryDate(order.getPlannedEndDate().toLocalDate().toString());
+                long days = ChronoUnit.DAYS.between(order.getPlannedEndDate(), now);
+                dto.setOverdueDays((int) Math.max(0, days));
+            } else {
+                dto.setDeliveryDate("");
+                dto.setOverdueDays(0);
+            }
+
+            result.add(dto);
+        }
+
+        return result;
     }
 }

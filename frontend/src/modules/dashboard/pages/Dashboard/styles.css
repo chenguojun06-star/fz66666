@@ -452,3 +452,36 @@
   font-size: var(--font-size-sm);
   color: #1a1a1a;
 }
+
+/* 数据分析区域布局 */
+.dashboard-analysis-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.dashboard-charts-left {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.dashboard-table-right {
+  height: 100%;
+}
+
+.chart-item {
+  flex: 1;
+  min-height: 400px;
+}
+
+@media (max-width: 1400px) {
+  .dashboard-analysis-section {
+    grid-template-columns: 1fr;
+  }
+  
+  .dashboard-table-right {
+    min-height: 500px;
+  }
+}

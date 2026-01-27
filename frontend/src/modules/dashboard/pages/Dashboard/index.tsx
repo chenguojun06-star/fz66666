@@ -16,9 +16,11 @@ import Layout from '@/components/Layout';
 import api, { ApiResult } from '@/utils/api';
 import errorHandler from '@/utils/errorHandler';
 import { useSync } from '@/utils/syncManager';
-import DeliveryAlert from '../../components/DeliveryAlert';
 import MiniDataDashboard from '../../components/MiniDataDashboard';
 import TopStats from '../../components/TopStats';
+import OrderCuttingChart from '../../components/OrderCuttingChart';
+import ScanCountChart from '../../components/ScanCountChart';
+import OverdueOrderTable from '../../components/OverdueOrderTable';
 import './styles.css';
 
 interface DashboardStats {
@@ -370,8 +372,23 @@ const Dashboard: React.FC = () => {
         {/* 顶部4个统计看板 */}
         <TopStats />
 
-        {/* 交期预警看板 */}
-        <DeliveryAlert />
+        {/* 数据分析区域 */}
+        <div className="dashboard-analysis-section">
+          {/* 左侧折线图区域 */}
+          <div className="dashboard-charts-left">
+            <div className="chart-item">
+              <OrderCuttingChart />
+            </div>
+            <div className="chart-item">
+              <ScanCountChart />
+            </div>
+          </div>
+
+          {/* 右侧延期订单表格 */}
+          <div className="dashboard-table-right">
+            <OverdueOrderTable />
+          </div>
+        </div>
 
         <div className="dashboard-grid">
           <div className="dashboard-card">
