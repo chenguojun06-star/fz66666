@@ -73,32 +73,42 @@
   font-weight: 600;
 }
 
-/* 时间维度数据网格 - 2x2 */
-.stat-time-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-  margin-top: 4px;
+/* 数据展示容器 */
+.stat-data-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
 }
 
-.stat-time-item {
-  text-align: center;
-  padding: 8px;
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.02);
+/* 第1行：4个数量横向排列 */
+.stat-values-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
 }
 
-.stat-time-value {
-  font-size: 20px;
+.stat-value {
+  flex: 1;
+  font-size: 22px;
   font-weight: 700;
+  text-align: center;
   line-height: 1.2;
-  margin-bottom: 4px;
+}
+
+/* 第2行：4个时间标签横向排列 */
+.stat-labels-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .stat-time-label {
-  font-size: 12px;
+  flex: 1;
+  font-size: 13px;
   font-weight: 500;
-  opacity: 0.8;
+  text-align: center;
+  opacity: 0.7;
 }
 
 /* 深色主题适配 */
