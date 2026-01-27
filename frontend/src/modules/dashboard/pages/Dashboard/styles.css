@@ -472,8 +472,7 @@
 }
 
 .chart-item {
-  flex: 1;
-  min-height: 400px;
+  flex: 0 0 auto;
 }
 
 @media (max-width: 1400px) {

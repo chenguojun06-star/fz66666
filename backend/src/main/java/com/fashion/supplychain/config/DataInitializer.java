@@ -899,7 +899,7 @@ public class DataInitializer implements CommandLineRunner {
         }
 
         ensurePermission("仪表盘", "MENU_DASHBOARD", 0L, null, "menu", "/dashboard", null, 0);
-        Long basicId = ensurePermission("基础资料", "MENU_BASIC", 0L, null, "menu", null, null, 10);
+        Long basicId = ensurePermission("样衣管理", "MENU_BASIC", 0L, null, "menu", null, null, 10);
         Long productionId = ensurePermission("生产管理", "MENU_PRODUCTION", 0L, null, "menu", null, null, 20);
         Long financeId = ensurePermission("财务管理", "MENU_FINANCE", 0L, null, "menu", null, null, 30);
         Long systemId = ensurePermission("系统设置", "MENU_SYSTEM", 0L, null, "menu", null, null, 40);

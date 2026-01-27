@@ -40,9 +40,9 @@ const OverdueOrderTable: React.FC = () => {
           overdueDays: Math.floor(Math.random() * 20) + 1,
         };
       });
-      
+
       setDataSource(mockData);
-      
+
       // TODO: 替换为真实API
       // const result = await api.get<OverdueOrder[]>('/api/dashboard/overdue-orders');
       // if (result.success && result.data) {
@@ -168,7 +168,7 @@ const OverdueOrderTable: React.FC = () => {
     <Card
       title="延期订单列表"
       className="overdue-order-table-card"
-      bordered={false}
+      variant="borderless"
     >
       <Spin spinning={loading}>
         <Table

@@ -461,7 +461,7 @@ const UserList: React.FC = () => {
       team: '查看团队',
       own: '仅看自己',
       // 兼容旧数据
-      style: '款号资料',
+      style: '样衣开发',
       production: '生产管理',
       finance: '财务管理',
       system: '系统设置'

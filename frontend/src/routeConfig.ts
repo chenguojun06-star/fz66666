@@ -106,11 +106,11 @@ export const menuConfig: MenuSection[] = [
     path: paths.dashboard,
   },
   {
-    title: '基础资料',
+    title: '样衣管理',
     key: 'basic',
     icon: React.createElement(AppstoreOutlined),
     items: [
-      { label: '款号资料', path: paths.styleInfoList, icon: React.createElement(FileTextOutlined) },
+      { label: '样衣开发', path: paths.styleInfoList, icon: React.createElement(FileTextOutlined) },
       { label: '下单管理', path: paths.orderManagementList, icon: React.createElement(FileTextOutlined) },
       { label: '资料中心', path: paths.dataCenter, icon: React.createElement(DatabaseOutlined) },
       { label: '单价流程', path: paths.templateCenter, icon: React.createElement(BookOutlined) },

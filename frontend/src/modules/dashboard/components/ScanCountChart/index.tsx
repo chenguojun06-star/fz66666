@@ -31,16 +31,16 @@ const ScanCountChart: React.FC = () => {
         date.setDate(date.getDate() - 29 + i);
         return `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
       });
-      
+
       const mockCounts = Array.from({ length: 30 }, () => Math.floor(Math.random() * 50) + 80);
       const mockQuantities = Array.from({ length: 30 }, () => Math.floor(Math.random() * 3000) + 5000);
-      
+
       setData({
         dates: mockDates,
         scanCounts: mockCounts,
         scanQuantities: mockQuantities,
       });
-      
+
       // TODO: 替换为真实API
       // const result = await api.get<ChartData>('/api/dashboard/scan-count-chart');
       // if (result.success && result.data) {
@@ -48,7 +48,24 @@ const ScanCountChart: React.FC = () => {
       // }
     } catch (error) {
       console.error('Failed to load scan count chart:', error);
-    } filet html = `<div style="padding: 4px 0; font-weight: 600;">${date}</div>`;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const option = {
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+      borderColor: '#ddd',
+      borderWidth: 1,
+      textStyle: {
+        color: '#333',
+        fontSize: 13,
+      },
+      formatter: (params: any) => {
+        const date = params[0].axisValue;
+        let html = `<div style="padding: 4px 0; font-weight: 600;">${date}</div>`;
         params.forEach((item: any) => {
           html += `
             <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 2px 0;">
@@ -65,7 +82,7 @@ const ScanCountChart: React.FC = () => {
     },
     legend: {
       data: ['扫菲次数', '扫菲数量'],
-      top: 10,
+      top: 5,
       textStyle: {
         fontSize: 13,
         color: '#666',
@@ -74,8 +91,8 @@ const ScanCountChart: React.FC = () => {
     grid: {
       left: '3%',
       right: '4%',
-      bottom: '3%',
-      top: 60,
+      bottom: '5px',
+      top: 35,
       containLabel: true,
     },
     xAxis: {
@@ -149,7 +166,7 @@ const ScanCountChart: React.FC = () => {
         },
         itemStyle: {
           color: '#f59e0b',
-      title="扫菲次数 vs 扫菲数量" 
+        },
         areaStyle: {
           color: {
             type: 'linear',
@@ -159,24 +176,7 @@ const ScanCountChart: React.FC = () => {
             y2: 1,
             colorStops: [
               { offset: 0, color: 'rgba(245, 158, 11, 0.2)' },
-              { offset: 1, color: 'rgba(245, 158, 11
-        lineStyle: {
-          width: 3,
-          color: '#8b5cf6',
-        },
-        itemStyle: {
-          color: '#8b5cf6',
-        },
-        areaStyle: {
-          color: {
-            type: 'linear',
-            x: 0,
-            y: 0,
-            x2: 0,
-            y2: 1,
-            colorStops: [
-              { offset: 0, color: 'rgba(139, 92, 246, 0.2)' },
-              { offset: 1, color: 'rgba(139, 92, 246, 0.02)' },
+              { offset: 1, color: 'rgba(245, 158, 11, 0.02)' },
             ],
           },
         },
@@ -186,14 +186,14 @@ const ScanCountChart: React.FC = () => {
 
   return (
     <Card
-      title="扫菲次数统计"
+      title="扫菲次数 vs 扫菲数量"
       className="scan-count-chart-card"
-      bordered={false}
+      variant="borderless"
     >
       <Spin spinning={loading}>
         <div className="chart-container">
           {data.dates.length > 0 ? (
-            <ReactECharts option={option} style={{ height: '350px' }} />
+            <ReactECharts option={option} style={{ height: '250px' }} />
           ) : (
             <div className="empty-chart">暂无数据</div>
           )}

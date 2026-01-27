@@ -1,4 +1,4 @@
-// 款号资料模块类型定义
+// 样衣开发模块类型定义
 
 export interface StyleInfo {
   id?: string | number;
@@ -91,6 +91,7 @@ export interface StyleProcess {
   styleId: string | number;
   processCode: string;
   processName: string;
+  progressStage?: string; // 进度节点：采购/裁剪/车缝/尾部/入库
   machineType: string;
   standardTime: number;
   price: number;
