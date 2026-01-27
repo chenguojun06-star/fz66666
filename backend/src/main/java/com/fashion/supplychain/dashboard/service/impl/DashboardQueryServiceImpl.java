@@ -249,4 +249,39 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
                 .page(new Page<>(1, lim))
                 .getRecords();
     }
+
+    @Override
+    public long sumTotalQualifiedQuantity() {
+        // 统计所有合格品数量
+        List<ProductWarehousing> warehouses = productWarehousingService.lambdaQuery()
+                .eq(ProductWarehousing::getDeleteFlag, 0)
+                .select(ProductWarehousing::getQualifiedQuantity)
+                .list();
+        return warehouses.stream()
+                .mapToLong(w -> w.getQualifiedQuantity() != null ? w.getQualifiedQuantity() : 0L)
+                .sum();
+    }
+
+    @Override
+    public long sumTotalUnqualifiedQuantity() {
+        // 统计所有次品数量
+        List<ProductWarehousing> warehouses = productWarehousingService.lambdaQuery()
+                .eq(ProductWarehousing::getDeleteFlag, 0)
+                .select(ProductWarehousing::getUnqualifiedQuantity)
+                .list();
+        return warehouses.stream()
+                .mapToLong(w -> w.getUnqualifiedQuantity() != null ? w.getUnqualifiedQuantity() : 0L)
+                .sum();
+    }
+
+    @Override
+    public long countRepairIssues() {
+        // 统计返修问题数量（根据实际业务逻辑调整）
+        // 这里统计次品备注中包含"返修"关键字的记录数
+        return productWarehousingService.lambdaQuery()
+                .eq(ProductWarehousing::getDeleteFlag, 0)
+                .like(ProductWarehousing::getDefectRemark, "返修")
+                .count();
+    }
 }
+

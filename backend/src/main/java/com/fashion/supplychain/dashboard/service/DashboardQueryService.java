@@ -45,4 +45,11 @@ public interface DashboardQueryService {
     long countTotalWarehousing();
 
     List<ProductionOrder> listOverdueOrders(int limit);
+
+    // 质检统计方法
+    long sumTotalQualifiedQuantity();
+
+    long sumTotalUnqualifiedQuantity();
+
+    long countRepairIssues();
 }

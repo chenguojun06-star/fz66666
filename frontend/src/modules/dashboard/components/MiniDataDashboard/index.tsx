@@ -1,39 +1,45 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Spin, message } from 'antd';
-import { FileTextOutlined, ShoppingCartOutlined, ApartmentOutlined } from '@ant-design/icons';
+import { InboxOutlined, WarningOutlined, CheckCircleOutlined, LineChartOutlined, ToolOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import './styles.css';
 
-interface DataCenterStats {
-  styleCount: number;
-  materialCount: number;
-  productionCount: number;
+interface QualityStats {
+  totalWarehousing: number;
+  defectiveCount: number;
+  defectRate: number;
+  qualifiedRate: number;
+  repairIssues: number;
 }
 
 const MiniDataDashboard: React.FC = () => {
-  const [stats, setStats] = useState<DataCenterStats>({
-    styleCount: 0,
-    materialCount: 0,
-    productionCount: 0,
+  const [stats, setStats] = useState<QualityStats>({
+    totalWarehousing: 0,
+    defectiveCount: 0,
+    defectRate: 0,
+    qualifiedRate: 0,
+    repairIssues: 0,
   });
   const [loading, setLoading] = useState(false);
 
   const fetchStats = async () => {
     setLoading(true);
     try {
-      const response = await api.get<{ code: number; message: string; data: DataCenterStats }>('/data-center/stats');
+      const response = await api.get<{ code: number; message: string; data: QualityStats }>('/dashboard/quality-stats');
       if (response.code === 200) {
-        const d = response.data as DataCenterStats || {} as DataCenterStats;
+        const d = response.data as QualityStats || {} as QualityStats;
         setStats({
-          styleCount: d.styleCount ?? 0,
-          materialCount: d.materialCount ?? 0,
-          productionCount: d.productionCount ?? 0,
+          totalWarehousing: d.totalWarehousing ?? 0,
+          defectiveCount: d.defectiveCount ?? 0,
+          defectRate: d.defectRate ?? 0,
+          qualifiedRate: d.qualifiedRate ?? 0,
+          repairIssues: d.repairIssues ?? 0,
         });
       } else {
-        message.error(response.message || '获取资料中心统计失败');
+        message.error(response.message || '获取质检统计失败');
       }
     } catch (error: any) {
-      console.error('获取资料中心统计失败:', error);
+      console.error('获取质检统计失败:', error);
       // 不显示错误提示，避免干扰首页用户体验
     } finally {
       setLoading(false);
@@ -45,40 +51,60 @@ const MiniDataDashboard: React.FC = () => {
   }, []);
 
   return (
-    <Card className="mini-data-dashboard" title="📊 资料中心统计">
+    <Card className="mini-data-dashboard" title="� 质检统计概览">
       {loading ? (
         <div className="mini-dashboard-loading">
           <Spin />
         </div>
       ) : (
         <div className="mini-dashboard-grid">
-          <div className="mini-stat-card mini-stat-card--style">
-            <div className="mini-stat-icon mini-stat-icon--style">
-              <FileTextOutlined />
+          <div className="mini-stat-card mini-stat-card--warehousing">
+            <div className="mini-stat-icon mini-stat-icon--warehousing">
+              <InboxOutlined />
             </div>
             <div className="mini-stat-content">
-              <div className="mini-stat-value">{stats.styleCount}</div>
-              <div className="mini-stat-label">款号总数</div>
+              <div className="mini-stat-value">{stats.totalWarehousing}</div>
+              <div className="mini-stat-label">入库数</div>
             </div>
           </div>
 
-          <div className="mini-stat-card mini-stat-card--material">
-            <div className="mini-stat-icon mini-stat-icon--material">
-              <ShoppingCartOutlined />
+          <div className="mini-stat-card mini-stat-card--defective">
+            <div className="mini-stat-icon mini-stat-icon--defective">
+              <WarningOutlined />
             </div>
             <div className="mini-stat-content">
-              <div className="mini-stat-value">{stats.materialCount}</div>
-              <div className="mini-stat-label">物料总数</div>
+              <div className="mini-stat-value">{stats.defectiveCount}</div>
+              <div className="mini-stat-label">次品数</div>
             </div>
           </div>
 
-          <div className="mini-stat-card mini-stat-card--production">
-            <div className="mini-stat-icon mini-stat-icon--production">
-              <ApartmentOutlined />
+          <div className="mini-stat-card mini-stat-card--defect-rate">
+            <div className="mini-stat-icon mini-stat-icon--defect-rate">
+              <LineChartOutlined />
             </div>
             <div className="mini-stat-content">
-              <div className="mini-stat-value">{stats.productionCount}</div>
-              <div className="mini-stat-label">生产订单</div>
+              <div className="mini-stat-value">{stats.defectRate.toFixed(2)}%</div>
+              <div className="mini-stat-label">次品率</div>
+            </div>
+          </div>
+
+          <div className="mini-stat-card mini-stat-card--qualified">
+            <div className="mini-stat-icon mini-stat-icon--qualified">
+              <CheckCircleOutlined />
+            </div>
+            <div className="mini-stat-content">
+              <div className="mini-stat-value">{stats.qualifiedRate.toFixed(2)}%</div>
+              <div className="mini-stat-label">合格率</div>
+            </div>
+          </div>
+
+          <div className="mini-stat-card mini-stat-card--repair">
+            <div className="mini-stat-icon mini-stat-icon--repair">
+              <ToolOutlined />
+            </div>
+            <div className="mini-stat-content">
+              <div className="mini-stat-value">{stats.repairIssues}</div>
+              <div className="mini-stat-label">返修问题</div>
             </div>
           </div>
         </div>
