@@ -9,29 +9,78 @@ import {
 import api from '@/utils/api';
 import './styles.css';
 
-type TimeRange = 'day' | 'week' | 'month' | 'year';
+interface TimeRangeStats {
+  day: number;
+  week: number;
+  month: number;
+  year: number;
+}
+
+interface TopStatsData {
+  sampleDevelopment: TimeRangeStats;
+  bulkOrder: TimeRangeStats;
+  cutting: TimeRangeStats;
+  warehousing: TimeRangeStats;
+}
 
 interface StatCardProps {
   icon: React.ReactNode;
   label: string;
-  dataKey: string;
+  dataKey: keyof TopStatsData;
   color: string;
   bgGradient: string;
+  data: TimeRangeStats | null;
+  loading: boolean;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ icon, label, dataKey, color, bgGradient }) => {
-  const [loading, setLoading] = useState(false);
-  const [timeRange, setTimeRange] = useState<TimeRange>('week');
-  const [value, setValue] = useState<number>(0);
+const StatCard: React.FC<StatCardProps> = ({ icon, label, dataKey, color, bgGradient, data, loading }) => {
+  return (
+    <div className="top-stat-item" style={{ borderColor: color }}>
+      <Spin spinning={loading}>
+        <div className="stat-card-content">
+          {/* 图标和标签 */}
+          <div className="stat-header">
+            <div className="stat-icon-circle" style={{ borderColor: color }}>
+              <span className="stat-icon" style={{ color }}>{icon}</span>
+            </div>
+            <div className="stat-label" style={{ color }}>{label}</div>
+          </div>
 
-  const fetchData = async () => {
+          {/* 4个时间维度的数据 */}
+          <div className="stat-time-grid">
+            <div className="stat-time-item">
+              <div className="stat-time-value" style={{ color }}>{data?.day.toLocaleString() || 0}</div>
+              <div className="stat-time-label" style={{ color: `${color}99` }}>日</div>
+            </div>
+            <div className="stat-time-item">
+              <div className="stat-time-value" style={{ color }}>{data?.week.toLocaleString() || 0}</div>
+              <div className="stat-time-label" style={{ color: `${color}99` }}>周</div>
+            </div>
+            <div className="stat-time-item">
+              <div className="stat-time-value" style={{ color }}>{data?.month.toLocaleString() || 0}</div>
+              <div className="stat-time-label" style={{ color: `${color}99` }}>月</div>
+            </div>
+            <div className="stat-time-item">
+              <div className="stat-time-value" style={{ color }}>{data?.year.toLocaleString() || 0}</div>
+              <div className="stat-time-label" style={{ color: `${color}99` }}>年</div>
+            </div>
+          </div>
+        </div>
+      </Spin>
+    </div>
+  );
+};
+
+const TopStats: React.FC = () => {
+  const [loading, setLoading] = useState(false);
+  const [statsData, setStatsData] = useState<TopStatsData | null>(null);
+
+  const fetchStats = async () => {
     setLoading(true);
     try {
-      const response = await api.get<any>('/api/dashboard/top-stats', {
-        params: { range: timeRange },
-      });
+      const response = await api.get<TopStatsData>('/api/dashboard/top-stats');
       if (response.success && response.data) {
-        setValue(response.data[dataKey] || 0);
+        setStatsData(response.data);
       }
     } catch (error) {
       message.error('获取统计数据失败');
@@ -42,74 +91,33 @@ const StatCard: React.FC<StatCardProps> = ({ icon, label, dataKey, color, bgGrad
   };
 
   useEffect(() => {
-    fetchData();
-  }, [timeRange]);
+    fetchStats();
+  }, []);
 
-  const timeRanges: { value: TimeRange; label: string }[] = [
-    { value: 'day', label: '日' },
-    { value: 'week', label: '周' },
-    { value: 'month', label: '月' },
-    { value: 'year', label: '年' },
-  ];
-
-  return (
-    <div className="top-stat-item" style={{ background: bgGradient }}>
-      <Spin spinning={loading}>
-        <div className="stat-card-content">
-          {/* 第1行：图标 + 数量 + 标签 */}
-          <div className="stat-header">
-            <div className="stat-icon-circle" style={{ background: `rgba(255, 255, 255, 0.3)` }}>
-              <span className="stat-icon" style={{ color }}>{icon}</span>
-            </div>
-            <div className="stat-info">
-              <div className="stat-value">{value.toLocaleString()}</div>
-              <div className="stat-label">{label}</div>
-            </div>
-          </div>
-
-          {/* 第2行：时间选择器 */}
-          <div className="stat-time-selector">
-            {timeRanges.map(({ value: rangeValue, label: rangeLabel }) => (
-              <button
-                key={rangeValue}
-                className={`stat-time-button ${timeRange === rangeValue ? 'active' : ''}`}
-                onClick={() => setTimeRange(rangeValue)}
-              >
-                {rangeLabel}
-              </button>
-            ))}
-          </div>
-        </div>
-      </Spin>
-    </div>
-  );
-};
-
-const TopStats: React.FC = () => {
   const statsConfig = [
     {
-      key: 'sampleDevelopmentCount',
+      key: 'sampleDevelopment' as keyof TopStatsData,
       icon: <TagsOutlined />,
       label: '样衣开发',
       color: '#8b5cf6',
       bgGradient: 'linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%)',
     },
     {
-      key: 'bulkOrderCount',
+      key: 'bulkOrder' as keyof TopStatsData,
       icon: <ShoppingCartOutlined />,
       label: '大货下单',
       color: '#3b82f6',
       bgGradient: 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)',
     },
     {
-      key: 'cuttingCount',
+      key: 'cutting' as keyof TopStatsData,
       icon: <ScissorOutlined />,
       label: '裁剪数量',
       color: '#f59e0b',
       bgGradient: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
     },
     {
-      key: 'warehousingCount',
+      key: 'warehousing' as keyof TopStatsData,
       icon: <InboxOutlined />,
       label: '出入库数量',
       color: '#10b981',
@@ -128,6 +136,8 @@ const TopStats: React.FC = () => {
             label={config.label}
             color={config.color}
             bgGradient={config.bgGradient}
+            data={statsData?.[config.key] || null}
+            loading={loading}
           />
         ))}
       </div>

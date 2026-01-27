@@ -327,30 +327,51 @@ public class DashboardOrchestrator {
     }
 
     /**
-     * 获取顶部4个核心统计看板数据
-     * @param range 时间范围：day(日)、week(周)、month(月)、year(年)
+     * 获取顶部4个核心统计看板数据 - 返回日周月年4个时间维度
      */
     public TopStatsResponse getTopStats(String range) {
         TopStatsResponse response = new TopStatsResponse();
-
-        LocalDateTime startTime = calculateTopStatsStartTime(range);
         LocalDateTime endTime = LocalDateTime.now();
 
-        // 1. 样衣开发数量 - 统计款号表中 is_sample=1 且在时间范围内创建的数量
-        long sampleCount = dashboardQueryService.countSampleStylesBetween(startTime, endTime);
-        response.setSampleDevelopmentCount((int) sampleCount);
+        // 计算4个时间维度的起始时间
+        LocalDate today = LocalDate.now();
+        LocalDateTime dayStart = LocalDateTime.of(today, LocalTime.MIN);
+        LocalDate monday = today.minusDays(today.getDayOfWeek().getValue() - 1);
+        LocalDateTime weekStart = LocalDateTime.of(monday, LocalTime.MIN);
+        LocalDateTime monthStart = LocalDateTime.of(today.withDayOfMonth(1), LocalTime.MIN);
+        LocalDateTime yearStart = LocalDateTime.of(today.withDayOfYear(1), LocalTime.MIN);
 
-        // 2. 大货下单数量 - 统计生产订单在时间范围内创建的数量
-        long bulkOrderCount = dashboardQueryService.countProductionOrdersBetween(startTime, endTime);
-        response.setBulkOrderCount((int) bulkOrderCount);
+        // 1. 样衣开发数量
+        TopStatsResponse.TimeRangeStats sampleStats = new TopStatsResponse.TimeRangeStats();
+        sampleStats.setDay((int) dashboardQueryService.countSampleStylesBetween(dayStart, endTime));
+        sampleStats.setWeek((int) dashboardQueryService.countSampleStylesBetween(weekStart, endTime));
+        sampleStats.setMonth((int) dashboardQueryService.countSampleStylesBetween(monthStart, endTime));
+        sampleStats.setYear((int) dashboardQueryService.countSampleStylesBetween(yearStart, endTime));
+        response.setSampleDevelopment(sampleStats);
 
-        // 3. 裁剪数量 - 统计裁剪任务在时间范围内创建的总裁剪数量
-        long cuttingCount = dashboardQueryService.sumCuttingQuantityBetween(startTime, endTime);
-        response.setCuttingCount((int) cuttingCount);
+        // 2. 大货下单数量
+        TopStatsResponse.TimeRangeStats bulkOrderStats = new TopStatsResponse.TimeRangeStats();
+        bulkOrderStats.setDay((int) dashboardQueryService.countProductionOrdersBetween(dayStart, endTime));
+        bulkOrderStats.setWeek((int) dashboardQueryService.countProductionOrdersBetween(weekStart, endTime));
+        bulkOrderStats.setMonth((int) dashboardQueryService.countProductionOrdersBetween(monthStart, endTime));
+        bulkOrderStats.setYear((int) dashboardQueryService.countProductionOrdersBetween(yearStart, endTime));
+        response.setBulkOrder(bulkOrderStats);
 
-        // 4. 出入库数量 - 统计质检入库在时间范围内的总入库数量
-        long warehousingCount = dashboardQueryService.sumWarehousingQuantityBetween(startTime, endTime);
-        response.setWarehousingCount((int) warehousingCount);
+        // 3. 裁剪数量
+        TopStatsResponse.TimeRangeStats cuttingStats = new TopStatsResponse.TimeRangeStats();
+        cuttingStats.setDay((int) dashboardQueryService.sumCuttingQuantityBetween(dayStart, endTime));
+        cuttingStats.setWeek((int) dashboardQueryService.sumCuttingQuantityBetween(weekStart, endTime));
+        cuttingStats.setMonth((int) dashboardQueryService.sumCuttingQuantityBetween(monthStart, endTime));
+        cuttingStats.setYear((int) dashboardQueryService.sumCuttingQuantityBetween(yearStart, endTime));
+        response.setCutting(cuttingStats);
+
+        // 4. 出入库数量
+        TopStatsResponse.TimeRangeStats warehousingStats = new TopStatsResponse.TimeRangeStats();
+        warehousingStats.setDay((int) dashboardQueryService.sumWarehousingQuantityBetween(dayStart, endTime));
+        warehousingStats.setWeek((int) dashboardQueryService.sumWarehousingQuantityBetween(weekStart, endTime));
+        warehousingStats.setMonth((int) dashboardQueryService.sumWarehousingQuantityBetween(monthStart, endTime));
+        warehousingStats.setYear((int) dashboardQueryService.sumWarehousingQuantityBetween(yearStart, endTime));
+        response.setWarehousing(warehousingStats);
 
         return response;
     }
