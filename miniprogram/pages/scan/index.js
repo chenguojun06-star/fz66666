@@ -565,7 +565,7 @@ Page({
   _addRecordToGroup(group, record) {
     // 更新统计数量
     group.totalQuantity += record.quantity || 1;
-    
+
     // 根据扫码结果分类统计
     if (record.scanResult === 'success' || record.scanResult === 'qualified') {
       group.qualifiedCount += record.quantity || 1;
@@ -575,12 +575,12 @@ Page({
       // 默认算作合格
       group.qualifiedCount += record.quantity || 1;
     }
-    
+
     // 更新最新时间
     if (record.scanTime && (!group.latestTime || record.scanTime > group.latestTime)) {
       group.latestTime = record.scanTime;
     }
-    
+
     // 添加明细记录
     group.items.push({
       id: record.id,
@@ -602,23 +602,23 @@ Page({
    */
   _groupScanRecords(records) {
     const groupedMap = {};
-    
+
     records.forEach(record => {
       const groupKey = this._createGroupKey(record.orderNo, record.progressStage);
-      
+
       // 如果分组不存在，创建新分组
       if (!groupedMap[groupKey]) {
         groupedMap[groupKey] = this._createNewGroup(groupKey, record);
       }
-      
+
       // 将记录添加到分组
       this._addRecordToGroup(groupedMap[groupKey], record);
     });
-    
+
     // 转为数组并按时间排序
     const groupedList = Object.values(groupedMap);
     groupedList.sort((a, b) => (b.latestTime || '').localeCompare(a.latestTime || ''));
-    
+
     return groupedList;
   },
 
@@ -628,12 +628,12 @@ Page({
    */
   _mergeGroupedHistory(existingGroups, newGroups) {
     const existingMap = {};
-    
+
     // 构建已有分组的映射
     existingGroups.forEach(g => {
       existingMap[g.id] = g;
     });
-    
+
     // 合并新分组数据
     newGroups.forEach(g => {
       if (existingMap[g.id]) {
@@ -650,11 +650,11 @@ Page({
         existingMap[g.id] = g;
       }
     });
-    
+
     // 转为数组并排序
     const mergedList = Object.values(existingMap);
     mergedList.sort((a, b) => (b.latestTime || '').localeCompare(a.latestTime || ''));
-    
+
     return mergedList;
   },
 
@@ -1387,13 +1387,13 @@ Page({
    */
   _buildProcurementUpdatesOnly(materialPurchases) {
     const updates = [];
-    
+
     for (const item of materialPurchases) {
       const inputQty = Number(item.inputQuantity);
       if (inputQty > 0) {
         const newArrived = (Number(item.arrivedQuantity) || 0) + inputQty;
         const remark = this._validateProcurementArrival(item, inputQty, newArrived);
-        
+
         updates.push({
           id: item.id,
           arrivedQuantity: newArrived,
@@ -1401,11 +1401,11 @@ Page({
         });
       }
     }
-    
+
     if (updates.length === 0) {
       throw new Error('请至少填写一项到货数量');
     }
-    
+
     return updates;
   },
 
@@ -1428,7 +1428,7 @@ Page({
     try {
       // 构建更新列表（复用验证逻辑）
       const updates = this._buildProcurementUpdatesOnly(materialPurchases);
-      
+
       // 只调用 updateArrivedQuantity（不再调用 receivePurchase，因为已经领取了）
       await Promise.all(updates.map(u => api.production.updateArrivedQuantity(u)));
 
@@ -1576,14 +1576,14 @@ Page({
   _validateProcurementArrival(item, inputQty, newArrived) {
     const purchaseQty = Number(item.purchaseQuantity) || 0;
     const remark = (item.remarkInput || '').trim();
-    
+
     // 检查：到货数量小于70%时必须填写备注
     if (purchaseQty > 0 && newArrived * 100 < purchaseQty * 70 && !remark) {
       throw new Error(
         `${item.materialName || '物料'}到货不足70%（${newArrived}/${purchaseQty}），请填写备注说明原因`
       );
     }
-    
+
     return remark;
   },
 
@@ -1596,7 +1596,7 @@ Page({
     const updates = [];
     const userInfo = getUserInfo();
     const receiverName = userInfo.realName || userInfo.username;
-    
+
     for (const item of materialPurchases) {
       // 领取任务
       receives.push({
@@ -1604,13 +1604,13 @@ Page({
         receiverId: userInfo.id,
         receiverName: receiverName,
       });
-      
+
       // 处理到货数量
       const inputQty = Number(item.inputQuantity);
       if (inputQty > 0) {
         const newArrived = (Number(item.arrivedQuantity) || 0) + inputQty;
         const remark = this._validateProcurementArrival(item, inputQty, newArrived);
-        
+
         updates.push({
           id: item.id,
           arrivedQuantity: newArrived,
@@ -1618,7 +1618,7 @@ Page({
         });
       }
     }
-    
+
     return { receives, updates };
   },
 
@@ -1636,7 +1636,7 @@ Page({
         throw new Error('领取任务失败：' + (err.message || '网络或服务器错误'));
       }
     }
-    
+
     // 更新到货数量
     if (updates.length > 0) {
       try {
@@ -1659,10 +1659,10 @@ Page({
     try {
       // 构建更新数据
       const { receives, updates } = this._buildProcurementUpdates(materialPurchases);
-      
+
       // 执行提交
       await this._executeProcurementSubmit(receives, updates);
-      
+
       toast.success('提交成功');
       this.loadMyPanel(true);
       this.loadMyProcurementTasks();
@@ -1859,7 +1859,7 @@ Page({
   _buildQualityBasePayload(detail, qualityModal, userInfo, warehouse) {
     const totalQty = detail.quantity || 1;
     const bundleNoNum = detail.bundleNo ? parseInt(detail.bundleNo, 10) : null;
-    
+
     return {
       orderNo: detail.orderNo,
       orderId: detail.orderId || '',
@@ -1883,7 +1883,7 @@ Page({
    */
   _handleUnqualifiedInfo(qualityModal, payload) {
     const { defectCategories, handleMethods } = this.data;
-    
+
     // 缺陷分类映射
     const categoryMap = {
       外观完整性: 'appearance_integrity',
@@ -1892,14 +1892,14 @@ Page({
       功能有效性: 'functional_effectiveness',
       其他: 'other',
     };
-    
+
     const selectedCategory = defectCategories[qualityModal.defectCategory] || '其他';
     payload.defectCategory = categoryMap[selectedCategory] || 'other';
-    
+
     // 处理方式
     const selectedMethod = handleMethods[qualityModal.handleMethod] || '返修';
     payload.defectRemark = selectedMethod; // 返修 或 报废
-    
+
     // 照片URL
     if (qualityModal.images && qualityModal.images.length > 0) {
       payload.unqualifiedImageUrls = JSON.stringify(qualityModal.images);
