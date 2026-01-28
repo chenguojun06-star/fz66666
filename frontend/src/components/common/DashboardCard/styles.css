@@ -1,0 +1,24 @@
+.dashboard-card {
+  height: 100%;
+  transition: all 0.3s ease;
+}
+
+.dashboard-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.dashboard-card-title {
+  display: flex;
+  align-items: center;
+  font-size: 15px;
+  font-weight: 600;
+  color: #262626;
+}
+
+.dashboard-card-icon {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 8px;
+  font-size: 16px;
+  color: #1890ff;
+}

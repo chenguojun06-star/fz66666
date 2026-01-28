@@ -48,6 +48,7 @@ public class ScanRecordOrchestrator {
             "车缝",
             "大烫",
             "质检",
+            "二次工艺",
             "包装",
             "入库");
 
@@ -912,7 +913,7 @@ public class ScanRecordOrchestrator {
         String stageNameNormalized = normalizeFixedProductionNodeName(stageName);
         String pricingProcessNameNormalized = normalizeFixedProductionNodeName(pricingProcessName);
         if (!hasText(stageNameNormalized) || !hasText(pricingProcessNameNormalized)) {
-            throw new IllegalArgumentException("生产环节必须为：采购/裁剪/车缝/大烫/质检/包装/入库");
+            throw new IllegalArgumentException("生产环节必须为：采购/裁剪/车缝/大烫/质检/二次工艺/包装/入库");
         }
 
         final String stageNameFinal = Objects.requireNonNull(stageNameNormalized);

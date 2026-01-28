@@ -414,11 +414,36 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
             }
         } catch (Exception ignored) {
         }
+
+        // 设置进度节点（与列表页逻辑一致）
+        String patternStatus = StringUtils.hasText(style.getPatternStatus()) ? style.getPatternStatus().trim() : "";
+        String sampleStatus = StringUtils.hasText(style.getSampleStatus()) ? style.getSampleStatus().trim() : "";
+
+        if ("COMPLETED".equalsIgnoreCase(sampleStatus)) {
+            style.setProgressNode("样衣完成");
+            style.setCompletedTime(style.getSampleCompletedTime());
+        } else if ("IN_PROGRESS".equalsIgnoreCase(sampleStatus)) {
+            style.setProgressNode("样衣制作中");
+            style.setCompletedTime(null);
+        } else if ("COMPLETED".equalsIgnoreCase(patternStatus)) {
+            style.setProgressNode("纸样完成");
+            style.setCompletedTime(style.getPatternCompletedTime());
+        } else if ("IN_PROGRESS".equalsIgnoreCase(patternStatus)) {
+            style.setProgressNode("纸样开发中");
+            style.setCompletedTime(null);
+        } else {
+            style.setProgressNode("未开始");
+            style.setCompletedTime(null);
+        }
+
         return style;
     }
 
     @Override
     public boolean saveOrUpdateStyle(StyleInfo styleInfo) {
+        System.out.println("🔍 saveOrUpdateStyle - ID: " + styleInfo.getId());
+        System.out.println("🔍 saveOrUpdateStyle - sizeColorConfig: " + styleInfo.getSizeColorConfig());
+
         LocalDateTime now = LocalDateTime.now();
 
         if (styleInfo.getId() != null) {
@@ -437,6 +462,10 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
             styleInfo.setUpdateTime(now);
             if (!StringUtils.hasText(styleInfo.getStatus())) {
                 styleInfo.setStatus("ENABLED");
+            }
+            // 品类默认值（数据库NOT NULL约束要求）
+            if (!StringUtils.hasText(styleInfo.getCategory())) {
+                styleInfo.setCategory("未分类");
             }
             styleInfo.setPrice(null);
         }

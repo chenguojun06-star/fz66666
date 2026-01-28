@@ -42,7 +42,7 @@ public class WeChatMiniProgramAuthOrchestrator {
         if ((code == null || code.isBlank()) && (username != null && username.startsWith("test"))) {
             code = "mock_" + username;
         }
-        
+
         WeChatMiniProgramClient.Code2SessionResult session = weChatMiniProgramClient.code2Session(code);
         if (session == null || !session.isSuccess()) {
             result.put("success", false);
@@ -145,7 +145,7 @@ public class WeChatMiniProgramAuthOrchestrator {
                 return "warehouse";
             }
         }
-        
+
         // 默认返回空字符串，表示无特殊权限限制
         return "";
     }
@@ -153,6 +153,7 @@ public class WeChatMiniProgramAuthOrchestrator {
     public void recordLoginAttempt(String username, String ip, String userAgent, String status, String message) {
         try {
             LoginLog log = new LoginLog();
+            log.setLogType("LOGIN"); // 设置日志类型为登录
             log.setUsername(safeTrim(username));
             log.setIp(safeTrim(ip));
             log.setLoginTime(LocalDateTime.now());

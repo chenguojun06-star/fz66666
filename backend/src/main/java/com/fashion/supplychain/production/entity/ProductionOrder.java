@@ -331,6 +331,32 @@ public class ProductionOrder {
     @TableField(exist = false)
     private Integer ironingCompletionRate;
 
+    // ==================== 二次工艺环节字段（新增）====================
+
+    /**
+     * 二次工艺开始时间
+     */
+    @TableField(exist = false)
+    private LocalDateTime secondaryProcessStartTime;
+
+    /**
+     * 二次工艺完成时间
+     */
+    @TableField(exist = false)
+    private LocalDateTime secondaryProcessEndTime;
+
+    /**
+     * 二次工艺操作员姓名
+     */
+    @TableField(exist = false)
+    private String secondaryProcessOperatorName;
+
+    /**
+     * 二次工艺完成率(%)
+     */
+    @TableField(exist = false)
+    private Integer secondaryProcessCompletionRate;
+
     // ==================== 包装环节字段（新增）====================
 
     /**
@@ -375,6 +401,13 @@ public class ProductionOrder {
      * 备注
      */
     private String remarks;
+
+    /**
+     * 节点操作记录(委派工厂/指定负责人/备注等)
+     * JSON格式存储各节点的操作信息
+     */
+    @TableField("node_operations")
+    private String nodeOperations;
 
     /**
      * 预计出货日期

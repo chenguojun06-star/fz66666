@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Button, Card, Col, Input, Row, Space, Statistic, message } from 'antd';
-import { DownloadOutlined, PrinterOutlined } from '@ant-design/icons';
+import { DownloadOutlined, PrinterOutlined, AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
+import UniversalCardView from '@/components/common/UniversalCardView';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import api from '@/utils/api';

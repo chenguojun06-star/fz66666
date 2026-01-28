@@ -6,3 +6,5 @@ export const RoleList = React.lazy(() => import('./pages/System/RoleList'));
 export const FactoryList = React.lazy(() => import('./pages/System/FactoryList'));
 export const LoginLogList = React.lazy(() => import('./pages/System/LoginLogList'));
 export const Profile = React.lazy(() => import('./pages/System/Profile'));
+export const DictManage = React.lazy(() => import('./pages/System/DictManage'));
+export const Tutorial = React.lazy(() => import('./pages/System/Tutorial'));

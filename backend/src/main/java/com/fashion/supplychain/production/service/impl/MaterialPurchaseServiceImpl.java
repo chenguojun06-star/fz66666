@@ -185,6 +185,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         String status = (String) safeParams.getOrDefault("status", "");
         String orderNo = (String) safeParams.getOrDefault("orderNo", "");
         String materialType = (String) safeParams.getOrDefault("materialType", "");
+        String sourceType = (String) safeParams.getOrDefault("sourceType", "");
 
         Page<MaterialPurchase> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<MaterialPurchase> wrapper = new LambdaQueryWrapper<MaterialPurchase>()
@@ -194,6 +195,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
                 .like(StringUtils.hasText(materialName), MaterialPurchase::getMaterialName, materialName)
                 .like(StringUtils.hasText(orderNo), MaterialPurchase::getOrderNo, orderNo)
                 .eq(StringUtils.hasText(status), MaterialPurchase::getStatus, status)
+                .eq(StringUtils.hasText(sourceType), MaterialPurchase::getSourceType, sourceType)
                 .orderByDesc(MaterialPurchase::getCreateTime);
 
         if (StringUtils.hasText(materialType)) {
@@ -1183,7 +1185,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
 
     /**
      * 更新生产订单的物料到位率
-     * 
+     *
      * @param orderId 生产订单ID
      */
 }

@@ -78,6 +78,11 @@ public class StyleInfo {
     private String size;
 
     /**
+     * 样板数
+     */
+    private Integer sampleQuantity;
+
+    /**
      * 封面图片
      */
     private String cover;
@@ -94,6 +99,12 @@ public class StyleInfo {
     private LocalDateTime createTime;
 
     /**
+     * 交板日期
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime deliveryDate;
+
+    /**
      * 更新时间
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
@@ -107,6 +118,96 @@ public class StyleInfo {
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime patternCompletedTime;
+
+    /**
+     * 纸样领取人
+     */
+    private String patternAssignee;
+
+    /**
+     * BOM领取人
+     */
+    private String bomAssignee;
+
+    /**
+     * BOM开始时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime bomStartTime;
+
+    /**
+     * BOM完成时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime bomCompletedTime;
+
+    /**
+     * 尺码领取人
+     */
+    private String sizeAssignee;
+
+    /**
+     * 尺码开始时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime sizeStartTime;
+
+    /**
+     * 尺码完成时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime sizeCompletedTime;
+
+    /**
+     * 工序领取人
+     */
+    private String processAssignee;
+
+    /**
+     * 工序开始时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime processStartTime;
+
+    /**
+     * 工序完成时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime processCompletedTime;
+
+    /**
+     * 生产制单领取人
+     */
+    private String productionAssignee;
+
+    /**
+     * 生产制单开始时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime productionStartTime;
+
+    /**
+     * 生产制单完成时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime productionCompletedTime;
+
+    /**
+     * 二次工艺领取人
+     */
+    private String secondaryAssignee;
+
+    /**
+     * 二次工艺开始时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime secondaryStartTime;
+
+    /**
+     * 二次工艺完成时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime secondaryCompletedTime;
 
     private String sampleStatus;
 
@@ -144,4 +245,55 @@ public class StyleInfo {
 
     @TableField(exist = false)
     private Integer orderCount;
+
+    /**
+     * 码数颜色配置（JSON格式）
+     * 存储样板的尺码、颜色、数量配置信息
+     */
+    private String sizeColorConfig;
+
+    /**
+     * 设计师（复用sampleNo字段）
+     */
+    private String sampleNo;
+
+    /**
+     * 设计号（复用vehicleSupplier字段）
+     */
+    private String vehicleSupplier;
+
+    /**
+     * 纸样师（复用sampleSupplier字段）
+     */
+    private String sampleSupplier;
+
+    /**
+     * 纸样号
+     */
+    private String patternNo;
+
+    /**
+     * 车板师
+     */
+    private String plateWorker;
+
+    /**
+     * 板类（首单/复板/公司版等）
+     */
+    private String plateType;
+
+    /**
+     * 跟单员（复用orderType字段）
+     */
+    private String orderType;
+
+    /**
+     * 客户
+     */
+    private String customer;
+
+    /**
+     * 订单号（关联的最新订单号）
+     */
+    private String orderNo;
 }

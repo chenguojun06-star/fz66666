@@ -8,3 +8,4 @@ export const ProductWarehousing = React.lazy(() => import('./pages/Production/Pr
 export const OrderTransfer = React.lazy(() => import('./pages/Production/OrderTransfer'));
 export const OrderFlow = React.lazy(() => import('./pages/Production/OrderFlow'));
 export const ProgressDetail = React.lazy(() => import('./pages/Production/ProgressDetail'));
+export const PatternProduction = React.lazy(() => import('./pages/Production/PatternProduction'));

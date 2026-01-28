@@ -41,7 +41,7 @@ public class StyleInfoController {
     @PostMapping
     public Result<?> save(@RequestBody StyleInfo styleInfo) {
         styleInfoOrchestrator.save(styleInfo);
-        return Result.successMessage("操作成功");
+        return Result.success(styleInfo);
     }
 
     /**
@@ -49,6 +49,8 @@ public class StyleInfoController {
      */
     @PutMapping
     public Result<?> update(@RequestBody StyleInfo styleInfo) {
+        System.out.println("🔍 收到更新请求 - ID: " + styleInfo.getId() + ", 款号: " + styleInfo.getStyleNo());
+        System.out.println("🔍 sizeColorConfig: " + styleInfo.getSizeColorConfig());
         styleInfoOrchestrator.update(styleInfo);
         return Result.successMessage("操作成功");
     }

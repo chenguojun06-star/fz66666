@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { App, Button, InputNumber, Table } from 'antd';
-import { SaveOutlined, EditOutlined } from '@ant-design/icons';
+import { App, Button, Input, InputNumber, Space, Table, Tag } from 'antd';
+import { SaveOutlined, EditOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import api, { toNumberSafe } from '@/utils/api';
 
 interface Props {
@@ -31,33 +31,83 @@ const StyleSizePriceTab: React.FC<Props> = ({ styleId, readOnly }) => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string>('');
+  const [editingSizes, setEditingSizes] = useState(false);
+  const [newSize, setNewSize] = useState('');
 
-  // 获取尺码列表
+  const getErrorStatus = (err: unknown) => {
+    const anyErr = err as { status?: number; response?: { status?: number } };
+    return Number(anyErr?.status || anyErr?.response?.status || 0);
+  };
+
+  const handleAuthError = (err: unknown) => {
+    const status = getErrorStatus(err);
+    if (status === 401 || status === 403) {
+      message.error('登录已过期，请重新登录');
+      setErrorMsg('登录已过期，请重新登录');
+      return true;
+    }
+    return false;
+  };
+
+  // 获取尺码列表（从已保存的多码单价中提取，或使用默认尺码）
   const fetchSizes = async () => {
     try {
-      const res = await api.get<{ code: number; data: string }>(`/style/info/${styleId}`);
-      if (res.code === 200 && res.data) {
-        const sizeStr = res.data.size || '';
-        const sizeList = sizeStr.split(',').map(s => s.trim()).filter(Boolean);
-        setSizes(sizeList);
-        return sizeList;
+      // 先尝试从已保存的多码单价中获取尺码
+      const res = await api.get<{ code: number; data: SizePrice[] }>(`/style/size-price/list`, {
+        params: { styleId }
+      });
+      if (res.code === 200 && res.data && res.data.length > 0) {
+        // 从已保存的数据中提取不重复的尺码
+        const sizeSet = new Set<string>();
+        (res.data || []).forEach((item: SizePrice) => {
+          if (item.size) {
+            sizeSet.add(item.size.trim());
+          }
+        });
+        const sizeList = Array.from(sizeSet).sort();
+        if (sizeList.length > 0) {
+          setSizes(sizeList);
+          return sizeList;
+        }
       }
+
+      // 如果没有已保存的数据，使用默认尺码
+      const defaultSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+      setSizes(defaultSizes);
+      return defaultSizes;
     } catch (error) {
+      if (handleAuthError(error)) {
+        return [];
+      }
       console.error('获取尺码失败', error);
+      // 出错时也使用默认尺码
+      const defaultSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+      setSizes(defaultSizes);
+      return defaultSizes;
     }
-    return [];
   };
 
   // 获取工序列表
   const fetchProcesses = async () => {
     try {
-      const res = await api.get<{ code: number; data: any[] }>(`/style/process/list?styleId=${styleId}`);
+      const res = await api.get<{ code: number; data: any[] }>(`/style/process/list`, {
+        params: { styleId }
+      });
       if (res.code === 200) {
-        setProcesses(res.data || []);
-        return res.data || [];
+        const processList = res.data || [];
+        setProcesses(processList);
+        if (processList.length === 0) {
+          setErrorMsg('请先配置工序单价');
+        }
+        return processList;
       }
     } catch (error) {
+      if (handleAuthError(error)) {
+        return [];
+      }
       console.error('获取工序失败', error);
+      setErrorMsg('获取工序失败，请检查网络连接');
     }
     return [];
   };
@@ -65,10 +115,20 @@ const StyleSizePriceTab: React.FC<Props> = ({ styleId, readOnly }) => {
   // 获取多码单价数据
   const fetchData = async () => {
     setLoading(true);
+    setErrorMsg('');
     try {
       const [sizeList, processList] = await Promise.all([fetchSizes(), fetchProcesses()]);
 
-      const res = await api.get<{ code: number; data: SizePrice[] }>(`/style/size-price/list?styleId=${styleId}`);
+      // 检查工序是否配置
+      if (processList.length === 0) {
+        setErrorMsg('请先配置工序单价');
+        setLoading(false);
+        return;
+      }
+
+      const res = await api.get<{ code: number; data: SizePrice[] }>(`/style/size-price/list`, {
+        params: { styleId }
+      });
 
       if (res.code === 200) {
         const sizePriceData = res.data || [];
@@ -85,6 +145,7 @@ const StyleSizePriceTab: React.FC<Props> = ({ styleId, readOnly }) => {
             const found = sizePriceData.find(
               sp => sp.processCode === proc.processCode && sp.size === size
             );
+            // 如果没有配置多码单价，默认使用工序单价
             row[`price_${size}`] = found ? toNumberSafe(found.price) : toNumberSafe(proc.price);
           });
 
@@ -95,7 +156,11 @@ const StyleSizePriceTab: React.FC<Props> = ({ styleId, readOnly }) => {
         setEditMode(false);
       }
     } catch (error) {
+      if (handleAuthError(error)) {
+        return;
+      }
       message.error('获取数据失败');
+      setErrorMsg('获取数据失败，请检查网络连接');
     } finally {
       setLoading(false);
     }
@@ -108,6 +173,46 @@ const StyleSizePriceTab: React.FC<Props> = ({ styleId, readOnly }) => {
   // 更新字段值
   const updateField = (processCode: string, field: string, value: any) => {
     setData(prev => prev.map(r => (r.processCode === processCode ? { ...r, [field]: value } : r)));
+  };
+
+  // 添加尺码
+  const addSize = () => {
+    const trimmed = newSize.trim().toUpperCase();
+    if (!trimmed) {
+      message.warning('请输入尺码');
+      return;
+    }
+    if (sizes.includes(trimmed)) {
+      message.warning('该尺码已存在');
+      return;
+    }
+
+    // 添加尺码到列表
+    const newSizes = [...sizes, trimmed];
+    setSizes(newSizes);
+
+    // 为所有工序添加该尺码的默认单价
+    setData(prev => prev.map(row => ({
+      ...row,
+      [`price_${trimmed}`]: row.price || 0 // 使用工序基础单价作为默认值
+    })));
+
+    setNewSize('');
+    message.success(`已添加尺码: ${trimmed}`);
+  };
+
+  // 删除尺码
+  const removeSize = (size: string) => {
+    const newSizes = sizes.filter(s => s !== size);
+    setSizes(newSizes);
+
+    // 从所有工序中删除该尺码的价格字段
+    setData(prev => prev.map(row => {
+      const { [`price_${size}`]: removed, ...rest } = row;
+      return rest;
+    }));
+
+    message.success(`已删除尺码: ${size}`);
   };
 
   // 保存数据
@@ -137,8 +242,12 @@ const StyleSizePriceTab: React.FC<Props> = ({ styleId, readOnly }) => {
       } else {
         message.error(res.message || '保存失败');
       }
-    } catch (error: any) {
-      message.error(error?.message || '保存失败');
+    } catch (error: unknown) {
+      if (handleAuthError(error)) {
+        return;
+      }
+      const anyError = error as { message?: string };
+      message.error(anyError?.message || '保存失败');
     } finally {
       setSaving(false);
     }
@@ -180,33 +289,125 @@ const StyleSizePriceTab: React.FC<Props> = ({ styleId, readOnly }) => {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
-        {!editMode || readOnly ? (
-          <Button icon={<EditOutlined />} onClick={() => setEditMode(true)} disabled={loading || saving || readOnly}>
-            编辑
-          </Button>
-        ) : (
-          <>
-            <Button icon={<SaveOutlined />} type="primary" onClick={saveAll} loading={saving} style={{ marginRight: 8 }}>
-              保存
-            </Button>
-            <Button disabled={saving} onClick={() => { setEditMode(false); fetchData(); }}>
-              取消
-            </Button>
-          </>
-        )}
-      </div>
+      {errorMsg && (
+        <div style={{
+          padding: '16px',
+          marginBottom: '16px',
+          background: '#fff7e6',
+          border: '1px solid #ffd591',
+          borderRadius: '4px',
+          color: '#d46b08'
+        }}>
+          <strong>⚠️ 提示：</strong> {errorMsg}
+        </div>
+      )}
 
-      <Table
-        bordered
-        dataSource={data}
-        columns={columns}
-        pagination={false}
-        loading={loading}
-        rowKey="processCode"
-        scroll={{ x: 'max-content' }}
-        size="small"
-      />
+      {!errorMsg && (
+        <>
+          <div style={{
+            padding: '12px',
+            marginBottom: '16px',
+            background: '#f0f7ff',
+            borderRadius: '4px',
+            fontSize: '13px',
+            color: '#666'
+          }}>
+            <strong>使用说明：</strong>
+            <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
+              <li>此功能用于配置不同尺码下的工序单价</li>
+              <li>默认使用工序表中的单价，可针对特殊尺码调整价格</li>
+              <li>例如：XL码和XXL码的车缝工序可能比S码更贵</li>
+            </ul>
+          </div>
+
+          {/* 尺码管理区域 */}
+          <div style={{
+            marginBottom: 16,
+            padding: '12px',
+            background: '#fafafa',
+            borderRadius: '4px',
+            border: '1px solid #d9d9d9'
+          }}>
+            <div style={{ marginBottom: 8, fontWeight: 600, fontSize: '13px' }}>尺码管理</div>
+            <Space wrap>
+              {sizes.map(size => (
+                <Tag
+                  key={size}
+                  closable={!readOnly && editingSizes}
+                  onClose={() => removeSize(size)}
+                  style={{ fontSize: '13px', padding: '2px 8px' }}
+                >
+                  {size}
+                </Tag>
+              ))}
+              {editingSizes && !readOnly && (
+                <Space.Compact style={{ width: 200 }}>
+                  <Input
+                    placeholder="输入尺码(如XL)"
+                    value={newSize}
+                    onChange={(e) => setNewSize(e.target.value)}
+                    onPressEnter={addSize}
+                    style={{ width: 140 }}
+                  />
+                  <Button type="primary" icon={<PlusOutlined />} onClick={addSize}>
+                    添加
+                  </Button>
+                </Space.Compact>
+              )}
+            </Space>
+            <div style={{ marginTop: 8 }}>
+              {!readOnly && (
+                <Button
+                  size="small"
+                  type="link"
+                  onClick={() => setEditingSizes(!editingSizes)}
+                >
+                  {editingSizes ? '完成编辑' : '编辑尺码'}
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+            {!editMode || readOnly ? (
+              <Button
+                icon={<EditOutlined />}
+                onClick={() => setEditMode(true)}
+                disabled={loading || saving || readOnly || data.length === 0}
+              >
+                编辑
+              </Button>
+            ) : (
+              <>
+                <Button icon={<SaveOutlined />} type="primary" onClick={saveAll} loading={saving} style={{ marginRight: 8 }}>
+                  保存
+                </Button>
+                <Button disabled={saving} onClick={() => { setEditMode(false); fetchData(); }}>
+                  取消
+                </Button>
+              </>
+            )}
+          </div>
+
+          <Table
+            bordered
+            dataSource={data}
+            columns={columns}
+            pagination={false}
+            loading={loading}
+            rowKey="processCode"
+            scroll={{ x: 'max-content' }}
+            size="small"
+            locale={{
+              emptyText: sizes.length === 0
+                ? '请先在基础信息中配置尺码'
+                : processes.length === 0
+                ? '请先配置工序单价'
+                : '暂无数据'
+            }}
+          />
+        </>
+      )}
     </div>
   );
 };

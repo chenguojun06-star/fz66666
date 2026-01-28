@@ -13,6 +13,7 @@ export interface StyleInfo {
   season?: string;
   color?: string;
   size?: string;
+  sampleQuantity?: number;
   cover?: string;
   status?: string;
   createTime?: string;
@@ -37,6 +38,9 @@ export interface StyleInfo {
 
   orderCount?: number;
   latestOrderTime?: string;
+
+  // 码数颜色配置（JSON字符串）
+  sizeColorConfig?: string;
 }
 
 export interface StyleBom {

@@ -973,6 +973,14 @@ public class ProductionOrderQueryService {
                 String ironingOperator = flow == null ? null
                         : ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(flow, "ironingOperatorName"));
 
+                // 二次工艺环节（新增）
+                LocalDateTime secondaryProcessStart = flow == null ? null
+                        : toLocalDateTime(ParamUtils.getIgnoreCase(flow, "secondaryProcessStartTime"));
+                LocalDateTime secondaryProcessEnd = flow == null ? null
+                        : toLocalDateTime(ParamUtils.getIgnoreCase(flow, "secondaryProcessEndTime"));
+                String secondaryProcessOperator = flow == null ? null
+                        : ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(flow, "secondaryProcessOperatorName"));
+
                 // 包装环节（新增）
                 LocalDateTime packagingStart = flow == null ? null
                         : toLocalDateTime(ParamUtils.getIgnoreCase(flow, "packagingStartTime"));
@@ -1091,6 +1099,15 @@ public class ProductionOrderQueryService {
                                 (int) Math.round(Math.max(0, wareQtyForRate) * 100.0 / baseQtyForRate));
                 o.setIroningCompletionRate(ironingRate);
 
+                // 设置二次工艺环节（新增）
+                o.setSecondaryProcessStartTime(secondaryProcessStart);
+                o.setSecondaryProcessEndTime(secondaryProcessEnd);
+                o.setSecondaryProcessOperatorName(secondaryProcessOperator);
+                Integer secondaryProcessRate = baseQtyForRate <= 0 ? 0
+                        : scanRecordDomainService.clampPercent(
+                                (int) Math.round(Math.max(0, wareQtyForRate) * 100.0 / baseQtyForRate));
+                o.setSecondaryProcessCompletionRate(secondaryProcessRate);
+
                 // 设置包装环节（新增）
                 o.setPackagingStartTime(packagingStart);
                 o.setPackagingEndTime(packagingEnd);
@@ -1203,6 +1220,9 @@ public class ProductionOrderQueryService {
             LocalDateTime ironingStart = null, ironingEnd = null;
             String ironingOperator = null;
 
+            LocalDateTime secondaryProcessStart = null, secondaryProcessEnd = null;
+            String secondaryProcessOperator = null;
+
             LocalDateTime packagingStart = null, packagingEnd = null;
             String packagingOperator = null;
 
@@ -1275,6 +1295,12 @@ public class ProductionOrderQueryService {
                     }
                     ironingEnd = t;
                     ironingOperator = op;
+                } else if ("production".equals(st) && "二次工艺".equals(pn)) {
+                    if (secondaryProcessStart == null) {
+                        secondaryProcessStart = t;
+                    }
+                    secondaryProcessEnd = t;
+                    secondaryProcessOperator = op;
                 } else if ("production".equals(st) && "包装".equals(pn)) {
                     if (packagingStart == null) {
                         packagingStart = t;
@@ -1285,7 +1311,7 @@ public class ProductionOrderQueryService {
                         && !isBaseStageName(pn)
                         && !"quality_warehousing".equals(pc)
                         && !templateLibraryService.isProgressQualityStageName(pn)
-                        && !"车缝".equals(pn) && !"大烫".equals(pn) && !"包装".equals(pn)) {
+                        && !"车缝".equals(pn) && !"大烫".equals(pn) && !"二次工艺".equals(pn) && !"包装".equals(pn)) {
                     if (sewingStart == null) {
                         sewingStart = t;
                     }
@@ -1433,6 +1459,15 @@ public class ProductionOrderQueryService {
                     : scanRecordDomainService.clampPercent(
                             (int) Math.round(Math.max(0, wareQtyForRate) * 100.0 / o.getOrderQuantity()));
             o.setIroningCompletionRate(ironingRate);
+
+            // 设置二次工艺环节（新增 - 兜底分支）
+            o.setSecondaryProcessStartTime(secondaryProcessStart);
+            o.setSecondaryProcessEndTime(secondaryProcessEnd);
+            o.setSecondaryProcessOperatorName(secondaryProcessOperator);
+            Integer secondaryProcessRate = (o.getOrderQuantity() == null || o.getOrderQuantity() <= 0) ? 0
+                    : scanRecordDomainService.clampPercent(
+                            (int) Math.round(Math.max(0, wareQtyForRate) * 100.0 / o.getOrderQuantity()));
+            o.setSecondaryProcessCompletionRate(secondaryProcessRate);
 
             // 设置包装环节（新增 - 兜底分支）
             o.setPackagingStartTime(packagingStart);

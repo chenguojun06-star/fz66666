@@ -97,4 +97,16 @@ public class MaterialPurchase {
      * 预计出货日期
      */
     private java.time.LocalDate expectedShipDate;
+
+    // ==================== 采购来源字段（区分样衣/订单采购）====================
+
+    /**
+     * 采购来源类型: order=生产订单, sample=样衣开发
+     */
+    private String sourceType;
+
+    /**
+     * 样衣生产ID（样衣采购时关联）
+     */
+    private String patternProductionId;
 }

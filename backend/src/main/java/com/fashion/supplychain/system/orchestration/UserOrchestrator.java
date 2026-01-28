@@ -6,12 +6,10 @@ import com.fashion.supplychain.auth.AuthTokenService;
 import com.fashion.supplychain.auth.TokenSubject;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.system.entity.LoginLog;
-import com.fashion.supplychain.system.entity.SystemOperationLog;
 import com.fashion.supplychain.system.entity.User;
 import com.fashion.supplychain.system.service.LoginLogService;
 import com.fashion.supplychain.system.service.PermissionService;
 import com.fashion.supplychain.system.service.RolePermissionService;
-import com.fashion.supplychain.system.service.SystemOperationLogService;
 import com.fashion.supplychain.system.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -51,9 +49,6 @@ public class UserOrchestrator {
 
     @Autowired
     private LoginLogService loginLogService;
-
-    @Autowired
-    private SystemOperationLogService systemOperationLogService;
 
     @Autowired
     private AuthTokenService authTokenService;
@@ -157,7 +152,7 @@ public class UserOrchestrator {
             if ("pending".equals(approvalStatus)) {
                 throw new IllegalStateException("您的账号正在审批中，请耐心等待管理员审核");
             } else if ("rejected".equals(approvalStatus)) {
-                throw new IllegalStateException("您的账号已被拒绝，原因：" + 
+                throw new IllegalStateException("您的账号已被拒绝，原因：" +
                     (user.getApprovalRemark() != null ? user.getApprovalRemark() : "管理员拒绝"));
             }
         }
@@ -223,7 +218,7 @@ public class UserOrchestrator {
             throw new NoSuchElementException("用户不存在");
         }
         sanitizeUser(user);
-        
+
         // 构建返回对象，包含用户信息和权限列表
         Map<String, Object> result = new HashMap<>();
         result.put("id", user.getId());
@@ -234,11 +229,11 @@ public class UserOrchestrator {
         result.put("permissionRange", user.getPermissionRange());
         result.put("phone", user.getPhone());
         result.put("email", user.getEmail());
-        
+
         // 获取用户权限列表（使用内部方法，不做权限检查）
         List<String> permissions = getPermissionCodesByRoleId(user.getRoleId());
         result.put("permissions", permissions);
-        
+
         return result;
     }
 
@@ -272,6 +267,7 @@ public class UserOrchestrator {
             String message) {
         try {
             LoginLog log = new LoginLog();
+            log.setLogType("LOGIN"); // 设置日志类型为登录
             log.setUsername(safeTrim(username));
             log.setName(safeTrim(name));
             log.setIp(safeTrim(ip));
@@ -299,7 +295,7 @@ public class UserOrchestrator {
                .or()
                .isNull("approval_status");
         wrapper.orderByDesc("create_time");
-        
+
         Page<User> userPage = userService.page(new Page<>(page, pageSize), wrapper);
         if (userPage != null && userPage.getRecords() != null) {
             userPage.getRecords().forEach(this::sanitizeUser);
@@ -327,12 +323,12 @@ public class UserOrchestrator {
         if (!StringUtils.hasText(normalized)) {
             throw new IllegalArgumentException("操作原因不能为空");
         }
-        
+
         user.setApprovalStatus("approved");
         user.setApprovalTime(LocalDateTime.now());
         user.setApprovalRemark(normalized);
         user.setStatus("active"); // 同时激活用户
-        
+
         boolean success = userService.updateById(user);
         if (!success) {
             throw new IllegalStateException("批准失败");
@@ -357,12 +353,12 @@ public class UserOrchestrator {
         if (!StringUtils.hasText(normalized)) {
             throw new IllegalArgumentException("操作原因不能为空");
         }
-        
+
         user.setApprovalStatus("rejected");
         user.setApprovalTime(LocalDateTime.now());
         user.setApprovalRemark(normalized);
         user.setStatus("inactive"); // 同时停用用户
-        
+
         boolean success = userService.updateById(user);
         if (!success) {
             throw new IllegalStateException("拒绝失败");
@@ -453,15 +449,9 @@ public class UserOrchestrator {
 
     private void saveOperationLog(String bizType, String bizId, String action, String remark) {
         try {
-            SystemOperationLog log = new SystemOperationLog();
-            log.setBizType(bizType);
-            log.setBizId(bizId);
-            log.setAction(action);
             UserContext ctx = UserContext.get();
-            log.setOperator(ctx != null ? ctx.getUsername() : null);
-            log.setRemark(remark);
-            log.setCreateTime(LocalDateTime.now());
-            systemOperationLogService.save(log);
+            String operator = (ctx != null ? ctx.getUsername() : null);
+            loginLogService.recordOperation(bizType, bizId, action, operator, remark);
         } catch (Exception e) {
         }
     }

@@ -1,7 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Button, Input, Space, Table, Tag, message } from 'antd';
+import React, { useState } from 'react';
+import { Button, Input, Space, Tag, message } from 'antd';
 import api from '@/utils/api';
 import { buildProductionSheetHtml } from '../../DataCenter';
+import { formatDateTime } from '@/utils/datetime';
+
+const { TextArea } = Input;
 
 interface Props {
   styleId: string | number;
@@ -16,6 +19,9 @@ interface Props {
   onProductionReqReset: () => void;
   onProductionReqRollback: () => void;
   productionReqCanRollback: boolean;
+  productionAssignee?: string;
+  productionStartTime?: string;
+  productionCompletedTime?: string;
 }
 
 const StyleProductionTab: React.FC<Props> = ({
@@ -31,34 +37,10 @@ const StyleProductionTab: React.FC<Props> = ({
   onProductionReqReset,
   onProductionReqRollback,
   productionReqCanRollback,
+  productionAssignee,
+  productionStartTime,
+  productionCompletedTime,
 }) => {
-  const productionReqRootRef = useRef<HTMLDivElement | null>(null);
-  const [productionReqScrollY, setProductionReqScrollY] = useState<number>(320);
-
-  useEffect(() => {
-    const root = productionReqRootRef.current;
-    if (!root) return;
-
-    const target = (root.closest('.ant-modal-body') as HTMLElement | null) ?? root;
-
-    const compute = () => {
-      const h = Math.floor(target.getBoundingClientRect().height || 0);
-      const y = Math.max(180, h - 260);
-      setProductionReqScrollY((prev) => (prev === y ? prev : y));
-    };
-
-    compute();
-
-    if (typeof ResizeObserver === 'undefined') {
-      if (typeof window === 'undefined') return;
-      window.addEventListener('resize', compute);
-      return () => window.removeEventListener('resize', compute);
-    }
-
-    const ro = new ResizeObserver(() => compute());
-    ro.observe(target);
-    return () => ro.disconnect();
-  }, []);
 
   const downloadHtmlFile = (fileName: string, html: string) => {
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
@@ -131,16 +113,30 @@ const StyleProductionTab: React.FC<Props> = ({
   };
 
   return (
-    <div data-production-req ref={productionReqRootRef}>
-      <style>{
-        '[data-production-req] .ant-table-thead > tr > th,[data-production-req] .ant-table-tbody > tr > td{padding:4px 6px !important;text-align:center !important;vertical-align:middle !important;}' +
-        '[data-production-req] .ant-input{padding:0 6px !important;height:24px !important;line-height:24px !important;}'
-      }</style>
-
+    <div data-production-req>
+      {/* 状态栏 */}
+      <div style={{
+        marginBottom: 16,
+        padding: '12px 16px',
+        background: '#f5f5f5',
+        borderRadius: 4,
+        display: 'flex',
+        gap: 24,
+      }}>
+        <span style={{ color: '#666' }}>
+          领取人：<span style={{ color: '#333', fontWeight: 500 }}>{productionAssignee || '-'}</span>
+        </span>
+        <span style={{ color: '#666' }}>
+          开始时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(productionStartTime)}</span>
+        </span>
+        <span style={{ color: '#666' }}>
+          完成时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(productionCompletedTime)}</span>
+        </span>
+      </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
         <Space size={8} wrap>
           <span style={{ fontWeight: 500 }}>生产要求</span>
-          {productionReqLocked ? <Tag color="warning">已保存</Tag> : <Tag color="default">可编辑</Tag>}
+          <Tag color="success">可编辑</Tag>
         </Space>
         <Space size={8} wrap>
           <Button size="small" onClick={downloadWorkorder}>
@@ -149,58 +145,36 @@ const StyleProductionTab: React.FC<Props> = ({
           <Button size="small" onClick={printWorkorder}>
             打印制单
           </Button>
-          {productionReqEditable ? (
-            <>
-              <Button size="small" onClick={onProductionReqReset} disabled={Boolean(productionReqSaving)}>
-                取消
-              </Button>
-              <Button size="small" type="primary" loading={Boolean(productionReqSaving)} onClick={onProductionReqSave}>
-                保存
-              </Button>
-            </>
-          ) : productionReqLocked && productionReqCanRollback ? (
-            <Button size="small" danger loading={Boolean(productionReqRollbackSaving)} onClick={onProductionReqRollback}>
-              退回修改
-            </Button>
-          ) : null}
+          <Button size="small" onClick={onProductionReqReset} disabled={Boolean(productionReqSaving)}>
+            取消
+          </Button>
+          <Button size="small" type="primary" loading={Boolean(productionReqSaving)} onClick={onProductionReqSave}>
+            保存
+          </Button>
         </Space>
+        <div style={{ marginTop: 8, color: '#666', fontSize: 12 }}>
+          💡 提示：相关文件请在"文件管理"标签页统一上传
+        </div>
       </div>
 
-      <Table
-        size="small"
-        rowKey={(r) => String((r as Record<string, unknown>).key)}
-        pagination={false}
-        scroll={{ y: productionReqScrollY, x: 'max-content' }}
-        sticky
-        dataSource={Array.from({ length: Math.max(0, Number(productionReqRowCount) || 15) }).map((_, idx) => ({
-          key: String(idx + 1),
-          no: idx + 1,
-          text: (Array.isArray(productionReqRows) ? productionReqRows[idx] : '') || '',
-        }))}
-        columns={[
-          { title: '序号', dataIndex: 'no', key: 'no', width: 56 },
-          {
-            title: '内容',
-            dataIndex: 'text',
-            key: 'text',
-            render: (v: any, record: any) => {
-              const idx = Number(record?.no || 1) - 1;
-              const t = String(v || '');
-              if (productionReqEditable) {
-                return (
-                  <Input
-                    size="small"
-                    value={t}
-                    placeholder={`第${record?.no}条`}
-                    onChange={(e) => onProductionReqChange?.(idx, e.target.value)}
-                  />
-                );
-              }
-              const txt = t.trim();
-              return txt ? txt : <span style={{ color: 'rgba(0,0,0,0.35)' }}>-</span>;
-            },
-          },
-        ]}
+      <TextArea
+        value={productionReqRows.join('\n')}
+        onChange={(e) => {
+          const lines = e.target.value.split('\n');
+          const maxLines = Math.max(lines.length, productionReqRowCount || 15);
+          // 确保数组长度足够
+          for (let i = 0; i < maxLines; i++) {
+            const line = i < lines.length ? lines[i] : '';
+            onProductionReqChange?.(i, line);
+          }
+        }}
+        placeholder="请输入生产要求，每行一条&#10;例如：&#10;1. 面料要求...&#10;2. 工艺要求...&#10;3. 包装要求..."
+        rows={20}
+        style={{
+          fontSize: '14px',
+          lineHeight: '1.8',
+          fontFamily: 'monospace'
+        }}
       />
     </div>
   );

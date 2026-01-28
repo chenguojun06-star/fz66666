@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Spin, message } from 'antd';
+import { App, Spin } from 'antd';
 import {
   TagsOutlined,
   ShoppingCartOutlined,
@@ -71,8 +71,14 @@ const StatCard: React.FC<StatCardProps> = ({ icon, label, dataKey, color, bgGrad
 };
 
 const TopStats: React.FC = () => {
+  const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [statsData, setStatsData] = useState<TopStatsData | null>(null);
+
+  const getErrorStatus = (err: unknown) => {
+    const anyErr = err as { status?: number; response?: { status?: number } };
+    return Number(anyErr?.status || anyErr?.response?.status || 0);
+  };
 
   const fetchStats = async () => {
     setLoading(true);
@@ -82,12 +88,18 @@ const TopStats: React.FC = () => {
       });
       if (response.code === 200 && response.data) {
         setStatsData(response.data);
+      } else if (response.code === 401 || response.code === 403) {
+        message.error('登录已过期，请重新登录');
       } else {
         message.error(response.message || '获取统计数据失败');
       }
     } catch (error) {
+      const status = getErrorStatus(error);
+      if (status === 401 || status === 403) {
+        message.error('登录已过期，请重新登录');
+        return;
+      }
       message.error('获取统计数据失败');
-      console.error('获取统计数据失败:', error);
     } finally {
       setLoading(false);
     }

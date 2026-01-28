@@ -147,22 +147,45 @@ public class TemplateLibraryOrchestrator {
             throw new IllegalArgumentException("模板参数不完整");
         }
 
-        tpl.setTemplateType(type);
-        tpl.setTemplateKey(key);
-        tpl.setTemplateName(name);
-        tpl.setTemplateContent(content);
-        tpl.setLocked(1);
-        String ssn = String.valueOf(tpl.getSourceStyleNo() == null ? "" : tpl.getSourceStyleNo()).trim();
-        tpl.setSourceStyleNo(StringUtils.hasText(ssn) ? ssn : null);
-        tpl.setOperatorName(UserContext.username());
+        // 检查是否已存在相同 type+key 的记录
+        TemplateLibrary existing = templateLibraryService.lambdaQuery()
+                .eq(TemplateLibrary::getTemplateType, type)
+                .eq(TemplateLibrary::getTemplateKey, key)
+                .one();
+
         LocalDateTime now = LocalDateTime.now();
-        if (tpl.getCreateTime() == null) {
-            tpl.setCreateTime(now);
-        }
-        tpl.setUpdateTime(now);
-        boolean ok = templateLibraryService.save(tpl);
-        if (!ok) {
-            throw new IllegalStateException("保存失败");
+
+        if (existing != null) {
+            // 如果已存在，执行更新
+            existing.setTemplateName(name);
+            existing.setTemplateContent(content);
+            existing.setLocked(1);
+            String ssn = String.valueOf(tpl.getSourceStyleNo() == null ? "" : tpl.getSourceStyleNo()).trim();
+            existing.setSourceStyleNo(StringUtils.hasText(ssn) ? ssn : null);
+            existing.setOperatorName(UserContext.username());
+            existing.setUpdateTime(now);
+            boolean ok = templateLibraryService.updateById(existing);
+            if (!ok) {
+                throw new IllegalStateException("更新失败");
+            }
+        } else {
+            // 如果不存在，执行新建
+            tpl.setTemplateType(type);
+            tpl.setTemplateKey(key);
+            tpl.setTemplateName(name);
+            tpl.setTemplateContent(content);
+            tpl.setLocked(1);
+            String ssn = String.valueOf(tpl.getSourceStyleNo() == null ? "" : tpl.getSourceStyleNo()).trim();
+            tpl.setSourceStyleNo(StringUtils.hasText(ssn) ? ssn : null);
+            tpl.setOperatorName(UserContext.username());
+            if (tpl.getCreateTime() == null) {
+                tpl.setCreateTime(now);
+            }
+            tpl.setUpdateTime(now);
+            boolean ok = templateLibraryService.save(tpl);
+            if (!ok) {
+                throw new IllegalStateException("保存失败");
+            }
         }
         return true;
     }

@@ -3,7 +3,9 @@ package com.fashion.supplychain.style.orchestration;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.production.entity.PatternProduction;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.service.PatternProductionService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.StyleAttachment;
 import com.fashion.supplychain.style.entity.StyleInfo;
@@ -42,6 +44,9 @@ public class StyleInfoOrchestrator {
     @Autowired
     private ProductionOrderService productionOrderService;
 
+    @Autowired
+    private PatternProductionService patternProductionService;
+
     public IPage<StyleInfo> list(Map<String, Object> params) {
         return styleInfoService.queryPage(params);
     }
@@ -59,7 +64,28 @@ public class StyleInfoOrchestrator {
         try {
             boolean result = styleInfoService.saveOrUpdateStyle(styleInfo);
             if (result) {
-                tryCreateTemplateFromStyle(styleInfo == null ? null : styleInfo.getStyleNo());
+                // 自动创建样板生产记录（待领取状态）
+                try {
+                    // 如果是新增，重新查询获取完整对象（包含自动生成的ID）
+                    if (styleInfo.getId() == null && StringUtils.hasText(styleInfo.getStyleNo())) {
+                        StyleInfo savedStyle = styleInfoService.lambdaQuery()
+                                .eq(StyleInfo::getStyleNo, styleInfo.getStyleNo())
+                                .orderByDesc(StyleInfo::getCreateTime)
+                                .last("LIMIT 1")
+                                .one();
+                        if (savedStyle != null) {
+                            createPatternProductionRecord(savedStyle);
+                        }
+                    } else {
+                        createPatternProductionRecord(styleInfo);
+                    }
+                } catch (Exception e) {
+                    log.error("自动创建样板生产记录失败: styleId={}, styleNo={}",
+                            styleInfo.getId(), styleInfo.getStyleNo(), e);
+                }
+                // 移除自动同步到模板库，只有手动推送时才同步
+                // tryCreateTemplateFromStyle(styleInfo == null ? null :
+                // styleInfo.getStyleNo());
                 return true;
             }
             throw new IllegalStateException("操作失败");
@@ -68,9 +94,11 @@ public class StyleInfoOrchestrator {
             if (msg != null && msg.toLowerCase().contains("duplicate")) {
                 throw new IllegalArgumentException("款号已存在");
             }
-            throw new IllegalStateException("保存失败");
+            log.error("数据完整性约束失败: {}", msg, e);
+            throw new IllegalStateException("保存失败: " + msg);
         } catch (Exception e) {
-            throw new IllegalStateException("保存失败");
+            log.error("保存样式信息失败", e);
+            throw new IllegalStateException("保存失败: " + e.getMessage());
         }
     }
 
@@ -79,18 +107,21 @@ public class StyleInfoOrchestrator {
         try {
             boolean result = styleInfoService.saveOrUpdateStyle(styleInfo);
             if (result) {
-                try {
-                    String styleNo = styleInfo == null ? null : styleInfo.getStyleNo();
-                    if (!StringUtils.hasText(styleNo) && styleInfo != null && styleInfo.getId() != null) {
-                        StyleInfo current = styleInfoService.getById(styleInfo.getId());
-                        styleNo = current == null ? null : current.getStyleNo();
-                    }
-                    tryCreateTemplateFromStyle(styleNo);
-                } catch (Exception e) {
-                    log.warn("Failed to sync templates after style update: styleId={}, styleNo={}",
-                            styleInfo == null ? null : styleInfo.getId(),
-                            styleInfo == null ? null : styleInfo.getStyleNo(), e);
-                }
+                // 移除自动同步到模板库，只有手动推送时才同步
+                // try {
+                // String styleNo = styleInfo == null ? null : styleInfo.getStyleNo();
+                // if (!StringUtils.hasText(styleNo) && styleInfo != null && styleInfo.getId()
+                // != null) {
+                // StyleInfo current = styleInfoService.getById(styleInfo.getId());
+                // styleNo = current == null ? null : current.getStyleNo();
+                // }
+                // tryCreateTemplateFromStyle(styleNo);
+                // } catch (Exception e) {
+                // log.warn("Failed to sync templates after style update: styleId={},
+                // styleNo={}",
+                // styleInfo == null ? null : styleInfo.getId(),
+                // styleInfo == null ? null : styleInfo.getStyleNo(), e);
+                // }
                 return true;
             }
             throw new IllegalStateException("操作失败");
@@ -111,9 +142,10 @@ public class StyleInfoOrchestrator {
             throw new NoSuchElementException("款号不存在");
         }
 
-        if (isProductionRequirementsLocked(id)) {
-            throw new IllegalStateException("生产要求已保存，无法修改，请联系管理员退回");
-        }
+        // 取消锁定检查，允许随时修改
+        // if (isProductionRequirementsLocked(id)) {
+        // throw new IllegalStateException("生产要求已保存，无法修改，请联系管理员退回");
+        // }
 
         String desc = body == null ? null
                 : (body.get("description") == null ? null : String.valueOf(body.get("description")));
@@ -229,10 +261,15 @@ public class StyleInfoOrchestrator {
                 .eq(StyleInfo::getId, id)
                 .set(StyleInfo::getPatternStatus, "COMPLETED")
                 .set(StyleInfo::getPatternCompletedTime, LocalDateTime.now())
+                // 自动同步样衣状态为完成，代表纸样、尺寸表、工序表、生产制单流程结束
+                .set(StyleInfo::getSampleStatus, "COMPLETED")
+                .set(StyleInfo::getSampleProgress, 100)
+                .set(StyleInfo::getSampleCompletedTime, LocalDateTime.now())
                 .set(StyleInfo::getUpdateTime, LocalDateTime.now())
                 .update();
         if (ok) {
             savePatternLog(id, "PATTERN_COMPLETED", null);
+            saveSampleLog(id, "SAMPLE_COMPLETED", "关联纸样完成自动同步");
         }
         if (!ok) {
             throw new IllegalStateException("操作失败");
@@ -258,10 +295,15 @@ public class StyleInfoOrchestrator {
                 .eq(StyleInfo::getId, id)
                 .set(StyleInfo::getPatternStatus, null)
                 .set(StyleInfo::getPatternCompletedTime, null)
+                // 关联回退样衣状态
+                .set(StyleInfo::getSampleStatus, "IN_PROGRESS")
+                .set(StyleInfo::getSampleProgress, 0)
+                .set(StyleInfo::getSampleCompletedTime, null)
                 .set(StyleInfo::getUpdateTime, LocalDateTime.now())
                 .update();
         if (ok) {
             saveMaintenanceLog(id, "PATTERN_RESET", remark);
+            saveMaintenanceLog(id, "SAMPLE_RESET", "关联纸样回退自动同步: " + remark);
         }
         if (!ok) {
             throw new IllegalStateException("操作失败");
@@ -334,22 +376,28 @@ public class StyleInfoOrchestrator {
             throw new NoSuchElementException("款号不存在");
         }
         if (isCompleted(current.getSampleStatus())) {
-            throw new IllegalStateException("样衣已完成，无法修改，请联系管理员回退");
+            throw new IllegalStateException("样衣已完成，无需重复操作");
         }
+
         boolean ok = styleInfoService.lambdaUpdate()
                 .eq(StyleInfo::getId, id)
                 .set(StyleInfo::getSampleStatus, "COMPLETED")
                 .set(StyleInfo::getSampleProgress, 100)
                 .set(StyleInfo::getSampleCompletedTime, LocalDateTime.now())
+                // 同时也标记纸样为完成，确保状态一致
+                .set(StyleInfo::getPatternStatus, "COMPLETED")
+                .set(StyleInfo::getPatternCompletedTime,
+                        current.getPatternCompletedTime() == null ? LocalDateTime.now()
+                                : current.getPatternCompletedTime())
                 .set(StyleInfo::getUpdateTime, LocalDateTime.now())
                 .update();
         if (ok) {
-            saveSampleLog(id, "SAMPLE_COMPLETED", null);
+            saveSampleLog(id, "SAMPLE_COMPLETED", "手动点击样衣完成");
+            if (!isCompleted(current.getPatternStatus())) {
+                savePatternLog(id, "PATTERN_COMPLETED", "关联样衣完成自动同步");
+            }
         }
-        if (!ok) {
-            throw new IllegalStateException("操作失败");
-        }
-        return true;
+        return ok;
     }
 
     public boolean resetSample(Long id, Map<String, Object> body) {
@@ -383,6 +431,20 @@ public class StyleInfoOrchestrator {
     }
 
     public boolean delete(Long id) {
+        // 先删除关联的样板生产记录
+        try {
+            boolean removed = patternProductionService.lambdaUpdate()
+                    .eq(PatternProduction::getStyleId, String.valueOf(id))
+                    .remove();
+            if (removed) {
+                log.info("删除款式时，级联删除了样板生产记录: styleId={}", id);
+            }
+        } catch (Exception e) {
+            log.warn("删除关联的样板生产记录失败: styleId={}", id, e);
+            // 继续删除款式信息，不因为样板生产记录删除失败而中断
+        }
+
+        // 删除款式信息
         boolean result = styleInfoService.deleteById(id);
         if (!result) {
             throw new IllegalStateException("删除失败");
@@ -499,6 +561,47 @@ public class StyleInfoOrchestrator {
         }
     }
 
+    /**
+     * 自动创建样板生产记录
+     */
+    private void createPatternProductionRecord(StyleInfo styleInfo) {
+        if (styleInfo == null || styleInfo.getId() == null) {
+            return;
+        }
+
+        // 检查是否已存在样板生产记录
+        long existingCount = patternProductionService.lambdaQuery()
+                .eq(PatternProduction::getStyleId, String.valueOf(styleInfo.getId()))
+                .count();
+
+        if (existingCount > 0) {
+            log.info("样板生产记录已存在，跳过自动创建: styleId={}", styleInfo.getId());
+            return;
+        }
+
+        // 初始化6个工序进度节点为0
+        String progressNodesJson = "{\"cutting\":0,\"sewing\":0,\"ironing\":0,\"quality\":0,\"secondary\":0,\"packaging\":0}";
+
+        PatternProduction patternProduction = new PatternProduction();
+        patternProduction.setStyleId(String.valueOf(styleInfo.getId()));
+        patternProduction.setStyleNo(styleInfo.getStyleNo());
+        patternProduction.setStatus("PENDING");
+        patternProduction.setProgressNodes(progressNodesJson);
+        patternProduction.setCreateTime(LocalDateTime.now());
+        patternProduction.setUpdateTime(LocalDateTime.now());
+
+        UserContext ctx = UserContext.get();
+        if (ctx != null) {
+            patternProduction.setCreateBy(ctx.getUsername());
+        }
+
+        boolean saved = patternProductionService.save(patternProduction);
+        if (saved) {
+            log.info("自动创建样板生产记录成功: styleId={}, styleNo={}, patternId={}",
+                    styleInfo.getId(), styleInfo.getStyleNo(), patternProduction.getId());
+        }
+    }
+
     private void validateStyleInfo(StyleInfo styleInfo) {
         if (styleInfo == null) {
             throw new IllegalArgumentException("参数不能为空");
@@ -509,8 +612,6 @@ public class StyleInfoOrchestrator {
         if (!StringUtils.hasText(styleInfo.getStyleName())) {
             throw new IllegalArgumentException("请输入款名");
         }
-        if (!StringUtils.hasText(styleInfo.getCategory())) {
-            throw new IllegalArgumentException("请选择品类");
-        }
+        // 品类不再必填，允许创建空记录
     }
 }

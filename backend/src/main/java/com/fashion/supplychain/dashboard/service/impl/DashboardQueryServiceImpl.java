@@ -5,11 +5,13 @@ import com.fashion.supplychain.finance.entity.MaterialReconciliation;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
 import com.fashion.supplychain.finance.service.MaterialReconciliationService;
 import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
+import com.fashion.supplychain.production.entity.CuttingTask;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.mapper.ProductWarehousingMapper;
+import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
@@ -28,6 +30,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
 
     private final StyleInfoService styleInfoService;
     private final ProductionOrderService productionOrderService;
+    private final CuttingTaskService cuttingTaskService;
     private final MaterialReconciliationService materialReconciliationService;
     private final ShipmentReconciliationService shipmentReconciliationService;
     private final ScanRecordService scanRecordService;
@@ -38,6 +41,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
     public DashboardQueryServiceImpl(
             StyleInfoService styleInfoService,
             ProductionOrderService productionOrderService,
+            CuttingTaskService cuttingTaskService,
             MaterialReconciliationService materialReconciliationService,
             ShipmentReconciliationService shipmentReconciliationService,
             ScanRecordService scanRecordService,
@@ -46,6 +50,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
             ProductWarehousingMapper productWarehousingMapper) {
         this.styleInfoService = styleInfoService;
         this.productionOrderService = productionOrderService;
+        this.cuttingTaskService = cuttingTaskService;
         this.materialReconciliationService = materialReconciliationService;
         this.shipmentReconciliationService = shipmentReconciliationService;
         this.scanRecordService = scanRecordService;
@@ -61,10 +66,8 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
 
     @Override
     public long countProductionOrders() {
-        // 统计所有未删除的订单（包括待生产、生产中等状态）
         return productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
-                .in(ProductionOrder::getStatus, "pending", "production", "delayed")
                 .count();
     }
 
@@ -143,8 +146,8 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         // 1. 订单超期：已超过计划结束日期但未完成的订单
         long delayedOrders = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
-                .ne(ProductionOrder::getStatus, "已完成")
-                .ne(ProductionOrder::getStatus, "已取消")
+                .ne(ProductionOrder::getStatus, "completed")
+                .ne(ProductionOrder::getStatus, "cancelled")
                 .isNotNull(ProductionOrder::getPlannedEndDate)
                 .lt(ProductionOrder::getPlannedEndDate, now)
                 .count();
@@ -331,16 +334,15 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
 
     @Override
     public long sumCuttingQuantityBetween(LocalDateTime start, LocalDateTime end) {
-        // 统计裁剪数量：使用 ProductionOrder 中的 cuttingQuantity 字段
-        List<ProductionOrder> orders = productionOrderService.lambdaQuery()
-                .eq(ProductionOrder::getDeleteFlag, 0)
-                .ge(start != null, ProductionOrder::getCreateTime, start)
-                .le(end != null, ProductionOrder::getCreateTime, end)
-                .isNotNull(ProductionOrder::getCuttingQuantity)
+        // 统计裁剪数量：从 CuttingTask 表统计 orderQuantity
+        List<CuttingTask> tasks = cuttingTaskService.lambdaQuery()
+                .ge(start != null, CuttingTask::getCreateTime, start)
+                .le(end != null, CuttingTask::getCreateTime, end)
+                .isNotNull(CuttingTask::getOrderQuantity)
                 .list();
 
-        return orders.stream()
-                .mapToInt(ProductionOrder::getCuttingQuantity)
+        return tasks.stream()
+                .mapToInt(CuttingTask::getOrderQuantity)
                 .sum();
     }
 
@@ -381,20 +383,19 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
 
     @Override
     public List<Integer> getDailyCuttingQuantities(LocalDateTime start, LocalDateTime end) {
-        // 获取每天的裁剪总数量
-        List<ProductionOrder> orders = productionOrderService.lambdaQuery()
-                .eq(ProductionOrder::getDeleteFlag, 0)
-                .ge(start != null, ProductionOrder::getCreateTime, start)
-                .le(end != null, ProductionOrder::getCreateTime, end)
-                .isNotNull(ProductionOrder::getCuttingQuantity)
-                .orderByAsc(ProductionOrder::getCreateTime)
+        // 获取每天的裁剪总数量：从 CuttingTask 表统计
+        List<CuttingTask> tasks = cuttingTaskService.lambdaQuery()
+                .ge(start != null, CuttingTask::getCreateTime, start)
+                .le(end != null, CuttingTask::getCreateTime, end)
+                .isNotNull(CuttingTask::getOrderQuantity)
+                .orderByAsc(CuttingTask::getCreateTime)
                 .list();
 
         // 按日期分组统计数量
         Map<String, Integer> dailyQuantities = new java.util.HashMap<>();
-        for (ProductionOrder order : orders) {
-            String date = order.getCreateTime().toLocalDate().toString();
-            int quantity = order.getCuttingQuantity();
+        for (CuttingTask task : tasks) {
+            String date = task.getCreateTime().toLocalDate().toString();
+            int quantity = task.getOrderQuantity();
             dailyQuantities.merge(date, quantity, Integer::sum);
         }
 
@@ -427,9 +428,9 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         return productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .lt(ProductionOrder::getPlannedEndDate, now)
-                .ne(ProductionOrder::getStatus, "已完成")
+                .ne(ProductionOrder::getStatus, "completed")
+                .ne(ProductionOrder::getStatus, "cancelled")
                 .orderByAsc(ProductionOrder::getPlannedEndDate)
                 .list();
     }
 }
-
