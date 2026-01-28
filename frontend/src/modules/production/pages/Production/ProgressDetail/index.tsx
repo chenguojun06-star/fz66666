@@ -1,15 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, App, Button, Card, Collapse, Form, Grid, Input, InputNumber, Modal, Select, Segmented, Space, Tag, Tooltip, Typography } from 'antd';
 import { UnifiedRangePicker } from '@/components/common/UnifiedDatePicker';
-import { DeleteOutlined, EyeOutlined, RollbackOutlined, ScanOutlined, EditOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EyeOutlined, RollbackOutlined, ScanOutlined, EditOutlined, AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useLocation } from 'react-router-dom';
 import Layout from '@/components/Layout';
+import UniversalCardView from '@/components/common/UniversalCardView';
+import LiquidProgressLottie from '@/components/common/LiquidProgressLottie';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import QuickEditModal from '@/components/common/QuickEditModal';
+import NodeDetailModal from '@/components/common/NodeDetailModal';
 import { ProductionOrderHeader, StyleCoverThumb } from '@/components/StyleAssets';
 import { compareSizeAsc, generateRequestId, isDuplicateScanMessage, isOrderFrozenByStatus } from '@/utils/api';
 import { isSupervisorOrAboveUser as isSupervisorOrAboveUserFn, useAuth } from '@/utils/authContext';
@@ -301,10 +304,10 @@ const modernProgressBoardCss = `
 .mpb-pillDot{width:8px;height:8px;border-radius:999px;flex:0 0 auto;box-shadow:0 8px 18px rgba(15,23,42,.12)}
 .mpb-nodesWrap{display:flex;align-items:center;gap:8px;min-height:46px;min-width:120px;flex-wrap:wrap}
 .mpb-mark{display:flex;align-items:center}
-.mpb-node{position:relative;overflow:hidden;height:24px;max-width:126px;min-width:58px;padding:0 10px;border-radius:999px;display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.30);color:rgba(15,23,42,.78);backdrop-filter:blur(10px) saturate(160%);-webkit-backdrop-filter:blur(10px) saturate(160%);box-shadow:0 10px 18px rgba(15,23,42,.10)}
-.mpb-node::before{content:"";position:absolute;left:0;top:0;bottom:0;width:var(--p,0%);background:linear-gradient(90deg,#86efac 0%,#4ade80 26%,#22c55e 52%,#4ade80 78%,#86efac 100%);background-size:200% 100%;animation:mpbNodeFlow 2.8s linear infinite;transition:width .55s cubic-bezier(.2,.8,.2,1);filter:saturate(104%) brightness(.97);box-shadow:inset 0 0 0 1px rgba(255,255,255,.16),inset 0 10px 14px rgba(255,255,255,.10)}
-.mpb-nodeName{position:relative;z-index:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:78px;font-size:12px;line-height:24px}
-.mpb-nodeQty{position:relative;z-index:1;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;height:16px;min-width:24px;padding:0 6px;border-radius:999px;background:rgba(15,23,42,.06);border:1px solid rgba(255,255,255,.36);color:rgba(15,23,42,.78);font-weight:700;font-size:11px;line-height:16px;font-variant-numeric:tabular-nums}
+.mpb-node{position:relative;overflow:hidden;width:70px;height:70px;padding:0;border-radius:50%;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.30);color:rgba(15,23,42,.78);backdrop-filter:blur(10px) saturate(160%);-webkit-backdrop-filter:blur(10px) saturate(160%);box-shadow:0 10px 18px rgba(15,23,42,.10)}
+.mpb-node::before{content:"";position:absolute;left:0;top:auto;bottom:0;right:0;width:100%;height:var(--p,0%);background:linear-gradient(0deg,#86efac 0%,#4ade80 26%,#22c55e 52%,#4ade80 78%,#86efac 100%);background-size:100% 200%;animation:mpbNodeFlowVertical 2.8s linear infinite;transition:height .55s cubic-bezier(.2,.8,.2,1);filter:saturate(104%) brightness(.97);box-shadow:inset 0 0 0 1px rgba(255,255,255,.16),inset 0 10px 14px rgba(255,255,255,.10);border-radius:50%}
+.mpb-nodeName{position:relative;z-index:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:50px;font-size:11px;line-height:14px;text-align:center}
+.mpb-nodeQty{position:relative;z-index:1;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;height:16px;min-width:20px;padding:0 4px;border-radius:999px;background:rgba(15,23,42,.06);border:1px solid rgba(255,255,255,.36);color:rgba(15,23,42,.78);font-weight:700;font-size:10px;line-height:16px;font-variant-numeric:tabular-nums}
 .mpb-node.mpb-nodeDone{border-color:rgba(34,197,94,.34);color:rgba(15,23,42,.88)}
 .mpb-node.mpb-nodeCurrent{border-color:rgba(96,165,250,.42);color:rgba(15,23,42,.92);animation:mpbNodeGlow 2.6s ease-in-out infinite}
 .mpb-pop{animation:mpbPop .42s cubic-bezier(.2,.8,.2,1) both}
@@ -362,6 +365,7 @@ const modernProgressBoardCss = `
 .mpb-detailCard.mpb-detailFrozen .mpb-detailFill{animation:none;filter:none;opacity:.6}
 @keyframes mpbPop{0%{transform:translateY(-1px) scale(.94);opacity:.0}100%{transform:translateY(0) scale(1);opacity:1}}
 @keyframes mpbNodeFlow{0%{background-position:0% 50%}100%{background-position:100% 50%}}
+@keyframes mpbNodeFlowVertical{0%{background-position:50% 0%}100%{background-position:50% 100%}}
 @keyframes mpbNodeGlow{0%,100%{box-shadow:0 10px 18px rgba(15,23,42,.10),0 0 0 0 rgba(59,130,246,.0)}50%{box-shadow:0 12px 22px rgba(59,130,246,.16),0 0 0 6px rgba(59,130,246,.08)}}
 .mpb-glass.mpb-frozen{background:linear-gradient(135deg,rgba(248,250,252,.62),rgba(241,245,249,.42));border-color:rgba(148,163,184,.32);box-shadow:0 8px 22px rgba(15,23,42,.06);backdrop-filter:blur(16px) saturate(120%);-webkit-backdrop-filter:blur(16px) saturate(120%)}
 .mpb-frozen .mpb-pill,.mpb-frozen .mpb-percent{background:rgba(241,245,249,.22);border-color:rgba(148,163,184,.30);color:rgba(15,23,42,.56)}
@@ -542,6 +546,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
   const [queryParams, setQueryParams] = useState<ProductionQueryParams>({ page: 1, pageSize: 10 });
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
 
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
@@ -608,6 +613,33 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const [quickEditVisible, setQuickEditVisible] = useState(false);
   const [quickEditRecord, setQuickEditRecord] = useState<ProductionOrder | null>(null);
   const [quickEditSaving, setQuickEditSaving] = useState(false);
+
+  // 节点详情弹窗状态
+  const [nodeDetailVisible, setNodeDetailVisible] = useState(false);
+  const [nodeDetailOrder, setNodeDetailOrder] = useState<ProductionOrder | null>(null);
+  const [nodeDetailType, setNodeDetailType] = useState<string>('');
+  const [nodeDetailName, setNodeDetailName] = useState<string>('');
+  const [nodeDetailStats, setNodeDetailStats] = useState<{ done: number; total: number; percent: number; remaining: number } | undefined>(undefined);
+  const [nodeDetailUnitPrice, setNodeDetailUnitPrice] = useState<number | undefined>(undefined);
+  const [nodeDetailProcessList, setNodeDetailProcessList] = useState<{ name: string; unitPrice?: number }[]>([]);
+
+  // 打开节点详情弹窗
+  const openNodeDetail = useCallback((
+    order: ProductionOrder,
+    nodeType: string,
+    nodeName: string,
+    stats?: { done: number; total: number; percent: number; remaining: number },
+    unitPrice?: number,
+    processList?: { name: string; unitPrice?: number }[]
+  ) => {
+    setNodeDetailOrder(order);
+    setNodeDetailType(nodeType);
+    setNodeDetailName(nodeName);
+    setNodeDetailStats(stats);
+    setNodeDetailUnitPrice(unitPrice);
+    setNodeDetailProcessList(processList || []);
+    setNodeDetailVisible(true);
+  }, []);
 
   const [orderSortField, setOrderSortField] = useState<string>('createTime');
   const [orderSortOrder, setOrderSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -2241,6 +2273,38 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     return Math.ceil(cq * 0.9);
   };
 
+  // 查看扫码记录
+  const handleViewScanHistory = async (order: ProductionOrder) => {
+    const detail = order?.id ? await fetchOrderDetail(order.id) : null;
+    const effective = detail || order;
+    setActiveOrder(effective);
+    setNodeWorkflowLocked(Number((effective as Record<string, unknown>)?.progressWorkflowLocked) === 1);
+    setNodeWorkflowDirty(false);
+    await ensureNodesFromTemplateIfNeeded(effective);
+    await fetchScanHistory(effective);
+    await fetchCuttingBundles(effective);
+    setDetailOpen(true);
+  };
+
+  // 查看详情
+  const handleViewDetail = async (order: ProductionOrder) => {
+    const detail = order?.id ? await fetchOrderDetail(order.id) : null;
+    const effective = detail || order;
+    setActiveOrder(effective);
+    setNodeWorkflowLocked(Number((effective as Record<string, unknown>)?.progressWorkflowLocked) === 1);
+    setNodeWorkflowDirty(false);
+    await ensureNodesFromTemplateIfNeeded(effective);
+    await fetchScanHistory(effective);
+    await fetchCuttingBundles(effective);
+    setDetailOpen(true);
+  };
+
+  // 快速编辑
+  const handleQuickEdit = (order: ProductionOrder) => {
+    setQuickEditRecord(order);
+    setQuickEditVisible(true);
+  };
+
   const handleQuickEditSave = async (values: { remarks: string; expectedShipDate: string | null }) => {
     setQuickEditSaving(true);
     try {
@@ -2420,28 +2484,129 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       },
     },
     {
-      title: '进度板块',
-      key: 'progressBoard',
-      width: 520,
+      title: '生产进度',
+      key: 'progressNodes',
+      width: 900,
+      align: 'center' as const,
       render: (_: any, record: ProductionOrder) => {
-        const totalQty = Number(record.orderQuantity) || 0;
-        const done = Number(record.completedQuantity) || 0;
-        const frozen = isOrderFrozenByStatus(record);
-        const label = getProgressLabelForTable(record);
+        // 获取该订单的工序节点
         const ns = stripWarehousingNode(resolveNodesForListOrder(record));
-        const progress = getProgressPercentForTable(record, ns);
+        const totalQty = Number(record.orderQuantity) || 0;
         const nodeDoneMap = boardStatsByOrder[String(record.id || '')];
+
+        // 空数据提示
+        if (!ns || ns.length === 0) {
+          return (
+            <div style={{ color: '#999', fontSize: 14, padding: '20px 0' }}>
+              暂无工序进度数据
+            </div>
+          );
+        }
+
         return (
-          <ModernProgressBoard
-            nodes={ns}
-            progress={progress}
-            label={label}
-            totalQty={totalQty}
-            doneQty={done}
-            arrivalRate={Number((record as Record<string, unknown>).materialArrivalRate)}
-            frozen={frozen}
-            nodeDoneMap={nodeDoneMap}
-          />
+          <div style={{
+            display: 'flex',
+            gap: 0,
+            alignItems: 'center',
+            justifyContent: 'space-evenly',
+            padding: '12px 8px',
+            width: '100%',
+          }}>
+            {ns.map((node: ProgressNode, index: number) => {
+              const nodeName = node.name || '-';
+              const nodeQty = totalQty;
+              const completedQty = nodeDoneMap?.[nodeName] || 0;
+              const percent = nodeQty > 0 ? Math.round((completedQty / nodeQty) * 100) : 0;
+              const remaining = nodeQty - completedQty;
+              // 将节点名称映射到节点类型
+              const nodeTypeMap: Record<string, string> = {
+                '裁剪': 'cutting', '裁床': 'cutting', '剪裁': 'cutting', '开裁': 'cutting',
+                '缝制': 'sewing', '车缝': 'sewing', '缝纫': 'sewing', '车工': 'sewing',
+                '整烫': 'ironing', '熨烫': 'ironing', '大烫': 'ironing',
+                '质检': 'quality', '检验': 'quality', '品检': 'quality', '验货': 'quality',
+                '包装': 'packaging', '后整': 'packaging', '打包': 'packaging', '装箱': 'packaging',
+                '二次工艺': 'secondaryProcess', '绣花': 'secondaryProcess', '印花': 'secondaryProcess',
+              };
+              const nodeType = nodeTypeMap[nodeName] || nodeName.toLowerCase();
+
+              return (
+                <div
+                  key={node.id || index}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 6,
+                    flex: 1,
+                    cursor: 'pointer',
+                    padding: 4,
+                    borderRadius: 8,
+                    transition: 'background 0.2s',
+                  }}
+                  onClick={() => openNodeDetail(
+                    record,
+                    nodeType,
+                    nodeName,
+                    { done: completedQty, total: nodeQty, percent, remaining },
+                    node.unitPrice,
+                    ns.map(n => ({ name: n.name, unitPrice: n.unitPrice })) // 传递所有工序单价
+                  )}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(59, 130, 246, 0.08)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                  title={`点击查看 ${nodeName} 详情`}
+                >
+                  <LiquidProgressLottie
+                    progress={percent}
+                    size={60}
+                    color1={
+                      percent >= 100
+                        ? '#9ca3af'
+                        : (() => {
+                          const shipDate = record.expectedShipDate;
+                          if (!shipDate) return '#52c41a';
+                          const now = new Date();
+                          const delivery = new Date(shipDate);
+                          const diffDays = Math.ceil((delivery.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                          if (diffDays < 0) return '#ef4444'; // 延期红色
+                          if (diffDays <= 3) return '#f59e0b'; // 预警黄色
+                          return '#52c41a'; // 正常绿色
+                        })()
+                    }
+                    color2={
+                      percent >= 100
+                        ? '#d1d5db'
+                        : (() => {
+                          const shipDate = record.expectedShipDate;
+                          if (!shipDate) return '#95de64';
+                          const now = new Date();
+                          const delivery = new Date(shipDate);
+                          const diffDays = Math.ceil((delivery.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                          if (diffDays < 0) return '#fca5a5'; // 延期红色浅色
+                          if (diffDays <= 3) return '#fbbf24'; // 预警黄色浅色
+                          return '#95de64'; // 正常绿色浅色
+                        })()
+                    }
+                  />
+                  <div style={{
+                    fontSize: 14,
+                    fontWeight: 700,
+                    color: '#1f2937',
+                    letterSpacing: '0.3px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}>
+                    <span>{nodeName}</span>
+                    <span style={{
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: percent >= 100 ? '#059669' : '#6b7280',
+                    }}>({completedQty}/{nodeQty})</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         );
       },
     },
@@ -2648,23 +2813,56 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             <Text strong style={{ fontSize: 14 }}>工序单价</Text>
           </div>
           <Card size="small" styles={{ body: { padding: 12 } }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
               {nodes.filter(n => (Number(n.unitPrice) || 0) > 0).map((n) => {
                 const unitPrice = Number(n.unitPrice) || 0;
+                const stat = nodeStats.statsByName[n.name] || { done: 0, total: nodeStats.totalQty, remaining: nodeStats.totalQty, percent: 0 };
+                const percent = clampPercent(stat.percent);
                 return (
-                  <div key={`price-${n.id}`} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Text style={{ minWidth: 50, fontSize: 13 }}>{n.name}：</Text>
-                    <InputNumber
-                      size="small"
-                      min={0}
-                      precision={2}
-                      value={unitPrice}
-                      aria-label={`单价-${n.name}`}
-                      disabled={!canEditWorkflow}
-                      onChange={(v) => updateNodeUnitPrice(n.id, Number(v) || 0)}
-                      prefix="¥"
-                      style={{ flex: 1, minWidth: 80 }}
-                    />
+                  <div key={`price-${n.id}`} style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 6,
+                    padding: 8,
+                    border: '1px solid #e8e8e8',
+                    borderRadius: 4,
+                    background: '#fafafa'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Text strong style={{ fontSize: 13 }}>{n.name}</Text>
+                      <Text type="secondary" style={{ fontSize: 12 }}>{percent.toFixed(0)}%</Text>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Text style={{ fontSize: 12, color: '#666', minWidth: 40 }}>单价：</Text>
+                      <InputNumber
+                        size="small"
+                        min={0}
+                        precision={2}
+                        value={unitPrice}
+                        aria-label={`单价-${n.name}`}
+                        disabled={!canEditWorkflow}
+                        onChange={(v) => updateNodeUnitPrice(n.id, Number(v) || 0)}
+                        prefix="¥"
+                        style={{ flex: 1 }}
+                      />
+                    </div>
+                    <div style={{
+                      height: 4,
+                      background: '#e8e8e8',
+                      borderRadius: 2,
+                      overflow: 'hidden'
+                    }}>
+                      <div style={{
+                        height: '100%',
+                        width: `${percent}%`,
+                        background: percent >= 100 ? '#52c41a' : percent > 0 ? '#1890ff' : '#d9d9d9',
+                        transition: 'width 0.3s ease'
+                      }} />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#999' }}>
+                      <span>已完成: {stat.done}</span>
+                      <span>剩余: {stat.remaining}</span>
+                    </div>
                   </div>
                 );
               })}
@@ -2731,25 +2929,95 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             </Form>
           </Card>
 
-          <ResizableTable
-            rowKey={(r: ProductionOrder) => String(r.id || r.orderNo)}
-            loading={loading}
-            columns={columns}
-            dataSource={orders}
-            pagination={{
-              current: queryParams.page,
-              pageSize: queryParams.pageSize,
-              total,
-              showSizeChanger: true,
-              onChange: (page: number, pageSize: number) => setQueryParams((prev) => ({ ...prev, page, pageSize })),
-            }}
-            scroll={{ x: 1500 }}
-          />
+          {viewMode === 'list' ? (
+            <ResizableTable
+              rowKey={(r: ProductionOrder) => String(r.id || r.orderNo)}
+              loading={loading}
+              columns={columns}
+              dataSource={orders}
+              pagination={{
+                current: queryParams.page,
+                pageSize: queryParams.pageSize,
+                total,
+                showSizeChanger: true,
+                onChange: (page: number, pageSize: number) => setQueryParams((prev) => ({ ...prev, page, pageSize })),
+              }}
+              scroll={{ x: 1500 }}
+            />
+          ) : (
+            <UniversalCardView
+              dataSource={orders}
+              loading={loading}
+              columns={6}
+              coverField="styleCover"
+              titleField="styleNo"
+              subtitleField="orderNo"
+              fields={[
+                { label: '客户', key: 'customerName' },
+                { label: '工厂', key: 'factoryName' },
+                { label: '数量', key: 'quantity', suffix: ' 件' },
+                { label: '交期', key: 'expectedShipDate' },
+              ]}
+              progressConfig={{
+                calculate: (record: ProductionOrder) => {
+                  const prices = record.progressNodeUnitPrices || [];
+                  if (prices.length === 0) return 0;
+                  const completedCount = prices.filter((p: { completedQuantity?: number; quantity?: number }) =>
+                    (p.completedQuantity || 0) >= (p.quantity || 0)
+                  ).length;
+                  return Math.round((completedCount / prices.length) * 100);
+                },
+                getStatus: (record: ProductionOrder) => {
+                  const shipDate = record.expectedShipDate;
+                  if (!shipDate) return 'success';
+                  const now = new Date();
+                  const delivery = new Date(shipDate);
+                  const diffDays = Math.ceil((delivery.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                  if (diffDays < 0) return 'danger';
+                  if (diffDays <= 3) return 'warning';
+                  return 'success';
+                },
+                show: true,
+              }}
+              actions={(record: ProductionOrder) => [
+                {
+                  key: 'scan',
+                  icon: <ScanOutlined />,
+                  label: '扫码记录',
+                  onClick: () => handleViewScanHistory(record),
+                },
+                {
+                  key: 'view',
+                  icon: <EyeOutlined />,
+                  label: '查看详情',
+                  onClick: () => handleViewDetail(record),
+                },
+                {
+                  key: 'divider1',
+                  type: 'divider' as const,
+                },
+                {
+                  key: 'edit',
+                  icon: <EditOutlined />,
+                  label: '快速编辑',
+                  onClick: () => handleQuickEdit(record),
+                },
+              ].filter(Boolean)}
+            />
+          )}
         </>
       ) : (
         <Card className="page-card">
           <div className="page-header">
             <h2 className="page-title">生产进度</h2>
+            <Space>
+              <Button
+                icon={viewMode === 'list' ? <AppstoreOutlined /> : <UnorderedListOutlined />}
+                onClick={() => setViewMode(viewMode === 'list' ? 'card' : 'list')}
+              >
+                {viewMode === 'list' ? '卡片视图' : '列表视图'}
+              </Button>
+            </Space>
           </div>
 
           <Card size="small" className="filter-card mb-sm">
@@ -2788,20 +3056,82 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             </Form>
           </Card>
 
-          <ResizableTable
-            rowKey={(r: ProductionOrder) => String(r.id || r.orderNo)}
-            loading={loading}
-            columns={columns}
-            dataSource={orders}
-            pagination={{
-              current: queryParams.page,
-              pageSize: queryParams.pageSize,
-              total,
-              showSizeChanger: true,
-              onChange: (page: number, pageSize: number) => setQueryParams((prev) => ({ ...prev, page, pageSize })),
-            }}
-            scroll={{ x: 1500 }}
-          />
+          {viewMode === 'list' ? (
+            <ResizableTable
+              rowKey={(r: ProductionOrder) => String(r.id || r.orderNo)}
+              loading={loading}
+              columns={columns}
+              dataSource={orders}
+              pagination={{
+                current: queryParams.page,
+                pageSize: queryParams.pageSize,
+                total,
+                showSizeChanger: true,
+                onChange: (page: number, pageSize: number) => setQueryParams((prev) => ({ ...prev, page, pageSize })),
+              }}
+              scroll={{ x: 1500 }}
+            />
+          ) : (
+            <UniversalCardView
+              dataSource={orders}
+              loading={loading}
+              columns={6}
+              coverField="styleCover"
+              titleField="styleNo"
+              subtitleField="orderNo"
+              fields={[
+                { label: '客户', key: 'customerName' },
+                { label: '工厂', key: 'factoryName' },
+                { label: '数量', key: 'quantity', suffix: ' 件' },
+                { label: '交期', key: 'expectedShipDate' },
+              ]}
+              progressConfig={{
+                calculate: (record: ProductionOrder) => {
+                  const prices = record.progressNodeUnitPrices || [];
+                  if (prices.length === 0) return 0;
+                  const completedCount = prices.filter((p: { completedQuantity?: number; quantity?: number }) =>
+                    (p.completedQuantity || 0) >= (p.quantity || 0)
+                  ).length;
+                  return Math.round((completedCount / prices.length) * 100);
+                },
+                getStatus: (record: ProductionOrder) => {
+                  const shipDate = record.expectedShipDate;
+                  if (!shipDate) return 'success';
+                  const now = new Date();
+                  const delivery = new Date(shipDate);
+                  const diffDays = Math.ceil((delivery.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                  if (diffDays < 0) return 'danger';
+                  if (diffDays <= 3) return 'warning';
+                  return 'success';
+                },
+                show: true,
+              }}
+              actions={(record: ProductionOrder) => [
+                {
+                  key: 'scan',
+                  icon: <ScanOutlined />,
+                  label: '扫码记录',
+                  onClick: () => handleViewScanHistory(record),
+                },
+                {
+                  key: 'view',
+                  icon: <EyeOutlined />,
+                  label: '查看详情',
+                  onClick: () => handleViewDetail(record),
+                },
+                {
+                  key: 'divider1',
+                  type: 'divider' as const,
+                },
+                {
+                  key: 'edit',
+                  icon: <EditOutlined />,
+                  label: '快速编辑',
+                  onClick: () => handleQuickEdit(record),
+                },
+              ].filter(Boolean)}
+            />
+          )}
         </Card>
       )}
 
@@ -3518,6 +3848,25 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         onCancel={() => {
           setQuickEditVisible(false);
           setQuickEditRecord(null);
+        }}
+      />
+
+      {/* 节点详情弹窗 - 水晶球生产节点看板 */}
+      <NodeDetailModal
+        visible={nodeDetailVisible}
+        onClose={() => {
+          setNodeDetailVisible(false);
+          setNodeDetailOrder(null);
+        }}
+        orderId={nodeDetailOrder?.id}
+        orderNo={nodeDetailOrder?.orderNo}
+        nodeType={nodeDetailType}
+        nodeName={nodeDetailName}
+        stats={nodeDetailStats}
+        unitPrice={nodeDetailUnitPrice}
+        processList={nodeDetailProcessList}
+        onSaved={() => {
+          void refresh();
         }}
       />
     </div>

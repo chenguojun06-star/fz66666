@@ -19,6 +19,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
   const [quotation, setQuotation] = useState<StyleQuotation | null>(null);
   const [bomList, setBomList] = useState<StyleBom[]>([]);
   const [processList, setProcessList] = useState<StyleProcess[]>([]);
+  const [secondaryProcessList, setSecondaryProcessList] = useState<any[]>([]);
 
   const materialCost = Number(Form.useWatch('materialCost', form)) || 0;
   const processCost = Number(Form.useWatch('processCost', form)) || 0;
@@ -74,6 +75,20 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
         setProcessList(processData);
       }
 
+      // 4. 自动计算二次工艺费用
+      const secondaryProcessRes = await api.get<any[]>(`/style/secondary-process/list?styleId=${styleId}`);
+      const secondaryProcessResult = secondaryProcessRes as Record<string, unknown>;
+      let secondaryCost = 0;
+      let secondaryData: any[] = [];
+      if (secondaryProcessResult.code === 200) {
+        secondaryData = (secondaryProcessResult.data || []) as any[];
+        secondaryCost = secondaryData.reduce((sum: number, item: any) => sum + (Number(item.unitPrice) || 0), 0);
+        setSecondaryProcessList(secondaryData);
+      }
+
+      // 工序总成本 = 普通工序 + 二次工艺
+      const totalProcessCost = procCost + secondaryCost;
+
       const baseValues = existing
         ? {
           ...existing,
@@ -88,7 +103,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
       const nextValues = {
         ...baseValues,
         materialCost: Number(bomCost.toFixed(2)),
-        processCost: Number(procCost.toFixed(2)),
+        processCost: Number(totalProcessCost.toFixed(2)),
       };
 
       setQuotation(existing ? nextValues : null);
@@ -135,8 +150,9 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
       const result = res as Record<string, unknown>;
       if (result.code === 200) {
         message.success('保存成功');
+        // 保存后自动刷新，不触发页面跳转
+        await fetchData();
         onSaved?.();
-        fetchData();
       } else {
         message.error(result.message || '保存失败');
       }
@@ -187,56 +203,66 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
       render: (v: unknown) => <span style={{ color: '#52c41a', fontWeight: 600 }}>¥{toNumberSafe(v).toFixed(2)}</span> },
   ];
 
+  // 二次工艺表格列定义
+  const secondaryProcessColumns: ColumnsType<any> = [
+    { title: '序号', dataIndex: 'sortOrder', key: 'sortOrder', width: 70, align: 'center',
+      render: (v: unknown, _: any, index: number) => toNumberSafe(v) || index + 1 },
+    { title: '工艺名称', dataIndex: 'processName', key: 'processName', width: 120,
+      render: (v: unknown) => String(v || '').trim() || '-' },
+    { title: '工艺描述', dataIndex: 'description', key: 'description', ellipsis: true,
+      render: (v: unknown) => String(v || '').trim() || '-' },
+    { title: '领取人', dataIndex: 'assignee', key: 'assignee', width: 100,
+      render: (v: unknown) => String(v || '').trim() || '-' },
+    { title: '完成时间', dataIndex: 'completedTime', key: 'completedTime', width: 160,
+      render: (v: unknown) => v ? String(v) : '-' },
+    { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 100, align: 'right',
+      render: (v: unknown) => <span style={{ color: '#fa8c16', fontWeight: 600 }}>¥{toNumberSafe(v).toFixed(2)}</span> },
+  ];
+
   return (
     <div className="style-quotation" style={{ padding: '0 4px' }}>
       {/* 1. 成本核算 - 顶部 */}
       <Row gutter={8} style={{ marginBottom: 8 }}>
         <Col span={18}>
-          <Card title="💰 成本核算" size="small" style={{ height: '100%' }} styles={{ body: { padding: '8px' } }}>
+          <Card title="� 成本核算" size="small" style={{ height: '100%' }} styles={{ body: { padding: '8px' } }}>
             <Form form={form} layout="vertical" onValuesChange={calculateTotal} size="small">
               <Row gutter={8}>
                 <Col span={8}>
-                  <Form.Item label={<span style={{ fontSize: '12px' }}>物料总成本 (自动)</span>} style={{ marginBottom: 4 }}>
-                    <Space.Compact style={{ width: '100%' }}>
-                      <Form.Item name="materialCost" noStyle>
-                        <InputNumber size="small" style={{ width: '100%', fontSize: '12px' }} prefix="¥" readOnly />
-                      </Form.Item>
-                      {!readOnly && <Button type="link" size="small" onClick={fetchData} style={{ fontSize: '11px' }}>刷新</Button>}
-                    </Space.Compact>
+                  <Form.Item label={<span style={{ fontSize: '14px', fontWeight: 600 }}>物料总成本 (自动)</span>} style={{ marginBottom: 4 }}>
+                    <Form.Item name="materialCost" noStyle>
+                      <InputNumber size="middle" style={{ width: '100%', fontSize: '16px' }} prefix="¥" readOnly />
+                    </Form.Item>
                   </Form.Item>
                 </Col>
                 <Col span={8}>
-                  <Form.Item label={<span style={{ fontSize: '12px' }}>工序总成本 (自动)</span>} style={{ marginBottom: 4 }}>
-                    <Space.Compact style={{ width: '100%' }}>
-                      <Form.Item name="processCost" noStyle>
-                        <InputNumber size="small" style={{ width: '100%', fontSize: '12px' }} prefix="¥" readOnly />
-                      </Form.Item>
-                      {!readOnly && <Button type="link" size="small" onClick={fetchData} style={{ fontSize: '11px' }}>刷新</Button>}
-                    </Space.Compact>
+                  <Form.Item label={<span style={{ fontSize: '14px', fontWeight: 600 }}>工序总成本 (自动)</span>} style={{ marginBottom: 4 }}>
+                    <Form.Item name="processCost" noStyle>
+                      <InputNumber size="middle" style={{ width: '100%', fontSize: '16px' }} prefix="¥" readOnly />
+                    </Form.Item>
                   </Form.Item>
                 </Col>
                 <Col span={8}>
-                  <Form.Item label={<span style={{ fontSize: '12px' }}>其他费用</span>} name="otherCost" style={{ marginBottom: 4 }}>
-                    <InputNumber size="small" style={{ width: '100%', fontSize: '12px' }} prefix="¥" min={0} />
+                  <Form.Item label={<span style={{ fontSize: '14px', fontWeight: 600 }}>其他费用</span>} name="otherCost" style={{ marginBottom: 4 }}>
+                    <InputNumber size="middle" style={{ width: '100%', fontSize: '16px' }} prefix="¥" min={0} />
                   </Form.Item>
                 </Col>
               </Row>
               <Row gutter={8}>
                 <Col span={8}>
-                  <Form.Item label={<span style={{ fontSize: '12px' }}>目标利润率 (%)</span>} name="profitRate" style={{ marginBottom: 4 }}>
-                    <InputNumber size="small" style={{ width: '100%', fontSize: '12px' }} min={0} max={100} />
+                  <Form.Item label={<span style={{ fontSize: '14px', fontWeight: 600 }}>目标利润率 (%)</span>} name="profitRate" style={{ marginBottom: 4 }}>
+                    <InputNumber size="middle" style={{ width: '100%', fontSize: '16px' }} min={0} max={100} />
                   </Form.Item>
                 </Col>
                 <Col span={8}>
-                  <Form.Item label={<span style={{ fontSize: '12px' }}>总成本</span>} name="totalCost" style={{ marginBottom: 4 }}>
-                    <InputNumber size="small" style={{ width: '100%', fontSize: '12px' }} prefix="¥" readOnly precision={2} />
+                  <Form.Item label={<span style={{ fontSize: '14px', fontWeight: 600 }}>总成本</span>} name="totalCost" style={{ marginBottom: 4 }}>
+                    <InputNumber size="middle" style={{ width: '100%', fontSize: '16px' }} prefix="¥" readOnly precision={2} />
                   </Form.Item>
                 </Col>
                 <Col span={8}>
-                  <Form.Item label={<span style={{ fontSize: '12px' }}>最终报价</span>} name="totalPrice" style={{ marginBottom: 4 }}>
+                  <Form.Item label={<span style={{ fontSize: '14px', fontWeight: 600 }}>最终报价</span>} name="totalPrice" style={{ marginBottom: 4 }}>
                     <InputNumber
-                      size="small"
-                      style={{ width: '100%', fontSize: '12px', fontWeight: 'bold' }}
+                      size="middle"
+                      style={{ width: '100%', fontSize: '18px', fontWeight: 'bold', color: '#ff4d4f' }}
                       prefix="¥"
                       readOnly
                       precision={2}
@@ -251,9 +277,9 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                       type="primary"
                       icon={<SaveOutlined />}
                       onClick={handleSave}
-                      size="small"
+                      size="middle"
                       block
-                      style={{ fontSize: '12px', marginTop: '4px' }}
+                      style={{ fontSize: '14px', marginTop: '4px', height: '40px' }}
                     >
                       保存报价单
                     </Button>
@@ -270,18 +296,18 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                 title="预估毛利"
                 value={profit}
                 precision={2}
-                styles={{ value: { fontSize: '16px', color: '#3f8600' } }}
+                styles={{ value: { fontSize: '20px', color: '#3f8600', fontWeight: 700 } }}
                 prefix="¥"
               />
             </div>
             <Divider style={{ margin: '6px 0' }} />
-            <div style={{ fontSize: '11px' }}>
-              <div style={{ marginBottom: 4 }}>
-                <span>物料占比：</span>
-                <span style={{ float: 'right' }}>
+            <div style={{ fontSize: '13px' }}>
+              <div style={{ marginBottom: 6 }}>
+                <span style={{ fontWeight: 600 }}>物料占比：</span>
+                <span style={{ float: 'right', fontWeight: 600 }}>
                   {((totalPrice ? (materialCost / totalPrice) * 100 : 0) || 0).toFixed(1)}%
                 </span>
-                <div style={{ height: 3, background: '#f0f0f0', marginTop: 4, borderRadius: 2 }}>
+                <div style={{ height: 4, background: '#f0f0f0', marginTop: 4, borderRadius: 2 }}>
                   <div style={{
                     width: `${totalPrice ? (materialCost / totalPrice) * 100 : 0}%`,
                     height: '100%',
@@ -291,11 +317,11 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                 </div>
               </div>
               <div>
-                <span>工费占比：</span>
-                <span style={{ float: 'right' }}>
+                <span style={{ fontWeight: 600 }}>工费占比：</span>
+                <span style={{ float: 'right', fontWeight: 600 }}>
                   {((totalPrice ? (processCost / totalPrice) * 100 : 0) || 0).toFixed(1)}%
                 </span>
-                <div style={{ height: 3, background: '#f0f0f0', marginTop: 4, borderRadius: 2 }}>
+                <div style={{ height: 4, background: '#f0f0f0', marginTop: 4, borderRadius: 2 }}>
                   <div style={{
                     width: `${totalPrice ? (processCost / totalPrice) * 100 : 0}%`,
                     height: '100%',
@@ -311,27 +337,27 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
 
       {/* 2. BOM 物料清单 - 中部 */}
       <Card
-        title={<span style={{ fontSize: '13px' }}>📦 BOM物料清单 ({bomList.length}项) - 总成本: ¥{materialCost.toFixed(2)}</span>}
+        title={<span style={{ fontSize: '15px', fontWeight: 600 }}>📦 BOM物料清单 ({bomList.length}项) - 总成本: ¥{materialCost.toFixed(2)}</span>}
         size="small"
         style={{ marginBottom: 8 }}
         styles={{ body: { padding: '8px' } }}
       >
         <Table
-          size="small"
+          size="middle"
           columns={bomColumns}
           dataSource={bomList}
           rowKey={(r) => String((r as Record<string, unknown>)?.id || Math.random())}
-          pagination={{ pageSize: 5, size: 'small', showSizeChanger: false, simple: true }}
+          pagination={false}
           scroll={{ x: 1100 }}
-          style={{ fontSize: '12px' }}
+          style={{ fontSize: '14px' }}
           summary={() => (
             <Table.Summary fixed>
               <Table.Summary.Row>
                 <Table.Summary.Cell index={0} colSpan={8} align="right">
-                  <strong style={{ fontSize: '12px' }}>物料总成本：</strong>
+                  <strong style={{ fontSize: '15px' }}>物料总成本：</strong>
                 </Table.Summary.Cell>
                 <Table.Summary.Cell index={8} align="right">
-                  <strong style={{ color: '#1890ff', fontSize: '13px' }}>
+                  <strong style={{ color: '#1890ff', fontSize: '16px', fontWeight: 700 }}>
                     ¥{materialCost.toFixed(2)}
                   </strong>
                 </Table.Summary.Cell>
@@ -341,36 +367,100 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
         />
       </Card>
 
-      {/* 3. 工序明细 - 底部 */}
+      {/* 3. 工序明细 */}
       <Card
-        title={<span style={{ fontSize: '13px' }}>🔧 工序明细 ({processList.length}项) - 总成本: ¥{processCost.toFixed(2)}</span>}
+        title={<span style={{ fontSize: '15px', fontWeight: 600 }}>🔧 工序明细 ({processList.length}项) - 小计: ¥{processList.reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0).toFixed(2)}</span>}
         size="small"
+        style={{ marginBottom: 8 }}
         styles={{ body: { padding: '8px' } }}
       >
         <Table
-          size="small"
+          size="middle"
           columns={processColumns}
           dataSource={processList}
           rowKey={(r) => String((r as Record<string, unknown>)?.id || Math.random())}
-          pagination={{ pageSize: 5, size: 'small', showSizeChanger: false, simple: true }}
+          pagination={false}
           scroll={{ x: 700 }}
-          style={{ fontSize: '12px' }}
-          summary={() => (
-            <Table.Summary fixed>
-              <Table.Summary.Row>
-                <Table.Summary.Cell index={0} colSpan={3} align="right">
-                  <strong style={{ fontSize: '12px' }}>工序总成本：</strong>
-                </Table.Summary.Cell>
-                <Table.Summary.Cell index={3} align="right">
-                  <strong style={{ color: '#52c41a', fontSize: '13px' }}>
-                    ¥{processCost.toFixed(2)}
-                  </strong>
-                </Table.Summary.Cell>
-              </Table.Summary.Row>
-            </Table.Summary>
-          )}
+          style={{ fontSize: '14px' }}
+          summary={() => {
+            const processTotal = processList.reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0);
+            return (
+              <Table.Summary fixed>
+                <Table.Summary.Row>
+                  <Table.Summary.Cell index={0} colSpan={3} align="right">
+                    <strong style={{ fontSize: '15px' }}>工序小计：</strong>
+                  </Table.Summary.Cell>
+                  <Table.Summary.Cell index={3} align="right">
+                    <strong style={{ color: '#52c41a', fontSize: '16px', fontWeight: 700 }}>
+                      ¥{processTotal.toFixed(2)}
+                    </strong>
+                  </Table.Summary.Cell>
+                </Table.Summary.Row>
+              </Table.Summary>
+            );
+          }}
         />
       </Card>
+
+      {/* 4. 二次工艺明细 */}
+      {secondaryProcessList.length > 0 && (
+        <Card
+          title={<span style={{ fontSize: '15px', fontWeight: 600 }}>✨ 二次工艺明细 ({secondaryProcessList.length}项) - 总费用: ¥{secondaryProcessList.reduce((sum, item) => sum + (Number(item.unitPrice) || 0), 0).toFixed(2)}</span>}
+          size="small"
+          styles={{ body: { padding: '8px' } }}
+        >
+          <Table
+            size="middle"
+            columns={secondaryProcessColumns}
+            dataSource={secondaryProcessList}
+            rowKey={(r) => String((r as Record<string, unknown>)?.id || Math.random())}
+            pagination={false}
+            scroll={{ x: 960 }}
+            style={{ fontSize: '14px' }}
+            summary={() => {
+              const secondaryTotal = secondaryProcessList.reduce((sum, item) => sum + (Number(item.unitPrice) || 0), 0);
+              return (
+                <Table.Summary fixed>
+                  <Table.Summary.Row>
+                    <Table.Summary.Cell index={0} colSpan={5} align="right">
+                      <strong style={{ fontSize: '15px' }}>二次工艺总费用：</strong>
+                    </Table.Summary.Cell>
+                    <Table.Summary.Cell index={5} align="right">
+                      <strong style={{ color: '#fa8c16', fontSize: '16px', fontWeight: 700 }}>
+                        ¥{secondaryTotal.toFixed(2)}
+                      </strong>
+                    </Table.Summary.Cell>
+                  </Table.Summary.Row>
+                </Table.Summary>
+              );
+            }}
+          />
+        </Card>
+      )}
+
+      {/* 5. 工序成本汇总 */}
+      {secondaryProcessList.length > 0 && (
+        <Card
+          size="small"
+          styles={{ body: { padding: '12px', background: '#f6ffed' } }}
+        >
+          <Row justify="space-between" align="middle">
+            <Col>
+              <span style={{ fontSize: '15px', fontWeight: 600 }}>
+                💰 工序总成本（普通工序 + 二次工艺）
+              </span>
+            </Col>
+            <Col>
+              <span style={{ fontSize: '20px', fontWeight: 700, color: '#52c41a' }}>
+                ¥{processCost.toFixed(2)}
+              </span>
+              <span style={{ fontSize: '13px', color: '#8c8c8c', marginLeft: 8 }}>
+                = ¥{processList.reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0).toFixed(2)} + ¥{secondaryProcessList.reduce((sum, item) => sum + (Number(item.unitPrice) || 0), 0).toFixed(2)}
+              </span>
+            </Col>
+          </Row>
+        </Card>
+      )}
     </div>
   );
 };

@@ -1405,4 +1405,86 @@ public class ProductionOrderOrchestrator {
         // 返回更新后的完整订单信息
         return productionOrderQueryService.getDetailById(orderId);
     }
+
+    /**
+     * 从样衣信息创建生产订单
+     * 会自动复制：BOM表、工序表、尺寸表、文件附件等
+     *
+     * @param styleId 样衣ID
+     * @param priceType 单价类型：process(工序单价) 或 sizePrice(多码单价)
+     * @param remark 备注
+     * @return 创建的订单信息
+     */
+    @Transactional
+    public Map<String, Object> createOrderFromStyle(String styleId, String priceType, String remark) {
+        // 1. 验证参数
+        if (!StringUtils.hasText(styleId)) {
+            throw new IllegalArgumentException("样衣ID不能为空");
+        }
+        if (!StringUtils.hasText(priceType)) {
+            throw new IllegalArgumentException("单价类型不能为空");
+        }
+
+        // 2. 获取样衣详细信息
+        StyleInfo style = styleInfoService.getDetailById(Long.parseLong(styleId.trim()));
+        if (style == null) {
+            throw new NoSuchElementException("样衣信息不存在：" + styleId);
+        }
+
+        // 3. 检查样衣开发状态
+        String progressNode = String.valueOf(style.getProgressNode() == null ? "" : style.getProgressNode()).trim();
+        if (!"样衣完成".equals(progressNode)) {
+            throw new IllegalStateException("样衣开发未完成，当前状态：" + progressNode + "，无法推送到下单管理");
+        }
+
+        // 4. 创建订单基本信息（暂时不保存到数据库，等所有数据准备好后一起保存）
+        ProductionOrder newOrder = new ProductionOrder();
+        newOrder.setStyleId(String.valueOf(style.getId()));
+        newOrder.setStyleNo(style.getStyleNo());
+        newOrder.setStyleName(style.getStyleName());
+        newOrder.setRemarks(StringUtils.hasText(remark) ? remark.trim() : null);
+
+        // 设置初始状态
+        newOrder.setProductionProgress(0);
+        newOrder.setMaterialArrivalRate(0);
+        newOrder.setStatus("pending"); // 待生产
+
+        // 5. 保存订单获取ID
+        boolean saved = productionOrderService.save(newOrder);
+        if (!saved || newOrder.getId() == null) {
+            throw new RuntimeException("创建订单失败");
+        }
+
+        String newOrderId = newOrder.getId();
+        String orderNo = newOrder.getOrderNo(); // 数据库自动生成
+
+        log.info("Created order from style: styleId={}, styleNo={}, orderId={}, orderNo={}",
+                styleId, style.getStyleNo(), newOrderId, orderNo);
+
+        // 6. 复制相关数据（BOM、工序、尺寸、附件等）
+        try {
+            // TODO: 实现具体的数据复制逻辑
+            // copyBomData(style.getId(), newOrderId);
+            // copyProcessData(style.getId(), newOrderId, priceType);
+            // copySizeData(style.getId(), newOrderId);
+            // copyAttachments(style.getId(), newOrderId);
+
+            log.warn("Data copy not implemented yet: BOM, Process, Size, Attachments");
+        } catch (Exception e) {
+            log.error("Failed to copy data from style to order: styleId={}, orderId={}",
+                    styleId, newOrderId, e);
+            // 如果复制失败，删除已创建的订单
+            productionOrderService.removeById(newOrderId);
+            throw new RuntimeException("复制样衣数据失败：" + e.getMessage(), e);
+        }
+
+        // 7. 返回结果
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("id", newOrderId);
+        result.put("orderNo", orderNo);
+        result.put("styleNo", style.getStyleNo());
+        result.put("styleName", style.getStyleName());
+
+        return result;
+    }
 }

@@ -57,6 +57,21 @@ public class StyleProcess {
      */
     private Integer sortOrder;
 
+    /**
+     * 领取人
+     */
+    private String assignee;
+
+    /**
+     * 开始时间
+     */
+    private LocalDateTime startTime;
+
+    /**
+     * 完成时间
+     */
+    private LocalDateTime completedTime;
+
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 }

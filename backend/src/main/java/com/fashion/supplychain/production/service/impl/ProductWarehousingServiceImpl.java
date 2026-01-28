@@ -302,7 +302,7 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
                     .eq(ScanRecord::getCuttingBundleId, bid)
                     .eq(ScanRecord::getScanType, "production")
                     .eq(ScanRecord::getScanResult, "success")
-                    .in(ScanRecord::getProcessName, java.util.Arrays.asList("整烫", "包装"))
+                    .in(ScanRecord::getProcessName, java.util.Arrays.asList("整烫", "二次工艺", "包装"))
                     .set(ScanRecord::getScanResult, "failure")
                     .set(ScanRecord::getRemark, "次品退回缝制，后续环节作废")
                     .set(ScanRecord::getUpdateTime, now));

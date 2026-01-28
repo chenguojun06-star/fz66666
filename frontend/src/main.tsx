@@ -7,6 +7,8 @@ import { AuthProvider } from './utils/authContext';
 import { AppProvider } from './utils/appContext';
 import 'antd/dist/reset.css'; // 引入组件库样式
 import './styles/global.css';
+import './styles/design-system.css'; // 设计系统
+import './styles/button-override.css'; // 按钮统一样式
 
 const themeStorageKey = 'app.theme';
 

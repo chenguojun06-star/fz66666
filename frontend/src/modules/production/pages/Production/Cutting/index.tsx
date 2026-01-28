@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { App, Button, Card, Form, Input, InputNumber, Select, Space, Tag } from 'antd';
-import { EyeOutlined, LoginOutlined, PlusOutlined, RollbackOutlined, EditOutlined } from '@ant-design/icons';
+import { EyeOutlined, LoginOutlined, PlusOutlined, RollbackOutlined, EditOutlined, AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
+import UniversalCardView from '@/components/common/UniversalCardView';
 import { useSync } from '@/utils/syncManager';
 import ResizableModal, {
   useResizableModalTableScrollY,

@@ -44,9 +44,10 @@ public class StyleSizeOrchestrator {
         }
         styleSize.setUpdateTime(LocalDateTime.now());
         boolean ok = styleSizeService.save(styleSize);
-        if (ok) {
-            tryCreateSizeTemplate(styleSize.getStyleId());
-        }
+        // 样衣阶段不自动同步到模板库
+        // if (ok) {
+        //     tryCreateSizeTemplate(styleSize.getStyleId());
+        // }
         if (!ok) {
             throw new IllegalStateException("保存失败");
         }
@@ -67,9 +68,10 @@ public class StyleSizeOrchestrator {
         styleSize.setStyleId(current.getStyleId());
         styleSize.setUpdateTime(LocalDateTime.now());
         boolean ok = styleSizeService.updateById(styleSize);
-        if (ok) {
-            tryCreateSizeTemplate(current.getStyleId());
-        }
+        // 样衣阶段不自动同步到模板库
+        // if (ok) {
+        //     tryCreateSizeTemplate(current.getStyleId());
+        // }
         if (!ok) {
             throw new IllegalStateException("保存失败");
         }

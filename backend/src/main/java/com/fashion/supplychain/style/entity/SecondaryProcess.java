@@ -1,0 +1,91 @@
+package com.fashion.supplychain.style.entity;
+
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import lombok.Data;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+/**
+ * 二次工艺实体类
+ */
+@Data
+@TableName("t_secondary_process")
+public class SecondaryProcess {
+
+    /**
+     * 主键ID
+     */
+    @TableId(type = IdType.AUTO)
+    private Long id;
+
+    /**
+     * 款号ID
+     */
+    private Long styleId;
+
+    /**
+     * 工艺类型（embroidery/printing/washing/dyeing/ironing/pleating/beading/other）
+     */
+    private String processType;
+
+    /**
+     * 工艺名称
+     */
+    private String processName;
+
+    /**
+     * 数量
+     */
+    private Integer quantity;
+
+    /**
+     * 单价
+     */
+    private BigDecimal unitPrice;
+
+    /**
+     * 总价
+     */
+    private BigDecimal totalPrice;
+
+    /**
+     * 工厂名称
+     */
+    private String factoryName;
+
+    /**
+     * 领取人
+     */
+    private String assignee;
+
+    /**
+     * 完成时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime completedTime;
+
+    /**
+     * 状态（pending/processing/completed/cancelled）
+     */
+    private String status;
+
+    /**
+     * 备注
+     */
+    private String remark;
+
+    /**
+     * 创建时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime createdAt;
+
+    /**
+     * 更新时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime updatedAt;
+}

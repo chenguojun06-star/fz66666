@@ -6,7 +6,7 @@ import com.fashion.supplychain.system.entity.Role;
 import com.fashion.supplychain.system.entity.SystemOperationLog;
 import com.fashion.supplychain.system.service.RolePermissionService;
 import com.fashion.supplychain.system.service.RoleService;
-import com.fashion.supplychain.system.service.SystemOperationLogService;
+import com.fashion.supplychain.system.service.LoginLogService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -25,7 +25,7 @@ public class RoleOrchestrator {
     private RolePermissionService rolePermissionService;
 
     @Autowired
-    private SystemOperationLogService systemOperationLogService;
+    private LoginLogService loginLogService;
 
     public Page<Role> list(Long page, Long pageSize, String roleName, String roleCode, String status) {
         return roleService.getRolePage(page, pageSize, roleName, roleCode, status);
@@ -123,15 +123,9 @@ public class RoleOrchestrator {
 
     private void saveOperationLog(String bizType, String bizId, String action, String remark) {
         try {
-            SystemOperationLog log = new SystemOperationLog();
-            log.setBizType(bizType);
-            log.setBizId(bizId);
-            log.setAction(action);
             UserContext ctx = UserContext.get();
-            log.setOperator(ctx != null ? ctx.getUsername() : null);
-            log.setRemark(remark);
-            log.setCreateTime(java.time.LocalDateTime.now());
-            systemOperationLogService.save(log);
+            String operator = (ctx != null ? ctx.getUsername() : null);
+            loginLogService.recordOperation(bizType, bizId, action, operator, remark);
         } catch (Exception e) {
         }
     }

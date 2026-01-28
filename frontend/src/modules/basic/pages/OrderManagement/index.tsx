@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { App, AutoComplete, Button, Card, Col, Form, Input, InputNumber, Row, Select, Space, Tabs, Tag, Tooltip } from 'antd';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
-import { ShoppingCartOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import { ShoppingCartOutlined, QuestionCircleOutlined, AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import { useSync } from '@/utils/syncManager';
+import UniversalCardView from '@/components/common/UniversalCardView';
 
 import dayjs from 'dayjs';
 import Layout from '@/components/Layout';
@@ -46,6 +47,7 @@ const defaultProgressNodes: ProgressNode[] = [
   { id: 'sewing', name: '车缝', processes: [{ id: 'sewing-0', processName: '车缝', unitPrice: 0 }] },
   { id: 'pressing', name: '大烫', processes: [{ id: 'pressing-0', processName: '大烫', unitPrice: 0 }] },
   { id: 'quality', name: '质检', processes: [{ id: 'quality-0', processName: '质检', unitPrice: 0 }] },
+  { id: 'secondary-process', name: '二次工艺', processes: [{ id: 'secondary-process-0', processName: '二次工艺', unitPrice: 0 }] },
   { id: 'packaging', name: '包装', processes: [{ id: 'packaging-0', processName: '包装', unitPrice: 0 }] },
   { id: 'warehousing', name: '入库', processes: [{ id: 'warehousing-0', processName: '入库', unitPrice: 0 }] },
 ];
@@ -92,6 +94,9 @@ const OrderManagement: React.FC = () => {
   const [selectedStyle, setSelectedStyle] = useState<StyleInfo | null>(null);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [form] = Form.useForm();
+
+  // 视图切换状态
+  const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
 
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailRows, setDetailRows] = useState<any[]>([]);
@@ -1184,9 +1189,17 @@ const OrderManagement: React.FC = () => {
       <Card className="page-card">
         <div className="page-header">
           <h2 className="page-title">下单管理</h2>
-          <Button type="primary" onClick={() => fetchStyles()}>
-            刷新
-          </Button>
+          <Space size={12}>
+            <Button
+              icon={viewMode === 'table' ? <AppstoreOutlined /> : <UnorderedListOutlined />}
+              onClick={() => setViewMode(viewMode === 'table' ? 'card' : 'table')}
+            >
+              {viewMode === 'table' ? '卡片视图' : '列表视图'}
+            </Button>
+            <Button type="primary" onClick={() => fetchStyles()}>
+              刷新
+            </Button>
+          </Space>
         </div>
 
         <Card size="small" className="filter-card mb-sm">
@@ -1211,20 +1224,46 @@ const OrderManagement: React.FC = () => {
           </Space>
         </Card>
 
-        <ResizableTable
-          rowKey={(r) => String(r.id ?? r.styleNo)}
-          columns={columns as Record<string, unknown>}
-          dataSource={styles}
-          loading={loading}
-          scroll={{ x: 'max-content', y: isMobile ? 360 : 560 }}
-          pagination={{
-            current: queryParams.page,
-            pageSize: queryParams.pageSize,
-            total,
-            showSizeChanger: true,
-            onChange: (page, pageSize) => setQueryParams(prev => ({ ...prev, page, pageSize })),
-          }}
-        />
+        {viewMode === 'table' ? (
+          <ResizableTable
+            rowKey={(r) => String(r.id ?? r.styleNo)}
+            columns={columns as Record<string, unknown>}
+            dataSource={styles}
+            loading={loading}
+            scroll={{ x: 'max-content', y: isMobile ? 360 : 560 }}
+            pagination={{
+              current: queryParams.page,
+              pageSize: queryParams.pageSize,
+              total,
+              showSizeChanger: true,
+              onChange: (page, pageSize) => setQueryParams(prev => ({ ...prev, page, pageSize })),
+            }}
+          />
+        ) : (
+          <UniversalCardView
+            dataSource={styles}
+            loading={loading}
+            columns={6}
+            coverField="cover"
+            titleField="styleNo"
+            subtitleField="styleName"
+            fields={[
+              { label: '品类', key: 'category', render: (val) => toCategoryCn(val) },
+              { label: 'BOM', key: 'bomCount', render: (val) => val > 0 ? '有' : '无' },
+              { label: '创建时间', key: 'createTime', render: (val) => formatDateTime(val) },
+            ]}
+            progressConfig={{ show: false }}
+            actions={(record) => [
+              {
+                key: 'create',
+                icon: <ShoppingCartOutlined />,
+                label: '下单',
+                onClick: () => openCreate(record),
+              },
+            ]}
+            onCardClick={(record) => openCreate(record)}
+          />
+        )}
       </Card>
 
       <ResizableModal

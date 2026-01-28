@@ -2,10 +2,11 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Card, Input, Select, Space, Tag, Form, Row, Col, InputNumber, Upload, message, Segmented, Dropdown, Collapse, Tabs, Modal, Tooltip } from 'antd';
 import type { MenuProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { PlusOutlined, SearchOutlined, EyeOutlined, EditOutlined, UploadOutlined, QuestionCircleOutlined, DownloadOutlined } from '@ant-design/icons';
+import { PlusOutlined, SearchOutlined, EyeOutlined, EditOutlined, UploadOutlined, QuestionCircleOutlined, DownloadOutlined, AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
 import QRCodeBox from '@/components/common/QRCodeBox';
 import Layout from '@/components/Layout';
+import UniversalCardView from '@/components/common/UniversalCardView';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import QuickEditModal from '@/components/common/QuickEditModal';
@@ -1415,6 +1416,18 @@ const MaterialPurchase: React.FC = () => {
       },
     },
     {
+      title: '来源',
+      dataIndex: 'sourceType',
+      key: 'sourceType',
+      width: 80,
+      render: (v: string) => {
+        if (v === 'sample') {
+          return <Tag color="orange">样衣</Tag>;
+        }
+        return <Tag color="blue">订单</Tag>;
+      },
+    },
+    {
       title: <SortableColumnTitle
         title="下单时间"
         sortField={sortField}
@@ -1720,35 +1733,16 @@ const MaterialPurchase: React.FC = () => {
         <Card className="page-card">
           {/* 页签切换 */}
           <Tabs
-            activeKey={activeTabKey}
-            onChange={(k) => {
-              if (k === 'purchase' || k === 'materialDatabase') {
-                setActiveTabKey(k);
-              }
-            }}
+            activeKey="purchase"
             items={[
               {
                 key: 'purchase',
-                label: '面辅料采购',
+                label: '面料采购',
                 children: (
                   <div>
                     {/* 页面标题和操作区 */}
                     <div className="page-header">
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <h2 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          {queryParams.materialType
-                            ? `${getMaterialTypeLabel(queryParams.materialType)}采购`
-                            : '面辅料采购'}
-                          <Tooltip
-                            title={
-                              '合并采购逻辑：从订单生成采购单时，会自动匹配同一天创建且同款的其它订单一起生成。\n'
-                              + '避免重复：若某订单已存在未删除的采购记录且未选择“覆盖生成”，该订单会被自动跳过。\n'
-                              + '合并方式：相同物料（类型/编码/名称/规格/单位/供应商相同）会共用同一采购单号，便于采购合单。'
-                            }
-                          >
-                            <QuestionCircleOutlined style={{ color: '#999', cursor: 'pointer' }} />
-                          </Tooltip>
-                        </h2>
                         <Segmented
                           value={queryParams.materialType || ''}
                           options={[
@@ -1759,6 +1753,15 @@ const MaterialPurchase: React.FC = () => {
                           ]}
                           onChange={(value) => setQueryParams(prev => ({ ...prev, materialType: String(value), page: 1 }))}
                         />
+                        <Tooltip
+                          title={
+                            '合并采购逻辑：从订单生成采购单时，会自动匹配同一天创建且同款的其它订单一起生成。\n'
+                            + '避免重复：若某订单已存在未删除的采购记录且未选择"覆盖生成"，该订单会被自动跳过。\n'
+                            + '合并方式：相同物料（类型/编码/名称/规格/单位/供应商相同）会共用同一采购单号，便于采购合单。'
+                          }
+                        >
+                          <QuestionCircleOutlined style={{ color: '#999', cursor: 'pointer' }} />
+                        </Tooltip>
                       </div>
                       <Space wrap>
                         <Button
@@ -1938,123 +1941,6 @@ const MaterialPurchase: React.FC = () => {
                         showSizeChanger: true,
                         size: isMobile ? 'small' : 'default',
                       }}
-                    />
-                  </div>
-                ),
-              },
-              {
-                key: 'materialDatabase',
-                label: '面辅料数据库',
-                children: (
-                  <div>
-                    {/* 面辅料数据库页面标题和操作区 */}
-                    <div className="page-header">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <h2 className="page-title">面辅料数据库</h2>
-                      </div>
-                      <Space wrap>
-                        <Button type="primary" icon={<PlusOutlined />} onClick={() => openMaterialDatabaseDialog('create')}>
-                          新增面辅料
-                        </Button>
-                      </Space>
-                    </div>
-
-                    {/* 面辅料数据库筛选区 */}
-                    <Card size="small" className="filter-card mb-sm">
-                      <Form layout="inline" size="small">
-                        <Form.Item label="物料编码">
-                          <Input
-                            placeholder="请输入物料编码"
-                            value={materialDatabaseQueryParams.materialCode}
-                            onChange={(e) => setMaterialDatabaseQueryParams({ ...materialDatabaseQueryParams, materialCode: e.target.value, page: 1 })}
-                            style={{ width: 120 }}
-                          />
-                        </Form.Item>
-                        <Form.Item label="物料名称">
-                          <Input
-                            placeholder="请输入物料名称"
-                            value={materialDatabaseQueryParams.materialName}
-                            onChange={(e) => setMaterialDatabaseQueryParams({ ...materialDatabaseQueryParams, materialName: e.target.value, page: 1 })}
-                            style={{ width: 120 }}
-                          />
-                        </Form.Item>
-                        <Form.Item label="款号">
-                          <Input
-                            placeholder="请输入款号"
-                            value={materialDatabaseQueryParams.styleNo}
-                            onChange={(e) => setMaterialDatabaseQueryParams({ ...materialDatabaseQueryParams, styleNo: e.target.value, page: 1 })}
-                            style={{ width: 100 }}
-                          />
-                        </Form.Item>
-                        <Form.Item label="物料类型">
-                          <Select
-                            placeholder="请选择物料类型"
-                            value={materialDatabaseQueryParams.materialType || ''}
-                            onChange={(value) => setMaterialDatabaseQueryParams({ ...materialDatabaseQueryParams, materialType: value, page: 1 })}
-                            style={{ width: 120 }}
-                          >
-                            <Option value="">全部</Option>
-                            <Option value="fabric">面料</Option>
-                            <Option value="fabricA">面料A</Option>
-                            <Option value="fabricB">面料B</Option>
-                            <Option value="fabricC">面料C</Option>
-                            <Option value="fabricD">面料D</Option>
-                            <Option value="fabricE">面料E</Option>
-                            <Option value="lining">里料</Option>
-                            <Option value="liningA">里料A</Option>
-                            <Option value="liningB">里料B</Option>
-                            <Option value="liningC">里料C</Option>
-                            <Option value="liningD">里料D</Option>
-                            <Option value="liningE">里料E</Option>
-                            <Option value="accessory">辅料</Option>
-                            <Option value="accessoryA">辅料A</Option>
-                            <Option value="accessoryB">辅料B</Option>
-                            <Option value="accessoryC">辅料C</Option>
-                            <Option value="accessoryD">辅料D</Option>
-                            <Option value="accessoryE">辅料E</Option>
-                          </Select>
-                        </Form.Item>
-                        <Form.Item label="供应商">
-                          <Input
-                            placeholder="请输入供应商"
-                            value={materialDatabaseQueryParams.supplierName}
-                            onChange={(e) => setMaterialDatabaseQueryParams({ ...materialDatabaseQueryParams, supplierName: e.target.value, page: 1 })}
-                            style={{ width: 120 }}
-                          />
-                        </Form.Item>
-                        <Form.Item className="filter-actions">
-                          <Space>
-                            <Button type="primary" icon={<SearchOutlined />} onClick={() => fetchMaterialDatabaseList()}>
-                              查询
-                            </Button>
-                            <Button onClick={() => {
-                              setMaterialDatabaseQueryParams({ page: 1, pageSize: 10 });
-                            }}>
-                              重置
-                            </Button>
-                          </Space>
-                        </Form.Item>
-                      </Form>
-                    </Card>
-
-                    {/* 辅料数据库表格区 */}
-                    <ResizableTable<MaterialDatabase>
-                      columns={materialDatabaseColumns}
-                      dataSource={materialDatabaseList}
-                      rowKey={(r) => String(r?.id || r?.materialCode || '')}
-                      loading={materialDatabaseLoading}
-                      scroll={{ x: 'max-content', y: isMobile ? 360 : 560 }}
-                      size={isMobile ? 'small' : 'middle'}
-                      pagination={{
-                        current: materialDatabaseQueryParams.page,
-                        pageSize: materialDatabaseQueryParams.pageSize,
-                        total: materialDatabaseTotal,
-                        onChange: (page, pageSize) => setMaterialDatabaseQueryParams({ ...materialDatabaseQueryParams, page, pageSize }),
-                        size: isMobile ? 'small' : 'default',
-                      }}
-                      resizableColumns={true}
-                      reorderableColumns={true}
-                      storageKey="materialDatabaseTable"
                     />
                   </div>
                 ),
@@ -2785,198 +2671,6 @@ const MaterialPurchase: React.FC = () => {
             >
               <Input.TextArea rows={3} maxLength={200} showCount />
             </Form.Item>
-          </Form>
-        </ResizableModal>
-
-        {/* 辅料数据库对话框 */}
-        <ResizableModal
-          title={materialDatabaseMode === 'create' ? '新增面辅料' : '编辑面辅料'}
-          open={materialDatabaseVisible}
-          onCancel={closeMaterialDatabaseDialog}
-          width={modalWidth}
-          initialHeight={modalInitialHeight}
-          minWidth={isMobile ? 320 : 520}
-          scaleWithViewport
-          tableDensity={isMobile ? 'dense' : 'auto'}
-          footer={[
-            <Button key="cancel" onClick={closeMaterialDatabaseDialog}>
-              取消
-            </Button>,
-            <Button key="submit" type="primary" loading={submitLoading} onClick={handleMaterialDatabaseSubmit}>
-              {materialDatabaseMode === 'create' ? '创建' : '保存'}
-            </Button>,
-          ]}
-        >
-          <Form form={materialDatabaseForm} layout="vertical" size={isMobile ? 'small' : 'middle'}>
-            <Row gutter={[16, 12]}>
-              <Col xs={24} sm={12} lg={6}>
-                <Form.Item
-                  name="image"
-                  label="物料图片"
-                >
-                  <Upload
-                    accept="image/*"
-                    listType="picture-card"
-                    maxCount={1}
-                    fileList={materialDatabaseImageFiles}
-                    onRemove={() => {
-                      materialDatabaseForm.setFieldsValue({ image: undefined });
-                      setMaterialDatabaseImageFiles([]);
-                      return true;
-                    }}
-                    beforeUpload={(file) => {
-                      void uploadMaterialDatabaseImage(file as File);
-                      return Upload.LIST_IGNORE;
-                    }}
-                  >
-                    {materialDatabaseImageFiles.length ? null : (
-                      <div>
-                        <UploadOutlined />
-                        <div style={{ marginTop: 8, fontSize: 'var(--font-size-sm)' }}>上传</div>
-                      </div>
-                    )}
-                  </Upload>
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} lg={6}>
-                <Form.Item
-                  name="materialCode"
-                  label="物料编码"
-                  rules={[{ required: true, message: '请输入物料编码' }]}
-                >
-                  <Input placeholder="请输入物料编码" />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} lg={6}>
-                <Form.Item
-                  name="materialName"
-                  label="物料名称"
-                  rules={[{ required: true, message: '请输入物料名称' }]}
-                >
-                  <Input placeholder="请输入物料名称" />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} lg={6}>
-                <Form.Item name="styleNo" label="款号">
-                  <Input placeholder="请输入款号" />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Row gutter={[16, 12]}>
-              <Col xs={24} sm={12} lg={6}>
-                <Form.Item
-                  name="materialType"
-                  label="物料类型"
-                  rules={[{ required: true, message: '请选择物料类型' }]}
-                >
-                  <Select placeholder="请选择物料类型">
-                    <Option value="fabric">面料</Option>
-                    <Option value="fabricA">面料A</Option>
-                    <Option value="fabricB">面料B</Option>
-                    <Option value="fabricC">面料C</Option>
-                    <Option value="fabricD">面料D</Option>
-                    <Option value="fabricE">面料E</Option>
-                    <Option value="lining">里料</Option>
-                    <Option value="liningA">里料A</Option>
-                    <Option value="liningB">里料B</Option>
-                    <Option value="liningC">里料C</Option>
-                    <Option value="liningD">里料D</Option>
-                    <Option value="liningE">里料E</Option>
-                    <Option value="accessory">辅料</Option>
-                    <Option value="accessoryA">辅料A</Option>
-                    <Option value="accessoryB">辅料B</Option>
-                    <Option value="accessoryC">辅料C</Option>
-                    <Option value="accessoryD">辅料D</Option>
-                    <Option value="accessoryE">辅料E</Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} lg={6}>
-                <Form.Item name="specifications" label="规格">
-                  <Input placeholder="请输入规格" />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} lg={6}>
-                <Form.Item
-                  name="unit"
-                  label="单位"
-                  rules={[{ required: true, message: '请输入单位' }]}
-                >
-                  <Input placeholder="请输入单位" />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} lg={6}>
-                <Form.Item
-                  name="supplierName"
-                  label="供应商"
-                  rules={[{ required: true, message: '请输入供应商' }]}
-                >
-                  <Input placeholder="请输入供应商" />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Row gutter={[16, 12]}>
-              <Col xs={24} sm={12} lg={6}>
-                <Form.Item name="unitPrice" label="单价(元)">
-                  <InputNumber
-                    placeholder="请输入单价"
-                    style={{ width: '100%' }}
-                    min={0}
-                    step={0.01}
-                    precision={2}
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} lg={6}>
-                <Form.Item name="description" label="描述">
-                  <Input.TextArea placeholder="请输入描述" autoSize={{ minRows: 1, maxRows: 3 }} />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} lg={6}>
-                <Form.Item name="createTime" label="创建时间">
-                  <Input type="datetime-local" placeholder="系统自动生成" disabled />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} lg={6}>
-                <Form.Item name="completedTime" label="完成时间">
-                  <Input type="datetime-local" placeholder="完成后自动生成" disabled />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Row gutter={[16, 12]}>
-              <Col xs={24} lg={12}>
-                <Form.Item name="remark" label="备注">
-                  <Input.TextArea
-                    placeholder="请输入备注"
-                    autoSize={{ minRows: 3, maxRows: 6 }}
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} lg={12}>
-                <Form.Item name="status" label="状态">
-                  <Select
-                    placeholder="请选择状态"
-                    onChange={(v) => {
-                      const st = String(v || 'pending').trim().toLowerCase();
-                      if (st === 'completed') {
-                        const existed = String(materialDatabaseForm.getFieldValue('completedTime') || '').trim();
-                        if (!existed) {
-                          materialDatabaseForm.setFieldsValue({ completedTime: toLocalDateTimeInputValue() });
-                        }
-                        return;
-                      }
-                      materialDatabaseForm.setFieldsValue({ completedTime: undefined });
-                    }}
-                  >
-                    <Option value="pending">待完成</Option>
-                    <Option value="completed">已完成</Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-            </Row>
           </Form>
         </ResizableModal>
 

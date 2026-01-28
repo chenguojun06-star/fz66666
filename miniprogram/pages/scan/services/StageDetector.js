@@ -8,7 +8,7 @@
  * 4. 支持从订单工艺模板动态读取工序列表和时间配置
  *
  * 核心逻辑：
- * - 订单级别：按照 采购→裁剪→车缝→大烫→质检→包装→入库 流程判断
+ * - 订单级别：按照 采购→裁剪→车缝→大烫→质检→二次工艺→包装→入库 流程判断
  * - 菲号级别：根据扫码次数匹配工序列表中的第N个工序
  * - 防重复：最小间隔 = max(30秒, 菲号数量 × 工序分钟 × 60 × 50%)
  *
@@ -36,8 +36,9 @@ class StageDetector {
       '车缝', // 2 - 车缝（原缝制已合并）
       '大烫', // 3 - 熨烫定型
       '质检', // 4 - 质量检验
-      '包装', // 5 - 包装
-      '入库', // 6 - 入库
+      '二次工艺', // 5 - 二次工艺（刺绣、印花等）
+      '包装', // 6 - 包装
+      '入库', // 7 - 入库
     ];
 
     // 车缝子工序列表（当订单未配置工艺模板时使用）
@@ -66,6 +67,7 @@ class StageDetector {
       大烫: { processName: '大烫', progressStage: '大烫', scanType: 'production' },
       整烫: { processName: '整烫', progressStage: '整烫', scanType: 'production' },
       质检: { processName: '质检', progressStage: '质检', scanType: 'quality' },
+      二次工艺: { processName: '二次工艺', progressStage: '二次工艺', scanType: 'production' },
       包装: { processName: '包装', progressStage: '包装', scanType: 'production' },
       入库: { processName: '入库', progressStage: '入库', scanType: 'warehouse' },
     };

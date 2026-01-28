@@ -26,6 +26,7 @@ export const paths = {
 
   styleInfoList: '/style-info',
   styleInfoDetail: '/style-info/:id',
+  patternProduction: '/pattern-production',
 
   orderManagementList: '/order-management',
   orderManagementDetail: '/order-management/:styleNo',
@@ -50,17 +51,26 @@ export const paths = {
   payrollOperatorSummary: '/finance/payroll-operator-summary',
   financeCenter: '/finance/center',
 
+  warehouseDashboard: '/warehouse/dashboard',
+  materialInventory: '/warehouse/material',
+  materialDatabase: '/warehouse/material-database',
+  finishedInventory: '/warehouse/finished',
+  sampleInventory: '/warehouse/sample',
+
   profile: '/system/profile',
   user: '/system/user',
   userApproval: '/system/user-approval',
   role: '/system/role',
   factory: '/system/factory',
   loginLog: '/system/login-log',
+  dict: '/system/dict',
+  tutorial: '/system/tutorial',
 } as const;
 
 export const permissionCodes = {
   dashboard: 'MENU_DASHBOARD',
   styleInfo: 'MENU_STYLE_INFO',
+  patternProduction: 'MENU_PATTERN_PRODUCTION',
   orderManagement: 'MENU_ORDER_MANAGEMENT',
   dataCenter: 'MENU_DATA_CENTER',
   templateCenter: 'MENU_TEMPLATE_CENTER',
@@ -77,11 +87,19 @@ export const permissionCodes = {
   orderReconciliationApproval: 'MENU_ORDER_RECON_APPROVAL',
   financeCenter: 'MENU_FINANCE_CENTER',
 
+  warehouseDashboard: 'MENU_WAREHOUSE_DASHBOARD',
+  materialInventory: 'MENU_MATERIAL_INVENTORY',
+  materialDatabase: 'MENU_MATERIAL_DATABASE',
+  finishedInventory: 'MENU_FINISHED_INVENTORY',
+  sampleInventory: 'MENU_SAMPLE_INVENTORY',
+
   user: 'MENU_USER',
   userApproval: 'MENU_USER_APPROVAL',
   role: 'MENU_ROLE',
   factory: 'MENU_FACTORY',
   loginLog: 'MENU_LOGIN_LOG',
+  dict: 'MENU_DICT',
+  tutorial: 'MENU_TUTORIAL',
 } as const;
 
 export type MenuItem = {
@@ -111,6 +129,7 @@ export const menuConfig: MenuSection[] = [
     icon: React.createElement(AppstoreOutlined),
     items: [
       { label: '样衣开发', path: paths.styleInfoList, icon: React.createElement(FileTextOutlined) },
+      { label: '样板生产', path: paths.patternProduction, icon: React.createElement(ScissorOutlined) },
       { label: '下单管理', path: paths.orderManagementList, icon: React.createElement(FileTextOutlined) },
       { label: '资料中心', path: paths.dataCenter, icon: React.createElement(DatabaseOutlined) },
       { label: '单价流程', path: paths.templateCenter, icon: React.createElement(BookOutlined) },
@@ -126,6 +145,18 @@ export const menuConfig: MenuSection[] = [
       { label: '裁剪管理', path: paths.cutting, icon: React.createElement(ScissorOutlined) },
       { label: '生产进度', path: paths.progressDetail, icon: React.createElement(FileSearchOutlined) },
       { label: '质检入库', path: paths.warehousing, icon: React.createElement(InboxOutlined) },
+    ],
+  },
+  {
+    title: '仓库管理',
+    key: 'warehouse',
+    icon: React.createElement(InboxOutlined),
+    items: [
+      { label: '数据看板', path: paths.warehouseDashboard, icon: React.createElement(DashboardOutlined) },
+      { label: '面辅料进销存', path: paths.materialInventory, icon: React.createElement(InboxOutlined) },
+      { label: '面辅料数据库', path: paths.materialDatabase, icon: React.createElement(DatabaseOutlined) },
+      { label: '成品进销存', path: paths.finishedInventory, icon: React.createElement(InboxOutlined) },
+      { label: '样衣出入库', path: paths.sampleInventory, icon: React.createElement(FileTextOutlined) },
     ],
   },
   {
@@ -149,7 +180,9 @@ export const menuConfig: MenuSection[] = [
       { label: '人员管理', path: paths.user, icon: React.createElement(TeamOutlined) },
       { label: '角色管理', path: paths.role, icon: React.createElement(UserSwitchOutlined) },
       { label: '供应商管理', path: paths.factory, icon: React.createElement(DatabaseOutlined) },
+      { label: '字典管理', path: paths.dict, icon: React.createElement(BookOutlined) },
       { label: '登录日志', path: paths.loginLog, icon: React.createElement(FileSearchOutlined) },
+      { label: '系统教学', path: paths.tutorial, icon: React.createElement(BookOutlined) },
     ],
   },
 ];
@@ -157,9 +190,17 @@ export const menuConfig: MenuSection[] = [
 export const routeToPermissionCode: Record<string, string> = {
   [paths.dashboard]: permissionCodes.dashboard,
   [paths.styleInfoList]: permissionCodes.styleInfo,
+  [paths.patternProduction]: permissionCodes.patternProduction,
   [paths.orderManagementList]: permissionCodes.orderManagement,
   [paths.dataCenter]: permissionCodes.dataCenter,
   [paths.templateCenter]: permissionCodes.templateCenter,
+
+  [paths.warehouseDashboard]: permissionCodes.warehouseDashboard,
+  [paths.materialInventory]: permissionCodes.materialInventory,
+  [paths.materialDatabase]: permissionCodes.materialDatabase,
+  [paths.finishedInventory]: permissionCodes.finishedInventory,
+  [paths.sampleInventory]: permissionCodes.sampleInventory,
+
 
   [paths.productionList]: permissionCodes.productionList,
   [paths.materialPurchase]: permissionCodes.materialPurchase,
@@ -176,6 +217,8 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.role]: permissionCodes.role,
   [paths.factory]: permissionCodes.factory,
   [paths.loginLog]: permissionCodes.loginLog,
+  [paths.dict]: permissionCodes.dict,
+  [paths.tutorial]: permissionCodes.tutorial,
 };
 
 const normalizePath = (p: string) => String(p || '').split('?')[0];

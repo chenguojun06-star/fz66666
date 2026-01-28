@@ -44,9 +44,10 @@ public class StyleProcessOrchestrator {
         }
         styleProcess.setUpdateTime(LocalDateTime.now());
         boolean ok = styleProcessService.save(styleProcess);
-        if (ok) {
-            tryCreateProcessTemplates(styleProcess.getStyleId());
-        }
+        // 样衣阶段不自动同步到模板库
+        // if (ok) {
+        //     tryCreateProcessTemplates(styleProcess.getStyleId());
+        // }
         if (!ok) {
             throw new IllegalStateException("保存失败");
         }
@@ -67,9 +68,10 @@ public class StyleProcessOrchestrator {
         styleProcess.setStyleId(current.getStyleId());
         styleProcess.setUpdateTime(LocalDateTime.now());
         boolean ok = styleProcessService.updateById(styleProcess);
-        if (ok) {
-            tryCreateProcessTemplates(current.getStyleId());
-        }
+        // 样衣阶段不自动同步到模板库
+        // if (ok) {
+        //     tryCreateProcessTemplates(current.getStyleId());
+        // }
         if (!ok) {
             throw new IllegalStateException("保存失败");
         }

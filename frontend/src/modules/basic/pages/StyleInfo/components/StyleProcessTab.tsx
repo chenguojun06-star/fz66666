@@ -6,11 +6,15 @@ import api, { toNumberSafe } from '@/utils/api';
 import { useViewport } from '@/utils/useViewport';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
+import { formatDateTime } from '@/utils/datetime';
 
 interface Props {
   styleId: string | number;
   readOnly?: boolean;
   hidePrice?: boolean; // 是否隐藏单价列
+  processAssignee?: string;
+  processStartTime?: string;
+  processCompletedTime?: string;
 }
 
 const norm = (v: unknown) => String(v || '').trim();
@@ -21,7 +25,14 @@ const isTempId = (id: any) => {
   return s.startsWith('-');
 };
 
-const StyleProcessTab: React.FC<Props> = ({ styleId, readOnly, hidePrice = false }) => {
+const StyleProcessTab: React.FC<Props> = ({
+  styleId,
+  readOnly,
+  hidePrice = false,
+  processAssignee,
+  processStartTime,
+  processCompletedTime,
+}) => {
   const [data, setData] = useState<StyleProcess[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -37,7 +48,6 @@ const StyleProcessTab: React.FC<Props> = ({ styleId, readOnly, hidePrice = false
   const [styleNoLoading, setStyleNoLoading] = useState(false);
   const styleNoReqSeq = useRef(0);
   const styleNoTimerRef = useRef<number | undefined>(undefined);
-  const { tableScrollY } = useViewport();
 
   const fetchStyleNoOptions = async (keyword?: string) => {
     const seq = (styleNoReqSeq.current += 1);
@@ -365,7 +375,7 @@ const StyleProcessTab: React.FC<Props> = ({ styleId, readOnly, hidePrice = false
               ]}
             />
           ) : (
-            text || '车缝'
+            record.progressStage || '车缝'
           ),
       },
       {
@@ -450,6 +460,25 @@ const StyleProcessTab: React.FC<Props> = ({ styleId, readOnly, hidePrice = false
 
   return (
     <div>
+      {/* 状态栏 */}
+      <div style={{
+        marginBottom: 16,
+        padding: '12px 16px',
+        background: '#f5f5f5',
+        borderRadius: 4,
+        display: 'flex',
+        gap: 24,
+      }}>
+        <span style={{ color: '#666' }}>
+          领取人：<span style={{ color: '#333', fontWeight: 500 }}>{processAssignee || '-'}</span>
+        </span>
+        <span style={{ color: '#666' }}>
+          开始时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(processStartTime)}</span>
+        </span>
+        <span style={{ color: '#666' }}>
+          完成时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(processCompletedTime)}</span>
+        </span>
+      </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <Space>
           <Select
@@ -544,7 +573,7 @@ const StyleProcessTab: React.FC<Props> = ({ styleId, readOnly, hidePrice = false
         pagination={false}
         loading={loading}
         rowKey="id"
-        scroll={{ x: 'max-content', y: tableScrollY }}
+        scroll={{ x: 'max-content' }}
         storageKey={`style-process-${String(styleId)}`}
         minColumnWidth={70}
       />

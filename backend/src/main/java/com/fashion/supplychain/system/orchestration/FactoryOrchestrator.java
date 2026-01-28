@@ -5,9 +5,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.system.entity.Factory;
-import com.fashion.supplychain.system.entity.SystemOperationLog;
 import com.fashion.supplychain.system.service.FactoryService;
-import com.fashion.supplychain.system.service.SystemOperationLogService;
+import com.fashion.supplychain.system.service.LoginLogService;
 import java.time.LocalDateTime;
 import java.util.NoSuchElementException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,7 +21,7 @@ public class FactoryOrchestrator {
     private FactoryService factoryService;
 
     @Autowired
-    private SystemOperationLogService systemOperationLogService;
+    private LoginLogService loginLogService;
 
     public IPage<Factory> list(String page, String pageSize, String factoryCode, String factoryName, String status) {
         int p = parsePositiveIntOrDefault(page, 1, "page");
@@ -136,15 +135,9 @@ public class FactoryOrchestrator {
 
     private void saveOperationLog(String bizType, String bizId, String action, String remark) {
         try {
-            SystemOperationLog log = new SystemOperationLog();
-            log.setBizType(bizType);
-            log.setBizId(bizId);
-            log.setAction(action);
             UserContext ctx = UserContext.get();
-            log.setOperator(ctx != null ? ctx.getUsername() : null);
-            log.setRemark(remark);
-            log.setCreateTime(LocalDateTime.now());
-            systemOperationLogService.save(log);
+            String operator = (ctx != null ? ctx.getUsername() : null);
+            loginLogService.recordOperation(bizType, bizId, action, operator, remark);
         } catch (Exception e) {
         }
     }

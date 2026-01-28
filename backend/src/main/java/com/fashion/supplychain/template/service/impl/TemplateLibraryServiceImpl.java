@@ -325,38 +325,12 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
 
     @Override
     public List<Map<String, Object>> resolveProgressNodeUnitPrices(String styleNo) {
+        // 只返回进度节点，不匹配工序单价
         TemplateLibrary tpl = resolveProgressTemplate(styleNo);
-        Map<String, BigDecimal> processPrices;
-        try {
-            processPrices = resolveProcessUnitPrices(styleNo);
-        } catch (Exception e) {
-            processPrices = new LinkedHashMap<>();
-        }
-
         List<Map<String, Object>> out = new ArrayList<>();
 
+        // 如果没有进度模板，返回空列表（不再返回工序单价数据）
         if (tpl == null || !StringUtils.hasText(tpl.getTemplateContent())) {
-            if (processPrices == null || processPrices.isEmpty()) {
-                return out;
-            }
-            for (Map.Entry<String, BigDecimal> e : processPrices.entrySet()) {
-                if (e == null) {
-                    continue;
-                }
-                String name = StringUtils.hasText(e.getKey()) ? e.getKey().trim() : "";
-                if (!StringUtils.hasText(name)) {
-                    continue;
-                }
-                BigDecimal up = e.getValue();
-                if (up == null || up.compareTo(BigDecimal.ZERO) < 0) {
-                    up = BigDecimal.ZERO;
-                }
-                Map<String, Object> item = new LinkedHashMap<>();
-                item.put("id", name);
-                item.put("name", name);
-                item.put("unitPrice", up.setScale(2, RoundingMode.HALF_UP));
-                out.add(item);
-            }
             return out;
         }
 
@@ -393,13 +367,7 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
                         up = BigDecimal.ZERO;
                     }
 
-                    if (processPrices != null && !processPrices.isEmpty()) {
-                        BigDecimal matched = matchProcessUnitPrice(processPrices, name);
-                        if (matched != null && matched.compareTo(BigDecimal.ZERO) > 0) {
-                            up = matched;
-                        }
-                    }
-
+                    // 不再从工序单价中匹配价格，只使用模板中的价格
                     Map<String, Object> item = new LinkedHashMap<>();
                     item.put("id", id);
                     item.put("name", name);
@@ -846,13 +814,23 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
             return new LinkedHashMap<>();
         }
         Map<String, Object> content = parseContentMap(tpl.getTemplateContent());
-        List<Map<String, Object>> steps = coerceListOfMap(content.get("steps"));
+
+        // 兼容两种格式：steps（旧格式）和 nodes（新格式）
+        List<Map<String, Object>> items = coerceListOfMap(content.get("steps"));
+        if (items == null || items.isEmpty()) {
+            items = coerceListOfMap(content.get("nodes"));
+        }
+
         LinkedHashMap<String, BigDecimal> out = new LinkedHashMap<>();
-        for (Map<String, Object> s : steps) {
+        for (Map<String, Object> s : items) {
             if (s == null) {
                 continue;
             }
+            // 兼容两种字段名：processName（旧）和 name（新）
             String name = String.valueOf(s.getOrDefault("processName", "")).trim();
+            if (!StringUtils.hasText(name)) {
+                name = String.valueOf(s.getOrDefault("name", "")).trim();
+            }
             if (!StringUtils.hasText(name)) {
                 continue;
             }

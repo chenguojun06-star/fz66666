@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { Button, Input, Modal, Space, Tabs, Tag, message } from 'antd';
+import { Button, Input, Modal, Space, Tag, message } from 'antd';
 import api from '@/utils/api';
 import { isSupervisorOrAboveUser, useAuth } from '@/utils/authContext';
 import { formatDateTime } from '@/utils/datetime';
@@ -11,6 +11,7 @@ interface Props {
   patternStatus?: string;
   patternStartTime?: string;
   patternCompletedTime?: string;
+  patternAssignee?: string;
   readOnly?: boolean;
   onRefresh: () => void;
 }
@@ -20,14 +21,14 @@ const StylePatternTab: React.FC<Props> = ({
   patternStatus,
   patternStartTime,
   patternCompletedTime,
+  patternAssignee,
   readOnly,
   onRefresh,
 }) => {
   const { user } = useAuth();
   const [saving, setSaving] = useState(false);
-  const [sectionKey, setSectionKey] = useState<'files' | 'grading'>('files');
+  const [sectionKey, setSectionKey] = useState<'files'>('files');
   const [patternFiles, setPatternFiles] = useState<StyleAttachment[]>([]);
-  const [gradingFiles, setGradingFiles] = useState<StyleAttachment[]>([]);
   const [patternCheckResult, setPatternCheckResult] = useState<{ complete: boolean; missingItems: string[] } | null>(null);
 
   // 检查纸样是否齐全
@@ -46,7 +47,7 @@ const StylePatternTab: React.FC<Props> = ({
 
   useEffect(() => {
     checkPatternComplete();
-  }, [checkPatternComplete, patternFiles, gradingFiles]);
+  }, [checkPatternComplete, patternFiles]);
 
   const status = useMemo(() => String(patternStatus || '').trim().toUpperCase(), [patternStatus]);
   const locked = useMemo(() => status === 'COMPLETED', [status]);
@@ -84,21 +85,7 @@ const StylePatternTab: React.FC<Props> = ({
     });
   }, [patternFiles]);
 
-  const hasValidGradingFile = useMemo(() => {
-    const list = Array.isArray(gradingFiles) ? gradingFiles : [];
-    return list.some((f) => {
-      const name = String((f as Record<string, unknown>)?.fileName || '').toLowerCase();
-      const url = String((f as Record<string, unknown>)?.fileUrl || '').toLowerCase();
-      return (
-        name.endsWith('.dxf') ||
-        name.endsWith('.plt') ||
-        name.endsWith('.ets') ||
-        url.includes('.dxf') ||
-        url.includes('.plt') ||
-        url.includes('.ets')
-      );
-    });
-  }, [gradingFiles]);
+
 
   const call = async (url: string, body?: any) => {
     setSaving(true);
@@ -158,6 +145,7 @@ const StylePatternTab: React.FC<Props> = ({
         <Space size="large" wrap>
           <span>纸样状态：</span>
           {statusTag}
+          <span>领取人：{patternAssignee || '-'}</span>
           <span>开始时间：{startTimeText}</span>
           <span>完成时间：{completedTimeText}</span>
           {/* 纸样齐全检查提示 */}
@@ -193,14 +181,10 @@ const StylePatternTab: React.FC<Props> = ({
               <Button
                 type="primary"
                 loading={saving}
-                disabled={!hasValidPatternFile || !hasValidGradingFile}
+                disabled={!hasValidPatternFile}
                 onClick={() => {
                   if (!hasValidPatternFile) {
                     message.error('请先上传纸样文件（dxf/plt/ets）');
-                    return;
-                  }
-                  if (!hasValidGradingFile) {
-                    message.error('请先上传放码纸样（dxf/plt/ets）');
                     return;
                   }
                   call(`/style/info/${styleId}/pattern/complete`);
@@ -211,13 +195,9 @@ const StylePatternTab: React.FC<Props> = ({
               {canRollback ? (
                 <Button danger loading={saving} onClick={openMaintenance}>维护</Button>
               ) : null}
-              {!hasValidPatternFile || !hasValidGradingFile ? (
+              {!hasValidPatternFile ? (
                 <span style={{ color: 'var(--neutral-text-lighter)' }}>
-                  {!hasValidPatternFile && !hasValidGradingFile
-                    ? '需先上传纸样和放码文件(dxf/plt/ets)'
-                    : !hasValidPatternFile
-                      ? '需先上传纸样(dxf/plt/ets)'
-                      : '需先上传放码文件(dxf/plt/ets)'}
+                  需先上传纸样(dxf/plt/ets)
                 </span>
               ) : null}
             </>
@@ -225,38 +205,16 @@ const StylePatternTab: React.FC<Props> = ({
         </Space>
       </div>
 
-      <Tabs
-        activeKey={sectionKey}
-        onChange={(k) => setSectionKey(k as Record<string, unknown>)}
-        items={[
-          {
-            key: 'files',
-            label: '纸样文件',
-            children: (
-              <StyleAttachmentTab
-                styleId={styleId}
-                bizType="pattern"
-                uploadText="上传纸样文件"
-                readOnly={childReadOnly}
-                onListChange={setPatternFiles}
-              />
-            ),
-          },
-          {
-            key: 'grading',
-            label: '放码文件',
-            children: (
-              <StyleAttachmentTab
-                styleId={styleId}
-                bizType="pattern_grading"
-                uploadText="上传放码文件"
-                readOnly={childReadOnly}
-                onListChange={setGradingFiles}
-              />
-            ),
-          },
-        ]}
-      />
+      {/* 纸样文件上传区域 */}
+      <div style={{ marginTop: 16 }}>
+        <StyleAttachmentTab
+          styleId={styleId}
+          bizType="pattern"
+          uploadText="上传纸样文件"
+          readOnly={childReadOnly}
+          onListChange={setPatternFiles}
+        />
+      </div>
     </div>
   );
 };

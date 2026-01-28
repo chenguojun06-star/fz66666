@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button, Card, Input, Select, Space, Tag, Form, Table, App, Dropdown, Checkbox } from 'antd';
-import { SearchOutlined, EyeOutlined, DownloadOutlined, DeleteOutlined, CheckCircleOutlined, EditOutlined, SettingOutlined, FileSearchOutlined } from '@ant-design/icons';
+import { SearchOutlined, EyeOutlined, DownloadOutlined, DeleteOutlined, CheckCircleOutlined, EditOutlined, SettingOutlined, FileSearchOutlined, AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import ResizableModal from '@/components/common/ResizableModal';
 import QuickEditModal from '@/components/common/QuickEditModal';
@@ -21,6 +21,7 @@ import dayjs from 'dayjs';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
+import UniversalCardView from '@/components/common/UniversalCardView';
 import { useLocation, useNavigate } from 'react-router-dom';
 import QRCodeBox from '@/components/common/QRCodeBox';
 import { StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
@@ -92,6 +93,7 @@ const ProductionList: React.FC = () => {
   const [selectedRows, setSelectedRows] = useState<ProductionOrder[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
 
   // 快速编辑状态
   const [quickEditVisible, setQuickEditVisible] = useState(false);
@@ -102,6 +104,57 @@ const ProductionList: React.FC = () => {
   const [logRecords, setLogRecords] = useState<ScanRecord[]>([]);
   const [logTitle, setLogTitle] = useState('日志');
 
+  // 默认显示的核心列（其他列默认隐藏，用户可以添加）
+  const defaultVisibleColumns: Record<string, boolean> = {
+    styleCover: true,          // 图片
+    styleNo: true,             // 款号
+    styleName: true,           // 款名
+    attachments: true,         // 附件
+    factoryName: true,         // 加工厂
+    orderQuantity: true,       // 订单数量
+    orderOperatorName: false,  // 下单人
+    createTime: false,         // 下单时间
+    remarks: false,            // 备注
+    expectedShipDate: true,    // 预计出货
+    procurementStartTime: false,
+    procurementEndTime: false,
+    procurementOperatorName: false,
+    procurementCompletionRate: false,
+    cuttingStartTime: false,
+    cuttingEndTime: false,
+    cuttingOperatorName: false,
+    cuttingCompletionRate: false,
+    carSewingStartTime: false,
+    carSewingEndTime: false,
+    carSewingOperatorName: false,
+    carSewingCompletionRate: false,
+    ironingStartTime: false,
+    ironingEndTime: false,
+    ironingOperatorName: false,
+    ironingCompletionRate: false,
+    packagingStartTime: false,
+    packagingEndTime: false,
+    packagingOperatorName: false,
+    packagingCompletionRate: false,
+    qualityStartTime: false,
+    qualityEndTime: false,
+    qualityOperatorName: false,
+    qualityCompletionRate: false,
+    warehousingStartTime: false,
+    warehousingEndTime: false,
+    warehousingOperatorName: false,
+    warehousingCompletionRate: false,
+    cuttingQuantity: false,    // 裁剪数量
+    cuttingBundleCount: false, // 扎数
+    completedQuantity: false,  // 完成数量
+    warehousingQualifiedQuantity: true,  // 入库数量
+    outstockQuantity: false,   // 出库数量
+    inStockQuantity: false,    // 库存
+    productionProgress: true,  // 生产进度
+    status: true,              // 状态
+    plannedEndDate: true,      // 订单交期
+  };
+
   // 列显示/隐藏状态
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(() => {
     const saved = localStorage.getItem('production-list-visible-columns');
@@ -109,25 +162,10 @@ const ProductionList: React.FC = () => {
       try {
         return JSON.parse(saved);
       } catch (e) {
-        return {};
+        return defaultVisibleColumns;
       }
     }
-    // 默认全部显示
-    return {
-      styleCover: true,
-      orderNo: true,
-      styleNo: true,
-      styleName: true,
-      attachments: true,
-      factoryName: true,
-      orderQuantity: true,
-      cuttingQuantity: true,
-      sewingCompletionRate: true,
-      warehousingQualifiedQuantity: true,
-      productionProgress: true,
-      status: true,
-      plannedEndDate: true,
-    };
+    return defaultVisibleColumns;
   });
 
   // 保存列显示状态到 localStorage
@@ -141,6 +179,103 @@ const ProductionList: React.FC = () => {
       ...prev,
       [key]: !prev[key]
     }));
+  };
+
+  // 列设置选项配置
+  const columnOptions = [
+    { key: 'styleCover', label: '图片' },
+    { key: 'styleNo', label: '款号' },
+    { key: 'styleName', label: '款名' },
+    { key: 'attachments', label: '附件' },
+    { key: 'factoryName', label: '加工厂' },
+    { key: 'orderQuantity', label: '订单数量' },
+    { key: 'orderOperatorName', label: '下单人' },
+    { key: 'createTime', label: '下单时间' },
+    { key: 'remarks', label: '备注' },
+    { key: 'expectedShipDate', label: '预计出货' },
+    { key: 'procurementStartTime', label: '采购时间' },
+    { key: 'procurementEndTime', label: '采购完成' },
+    { key: 'procurementOperatorName', label: '采购员' },
+    { key: 'procurementCompletionRate', label: '采购完成率' },
+    { key: 'cuttingStartTime', label: '裁剪时间' },
+    { key: 'cuttingEndTime', label: '裁剪完成' },
+    { key: 'cuttingOperatorName', label: '裁剪员' },
+    { key: 'cuttingCompletionRate', label: '裁剪完成率' },
+    { key: 'carSewingStartTime', label: '车缝开始' },
+    { key: 'carSewingEndTime', label: '车缝完成' },
+    { key: 'carSewingOperatorName', label: '车缝员' },
+    { key: 'carSewingCompletionRate', label: '车缝完成率' },
+    { key: 'ironingStartTime', label: '大烫开始' },
+    { key: 'ironingEndTime', label: '大烫完成' },
+    { key: 'ironingOperatorName', label: '大烫员' },
+    { key: 'ironingCompletionRate', label: '大烫完成率' },
+    { key: 'packagingStartTime', label: '包装开始' },
+    { key: 'packagingEndTime', label: '包装完成' },
+    { key: 'packagingOperatorName', label: '包装员' },
+    { key: 'packagingCompletionRate', label: '包装完成率' },
+    { key: 'qualityStartTime', label: '质检时间' },
+    { key: 'qualityEndTime', label: '质检完成' },
+    { key: 'qualityOperatorName', label: '质检员' },
+    { key: 'qualityCompletionRate', label: '质检完成率' },
+    { key: 'warehousingStartTime', label: '入库时间' },
+    { key: 'warehousingEndTime', label: '入库完成' },
+    { key: 'warehousingOperatorName', label: '入库员' },
+    { key: 'warehousingCompletionRate', label: '入库完成率' },
+    { key: 'cuttingQuantity', label: '裁剪数量' },
+    { key: 'cuttingBundleCount', label: '扎数' },
+    { key: 'completedQuantity', label: '完成数量' },
+    { key: 'warehousingQualifiedQuantity', label: '入库数量' },
+    { key: 'outstockQuantity', label: '出库数量' },
+    { key: 'inStockQuantity', label: '库存' },
+    { key: 'productionProgress', label: '生产进度' },
+    { key: 'status', label: '状态' },
+    { key: 'plannedEndDate', label: '订单交期' },
+  ];
+
+  // 重置列显示为默认值
+  const resetColumnSettings = () => {
+    setVisibleColumns(defaultVisibleColumns);
+    localStorage.removeItem('production-list-visible-columns');
+  };
+
+  // 列设置下拉菜单
+  const columnSettingsMenu = {
+    items: [
+      {
+        key: 'column-settings-title',
+        label: <div style={{ fontWeight: 600, color: '#666', padding: '0 4px' }}>选择要显示的列</div>,
+        disabled: true,
+      },
+      { type: 'divider' as const },
+      ...columnOptions.map(opt => ({
+        key: opt.key,
+        label: (
+          <div onClick={(e) => e.stopPropagation()}>
+            <Checkbox
+              checked={visibleColumns[opt.key] === true}
+              onChange={() => toggleColumnVisible(opt.key)}
+            >
+              {opt.label}
+            </Checkbox>
+          </div>
+        ),
+      })),
+      { type: 'divider' as const },
+      {
+        key: 'reset-columns',
+        label: (
+          <div
+            style={{ color: '#1890ff', textAlign: 'center', cursor: 'pointer' }}
+            onClick={(e) => {
+              e.stopPropagation();
+              resetColumnSettings();
+            }}
+          >
+            重置为默认
+          </div>
+        ),
+      },
+    ],
   };
 
   const { user } = useAuth();
@@ -1549,6 +1684,21 @@ const ProductionList: React.FC = () => {
           <div className="page-header">
             <h2 className="page-title">我的订单</h2>
             <Space wrap>
+              <Dropdown
+                menu={columnSettingsMenu}
+                trigger={['click']}
+                placement="bottomRight"
+              >
+                <Button icon={<SettingOutlined />}>
+                  列设置
+                </Button>
+              </Dropdown>
+              <Button
+                icon={viewMode === 'list' ? <AppstoreOutlined /> : <UnorderedListOutlined />}
+                onClick={() => setViewMode(viewMode === 'list' ? 'card' : 'list')}
+              >
+                {viewMode === 'list' ? '卡片视图' : '列表视图'}
+              </Button>
               <Button icon={<DownloadOutlined />} onClick={exportSelected} disabled={!selectedRowKeys.length}>
                 导出
               </Button>
@@ -1608,27 +1758,97 @@ const ProductionList: React.FC = () => {
             </Form>
           </Card>
 
-          {/* 表格区 */}
-          <ResizableTable<ProductionOrder>
-            storageKey="production-order-table"
-            columns={columns as Record<string, unknown>}
-            dataSource={sortedProductionList}
-            rowKey="id"
-            loading={loading}
-            rowSelection={{
-              selectedRowKeys,
-              onChange: (keys: React.Key[], rows: ProductionOrder[]) => {
-                setSelectedRowKeys(keys);
-                setSelectedRows(rows);
-              },
-            }}
-            pagination={{
-              current: queryParams.page,
-              pageSize: queryParams.pageSize,
-              total: total,
-              onChange: (page, pageSize) => setQueryParams({ ...queryParams, page, pageSize }),
-            }}
-          />
+          {/* 表格/卡片区 */}
+          {viewMode === 'list' ? (
+            <ResizableTable<ProductionOrder>
+              storageKey="production-order-table"
+              columns={columns as Record<string, unknown>}
+              dataSource={sortedProductionList}
+              rowKey="id"
+              loading={loading}
+              rowSelection={{
+                selectedRowKeys,
+                onChange: (keys: React.Key[], rows: ProductionOrder[]) => {
+                  setSelectedRowKeys(keys);
+                  setSelectedRows(rows);
+                },
+              }}
+              pagination={{
+                current: queryParams.page,
+                pageSize: queryParams.pageSize,
+                total: total,
+                onChange: (page, pageSize) => setQueryParams({ ...queryParams, page, pageSize }),
+              }}
+            />
+          ) : (
+            <UniversalCardView
+              dataSource={sortedProductionList}
+              columns={isMobile ? 2 : 6}
+              coverField="styleNo"
+              titleField="orderNo"
+              subtitleField="styleNo"
+              fields={[
+                {
+                  label: '码数',
+                  key: 'sizeCount',
+                  format: (val: any, record: any) => {
+                    // 优先使用sizeCount字段
+                    if (val) return `${val}个码`;
+                    // 降级方案：从productionOrderLines计算
+                    const lines = record?.productionOrderLines;
+                    if (!lines) return '-';
+                    const lineArr = Array.isArray(lines) ? lines : [];
+                    const uniqueSizes = new Set(lineArr.map((l: any) => l.size).filter(Boolean));
+                    return uniqueSizes.size > 0 ? `${uniqueSizes.size}个码` : '-';
+                  }
+                },
+                { label: '数量', key: 'quantity', suffix: ' 件' },
+                {
+                  label: '订单交期',
+                  key: 'expectedShipDate',
+                  format: (val: any) => val ? dayjs(val).format('MM-DD') : '-'
+                },
+              ]}
+              progressConfig={{
+                calculate: (record: ProductionOrder) => {
+                  const progress = Number(record.productionProgress) || 0;
+                  return Math.min(100, Math.max(0, progress));
+                },
+                getStatus: (record: ProductionOrder) => {
+                  const status = String(record.status || '').toLowerCase();
+                  if (status === 'completed') return 'success';
+                  if (status === 'delayed') return 'danger';
+                  if (status === 'production') return 'warning';
+                  return 'default';
+                },
+                show: true,
+              }}
+              actions={(record: ProductionOrder) => [
+                {
+                  key: 'view',
+                  icon: <EyeOutlined />,
+                  label: '查看',
+                  onClick: () => {
+                    setCurrentOrder(record);
+                    setVisible(true);
+                  },
+                },
+                {
+                  key: 'edit',
+                  icon: <EditOutlined />,
+                  label: '编辑',
+                  onClick: () => {
+                    setQuickEditRecord(record);
+                    setQuickEditVisible(true);
+                  },
+                },
+              ].filter(Boolean)}
+              onCardClick={(record: ProductionOrder) => {
+                setCurrentOrder(record);
+                setVisible(true);
+              }}
+            />
+          )}
         </Card>
 
         {/* 生产订单详情弹窗 */}

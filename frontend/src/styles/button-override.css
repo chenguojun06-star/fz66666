@@ -1,0 +1,242 @@
+/* ============================================
+   按钮统一样式覆盖 - 全站胶囊形绿色主题
+   ============================================ */
+
+/* ========== Ant Design 按钮全局覆盖 ========== */
+
+/* 主按钮 - 统一为蓝色胶囊形 */
+.ant-btn-primary {
+  background: #2D7FF9 !important;
+  border: none !important;
+  border-radius: 999px !important; /* 胶囊形 */
+  font-weight: 500 !important;
+  box-shadow: 0 4px 12px rgba(45, 127, 249, 0.3) !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  height: auto !important;
+  padding: 10px 24px !important;
+}
+
+.ant-btn-primary:hover {
+  background: #1E6FE8 !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 20px rgba(45, 127, 249, 0.4) !important;
+}
+
+.ant-btn-primary:active {
+  transform: translateY(0) !important;
+  box-shadow: 0 4px 12px rgba(45, 127, 249, 0.3) !important;
+}
+
+.ant-btn-primary:disabled {
+  background: #d1d5db !important;
+  box-shadow: none !important;
+  transform: none !important;
+  opacity: 0.6 !important;
+}
+
+/* 小尺寸主按钮 */
+.ant-btn-primary.ant-btn-sm {
+  padding: 6px 16px !important;
+  font-size: 13px !important;
+}
+
+/* 大尺寸主按钮 */
+.ant-btn-primary.ant-btn-lg {
+  padding: 14px 32px !important;
+  font-size: 16px !important;
+}
+
+/* 次要按钮 - 统一为胶囊形 */
+.ant-btn-default {
+  border-radius: 999px !important;
+  border-color: #e5e7eb !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  font-weight: 500 !important;
+  padding: 10px 24px !important;
+}
+
+.ant-btn-default:hover {
+  border-color: #2D7FF9 !important;
+  color: #2D7FF9 !important;
+  background: rgba(45, 127, 249, 0.04) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+}
+
+.ant-btn-default.ant-btn-sm {
+  padding: 6px 16px !important;
+}
+
+.ant-btn-default.ant-btn-lg {
+  padding: 14px 32px !important;
+}
+
+/* 幽灵按钮 */
+.ant-btn-ghost {
+  border-radius: 999px !important;
+  border-color: #2D7FF9 !important;
+  color: #2D7FF9 !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.ant-btn-ghost:hover {
+  background: rgba(45, 127, 249, 0.08) !important;
+  border-color: #1E6FE8 !important;
+}
+
+/* 文本按钮 */
+.ant-btn-text {
+  border-radius: 999px !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.ant-btn-text:hover {
+  background: rgba(45, 127, 249, 0.06) !important;
+  color: #2D7FF9 !important;
+}
+
+/* 链接按钮 */
+.ant-btn-link {
+  border-radius: 999px !important;
+  color: #2D7FF9 !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.ant-btn-link:hover {
+  color: #1E6FE8 !important;
+}
+
+/* 危险按钮 */
+.ant-btn-dangerous.ant-btn-primary {
+  background: #ef4444 !important;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3) !important;
+}
+
+.ant-btn-dangerous.ant-btn-primary:hover {
+  background: #dc2626 !important;
+  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4) !important;
+}
+
+/* 图标按钮 */
+.ant-btn-icon-only {
+  border-radius: 50% !important; /* 圆形 */
+  width: auto !important;
+  height: auto !important;
+  padding: 8px !important;
+}
+
+.ant-btn-icon-only.ant-btn-sm {
+  padding: 6px !important;
+}
+
+.ant-btn-icon-only.ant-btn-lg {
+  padding: 12px !important;
+}
+
+/* ========== 特殊场景覆盖 ========== */
+
+/* 搜索框内的按钮 */
+.ant-input-search .ant-input-search-button {
+  background: #2D7FF9 !important;
+  border: none !important;
+  border-radius: 0 999px 999px 0 !important;
+  box-shadow: 0 4px 12px rgba(45, 127, 249, 0.3) !important;
+}
+
+.ant-input-search .ant-input-search-button:hover {
+  background: #1E6FE8 !important;
+  box-shadow: 0 8px 20px rgba(45, 127, 249, 0.4) !important;
+}
+
+/* Space.Compact 中的按钮 */
+.ant-space-compact .ant-btn-primary {
+  border-radius: 0 999px 999px 0 !important;
+}
+
+.ant-space-compact .ant-btn:first-child:not(:last-child) {
+  border-radius: 999px 0 0 999px !important;
+}
+
+.ant-space-compact .ant-btn:last-child:not(:first-child) {
+  border-radius: 0 999px 999px 0 !important;
+}
+
+/* Modal 底部按钮 */
+.ant-modal-footer .ant-btn {
+  margin-left: 8px !important;
+}
+
+/* Popconfirm 按钮 */
+.ant-popover-buttons .ant-btn {
+  margin-left: 8px !important;
+}
+
+/* ========== 表格内按钮优化 ========== */
+.ant-table .ant-btn-sm {
+  padding: 4px 12px !important;
+  font-size: 12px !important;
+  height: auto !important;
+}
+
+/* ========== 按钮组 ========== */
+.ant-btn-group .ant-btn {
+  border-radius: 0 !important;
+}
+
+.ant-btn-group .ant-btn:first-child {
+  border-radius: 999px 0 0 999px !important;
+}
+
+.ant-btn-group .ant-btn:last-child {
+  border-radius: 0 999px 999px 0 !important;
+}
+
+.ant-btn-group .ant-btn:only-child {
+  border-radius: 999px !important;
+}
+
+/* ========== 加载状态 ========== */
+.ant-btn-loading {
+  opacity: 0.7 !important;
+}
+
+/* ========== 图标间距调整 ========== */
+.ant-btn > .anticon + span,
+.ant-btn > span + .anticon {
+  margin-left: 6px !important;
+}
+
+/* ========== 移除所有杂乱颜色 ========== */
+/* 统一主题色 */
+.ant-btn-primary[style*="background"] {
+  background: #2D7FF9 !important;
+}
+
+/* 移除其他颜色覆盖 */
+.ant-btn[style*="color: rgb"] {
+  color: inherit !important;
+}
+
+/* ========== 响应式优化 ========== */
+@media (max-width: 768px) {
+  .ant-btn {
+    padding: 8px 20px !important;
+    font-size: 13px !important;
+  }
+
+  .ant-btn-sm {
+    padding: 6px 14px !important;
+    font-size: 12px !important;
+  }
+
+  .ant-btn-lg {
+    padding: 12px 28px !important;
+    font-size: 15px !important;
+  }
+}
+
+/* ========== 打印时隐藏按钮阴影 ========== */
+@media print {
+  .ant-btn {
+    box-shadow: none !important;
+  }
+}

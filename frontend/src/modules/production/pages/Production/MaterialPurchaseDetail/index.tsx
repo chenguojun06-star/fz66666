@@ -452,7 +452,7 @@ const MaterialPurchaseDetail: React.FC = () => {
               关闭
             </Button>
           ]}
-          width="70vw"
+          width="60vw"
           initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.75 : 720}
         >
           {currentPurchase && (

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Spin, message } from 'antd';
+import { App, Card, Spin } from 'antd';
 import { InboxOutlined, WarningOutlined, CheckCircleOutlined, LineChartOutlined, ToolOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import './styles.css';
@@ -15,6 +15,7 @@ interface QualityStats {
 type TimeRange = 'day' | 'week' | 'month';
 
 const MiniDataDashboard: React.FC = () => {
+  const { message } = App.useApp();
   const [stats, setStats] = useState<QualityStats>({
     totalWarehousing: 0,
     defectiveCount: 0,

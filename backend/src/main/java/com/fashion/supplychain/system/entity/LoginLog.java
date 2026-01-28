@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 import lombok.Data;
 
 /**
- * 登录日志实体类
+ * 登录日志/操作日志实体类（合并后）
  */
 @Data
 @TableName("t_login_log")
@@ -35,4 +35,31 @@ public class LoginLog {
 
     @TableField(exist = false)
     private String userAgent;
+
+    // ==================== 操作日志相关字段 ====================
+
+    /**
+     * 日志类型：LOGIN-登录日志，OPERATION-操作日志
+     */
+    private String logType;
+
+    /**
+     * 业务类型（仅操作日志）
+     */
+    private String bizType;
+
+    /**
+     * 业务ID（仅操作日志）
+     */
+    private String bizId;
+
+    /**
+     * 操作动作（仅操作日志）
+     */
+    private String action;
+
+    /**
+     * 备注
+     */
+    private String remark;
 }

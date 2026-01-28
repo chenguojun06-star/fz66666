@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import org.apache.ibatis.annotations.Mapper;
@@ -33,4 +34,19 @@ public interface MaterialPurchaseMapper extends BaseMapper<MaterialPurchase> {
             "</script>"
     })
     List<Map<String, Object>> selectProcurementSnapshot(@Param("orderIds") List<String> orderIds);
+
+    /**
+     * 统计今日到货次数
+     */
+    @Select("SELECT COUNT(*) FROM t_material_purchase " +
+            "WHERE DATE(actual_arrival_date) = #{today} AND delete_flag = 0")
+    Integer selectTodayArrivalCount(@Param("today") LocalDate today);
+
+    /**
+     * 查询今日到货列表
+     */
+    @Select("SELECT * FROM t_material_purchase " +
+            "WHERE DATE(actual_arrival_date) = #{today} AND delete_flag = 0 " +
+            "ORDER BY actual_arrival_date DESC LIMIT 20")
+    List<MaterialPurchase> selectTodayArrivals(@Param("today") LocalDate today);
 }

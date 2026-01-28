@@ -73,7 +73,9 @@ public class SecurityConfig implements WebMvcConfigurer {
                         .antMatchers("/api/production/order/detail/**").permitAll()
                         .antMatchers("/api/production/cutting-bundle/by-no").permitAll()
                         .antMatchers("/api/production/cutting/summary").permitAll()
+                        .antMatchers("/api/production/order/node-operations/**").authenticated()
                         .antMatchers("/actuator/health", "/actuator/health/**", "/actuator/info", "/actuator/info/**").permitAll()
+                        .antMatchers("/api/warehouse/dashboard/**").permitAll() // TODO: 临时开放，权限配置后需要改为authenticated()
                         .antMatchers("/actuator/**").hasAnyAuthority(
                                 "ROLE_admin",
                                 "ROLE_ADMIN",

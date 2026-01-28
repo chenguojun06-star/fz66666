@@ -7,10 +7,14 @@ import { useViewport } from '@/utils/useViewport';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
+import { formatDateTime } from '@/utils/datetime';
 
 interface Props {
   styleId: string | number;
   readOnly?: boolean;
+  sizeAssignee?: string;
+  sizeStartTime?: string;
+  sizeCompletedTime?: string;
 }
 
 type MatrixCell = {
@@ -38,7 +42,13 @@ const splitSizeNames = (name: string) => {
   return parts;
 };
 
-const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
+const StyleSizeTab: React.FC<Props> = ({
+  styleId,
+  readOnly,
+  sizeAssignee,
+  sizeStartTime,
+  sizeCompletedTime,
+}) => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -60,7 +70,7 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
   const [styleNoLoading, setStyleNoLoading] = useState(false);
   const styleNoReqSeq = useRef(0);
   const styleNoTimerRef = useRef<number | undefined>(undefined);
-  const { tableScrollY, modalWidth } = useViewport();
+  const { modalWidth } = useViewport();
 
   const fetchStyleNoOptions = async (keyword?: string) => {
     const seq = (styleNoReqSeq.current += 1);
@@ -603,6 +613,25 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
 
   return (
     <div>
+      {/* 状态栏 */}
+      <div style={{
+        marginBottom: 16,
+        padding: '12px 16px',
+        background: '#f5f5f5',
+        borderRadius: 4,
+        display: 'flex',
+        gap: 24,
+      }}>
+        <span style={{ color: '#666' }}>
+          领取人：<span style={{ color: '#333', fontWeight: 500 }}>{sizeAssignee || '-'}</span>
+        </span>
+        <span style={{ color: '#666' }}>
+          开始时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(sizeStartTime)}</span>
+        </span>
+        <span style={{ color: '#666' }}>
+          完成时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(sizeCompletedTime)}</span>
+        </span>
+      </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <div />
         <Space>
@@ -690,6 +719,9 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
             </>
           )}
         </Space>
+        <div style={{ marginTop: 8, color: '#666', fontSize: 12 }}>
+          💡 提示：相关文件请在"文件管理"标签页统一上传
+        </div>
       </div>
 
       <ResizableTable
@@ -699,7 +731,7 @@ const StyleSizeTab: React.FC<Props> = ({ styleId, readOnly }) => {
         pagination={false}
         loading={loading}
         rowKey="key"
-        scroll={{ x: 'max-content', y: tableScrollY }}
+        scroll={{ x: 'max-content' }}
         tableLayout="auto"
         storageKey={`style-size-v2-${String(styleId)}`}
         minColumnWidth={70}

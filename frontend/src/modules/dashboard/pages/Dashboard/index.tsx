@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { AutoComplete, Button, Card, Checkbox, Input, Modal, Space, message } from 'antd';
+import { App, AutoComplete, Button, Card, Checkbox, Input, Modal, Space } from 'antd';
 import {
   AccountBookOutlined,
   ApartmentOutlined,
@@ -75,6 +75,7 @@ const STORAGE_KEY = 'dashboard_quick_entries';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
+  const { message } = App.useApp();
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchOptions, setSearchOptions] = useState<SearchOption[]>([]);
@@ -364,7 +365,7 @@ const Dashboard: React.FC = () => {
               loading={searchLoading}
               onClick={handleSearch}
             >
-              盲收
+              搜索
             </Button>
           </Space.Compact>
         </Card>

@@ -1,5 +1,5 @@
 import api from '../../utils/api';
-import type { ProductionQueryParams } from '../../types/production';
+import type { ProductionQueryParams, PatternDevelopmentStats } from '../../types/production';
 
 export type ProductionOrderListParams = ProductionQueryParams & {
   startDate?: string;
@@ -14,6 +14,9 @@ export const productionOrderApi = {
   saveProgressWorkflow: (payload: Record<string, unknown>) => api.post<{ code: number; message: string; data: boolean }>('/production/order/progress-workflow/lock', payload),
   rollbackProgressWorkflow: (payload: Record<string, unknown>) => api.post<{ code: number; message: string; data: boolean }>('/production/order/progress-workflow/rollback', payload),
   quickEdit: (payload: Record<string, unknown>) => api.put<{ code: number; message: string; data: unknown }>('/production/order/quick-edit', payload),
+  // 节点操作记录 API
+  getNodeOperations: (id: string) => api.get<{ code: number; data: string }>(`/production/order/node-operations/${encodeURIComponent(id)}`),
+  saveNodeOperations: (id: string, nodeOperations: string) => api.post<{ code: number; message: string }>('/production/order/node-operations', { id, nodeOperations }),
 };
 
 export const productionCuttingApi = {
@@ -30,9 +33,18 @@ export const productionWarehousingApi = {
   rollbackByBundle: (payload: Record<string, unknown>) => api.post<{ code: number; message: string; data: boolean }>('/production/warehousing/rollback-by-bundle', payload),
 };
 
+export const patternProductionApi = {
+  // 获取样衣开发费用统计
+  getDevelopmentStats: (rangeType: 'day' | 'week' | 'month' = 'day') =>
+    api.get<{ code: number; data: PatternDevelopmentStats }>('/production/pattern/development-stats', {
+      params: { rangeType },
+    }),
+};
+
 export default {
   productionOrderApi,
   productionCuttingApi,
   productionScanApi,
   productionWarehousingApi,
+  patternProductionApi,
 };

@@ -49,22 +49,23 @@ body {
   --glass-shadow-hover: 0 14px 36px rgba(17, 24, 39, 0.1);
   --glass-text: rgba(17, 24, 39, 0.88);
   --glass-text-muted: rgba(17, 24, 39, 0.56);
-  /* 中性色 */
+  /* 中性色 - 浅色主题深色文字 */
   --neutral-white: #FFFFFF;
   --neutral-light: #FAFAFA;
   --neutral-medium: #F0F0F0;
   --neutral-dark: #E0E0E0;
-  --neutral-text: #333333;
-  --neutral-text-light: #666666;
-  --neutral-text-lighter: #999999;
+  --neutral-text: #1a1a1a;
+  --neutral-text-light: #4a4a4a;
+  --neutral-text-lighter: #6b6b6b;
   --app-bg: #FAFAFA;
   --table-header-bg: #f7f8fa;
   --table-row-stripe-bg: #fbfbfc;
   --table-row-hover-bg: #f2f6ff;
+  /* 侧边栏 - 深色背景浅色文字 */
   --sidebar-bg-start: #0b2d5c;
   --sidebar-bg-end: #081c3a;
-  --sidebar-text: rgba(255, 255, 255, 0.88);
-  --sidebar-text-strong: rgba(255, 255, 255, 0.98);
+  --sidebar-text: rgba(255, 255, 255, 0.95);
+  --sidebar-text-strong: #ffffff;
   --sidebar-text-muted: rgba(255, 255, 255, 0.75);
   --sidebar-text-disabled: rgba(255, 255, 255, 0.45);
   --sidebar-item-bg-hover: rgba(255, 255, 255, 0.12);
@@ -123,21 +124,30 @@ body {
 
 :root[data-theme="blue"] {
   --primary-color: #2D7FF9;
+  /* 浅色主题 - 深色文字 */
   --neutral-white: #ffffff;
   --neutral-light: #eef4ff;
   --neutral-medium: #e3ebfb;
   --neutral-dark: #cdd8ee;
-  --neutral-text: #0b2d5c;
-  --neutral-text-light: rgba(11, 45, 92, 0.72);
-  --neutral-text-lighter: rgba(11, 45, 92, 0.52);
+  --neutral-text: #1a1a1a;
+  --neutral-text-light: #4a4a4a;
+  --neutral-text-lighter: #6b6b6b;
   --app-bg: #eaf1ff;
   --table-header-bg: rgba(45, 127, 249, 0.06);
   --table-row-stripe-bg: rgba(45, 127, 249, 0.03);
   --table-row-hover-bg: rgba(45, 127, 249, 0.08);
+  /* 侧边栏 - 深色背景白色文字 */
   --sidebar-bg-start: #0b2d5c;
   --sidebar-bg-end: #081c3a;
+  --sidebar-text: rgba(255, 255, 255, 0.95);
+  --sidebar-text-strong: #ffffff;
+  --sidebar-text-muted: rgba(255, 255, 255, 0.75);
+  --sidebar-text-disabled: rgba(255, 255, 255, 0.45);
   --user-avatar-gradient-start: #2d7ff9;
   --user-avatar-gradient-end: #0b2d5c;
+  /* 玻璃态 - 深色文字 */
+  --glass-text: rgba(17, 24, 39, 0.88);
+  --glass-text-muted: rgba(17, 24, 39, 0.56);
 }
 
 /* 浅蓝色主题（与小程序统一） */
@@ -219,20 +229,22 @@ body {
 
 :root[data-theme="white"] {
   --primary-color: #2D7FF9;
+  /* 浅色主题 - 深色文字 */
   --neutral-white: #ffffff;
   --neutral-light: #ffffff;
   --neutral-medium: #f2f2f2;
   --neutral-dark: #dedede;
-  --neutral-text: #1f1f1f;
-  --neutral-text-light: rgba(31, 31, 31, 0.72);
-  --neutral-text-lighter: rgba(31, 31, 31, 0.5);
+  --neutral-text: #1a1a1a;
+  --neutral-text-light: #4a4a4a;
+  --neutral-text-lighter: #6b6b6b;
   --app-bg: #ffffff;
   --table-header-bg: #fafafa;
   --table-row-stripe-bg: #ffffff;
   --table-row-hover-bg: #f5f7ff;
+  /* 侧边栏 - 浅色背景深色文字 */
   --sidebar-bg-start: #ffffff;
   --sidebar-bg-end: #ffffff;
-  --sidebar-text: #000000;
+  --sidebar-text: #1a1a1a;
   --sidebar-text-strong: #000000;
   --sidebar-text-muted: rgba(0, 0, 0, 0.7);
   --sidebar-text-disabled: rgba(0, 0, 0, 0.4);
@@ -255,18 +267,18 @@ body {
   --glass-text-muted: rgba(31, 31, 31, 0.56);
   --glass-shadow: 0 10px 30px rgba(31, 31, 31, 0.06);
   --glass-shadow-hover: 0 14px 36px rgba(31, 31, 31, 0.08);
-}
-
-/* 深色主题（雾黑色调） */
+}- 深色背景浅色文字 */
 :root[data-theme="dark"] {
   --primary-color: #6ba3ff;
 
-  /* 中性色 - 雾黑色调 */
+  /* 中性色 - 雾黑色调，浅色文字 */
   --neutral-white: #1a1d24;
   --neutral-light: #0f1115;
   --neutral-medium: rgba(255, 255, 255, 0.06);
   --neutral-dark: rgba(255, 255, 255, 0.1);
-  --neutral-text: #f0f2f5;
+  --neutral-text: #f5f5f5;
+  --neutral-text-light: #d1d5db;
+  --neutral-text-lighter: #9ca3af
   --neutral-text-light: #b8bdc6;
   --neutral-text-lighter: #8b92a0;
 

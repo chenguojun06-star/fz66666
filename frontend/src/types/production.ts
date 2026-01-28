@@ -205,6 +205,9 @@ export interface MaterialPurchase extends Record<string, unknown> {
   expectedArrivalDate?: string;
   expectedShipDate?: string;
   actualArrivalDate?: string;
+  // 采购来源字段
+  sourceType?: 'order' | 'sample';  // order=生产订单, sample=样衣开发
+  patternProductionId?: string;     // 样衣生产ID
 }
 
 export interface ProductWarehousing {
@@ -282,6 +285,7 @@ export interface MaterialQueryParams {
   supplier?: string;
   materialType?: string;
   status?: string;
+  sourceType?: 'order' | 'sample' | '';  // 采购来源: order=生产订单, sample=样衣开发
   page: number;
   pageSize: number;
 }
@@ -352,4 +356,14 @@ export interface MaterialDatabaseQueryParams {
   styleNo?: string;
   page: number;
   pageSize: number;
+}
+
+// 样衣开发费用统计
+export interface PatternDevelopmentStats {
+  rangeType: 'day' | 'week' | 'month';   // 时间范围
+  patternCount: number;                   // 样衣数量
+  materialCost: number;                   // 面辅料费用
+  processCost: number;                    // 工序单价费用
+  secondaryProcessCost: number;           // 二次工艺费用
+  totalCost: number;                      // 总开发费用
 }

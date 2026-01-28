@@ -1,6 +1,6 @@
 import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { Button, Spin } from 'antd';
+import { Button, Spin, App as AntdApp } from 'antd';
 import PrivateRoute from './components/PrivateRoute';
 import { useAuth } from './utils/authContext';
 import ResizableModal from './components/common/ResizableModal';
@@ -17,8 +17,15 @@ import {
   PayrollOperatorSummary,
   FinanceCenter,
 } from './modules/finance';
+import {
+  WarehouseDashboard,
+  MaterialInventory,
+  MaterialDatabase,
+  FinishedInventory,
+  SampleInventory,
+} from './modules/warehouse';
 import { Dashboard } from './modules/dashboard';
-import { UserList, UserApproval, RoleList, FactoryList, LoginLogList, Profile } from './modules/system';
+import { UserList, UserApproval, RoleList, FactoryList, LoginLogList, Profile, DictManage, Tutorial } from './modules/system';
 import {
   ProductionList,
   CuttingManagement,
@@ -28,6 +35,7 @@ import {
   OrderTransfer,
   OrderFlow,
   ProgressDetail,
+  PatternProduction,
 } from './modules/production';
 
 // 懒加载组件
@@ -182,6 +190,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.dashboard} element={<Suspense fallback={<Spin />}><Dashboard /></Suspense>} />
           <Route path={paths.styleInfoList} element={<Suspense fallback={<Spin />}><StyleInfo /></Suspense>} />
           <Route path={paths.styleInfoDetail} element={<Suspense fallback={<Spin />}><StyleInfo /></Suspense>} />
+          <Route path={paths.patternProduction} element={<Suspense fallback={<Spin />}><PatternProduction /></Suspense>} />
           <Route path={paths.productionList} element={<Suspense fallback={<Spin />}><ProductionList /></Suspense>} />
           <Route path={paths.cutting} element={<Suspense fallback={<Spin />}><CuttingManagement /></Suspense>} />
           <Route path={paths.cuttingTask} element={<Suspense fallback={<Spin />}><CuttingManagement /></Suspense>} />
@@ -205,7 +214,16 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.orderReconciliationApproval} element={<Suspense fallback={<Spin />}><OrderReconciliationApproval /></Suspense>} />
           <Route path={paths.payrollOperatorSummary} element={<Suspense fallback={<Spin />}><PayrollOperatorSummary /></Suspense>} />
           <Route path={paths.financeCenter} element={<Suspense fallback={<Spin />}><FinanceCenter /></Suspense>} />
+
+          <Route path={paths.warehouseDashboard} element={<Suspense fallback={<Spin />}><WarehouseDashboard /></Suspense>} />
+          <Route path={paths.materialInventory} element={<Suspense fallback={<Spin />}><MaterialInventory /></Suspense>} />
+          <Route path={paths.materialDatabase} element={<Suspense fallback={<Spin />}><MaterialDatabase /></Suspense>} />
+          <Route path={paths.finishedInventory} element={<Suspense fallback={<Spin />}><FinishedInventory /></Suspense>} />
+          <Route path={paths.sampleInventory} element={<Suspense fallback={<Spin />}><SampleInventory /></Suspense>} />
+
           <Route path={paths.user} element={<Suspense fallback={<Spin />}><UserList /></Suspense>} />
+          <Route path={paths.dict} element={<Suspense fallback={<Spin />}><DictManage /></Suspense>} />
+          <Route path={paths.tutorial} element={<Suspense fallback={<Spin />}><Tutorial /></Suspense>} />
           <Route path={paths.userApproval} element={<Suspense fallback={<Spin />}><UserApproval /></Suspense>} />
           <Route path={paths.role} element={<Suspense fallback={<Spin />}><RoleList /></Suspense>} />
           <Route path={paths.factory} element={<Suspense fallback={<Spin />}><FactoryList /></Suspense>} />
@@ -255,9 +273,11 @@ const AppRoutes: React.FC = () => {
 const App: React.FC = () => {
   return (
     <ErrorBoundary>
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <AppRoutes />
-      </BrowserRouter>
+      <AntdApp>
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <AppRoutes />
+        </BrowserRouter>
+      </AntdApp>
     </ErrorBoundary>
   );
 };

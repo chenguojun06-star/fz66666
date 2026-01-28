@@ -2,12 +2,18 @@
 
 ## 🎯 系统概览
 
-三端协同的服装供应链管理系统：**Java Spring Boot 后端** + **React TypeScript PC端** + **微信小程序手机端**，管理从订单到生产、质检、对账的完整流程。系统评分 96/100。
+三端协同的服装供应链管理系统：**Java Spring Boot 后端** + **React TypeScript PC端** + **微信小程序手机端**，管理从订单到生产、质检、对账的完整流程。系统评分 95/100。
 
 **核心技术栈**：
 - 后端：Spring Boot 2.7.18 + MyBatis Plus 3.5.7 + MySQL 9.0 + Java 21
 - PC端：React 18 + Ant Design 6.1.3 + Vite 7 + TypeScript 5.3.3 + Zustand
 - 小程序：微信原生框架 + JSDoc 类型注释
+
+**项目特点**：
+- 📊 **高代码质量**：小程序ESLint错误率<1%，后端无未使用导入
+- 🏗️ **成熟架构**：26个Orchestrator编排器 + 统一UI组件库
+- 📚 **完善文档**：15份核心文档（已精简56%）
+- 🔄 **三端统一**：SKU系统（款号+颜色+尺码）和验证规则跨平台一致
 
 ## 🏗️ 架构关键设计
 
@@ -122,6 +128,59 @@ import {
 
 参考 `ModalContentLayout.examples.md` 查看完整用法和迁移指南。
 
+### 前端：UniversalCardView 通用卡片视图组件
+通用列表卡片视图组件，支持响应式布局和丰富配置：
+```typescript
+// frontend/src/components/common/UniversalCardView/index.tsx
+import UniversalCardView from '@/components/common/UniversalCardView';
+
+<UniversalCardView
+  dataSource={records}
+  columns={4}                    // PC端4列，移动端自适应
+  coverField="coverImage"        // 封面图字段（1:1正方形）
+  titleField="styleNo"
+  subtitleField="color"
+  fields={[
+    { label: '数量', key: 'quantity', suffix: ' 件' },
+    { label: '交板', key: 'deliveryTime' },
+  ]}
+  progressConfig={{              // 可选进度条
+    calculate: (record) => calculateProgress(record),
+    getStatus: (record) => getDeliveryStatus(record),
+    show: true,
+  }}
+  actions={(record) => [...]}    // 操作菜单
+  onCardClick={(record) => {}}   // 点击事件
+/>
+```
+- 已在样板生产、裁剪单等页面应用
+- 支持 ViewToggle 切换表格/卡片视图
+
+### 前端：LiquidProgressLottie 进度球动画组件
+基于 Lottie 的流体进度球动画组件：
+```typescript
+// frontend/src/components/common/LiquidProgressLottie.tsx
+<LiquidProgressLottie
+  percent={85}
+  size={120}
+  colorPreset="primary"  // primary/success/warning/danger
+/>
+```
+
+### 前端：StyleAttachmentsButton 附件管理组件
+款式附件管理组件，支持过滤显示特定类型附件：
+```typescript
+// frontend/src/components/common/StyleAttachmentsButton.tsx
+<StyleAttachmentsButton
+  styleId={record.styleId}
+  onlyGradingPattern={true}  // 仅显示放码纸样（bizType='pattern_grading'）
+/>
+```
+- **onlyGradingPattern=true**: 订单相关页面仅显示放码纸样，避免混淆
+- **onlyGradingPattern=false**: 显示所有附件（默认）
+- 已在 9+ 页面统一应用（生产订单、裁剪单、数据中心、物料采购等）
+- 纸样完成验证：必须同时上传纸样文件(.dxf/.plt/.ets)和放码纸样才能标记完成
+
 ### 小程序：智能扫码工序识别（核心业务逻辑）
 三种扫码模式（参考 `SKU_QUICK_REFERENCE.md` 和 `SCAN_SYSTEM_LOGIC.md`）：
 1. **订单扫码(ORDER)**：扫 `PO20260122001`，显示SKU明细表单，用户选择数量
@@ -151,7 +210,7 @@ import {
 docker start fashion-mysql-simple
 
 # 2. 后端（推荐用 dev-public.sh，自动加载 .run/backend.env）
-./dev-public.sh  # 自动启动后端+前端+内网穿透
+./dev-public.sh  # 自动启动后端+前端+内网穿透（Cloudflare Tunnel）
 # 或单独启动后端
 cd backend && mvn spring-boot:run
 
@@ -162,10 +221,20 @@ cd frontend && npm run dev  # http://localhost:5173
 # 使用微信开发者工具打开 miniprogram/ 目录
 ```
 
-**环境变量配置**：
+**环境变量配置**（关键！）：
 - 后端环境变量在 `.run/backend.env`（需自行创建，不入版本库，参考 `ENV_CONFIG_GUIDE.md`）
 - 数据库连接默认 `localhost:3308`（⚠️ 非标准端口，Docker映射配置）
 - JWT密钥、微信配置等敏感信息通过环境变量注入
+- **必须使用 `dev-public.sh` 启动**，否则会因缺少环境变量导致 API 403 错误
+
+### 实用脚本工具
+| 脚本 | 用途 | 示例 |
+|------|------|------|
+| `./dev-public.sh` | 一键启动所有服务+内网穿透 | 推荐开发使用 |
+| `./git-sync.sh` | 自动 pull + add + commit + push | `./git-sync.sh "提交信息"` |
+| `./miniprogram-check.sh` | 小程序代码质量检查（ESLint + TypeScript） | 提交前必查 |
+| `deployment/db-manager.sh` | 数据库备份/恢复/迁移 | `./db-manager.sh backup` |
+| `check-system-status.sh` | 系统状态检查 | 快速诊断问题 |
 
 ### 数据库管理
 - **配置**：`deployment/DATABASE_CONFIG.md`
@@ -201,7 +270,19 @@ cd frontend && npm run dev  # http://localhost:5173
 - **弹窗尺寸**：统一 80vw × 85vh，使用 `ResizableModal`
 - **API 调用**：`services/api.ts` 统一封装，自动处理错误和 token
 - **路由配置**：`routeConfig.ts` 定义路径和权限码
+- **模块化结构**：按业务模块组织（`src/modules/` 下 basic/production/finance/system/dashboard）
+- **页面目录**：新页面放入 `src/modules/{模块名}/pages/` 目录
+- **路由懒加载**：模块入口使用 `React.lazy()` 实现代码分割
 - **性能优化**：使用 `requestAnimationFrame` 优化 INP 到 <200ms，构建限制 chunk 大小（800KB main, 300KB vendor）
+- **通用组件**：
+  - `ResizableModal`: 可调整大小的弹窗（80vw × 85vh标准）
+  - `QRCodeBox`: 统一二维码组件（4种主题）
+  - `ModalContentLayout`: 弹窗内容布局（9个可组合组件）
+  - `UniversalCardView`: 通用卡片视图（支持ViewToggle切换）
+  - `LiquidProgressLottie`: 流体进度球动画
+  - `UnifiedDatePicker`: 统一日期选择器（dayjs）
+  - `SortableColumn`: 通用排序列组件
+  - `StyleAttachmentsButton`: 款式附件按钮（支持 `onlyGradingPattern` 过滤放码纸样）
 
 ### 微信小程序
 - **目录结构**：`pages/` 页面，`utils/` 工具，`components/` 组件
@@ -217,19 +298,24 @@ cd frontend && npm run dev  # http://localhost:5173
   - TypeScript: `npm run 类型检查`（JSDoc 类型检查）
   - 完整检查: `./miniprogram-check.sh`（一键检查所有问题）
   - 详见：`docs/小程序开发工具指南.md`
+- **代码规范**：
+  - 所有 if/for/while 必须使用大括号（`curly: all`）
+  - 未使用参数以下划线前缀（`argsIgnorePattern: "^_"`）
+  - 复杂度上限15（核心业务逻辑允许适当超出）
+  - 函数最大行数150（不含空行和注释）
 
 ## 🔍 关键文件速查
 
 ### 必读文档（优先级排序）
 1. `开发指南.md` - **开发指南**（⭐ 最重要，包含完整架构和最佳实践）
 2. `系统状态.md` - 系统状态和文档索引（从这里开始）
-3. `SKU系统快速参考.md` - SKU系统快速参考（款号+颜色+尺码统一）
-4. `扫码系统逻辑.md` - 扫码系统核心逻辑（三种模式）
-5. `架构评估报告.md` - 架构评估报告（96分细节）
-6. `项目技术文档.md` - 完整技术文档
-7. `业务流程说明.md` - 业务流程说明
-8. `docs/代码质量工具完整指南.md` - 代码质量与业务优化工具（30+工具，PC端+后端）
-9. `docs/小程序开发工具指南.md` - **小程序专用工具**（ESLint, TypeScript, 性能分析）
+3. `docs/扫码和SKU系统完整指南.md` - **SKU系统完整说明**（款号+颜色+尺码统一）
+4. `架构评估报告.md` - 架构评估报告（96分细节）
+5. `项目技术文档.md` - 完整技术文档
+6. `业务流程说明.md` - 业务流程说明
+7. `docs/代码质量工具完整指南.md` - 代码质量与业务优化工具（30+工具，PC端+后端）
+8. `docs/小程序开发完整指南.md` - **小程序专用工具**（ESLint, TypeScript, 性能分析）
+9. `docs/功能实现指南.md` - 排序、工序、权限等功能实现指南
 
 ### 核心配置
 - `backend/pom.xml` - Spring Boot 2.7.18, MyBatis Plus 3.5.7, Java 21
@@ -240,8 +326,9 @@ cd frontend && npm run dev  # http://localhost:5173
 ### 关键业务文件
 - 订单实体：`backend/src/main/java/com/fashion/supplychain/production/entity/ProductionOrder.java`
 - PC端路由：`frontend/src/routeConfig.ts`
-- 小程序扫码：`miniprogram/pages/work/index.js`（450行，包含SKUProcessor逻辑）
+- 小程序扫码：`miniprogram/pages/work/index.js`（含SKUProcessor扫码逻辑）
 - 前端弹窗：`frontend/src/components/common/ResizableModal.tsx`
+- 卡片视图：`frontend/src/components/common/UniversalCardView/index.tsx`
 - 后端编排器示例：`backend/src/main/java/com/fashion/supplychain/production/orchestration/ProductionOrderOrchestrator.java`
 
 ## 💡 技术亮点与注意事项
@@ -267,7 +354,9 @@ cd frontend && npm run dev  # http://localhost:5173
 - 详细逻辑参考 `SCAN_SYSTEM_LOGIC.md`
 
 ### 文档优化历史
-- 2026-01-24：从60+份文档优化到17份核心文档（↓ 72%）
+- 2026-01-27：代码质量大提升（小程序ESLint↓93.7%，后端清理未使用导入）+ 附件系统优化（放码纸样过滤）
+- 2026-01-26：文档大整合，从34份精简到15份核心文档（↓ 56%）
+- 2026-01-24：从60+份文档优化到34份（首次）
 - 删除了28份过时/重复/已完成的报告文档
 - 集成了工资结算模块到人员工序结算
 - SKU系统整合完成，三端统一
@@ -276,11 +365,11 @@ cd frontend && npm run dev  # http://localhost:5173
 
 ### 添加新业务模块
 1. 后端：创建 `entity` → `mapper` → `service/serviceImpl` → `orchestrator`（如需跨服务） → `controller`
-2. 前端：在 `pages/` 创建目录 → 添加路由到 `routeConfig.ts` → 编写 API 到 `services/`
+2. 前端：在 `src/modules/{模块}/pages/` 创建目录 → 添加路由到 `routeConfig.ts` → 编写 API 到 `services/`
 3. 权限：在数据库 `t_role_permission` 添加权限码，后端 controller 添加 `@PreAuthorize`
 
 ### 修改弹窗表单
-1. 找到对应页面（如 `frontend/src/pages/Production/Cutting.tsx`）
+1. 找到对应页面（如 `frontend/src/modules/production/pages/Production/Cutting/index.tsx`）
 2. 使用 `<ResizableModal>` 包裹表单，确保尺寸 80vw × 85vh
 3. 表单校验使用 Ant Design 的 `rules` 配合 `validationRules`
 
@@ -296,5 +385,5 @@ cd frontend && npm run dev  # http://localhost:5173
 
 ---
 
-*最后更新：2026-01-24*  
+*最后更新：2026-01-28*  
 *维护者：如需更多细节，查阅根目录的 MD 文档*

@@ -553,9 +553,29 @@ public class DataInitializer implements CommandLineRunner {
                     "ALTER TABLE t_login_log ADD COLUMN login_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '登录时间'");
         }
 
+        // 添加操作日志相关字段
+        if (!columnExists("t_login_log", "log_type")) {
+            execSilently("ALTER TABLE t_login_log ADD COLUMN log_type VARCHAR(20) DEFAULT 'LOGIN' COMMENT '日志类型：LOGIN-登录日志，OPERATION-操作日志'");
+        }
+        if (!columnExists("t_login_log", "biz_type")) {
+            execSilently("ALTER TABLE t_login_log ADD COLUMN biz_type VARCHAR(50) COMMENT '业务类型'");
+        }
+        if (!columnExists("t_login_log", "biz_id")) {
+            execSilently("ALTER TABLE t_login_log ADD COLUMN biz_id VARCHAR(64) COMMENT '业务ID'");
+        }
+        if (!columnExists("t_login_log", "action")) {
+            execSilently("ALTER TABLE t_login_log ADD COLUMN action VARCHAR(50) COMMENT '操作动作'");
+        }
+        if (!columnExists("t_login_log", "remark")) {
+            execSilently("ALTER TABLE t_login_log ADD COLUMN remark VARCHAR(500) COMMENT '备注'");
+        }
+
         addIndexIfAbsent("t_login_log", "idx_login_time", "login_time");
         addIndexIfAbsent("t_login_log", "idx_username", "username");
         addIndexIfAbsent("t_login_log", "idx_login_result", "login_result");
+        addIndexIfAbsent("t_login_log", "idx_log_type", "log_type");
+        addIndexIfAbsent("t_login_log", "idx_biz", "biz_type, biz_id");
+        addIndexIfAbsent("t_login_log", "idx_action", "action");
     }
 
     private void ensureMaterialPurchaseTable() {

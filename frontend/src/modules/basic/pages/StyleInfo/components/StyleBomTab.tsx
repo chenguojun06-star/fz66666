@@ -8,10 +8,14 @@ import RowActions from '@/components/common/RowActions';
 import { isSupervisorOrAboveUser, useAuth } from '@/utils/authContext';
 import { getMaterialSortWeight, getMaterialTypeLabel, normalizeMaterialType } from '@/utils/materialType';
 import { useViewport } from '@/utils/useViewport';
+import { formatDateTime } from '@/utils/datetime';
 
 interface Props {
   styleId: string | number;
   readOnly?: boolean;
+  bomAssignee?: string;
+  bomStartTime?: string;
+  bomCompletedTime?: string;
 }
 
 type MaterialType = NonNullable<StyleBom['materialType']>;
@@ -48,7 +52,13 @@ const sortBomRows = (rows: StyleBom[]) => {
   return list;
 };
 
-const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
+const StyleBomTab: React.FC<Props> = ({
+  styleId,
+  readOnly,
+  bomAssignee,
+  bomStartTime,
+  bomCompletedTime,
+}) => {
   const { user } = useAuth();
   const { message } = App.useApp();
   const { modalWidth } = useViewport();
@@ -83,7 +93,6 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
   const locked = Boolean(readOnly);
 
   const isSupervisorOrAbove = isSupervisorOrAboveUser(user);
-  const { tableScrollY } = useViewport();
 
   const [styleNoOptions, setStyleNoOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [styleNoLoading, setStyleNoLoading] = useState(false);
@@ -1072,6 +1081,25 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
 
   return (
     <div>
+      {/* 状态栏 */}
+      <div style={{
+        marginBottom: 16,
+        padding: '12px 16px',
+        background: '#f5f5f5',
+        borderRadius: 4,
+        display: 'flex',
+        gap: 24,
+      }}>
+        <span style={{ color: '#666' }}>
+          领取人：<span style={{ color: '#333', fontWeight: 500 }}>{bomAssignee || '-'}</span>
+        </span>
+        <span style={{ color: '#666' }}>
+          开始时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(bomStartTime)}</span>
+        </span>
+        <span style={{ color: '#666' }}>
+          完成时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(bomCompletedTime)}</span>
+        </span>
+      </div>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
         <Space wrap>
           <Button
@@ -1395,7 +1423,7 @@ const StyleBomTab: React.FC<Props> = ({ styleId, readOnly }) => {
           pagination={false}
           loading={loading}
           rowKey="id"
-          scroll={{ x: 'max-content', y: tableScrollY }}
+          scroll={{ x: 'max-content' }}
           storageKey={`style-bom-${String(styleId)}`}
           minColumnWidth={70}
         />
