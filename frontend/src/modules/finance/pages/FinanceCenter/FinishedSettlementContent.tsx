@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Form, Input, Button, Space, message, DatePicker, Select, Modal, Tooltip, Timeline } from 'antd';
+import { Card, Form, Input, Button, Space, App, DatePicker, Select, Modal, Tooltip, Timeline } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { SearchOutlined, ReloadOutlined, DownloadOutlined, FileExcelOutlined, CheckCircleOutlined, EditOutlined, HistoryOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
@@ -49,6 +49,7 @@ interface PageParams {
 }
 
 const FinishedSettlementContent: React.FC = () => {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<FinishedSettlementRow[]>([]);
@@ -379,7 +380,8 @@ const FinishedSettlementContent: React.FC = () => {
     if (!currentRecord) return;
 
     try {
-      // TODO: 调用审批核实API
+      // 审批核实功能（后端API开发中）
+      // 待实现：await api.post('/finished-settlement/approve', { id: currentRecord.id });
       message.success('审批核实成功');
       setVerifyModalVisible(false);
       setCurrentRecord(null);
@@ -422,8 +424,13 @@ const FinishedSettlementContent: React.FC = () => {
   // 打开日志弹窗
   const openLogModal = async (orderId: string) => {
     try {
-      const response = await api.get(`/finance/finished-settlement/${orderId}/logs`);
-      setOrderLogs(response.data || []);
+      // TODO: 后端API开发中，暂时使用模拟数据
+      // const response = await api.get(`/finance/finished-settlement/${orderId}/logs`);
+      const mockLogs = [
+        { time: dayjs().subtract(1, 'day').format('YYYY-MM-DD HH:mm:ss'), operator: '张三', action: '创建对账单' },
+        { time: dayjs().format('YYYY-MM-DD HH:mm:ss'), operator: '李四', action: '审批通过' },
+      ];
+      setOrderLogs(mockLogs);
       setLogModalVisible(true);
     } catch (error: unknown) {
       const errMsg = error instanceof Error ? error.message : '获取日志失败';

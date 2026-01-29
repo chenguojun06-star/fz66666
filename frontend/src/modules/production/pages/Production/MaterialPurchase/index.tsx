@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Card, Input, Select, Space, Tag, Form, Row, Col, InputNumber, Upload, message, Segmented, Dropdown, Collapse, Tabs, Modal, Tooltip } from 'antd';
+import { useModal } from '@/hooks';
 import type { MenuProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, SearchOutlined, EyeOutlined, EditOutlined, UploadOutlined, QuestionCircleOutlined, DownloadOutlined, AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
@@ -100,18 +101,15 @@ const MaterialPurchase: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [submitLoading, setSubmitLoading] = useState(false);
 
-  const [returnConfirmOpen, setReturnConfirmOpen] = useState(false);
-  const [returnConfirmTargets, setReturnConfirmTargets] = useState<MaterialPurchaseType[]>([]);
+  const returnConfirmModal = useModal<MaterialPurchaseType[]>();
   const [returnConfirmSubmitting, setReturnConfirmSubmitting] = useState(false);
-  const [returnResetOpen, setReturnResetOpen] = useState(false);
-  const [returnResetTarget, setReturnResetTarget] = useState<MaterialPurchaseType | null>(null);
+  const returnResetModal = useModal<MaterialPurchaseType>();
   const [returnResetSubmitting, setReturnResetSubmitting] = useState(false);
   const [returnConfirmForm] = Form.useForm();
   const [returnResetForm] = Form.useForm();
 
   // 快速编辑状态
-  const [quickEditVisible, setQuickEditVisible] = useState(false);
-  const [quickEditRecord, setQuickEditRecord] = useState<MaterialPurchaseType | null>(null);
+  const quickEditModal = useModal<MaterialPurchaseType>();
   const [quickEditSaving, setQuickEditSaving] = useState(false);
 
   const [purchaseSortField, setPurchaseSortField] = useState<string>('createTime');
@@ -140,9 +138,8 @@ const MaterialPurchase: React.FC = () => {
   const watchedStyleCover = Form.useWatch('styleCover', form);
 
   // 辅料数据库相关状态
-  const [materialDatabaseVisible, setMaterialDatabaseVisible] = useState(false);
-  const [currentMaterial, setCurrentMaterial] = useState<MaterialDatabase | null>(null);
-  const [materialDatabaseMode, setMaterialDatabaseMode] = useState<'create' | 'edit'>('create');
+  type MaterialDatabaseModalData = MaterialDatabase & { mode: 'create' | 'edit' };
+  const materialDatabaseModal = useModal<MaterialDatabaseModalData>();
   const [materialDatabaseList, setMaterialDatabaseList] = useState<MaterialDatabase[]>([]);
   const [materialDatabaseLoading, setMaterialDatabaseLoading] = useState(false);
   const [materialDatabaseTotal, setMaterialDatabaseTotal] = useState(0);
@@ -249,8 +246,7 @@ const MaterialPurchase: React.FC = () => {
       const ok = await ensureOrderUnlocked(orderKey);
       if (!ok) return;
     }
-    setReturnConfirmTargets(list);
-    setReturnConfirmOpen(true);
+    returnConfirmModal.open(list);
   };
 
   const openReturnReset = async (target: MaterialPurchaseType) => {
@@ -259,8 +255,7 @@ const MaterialPurchase: React.FC = () => {
       const ok = await ensureOrderUnlocked(orderKey);
       if (!ok) return;
     }
-    setReturnResetTarget(target);
-    setReturnResetOpen(true);
+    returnResetModal.open(target);
   };
 
   // 导出采购单数据到 Excel
@@ -333,10 +328,10 @@ const MaterialPurchase: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!returnConfirmOpen) {
+    if (!returnConfirmModal.visible) {
       return;
     }
-    const list = (returnConfirmTargets || []).filter((t) => String(t?.id || '').trim());
+    const list = (returnConfirmModal.data || []).filter((t) => String(t?.id || '').trim());
     returnConfirmForm.setFieldsValue({
       items: list.map((t) => ({
         purchaseId: String(t.id),
@@ -348,14 +343,14 @@ const MaterialPurchase: React.FC = () => {
           || (Number(t.arrivedQuantity || 0) || Number(t.purchaseQuantity || 0) || 0),
       })),
     });
-  }, [returnConfirmForm, returnConfirmOpen, returnConfirmTargets]);
+  }, [returnConfirmForm, returnConfirmModal.visible, returnConfirmModal.data]);
 
   useEffect(() => {
-    if (!returnResetOpen) {
+    if (!returnResetModal.visible) {
       return;
     }
     returnResetForm.setFieldsValue({ reason: '' });
-  }, [returnResetForm, returnResetOpen]);
+  }, [returnResetForm, returnResetModal.visible]);
 
   const buildColorSummary = (lines: Array<{ color: string; size: string; quantity: number }>) => {
     const set = new Set<string>();
@@ -610,8 +605,6 @@ const MaterialPurchase: React.FC = () => {
 
   // 打开辅料数据库对话框
   const openMaterialDatabaseDialog = (mode: 'create' | 'edit', material?: MaterialDatabase) => {
-    setMaterialDatabaseMode(mode);
-    setCurrentMaterial(material || null);
     if (mode === 'create') {
       // 设置当前时间为创建时间默认值
       const formattedNow = toLocalDateTimeInputValue();
@@ -623,6 +616,7 @@ const MaterialPurchase: React.FC = () => {
         image: undefined,
       });
       setMaterialDatabaseImageFiles([]);
+      materialDatabaseModal.open({ mode } as MaterialDatabaseModalData);
     } else if (material) {
       const formattedMaterial = {
         ...material,
@@ -631,17 +625,17 @@ const MaterialPurchase: React.FC = () => {
       };
       materialDatabaseForm.setFieldsValue(formattedMaterial);
       setMaterialDatabaseImageFiles(buildImageFileList(material?.image));
+      materialDatabaseModal.open({ ...material, mode } as MaterialDatabaseModalData);
     } else {
       materialDatabaseForm.resetFields();
       setMaterialDatabaseImageFiles([]);
+      materialDatabaseModal.open({ mode } as MaterialDatabaseModalData);
     }
-    setMaterialDatabaseVisible(true);
   };
 
   // 关闭辅料数据库对话框
   const closeMaterialDatabaseDialog = () => {
-    setMaterialDatabaseVisible(false);
-    setCurrentMaterial(null);
+    materialDatabaseModal.close();
     materialDatabaseForm.resetFields();
     setMaterialDatabaseImageFiles([]);
   };
@@ -661,16 +655,16 @@ const MaterialPurchase: React.FC = () => {
         image: String(values?.image || '').trim() || undefined,
       };
 
-      if (materialDatabaseMode === 'create') {
+      if (materialDatabaseModal.data?.mode === 'create') {
         unwrapApiData<boolean>(await api.post<{ code: number; message: string; data: boolean }>('/material/database', payload), '新增失败');
       } else {
         unwrapApiData<boolean>(
-          await api.put<{ code: number; message: string; data: boolean }>('/material/database', { ...payload, id: currentMaterial?.id }),
+          await api.put<{ code: number; message: string; data: boolean }>('/material/database', { ...payload, id: materialDatabaseModal.data?.id }),
           '保存失败'
         );
       }
 
-      message.success(materialDatabaseMode === 'edit' ? '保存成功' : '新增成功');
+      message.success(materialDatabaseModal.data?.mode === 'edit' ? '保存成功' : '新增成功');
       closeMaterialDatabaseDialog();
       fetchMaterialDatabaseList();
     } catch (error) {
@@ -817,8 +811,7 @@ const MaterialPurchase: React.FC = () => {
       const ok = await ensureOrderUnlocked(orderKey);
       if (!ok) return;
     }
-    setQuickEditRecord(record);
-    setQuickEditVisible(true);
+    quickEditModal.open(record);
   };
 
   const escapeHtml = (v: unknown) => {
@@ -1148,7 +1141,7 @@ const MaterialPurchase: React.FC = () => {
   const submitReturnConfirm = async () => {
     try {
       setReturnConfirmSubmitting(true);
-      const orderKey = String(returnConfirmTargets[0]?.orderId || returnConfirmTargets[0]?.orderNo || '').trim();
+      const orderKey = String(returnConfirmModal.data?.[0]?.orderId || returnConfirmModal.data?.[0]?.orderNo || '').trim();
       if (orderKey) {
         const ok = await ensureOrderUnlocked(orderKey);
         if (!ok) return;
@@ -1180,8 +1173,7 @@ const MaterialPurchase: React.FC = () => {
       }
 
       message.success('回料确认成功');
-      setReturnConfirmOpen(false);
-      setReturnConfirmTargets([]);
+      returnConfirmModal.close();
       returnConfirmForm.resetFields();
       fetchMaterialPurchaseList();
       const no = String(currentPurchase?.orderNo || '').trim();
@@ -1196,20 +1188,20 @@ const MaterialPurchase: React.FC = () => {
   };
 
   const submitReturnReset = async () => {
-    if (!returnResetTarget) return;
+    if (!returnResetModal.data) return;
     if (!isSupervisorOrAbove) {
       message.error('仅主管级别及以上可执行退回');
       return;
     }
     try {
       setReturnResetSubmitting(true);
-      const orderKey = String(returnResetTarget?.orderId || returnResetTarget?.orderNo || '').trim();
+      const orderKey = String(returnResetModal.data?.orderId || returnResetModal.data?.orderNo || '').trim();
       if (orderKey) {
         const ok = await ensureOrderUnlocked(orderKey);
         if (!ok) return;
       }
       const values = (await returnResetForm.validateFields()) as { reason?: string };
-      const purchaseId = String(returnResetTarget?.id || '').trim();
+      const purchaseId = String(returnResetModal.data?.id || '').trim();
       if (!purchaseId) {
         message.error('采购任务缺少ID');
         return;
@@ -1220,8 +1212,7 @@ const MaterialPurchase: React.FC = () => {
         throw new Error(result?.message || '退回失败');
       }
       message.success('退回成功');
-      setReturnResetOpen(false);
-      setReturnResetTarget(null);
+      returnResetModal.close();
       returnResetForm.resetFields();
       fetchMaterialPurchaseList();
       const no = String(currentPurchase?.orderNo || '').trim();
@@ -1240,13 +1231,12 @@ const MaterialPurchase: React.FC = () => {
     setQuickEditSaving(true);
     try {
       await api.put('/production/purchase/quick-edit', {
-        id: quickEditRecord?.id,
+        id: quickEditModal.data?.id,
         remark: values.remarks,
         expectedShipDate: values.expectedShipDate,
       });
       messageApi.success('保存成功');
-      setQuickEditVisible(false);
-      setQuickEditRecord(null);
+      quickEditModal.close();
       fetchMaterialPurchaseList();
     } catch (error: any) {
       messageApi.error(error?.response?.data?.message || '保存失败');
@@ -2561,15 +2551,14 @@ const MaterialPurchase: React.FC = () => {
         </ResizableModal>
 
         <ResizableModal
-          open={returnConfirmOpen}
+          open={returnConfirmModal.visible}
           title="回料确认"
           okText="确认回料"
           cancelText="取消"
           width={isMobile ? '96vw' : 570}
           centered
           onCancel={() => {
-            setReturnConfirmOpen(false);
-            setReturnConfirmTargets([]);
+            returnConfirmModal.close();
             returnConfirmForm.resetFields();
           }}
           okButtonProps={{ loading: returnConfirmSubmitting }}
@@ -2594,7 +2583,7 @@ const MaterialPurchase: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {returnConfirmTargets.map((t, idx) => {
+                  {(returnConfirmModal.data || []).map((t, idx) => {
                     const purchaseQty = Number(t?.purchaseQuantity || 0) || 0;
                     const arrivedQty = Number(t?.arrivedQuantity || 0) || 0;
                     const max = arrivedQty > 0 ? arrivedQty : purchaseQty;
@@ -2646,15 +2635,14 @@ const MaterialPurchase: React.FC = () => {
         </ResizableModal>
 
         <ResizableModal
-          open={returnResetOpen}
+          open={returnResetModal.visible}
           title="退回回料确认"
           okText="确认退回"
           cancelText="取消"
           okButtonProps={{ danger: true, loading: returnResetSubmitting }}
           width={isMobile ? '96vw' : 520}
           onCancel={() => {
-            setReturnResetOpen(false);
-            setReturnResetTarget(null);
+            returnResetModal.close();
             returnResetForm.resetFields();
           }}
           onOk={submitReturnReset}
@@ -2676,16 +2664,15 @@ const MaterialPurchase: React.FC = () => {
 
         {/* 快速编辑弹窗 */}
         <QuickEditModal
-          visible={quickEditVisible}
+          visible={quickEditModal.visible}
           loading={quickEditSaving}
           initialValues={{
-            remark: quickEditRecord?.remark,
-            expectedShipDate: quickEditRecord?.expectedShipDate,
+            remark: quickEditModal.data?.remark,
+            expectedShipDate: quickEditModal.data?.expectedShipDate,
           }}
           onSave={handleQuickEditSave}
           onCancel={() => {
-            setQuickEditVisible(false);
-            setQuickEditRecord(null);
+            quickEditModal.close();
           }}
         />
       </div>

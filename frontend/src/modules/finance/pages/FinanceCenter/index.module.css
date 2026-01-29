@@ -196,7 +196,7 @@
 /* 图表上方汇总统计 */
 .chartSummary {
   padding: 12px 16px;
-  background: var(--color-bg-gray, linear-gradient(135deg, #f5f7fa 0%, #e8ecf0 100%));
+  background: var(--color-bg-gray, #f5f7fa);
   border-bottom: 1px solid var(--color-border-light, #e8e8e8);
 }
 

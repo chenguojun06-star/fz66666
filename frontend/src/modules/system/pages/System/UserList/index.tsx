@@ -11,6 +11,7 @@ import api, { requestWithPathFallback } from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
 import { useSync } from '@/utils/syncManager';
 import { useViewport } from '@/utils/useViewport';
+import { useModal } from '@/hooks';
 import './styles.css';
 
 const { Option } = Select;
@@ -20,8 +21,8 @@ const UserList: React.FC = () => {
   const [form] = Form.useForm();
   // 状态管理
   const { isMobile, modalWidth } = useViewport();
-  const [visible, setVisible] = useState(false);
-  const [currentUser, setCurrentUser] = useState<UserType | null>(null);
+  const userModal = useModal<UserType>();
+  const logModal = useModal();
   const [queryParams, setQueryParams] = useState<UserQueryParams>({
     page: 1,
     pageSize: 10
@@ -44,7 +45,6 @@ const UserList: React.FC = () => {
   const [permLoading, setPermLoading] = useState(false);
   const [permSaving, setPermSaving] = useState(false);
   const [pendingUserCount, setPendingUserCount] = useState(0);
-  const [logVisible, setLogVisible] = useState(false);
   const [logLoading, setLogLoading] = useState(false);
   const [logRecords, setLogRecords] = useState<any[]>([]);
   const [logTitle, setLogTitle] = useState('操作日志');
@@ -60,7 +60,7 @@ const UserList: React.FC = () => {
       { max: 20, message: '姓名长度不超过 20 个字符', trigger: ['change', 'blur'] }
     ],
     password: [
-      { required: !currentUser, message: '请输入密码', trigger: ['change', 'blur'] },
+      { required: !userModal.data, message: '请输入密码', trigger: ['change', 'blur'] },
       { min: 6, max: 20, message: '密码长度在 6 到 20 个字符', trigger: ['change', 'blur'] }
     ],
     roleId: [
@@ -211,7 +211,7 @@ const UserList: React.FC = () => {
     },
     {
       interval: 60000, // 60秒轮询
-      enabled: !loading && !visible,
+      enabled: !loading && !userModal.visible,
       pauseOnHidden: true,
       onError: (error) => console.error('[实时同步] 用户列表同步错误', error)
     }
@@ -348,7 +348,7 @@ const UserList: React.FC = () => {
   // 打开弹窗
   const openDialog = (user?: UserType, initialTab: 'base' | 'perm' = 'base') => {
     setActiveEditTab(initialTab);
-    setCurrentUser(user || null);
+    userModal.open(user || null);
 
     // 确保加载角色选项
     if (roleOptions.length === 0 && !roleOptionsLoading) {
@@ -370,13 +370,11 @@ const UserList: React.FC = () => {
         approvalStatus: 'approved'
       });
     }
-    setVisible(true);
   };
 
   // 关闭弹窗
   const closeDialog = () => {
-    setVisible(false);
-    setCurrentUser(null);
+    userModal.close();
     setActiveEditTab('base');
     setPermTree([]);
     setPermCheckedIds(new Set());
@@ -422,7 +420,7 @@ const UserList: React.FC = () => {
 
   const openLogModal = async (bizType: string, bizId: string, title: string) => {
     setLogTitle(title);
-    setLogVisible(true);
+    logModal.open();
     setLogLoading(true);
     try {
       const res = await api.get('/system/operation-log/list', {
@@ -547,15 +545,15 @@ const UserList: React.FC = () => {
         setSubmitLoading(true);
         try {
           let response;
-          if (currentUser?.id) {
-            response = await api.put('/system/user', { ...values, id: currentUser.id, operationRemark: remark });
+          if (userModal.data?.id) {
+            response = await api.put('/system/user', { ...values, id: userModal.data.id, operationRemark: remark });
           } else {
             response = await api.post('/system/user', values);
           }
 
           const result = response as Record<string, unknown>;
           if (result.code === 200) {
-            message.success(currentUser?.id ? '编辑人员成功' : '新增人员成功');
+            message.success(userModal.data?.id ? '编辑人员成功' : '新增人员成功');
             closeDialog();
             getUserList();
           } else {
@@ -566,7 +564,7 @@ const UserList: React.FC = () => {
         }
       };
 
-      if (currentUser?.id) {
+      if (userModal.data?.id) {
         openRemarkModal('确认保存', '确认保存', undefined, submit);
         return;
       }
@@ -756,7 +754,7 @@ const UserList: React.FC = () => {
   ];
 
   useEffect(() => {
-    if (!visible) return;
+    if (!userModal.visible) return;
     const rid = String(selectedRoleId || '').trim();
     if (!rid) {
       setPermTree([]);
@@ -764,7 +762,7 @@ const UserList: React.FC = () => {
       return;
     }
     loadPermTreeAndChecked(rid);
-  }, [selectedRoleId, visible]);
+  }, [selectedRoleId, userModal.visible]);
 
   return (
     <Layout>
@@ -870,8 +868,8 @@ const UserList: React.FC = () => {
 
         {/* 用户编辑弹窗 */}
         <ResizableModal
-          title={currentUser ? '编辑人员' : '新增人员'}
-          open={visible}
+          title={userModal.data ? '编辑人员' : '新增人员'}
+          open={userModal.visible}
           onCancel={closeDialog}
           onOk={handleSubmit}
           okText="保存"
@@ -903,7 +901,7 @@ const UserList: React.FC = () => {
                             <Input placeholder="请输入姓名" />
                           </Form.Item>
                         </Col>
-                        {!currentUser && (
+                        {!userModal.data && (
                           <Col span={8}>
                             <Form.Item name="password" label="密码" rules={formRules.password}>
                               <Input.Password placeholder="请输入密码" />
@@ -1079,10 +1077,10 @@ const UserList: React.FC = () => {
         </ResizableModal>
 
         <ResizableModal
-          open={logVisible}
+          open={logModal.visible}
           title={logTitle}
           onCancel={() => {
-            setLogVisible(false);
+            logModal.close();
             setLogRecords([]);
           }}
           footer={null}

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button, Card, Input, Select, Space, Tag, Form, Row, Col, InputNumber, Upload, message, Modal } from 'antd';
 import type { MenuProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -13,10 +13,9 @@ import api, { unwrapApiData } from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
 import { getMaterialTypeCategory, getMaterialTypeLabel, normalizeMaterialType } from '@/utils/materialType';
 import { useViewport } from '@/utils/useViewport';
+import { useModal, useRequest, useTablePagination } from '@/hooks';
 
 const { Option } = Select;
-
-const MATERIAL_DB_QUERY_STORAGE_KEY = 'MaterialDatabase.queryParams';
 
 // 转换为本地日期时间输入值格式
 const toLocalDateTimeInputValue = (): string => {
@@ -33,70 +32,64 @@ const MaterialDatabasePage: React.FC = () => {
   const [_messageApi, contextHolder] = message.useMessage();
   const { isMobile, modalWidth } = useViewport();
 
-  // 面辅料数据库相关状态
-  const [visible, setVisible] = useState(false);
-  const [currentMaterial, setCurrentMaterial] = useState<MaterialDatabase | null>(null);
-  const [mode, setMode] = useState<'create' | 'edit'>('create');
+  // ===== 使用 Hooks 优化状态管理 =====
+  // Modal 状态管理（替代 visible, currentMaterial, mode）
+  const { visible, data: currentMaterial, open, close } = useModal<MaterialDatabase>();
+
+  // 分页状态管理（替代 queryParams, total）
+  const { pagination, setTotal } = useTablePagination(10);
+
+  // ===== 保留的状态 =====
   const [dataList, setDataList] = useState<MaterialDatabase[]>([]);
   const [loading, setLoading] = useState(false);
-  const [total, setTotal] = useState(0);
-  const [submitLoading, setSubmitLoading] = useState(false);
-  const [queryParams, setQueryParams] = useState<MaterialDatabaseQueryParams>(() => {
-    const base: MaterialDatabaseQueryParams = { page: 1, pageSize: 10 };
-    if (typeof window === 'undefined') return base;
-    try {
-      const raw = sessionStorage.getItem(MATERIAL_DB_QUERY_STORAGE_KEY);
-      if (!raw) return base;
-      const parsed = JSON.parse(raw);
-      if (!parsed || typeof parsed !== 'object') return base;
-      const page = Number((parsed as Record<string, unknown>).page);
-      const pageSize = Number((parsed as Record<string, unknown>).pageSize);
-      return {
-        ...base,
-        ...(parsed as Record<string, unknown>),
-        page: Number.isFinite(page) && page > 0 ? Math.floor(page) : base.page,
-        pageSize: Number.isFinite(pageSize) && pageSize > 0 ? Math.floor(pageSize) : base.pageSize,
-      };
-    } catch {
-      return base;
-    }
-  });
+  // 额外的查询条件（不包括 page/pageSize）
+  const [extraFilters, setExtraFilters] = useState<Partial<MaterialDatabaseQueryParams>>({});
   const [form] = Form.useForm();
   const [imageFiles, setImageFiles] = useState<UploadFile[]>([]);
 
   const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
-  // 保存查询参数到sessionStorage
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      sessionStorage.setItem(MATERIAL_DB_QUERY_STORAGE_KEY, JSON.stringify(queryParams));
-    } catch {
-      // 忽略错误
-    }
-  }, [queryParams]);
-
-  // 获取面辅料数据库列表
-  const fetchList = useCallback(async () => {
+  // ===== 获取列表函数 =====
+  const fetchList = async () => {
     setLoading(true);
     try {
-      const res = await api.get<{ code: number; data: { records: MaterialDatabase[]; total: number } }>('/material/database/list', { params: queryParams });
-      const data = unwrapApiData<{ records?: MaterialDatabase[]; total?: number }>(res as Record<string, unknown>, '获取面辅料数据库列表失败');
+      const fullQueryParams: MaterialDatabaseQueryParams = {
+        page: pagination.current,
+        pageSize: pagination.pageSize,
+        ...extraFilters,
+      };
+
+      const res = await api.get<{ code: number; data: { records: MaterialDatabase[]; total: number } }>(
+        '/material/database/list',
+        { params: fullQueryParams }
+      );
+      const data = unwrapApiData<{ records?: MaterialDatabase[]; total?: number }>(
+        res as Record<string, unknown>,
+        '获取面辅料数据库列表失败'
+      );
       const records = Array.isArray(data?.records) ? data.records : [];
       setDataList(records as MaterialDatabase[]);
       setTotal(Number(data?.total || 0) || 0);
     } catch (error) {
-      const errMessage = (error as Error)?.message;
-      message.error(errMessage || '获取面辅料数据库列表失败');
+      message.error((error as Error)?.message || '获取面辅料数据库列表失败');
     } finally {
       setLoading(false);
     }
-  }, [queryParams]);
+  };
 
-  // 页面加载时获取列表
+  // 当分页或筛选条件变化时重新获取列表
   useEffect(() => {
     fetchList();
-  }, [fetchList]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    pagination.current,
+    pagination.pageSize,
+    extraFilters.materialCode,
+    extraFilters.materialName,
+    extraFilters.styleNo,
+    extraFilters.materialType,
+    extraFilters.supplierName,
+  ]);
 
   // 上传物料图片
   const uploadImage = async (file: File) => {
@@ -124,13 +117,11 @@ const MaterialDatabasePage: React.FC = () => {
     }
   };
 
+  // ===== 优化弹窗打开/关闭逻辑 =====
   // 打开新建/编辑弹窗
   const openDialog = (dialogMode: 'create' | 'edit', record?: MaterialDatabase) => {
-    setMode(dialogMode);
-    setVisible(true);
-
     if (dialogMode === 'edit' && record) {
-      setCurrentMaterial(record);
+      open(record); // 自动设置 visible=true + data=record
       form.setFieldsValue({
         ...record,
         materialType: normalizeMaterialType(record.materialType || 'accessory'),
@@ -146,7 +137,7 @@ const MaterialDatabasePage: React.FC = () => {
         ]);
       }
     } else {
-      setCurrentMaterial(null);
+      open(); // 仅设置 visible=true（create模式）
       form.resetFields();
       setImageFiles([]);
     }
@@ -154,16 +145,14 @@ const MaterialDatabasePage: React.FC = () => {
 
   // 关闭弹窗
   const closeDialog = () => {
-    setVisible(false);
-    setCurrentMaterial(null);
+    close(); // 自动设置 visible=false + data=null
     form.resetFields();
     setImageFiles([]);
   };
 
-  // 提交表单
-  const handleSubmit = async () => {
-    try {
-      setSubmitLoading(true);
+  // ===== 使用 useRequest 优化表单提交 =====
+  const { run: handleSubmit, loading: submitLoading } = useRequest(
+    async () => {
       const values = (await form.validateFields()) as Record<string, unknown>;
       const status = String(values?.status || 'pending').trim();
 
@@ -175,30 +164,39 @@ const MaterialDatabasePage: React.FC = () => {
         image: String(values?.image || '').trim() || undefined,
       };
 
+      const mode = currentMaterial ? 'edit' : 'create';
+
       if (mode === 'create') {
-        unwrapApiData<boolean>(await api.post<{ code: number; message: string; data: boolean }>('/material/database', payload), '新增失败');
+        unwrapApiData<boolean>(
+          await api.post<{ code: number; message: string; data: boolean }>('/material/database', payload),
+          '新增失败'
+        );
+        return '新增成功';
       } else {
         unwrapApiData<boolean>(
-          await api.put<{ code: number; message: string; data: boolean }>('/material/database', { ...payload, id: currentMaterial?.id }),
+          await api.put<{ code: number; message: string; data: boolean }>('/material/database', {
+            ...payload,
+            id: currentMaterial?.id,
+          }),
           '保存失败'
         );
+        return '保存成功';
       }
-
-      message.success(mode === 'edit' ? '保存成功' : '新增成功');
-      closeDialog();
-      fetchList();
-    } catch (error) {
-      const formError = error as { errorFields?: Array<{ errors?: string[] }> };
-      if (formError?.errorFields?.length) {
-        const firstError = formError.errorFields[0];
-        message.error(firstError?.errors?.[0] || '表单验证失败');
-      } else {
-        message.error((error as Error).message || '保存失败');
-      }
-    } finally {
-      setSubmitLoading(false);
+    },
+    {
+      onSuccess: () => {
+        close();
+        fetchList();
+      },
+      onError: (error) => {
+        const formError = error as { errorFields?: Array<{ errors?: string[] }> };
+        if (formError?.errorFields?.length) {
+          const firstError = formError.errorFields[0];
+          message.error(firstError?.errors?.[0] || '表单验证失败');
+        }
+      },
     }
-  };
+  );
 
   // 删除物料
   const handleDelete = async (record: MaterialDatabase) => {
@@ -476,32 +474,32 @@ const MaterialDatabasePage: React.FC = () => {
               <Form.Item label="面料编号">
                 <Input
                   placeholder="请输入面料编号"
-                  value={queryParams.materialCode}
-                  onChange={(e) => setQueryParams({ ...queryParams, materialCode: e.target.value, page: 1 })}
+                  value={extraFilters.materialCode}
+                  onChange={(e) => setExtraFilters({ ...extraFilters, materialCode: e.target.value })}
                   style={{ width: 120 }}
                 />
               </Form.Item>
               <Form.Item label="面料名称">
                 <Input
                   placeholder="请输入面料名称"
-                  value={queryParams.materialName}
-                  onChange={(e) => setQueryParams({ ...queryParams, materialName: e.target.value, page: 1 })}
+                  value={extraFilters.materialName}
+                  onChange={(e) => setExtraFilters({ ...extraFilters, materialName: e.target.value })}
                   style={{ width: 120 }}
                 />
               </Form.Item>
               <Form.Item label="款号">
                 <Input
                   placeholder="请输入款号"
-                  value={queryParams.styleNo}
-                  onChange={(e) => setQueryParams({ ...queryParams, styleNo: e.target.value, page: 1 })}
+                  value={extraFilters.styleNo}
+                  onChange={(e) => setExtraFilters({ ...extraFilters, styleNo: e.target.value })}
                   style={{ width: 100 }}
                 />
               </Form.Item>
               <Form.Item label="物料类型">
                 <Select
                   placeholder="请选择物料类型"
-                  value={queryParams.materialType || ''}
-                  onChange={(value) => setQueryParams({ ...queryParams, materialType: value, page: 1 })}
+                  value={extraFilters.materialType || ''}
+                  onChange={(value) => setExtraFilters({ ...extraFilters, materialType: value })}
                   style={{ width: 120 }}
                 >
                   <Option value="">全部</Option>
@@ -528,8 +526,8 @@ const MaterialDatabasePage: React.FC = () => {
               <Form.Item label="供应商">
                 <Input
                   placeholder="请输入供应商"
-                  value={queryParams.supplierName}
-                  onChange={(e) => setQueryParams({ ...queryParams, supplierName: e.target.value, page: 1 })}
+                  value={extraFilters.supplierName}
+                  onChange={(e) => setExtraFilters({ ...extraFilters, supplierName: e.target.value })}
                   style={{ width: 120 }}
                 />
               </Form.Item>
@@ -539,7 +537,7 @@ const MaterialDatabasePage: React.FC = () => {
                     查询
                   </Button>
                   <Button onClick={() => {
-                    setQueryParams({ page: 1, pageSize: 10 });
+                    setExtraFilters({});
                   }}>
                     重置
                   </Button>
@@ -557,12 +555,8 @@ const MaterialDatabasePage: React.FC = () => {
             scroll={{ x: 'max-content', y: isMobile ? 360 : 560 }}
             size={isMobile ? 'small' : 'middle'}
             pagination={{
-              current: queryParams.page,
-              pageSize: queryParams.pageSize,
-              total,
-              showSizeChanger: true,
+              ...pagination,
               showTotal: (t) => `共 ${t} 条`,
-              onChange: (page, size) => setQueryParams({ ...queryParams, page, pageSize: size }),
               size: isMobile ? 'small' : 'default',
             }}
           />
@@ -570,7 +564,7 @@ const MaterialDatabasePage: React.FC = () => {
 
         {/* 新增/编辑弹窗 */}
         <ResizableModal
-          title={mode === 'create' ? '新增面辅料' : '编辑面辅料'}
+          title={currentMaterial ? '编辑面辅料' : '新增面辅料'}
           open={visible}
           onCancel={closeDialog}
           width={modalWidth}
@@ -580,8 +574,8 @@ const MaterialDatabasePage: React.FC = () => {
             <Button key="cancel" onClick={closeDialog}>
               取消
             </Button>,
-            <Button key="submit" type="primary" loading={submitLoading} onClick={handleSubmit}>
-              {mode === 'create' ? '创建' : '保存'}
+            <Button key="submit" type="primary" loading={submitLoading} onClick={() => handleSubmit()}>
+              {currentMaterial ? '保存' : '创建'}
             </Button>,
           ]}
         >

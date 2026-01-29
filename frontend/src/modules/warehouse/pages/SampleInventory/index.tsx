@@ -7,7 +7,6 @@ import {
   Input,
   Tag,
   Tooltip,
-  message,
   DatePicker,
   Select,
   Badge,
@@ -15,7 +14,6 @@ import {
   Modal,
   Row,
   Col,
-  Descriptions,
 } from 'antd';
 import {
   PlusOutlined,
@@ -31,6 +29,7 @@ import api from '@/utils/api';
 import dayjs from 'dayjs';
 import LoanModal from './LoanModal';
 import ReturnModal from './ReturnModal';
+import { useModal, useTablePagination } from '@/hooks';
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
@@ -63,23 +62,21 @@ interface SampleLoan {
 }
 
 const SampleInventory: React.FC = () => {
+  // ===== 使用 Hooks 优化状态管理 =====
+  const { pagination, setTotal } = useTablePagination(20);
+  const { visible: loanModalVisible, data: _loanModalData, open: openLoanModal, close: closeLoanModal } = useModal<SampleLoan>();
+  const { visible: returnModalVisible, data: returnModalData, open: openReturnModal, close: closeReturnModal } = useModal<SampleLoan>();
+  const { visible: detailModalVisible, data: detailModalData, open: openDetailModal, close: closeDetailModal } = useModal<SampleLoan>();
+
+  // ===== 保留的状态 =====
   const [loading, setLoading] = useState(false);
   const [dataSource, setDataSource] = useState<SampleLoan[]>([]);
-  const [total, setTotal] = useState(0);
-  const [pageNum, setPageNum] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
 
   // 筛选条件
   const [searchText, setSearchText] = useState('');
   const [selectedFactory, setSelectedFactory] = useState<string | undefined>(undefined);
   const [selectedStatus, setSelectedStatus] = useState<string | undefined>(undefined);
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
-
-  // 弹窗状态
-  const [loanModalVisible, setLoanModalVisible] = useState(false);
-  const [returnModalVisible, setReturnModalVisible] = useState(false);
-  const [currentRecord, setCurrentRecord] = useState<SampleLoan | null>(null);
-  const [detailModalVisible, setDetailModalVisible] = useState(false);
 
   // 工厂列表
   const [factories, setFactories] = useState<Array<{ id: string; factoryName: string }>>([]);
@@ -104,8 +101,8 @@ const SampleInventory: React.FC = () => {
     try {
       // TODO: 后端API开发中，暂时使用模拟数据
       // const params: any = {
-      //   page: pageNum,
-      //   pageSize,
+      //   page: pagination.current,
+      //   pageSize: pagination.pageSize,
       // };
 
       // // 搜索条件
@@ -219,24 +216,22 @@ const SampleInventory: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, [pageNum, pageSize, selectedFactory, selectedStatus, dateRange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pagination.current, pagination.pageSize, selectedFactory, selectedStatus, dateRange]);
 
   // 借出样衣
   const handleLoan = () => {
-    setCurrentRecord(null);
-    setLoanModalVisible(true);
+    openLoanModal();
   };
 
   // 归还样衣
   const handleReturn = (record: SampleLoan) => {
-    setCurrentRecord(record);
-    setReturnModalVisible(true);
+    openReturnModal(record);
   };
 
   // 查看详情
   const handleViewDetail = (record: SampleLoan) => {
-    setCurrentRecord(record);
-    setDetailModalVisible(true);
+    openDetailModal(record);
   };
 
   // 获取状态标签
@@ -507,16 +502,8 @@ const SampleInventory: React.FC = () => {
             rowKey="id"
             scroll={{ x: 1900 }}
             pagination={{
-              current: pageNum,
-              pageSize,
-              total,
-              showSizeChanger: true,
-              showQuickJumper: true,
+              ...pagination,
               showTotal: (total) => `共 ${total} 条记录`,
-              onChange: (page, size) => {
-                setPageNum(page);
-                setPageSize(size);
-              },
             }}
           />
         </Card>
@@ -524,9 +511,9 @@ const SampleInventory: React.FC = () => {
         {/* 借出弹窗 */}
         <LoanModal
           visible={loanModalVisible}
-          onCancel={() => setLoanModalVisible(false)}
+          onCancel={closeLoanModal}
           onSuccess={() => {
-            setLoanModalVisible(false);
+            closeLoanModal();
             loadData();
           }}
         />
@@ -534,10 +521,10 @@ const SampleInventory: React.FC = () => {
         {/* 归还弹窗 */}
         <ReturnModal
           visible={returnModalVisible}
-          record={currentRecord}
-          onCancel={() => setReturnModalVisible(false)}
+          record={returnModalData}
+          onCancel={closeReturnModal}
           onSuccess={() => {
-            setReturnModalVisible(false);
+            closeReturnModal();
             loadData();
           }}
         />
@@ -547,19 +534,19 @@ const SampleInventory: React.FC = () => {
           title={
             <Space>
               <span style={{ fontSize: 16, fontWeight: 600 }}>📋 样衣借调详情</span>
-              {currentRecord && getStatusTag(currentRecord)}
+              {detailModalData && getStatusTag(detailModalData)}
             </Space>
           }
           open={detailModalVisible}
-          onCancel={() => setDetailModalVisible(false)}
+          onCancel={closeDetailModal}
           footer={[
-            <Button key="close" onClick={() => setDetailModalVisible(false)}>
+            <Button key="close" onClick={closeDetailModal}>
               关闭
             </Button>,
           ]}
           width={900}
         >
-          {currentRecord && (
+          {detailModalData && (
             <Space orientation="vertical" style={{ width: '100%' }} size="large">
               {/* 基础信息 */}
               <Card size="small" style={{ background: '#f5f5f5' }} title="基础信息">
@@ -567,26 +554,26 @@ const SampleInventory: React.FC = () => {
                   <Col span={8}>
                     <div style={{ marginBottom: 16 }}>
                       <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4 }}>借出单号</div>
-                      <div style={{ fontSize: 14, fontWeight: 600 }}>{currentRecord.loanNo}</div>
+                      <div style={{ fontSize: 14, fontWeight: 600 }}>{detailModalData.loanNo}</div>
                     </div>
                   </Col>
                   <Col span={8}>
                     <div style={{ marginBottom: 16 }}>
                       <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4 }}>款号</div>
-                      <div style={{ fontSize: 14, fontWeight: 600 }}>{currentRecord.styleNo}</div>
+                      <div style={{ fontSize: 14, fontWeight: 600 }}>{detailModalData.styleNo}</div>
                     </div>
                   </Col>
                   <Col span={8}>
                     <div style={{ marginBottom: 16 }}>
                       <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4 }}>款式名称</div>
-                      <div style={{ fontSize: 14, fontWeight: 600 }}>{currentRecord.styleName}</div>
+                      <div style={{ fontSize: 14, fontWeight: 600 }}>{detailModalData.styleName}</div>
                     </div>
                   </Col>
                   <Col span={8}>
                     <div style={{ marginBottom: 16 }}>
                       <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4 }}>样衣编号</div>
                       <div style={{ fontSize: 14, fontWeight: 600 }}>
-                        {currentRecord.styleNo}-{currentRecord.sampleCode}
+                        {detailModalData.styleNo}-{detailModalData.sampleCode}
                       </div>
                     </div>
                   </Col>
@@ -594,14 +581,14 @@ const SampleInventory: React.FC = () => {
                     <div style={{ marginBottom: 16 }}>
                       <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4 }}>仓库位置</div>
                       <div style={{ fontSize: 14, fontWeight: 600, color: '#1890ff' }}>
-                        {currentRecord.warehouseLocation || '-'}
+                        {detailModalData.warehouseLocation || '-'}
                       </div>
                     </div>
                   </Col>
                   <Col span={8}>
                     <div style={{ marginBottom: 16 }}>
                       <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4 }}>创建时间</div>
-                      <div style={{ fontSize: 14, fontWeight: 600 }}>{currentRecord.createTime}</div>
+                      <div style={{ fontSize: 14, fontWeight: 600 }}>{detailModalData.createTime}</div>
                     </div>
                   </Col>
                 </Row>
@@ -613,14 +600,14 @@ const SampleInventory: React.FC = () => {
                   <Col span={8}>
                     <div style={{ marginBottom: 16 }}>
                       <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4 }}>借出工厂</div>
-                      <div style={{ fontSize: 14, fontWeight: 600 }}>{currentRecord.factoryName}</div>
+                      <div style={{ fontSize: 14, fontWeight: 600 }}>{detailModalData.factoryName}</div>
                     </div>
                   </Col>
                   <Col span={8}>
                     <div style={{ marginBottom: 16 }}>
                       <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4 }}>借出数量</div>
                       <div style={{ fontSize: 14, fontWeight: 600, color: '#1890ff' }}>
-                        {currentRecord.loanQuantity} 件
+                        {detailModalData.loanQuantity} 件
                       </div>
                     </div>
                   </Col>
@@ -628,45 +615,45 @@ const SampleInventory: React.FC = () => {
                     <div style={{ marginBottom: 16 }}>
                       <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4 }}>借出操作人</div>
                       <div style={{ fontSize: 14, fontWeight: 600, color: '#1890ff' }}>
-                        {currentRecord.loanOperator || currentRecord.createBy}
+                        {detailModalData.loanOperator || detailModalData.createBy}
                       </div>
                     </div>
                   </Col>
                   <Col span={8}>
                     <div style={{ marginBottom: 16 }}>
                       <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4 }}>借出日期</div>
-                      <div style={{ fontSize: 14, fontWeight: 600 }}>{currentRecord.loanDate}</div>
+                      <div style={{ fontSize: 14, fontWeight: 600 }}>{detailModalData.loanDate}</div>
                     </div>
                   </Col>
                   <Col span={8}>
                     <div style={{ marginBottom: 16 }}>
                       <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4 }}>预计归还日期</div>
-                      <div style={{ fontSize: 14, fontWeight: 600 }}>{currentRecord.expectedReturnDate}</div>
+                      <div style={{ fontSize: 14, fontWeight: 600 }}>{detailModalData.expectedReturnDate}</div>
                     </div>
                   </Col>
                   <Col span={8}>
                     <div style={{ marginBottom: 16 }}>
                       <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4 }}>借出原因</div>
-                      <div style={{ fontSize: 14, fontWeight: 600 }}>{currentRecord.loanReason}</div>
+                      <div style={{ fontSize: 14, fontWeight: 600 }}>{detailModalData.loanReason}</div>
                     </div>
                   </Col>
                 </Row>
               </Card>
 
               {/* 归还信息 */}
-              {currentRecord.status === '已归还' && (
+              {detailModalData.status === '已归还' && (
                 <Card size="small" title="归还信息">
                   <Row gutter={24}>
                     <Col span={8}>
                       <div style={{ marginBottom: 16 }}>
                         <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4 }}>实际归还日期</div>
-                        <div style={{ fontSize: 14, fontWeight: 600 }}>{currentRecord.actualReturnDate}</div>
+                        <div style={{ fontSize: 14, fontWeight: 600 }}>{detailModalData.actualReturnDate}</div>
                       </div>
                     </Col>
                     <Col span={8}>
                       <div style={{ marginBottom: 16 }}>
                         <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4 }}>归还数量</div>
-                        <div style={{ fontSize: 14, fontWeight: 600 }}>{currentRecord.returnQuantity} 件</div>
+                        <div style={{ fontSize: 14, fontWeight: 600 }}>{detailModalData.returnQuantity} 件</div>
                       </div>
                     </Col>
                     <Col span={8}>
@@ -674,10 +661,10 @@ const SampleInventory: React.FC = () => {
                         <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4 }}>归还状态</div>
                         <div>
                           <Tag color={
-                            currentRecord.returnStatus === '完好' ? 'success' :
-                            currentRecord.returnStatus === '破损' ? 'warning' : 'error'
+                            detailModalData.returnStatus === '完好' ? 'success' :
+                            detailModalData.returnStatus === '破损' ? 'warning' : 'error'
                           }>
-                            {currentRecord.returnStatus}
+                            {detailModalData.returnStatus}
                           </Tag>
                         </div>
                       </div>
@@ -686,7 +673,7 @@ const SampleInventory: React.FC = () => {
                       <div style={{ marginBottom: 16 }}>
                         <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4 }}>归还操作人</div>
                         <div style={{ fontSize: 14, fontWeight: 600, color: '#52c41a' }}>
-                          {currentRecord.returnOperator || '-'}
+                          {detailModalData.returnOperator || '-'}
                         </div>
                       </div>
                     </Col>
@@ -695,24 +682,24 @@ const SampleInventory: React.FC = () => {
               )}
 
               {/* 逾期信息 */}
-              {currentRecord.status === '逾期' && (
+              {detailModalData.status === '逾期' && (
                 <Card
                   size="small"
                   title="⚠️ 逾期提醒"
                   style={{ borderColor: '#ff4d4f', background: '#fff2f0' }}
                 >
                   <div style={{ fontSize: 14, color: '#cf1322' }}>
-                    已逾期 <strong style={{ fontSize: 18 }}>{currentRecord.overdueDays}</strong> 天，
+                    已逾期 <strong style={{ fontSize: 18 }}>{detailModalData.overdueDays}</strong> 天，
                     请尽快联系工厂归还样衣！
                   </div>
                 </Card>
               )}
 
               {/* 备注 */}
-              {currentRecord.remark && (
+              {detailModalData.remark && (
                 <Card size="small" title="备注信息">
                   <div style={{ fontSize: 14, color: '#595959', lineHeight: 1.6 }}>
-                    {currentRecord.remark}
+                    {detailModalData.remark}
                   </div>
                 </Card>
               )}

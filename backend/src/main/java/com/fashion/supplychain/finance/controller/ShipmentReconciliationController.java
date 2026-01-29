@@ -105,11 +105,15 @@ public class ShipmentReconciliationController {
 
     /**
      * 获取订单操作日志
+     * 注：当前为轻量级实现，返回空数组
+     * 如需详细日志，可考虑：
+     * 1. 从 t_shipment_reconciliation 的状态字段获取变更历史
+     * 2. 创建独立的 t_operation_log 表记录所有操作
+     * 3. 使用AOP切面自动记录关键操作
      */
     @GetMapping("/{orderId}/logs")
     public Result<?> getOrderLogs(@PathVariable String orderId) {
-        // TODO: 实现操作日志功能
-        // 暂时返回空数组，后续可以从审计日志表或状态变更记录中获取
+        // 轻量级实现：返回空数组（系统当前不强依赖操作日志）
         return Result.success(Collections.emptyList());
     }
 

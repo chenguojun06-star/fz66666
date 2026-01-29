@@ -7,7 +7,6 @@ import {
   Input,
   Tag,
   message,
-  DatePicker,
   Select,
   Image,
   Statistic,
@@ -30,10 +29,9 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import Layout from '@/components/Layout';
-import api from '@/utils/api';
+import { useModal, useTablePagination } from '@/hooks';
 import dayjs from 'dayjs';
 
-const { RangePicker } = DatePicker;
 const { Option } = Select;
 
 // 物料批次明细接口
@@ -77,38 +75,22 @@ interface MaterialInventory {
   fabricComposition?: string; // 成分（仅面料）
 }
 
-// 物料批次明细接口
-interface MaterialBatchDetail {
-  batchNo: string;              // 批次号
-  warehouseLocation: string;    // 仓库位置
-  color?: string;               // 颜色（如果有）
-  availableQty: number;         // 可用库存
-  lockedQty: number;            // 锁定库存
-  inboundDate: string;          // 入库日期
-  expiryDate?: string;          // 过期日期（如果有）
-  outboundQty?: number;         // 出库数量
-}
-
-const MaterialInventory: React.FC = () => {
-  const [loading, setLoading] = useState(false);
+const _MaterialInventory: React.FC = () => {
+  const [loading] = useState(false);
   const [dataSource, setDataSource] = useState<MaterialInventory[]>([]);
-  const [total, setTotal] = useState(0);
-  const [pageNum, setPageNum] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+
+  // ===== 使用 useTablePagination 管理分页 =====
+  const pagination = useTablePagination(20);
 
   const [searchText, setSearchText] = useState('');
   const [selectedType, setSelectedType] = useState<string | undefined>(undefined);
 
-  // 详情模态框
-  const [detailVisible, setDetailVisible] = useState(false);
-  const [selectedRecord, setSelectedRecord] = useState<MaterialInventory | null>(null);
+  // ===== 使用 useModal 管理弹窗 =====
+  const detailModal = useModal<MaterialInventory>();
+  const inboundModal = useModal<MaterialInventory>();
+  const outboundModal = useModal<MaterialInventory>();
 
-  // 入库模态框
-  const [inboundVisible, setInboundVisible] = useState(false);
   const [inboundForm] = Form.useForm();
-
-  // 出库模态框
-  const [outboundVisible, setOutboundVisible] = useState(false);
   const [outboundForm] = Form.useForm();
   const [batchDetails, setBatchDetails] = useState<MaterialBatchDetail[]>([]);
 
@@ -196,19 +178,16 @@ const MaterialInventory: React.FC = () => {
 
   useEffect(() => {
     setDataSource(getMockData());
-    setTotal(getMockData().length);
+    pagination.setTotal(getMockData().length);
   }, []);
 
   // 查看详情（出入库记录）
   const handleViewDetail = (record: MaterialInventory) => {
-    setSelectedRecord(record);
-    setDetailVisible(true);
+    detailModal.open(record);
   };
 
   // 扫码入库
   const handleInbound = (record?: MaterialInventory) => {
-    setSelectedRecord(record || null);
-    setInboundVisible(true);
     if (record) {
       inboundForm.setFieldsValue({
         materialCode: record.materialCode,
@@ -216,6 +195,7 @@ const MaterialInventory: React.FC = () => {
         warehouseLocation: record.warehouseLocation,
       });
     }
+    inboundModal.open(record || null);
   };
 
   // 确认入库
@@ -224,7 +204,7 @@ const MaterialInventory: React.FC = () => {
       const values = await inboundForm.validateFields();
       console.log('入库数据:', values);
       message.success('入库成功！');
-      setInboundVisible(false);
+      inboundModal.close();
       inboundForm.resetFields();
       // TODO: 调用后端 API
     } catch (error) {
@@ -234,13 +214,12 @@ const MaterialInventory: React.FC = () => {
 
   // 出库
   const handleOutbound = (record: MaterialInventory) => {
-    setSelectedRecord(record);
-    setOutboundVisible(true);
     outboundForm.setFieldsValue({
       materialCode: record.materialCode,
       materialName: record.materialName,
       availableQty: record.availableQty,
     });
+    outboundModal.open(record);
 
     // 模拟批次明细数据（实际应从后端获取）
     const mockBatchDetails: MaterialBatchDetail[] = [
@@ -298,8 +277,8 @@ const MaterialInventory: React.FC = () => {
     }
 
     console.log('物料出库数据:', {
-      materialCode: selectedRecord?.materialCode,
-      materialName: selectedRecord?.materialName,
+      materialCode: outboundModal.data?.materialCode,
+      materialName: outboundModal.data?.materialName,
       batches: selectedBatches.map(item => ({
         batchNo: item.batchNo,
         warehouseLocation: item.warehouseLocation,
@@ -308,8 +287,8 @@ const MaterialInventory: React.FC = () => {
       })),
     });
 
-    message.success(`成功出库 ${selectedBatches.length} 个批次，共 ${selectedBatches.reduce((sum, item) => sum + (item.outboundQty || 0), 0)} ${selectedRecord?.unit || '件'}`);
-    setOutboundVisible(false);
+    message.success(`成功出库 ${selectedBatches.length} 个批次，共 ${selectedBatches.reduce((sum, item) => sum + (item.outboundQty || 0), 0)} ${outboundModal.data?.unit || '件'}`);
+    outboundModal.close();
     setBatchDetails([]);
     outboundForm.resetFields();
   };
@@ -707,17 +686,7 @@ const MaterialInventory: React.FC = () => {
             loading={loading}
             rowKey="id"
             scroll={{ x: 1600 }}
-            pagination={{
-              current: pageNum,
-              pageSize,
-              total,
-              showSizeChanger: true,
-              showTotal: (total) => `共 ${total} 条`,
-              onChange: (page, size) => {
-                setPageNum(page);
-                setPageSize(size);
-              },
-            }}
+            pagination={pagination.pagination}
           />
         </Card>
       </div>
@@ -725,24 +694,24 @@ const MaterialInventory: React.FC = () => {
       {/* 详情模态框 - 出入库记录 */}
       <Modal
         title="出入库记录"
-        open={detailVisible}
-        onCancel={() => setDetailVisible(false)}
+        open={detailModal.visible}
+        onCancel={detailModal.close}
         footer={[
-          <Button key="close" onClick={() => setDetailVisible(false)}>
+          <Button key="close" onClick={detailModal.close}>
             关闭
           </Button>,
         ]}
         width={800}
       >
-        {selectedRecord && (
+        {detailModal.data && (
           <div>
             <Card size="small" style={{ marginBottom: 16, background: '#f5f5f5' }}>
               <Space orientation="vertical" size={8} style={{ width: '100%' }}>
                 <div>
-                  <strong style={{ fontSize: 16 }}>{selectedRecord.materialCode}</strong>
-                  <Tag color="blue" style={{ marginLeft: 8 }}>{selectedRecord.materialType}</Tag>
+                  <strong style={{ fontSize: 16 }}>{detailModal.data.materialCode}</strong>
+                  <Tag color="blue" style={{ marginLeft: 8 }}>{detailModal.data.materialType}</Tag>
                 </div>
-                <div style={{ fontSize: 14 }}>{selectedRecord.materialName}</div>
+                <div style={{ fontSize: 14 }}>{detailModal.data.materialName}</div>
               </Space>
             </Card>
 
@@ -752,21 +721,21 @@ const MaterialInventory: React.FC = () => {
                 {
                   id: '1',
                   type: '入库',
-                  date: selectedRecord.lastInboundDate,
-                  operator: selectedRecord.lastInboundBy,
+                  date: detailModal.data.lastInboundDate,
+                  operator: detailModal.data.lastInboundBy,
                   quantity: 2000,
-                  unit: selectedRecord.unit,
-                  warehouseLocation: selectedRecord.warehouseLocation,
+                  unit: detailModal.data.unit,
+                  warehouseLocation: detailModal.data.warehouseLocation,
                   remark: '正常入库',
                 },
                 {
                   id: '2',
                   type: '出库',
-                  date: selectedRecord.lastOutboundDate,
-                  operator: selectedRecord.lastOutboundBy,
+                  date: detailModal.data.lastOutboundDate,
+                  operator: detailModal.data.lastOutboundBy,
                   quantity: 500,
-                  unit: selectedRecord.unit,
-                  warehouseLocation: selectedRecord.warehouseLocation,
+                  unit: detailModal.data.unit,
+                  warehouseLocation: detailModal.data.warehouseLocation,
                   remark: '生产领料',
                 },
               ]}
@@ -818,9 +787,9 @@ const MaterialInventory: React.FC = () => {
             扫码入库
           </Space>
         }
-        open={inboundVisible}
+        open={inboundModal.visible}
         onCancel={() => {
-          setInboundVisible(false);
+          inboundModal.close();
           inboundForm.resetFields();
         }}
         onOk={handleInboundConfirm}
@@ -899,9 +868,9 @@ const MaterialInventory: React.FC = () => {
             <span>物料出库 - 批次明细</span>
           </Space>
         }
-        open={outboundVisible}
+        open={outboundModal.visible}
         onCancel={() => {
-          setOutboundVisible(false);
+          outboundModal.close();
           setBatchDetails([]);
           outboundForm.resetFields();
         }}
@@ -910,26 +879,26 @@ const MaterialInventory: React.FC = () => {
         okText="确认出库"
         cancelText="取消"
       >
-        {selectedRecord && (
+        {outboundModal.data && (
           <Space orientation="vertical" style={{ width: '100%' }} size="large">
             {/* 基础信息卡片 */}
             <Card size="small" style={{ background: '#f5f5f5' }}>
               <Row gutter={24}>
                 <Col span={6}>
                   <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4 }}>面料编号</div>
-                  <div style={{ fontSize: 14, fontWeight: 600 }}>{selectedRecord.materialCode}</div>
+                  <div style={{ fontSize: 14, fontWeight: 600 }}>{outboundModal.data.materialCode}</div>
                 </Col>
                 <Col span={8}>
                   <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4 }}>面料名称</div>
-                  <div style={{ fontSize: 14, fontWeight: 600 }}>{selectedRecord.materialName}</div>
+                  <div style={{ fontSize: 14, fontWeight: 600 }}>{outboundModal.data.materialName}</div>
                 </Col>
                 <Col span={5}>
                   <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4 }}>物料类型</div>
-                  <div><Tag color="blue">{selectedRecord.materialType}</Tag></div>
+                  <div><Tag color="blue">{outboundModal.data.materialType}</Tag></div>
                 </Col>
                 <Col span={5}>
                   <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4 }}>颜色</div>
-                  <div style={{ fontSize: 14, fontWeight: 600 }}>{selectedRecord.color || '-'}</div>
+                  <div style={{ fontSize: 14, fontWeight: 600 }}>{outboundModal.data.color || '-'}</div>
                 </Col>
               </Row>
             </Card>
@@ -1036,7 +1005,7 @@ const MaterialInventory: React.FC = () => {
                         <Table.Summary.Cell index={2} />
                         <Table.Summary.Cell index={3} align="center">
                           <strong style={{ color: '#1890ff', fontSize: 15 }}>
-                            {totalOutbound} {selectedRecord.unit}
+                            {totalOutbound} {outboundModal.data.unit}
                           </strong>
                         </Table.Summary.Cell>
                       </Table.Summary.Row>
@@ -1064,4 +1033,4 @@ const MaterialInventory: React.FC = () => {
   );
 };
 
-export default MaterialInventory;
+export default _MaterialInventory;

@@ -90,6 +90,7 @@ const OrderManagement: React.FC = () => {
 
   const [factories, setFactories] = useState<Factory[]>([]);
 
+  // ===== 弹窗状态（保留原状，未迁移到 useModal）=====
   const [visible, setVisible] = useState(false);
   const [selectedStyle, setSelectedStyle] = useState<StyleInfo | null>(null);
   const [submitLoading, setSubmitLoading] = useState(false);
@@ -98,10 +99,11 @@ const OrderManagement: React.FC = () => {
   // 视图切换状态
   const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
 
+  // ===== 详情页分页状态 =====
+  const [detailQuery, setDetailQuery] = useState({ page: 1, pageSize: 20 });
+  const [detailTotal, setDetailTotal] = useState(0);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailRows, setDetailRows] = useState<any[]>([]);
-  const [detailTotal, setDetailTotal] = useState(0);
-  const [detailQuery, setDetailQuery] = useState({ page: 1, pageSize: 20 });
 
   const [activeTabKey, setActiveTabKey] = useState('base');
   const [bomLoading, setBomLoading] = useState(false);

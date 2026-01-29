@@ -147,8 +147,8 @@
 }
 
 .universal-card-progress-success {
-  background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
-  box-shadow: 0 2px 8px rgba(82, 196, 26, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%);
+  box-shadow: 0 2px 8px rgba(82, 196, 26, 0.35);
 }
 
 .universal-card-progress-success:hover {
@@ -157,8 +157,8 @@
 }
 
 .universal-card-progress-warning {
-  background: linear-gradient(135deg, #faad14 0%, #ffc53d 100%);
-  box-shadow: 0 2px 8px rgba(250, 173, 20, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  background: linear-gradient(135deg, #faad14 0%, #d48806 100%);
+  box-shadow: 0 2px 8px rgba(250, 173, 20, 0.35);
 }
 
 .universal-card-progress-warning:hover {
@@ -167,8 +167,8 @@
 }
 
 .universal-card-progress-danger {
-  background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%);
-  box-shadow: 0 2px 8px rgba(255, 77, 79, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  background: linear-gradient(135deg, #ff4d4f 0%, #cf1322 100%);
+  box-shadow: 0 2px 8px rgba(255, 77, 79, 0.35);
 }
 
 .universal-card-progress-danger:hover {
@@ -177,8 +177,8 @@
 }
 
 .universal-card-progress-default {
-  background: linear-gradient(135deg, #d9d9d9 0%, #e8e8e8 100%);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  background: linear-gradient(135deg, #bfbfbf 0%, #8c8c8c 100%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .universal-card-progress-default .universal-card-progress-text {

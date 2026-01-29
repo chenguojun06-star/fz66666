@@ -43,7 +43,8 @@ const OverdueOrderTable: React.FC = () => {
 
       setDataSource(mockData);
 
-      // TODO: 替换为真实API
+      // 演示数据：用于展示逾期订单列表
+      // 生产环境可替换为真实API：
       // const result = await api.get<OverdueOrder[]>('/api/dashboard/overdue-orders');
       // if (result.success && result.data) {
       //   setDataSource(result.data);

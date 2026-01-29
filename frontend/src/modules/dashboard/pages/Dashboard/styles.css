@@ -62,22 +62,40 @@
   box-shadow: 0 0 0 2px rgba(45, 127, 249, 0.1) !important;
 }
 
-/* 搜索按钮增强（胶囊形右半边） */
+/* 搜索按钮增强（胶囊形右半边 - 镂空设计） */
 .filter-card .ant-btn-primary {
   height: 40px !important;
   font-weight: 600 !important;
   border-radius: 0 999px 999px 0 !important;
-  background: #2D7FF9 !important;
-  border: none !important;
-  box-shadow: 0 4px 12px rgba(45, 127, 249, 0.3) !important;
+  background: #ffffff !important;
+  border: 2px solid #40a9ff !important;
+  color: #40a9ff !important;
+  box-shadow: 0 2px 8px rgba(64, 169, 255, 0.15) !important;
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
   padding: 0 32px !important;
 }
 
 .filter-card .ant-btn-primary:hover {
   transform: translateY(-2px) !important;
-  box-shadow: 0 8px 20px rgba(45, 127, 249, 0.4) !important;
-  background: #1E6FE8 !important;
+  background: #f0f9ff !important;
+  border-color: #1890ff !important;
+  color: #1890ff !important;
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.25) !important;
+}
+
+/* 深色主题搜索按钮 */
+[data-theme="dark"] .filter-card .ant-btn-primary {
+  background: rgba(26, 32, 39, 0.8) !important;
+  border-color: #69b1ff !important;
+  color: #69b1ff !important;
+  box-shadow: 0 2px 8px rgba(105, 177, 255, 0.15) !important;
+}
+
+[data-theme="dark"] .filter-card .ant-btn-primary:hover {
+  background: rgba(64, 169, 255, 0.1) !important;
+  border-color: #91d5ff !important;
+  color: #91d5ff !important;
+  box-shadow: 0 4px 12px rgba(105, 177, 255, 0.25) !important;
 }
 
 /* 页面容器背景 */
@@ -89,30 +107,10 @@
 }
 
 /* 背景装饰图形 */
-.page-card::before {
-  content: '';
-  position: absolute;
-  top: -20%;
-  right: -10%;
-  width: 800px;
-  height: 800px;
-  background: radial-gradient(circle, rgba(45, 127, 249, 0.06) 0%, transparent 70%);
-  border-radius: 50%;
-  pointer-events: none;
-  animation: floatBackground 20s ease-in-out infinite;
-}
-
+.page-card::before,
 .page-card::after {
-  content: '';
-  position: absolute;
-  bottom: -30%;
-  left: -15%;
-  width: 900px;
-  height: 900px;
-  background: radial-gradient(circle, rgba(59, 130, 246, 0.06) 0%, transparent 70%);
-  border-radius: 50%;
-  pointer-events: none;
-  animation: floatBackground 25s ease-in-out infinite reverse;
+  /* 禁用浮动装饰效果 */
+  display: none;
 }
 
 @keyframes floatBackground {
@@ -282,14 +280,8 @@
 
 /* 图标内部光泽 */
 .stat-icon::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 50%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.4), transparent);
-  border-radius: 12px 12px 0 0;
+  /* 禁用顶部渐变高光效果 */
+  display: none;
 }
 
 .stat-card:hover .stat-icon {
@@ -441,7 +433,7 @@
   transform: translateY(-50%);
   width: 4px;
   height: 20px;
-  background: #2D7FF9;
+  background: linear-gradient(135deg, #69b1ff 0%, #40a9ff 100%);
   border-radius: 2px;
 }
 
@@ -541,7 +533,7 @@
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.6));
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.85));
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.8);
   border-radius: 16px;
@@ -555,15 +547,8 @@
 
 /* 卡片光晕效果 */
 .quick-entry-item::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.4) 0%, transparent 70%);
-  opacity: 0;
-  transition: opacity 0.4s;
+  /* 禁用光晕装饰效果 */
+  display: none;
 }
 
 .quick-entry-item:hover::before {
@@ -574,7 +559,7 @@
   transform: translateY(-6px) scale(1.03);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12),
               inset 0 0 0 1px rgba(255, 255, 255, 1);
-  background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.8));
+  background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(250, 251, 252, 0.95));
 }
 
 .quick-entry-item--style {
@@ -733,4 +718,119 @@
   .dashboard-table-right {
     min-height: 500px;
   }
+}
+
+/* ============= 深色主题覆盖规则 ============= */
+:root[data-theme="dark"] .page-title {
+  color: var(--neutral-text);
+}
+
+:root[data-theme="dark"] .filter-card {
+  background: rgba(26, 29, 36, 0.85) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.05) !important;
+}
+
+:root[data-theme="dark"] .stat-card {
+  background: rgba(26, 29, 36, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3),
+              0 1px 4px rgba(0, 0, 0, 0.2),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+:root[data-theme="dark"] .stat-card:hover {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5),
+              0 4px 12px rgba(0, 0, 0, 0.3),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+:root[data-theme="dark"] .stat-card::before {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* 深色主题下的统计卡片背景 */
+:root[data-theme="dark"] .stat-card--sample {
+  background: rgba(22, 119, 255, 0.1);
+  border-color: rgba(22, 119, 255, 0.3);
+}
+
+:root[data-theme="dark"] .stat-card--production {
+  background: rgba(19, 194, 194, 0.1);
+  border-color: rgba(19, 194, 194, 0.3);
+}
+
+:root[data-theme="dark"] .stat-card--quantity {
+  background: rgba(82, 196, 26, 0.1);
+  border-color: rgba(82, 196, 26, 0.3);
+}
+
+:root[data-theme="dark"] .stat-card--overdue {
+  background: rgba(255, 77, 79, 0.1);
+  border-color: rgba(255, 77, 79, 0.3);
+}
+
+:root[data-theme="dark"] .stat-card--today-warehousing {
+  background: rgba(250, 173, 20, 0.1);
+  border-color: rgba(250, 173, 20, 0.3);
+}
+
+:root[data-theme="dark"] .stat-card--total-warehousing {
+  background: rgba(114, 46, 209, 0.1);
+  border-color: rgba(114, 46, 209, 0.3);
+}
+
+:root[data-theme="dark"] .stat-card--defective {
+  background: rgba(250, 84, 28, 0.1);
+  border-color: rgba(250, 84, 28, 0.3);
+}
+
+:root[data-theme="dark"] .stat-card--payment {
+  background: rgba(47, 84, 235, 0.1);
+  border-color: rgba(47, 84, 235, 0.3);
+}
+
+:root[data-theme="dark"] .stat-icon {
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3),
+              inset 0 -2px 8px rgba(0, 0, 0, 0.2);
+}
+
+:root[data-theme="dark"] .stat-icon::after {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+:root[data-theme="dark"] .stat-value {
+  color: var(--neutral-text);
+}
+
+:root[data-theme="dark"] .stat-label {
+  color: var(--neutral-text-light);
+}
+
+:root[data-theme="dark"] .dashboard-card {
+  background: rgba(26, 29, 36, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+:root[data-theme="dark"] .dashboard-card:hover {
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+:root[data-theme="dark"] .card-header {
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+:root[data-theme="dark"] .card-title {
+  color: var(--neutral-text);
+}
+
+:root[data-theme="dark"] .entry-label {
+  color: var(--neutral-text);
 }

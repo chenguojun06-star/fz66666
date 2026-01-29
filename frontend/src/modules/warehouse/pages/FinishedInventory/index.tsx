@@ -3,6 +3,7 @@ import { Card, Table, Button, Space, Input, Tag, Select, Image, Statistic, Row, 
 import { PlusOutlined, SearchOutlined, DownloadOutlined, ExportOutlined, HistoryOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import Layout from '@/components/Layout';
+import { useModal, useTablePagination } from '@/hooks';
 
 const { Option } = Select;
 
@@ -39,21 +40,20 @@ interface FinishedInventory {
   sizes?: string[];                // 多尺码列表
 }
 
-const FinishedInventory: React.FC = () => {
+const _FinishedInventory: React.FC = () => {
   const { message, modal } = App.useApp();
   const [dataSource, setDataSource] = useState<FinishedInventory[]>([]);
-  const [pageNum, setPageNum] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
   const [searchText, setSearchText] = useState('');
 
-  // 出库模态框
-  const [outboundVisible, setOutboundVisible] = useState(false);
-  const [selectedRecord, setSelectedRecord] = useState<FinishedInventory | null>(null);
+  // ===== 使用 useTablePagination 管理分页 =====
+  const pagination = useTablePagination(20);
+
+  // ===== 使用 useModal 管理弹窗 =====
+  const outboundModal = useModal<FinishedInventory>();
+  const inboundHistoryModal = useModal<FinishedInventory>();
+
   const [skuDetails, setSkuDetails] = useState<SKUDetail[]>([]);
   const [outboundForm] = Form.useForm();
-
-  // 入库记录模态框
-  const [inboundHistoryVisible, setInboundHistoryVisible] = useState(false);
   const [inboundHistory, setInboundHistory] = useState<any[]>([]);
 
   const getMockData = (): FinishedInventory[] => [
@@ -119,7 +119,6 @@ const FinishedInventory: React.FC = () => {
 
   // 打开出库模态框，加载该款式的所有SKU明细
   const handleOutbound = (record: FinishedInventory) => {
-    setSelectedRecord(record);
     // 模拟SKU明细数据（实际应从后端获取）
     const mockSKUDetails: SKUDetail[] = [
       // 白色系列
@@ -142,7 +141,7 @@ const FinishedInventory: React.FC = () => {
       { color: '灰色', size: 'XXL', sku: `${record.styleNo}-灰色-XXL`, availableQty: 150, lockedQty: 10, defectQty: 2, warehouseLocation: 'C-01-06' },
     ];
     setSkuDetails(mockSKUDetails);
-    setOutboundVisible(true);
+    outboundModal.open(record);
   };
 
   // SKU数量变化
@@ -169,13 +168,12 @@ const FinishedInventory: React.FC = () => {
 
     // TODO: 调用后端API
     message.success('出库成功！');
-    setOutboundVisible(false);
+    outboundModal.close();
     setSkuDetails([]);
   };
 
   // 查看入库记录
   const handleViewInboundHistory = (record: FinishedInventory) => {
-    setSelectedRecord(record);
     // 模拟入库记录数据
     const mockHistory = [
       {
@@ -198,7 +196,7 @@ const FinishedInventory: React.FC = () => {
       },
     ];
     setInboundHistory(mockHistory);
-    setInboundHistoryVisible(true);
+    inboundHistoryModal.open(record);
   };
 
   const columns: ColumnsType<FinishedInventory> = [
@@ -514,17 +512,7 @@ const FinishedInventory: React.FC = () => {
             dataSource={dataSource}
             rowKey="id"
             scroll={{ x: 1400 }}
-            pagination={{
-              current: pageNum,
-              pageSize,
-              total: dataSource.length,
-              showSizeChanger: true,
-              showTotal: (total) => `共 ${total} 条`,
-              onChange: (page, size) => {
-                setPageNum(page);
-                setPageSize(size);
-              },
-            }}
+            pagination={pagination.pagination}
           />
         </Card>
 
@@ -536,9 +524,9 @@ const FinishedInventory: React.FC = () => {
               <span>成品出库 - 多颜色多尺码明细</span>
             </Space>
           }
-          open={outboundVisible}
+          open={outboundModal.visible}
           onCancel={() => {
-            setOutboundVisible(false);
+            outboundModal.close();
             setSkuDetails([]);
           }}
           onOk={handleOutboundConfirm}
@@ -546,27 +534,27 @@ const FinishedInventory: React.FC = () => {
           okText="确认出库"
           cancelText="取消"
         >
-          {selectedRecord && (
+          {outboundModal.data && (
             <Space orientation="vertical" style={{ width: '100%' }} size="large">
               {/* 基础信息卡片 */}
               <Card size="small" style={{ background: '#f5f5f5' }}>
                 <Row gutter={24}>
                   <Col span={6}>
                     <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4 }}>订单号</div>
-                    <div style={{ fontSize: 14, fontWeight: 600 }}>{selectedRecord.orderNo}</div>
+                    <div style={{ fontSize: 14, fontWeight: 600 }}>{outboundModal.data.orderNo}</div>
                   </Col>
                   <Col span={6}>
                     <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4 }}>款号</div>
-                    <div style={{ fontSize: 14, fontWeight: 600 }}>{selectedRecord.styleNo}</div>
+                    <div style={{ fontSize: 14, fontWeight: 600 }}>{outboundModal.data.styleNo}</div>
                   </Col>
                   <Col span={6}>
                     <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4 }}>款式名称</div>
-                    <div style={{ fontSize: 14, fontWeight: 600 }}>{selectedRecord.styleName}</div>
+                    <div style={{ fontSize: 14, fontWeight: 600 }}>{outboundModal.data.styleName}</div>
                   </Col>
                   <Col span={6}>
                     <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4 }}>质检号</div>
                     <div style={{ fontSize: 14, fontWeight: 600, color: '#1890ff' }}>
-                      {selectedRecord.qualityInspectionNo || '-'}
+                      {outboundModal.data.qualityInspectionNo || '-'}
                     </div>
                   </Col>
                 </Row>
@@ -638,36 +626,36 @@ const FinishedInventory: React.FC = () => {
               <span>入库记录</span>
             </Space>
           }
-          open={inboundHistoryVisible}
-          onCancel={() => setInboundHistoryVisible(false)}
+          open={inboundHistoryModal.visible}
+          onCancel={inboundHistoryModal.close}
           width={900}
           footer={[
-            <Button key="close" onClick={() => setInboundHistoryVisible(false)}>
+            <Button key="close" onClick={inboundHistoryModal.close}>
               关闭
             </Button>
           ]}
         >
-          {selectedRecord && (
+          {inboundHistoryModal.data && (
             <Space orientation="vertical" size="large" style={{ width: '100%' }}>
               {/* 基础信息卡片 */}
               <Card size="small" style={{ background: '#f8f9fa' }}>
                 <Space size={40}>
                   <div>
                     <span style={{ color: '#8c8c8c', marginRight: 8 }}>款号:</span>
-                    <strong style={{ fontSize: 16 }}>{selectedRecord.styleNo}</strong>
+                    <strong style={{ fontSize: 16 }}>{inboundHistoryModal.data.styleNo}</strong>
                   </div>
                   <div>
                     <span style={{ color: '#8c8c8c', marginRight: 8 }}>订单号:</span>
-                    <strong>{selectedRecord.orderNo}</strong>
+                    <strong>{inboundHistoryModal.data.orderNo}</strong>
                   </div>
                   <div>
                     <span style={{ color: '#8c8c8c', marginRight: 8 }}>颜色:</span>
-                    <Tag color="blue">{selectedRecord.color}</Tag>
+                    <Tag color="blue">{inboundHistoryModal.data.color}</Tag>
                   </div>
                   <div>
                     <span style={{ color: '#8c8c8c', marginRight: 8 }}>当前库存:</span>
                     <strong style={{ color: '#059669', fontSize: 16 }}>
-                      {selectedRecord.quantity} 件
+                      {inboundHistoryModal.data.quantity} 件
                     </strong>
                   </div>
                 </Space>
@@ -742,4 +730,4 @@ const FinishedInventory: React.FC = () => {
   );
 };
 
-export default FinishedInventory;
+export default _FinishedInventory;

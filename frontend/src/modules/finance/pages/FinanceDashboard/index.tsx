@@ -6,6 +6,7 @@ import Layout from '@/components/Layout';
 import api from '@/utils/api';
 import dayjs from 'dayjs';
 import styles from './index.module.css';
+import { useRequest } from '@/hooks';
 
 const { RangePicker } = DatePicker;
 
@@ -44,7 +45,6 @@ interface RankData {
 type TimeRangeType = 'today' | 'week' | 'month' | 'year' | 'custom';
 
 const FinanceDashboard: React.FC = () => {
-  const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'amount' | 'count'>('amount');
   const [timeRange, setTimeRange] = useState<TimeRangeType>('year');
   const [customRange, setCustomRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
@@ -59,9 +59,8 @@ const FinanceDashboard: React.FC = () => {
   const [trendData, setTrendData] = useState<TrendData[]>([]);
   const [rankData, setRankData] = useState<RankData[]>([]);
 
-  // 加载数据
-  const loadData = async () => {
-    setLoading(true);
+  // ===== 使用 useRequest 优化数据加载 =====
+  const { run: loadData, loading } = useRequest(async () => {
     try {
       // 计算日期范围
       let startDate: string, endDate: string;
@@ -148,10 +147,8 @@ const FinanceDashboard: React.FC = () => {
       });
       setTrendData(generateMockTrendData());
       setRankData(generateMockRankData());
-    } finally {
-      setLoading(false);
     }
-  };
+  }, { manual: true });
 
   // 生成模拟趋势数据
   const generateMockTrendData = (): TrendData[] => {

@@ -556,12 +556,12 @@ const SystemTutorial: React.FC = () => {
     <Layout>
       <div className="system-tutorial-container">
         {/* 页面头部 */}
-        <div className="page-header">
+        <div className="tutorial-page-header">
           <div className="header-content">
-            <div className="title-section">
-              <BookOutlined className="header-icon" />
+            <div className="tutorial-title-section">
+              <BookOutlined className="tutorial-header-icon" />
               <div>
-                <h2 className="page-title">系统教学中心</h2>
+                <h2 className="tutorial-page-title">系统教学中心</h2>
                 <Text type="secondary">从入门到精通，快速掌握服装供应链管理系统</Text>
               </div>
             </div>

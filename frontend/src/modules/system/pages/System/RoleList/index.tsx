@@ -12,14 +12,15 @@ import { getErrorMessage } from '@/types/api';
 import api, { requestWithPathFallback } from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
 import { useViewport } from '@/utils/useViewport';
+import { useModal } from '@/hooks';
 import './styles.css';
 
 const RoleList: React.FC = () => {
   const { message, modal } = App.useApp();
   const [form] = Form.useForm();
   const { isMobile, modalWidth } = useViewport();
-  const [visible, setVisible] = useState(false);
-  const [currentRole, setCurrentRole] = useState<Role | null>(null);
+  const roleModal = useModal<Role>();
+  const permModal = useModal();
   const [queryParams, setQueryParams] = useState<RoleQueryParams>({
     page: 1,
     pageSize: 10
@@ -32,7 +33,6 @@ const RoleList: React.FC = () => {
   const [brandOptions, setBrandOptions] = useState<{ label: string; value: string }[]>([]);
   const [deptOptions, setDeptOptions] = useState<{ label: string; value: string }[]>([]);
 
-  const [permVisible, setPermVisible] = useState(false);
   type PermissionNode = {
     id?: number | string;
     parentId?: number;
@@ -168,7 +168,7 @@ const RoleList: React.FC = () => {
   }, []);
 
   const openDialog = (role?: Role) => {
-    setCurrentRole(role || null);
+    roleModal.open(role || null);
     form.setFieldsValue({
       roleName: String(role?.roleName || ''),
       roleCode: String(role?.roleCode || ''),
@@ -178,12 +178,10 @@ const RoleList: React.FC = () => {
       dataScopeBrands: Array.isArray(role?.dataScopeBrands) ? role?.dataScopeBrands : [],
       dataScopeDepartments: Array.isArray(role?.dataScopeDepartments) ? role?.dataScopeDepartments : [],
     });
-    setVisible(true);
   };
 
   const closeDialog = () => {
-    setVisible(false);
-    setCurrentRole(null);
+    roleModal.close();
     form.resetFields();
   };
 
@@ -318,7 +316,7 @@ const RoleList: React.FC = () => {
   };
 
   const openPermDialog = async (role: Role) => {
-    setCurrentRole(role);
+    roleModal.setModalData(role);
     try {
       const treeRes = await requestWithPathFallback('get', '/system/permission/tree', '/auth/permission/tree');
       const idsRes = await requestWithPathFallback('get', `/system/role/${role.id}/permission-ids`, `/auth/role/${role.id}/permission-ids`);
@@ -331,14 +329,14 @@ const RoleList: React.FC = () => {
       }
       const idList: number[] = (idsResult.code === 200 && Array.isArray(idsResult.data)) ? idsResult.data : [];
       setCheckedPermIds(new Set(idList));
-      setPermVisible(true);
+      permModal.open();
     } catch (e) {
       message.error('加载权限失败');
     }
   };
 
   const closePermDialog = () => {
-    setPermVisible(false);
+    permModal.close();
     setPermTree([]);
     setCheckedPermIds(new Set());
     setPermKeyword('');
@@ -417,15 +415,15 @@ const RoleList: React.FC = () => {
   }, [permKeyword, permTree]);
 
   const savePerms = async () => {
-    if (!currentRole?.id) return;
+    if (!roleModal.data?.id) return;
     openRemarkModal('确认授权', '确认授权', undefined, async (remark) => {
       setPermSaving(true);
       try {
         const ids = Array.from(checkedPermIds.values());
         const res = await requestWithPathFallback(
           'put',
-          `/system/role/${currentRole.id}/permission-ids`,
-          `/auth/role/${currentRole.id}/permission-ids`,
+          `/system/role/${roleModal.data.id}/permission-ids`,
+          `/auth/role/${roleModal.data.id}/permission-ids`,
           { permissionIds: ids, remark }
         );
         const result = res as { code?: number; message?: unknown };
@@ -612,8 +610,8 @@ const RoleList: React.FC = () => {
       </div>
 
       <ResizableModal
-        open={visible}
-        title={currentRole ? '编辑角色' : '新增角色'}
+        open={roleModal.visible}
+        title={roleModal.data ? '编辑角色' : '新增角色'}
         onCancel={closeDialog}
         onOk={handleSave}
         okText="保存"
@@ -683,8 +681,8 @@ const RoleList: React.FC = () => {
       </ResizableModal>
 
       <ResizableModal
-        open={permVisible}
-        title={currentRole ? `为「${currentRole.roleName}」授权` : '权限授权'}
+        open={permModal.visible}
+        title={roleModal.data ? `为「${roleModal.data.roleName}」授权` : '权限授权'}
         onCancel={closePermDialog}
         footer={
           <div className="modal-footer-actions">
