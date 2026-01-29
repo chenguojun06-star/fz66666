@@ -6,9 +6,13 @@ import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.dto.PatternDevelopmentStatsDTO;
 import com.fashion.supplychain.production.entity.PatternProduction;
+import com.fashion.supplychain.production.entity.MaterialPurchase;
+import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.PatternProductionService;
+import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleProcess;
+import com.fashion.supplychain.style.service.StyleBomService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.StyleProcessService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -19,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -41,6 +46,12 @@ public class PatternProductionController {
 
     @Autowired
     private StyleProcessService styleProcessService;
+
+    @Autowired
+    private StyleBomService styleBomService;
+
+    @Autowired
+    private MaterialPurchaseService materialPurchaseService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -120,29 +131,56 @@ public class PatternProductionController {
                     }
                     map.put("coverImage", coverImage);
 
-                    // 获取工序单价（从t_style_process表）
+                    // 获取工序单价并按进度节点汇总（从t_style_process表）
                     Map<String, Object> processUnitPrices = new LinkedHashMap<>();
+                    Map<String, Object> processDetails = new LinkedHashMap<>();
+
                     if (StringUtils.hasText(record.getStyleId())) {
                         try {
                             Long styleId = Long.parseLong(record.getStyleId());
                             List<StyleProcess> processes = styleProcessService.listByStyleId(styleId);
                             if (processes != null) {
+                                // 按进度节点分组汇总单价：采购、裁剪、车缝、尾部、入库
+                                Map<String, Double> stagePriceMap = new HashMap<>();
+                                Map<String, List<Map<String, Object>>> stageDetailsMap = new HashMap<>();
+
+                                // 初始化5个进度节点
+                                String[] stages = {"采购", "裁剪", "车缝", "尾部", "入库"};
+                                for (String stage : stages) {
+                                    stagePriceMap.put(stage, 0.0);
+                                    stageDetailsMap.put(stage, new ArrayList<>());
+                                }
+
                                 for (StyleProcess process : processes) {
-                                    String processName = process.getProcessName();
-                                    if (processName == null) {
-                                        processName = process.getProcessCode();
-                                    }
-                                    if (StringUtils.hasText(processName)) {
-                                        BigDecimal price = process.getPrice();
-                                        processUnitPrices.put(processName, price != null ? price.doubleValue() : 0);
+                                    String progressStage = process.getProgressStage(); // 工序所属的进度节点
+                                    BigDecimal price = process.getPrice();
+                                    double priceValue = price != null ? price.doubleValue() : 0;
+
+                                    if (StringUtils.hasText(progressStage) && stagePriceMap.containsKey(progressStage)) {
+                                        // 汇总单价
+                                        stagePriceMap.put(progressStage, stagePriceMap.get(progressStage) + priceValue);
+
+                                        // 保存工序明细
+                                        Map<String, Object> detail = new HashMap<>();
+                                        detail.put("name", process.getProcessName() != null ? process.getProcessName() : process.getProcessCode());
+                                        detail.put("unitPrice", priceValue);
+                                        detail.put("processCode", process.getProcessCode());
+                                        detail.put("machineType", process.getMachineType());
+                                        detail.put("standardTime", process.getStandardTime());
+                                        stageDetailsMap.get(progressStage).add(detail);
                                     }
                                 }
+
+                                // 将汇总后的单价和明细放入返回Map
+                                processUnitPrices.putAll(stagePriceMap);
+                                processDetails.putAll(stageDetailsMap);
                             }
                         } catch (Exception e) {
                             log.warn("Failed to get process unit prices for styleId: {}", record.getStyleId(), e);
                         }
                     }
                     map.put("processUnitPrices", processUnitPrices);
+                    map.put("processDetails", processDetails);
 
                     return map;
                 })
@@ -225,6 +263,45 @@ public class PatternProductionController {
 
         patternProductionService.updateById(record);
 
+        // 同步更新样衣开发表的生产制单开始时间和领取人
+        String styleIdStr = record.getStyleId();
+        if (StringUtils.hasText(styleIdStr)) {
+            try {
+                Long styleId = Long.parseLong(styleIdStr);
+                StyleInfo styleInfo = styleInfoService.getById(styleId);
+                if (styleInfo != null) {
+                    boolean updated = false;
+
+                    // 设置领取人（如果还没有）
+                    if (!StringUtils.hasText(styleInfo.getProductionAssignee())) {
+                        styleInfo.setProductionAssignee(currentUser);
+                        updated = true;
+                    }
+
+                    // 设置开始时间（如果还没有）
+                    if (styleInfo.getProductionStartTime() == null) {
+                        styleInfo.setProductionStartTime(LocalDateTime.now());
+                        updated = true;
+                    }
+
+                    // 同步纸样师到基础信息（sampleSupplier字段）
+                    if (StringUtils.hasText(record.getPatternMaker()) && !StringUtils.hasText(styleInfo.getSampleSupplier())) {
+                        styleInfo.setSampleSupplier(record.getPatternMaker());
+                        updated = true;
+                        log.info("Synced pattern maker to style info: styleId={}, patternMaker={}", styleId, record.getPatternMaker());
+                    }
+
+                    if (updated) {
+                        styleInfoService.updateById(styleInfo);
+                        log.info("Synced production start to style info: styleId={}, assignee={}, startTime={}",
+                                styleId, currentUser, LocalDateTime.now());
+                    }
+                }
+            } catch (NumberFormatException e) {
+                log.warn("Invalid styleId format: {}", styleIdStr);
+            }
+        }
+
         log.info("Pattern production received: id={}, receiver={}, patternMaker={}",
                 id, currentUser, record.getPatternMaker());
         return Result.success("领取成功");
@@ -254,6 +331,36 @@ public class PatternProductionController {
             if (allCompleted && !"COMPLETED".equals(record.getStatus())) {
                 record.setStatus("COMPLETED");
                 record.setCompleteTime(LocalDateTime.now());
+
+                // 同步更新样衣开发表的样板生产时间和领取人
+                if (StringUtils.hasText(record.getStyleId())) {
+                    try {
+                        Long styleId = Long.parseLong(record.getStyleId());
+                        StyleInfo styleInfo = styleInfoService.getById(styleId);
+                        if (styleInfo != null) {
+                            String currentUser = UserContext.username();
+                            LocalDateTime now = LocalDateTime.now();
+
+                            // 设置领取人（如果还没有）
+                            if (!StringUtils.hasText(styleInfo.getProductionAssignee())) {
+                                styleInfo.setProductionAssignee(currentUser);
+                            }
+
+                            // 设置开始时间（如果还没有）
+                            if (styleInfo.getProductionStartTime() == null) {
+                                styleInfo.setProductionStartTime(record.getCreateTime() != null ? record.getCreateTime() : now);
+                            }
+
+                            // 设置完成时间
+                            styleInfo.setProductionCompletedTime(now);
+
+                            styleInfoService.updateById(styleInfo);
+                            log.info("Updated StyleInfo production times: styleId={}, assignee={}", styleId, styleInfo.getProductionAssignee());
+                        }
+                    } catch (Exception e) {
+                        log.error("Failed to update StyleInfo production times: styleId={}", record.getStyleId(), e);
+                    }
+                }
             }
 
             patternProductionService.updateById(record);
@@ -285,5 +392,110 @@ public class PatternProductionController {
 
         log.info("Pattern production deleted: id={}", id);
         return Result.success("删除成功");
+    }
+
+    /**
+     * 根据BOM配置自动生成物料采购记录
+     */
+    private void createMaterialPurchaseFromBom(PatternProduction patternProduction) {
+        if (patternProduction == null || !StringUtils.hasText(patternProduction.getStyleId())) {
+            log.warn("Cannot create material purchase: invalid pattern production or styleId");
+            return;
+        }
+
+        String styleId = patternProduction.getStyleId();
+
+        // 查询BOM配置
+        LambdaQueryWrapper<StyleBom> bomWrapper = new LambdaQueryWrapper<>();
+        bomWrapper.eq(StyleBom::getStyleId, styleId);
+        List<StyleBom> bomList = styleBomService.list(bomWrapper);
+
+        if (bomList == null || bomList.isEmpty()) {
+            log.info("No BOM found for styleId={}, skip material purchase creation", styleId);
+            return;
+        }
+
+        // 检查是否已经生成过采购记录
+        LambdaQueryWrapper<MaterialPurchase> existsWrapper = new LambdaQueryWrapper<>();
+        existsWrapper.eq(MaterialPurchase::getPatternProductionId, patternProduction.getId())
+                .eq(MaterialPurchase::getDeleteFlag, 0);
+        long existsCount = materialPurchaseService.count(existsWrapper);
+
+        if (existsCount > 0) {
+            log.info("Material purchase already exists for patternProductionId={}, skip creation",
+                    patternProduction.getId());
+            return;
+        }
+
+        // 获取款式信息
+        StyleInfo styleInfo = styleInfoService.getById(styleId);
+
+        // 为每个BOM项创建采购记录
+        int createdCount = 0;
+        for (StyleBom bom : bomList) {
+            try {
+                MaterialPurchase purchase = new MaterialPurchase();
+
+                // 生成采购单号：MP + 时间戳后8位
+                String purchaseNo = "MP" + System.currentTimeMillis() % 100000000;
+                purchase.setPurchaseNo(purchaseNo);
+
+                // 物料信息
+                purchase.setMaterialCode(bom.getMaterialCode());
+                purchase.setMaterialName(bom.getMaterialName());
+                purchase.setMaterialType(bom.getMaterialType());
+                purchase.setSpecifications(bom.getSpecification());
+                purchase.setUnit(bom.getUnit());
+
+                // 采购数量 = 用量 × 样板数量
+                int quantity = patternProduction.getQuantity() != null ? patternProduction.getQuantity() : 1;
+                BigDecimal usageAmount = bom.getUsageAmount() != null ? bom.getUsageAmount() : BigDecimal.ZERO;
+                int purchaseQty = usageAmount.multiply(BigDecimal.valueOf(quantity)).intValue();
+                purchase.setPurchaseQuantity(purchaseQty);
+                purchase.setArrivedQuantity(0);
+
+                // 供应商和价格
+                purchase.setSupplierName(bom.getSupplier());
+                purchase.setUnitPrice(bom.getUnitPrice());
+                BigDecimal totalAmount = bom.getUnitPrice() != null
+                        ? bom.getUnitPrice().multiply(BigDecimal.valueOf(purchaseQty))
+                        : BigDecimal.ZERO;
+                purchase.setTotalAmount(totalAmount);
+
+                // 款式信息
+                purchase.setStyleId(styleId);
+                purchase.setStyleNo(patternProduction.getStyleNo());
+                if (styleInfo != null) {
+                    purchase.setStyleName(styleInfo.getStyleName());
+                    purchase.setStyleCover(styleInfo.getCover());
+                }
+
+                // 同步颜色和尺码信息
+                purchase.setColor(patternProduction.getColor());
+                // 尺码从StyleInfo获取
+                if (styleInfo != null && StringUtils.hasText(styleInfo.getSize())) {
+                    purchase.setSize(styleInfo.getSize());
+                }
+
+                // 采购来源：样衣
+                purchase.setSourceType("sample");
+                purchase.setPatternProductionId(patternProduction.getId());
+
+                // 状态
+                purchase.setStatus("PENDING");
+                purchase.setDeleteFlag(0);
+                purchase.setCreateTime(LocalDateTime.now());
+                purchase.setUpdateTime(LocalDateTime.now());
+
+                materialPurchaseService.save(purchase);
+                createdCount++;
+
+            } catch (Exception e) {
+                log.error("Failed to create material purchase for bom: bomId={}", bom.getId(), e);
+            }
+        }
+
+        log.info("Created {} material purchase records for patternProductionId={}",
+                createdCount, patternProduction.getId());
     }
 }

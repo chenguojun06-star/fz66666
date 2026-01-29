@@ -16,6 +16,7 @@ interface Props {
   bomAssignee?: string;
   bomStartTime?: string;
   bomCompletedTime?: string;
+  onRefresh?: () => void | Promise<void>;
 }
 
 type MaterialType = NonNullable<StyleBom['materialType']>;
@@ -58,6 +59,7 @@ const StyleBomTab: React.FC<Props> = ({
   bomAssignee,
   bomStartTime,
   bomCompletedTime,
+  onRefresh,
 }) => {
   const { user } = useAuth();
   const { message } = App.useApp();
@@ -731,6 +733,105 @@ const StyleBomTab: React.FC<Props> = ({
     }
   };
 
+  // 生成采购单（手动触发）
+  const handleGeneratePurchase = async () => {
+    if (!data || data.length === 0) {
+      message.error('请先配置BOM物料');
+      return;
+    }
+
+    const sid = Number(styleId);
+    if (!Number.isFinite(sid) || sid <= 0) {
+      message.error('无效的款式ID');
+      return;
+    }
+
+    Modal.confirm({
+      title: '确认生成采购单',
+      content: `将根据当前BOM配置（${data.length}个物料）生成物料采购记录，是否继续？`,
+      onOk: async () => {
+        setLoading(true);
+        try {
+          const res = await api.post<{ code: number; message: string; data: number }>('/style/bom/generate-purchase', {
+            styleId: sid,
+          });
+          const result = res as Record<string, unknown>;
+          if (result.code === 200) {
+            const count = Number(result.data) || 0;
+            message.success(`成功生成 ${count} 条物料采购记录`);
+          } else {
+            message.error(result.message || '生成失败');
+          }
+        } catch (error: unknown) {
+          message.error(`生成失败：${error?.message || '请求失败'}`);
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
+  };
+
+  // 开始BOM配置
+  const handleBomStart = async () => {
+    const sid = Number(styleId);
+    if (!Number.isFinite(sid) || sid <= 0) {
+      message.error('无效的款式ID');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await api.post<{ code: number; message: string }>(`/style/info/${sid}/bom/start`);
+      const result = res as Record<string, unknown>;
+      if (result.code === 200) {
+        message.success('已开始BOM配置');
+        // 调用父组件的刷新回调，更新款式数据
+        if (onRefresh) {
+          await onRefresh();
+        }
+      } else {
+        message.error(result.message || '操作失败');
+      }
+    } catch (error: unknown) {
+      message.error(`操作失败：${error?.message || '请求失败'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 标记BOM完成
+  const handleBomComplete = async () => {
+    if (!data || data.length === 0) {
+      message.error('请先配置BOM物料');
+      return;
+    }
+
+    const sid = Number(styleId);
+    if (!Number.isFinite(sid) || sid <= 0) {
+      message.error('无效的款式ID');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await api.post<{ code: number; message: string }>(`/style/info/${sid}/bom/complete`);
+      const result = res as Record<string, unknown>;
+      if (result.code === 200) {
+        message.success('BOM配置已完成');
+        // 调用父组件的刷新回调，更新款式数据
+        if (onRefresh) {
+          await onRefresh();
+        }
+      } else {
+        message.error(result.message || '操作失败');
+      }
+    } catch (error: unknown) {
+      message.error(`操作失败：${error?.message || '请求失败'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // 删除行
   const handleDelete = async (id: string | number) => {
     if (locked) {
@@ -802,15 +903,31 @@ const StyleBomTab: React.FC<Props> = ({
     {
       title: '物料编码',
       dataIndex: 'materialCode',
-      width: 120,
+      width: 180,
       ellipsis: true,
       editable: true,
       render: (text: string, record: StyleBom) => {
         if (!locked && (tableEditable || isEditing(record))) {
           return (
-            <Form.Item name={rowName(record.id, 'materialCode')} style={{ margin: 0 }} rules={[{ required: true, message: '必填' }]}>
-              <Input />
-            </Form.Item>
+            <div style={{ display: 'flex', gap: 4 }}>
+              <Form.Item name={rowName(record.id, 'materialCode')} style={{ margin: 0, flex: 1 }} rules={[{ required: true, message: '必填' }]}>
+                <Input placeholder="输入编码或点击选择→" />
+              </Form.Item>
+              <Button
+                size="small"
+                onClick={() => {
+                  setMaterialTargetRowId(String(record.id));
+                  setMaterialTab('select');
+                  setMaterialKeyword('');
+                  setMaterialModalOpen(true);
+                  materialCreateForm.resetFields();
+                  fetchMaterials(1, '');
+                }}
+                style={{ flexShrink: 0 }}
+              >
+                选择
+              </Button>
+            </div>
           );
         }
         return text;
@@ -1088,34 +1205,62 @@ const StyleBomTab: React.FC<Props> = ({
         background: '#f5f5f5',
         borderRadius: 4,
         display: 'flex',
-        gap: 24,
+        justifyContent: 'space-between',
+        alignItems: 'center',
       }}>
-        <span style={{ color: '#666' }}>
-          领取人：<span style={{ color: '#333', fontWeight: 500 }}>{bomAssignee || '-'}</span>
-        </span>
-        <span style={{ color: '#666' }}>
-          开始时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(bomStartTime)}</span>
-        </span>
-        <span style={{ color: '#666' }}>
-          完成时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(bomCompletedTime)}</span>
-        </span>
+        <Space size="large" wrap>
+          <span style={{ color: '#666' }}>
+            领取人：<span style={{ color: '#333', fontWeight: 500 }}>{bomAssignee || '-'}</span>
+          </span>
+          <span style={{ color: '#666' }}>
+            开始时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(bomStartTime)}</span>
+          </span>
+          <span style={{ color: '#666' }}>
+            完成时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(bomCompletedTime)}</span>
+          </span>
+        </Space>
+
+        <Space wrap>
+          {locked ? (
+            <Tag color="success">已完成</Tag>
+          ) : bomStartTime ? (
+            <Tag color="processing">进行中</Tag>
+          ) : (
+            <Tag color="default">未开始</Tag>
+          )}
+
+          {!locked && !bomStartTime && (
+            <Button onClick={handleBomStart} loading={loading} size="small">
+              开始BOM配置
+            </Button>
+          )}
+
+          {!locked && bomStartTime && !bomCompletedTime && data.length > 0 && (
+            <Button type="primary" onClick={handleBomComplete} loading={loading} size="small">
+              标记完成
+            </Button>
+          )}
+        </Space>
       </div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        {/* 左侧：生成采购单按钮 */}
+        <Button
+          type="primary"
+          onClick={handleGeneratePurchase}
+          disabled={locked || !data.length || loading}
+          loading={loading}
+        >
+          📦 生成采购单
+        </Button>
+
+        {/* 右侧：BOM配置操作按钮 */}
         <Space wrap>
           <Button
             onClick={handleAdd}
-            type="primary"
             icon={<PlusOutlined />}
-            disabled={locked || Boolean(editingKey) || loading || templateLoading || (!tableEditable && !isSupervisorOrAbove)}
+            disabled={locked || Boolean(editingKey) || loading || templateLoading}
           >
             添加物料
-          </Button>
-
-          <Button
-            disabled={locked || loading || templateLoading || syncLoading || (!tableEditable && !isSupervisorOrAbove)}
-            onClick={openMaterialModal}
-          >
-            选择面辅料
           </Button>
 
           {tableEditable ? (
@@ -1138,37 +1283,6 @@ const StyleBomTab: React.FC<Props> = ({
 
           <Select
             allowClear
-            showSearch
-            filterOption={false}
-            loading={styleNoLoading}
-            value={templateSourceStyleNo || undefined}
-            placeholder="来源款号"
-            style={{ width: 180 }}
-            options={styleNoOptions}
-            onSearch={scheduleFetchStyleNos}
-            onChange={(v) => setTemplateSourceStyleNo(String(v || ''))}
-            onOpenChange={(open) => {
-              if (open && !styleNoOptions.length) fetchStyleNoOptions('');
-            }}
-            disabled={locked || Boolean(editingKey) || loading || templateLoading}
-          />
-
-          <Button disabled={locked || Boolean(editingKey) || loading || templateLoading} onClick={() => fetchBomTemplates(templateSourceStyleNo)}>
-            筛选
-          </Button>
-
-          <Button
-            disabled={locked || Boolean(editingKey) || loading || templateLoading}
-            onClick={() => {
-              setTemplateSourceStyleNo('');
-              fetchBomTemplates('');
-            }}
-          >
-            全部
-          </Button>
-
-          <Select
-            allowClear
             placeholder="导入BOM模板"
             value={bomTemplateId}
             style={{ width: 240 }}
@@ -1178,11 +1292,14 @@ const StyleBomTab: React.FC<Props> = ({
             }))}
             onChange={(v) => setBomTemplateId(v)}
             disabled={locked || Boolean(editingKey) || loading || templateLoading}
+            onOpenChange={(open) => {
+              if (open && !bomTemplates.length) fetchBomTemplates('');
+            }}
           />
 
           <Select
             value={importMode}
-            style={{ width: 120 }}
+            style={{ width: 100 }}
             options={[
               { value: 'overwrite', label: '覆盖' },
               { value: 'append', label: '追加' },
@@ -1194,16 +1311,6 @@ const StyleBomTab: React.FC<Props> = ({
           <Button disabled={locked || Boolean(editingKey) || loading || templateLoading || tableEditable} onClick={applyBomTemplate}>
             导入模板
           </Button>
-
-          {isSupervisorOrAbove ? (
-            <Button
-              disabled={locked || Boolean(editingKey) || loading || templateLoading || tableEditable || !data.length}
-              loading={syncLoading}
-              onClick={syncToMaterialDatabase}
-            >
-              一键同步到面辅料数据库
-            </Button>
-          ) : null}
         </Space>
       </div>
       <Modal

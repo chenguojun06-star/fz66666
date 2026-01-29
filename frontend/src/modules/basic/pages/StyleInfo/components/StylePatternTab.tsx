@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { Button, Input, Modal, Space, Tag, message } from 'antd';
+import { App, Button, Input, Modal, Space, Tag } from 'antd';
 import api from '@/utils/api';
 import { isSupervisorOrAboveUser, useAuth } from '@/utils/authContext';
 import { formatDateTime } from '@/utils/datetime';
@@ -25,6 +25,7 @@ const StylePatternTab: React.FC<Props> = ({
   readOnly,
   onRefresh,
 }) => {
+  const { message, modal } = App.useApp();
   const { user } = useAuth();
   const [saving, setSaving] = useState(false);
   const [sectionKey, setSectionKey] = useState<'files'>('files');
@@ -109,7 +110,7 @@ const StylePatternTab: React.FC<Props> = ({
 
   const openMaintenance = () => {
     let reason = '';
-    Modal.confirm({
+    modal.confirm({
       title: '维护',
       content: (
         <div>

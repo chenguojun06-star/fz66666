@@ -47,7 +47,7 @@ public class StyleQuotation {
      * 总成本
      */
     private BigDecimal totalCost;
-    
+
     /**
      * 报价
      */
@@ -58,21 +58,26 @@ public class StyleQuotation {
      * 创建时间
      */
     private LocalDateTime createTime;
-    
+
     /**
      * 更新时间
      */
     private LocalDateTime updateTime;
-    
+
     /**
      * 币种
      */
     @TableField(exist = false)
     private String currency;
-    
+
     /**
      * 版本号
      */
     @TableField(exist = false)
     private String version;
+
+    /**
+     * 是否锁定（0=未锁定，1=已锁定）
+     */
+    private Integer isLocked;
 }

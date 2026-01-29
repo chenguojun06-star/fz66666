@@ -380,8 +380,9 @@ const FinishedSettlementContent: React.FC = () => {
     if (!currentRecord) return;
 
     try {
-      // 审批核实功能（后端API开发中）
-      // 待实现：await api.post('/finished-settlement/approve', { id: currentRecord.id });
+      await api.post('/api/finance/finished-settlement/approve', {
+        id: currentRecord.orderId
+      });
       message.success('审批核实成功');
       setVerifyModalVisible(false);
       setCurrentRecord(null);

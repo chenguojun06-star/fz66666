@@ -28,6 +28,14 @@ public class StyleInfoController {
     }
 
     /**
+     * 获取样衣开发费用统计
+     */
+    @GetMapping("/development-stats")
+    public Result<?> getDevelopmentStats(@RequestParam(defaultValue = "day") String rangeType) {
+        return Result.success(styleInfoOrchestrator.getDevelopmentStats(rangeType));
+    }
+
+    /**
      * 根据ID查询款号资料详情
      */
     @GetMapping("/{id}")
@@ -49,8 +57,6 @@ public class StyleInfoController {
      */
     @PutMapping
     public Result<?> update(@RequestBody StyleInfo styleInfo) {
-        System.out.println("🔍 收到更新请求 - ID: " + styleInfo.getId() + ", 款号: " + styleInfo.getStyleNo());
-        System.out.println("🔍 sizeColorConfig: " + styleInfo.getSizeColorConfig());
         styleInfoOrchestrator.update(styleInfo);
         return Result.successMessage("操作成功");
     }
@@ -100,6 +106,41 @@ public class StyleInfoController {
     @PostMapping("/{id}/sample/reset")
     public Result<?> resetSample(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
         return Result.success(styleInfoOrchestrator.resetSample(id, body));
+    }
+
+    @PostMapping("/{id}/bom/start")
+    public Result<?> startBom(@PathVariable Long id) {
+        return Result.success(styleInfoOrchestrator.startBom(id));
+    }
+
+    @PostMapping("/{id}/bom/complete")
+    public Result<?> completeBom(@PathVariable Long id) {
+        return Result.success(styleInfoOrchestrator.completeBom(id));
+    }
+
+    @PostMapping("/{id}/process/start")
+    public Result<?> startProcess(@PathVariable Long id) {
+        return Result.success(styleInfoOrchestrator.startProcess(id));
+    }
+
+    @PostMapping("/{id}/process/complete")
+    public Result<?> completeProcess(@PathVariable Long id) {
+        return Result.success(styleInfoOrchestrator.completeProcess(id));
+    }
+
+    @PostMapping("/{id}/secondary/start")
+    public Result<?> startSecondary(@PathVariable Long id) {
+        return Result.success(styleInfoOrchestrator.startSecondary(id));
+    }
+
+    @PostMapping("/{id}/secondary/complete")
+    public Result<?> completeSecondary(@PathVariable Long id) {
+        return Result.success(styleInfoOrchestrator.completeSecondary(id));
+    }
+
+    @PostMapping("/{id}/secondary/skip")
+    public Result<?> skipSecondary(@PathVariable Long id) {
+        return Result.success(styleInfoOrchestrator.skipSecondary(id));
     }
 
     /**

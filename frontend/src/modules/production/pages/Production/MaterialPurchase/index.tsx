@@ -62,7 +62,7 @@ const MaterialPurchase: React.FC = () => {
   const [previewList, setPreviewList] = useState<MaterialPurchaseType[]>([]);
   const [previewOrderId, setPreviewOrderId] = useState<string>('');
   const [queryParams, setQueryParams] = useState<MaterialQueryParams>(() => {
-    const base: MaterialQueryParams = { page: 1, pageSize: 10, materialType: 'fabric' };
+    const base: MaterialQueryParams = { page: 1, pageSize: 10 };
     if (typeof window === 'undefined') return base;
     try {
       const raw = sessionStorage.getItem(PURCHASE_QUERY_STORAGE_KEY);
@@ -77,7 +77,7 @@ const MaterialPurchase: React.FC = () => {
         ...(parsed as Record<string, unknown>),
         page: Number.isFinite(page) && page > 0 ? Math.floor(page) : base.page,
         pageSize: Number.isFinite(pageSize) && pageSize > 0 ? Math.floor(pageSize) : base.pageSize,
-        materialType: typeof materialType === 'string' ? materialType : base.materialType,
+        // materialType: typeof materialType === 'string' ? materialType : base.materialType,
       };
     } catch {
       // Intentionally empty
@@ -1311,6 +1311,22 @@ const MaterialPurchase: React.FC = () => {
       ),
     },
     {
+      title: '款号',
+      dataIndex: 'styleNo',
+      key: 'styleNo',
+      width: 120,
+      ellipsis: true,
+      render: (v: string) => v || '-',
+    },
+    {
+      title: '下单数量',
+      dataIndex: 'orderQuantity',
+      key: 'orderQuantity',
+      width: 100,
+      align: 'right' as const,
+      render: (v: number) => v ? `${v} 件` : '-',
+    },
+    {
       title: '采购单号',
       dataIndex: 'purchaseNo',
       key: 'purchaseNo',
@@ -1895,6 +1911,18 @@ const MaterialPurchase: React.FC = () => {
                             <Option value="partial">部分到货</Option>
                             <Option value="completed">全部到货</Option>
                             <Option value="cancelled">已取消</Option>
+                          </Select>
+                        </Form.Item>
+                        <Form.Item label="来源">
+                          <Select
+                            placeholder="请选择来源"
+                            value={queryParams.sourceType || ''}
+                            onChange={(value) => setQueryParams({ ...queryParams, sourceType: value, page: 1 })}
+                            style={{ width: 100 }}
+                          >
+                            <Option value="">全部</Option>
+                            <Option value="order">订单</Option>
+                            <Option value="sample">样衣</Option>
                           </Select>
                         </Form.Item>
                         <Form.Item className="filter-actions">

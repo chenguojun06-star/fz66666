@@ -23,7 +23,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 成品结算控制器
@@ -36,6 +38,9 @@ public class FinishedProductSettlementController {
 
     private final FinishedProductSettlementService settlementService;
     private final FinishedProductSettlementExportService exportService;
+
+    // 审批状态存储（生产环境应持久化到数据库）
+    private static final Map<String, String> approvalStatus = new HashMap<>();
 
     @Operation(summary = "分页查询成品结算列表")
     @GetMapping("/page")
@@ -150,5 +155,38 @@ public class FinishedProductSettlementController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encodedFileName)
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .body(excelBytes);
+    }
+
+    @Operation(summary = "审批核实成品结算")
+    @PostMapping("/approve")
+    @PreAuthorize("hasAuthority('FINANCE_SETTLEMENT_APPROVE')")
+    public Result<?> approve(@RequestBody Map<String, String> params) {
+        String id = params.get("id");
+
+        if (StringUtils.isBlank(id)) {
+            return Result.fail("订单ID不能为空");
+        }
+
+        // 查询结算记录
+        FinishedProductSettlement settlement = settlementService.getById(id);
+        if (settlement == null) {
+            return Result.fail("未找到该订单的结算数据");
+        }
+
+        // 更新审批状态（生产环境应持久化到数据库）
+        approvalStatus.put(id, "approved");
+
+        return Result.success();
+    }
+
+    @Operation(summary = "获取审批状态")
+    @GetMapping("/approval-status/{id}")
+    @PreAuthorize("hasAuthority('FINANCE_SETTLEMENT_VIEW')")
+    public Result<Map<String, Object>> getApprovalStatus(@PathVariable String id) {
+        String status = approvalStatus.getOrDefault(id, "pending");
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", id);
+        result.put("status", status);
+        return Result.success(result);
     }
 }

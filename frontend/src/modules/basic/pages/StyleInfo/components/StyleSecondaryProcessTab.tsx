@@ -34,6 +34,7 @@ interface Props {
   secondaryStartTime?: string;
   secondaryCompletedTime?: string;
   sampleQuantity?: number; // 样板数量，用于自动填充工艺数量
+  onRefresh?: () => void; // 刷新父组件的回调
 }
 
 const StyleSecondaryProcessTab: React.FC<Props> = ({
@@ -43,6 +44,7 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
   secondaryStartTime,
   secondaryCompletedTime,
   sampleQuantity = 0, // 默认为 0
+  onRefresh,
 }) => {
   const { message, modal } = App.useApp();
   const { isMobile, modalWidth } = useViewport();
@@ -97,6 +99,17 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
   useEffect(() => {
     fetchData();
   }, [styleId]);
+
+  // 无二次工艺处理
+  const handleSkipSecondary = async () => {
+    try {
+      await api.post(`/style/info/${styleId}/secondary/skip`);
+      message.success('已标记为无二次工艺');
+      if (onRefresh) onRefresh();
+    } catch (error) {
+      message.error('操作失败');
+    }
+  };
 
   // 新建
   const handleAdd = () => {
@@ -311,7 +324,7 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
       </div>
       {/* 操作按钮 */}
       {!readOnly && (
-        <div style={{ marginBottom: 16 }}>
+        <div style={{ marginBottom: 16, display: 'flex', gap: 12 }}>
           <Button
             type="primary"
             icon={<PlusOutlined />}
@@ -319,6 +332,14 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
           >
             新建工艺
           </Button>
+          {!secondaryCompletedTime && (
+            <Button
+              onClick={handleSkipSecondary}
+              style={{ color: '#666' }}
+            >
+              无二次工艺
+            </Button>
+          )}
         </div>
       )}
 

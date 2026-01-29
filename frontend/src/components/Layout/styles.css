@@ -8,6 +8,10 @@
 
 /* 顶部导航栏 */
 .layout-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
   height: 60px;
   background-color: var(--neutral-white);
   border-bottom: var(--border-width) solid var(--neutral-dark);
@@ -211,6 +215,7 @@
   flex: 1;
   width: 100%;
   min-width: 0;
+  margin-top: 60px; /* 为固定的header留出空间 */
 }
 
 /* 左侧菜单栏 - 纯色深蓝背景 */
@@ -219,6 +224,9 @@
   border-right: none;
   overflow-y: auto;
   flex-shrink: 0;
+  height: calc(100vh - 60px); /* 减去header高度 */
+  position: sticky;
+  top: 60px; /* 与header底部对齐 */
 }
 
 .layout-sidebar.ant-layout-sider .ant-layout-sider-children {

@@ -1,56 +1,117 @@
 # GitHub Copilot 指令 - 服装供应链管理系统
 
+> **最后更新**: 2026-01-30  
+> **系统评分**: 96/100 ⭐⭐⭐⭐⭐  
+> **文档版本**: v3.0
+
 ## 🎯 系统概览
 
-三端协同的服装供应链管理系统：**Java Spring Boot 后端** + **React TypeScript PC端** + **微信小程序手机端**，管理从订单到生产、质检、对账的完整流程。系统评分 95/100。
+三端协同的服装供应链管理系统：**Java Spring Boot 后端** + **React TypeScript PC端** + **微信小程序手机端**，管理从订单到生产、质检、对账的完整流程。
 
 **核心技术栈**：
-- 后端：Spring Boot 2.7.18 + MyBatis Plus 3.5.7 + MySQL 9.0 + Java 21
+- 后端：Spring Boot 2.7.18 + MyBatis Plus 3.5.7 + MySQL 8.0 + Java 21
 - PC端：React 18 + Ant Design 6.1.3 + Vite 7 + TypeScript 5.3.3 + Zustand
-- 小程序：微信原生框架 + JSDoc 类型注释
+- 小程序：微信原生框架 + JSDoc 类型注释 + Design Token
 
 **项目特点**：
-- 📊 **高代码质量**：小程序ESLint错误率<1%，后端无未使用导入
-- 🏗️ **成熟架构**：26个Orchestrator编排器 + 统一UI组件库
-- 📚 **完善文档**：15份核心文档（已精简56%）
+- 📊 **高代码质量**：TODO清零、调试代码已清理、Mock数据标注完整
+- 🏗️ **成熟架构**：26个Orchestrator编排器 + 26个通用组件
+- 📚 **完善文档**：17份核心文档（含设计规范v3.0）
 - 🔄 **三端统一**：SKU系统（款号+颜色+尺码）和验证规则跨平台一致
+- 🎨 **设计系统v3.0**：纯色主题 + Design Token驱动 + 三级弹窗规范
 
 ## 🏗️ 架构关键设计
 
-### 后端：Orchestrator 模式（核心）
-业务逻辑使用 **Orchestrator 编排层** + **Service 服务层** 分离架构：
-- **Orchestrator**: 跨服务业务编排，处理复杂事务逻辑（26个编排器，如 `ShipmentReconciliationOrchestrator`、`ProductionOrderOrchestrator`）
-- **Service/ServiceImpl**: 单一领域的 CRUD 操作
-- 示例路径：`backend/src/main/java/com/fashion/supplychain/*/orchestration/`
+### 后端：Orchestrator 模式（核心架构）
 
-**架构层次**：Controller → Orchestrator → Service → Mapper
+**层次结构**：`Controller → Orchestrator → Service → Mapper`
+
+- **Controller**: 接收HTTP请求，参数验证，使用 `@PreAuthorize("hasAuthority('CODE')")` 控制权限
+- **Orchestrator**: 业务编排层，处理跨服务的复杂业务逻辑（26个编排器）
+- **Service/ServiceImpl**: 单一领域的CRUD操作，不允许Service之间互相调用
+- **Mapper**: MyBatis Plus数据访问层
 
 **何时使用 Orchestrator**：
-- 需要跨多个 Service 协调操作（如订单创建涉及 Order + Cutting + Finance）
-- 复杂事务管理和业务流程编排
-- 多步骤的业务逻辑需要统一管理
+- ✅ 跨多个Service协调操作（如订单创建涉及Order + Cutting + Finance）
+- ✅ 复杂事务管理和多步骤业务流程
+- ❌ 简单单表CRUD直接用Service
 
 **现有26个编排器按模块分布**：
-- 生产管理（8个）：ProductionOrder, CuttingTask, Scan, Quality, Bundle, Template, ProgressNode, BOM
-- 对账（3个）：Shipment, Factory, Material
-- 财务（3个）：Finance, Payroll, CostAnalysis
-- 仓储（2个）：Warehousing, Inventory
-- 采购（2个）：MaterialPurchase, Supplier
-- 工厂（2个）：Factory, Performance
-- 系统（6个）：User, Role, Dashboard, Report, Notification, AuditLog
-
-### 前端：ResizableModal 统一弹窗规范
-所有表单弹窗使用 `<ResizableModal>` 组件，统一尺寸：**80vw × 85vh**
-```typescript
-// frontend/src/components/common/ResizableModal.tsx
-<ResizableModal
-  title="编辑订单"
-  visible={visible}
-  defaultWidth="80vw"
-  defaultHeight="85vh"
->
 ```
-已在 14+ 页面采用，包括裁剪单、对账单、质检入库等。
+backend/src/main/java/com/fashion/supplychain/*/orchestration/
+├── production/        # 生产管理（8个）：ProductionOrder, CuttingTask, Scan, Quality...
+├── finance/           # 财务（3个）：Finance, Payroll, CostAnalysis
+├── reconciliation/    # 对账（3个）：Shipment, Factory, Material
+├── warehouse/         # 仓储（2个）：Warehousing, Inventory
+├── purchase/          # 采购（2个）：MaterialPurchase, Supplier
+├── factory/           # 工厂（2个）：Factory, Performance
+└── system/            # 系统（6个）：User, Role, Dashboard, Report, Notification, AuditLog
+```
+
+**编排器示例**：
+```java
+@Service
+@Slf4j
+public class ProductionOrderOrchestrator {
+    @Autowired private ProductionOrderService orderService;
+    @Autowired private CuttingTaskService cuttingService;
+    @Autowired private StyleInfoService styleService;
+    
+    @Transactional
+    public ProductionOrder createOrder(ProductionOrder order) {
+        // 1. 验证款式信息
+        StyleInfo style = styleService.getById(order.getStyleId());
+        // 2. 创建订单
+        orderService.save(order);
+        // 3. 生成裁剪单（跨Service协调）
+        cuttingService.createFromOrder(order);
+        return order;
+    }
+}
+```
+
+### 前端：ResizableModal 三级弹窗规范（v3.0）
+
+所有表单弹窗使用 `<ResizableModal>` 组件，**三级尺寸体系**：
+
+```typescript
+// ✅ 大窗口（60vw × 60vh）- 复杂表单、多Tab内容
+<ResizableModal
+  title="编辑生产订单"
+  visible={visible}
+  defaultWidth="60vw"
+  defaultHeight="60vh"
+>
+  {/* 复杂表单内容 */}
+</ResizableModal>
+
+// ✅ 中窗口（40vw × 50vh）- 普通表单
+<ResizableModal
+  title="添加款式"
+  visible={visible}
+  defaultWidth="40vw"
+  defaultHeight="50vh"
+>
+  {/* 普通表单 */}
+</ResizableModal>
+
+// ✅ 小窗口（30vw × 40vh）- 简单表单
+<ResizableModal
+  title="确认操作"
+  visible={visible}
+  defaultWidth="30vw"
+  defaultHeight="40vh"
+>
+  {/* 简单确认框 */}
+</ResizableModal>
+```
+
+**尺寸选择原则**：
+- **大窗口60vw**：订单编辑、生产任务、对账单（字段多、有Tab切换）
+- **中窗口40vw**：款式管理、菲号生成、物料采购（普通表单）
+- **小窗口30vw**：确认对话框、简单输入（少于5个字段）
+
+**⚠️ 已废弃尺寸**：旧版80vw × 85vh已全面替换为三级规范，禁止继续使用。
 
 ### 前端：QRCodeBox 统一二维码组件
 所有二维码展示使用 `<QRCodeBox>` 组件，提供 4 种主题样式：
@@ -71,7 +132,9 @@
 已在 4+ 页面统一应用。参考 `QRCodeBox.examples.md` 查看完整用法。
 
 ### 前端：ModalContentLayout 通用弹窗布局（最新规范）
+
 所有 ResizableModal 内的内容使用 `ModalContentLayout` 组件统一样式：
+
 ```typescript
 // frontend/src/components/common/ModalContentLayout.tsx
 import {
@@ -80,23 +143,28 @@ import {
   ModalPrimaryField,
   ModalFieldRow,
   ModalFieldGrid,
+  ModalInfoCard,
+  ModalSideLayout,
+  ModalVerticalStack,
+  ModalSectionTitle,
 } from '@/components/common/ModalContentLayout';
 
 // 头部灰色卡片
 <ModalHeaderCard isMobile={false}>
-  {/* 左右布局 */}
   <ModalSideLayout
     left={<StyleCoverThumb />}
     right={
       <>
-        {/* 重要字段（大字号） */}
+        {/* 重要字段（18px大字号） */}
         <ModalPrimaryField label="订单号" value="PO20260122001" />
+        
         {/* 普通字段横向排列 */}
         <ModalFieldRow gap={24}>
           <ModalField label="款号" value="ST001" />
           <ModalField label="颜色" value="黑色" />
         </ModalFieldRow>
-        {/* 网格字段（3列） */}
+        
+        {/* 网格字段（3列布局） */}
         <ModalFieldGrid columns={3}>
           <ModalField label="订单数量" value="500" />
           <ModalField label="完成数量" value="450" />
@@ -125,8 +193,6 @@ import {
 - 重点值：18px, #1f2937, 700字重
 - 字段间距：24px
 - 卡片内边距：PC 12px, 移动端 10px
-
-参考 `ModalContentLayout.examples.md` 查看完整用法和迁移指南。
 
 ### 前端：UniversalCardView 通用卡片视图组件
 通用列表卡片视图组件，支持响应式布局和丰富配置：
@@ -267,15 +333,16 @@ cd frontend && npm run dev  # http://localhost:5173
 - **组件规范**：功能组件 + TypeScript + Hooks
 - **状态管理**：Zustand (`frontend/src/utils/appContext.tsx`)
 - **表单验证**：Ant Design Form + `validationRules`（与小程序一致）
-- **弹窗尺寸**：统一 80vw × 85vh，使用 `ResizableModal`
+- **弹窗尺寸**：三级规范（大60vw/中40vw/小30vw），使用 `ResizableModal`
 - **API 调用**：`services/api.ts` 统一封装，自动处理错误和 token
 - **路由配置**：`routeConfig.ts` 定义路径和权限码
 - **模块化结构**：按业务模块组织（`src/modules/` 下 basic/production/finance/system/dashboard）
 - **页面目录**：新页面放入 `src/modules/{模块名}/pages/` 目录
 - **路由懒加载**：模块入口使用 `React.lazy()` 实现代码分割
 - **性能优化**：使用 `requestAnimationFrame` 优化 INP 到 <200ms，构建限制 chunk 大小（800KB main, 300KB vendor）
-- **通用组件**：
-  - `ResizableModal`: 可调整大小的弹窗（80vw × 85vh标准）
+- **设计系统v3.0**：纯色主题（禁止渐变）+ Design Token驱动
+- **通用组件**（26个标准组件）：
+  - `ResizableModal`: 三级弹窗（大60vw/中40vw/小30vw）
   - `QRCodeBox`: 统一二维码组件（4种主题）
   - `ModalContentLayout`: 弹窗内容布局（9个可组合组件）
   - `UniversalCardView`: 通用卡片视图（支持ViewToggle切换）
@@ -309,13 +376,15 @@ cd frontend && npm run dev  # http://localhost:5173
 ### 必读文档（优先级排序）
 1. `开发指南.md` - **开发指南**（⭐ 最重要，包含完整架构和最佳实践）
 2. `系统状态.md` - 系统状态和文档索引（从这里开始）
-3. `docs/扫码和SKU系统完整指南.md` - **SKU系统完整说明**（款号+颜色+尺码统一）
-4. `架构评估报告.md` - 架构评估报告（96分细节）
-5. `项目技术文档.md` - 完整技术文档
-6. `业务流程说明.md` - 业务流程说明
-7. `docs/代码质量工具完整指南.md` - 代码质量与业务优化工具（30+工具，PC端+后端）
-8. `docs/小程序开发完整指南.md` - **小程序专用工具**（ESLint, TypeScript, 性能分析）
-9. `docs/功能实现指南.md` - 排序、工序、权限等功能实现指南
+3. `设计系统完整规范-2026.md` - **设计系统v3.0**（纯色主题+Design Token+三级弹窗）
+4. `P0-P1任务完成总结-2026-01-29.md` - 最新任务完成总结（TODO清零+代码质量提升）
+5. `docs/扫码和SKU系统完整指南.md` - **SKU系统完整说明**（款号+颜色+尺码统一）
+6. `架构评估报告.md` - 架构评估报告（96分细节）
+7. `项目技术文档.md` - 完整技术文档
+8. `业务流程说明.md` - 业务流程说明
+9. `docs/代码质量工具完整指南.md` - 代码质量与业务优化工具（30+工具，PC端+后端）
+10. `docs/小程序开发完整指南.md` - **小程序专用工具**（ESLint, TypeScript, 性能分析）
+11. `docs/功能实现指南.md` - 排序、工序、权限等功能实现指南
 
 ### 核心配置
 - `backend/pom.xml` - Spring Boot 2.7.18, MyBatis Plus 3.5.7, Java 21
@@ -354,12 +423,14 @@ cd frontend && npm run dev  # http://localhost:5173
 - 详细逻辑参考 `SCAN_SYSTEM_LOGIC.md`
 
 ### 文档优化历史
+- 2026-01-29：**P0/P1任务完成**（TODO清零、Mock数据标注、调试代码清理、成品结算审批API）
 - 2026-01-27：代码质量大提升（小程序ESLint↓93.7%，后端清理未使用导入）+ 附件系统优化（放码纸样过滤）
 - 2026-01-26：文档大整合，从34份精简到15份核心文档（↓ 56%）
 - 2026-01-24：从60+份文档优化到34份（首次）
 - 删除了28份过时/重复/已完成的报告文档
 - 集成了工资结算模块到人员工序结算
 - SKU系统整合完成，三端统一
+- **设计系统v3.0**：三级弹窗规范（60vw/40vw/30vw）+ 纯色主题 + ModalContentLayout统一布局
 
 ## 🚀 常见任务指南
 
@@ -370,8 +441,12 @@ cd frontend && npm run dev  # http://localhost:5173
 
 ### 修改弹窗表单
 1. 找到对应页面（如 `frontend/src/modules/production/pages/Production/Cutting/index.tsx`）
-2. 使用 `<ResizableModal>` 包裹表单，确保尺寸 80vw × 85vh
+2. 使用 `<ResizableModal>` 包裹表单，按复杂度选择尺寸：
+   - 大窗口60vw：复杂表单、多Tab内容
+   - 中窗口40vw：普通表单
+   - 小窗口30vw：简单确认框
 3. 表单校验使用 Ant Design 的 `rules` 配合 `validationRules`
+4. 弹窗内容使用 `ModalContentLayout` 组件统一样式
 
 ### 扫码系统调试
 1. 参考 `QUICK_TEST_GUIDE.md` 创建测试订单
@@ -385,5 +460,5 @@ cd frontend && npm run dev  # http://localhost:5173
 
 ---
 
-*最后更新：2026-01-28*  
+*最后更新：2026-01-30*  
 *维护者：如需更多细节，查阅根目录的 MD 文档*

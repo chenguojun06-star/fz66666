@@ -771,10 +771,11 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
             throw new NoSuchElementException("目标款号不存在");
         }
 
-        String status = String.valueOf(style.getPatternStatus() == null ? "" : style.getPatternStatus()).trim();
-        if ("COMPLETED".equalsIgnoreCase(status)) {
-            throw new IllegalArgumentException("纸样已完成，无法修改，请先回退");
-        }
+        // 移除纸样状态检查，工序单价是独立模块，不应该受纸样状态限制
+        // String status = String.valueOf(style.getPatternStatus() == null ? "" : style.getPatternStatus()).trim();
+        // if ("COMPLETED".equalsIgnoreCase(status)) {
+        //     throw new IllegalArgumentException("纸样已完成，无法修改，请先回退");
+        // }
 
         TemplateLibrary tpl = getById(tid);
         if (tpl == null) {

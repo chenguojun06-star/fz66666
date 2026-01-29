@@ -5,7 +5,7 @@ import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
 import { patternProductionApi } from '@/services/production/productionApi';
 import type { PatternDevelopmentStats } from '@/types/production';
 import type { MenuProps } from 'antd';
-import { PlusOutlined, SearchOutlined, EyeOutlined, DeleteOutlined, StarOutlined, StarFilled, HolderOutlined, AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
+import { PlusOutlined, SearchOutlined, EyeOutlined, DeleteOutlined, StarOutlined, StarFilled, AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import UniversalCardView from '@/components/common/UniversalCardView';
 import { useSync } from '@/utils/syncManager';
@@ -70,8 +70,11 @@ const StyleInfoPage: React.FC = () => {
   const loadDevelopmentStats = async (rangeType: 'day' | 'week' | 'month') => {
     setStatsLoading(true);
     try {
-      const response = await patternProductionApi.getDevelopmentStats(rangeType);
-      if (response.code === 0 && response.data) {
+      // 改为调用样衣开发的统计API
+      const response = await api.get<{ code: number; data: PatternDevelopmentStats }>('/style/info/development-stats', {
+        params: { rangeType },
+      });
+      if (response.code === 200 && response.data) {
         setDevelopmentStats(response.data);
       }
     } catch (error) {
@@ -112,17 +115,11 @@ const StyleInfoPage: React.FC = () => {
 
   // 工序表和生产制单弹窗
   const [processModalVisible, setProcessModalVisible] = useState(false);
-  const [productionModalVisible, setProductionModalVisible] = useState(false);
   const [sizePriceModalVisible, setSizePriceModalVisible] = useState(false);
   const [pushToOrderModalVisible, setPushToOrderModalVisible] = useState(false);
   const [processData, setProcessData] = useState<any[]>([]);
-  const [progressNodes, setProgressNodes] = useState<any[]>([]); // 存储进度节点数据，用于显示
-  const [progressForm] = Form.useForm();
-  const [progressSaving, setProgressSaving] = useState(false);
   const [pushToOrderForm] = Form.useForm();
   const [pushToOrderSaving, setPushToOrderSaving] = useState(false);
-  const [nodeDragOverIndex, setNodeDragOverIndex] = useState<number | null>(null);
-  const draggingNodeIndexRef = useRef<number | null>(null);
 
   // 弹窗状态
   const [modalVisible, setModalVisible] = useState(false);
@@ -167,6 +164,12 @@ const StyleInfoPage: React.FC = () => {
   const isSupervisorOrAbove = useMemo(() => isSupervisorOrAboveUser(user), [user]);
   // 基础信息锁定状态：保存后锁定，点击退回解锁
   const [editLocked, setEditLocked] = useState(false);
+
+  // 辅助函数：判断字段是否应该被锁定（保存后所有字段都锁定）
+  const isFieldLocked = (fieldValue: any) => {
+    // 只要editLocked为true且有ID（已保存），所有字段都锁定
+    return editLocked && Boolean(currentStyle?.id);
+  };
 
   const isStageDoneRow = (record: unknown) => {
     const node = String(record?.progressNode || '').trim();
@@ -603,9 +606,8 @@ const StyleInfoPage: React.FC = () => {
         const styleData = res.data || null;
         setCurrentStyle(styleData);
 
-        const sampleStatus = String(styleData?.sampleStatus ?? '').trim().toUpperCase();
-        const patternStatus = String(styleData?.patternStatus ?? '').trim().toUpperCase();
-        setEditLocked(sampleStatus === 'COMPLETED' || patternStatus === 'COMPLETED');
+        // 只要有ID（已保存），就锁定编辑，除非是新建状态
+        setEditLocked(Boolean(styleData?.id));
 
         // 恢复表格配置数据
         if (styleData?.sizeColorConfig) {
@@ -675,129 +677,6 @@ const StyleInfoPage: React.FC = () => {
     }
   };
 
-  // 加载进度模版数据
-  const loadProgressTemplate = async (styleNo: string) => {
-    // 自动生成模板名称：款号-进度模板
-    const autoTemplateName = `${styleNo}-进度模板`;
-
-    try {
-      // 尝试加载该款号的进度模版
-      const res = await api.get<{ code: number; data: { records: any[] } }>('/template-library/list', {
-        params: {
-          templateType: 'progress',
-          sourceStyleNo: styleNo,
-          page: 1,
-          pageSize: 1,
-        },
-      });
-
-      if (res.code === 200 && res.data?.records?.length > 0) {
-        const tpl = res.data.records[0];
-        const content = JSON.parse(tpl.templateContent || tpl.content || '{}');  // 兼容两种字段名
-        const nodes = content.nodes || [];
-        progressForm.setFieldsValue({
-          templateName: autoTemplateName, // 总是使用自动生成的名称
-          templateKey: tpl.templateKey,
-          sourceStyleNo: styleNo, // 总是使用当前款号
-          nodes,
-        });
-        setProgressNodes(nodes); // 更新状态用于显示
-      } else {
-        // 没有找到模版，设置默认的进度节点
-        const defaultNodes = [
-          { name: '采购' },
-          { name: '裁剪' },
-          { name: '车缝' },
-          { name: '大烫' },
-          { name: '质检' },
-          { name: '二次工艺' },
-          { name: '包装' },
-          { name: '入库' },
-        ];
-        progressForm.setFieldsValue({
-          templateName: autoTemplateName,
-          templateKey: `progress_${styleNo}`,
-          sourceStyleNo: styleNo,
-          nodes: defaultNodes,
-        });
-        setProgressNodes(defaultNodes); // 更新状态用于显示
-      }
-    } catch (error) {
-      console.error('加载进度模版失败', error);
-      // 设置默认值
-      progressForm.setFieldsValue({
-        templateName: autoTemplateName,
-        templateKey: `progress_${styleNo}`,
-        sourceStyleNo: styleNo,
-        nodes: [
-          { name: '采购' },
-          { name: '裁剪' },
-          { name: '车缝' },
-          { name: '大烫' },
-          { name: '质检' },
-          { name: '二次工艺' },
-          { name: '包装' },
-          { name: '入库' },
-        ],
-      });
-    }
-  };
-
-  // 保存进度模版
-  const submitProgress = async () => {
-    try {
-      await progressForm.validateFields();
-      const values = progressForm.getFieldsValue();
-
-      // 自动填充款号和模板名称
-      const styleNo = currentStyle?.styleNo || '';
-      const finalTemplateName = values.templateName || `${styleNo}-进度模板`;
-      const finalSourceStyleNo = styleNo; // 自动绑定当前款号
-
-      setProgressSaving(true);
-      const content = JSON.stringify({
-        nodes: (values.nodes || []).map((n: any) => ({
-          name: n.name || '',
-          unitPrice: n.unitPrice || 0,
-        })),
-      });
-
-      const res = await api.post('/template-library/save', {
-        templateType: 'progress',
-        templateKey: values.templateKey || `progress_${finalSourceStyleNo}`,
-        templateContent: content,  // 后端字段是 templateContent
-        sourceStyleNo: finalSourceStyleNo,
-        templateName: finalTemplateName,  // 后端字段是 templateName
-      });
-
-      if (res.code === 200) {
-        message.success('保存成功');
-        // 更新表单显示的款号和名称
-        progressForm.setFieldsValue({
-          sourceStyleNo: finalSourceStyleNo,
-          templateName: finalTemplateName,
-        });
-        // 更新进度节点显示数据
-        setProgressNodes(values.nodes || []);
-        setProductionModalVisible(false);
-        // 刷新数据
-        if (currentStyle?.styleNo) {
-          await loadProgressTemplate(currentStyle.styleNo);
-        }
-      } else {
-        message.error(res.message || '保存失败');
-      }
-    } catch (error: any) {
-      if (error.errorFields) {
-        message.error('请完善表单');
-      } else {
-        message.error('保存失败');
-      }
-    } finally {
-      setProgressSaving(false);
-    }
-  };
-
   // 推送到下单
   const handlePushToOrder = () => {
     if (!currentStyle) {
@@ -805,12 +684,12 @@ const StyleInfoPage: React.FC = () => {
       return;
     }
 
-    // 检查开发状态
-    const progressNode = String(currentStyle.progressNode || '').trim();
-    if (progressNode !== '样衣完成') {
-      message.error('款号开发未完成，无法推送到下单管理');
-      return;
-    }
+    // 移除开发状态检查，允许任何时候推送
+    // const progressNode = String(currentStyle.progressNode || '').trim();
+    // if (progressNode !== '样衣完成') {
+    //   message.error('款号开发未完成，无法推送到下单管理');
+    //   return;
+    // }
 
     // 检查必要数据
     if (!processData || processData.length === 0) {
@@ -1021,20 +900,55 @@ const StyleInfoPage: React.FC = () => {
         res = await api.put('/style/info', payload);
       } else {
         // 新建时：如果没有款号，自动生成
-        if (!normalizedValues.styleNo || normalizedValues.styleNo.trim() === '') {
+        let styleNo = normalizedValues.styleNo?.trim() || '';
+        if (!styleNo) {
           const serialRes = await api.get<{ code: number; data: string }>('/system/serial/generate', {
             params: { ruleCode: 'STYLE_NO' }
           });
-          normalizedValues.styleNo = serialRes.code === 200 && serialRes.data
+          styleNo = serialRes.code === 200 && serialRes.data
             ? serialRes.data
             : 'ST' + Date.now();
         }
+
+        // 检查款号是否重复，如果重复则自动递增
+        let finalStyleNo = styleNo;
+        let suffix = 1;
+        let isDuplicate = true;
+
+        while (isDuplicate) {
+          try {
+            const checkRes = await api.get<{ code: number; data: { records: any[] } }>('/style/info/list', {
+              params: { styleNo: finalStyleNo, page: 1, pageSize: 1 }
+            });
+
+            if (checkRes.code === 200 && checkRes.data?.records && checkRes.data.records.length > 0) {
+              // 款号重复，添加后缀
+              finalStyleNo = `${styleNo}-${suffix}`;
+              suffix++;
+            } else {
+              // 款号不重复，可以使用
+              isDuplicate = false;
+            }
+          } catch (error) {
+            // 查询出错，直接使用原款号
+            isDuplicate = false;
+          }
+        }
+
+        normalizedValues.styleNo = finalStyleNo;
+        if (finalStyleNo !== styleNo) {
+          message.info(`款号 ${styleNo} 已存在，自动调整为 ${finalStyleNo}`);
+        }
+
         res = await api.post('/style/info', normalizedValues);
       }
 
       const result = res as Record<string, unknown>;
       if (result.code === 200) {
         message.success(currentStyle?.id ? '更新成功' : '创建成功');
+
+        // 保存成功后立即锁定表单
+        setEditLocked(true);
 
         // 如果是新建页面，保存后上传待上传的图片，然后跳转到详情页
         if (isNewPage && result.data?.id) {
@@ -1192,7 +1106,33 @@ const StyleInfoPage: React.FC = () => {
           </div>
 
           {/* 基础信息 - 固定在上面 */}
-          <Card title="样衣详情" style={{ marginBottom: 24 }}>
+          <Card
+            title="样衣详情"
+            style={{ marginBottom: 24 }}
+            extra={
+              currentStyle?.id && (
+                <Space>
+                  <Button
+                    type="primary"
+                    size="small"
+                    onClick={handleCompleteSample}
+                    style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+                    disabled={(currentStyle as any)?.sampleStatus === 'COMPLETED'}
+                  >
+                    {(currentStyle as any)?.sampleStatus === 'COMPLETED' ? '样衣已完成' : '样衣完成'}
+                  </Button>
+                  <Button
+                    type="primary"
+                    size="small"
+                    onClick={handlePushToOrder}
+                    disabled={!processData || processData.length === 0}
+                  >
+                    推送到下单管理
+                  </Button>
+                </Space>
+              )
+            }
+          >
             <Form layout="horizontal" form={form} labelCol={{ flex: '80px' }} wrapperCol={{ flex: 1 }}>
               <Row gutter={16}>
                 <Col xs={24} lg={6}>
@@ -1205,31 +1145,21 @@ const StyleInfoPage: React.FC = () => {
                   />
                 </Col>
                 <Col xs={24} lg={18}>
-                  {/* 第1行：订单号、款号、款名、设计师、设计号 */}
+                  {/* 第1行：款号、款名、设计师 */}
                   <Row gutter={[12, 8]}>
-                    <Col span={24 / 5}>
-                      <Form.Item name="orderNo" label="订单号">
-                        <Input placeholder="请输入订单号" disabled={editLocked} />
-                      </Form.Item>
-                    </Col>
-                    <Col span={24 / 5}>
+                    <Col span={8}>
                       <Form.Item name="styleNo" label="款号" rules={[{ required: true, message: '请输入款号' }]}>
-                        <Input placeholder="请输入款号" disabled={editLocked} />
+                        <Input placeholder="请输入款号" disabled={editLocked || Boolean(currentStyle?.id)} />
                       </Form.Item>
                     </Col>
-                    <Col span={24 / 5}>
+                    <Col span={8}>
                       <Form.Item name="styleName" label="款名" rules={[{ required: true, message: '请输入款名' }]}>
                         <Input placeholder="请输入款名" disabled={editLocked} />
                       </Form.Item>
                     </Col>
-                    <Col span={24 / 5}>
+                    <Col span={8}>
                       <Form.Item name="sampleNo" label="设计师">
                         <Input placeholder="请输入设计师" disabled={editLocked} />
-                      </Form.Item>
-                    </Col>
-                    <Col span={24 / 5}>
-                      <Form.Item name="vehicleSupplier" label="设计号">
-                        <Input placeholder="请输入设计号" disabled={editLocked} />
                       </Form.Item>
                     </Col>
                   </Row>
@@ -1238,27 +1168,27 @@ const StyleInfoPage: React.FC = () => {
                   <Row gutter={[12, 8]}>
                     <Col span={24 / 5}>
                       <Form.Item name="season" label="季节">
-                        <Select placeholder="请选择季节" options={seasonOptions} disabled={editLocked} />
+                        <Select placeholder="请选择季节" options={seasonOptions} disabled={isFieldLocked(currentStyle?.season)} />
                       </Form.Item>
                     </Col>
                     <Col span={24 / 5}>
                       <Form.Item name="customer" label="客户">
-                        <Input placeholder="请选择客户" disabled={editLocked} />
+                        <Input placeholder="请选择客户" disabled={isFieldLocked(currentStyle?.customer)} />
                       </Form.Item>
                     </Col>
                     <Col span={24 / 5}>
                       <Form.Item name="sampleSupplier" label="纸样师">
-                        <Input placeholder="请输入纸样师" disabled={editLocked} />
+                        <Input placeholder="请输入纸样师" disabled={isFieldLocked(currentStyle?.sampleSupplier)} />
                       </Form.Item>
                     </Col>
                     <Col span={24 / 5}>
                       <Form.Item name="patternNo" label="纸样号">
-                        <Input placeholder="请输入纸样号" disabled={editLocked} />
+                        <Input placeholder="请输入纸样号" disabled={isFieldLocked(currentStyle?.patternNo)} />
                       </Form.Item>
                     </Col>
                     <Col span={24 / 5}>
                       <Form.Item name="plateWorker" label="车板师">
-                        <Input placeholder="请输入车板师" disabled={editLocked} />
+                        <Input placeholder="请输入车板师" disabled={isFieldLocked(currentStyle?.plateWorker)} />
                       </Form.Item>
                     </Col>
                   </Row>
@@ -1267,7 +1197,7 @@ const StyleInfoPage: React.FC = () => {
                   <Row gutter={[12, 8]}>
                     <Col span={24 / 5}>
                       <Form.Item name="plateType" label="板类">
-                        <Select placeholder="请选择板类" disabled={editLocked}>
+                        <Select placeholder="请选择板类" disabled={isFieldLocked(currentStyle?.plateType)}>
                           <Select.Option value="首单">首单</Select.Option>
                           <Select.Option value="复板">复板</Select.Option>
                           <Select.Option value="公司版">公司版</Select.Option>
@@ -1281,13 +1211,13 @@ const StyleInfoPage: React.FC = () => {
                     </Col>
                     <Col span={24 / 5}>
                       <Form.Item name="category" label="品类" rules={[{ required: true, message: '请选择品类' }]}>
-                        <Select placeholder="请选择品类" options={categoryOptions} disabled={editLocked} />
+                        <Select placeholder="请选择品类" options={categoryOptions} disabled={isFieldLocked(currentStyle?.category)} />
                       </Form.Item>
                     </Col>
                     <Col span={24 / 5}>
                       <Form.Item name="createTime" label="下板时间">
                         <UnifiedDatePicker
-                          disabled={Boolean(currentStyle?.id)}
+                          disabled={editLocked}
                           allowClear
                           showTime
                           placeholder="请选择下板时间"
@@ -1299,7 +1229,7 @@ const StyleInfoPage: React.FC = () => {
                     <Col span={24 / 5}>
                       <Form.Item name="deliveryDate" label="交板日期">
                         <UnifiedDatePicker
-                          disabled={editLocked}
+                          disabled={isFieldLocked(currentStyle?.deliveryDate)}
                           allowClear
                           showTime
                           placeholder="请选择交板日期"
@@ -1310,7 +1240,7 @@ const StyleInfoPage: React.FC = () => {
                     </Col>
                     <Col span={24 / 5}>
                       <Form.Item name="cycle" label="样衣周期[天]" labelCol={{ flex: '100px' }}>
-                        <InputNumber style={{ width: '100%' }} min={0} disabled={editLocked} />
+                        <InputNumber style={{ width: '100%' }} min={0} disabled={isFieldLocked(currentStyle?.cycle)} />
                       </Form.Item>
                     </Col>
                   </Row>
@@ -1319,7 +1249,7 @@ const StyleInfoPage: React.FC = () => {
                   <Row gutter={[12, 8]}>
                     <Col span={24 / 5}>
                       <Form.Item name="orderType" label="跟单员">
-                        <Input placeholder="请输入跟单员" disabled={editLocked} />
+                        <Input placeholder="请输入跟单员" disabled={isFieldLocked(currentStyle?.orderType)} />
                       </Form.Item>
                     </Col>
                     <Col span={24 / 5}>
@@ -1329,7 +1259,7 @@ const StyleInfoPage: React.FC = () => {
                     </Col>
                     <Col span={24 / 5 * 3}>
                       <Form.Item name="remark" label="备注">
-                        <Input.TextArea rows={2} placeholder="请输入备注" disabled={editLocked} />
+                        <Input.TextArea rows={2} placeholder="请输入备注" disabled={isFieldLocked(currentStyle?.remark)} />
                       </Form.Item>
                     </Col>
                   </Row>
@@ -1346,37 +1276,37 @@ const StyleInfoPage: React.FC = () => {
                             <tr>
                               <td style={{ padding: '4px 8px', border: '1px solid #d9d9d9', background: '#fafafa', fontWeight: 500, whiteSpace: 'nowrap' }}>码数</td>
                               <td style={{ padding: '2px 4px', border: '1px solid #d9d9d9', whiteSpace: 'nowrap' }}>
-                                <DictAutoComplete dictType="size" size="small" value={size1} onChange={setSize1} style={{ width: '80px', textAlign: 'center' }} disabled={editLocked} />
+                                <DictAutoComplete dictType="size" size="small" value={size1} onChange={setSize1} style={{ width: '80px', textAlign: 'center' }} disabled={isFieldLocked(size1)} />
                               </td>
                               <td style={{ padding: '2px 4px', border: '1px solid #d9d9d9', whiteSpace: 'nowrap' }}>
-                                <DictAutoComplete dictType="size" size="small" value={size2} onChange={setSize2} style={{ width: '80px', textAlign: 'center' }} disabled={editLocked} />
+                                <DictAutoComplete dictType="size" size="small" value={size2} onChange={setSize2} style={{ width: '80px', textAlign: 'center' }} disabled={isFieldLocked(size2)} />
                               </td>
                               <td style={{ padding: '2px 4px', border: '1px solid #d9d9d9', whiteSpace: 'nowrap' }}>
-                                <DictAutoComplete dictType="size" size="small" value={size3} onChange={setSize3} style={{ width: '80px', textAlign: 'center' }} disabled={editLocked} />
+                                <DictAutoComplete dictType="size" size="small" value={size3} onChange={setSize3} style={{ width: '80px', textAlign: 'center' }} disabled={isFieldLocked(size3)} />
                               </td>
                               <td style={{ padding: '2px 4px', border: '1px solid #d9d9d9', whiteSpace: 'nowrap' }}>
-                                <DictAutoComplete dictType="size" size="small" value={size4} onChange={setSize4} style={{ width: '80px', textAlign: 'center' }} disabled={editLocked} />
+                                <DictAutoComplete dictType="size" size="small" value={size4} onChange={setSize4} style={{ width: '80px', textAlign: 'center' }} disabled={isFieldLocked(size4)} />
                               </td>
                               <td style={{ padding: '2px 4px', border: '1px solid #d9d9d9', whiteSpace: 'nowrap' }}>
-                                <DictAutoComplete dictType="size" size="small" value={size5} onChange={setSize5} style={{ width: '80px', textAlign: 'center' }} disabled={editLocked} />
+                                <DictAutoComplete dictType="size" size="small" value={size5} onChange={setSize5} style={{ width: '80px', textAlign: 'center' }} disabled={isFieldLocked(size5)} />
                               </td>
                             </tr>
                             <tr>
                               <td style={{ padding: '4px 8px', border: '1px solid #d9d9d9', background: '#fafafa', fontWeight: 500, whiteSpace: 'nowrap', color: '#ff4d4f' }}>颜色</td>
                               <td style={{ padding: '2px 4px', border: '1px solid #d9d9d9', whiteSpace: 'nowrap' }}>
-                                <DictAutoComplete dictType="color" size="small" value={color1} onChange={setColor1} style={{ width: '80px', textAlign: 'center' }} disabled={editLocked} />
+                                <DictAutoComplete dictType="color" size="small" value={color1} onChange={setColor1} style={{ width: '80px', textAlign: 'center' }} disabled={isFieldLocked(color1)} />
                               </td>
                               <td style={{ padding: '2px 4px', border: '1px solid #d9d9d9', whiteSpace: 'nowrap' }}>
-                                <DictAutoComplete dictType="color" size="small" value={color2} onChange={setColor2} style={{ width: '80px', textAlign: 'center' }} disabled={editLocked} />
+                                <DictAutoComplete dictType="color" size="small" value={color2} onChange={setColor2} style={{ width: '80px', textAlign: 'center' }} disabled={isFieldLocked(color2)} />
                               </td>
                               <td style={{ padding: '2px 4px', border: '1px solid #d9d9d9', whiteSpace: 'nowrap' }}>
-                                <DictAutoComplete dictType="color" size="small" value={color3} onChange={setColor3} style={{ width: '80px', textAlign: 'center' }} disabled={editLocked} />
+                                <DictAutoComplete dictType="color" size="small" value={color3} onChange={setColor3} style={{ width: '80px', textAlign: 'center' }} disabled={isFieldLocked(color3)} />
                               </td>
                               <td style={{ padding: '2px 4px', border: '1px solid #d9d9d9', whiteSpace: 'nowrap' }}>
-                                <DictAutoComplete dictType="color" size="small" value={color4} onChange={setColor4} style={{ width: '80px', textAlign: 'center' }} disabled={editLocked} />
+                                <DictAutoComplete dictType="color" size="small" value={color4} onChange={setColor4} style={{ width: '80px', textAlign: 'center' }} disabled={isFieldLocked(color4)} />
                               </td>
                               <td style={{ padding: '2px 4px', border: '1px solid #d9d9d9', whiteSpace: 'nowrap' }}>
-                                <DictAutoComplete dictType="color" size="small" value={color5} onChange={setColor5} style={{ width: '80px', textAlign: 'center' }} disabled={editLocked} />
+                                <DictAutoComplete dictType="color" size="small" value={color5} onChange={setColor5} style={{ width: '80px', textAlign: 'center' }} disabled={isFieldLocked(color5)} />
                               </td>
                             </tr>
                             <tr>
@@ -1391,7 +1321,7 @@ const StyleInfoPage: React.FC = () => {
                                   }}
                                   style={{ width: '80px' }}
                                   min={0}
-                                  disabled={editLocked}
+                                  disabled={isFieldLocked(qty1)}
                                 />
                               </td>
                               <td style={{ padding: '2px 4px', border: '1px solid #d9d9d9', whiteSpace: 'nowrap' }}>
@@ -1404,7 +1334,7 @@ const StyleInfoPage: React.FC = () => {
                                   }}
                                   style={{ width: '80px' }}
                                   min={0}
-                                  disabled={editLocked}
+                                  disabled={isFieldLocked(qty2)}
                                 />
                               </td>
                               <td style={{ padding: '2px 4px', border: '1px solid #d9d9d9', whiteSpace: 'nowrap' }}>
@@ -1417,7 +1347,7 @@ const StyleInfoPage: React.FC = () => {
                                   }}
                                   style={{ width: '80px' }}
                                   min={0}
-                                  disabled={editLocked}
+                                  disabled={isFieldLocked(qty3)}
                                 />
                               </td>
                               <td style={{ padding: '2px 4px', border: '1px solid #d9d9d9', whiteSpace: 'nowrap' }}>
@@ -1430,7 +1360,7 @@ const StyleInfoPage: React.FC = () => {
                                   }}
                                   style={{ width: '80px' }}
                                   min={0}
-                                  disabled={editLocked}
+                                  disabled={isFieldLocked(qty4)}
                                 />
                               </td>
                               <td style={{ padding: '2px 4px', border: '1px solid #d9d9d9', whiteSpace: 'nowrap' }}>
@@ -1443,7 +1373,7 @@ const StyleInfoPage: React.FC = () => {
                                   }}
                                   style={{ width: '80px' }}
                                   min={0}
-                                  disabled={editLocked}
+                                  disabled={isFieldLocked(qty5)}
                                 />
                               </td>
                             </tr>
@@ -1614,29 +1544,7 @@ const StyleInfoPage: React.FC = () => {
                     </Row>
                   )}
 
-                  {/* 第9行：进度模版 */}
-                  {currentStyle?.id && (
-                    <Row gutter={[12, 8]}>
-                      <Col span={24}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                          <Button size="small" onClick={() => setProductionModalVisible(true)}>进度模版</Button>
-                          <div style={{ flex: 1, display: 'flex', flexWrap: 'wrap', gap: 8, fontSize: 12 }}>
-                            {progressNodes.length > 0 ? (
-                              progressNodes.map((item: any, idx: number) => (
-                                <span key={idx} style={{ padding: '2px 8px', background: '#e6f7ff', borderRadius: 4 }}>
-                                  {item.name}
-                                </span>
-                              ))
-                            ) : (
-                              <span style={{ color: '#999' }}>点击配置进度节点</span>
-                            )}
-                          </div>
-                        </div>
-                      </Col>
-                    </Row>
-                  )}
-
-                  {/* 第10行：多码单价 */}
+                  {/* 第9行：多码单价 */}
                   {currentStyle?.id && (
                     <Row gutter={[12, 8]}>
                       <Col span={24}>
@@ -1650,37 +1558,7 @@ const StyleInfoPage: React.FC = () => {
                     </Row>
                   )}
 
-                  {/* 第10行：推送到下单按钮 */}
-                  {currentStyle?.id && (
-                    <Row gutter={[12, 8]} style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #f0f0f0' }}>
-                      <Col span={24}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                          <Button
-                            type="primary"
-                            size="small"
-                            onClick={handleCompleteSample}
-                            style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
-                            disabled={(currentStyle as any)?.sampleStatus === 'COMPLETED'}
-                          >
-                            {(currentStyle as any)?.sampleStatus === 'COMPLETED' ? '样衣已完成' : '样衣完成'}
-                          </Button>
-                          <Button
-                            type="primary"
-                            size="small"
-                            onClick={handlePushToOrder}
-                            disabled={!processData || processData.length === 0}
-                          >
-                            推送到下单管理
-                          </Button>
-                          <div style={{ flex: 1, fontSize: 12, color: '#999' }}>
-                            {processData && processData.length > 0
-                              ? '样衣开发完成后，可推送到下单管理模块'
-                              : '请先配置工序单价后才能推送'}
-                          </div>
-                        </div>
-                      </Col>
-                    </Row>
-                  )}
+
                 </Col>
               </Row>
               <Row gutter={16}>
@@ -1691,11 +1569,9 @@ const StyleInfoPage: React.FC = () => {
                       <Button
                         type="default"
                         onClick={() => {
-                          modal.confirm({
-                            title: '确认退回',
-                            content: '退回后可以重新编辑基础信息，是否继续？',
-                            onOk: () => setEditLocked(false)
-                          });
+                          setMaintenanceRecord(currentStyle);
+                          setMaintenanceReason('');
+                          setMaintenanceOpen(true);
                         }}
                       >
                         退回
@@ -1725,6 +1601,7 @@ const StyleInfoPage: React.FC = () => {
                     bomAssignee={(currentStyle as Record<string, unknown>).bomAssignee}
                     bomStartTime={(currentStyle as Record<string, unknown>).bomStartTime}
                     bomCompletedTime={(currentStyle as Record<string, unknown>).bomCompletedTime}
+                    onRefresh={() => fetchDetail(String(currentStyle.id))}
                   />
                 ) : (
                   <div style={{ padding: '40px 20px', textAlign: 'center', color: '#999' }}>
@@ -1778,9 +1655,11 @@ const StyleInfoPage: React.FC = () => {
                   <StyleProcessTab
                     styleId={currentStyle.id}
                     readOnly={false}
+                    progressNode={currentStyle?.progressNode}
                     processAssignee={(currentStyle as Record<string, unknown>).processAssignee}
                     processStartTime={(currentStyle as Record<string, unknown>).processStartTime}
                     processCompletedTime={(currentStyle as Record<string, unknown>).processCompletedTime}
+                    onRefresh={() => fetchDetail(String(currentStyle.id))}
                   />
                 ) : (
                   <div style={{ padding: '40px 20px', textAlign: 'center', color: '#999' }}>
@@ -1828,6 +1707,7 @@ const StyleInfoPage: React.FC = () => {
                     secondaryStartTime={(currentStyle as Record<string, unknown>).secondaryStartTime}
                     secondaryCompletedTime={(currentStyle as Record<string, unknown>).secondaryCompletedTime}
                     sampleQuantity={(currentStyle as Record<string, unknown>).sampleQuantity}
+                    onRefresh={() => fetchDetail(String(currentStyle.id))}
                   />
                 ) : (
                   <div style={{ padding: '40px 20px', textAlign: 'center', color: '#999' }}>
@@ -1878,7 +1758,7 @@ const StyleInfoPage: React.FC = () => {
                 key: '9',
                 label: '文件管理',
                 children: currentStyle?.id ? (
-                  <StyleAttachmentTab styleId={currentStyle.id} bizType="pattern_grading" readOnly={false} />
+                  <StyleAttachmentTab styleId={currentStyle.id} readOnly={false} />
                 ) : (
                   <div style={{ padding: '40px 20px', textAlign: 'center', color: '#999' }}>
                     <div style={{ fontSize: '16px', marginBottom: '8px' }}>请先保存基础信息</div>
@@ -1940,143 +1820,26 @@ const StyleInfoPage: React.FC = () => {
           width="60vw"
           initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.7 : 600}
         >
-          {currentStyle?.id && <StyleProcessTab styleId={currentStyle.id} readOnly={false} />}
-        </ResizableModal>
-
-        {/* 进度模版弹窗 */}
-        <ResizableModal
-          title="进度模版"
-          open={productionModalVisible}
-          onCancel={() => {
-            setProductionModalVisible(false);
-            progressForm.resetFields();
-          }}
-          onOk={submitProgress}
-          okText="保存"
-          cancelText="取消"
-          confirmLoading={progressSaving}
-          width="60vw"
-          initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.7 : 600}
-          afterOpenChange={(open) => {
-            if (open && currentStyle?.styleNo) {
-              loadProgressTemplate(currentStyle.styleNo);
-            }
-          }}
-        >
-          <div style={{ maxHeight: '60vh', overflow: 'auto', padding: '0 2px' }}>
-            <Form form={progressForm} layout="vertical">
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <Form.Item name="templateName" label="模板名称" rules={[{ required: true, message: '请输入模板名称' }]} style={{ marginBottom: 8 }}>
-                  <Input placeholder="例如：外协款-进度模板" size="small" />
-                </Form.Item>
-                <Form.Item name="templateKey" label="模板标识(可选)" style={{ marginBottom: 8 }}>
-                  <Input placeholder="不填则自动生成" size="small" />
-                </Form.Item>
-              </div>
-
-              <Form.Item name="sourceStyleNo" label="绑定款号(可选)" style={{ marginBottom: 12 }}>
-                <Input size="small" placeholder="绑定后打开该款订单会自动尝试套用" disabled />
-              </Form.Item>
-
-              <div style={{ border: '1px solid #d9d9d9', padding: 8, borderRadius: 4 }}>
-                <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>进度节点</div>
-                <Form.List name="nodes">
-                  {(fields, { add, remove, move }) => (
-                    <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, fontSize: 11, color: '#666' }}>
-                        <span>定义生产进度的工序顺序</span>
-                        <Button
-                          type="primary"
-                          size="small"
-                          icon={<PlusOutlined />}
-                          onClick={() => add({ name: '' })}
-                          disabled={progressSaving}
-                        />
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        {fields.map((f, idx) => (
-                          <div
-                            key={f.key}
-                            onDragOver={(e) => {
-                              if (progressSaving) return;
-                              e.preventDefault();
-                              if (nodeDragOverIndex !== idx) setNodeDragOverIndex(idx);
-                            }}
-                            onDragLeave={() => {
-                              if (nodeDragOverIndex === idx) setNodeDragOverIndex(null);
-                            }}
-                            onDrop={(e) => {
-                              if (progressSaving) return;
-                              e.preventDefault();
-                              const from = draggingNodeIndexRef.current;
-                              if (from == null || from === idx) return;
-                              move(from, idx);
-                              draggingNodeIndexRef.current = idx;
-                              setNodeDragOverIndex(null);
-                            }}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'flex-start',
-                              gap: 4,
-                              padding: 2,
-                              background: nodeDragOverIndex === idx ? '#e6f7ff' : 'transparent',
-                            }}
-                          >
-                            <span
-                              draggable={!progressSaving}
-                              onDragStart={(e) => {
-                                if (progressSaving) return;
-                                draggingNodeIndexRef.current = idx;
-                                setNodeDragOverIndex(null);
-                                try {
-                                  e.dataTransfer.effectAllowed = 'move';
-                                  e.dataTransfer.setData('text/plain', String(idx));
-                                } catch {
-                                  // Intentionally empty
-                                }
-                              }}
-                              onDragEnd={() => {
-                                draggingNodeIndexRef.current = null;
-                                setNodeDragOverIndex(null);
-                              }}
-                              style={{
-                                width: 20,
-                                height: 20,
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: '#999',
-                                cursor: progressSaving ? 'not-allowed' : 'grab',
-                                userSelect: 'none',
-                                fontSize: 12,
-                              }}
-                            >
-                              <HolderOutlined />
-                            </span>
-                            <Form.Item
-                              name={[f.name, 'name']}
-                              rules={[{ required: true, message: '请输入节点名称' }]}
-                              style={{ margin: 0, flex: 1 }}
-                            >
-                              <Input placeholder="生产进度节点（如：裁剪、车缝、质检）" size="small" />
-                            </Form.Item>
-                            <Button
-                              type="text"
-                              size="small"
-                              danger
-                              icon={<DeleteOutlined />}
-                              disabled={progressSaving}
-                              onClick={() => remove(f.name)}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </Form.List>
-              </div>
-            </Form>
-          </div>
+          {currentStyle?.id && (
+            <StyleProcessTab
+              styleId={currentStyle.id}
+              readOnly={false}
+              onRefresh={async () => {
+                // 保存后立即刷新工序数据
+                try {
+                  const res = await api.get<{ code: number; data: any[] }>(
+                    `/style/process/list`,
+                    { params: { styleId: currentStyle.id } }
+                  );
+                  if (res.code === 200 && res.data) {
+                    setProcessData(res.data || []);
+                  }
+                } catch (error) {
+                  console.error('刷新工序数据失败', error);
+                }
+              }}
+            />
+          )}
         </ResizableModal>
 
         {/* 多码单价弹窗 */}
@@ -2324,34 +2087,41 @@ const StyleInfoPage: React.FC = () => {
             progressConfig={{
               show: true,
               calculate: (record) => {
-                // 计算样衣开发进度
+                // 计算样衣开发进度 - 6个核心步骤
                 let completedSteps = 0;
-                let totalSteps = 5; // 总步骤：面辅料、工序、二次工艺、尺寸、附件
+                let totalSteps = 6; // BOM、纸样、尺寸、工序、生产制单、二次工艺
 
-                if (record.materialCompleted) completedSteps++;
-                if (record.processCompleted) completedSteps++;
-                if (record.secondaryProcessCompleted) completedSteps++;
-                if (record.sizeCompleted) completedSteps++;
-                if (record.attachmentCompleted) completedSteps++;
+                if (record.bomCompletedTime) completedSteps++; // 1. BOM配置完成
+                if (record.patternCompletedTime) completedSteps++; // 2. 纸样开发完成
+                if (record.sizeCompletedTime) completedSteps++; // 3. 尺寸表完成
+                if (record.processCompletedTime) completedSteps++; // 4. 工序配置完成
+                if (record.productionCompletedTime) completedSteps++; // 5. 生产制单完成
+                if (record.secondaryCompletedTime) completedSteps++; // 6. 二次工艺完成
 
                 return Math.round((completedSteps / totalSteps) * 100);
               },
               getStatus: (record) => {
-                const progress = (() => {
-                  let completedSteps = 0;
-                  let totalSteps = 5;
-                  if (record.materialCompleted) completedSteps++;
-                  if (record.processCompleted) completedSteps++;
-                  if (record.secondaryProcessCompleted) completedSteps++;
-                  if (record.sizeCompleted) completedSteps++;
-                  if (record.attachmentCompleted) completedSteps++;
-                  return (completedSteps / totalSteps) * 100;
-                })();
+                // 根据交板日期判断状态颜色
+                if (!record.deliveryDate) {
+                  return 'normal'; // 没有交期，显示正常颜色
+                }
 
-                if (progress === 100) return 'success';
-                if (progress >= 60) return 'warning';
-                return 'danger';
+                const deliveryTime = new Date(record.deliveryDate).getTime();
+                const now = new Date().getTime();
+                const remainingDays = (deliveryTime - now) / (1000 * 60 * 60 * 24);
+
+                // 已延期或今天就是交期
+                if (remainingDays <= 0) {
+                  return 'danger'; // 红色
+                }
+                // 3天内到期
+                if (remainingDays <= 3) {
+                  return 'warning'; // 黄色
+                }
+                // 时间充裕
+                return 'normal'; // 绿色
               },
+              type: 'liquid', // 液体波浪进度条
             }}
             actions={(record) => [
               {
