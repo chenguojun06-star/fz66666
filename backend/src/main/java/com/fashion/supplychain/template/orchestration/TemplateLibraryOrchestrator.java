@@ -359,9 +359,10 @@ public class TemplateLibraryOrchestrator {
     }
 
     public List<TemplateLibrary> createFromStyle(Map<String, Object> body) {
-        if (!UserContext.isTopAdmin()) {
-            throw new AccessDeniedException("无权限操作");
-        }
+        // 移除权限限制，工序模板应该允许所有有权限的用户创建
+        // if (!UserContext.isTopAdmin()) {
+        //     throw new AccessDeniedException("无权限操作");
+        // }
 
         String sourceStyleNo = body == null ? null
                 : (body.get("sourceStyleNo") == null ? null : String.valueOf(body.get("sourceStyleNo")));
@@ -378,9 +379,10 @@ public class TemplateLibraryOrchestrator {
     }
 
     public boolean applyToStyle(Map<String, Object> body) {
-        if (!UserContext.isTopAdmin()) {
-            throw new AccessDeniedException("无权限操作");
-        }
+        // 移除权限限制，工序模板应该允许所有有权限的用户使用
+        // if (!UserContext.isTopAdmin()) {
+        //     throw new AccessDeniedException("无权限操作");
+        // }
 
         String templateId = body == null ? null
                 : (body.get("templateId") == null ? null : String.valueOf(body.get("templateId")));

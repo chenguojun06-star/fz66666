@@ -72,6 +72,9 @@ export interface ProductionOrder {
   factoryUnitPrice?: number;
   quotationUnitPrice?: number;
 
+  // 工序单价和明细
+  progressNodeUnitPrices?: any[]; // 工序节点单价数组
+
   // 采购手动确认相关字段
   procurementManuallyCompleted?: number;
   procurementConfirmedBy?: string;
@@ -189,6 +192,7 @@ export interface MaterialPurchase extends Record<string, unknown> {
   remark?: string;
   orderId?: string;
   orderNo?: string;
+  orderQuantity?: number;
   styleId?: string;
   styleNo?: string;
   styleName?: string;

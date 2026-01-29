@@ -1,5 +1,6 @@
 package com.fashion.supplychain.style.orchestration;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.UserContext;
@@ -8,15 +9,21 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.PatternProductionService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.StyleAttachment;
+import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleOperationLog;
+import com.fashion.supplychain.style.entity.StyleQuotation;
 import com.fashion.supplychain.style.service.StyleAttachmentService;
+import com.fashion.supplychain.style.service.StyleBomService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.StyleOperationLogService;
+import com.fashion.supplychain.style.service.StyleQuotationService;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.NoSuchElementException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,6 +53,12 @@ public class StyleInfoOrchestrator {
 
     @Autowired
     private PatternProductionService patternProductionService;
+
+    @Autowired
+    private StyleBomService styleBomService;
+
+    @Autowired
+    private StyleQuotationService styleQuotationService;
 
     public IPage<StyleInfo> list(Map<String, Object> params) {
         return styleInfoService.queryPage(params);
@@ -219,14 +232,23 @@ public class StyleInfoOrchestrator {
         if (isCompleted(current.getPatternStatus())) {
             throw new IllegalStateException("纸样已完成，无法修改，请联系管理员回退");
         }
+
+        String currentUser = UserContext.username();
         boolean ok = styleInfoService.lambdaUpdate()
                 .eq(StyleInfo::getId, id)
                 .set(StyleInfo::getPatternStatus, "IN_PROGRESS")
                 .set(StyleInfo::getPatternCompletedTime, null)
+                // 纸样开始时同步更新尺寸表开始时间（尺寸被纸样控制）
+                .set(StyleInfo::getSizeAssignee, currentUser)
+                .set(StyleInfo::getSizeStartTime, LocalDateTime.now())
+                // 纸样开始时同步更新生产制单开始时间（生产制单跟随纸样）
+                .set(StyleInfo::getProductionAssignee, currentUser)
+                .set(StyleInfo::getProductionStartTime, LocalDateTime.now())
                 .set(StyleInfo::getUpdateTime, LocalDateTime.now())
                 .update();
         if (ok) {
             savePatternLog(id, "PATTERN_START", null);
+            log.info("纸样开始，已同步更新尺寸表和生产制单开始时间: styleId={}", id);
         }
         if (!ok) {
             throw new IllegalStateException("操作失败");
@@ -261,6 +283,14 @@ public class StyleInfoOrchestrator {
                 .eq(StyleInfo::getId, id)
                 .set(StyleInfo::getPatternStatus, "COMPLETED")
                 .set(StyleInfo::getPatternCompletedTime, LocalDateTime.now())
+                // 纸样完成时同步更新尺寸表时间（尺寸被纸样控制）
+                .set(StyleInfo::getSizeAssignee, current.getSizeAssignee() != null ? current.getSizeAssignee() : UserContext.username())
+                .set(StyleInfo::getSizeStartTime, current.getSizeStartTime() != null ? current.getSizeStartTime() : LocalDateTime.now())
+                .set(StyleInfo::getSizeCompletedTime, LocalDateTime.now())
+                // 纸样完成时同步更新生产制单时间（生产制单跟随纸样）
+                .set(StyleInfo::getProductionAssignee, current.getProductionAssignee() != null ? current.getProductionAssignee() : UserContext.username())
+                .set(StyleInfo::getProductionStartTime, current.getProductionStartTime() != null ? current.getProductionStartTime() : LocalDateTime.now())
+                .set(StyleInfo::getProductionCompletedTime, LocalDateTime.now())
                 // 自动同步样衣状态为完成，代表纸样、尺寸表、工序表、生产制单流程结束
                 .set(StyleInfo::getSampleStatus, "COMPLETED")
                 .set(StyleInfo::getSampleProgress, 100)
@@ -270,6 +300,7 @@ public class StyleInfoOrchestrator {
         if (ok) {
             savePatternLog(id, "PATTERN_COMPLETED", null);
             saveSampleLog(id, "SAMPLE_COMPLETED", "关联纸样完成自动同步");
+            log.info("纸样完成，已同步更新尺寸表和生产制单时间: styleId={}", id);
         }
         if (!ok) {
             throw new IllegalStateException("操作失败");
@@ -379,23 +410,72 @@ public class StyleInfoOrchestrator {
             throw new IllegalStateException("样衣已完成，无需重复操作");
         }
 
-        boolean ok = styleInfoService.lambdaUpdate()
-                .eq(StyleInfo::getId, id)
-                .set(StyleInfo::getSampleStatus, "COMPLETED")
-                .set(StyleInfo::getSampleProgress, 100)
-                .set(StyleInfo::getSampleCompletedTime, LocalDateTime.now())
-                // 同时也标记纸样为完成，确保状态一致
-                .set(StyleInfo::getPatternStatus, "COMPLETED")
-                .set(StyleInfo::getPatternCompletedTime,
-                        current.getPatternCompletedTime() == null ? LocalDateTime.now()
-                                : current.getPatternCompletedTime())
-                .set(StyleInfo::getUpdateTime, LocalDateTime.now())
-                .update();
+        // 兜底逻辑：自动补全所有未完成的步骤
+        LocalDateTime now = LocalDateTime.now();
+        String currentUser = UserContext.username();
+
+        // 构建更新条件
+        var updateChain = styleInfoService.lambdaUpdate().eq(StyleInfo::getId, id);
+
+        // 1. BOM配置
+        if (current.getBomCompletedTime() == null) {
+            updateChain.set(StyleInfo::getBomAssignee, currentUser)
+                      .set(StyleInfo::getBomStartTime, current.getBomStartTime() != null ? current.getBomStartTime() : now)
+                      .set(StyleInfo::getBomCompletedTime, now);
+            log.info("样衣完成兜底：自动完成BOM配置");
+        }
+
+        // 2. 纸样开发
+        if (current.getPatternCompletedTime() == null) {
+            updateChain.set(StyleInfo::getPatternStatus, "COMPLETED")
+                      .set(StyleInfo::getPatternAssignee, currentUser)
+                      .set(StyleInfo::getPatternCompletedTime, now);
+            log.info("样衣完成兜底：自动完成纸样开发");
+        }
+
+        // 3. 尺寸表
+        if (current.getSizeCompletedTime() == null) {
+            updateChain.set(StyleInfo::getSizeAssignee, currentUser)
+                      .set(StyleInfo::getSizeStartTime, current.getSizeStartTime() != null ? current.getSizeStartTime() : now)
+                      .set(StyleInfo::getSizeCompletedTime, now);
+            log.info("样衣完成兜底：自动完成尺寸表");
+        }
+
+        // 4. 工序配置
+        if (current.getProcessCompletedTime() == null) {
+            updateChain.set(StyleInfo::getProcessAssignee, currentUser)
+                      .set(StyleInfo::getProcessStartTime, current.getProcessStartTime() != null ? current.getProcessStartTime() : now)
+                      .set(StyleInfo::getProcessCompletedTime, now);
+            log.info("样衣完成兜底：自动完成工序配置");
+        }
+
+        // 5. 生产制单（样板生产）
+        if (current.getProductionCompletedTime() == null) {
+            updateChain.set(StyleInfo::getProductionAssignee, currentUser)
+                      .set(StyleInfo::getProductionStartTime, current.getProductionStartTime() != null ? current.getProductionStartTime() : now)
+                      .set(StyleInfo::getProductionCompletedTime, now);
+            log.info("样衣完成兜底：自动完成生产制单");
+        }
+
+        // 6. 二次工艺
+        if (current.getSecondaryCompletedTime() == null) {
+            updateChain.set(StyleInfo::getSecondaryAssignee, currentUser)
+                      .set(StyleInfo::getSecondaryStartTime, current.getSecondaryStartTime() != null ? current.getSecondaryStartTime() : now)
+                      .set(StyleInfo::getSecondaryCompletedTime, now);
+            log.info("样衣完成兜底：自动完成二次工艺");
+        }
+
+        // 7. 标记样衣完成
+        updateChain.set(StyleInfo::getSampleStatus, "COMPLETED")
+                  .set(StyleInfo::getSampleProgress, 100)
+                  .set(StyleInfo::getSampleCompletedTime, now)
+                  .set(StyleInfo::getUpdateTime, now);
+
+        boolean ok = updateChain.update();
+
         if (ok) {
-            saveSampleLog(id, "SAMPLE_COMPLETED", "手动点击样衣完成");
-            if (!isCompleted(current.getPatternStatus())) {
-                savePatternLog(id, "PATTERN_COMPLETED", "关联样衣完成自动同步");
-            }
+            saveSampleLog(id, "SAMPLE_COMPLETED", "点击样衣完成（含兜底逻辑）");
+            log.info("样衣完成成功：styleId={}, 已自动补全所有未完成步骤", id);
         }
         return ok;
     }
@@ -585,6 +665,24 @@ public class StyleInfoOrchestrator {
         PatternProduction patternProduction = new PatternProduction();
         patternProduction.setStyleId(String.valueOf(styleInfo.getId()));
         patternProduction.setStyleNo(styleInfo.getStyleNo());
+
+        // 从样衣信息复制颜色、数量、下板时间、交板时间
+        String color = styleInfo.getColor();
+        if (!StringUtils.hasText(color)) {
+            color = "-"; // 默认值
+        }
+        patternProduction.setColor(color);
+
+        // 使用 sampleQuantity，如果为空则默认为 1
+        Integer quantity = styleInfo.getSampleQuantity();
+        if (quantity == null || quantity == 0) {
+            quantity = 1; // 默认至少1件
+        }
+        patternProduction.setQuantity(quantity);
+
+        patternProduction.setReleaseTime(styleInfo.getCreateTime()); // 下板时间
+        patternProduction.setDeliveryTime(styleInfo.getDeliveryDate()); // 交板时间
+
         patternProduction.setStatus("PENDING");
         patternProduction.setProgressNodes(progressNodesJson);
         patternProduction.setCreateTime(LocalDateTime.now());
@@ -597,8 +695,9 @@ public class StyleInfoOrchestrator {
 
         boolean saved = patternProductionService.save(patternProduction);
         if (saved) {
-            log.info("自动创建样板生产记录成功: styleId={}, styleNo={}, patternId={}",
-                    styleInfo.getId(), styleInfo.getStyleNo(), patternProduction.getId());
+            log.info("自动创建样板生产记录成功: styleId={}, styleNo={}, patternId={}, color={}, quantity={}",
+                    styleInfo.getId(), styleInfo.getStyleNo(), patternProduction.getId(),
+                    styleInfo.getColor(), styleInfo.getSampleQuantity());
         }
     }
 
@@ -613,5 +712,245 @@ public class StyleInfoOrchestrator {
             throw new IllegalArgumentException("请输入款名");
         }
         // 品类不再必填，允许创建空记录
+    }
+
+    public boolean startBom(Long id) {
+        StyleInfo current = styleInfoService.getById(id);
+        if (current == null) {
+            throw new NoSuchElementException("款号不存在");
+        }
+        if (current.getBomCompletedTime() != null) {
+            throw new IllegalStateException("BOM配置已完成，无法重新开始");
+        }
+
+        String currentUser = UserContext.username();
+        boolean ok = styleInfoService.lambdaUpdate()
+                .eq(StyleInfo::getId, id)
+                .set(StyleInfo::getBomAssignee, currentUser)
+                .set(StyleInfo::getBomStartTime, LocalDateTime.now())
+                .set(StyleInfo::getUpdateTime, LocalDateTime.now())
+                .update();
+
+        if (!ok) {
+            throw new IllegalStateException("操作失败");
+        }
+        log.info("BOM配置已开始: styleId={}, assignee={}", id, currentUser);
+        return true;
+    }
+
+    public boolean completeBom(Long id) {
+        StyleInfo current = styleInfoService.getById(id);
+        if (current == null) {
+            throw new NoSuchElementException("款号不存在");
+        }
+        if (current.getBomCompletedTime() != null) {
+            throw new IllegalStateException("BOM配置已完成，无法重复操作");
+        }
+        if (current.getBomStartTime() == null) {
+            throw new IllegalStateException("请先点击'开始BOM配置'");
+        }
+
+        // 检查是否有BOM数据
+        List<StyleBom> bomList = styleBomService.list(
+            new LambdaQueryWrapper<StyleBom>()
+                .eq(StyleBom::getStyleId, id)
+        );
+        if (bomList == null || bomList.isEmpty()) {
+            throw new IllegalStateException("请先配置BOM物料数据");
+        }
+
+        boolean ok = styleInfoService.lambdaUpdate()
+                .eq(StyleInfo::getId, id)
+                .set(StyleInfo::getBomCompletedTime, LocalDateTime.now())
+                .set(StyleInfo::getUpdateTime, LocalDateTime.now())
+                .update();
+
+        if (!ok) {
+            throw new IllegalStateException("操作失败");
+        }
+        log.info("BOM配置已完成: styleId={}", id);
+        return true;
+    }
+
+    public boolean startProcess(Long id) {
+        StyleInfo current = styleInfoService.getById(id);
+        if (current == null) {
+            throw new NoSuchElementException("款号不存在");
+        }
+        if (current.getProcessStartTime() != null) {
+            log.info("工序配置已开始过，跳过重复操作: styleId={}", id);
+            return true;
+        }
+
+        String currentUser = UserContext.username();
+        boolean ok = styleInfoService.lambdaUpdate()
+                .eq(StyleInfo::getId, id)
+                .set(StyleInfo::getProcessAssignee, currentUser)
+                .set(StyleInfo::getProcessStartTime, LocalDateTime.now())
+                .set(StyleInfo::getUpdateTime, LocalDateTime.now())
+                .update();
+
+        if (!ok) {
+            throw new IllegalStateException("操作失败");
+        }
+        log.info("工序配置已开始: styleId={}, assignee={}", id, currentUser);
+        return true;
+    }
+
+    public boolean completeProcess(Long id) {
+        StyleInfo current = styleInfoService.getById(id);
+        if (current == null) {
+            throw new NoSuchElementException("款号不存在");
+        }
+        if (current.getProcessCompletedTime() != null) {
+            log.info("工序配置已完成，跳过重复操作: styleId={}", id);
+            return true;
+        }
+
+        boolean ok = styleInfoService.lambdaUpdate()
+                .eq(StyleInfo::getId, id)
+                .set(StyleInfo::getProcessCompletedTime, LocalDateTime.now())
+                .set(StyleInfo::getUpdateTime, LocalDateTime.now())
+                .update();
+
+        if (!ok) {
+            throw new IllegalStateException("操作失败");
+        }
+        log.info("工序配置已完成: styleId={}", id);
+        return true;
+    }
+
+    public boolean startSecondary(Long id) {
+        StyleInfo current = styleInfoService.getById(id);
+        if (current == null) {
+            throw new NoSuchElementException("款号不存在");
+        }
+        if (current.getSecondaryStartTime() != null) {
+            log.info("二次工艺已开始过，跳过重复操作: styleId={}", id);
+            return true;
+        }
+
+        String currentUser = UserContext.username();
+        boolean ok = styleInfoService.lambdaUpdate()
+                .eq(StyleInfo::getId, id)
+                .set(StyleInfo::getSecondaryAssignee, currentUser)
+                .set(StyleInfo::getSecondaryStartTime, LocalDateTime.now())
+                .set(StyleInfo::getUpdateTime, LocalDateTime.now())
+                .update();
+
+        if (!ok) {
+            throw new IllegalStateException("操作失败");
+        }
+        log.info("二次工艺已开始: styleId={}, assignee={}", id, currentUser);
+        return true;
+    }
+
+    public boolean completeSecondary(Long id) {
+        StyleInfo current = styleInfoService.getById(id);
+        if (current == null) {
+            throw new NoSuchElementException("款号不存在");
+        }
+        if (current.getSecondaryCompletedTime() != null) {
+            log.info("二次工艺已完成，跳过重复操作: styleId={}", id);
+            return true;
+        }
+
+        boolean ok = styleInfoService.lambdaUpdate()
+                .eq(StyleInfo::getId, id)
+                .set(StyleInfo::getSecondaryCompletedTime, LocalDateTime.now())
+                .set(StyleInfo::getUpdateTime, LocalDateTime.now())
+                .update();
+
+        if (!ok) {
+            throw new IllegalStateException("操作失败");
+        }
+        log.info("二次工艺已完成: styleId={}", id);
+        return true;
+    }
+
+    public boolean skipSecondary(Long id) {
+        StyleInfo current = styleInfoService.getById(id);
+        if (current == null) {
+            throw new NoSuchElementException("款号不存在");
+        }
+        if (current.getSecondaryCompletedTime() != null) {
+            log.info("二次工艺已完成，跳过重复操作: styleId={}", id);
+            return true;
+        }
+
+        String currentUser = UserContext.username();
+        boolean ok = styleInfoService.lambdaUpdate()
+                .eq(StyleInfo::getId, id)
+                .set(StyleInfo::getSecondaryAssignee, currentUser)
+                .set(StyleInfo::getSecondaryStartTime, LocalDateTime.now())
+                .set(StyleInfo::getSecondaryCompletedTime, LocalDateTime.now())
+                .set(StyleInfo::getUpdateTime, LocalDateTime.now())
+                .update();
+
+        if (!ok) {
+            throw new IllegalStateException("操作失败");
+        }
+        log.info("二次工艺已跳过（无二次工艺）: styleId={}, operator={}", id, currentUser);
+        return true;
+    }
+
+    /**
+     * 获取样衣开发费用统计
+     */
+    public Map<String, Object> getDevelopmentStats(String rangeType) {
+        LocalDateTime startTime = getStartTimeByRange(rangeType);
+        LocalDateTime endTime = LocalDateTime.now();
+
+        // 查询时间范围内已完成的样衣
+        List<StyleInfo> completedStyles = styleInfoService.lambdaQuery()
+                .eq(StyleInfo::getSampleStatus, "COMPLETED")
+                .ge(StyleInfo::getSampleCompletedTime, startTime)
+                .le(StyleInfo::getSampleCompletedTime, endTime)
+                .list();
+
+        int styleCount = completedStyles.size();
+
+        // 统计费用：遍历所有已完成的样衣，汇总其报价单费用
+        double totalMaterialCost = 0.0;
+        double totalProcessCost = 0.0;
+        double totalOtherCost = 0.0;
+
+        for (StyleInfo style : completedStyles) {
+            // 查询该样衣的报价单
+            StyleQuotation quotation = styleQuotationService.lambdaQuery()
+                    .eq(StyleQuotation::getStyleId, style.getId())
+                    .one();
+
+            if (quotation != null) {
+                totalMaterialCost += (quotation.getMaterialCost() != null ? quotation.getMaterialCost().doubleValue() : 0.0);
+                totalProcessCost += (quotation.getProcessCost() != null ? quotation.getProcessCost().doubleValue() : 0.0);
+                totalOtherCost += (quotation.getOtherCost() != null ? quotation.getOtherCost().doubleValue() : 0.0);
+            }
+        }
+
+        double totalCost = totalMaterialCost + totalProcessCost + totalOtherCost;
+
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("patternCount", styleCount);
+        stats.put("materialCost", totalMaterialCost);
+        stats.put("processCost", totalProcessCost);
+        stats.put("secondaryProcessCost", totalOtherCost);  // other_cost 对应二次工艺
+        stats.put("totalCost", totalCost);
+
+        return stats;
+    }
+
+    private LocalDateTime getStartTimeByRange(String rangeType) {
+        LocalDate today = LocalDate.now();
+        switch (rangeType) {
+            case "day":
+                return today.atStartOfDay();
+            case "week":
+                return today.minusDays(today.getDayOfWeek().getValue() - 1).atStartOfDay();
+            case "month":
+                return today.withDayOfMonth(1).atStartOfDay();
+            default:
+                return today.atStartOfDay();
+        }
     }
 }

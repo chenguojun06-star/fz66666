@@ -402,9 +402,6 @@ const SKUProcessor = {
     const found = prices.find(p => p.processName === processName);
 
     if (found) {
-      console.log(
-        `[SKUProcessor] 查询工序单价 - processName: ${processName}, unitPrice: ${found.unitPrice}`
-      );
       return Number(found.unitPrice) || 0;
     }
 
@@ -441,9 +438,7 @@ const SKUProcessor = {
     const qty = Number(quantity) || 0;
     const cost = price * qty;
 
-    console.log(
-      `[SKUProcessor] 计算扫码成本 - unitPrice: ${price}, quantity: ${qty}, cost: ${cost}`
-    );
+
     return Math.round(cost * 100) / 100; // 保留2位小数
   },
 

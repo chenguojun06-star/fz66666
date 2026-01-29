@@ -63,6 +63,16 @@ public class MaterialPurchase {
 
     private String styleCover;
 
+    /**
+     * 颜色（从样衣同步）
+     */
+    private String color;
+
+    /**
+     * 尺码（从样衣同步）
+     */
+    private String size;
+
     private Integer returnConfirmed;
 
     private Integer returnQuantity;

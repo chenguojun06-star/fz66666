@@ -441,9 +441,6 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
 
     @Override
     public boolean saveOrUpdateStyle(StyleInfo styleInfo) {
-        System.out.println("🔍 saveOrUpdateStyle - ID: " + styleInfo.getId());
-        System.out.println("🔍 saveOrUpdateStyle - sizeColorConfig: " + styleInfo.getSizeColorConfig());
-
         LocalDateTime now = LocalDateTime.now();
 
         if (styleInfo.getId() != null) {

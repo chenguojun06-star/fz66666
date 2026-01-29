@@ -2806,72 +2806,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             </div>
           </div>
         </div>
-
-        {/* 工序单价区域 */}
-        <div>
-          <div style={{ marginBottom: 8 }}>
-            <Text strong style={{ fontSize: 14 }}>工序单价</Text>
-          </div>
-          <Card size="small" styles={{ body: { padding: 12 } }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
-              {nodes.filter(n => (Number(n.unitPrice) || 0) > 0).map((n) => {
-                const unitPrice = Number(n.unitPrice) || 0;
-                const stat = nodeStats.statsByName[n.name] || { done: 0, total: nodeStats.totalQty, remaining: nodeStats.totalQty, percent: 0 };
-                const percent = clampPercent(stat.percent);
-                return (
-                  <div key={`price-${n.id}`} style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 6,
-                    padding: 8,
-                    border: '1px solid #e8e8e8',
-                    borderRadius: 4,
-                    background: '#fafafa'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Text strong style={{ fontSize: 13 }}>{n.name}</Text>
-                      <Text type="secondary" style={{ fontSize: 12 }}>{percent.toFixed(0)}%</Text>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <Text style={{ fontSize: 12, color: '#666', minWidth: 40 }}>单价：</Text>
-                      <InputNumber
-                        size="small"
-                        min={0}
-                        precision={2}
-                        value={unitPrice}
-                        aria-label={`单价-${n.name}`}
-                        disabled={!canEditWorkflow}
-                        onChange={(v) => updateNodeUnitPrice(n.id, Number(v) || 0)}
-                        prefix="¥"
-                        style={{ flex: 1 }}
-                      />
-                    </div>
-                    <div style={{
-                      height: 4,
-                      background: '#e8e8e8',
-                      borderRadius: 2,
-                      overflow: 'hidden'
-                    }}>
-                      <div style={{
-                        height: '100%',
-                        width: `${percent}%`,
-                        background: percent >= 100 ? '#52c41a' : percent > 0 ? '#1890ff' : '#d9d9d9',
-                        transition: 'width 0.3s ease'
-                      }} />
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#999' }}>
-                      <span>已完成: {stat.done}</span>
-                      <span>剩余: {stat.remaining}</span>
-                    </div>
-                  </div>
-                );
-              })}
-              {nodes.filter(n => (Number(n.unitPrice) || 0) > 0).length === 0 && (
-                <Text type="secondary">暂无工序单价，请先导入工序单价模板或手动设置</Text>
-              )}
-            </div>
-          </Card>
-        </div>
       </div>
     );
   }, [activeOrder, dragOverNodeId, draggingNodeId, isSupervisorOrAbove, nodeStats, nodeWorkflowLocked, nodeWorkflowSaving, nodes, screens.md]);
@@ -2969,15 +2903,16 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 },
                 getStatus: (record: ProductionOrder) => {
                   const shipDate = record.expectedShipDate;
-                  if (!shipDate) return 'success';
+                  if (!shipDate) return 'normal';
                   const now = new Date();
                   const delivery = new Date(shipDate);
                   const diffDays = Math.ceil((delivery.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
                   if (diffDays < 0) return 'danger';
                   if (diffDays <= 3) return 'warning';
-                  return 'success';
+                  return 'normal';
                 },
                 show: true,
+                type: 'liquid', // 液体波浪进度条
               }}
               actions={(record: ProductionOrder) => [
                 {
@@ -3096,15 +3031,16 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 },
                 getStatus: (record: ProductionOrder) => {
                   const shipDate = record.expectedShipDate;
-                  if (!shipDate) return 'success';
+                  if (!shipDate) return 'normal';
                   const now = new Date();
                   const delivery = new Date(shipDate);
                   const diffDays = Math.ceil((delivery.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
                   if (diffDays < 0) return 'danger';
                   if (diffDays <= 3) return 'warning';
-                  return 'success';
+                  return 'normal';
                 },
                 show: true,
+                type: 'liquid', // 液体波浪进度条
               }}
               actions={(record: ProductionOrder) => [
                 {

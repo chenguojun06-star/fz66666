@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, Table, Button, Space, Input, message, Row, Col, Modal, Form, InputNumber, Tag, DatePicker, Dropdown, Checkbox } from 'antd';
+import { Card, Table, Button, Space, Input, message, Row, Col, Modal, Form, InputNumber, Tag, Dropdown } from 'antd';
 import type { MenuProps } from 'antd';
 import { PlusOutlined, SearchOutlined, AppstoreOutlined, UnorderedListOutlined, EyeOutlined, CheckCircleOutlined, ClockCircleOutlined, SyncOutlined, MoreOutlined, UserOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -10,6 +10,7 @@ import UniversalCardView from '@/components/common/UniversalCardView';
 import { StyleAttachmentsButton } from '@/components/StyleAssets';
 import api from '@/utils/api';
 import { useModal } from '@/hooks';
+import { formatDateTime } from '@/utils/datetime';
 import './style.css';
 
 interface ProgressNode {
@@ -30,7 +31,8 @@ interface PatternProductionRecord {
   receiveTime: string; // 领取时间
   completeTime: string; // 完成时间
   progressNodes: { [nodeId: string]: number }; // 各工序的完成百分比
-  processUnitPrices?: { [processName: string]: number }; // 工序单价（从后端获取）
+  processUnitPrices?: { [processName: string]: number }; // 工序单价汇总（从后端获取）
+  processDetails?: { [stageName: string]: Array<{ name: string; unitPrice: number }> }; // 每个节点下的工序明细
   coverImage?: string; // 封面图片
   patternMaker?: string; // 纸样师傅
   status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED'; // 状态
@@ -49,14 +51,14 @@ const DEFAULT_NODES: ProgressNode[] = [
 // Lottie 液体进度组件（已移至通用组件 LiquidProgressLottie）
 
 // 计算交期状态
-const getDeliveryStatus = (deliveryTime: string): 'success' | 'warning' | 'danger' => {
+const getDeliveryStatus = (deliveryTime: string): 'normal' | 'warning' | 'danger' => {
   const now = new Date();
   const delivery = new Date(deliveryTime);
   const diffDays = Math.ceil((delivery.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
   if (diffDays < 0) return 'danger'; // 已逾期
   if (diffDays <= 3) return 'warning'; // 3天内临近
-  return 'success'; // 充足时间
+  return 'normal'; // 充足时间
 };
 
 // 计算总体进度百分比（从 record 对象中提取 progressNodes）
@@ -78,12 +80,9 @@ const PatternProduction: React.FC = () => {
 
   // ===== 使用 useModal 管理弹窗状态 =====
   const progressModal = useModal<PatternProductionRecord>();
-  const receiveModal = useModal<PatternProductionRecord>();
   const detailModal = useModal<PatternProductionRecord>();
   const attachmentModal = useModal<PatternProductionRecord>();
   const attachmentWrapperRef = React.useRef<HTMLDivElement>(null);
-  const [customNodes, setCustomNodes] = useState<ProgressNode[]>([...DEFAULT_NODES]);
-  const [newNodeName, setNewNodeName] = useState('');
   const [operationLogs, setOperationLogs] = useState<Array<{
     id: string;
     action: string;
@@ -92,7 +91,6 @@ const PatternProduction: React.FC = () => {
     detail: string;
   }>>([]);
   const [form] = Form.useForm();
-  const [receiveForm] = Form.useForm();
 
   // 节点详情弹窗状态
   const [nodeDetailVisible, setNodeDetailVisible] = useState(false);
@@ -172,15 +170,15 @@ const PatternProduction: React.FC = () => {
       // 转换后端数据格式为前端格式
       const formattedData: PatternProductionRecord[] = records.map((item: any) => ({
         id: item.id,
-        styleNo: item.styleNo,
-        color: item.color || '-',
+        styleNo: item.styleNo || '-',
+        color: item.color || '',
         sizes: [], // 后端暂未提供
-        quantity: item.quantity || 0,
-        releaseTime: item.releaseTime ? String(item.releaseTime).replace('T', ' ') : '-',
-        deliveryTime: item.deliveryTime ? String(item.deliveryTime).replace('T', ' ') : '-',
+        quantity: item.quantity ?? 0,
+        releaseTime: formatDateTime(item.releaseTime) || '-',
+        deliveryTime: formatDateTime(item.deliveryTime) || '-',
         receiver: item.receiver || '-',
-        receiveTime: item.receiveTime ? String(item.receiveTime).replace('T', ' ') : '-',
-        completeTime: item.completeTime ? String(item.completeTime).replace('T', ' ') : '-',
+        receiveTime: formatDateTime(item.receiveTime) || '-',
+        completeTime: formatDateTime(item.completeTime) || '-',
         coverImage: item.coverImage,
         patternMaker: item.patternMaker || '-',
         status: item.status || 'PENDING',
@@ -192,8 +190,10 @@ const PatternProduction: React.FC = () => {
           secondary: 0,
           packaging: 0,
         },
-        // 工序单价从后端获取
+        // 工序单价汇总从后端获取（从样板开发的工艺配置汇总）
         processUnitPrices: item.processUnitPrices || {},
+        // 每个节点下的工序明细（含工序名和单价）
+        processDetails: item.processDetails || {},
       }));
 
       setDataSource(formattedData);
@@ -206,35 +206,15 @@ const PatternProduction: React.FC = () => {
     }
   };
 
-  // 打开领取对话框
-  const handleOpenReceive = (record: PatternProductionRecord) => {
-    receiveForm.setFieldsValue({
-      patternMaker: '',
-      releaseTime: null,
-      deliveryTime: null,
-    });
-    receiveModal.open(record);
-  };
-
-  // 提交领取
-  const handleReceiveSubmit = async () => {
+  // 直接领取（不弹窗）
+  const handleReceive = async (record: PatternProductionRecord) => {
     try {
-      const values = await receiveForm.validateFields();
-      await api.post(`/production/pattern/${receiveModal.data!.id}/receive`, {
-        patternMaker: values.patternMaker,
-        releaseTime: values.releaseTime?.format('YYYY-MM-DD HH:mm:ss'),
-        deliveryTime: values.deliveryTime?.format('YYYY-MM-DD HH:mm:ss'),
-      });
+      await api.post(`/production/pattern/${record.id}/receive`, {});
       message.success('领取成功');
-      receiveModal.close();
-      receiveForm.resetFields();
+      addOperationLog('领取', `领取：${record.styleNo}`);
       loadData();
     } catch (error: any) {
-      if (error.errorFields) {
-        message.error('请检查输入数据');
-      } else {
-        message.error(error.message || '领取失败');
-      }
+      message.error(error.message || '领取失败');
     }
   };
 
@@ -249,19 +229,86 @@ const PatternProduction: React.FC = () => {
     detailModal.open(record);
   };
 
-  // 删除样板生产记录
-  const handleDelete = async (record: PatternProductionRecord) => {
+  // 维护操作
+  const handleMaintenance = (record: PatternProductionRecord) => {
+    let maintenanceReason = '';
     Modal.confirm({
-      title: '确认删除',
-      content: `确定要删除样板生产记录：${record.styleNo} - ${record.color}？`,
-      okText: '确认',
+      title: '维护',
+      content: (
+        <div>
+          <div style={{ marginBottom: 12, fontWeight: 600 }}>
+            维护样板：{record.styleNo} - {record.color}
+          </div>
+          <div style={{ marginBottom: 8, fontWeight: 600 }}>维护原因：</div>
+          <Input.TextArea
+            placeholder="请输入维护原因"
+            autoSize={{ minRows: 3, maxRows: 6 }}
+            maxLength={200}
+            showCount
+            onChange={(e) => {
+              maintenanceReason = e.target.value;
+            }}
+          />
+        </div>
+      ),
+      okText: '确认维护',
       cancelText: '取消',
       okButtonProps: { danger: true },
       onOk: async () => {
+        const reason = maintenanceReason.trim();
+        if (!reason) {
+          message.error('请输入维护原因');
+          return Promise.reject(new Error('请输入维护原因'));
+        }
         try {
-          await api.delete(`/production/pattern/${record.id}`);
+          await api.post(`/production/pattern/${record.id}/maintenance`, { reason });
+          message.success('维护成功');
+          addOperationLog('维护记录', `维护样板：${record.styleNo}，原因：${reason}`);
+          loadData();
+        } catch (error: any) {
+          message.error(error.message || '维护失败');
+        }
+      },
+    });
+  };
+
+  // 删除样板生产记录
+  const handleDelete = async (record: PatternProductionRecord) => {
+    let deleteReason = '';
+    Modal.confirm({
+      title: '确认删除',
+      content: (
+        <div>
+          <div style={{ marginBottom: 12, color: '#ff4d4f', fontWeight: 600 }}>
+            删除样板生产记录：{record.styleNo} - {record.color}
+          </div>
+          <div style={{ marginBottom: 8, fontWeight: 600 }}>请输入删除原因：</div>
+          <Input.TextArea
+            placeholder="请输入删除原因（必填）"
+            autoSize={{ minRows: 3, maxRows: 6 }}
+            maxLength={200}
+            showCount
+            onChange={(e) => {
+              deleteReason = e.target.value;
+            }}
+          />
+        </div>
+      ),
+      okText: '确认删除',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        const reason = deleteReason.trim();
+        if (!reason) {
+          message.error('请输入删除原因');
+          return Promise.reject(new Error('请输入删除原因'));
+        }
+        try {
+          await api.delete(`/production/pattern/${record.id}`, {
+            data: { reason },
+          });
           message.success('删除成功');
-          addOperationLog('删除记录', `删除样板生产记录：${record.styleNo}`);
+          addOperationLog('删除记录', `删除样板生产记录：${record.styleNo}，原因：${reason}`);
           loadData();
         } catch (error: any) {
           message.error(error.message || '删除失败');
@@ -394,14 +441,28 @@ const PatternProduction: React.FC = () => {
       width: 900,
       align: 'center' as const,
       render: (progressNodes: { [key: string]: number }, record) => {
-        // 从后端获取的工序单价
+        // 从后端获取的进度节点配置和单价汇总
         const processUnitPrices = record.processUnitPrices || {};
 
-        // 构建带单价的节点列表
-        const nodesWithPrices = DEFAULT_NODES.map(node => ({
-          ...node,
-          unitPrice: processUnitPrices[node.name] || 0,
-        }));
+        // 动态构建进度节点列表（从样板开发的工艺配置读取）
+        // 进度节点按顺序：采购、裁剪、车缝、尾部、入库
+        const progressStages = ['采购', '裁剪', '车缝', '尾部', '入库'];
+        const nodesWithPrices = progressStages.map((stageName) => {
+          // 节点ID使用拼音映射
+          const stageIdMap: Record<string, string> = {
+            '采购': 'procurement',
+            '裁剪': 'cutting',
+            '车缝': 'sewing',
+            '尾部': 'tail',
+            '入库': 'warehousing',
+          };
+          const nodeId = stageIdMap[stageName] || stageName;
+          return {
+            id: nodeId,
+            name: stageName,
+            unitPrice: processUnitPrices[stageName] || 0,
+          };
+        });
 
         return (
         <div style={{
@@ -431,14 +492,20 @@ const PatternProduction: React.FC = () => {
                   borderRadius: 8,
                   transition: 'background 0.2s',
                 }}
-                onClick={() => openNodeDetail(
-                  record,
-                  node.id,
-                  node.name,
-                  { done: completedQty, total: record.quantity, percent, remaining },
-                  node.unitPrice,
-                  nodesWithPrices.map(n => ({ name: n.name, unitPrice: n.unitPrice }))
-                )}
+                onClick={() => {
+                  // 获取该节点下的工序明细列表
+                  const processDetails = record.processDetails || {};
+                  const nodeProcessList = processDetails[node.name] || [];
+
+                  openNodeDetail(
+                    record,
+                    node.id,
+                    node.name,
+                    { done: completedQty, total: record.quantity, percent, remaining },
+                    node.unitPrice,
+                    nodeProcessList // 传递该节点下的工序明细
+                  );
+                }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(59, 130, 246, 0.08)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                 title={`点击查看 ${node.name} 详情`}
@@ -522,24 +589,33 @@ const PatternProduction: React.FC = () => {
       width: 120,
       fixed: 'right',
       render: (_, record) => {
+        // 计算完成进度（0-100）
+        const progressNodes = record.progressNodes || {};
+        const nodeValues = Object.values(progressNodes) as number[];
+        const totalProgress = nodeValues.length > 0
+          ? Math.round(nodeValues.reduce((sum: number, val: number) => sum + val, 0) / nodeValues.length)
+          : 0;
+        const isCompleted = totalProgress === 100 || record.status === 'COMPLETED';
+
         const menuItems: MenuProps['items'] = [
           record.status === 'PENDING' && {
             key: 'receive',
             icon: <UserOutlined />,
-            label: '领取样板',
-            onClick: () => handleOpenReceive(record),
+            label: '领取',
+            onClick: () => handleReceive(record),
           },
-          record.status === 'IN_PROGRESS' && {
+          record.status === 'IN_PROGRESS' && !isCompleted && {
             key: 'progress',
             icon: <SyncOutlined />,
-            label: '更新进度',
+            label: '进度',
             onClick: () => handleOpenProgress(record),
           },
           {
             key: 'view',
             icon: <EyeOutlined />,
-            label: '查看详情',
+            label: '查看',
             onClick: () => handleOpenDetail(record),
+            disabled: isCompleted,
           },
           {
             key: 'divider1',
@@ -547,8 +623,16 @@ const PatternProduction: React.FC = () => {
           },
           {
             key: 'attachment',
-            label: '附件管理',
+            label: '附件',
             onClick: () => attachmentModal.open(record),
+            disabled: isCompleted,
+          },
+          {
+            key: 'maintenance',
+            label: '维护',
+            onClick: () => handleMaintenance(record),
+            danger: !isCompleted,
+            disabled: isCompleted,
           },
           {
             key: 'divider2',
@@ -558,14 +642,15 @@ const PatternProduction: React.FC = () => {
             key: 'delete',
             icon: <DeleteOutlined />,
             label: '删除记录',
-            danger: true,
+            danger: !isCompleted,
+            disabled: isCompleted,
             onClick: () => handleDelete(record),
           },
         ].filter(Boolean) as MenuProps['items'];
 
         return (
           <Dropdown menu={{ items: menuItems }} trigger={['click']}>
-            <Button icon={<MoreOutlined />}>更多</Button>
+            <Button icon={<MoreOutlined />} />
           </Dropdown>
         );
       },
@@ -626,11 +711,8 @@ const PatternProduction: React.FC = () => {
               titleField="styleNo"
               subtitleField="color"
               fields={[
-                { label: '码数', key: 'sizes', render: (val, record) => {
-                  const sizeCount = record.sizeCount || 0;
-                  return sizeCount > 0 ? `${sizeCount}个码` : '-';
-                }},
-                { label: '数量', key: 'quantity', suffix: ' 件' },
+                { label: '颜色', key: 'color', render: (val) => val || '-' },
+                { label: '数量', key: 'quantity', render: (val) => (val !== null && val !== undefined) ? `${val} 件` : '-' },
                 { label: '下板', key: 'releaseTime' },
                 { label: '交板', key: 'deliveryTime' },
               ]}
@@ -638,256 +720,72 @@ const PatternProduction: React.FC = () => {
                 calculate: calculateProgress,
                 getStatus: (record) => getDeliveryStatus(record.deliveryTime),
                 show: true,
+                type: 'liquid', // 液体波浪进度条
               }}
-              actions={(record) => ([
-                record.status === 'PENDING' && {
-                  key: 'receive',
-                  icon: <UserOutlined />,
-                  label: '领取样板',
-                  onClick: () => handleOpenReceive(record),
-                },
-                record.status === 'IN_PROGRESS' && {
-                  key: 'progress',
-                  icon: <SyncOutlined />,
-                  label: '更新进度',
-                  onClick: () => handleOpenProgress(record),
-                },
-                {
-                  key: 'view',
-                  icon: <EyeOutlined />,
-                  label: '查看详情',
-                  onClick: () => handleOpenDetail(record),
-                },
-                {
-                  key: 'divider1',
-                  type: 'divider' as const,
-                  label: '',
-                },
-                {
-                  key: 'attachment',
-                  label: '附件管理',
-                  onClick: () => attachmentModal.open(record),
-                },
-                {
-                  key: 'delete',
-                  icon: <DeleteOutlined />,
-                  label: '删除',
-                  onClick: () => handleDelete(record),
-                  danger: true,
-                },
-              ] as const).filter(Boolean) as any}
+              actions={(record) => {
+                // 计算完成进度（0-100）
+                const progressNodes = record.progressNodes || {};
+                const nodeValues = Object.values(progressNodes) as number[];
+                const totalProgress = nodeValues.length > 0
+                  ? Math.round(nodeValues.reduce((sum: number, val: number) => sum + val, 0) / nodeValues.length)
+                  : 0;
+                const isCompleted = totalProgress === 100 || record.status === 'COMPLETED';
+
+                return [
+                  record.status === 'PENDING' && {
+                    key: 'receive',
+                    icon: <UserOutlined />,
+                    label: '领取',
+                    onClick: () => handleReceive(record),
+                  },
+                  record.status === 'IN_PROGRESS' && !isCompleted && {
+                    key: 'progress',
+                    icon: <SyncOutlined />,
+                    label: '进度',
+                    onClick: () => handleOpenProgress(record),
+                  },
+                  {
+                    key: 'view',
+                    icon: <EyeOutlined />,
+                    label: '查看',
+                    onClick: () => handleOpenDetail(record),
+                    disabled: isCompleted,
+                    style: isCompleted ? { color: '#d9d9d9' } : undefined,
+                  },
+                  {
+                    key: 'divider1',
+                    type: 'divider' as const,
+                    label: '',
+                  },
+                  {
+                    key: 'attachment',
+                    label: '附件',
+                    onClick: () => attachmentModal.open(record),
+                    disabled: isCompleted,
+                    style: isCompleted ? { color: '#d9d9d9' } : undefined,
+                  },
+                  {
+                    key: 'maintenance',
+                    label: '维护',
+                    onClick: () => handleMaintenance(record),
+                    danger: !isCompleted,
+                    disabled: isCompleted,
+                    style: isCompleted ? { color: '#d9d9d9' } : undefined,
+                  },
+                  {
+                    key: 'delete',
+                    icon: <DeleteOutlined />,
+                    label: '删除',
+                    onClick: () => handleDelete(record),
+                    danger: !isCompleted,
+                    disabled: isCompleted,
+                    style: isCompleted ? { color: '#d9d9d9' } : undefined,
+                  },
+                ] as const;
+              }}
             />
           )}
         </Card>
-
-        {/* 领取样板对话框 */}
-        <Modal
-          title="领取样板"
-          open={receiveModal.visible}
-          onOk={handleReceiveSubmit}
-          onCancel={() => {
-            receiveModal.close();
-            receiveForm.resetFields();
-          }}
-          width={1000}
-          okText="确认领取"
-          cancelText="取消"
-        >
-          {receiveModal.data && (
-            <div style={{ marginBottom: 16, padding: 12, background: '#f5f5f5', borderRadius: 4 }}>
-              <div style={{ display: 'flex', gap: 16, marginBottom: 8, justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', gap: 16 }}>
-                  <div><strong>款号:</strong> {receiveModal.data.styleNo}</div>
-                  <div><strong>颜色:</strong> {receiveModal.data.color}</div>
-                  <div><strong>状态:</strong> {renderStatus(receiveModal.data.status)}</div>
-                </div>
-                <Button
-                  type="link"
-                  icon={<ClockCircleOutlined />}
-                  onClick={() => setOperationLogVisible(true)}
-                >
-                  操作历史
-                </Button>
-              </div>
-            </div>
-          )}
-          <Form form={receiveForm} layout="vertical">
-            <Row gutter={12}>
-              <Col span={12}>
-                <Form.Item
-                  name="releaseTime"
-                  label="下板时间"
-                  rules={[
-                    { required: true, message: '请选择时间' },
-                  ]}
-                >
-                  <DatePicker
-                    showTime
-                    format="YYYY-MM-DD HH:mm:ss"
-                    style={{ width: '100%' }}
-                    placeholder="选择时间"
-                  />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                  name="deliveryTime"
-                  label="预计交板时间"
-                  rules={[
-                    { required: true, message: '请选择时间' },
-                  ]}
-                >
-                  <DatePicker
-                    showTime
-                    format="YYYY-MM-DD HH:mm:ss"
-                    style={{ width: '100%' }}
-                    placeholder="选择时间"
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Form.Item
-              name="productionNodes"
-              label={(
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                  <span>生产节点配置</span>
-                  <Space size="small">
-                    <Input
-                      placeholder="新工序名称"
-                      value={newNodeName}
-                      onChange={(e) => setNewNodeName(e.target.value)}
-                      style={{ width: 120 }}
-                      size="small"
-                    />
-                    <Button
-                      type="primary"
-                      icon={<PlusOutlined />}
-                      size="small"
-                      onClick={() => {
-                        if (!newNodeName.trim()) {
-                          message.warning('请输入工序名称');
-                          return;
-                        }
-                        if (customNodes.some(n => n.name === newNodeName.trim())) {
-                          message.warning('工序已存在');
-                          return;
-                        }
-                        const newNode: ProgressNode = {
-                          id: `custom_${Date.now()}`,
-                          name: newNodeName.trim(),
-                        };
-                        setCustomNodes([...customNodes, newNode]);
-                        addOperationLog('添加工序', `添加自定义工序：${newNodeName.trim()}`);
-                        setNewNodeName('');
-                        message.success('工序添加成功');
-                      }}
-                    >
-                      添加工序
-                    </Button>
-                  </Space>
-                </div>
-              )}
-              rules={[
-                { required: true, message: '请至少选择一个生产节点' },
-              ]}
-              initialValue={customNodes.map(n => n.id)}
-            >
-              <Checkbox.Group style={{ width: '100%' }}>
-                <Row gutter={[8, 8]}>
-                  {customNodes.map((node) => (
-                    <Col span={8} key={node.id}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <Checkbox value={node.id}>
-                          {node.name}
-                        </Checkbox>
-                        <Button
-                          type="text"
-                          danger
-                          size="small"
-                          icon={<DeleteOutlined />}
-                          onClick={() => {
-                            const nodeName = node.name;
-                            setCustomNodes(customNodes.filter(n => n.id !== node.id));
-                            addOperationLog('删除工序', `删除工序：${nodeName}`);
-                            message.success('工序已删除');
-                          }}
-                          style={{ padding: '0 4px', minWidth: 'auto' }}
-                        />
-                      </div>
-                    </Col>
-                  ))}
-                </Row>
-              </Checkbox.Group>
-            </Form.Item>
-
-            {/* 工序指派配置 */}
-            <Form.Item noStyle shouldUpdate={(prev, curr) => prev.productionNodes !== curr.productionNodes}>
-              {({ getFieldValue }) => {
-                const selectedNodes = getFieldValue('productionNodes') || [];
-                const nodesToShow = customNodes.filter(node => selectedNodes.includes(node.id));
-
-                if (nodesToShow.length === 0) {
-                  return null;
-                }
-
-                return (
-                  <div style={{
-                    marginTop: 16,
-                    padding: 16,
-                    background: '#fafafa',
-                    borderRadius: 6,
-                    border: '1px solid #e5e7eb',
-                  }}>
-                    <div style={{
-                      fontSize: 14,
-                      fontWeight: 600,
-                      color: '#1f2937',
-                      marginBottom: 12,
-                    }}>👥 工序指派配置（多人协作）</div>
-                    <Row gutter={[12, 12]}>
-                      {nodesToShow.map((node) => (
-                        <Col span={6} key={node.id}>
-                          <Form.Item
-                            name={['nodeAssignments', node.id]}
-                            label={node.name}
-                            style={{ marginBottom: 0 }}
-                          >
-                            <Input
-                              placeholder={`输入${node.name}负责人`}
-                              prefix={<UserOutlined style={{ color: '#9ca3af' }} />}
-                            />
-                          </Form.Item>
-                        </Col>
-                      ))}
-                    </Row>
-                    <div style={{
-                      marginTop: 8,
-                      fontSize: 12,
-                      color: '#6b7280',
-                    }}>
-                      💡 提示：每个工序可以指派不同的人员负责，如：张三负责印花，李四负责车缝
-                    </div>
-                  </div>
-                );
-              }}
-            </Form.Item>
-
-            <div style={{
-              padding: 12,
-              background: '#e6f7ff',
-              border: '1px solid #91d5ff',
-              borderRadius: 4,
-              fontSize: 13,
-              color: '#0958d9'
-            }}>
-              <div>💡 <strong>提示：</strong></div>
-              <div style={{ marginTop: 4 }}>• 领取后将自动切换为“进行中”状态</div>
-              <div>• 可以自定义生产节点（裁剪、车缝、大烫等）</div>
-              <div>• 领取后可在“更新进度”中实时更新各工序进度</div>
-            </div>
-          </Form>
-        </Modal>
 
         {/* 工序进度更新对话框 */}
         <Modal
@@ -1164,7 +1062,7 @@ const PatternProduction: React.FC = () => {
               styleNo={attachmentModal.data.styleNo}
               buttonText="附件管理"
               modalTitle={`${attachmentModal.data.styleNo} - 附件`}
-              onlyGradingPattern={true}
+              onlyGradingPattern={false}
             />
           </div>
         )}

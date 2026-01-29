@@ -214,7 +214,7 @@ Page({
       const activities = normalizeActivities(payload);
       this.setData({ stats, statsLoaded: true, activities });
     } catch (e) {
-      console.error('Dashboard error:', e); // DEBUG
+      console.error('Dashboard error:', e);
       if (e && e.type === 'auth') {
         return;
       }

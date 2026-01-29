@@ -36,9 +36,10 @@ public class StyleProcessOrchestrator {
         if (styleProcess == null || styleProcess.getStyleId() == null) {
             throw new IllegalArgumentException("styleId不能为空");
         }
-        if (styleInfoService.isPatternLocked(styleProcess.getStyleId())) {
-            throw new IllegalStateException("纸样已完成，无法修改，请先回退");
-        }
+        // 移除纸样状态检查，工序单价是独立模块
+        // if (styleInfoService.isPatternLocked(styleProcess.getStyleId())) {
+        //     throw new IllegalStateException("纸样已完成，无法修改，请先回退");
+        // }
         if (styleProcess.getCreateTime() == null) {
             styleProcess.setCreateTime(LocalDateTime.now());
         }
@@ -62,9 +63,10 @@ public class StyleProcessOrchestrator {
         if (current == null) {
             throw new NoSuchElementException("记录不存在");
         }
-        if (styleInfoService.isPatternLocked(current.getStyleId())) {
-            throw new IllegalStateException("纸样已完成，无法修改，请先回退");
-        }
+        // 移除纸样状态检查，工序单价是独立模块
+        // if (styleInfoService.isPatternLocked(current.getStyleId())) {
+        //     throw new IllegalStateException("纸样已完成，无法修改，请先回退");
+        // }
         styleProcess.setStyleId(current.getStyleId());
         styleProcess.setUpdateTime(LocalDateTime.now());
         boolean ok = styleProcessService.updateById(styleProcess);
@@ -83,9 +85,10 @@ public class StyleProcessOrchestrator {
         if (current == null) {
             throw new NoSuchElementException("记录不存在");
         }
-        if (styleInfoService.isPatternLocked(current.getStyleId())) {
-            throw new IllegalStateException("纸样已完成，无法修改，请先回退");
-        }
+        // 移除纸样状态检查，工序单价是独立模块
+        // if (styleInfoService.isPatternLocked(current.getStyleId())) {
+        //     throw new IllegalStateException("纸样已完成，无法修改，请先回退");
+        // }
         boolean ok = styleProcessService.removeById(id);
         if (!ok) {
             throw new IllegalStateException("删除失败");

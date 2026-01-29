@@ -140,7 +140,12 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
       type === 'application/vnd.ms-excel' ||
       type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
       type === 'application/msword' ||
-      type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+      type === 'application/zip' ||
+      type === 'application/x-zip-compressed' ||
+      type === 'application/x-rar-compressed' ||
+      type === 'application/x-7z-compressed' ||
+      type === 'application/octet-stream'; // 用于 dxf/plt/ets 等特殊格式
 
     const extOk = acceptExts.includes(ext);
 

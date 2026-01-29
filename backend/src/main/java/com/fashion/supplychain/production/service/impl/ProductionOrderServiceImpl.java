@@ -13,8 +13,16 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.production.service.CuttingTaskService;
+import com.fashion.supplychain.production.service.MaterialPurchaseService;
+import com.fashion.supplychain.style.service.StyleBomService;
+import com.fashion.supplychain.style.entity.StyleBom;
+import com.fashion.supplychain.production.entity.MaterialPurchase;
+import com.fashion.supplychain.style.entity.StyleInfo;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import lombok.extern.slf4j.Slf4j;
@@ -49,6 +57,12 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
     private ProductionOrderQueryService productionOrderQueryService;
 
     @Autowired
+    private ObjectProvider<MaterialPurchaseService> materialPurchaseServiceProvider;
+
+    @Autowired
+    private ObjectProvider<StyleBomService> styleBomServiceProvider;
+
+    @Autowired
     private ObjectProvider<ProductionOrderProgressOrchestrationService> progressOrchestrationServiceProvider;
 
     @Autowired
@@ -65,6 +79,7 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean saveOrUpdateOrder(ProductionOrder productionOrder) {
         LocalDateTime now = LocalDateTime.now();
 
@@ -108,6 +123,7 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
         boolean ok = this.saveOrUpdate(productionOrder);
         if (ok && isCreate) {
             cuttingTaskService.createTaskIfAbsent(productionOrder);
+            this.generateMaterialPurchases(productionOrder);
             try {
                 scanRecordDomainService.ensureBaseStageScanRecordsOnCreate(productionOrder);
                 this.recomputeProgressFromRecords(productionOrder.getId().trim());
@@ -227,5 +243,90 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
         return this.getOne(new LambdaQueryWrapper<ProductionOrder>()
                 .eq(ProductionOrder::getOrderNo, orderNo.trim())
                 .last("LIMIT 1"));
+    }
+
+    private void generateMaterialPurchases(ProductionOrder order) {
+        if (order == null || !StringUtils.hasText(order.getId())) {
+            return;
+        }
+
+        StyleBomService styleBomService = styleBomServiceProvider.getIfAvailable();
+        MaterialPurchaseService materialPurchaseService = materialPurchaseServiceProvider.getIfAvailable();
+        StyleInfoService styleInfoService = styleInfoServiceProvider.getIfAvailable();
+
+        if (styleBomService == null || materialPurchaseService == null || styleInfoService == null) {
+            log.warn("Required services not available for generating material purchases");
+            return;
+        }
+
+        Long styleId = null;
+        try {
+            styleId = Long.parseLong(order.getStyleId());
+        } catch (NumberFormatException e) {
+            log.error("Invalid styleId: {}", order.getStyleId());
+            return;
+        }
+
+        List<StyleBom> bomList = styleBomService.listByStyleId(styleId);
+        if (bomList == null || bomList.isEmpty()) {
+            return;
+        }
+
+        StyleInfo style = styleInfoService.getById(styleId);
+        String cover = style != null ? style.getCover() : null;
+
+        List<MaterialPurchase> purchases = new ArrayList<>();
+        int orderQty = order.getOrderQuantity() != null ? order.getOrderQuantity() : 0;
+
+        for (StyleBom bom : bomList) {
+            MaterialPurchase mp = new MaterialPurchase();
+            mp.setOrderId(order.getId());
+            mp.setOrderNo(order.getOrderNo());
+            mp.setStyleId(order.getStyleId());
+            mp.setStyleNo(order.getStyleNo());
+            mp.setStyleName(order.getStyleName());
+            mp.setStyleCover(cover);
+
+            mp.setMaterialCode(bom.getMaterialCode());
+            mp.setMaterialName(bom.getMaterialName());
+            mp.setMaterialType(bom.getMaterialType());
+            mp.setSpecifications(bom.getSpecification());
+            mp.setUnit(bom.getUnit());
+            mp.setSupplierName(bom.getSupplier());
+
+            BigDecimal usage = bom.getUsageAmount() != null ? bom.getUsageAmount() : BigDecimal.ZERO;
+            BigDecimal loss = bom.getLossRate() != null ? bom.getLossRate() : BigDecimal.ZERO;
+
+            BigDecimal totalUsage = usage.multiply(BigDecimal.valueOf(orderQty));
+            BigDecimal withLoss = totalUsage
+                    .multiply(BigDecimal.ONE.add(loss.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP)));
+            mp.setPurchaseQuantity(withLoss.setScale(0, RoundingMode.CEILING).intValue());
+
+            mp.setUnitPrice(bom.getUnitPrice());
+            if (mp.getPurchaseQuantity() != null && mp.getUnitPrice() != null) {
+                mp.setTotalAmount(mp.getUnitPrice().multiply(BigDecimal.valueOf(mp.getPurchaseQuantity())));
+            }
+
+            // if (order.getPlannedEndDate() != null) {
+            //     mp.setExpectedShipDate(order.getPlannedEndDate().toLocalDate());
+            // }
+
+            // Generate purchaseNo
+            String ts = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
+            int rand = (int) (ThreadLocalRandom.current().nextDouble() * 900) + 100;
+            mp.setPurchaseNo("PUR" + ts + rand);
+
+            mp.setStatus("pending");
+            mp.setCreateTime(LocalDateTime.now());
+            mp.setUpdateTime(LocalDateTime.now());
+            mp.setDeleteFlag(0);
+            mp.setArrivedQuantity(0);
+
+            purchases.add(mp);
+        }
+
+        if (!purchases.isEmpty()) {
+            materialPurchaseService.saveBatch(purchases);
+        }
     }
 }

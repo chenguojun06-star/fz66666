@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, Row, Col, Button, Space } from 'antd';
 import { StyleCoverThumb } from '@/components/StyleAssets';
+import LiquidProgressBar from '@/components/common/LiquidProgressBar';
 import './style.css';
 
 export interface CardField {
@@ -14,8 +15,9 @@ export interface CardField {
 
 export interface CardProgressConfig {
   calculate: (record: any) => number;
-  getStatus?: (record: any) => 'success' | 'warning' | 'danger';
+  getStatus?: (record: any) => 'normal' | 'warning' | 'danger'; // liquid 类型使用 normal/warning/danger
   show?: boolean; // 是否显示进度条
+  type?: 'capsule' | 'liquid'; // 进度条类型：capsule=胶囊条（默认），liquid=液体波浪条
 }
 
 export interface CardAction {
@@ -125,15 +127,17 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
               }
             >
               <div className="universal-card-body">
-                {/* 标题 */}
-                <h3 className="universal-card-title">{record[titleField]}</h3>
-
-                {/* 副标题 */}
-                {subtitleField && (
-                  <div className="universal-card-subtitle">
-                    {record[subtitleField]}
-                  </div>
-                )}
+                {/* 标题和副标题在同一行 */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <h3 className="universal-card-title" style={{ margin: 0, flex: 1, minWidth: 0 }}>
+                    {record[titleField]}
+                  </h3>
+                  {subtitleField && (
+                    <div className="universal-card-subtitle" style={{ margin: 0, flexShrink: 0 }}>
+                      {record[subtitleField]}
+                    </div>
+                  )}
+                </div>
 
                 {/* 字段行 */}
                 {groupFields(fields).map((group, idx) => (
@@ -149,23 +153,46 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
                   </div>
                 ))}
 
-                {/* 进度条（可选） - 胶囊椭圆形 */}
+                {/* 进度条作为分割线（可选） */}
                 {progressConfig?.show !== false && progressConfig && (
-                  <div
-                    className={`universal-card-progress-line universal-card-progress-${
-                      progressConfig.getStatus?.(record) || 'default'
-                    }`}
-                    style={{ width: `${Math.max(15, progressConfig.calculate(record))}%` }}
-                  >
-                    <span className="universal-card-progress-text">
-                      {progressConfig.calculate(record)}%
-                    </span>
+                  <div style={{
+                    marginTop: '12px',
+                    marginBottom: '12px',
+                    paddingTop: '8px',
+                    animation: 'progressFadeIn 0.6s ease-out'
+                  }}>
+                    {progressConfig.type === 'liquid' ? (
+                      // 液体波浪进度条
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <LiquidProgressBar
+                          percent={progressConfig.calculate(record)}
+                          width="100%"
+                          height={12}
+                          status={progressConfig.getStatus?.(record)}
+                        />
+                        <span style={{ fontSize: '12px', color: '#666', minWidth: '35px', fontWeight: 600 }}>
+                          {progressConfig.calculate(record)}%
+                        </span>
+                      </div>
+                    ) : (
+                      // 胶囊椭圆形进度条（默认）
+                      <div
+                        className={`universal-card-progress-line universal-card-progress-${
+                          progressConfig.getStatus?.(record) || 'default'
+                        }`}
+                        style={{ width: `${Math.max(15, progressConfig.calculate(record))}%` }}
+                      >
+                        <span className="universal-card-progress-text">
+                          {progressConfig.calculate(record)}%
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
 
                 {/* 操作按钮 - 直接显示文字按钮 */}
                 {actionButtons.length > 0 && (
-                  <div className="universal-card-actions">
+                  <div className="universal-card-actions" style={{ borderTop: 'none', paddingTop: 0 }}>
                     <Space size="small">
                       {actionButtons.map((action) => (
                         <Button

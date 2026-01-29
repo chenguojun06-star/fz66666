@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Input, InputNumber, message, Space, Select, Modal } from 'antd';
+import { Button, Input, InputNumber, Space, Select, Modal, App } from 'antd';
 import { PlusOutlined, DeleteOutlined, SaveOutlined, EditOutlined } from '@ant-design/icons';
 import { StyleProcess, TemplateLibrary } from '@/types/style';
 import api, { toNumberSafe } from '@/utils/api';
@@ -12,9 +12,11 @@ interface Props {
   styleId: string | number;
   readOnly?: boolean;
   hidePrice?: boolean; // 是否隐藏单价列
+  progressNode?: string; // 进度节点
   processAssignee?: string;
   processStartTime?: string;
   processCompletedTime?: string;
+  onRefresh?: () => void; // 刷新父组件的回调
 }
 
 const norm = (v: unknown) => String(v || '').trim();
@@ -29,10 +31,13 @@ const StyleProcessTab: React.FC<Props> = ({
   styleId,
   readOnly,
   hidePrice = false,
+  progressNode,
   processAssignee,
   processStartTime,
   processCompletedTime,
+  onRefresh,
 }) => {
+  const { message } = App.useApp();
   const [data, setData] = useState<StyleProcess[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -152,9 +157,24 @@ const StyleProcessTab: React.FC<Props> = ({
     fetchStyleNoOptions('');
   }, []);
 
-  const enterEdit = () => {
+  const enterEdit = async () => {
     if (readOnly) return;
     if (editMode) return;
+
+    // 首次编辑时调用开始API
+    if (!processStartTime && styleId) {
+      try {
+        const res = await api.post(`/style/info/${styleId}/process/start`);
+        if (res.code === 200) {
+          console.log('工序配置已开始');
+          // 刷新数据以获取最新的开始时间
+          if (onRefresh) onRefresh();
+        }
+      } catch (error) {
+        console.error('记录工序开始时间失败:', error);
+      }
+    }
+
     snapshotRef.current = JSON.parse(JSON.stringify(data)) as StyleProcess[];
     setEditMode(true);
   };
@@ -285,7 +305,7 @@ const StyleProcessTab: React.FC<Props> = ({
           processName: norm(r.processName),
           progressStage: norm(r.progressStage) || '车缝',
           machineType: norm(r.machineType),
-          standardTime: toNumberSafe(r.standardTime),
+          standardTime: r.standardTime != null ? toNumberSafe(r.standardTime) : 0,
           price: toNumberSafe(r.price),
           sortOrder: toNumberSafe(r.sortOrder),
         };
@@ -305,10 +325,21 @@ const StyleProcessTab: React.FC<Props> = ({
         return;
       }
 
+      // 保存成功后调用完成API
+      if (styleId && data.length > 0) {
+        try {
+          await api.post(`/style/info/${styleId}/process/complete`);
+          console.log('工序配置已完成');
+        } catch (error) {
+          console.error('记录工序完成时间失败:', error);
+        }
+      }
+
       message.success('保存成功');
       setEditMode(false);
       snapshotRef.current = null;
       await fetchProcess();
+      if (onRefresh) onRefresh(); // 刷新父组件数据
     } catch (e: unknown) {
       message.error(e?.message || '保存失败');
     } finally {
@@ -370,6 +401,7 @@ const StyleProcessTab: React.FC<Props> = ({
                 { label: '采购', value: '采购' },
                 { label: '裁剪', value: '裁剪' },
                 { label: '车缝', value: '车缝' },
+                { label: '二次工艺', value: '二次工艺' },
                 { label: '尾部', value: '尾部' },
                 { label: '入库', value: '入库' },
               ]}
@@ -460,6 +492,20 @@ const StyleProcessTab: React.FC<Props> = ({
 
   return (
     <div>
+      {/* 进度节点 - 已隐藏 */}
+      {/* {progressNode && (
+        <div style={{
+          marginBottom: 12,
+          padding: '10px 16px',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          borderRadius: 4,
+          color: '#fff',
+          fontSize: '15px',
+          fontWeight: 600,
+        }}>
+          进度节点：{progressNode}
+        </div>
+      )} */}
       {/* 状态栏 */}
       <div style={{
         marginBottom: 16,

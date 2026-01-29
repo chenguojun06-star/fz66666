@@ -56,7 +56,6 @@ Page({
 
     // 订阅数据刷新事件
     this._unsubscribeRefresh = onDataRefresh(payload => {
-      console.log('[个人页面] 收到数据变更通知:', payload);
       // 刷新当前页面数据
       this.refreshAll(true);
     });

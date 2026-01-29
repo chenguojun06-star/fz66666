@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Form, InputNumber, Button, Row, Col, Statistic, Divider, Space, App, Table } from 'antd';
-import { SaveOutlined } from '@ant-design/icons';
+import { Card, Form, InputNumber, Button, Row, Col, Statistic, Divider, App, Table } from 'antd';
+import { SaveOutlined, LockOutlined, EditOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { StyleQuotation, StyleBom, StyleProcess } from '@/types/style';
 import api, { toNumberSafe } from '@/utils/api';
@@ -20,6 +20,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
   const [bomList, setBomList] = useState<StyleBom[]>([]);
   const [processList, setProcessList] = useState<StyleProcess[]>([]);
   const [secondaryProcessList, setSecondaryProcessList] = useState<any[]>([]);
+  const [isLocked, setIsLocked] = useState(false); // 锁定状态
 
   const materialCost = Number(Form.useWatch('materialCost', form)) || 0;
   const processCost = Number(Form.useWatch('processCost', form)) || 0;
@@ -108,6 +109,10 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
 
       setQuotation(existing ? nextValues : null);
       form.setFieldsValue(nextValues);
+      // 设置锁定状态
+      if (existing && 'isLocked' in existing) {
+        setIsLocked(existing.isLocked === 1);
+      }
       calculateTotal();
     } catch (error) {
       message.error('获取报价信息失败');
@@ -144,12 +149,14 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
       const data = {
         ...(quotation || {}),
         ...values,
-        styleId
+        styleId,
+        isLocked: 1, // 保存后锁定
       };
       const res = await api.post('/style/quotation', data);
       const result = res as Record<string, unknown>;
       if (result.code === 200) {
-        message.success('保存成功');
+        message.success('保存成功，报价单已锁定');
+        setIsLocked(true); // 保存后锁定
         // 保存后自动刷新，不触发页面跳转
         await fetchData();
         onSaved?.();
@@ -158,6 +165,22 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
       }
     } catch (error) {
       message.error('保存失败');
+    }
+  };
+
+  // 维护（解锁）
+  const handleUnlock = async () => {
+    try {
+      // 更新后端锁定状态
+      const payload = {
+        ...quotation,
+        isLocked: 0, // 解锁
+      };
+      await api.put('/style/quotation', payload);
+      setIsLocked(false);
+      message.success('已解锁，可以编辑');
+    } catch (error: any) {
+      message.error(error.message || '解锁失败');
     }
   };
 
@@ -243,14 +266,14 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                 </Col>
                 <Col span={8}>
                   <Form.Item label={<span style={{ fontSize: '14px', fontWeight: 600 }}>其他费用</span>} name="otherCost" style={{ marginBottom: 4 }}>
-                    <InputNumber size="middle" style={{ width: '100%', fontSize: '16px' }} prefix="¥" min={0} />
+                    <InputNumber size="middle" style={{ width: '100%', fontSize: '16px' }} prefix="￥" min={0} disabled={isLocked} />
                   </Form.Item>
                 </Col>
               </Row>
               <Row gutter={8}>
                 <Col span={8}>
                   <Form.Item label={<span style={{ fontSize: '14px', fontWeight: 600 }}>目标利润率 (%)</span>} name="profitRate" style={{ marginBottom: 4 }}>
-                    <InputNumber size="middle" style={{ width: '100%', fontSize: '16px' }} min={0} max={100} />
+                    <InputNumber size="middle" style={{ width: '100%', fontSize: '16px' }} min={0} max={100} disabled={isLocked} />
                   </Form.Item>
                 </Col>
                 <Col span={8}>
@@ -271,19 +294,42 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                 </Col>
               </Row>
               {!readOnly && (
-                <Row>
-                  <Col span={24}>
+                <Row gutter={8}>
+                  <Col span={isLocked ? 12 : 24}>
                     <Button
                       type="primary"
-                      icon={<SaveOutlined />}
+                      icon={isLocked ? <LockOutlined /> : <SaveOutlined />}
                       onClick={handleSave}
                       size="middle"
                       block
-                      style={{ fontSize: '14px', marginTop: '4px', height: '40px' }}
+                      disabled={isLocked}
+                      style={{
+                        fontSize: '14px',
+                        marginTop: '4px',
+                        height: '40px',
+                        backgroundColor: isLocked ? '#d9d9d9' : undefined,
+                        borderColor: isLocked ? '#d9d9d9' : undefined,
+                        color: isLocked ? '#8c8c8c' : undefined,
+                      }}
                     >
-                      保存报价单
+                      {isLocked ? '已保存（已锁定）' : '保存报价单'}
                     </Button>
                   </Col>
+                  {isLocked && (
+                    <Col span={12}>
+                      <Button
+                        type="default"
+                        icon={<EditOutlined />}
+                        onClick={handleUnlock}
+                        size="middle"
+                        block
+                        danger
+                        style={{ fontSize: '14px', marginTop: '4px', height: '40px' }}
+                      >
+                        维护
+                      </Button>
+                    </Col>
+                  )}
                 </Row>
               )}
             </Form>

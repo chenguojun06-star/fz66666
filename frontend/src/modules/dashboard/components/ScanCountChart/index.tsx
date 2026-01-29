@@ -32,6 +32,7 @@ const ScanCountChart: React.FC = () => {
         return `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
       });
 
+      // 演示数据：生成近30天的随机扫码统计（实际应调用真实API）
       const mockCounts = Array.from({ length: 30 }, () => Math.floor(Math.random() * 50) + 80);
       const mockQuantities = Array.from({ length: 30 }, () => Math.floor(Math.random() * 3000) + 5000);
 
@@ -41,7 +42,7 @@ const ScanCountChart: React.FC = () => {
         scanQuantities: mockQuantities,
       });
 
-      // TODO: 替换为真实API
+      // TODO: 替换为真实API（从t_scan_record表聚合统计）
       // const result = await api.get<ChartData>('/api/dashboard/scan-count-chart');
       // if (result.success && result.data) {
       //   setData(result.data);

@@ -29,6 +29,7 @@ import { formatDateTime } from '@/utils/datetime';
 import { useSync } from '@/utils/syncManager';
 import { useViewport } from '@/utils/useViewport';
 import { useModal } from '@/hooks';
+import LiquidProgressBar from '@/components/common/LiquidProgressBar';
 
 const { Option } = Select;
 
@@ -102,6 +103,11 @@ const ProductionList: React.FC = () => {
   const [logLoading, setLogLoading] = useState(false);
   const [logRecords, setLogRecords] = useState<ScanRecord[]>([]);
   const [logTitle, setLogTitle] = useState('日志');
+
+  // 工序详情弹窗状态
+  const [processDetailVisible, setProcessDetailVisible] = useState(false);
+  const [processDetailRecord, setProcessDetailRecord] = useState<ProductionOrder | null>(null);
+  const [processDetailType, setProcessDetailType] = useState<string>('');
 
   // 默认显示的核心列（其他列默认隐藏，用户可以添加）
   const defaultVisibleColumns: Record<string, boolean> = {
@@ -237,8 +243,9 @@ const ProductionList: React.FC = () => {
     localStorage.removeItem('production-list-visible-columns');
   };
 
-  // 列设置下拉菜单
-  const columnSettingsMenu = {
+  // 列设置下拉菜单(已删除,改用工序展开功能)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _columnSettingsMenu = {
     items: [
       {
         key: 'column-settings-title',
@@ -777,7 +784,9 @@ const ProductionList: React.FC = () => {
     return sorted;
   }, [productionList, sortField, sortOrder]);
 
-  const stageColumns = (
+  // 工序列函数(已改用工序汇总+点击展开)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _stageColumns = (
     prefix: string,
     titles: { start: string; end: string; operator: string; rate: string },
     options?: { includeOperator?: boolean }
@@ -899,6 +908,13 @@ const ProductionList: React.FC = () => {
     },
   ];
 
+  // 打开工序详情弹窗
+  const openProcessDetail = (record: ProductionOrder, type: string) => {
+    setProcessDetailRecord(record);
+    setProcessDetailType(type);
+    setProcessDetailVisible(true);
+  };
+
   const allColumns = [
     {
       title: '图片',
@@ -942,7 +958,23 @@ const ProductionList: React.FC = () => {
       title: '款名',
       dataIndex: 'styleName',
       key: 'styleName',
+      width: 150,
       ellipsis: true,
+    },
+    {
+      title: '品类',
+      dataIndex: 'category',
+      key: 'category',
+      width: 100,
+      render: (v: any) => v || '-',
+    },
+    {
+      title: '公司',
+      dataIndex: 'companyName',
+      key: 'companyName',
+      width: 120,
+      ellipsis: true,
+      render: (v: any) => v || '-',
     },
     {
       title: '附件',
@@ -962,6 +994,20 @@ const ProductionList: React.FC = () => {
       dataIndex: 'factoryName',
       key: 'factoryName',
       width: 120,
+    },
+    {
+      title: '跟单员',
+      dataIndex: 'merchandiser',
+      key: 'merchandiser',
+      width: 100,
+      render: (v: any) => v || '-',
+    },
+    {
+      title: '纸样师',
+      dataIndex: 'patternMaker',
+      key: 'patternMaker',
+      width: 100,
+      render: (v: any) => v || '-',
     },
     {
       title: '订单数量',
@@ -1006,13 +1052,211 @@ const ProductionList: React.FC = () => {
       width: 120,
       render: (v: any) => v ? formatDateTime(v) : '-',
     },
-    ...stageColumns('procurement', { start: '采购时间', end: '采购完成', operator: '采购员', rate: '采购完成率' }),
-    ...stageColumns('cutting', { start: '裁剪时间', end: '裁剪完成', operator: '裁剪员', rate: '裁剪完成率' }),
-    ...stageColumns('carSewing', { start: '车缝开始', end: '车缝完成', operator: '车缝员', rate: '车缝完成率' }),
-    ...stageColumns('ironing', { start: '大烫开始', end: '大烫完成', operator: '大烫员', rate: '大烫完成率' }),
-    ...stageColumns('packaging', { start: '包装开始', end: '包装完成', operator: '包装员', rate: '包装完成率' }),
-    ...stageColumns('quality', { start: '质检时间', end: '质检完成', operator: '质检员', rate: '质检完成率' }),
-    ...stageColumns('warehousing', { start: '入库时间', end: '入库完成', operator: '入库员', rate: '入库完成率' }),
+    {
+      title: '采购',
+      dataIndex: 'procurementCompletionRate',
+      key: 'procurementSummary',
+      width: 100,
+      align: 'center' as const,
+      render: (rate: number, record: ProductionOrder) => {
+        return (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              cursor: 'pointer',
+              padding: '4px',
+              borderRadius: '4px',
+              transition: 'background 0.2s'
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              openProcessDetail(record, 'procurement');
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#f5f5f5';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+            }}
+          >
+            <LiquidProgressBar
+              percent={rate || 0}
+              width="100%"
+              height={12}
+            />
+            <span style={{ fontSize: '12px', color: '#666', minWidth: '40px' }}>
+              {rate || 0}%
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      title: '裁剪',
+      dataIndex: 'cuttingCompletionRate',
+      key: 'cuttingSummary',
+      width: 100,
+      align: 'center' as const,
+      render: (rate: number, record: ProductionOrder) => {
+        return (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              cursor: 'pointer',
+              padding: '4px',
+              borderRadius: '4px',
+              transition: 'background 0.2s'
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              openProcessDetail(record, 'cutting');
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#f5f5f5';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+            }}
+          >
+            <LiquidProgressBar
+              percent={rate || 0}
+              width="100%"
+              height={12}
+            />
+            <span style={{ fontSize: '12px', color: '#666', minWidth: '40px' }}>
+              {rate || 0}%
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      title: '二次工艺',
+      dataIndex: 'secondaryProcessRate',
+      key: 'secondaryProcessSummary',
+      width: 110,
+      align: 'center' as const,
+      render: (rate: number, record: ProductionOrder) => {
+        return (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              cursor: 'pointer',
+              padding: '4px',
+              borderRadius: '4px',
+              transition: 'background 0.2s'
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              openProcessDetail(record, 'secondaryProcess');
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#f5f5f5';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+            }}
+          >
+            <LiquidProgressBar
+              percent={rate || 0}
+              width="100%"
+              height={12}
+            />
+            <span style={{ fontSize: '12px', color: '#666', minWidth: '40px' }}>
+              {rate || 0}%
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      title: '车缝',
+      dataIndex: 'carSewingCompletionRate',
+      key: 'carSewingSummary',
+      width: 100,
+      align: 'center' as const,
+      render: (rate: number, record: ProductionOrder) => {
+        return (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              cursor: 'pointer',
+              padding: '4px',
+              borderRadius: '4px',
+              transition: 'background 0.2s'
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              openProcessDetail(record, 'carSewing');
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#f5f5f5';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+            }}
+          >
+            <LiquidProgressBar
+              percent={rate || 0}
+              width="100%"
+              height={12}
+            />
+            <span style={{ fontSize: '12px', color: '#666', minWidth: '40px' }}>
+              {rate || 0}%
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      title: '尾部',
+      dataIndex: 'tailProcessRate',
+      key: 'tailProcessSummary',
+      width: 100,
+      align: 'center' as const,
+      render: (rate: number, record: ProductionOrder) => {
+        return (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              cursor: 'pointer',
+              padding: '4px',
+              borderRadius: '4px',
+              transition: 'background 0.2s'
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              openProcessDetail(record, 'tailProcess');
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#f5f5f5';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+            }}
+          >
+            <LiquidProgressBar
+              percent={rate || 0}
+              width="100%"
+              height={12}
+            />
+            <span style={{ fontSize: '12px', color: '#666', minWidth: '40px' }}>
+              {rate || 0}%
+            </span>
+          </div>
+        );
+      },
+    },
     {
       title: '裁剪数量',
       dataIndex: 'cuttingQuantity',
@@ -1037,12 +1281,92 @@ const ProductionList: React.FC = () => {
       align: 'right' as const,
     },
     {
-      title: '合格入库',
+      title: '入库',
       dataIndex: 'warehousingQualifiedQuantity',
       key: 'warehousingQualifiedQuantity',
-      width: 100,
-      align: 'right' as const,
-      render: (v: unknown) => Number(v ?? 0) || 0,
+      width: 140,
+      align: 'left' as const,
+      render: (_: unknown, record: ProductionOrder) => {
+        const qualified = Number(record.warehousingQualifiedQuantity ?? 0) || 0;
+        const total = Number(record.cuttingQuantity || record.orderQuantity) || 1;
+        const rate = Math.min(100, Math.round((qualified / total) * 100));
+
+        // 颜色根据进度变化
+        const getColor = () => {
+          if (rate === 100) return '#059669'; // 绿色
+          if (rate > 0) return '#3b82f6'; // 蓝色
+          return '#e5e7eb'; // 灰色
+        };
+
+        return (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              cursor: 'pointer',
+              padding: '4px 0',
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              openProcessDetail(record, 'warehousing');
+            }}
+          >
+            {/* 进度圆环 */}
+            <div style={{ position: 'relative', width: '36px', height: '36px' }}>
+              <svg width="36" height="36" style={{ transform: 'rotate(-90deg)' }}>
+                {/* 背景圆环 */}
+                <circle
+                  cx="18"
+                  cy="18"
+                  r="16"
+                  fill="none"
+                  stroke="#f3f4f6"
+                  strokeWidth="3"
+                />
+                {/* 进度圆环 */}
+                <circle
+                  cx="18"
+                  cy="18"
+                  r="16"
+                  fill="none"
+                  stroke={getColor()}
+                  strokeWidth="3"
+                  strokeDasharray={`${(rate / 100) * 100.53} 100.53`}
+                  strokeLinecap="round"
+                  style={{
+                    transition: 'stroke-dasharray 0.3s ease',
+                  }}
+                />
+              </svg>
+              {/* 中间百分比文字 */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  color: getColor(),
+                }}
+              >
+                {rate}%
+              </div>
+            </div>
+
+            {/* 数字信息 */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              <span style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>
+                {qualified}/{total}
+              </span>
+              <span style={{ fontSize: '11px', color: '#9ca3af' }}>
+                {qualified > 0 ? '已入库' : '未入库'}
+              </span>
+            </div>
+          </div>
+        );
+      },
     },
     {
       title: '次品数',
@@ -1143,6 +1467,26 @@ const ProductionList: React.FC = () => {
               ),
             },
             {
+              key: 'category',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.category !== false} onChange={() => toggleColumnVisible('category')}>
+                    品类
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'companyName',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.companyName !== false} onChange={() => toggleColumnVisible('companyName')}>
+                    公司
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
               key: 'attachments',
               label: (
                 <div onClick={(e) => e.stopPropagation()}>
@@ -1158,6 +1502,26 @@ const ProductionList: React.FC = () => {
                 <div onClick={(e) => e.stopPropagation()}>
                   <Checkbox checked={visibleColumns.factoryName !== false} onChange={() => toggleColumnVisible('factoryName')}>
                     加工厂
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'merchandiser',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.merchandiser !== false} onChange={() => toggleColumnVisible('merchandiser')}>
+                    跟单员
+                  </Checkbox>
+                </div>
+              ),
+            },
+            {
+              key: 'patternMaker',
+              label: (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={visibleColumns.patternMaker !== false} onChange={() => toggleColumnVisible('patternMaker')}>
+                    纸样师
                   </Checkbox>
                 </div>
               ),
@@ -1212,282 +1576,59 @@ const ProductionList: React.FC = () => {
                 </div>
               ),
             },
+            { type: 'divider' as const },
             {
-              key: 'procurementStartTime',
+              key: 'process-summary-title',
+              label: <div style={{ fontWeight: 600, color: '#666', padding: '0 4px' }}>工序汇总</div>,
+              disabled: true,
+            },
+            { type: 'divider' as const },
+            {
+              key: 'procurementSummary',
               label: (
                 <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.procurementStartTime !== false} onChange={() => toggleColumnVisible('procurementStartTime')}>
-                    采购时间
+                  <Checkbox checked={visibleColumns.procurementSummary !== false} onChange={() => toggleColumnVisible('procurementSummary')}>
+                    采购
                   </Checkbox>
                 </div>
               ),
             },
             {
-              key: 'procurementEndTime',
+              key: 'cuttingSummary',
               label: (
                 <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.procurementEndTime !== false} onChange={() => toggleColumnVisible('procurementEndTime')}>
-                    采购完成
+                  <Checkbox checked={visibleColumns.cuttingSummary !== false} onChange={() => toggleColumnVisible('cuttingSummary')}>
+                    裁剪
                   </Checkbox>
                 </div>
               ),
             },
             {
-              key: 'procurementOperatorName',
+              key: 'secondaryProcessSummary',
               label: (
                 <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.procurementOperatorName !== false} onChange={() => toggleColumnVisible('procurementOperatorName')}>
-                    采购员
+                  <Checkbox checked={visibleColumns.secondaryProcessSummary !== false} onChange={() => toggleColumnVisible('secondaryProcessSummary')}>
+                    二次工艺
                   </Checkbox>
                 </div>
               ),
             },
             {
-              key: 'procurementCompletionRate',
+              key: 'carSewingSummary',
               label: (
                 <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.procurementCompletionRate !== false} onChange={() => toggleColumnVisible('procurementCompletionRate')}>
-                    采购完成率
+                  <Checkbox checked={visibleColumns.carSewingSummary !== false} onChange={() => toggleColumnVisible('carSewingSummary')}>
+                    车缝
                   </Checkbox>
                 </div>
               ),
             },
             {
-              key: 'cuttingStartTime',
+              key: 'tailProcessSummary',
               label: (
                 <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.cuttingStartTime !== false} onChange={() => toggleColumnVisible('cuttingStartTime')}>
-                    裁剪时间
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'cuttingEndTime',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.cuttingEndTime !== false} onChange={() => toggleColumnVisible('cuttingEndTime')}>
-                    裁剪完成
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'cuttingOperatorName',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.cuttingOperatorName !== false} onChange={() => toggleColumnVisible('cuttingOperatorName')}>
-                    裁剪员
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'cuttingCompletionRate',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.cuttingCompletionRate !== false} onChange={() => toggleColumnVisible('cuttingCompletionRate')}>
-                    裁剪完成率
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'carSewingStartTime',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.carSewingStartTime !== false} onChange={() => toggleColumnVisible('carSewingStartTime')}>
-                    车缝开始
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'carSewingEndTime',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.carSewingEndTime !== false} onChange={() => toggleColumnVisible('carSewingEndTime')}>
-                    车缝完成
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'carSewingOperatorName',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.carSewingOperatorName !== false} onChange={() => toggleColumnVisible('carSewingOperatorName')}>
-                    车缝员
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'carSewingCompletionRate',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.carSewingCompletionRate !== false} onChange={() => toggleColumnVisible('carSewingCompletionRate')}>
-                    车缝完成率
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'ironingStartTime',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.ironingStartTime !== false} onChange={() => toggleColumnVisible('ironingStartTime')}>
-                    大烫开始
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'ironingEndTime',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.ironingEndTime !== false} onChange={() => toggleColumnVisible('ironingEndTime')}>
-                    大烫完成
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'ironingOperatorName',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.ironingOperatorName !== false} onChange={() => toggleColumnVisible('ironingOperatorName')}>
-                    大烫员
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'ironingCompletionRate',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.ironingCompletionRate !== false} onChange={() => toggleColumnVisible('ironingCompletionRate')}>
-                    大烫完成率
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'packagingStartTime',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.packagingStartTime !== false} onChange={() => toggleColumnVisible('packagingStartTime')}>
-                    包装开始
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'packagingEndTime',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.packagingEndTime !== false} onChange={() => toggleColumnVisible('packagingEndTime')}>
-                    包装完成
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'packagingOperatorName',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.packagingOperatorName !== false} onChange={() => toggleColumnVisible('packagingOperatorName')}>
-                    包装员
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'packagingCompletionRate',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.packagingCompletionRate !== false} onChange={() => toggleColumnVisible('packagingCompletionRate')}>
-                    包装完成率
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'qualityStartTime',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.qualityStartTime !== false} onChange={() => toggleColumnVisible('qualityStartTime')}>
-                    质检时间
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'qualityEndTime',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.qualityEndTime !== false} onChange={() => toggleColumnVisible('qualityEndTime')}>
-                    质检完成
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'qualityOperatorName',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.qualityOperatorName !== false} onChange={() => toggleColumnVisible('qualityOperatorName')}>
-                    质检员
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'qualityCompletionRate',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.qualityCompletionRate !== false} onChange={() => toggleColumnVisible('qualityCompletionRate')}>
-                    质检完成率
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'warehousingStartTime',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.warehousingStartTime !== false} onChange={() => toggleColumnVisible('warehousingStartTime')}>
-                    入库时间
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'warehousingEndTime',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.warehousingEndTime !== false} onChange={() => toggleColumnVisible('warehousingEndTime')}>
-                    入库完成
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'warehousingOperatorName',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.warehousingOperatorName !== false} onChange={() => toggleColumnVisible('warehousingOperatorName')}>
-                    入库员
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'warehousingCompletionRate',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.warehousingCompletionRate !== false} onChange={() => toggleColumnVisible('warehousingCompletionRate')}>
-                    入库完成率
+                  <Checkbox checked={visibleColumns.tailProcessSummary !== false} onChange={() => toggleColumnVisible('tailProcessSummary')}>
+                    尾部
                   </Checkbox>
                 </div>
               ),
@@ -1609,6 +1750,41 @@ const ProductionList: React.FC = () => {
                 primary: true,
               },
               {
+                key: 'process',
+                label: '工序',
+                title: '查看工序详情',
+                icon: <UnorderedListOutlined />,
+                menu: {
+                  items: [
+                    {
+                      key: 'procurement',
+                      label: '📦 采购',
+                      onClick: () => openProcessDetail(record, 'procurement'),
+                    },
+                    {
+                      key: 'cutting',
+                      label: '✂️ 裁剪',
+                      onClick: () => openProcessDetail(record, 'cutting'),
+                    },
+                    {
+                      key: 'carSewing',
+                      label: '🧵 车缝',
+                      onClick: () => openProcessDetail(record, 'carSewing'),
+                    },
+                    {
+                      key: 'secondaryProcess',
+                      label: '🔧 二次工艺',
+                      onClick: () => openProcessDetail(record, 'secondaryProcess'),
+                    },
+                    {
+                      key: 'tailProcess',
+                      label: '🎀 尾部',
+                      onClick: () => openProcessDetail(record, 'tailProcess'),
+                    },
+                  ],
+                },
+              },
+              {
                 key: 'quickEdit',
                 label: '编辑',
                 title: '快速编辑备注和预计出货',
@@ -1679,15 +1855,6 @@ const ProductionList: React.FC = () => {
           <div className="page-header">
             <h2 className="page-title">我的订单</h2>
             <Space wrap>
-              <Dropdown
-                menu={columnSettingsMenu}
-                trigger={['click']}
-                placement="bottomRight"
-              >
-                <Button icon={<SettingOutlined />}>
-                  列设置
-                </Button>
-              </Dropdown>
               <Button
                 icon={viewMode === 'list' ? <AppstoreOutlined /> : <UnorderedListOutlined />}
                 onClick={() => setViewMode(viewMode === 'list' ? 'card' : 'list')}
@@ -1811,12 +1978,13 @@ const ProductionList: React.FC = () => {
                 },
                 getStatus: (record: ProductionOrder) => {
                   const status = String(record.status || '').toLowerCase();
-                  if (status === 'completed') return 'success';
+                  if (status === 'completed') return 'normal';
                   if (status === 'delayed') return 'danger';
                   if (status === 'production') return 'warning';
-                  return 'default';
+                  return 'normal';
                 },
                 show: true,
+                type: 'liquid', // 使用液体波浪进度条
               }}
               actions={(record: ProductionOrder) => [
                 {
@@ -2281,7 +2449,7 @@ const ProductionList: React.FC = () => {
           open={logModal.visible}
           title={logTitle}
           onCancel={() => {
-            setLogVisible(false);
+            logModal.close();
             setLogRecords([]);
           }}
           footer={null}
@@ -2313,6 +2481,418 @@ const ProductionList: React.FC = () => {
             quickEditModal.close();
           }}
         />
+
+        {/* 工序详情弹窗 */}
+        <ResizableModal
+          title={(() => {
+            const titles: Record<string, string> = {
+              procurement: '📦 采购工序明细',
+              cutting: '✂️ 裁剪工序明细',
+              secondaryProcess: '🔧 二次工艺明细',
+              carSewing: '🧵 车缝工序明细',
+              tailProcess: '🎀 尾部工序明细',
+              warehousing: '📥 入库详情',
+            };
+            return titles[processDetailType] || '工序明细';
+          })()}
+          open={processDetailVisible}
+          onCancel={() => {
+            setProcessDetailVisible(false);
+            setProcessDetailRecord(null);
+            setProcessDetailType('');
+          }}
+          footer={null}
+          width="60vw"
+          initialHeight={580}
+        >
+          {processDetailRecord && (() => {
+            // 如果是入库类型，显示入库统计数据
+            if (processDetailType === 'warehousing') {
+              const orderQty = processDetailRecord.orderQuantity || 0;
+              const cuttingQty = processDetailRecord.cuttingQuantity || orderQty;
+              const qualifiedQty = processDetailRecord.warehousingQualifiedQuantity || 0;
+              const unqualifiedQty = processDetailRecord.unqualifiedQuantity || 0;
+              const repairQty = processDetailRecord.repairQuantity || 0;
+              const stockQty = processDetailRecord.inStockQuantity || 0;
+              const qualifiedRate = cuttingQty > 0 ? Math.round((qualifiedQty / cuttingQty) * 100) : 0;
+
+              return (
+                <div>
+                  {/* 订单基本信息 */}
+                  <div style={{
+                    background: '#f8f9fa',
+                    padding: '12px',
+                    borderRadius: '6px',
+                    marginBottom: '12px',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(3, 1fr)',
+                    gap: '12px',
+                    fontSize: '13px'
+                  }}>
+                    <div>
+                      <span style={{ color: '#6b7280' }}>订单号：</span>
+                      <span style={{ fontWeight: 600, color: '#111827' }}>
+                        {processDetailRecord.orderNo || '-'}
+                      </span>
+                    </div>
+                    <div>
+                      <span style={{ color: '#6b7280' }}>款号：</span>
+                      <span style={{ fontWeight: 600, color: '#111827' }}>
+                        {processDetailRecord.styleNo || '-'}
+                      </span>
+                    </div>
+                    <div>
+                      <span style={{ color: '#6b7280' }}>款名：</span>
+                      <span style={{ fontWeight: 600, color: '#111827' }}>
+                        {processDetailRecord.styleName || '-'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 入库操作信息 */}
+                  <div style={{
+                    background: '#ffffff',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '6px',
+                    padding: '12px',
+                    marginBottom: '12px',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(4, 1fr)',
+                    gap: '12px',
+                    fontSize: '13px'
+                  }}>
+                    <div>
+                      <span style={{ color: '#6b7280' }}>入库单号：</span>
+                      <span style={{ fontWeight: 600, color: '#1890ff' }}>
+                        {processDetailRecord.warehousingOrderNo || '-'}
+                      </span>
+                    </div>
+                    <div>
+                      <span style={{ color: '#6b7280' }}>操作人：</span>
+                      <span style={{ fontWeight: 600, color: '#111827' }}>
+                        {processDetailRecord.warehousingOperatorName || '-'}
+                      </span>
+                    </div>
+                    <div>
+                      <span style={{ color: '#6b7280' }}>开始时间：</span>
+                      <span style={{ fontWeight: 500, color: '#111827' }}>
+                        {formatDateTime(processDetailRecord.warehousingStartTime)}
+                      </span>
+                    </div>
+                    <div>
+                      <span style={{ color: '#6b7280' }}>完成时间：</span>
+                      <span style={{ fontWeight: 500, color: '#111827' }}>
+                        {formatDateTime(processDetailRecord.warehousingEndTime)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 入库统计（紧凑型卡片） */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(4, 1fr)',
+                    gap: '12px',
+                    marginBottom: '12px'
+                  }}>
+                    {[
+                      { label: '合格入库', value: qualifiedQty, color: '#059669', percent: qualifiedRate },
+                      { label: '次品数', value: unqualifiedQty, color: '#dc2626' },
+                      { label: '返修数', value: repairQty, color: '#f59e0b' },
+                      { label: '库存', value: stockQty, color: '#3b82f6' },
+                    ].map((item) => (
+                      <div
+                        key={item.label}
+                        style={{
+                          background: '#ffffff',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '6px',
+                          padding: '12px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '6px',
+                        }}
+                      >
+                        <span style={{
+                          fontSize: '12px',
+                          color: '#6b7280',
+                          fontWeight: 500,
+                        }}>
+                          {item.label}
+                        </span>
+                        <span style={{
+                          fontSize: '24px',
+                          fontWeight: 700,
+                          color: item.color,
+                        }}>
+                          {item.value}
+                        </span>
+                        {item.percent !== undefined && (
+                          <span style={{
+                            fontSize: '11px',
+                            color: '#9ca3af',
+                          }}>
+                            占比 {item.percent}%
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* 码数明细表格 */}
+                  <div style={{
+                    background: '#ffffff',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '6px',
+                    padding: '12px',
+                  }}>
+                    <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: '#111827' }}>
+                      📏 码数明细
+                    </div>
+                    <Table
+                      dataSource={(() => {
+                        // 解析 SKU 数据
+                        const skuData = processDetailRecord.skuRows || [];
+                        if (Array.isArray(skuData) && skuData.length > 0) {
+                          return skuData.map((sku: any, index: number) => ({
+                            key: index,
+                            color: sku.color || '-',
+                            size: sku.size || '-',
+                            quantity: sku.quantity || 0,
+                          }));
+                        }
+                        return [];
+                      })()}
+                      columns={[
+                        {
+                          title: '颜色',
+                          dataIndex: 'color',
+                          key: 'color',
+                          width: 100,
+                        },
+                        {
+                          title: '尺码',
+                          dataIndex: 'size',
+                          key: 'size',
+                          width: 80,
+                        },
+                        {
+                          title: '数量',
+                          dataIndex: 'quantity',
+                          key: 'quantity',
+                          width: 80,
+                          align: 'right' as const,
+                          render: (v: number) => <span style={{ fontWeight: 600 }}>{v}</span>,
+                        },
+                      ]}
+                      pagination={false}
+                      size="small"
+                      locale={{ emptyText: '暂无码数明细' }}
+                      summary={(pageData) => {
+                        if (pageData.length === 0) return null;
+                        const total = pageData.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+                        return (
+                          <Table.Summary.Row style={{ background: '#fafafa' }}>
+                            <Table.Summary.Cell index={0} colSpan={2}>
+                              <span style={{ fontWeight: 600 }}>合计</span>
+                            </Table.Summary.Cell>
+                            <Table.Summary.Cell index={1} align="right">
+                              <span style={{ fontWeight: 700, color: '#059669' }}>{total} 件</span>
+                            </Table.Summary.Cell>
+                          </Table.Summary.Row>
+                        );
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            }
+
+            // 工序类型（非入库）
+            // 从 progressWorkflowJson 解析工序数据
+            let workflowNodes: any[] = [];
+            try {
+              console.log('🔍 [工序弹窗] processDetailRecord:', processDetailRecord);
+              console.log('🔍 [工序弹窗] progressWorkflowJson:', processDetailRecord.progressWorkflowJson);
+
+              if (processDetailRecord.progressWorkflowJson) {
+                const workflow = typeof processDetailRecord.progressWorkflowJson === 'string'
+                  ? JSON.parse(processDetailRecord.progressWorkflowJson)
+                  : processDetailRecord.progressWorkflowJson;
+                workflowNodes = workflow?.nodes || [];
+                console.log('✅ [工序弹窗] 解析成功，nodes数量:', workflowNodes.length);
+              } else {
+                console.warn('⚠️ [工序弹窗] progressWorkflowJson为空');
+              }
+            } catch (e) {
+              console.error('❌ [工序弹窗] 解析工艺模板失败:', e);
+            }
+
+            // 工序类型映射
+            const processStageMap: Record<string, string> = {
+              procurement: '采购',
+              cutting: '裁剪',
+              secondaryProcess: '二次工艺',
+              carSewing: '车缝',
+              tailProcess: '尾部',
+            };
+
+            const currentStage = processStageMap[processDetailType] || '';
+            console.log('🎯 [工序弹窗] 当前阶段:', currentStage, '类型:', processDetailType);
+
+            // 筛选当前阶段的子工序
+            const filteredProcesses = workflowNodes
+              .filter((node: any) => node.progressStage === currentStage)
+              .sort((a: any, b: any) => (a.sortOrder || 0) - (b.sortOrder || 0));
+
+            console.log('📋 [工序弹窗] 筛选后的工序:', filteredProcesses);
+
+            const detailColumns = [
+              {
+                title: '进度节点',
+                dataIndex: 'progressStage',
+                key: 'progressStage',
+                width: 100,
+                render: (v: any) => (
+                  <span style={{ color: '#1890ff', fontWeight: 600 }}>
+                    {v || '-'}
+                  </span>
+                ),
+              },
+              {
+                title: '工序名称',
+                dataIndex: 'name',
+                key: 'name',
+                width: 120,
+                render: (v: any) => v || '-',
+              },
+              {
+                title: '工序单价',
+                dataIndex: 'unitPrice',
+                key: 'unitPrice',
+                width: 100,
+                align: 'right' as const,
+                render: (v: any) => {
+                  const price = Number(v);
+                  return price > 0 ? `¥${price.toFixed(2)}` : '-';
+                },
+              },
+              {
+                title: '裁剪数量',
+                key: 'cuttingQuantity',
+                width: 100,
+                align: 'right' as const,
+                render: () => {
+                  // 从订单读取裁剪数量，如果没有则使用订单数量
+                  const cuttingQty = processDetailRecord.cuttingQuantity || processDetailRecord.orderQuantity || 0;
+                  return cuttingQty;
+                },
+              },
+              {
+                title: '完成数量',
+                key: 'completedQuantity',
+                width: 100,
+                align: 'right' as const,
+                render: () => {
+                  // TODO: 从扫码记录统计完成数量
+                  // 临时显示0，后续从后端接口获取
+                  return 0;
+                },
+              },
+            ];
+
+            const stageTitles: Record<string, string> = {
+              procurement: '📦 采购',
+              cutting: '✂️ 裁剪',
+              carSewing: '🧵 车缝',
+              secondaryProcess: '🔧 二次工艺',
+              tailProcess: '🎀 尾部',
+            };
+
+            return (
+              <div>
+                {/* 订单基本信息 */}
+                <div style={{
+                  background: '#f8f9fa',
+                  padding: '16px',
+                  borderRadius: '8px',
+                  marginBottom: '16px',
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(5, 1fr)',
+                  gap: '12px'
+                }}>
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>订单号</div>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>
+                      {processDetailRecord.orderNo || '-'}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>款号</div>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>
+                      {processDetailRecord.styleNo || '-'}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>款名</div>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>
+                      {processDetailRecord.styleName || '-'}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>订单数量</div>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>
+                      {processDetailRecord.orderQuantity || 0} 件
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>裁剪数量</div>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#059669' }}>
+                      {processDetailRecord.cuttingQuantity || processDetailRecord.orderQuantity || 0} 件
+                    </div>
+                  </div>
+                </div>
+
+                {/* 工序明细表格 */}
+                <Table
+                  columns={detailColumns}
+                  dataSource={filteredProcesses}
+                  rowKey={(record: any) => record.id || record.name}
+                  pagination={false}
+                  size="small"
+                  locale={{ emptyText: `暂无${stageTitles[processDetailType] || ''}工序数据` }}
+                  summary={(pageData) => {
+                    if (pageData.length === 0) return null;
+
+                    const totalPrice = pageData.reduce((sum, record) => {
+                      return sum + (Number(record.unitPrice) || 0);
+                    }, 0);
+                    const cuttingQty = processDetailRecord.cuttingQuantity || processDetailRecord.orderQuantity || 0;
+                    const totalWage = totalPrice * cuttingQty;
+
+                    return (
+                      <Table.Summary.Row style={{ background: '#fafafa', fontWeight: 600 }}>
+                        <Table.Summary.Cell index={0} colSpan={2}>
+                          合计（{pageData.length}个工序）
+                        </Table.Summary.Cell>
+                        <Table.Summary.Cell index={1} align="right">
+                          ¥{totalPrice.toFixed(2)}
+                        </Table.Summary.Cell>
+                        <Table.Summary.Cell index={2} align="right">
+                          {cuttingQty} 件
+                        </Table.Summary.Cell>
+                        <Table.Summary.Cell index={3} align="right">
+                          <span style={{ color: '#059669', fontSize: '14px', fontWeight: 700 }}>
+                            总工资: ¥{totalWage.toFixed(2)}
+                          </span>
+                        </Table.Summary.Cell>
+                      </Table.Summary.Row>
+                    );
+                  }}
+                />
+              </div>
+            );
+          })()}
+        </ResizableModal>
       </div>
     </Layout>
   );
