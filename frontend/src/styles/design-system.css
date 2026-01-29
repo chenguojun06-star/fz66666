@@ -304,30 +304,10 @@
 }
 
 /* 背景装饰球（动态） */
-.page-container-glass::before {
-  content: '';
-  position: absolute;
-  top: -20%;
-  right: -10%;
-  width: 800px;
-  height: 800px;
-  background: radial-gradient(circle, rgba(34, 197, 94, 0.08) 0%, transparent 70%);
-  border-radius: 50%;
-  pointer-events: none;
-  animation: floatBg 20s ease-in-out infinite;
-}
-
+/* @design-system: 删除渐变背景装饰，保持简洁纯色设计 */
+.page-container-glass::before,
 .page-container-glass::after {
-  content: '';
-  position: absolute;
-  bottom: -30%;
-  left: -15%;
-  width: 900px;
-  height: 900px;
-  background: radial-gradient(circle, rgba(59, 130, 246, 0.06) 0%, transparent 70%);
-  border-radius: 50%;
-  pointer-events: none;
-  animation: floatBg 25s ease-in-out infinite reverse;
+  display: none; /* 禁用渐变背景装饰 */
 }
 
 @keyframes floatBg {
@@ -350,15 +330,9 @@
   position: relative;
 }
 
+/* @design-system: 删除渐变高光，使用纯色设计 */
 .icon-button-glass::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 50%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.4), transparent);
-  border-radius: var(--radius-base) var(--radius-base) 0 0;
+  display: none; /* 禁用渐变高光效果 */
 }
 
 .icon-button-glass:hover {

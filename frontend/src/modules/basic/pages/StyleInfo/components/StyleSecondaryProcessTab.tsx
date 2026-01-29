@@ -6,6 +6,7 @@ import RowActions from '@/components/common/RowActions';
 import api, { toNumberSafe } from '@/utils/api';
 import { useViewport } from '@/utils/useViewport';
 import { formatDateTime } from '@/utils/datetime';
+import { useModal } from '@/hooks';
 import type { ColumnsType } from 'antd/es/table';
 
 const { Option } = Select;
@@ -45,9 +46,7 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
 }) => {
   const { message, modal } = App.useApp();
   const { isMobile, modalWidth } = useViewport();
-
-  const [visible, setVisible] = useState(false);
-  const [currentRecord, setCurrentRecord] = useState<SecondaryProcess | null>(null);
+  const processModal = useModal<SecondaryProcess>();
   const [dataSource, setDataSource] = useState<SecondaryProcess[]>([]);
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
@@ -101,32 +100,29 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
 
   // 新建
   const handleAdd = () => {
-    setCurrentRecord(null);
+    processModal.open(null);
     form.resetFields();
     form.setFieldsValue({
       status: 'pending',
       quantity: sampleQuantity || 0 // 自动填充样板数量
     });
-    setVisible(true);
   };
 
   // 编辑
   const handleEdit = (record: SecondaryProcess) => {
-    setCurrentRecord(record);
+    processModal.open(record);
     form.setFieldsValue({
       ...record,
       totalPrice: record.quantity && record.unitPrice
         ? toNumberSafe(record.quantity) * toNumberSafe(record.unitPrice)
         : 0
     });
-    setVisible(true);
   };
 
   // 查看
   const handleView = (record: SecondaryProcess) => {
-    setCurrentRecord(record);
+    processModal.open(record);
     form.setFieldsValue(record);
-    setVisible(true);
   };
 
   // 删除
@@ -155,15 +151,15 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
         styleId
       };
 
-      if (currentRecord?.id) {
-        await api.put(`/style/secondary-process/${currentRecord.id}`, data);
+      if (processModal.data?.id) {
+        await api.put(`/style/secondary-process/${processModal.data.id}`, data);
         message.success('更新成功');
       } else {
         await api.post('/style/secondary-process', data);
         message.success('新建成功');
       }
 
-      setVisible(false);
+      processModal.close();
       fetchData();
     } catch (error: any) {
       if (error.errorFields) {
@@ -339,10 +335,10 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
 
       {/* 新建/编辑弹窗 */}
       <ResizableModal
-        title={currentRecord?.id ? '编辑二次工艺' : '新建二次工艺'}
-        open={visible}
+        title={processModal.data?.id ? '编辑二次工艺' : '新建二次工艺'}
+        open={processModal.visible}
         onOk={handleSave}
-        onCancel={() => setVisible(false)}
+        onCancel={() => processModal.close()}
         width={modalWidth}
         okText="保存"
         cancelText="取消"

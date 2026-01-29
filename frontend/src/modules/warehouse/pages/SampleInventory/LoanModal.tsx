@@ -167,6 +167,7 @@ const LoanModal: React.FC<LoanModalProps> = ({ visible, onCancel, onSuccess }) =
         form={form}
         layout="vertical"
         autoComplete="off"
+        preserve={false}
       >
         {/* 款号选择 */}
         <Form.Item

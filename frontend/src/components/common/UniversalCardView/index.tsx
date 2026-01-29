@@ -109,11 +109,13 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
               cover={
                 <div className="universal-card-cover">
                   {record[coverField] ? (
-                    <StyleCoverThumb
-                      styleNo={record[coverField]}
-                      size="100%"
-                      borderRadius={0}
-                    />
+                    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
+                      <StyleCoverThumb
+                        src={record[coverField]}
+                        size="100%"
+                        borderRadius={0}
+                      />
+                    </div>
                   ) : (
                     <div className="universal-card-cover-placeholder">
                       <span>{coverPlaceholder}</span>

@@ -47,10 +47,9 @@
   font-size: calc(var(--font-size-lg) + 1px);
   padding: 8px 14px;
   border-radius: 999px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.86) 0%, rgba(232, 244, 255, 0.58) 55%, rgba(255, 255, 255, 0.62) 100%);
-  background-size: 220% 220%;
+  background: rgba(255, 255, 255, 0.75); /* @design-system: 纯色，禁止渐变 */
   border: 1px solid rgba(45, 127, 249, 0.28);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72), 0 12px 26px rgba(11, 45, 92, 0.14);
+  box-shadow: 0 2px 8px rgba(11, 45, 92, 0.1); /* @design-system: 轻量阴影 */
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   max-width: 260px;
@@ -61,19 +60,18 @@
   animation: header-brand-flow 7.5s ease-in-out infinite;
 }
 
+/* 深色主题下的品牌标签 */
+:root[data-theme="dark"] .header-title.header-brand {
+  background: rgba(107, 163, 255, 0.15);
+  border: 1px solid rgba(107, 163, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  color: #6ba3ff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
 .header-title.header-brand::after {
-  content: '';
-  position: absolute;
-  inset: -60% -80%;
-  background:
-    radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 62%),
-    linear-gradient(120deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.42) 45%, rgba(255, 255, 255, 0) 70%);
-  transform: translateX(-30%) rotate(12deg);
-  opacity: 0.55;
-  filter: blur(0.2px);
-  mix-blend-mode: overlay;
-  pointer-events: none;
-  animation: header-brand-sheen 3.8s ease-in-out infinite;
+  /* 禁用渐变装饰效果 */
+  display: none;
 }
 
 @keyframes header-brand-flow {
@@ -188,7 +186,7 @@
 }
 
 .user-avatar.ant-avatar {
-  background: linear-gradient(135deg, var(--user-avatar-gradient-start) 0%, var(--user-avatar-gradient-end) 100%);
+  background: var(--primary-color);
   color: rgba(255, 255, 255, 0.96);
   font-weight: 700;
 }
@@ -215,9 +213,9 @@
   min-width: 0;
 }
 
-/* 左侧菜单栏 */
+/* 左侧菜单栏 - 纯色深蓝背景 */
 .layout-sidebar.ant-layout-sider {
-  background: linear-gradient(180deg, var(--sidebar-bg-start) 0%, var(--sidebar-bg-end) 100%);
+  background: var(--sidebar-bg); /* @design-system: 纯色，禁止渐变 */
   border-right: none;
   overflow-y: auto;
   flex-shrink: 0;
@@ -306,19 +304,19 @@
 }
 
 .ant-menu-submenu-popup .ant-menu {
-  background: #ffffff;
+  background: var(--neutral-white);
 }
 
 .ant-menu-submenu-popup .ant-menu-item,
 .ant-menu-submenu-popup .ant-menu-submenu-title {
-  color: #000000;
+  color: var(--neutral-text);
 }
 
 .ant-menu-submenu-popup .ant-menu-item:hover,
 .ant-menu-submenu-popup .ant-menu-submenu-title:hover,
 .ant-menu-submenu-popup .ant-menu-item-active,
 .ant-menu-submenu-popup .ant-menu-item-selected {
-  color: #000000;
+  color: var(--neutral-text);
 }
 
 .sidebar-tools {
@@ -470,7 +468,7 @@
 }
 
 .mobile-nav-drawer .ant-drawer-content {
-  background: linear-gradient(180deg, var(--sidebar-bg-start) 0%, var(--sidebar-bg-end) 100%) !important;
+  background: var(--sidebar-bg) !important; /* @design-system: 纯色，禁止渐变 */
 }
 
 .mobile-nav-drawer .ant-drawer-wrapper-body {

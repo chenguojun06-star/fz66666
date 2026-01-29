@@ -5,6 +5,7 @@ import RowActions from '@/components/common/RowActions';
 import ResizableTable from '@/components/common/ResizableTable';
 import { Factory as FactoryType, FactoryQueryParams } from '@/types/system';
 import api from '@/utils/api';
+import { useModal } from '@/hooks';
 import { App, Button, Card, Form, Input, Select, Space, Tag, Upload } from 'antd';
 import type { UploadFile } from 'antd';
 import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, UploadOutlined, FileSearchOutlined } from '@ant-design/icons';
@@ -17,7 +18,11 @@ const FactoryList: React.FC = () => {
   const { message, modal } = App.useApp();
   const [form] = Form.useForm();
   const { isMobile, modalWidth } = useViewport();
-  const [visible, setVisible] = useState(false);
+
+  // ===== 使用 useModal 管理弹窗 =====
+  const factoryModal = useModal<FactoryType>();
+  const logModal = useModal();
+
   const [dialogMode, setDialogMode] = useState<DialogMode>('view');
   const [queryParams, setQueryParams] = useState<FactoryQueryParams>({
     page: 1,
@@ -28,9 +33,7 @@ const FactoryList: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
-  const [currentFactory, setCurrentFactory] = useState<FactoryType | null>(null);
   const [licenseFileList, setLicenseFileList] = useState<UploadFile[]>([]);
-  const [logVisible, setLogVisible] = useState(false);
   const [logLoading, setLogLoading] = useState(false);
   const [logRecords, setLogRecords] = useState<any[]>([]);
   const [logTitle, setLogTitle] = useState('操作日志');
@@ -98,7 +101,6 @@ const FactoryList: React.FC = () => {
 
   const openDialog = (mode: DialogMode, factory?: FactoryType) => {
     setDialogMode(mode);
-    setCurrentFactory(factory || null);
     if (mode === 'create') {
       form.setFieldsValue({
         factoryCode: '',
@@ -122,12 +124,11 @@ const FactoryList: React.FC = () => {
       });
       setLicenseFileList(buildImageFileList((factory as Record<string, unknown>)?.businessLicense));
     }
-    setVisible(true);
+    factoryModal.open(factory || null);
   };
 
   const closeDialog = () => {
-    setVisible(false);
-    setCurrentFactory(null);
+    factoryModal.close();
     form.resetFields();
     setLicenseFileList([]);
   };
@@ -171,7 +172,7 @@ const FactoryList: React.FC = () => {
 
   const openLogModal = async (bizType: string, bizId: string, title: string) => {
     setLogTitle(title);
-    setLogVisible(true);
+    logModal.open();
     setLogLoading(true);
     try {
       const res = await api.get('/system/operation-log/list', {
@@ -199,7 +200,7 @@ const FactoryList: React.FC = () => {
       const payload: unknown = {
         ...values,
         status: values.status || 'active',
-        id: currentFactory?.id,
+        id: factoryModal.data?.id,
         operationRemark: remark,
       };
 
@@ -419,7 +420,7 @@ const FactoryList: React.FC = () => {
       </Card>
 
       <ResizableModal
-        open={visible}
+        open={factoryModal.visible}
         title={dialogMode === 'create' ? '新增供应商' : dialogMode === 'edit' ? '编辑供应商' : '供应商详情'}
         onCancel={closeDialog}
         onOk={dialogMode === 'view' ? undefined : handleSave}
@@ -499,10 +500,10 @@ const FactoryList: React.FC = () => {
       </ResizableModal>
 
       <ResizableModal
-        open={logVisible}
+        open={logModal.visible}
         title={logTitle}
         onCancel={() => {
-          setLogVisible(false);
+          logModal.close();
           setLogRecords([]);
         }}
         footer={null}

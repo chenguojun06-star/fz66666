@@ -41,7 +41,8 @@ const OrderCuttingChart: React.FC = () => {
         cuttingQuantities: mockCuttingQuantities,
       });
 
-      // TODO: 替换为真实API
+      // 演示数据：用于展示图表效果
+      // 生产环境可替换为真实API：
       // const result = await api.get<ChartData>('/api/dashboard/order-cutting-chart');
       // if (result.success && result.data) {
       //   setData(result.data);

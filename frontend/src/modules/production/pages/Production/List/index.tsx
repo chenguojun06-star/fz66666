@@ -28,6 +28,7 @@ import { StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAsset
 import { formatDateTime } from '@/utils/datetime';
 import { useSync } from '@/utils/syncManager';
 import { useViewport } from '@/utils/useViewport';
+import { useModal } from '@/hooks';
 
 const { Option } = Select;
 
@@ -43,8 +44,9 @@ const ProductionList: React.FC = () => {
 
   // 状态管理
   const { isMobile, modalWidth } = useViewport();
-  const [visible, setVisible] = useState(false);
-  const [currentOrder, setCurrentOrder] = useState<ProductionOrder | null>(null);
+  const orderModal = useModal<ProductionOrder>();
+  const quickEditModal = useModal<ProductionOrder>();
+  const logModal = useModal();
   const [queryParams, setQueryParams] = useState<ProductionQueryParams>({
     page: 1,
     pageSize: 10
@@ -66,7 +68,7 @@ const ProductionList: React.FC = () => {
     }
     const orderNo = String(order?.orderNo || '').trim();
     setLogTitle(orderNo ? `订单 ${orderNo} 日志` : '订单日志');
-    setLogVisible(true);
+    logModal.open();
     setLogLoading(true);
     try {
       const res = await productionScanApi.listByOrderId(orderId, { page: 1, pageSize: 200 });
@@ -95,11 +97,8 @@ const ProductionList: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
 
-  // 快速编辑状态
-  const [quickEditVisible, setQuickEditVisible] = useState(false);
-  const [quickEditRecord, setQuickEditRecord] = useState<ProductionOrder | null>(null);
+  // 快速编辑和日志状态
   const [quickEditSaving, setQuickEditSaving] = useState(false);
-  const [logVisible, setLogVisible] = useState(false);
   const [logLoading, setLogLoading] = useState(false);
   const [logRecords, setLogRecords] = useState<ScanRecord[]>([]);
   const [logTitle, setLogTitle] = useState('日志');
@@ -285,7 +284,7 @@ const ProductionList: React.FC = () => {
 
   const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
-  const orderDetailLines = currentOrder ? parseProductionOrderLines(currentOrder, { includeWarehousedQuantity: true }) : [];
+  const orderDetailLines = orderModal.data ? parseProductionOrderLines(orderModal.data, { includeWarehousedQuantity: true }) : [];
   const detailColors = (() => {
     const s = new Set(
       orderDetailLines
@@ -293,7 +292,7 @@ const ProductionList: React.FC = () => {
         .filter((v) => v)
     );
     const joined = Array.from(s).join('、');
-    return joined || safeString((currentOrder as Record<string, unknown>)?.color);
+    return joined || safeString((orderModal.data as Record<string, unknown>)?.color);
   })();
 
   const detailSizes = (() => {
@@ -303,20 +302,20 @@ const ProductionList: React.FC = () => {
         .filter((v) => v)
     );
     const joined = Array.from(s).join('、');
-    return joined || safeString((currentOrder as Record<string, unknown>)?.size);
+    return joined || safeString((orderModal.data as Record<string, unknown>)?.size);
   })();
 
   const detailQuantity = (() => {
     const sum = orderDetailLines.reduce((acc, l) => acc + (Number(l?.quantity) || 0), 0);
     if (sum > 0) return sum;
-    const q = Number((currentOrder as Record<string, unknown>)?.orderQuantity);
+    const q = Number((orderModal.data as Record<string, unknown>)?.orderQuantity);
     return Number.isFinite(q) && q > 0 ? q : 0;
   })();
 
   const detailWarehousedQuantity = (() => {
     const sum = orderDetailLines.reduce((acc, l) => acc + (Number(l?.warehousedQuantity) || 0), 0);
     if (sum > 0) return sum;
-    const q = toNumberSafe((currentOrder as Record<string, unknown>)?.warehousingQualifiedQuantity);
+    const q = toNumberSafe((orderModal.data as Record<string, unknown>)?.warehousingQualifiedQuantity);
     return q > 0 ? q : 0;
   })();
 
@@ -362,10 +361,10 @@ const ProductionList: React.FC = () => {
 
     if (rows.length) return rows;
 
-    const color = safeString((currentOrder as Record<string, unknown>)?.color);
-    const size = safeString((currentOrder as Record<string, unknown>)?.size);
-    const orderQuantity = Math.max(0, toNumberSafe((currentOrder as Record<string, unknown>)?.orderQuantity) || detailQuantity);
-    const c = toNumberSafe((currentOrder as Record<string, unknown>)?.cuttingQuantity) || 0;
+    const color = safeString((orderModal.data as Record<string, unknown>)?.color);
+    const size = safeString((orderModal.data as Record<string, unknown>)?.size);
+    const orderQuantity = Math.max(0, toNumberSafe((orderModal.data as Record<string, unknown>)?.orderQuantity) || detailQuantity);
+    const c = toNumberSafe((orderModal.data as Record<string, unknown>)?.cuttingQuantity) || 0;
     const w = detailWarehousedQuantity;
     return [
       {
@@ -462,7 +461,7 @@ const ProductionList: React.FC = () => {
     },
     {
       interval: 30000, // 30秒轮询
-      enabled: !loading && !visible, // 加载中或弹窗打开时暂停同步
+      enabled: !loading && !orderModal.visible && !quickEditModal.visible && !logModal.visible, // 加载中或弹窗打开时暂停同步
       pauseOnHidden: true, // 页面隐藏时暂停
       onError: (error) => {
         console.error('[实时同步] 错误', error);
@@ -584,14 +583,12 @@ const ProductionList: React.FC = () => {
   // 打开弹窗
   const openDialog = (order?: ProductionOrder) => {
     if (!order) return;
-    setCurrentOrder(order);
-    setVisible(true);
+    orderModal.open(order);
   };
 
   // 关闭弹窗
   const closeDialog = () => {
-    setVisible(false);
-    setCurrentOrder(null);
+    orderModal.close();
   };
 
   // 获取状态文本和标签颜色
@@ -617,12 +614,11 @@ const ProductionList: React.FC = () => {
     setQuickEditSaving(true);
     try {
       await productionOrderApi.quickEdit({
-        id: quickEditRecord?.id,
+        id: quickEditModal.data?.id,
         ...values,
       });
       message.success('保存成功');
-      setQuickEditVisible(false);
-      setQuickEditRecord(null);
+      quickEditModal.close();
       await fetchProductionList();
     } catch (error: any) {
       message.error(error?.response?.data?.message || '保存失败');
@@ -1004,7 +1000,7 @@ const ProductionList: React.FC = () => {
       render: (v: any) => v || '-',
     },
     {
-      title: <SortableColumnTitle title="预计出货" field="expectedShipDate" onSort={handleSort} currentField={sortField} currentOrder={sortOrder} />,
+      title: <SortableColumnTitle title="预计出货" field="expectedShipDate" onSort={handleSort} currentField={sortField} order={sortOrder} />,
       dataIndex: 'expectedShipDate',
       key: 'expectedShipDate',
       width: 120,
@@ -1618,8 +1614,7 @@ const ProductionList: React.FC = () => {
                 title: '快速编辑备注和预计出货',
                 icon: <EditOutlined />,
                 onClick: () => {
-                  setQuickEditRecord(record);
-                  setQuickEditVisible(true);
+                  quickEditModal.open(record);
                 },
               },
               {
@@ -1784,7 +1779,7 @@ const ProductionList: React.FC = () => {
             <UniversalCardView
               dataSource={sortedProductionList}
               columns={isMobile ? 2 : 6}
-              coverField="styleNo"
+              coverField="styleCover"
               titleField="orderNo"
               subtitleField="styleNo"
               fields={[
@@ -1829,8 +1824,7 @@ const ProductionList: React.FC = () => {
                   icon: <EyeOutlined />,
                   label: '查看',
                   onClick: () => {
-                    setCurrentOrder(record);
-                    setVisible(true);
+                    orderModal.open(record);
                   },
                 },
                 {
@@ -1838,14 +1832,12 @@ const ProductionList: React.FC = () => {
                   icon: <EditOutlined />,
                   label: '编辑',
                   onClick: () => {
-                    setQuickEditRecord(record);
-                    setQuickEditVisible(true);
+                    quickEditModal.open(record);
                   },
                 },
               ].filter(Boolean)}
               onCardClick={(record: ProductionOrder) => {
-                setCurrentOrder(record);
-                setVisible(true);
+                orderModal.open(record);
               }}
             />
           )}
@@ -1854,7 +1846,7 @@ const ProductionList: React.FC = () => {
         {/* 生产订单详情弹窗 */}
         <ResizableModal
           title="生产订单详情"
-          open={visible}
+          open={orderModal.visible}
           onCancel={closeDialog}
           footer={null}
           width={modalWidth}
@@ -1863,7 +1855,7 @@ const ProductionList: React.FC = () => {
           scaleWithViewport
           tableDensity={isMobile ? 'dense' : 'auto'}
         >
-          {currentOrder ? (
+          {orderModal.data ? (
             <>
               {/* 头部订单信息卡片 */}
               <div style={{
@@ -1882,13 +1874,13 @@ const ProductionList: React.FC = () => {
                   gap: 8
                 }}>
                   <StyleCoverThumb
-                    styleNo={String((currentOrder as Record<string, unknown>).styleNo || '').trim()}
+                    styleNo={String((orderModal.data as Record<string, unknown>).styleNo || '').trim()}
                     size={isMobile ? 160 : 200}
                     borderRadius={6}
                   />
-                  {currentOrder?.qrCode ? (
+                  {orderModal.data?.qrCode ? (
                     <QRCodeBox
-                      value={String(currentOrder.qrCode)}
+                      value={String(orderModal.data.qrCode)}
                       label="订单扫码"
                       variant="primary"
                       size={isMobile ? 120 : 140}
@@ -1923,12 +1915,12 @@ const ProductionList: React.FC = () => {
                           fontWeight: 700,
                           color: 'var(--neutral-text)',
                           letterSpacing: '0.5px'
-                        }}>{safeString((currentOrder as Record<string, unknown>).orderNo)}</span>
+                        }}>{safeString((orderModal.data as Record<string, unknown>).orderNo)}</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <span style={{ fontSize: 14, color: 'var(--neutral-text-light)', fontWeight: 600 }}>加工厂</span>
                         <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--neutral-text)' }}>
-                          {safeString((currentOrder as Record<string, unknown>).factoryName)}
+                          {safeString((orderModal.data as Record<string, unknown>).factoryName)}
                         </span>
                       </div>
                     </div>
@@ -2039,13 +2031,13 @@ const ProductionList: React.FC = () => {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ fontSize: 14, color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap' }}>款号</span>
                       <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--neutral-text)' }}>
-                        {safeString((currentOrder as Record<string, unknown>).styleNo)}
+                        {safeString((orderModal.data as Record<string, unknown>).styleNo)}
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ fontSize: 14, color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap' }}>款名</span>
                       <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--neutral-text)' }}>
-                        {safeString((currentOrder as Record<string, unknown>).styleName)}
+                        {safeString((orderModal.data as Record<string, unknown>).styleName)}
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -2071,13 +2063,13 @@ const ProductionList: React.FC = () => {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ fontSize: 13, color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap' }}>订单数量</span>
                         <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-text)' }}>
-                          {String((currentOrder as Record<string, unknown>).orderQuantity ?? '-')}
+                          {String((orderModal.data as Record<string, unknown>).orderQuantity ?? '-')}
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ fontSize: 13, color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap' }}>完成数量</span>
                         <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-text)' }}>
-                          {String((currentOrder as Record<string, unknown>).completedQuantity ?? '-')}
+                          {String((orderModal.data as Record<string, unknown>).completedQuantity ?? '-')}
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -2089,61 +2081,61 @@ const ProductionList: React.FC = () => {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ fontSize: 13, color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap' }}>生产进度</span>
                         <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--success-color)' }}>
-                          {String((currentOrder as Record<string, unknown>).productionProgress ?? '-')}%
+                          {String((orderModal.data as Record<string, unknown>).productionProgress ?? '-')}%
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ fontSize: 13, color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap' }}>状态</span>
                         <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-text)' }}>
-                          {getStatusConfig((currentOrder as Record<string, unknown>).status).text}
+                          {getStatusConfig((orderModal.data as Record<string, unknown>).status).text}
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ fontSize: 13, color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap' }}>采购员</span>
                         <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-text)' }}>
-                          {safeString((currentOrder as Record<string, unknown>).procurementOperatorName)}
+                          {safeString((orderModal.data as Record<string, unknown>).procurementOperatorName)}
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ fontSize: 13, color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap' }}>采购完成率</span>
                         <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-text)' }}>
-                          {((currentOrder as Record<string, unknown>).procurementCompletionRate ?? '-') + '%'}
+                          {((orderModal.data as Record<string, unknown>).procurementCompletionRate ?? '-') + '%'}
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ fontSize: 13, color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap' }}>采购时间</span>
                         <span style={{ fontSize: 13, color: 'var(--neutral-text)' }}>
-                          {formatDateTime((currentOrder as Record<string, unknown>).procurementStartTime)}
+                          {formatDateTime((orderModal.data as Record<string, unknown>).procurementStartTime)}
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ fontSize: 13, color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap' }}>采购完成时间</span>
                         <span style={{ fontSize: 13, color: 'var(--neutral-text)' }}>
-                          {formatDateTime((currentOrder as Record<string, unknown>).procurementEndTime)}
+                          {formatDateTime((orderModal.data as Record<string, unknown>).procurementEndTime)}
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ fontSize: 13, color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap' }}>裁剪员</span>
                         <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-text)' }}>
-                          {safeString((currentOrder as Record<string, unknown>).cuttingOperatorName)}
+                          {safeString((orderModal.data as Record<string, unknown>).cuttingOperatorName)}
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ fontSize: 13, color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap' }}>裁剪完成率</span>
                         <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-text)' }}>
-                          {((currentOrder as Record<string, unknown>).cuttingCompletionRate ?? '-') + '%'}
+                          {((orderModal.data as Record<string, unknown>).cuttingCompletionRate ?? '-') + '%'}
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ fontSize: 13, color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap' }}>裁剪时间</span>
                         <span style={{ fontSize: 13, color: 'var(--neutral-text)' }}>
-                          {formatDateTime((currentOrder as Record<string, unknown>).cuttingStartTime)}
+                          {formatDateTime((orderModal.data as Record<string, unknown>).cuttingStartTime)}
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ fontSize: 13, color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap' }}>裁剪完成时间</span>
                         <span style={{ fontSize: 13, color: 'var(--neutral-text)' }}>
-                          {formatDateTime((currentOrder as Record<string, unknown>).cuttingEndTime)}
+                          {formatDateTime((orderModal.data as Record<string, unknown>).cuttingEndTime)}
                         </span>
                       </div>
                     </div>
@@ -2261,22 +2253,22 @@ const ProductionList: React.FC = () => {
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--neutral-text-light)' }}>计划开始：</span>
-                    <span style={{ fontSize: 12, color: 'var(--neutral-text-light)' }}>{formatDateTime(currentOrder.plannedStartDate)}</span>
+                    <span style={{ fontSize: 12, color: 'var(--neutral-text-light)' }}>{formatDateTime(orderModal.data.plannedStartDate)}</span>
                   </div>
-                  {currentOrder.actualStartDate && (
+                  {orderModal.data.actualStartDate && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--neutral-text-light)' }}>实际开始：</span>
-                      <span style={{ fontSize: 12, color: 'var(--success-color)' }}>{formatDateTime(currentOrder.actualStartDate)}</span>
+                      <span style={{ fontSize: 12, color: 'var(--success-color)' }}>{formatDateTime(orderModal.data.actualStartDate)}</span>
                     </div>
                   )}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--neutral-text-light)' }}>计划完成：</span>
-                    <span style={{ fontSize: 12, color: 'var(--neutral-text-light)' }}>{formatDateTime(currentOrder.plannedEndDate)}</span>
+                    <span style={{ fontSize: 12, color: 'var(--neutral-text-light)' }}>{formatDateTime(orderModal.data.plannedEndDate)}</span>
                   </div>
-                  {currentOrder.actualEndDate && (
+                  {orderModal.data.actualEndDate && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--neutral-text-light)' }}>实际完成：</span>
-                      <span style={{ fontSize: 12, color: 'var(--success-color)' }}>{formatDateTime(currentOrder.actualEndDate)}</span>
+                      <span style={{ fontSize: 12, color: 'var(--success-color)' }}>{formatDateTime(orderModal.data.actualEndDate)}</span>
                     </div>
                   )}
                 </div>
@@ -2286,7 +2278,7 @@ const ProductionList: React.FC = () => {
         </ResizableModal>
 
         <ResizableModal
-          open={logVisible}
+          open={logModal.visible}
           title={logTitle}
           onCancel={() => {
             setLogVisible(false);
@@ -2310,16 +2302,15 @@ const ProductionList: React.FC = () => {
 
         {/* 快速编辑弹窗 */}
         <QuickEditModal
-          visible={quickEditVisible}
+          visible={quickEditModal.visible}
           loading={quickEditSaving}
           initialValues={{
-            remarks: quickEditRecord?.remarks,
-            expectedShipDate: quickEditRecord?.expectedShipDate,
+            remarks: quickEditModal.data?.remarks,
+            expectedShipDate: quickEditModal.data?.expectedShipDate,
           }}
           onSave={handleQuickEditSave}
           onCancel={() => {
-            setQuickEditVisible(false);
-            setQuickEditRecord(null);
+            quickEditModal.close();
           }}
         />
       </div>

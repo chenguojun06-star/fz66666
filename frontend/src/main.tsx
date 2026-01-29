@@ -9,6 +9,7 @@ import 'antd/dist/reset.css'; // 引入组件库样式
 import './styles/global.css';
 import './styles/design-system.css'; // 设计系统
 import './styles/button-override.css'; // 按钮统一样式
+import './styles/dark-theme-global.css'; // 深色主题全局覆盖
 
 const themeStorageKey = 'app.theme';
 
@@ -133,7 +134,7 @@ const lightBlueThemeTokens = {
   colorPrimaryTextActive: '#2563eb',
   colorBgContainer: '#ffffff',
   colorBgElevated: '#ffffff',
-  colorBgLayout: 'linear-gradient(135deg, #e0f2fe 0%, #e0e7ff 100%)',
+  colorBgLayout: '#eaf1ff', // @design-system: 纯色浅蓝背景（禁止渐变）
   colorBgSpotlight: 'rgba(224, 242, 254, 0.8)',
   colorBorder: 'rgba(147, 197, 253, 0.5)',
   colorBorderSecondary: 'rgba(224, 242, 254, 0.6)',

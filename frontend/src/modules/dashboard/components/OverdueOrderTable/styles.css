@@ -80,6 +80,27 @@
   color: #9ca3af;
 }
 
+/* 深色主题覆盖 */
+:root[data-theme="dark"] .overdue-order-table-card {
+  background: rgba(26, 29, 36, 0.6);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+:root[data-theme="dark"] .overdue-order-table-card .ant-card-head {
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+:root[data-theme="dark"] .overdue-order-table-card .ant-card-head-title {
+  color: var(--neutral-text);
+}
+
+:root[data-theme="dark"] .overdue-order-table .ant-table-thead > tr > th {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--neutral-text);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 .overdue-days {
   color: #ef4444;
   font-weight: 600;

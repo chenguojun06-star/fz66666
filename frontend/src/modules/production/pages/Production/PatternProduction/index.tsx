@@ -9,6 +9,7 @@ import NodeDetailModal from '@/components/common/NodeDetailModal';
 import UniversalCardView from '@/components/common/UniversalCardView';
 import { StyleAttachmentsButton } from '@/components/StyleAssets';
 import api from '@/utils/api';
+import { useModal } from '@/hooks';
 import './style.css';
 
 interface ProgressNode {
@@ -73,11 +74,14 @@ const PatternProduction: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
-  const [progressModalVisible, setProgressModalVisible] = useState(false);
-  const [receiveModalVisible, setReceiveModalVisible] = useState(false);
   const [operationLogVisible, setOperationLogVisible] = useState(false);
-  const [detailModalVisible, setDetailModalVisible] = useState(false);
-  const [currentRecord, setCurrentRecord] = useState<PatternProductionRecord | null>(null);
+
+  // ===== 使用 useModal 管理弹窗状态 =====
+  const progressModal = useModal<PatternProductionRecord>();
+  const receiveModal = useModal<PatternProductionRecord>();
+  const detailModal = useModal<PatternProductionRecord>();
+  const attachmentModal = useModal<PatternProductionRecord>();
+  const attachmentWrapperRef = React.useRef<HTMLDivElement>(null);
   const [customNodes, setCustomNodes] = useState<ProgressNode[]>([...DEFAULT_NODES]);
   const [newNodeName, setNewNodeName] = useState('');
   const [operationLogs, setOperationLogs] = useState<Array<{
@@ -116,6 +120,17 @@ const PatternProduction: React.FC = () => {
     setNodeDetailProcessList(processList || []);
     setNodeDetailVisible(true);
   }, []);
+
+  // 当 attachmentModal 打开时，程序化触发附件按钮点击
+  useEffect(() => {
+    if (attachmentModal.visible && attachmentWrapperRef.current) {
+      const button = attachmentWrapperRef.current.querySelector('button');
+      if (button) {
+        button.click();
+        attachmentModal.close(); // 立即关闭moda state，避免重复触发
+      }
+    }
+  }, [attachmentModal.visible]);
 
   // 记录操作日志
   const addOperationLog = (action: string, detail: string) => {
@@ -193,27 +208,25 @@ const PatternProduction: React.FC = () => {
 
   // 打开领取对话框
   const handleOpenReceive = (record: PatternProductionRecord) => {
-    setCurrentRecord(record);
     receiveForm.setFieldsValue({
       patternMaker: '',
       releaseTime: null,
       deliveryTime: null,
     });
-    setReceiveModalVisible(true);
+    receiveModal.open(record);
   };
 
   // 提交领取
   const handleReceiveSubmit = async () => {
     try {
       const values = await receiveForm.validateFields();
-      await api.post(`/production/pattern/${currentRecord!.id}/receive`, {
+      await api.post(`/production/pattern/${receiveModal.data!.id}/receive`, {
         patternMaker: values.patternMaker,
         releaseTime: values.releaseTime?.format('YYYY-MM-DD HH:mm:ss'),
         deliveryTime: values.deliveryTime?.format('YYYY-MM-DD HH:mm:ss'),
       });
       message.success('领取成功');
-      setReceiveModalVisible(false);
-      setCurrentRecord(null);
+      receiveModal.close();
       receiveForm.resetFields();
       loadData();
     } catch (error: any) {
@@ -227,15 +240,13 @@ const PatternProduction: React.FC = () => {
 
   // 打开进度更新对话框
   const handleOpenProgress = (record: PatternProductionRecord) => {
-    setCurrentRecord(record);
     form.setFieldsValue(record.progressNodes);
-    setProgressModalVisible(true);
+    progressModal.open(record);
   };
 
   // 打开查看详情
   const handleOpenDetail = (record: PatternProductionRecord) => {
-    setCurrentRecord(record);
-    setDetailModalVisible(true);
+    detailModal.open(record);
   };
 
   // 删除样板生产记录
@@ -263,10 +274,9 @@ const PatternProduction: React.FC = () => {
   const handleUpdateProgress = async () => {
     try {
       const values = await form.validateFields();
-      await api.post(`/production/pattern/${currentRecord!.id}/progress`, values);
+      await api.post(`/production/pattern/${progressModal.data!.id}/progress`, values);
       message.success('进度更新成功');
-      setProgressModalVisible(false);
-      setCurrentRecord(null);
+      progressModal.close();
       form.resetFields();
       loadData(); // 刷新列表
     } catch (error: any) {
@@ -537,14 +547,8 @@ const PatternProduction: React.FC = () => {
           },
           {
             key: 'attachment',
-            label: (
-              <StyleAttachmentsButton
-                styleNo={record.styleNo}
-                buttonText="附件管理"
-                modalTitle={`${record.styleNo} - 附件`}
-                onlyGradingPattern={true}
-              />
-            ),
+            label: '附件管理',
+            onClick: () => attachmentModal.open(record),
           },
           {
             key: 'divider2',
@@ -661,14 +665,8 @@ const PatternProduction: React.FC = () => {
                 },
                 {
                   key: 'attachment',
-                  label: (
-                    <StyleAttachmentsButton
-                      styleNo={record.styleNo}
-                      buttonText="附件管理"
-                      modalTitle={`${record.styleNo} - 附件`}
-                      onlyGradingPattern={true}
-                    />
-                  ),
+                  label: '附件管理',
+                  onClick: () => attachmentModal.open(record),
                 },
                 {
                   key: 'delete',
@@ -685,24 +683,23 @@ const PatternProduction: React.FC = () => {
         {/* 领取样板对话框 */}
         <Modal
           title="领取样板"
-          open={receiveModalVisible}
+          open={receiveModal.visible}
           onOk={handleReceiveSubmit}
           onCancel={() => {
-            setReceiveModalVisible(false);
-            setCurrentRecord(null);
+            receiveModal.close();
             receiveForm.resetFields();
           }}
           width={1000}
           okText="确认领取"
           cancelText="取消"
         >
-          {currentRecord && (
+          {receiveModal.data && (
             <div style={{ marginBottom: 16, padding: 12, background: '#f5f5f5', borderRadius: 4 }}>
               <div style={{ display: 'flex', gap: 16, marginBottom: 8, justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', gap: 16 }}>
-                  <div><strong>款号:</strong> {currentRecord.styleNo}</div>
-                  <div><strong>颜色:</strong> {currentRecord.color}</div>
-                  <div><strong>状态:</strong> {renderStatus(currentRecord.status)}</div>
+                  <div><strong>款号:</strong> {receiveModal.data.styleNo}</div>
+                  <div><strong>颜色:</strong> {receiveModal.data.color}</div>
+                  <div><strong>状态:</strong> {renderStatus(receiveModal.data.status)}</div>
                 </div>
                 <Button
                   type="link"
@@ -895,23 +892,22 @@ const PatternProduction: React.FC = () => {
         {/* 工序进度更新对话框 */}
         <Modal
           title="更新工序进度"
-          open={progressModalVisible}
+          open={progressModal.visible}
           onOk={handleUpdateProgress}
           onCancel={() => {
-            setProgressModalVisible(false);
-            setCurrentRecord(null);
+            progressModal.close();
             form.resetFields();
           }}
           width={600}
           okText="保存"
           cancelText="取消"
         >
-          {currentRecord && (
+          {progressModal.data && (
             <div style={{ marginBottom: 16 }}>
               <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
-                <div><strong>款号:</strong> {currentRecord.styleNo}</div>
-                <div><strong>颜色:</strong> {currentRecord.color}</div>
-                <div><strong>状态:</strong> {renderStatus(currentRecord.status)}</div>
+                <div><strong>款号:</strong> {progressModal.data.styleNo}</div>
+                <div><strong>颜色:</strong> {progressModal.data.color}</div>
+                <div><strong>状态:</strong> {renderStatus(progressModal.data.status)}</div>
               </div>
               <div style={{ fontSize: 12, color: '#999' }}>
                 当所有工序进度达到 100% 时，系统将自动标记为已完成
@@ -1009,19 +1005,16 @@ const PatternProduction: React.FC = () => {
               <span>样板详情</span>
             </div>
           }
-          open={detailModalVisible}
-          onCancel={() => {
-            setDetailModalVisible(false);
-            setCurrentRecord(null);
-          }}
+          open={detailModal.visible}
+          onCancel={detailModal.close}
           footer={[
-            <Button key="close" onClick={() => setDetailModalVisible(false)}>
+            <Button key="close" onClick={detailModal.close}>
               关闭
             </Button>
           ]}
           width={900}
         >
-          {currentRecord && (
+          {detailModal.data && (
             <div>
               {/* 基本信息 */}
               <div style={{
@@ -1034,37 +1027,37 @@ const PatternProduction: React.FC = () => {
                   <Col span={8}>
                     <div style={{ marginBottom: 8 }}>
                       <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>款号</div>
-                      <div style={{ fontSize: 16, fontWeight: 600, color: '#1f2937' }}>{currentRecord.styleNo}</div>
+                      <div style={{ fontSize: 16, fontWeight: 600, color: '#1f2937' }}>{detailModal.data.styleNo}</div>
                     </div>
                   </Col>
                   <Col span={8}>
                     <div style={{ marginBottom: 8 }}>
                       <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>颜色</div>
-                      <div style={{ fontSize: 16, fontWeight: 600, color: '#1f2937' }}>{currentRecord.color}</div>
+                      <div style={{ fontSize: 16, fontWeight: 600, color: '#1f2937' }}>{detailModal.data.color}</div>
                     </div>
                   </Col>
                   <Col span={8}>
                     <div style={{ marginBottom: 8 }}>
                       <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>状态</div>
-                      <div>{renderStatus(currentRecord.status)}</div>
+                      <div>{renderStatus(detailModal.data.status)}</div>
                     </div>
                   </Col>
                   <Col span={8}>
                     <div style={{ marginBottom: 8 }}>
                       <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>数量</div>
-                      <div style={{ fontSize: 16, fontWeight: 600, color: '#1f2937' }}>{currentRecord.quantity}</div>
+                      <div style={{ fontSize: 16, fontWeight: 600, color: '#1f2937' }}>{detailModal.data.quantity}</div>
                     </div>
                   </Col>
                   <Col span={8}>
                     <div style={{ marginBottom: 8 }}>
                       <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>纸样师傅</div>
-                      <div style={{ fontSize: 16, fontWeight: 600, color: '#1f2937' }}>{currentRecord.patternMaker}</div>
+                      <div style={{ fontSize: 16, fontWeight: 600, color: '#1f2937' }}>{detailModal.data.patternMaker}</div>
                     </div>
                   </Col>
                   <Col span={8}>
                     <div style={{ marginBottom: 8 }}>
                       <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>领取人</div>
-                      <div style={{ fontSize: 16, fontWeight: 600, color: '#1f2937' }}>{currentRecord.receiver}</div>
+                      <div style={{ fontSize: 16, fontWeight: 600, color: '#1f2937' }}>{detailModal.data.receiver}</div>
                     </div>
                   </Col>
                 </Row>
@@ -1082,19 +1075,19 @@ const PatternProduction: React.FC = () => {
                 <Row gutter={[24, 16]}>
                   <Col span={12}>
                     <div style={{ fontSize: 12, color: '#999' }}>下板时间</div>
-                    <div style={{ fontSize: 14, fontWeight: 500, color: '#1f2937' }}>{currentRecord.releaseTime}</div>
+                    <div style={{ fontSize: 14, fontWeight: 500, color: '#1f2937' }}>{detailModal.data.releaseTime}</div>
                   </Col>
                   <Col span={12}>
                     <div style={{ fontSize: 12, color: '#999' }}>交板时间</div>
-                    <div style={{ fontSize: 14, fontWeight: 500, color: '#1f2937' }}>{currentRecord.deliveryTime}</div>
+                    <div style={{ fontSize: 14, fontWeight: 500, color: '#1f2937' }}>{detailModal.data.deliveryTime}</div>
                   </Col>
                   <Col span={12}>
                     <div style={{ fontSize: 12, color: '#999' }}>领取时间</div>
-                    <div style={{ fontSize: 14, fontWeight: 500, color: '#1f2937' }}>{currentRecord.receiveTime}</div>
+                    <div style={{ fontSize: 14, fontWeight: 500, color: '#1f2937' }}>{detailModal.data.receiveTime}</div>
                   </Col>
                   <Col span={12}>
                     <div style={{ fontSize: 12, color: '#999' }}>完成时间</div>
-                    <div style={{ fontSize: 14, fontWeight: 500, color: '#1f2937' }}>{currentRecord.completeTime}</div>
+                    <div style={{ fontSize: 14, fontWeight: 500, color: '#1f2937' }}>{detailModal.data.completeTime}</div>
                   </Col>
                 </Row>
               </div>
@@ -1109,7 +1102,7 @@ const PatternProduction: React.FC = () => {
                 <h4 style={{ marginBottom: 16, fontSize: 14, fontWeight: 600 }}>📊 工序进度</h4>
                 <Row gutter={[16, 16]}>
                   {DEFAULT_NODES.map((node) => {
-                    const percent = currentRecord.progressNodes[node.id] || 0;
+                    const percent = detailModal.data.progressNodes[node.id] || 0;
                     return (
                       <Col span={8} key={node.id}>
                         <div style={{
@@ -1163,6 +1156,18 @@ const PatternProduction: React.FC = () => {
             void loadData();
           }}
         />
+
+        {/* 附件管理弹窗 */}
+        {attachmentModal.data && (
+          <div ref={attachmentWrapperRef} style={{ position: 'absolute', left: -9999, top: -9999 }}>
+            <StyleAttachmentsButton
+              styleNo={attachmentModal.data.styleNo}
+              buttonText="附件管理"
+              modalTitle={`${attachmentModal.data.styleNo} - 附件`}
+              onlyGradingPattern={true}
+            />
+          </div>
+        )}
       </div>
     </Layout>
   );

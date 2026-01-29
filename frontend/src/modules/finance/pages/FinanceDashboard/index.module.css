@@ -72,19 +72,13 @@
 
 .miniAreaChart {
   height: 100%;
-  background: linear-gradient(180deg, rgba(24, 144, 255, 0.2) 0%, rgba(24, 144, 255, 0) 100%);
+  background: linear-gradient(180deg, rgba(24, 144, 255, 0.15) 0%, rgba(24, 144, 255, 0.05) 100%);
   border-radius: 4px;
 }
 
 .miniBarChart {
   height: 100%;
-  background: repeating-linear-gradient(
-    90deg,
-    #d9d9d9 0px,
-    #d9d9d9 8px,
-    transparent 8px,
-    transparent 12px
-  );
+  background: #d9d9d9;
   border-radius: 4px;
 }
 
@@ -98,7 +92,7 @@
 
 .progressFill {
   height: 100%;
-  background: linear-gradient(90deg, #36cfc9, #13c2c2);
+  background: linear-gradient(90deg, #13c2c2 0%, #08979c 50%, #006d75 100%);
   border-radius: 4px;
   transition: width 0.3s ease;
 }

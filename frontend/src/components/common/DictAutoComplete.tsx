@@ -47,7 +47,7 @@ const DictAutoComplete: React.FC<DictAutoCompleteProps> = ({
 
     setLoading(true);
     try {
-      const response = await api.get('/api/system/dict/list', {
+      const response = await api.get('/system/dict/list', {
         params: {
           dictType,
           pageSize: maxSuggestions

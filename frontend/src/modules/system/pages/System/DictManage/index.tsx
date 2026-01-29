@@ -3,6 +3,7 @@ import { App, Button, Card, Col, Form, Input, Modal, Row, Select, Space, Table, 
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import api from '@/utils/api';
+import { useModal } from '@/hooks';
 import type { ColumnsType } from 'antd/es/table';
 
 const { Option } = Select;
@@ -41,8 +42,10 @@ const DictManage: React.FC = () => {
   const { message, modal } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [dataSource, setDataSource] = useState<DictItem[]>([]);
-  const [visible, setVisible] = useState(false);
-  const [currentRecord, setCurrentRecord] = useState<DictItem | null>(null);
+
+  // ===== 使用 useModal 管理弹窗 =====
+  const dictModal = useModal<DictItem>();
+
   const [selectedType, setSelectedType] = useState<string>('category');
   const [form] = Form.useForm();
 
@@ -50,11 +53,15 @@ const DictManage: React.FC = () => {
   const fetchData = async (dictType: string = selectedType) => {
     setLoading(true);
     try {
-      const res = await api.get<{ code: number; data: DictItem[] }>('/api/system/dict/list', {
+      const res = await api.get<{ code: number; data: DictItem[] | { records: DictItem[]; total: number } }>('/system/dict/list', {
         params: { dictType, page: 1, pageSize: 1000 }
       });
       if (res.code === 200) {
-        setDataSource(res.data || []);
+        // 处理分页数据或数组数据
+        const list = Array.isArray(res.data)
+          ? res.data
+          : (res.data?.records || []);
+        setDataSource(list);
       } else {
         // API 不存在时使用本地数据
         const localData = getLocalData(dictType);
@@ -215,17 +222,15 @@ const DictManage: React.FC = () => {
 
   // 新建
   const handleAdd = () => {
-    setCurrentRecord(null);
     form.resetFields();
     form.setFieldsValue({ dictType: selectedType });
-    setVisible(true);
+    dictModal.open(null);
   };
 
   // 编辑
   const handleEdit = (record: DictItem) => {
-    setCurrentRecord(record);
     form.setFieldsValue(record);
-    setVisible(true);
+    dictModal.open(record);
   };
 
   // 删除
@@ -250,15 +255,15 @@ const DictManage: React.FC = () => {
     try {
       const values = await form.validateFields();
 
-      if (currentRecord?.id) {
-        await api.put(`/api/system/dict/${currentRecord.id}`, values);
+      if (dictModal.data?.id) {
+        await api.put(`/api/system/dict/${dictModal.data.id}`, values);
         message.success('更新成功');
       } else {
         await api.post('/api/system/dict', values);
         message.success('新建成功');
       }
 
-      setVisible(false);
+      dictModal.close();
       fetchData();
     } catch (error: any) {
       if (error.errorFields) {
@@ -399,12 +404,12 @@ const DictManage: React.FC = () => {
       />
 
       <Modal
-        title={currentRecord ? '编辑字典项' : '新建字典项'}
-        open={visible}
-        onCancel={() => setVisible(false)}
+        title={dictModal.data ? '编辑字典项' : '新建字典项'}
+        open={dictModal.visible}
+        onCancel={dictModal.close}
         onOk={handleSave}
         width={600}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={form} layout="vertical" style={{ marginTop: 24 }}>
           <Form.Item
@@ -412,7 +417,7 @@ const DictManage: React.FC = () => {
             label="字典类型"
             rules={[{ required: true, message: '请选择字典类型' }]}
           >
-            <Select placeholder="请选择字典类型" disabled={Boolean(currentRecord)}>
+            <Select placeholder="请选择字典类型" disabled={Boolean(dictModal.data)}>
               {DICT_TYPES.map(type => (
                 <Option key={type.value} value={type.value}>
                   {type.label} - {type.description}
@@ -429,7 +434,7 @@ const DictManage: React.FC = () => {
               { pattern: /^[A-Z0-9_]+$/, message: '编码只能包含大写字母、数字和下划线' }
             ]}
           >
-            <Input placeholder="请输入字典编码（大写字母、数字、下划线）" disabled={Boolean(currentRecord)} />
+            <Input placeholder="请输入字典编码（大写字母、数字、下划线）" disabled={Boolean(dictModal.data)} />
           </Form.Item>
 
           <Form.Item

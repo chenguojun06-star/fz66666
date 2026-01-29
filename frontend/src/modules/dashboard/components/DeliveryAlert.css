@@ -34,12 +34,12 @@
 }
 
 .delivery-section-compact.delivery-section--urgent {
-  background: linear-gradient(135deg, #fff1f0 0%, #fff 100%);
+  background: linear-gradient(135deg, #fff 0%, #fff1f0 100%);
   border: 1px solid #ffccc7;
 }
 
 .delivery-section-compact.delivery-section--warning {
-  background: linear-gradient(135deg, #fffbe6 0%, #fff 100%);
+  background: linear-gradient(135deg, #fff 0%, #fffbe6 100%);
   border: 1px solid #ffe58f;
 }
 

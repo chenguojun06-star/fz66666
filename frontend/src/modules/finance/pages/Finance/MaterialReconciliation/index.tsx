@@ -16,6 +16,7 @@ import { getMaterialReconStatusConfig, materialReconStatusTransitions } from '@/
 import { isSupervisorOrAboveUser, useAuth } from '@/utils/authContext';
 import { useSync } from '@/utils/syncManager';
 import { useViewport } from '@/utils/useViewport';
+import { useModal } from '@/hooks';
 
 const { Option } = Select;
 
@@ -23,8 +24,7 @@ const MaterialReconciliation: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth(); // 获取当前用户信息
   const { isMobile, modalWidth } = useViewport();
-  const [visible, setVisible] = useState(false);
-  const [currentRecon, setCurrentRecon] = useState<MaterialReconType | null>(null);
+  const reconModal = useModal<MaterialReconType>();
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [queryParams, setQueryParams] = useState<MaterialReconQueryParams>({
     page: 1,
@@ -364,7 +364,7 @@ const MaterialReconciliation: React.FC = () => {
     },
     {
       interval: 45000, // 45秒轮询，财务数据中等频率
-      enabled: !loading && !queryLoading && !visible, // 加载中或弹窗打开时暂停
+      enabled: !loading && !queryLoading && !reconModal.visible, // 加载中或弹窗打开时暂停
       pauseOnHidden: true, // 页面隐藏时暂停
       onError: (error) => {
         console.error('[实时同步] 物料对账数据同步错误', error);
@@ -377,16 +377,14 @@ const MaterialReconciliation: React.FC = () => {
    * @param recon 可选，要编辑的物料对账记录，不传则为新增
    */
   const openDialog = (recon?: MaterialReconType) => {
-    setCurrentRecon(recon || null);
-    setVisible(true);
+    reconModal.open(recon || null);
   };
 
   /**
    * 关闭物料对账弹窗
    */
   const closeDialog = () => {
-    setVisible(false);
-    setCurrentRecon(null);
+    reconModal.close();
   };
 
   /**
@@ -398,9 +396,9 @@ const MaterialReconciliation: React.FC = () => {
     try {
       setSubmitLoading(true);
       let response;
-      if (currentRecon?.id) {
+      if (reconModal.data?.id) {
         // 编辑物料对账：调用PUT接口更新现有记录
-        response = await materialReconciliationApi.updateMaterialReconciliation({ ...values, id: currentRecon.id });
+        response = await materialReconciliationApi.updateMaterialReconciliation({ ...values, id: reconModal.data.id });
       } else {
         // 新增物料对账：调用POST接口创建新记录
         response = await materialReconciliationApi.createMaterialReconciliation(values);
@@ -408,7 +406,7 @@ const MaterialReconciliation: React.FC = () => {
 
       const result = response as Record<string, unknown>;
       if (result.code === 200) {
-        message.success(currentRecon?.id ? '编辑物料对账成功' : '新增物料对账成功');
+        message.success(reconModal.data?.id ? '编辑物料对账成功' : '新增物料对账成功');
         // 关闭弹窗
         closeDialog();
         // 刷新物料对账列表
@@ -827,17 +825,17 @@ const MaterialReconciliation: React.FC = () => {
 
         {/* 物料对账详情弹窗 */}
         <ResizableModal
-          title={currentRecon ? '物料对账详情' : '新增物料对账'}
-          open={visible}
+          title={reconModal.data ? '物料对账详情' : '新增物料对账'}
+          open={reconModal.visible}
           onCancel={closeDialog}
           onOk={() => {
-            if (!currentRecon && saveFormRef.current) {
+            if (!reconModal.data && saveFormRef.current) {
               saveFormRef.current();
             }
           }}
           okText="保存"
           cancelText="取消"
-          footer={currentRecon ? null : undefined} // 当是新增模式时，使用默认页脚
+          footer={reconModal.data ? null : undefined} // 当是新增模式时，使用默认页脚
           okButtonProps={{ loading: submitLoading }}
           width={modalWidth}
           initialHeight={modalInitialHeight}
@@ -845,7 +843,7 @@ const MaterialReconciliation: React.FC = () => {
           scaleWithViewport
         >
           <MaterialReconModalContent
-            currentRecon={currentRecon}
+            currentRecon={reconModal.data}
             onSubmit={handleSubmit}
             onSave={(saveFn) => {
               saveFormRef.current = saveFn;

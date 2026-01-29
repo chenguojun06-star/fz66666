@@ -18,7 +18,7 @@
 }
 
 .mini-data-dashboard .ant-card-head {
-  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+  background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
   border-radius: 20px 20px 0 0;
   padding: 12px 20px;
   border-bottom: none;
@@ -69,9 +69,9 @@
 }
 
 .time-range-btn.active {
-  background: white;
-  color: #4b5563;
-  border-color: white;
+  background: var(--neutral-white);
+  color: var(--neutral-text);
+  border-color: var(--neutral-white);
   font-weight: 600;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
@@ -127,23 +127,24 @@
 }
 
 .mini-stat-icon--warehousing {
-  background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%);
+  background: linear-gradient(135deg, #a5b4fc 0%, #818cf8 100%);
 }
 
 .mini-stat-icon--defective {
-  background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
+  background: linear-gradient(135deg, #fdba74 0%, #fb923c 100%);
 }
 
 .mini-stat-icon--defect-rate {
-  background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+  background: linear-gradient(135deg, #fca5a5 0%, #f87171 100%);
 }
 
 .mini-stat-icon--qualified {
-  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  background: linear-gradient(135deg, #6ee7b7 0%, #34d399 100%);
 }
 
 .mini-stat-icon--repair {
-  background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6
+  background: linear-gradient(135deg, #c4b5fd 0%, #a78bfa 100%);
+}
     border-color: rgba(255, 255, 255, 0.15);
   }
 }
@@ -161,23 +162,23 @@
 }
 
 .mini-stat-icon--warehousing {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #93c5fd 0%, #60a5fa 100%);
 }
 
 .mini-stat-icon--defective {
-  background: linear-gradient(135deg, #f59e0b 0%, #dc2626 100%);
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
 }
 
 .mini-stat-icon--defect-rate {
-  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+  background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
 }
 
 .mini-stat-icon--qualified {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
 }
 
 .mini-stat-icon--repair {
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
 }
 
 .mini-stat-content {
@@ -252,4 +253,38 @@
   .mini-stat-label {
     font-size: 12px;
   }
+}
+
+/* 深色主题覆盖规则 */
+:root[data-theme="dark"] .mini-data-dashboard {
+  background: rgba(26, 29, 36, 0.6);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+:root[data-theme="dark"] .mini-data-dashboard .ant-card-head {
+  background: #1f2937;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+:root[data-theme="dark"] .mini-data-dashboard .ant-card-body {
+  background: rgba(26, 29, 36, 0.6);
+}
+
+:root[data-theme="dark"] .mini-stat-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+:root[data-theme="dark"] .mini-stat-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+:root[data-theme="dark"] .mini-stat-value {
+  color: var(--neutral-text);
+}
+
+:root[data-theme="dark"] .mini-stat-label {
+  color: var(--neutral-text-light);
 }
