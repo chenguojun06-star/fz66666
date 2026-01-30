@@ -7,6 +7,7 @@ import Layout from '@/components/Layout';
 import LiquidProgressLottie from '@/components/common/LiquidProgressLottie';
 import NodeDetailModal from '@/components/common/NodeDetailModal';
 import UniversalCardView from '@/components/common/UniversalCardView';
+import QRCodeBox from '@/components/common/QRCodeBox';
 import { StyleAttachmentsButton } from '@/components/StyleAssets';
 import api from '@/utils/api';
 import { useModal } from '@/hooks';
@@ -914,6 +915,58 @@ const PatternProduction: React.FC = () => {
         >
           {detailModal.data && (
             <div>
+              {/* 封面图和二维码 */}
+              <div style={{
+                display: 'flex',
+                gap: 16,
+                marginBottom: 16,
+                padding: 16,
+                background: '#fafafa',
+                borderRadius: 6,
+              }}>
+                {/* 封面图 */}
+                {detailModal.data.coverImage && (
+                  <div>
+                    <img
+                      src={detailModal.data.coverImage}
+                      alt={detailModal.data.styleNo}
+                      style={{
+                        width: 160,
+                        height: 160,
+                        objectFit: 'cover',
+                        borderRadius: 6,
+                        border: '1px solid #e5e7eb',
+                      }}
+                    />
+                  </div>
+                )}
+                
+                {/* 二维码 - 扫码全流程 */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div>
+                    <QRCodeBox
+                      value={{
+                        type: 'pattern',
+                        id: detailModal.data.id,
+                        styleNo: detailModal.data.styleNo,
+                        color: detailModal.data.color,
+                        status: detailModal.data.status,
+                        progress: calculateProgress(detailModal.data),
+                      }}
+                      label="📱 扫码查看全流程"
+                      variant="primary"
+                      size={120}
+                    />
+                  </div>
+                  <div style={{ fontSize: 12, color: '#6b7280', lineHeight: '18px' }}>
+                    扫描二维码可在移动端查看样板生产全流程，包括：
+                    <br />• 实时工序进度追踪
+                    <br />• 时间节点记录
+                    <br />• 附件资料下载
+                  </div>
+                </div>
+              </div>
+
               {/* 基本信息 */}
               <div style={{
                 padding: 16,
