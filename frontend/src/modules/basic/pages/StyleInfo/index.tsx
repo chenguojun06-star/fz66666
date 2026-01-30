@@ -1,13 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { App, Button, Card, Col, Form, Input, InputNumber, Row, Select, Space, Tabs, Tag, Upload, Segmented, Statistic, Spin } from 'antd';
+import { App, Button, Card, Checkbox, Col, Form, Input, InputNumber, Row, Select, Space, Tabs, Tag, Upload, Segmented, Statistic, Spin } from 'antd';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
 import { patternProductionApi } from '@/services/production/productionApi';
 import type { PatternDevelopmentStats } from '@/types/production';
 import type { MenuProps } from 'antd';
-import { PlusOutlined, SearchOutlined, EyeOutlined, DeleteOutlined, StarOutlined, StarFilled, AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
+import { PlusOutlined, SearchOutlined, EyeOutlined, DeleteOutlined, StarOutlined, StarFilled, AppstoreOutlined, UnorderedListOutlined, PrinterOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import UniversalCardView from '@/components/common/UniversalCardView';
+import QRCodeBox from '@/components/common/QRCodeBox';
 import { useSync } from '@/utils/syncManager';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -120,6 +121,15 @@ const StyleInfoPage: React.FC = () => {
   const [processData, setProcessData] = useState<any[]>([]);
   const [pushToOrderForm] = Form.useForm();
   const [pushToOrderSaving, setPushToOrderSaving] = useState(false);
+
+  // 打印功能状态
+  const [printModalVisible, setPrintModalVisible] = useState(false);
+  const [printingRecord, setPrintingRecord] = useState<StyleInfoType | null>(null);
+  const [printOptions, setPrintOptions] = useState({
+    bom: true,
+    production: true,
+    process: true,
+  });
 
   // 弹窗状态
   const [modalVisible, setModalVisible] = useState(false);
@@ -557,6 +567,15 @@ const StyleInfoPage: React.FC = () => {
             key: 'sample',
             label: '样衣生产',
             onClick: () => navigate(`/style-info/${record.id}?tab=8`),
+          });
+          items.push({
+            key: 'print',
+            icon: <PrinterOutlined />,
+            label: '打印',
+            onClick: () => {
+              setPrintingRecord(record);
+              setPrintModalVisible(true);
+            },
           });
           items.push({ type: 'divider' });
           items.push({
@@ -2139,6 +2158,18 @@ const StyleInfoPage: React.FC = () => {
           />
         )}
       </Card>
+
+      {/* 打印预览弹窗 */}
+      <PrintPreviewModal
+        visible={printModalVisible}
+        record={printingRecord}
+        options={printOptions}
+        onOptionsChange={setPrintOptions}
+        onClose={() => {
+          setPrintModalVisible(false);
+          setPrintingRecord(null);
+        }}
+      />
     </Layout>
   );
 };
@@ -2590,6 +2621,286 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
         )}
       </div>
     </div>
+  );
+};
+
+// 打印预览弹窗组件
+const PrintPreviewModal: React.FC<{
+  visible: boolean;
+  record: StyleInfoType | null;
+  options: { bom: boolean; production: boolean; process: boolean };
+  onOptionsChange: (options: { bom: boolean; production: boolean; process: boolean }) => void;
+  onClose: () => void;
+}> = ({ visible, record, options, onOptionsChange, onClose }) => {
+  const [bomData, setBomData] = useState<any[]>([]);
+  const [processData, setProcessData] = useState<any[]>([]);
+  const [productionData, setProductionData] = useState<any>({});
+  const [loading, setLoading] = useState(false);
+
+  // 加载打印数据
+  useEffect(() => {
+    if (!visible || !record) return;
+    
+    const loadPrintData = async () => {
+      setLoading(true);
+      try {
+        // 加载BOM数据
+        if (options.bom) {
+          const bomRes = await api.get(`/style/bom/list`, { params: { styleNo: record.styleNo } });
+          if (bomRes.code === 200) {
+            setBomData(bomRes.data?.records || []);
+          }
+        }
+        
+        // 加载工序数据
+        if (options.process) {
+          const processRes = await api.get(`/style/process/list`, { params: { styleNo: record.styleNo } });
+          if (processRes.code === 200) {
+            setProcessData(processRes.data?.records || []);
+          }
+        }
+        
+        // 加载生产制单数据
+        if (options.production) {
+          setProductionData({
+            requirement: record.productionRequirement,
+          });
+        }
+      } catch (error) {
+        console.error('加载打印数据失败:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadPrintData();
+  }, [visible, record, options.bom, options.process, options.production]);
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  if (!record) return null;
+
+  return (
+    <ResizableModal
+      title={`打印预览 - ${record.styleNo}`}
+      visible={visible}
+      onCancel={onClose}
+      defaultWidth="80vw"
+      defaultHeight="85vh"
+      footer={[
+        <Checkbox.Group
+          key="options"
+          value={Object.keys(options).filter(k => options[k as keyof typeof options])}
+          onChange={(values) => {
+            onOptionsChange({
+              bom: values.includes('bom'),
+              production: values.includes('production'),
+              process: values.includes('process'),
+            });
+          }}
+          style={{ marginRight: 'auto' }}
+        >
+          <Checkbox value="bom">BOM表</Checkbox>
+          <Checkbox value="production">生产制单</Checkbox>
+          <Checkbox value="process">工序表</Checkbox>
+        </Checkbox.Group>,
+        <Button key="cancel" onClick={onClose}>
+          取消
+        </Button>,
+        <Button key="print" type="primary" icon={<PrinterOutlined />} onClick={handlePrint}>
+          打印
+        </Button>,
+      ]}
+    >
+      <Spin spinning={loading}>
+        <div className="print-preview-content" style={{ background: '#fff', padding: 20 }}>
+          {/* 打印样式 */}
+          <style>{`
+            @media print {
+              @page { margin: 15mm; size: A4; }
+              body * { visibility: hidden; }
+              .print-preview-content, .print-preview-content * { visibility: visible; }
+              .print-preview-content { 
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+              }
+              .no-print { display: none !important; }
+            }
+          `}</style>
+
+          {/* 固定抬头 */}
+          <div style={{
+            display: 'flex',
+            gap: 24,
+            padding: 16,
+            borderBottom: '2px solid #d9d9d9',
+            marginBottom: 24,
+            background: '#fafafa',
+          }}>
+            {/* 款式图片 */}
+            {record.coverImage && (
+              <div>
+                <img
+                  src={record.coverImage}
+                  alt={record.styleNo}
+                  style={{
+                    width: 120,
+                    height: 120,
+                    objectFit: 'cover',
+                    border: '1px solid #d9d9d9',
+                    borderRadius: 4,
+                  }}
+                />
+              </div>
+            )}
+            
+            {/* 基础信息 */}
+            <div style={{ flex: 1 }}>
+              <h2 style={{ margin: '0 0 12px 0', fontSize: 18 }}>{record.styleNo} - {record.styleName}</h2>
+              <Row gutter={[16, 8]}>
+                {record.color && (
+                  <Col span={8}>
+                    <span style={{ color: '#666' }}>颜色：</span>
+                    <span style={{ fontWeight: 600 }}>{record.color}</span>
+                  </Col>
+                )}
+                {record.size && (
+                  <Col span={8}>
+                    <span style={{ color: '#666' }}>尺码：</span>
+                    <span style={{ fontWeight: 600 }}>{record.size}</span>
+                  </Col>
+                )}
+                {record.quantity && (
+                  <Col span={8}>
+                    <span style={{ color: '#666' }}>数量：</span>
+                    <span style={{ fontWeight: 600 }}>{record.quantity}</span>
+                  </Col>
+                )}
+                {record.category && (
+                  <Col span={8}>
+                    <span style={{ color: '#666' }}>分类：</span>
+                    <span>{record.category}</span>
+                  </Col>
+                )}
+                {record.season && (
+                  <Col span={8}>
+                    <span style={{ color: '#666' }}>季节：</span>
+                    <span>{record.season}</span>
+                  </Col>
+                )}
+                {record.customer && (
+                  <Col span={8}>
+                    <span style={{ color: '#666' }}>客户：</span>
+                    <span>{record.customer}</span>
+                  </Col>
+                )}
+              </Row>
+            </div>
+            
+            {/* 二维码 */}
+            <div>
+              <QRCodeBox
+                value={{
+                  type: 'style',
+                  styleNo: record.styleNo,
+                  styleName: record.styleName,
+                  id: record.id,
+                }}
+                size={100}
+                variant="default"
+              />
+            </div>
+          </div>
+
+          {/* BOM表 */}
+          {options.bom && bomData.length > 0 && (
+            <div style={{ marginBottom: 24 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>📋 BOM表（物料清单）</h3>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ background: '#fafafa' }}>
+                    <th style={{ border: '1px solid #d9d9d9', padding: 8, textAlign: 'left' }}>物料编码</th>
+                    <th style={{ border: '1px solid #d9d9d9', padding: 8, textAlign: 'left' }}>物料名称</th>
+                    <th style={{ border: '1px solid #d9d9d9', padding: 8, textAlign: 'left' }}>规格</th>
+                    <th style={{ border: '1px solid #d9d9d9', padding: 8, textAlign: 'right' }}>用量</th>
+                    <th style={{ border: '1px solid #d9d9d9', padding: 8, textAlign: 'left' }}>单位</th>
+                    <th style={{ border: '1px solid #d9d9d9', padding: 8, textAlign: 'left' }}>备注</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bomData.map((item, index) => (
+                    <tr key={index}>
+                      <td style={{ border: '1px solid #d9d9d9', padding: 8 }}>{item.materialCode || '-'}</td>
+                      <td style={{ border: '1px solid #d9d9d9', padding: 8 }}>{item.materialName || '-'}</td>
+                      <td style={{ border: '1px solid #d9d9d9', padding: 8 }}>{item.specifications || '-'}</td>
+                      <td style={{ border: '1px solid #d9d9d9', padding: 8, textAlign: 'right' }}>{item.quantity || 0}</td>
+                      <td style={{ border: '1px solid #d9d9d9', padding: 8 }}>{item.unit || '-'}</td>
+                      <td style={{ border: '1px solid #d9d9d9', padding: 8 }}>{item.remark || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* 工序表 */}
+          {options.process && processData.length > 0 && (
+            <div style={{ marginBottom: 24 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>⚙️ 工序表</h3>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ background: '#fafafa' }}>
+                    <th style={{ border: '1px solid #d9d9d9', padding: 8, textAlign: 'left' }}>序号</th>
+                    <th style={{ border: '1px solid #d9d9d9', padding: 8, textAlign: 'left' }}>工序名称</th>
+                    <th style={{ border: '1px solid #d9d9d9', padding: 8, textAlign: 'right' }}>单价（元）</th>
+                    <th style={{ border: '1px solid #d9d9d9', padding: 8, textAlign: 'left' }}>工序要求</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {processData.map((item, index) => (
+                    <tr key={index}>
+                      <td style={{ border: '1px solid #d9d9d9', padding: 8 }}>{index + 1}</td>
+                      <td style={{ border: '1px solid #d9d9d9', padding: 8 }}>{item.processName || '-'}</td>
+                      <td style={{ border: '1px solid #d9d9d9', padding: 8, textAlign: 'right' }}>
+                        {item.unitPrice ? Number(item.unitPrice).toFixed(2) : '-'}
+                      </td>
+                      <td style={{ border: '1px solid #d9d9d9', padding: 8 }}>{item.requirement || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* 生产制单 */}
+          {options.production && productionData.requirement && (
+            <div style={{ marginBottom: 24 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>📦 生产制单要求</h3>
+              <div style={{
+                padding: 12,
+                border: '1px solid #d9d9d9',
+                borderRadius: 4,
+                background: '#fafafa',
+                whiteSpace: 'pre-wrap',
+                fontSize: 13,
+                lineHeight: 1.8,
+              }}>
+                {productionData.requirement}
+              </div>
+            </div>
+          )}
+
+          {/* 打印时间 */}
+          <div style={{ marginTop: 32, paddingTop: 16, borderTop: '1px solid #d9d9d9', textAlign: 'right', color: '#999', fontSize: 12 }}>
+            打印时间：{new Date().toLocaleString('zh-CN')}
+          </div>
+        </div>
+      </Spin>
+    </ResizableModal>
   );
 };
 
