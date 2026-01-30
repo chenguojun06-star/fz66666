@@ -27,7 +27,8 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
   const otherCost = Number(Form.useWatch('otherCost', form)) || 0;
   const profitRate = Number(Form.useWatch('profitRate', form)) || 0; // 目标利润率
   const totalCost = materialCost + processCost + otherCost; // 总成本
-  const totalPrice = Number(Form.useWatch('totalPrice', form)) || 0;
+  // 直接从表单获取最新的totalPrice，而不是依赖useWatch（可能滞后）
+  const totalPrice = Number(form.getFieldValue('totalPrice')) || Number(Form.useWatch('totalPrice', form)) || 0;
   const profit = totalPrice - totalCost; // 实际毛利
 
   const calcBomCost = (items: unknown[]) => {
@@ -369,9 +370,9 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
           <Card title="💰 成本结构" size="small" style={{ height: '100%' }} styles={{ body: { padding: '12px' } }}>
             <div style={{ textAlign: 'center', marginBottom: 16 }}>
               <div style={{ fontSize: '13px', color: '#8c8c8c', marginBottom: 8 }}>预计可赚</div>
-              <div style={{ 
-                fontSize: '32px', 
-                fontWeight: 700, 
+              <div style={{
+                fontSize: '32px',
+                fontWeight: 700,
                 color: profit >= 0 ? '#3f8600' : '#ff4d4f',
                 marginBottom: 4
               }}>
