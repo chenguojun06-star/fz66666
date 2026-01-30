@@ -2746,10 +2746,10 @@ const PrintPreviewModal: React.FC<{
             background: '#fafafa',
           }}>
             {/* 款式图片 */}
-            {record.coverImage && (
+            {record.cover && (
               <div>
                 <img
-                  src={record.coverImage}
+                  src={record.cover}
                   alt={record.styleNo}
                   style={{
                     width: 120,
@@ -2778,10 +2778,10 @@ const PrintPreviewModal: React.FC<{
                     <span style={{ fontWeight: 600 }}>{record.size}</span>
                   </Col>
                 )}
-                {record.quantity && (
+                {record.sampleQuantity && (
                   <Col span={8}>
-                    <span style={{ color: '#666' }}>数量：</span>
-                    <span style={{ fontWeight: 600 }}>{record.quantity}</span>
+                    <span style={{ color: '#666' }}>样衣数量：</span>
+                    <span style={{ fontWeight: 600 }}>{record.sampleQuantity}</span>
                   </Col>
                 )}
                 {record.category && (
@@ -2796,10 +2796,10 @@ const PrintPreviewModal: React.FC<{
                     <span>{record.season}</span>
                   </Col>
                 )}
-                {record.customer && (
+                {record.price && (
                   <Col span={8}>
-                    <span style={{ color: '#666' }}>客户：</span>
-                    <span>{record.customer}</span>
+                    <span style={{ color: '#666' }}>价格：</span>
+                    <span>¥{record.price}</span>
                   </Col>
                 )}
               </Row>
