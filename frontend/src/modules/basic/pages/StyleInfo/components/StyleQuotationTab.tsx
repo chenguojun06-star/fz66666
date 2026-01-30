@@ -25,9 +25,10 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
   const materialCost = Number(Form.useWatch('materialCost', form)) || 0;
   const processCost = Number(Form.useWatch('processCost', form)) || 0;
   const otherCost = Number(Form.useWatch('otherCost', form)) || 0;
+  const profitRate = Number(Form.useWatch('profitRate', form)) || 0; // 目标利润率
   const totalCost = materialCost + processCost + otherCost; // 总成本
   const totalPrice = Number(Form.useWatch('totalPrice', form)) || 0;
-  const profit = totalPrice - totalCost;
+  const profit = totalPrice - totalCost; // 实际毛利
 
   const calcBomCost = (items: unknown[]) => {
     return (items || []).reduce((sum: number, item: any) => {
@@ -368,11 +369,11 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
           <Card title="💰 成本结构" size="small" style={{ height: '100%' }} styles={{ body: { padding: '12px' } }}>
             <div style={{ textAlign: 'center', marginBottom: 12 }}>
               <Statistic
-                title="预估毛利"
-                value={profit}
-                precision={2}
-                valueStyle={{ fontSize: '22px', color: '#3f8600', fontWeight: 700 }}
-                prefix="¥"
+                title="目标利润率"
+                value={profitRate}
+                precision={1}
+                valueStyle={{ fontSize: '28px', color: '#fa8c16', fontWeight: 700 }}
+                suffix="%"
               />
             </div>
             <Divider style={{ margin: '8px 0' }} />
