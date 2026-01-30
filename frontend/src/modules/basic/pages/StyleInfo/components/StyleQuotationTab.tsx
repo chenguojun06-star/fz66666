@@ -25,8 +25,9 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
   const materialCost = Number(Form.useWatch('materialCost', form)) || 0;
   const processCost = Number(Form.useWatch('processCost', form)) || 0;
   const otherCost = Number(Form.useWatch('otherCost', form)) || 0;
+  const totalCost = materialCost + processCost + otherCost; // 总成本
   const totalPrice = Number(Form.useWatch('totalPrice', form)) || 0;
-  const profit = totalPrice - (materialCost + processCost + otherCost);
+  const profit = totalPrice - totalCost;
 
   const calcBomCost = (items: unknown[]) => {
     return (items || []).reduce((sum: number, item: any) => {
