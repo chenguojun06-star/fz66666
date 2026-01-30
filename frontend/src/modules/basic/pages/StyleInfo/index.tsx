@@ -573,8 +573,10 @@ const StyleInfoPage: React.FC = () => {
             icon: <PrinterOutlined />,
             label: '打印',
             onClick: () => {
+              console.log('🖨️ 打印按钮被点击', record);
               setPrintingRecord(record);
               setPrintModalVisible(true);
+              console.log('✅ 状态已更新: printModalVisible=true');
             },
           });
           items.push({ type: 'divider' });
@@ -2636,6 +2638,8 @@ const PrintPreviewModal: React.FC<{
   const [processData, setProcessData] = useState<any[]>([]);
   const [productionData, setProductionData] = useState<any>({});
   const [loading, setLoading] = useState(false);
+
+  console.log('📋 PrintPreviewModal 渲染:', { visible, record: record?.styleNo, options });
 
   // 加载打印数据
   useEffect(() => {
