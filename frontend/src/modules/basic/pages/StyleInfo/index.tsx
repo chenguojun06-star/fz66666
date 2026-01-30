@@ -2640,26 +2640,26 @@ const PrintPreviewModal: React.FC<{
   // 加载打印数据
   useEffect(() => {
     if (!visible || !record) return;
-    
+
     const loadPrintData = async () => {
       setLoading(true);
       try {
         // 加载BOM数据
         if (options.bom) {
-          const bomRes = await api.get(`/style/bom/list`, { params: { styleNo: record.styleNo } });
+          const bomRes = await api.get(`/style/bom/list`, { params: { styleId: record.id } });
           if (bomRes.code === 200) {
-            setBomData(bomRes.data?.records || []);
+            setBomData(bomRes.data || []);
           }
         }
-        
+
         // 加载工序数据
         if (options.process) {
-          const processRes = await api.get(`/style/process/list`, { params: { styleNo: record.styleNo } });
+          const processRes = await api.get(`/style/process/list`, { params: { styleId: record.id } });
           if (processRes.code === 200) {
-            setProcessData(processRes.data?.records || []);
+            setProcessData(processRes.data || []);
           }
         }
-        
+
         // 加载生产制单数据
         if (options.production) {
           setProductionData({
@@ -2672,7 +2672,7 @@ const PrintPreviewModal: React.FC<{
         setLoading(false);
       }
     };
-    
+
     loadPrintData();
   }, [visible, record, options.bom, options.process, options.production]);
 
@@ -2722,7 +2722,7 @@ const PrintPreviewModal: React.FC<{
               @page { margin: 15mm; size: A4; }
               body * { visibility: hidden; }
               .print-preview-content, .print-preview-content * { visibility: visible; }
-              .print-preview-content { 
+              .print-preview-content {
                 position: absolute;
                 left: 0;
                 top: 0;
@@ -2757,7 +2757,7 @@ const PrintPreviewModal: React.FC<{
                 />
               </div>
             )}
-            
+
             {/* 基础信息 */}
             <div style={{ flex: 1 }}>
               <h2 style={{ margin: '0 0 12px 0', fontSize: 18 }}>{record.styleNo} - {record.styleName}</h2>
@@ -2800,7 +2800,7 @@ const PrintPreviewModal: React.FC<{
                 )}
               </Row>
             </div>
-            
+
             {/* 二维码 */}
             <div>
               <QRCodeBox
