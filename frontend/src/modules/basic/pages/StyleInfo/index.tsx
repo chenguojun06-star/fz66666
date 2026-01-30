@@ -2403,11 +2403,11 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
               <span style={{ color: '#999' }}>点击下方按钮选择图片</span>
             ) : !styleId ? (
               <>
-                <div style={{ color: '#1890ff', fontSize: 14, marginBottom: 4 }}>保存款号后可上传</div>
+                <div style={{ color: '#1890ff', fontSize: 14, marginBottom: 4 }}>上传设计稿或款式照片</div>
                 <div style={{ color: '#999', fontSize: 12 }}>请先填写上方基础信息并点击"保存基础信息"</div>
               </>
             ) : enabled ? (
-              <span style={{ color: '#999' }}>暂无图片，点击下方按钮上传</span>
+              <span style={{ color: '#999' }}>上传设计稿或款式照片</span>
             ) : (
               <>
                 <div style={{ color: '#ff4d4f', fontSize: 14, marginBottom: 4 }}>样衣已完成</div>
@@ -2422,11 +2422,11 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
           <div style={{ textAlign: 'center', padding: '20px' }}>
             {!styleId ? (
               <>
-                <div style={{ color: '#1890ff', fontSize: 14, marginBottom: 4 }}>保存款号后可上传</div>
+                <div style={{ color: '#1890ff', fontSize: 14, marginBottom: 4 }}>上传设计稿或款式照片</div>
                 <div style={{ color: '#999', fontSize: 12 }}>请先填写上方基础信息并点击“保存基础信息”</div>
               </>
             ) : enabled ? (
-              <span style={{ color: '#999' }}>暂无图片，点击下方按钮上传</span>
+              <span style={{ color: '#999' }}>上传设计稿或款式照片</span>
             ) : (
               <>
                 <div style={{ color: '#ff4d4f', fontSize: 14, marginBottom: 4 }}>样衣已完成</div>
