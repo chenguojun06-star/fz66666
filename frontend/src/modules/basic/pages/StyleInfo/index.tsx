@@ -2689,7 +2689,7 @@ const PrintPreviewModal: React.FC<{
   return (
     <ResizableModal
       title={`打印预览 - ${record.styleNo}`}
-      visible={visible}
+      open={visible}
       onCancel={onClose}
       defaultWidth="80vw"
       defaultHeight="85vh"
