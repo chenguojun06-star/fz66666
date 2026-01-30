@@ -476,6 +476,19 @@ public class StyleInfoOrchestrator {
         if (ok) {
             saveSampleLog(id, "SAMPLE_COMPLETED", "点击样衣完成（含兜底逻辑）");
             log.info("样衣完成成功：styleId={}, 已自动补全所有未完成步骤", id);
+            
+            // 自动推送到单价维护（模板库）
+            try {
+                StyleInfo updated = styleInfoService.getById(id);
+                if (updated != null && StringUtils.hasText(updated.getStyleNo())) {
+                    // 推送所有类型：BOM、工序、工序单价、进度节点
+                    List<String> templateTypes = List.of("bom", "process", "process_price", "progress");
+                    templateLibraryService.createFromStyle(updated.getStyleNo(), templateTypes);
+                    log.info("样衣完成后自动推送到单价维护成功：styleNo={}", updated.getStyleNo());
+                }
+            } catch (Exception e) {
+                log.warn("样衣完成后自动推送到单价维护失败，但不影响样衣完成操作：{}", e.getMessage());
+            }
         }
         return ok;
     }

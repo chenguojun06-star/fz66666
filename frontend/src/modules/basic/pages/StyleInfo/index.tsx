@@ -722,10 +722,7 @@ const StyleInfoPage: React.FC = () => {
         message.success('推送成功，已添加到下单管理');
         setPushToOrderModalVisible(false);
         pushToOrderForm.resetFields();
-        // 跳转到下单管理页面
-        if (res.data?.orderNo) {
-          navigate(`/order-management?orderNo=${res.data.orderNo}`);
-        }
+        // 不跳转页面，留在当前页面
       } else {
         message.error(res.message || '推送失败');
       }
