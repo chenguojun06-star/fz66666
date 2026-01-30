@@ -26,16 +26,15 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
   const processCost = Number(Form.useWatch('processCost', form)) || 0;
   const otherCost = Number(Form.useWatch('otherCost', form)) || 0;
   const profitRate = Number(Form.useWatch('profitRate', form)) || 0; // 目标利润率
-  const watchTotalPrice = Number(Form.useWatch('totalPrice', form)) || 0; // 监听totalPrice
+  const totalCost = materialCost + processCost + otherCost; // 总成本
   
-  // 使用useMemo计算派生值
-  const totalCost = useMemo(() => materialCost + processCost + otherCost, [materialCost, processCost, otherCost]);
-  const totalPrice = useMemo(() => {
-    // 优先从表单直接获取最新值，fallback到watch的值
-    const formValue = Number(form.getFieldValue('totalPrice'));
-    return formValue || watchTotalPrice || 0;
-  }, [form, watchTotalPrice]);
-  const profit = useMemo(() => totalPrice - totalCost, [totalPrice, totalCost]);
+  // 计算最终报价和利润 - 每次渲染都从表单获取最新值
+  const getTotalPrice = () => {
+    const val = form.getFieldValue('totalPrice');
+    return Number(val) || 0;
+  };
+  const totalPrice = getTotalPrice();
+  const profit = totalPrice - totalCost;
 
   const calcBomCost = (items: unknown[]) => {
     return (items || []).reduce((sum: number, item: any) => {
@@ -377,7 +376,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
             <div style={{ textAlign: 'center', marginBottom: 16 }}>
               <div style={{ fontSize: '13px', color: '#8c8c8c', marginBottom: 8 }}>预计可赚</div>
               <div style={{
-                fontSize: '32px',
+                fontSize: '24px',
                 fontWeight: 700,
                 color: profit >= 0 ? '#3f8600' : '#ff4d4f',
                 marginBottom: 4
