@@ -447,9 +447,19 @@ const MaterialPurchase: React.FC = () => {
     if (!visible) return;
     if (dialogMode !== 'view') return;
     const no = String(currentPurchase?.orderNo || '').trim();
-    if (!no) return;
-    loadDetailByOrderNo(no);
-  }, [currentPurchase?.orderNo, dialogMode, visible]);
+    if (no) {
+      // 有订单号，加载订单详情
+      loadDetailByOrderNo(no);
+    } else if (currentPurchase) {
+      // 没有订单号（样衣采购等），直接加载该采购单信息
+      setDetailLoading(true);
+      setDetailOrder(null);
+      setDetailOrderLines([]);
+      // 只加载当前这一条采购记录
+      setDetailPurchases([currentPurchase]);
+      setDetailLoading(false);
+    }
+  }, [currentPurchase?.orderNo, currentPurchase?.id, dialogMode, visible]);
 
   // 获取物料采购列表
   const fetchMaterialPurchaseList = useCallback(async () => {
@@ -2227,7 +2237,7 @@ const MaterialPurchase: React.FC = () => {
                   styleName={currentPurchase?.styleName}
                   styleId={currentPurchase?.styleId}
                   styleCover={currentPurchase?.styleCover}
-                  color={String(detailOrder?.color || '').trim() || buildColorSummary(detailOrderLines) || ''}
+                  color={String(detailOrder?.color || currentPurchase?.color || '').trim() || buildColorSummary(detailOrderLines) || ''}
                   sizeItems={detailSizePairs.map((x) => ({ size: x.size, quantity: x.quantity }))}
                   totalQuantity={getOrderQtyTotal(detailOrderLines)}
                   qrCodeValue={currentPurchase?.orderNo
@@ -2238,7 +2248,12 @@ const MaterialPurchase: React.FC = () => {
                       styleName: currentPurchase.styleName,
                       purchaseCount: detailPurchases.length,
                     })
-                    : ''}
+                    : JSON.stringify({
+                      type: 'purchase',
+                      purchaseNo: currentPurchase?.purchaseNo,
+                      styleNo: currentPurchase?.styleNo,
+                      styleName: currentPurchase?.styleName,
+                    })}
                   coverSize={160}
                   qrSize={120}
                 />
