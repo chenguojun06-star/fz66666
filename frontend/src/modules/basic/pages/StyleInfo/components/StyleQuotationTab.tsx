@@ -367,20 +367,39 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
         </Col>
         <Col span={6}>
           <Card title="💰 成本结构" size="small" style={{ height: '100%' }} styles={{ body: { padding: '12px' } }}>
-            <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', marginBottom: 12 }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '12px', color: '#8c8c8c', marginBottom: 4 }}>预估毛利</div>
-                <div style={{ fontSize: '20px', color: profit >= 0 ? '#3f8600' : '#ff4d4f', fontWeight: 700 }}>
-                  ¥{profit.toFixed(2)}
-                </div>
+            <div style={{ background: '#f0f7ff', padding: '12px', borderRadius: 6, marginBottom: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <span style={{ fontSize: '13px', color: '#595959' }}>目标利润率：</span>
+                <span style={{ fontSize: '18px', fontWeight: 700, color: '#1890ff' }}>{profitRate}%</span>
               </div>
-              <Divider type="vertical" style={{ height: 40, margin: 0 }} />
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '12px', color: '#8c8c8c', marginBottom: 4 }}>实际利润率</div>
-                <div style={{ fontSize: '20px', color: '#fa8c16', fontWeight: 700 }}>
-                  {totalPrice > 0 ? ((profit / totalPrice) * 100).toFixed(1) : '0.0'}%
-                </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <span style={{ fontSize: '13px', color: '#595959' }}>总成本：</span>
+                <span style={{ fontSize: '16px', fontWeight: 600, color: '#262626' }}>¥{totalCost.toFixed(2)}</span>
               </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <span style={{ fontSize: '13px', color: '#595959' }}>最终报价：</span>
+                <span style={{ fontSize: '16px', fontWeight: 600, color: '#262626' }}>¥{totalPrice.toFixed(2)}</span>
+              </div>
+              <Divider style={{ margin: '8px 0', borderColor: '#d9d9d9' }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '14px', fontWeight: 600, color: '#262626' }}>预计可赚：</span>
+                <span style={{ 
+                  fontSize: '22px', 
+                  fontWeight: 700, 
+                  color: profit >= 0 ? '#3f8600' : '#ff4d4f' 
+                }}>
+                  {profit >= 0 ? '+' : ''}¥{profit.toFixed(2)}
+                </span>
+              </div>
+              {profit >= 0 ? (
+                <div style={{ fontSize: '12px', color: '#52c41a', textAlign: 'right', marginTop: 4 }}>
+                  ✓ 可盈利 (实际利润率 {totalPrice > 0 ? ((profit / totalPrice) * 100).toFixed(1) : '0.0'}%)
+                </div>
+              ) : (
+                <div style={{ fontSize: '12px', color: '#ff4d4f', textAlign: 'right', marginTop: 4 }}>
+                  ✗ 亏损 (报价低于成本)
+                </div>
+              )}
             </div>
             <Divider style={{ margin: '8px 0' }} />
             <div style={{ fontSize: '13px', lineHeight: 1.8 }}>
