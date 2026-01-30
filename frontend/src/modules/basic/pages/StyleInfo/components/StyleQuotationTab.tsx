@@ -367,14 +367,20 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
         </Col>
         <Col span={6}>
           <Card title="💰 成本结构" size="small" style={{ height: '100%' }} styles={{ body: { padding: '12px' } }}>
-            <div style={{ textAlign: 'center', marginBottom: 12 }}>
-              <Statistic
-                title="目标利润率"
-                value={profitRate}
-                precision={1}
-                valueStyle={{ fontSize: '28px', color: '#fa8c16', fontWeight: 700 }}
-                suffix="%"
-              />
+            <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', marginBottom: 12 }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '12px', color: '#8c8c8c', marginBottom: 4 }}>预估毛利</div>
+                <div style={{ fontSize: '20px', color: profit >= 0 ? '#3f8600' : '#ff4d4f', fontWeight: 700 }}>
+                  ¥{profit.toFixed(2)}
+                </div>
+              </div>
+              <Divider type="vertical" style={{ height: 40, margin: 0 }} />
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '12px', color: '#8c8c8c', marginBottom: 4 }}>实际利润率</div>
+                <div style={{ fontSize: '20px', color: '#fa8c16', fontWeight: 700 }}>
+                  {totalPrice > 0 ? ((profit / totalPrice) * 100).toFixed(1) : '0.0'}%
+                </div>
+              </div>
             </div>
             <Divider style={{ margin: '8px 0' }} />
             <div style={{ fontSize: '13px', lineHeight: 1.8 }}>
