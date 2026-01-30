@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { Spin } from 'antd';
-import { isAdminUser as isAdminUserFn, useAuth } from '../../utils/authContext';
+import { isAdminUser as isAdminUserFn, useAuth } from '../../utils/AuthContext';
 import { paths, resolvePermissionCode } from '../../routeConfig';
 
 const PrivateRoute: React.FC = () => {

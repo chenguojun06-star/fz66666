@@ -99,7 +99,15 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
   return (
     <Row gutter={[16, 16]}>
       {dataSource.map((record, index) => {
-        const actionButtons = actions?.(record)?.filter(action => action && action.type !== 'divider') || [];
+        // 计算是否已完成
+        const isCompleted = progressConfig ? progressConfig.calculate(record) >= 100 : false;
+        // 过滤操作按钮：已完成的订单移除编辑按钮
+        const actionButtons = actions?.(record)?.filter(action => {
+          if (!action || action.type === 'divider') return false;
+          // 已完成订单禁止编辑
+          if (isCompleted && (action.key === 'edit' || action.label === '编辑')) return false;
+          return true;
+        }) || [];
 
         return (
           <Col {...getColSpan()} key={record.id || index}>
@@ -156,22 +164,27 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
                 {/* 进度条作为分割线（可选） */}
                 {progressConfig?.show !== false && progressConfig && (
                   <div style={{
-                    marginTop: '12px',
-                    marginBottom: '12px',
-                    paddingTop: '8px',
+                    marginTop: '8px',
+                    marginBottom: '4px',
                     animation: 'progressFadeIn 0.6s ease-out'
                   }}>
                     {progressConfig.type === 'liquid' ? (
                       // 液体波浪进度条
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <LiquidProgressBar
                           percent={progressConfig.calculate(record)}
                           width="100%"
-                          height={12}
+                          height={14}
                           status={progressConfig.getStatus?.(record)}
                         />
-                        <span style={{ fontSize: '12px', color: '#666', minWidth: '35px', fontWeight: 600 }}>
-                          {progressConfig.calculate(record)}%
+                        <span style={{
+                          fontSize: '11px',
+                          color: progressConfig.calculate(record) >= 100 ? '#52c41a' : '#666',
+                          minWidth: progressConfig.calculate(record) >= 100 ? '40px' : '28px',
+                          fontWeight: 600,
+                          textAlign: 'right'
+                        }}>
+                          {progressConfig.calculate(record) >= 100 ? '已完成' : `${progressConfig.calculate(record)}%`}
                         </span>
                       </div>
                     ) : (
@@ -192,7 +205,7 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
 
                 {/* 操作按钮 - 直接显示文字按钮 */}
                 {actionButtons.length > 0 && (
-                  <div className="universal-card-actions" style={{ borderTop: 'none', paddingTop: 0 }}>
+                  <div className="universal-card-actions" style={{ borderTop: 'none', paddingTop: '2px', marginTop: '2px' }}>
                     <Space size="small">
                       {actionButtons.map((action) => (
                         <Button

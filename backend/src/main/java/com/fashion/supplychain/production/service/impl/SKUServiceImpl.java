@@ -16,17 +16,20 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import java.util.concurrent.TimeUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
 /**
  * SKU服务实现类
- * 
+ *
  * 职责:
  * 1. SKU数据标准化和验证
  * 2. SKU扫码模式检测 (ORDER/BUNDLE/SKU)
  * 3. SKU进度追踪和统计
- * 
+ *
  * @author GitHub Copilot
  * @date 2026-01-23
  */
@@ -42,12 +45,18 @@ public class SKUServiceImpl implements SKUService {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    // Cache for parsed order details: Key=OrderNo, Value=List<Map>
+    private final Cache<String, List<Map<String, Object>>> orderDetailsCache = Caffeine.newBuilder()
+            .expireAfterWrite(5, TimeUnit.MINUTES)
+            .maximumSize(1000)
+            .build();
+
     /**
      * 扫码模式定义
      */
-    private static final String SCAN_MODE_ORDER = "ORDER";    // 订单级扫码
-    private static final String SCAN_MODE_BUNDLE = "BUNDLE";  // 菲号级扫码
-    private static final String SCAN_MODE_SKU = "SKU";        // SKU级扫码
+    private static final String SCAN_MODE_ORDER = "ORDER"; // 订单级扫码
+    private static final String SCAN_MODE_BUNDLE = "BUNDLE"; // 菲号级扫码
+    private static final String SCAN_MODE_SKU = "SKU"; // SKU级扫码
 
     @Override
     public String detectScanMode(String scanCode, String color, String size) {
@@ -84,9 +93,9 @@ public class SKUServiceImpl implements SKUService {
 
         // 必填字段检查
         if (!StringUtils.hasText(orderNo) ||
-            !StringUtils.hasText(styleNo) ||
-            !StringUtils.hasText(color) ||
-            !StringUtils.hasText(size)) {
+                !StringUtils.hasText(styleNo) ||
+                !StringUtils.hasText(color) ||
+                !StringUtils.hasText(size)) {
             log.warn("[SKUService] SKU信息不完整: {}", scanRecord);
             return false;
         }
@@ -107,14 +116,14 @@ public class SKUServiceImpl implements SKUService {
                             continue;
                         }
                         String sc = StringUtils.hasText(ParamUtils.toTrimmedString(sku.get("color")))
-                            ? ParamUtils.toTrimmedString(sku.get("color"))
-                            : "";
+                                ? ParamUtils.toTrimmedString(sku.get("color"))
+                                : "";
                         String ss = StringUtils.hasText(ParamUtils.toTrimmedString(sku.get("size")))
-                            ? ParamUtils.toTrimmedString(sku.get("size"))
-                            : "";
+                                ? ParamUtils.toTrimmedString(sku.get("size"))
+                                : "";
                         String st = StringUtils.hasText(ParamUtils.toTrimmedString(sku.get("styleNo")))
-                            ? ParamUtils.toTrimmedString(sku.get("styleNo"))
-                            : "";
+                                ? ParamUtils.toTrimmedString(sku.get("styleNo"))
+                                : "";
                         if (!color.equals(sc) || !size.equals(ss)) {
                             continue;
                         }
@@ -126,14 +135,14 @@ public class SKUServiceImpl implements SKUService {
                     }
                     if (!matched) {
                         log.warn("[SKUService] SKU不在订单明细中: orderNo={}, styleNo={}, color={}, size={}",
-                            orderNo, styleNo, color, size);
+                                orderNo, styleNo, color, size);
                         return false;
                     }
                 }
             }
         } catch (Exception e) {
             log.warn("[SKUService] SKU校验异常: orderNo={}, styleNo={}, color={}, size={}",
-                orderNo, styleNo, color, size, e);
+                    orderNo, styleNo, color, size, e);
         }
 
         return true;
@@ -142,11 +151,10 @@ public class SKUServiceImpl implements SKUService {
     @Override
     public String normalizeSKUKey(String orderNo, String styleNo, String color, String size) {
         return String.format("%s:%s:%s:%s",
-            StringUtils.hasText(orderNo) ? orderNo.trim() : "",
-            StringUtils.hasText(styleNo) ? styleNo.trim() : "",
-            StringUtils.hasText(color) ? color.trim() : "",
-            StringUtils.hasText(size) ? size.trim() : ""
-        );
+                StringUtils.hasText(orderNo) ? orderNo.trim() : "",
+                StringUtils.hasText(styleNo) ? styleNo.trim() : "",
+                StringUtils.hasText(color) ? color.trim() : "",
+                StringUtils.hasText(size) ? size.trim() : "");
     }
 
     @Override
@@ -162,23 +170,23 @@ public class SKUServiceImpl implements SKUService {
             }
             // 查询该订单下所有的SKU记录 (去重)
             List<ScanRecord> records = scanRecordService.list(
-                new LambdaQueryWrapper<ScanRecord>()
-                    .eq(ScanRecord::getOrderNo, orderNo)
-                    .select(ScanRecord::getStyleNo, ScanRecord::getColor, ScanRecord::getSize)
-                    .last("group by style_no, color, size") // 使用SQL GROUP BY实现去重
+                    new LambdaQueryWrapper<ScanRecord>()
+                            .eq(ScanRecord::getOrderNo, orderNo)
+                            .select(ScanRecord::getStyleNo, ScanRecord::getColor, ScanRecord::getSize)
+                            .last("group by style_no, color, size") // 使用SQL GROUP BY实现去重
             );
 
             return records.stream()
-                .map(r -> {
-                    Map<String, Object> sku = new HashMap<>();
-                    sku.put("orderNo", r.getOrderNo());
-                    sku.put("styleNo", r.getStyleNo());
-                    sku.put("color", r.getColor());
-                    sku.put("size", r.getSize());
-                    sku.put("skuKey", normalizeSKUKey(r.getOrderNo(), r.getStyleNo(), r.getColor(), r.getSize()));
-                    return sku;
-                })
-                .collect(Collectors.toList());
+                    .map(r -> {
+                        Map<String, Object> sku = new HashMap<>();
+                        sku.put("orderNo", r.getOrderNo());
+                        sku.put("styleNo", r.getStyleNo());
+                        sku.put("color", r.getColor());
+                        sku.put("size", r.getSize());
+                        sku.put("skuKey", normalizeSKUKey(r.getOrderNo(), r.getStyleNo(), r.getColor(), r.getSize()));
+                        return sku;
+                    })
+                    .collect(Collectors.toList());
         } catch (Exception e) {
             log.error("[SKUService] 获取订单SKU列表失败: {}", orderNo, e);
             return new ArrayList<>();
@@ -198,24 +206,22 @@ public class SKUServiceImpl implements SKUService {
             long totalCount = getOrderSkuQuantity(orderNo, styleNo, color, size);
             if (totalCount <= 0) {
                 Long scannedTotal = scanRecordService.count(
-                    new LambdaQueryWrapper<ScanRecord>()
-                        .eq(ScanRecord::getOrderNo, orderNo)
-                        .eq(ScanRecord::getStyleNo, styleNo)
-                        .eq(ScanRecord::getColor, color)
-                        .eq(ScanRecord::getSize, size)
-                );
+                        new LambdaQueryWrapper<ScanRecord>()
+                                .eq(ScanRecord::getOrderNo, orderNo)
+                                .eq(ScanRecord::getStyleNo, styleNo)
+                                .eq(ScanRecord::getColor, color)
+                                .eq(ScanRecord::getSize, size));
                 totalCount = scannedTotal == null ? 0 : scannedTotal;
             }
 
             // 统计该SKU的已完成数（scanResult = success）
             Long completedCount = scanRecordService.count(
-                new LambdaQueryWrapper<ScanRecord>()
-                    .eq(ScanRecord::getOrderNo, orderNo)
-                    .eq(ScanRecord::getStyleNo, styleNo)
-                    .eq(ScanRecord::getColor, color)
-                    .eq(ScanRecord::getSize, size)
-                    .eq(ScanRecord::getScanResult, "success")
-            );
+                    new LambdaQueryWrapper<ScanRecord>()
+                            .eq(ScanRecord::getOrderNo, orderNo)
+                            .eq(ScanRecord::getStyleNo, styleNo)
+                            .eq(ScanRecord::getColor, color)
+                            .eq(ScanRecord::getSize, size)
+                            .eq(ScanRecord::getScanResult, "success"));
 
             long completed = completedCount == null ? 0 : completedCount;
             long remaining = totalCount - completed;
@@ -252,17 +258,38 @@ public class SKUServiceImpl implements SKUService {
                 return orderProgress;
             }
 
+            // 优化：一次性查询所有SKU的扫码统计，避免N+1查询
+            List<Map<String, Object>> stats = scanRecordService.getScanStatsByOrder(orderNo);
+            Map<String, Long> statsMap = new HashMap<>();
+            if (stats != null) {
+                for (Map<String, Object> s : stats) {
+                    String color = (String) s.get("color");
+                    String size = (String) s.get("size");
+                    Object countObj = s.get("count");
+                    long count = countObj != null ? Long.parseLong(countObj.toString()) : 0;
+                    statsMap.put(color + "|" + size, count);
+                }
+            }
+
             // 统计完成的SKU数量
             int completedSKUs = 0;
             for (Map<String, Object> sku : skuList) {
-                Map<String, Object> skuProgress = getSKUProgress(
-                    (String) sku.get("orderNo"),
-                    (String) sku.get("styleNo"),
-                    (String) sku.get("color"),
-                    (String) sku.get("size")
-                );
-                Object c = skuProgress.get("completed");
-                if (Boolean.TRUE.equals(c)) {
+                String color = (String) sku.get("color");
+                String size = (String) sku.get("size");
+                String styleNo = (String) sku.get("styleNo");
+
+                // 从内存Map获取已完成数量
+                long completed = statsMap.getOrDefault(color + "|" + size, 0L);
+                long totalCount = getOrderSkuQuantity(orderNo, styleNo, color, size);
+                long remaining = Math.max(0, totalCount - completed);
+
+                // 更新SKU对象的进度信息 (用于前端展示)
+                sku.put("totalCount", totalCount);
+                sku.put("completedCount", completed);
+                sku.put("remainingCount", remaining);
+                sku.put("completed", remaining == 0);
+
+                if (remaining == 0 && totalCount > 0) {
                     completedSKUs++;
                 }
             }
@@ -286,11 +313,10 @@ public class SKUServiceImpl implements SKUService {
         }
         try {
             return productionOrderService.getOne(
-                new LambdaQueryWrapper<ProductionOrder>()
-                    .eq(ProductionOrder::getOrderNo, on)
-                    .eq(ProductionOrder::getDeleteFlag, 0)
-                    .last("limit 1")
-            );
+                    new LambdaQueryWrapper<ProductionOrder>()
+                            .eq(ProductionOrder::getOrderNo, on)
+                            .eq(ProductionOrder::getDeleteFlag, 0)
+                            .last("limit 1"));
         } catch (Exception e) {
             log.warn("[SKUService] 查询订单失败: {}", on, e);
             return null;
@@ -303,8 +329,8 @@ public class SKUServiceImpl implements SKUService {
         }
         try {
             List<Map<String, Object>> list = objectMapper.readValue(details,
-                new TypeReference<List<Map<String, Object>>>() {
-                });
+                    new TypeReference<List<Map<String, Object>>>() {
+                    });
             if (list != null) {
                 return list;
             }
@@ -314,10 +340,11 @@ public class SKUServiceImpl implements SKUService {
             Map<String, Object> obj = objectMapper.readValue(details, new TypeReference<Map<String, Object>>() {
             });
             Object lines = obj == null ? null
-                : (obj.get("lines") != null ? obj.get("lines")
-                    : (obj.get("items") != null ? obj.get("items")
-                        : (obj.get("details") != null ? obj.get("details")
-                            : (obj.get("orderLines") != null ? obj.get("orderLines") : obj.get("list")))));
+                    : (obj.get("lines") != null ? obj.get("lines")
+                            : (obj.get("items") != null ? obj.get("items")
+                                    : (obj.get("details") != null ? obj.get("details")
+                                            : (obj.get("orderLines") != null ? obj.get("orderLines")
+                                                    : obj.get("list")))));
             if (lines instanceof List) {
                 @SuppressWarnings("unchecked")
                 List<Map<String, Object>> cast = (List<Map<String, Object>>) lines;
@@ -329,6 +356,12 @@ public class SKUServiceImpl implements SKUService {
     }
 
     private List<Map<String, Object>> resolveSkuListFromOrderDetails(String orderNo) {
+        // Try to get from cache first
+        List<Map<String, Object>> cached = orderDetailsCache.getIfPresent(orderNo);
+        if (cached != null) {
+            return cached;
+        }
+
         ProductionOrder order = getActiveOrderByNo(orderNo);
         if (order == null || !StringUtils.hasText(order.getOrderDetails())) {
             return List.of();
@@ -345,11 +378,11 @@ public class SKUServiceImpl implements SKUService {
                 continue;
             }
             String color = StringUtils.hasText(ParamUtils.toTrimmedString(r.get("color")))
-                ? ParamUtils.toTrimmedString(r.get("color"))
-                : "";
+                    ? ParamUtils.toTrimmedString(r.get("color"))
+                    : "";
             String size = StringUtils.hasText(ParamUtils.toTrimmedString(r.get("size")))
-                ? ParamUtils.toTrimmedString(r.get("size"))
-                : "";
+                    ? ParamUtils.toTrimmedString(r.get("size"))
+                    : "";
             if (!StringUtils.hasText(color) || !StringUtils.hasText(size)) {
                 continue;
             }
@@ -368,7 +401,11 @@ public class SKUServiceImpl implements SKUService {
             int current = parseQuantity(sku.get("quantity"));
             sku.put("quantity", current + Math.max(0, qty));
         }
-        return new ArrayList<>(agg.values());
+
+        List<Map<String, Object>> result = new ArrayList<>(agg.values());
+        // Put into cache
+        orderDetailsCache.put(orderNo, result);
+        return result;
     }
 
     private int parseQuantity(Object obj) {
@@ -396,14 +433,14 @@ public class SKUServiceImpl implements SKUService {
                 continue;
             }
             String sc = StringUtils.hasText(ParamUtils.toTrimmedString(sku.get("color")))
-                ? ParamUtils.toTrimmedString(sku.get("color"))
-                : "";
+                    ? ParamUtils.toTrimmedString(sku.get("color"))
+                    : "";
             String ss = StringUtils.hasText(ParamUtils.toTrimmedString(sku.get("size")))
-                ? ParamUtils.toTrimmedString(sku.get("size"))
-                : "";
+                    ? ParamUtils.toTrimmedString(sku.get("size"))
+                    : "";
             String st = StringUtils.hasText(ParamUtils.toTrimmedString(sku.get("styleNo")))
-                ? ParamUtils.toTrimmedString(sku.get("styleNo"))
-                : "";
+                    ? ParamUtils.toTrimmedString(sku.get("styleNo"))
+                    : "";
             if (!c.equals(sc) || !s.equals(ss)) {
                 continue;
             }
@@ -421,7 +458,7 @@ public class SKUServiceImpl implements SKUService {
         }
         String v = value.trim();
         return v.contains(",") || v.contains("，") || v.contains("/") || v.contains("、") || v.contains(";")
-            || v.contains("|") || v.contains(" ");
+                || v.contains("|") || v.contains(" ");
     }
 
     @Override
@@ -458,11 +495,10 @@ public class SKUServiceImpl implements SKUService {
         try {
             Page<ScanRecord> pageInfo = new Page<>(page, pageSize);
             IPage<ScanRecord> records = scanRecordService.page(
-                pageInfo,
-                new LambdaQueryWrapper<ScanRecord>()
-                    .eq(StringUtils.hasText(orderNo), ScanRecord::getOrderNo, orderNo)
-                    .orderByDesc(ScanRecord::getScanTime)
-            );
+                    pageInfo,
+                    new LambdaQueryWrapper<ScanRecord>()
+                            .eq(StringUtils.hasText(orderNo), ScanRecord::getOrderNo, orderNo)
+                            .orderByDesc(ScanRecord::getScanTime));
 
             // 转换为Map格式
             return records.convert(record -> {
@@ -490,13 +526,12 @@ public class SKUServiceImpl implements SKUService {
     public boolean isSKUCompleted(String orderNo, String styleNo, String color, String size) {
         try {
             Long remainingCount = scanRecordService.count(
-                new LambdaQueryWrapper<ScanRecord>()
-                    .eq(ScanRecord::getOrderNo, orderNo)
-                    .eq(ScanRecord::getStyleNo, styleNo)
-                    .eq(ScanRecord::getColor, color)
-                    .eq(ScanRecord::getSize, size)
-                    .ne(ScanRecord::getScanResult, "success")
-            );
+                    new LambdaQueryWrapper<ScanRecord>()
+                            .eq(ScanRecord::getOrderNo, orderNo)
+                            .eq(ScanRecord::getStyleNo, styleNo)
+                            .eq(ScanRecord::getColor, color)
+                            .eq(ScanRecord::getSize, size)
+                            .ne(ScanRecord::getScanResult, "success"));
 
             return remainingCount == 0;
         } catch (Exception e) {
@@ -519,15 +554,14 @@ public class SKUServiceImpl implements SKUService {
             List<Map<String, Object>> skuDetails = new ArrayList<>();
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> skuList = (List<Map<String, Object>>) orderProgress.get("skuList");
-            
+
             if (skuList != null) {
                 for (Map<String, Object> sku : skuList) {
                     Map<String, Object> skuDetail = getSKUProgress(
-                        (String) sku.get("orderNo"),
-                        (String) sku.get("styleNo"),
-                        (String) sku.get("color"),
-                        (String) sku.get("size")
-                    );
+                            (String) sku.get("orderNo"),
+                            (String) sku.get("styleNo"),
+                            (String) sku.get("color"),
+                            (String) sku.get("size"));
                     skuDetails.add(skuDetail);
                 }
             }
@@ -582,7 +616,7 @@ public class SKUServiceImpl implements SKUService {
 
             // 获取所有工序单价配置
             List<Map<String, Object>> prices = getProcessUnitPrices(orderNo);
-            
+
             // 查找匹配的工序单价
             for (Map<String, Object> priceInfo : prices) {
                 String name = String.valueOf(priceInfo.getOrDefault("name", "")).trim();
@@ -594,9 +628,9 @@ public class SKUServiceImpl implements SKUService {
                 }
             }
 
-            log.debug("[SKUService] 查询工序单价 - orderNo: {}, processName: {}, unitPrice: {}", 
-                orderNo, processName, result.get("unitPrice"));
-            
+            log.debug("[SKUService] 查询工序单价 - orderNo: {}, processName: {}, unitPrice: {}",
+                    orderNo, processName, result.get("unitPrice"));
+
         } catch (Exception e) {
             log.error("[SKUService] 获取工序单价失败 - orderNo: {}, processName: {}", orderNo, processName, e);
         }
@@ -621,9 +655,8 @@ public class SKUServiceImpl implements SKUService {
 
             // 获取工序单价
             Map<String, Object> priceInfo = getUnitPriceByProcess(
-                scanRecord.getOrderNo(), 
-                scanRecord.getProcessName()
-            );
+                    scanRecord.getOrderNo(),
+                    scanRecord.getProcessName());
 
             // 解析单价
             Object unitPriceObj = priceInfo.get("unitPrice");
@@ -637,13 +670,12 @@ public class SKUServiceImpl implements SKUService {
             }
 
             if (unitPrice.compareTo(java.math.BigDecimal.ZERO) <= 0
-                && StringUtils.hasText(scanRecord.getProgressStage())) {
+                    && StringUtils.hasText(scanRecord.getProgressStage())) {
                 String stageName = scanRecord.getProgressStage().trim();
                 if (!stageName.equalsIgnoreCase(scanRecord.getProcessName().trim())) {
                     Map<String, Object> stagePriceInfo = getUnitPriceByProcess(
-                        scanRecord.getOrderNo(),
-                        stageName
-                    );
+                            scanRecord.getOrderNo(),
+                            stageName);
                     Object stageUnitPriceObj = stagePriceInfo.get("unitPrice");
                     if (stageUnitPriceObj != null) {
                         try {
@@ -668,18 +700,18 @@ public class SKUServiceImpl implements SKUService {
 
             java.math.BigDecimal currentUnitPrice = scanRecord.getUnitPrice();
             if ((currentUnitPrice == null || currentUnitPrice.compareTo(java.math.BigDecimal.ZERO) <= 0)
-                && unitPrice.compareTo(java.math.BigDecimal.ZERO) > 0) {
+                    && unitPrice.compareTo(java.math.BigDecimal.ZERO) > 0) {
                 scanRecord.setUnitPrice(unitPrice);
             }
 
             java.math.BigDecimal currentTotalAmount = scanRecord.getTotalAmount();
             if ((currentTotalAmount == null || currentTotalAmount.compareTo(java.math.BigDecimal.ZERO) <= 0)
-                && scanCost.compareTo(java.math.BigDecimal.ZERO) > 0) {
+                    && scanCost.compareTo(java.math.BigDecimal.ZERO) > 0) {
                 scanRecord.setTotalAmount(scanCost);
             }
 
             log.debug("[SKUService] 附加工序单价 - processName: {}, unitPrice: {}, quantity: {}, scanCost: {}",
-                scanRecord.getProcessName(), unitPrice, qty, scanCost);
+                    scanRecord.getProcessName(), unitPrice, qty, scanCost);
 
             return true;
         } catch (Exception e) {
@@ -708,7 +740,7 @@ public class SKUServiceImpl implements SKUService {
 
             // 获取所有工序的单价
             List<Map<String, Object>> processPrices = getProcessUnitPrices(orderNo);
-            
+
             double totalUnitPrice = 0.0;
             for (Map<String, Object> priceInfo : processPrices) {
                 Object unitPrice = priceInfo.get("unitPrice");
@@ -732,7 +764,7 @@ public class SKUServiceImpl implements SKUService {
             result.put("quantity", orderQuantity);
 
             log.debug("[SKUService] 计算订单总工价 - orderNo: {}, totalUnitPrice: {}, totalCost: {}",
-                orderNo, totalUnitPrice, totalCost);
+                    orderNo, totalUnitPrice, totalCost);
 
         } catch (Exception e) {
             log.error("[SKUService] 计算订单总工价失败 - orderNo: {}", orderNo, e);

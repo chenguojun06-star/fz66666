@@ -4,7 +4,10 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.mapper.MaterialPurchaseMapper;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
+import com.fashion.supplychain.common.constant.MaterialConstants;
 import com.fashion.supplychain.common.ParamUtils;
+import com.fashion.supplychain.production.service.helper.MaterialPurchaseHelper;
+import com.fashion.supplychain.production.service.MaterialStockService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -14,8 +17,8 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.transaction.annotation.Transactional;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.HashMap;
@@ -35,20 +38,13 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.util.StringUtils;
 import java.util.NoSuchElementException;
-import java.time.format.DateTimeFormatter;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
 public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMapper, MaterialPurchase>
         implements MaterialPurchaseService {
-
-    private static final Pattern RECEIVER_REMARK_TIME = Pattern
-            .compile("(\\d{4}-\\d{2}-\\d{2}\\s+\\d{2}:\\d{2}(?::\\d{2})?)");
 
     @Autowired
     private ObjectProvider<ProductionOrderService> productionOrderServiceProvider;
@@ -61,6 +57,9 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
 
     @Autowired
     private StyleAttachmentService styleAttachmentService;
+
+    @Autowired
+    private MaterialStockService materialStockService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -87,88 +86,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
 
     @Override
     public String resolveMaterialId(MaterialPurchase purchase) {
-        if (purchase == null) {
-            return null;
-        }
-        String existing = purchase.getMaterialId();
-        if (StringUtils.hasText(existing)) {
-            return existing.trim();
-        }
-
-        String styleId = StringUtils.hasText(purchase.getStyleId()) ? purchase.getStyleId().trim() : "";
-        String type = StringUtils.hasText(purchase.getMaterialType()) ? purchase.getMaterialType().trim().toLowerCase()
-                : "";
-        String code = StringUtils.hasText(purchase.getMaterialCode()) ? purchase.getMaterialCode().trim() : "";
-        String name = StringUtils.hasText(purchase.getMaterialName()) ? purchase.getMaterialName().trim() : "";
-        String spec = StringUtils.hasText(purchase.getSpecifications()) ? purchase.getSpecifications().trim() : "";
-        String unit = StringUtils.hasText(purchase.getUnit()) ? purchase.getUnit().trim() : "";
-
-        String key = String.join("|", styleId, type, code, name, spec, unit);
-        if (!StringUtils.hasText(key.replace("|", "").trim())) {
-            return null;
-        }
-        return UUID.nameUUIDFromBytes(key.getBytes(StandardCharsets.UTF_8)).toString();
-    }
-
-    private String normalizeMatchKey(String v) {
-        return v == null ? "" : v.trim().replaceAll("\\s+", " ").toLowerCase();
-    }
-
-    private List<String> splitOptions(String value) {
-        if (!StringUtils.hasText(value)) {
-            return List.of();
-        }
-        String[] parts = value.split("[,/，、\\s]+");
-        List<String> out = new ArrayList<>();
-        for (String p : parts) {
-            String n = normalizeMatchKey(p);
-            if (StringUtils.hasText(n)) {
-                out.add(n);
-            }
-        }
-        return out;
-    }
-
-    private String normalizeMaterialType(String raw) {
-        String type = raw == null ? "" : raw.trim();
-        if (!StringUtils.hasText(type)) {
-            return "fabric";
-        }
-
-        if ("面料".equals(type))
-            return "fabric";
-        if ("里料".equals(type))
-            return "lining";
-        if ("辅料".equals(type))
-            return "accessory";
-
-        if (type.startsWith("面料") && type.length() > 2) {
-            return "fabric" + type.substring(2).trim();
-        }
-        if (type.startsWith("里料") && type.length() > 2) {
-            return "lining" + type.substring(2).trim();
-        }
-        if (type.startsWith("辅料") && type.length() > 2) {
-            return "accessory" + type.substring(2).trim();
-        }
-
-        return type;
-    }
-
-    private Set<String> intersectOrNull(Set<String> source, Set<String> allowed) {
-        if (source == null) {
-            return null;
-        }
-        if (allowed == null || allowed.isEmpty()) {
-            return null;
-        }
-        Set<String> next = new HashSet<>();
-        for (String v : source) {
-            if (allowed.contains(v)) {
-                next.add(v);
-            }
-        }
-        return next.isEmpty() ? null : next;
+        return MaterialPurchaseHelper.resolveMaterialId(purchase);
     }
 
     @Override
@@ -184,6 +102,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         String supplierName = (String) safeParams.getOrDefault("supplierName", "");
         String status = (String) safeParams.getOrDefault("status", "");
         String orderNo = (String) safeParams.getOrDefault("orderNo", "");
+        String styleNo = (String) safeParams.getOrDefault("styleNo", "");
         String materialType = (String) safeParams.getOrDefault("materialType", "");
         String sourceType = (String) safeParams.getOrDefault("sourceType", "");
 
@@ -194,21 +113,23 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
                 .like(StringUtils.hasText(materialCode), MaterialPurchase::getMaterialCode, materialCode)
                 .like(StringUtils.hasText(materialName), MaterialPurchase::getMaterialName, materialName)
                 .like(StringUtils.hasText(orderNo), MaterialPurchase::getOrderNo, orderNo)
+                .like(StringUtils.hasText(styleNo), MaterialPurchase::getStyleNo, styleNo)
                 .eq(StringUtils.hasText(status), MaterialPurchase::getStatus, status)
                 .eq(StringUtils.hasText(sourceType), MaterialPurchase::getSourceType, sourceType)
                 .orderByDesc(MaterialPurchase::getCreateTime);
 
         if (StringUtils.hasText(materialType)) {
             String mt = materialType.trim();
-            if ("fabric".equals(mt) || "lining".equals(mt) || "accessory".equals(mt)) {
+            if (MaterialConstants.TYPE_FABRIC.equals(mt) || MaterialConstants.TYPE_LINING.equals(mt)
+                    || MaterialConstants.TYPE_ACCESSORY.equals(mt)) {
                 wrapper.and(w -> {
                     w.likeRight(MaterialPurchase::getMaterialType, mt);
-                    if ("fabric".equals(mt)) {
-                        w.or().likeRight(MaterialPurchase::getMaterialType, "面料");
-                    } else if ("lining".equals(mt)) {
-                        w.or().likeRight(MaterialPurchase::getMaterialType, "里料");
-                    } else if ("accessory".equals(mt)) {
-                        w.or().likeRight(MaterialPurchase::getMaterialType, "辅料");
+                    if (MaterialConstants.TYPE_FABRIC.equals(mt)) {
+                        w.or().likeRight(MaterialPurchase::getMaterialType, MaterialConstants.TYPE_FABRIC_CN);
+                    } else if (MaterialConstants.TYPE_LINING.equals(mt)) {
+                        w.or().likeRight(MaterialPurchase::getMaterialType, MaterialConstants.TYPE_LINING_CN);
+                    } else if (MaterialConstants.TYPE_ACCESSORY.equals(mt)) {
+                        w.or().likeRight(MaterialPurchase::getMaterialType, MaterialConstants.TYPE_ACCESSORY_CN);
                     }
                 });
             } else {
@@ -247,11 +168,11 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
 
                         int pq = record.getPurchaseQuantity() == null ? 0 : record.getPurchaseQuantity();
                         String s = beforeStatus == null ? "" : beforeStatus.trim();
-                        record.setStatus(resolveStatusByArrived(s, rq, pq));
+                        record.setStatus(MaterialPurchaseHelper.resolveStatusByArrived(s, rq, pq));
                     }
                 }
 
-                repairReceiverFromRemark(record);
+                MaterialPurchaseHelper.repairReceiverFromRemark(record);
 
             }
         }
@@ -273,101 +194,6 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
             log.warn("Failed to check purchases for order: orderId={}", oid, e);
             return false;
         }
-    }
-
-    private boolean repairReceiverFromRemark(MaterialPurchase record) {
-        if (record == null) {
-            return false;
-        }
-        boolean needName = !StringUtils.hasText(record.getReceiverName());
-        boolean needTime = record.getReceivedTime() == null;
-        if (!needName && !needTime) {
-            return false;
-        }
-
-        String remark = record.getRemark();
-        if (!StringUtils.hasText(remark)) {
-            return false;
-        }
-
-        String[] parts = remark.split("[；;]");
-        for (String p : parts) {
-            if (!StringUtils.hasText(p)) {
-                continue;
-            }
-            String t = p.trim();
-            if (!(t.startsWith("领取人") || t.startsWith("收货人") || t.startsWith("领料人"))) {
-                continue;
-            }
-
-            int idx = t.indexOf('：');
-            if (idx < 0) {
-                idx = t.indexOf(':');
-            }
-            if (idx < 0 || idx >= t.length() - 1) {
-                continue;
-            }
-            String payload = t.substring(idx + 1).trim();
-            if (!StringUtils.hasText(payload)) {
-                continue;
-            }
-
-            Matcher m = RECEIVER_REMARK_TIME.matcher(payload);
-            String name = null;
-            String timeRaw = null;
-            if (m.find()) {
-                timeRaw = m.group(1);
-                String before = payload.substring(0, m.start()).trim();
-                if (StringUtils.hasText(before)) {
-                    name = before;
-                }
-            } else {
-                String[] tokens = payload.split("\\s+");
-                if (tokens.length > 0 && StringUtils.hasText(tokens[0])) {
-                    name = tokens[0].trim();
-                }
-            }
-
-            LocalDateTime time = tryParseRemarkTime(timeRaw);
-            boolean changed = false;
-            String nameTrimmed = name == null ? null : name.trim();
-            if (needName && StringUtils.hasText(nameTrimmed)) {
-                record.setReceiverName(nameTrimmed);
-                changed = true;
-                needName = false;
-            }
-            if (needTime && time != null) {
-                record.setReceivedTime(time);
-                changed = true;
-                needTime = false;
-            }
-            if (changed) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private LocalDateTime tryParseRemarkTime(String raw) {
-        if (!StringUtils.hasText(raw)) {
-            return null;
-        }
-        String s = raw.trim();
-        try {
-            if (s.length() >= 19) {
-                return LocalDateTime.parse(s.substring(0, 19), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-            }
-        } catch (Exception e) {
-            log.warn("Failed to parse remark time with seconds: raw={}", raw, e);
-        }
-        try {
-            if (s.length() >= 16) {
-                return LocalDateTime.parse(s.substring(0, 16), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
-            }
-        } catch (Exception e) {
-            log.warn("Failed to parse remark time with minutes: raw={}", raw, e);
-        }
-        return null;
     }
 
     @Override
@@ -410,7 +236,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         }
 
         if (!StringUtils.hasText(materialPurchase.getStatus())) {
-            materialPurchase.setStatus("pending");
+            materialPurchase.setStatus(MaterialConstants.STATUS_PENDING);
         }
 
         if (materialPurchase.getUnitPrice() == null) {
@@ -421,30 +247,57 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         materialPurchase.setTotalAmount(materialPurchase.getUnitPrice().multiply(BigDecimal.valueOf(arrived)));
 
         String status = materialPurchase.getStatus() == null ? "" : materialPurchase.getStatus().trim();
-        if (!"cancelled".equalsIgnoreCase(status)) {
-            int purchaseQty = materialPurchase.getPurchaseQuantity() == null ? 0 : materialPurchase.getPurchaseQuantity();
-            materialPurchase.setStatus(resolveStatusByArrived(status, arrived, purchaseQty));
+        if (!MaterialConstants.STATUS_CANCELLED.equalsIgnoreCase(status)) {
+            int purchaseQty = materialPurchase.getPurchaseQuantity() == null ? 0
+                    : materialPurchase.getPurchaseQuantity();
+            materialPurchase.setStatus(MaterialPurchaseHelper.resolveStatusByArrived(status, arrived, purchaseQty));
         }
 
-        if ("completed".equalsIgnoreCase(materialPurchase.getStatus())
+        if (MaterialConstants.STATUS_COMPLETED.equalsIgnoreCase(materialPurchase.getStatus())
                 && materialPurchase.getActualArrivalDate() == null) {
             materialPurchase.setActualArrivalDate(now);
+        }
+
+        // 确保 unit 字段有值，避免插入失败
+        if (!StringUtils.hasText(materialPurchase.getUnit())) {
+            materialPurchase.setUnit("-");
         }
 
         ensureSnapshot(materialPurchase);
 
         // 保存物料采购记录
-        return this.save(materialPurchase);
+        boolean saved = this.save(materialPurchase);
+
+        // 如果初始保存时就有到货数量，需要同步库存
+        if (saved) {
+            int currentArrived = materialPurchase.getArrivedQuantity() == null ? 0
+                    : materialPurchase.getArrivedQuantity();
+            if (currentArrived > 0) {
+                try {
+                    materialStockService.increaseStock(materialPurchase, currentArrived);
+                } catch (Exception e) {
+                    log.warn("Failed to init material stock on save: purchaseId={}, error={}", materialPurchase.getId(),
+                            e.getMessage());
+                }
+            }
+        }
+        return saved;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updatePurchaseAndUpdateOrder(MaterialPurchase materialPurchase) {
+        // 获取旧数据以计算库存差异
+        MaterialPurchase oldPurchase = null;
+        if (StringUtils.hasText(materialPurchase.getId())) {
+            oldPurchase = this.getById(materialPurchase.getId());
+        }
+
         // 设置更新时间
         materialPurchase.setUpdateTime(LocalDateTime.now());
 
         if (!StringUtils.hasText(materialPurchase.getStatus())) {
-            materialPurchase.setStatus("pending");
+            materialPurchase.setStatus(MaterialConstants.STATUS_PENDING);
         }
 
         if (materialPurchase.getUnitPrice() == null) {
@@ -454,12 +307,13 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         materialPurchase.setTotalAmount(materialPurchase.getUnitPrice().multiply(BigDecimal.valueOf(arrived)));
 
         String status = materialPurchase.getStatus() == null ? "" : materialPurchase.getStatus().trim();
-        if (!"cancelled".equalsIgnoreCase(status)) {
-            int purchaseQty = materialPurchase.getPurchaseQuantity() == null ? 0 : materialPurchase.getPurchaseQuantity();
-            materialPurchase.setStatus(resolveStatusByArrived(status, arrived, purchaseQty));
+        if (!MaterialConstants.STATUS_CANCELLED.equalsIgnoreCase(status)) {
+            int purchaseQty = materialPurchase.getPurchaseQuantity() == null ? 0
+                    : materialPurchase.getPurchaseQuantity();
+            materialPurchase.setStatus(MaterialPurchaseHelper.resolveStatusByArrived(status, arrived, purchaseQty));
         }
 
-        if ("completed".equalsIgnoreCase(materialPurchase.getStatus())
+        if (MaterialConstants.STATUS_COMPLETED.equalsIgnoreCase(materialPurchase.getStatus())
                 && materialPurchase.getActualArrivalDate() == null) {
             materialPurchase.setActualArrivalDate(materialPurchase.getUpdateTime());
         }
@@ -467,7 +321,25 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         ensureSnapshot(materialPurchase);
 
         // 更新物料采购记录
-        return this.updateById(materialPurchase);
+        boolean updated = this.updateById(materialPurchase);
+
+        // 同步库存差异
+        if (updated && oldPurchase != null) {
+            int oldArrived = oldPurchase.getArrivedQuantity() == null ? 0 : oldPurchase.getArrivedQuantity();
+            int newArrived = arrived;
+            int delta = newArrived - oldArrived;
+            if (delta != 0) {
+                try {
+                    materialStockService.increaseStock(materialPurchase, delta);
+                } catch (Exception e) {
+                    log.warn("Failed to sync material stock on update: purchaseId={}, delta={}, error={}",
+                            materialPurchase.getId(), delta, e.getMessage());
+                    throw new RuntimeException("库存同步失败", e);
+                }
+            }
+        }
+
+        return updated;
     }
 
     private void ensureSnapshot(MaterialPurchase materialPurchase) {
@@ -573,7 +445,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
                 if (!StringUtils.hasText(a.getFileUrl())) {
                     continue;
                 }
-                if (looksLikeImage(a)) {
+                if (MaterialPurchaseHelper.looksLikeImage(a)) {
                     return a.getFileUrl();
                 }
             }
@@ -582,27 +454,6 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         }
 
         return null;
-    }
-
-    private boolean looksLikeImage(StyleAttachment a) {
-        String t = a.getFileType() == null ? "" : a.getFileType().toLowerCase();
-        if (t.contains("image")) {
-            return true;
-        }
-        String name = a.getFileName() == null ? "" : a.getFileName().toLowerCase();
-        String url = a.getFileUrl() == null ? "" : a.getFileUrl().toLowerCase();
-        return name.endsWith(".jpg")
-                || name.endsWith(".jpeg")
-                || name.endsWith(".png")
-                || name.endsWith(".gif")
-                || name.endsWith(".webp")
-                || name.endsWith(".bmp")
-                || url.contains(".jpg")
-                || url.contains(".jpeg")
-                || url.contains(".png")
-                || url.contains(".gif")
-                || url.contains(".webp")
-                || url.contains(".bmp");
     }
 
     @Override
@@ -633,7 +484,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
 
         int aq = Math.max(0, arrivedQty);
         int clampedArrived = Math.min(aq, purchaseQty);
-        int threshold = calcArrivedCompleteThreshold(purchaseQty);
+        int threshold = MaterialPurchaseHelper.calcArrivedCompleteThreshold(purchaseQty);
         return (threshold > 0 && aq >= threshold) ? purchaseQty : clampedArrived;
     }
 
@@ -699,39 +550,64 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         return out;
     }
 
-    private int calcArrivedCompleteThreshold(int purchaseQty) {
-        if (purchaseQty <= 0) {
-            return 0;
-        }
-        return purchaseQty;
-    }
-
-    private String resolveStatusByArrived(String previousStatus, int arrivedQty, int purchaseQty) {
-        String prev = previousStatus == null ? "" : previousStatus.trim();
-        if (arrivedQty <= 0) {
-            return "received".equals(prev) ? "received" : "pending";
-        }
-        int threshold = calcArrivedCompleteThreshold(purchaseQty);
-        if (threshold <= 0) {
-            return "completed";
-        }
-        if (arrivedQty < threshold) {
-            return "partial";
-        }
-        return "completed";
-    }
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateArrivedQuantity(String id, Integer arrivedQuantity, String remark) {
         // 查询物料采购记录
+        // 注意：在同一事务中，getById 可能返回缓存对象。如果 updateById 未能刷新缓存，或者对象是同一个引用，
+        // 这里的 oldArrived 可能已经是上次 updateArrivedQuantity 设置的新值。
+        // 但 updateArrivedQuantity 调用了 updateById，应该会更新数据库。
+
+        // 问题在于：
+        // 1. 测试用例第一次调用 updateArrivedQuantity(..., 50, ...)
+        // -> getById: arrived=0
+        // -> setArrived(50)
+        // -> updateById(...) -> 提交到 DB (或 flush 到 session)
+        // -> materialPurchase 对象引用被修改为 arrived=50
+
+        // 2. 测试用例第二次调用 updateArrivedQuantity(..., 80, ...)
+        // -> getById: 如果 MyBatis 一级缓存生效，且是同一个 SqlSession，它可能返回同一个 materialPurchase 引用
+        // (arrived=50)
+        // -> oldArrived = 50
+        // -> delta = 80 - 50 = 30
+        // -> setArrived(80)
+        // -> updateById(...)
+        // -> stock +30 -> stock = 50 + 30 = 80. 正确。
+
+        // 3. 测试用例第三次调用 updateArrivedQuantity(..., 70, ...)
+        // -> getById: 拿到引用 (arrived=80)
+        // -> oldArrived = 80
+        // -> delta = 70 - 80 = -10
+        // -> setArrived(70)
+        // -> updateById(...)
+        // -> stock -10 -> stock = 80 - 10 = 70. 正确。
+
+        // 那么为什么测试失败，显示 stock=80 呢？
+        // 说明第三步没有扣减库存。
+        // 可能原因：
+        // A. delta 计算错误 (oldArrived 不对)
+        // B. increaseStock 没有执行
+        // C. increaseStock 执行了但没生效
+
+        // 让我们加点日志
         MaterialPurchase materialPurchase = this.getById(id);
         if (materialPurchase == null) {
             return false;
         }
 
+        int oldArrived = materialPurchase.getArrivedQuantity() == null ? 0 : materialPurchase.getArrivedQuantity();
+        int newArrived = arrivedQuantity == null ? 0 : arrivedQuantity;
+        int delta = newArrived - oldArrived;
+
+        log.info("updateArrivedQuantity: id={}, old={}, new={}, delta={}", id, oldArrived, newArrived, delta);
+
+        // 如果没有变化，直接返回true
+        if (delta == 0 && !StringUtils.hasText(remark)) {
+            return true;
+        }
+
         // 更新到货数量
-        materialPurchase.setArrivedQuantity(arrivedQuantity);
+        materialPurchase.setArrivedQuantity(newArrived);
         materialPurchase.setUpdateTime(LocalDateTime.now());
 
         if (StringUtils.hasText(remark)) {
@@ -747,19 +623,35 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         }
 
         if (materialPurchase.getUnitPrice() != null) {
-            int arrivedQty = arrivedQuantity == null ? 0 : arrivedQuantity;
-            materialPurchase.setTotalAmount(materialPurchase.getUnitPrice().multiply(BigDecimal.valueOf(arrivedQty)));
+            materialPurchase.setTotalAmount(materialPurchase.getUnitPrice().multiply(BigDecimal.valueOf(newArrived)));
         }
 
         String currentStatus = materialPurchase.getStatus() == null ? "" : materialPurchase.getStatus().trim();
         if (!"cancelled".equals(currentStatus)) {
             int purchaseQty = materialPurchase.getPurchaseQuantity() == null ? 0
                     : materialPurchase.getPurchaseQuantity();
-            int arrivedQty = arrivedQuantity == null ? 0 : arrivedQuantity;
-            String nextStatus = resolveStatusByArrived(currentStatus, arrivedQty, purchaseQty);
+            String nextStatus = MaterialPurchaseHelper.resolveStatusByArrived(currentStatus, newArrived, purchaseQty);
             materialPurchase.setStatus(nextStatus);
             if ("completed".equalsIgnoreCase(nextStatus) && materialPurchase.getActualArrivalDate() == null) {
                 materialPurchase.setActualArrivalDate(LocalDateTime.now());
+            }
+        }
+
+        // 确保 unit 字段有值，避免插入失败
+        if (!StringUtils.hasText(materialPurchase.getUnit())) {
+            materialPurchase.setUnit("-");
+        }
+
+        // 同步库存
+        if (delta != 0) {
+            // 如果是正数，增加库存；如果是负数（修正错误），减少库存
+            // updateStockQuantity 支持负数
+            try {
+                materialStockService.increaseStock(materialPurchase, delta);
+            } catch (Exception e) {
+                log.warn("Failed to sync material stock: purchaseId={}, delta={}, error={}", id, delta, e.getMessage());
+                // 可选择抛出异常回滚，或者仅记录日志。建议回滚以保证数据一致性
+                throw new RuntimeException("库存同步失败", e);
             }
         }
 
@@ -815,13 +707,13 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         }
 
         String status = existed.getStatus() == null ? "" : existed.getStatus().trim();
-        if ("completed".equals(status) || "cancelled".equals(status)) {
+        if (MaterialConstants.STATUS_COMPLETED.equals(status) || MaterialConstants.STATUS_CANCELLED.equals(status)) {
             return false;
         }
 
         String rid = StringUtils.hasText(receiverId) ? receiverId.trim() : null;
         String rname = StringUtils.hasText(receiverName) ? receiverName.trim() : null;
-        boolean pending = "pending".equals(status) || !StringUtils.hasText(status);
+        boolean pending = MaterialConstants.STATUS_PENDING.equals(status) || !StringUtils.hasText(status);
         if (!pending) {
             return isSameReceiver(existed, rid, rname);
         }
@@ -837,7 +729,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         LambdaUpdateWrapper<MaterialPurchase> uw = new LambdaUpdateWrapper<MaterialPurchase>()
                 .eq(MaterialPurchase::getId, purchaseId)
                 .eq(MaterialPurchase::getDeleteFlag, 0)
-                .and(w -> w.eq(MaterialPurchase::getStatus, "pending")
+                .and(w -> w.eq(MaterialPurchase::getStatus, MaterialConstants.STATUS_PENDING)
                         .or()
                         .isNull(MaterialPurchase::getStatus)
                         .or()
@@ -846,7 +738,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
                 .set(MaterialPurchase::getReceiverName, finalReceiverName)
                 .set(MaterialPurchase::getReceivedTime, now)
                 .set(MaterialPurchase::getUpdateTime, now)
-                .set(MaterialPurchase::getStatus, "received");
+                .set(MaterialPurchase::getStatus, MaterialConstants.STATUS_RECEIVED);
 
         boolean updated = this.update(uw);
         if (updated) {
@@ -897,7 +789,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         }
 
         String status = existed.getStatus() == null ? "" : existed.getStatus().trim();
-        if ("cancelled".equals(status)) {
+        if (MaterialConstants.STATUS_CANCELLED.equals(status)) {
             return false;
         }
 
@@ -939,7 +831,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         patch.setTotalAmount(unitPrice.multiply(BigDecimal.valueOf(rq)));
 
         int pq = existed.getPurchaseQuantity() == null ? 0 : existed.getPurchaseQuantity();
-        patch.setStatus(resolveStatusByArrived(status, rq, pq));
+        patch.setStatus(MaterialPurchaseHelper.resolveStatusByArrived(status, rq, pq));
 
         patch.setReturnConfirmerId(StringUtils.hasText(confirmerId) ? confirmerId.trim() : null);
         patch.setReturnConfirmerName(StringUtils.hasText(confirmerName) ? confirmerName.trim() : who);
@@ -1065,8 +957,8 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
             if (l == null) {
                 continue;
             }
-            String lc = normalizeMatchKey(l.color);
-            String ls = normalizeMatchKey(l.size);
+            String lc = MaterialPurchaseHelper.normalizeMatchKey(l.color);
+            String ls = MaterialPurchaseHelper.normalizeMatchKey(l.size);
             if (StringUtils.hasText(lc)) {
                 orderColorSet.add(lc);
             }
@@ -1083,21 +975,21 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
             String bomColor = bom.getColor() == null ? "" : bom.getColor().trim();
             String bomSize = bom.getSize() == null ? "" : bom.getSize().trim();
 
-            List<String> bomColorOpts = splitOptions(bomColor);
+            List<String> bomColorOpts = MaterialPurchaseHelper.splitOptions(bomColor);
             Set<String> bomColorSet = bomColorOpts.isEmpty() ? null : new HashSet<>(bomColorOpts);
-            List<String> bomSizeOpts = splitOptions(bomSize);
+            List<String> bomSizeOpts = MaterialPurchaseHelper.splitOptions(bomSize);
             Set<String> bomSizeSet = bomSizeOpts.isEmpty() ? null : new HashSet<>(bomSizeOpts);
 
-            bomColorSet = intersectOrNull(bomColorSet, orderColorSet);
-            bomSizeSet = intersectOrNull(bomSizeSet, orderSizeSet);
+            bomColorSet = MaterialPurchaseHelper.intersectOrNull(bomColorSet, orderColorSet);
+            bomSizeSet = MaterialPurchaseHelper.intersectOrNull(bomSizeSet, orderSizeSet);
 
             int matchedQty = 0;
             for (OrderLine l : lines) {
                 if (l == null) {
                     continue;
                 }
-                String lc = normalizeMatchKey(l.color);
-                String ls = normalizeMatchKey(l.size);
+                String lc = MaterialPurchaseHelper.normalizeMatchKey(l.color);
+                String ls = MaterialPurchaseHelper.normalizeMatchKey(l.size);
                 boolean colorOk = bomColorSet == null || bomColorSet.contains(lc);
                 boolean sizeOk = bomSizeSet == null || bomSizeSet.contains(ls);
                 if (colorOk && sizeOk) {
@@ -1134,7 +1026,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
                 mp.setPurchaseNo(nextPurchaseNo());
                 mp.setMaterialCode(bom.getMaterialCode());
                 mp.setMaterialName(bom.getMaterialName());
-                mp.setMaterialType(normalizeMaterialType(bom.getMaterialType()));
+                mp.setMaterialType(MaterialPurchaseHelper.normalizeMaterialType(bom.getMaterialType()));
                 mp.setSpecifications(bom.getSpecification());
                 mp.setUnit(bom.getUnit());
                 mp.setPurchaseQuantity(requiredInt);
@@ -1150,7 +1042,10 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
                 mp.setStyleName(order.getStyleName());
                 mp.setMaterialId(resolveMaterialId(mp));
                 mp.setStyleCover(resolveStyleCoverByStyleId(order.getStyleId()));
-                mp.setStatus("pending");
+                // 设置颜色和尺码信息（从BOM同步到采购单）
+                mp.setColor(StringUtils.hasText(bomColor) ? bomColor : null);
+                mp.setSize(StringUtils.hasText(bomSize) ? bomSize : null);
+                mp.setStatus(MaterialConstants.STATUS_PENDING);
                 LocalDateTime now = LocalDateTime.now();
                 mp.setCreateTime(now);
                 mp.setUpdateTime(now);
@@ -1171,7 +1066,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         String ts = now.format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
         for (int i = 0; i < 6; i++) {
             int rand = (int) (ThreadLocalRandom.current().nextDouble() * 900) + 100;
-            String candidate = "PUR" + ts + rand;
+            String candidate = MaterialConstants.PURCHASE_NO_PREFIX + ts + rand;
             long cnt = this
                     .count(new LambdaQueryWrapper<MaterialPurchase>().eq(MaterialPurchase::getPurchaseNo, candidate));
             if (cnt == 0) {
@@ -1180,12 +1075,6 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         }
         String nano = String.valueOf(System.nanoTime());
         String suffix = nano.length() > 6 ? nano.substring(nano.length() - 6) : nano;
-        return "PUR" + ts + suffix;
+        return MaterialConstants.PURCHASE_NO_PREFIX + ts + suffix;
     }
-
-    /**
-     * 更新生产订单的物料到位率
-     *
-     * @param orderId 生产订单ID
-     */
 }

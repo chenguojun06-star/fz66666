@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.service.impl;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fashion.supplychain.common.ParamUtils;
@@ -163,5 +164,18 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
                 }
                 return baseMapper.delete(new LambdaQueryWrapper<ScanRecord>()
                                 .eq(ScanRecord::getOrderNo, orderNo.trim()));
+        }
+
+        @Override
+        public java.util.List<Map<String, Object>> getScanStatsByOrder(String orderNo) {
+                if (!StringUtils.hasText(orderNo)) {
+                        return java.util.Collections.emptyList();
+                }
+                return baseMapper.selectMaps(
+                                new QueryWrapper<ScanRecord>()
+                                                .select("color", "size", "count(*) as count")
+                                                .eq("order_no", orderNo.trim())
+                                                .eq("scan_result", "success")
+                                                .groupBy("color", "size"));
         }
 }

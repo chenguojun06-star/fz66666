@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Form, Input, Button, Card, Typography, App } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../utils/authContext';
+import { useAuth } from '../../utils/AuthContext';
 import './styles.css';
 
 const { Title } = Typography;

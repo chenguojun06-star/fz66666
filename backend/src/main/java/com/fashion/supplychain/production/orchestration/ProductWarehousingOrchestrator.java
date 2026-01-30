@@ -12,6 +12,7 @@ import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
+import com.fashion.supplychain.style.service.ProductSkuService;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.HashMap;
@@ -49,6 +50,9 @@ public class ProductWarehousingOrchestrator {
 
     @Autowired
     private ProductionOrderScanRecordDomainService scanRecordDomainService;
+
+    @Autowired
+    private ProductSkuService productSkuService;
 
     public IPage<ProductWarehousing> list(Map<String, Object> params) {
         return productWarehousingService.queryPage(params);
@@ -114,9 +118,11 @@ public class ProductWarehousingOrchestrator {
 
         // 如果没有orderId但有orderNo，自动查找orderId
         String orderId = StringUtils.hasText(productWarehousing.getOrderId())
-            ? productWarehousing.getOrderId().trim() : null;
+                ? productWarehousing.getOrderId().trim()
+                : null;
         String orderNo = StringUtils.hasText(productWarehousing.getOrderNo())
-            ? productWarehousing.getOrderNo().trim() : null;
+                ? productWarehousing.getOrderNo().trim()
+                : null;
 
         if (!StringUtils.hasText(orderId) && StringUtils.hasText(orderNo)) {
             ProductionOrder order = productionOrderService.getByOrderNo(orderNo);
@@ -129,9 +135,11 @@ public class ProductWarehousingOrchestrator {
 
         // 如果没有cuttingBundleId，尝试通过qrCode或bundleNo查找
         String bundleId = StringUtils.hasText(productWarehousing.getCuttingBundleId())
-            ? productWarehousing.getCuttingBundleId().trim() : null;
+                ? productWarehousing.getCuttingBundleId().trim()
+                : null;
         String bundleQrCode = StringUtils.hasText(productWarehousing.getCuttingBundleQrCode())
-            ? productWarehousing.getCuttingBundleQrCode().trim() : null;
+                ? productWarehousing.getCuttingBundleQrCode().trim()
+                : null;
         Integer bundleNo = productWarehousing.getCuttingBundleNo();
 
         if (!StringUtils.hasText(bundleId)) {
@@ -143,10 +151,10 @@ public class ProductWarehousingOrchestrator {
             // 方式2：通过订单号+菲号序号查找
             if (bundle == null && StringUtils.hasText(orderNo) && bundleNo != null && bundleNo > 0) {
                 bundle = cuttingBundleService.lambdaQuery()
-                    .eq(CuttingBundle::getProductionOrderNo, orderNo)
-                    .eq(CuttingBundle::getBundleNo, bundleNo)
-                    .last("LIMIT 1")
-                    .one();
+                        .eq(CuttingBundle::getProductionOrderNo, orderNo)
+                        .eq(CuttingBundle::getBundleNo, bundleNo)
+                        .last("LIMIT 1")
+                        .one();
             }
             if (bundle != null && StringUtils.hasText(bundle.getId())) {
                 productWarehousing.setCuttingBundleId(bundle.getId());
@@ -179,7 +187,7 @@ public class ProductWarehousingOrchestrator {
             }
             productionOrderService.recomputeProgressFromRecords(orderId);
 
-        // 已禁用系统自动完成
+            // 已禁用系统自动完成
         }
         return true;
     }
@@ -297,6 +305,45 @@ public class ProductWarehousingOrchestrator {
         return true;
     }
 
+    private void updateSkuStock(ProductWarehousing w, ProductionOrder order, CuttingBundle bundle, int deltaQuantity) {
+        if (deltaQuantity == 0) {
+            return;
+        }
+        try {
+            String styleNo = w.getStyleNo();
+            String color = null;
+            String size = null;
+
+            if (bundle != null) {
+                color = bundle.getColor();
+                size = bundle.getSize();
+            } else if (order != null) {
+                color = order.getColor();
+                size = order.getSize();
+            }
+
+            // 如果bundle为null，尝试根据cuttingBundleId加载
+            if (color == null && StringUtils.hasText(w.getCuttingBundleId())) {
+                try {
+                    CuttingBundle b = cuttingBundleService.getById(w.getCuttingBundleId());
+                    if (b != null) {
+                        color = b.getColor();
+                        size = b.getSize();
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+
+            if (StringUtils.hasText(styleNo) && StringUtils.hasText(color) && StringUtils.hasText(size)) {
+                String skuCode = String.format("%s-%s-%s", styleNo.trim(), color.trim(), size.trim());
+                productSkuService.updateStock(skuCode, deltaQuantity);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to update SKU stock in orchestrator: warehousingId={}, delta={}, error={}", w.getId(),
+                    deltaQuantity, e.getMessage());
+        }
+    }
+
     public boolean delete(String id) {
         String key = StringUtils.hasText(id) ? id.trim() : null;
         if (!StringUtils.hasText(key)) {
@@ -316,6 +363,11 @@ public class ProductWarehousingOrchestrator {
         boolean ok = productWarehousingService.updateById(patch);
         if (!ok) {
             throw new IllegalStateException("删除失败");
+        }
+
+        // Decrement Stock
+        if (current.getQualifiedQuantity() != null && current.getQualifiedQuantity() > 0) {
+            updateSkuStock(current, null, null, -current.getQualifiedQuantity());
         }
 
         if (StringUtils.hasText(orderId)) {
@@ -695,6 +747,11 @@ public class ProductWarehousingOrchestrator {
                 patch.setUpdateTime(now);
                 productWarehousingService.updateById(patch);
                 remaining -= q;
+
+                // Decrement Stock
+                if (q > 0) {
+                    updateSkuStock(w, null, bundle, -q);
+                }
             } else {
                 int nextQualified = q - remaining;
                 int whQty = w.getWarehousingQuantity() == null ? q : w.getWarehousingQuantity();
@@ -706,6 +763,12 @@ public class ProductWarehousingOrchestrator {
                 patch.setWarehousingQuantity(nextWhQty);
                 patch.setUpdateTime(now);
                 productWarehousingService.updateById(patch);
+
+                // Decrement Stock
+                if (remaining > 0) {
+                    updateSkuStock(w, null, bundle, -remaining);
+                }
+
                 remaining = 0;
             }
         }

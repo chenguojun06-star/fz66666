@@ -17,8 +17,10 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ThreadLocalRandom;
 import lombok.extern.slf4j.Slf4j;
+import com.fashion.supplychain.style.service.ProductSkuService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Service
@@ -31,6 +33,9 @@ public class ProductOutstockServiceImpl extends ServiceImpl<ProductOutstockMappe
 
     @Autowired
     private ProductWarehousingService productWarehousingService;
+
+    @Autowired
+    private ProductSkuService productSkuService;
 
     @Override
     public IPage<ProductOutstock> queryPage(Map<String, Object> params) {
@@ -86,6 +91,7 @@ public class ProductOutstockServiceImpl extends ServiceImpl<ProductOutstockMappe
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean saveOutstockAndValidate(ProductOutstock outstock) {
         LocalDateTime now = LocalDateTime.now();
 
@@ -134,7 +140,23 @@ public class ProductOutstockServiceImpl extends ServiceImpl<ProductOutstockMappe
         outstock.setUpdateTime(now);
         outstock.setDeleteFlag(0);
 
-        return this.save(outstock);
+        boolean saved = this.save(outstock);
+        if (saved) {
+            // 扣减SKU库存
+            try {
+                String styleNo = outstock.getStyleNo();
+                String color = order.getColor();
+                String size = order.getSize();
+                if (StringUtils.hasText(styleNo) && StringUtils.hasText(color) && StringUtils.hasText(size)) {
+                    String skuCode = String.format("%s-%s-%s", styleNo.trim(), color.trim(), size.trim());
+                    productSkuService.updateStock(skuCode, -qty);
+                }
+            } catch (Exception e) {
+                log.error("Failed to decrement stock for outstock: id={}, error={}", outstock.getId(), e.getMessage());
+                throw new RuntimeException("库存扣减失败", e);
+            }
+        }
+        return saved;
     }
 
     private String buildOutstockNo(LocalDateTime now) {

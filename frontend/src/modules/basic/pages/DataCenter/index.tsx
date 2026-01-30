@@ -1,14 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Button, Card, Col, Input, Row, Space, Statistic, message } from 'antd';
-import { DownloadOutlined, PrinterOutlined, AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
+import { Button, Card, Col, Input, Row, Space, Statistic, message, Form, Tabs } from 'antd';
+import { DownloadOutlined, PrinterOutlined, AppstoreOutlined, UnorderedListOutlined, EditOutlined, EyeOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import UniversalCardView from '@/components/common/UniversalCardView';
 import ResizableTable from '@/components/common/ResizableTable';
+import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
+import StylePrintModal from '@/components/common/StylePrintModal';
 import api from '@/utils/api';
 import { StyleInfo, StyleQueryParams } from '@/types/style';
 import { StyleAttachmentsButton } from '@/components/StyleAssets';
 import { toCategoryCn } from '@/utils/styleCategory';
+import { formatDateTime } from '@/utils/datetime';
+import { useViewport } from '@/utils/useViewport';
 
 interface DataCenterStats {
   styleCount: number;
@@ -264,6 +268,9 @@ const AttachmentThumb: React.FC<{ styleId?: string | number; cover?: string | nu
 };
 
 const DataCenter: React.FC = () => {
+  const { isMobile, modalWidth } = useViewport();
+  const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
+
   const [stats, setStats] = useState<DataCenterStats>({
     styleCount: 0,
     materialCount: 0,
@@ -278,6 +285,21 @@ const DataCenter: React.FC = () => {
   const [styles, setStyles] = useState<StyleInfo[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+
+  // 打印弹窗状态
+  const [printModalVisible, setPrintModalVisible] = useState(false);
+  const [printingRecord, setPrintingRecord] = useState<StyleInfo | null>(null);
+
+  // 编辑弹窗状态
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingRecord, setEditingRecord] = useState<StyleInfo | null>(null);
+  const [editForm] = Form.useForm();
+  const [editSaving, setEditSaving] = useState(false);
+
+  // 详情弹窗状态
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [detailRecord, setDetailRecord] = useState<StyleInfo | null>(null);
 
   const fetchStats = async () => {
     try {
@@ -342,28 +364,47 @@ const DataCenter: React.FC = () => {
   };
 
   const printProductionSheet = async (style: StyleInfo) => {
+    // 使用通用打印组件
+    setPrintingRecord(style);
+    setPrintModalVisible(true);
+  };
+
+  // 打开编辑弹窗
+  const openEditModal = (record: StyleInfo) => {
+    setEditingRecord(record);
+    editForm.setFieldsValue({
+      description: record.description || '',
+    });
+    setEditModalVisible(true);
+  };
+
+  // 保存编辑
+  const handleEditSave = async () => {
+    if (!editingRecord) return;
     try {
-      const res = await api.get<{ code: number; message: string; data: unknown }>('/data-center/production-sheet', { params: { styleNo: style.styleNo } });
-      if (res.code !== 200) {
-        message.error(res.message || '获取生产制单失败');
-        return;
+      setEditSaving(true);
+      const values = await editForm.validateFields();
+      const res = await api.put<{ code: number; message: string }>(`/style/info/${editingRecord.id}`, {
+        description: values.description,
+      });
+      if (res.code === 200) {
+        message.success('保存成功');
+        setEditModalVisible(false);
+        fetchStyles();
+      } else {
+        message.error(res.message || '保存失败');
       }
-      const html = buildProductionSheetHtml(res.data);
-      const w = window.open('', '_blank');
-      if (!w) {
-        message.error('浏览器拦截了新窗口');
-        return;
-      }
-      w.document.open();
-      w.document.write(html);
-      w.document.close();
-      w.focus();
-      setTimeout(() => {
-        w.print();
-      }, 200);
     } catch (e: unknown) {
-      message.error(e?.message || '打印失败');
+      message.error(e?.message || '保存失败');
+    } finally {
+      setEditSaving(false);
     }
+  };
+
+  // 打开详情弹窗
+  const openDetailModal = (record: StyleInfo) => {
+    setDetailRecord(record);
+    setDetailModalVisible(true);
   };
 
   useEffect(() => {
@@ -385,43 +426,68 @@ const DataCenter: React.FC = () => {
       },
       { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 140 },
       { title: '款名', dataIndex: 'styleName', key: 'styleName', ellipsis: true },
-      { title: '品类', dataIndex: 'category', key: 'category', width: 140, render: (v: unknown) => toCategoryCn(v) },
+      { title: '品类', dataIndex: 'category', key: 'category', width: 100, render: (v: unknown) => toCategoryCn(v) },
       {
-        title: '附件',
+        title: '推送时间',
+        dataIndex: 'productionCompletedTime',
+        key: 'productionCompletedTime',
+        width: 150,
+        render: (v: unknown) => v ? formatDateTime(v) : '-'
+      },
+      {
+        title: '推送人',
+        dataIndex: 'productionAssignee',
+        key: 'productionAssignee',
+        width: 100,
+        render: (v: unknown) => v || '-'
+      },
+      {
+        title: '纸样',
         key: 'attachments',
         width: 100,
         render: (_: any, record: StyleInfo) => (
           <StyleAttachmentsButton
             styleId={(record as Record<string, unknown>).id}
             styleNo={(record as Record<string, unknown>).styleNo}
-            modalTitle={`放码纸样（${(record as Record<string, unknown>).styleNo}）`}
-            onlyGradingPattern={true}
           />
         )
       },
       {
         title: '操作',
         key: 'action',
-        width: 260,
+        width: 280,
         render: (_: any, record: StyleInfo) => (
           <RowActions
-            maxInline={3}
+            maxInline={4}
             actions={[
               {
-                key: 'download',
-                label: '下载生产制单',
-                title: '下载生产制单',
-                icon: <DownloadOutlined />,
-                onClick: () => downloadProductionSheet(record),
-                primary: true,
+                key: 'view',
+                label: '查看',
+                title: '查看详情',
+                icon: <EyeOutlined />,
+                onClick: () => openDetailModal(record),
+              },
+              {
+                key: 'edit',
+                label: '编辑',
+                title: '编辑生产制单内容',
+                icon: <EditOutlined />,
+                onClick: () => openEditModal(record),
               },
               {
                 key: 'print',
-                label: '打印制单',
+                label: '打印',
                 title: '打印制单',
                 icon: <PrinterOutlined />,
                 onClick: () => printProductionSheet(record),
                 primary: true,
+              },
+              {
+                key: 'download',
+                label: '下载',
+                title: '下载生产制单',
+                icon: <DownloadOutlined />,
+                onClick: () => downloadProductionSheet(record),
               },
             ]}
           />
@@ -485,6 +551,132 @@ const DataCenter: React.FC = () => {
           }}
         />
       </Card>
+
+      {/* 通用打印弹窗 */}
+      <StylePrintModal
+        visible={printModalVisible}
+        onClose={() => {
+          setPrintModalVisible(false);
+          setPrintingRecord(null);
+        }}
+        styleId={printingRecord?.id}
+        styleNo={printingRecord?.styleNo}
+        styleName={printingRecord?.styleName}
+        cover={printingRecord?.cover}
+        category={printingRecord?.category}
+        season={printingRecord?.season}
+        mode="sample"
+      />
+
+      {/* 编辑生产制单弹窗 */}
+      <ResizableModal
+        open={editModalVisible}
+        title={`编辑生产制单 - ${editingRecord?.styleNo || ''}`}
+        onCancel={() => {
+          setEditModalVisible(false);
+          setEditingRecord(null);
+          editForm.resetFields();
+        }}
+        footer={
+          <Space>
+            <Button onClick={() => {
+              setEditModalVisible(false);
+              setEditingRecord(null);
+              editForm.resetFields();
+            }}>取消</Button>
+            <Button type="primary" loading={editSaving} onClick={handleEditSave}>保存</Button>
+          </Space>
+        }
+        defaultWidth="50vw"
+        defaultHeight="60vh"
+      >
+        <Form form={editForm} layout="vertical">
+          <Form.Item
+            name="description"
+            label="生产要求（每行一条，最多15条）"
+            rules={[{ required: false }]}
+          >
+            <Input.TextArea
+              rows={15}
+              placeholder="请输入生产要求，每行一条&#10;例如：&#10;1. 裁剪前需松布和缩水，确认布号、正反面及染布，裁剪按照合同订单数量明细裁剪；&#10;2. 针织面料需松布24小时可裁剪，拉布经纬纱向要求经直纬平，注意避开布匹瑕疵和色差；"
+            />
+          </Form.Item>
+        </Form>
+      </ResizableModal>
+
+      {/* 详情弹窗 */}
+      <ResizableModal
+        open={detailModalVisible}
+        title={`款式详情 - ${detailRecord?.styleNo || ''}`}
+        onCancel={() => {
+          setDetailModalVisible(false);
+          setDetailRecord(null);
+        }}
+        footer={
+          <Space>
+            <Button onClick={() => {
+              setDetailModalVisible(false);
+              setDetailRecord(null);
+            }}>关闭</Button>
+            <Button type="primary" onClick={() => {
+              if (detailRecord) {
+                printProductionSheet(detailRecord);
+              }
+            }}>打印制单</Button>
+          </Space>
+        }
+        defaultWidth="60vw"
+        defaultHeight="70vh"
+      >
+        {detailRecord && (
+          <div style={{ padding: '16px' }}>
+            <Row gutter={[16, 16]}>
+              <Col span={8}>
+                <div style={{
+                  width: '100%',
+                  aspectRatio: '1',
+                  borderRadius: 8,
+                  overflow: 'hidden',
+                  background: '#f5f5f5',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  {detailRecord.cover ? (
+                    <img src={detailRecord.cover} alt="封面" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <span style={{ color: '#999' }}>暂无封面</span>
+                  )}
+                </div>
+              </Col>
+              <Col span={16}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div><span style={{ color: '#666' }}>款号：</span>{detailRecord.styleNo}</div>
+                  <div><span style={{ color: '#666' }}>款名：</span>{detailRecord.styleName}</div>
+                  <div><span style={{ color: '#666' }}>品类：</span>{toCategoryCn(detailRecord.category)}</div>
+                  <div><span style={{ color: '#666' }}>颜色：</span>{detailRecord.color || '-'}</div>
+                  <div><span style={{ color: '#666' }}>推送人：</span>{(detailRecord as any).productionAssignee || '-'}</div>
+                  <div><span style={{ color: '#666' }}>推送时间：</span>{(detailRecord as any).productionCompletedTime ? formatDateTime((detailRecord as any).productionCompletedTime) : '-'}</div>
+                </div>
+                <div style={{ marginTop: 16 }}>
+                  <div style={{ fontWeight: 600, marginBottom: 8 }}>生产要求：</div>
+                  <div style={{
+                    background: '#fafafa',
+                    padding: 12,
+                    borderRadius: 6,
+                    maxHeight: 200,
+                    overflow: 'auto',
+                    whiteSpace: 'pre-wrap',
+                    fontSize: 13
+                  }}>
+                    {detailRecord.description || '暂无生产要求'}
+                  </div>
+                </div>
+              </Col>
+            </Row>
+          </div>
+        )}
+      </ResizableModal>
     </Layout>
   );
 };

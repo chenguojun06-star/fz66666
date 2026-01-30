@@ -31,6 +31,7 @@ import type { ColumnsType } from 'antd/es/table';
 import Layout from '@/components/Layout';
 import { useModal, useTablePagination } from '@/hooks';
 import dayjs from 'dayjs';
+import { ok } from '@/utils/request';
 
 const { Option } = Select;
 
@@ -56,7 +57,8 @@ interface MaterialInventory {
   specification: string;
   color?: string;
   supplierName: string;
-  availableQty: number;
+  quantity: number; // 统一用 quantity
+  availableQty: number; // 暂时映射 quantity
   inTransitQty: number;
   lockedQty: number;
   safetyStock: number;
@@ -73,10 +75,11 @@ interface MaterialInventory {
   fabricWidth?: string;       // 门幅（仅面料）
   fabricWeight?: string;      // 克重（仅面料）
   fabricComposition?: string; // 成分（仅面料）
+  updateTime?: string;
 }
 
 const _MaterialInventory: React.FC = () => {
-  const [loading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [dataSource, setDataSource] = useState<MaterialInventory[]>([]);
 
   // ===== 使用 useTablePagination 管理分页 =====
@@ -94,92 +97,59 @@ const _MaterialInventory: React.FC = () => {
   const [outboundForm] = Form.useForm();
   const [batchDetails, setBatchDetails] = useState<MaterialBatchDetail[]>([]);
 
-  const [stats] = useState({
-    totalValue: 154900,
-    totalQty: 15800,
-    lowStockCount: 1,
-    materialTypes: 3,
+  const [stats, setStats] = useState({
+    totalValue: 0,
+    totalQty: 0,
+    lowStockCount: 0,
+    materialTypes: 0,
   });
 
-  const getMockData = (): MaterialInventory[] => [
-    {
-      id: '1',
-      materialCode: 'F001',
-      materialName: '纯棉面料',
-      materialType: '面料',
-      specification: '60S*60S',
-      color: '白色',
-      supplierName: '华美纺织',
-      availableQty: 5000,
-      inTransitQty: 2000,
-      lockedQty: 500,
-      safetyStock: 1000,
-      unit: '米',
-      unitPrice: 25.5,
-      totalValue: 127500,
-      warehouseLocation: 'A-01-01',
-      lastInboundDate: '2026-01-25',
-      lastOutboundDate: '2026-01-26',
-      lastInboundBy: '张三',
-      lastOutboundBy: '李四',
-      remark: '优质面料，适合夏季服装',
-      fabricWidth: '150cm',
-      fabricWeight: '180g/㎡',
-      fabricComposition: '100%棉',
-    },
-    {
-      id: '2',
-      materialCode: 'F002',
-      materialName: '涤纶面料',
-      materialType: '面料',
-      specification: '150D',
-      color: '黑色',
-      supplierName: '锦绣纺织',
-      availableQty: 800,
-      inTransitQty: 0,
-      lockedQty: 200,
-      safetyStock: 1000,
-      unit: '米',
-      unitPrice: 18.0,
-      totalValue: 14400,
-      warehouseLocation: 'A-01-02',
-      lastInboundDate: '2026-01-20',
-      lastOutboundDate: '2026-01-27',
-      lastInboundBy: '王五',
-      lastOutboundBy: '赵六',
-      remark: '库存不足，需尽快补货',
-      fabricWidth: '145cm',
-      fabricWeight: '220g/㎡',
-      fabricComposition: '65%涤纶 35%棉',
-    },
-    {
-      id: '3',
-      materialCode: 'L001',
-      materialName: '拉链',
-      materialType: '辅料',
-      specification: '5#',
-      color: '银色',
-      supplierName: 'YKK拉链',
-      availableQty: 10000,
-      inTransitQty: 5000,
-      lockedQty: 1000,
-      safetyStock: 2000,
-      unit: '条',
-      unitPrice: 1.2,
-      totalValue: 12000,
-      warehouseLocation: 'B-02-01',
-      lastInboundDate: '2026-01-22',
-      lastOutboundDate: '2026-01-28',
-      lastInboundBy: '孙七',
-      lastOutboundBy: '周八',
-      remark: 'YKK品牌拉链，质量稳定',
-    },
-  ];
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+        const { current, pageSize } = pagination.pagination;
+        const res = await ok('/api/production/material/stock/page', 'get', {
+            page: current,
+            pageSize: pageSize,
+            materialCode: searchText, // 简单映射
+            materialType: selectedType,
+        });
+        
+        if (res && res.records) {
+            const list = res.records.map((item: any) => ({
+                ...item,
+                availableQty: item.quantity, // 暂用总库存代替可用
+                specification: item.specifications, // 字段映射
+                safetyStock: 100, // 默认值
+                inTransitQty: 0, // 暂无数据
+                unitPrice: 0, // 暂无数据
+                totalValue: 0,
+                warehouseLocation: '默认仓',
+                lastInboundDate: item.updateTime,
+                lastOutboundDate: '-',
+            }));
+            setDataSource(list);
+            pagination.setTotal(res.total);
+            
+            // 简单统计
+            setStats({
+                totalValue: 0,
+                totalQty: list.reduce((sum: number, i: any) => sum + (i.quantity || 0), 0),
+                lowStockCount: list.filter((i: any) => (i.quantity || 0) < 100).length,
+                materialTypes: list.length
+            });
+        }
+    } catch (e) {
+        console.error(e);
+        message.error('加载库存失败');
+    } finally {
+        setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    setDataSource(getMockData());
-    pagination.setTotal(getMockData().length);
-  }, []);
+    fetchData();
+  }, [pagination.pagination.current, pagination.pagination.pageSize, searchText, selectedType]);
 
   // 查看详情（出入库记录）
   const handleViewDetail = (record: MaterialInventory) => {

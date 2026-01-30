@@ -385,7 +385,7 @@ public class ProductionOrderController {
     }
 
     /**
-     * 快速编辑订单（备注和预计出货日期）
+     * 快速编辑订单（备注、预计出货日期、工序数据等）
      */
     @PutMapping("/quick-edit")
     public Result<?> quickEdit(@RequestBody Map<String, Object> payload) {
@@ -399,14 +399,26 @@ public class ProductionOrderController {
             return Result.fail("订单不存在");
         }
 
-        String remarks = (String) payload.get("remarks");
-        String expectedShipDate = (String) payload.get("expectedShipDate");
+        // 更新备注
+        if (payload.containsKey("remarks")) {
+            String remarks = (String) payload.get("remarks");
+            order.setRemarks(remarks);
+        }
 
-        order.setRemarks(remarks);
-        if (expectedShipDate != null && !expectedShipDate.isEmpty()) {
-            order.setExpectedShipDate(java.time.LocalDate.parse(expectedShipDate));
-        } else {
-            order.setExpectedShipDate(null);
+        // 更新预计出货日期
+        if (payload.containsKey("expectedShipDate")) {
+            String expectedShipDate = (String) payload.get("expectedShipDate");
+            if (expectedShipDate != null && !expectedShipDate.isEmpty()) {
+                order.setExpectedShipDate(java.time.LocalDate.parse(expectedShipDate));
+            } else {
+                order.setExpectedShipDate(null);
+            }
+        }
+
+        // 更新工序数据（progressWorkflowJson）
+        if (payload.containsKey("progressWorkflowJson")) {
+            String progressWorkflowJson = (String) payload.get("progressWorkflowJson");
+            order.setProgressWorkflowJson(progressWorkflowJson);
         }
 
         boolean success = productionOrderService.updateById(order);

@@ -50,6 +50,12 @@ public class SecurityConfig implements WebMvcConfigurer {
     @Value("${app.auth.header-auth-enabled:false}")
     private boolean headerAuthEnabled;
 
+    @Value("${app.security.trusted-ips:}")
+    private List<String> trustedIps;
+
+    @Value("${app.security.trusted-ip-prefixes:}")
+    private List<String> trustedIpPrefixes;
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, AuthTokenService authTokenService) throws Exception {
         http
@@ -74,8 +80,9 @@ public class SecurityConfig implements WebMvcConfigurer {
                         .antMatchers("/api/production/cutting-bundle/by-no").permitAll()
                         .antMatchers("/api/production/cutting/summary").permitAll()
                         .antMatchers("/api/production/order/node-operations/**").authenticated()
-                        .antMatchers("/actuator/health", "/actuator/health/**", "/actuator/info", "/actuator/info/**").permitAll()
-                        .antMatchers("/api/warehouse/dashboard/**").permitAll() // TODO: 临时开放，权限配置后需要改为authenticated()
+                        .antMatchers("/actuator/health", "/actuator/health/**", "/actuator/info", "/actuator/info/**")
+                        .permitAll()
+                        .antMatchers("/api/warehouse/dashboard/**").authenticated()
                         .antMatchers("/actuator/**").hasAnyAuthority(
                                 "ROLE_admin",
                                 "ROLE_ADMIN",
@@ -86,8 +93,7 @@ public class SecurityConfig implements WebMvcConfigurer {
                                 "ROLE_ADMIN",
                                 "ROLE_1")
                         .antMatchers("/api/**").authenticated()
-                        .anyRequest().permitAll()
-                );
+                        .anyRequest().permitAll());
 
         http.addFilterBefore(new TokenAuthFilter(authTokenService), UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(new RequestIdFilter(), TokenAuthFilter.class);
@@ -188,46 +194,49 @@ public class SecurityConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(@NonNull InterceptorRegistry registry) {
-        registry.addInterceptor(new HandlerInterceptor() {
-            @Override
-            public boolean preHandle(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response,
-                    @NonNull Object handler) {
-                UserContext ctx = new UserContext();
+        registry.addInterceptor(new UserContextInterceptor());
+    }
 
-                // 优先从TokenSubject获取完整用户信息（包括permissionRange）
-                Object tokenSubjectAttr = request.getAttribute(TokenAuthFilter.TOKEN_SUBJECT_ATTR);
-                if (tokenSubjectAttr instanceof TokenSubject) {
-                    TokenSubject subject = (TokenSubject) tokenSubjectAttr;
-                    ctx.setUserId(subject.getUserId());
-                    ctx.setUsername(subject.getUsername());
-                    ctx.setRole(subject.getRoleName());
-                    ctx.setPermissionRange(subject.getPermissionRange());
-                } else {
-                    // 回退：从SecurityContext获取基本信息
-                    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-                    if (auth != null && auth.isAuthenticated() && auth.getPrincipal() != null) {
-                        ctx.setUsername(String.valueOf(auth.getPrincipal()));
-                        ctx.setUserId(auth.getCredentials() == null ? null : String.valueOf(auth.getCredentials()));
-                        ctx.setRole(extractRole(auth));
-                        // 默认权限范围
-                        ctx.setPermissionRange("all");
-                    } else if (headerAuthEnabled && isLocalRequest(request)) {
-                        ctx.setUserId(request.getHeader("X-User-Id"));
-                        ctx.setUsername(decodeHeaderValue(request.getHeader("X-User-Name")));
-                        ctx.setRole(decodeHeaderValue(request.getHeader("X-User-Role")));
-                        ctx.setPermissionRange(decodeHeaderValue(request.getHeader("X-Permission-Range")));
-                    }
+    // 将匿名内部类提取为静态内部类
+    private class UserContextInterceptor implements HandlerInterceptor {
+        @Override
+        public boolean preHandle(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response,
+                @NonNull Object handler) {
+            UserContext ctx = new UserContext();
+
+            // 优先从TokenSubject获取完整用户信息（包括permissionRange）
+            Object tokenSubjectAttr = request.getAttribute(TokenAuthFilter.TOKEN_SUBJECT_ATTR);
+            if (tokenSubjectAttr instanceof TokenSubject) {
+                TokenSubject subject = (TokenSubject) tokenSubjectAttr;
+                ctx.setUserId(subject.getUserId());
+                ctx.setUsername(subject.getUsername());
+                ctx.setRole(subject.getRoleName());
+                ctx.setPermissionRange(subject.getPermissionRange());
+            } else {
+                // 回退：从SecurityContext获取基本信息
+                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                if (auth != null && auth.isAuthenticated() && auth.getPrincipal() != null) {
+                    ctx.setUsername(String.valueOf(auth.getPrincipal()));
+                    ctx.setUserId(auth.getCredentials() == null ? null : String.valueOf(auth.getCredentials()));
+                    ctx.setRole(extractRole(auth));
+                    // 默认权限范围
+                    ctx.setPermissionRange("all");
+                } else if (headerAuthEnabled && isLocalRequest(request)) {
+                    ctx.setUserId(request.getHeader("X-User-Id"));
+                    ctx.setUsername(decodeHeaderValue(request.getHeader("X-User-Name")));
+                    ctx.setRole(decodeHeaderValue(request.getHeader("X-User-Role")));
+                    ctx.setPermissionRange(decodeHeaderValue(request.getHeader("X-Permission-Range")));
                 }
-                UserContext.set(ctx);
-                return true;
             }
+            UserContext.set(ctx);
+            return true;
+        }
 
-            @Override
-            public void afterCompletion(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response,
-                    @NonNull Object handler, @Nullable Exception ex) {
-                UserContext.clear();
-            }
-        });
+        @Override
+        public void afterCompletion(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response,
+                @NonNull Object handler, @Nullable Exception ex) {
+            UserContext.clear();
+        }
     }
 
     private static String extractRole(Authentication auth) {
@@ -290,7 +299,7 @@ public class SecurityConfig implements WebMvcConfigurer {
         }
     }
 
-    private static boolean isLocalRequest(HttpServletRequest request) {
+    private boolean isLocalRequest(HttpServletRequest request) {
         if (request == null) {
             return false;
         }
@@ -299,13 +308,19 @@ public class SecurityConfig implements WebMvcConfigurer {
             return false;
         }
         String v = ip.trim();
-        if (v.equals("127.0.0.1") || v.equals("::1") || v.equals("0:0:0:0:0:0:0:1")) {
+
+        if (trustedIps != null && trustedIps.contains(v)) {
             return true;
         }
-        if (v.startsWith("127.")) {
-            return true;
+
+        if (trustedIpPrefixes != null) {
+            for (String prefix : trustedIpPrefixes) {
+                if (v.startsWith(prefix)) {
+                    return true;
+                }
+            }
         }
-        return isPrivateNetwork(v);
+        return false;
     }
 
     private static String resolveClientIp(HttpServletRequest request) {
@@ -321,30 +336,5 @@ public class SecurityConfig implements WebMvcConfigurer {
             return real.trim();
         }
         return request.getRemoteAddr();
-    }
-
-    private static boolean isPrivateNetwork(String ip) {
-        if (ip == null || ip.isBlank()) {
-            return false;
-        }
-        String v = ip.trim();
-        if (v.startsWith("10.")) {
-            return true;
-        }
-        if (v.startsWith("192.168.")) {
-            return true;
-        }
-        if (v.startsWith("172.")) {
-            String[] parts = v.split("\\.");
-            if (parts.length > 1) {
-                try {
-                    int second = Integer.parseInt(parts[1]);
-                    return second >= 16 && second <= 31;
-                } catch (NumberFormatException e) {
-                    return false;
-                }
-            }
-        }
-        return false;
     }
 }

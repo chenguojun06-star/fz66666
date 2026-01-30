@@ -3,7 +3,7 @@ import { App, Avatar, Button, Card, Form, Input, Select, Space, Spin, Upload } f
 import { UploadOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import api from '@/utils/api';
-import { useAuth } from '@/utils/authContext';
+import { useAuth } from '@/utils/AuthContext';
 import './styles.css';
 
 type ProfileMe = {

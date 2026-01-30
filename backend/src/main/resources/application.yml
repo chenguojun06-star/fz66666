@@ -17,7 +17,7 @@ spring:
       max-file-size: 50MB
       max-request-size: 100MB
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3308/fashion_supplychain?useUnicode=true&characterEncoding=utf8&connectionCollation=utf8mb4_unicode_ci&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true}
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3308/fashion_supplychain?useUnicode=true&characterEncoding=utf8&connectionCollation=utf8mb4_0900_ai_ci&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true}
     username: ${SPRING_DATASOURCE_USERNAME:root}
     password: ${SPRING_DATASOURCE_PASSWORD:changeme}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -115,6 +115,31 @@ app:
   auth:
     jwt-secret: ${APP_AUTH_JWT_SECRET:fashion-supply-chain-jwt-secret-key-2026}
     header-auth-enabled: ${APP_AUTH_HEADER_AUTH_ENABLED:false}
+  security:
+    trusted-ips:
+      - "127.0.0.1"
+      - "::1"
+      - "0:0:0:0:0:0:0:1"
+    trusted-ip-prefixes:
+      - "127."
+      - "10."
+      - "192.168."
+      - "172.16."
+      - "172.17."
+      - "172.18."
+      - "172.19."
+      - "172.20."
+      - "172.21."
+      - "172.22."
+      - "172.23."
+      - "172.24."
+      - "172.25."
+      - "172.26."
+      - "172.27."
+      - "172.28."
+      - "172.29."
+      - "172.30."
+      - "172.31."
   cors:
     allowed-origin-patterns: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:*,http://127.0.0.1:*,http://192.168.*.*:*,http://10.*.*.*:*,http://172.16.*.*:*,http://172.17.*.*:*,http://172.18.*.*:*,http://172.19.*.*:*,http://172.20.*.*:*,http://172.21.*.*:*,http://172.22.*.*:*,http://172.23.*.*:*,http://172.24.*.*:*,http://172.25.*.*:*,http://172.26.*.*:*,http://172.27.*.*:*,http://172.28.*.*:*,http://172.29.*.*:*,http://172.30.*.*:*,http://172.31.*.*:*,https://*.vercel.app,https://*.trycloudflare.com}
     allow-credentials: ${APP_CORS_ALLOW_CREDENTIALS:true}

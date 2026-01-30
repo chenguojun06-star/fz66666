@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { App, AutoComplete, Button, Card, Col, Form, Input, InputNumber, Row, Select, Space, Tabs, Tag, Tooltip } from 'antd';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
-import { ShoppingCartOutlined, QuestionCircleOutlined, AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
+import { ShoppingCartOutlined, QuestionCircleOutlined, AppstoreOutlined, UnorderedListOutlined, PrinterOutlined } from '@ant-design/icons';
 import { useSync } from '@/utils/syncManager';
 import UniversalCardView from '@/components/common/UniversalCardView';
+import StylePrintModal from '@/components/common/StylePrintModal';
 
 import dayjs from 'dayjs';
 import Layout from '@/components/Layout';
@@ -98,6 +99,10 @@ const OrderManagement: React.FC = () => {
 
   // 视图切换状态
   const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
+
+  // ===== 打印弹窗状态 =====
+  const [printModalVisible, setPrintModalVisible] = useState(false);
+  const [printingRecord, setPrintingRecord] = useState<StyleInfo | null>(null);
 
   // ===== 详情页分页状态 =====
   const [detailQuery, setDetailQuery] = useState({ page: 1, pageSize: 20 });
@@ -645,10 +650,17 @@ const OrderManagement: React.FC = () => {
         const id = String(n?.id || n?.processCode || name || '').trim() || name;
         const p = Number(n?.unitPrice);
         const unitPrice = Number.isFinite(p) && p >= 0 ? p : 0;
+        // 保存完整的工序信息
+        const progressStage = String(n?.progressStage || name).trim();
+        const machineType = String(n?.machineType || '').trim();
+        const standardTime = Number(n?.standardTime) || 0;
         return {
           id,
           name,
-          processes: [{ id: `${id}-0`, processName: name, unitPrice }],
+          progressStage,
+          machineType,
+          standardTime,
+          processes: [{ id: `${id}-0`, processName: name, unitPrice, progressStage, machineType, standardTime }],
         } as ProgressNode;
       })
       .filter(Boolean) as ProgressNode[];
@@ -660,64 +672,85 @@ const OrderManagement: React.FC = () => {
     try {
       const res = await templateLibraryApi.progressNodeUnitPrices(sn);
       const result = res as Record<string, unknown>;
+      console.log('[订单] 从模板加载工序:', { styleNo: sn, code: result.code, data: result.data });
       if (result.code !== 200) return;
       const rows = Array.isArray(result.data) ? result.data : [];
       const normalized = buildProgressNodesFromTemplate(rows);
+      console.log('[订单] 解析后的工序节点:', normalized);
       if (normalized.length) {
         setProgressNodes(normalized);
       }
-    } catch {
-      // Intentionally empty
-      // 忽略错误
+    } catch (e) {
+      console.error('[订单] 加载工序模板失败:', e);
     }
   };
 
   const buildProgressWorkflowJson = (nodes: ProgressNode[]) => {
-    const normalizedNodes = (Array.isArray(nodes) ? nodes : [])
-      .map((n) => {
-        const name = String(n?.name || '').trim();
-        const id = String(n?.id || name || '').trim() || name;
-        const processes = (Array.isArray(n?.processes) ? (n as Record<string, unknown>).processes : []) as PricingProcess[];
-        const safeProcesses = processes
-          .map((p) => {
-            const pname = String((p as Record<string, unknown>)?.processName || '').trim();
-            const pid = String((p as Record<string, unknown>)?.id || `${id}-${pname}` || '').trim() || `${id}-${Date.now()}`;
-            const unitPrice = Number((p as Record<string, unknown>)?.unitPrice);
-            return {
-              id: pid,
-              processName: pname,
-              unitPrice: Number.isFinite(unitPrice) && unitPrice >= 0 ? unitPrice : 0,
-            };
-          })
-          .filter((p) => p.processName);
-        const unitPrice = safeProcesses.reduce((sum, p) => sum + (Number(p.unitPrice) || 0), 0);
-        return {
-          id,
-          name,
-          unitPrice,
-          processes: safeProcesses,
-        };
-      })
-      .filter((n) => n.name);
+    // 把所有工序扁平化存储，每个工序包含完整信息
+    const allProcesses: Array<{
+      id: string;
+      name: string;
+      unitPrice: number;
+      progressStage: string;
+      machineType: string;
+      standardTime: number;
+      sortOrder: number;
+    }> = [];
 
-    const ensuredNodes = normalizedNodes.length
-      ? normalizedNodes
-      : defaultProgressNodes.map((n) => ({
+    (Array.isArray(nodes) ? nodes : []).forEach((n, idx) => {
+      const name = String(n?.name || '').trim();
+      if (!name) return;
+
+      const id = String(n?.id || name || '').trim() || name;
+      const progressStage = String((n as any)?.progressStage || name).trim();
+      const machineType = String((n as any)?.machineType || '').trim();
+      const standardTime = Number((n as any)?.standardTime) || 0;
+
+      // 从 processes 数组获取单价
+      const processes = (Array.isArray(n?.processes) ? n.processes : []) as PricingProcess[];
+      const unitPrice = processes.length > 0
+        ? (Number(processes[0]?.unitPrice) || 0)
+        : 0;
+
+      allProcesses.push({
+        id,
+        name,
+        unitPrice,
+        progressStage,
+        machineType,
+        standardTime,
+        sortOrder: idx,
+      });
+    });
+
+    // 如果没有工序，使用默认值
+    const ensuredProcesses = allProcesses.length > 0
+      ? allProcesses
+      : defaultProgressNodes.map((n, idx) => ({
         id: n.id,
         name: n.name,
         unitPrice: (Array.isArray(n.processes) ? n.processes : []).reduce((sum, p) => sum + (Number(p.unitPrice) || 0), 0),
-        processes: n.processes,
+        progressStage: n.name,
+        machineType: '',
+        standardTime: 0,
+        sortOrder: idx,
       }));
-    const processesByNode: Record<string, { id: string; name: string; unitPrice: number }[]> = {};
-    for (const n of ensuredNodes) {
-      processesByNode[String(n.id)] = (Array.isArray((n as Record<string, unknown>).processes) ? (n as Record<string, unknown>).processes : []).map((p: any) => ({
-        id: String(p.id),
-        name: String(p.processName || '').trim(),
-        unitPrice: Number(p.unitPrice) || 0,
-      }));
+
+    console.log('[订单保存] progressWorkflowJson 工序列表:', ensuredProcesses.map(p => `${p.name}(${p.progressStage}): ¥${p.unitPrice}`));
+
+    // 新格式：直接在 nodes 里保存所有工序的完整信息
+    // processesByNode 作为兼容字段也保存一份（按 progressStage 分组）
+    const processesByNode: Record<string, typeof ensuredProcesses> = {};
+    for (const p of ensuredProcesses) {
+      const stage = p.progressStage || p.name;
+      if (!processesByNode[stage]) {
+        processesByNode[stage] = [];
+      }
+      processesByNode[stage].push(p);
     }
+
     return JSON.stringify({
-      nodes: ensuredNodes.map((n) => ({ id: n.id, name: n.name, unitPrice: n.unitPrice })),
+      nodes: ensuredProcesses,
       processesByNode,
     });
   };
@@ -1113,18 +1146,27 @@ const OrderManagement: React.FC = () => {
         <StyleAttachmentsButton
           styleId={(record as Record<string, unknown>).id}
           styleNo={record.styleNo}
-          modalTitle={`放码纸样（${record.styleNo}）`}
-          onlyGradingPattern={true}
+          modalTitle={`纸样附件（${record.styleNo}）`}
         />
       )
     },
     {
       title: '操作',
       key: 'action',
-      width: 110,
+      width: 150,
       render: (_: any, record: StyleInfo) => (
         <RowActions
           actions={[
+            {
+              key: 'print',
+              label: '打印',
+              title: '打印',
+              icon: <PrinterOutlined />,
+              onClick: () => {
+                setPrintingRecord(record);
+                setPrintModalVisible(true);
+              },
+            },
             {
               key: 'create',
               label: '下单',
@@ -1250,9 +1292,11 @@ const OrderManagement: React.FC = () => {
             titleField="styleNo"
             subtitleField="styleName"
             fields={[
-              { label: '品类', key: 'category', render: (val) => toCategoryCn(val) },
-              { label: 'BOM', key: 'bomCount', render: (val) => val > 0 ? '有' : '无' },
-              { label: '创建时间', key: 'createTime', render: (val) => formatDateTime(val) },
+              { label: '码数', key: 'size', render: (val) => val || '-' },
+              { label: '数量', key: 'sampleQuantity', render: (val, record) => {
+                const qty = Number(val) || Number(record?.quantity) || 0;
+                return qty > 0 ? `${qty}件` : '-';
+              }},
             ]}
             progressConfig={{ show: false }}
             actions={(record) => [
@@ -1263,7 +1307,6 @@ const OrderManagement: React.FC = () => {
                 onClick: () => openCreate(record),
               },
             ]}
-            onCardClick={(record) => openCreate(record)}
           />
         )}
       </Card>
@@ -1308,9 +1351,8 @@ const OrderManagement: React.FC = () => {
                         <StyleAttachmentsButton
                           styleId={selectedStyle?.id}
                           styleNo={selectedStyle?.styleNo}
-                          buttonText="查看附件"
-                          modalTitle={selectedStyle?.styleNo ? `放码纸样（${selectedStyle.styleNo}）` : '放码纸样'}
-                          onlyGradingPattern={true}
+                          buttonText="查看纸样"
+                          modalTitle={selectedStyle?.styleNo ? `纸样附件（${selectedStyle.styleNo}）` : '纸样附件'}
                         />
                       </div>
                     </div>
@@ -1682,6 +1724,28 @@ const OrderManagement: React.FC = () => {
 
         </Form>
       </ResizableModal>
+
+      {/* 打印预览弹窗 - 使用通用打印组件 */}
+      <StylePrintModal
+        visible={printModalVisible}
+        onClose={() => {
+          setPrintModalVisible(false);
+          setPrintingRecord(null);
+        }}
+        styleId={printingRecord?.id}
+        styleNo={printingRecord?.styleNo}
+        styleName={printingRecord?.styleName}
+        cover={printingRecord?.cover}
+        color={printingRecord?.color}
+        quantity={printingRecord?.sampleQuantity}
+        category={printingRecord?.category}
+        season={printingRecord?.season}
+        mode="order"
+        extraInfo={{
+          '交板日期': printingRecord?.deliveryDate,
+          '设计师': printingRecord?.designer,
+        }}
+      />
     </Layout>
   );
 };

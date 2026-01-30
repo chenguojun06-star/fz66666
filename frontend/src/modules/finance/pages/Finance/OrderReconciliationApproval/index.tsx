@@ -7,7 +7,7 @@ import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
 import api from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
-import { useAuth } from '@/utils/authContext';
+import { useAuth } from '@/utils/AuthContext';
 import { useViewport } from '@/utils/useViewport';
 
 // 订单结算审批记录类型

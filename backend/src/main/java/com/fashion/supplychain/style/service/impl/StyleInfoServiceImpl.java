@@ -14,6 +14,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.ParamUtils;
+import com.fashion.supplychain.common.UserContext;
 import java.math.BigDecimal;
 import java.util.NoSuchElementException;
 import org.springframework.stereotype.Service;
@@ -465,6 +466,14 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
                 styleInfo.setCategory("未分类");
             }
             styleInfo.setPrice(null);
+
+            // 设计师 = 创建款式的人（自动填充）
+            if (!StringUtils.hasText(styleInfo.getSampleNo())) {
+                String currentUser = UserContext.username();
+                if (StringUtils.hasText(currentUser)) {
+                    styleInfo.setSampleNo(currentUser);
+                }
+            }
         }
 
         return this.saveOrUpdate(styleInfo);

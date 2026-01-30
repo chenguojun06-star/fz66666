@@ -146,6 +146,12 @@
             <artifactId>snakeyaml</artifactId>
             <version>${snakeyaml.version}</version>
         </dependency>
+
+        <!-- Caffeine Cache -->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

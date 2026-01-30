@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button, Card, Input, Select, Space, Tag, Form, Table, App, Dropdown, Checkbox } from 'antd';
-import { SearchOutlined, EyeOutlined, DownloadOutlined, DeleteOutlined, CheckCircleOutlined, EditOutlined, SettingOutlined, FileSearchOutlined, AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
+import { SearchOutlined, EyeOutlined, DownloadOutlined, DeleteOutlined, CheckCircleOutlined, EditOutlined, SettingOutlined, FileSearchOutlined, AppstoreOutlined, UnorderedListOutlined, PrinterOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import ResizableModal from '@/components/common/ResizableModal';
 import QuickEditModal from '@/components/common/QuickEditModal';
+import StylePrintModal from '@/components/common/StylePrintModal';
 import { ProductionOrder, ProductionQueryParams, ScanRecord } from '@/types/production';
 import type { PaginatedResponse } from '@/types/api';
 import api, {
@@ -15,7 +16,8 @@ import api, {
   isApiSuccess,
 } from '@/utils/api';
 import { productionOrderApi, productionScanApi } from '@/services/production/productionApi';
-import { isSupervisorOrAboveUser, useAuth } from '@/utils/authContext';
+import { templateLibraryApi } from '@/services/template/templateLibraryApi';
+import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
 import './styles.css';
 import dayjs from 'dayjs';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -48,6 +50,11 @@ const ProductionList: React.FC = () => {
   const orderModal = useModal<ProductionOrder>();
   const quickEditModal = useModal<ProductionOrder>();
   const logModal = useModal();
+
+  // ===== 打印弹窗状态 =====
+  const [printModalVisible, setPrintModalVisible] = useState(false);
+  const [printingRecord, setPrintingRecord] = useState<ProductionOrder | null>(null);
+
   const [queryParams, setQueryParams] = useState<ProductionQueryParams>({
     page: 1,
     pageSize: 10
@@ -915,6 +922,77 @@ const ProductionList: React.FC = () => {
     setProcessDetailVisible(true);
   };
 
+  // 从模板同步工序单价到订单
+  const syncProcessFromTemplate = async (record: ProductionOrder) => {
+    const styleNo = String(record.styleNo || '').trim();
+    if (!styleNo) {
+      message.error('订单款号为空，无法同步');
+      return;
+    }
+
+    try {
+      // 从模板库获取最新工序数据
+      const res = await templateLibraryApi.progressNodeUnitPrices(styleNo);
+      const result = res as Record<string, unknown>;
+      if (result.code !== 200) {
+        message.error('获取工序模板失败');
+        return;
+      }
+
+      const rows = Array.isArray(result.data) ? result.data : [];
+      if (rows.length === 0) {
+        message.warning('未找到该款号的工序模板');
+        return;
+      }
+
+      // 构建新的 progressWorkflowJson
+      const allProcesses = rows.map((item: any, idx: number) => ({
+        id: String(item.id || item.processCode || item.name || '').trim(),
+        name: String(item.name || item.processName || '').trim(),
+        unitPrice: Number(item.unitPrice) || 0,
+        progressStage: String(item.progressStage || item.name || '').trim(),
+        machineType: String(item.machineType || '').trim(),
+        standardTime: Number(item.standardTime) || 0,
+        sortOrder: idx,
+      }));
+
+      // 按 progressStage 分组
+      const processesByNode: Record<string, typeof allProcesses> = {};
+      for (const p of allProcesses) {
+        const stage = p.progressStage || p.name;
+        if (!processesByNode[stage]) {
+          processesByNode[stage] = [];
+        }
+        processesByNode[stage].push(p);
+      }
+
+      const progressWorkflowJson = JSON.stringify({
+        nodes: allProcesses,
+        processesByNode,
+      });
+
+      console.log('[同步工序] 新的工序数据:', allProcesses.map(p => `${p.name}(${p.progressStage}): ¥${p.unitPrice}`));
+
+      // 使用 quickEdit API 更新订单
+      const updateRes = await productionOrderApi.quickEdit({
+        id: record.id,
+        progressWorkflowJson,
+      });
+
+      if (updateRes.code !== 200) {
+        message.error(updateRes.message || '同步失败');
+        return;
+      }
+
+      message.success(`已同步 ${allProcesses.length} 个工序`);
+      // 刷新列表
+      fetchProductionList();
+    } catch (e) {
+      console.error('同步工序失败:', e);
+      message.error('同步工序失败');
+    }
+  };
+
   const allColumns = [
     {
       title: '图片',
@@ -977,15 +1055,13 @@ const ProductionList: React.FC = () => {
       render: (v: any) => v || '-',
     },
     {
-      title: '附件',
+      title: '纸样',
       key: 'attachments',
       width: 100,
       render: (_: any, record: any) => (
         <StyleAttachmentsButton
           styleId={record.styleId}
           styleNo={record.styleNo}
-          modalTitle={record.styleNo ? `放码纸样（${record.styleNo}）` : '放码纸样'}
-          onlyGradingPattern={true}
         />
       )
     },
@@ -1141,6 +1217,24 @@ const ProductionList: React.FC = () => {
       width: 110,
       align: 'center' as const,
       render: (rate: number, record: ProductionOrder) => {
+        // 智能检测是否有二次工艺配置
+        const hasSecondaryProcess = (() => {
+          const nodes = record.progressNodeUnitPrices;
+          if (!Array.isArray(nodes) || nodes.length === 0) return false;
+          // 检查是否有包含"二次工艺"或"工艺"关键词的节点
+          return nodes.some((n: any) => {
+            const name = String(n.name || n.processName || '').trim();
+            return name.includes('二次工艺') || name.includes('二次') || (name.includes('工艺') && !name.includes('车'));
+          });
+        })();
+
+        // 如果没有二次工艺配置，显示占位符
+        if (!hasSecondaryProcess) {
+          return (
+            <span style={{ color: '#999', fontSize: '12px' }}>-</span>
+          );
+        }
+
         return (
           <div
             style={{
@@ -1750,39 +1844,68 @@ const ProductionList: React.FC = () => {
                 primary: true,
               },
               {
+                key: 'print',
+                label: '打印',
+                title: '打印生产制单',
+                icon: <PrinterOutlined />,
+                onClick: () => {
+                  setPrintingRecord(record);
+                  setPrintModalVisible(true);
+                },
+              },
+              {
                 key: 'process',
                 label: '工序',
                 title: '查看工序详情',
                 icon: <UnorderedListOutlined />,
-                menu: {
-                  items: [
-                    {
-                      key: 'procurement',
-                      label: '📦 采购',
-                      onClick: () => openProcessDetail(record, 'procurement'),
-                    },
-                    {
-                      key: 'cutting',
-                      label: '✂️ 裁剪',
-                      onClick: () => openProcessDetail(record, 'cutting'),
-                    },
-                    {
-                      key: 'carSewing',
-                      label: '🧵 车缝',
-                      onClick: () => openProcessDetail(record, 'carSewing'),
-                    },
-                    {
+                children: [
+                  {
+                    key: 'all',
+                    label: '📋 全部工序',
+                    onClick: () => openProcessDetail(record, 'all'),
+                  },
+                  { type: 'divider' },
+                  {
+                    key: 'procurement',
+                    label: '采购',
+                    onClick: () => openProcessDetail(record, 'procurement'),
+                  },
+                  {
+                    key: 'cutting',
+                    label: '裁剪',
+                    onClick: () => openProcessDetail(record, 'cutting'),
+                  },
+                  {
+                    key: 'carSewing',
+                    label: '车缝',
+                    onClick: () => openProcessDetail(record, 'carSewing'),
+                  },
+                  // 二次工艺：仅当款式配置了二次工艺时才显示
+                  ...(() => {
+                    const nodes = record.progressNodeUnitPrices;
+                    if (!Array.isArray(nodes)) return [];
+                    const hasSecondary = nodes.some((n: any) => {
+                      const name = String(n.name || n.processName || '').trim();
+                      return name.includes('二次工艺') || name.includes('二次') || (name.includes('工艺') && !name.includes('车'));
+                    });
+                    return hasSecondary ? [{
                       key: 'secondaryProcess',
-                      label: '🔧 二次工艺',
+                      label: '二次工艺',
                       onClick: () => openProcessDetail(record, 'secondaryProcess'),
-                    },
-                    {
-                      key: 'tailProcess',
-                      label: '🎀 尾部',
-                      onClick: () => openProcessDetail(record, 'tailProcess'),
-                    },
-                  ],
-                },
+                    }] : [];
+                  })(),
+                  {
+                    key: 'tailProcess',
+                    label: '尾部',
+                    onClick: () => openProcessDetail(record, 'tailProcess'),
+                  },
+                  { type: 'divider' },
+                  {
+                    key: 'syncProcess',
+                    label: '🔄 从模板同步',
+                    onClick: () => syncProcessFromTemplate(record),
+                  },
+                ],
               },
               {
                 key: 'quickEdit',
@@ -1952,23 +2075,33 @@ const ProductionList: React.FC = () => {
               fields={[
                 {
                   label: '码数',
-                  key: 'sizeCount',
-                  format: (val: any, record: any) => {
-                    // 优先使用sizeCount字段
-                    if (val) return `${val}个码`;
-                    // 降级方案：从productionOrderLines计算
-                    const lines = record?.productionOrderLines;
-                    if (!lines) return '-';
-                    const lineArr = Array.isArray(lines) ? lines : [];
-                    const uniqueSizes = new Set(lineArr.map((l: any) => l.size).filter(Boolean));
-                    return uniqueSizes.size > 0 ? `${uniqueSizes.size}个码` : '-';
+                  key: 'size',
+                  render: (val: unknown, record: Record<string, unknown>) => {
+                    // 显示具体码数列表
+                    const sizeStr = String(val || '').trim();
+                    if (sizeStr) return sizeStr;
+                    // 降级：从 orderDetails 解析
+                    const details = record?.orderDetails;
+                    if (details) {
+                      try {
+                        const parsed = typeof details === 'string' ? JSON.parse(details) : details;
+                        const lines = parsed?.orderLines || parsed?.lines || parsed;
+                        if (Array.isArray(lines)) {
+                          const sizes = [...new Set(lines.map((l: Record<string, unknown>) => l.size).filter(Boolean))];
+                          if (sizes.length > 0) return sizes.join(', ');
+                        }
+                      } catch { /* ignore */ }
+                    }
+                    return '-';
                   }
                 },
-                { label: '数量', key: 'quantity', suffix: ' 件' },
                 {
-                  label: '订单交期',
-                  key: 'expectedShipDate',
-                  format: (val: any) => val ? dayjs(val).format('MM-DD') : '-'
+                  label: '数量',
+                  key: 'orderQuantity',
+                  render: (val: unknown) => {
+                    const qty = Number(val) || 0;
+                    return qty > 0 ? `${qty} 件` : '-';
+                  }
                 },
               ]}
               progressConfig={{
@@ -2004,9 +2137,6 @@ const ProductionList: React.FC = () => {
                   },
                 },
               ].filter(Boolean)}
-              onCardClick={(record: ProductionOrder) => {
-                orderModal.open(record);
-              }}
             />
           )}
         </Card>
@@ -2486,12 +2616,13 @@ const ProductionList: React.FC = () => {
         <ResizableModal
           title={(() => {
             const titles: Record<string, string> = {
-              procurement: '📦 采购工序明细',
-              cutting: '✂️ 裁剪工序明细',
-              secondaryProcess: '🔧 二次工艺明细',
-              carSewing: '🧵 车缝工序明细',
-              tailProcess: '🎀 尾部工序明细',
-              warehousing: '📥 入库详情',
+              all: '全部工序明细',
+              procurement: '采购工序明细',
+              cutting: '裁剪工序明细',
+              secondaryProcess: '二次工艺明细',
+              carSewing: '车缝工序明细',
+              tailProcess: '尾部工序明细',
+              warehousing: '入库详情',
             };
             return titles[processDetailType] || '工序明细';
           })()}
@@ -2708,105 +2839,131 @@ const ProductionList: React.FC = () => {
             }
 
             // 工序类型（非入库）
-            // 从 progressWorkflowJson 解析工序数据
+            // 从 progressWorkflowJson 解析完整工序信息
             let workflowNodes: any[] = [];
             try {
-              console.log('🔍 [工序弹窗] processDetailRecord:', processDetailRecord);
-              console.log('🔍 [工序弹窗] progressWorkflowJson:', processDetailRecord.progressWorkflowJson);
-
               if (processDetailRecord.progressWorkflowJson) {
                 const workflow = typeof processDetailRecord.progressWorkflowJson === 'string'
                   ? JSON.parse(processDetailRecord.progressWorkflowJson)
                   : processDetailRecord.progressWorkflowJson;
-                workflowNodes = workflow?.nodes || [];
-                console.log('✅ [工序弹窗] 解析成功，nodes数量:', workflowNodes.length);
-              } else {
-                console.warn('⚠️ [工序弹窗] progressWorkflowJson为空');
+
+                // 新格式：nodes 直接包含所有工序的完整信息
+                const nodes = workflow?.nodes || [];
+                if (nodes.length > 0 && nodes[0]?.name) {
+                  // 检查是否是新格式（nodes 里直接有 name 和 unitPrice）
+                  workflowNodes = nodes.map((item: any, idx: number) => ({
+                    id: item.id || `proc_${idx}`,
+                    name: item.name || item.processName || '',
+                    progressStage: item.progressStage || '',
+                    machineType: item.machineType || '',
+                    standardTime: item.standardTime || 0,
+                    unitPrice: Number(item.unitPrice) || 0,
+                    sortOrder: item.sortOrder ?? idx,
+                  }));
+                  console.log('[工序明细] 从 nodes 直接解析:', workflowNodes.map(n => `${n.name}(${n.progressStage}): ¥${n.unitPrice}`));
+                } else {
+                  // 旧格式：从 processesByNode 读取
+                  const processesByNode = workflow?.processesByNode || {};
+                  const allProcesses: any[] = [];
+                  let sortIdx = 0;
+
+                  for (const node of nodes) {
+                    const nodeId = node?.id || '';
+                    const nodeProcesses = processesByNode[nodeId] || [];
+                    for (const p of nodeProcesses) {
+                      allProcesses.push({
+                        id: p.id || `proc_${sortIdx}`,
+                        name: p.name || p.processName || '',
+                        progressStage: p.progressStage || node?.progressStage || node?.name || '',
+                        machineType: p.machineType || '',
+                        standardTime: p.standardTime || 0,
+                        unitPrice: Number(p.unitPrice) || 0,
+                        sortOrder: sortIdx,
+                      });
+                      sortIdx++;
+                    }
+                  }
+
+                  if (allProcesses.length > 0) {
+                    workflowNodes = allProcesses;
+                    console.log('[工序明细] 从 processesByNode 解析:', workflowNodes.map(n => `${n.name}(${n.progressStage}): ¥${n.unitPrice}`));
+                  }
+                }
               }
+
+              // 如果 progressWorkflowJson 没有数据，从 progressNodeUnitPrices 读取
+              if (workflowNodes.length === 0 && Array.isArray(processDetailRecord.progressNodeUnitPrices) && processDetailRecord.progressNodeUnitPrices.length > 0) {
+                workflowNodes = processDetailRecord.progressNodeUnitPrices.map((item: any, idx: number) => ({
+                  id: item.id || item.processId || `node_${idx}`,
+                  name: item.name || item.processName || '',
+                  progressStage: item.progressStage || '',
+                  machineType: item.machineType || '',
+                  standardTime: item.standardTime || 0,
+                  unitPrice: Number(item.unitPrice) || Number(item.price) || 0,
+                  sortOrder: item.sortOrder ?? idx,
+                }));
+                console.log('[工序明细] 从 progressNodeUnitPrices 解析:', workflowNodes.map(n => `${n.name}(${n.progressStage}): ¥${n.unitPrice}`));
+              }
+
+              console.log('[工序明细] 最终工序列表:', workflowNodes.map(n => `${n.name}(${n.progressStage}): ¥${n.unitPrice}`));
             } catch (e) {
-              console.error('❌ [工序弹窗] 解析工艺模板失败:', e);
+              console.error('解析工艺模板失败:', e);
             }
 
-            // 工序类型映射
-            const processStageMap: Record<string, string> = {
-              procurement: '采购',
-              cutting: '裁剪',
-              secondaryProcess: '二次工艺',
-              carSewing: '车缝',
-              tailProcess: '尾部',
-            };
-
-            const currentStage = processStageMap[processDetailType] || '';
-            console.log('🎯 [工序弹窗] 当前阶段:', currentStage, '类型:', processDetailType);
-
-            // 筛选当前阶段的子工序
-            const filteredProcesses = workflowNodes
-              .filter((node: any) => node.progressStage === currentStage)
-              .sort((a: any, b: any) => (a.sortOrder || 0) - (b.sortOrder || 0));
-
-            console.log('📋 [工序弹窗] 筛选后的工序:', filteredProcesses);
-
-            const detailColumns = [
-              {
-                title: '进度节点',
-                dataIndex: 'progressStage',
-                key: 'progressStage',
-                width: 100,
-                render: (v: any) => (
-                  <span style={{ color: '#1890ff', fontWeight: 600 }}>
-                    {v || '-'}
-                  </span>
-                ),
-              },
-              {
-                title: '工序名称',
-                dataIndex: 'name',
-                key: 'name',
-                width: 120,
-                render: (v: any) => v || '-',
-              },
-              {
-                title: '工序单价',
-                dataIndex: 'unitPrice',
-                key: 'unitPrice',
-                width: 100,
-                align: 'right' as const,
-                render: (v: any) => {
-                  const price = Number(v);
-                  return price > 0 ? `¥${price.toFixed(2)}` : '-';
-                },
-              },
-              {
-                title: '裁剪数量',
-                key: 'cuttingQuantity',
-                width: 100,
-                align: 'right' as const,
-                render: () => {
-                  // 从订单读取裁剪数量，如果没有则使用订单数量
-                  const cuttingQty = processDetailRecord.cuttingQuantity || processDetailRecord.orderQuantity || 0;
-                  return cuttingQty;
-                },
-              },
-              {
-                title: '完成数量',
-                key: 'completedQuantity',
-                width: 100,
-                align: 'right' as const,
-                render: () => {
-                  // TODO: 从扫码记录统计完成数量
-                  // 临时显示0，后续从后端接口获取
-                  return 0;
-                },
-              },
+            // 主进度节点定义（固定的5+1个大类）
+            const mainStages = [
+              { key: 'procurement', name: '采购', keywords: ['采购', '物料', '备料'] },
+              { key: 'cutting', name: '裁剪', keywords: ['裁剪', '裁床', '开裁'] },
+              { key: 'carSewing', name: '车缝', keywords: ['车缝', '缝制', '缝纫', '车工', '生产'] },
+              { key: 'secondaryProcess', name: '二次工艺', keywords: ['二次工艺', '二次', '工艺'] },
+              { key: 'tailProcess', name: '尾部', keywords: ['尾部', '整烫', '包装', '质检', '后整', '剪线'] },
+              { key: 'warehousing', name: '入库', keywords: ['入库', '仓库'] },
             ];
 
-            const stageTitles: Record<string, string> = {
-              procurement: '📦 采购',
-              cutting: '✂️ 裁剪',
-              carSewing: '🧵 车缝',
-              secondaryProcess: '🔧 二次工艺',
-              tailProcess: '🎀 尾部',
+            // 将子工序匹配到对应的主进度节点
+            const matchStage = (progressStage: string, processName: string): string => {
+              // 合并 progressStage 和 processName 用于匹配（中文不需要转小写）
+              const text = `${progressStage || ''} ${processName || ''}`;
+              // 按顺序匹配，先匹配到的优先
+              for (const stage of mainStages) {
+                if (stage.keywords.some(kw => text.includes(kw))) {
+                  return stage.key;
+                }
+              }
+              // 默认归类到尾部
+              return 'tailProcess';
             };
+
+            // 按主进度节点分组
+            const groupedProcesses: Record<string, any[]> = {};
+            mainStages.forEach(s => { groupedProcesses[s.key] = []; });
+
+            workflowNodes.forEach((node: any) => {
+              const stageKey = matchStage(node.progressStage || '', node.name || '');
+              if (!groupedProcesses[stageKey]) {
+                groupedProcesses[stageKey] = [];
+              }
+              groupedProcesses[stageKey].push(node);
+            });
+
+            // 如果不是'all'类型，只显示当前阶段的工序
+            const stagesToShow = processDetailType === 'all'
+              ? mainStages.filter(s => groupedProcesses[s.key].length > 0)
+              : mainStages.filter(s => s.key === processDetailType && groupedProcesses[s.key].length > 0);
+
+            const stageTitles: Record<string, string> = {
+              all: '全部',
+              procurement: '采购',
+              cutting: '裁剪',
+              carSewing: '车缝',
+              secondaryProcess: '二次工艺',
+              tailProcess: '尾部',
+              warehousing: '入库',
+            };
+
+            // 计算总工价
+            const totalPrice = workflowNodes.reduce((sum: number, node: any) => sum + (Number(node.unitPrice) || 0), 0);
+            const cuttingQty = processDetailRecord.cuttingQuantity || processDetailRecord.orderQuantity || 0;
 
             return (
               <div>
@@ -2817,7 +2974,7 @@ const ProductionList: React.FC = () => {
                   borderRadius: '8px',
                   marginBottom: '16px',
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(5, 1fr)',
+                  gridTemplateColumns: 'repeat(6, 1fr)',
                   gap: '12px'
                 }}>
                   <div>
@@ -2847,52 +3004,160 @@ const ProductionList: React.FC = () => {
                   <div>
                     <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>裁剪数量</div>
                     <div style={{ fontSize: '14px', fontWeight: 600, color: '#059669' }}>
-                      {processDetailRecord.cuttingQuantity || processDetailRecord.orderQuantity || 0} 件
+                      {cuttingQty} 件
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>总工价</div>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#dc2626' }}>
+                      ¥{totalPrice.toFixed(2)}
                     </div>
                   </div>
                 </div>
 
-                {/* 工序明细表格 */}
-                <Table
-                  columns={detailColumns}
-                  dataSource={filteredProcesses}
-                  rowKey={(record: any) => record.id || record.name}
-                  pagination={false}
-                  size="small"
-                  locale={{ emptyText: `暂无${stageTitles[processDetailType] || ''}工序数据` }}
-                  summary={(pageData) => {
-                    if (pageData.length === 0) return null;
+                {/* 按进度节点分组显示工序 */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {stagesToShow.map((stage) => {
+                    const processes = groupedProcesses[stage.key] || [];
+                    if (processes.length === 0) return null;
 
-                    const totalPrice = pageData.reduce((sum, record) => {
-                      return sum + (Number(record.unitPrice) || 0);
-                    }, 0);
-                    const cuttingQty = processDetailRecord.cuttingQuantity || processDetailRecord.orderQuantity || 0;
-                    const totalWage = totalPrice * cuttingQty;
+                    const stageTotal = processes.reduce((sum: number, p: any) => sum + (Number(p.unitPrice) || 0), 0);
 
                     return (
-                      <Table.Summary.Row style={{ background: '#fafafa', fontWeight: 600 }}>
-                        <Table.Summary.Cell index={0} colSpan={2}>
-                          合计（{pageData.length}个工序）
-                        </Table.Summary.Cell>
-                        <Table.Summary.Cell index={1} align="right">
-                          ¥{totalPrice.toFixed(2)}
-                        </Table.Summary.Cell>
-                        <Table.Summary.Cell index={2} align="right">
-                          {cuttingQty} 件
-                        </Table.Summary.Cell>
-                        <Table.Summary.Cell index={3} align="right">
-                          <span style={{ color: '#059669', fontSize: '14px', fontWeight: 700 }}>
-                            总工资: ¥{totalWage.toFixed(2)}
-                          </span>
-                        </Table.Summary.Cell>
-                      </Table.Summary.Row>
+                      <div key={stage.key} style={{
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        overflow: 'hidden'
+                      }}>
+                        {/* 进度节点标题 */}
+                        <div style={{
+                          background: stage.key === 'procurement' ? '#dbeafe' :
+                                     stage.key === 'cutting' ? '#fef3c7' :
+                                     stage.key === 'carSewing' ? '#d1fae5' :
+                                     stage.key === 'secondaryProcess' ? '#ede9fe' :
+                                     stage.key === 'tailProcess' ? '#fce7f3' :
+                                     '#f3f4f6',
+                          padding: '10px 16px',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          borderBottom: '1px solid #e5e7eb'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{
+                              fontWeight: 700,
+                              fontSize: '15px',
+                              color: stage.key === 'procurement' ? '#1e40af' :
+                                     stage.key === 'cutting' ? '#92400e' :
+                                     stage.key === 'carSewing' ? '#065f46' :
+                                     stage.key === 'secondaryProcess' ? '#5b21b6' :
+                                     stage.key === 'tailProcess' ? '#9d174d' :
+                                     '#374151'
+                            }}>
+                              {stage.name}
+                            </span>
+                            <span style={{ fontSize: '13px', color: '#6b7280' }}>
+                              ({processes.length}个工序)
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '14px', fontWeight: 600, color: '#059669' }}>
+                            小计: ¥{stageTotal.toFixed(2)}
+                          </div>
+                        </div>
+
+                        {/* 子工序列表 */}
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                          <thead>
+                            <tr style={{ background: '#f9fafb' }}>
+                              <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '13px', color: '#6b7280', fontWeight: 500, width: '60px' }}>序号</th>
+                              <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '13px', color: '#6b7280', fontWeight: 500, width: '80px' }}>工序编号</th>
+                              <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '13px', color: '#6b7280', fontWeight: 500 }}>工序名称</th>
+                              <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '13px', color: '#6b7280', fontWeight: 500, width: '80px' }}>机器类型</th>
+                              <th style={{ padding: '8px 12px', textAlign: 'right', fontSize: '13px', color: '#6b7280', fontWeight: 500, width: '90px' }}>工序单价</th>
+                              <th style={{ padding: '8px 12px', textAlign: 'right', fontSize: '13px', color: '#6b7280', fontWeight: 500, width: '90px' }}>裁剪数量</th>
+                              <th style={{ padding: '8px 12px', textAlign: 'right', fontSize: '13px', color: '#6b7280', fontWeight: 500, width: '100px' }}>工序工资</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {processes.map((p: any, idx: number) => {
+                              const price = Number(p.unitPrice) || 0;
+                              const wage = price * cuttingQty;
+                              return (
+                                <tr key={p.id || idx} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                                  <td style={{ padding: '10px 12px', fontSize: '13px', color: '#9ca3af' }}>{idx + 1}</td>
+                                  <td style={{ padding: '10px 12px', fontSize: '13px', color: '#374151' }}>{p.id || '-'}</td>
+                                  <td style={{ padding: '10px 12px', fontSize: '14px', fontWeight: 600, color: '#111827' }}>{p.name || '-'}</td>
+                                  <td style={{ padding: '10px 12px', fontSize: '13px', color: '#6b7280' }}>{p.machineType || '-'}</td>
+                                  <td style={{ padding: '10px 12px', fontSize: '14px', fontWeight: 600, color: '#059669', textAlign: 'right' }}>
+                                    {price > 0 ? `¥${price.toFixed(2)}` : '-'}
+                                  </td>
+                                  <td style={{ padding: '10px 12px', fontSize: '13px', color: '#374151', textAlign: 'right' }}>{cuttingQty}</td>
+                                  <td style={{ padding: '10px 12px', fontSize: '14px', fontWeight: 600, color: '#dc2626', textAlign: 'right' }}>
+                                    {wage > 0 ? `¥${wage.toFixed(2)}` : '-'}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
                     );
-                  }}
-                />
+                  })}
+                </div>
+
+                {/* 总计 */}
+                {processDetailType === 'all' && (
+                  <div style={{
+                    marginTop: '16px',
+                    padding: '12px 16px',
+                    background: '#f0fdf4',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <span style={{ fontWeight: 600, color: '#374151' }}>
+                      全部工序合计（{workflowNodes.length}个）
+                    </span>
+                    <div style={{ display: 'flex', gap: '24px' }}>
+                      <span style={{ color: '#059669', fontWeight: 600 }}>
+                        总工价: ¥{totalPrice.toFixed(2)}
+                      </span>
+                      <span style={{ color: '#dc2626', fontWeight: 700, fontSize: '16px' }}>
+                        总工资: ¥{(totalPrice * cuttingQty).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })()}
         </ResizableModal>
+
+        {/* 打印预览弹窗 - 使用通用打印组件 */}
+        <StylePrintModal
+          visible={printModalVisible}
+          onClose={() => {
+            setPrintModalVisible(false);
+            setPrintingRecord(null);
+          }}
+          styleId={printingRecord?.styleId}
+          styleNo={printingRecord?.styleNo}
+          styleName={printingRecord?.styleName}
+          cover={printingRecord?.styleCover}
+          color={printingRecord?.color}
+          quantity={printingRecord?.orderQuantity}
+          category={printingRecord?.category}
+          mode="production"
+          extraInfo={{
+            '订单号': printingRecord?.orderNo,
+            '订单数量': printingRecord?.orderQuantity,
+            '加工厂': printingRecord?.factoryName,
+            '跟单员': printingRecord?.merchandiser,
+            '订单交期': printingRecord?.plannedEndDate,
+          }}
+          sizeDetails={printingRecord ? parseProductionOrderLines(printingRecord) : []}
+        />
       </div>
     </Layout>
   );

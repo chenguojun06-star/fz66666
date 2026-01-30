@@ -45,6 +45,11 @@ public interface ProductionOrderService extends IService<ProductionOrder> {
     ProductionOrder recomputeProgressFromRecords(String orderId);
 
     /**
+     * 异步重新计算订单进度
+     */
+    void recomputeProgressAsync(String orderId);
+
+    /**
      * 更新物料到位率
      */
     boolean updateMaterialArrivalRate(String id, Integer rate);

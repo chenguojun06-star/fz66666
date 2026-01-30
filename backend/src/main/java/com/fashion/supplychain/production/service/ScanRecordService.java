@@ -34,6 +34,7 @@ public interface ScanRecordService extends IService<ScanRecord> {
 
     /**
      * 根据订单ID删除扫码记录
+     * 
      * @param orderId 订单ID
      * @return 删除的记录数
      */
@@ -41,8 +42,17 @@ public interface ScanRecordService extends IService<ScanRecord> {
 
     /**
      * 根据订单号删除扫码记录
+     * 
      * @param orderNo 订单号
      * @return 删除的记录数
      */
     int deleteByOrderNo(String orderNo);
+
+    /**
+     * 获取订单的扫码统计数据
+     * 
+     * @param orderNo 订单号
+     * @return 统计列表 [{color: 'Red', size: 'L', count: 10}, ...]
+     */
+    java.util.List<Map<String, Object>> getScanStatsByOrder(String orderNo);
 }

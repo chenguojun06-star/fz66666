@@ -309,7 +309,7 @@ public class ScanRecordOrchestrator {
 
         String oid = trimToNull(target.getOrderId());
         if (hasText(oid)) {
-            productionOrderService.recomputeProgressFromRecords(oid);
+            productionOrderService.recomputeProgressAsync(oid);
         }
 
         Map<String, Object> resp = new HashMap<>();
@@ -368,7 +368,8 @@ public class ScanRecordOrchestrator {
             if (existed != null && hasText(existed.getId())) {
                 // 检查是否是同一个操作人
                 String existingOperatorId = existed.getOperatorId() == null ? null : existed.getOperatorId().trim();
-                String existingOperatorName = existed.getOperatorName() == null ? null : existed.getOperatorName().trim();
+                String existingOperatorName = existed.getOperatorName() == null ? null
+                        : existed.getOperatorName().trim();
                 boolean isSameOperator = false;
                 if (hasText(operatorId) && hasText(existingOperatorId)) {
                     isSameOperator = operatorId.equals(existingOperatorId);
@@ -398,7 +399,8 @@ public class ScanRecordOrchestrator {
                 }
                 // 验收人必须是领取人
                 String receivedOperatorId = received.getOperatorId() == null ? null : received.getOperatorId().trim();
-                String receivedOperatorName = received.getOperatorName() == null ? null : received.getOperatorName().trim();
+                String receivedOperatorName = received.getOperatorName() == null ? null
+                        : received.getOperatorName().trim();
                 boolean isSameOperator = false;
                 if (hasText(operatorId) && hasText(receivedOperatorId)) {
                     isSameOperator = operatorId.equals(receivedOperatorId);
@@ -478,14 +480,16 @@ public class ScanRecordOrchestrator {
         boolean hasQualifiedWarehousing = false;
         boolean hasUnqualifiedWarehousing = false;
         try {
-            List<ProductWarehousing> existingList = productWarehousingService.list(new LambdaQueryWrapper<ProductWarehousing>()
-                    .select(ProductWarehousing::getId, ProductWarehousing::getQualityStatus,
-                            ProductWarehousing::getWarehousingQuantity, ProductWarehousing::getQualifiedQuantity,
-                            ProductWarehousing::getUnqualifiedQuantity)
-                    .eq(ProductWarehousing::getDeleteFlag, 0)
-                    .eq(ProductWarehousing::getOrderId, order.getId())
-                    .eq(ProductWarehousing::getCuttingBundleId, bundle.getId())
-                    .orderByDesc(ProductWarehousing::getCreateTime));
+            List<ProductWarehousing> existingList = productWarehousingService
+                    .list(new LambdaQueryWrapper<ProductWarehousing>()
+                            .select(ProductWarehousing::getId, ProductWarehousing::getQualityStatus,
+                                    ProductWarehousing::getWarehousingQuantity,
+                                    ProductWarehousing::getQualifiedQuantity,
+                                    ProductWarehousing::getUnqualifiedQuantity)
+                            .eq(ProductWarehousing::getDeleteFlag, 0)
+                            .eq(ProductWarehousing::getOrderId, order.getId())
+                            .eq(ProductWarehousing::getCuttingBundleId, bundle.getId())
+                            .orderByDesc(ProductWarehousing::getCreateTime));
             if (existingList != null) {
                 for (ProductWarehousing w : existingList) {
                     if (w == null) {
@@ -1001,7 +1005,8 @@ public class ScanRecordOrchestrator {
         try {
             scanRecordService.saveScanRecord(sr);
         } catch (DuplicateKeyException e) {
-            Map<String, Object> updatedAfterDup = tryUpdateExistingBundleScanRecord(bundle, orderFinal, requestId, scanCode,
+            Map<String, Object> updatedAfterDup = tryUpdateExistingBundleScanRecord(bundle, orderFinal, requestId,
+                    scanCode,
                     finalScanType, stageNameFinal, pricingProcessNameFinal, qty, unitPrice, operatorId, operatorName,
                     sr.getColor(), sr.getSize(), sr.getProcessCode(), sr.getRemark(), isCutting);
             if (updatedAfterDup != null) {
@@ -1118,17 +1123,7 @@ public class ScanRecordOrchestrator {
             validateScanRecordForSave(patch);
             scanRecordService.updateById(patch);
 
-            try {
-                productionOrderService.recomputeProgressFromRecords(order.getId());
-            } catch (Exception e) {
-                log.warn("Failed to recompute progress after scan update: orderId={}", order.getId(), e);
-                scanRecordDomainService.insertOrchestrationFailure(
-                        order,
-                        "recomputeProgressFromRecords",
-                        e == null ? "recomputeProgressFromRecords failed"
-                                : ("recomputeProgressFromRecords failed: " + e.getMessage()),
-                        LocalDateTime.now());
-            }
+            productionOrderService.recomputeProgressAsync(order.getId());
 
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
@@ -1781,7 +1776,8 @@ public class ScanRecordOrchestrator {
 
     /**
      * 获取我的质检待处理任务（已领取未确认结果）
-     * 查询 scanType='quality' 且 processCode='quality_receive' 但没有对应的 'quality_confirm' 记录
+     * 查询 scanType='quality' 且 processCode='quality_receive' 但没有对应的
+     * 'quality_confirm' 记录
      */
     public List<ScanRecord> getMyQualityTasks() {
         UserContext ctx = UserContext.get();
@@ -1822,10 +1818,9 @@ public class ScanRecordOrchestrator {
             // 2. 检查该菲号是否已入库（可能通过PC端入库）
             if (hasText(bundleId)) {
                 long warehousingCount = productWarehousingService.count(
-                    new LambdaQueryWrapper<ProductWarehousing>()
-                        .eq(ProductWarehousing::getCuttingBundleId, bundleId)
-                        .eq(ProductWarehousing::getDeleteFlag, 0)
-                );
+                        new LambdaQueryWrapper<ProductWarehousing>()
+                                .eq(ProductWarehousing::getCuttingBundleId, bundleId)
+                                .eq(ProductWarehousing::getDeleteFlag, 0));
                 if (warehousingCount > 0) {
                     // 已入库，跳过
                     continue;

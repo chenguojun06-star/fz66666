@@ -1,8 +1,8 @@
-import React, { ReactNode, useEffect, useMemo, useState } from 'react';
+import React, { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Avatar, Badge, Button, Dropdown, Layout as AntLayout, Menu, message, Popover } from 'antd';
 import { BellOutlined, CloseOutlined, DownOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined, SettingOutlined } from '@ant-design/icons';
-import { isAdminUser as isAdminUserFn, useAuth } from '../../utils/authContext';
+import { isAdminUser as isAdminUserFn, useAuth } from '../../utils/AuthContext';
 import { menuConfig, resolvePermissionCode } from '../../routeConfig';
 import { useViewport } from '../../utils/useViewport';
 import api, { ApiResult } from '../../utils/api';
@@ -134,6 +134,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     return readRecentPages().slice(0, maxRecentPages);
   });
   const [urgentEvents, setUrgentEvents] = useState<UrgentEvent[]>([]);
+
+  // 标签栏滚动容器的ref
+  const recentsContainerRef = useRef<HTMLDivElement>(null);
+  const activeTabRef = useRef<HTMLDivElement>(null);
 
   const { isMobile } = useViewport();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => readSidebarCollapsed());
@@ -303,6 +307,36 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     });
   }, [effectiveFullPath, effectivePathname, getActivePath]);
 
+  // 当活动标签变化时，自动滚动到可见区域
+  useEffect(() => {
+    if (!activeTabRef.current || !recentsContainerRef.current) return;
+
+    // 使用 requestAnimationFrame 确保 DOM 更新后再滚动
+    requestAnimationFrame(() => {
+      if (!activeTabRef.current || !recentsContainerRef.current) return;
+
+      const container = recentsContainerRef.current;
+      const activeTab = activeTabRef.current;
+
+      const containerRect = container.getBoundingClientRect();
+      const tabRect = activeTab.getBoundingClientRect();
+
+      // 计算标签相对于容器的位置
+      const tabLeft = tabRect.left - containerRect.left + container.scrollLeft;
+      const tabRight = tabLeft + tabRect.width;
+
+      // 如果标签在可见区域外，则滚动到可见位置
+      if (tabLeft < container.scrollLeft) {
+        // 标签在左侧视野外，滚动到左边缘
+        container.scrollLeft = tabLeft - 10; // 留10px边距
+      } else if (tabRight > container.scrollLeft + containerRect.width) {
+        // 标签在右侧视野外，滚动到右边缘
+        container.scrollLeft = tabRight - containerRect.width + 10; // 留10px边距
+      }
+      // 如果标签已在可见区域内，不进行滚动
+    });
+  }, [effectiveFullPath]);
+
   const closeRecent = (path: string) => {
     setRecentPages((prev) => {
       const idx = prev.findIndex((p) => p.path === path);
@@ -334,11 +368,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <div className="header-left">
             <h1 className="header-title header-brand">衣富ERP供应链生态</h1>
             {recentPages.length ? (
-              <div className="header-recents" role="tablist" aria-label="最近打开的页面">
+              <div className="header-recents" role="tablist" aria-label="最近打开的页面" ref={recentsContainerRef}>
                 {recentPages.map((p) => {
                   const isCurrent = p.path === effectiveFullPath;
                   return (
-                    <div key={p.path} className={`recent-tab${isCurrent ? ' active' : ''}`}>
+                    <div
+                      key={p.path}
+                      className={`recent-tab${isCurrent ? ' active' : ''}`}
+                      ref={isCurrent ? activeTabRef : null}
+                    >
                       <Button
                         type="text"
                         size="small"

@@ -2,7 +2,7 @@ import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Button, Spin, App as AntdApp } from 'antd';
 import PrivateRoute from './components/PrivateRoute';
-import { useAuth } from './utils/authContext';
+import { useAuth } from './utils/AuthContext';
 import ResizableModal from './components/common/ResizableModal';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { paths } from './routeConfig';
@@ -36,6 +36,7 @@ import {
   OrderFlow,
   ProgressDetail,
   PatternProduction,
+  MaterialPicking,
 } from './modules/production';
 
 // 懒加载组件
@@ -61,12 +62,42 @@ const GlobalImagePreview: React.FC = () => {
   const [open, setOpen] = React.useState(false);
   const [src, setSrc] = React.useState<string | undefined>(undefined);
   const [alt, setAlt] = React.useState<string | undefined>(undefined);
+  const [imageDimensions, setImageDimensions] = React.useState<{ width: number; height: number } | null>(null);
 
   const close = React.useCallback(() => {
     setOpen(false);
     setSrc(undefined);
     setAlt(undefined);
+    setImageDimensions(null);
   }, []);
+
+  // 计算模态框尺寸
+  const getModalSize = React.useMemo(() => {
+    if (!imageDimensions) {
+      return { width: 600, height: 600 };
+    }
+
+    const maxWidth = window.innerWidth * 0.9; // 最大宽度为视口的90%
+    const maxHeight = window.innerHeight * 0.9; // 最大高度为视口的90%
+    const minSize = 300; // 最小尺寸
+
+    let { width, height } = imageDimensions;
+
+    // 如果图片太大，按比例缩小
+    if (width > maxWidth || height > maxHeight) {
+      const widthRatio = maxWidth / width;
+      const heightRatio = maxHeight / height;
+      const ratio = Math.min(widthRatio, heightRatio);
+      width = Math.round(width * ratio);
+      height = Math.round(height * ratio);
+    }
+
+    // 确保最小尺寸
+    width = Math.max(width, minSize);
+    height = Math.max(height, minSize);
+
+    return { width, height };
+  }, [imageDimensions]);
 
   React.useEffect(() => {
     const isIgnored = (img: HTMLImageElement) => {
@@ -102,6 +133,22 @@ const GlobalImagePreview: React.FC = () => {
 
       e.preventDefault();
       e.stopPropagation();
+
+      // 获取图片的实际尺寸
+      const naturalWidth = img.naturalWidth;
+      const naturalHeight = img.naturalHeight;
+
+      if (naturalWidth && naturalHeight) {
+        setImageDimensions({ width: naturalWidth, height: naturalHeight });
+      } else {
+        // 如果图片尚未加载，创建新Image对象获取尺寸
+        const tempImg = new Image();
+        tempImg.onload = () => {
+          setImageDimensions({ width: tempImg.width, height: tempImg.height });
+        };
+        tempImg.src = nextSrc;
+      }
+
       setSrc(nextSrc);
       setAlt(img.getAttribute('alt') || undefined);
       setOpen(true);
@@ -117,10 +164,10 @@ const GlobalImagePreview: React.FC = () => {
       title={null}
       onCancel={close}
       footer={null}
-      width={600}
-      minWidth={600}
-      minHeight={600}
-      initialHeight={600}
+      width={getModalSize.width}
+      minWidth={300}
+      minHeight={300}
+      initialHeight={getModalSize.height}
       contentPadding={0}
       destroyOnHidden
       scaleWithViewport={false}
@@ -133,6 +180,7 @@ const GlobalImagePreview: React.FC = () => {
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
+            background: '#f0f0f0',
           }}
         >
           <img
@@ -142,6 +190,7 @@ const GlobalImagePreview: React.FC = () => {
               maxWidth: '100%',
               maxHeight: '100%',
               objectFit: 'contain',
+              display: 'block',
             }}
           />
         </div>
@@ -197,6 +246,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.materialPurchase} element={<Suspense fallback={<Spin />}><MaterialPurchase /></Suspense>} />
           <Route path={paths.materialPurchaseDetail} element={<Suspense fallback={<Spin />}><MaterialPurchaseDetail /></Suspense>} />
           <Route path={paths.warehousing} element={<Suspense fallback={<Spin />}><ProductWarehousing /></Suspense>} />
+          <Route path={paths.materialPicking} element={<Suspense fallback={<Spin />}><MaterialPicking /></Suspense>} />
           <Route path={paths.warehousingDetail} element={<Suspense fallback={<Spin />}><ProductWarehousing /></Suspense>} />
           <Route path={paths.orderTransfer} element={<Suspense fallback={<Spin />}><OrderTransfer /></Suspense>} />
           <Route

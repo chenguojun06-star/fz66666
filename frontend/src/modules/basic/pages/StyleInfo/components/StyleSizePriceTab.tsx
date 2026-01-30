@@ -13,6 +13,7 @@ interface SizePrice {
   styleId: number;
   processCode: string;
   processName: string;
+  progressStage?: string;
   size: string;
   price: number;
 }
@@ -20,6 +21,7 @@ interface SizePrice {
 interface ProcessRow {
   processCode: string;
   processName: string;
+  progressStage?: string;
   [key: string]: any; // 动态尺码价格字段
 }
 
@@ -138,6 +140,7 @@ const StyleSizePriceTab: React.FC<Props> = ({ styleId, readOnly }) => {
           const row: ProcessRow = {
             processCode: proc.processCode,
             processName: proc.processName,
+            progressStage: proc.progressStage || '',
           };
 
           // 为每个尺码添加价格列
@@ -208,8 +211,16 @@ const StyleSizePriceTab: React.FC<Props> = ({ styleId, readOnly }) => {
 
     // 从所有工序中删除该尺码的价格字段
     setData(prev => prev.map(row => {
-      const { [`price_${size}`]: removed, ...rest } = row;
-      return rest;
+      const newRow: ProcessRow = {
+        processCode: row.processCode,
+        processName: row.processName,
+        progressStage: row.progressStage,
+      };
+      // 复制其他尺码的价格字段（排除要删除的尺码）
+      newSizes.forEach(s => {
+        newRow[`price_${s}`] = row[`price_${s}`];
+      });
+      return newRow;
     }));
 
     message.success(`已删除尺码: ${size}`);
@@ -228,6 +239,7 @@ const StyleSizePriceTab: React.FC<Props> = ({ styleId, readOnly }) => {
             styleId: Number(styleId),
             processCode: row.processCode,
             processName: row.processName,
+            progressStage: row.progressStage,
             size,
             price,
           });
@@ -264,8 +276,15 @@ const StyleSizePriceTab: React.FC<Props> = ({ styleId, readOnly }) => {
     {
       title: '工序名称',
       dataIndex: 'processName',
-      width: 160,
+      width: 120,
       fixed: 'left' as const,
+    },
+    {
+      title: '进度节点',
+      dataIndex: 'progressStage',
+      width: 100,
+      fixed: 'left' as const,
+      render: (text: string) => text || '-',
     },
     ...sizes.map(size => ({
       title: `${size}码单价`,

@@ -5,7 +5,7 @@ import { StyleBom, TemplateLibrary } from '@/types/style';
 import api from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
-import { isSupervisorOrAboveUser, useAuth } from '@/utils/authContext';
+import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
 import { getMaterialSortWeight, getMaterialTypeLabel, normalizeMaterialType } from '@/utils/materialType';
 import { useViewport } from '@/utils/useViewport';
 import { formatDateTime } from '@/utils/datetime';
