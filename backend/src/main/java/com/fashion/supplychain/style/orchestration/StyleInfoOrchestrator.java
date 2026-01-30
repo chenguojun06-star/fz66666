@@ -476,7 +476,7 @@ public class StyleInfoOrchestrator {
         if (ok) {
             saveSampleLog(id, "SAMPLE_COMPLETED", "点击样衣完成（含兜底逻辑）");
             log.info("样衣完成成功：styleId={}, 已自动补全所有未完成步骤", id);
-            
+
             // 自动推送到单价维护（模板库）
             try {
                 StyleInfo updated = styleInfoService.getById(id);

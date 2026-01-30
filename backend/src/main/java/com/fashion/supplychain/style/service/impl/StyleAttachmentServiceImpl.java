@@ -12,11 +12,11 @@ import java.util.List;
 
 @Service
 public class StyleAttachmentServiceImpl extends ServiceImpl<StyleAttachmentMapper, StyleAttachment> implements StyleAttachmentService {
-    
+
     private static final String STATUS_ACTIVE = "active";
     private static final String BIZ_TYPE_PATTERN = "pattern";
     private static final String BIZ_TYPE_PATTERN_GRADING = "pattern_grading";
-    
+
     @Override
     public List<StyleAttachment> listByStyleId(String styleId) {
         return listByStyleId(styleId, null);
