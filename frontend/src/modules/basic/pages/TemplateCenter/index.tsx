@@ -912,7 +912,7 @@ const TemplateCenter: React.FC = () => {
     <Layout>
       <Card
         className="page-card"
-        title="单价流程"
+        title="单价维护"
       >
         <Form form={queryForm} layout="inline" initialValues={{ templateType: '' }}>
           <Form.Item name="templateType" label="类型">

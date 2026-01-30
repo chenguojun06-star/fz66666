@@ -629,7 +629,7 @@ const OrderManagement: React.FC = () => {
     new Promise<boolean>((resolve) => {
       modal.confirm({
         title: '下单提醒',
-        content: '请确认单价流程维护已完成。',
+        content: '请确认单价维护已完成。',
         okText: '确认下单',
         cancelText: '取消',
         onOk: () => resolve(true),
