@@ -253,16 +253,16 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                 <Col span={8}>
                   <Form.Item label={<span style={{ fontSize: '14px', fontWeight: 600 }}>物料总成本 (自动)</span>} style={{ marginBottom: 4 }}>
                     <Form.Item name="materialCost" noStyle>
-                      <InputNumber 
-                        size="middle" 
-                        style={{ 
-                          width: '100%', 
+                      <InputNumber
+                        size="middle"
+                        style={{
+                          width: '100%',
                           fontSize: '16px',
                           backgroundColor: '#f5f5f5',
                           cursor: 'not-allowed'
-                        }} 
-                        prefix="¥" 
-                        readOnly 
+                        }}
+                        prefix="¥"
+                        readOnly
                         disabled
                       />
                     </Form.Item>
@@ -271,16 +271,16 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                 <Col span={8}>
                   <Form.Item label={<span style={{ fontSize: '14px', fontWeight: 600 }}>工序总成本 (自动)</span>} style={{ marginBottom: 4 }}>
                     <Form.Item name="processCost" noStyle>
-                      <InputNumber 
-                        size="middle" 
-                        style={{ 
-                          width: '100%', 
+                      <InputNumber
+                        size="middle"
+                        style={{
+                          width: '100%',
                           fontSize: '16px',
                           backgroundColor: '#f5f5f5',
                           cursor: 'not-allowed'
-                        }} 
-                        prefix="¥" 
-                        readOnly 
+                        }}
+                        prefix="¥"
+                        readOnly
                         disabled
                       />
                     </Form.Item>
@@ -301,9 +301,9 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                 <Col span={8}>
                   <div style={{ marginBottom: 4 }}>
                     <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: 4, color: 'rgba(0, 0, 0, 0.88)' }}>总成本</div>
-                    <Statistic 
-                      value={form.getFieldValue('totalCost') || 0} 
-                      precision={2} 
+                    <Statistic
+                      value={form.getFieldValue('totalCost') || 0}
+                      precision={2}
                       prefix="¥"
                       valueStyle={{ fontSize: '16px', color: '#1890ff' }}
                     />
@@ -312,9 +312,9 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                 <Col span={8}>
                   <div style={{ marginBottom: 4 }}>
                     <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: 4, color: 'rgba(0, 0, 0, 0.88)' }}>最终报价</div>
-                    <Statistic 
-                      value={form.getFieldValue('totalPrice') || 0} 
-                      precision={2} 
+                    <Statistic
+                      value={form.getFieldValue('totalPrice') || 0}
+                      precision={2}
                       prefix="¥"
                       valueStyle={{ fontSize: '18px', fontWeight: 'bold', color: '#ff4d4f' }}
                     />
@@ -364,43 +364,66 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
           </Card>
         </Col>
         <Col span={6}>
-          <Card title="成本结构" size="small" style={{ height: '100%' }} styles={{ body: { padding: '8px' } }}>
-            <div style={{ textAlign: 'center', marginBottom: 8 }}>
+          <Card title="💰 成本结构" size="small" style={{ height: '100%' }} styles={{ body: { padding: '12px' } }}>
+            <div style={{ textAlign: 'center', marginBottom: 12 }}>
               <Statistic
                 title="预估毛利"
                 value={profit}
                 precision={2}
-                styles={{ value: { fontSize: '20px', color: '#3f8600', fontWeight: 700 } }}
+                valueStyle={{ fontSize: '22px', color: '#3f8600', fontWeight: 700 }}
                 prefix="¥"
               />
             </div>
-            <Divider style={{ margin: '6px 0' }} />
-            <div style={{ fontSize: '13px' }}>
-              <div style={{ marginBottom: 6 }}>
-                <span style={{ fontWeight: 600 }}>物料占比：</span>
-                <span style={{ float: 'right', fontWeight: 600 }}>
-                  {((totalPrice ? (materialCost / totalPrice) * 100 : 0) || 0).toFixed(1)}%
-                </span>
-                <div style={{ height: 4, background: '#f0f0f0', marginTop: 4, borderRadius: 2 }}>
+            <Divider style={{ margin: '8px 0' }} />
+            <div style={{ fontSize: '13px', lineHeight: 1.8 }}>
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontWeight: 600, color: '#1890ff' }}>物料占比：</span>
+                  <span style={{ fontWeight: 700, fontSize: '14px', color: '#1890ff' }}>
+                    {totalCost > 0 ? ((materialCost / totalCost) * 100).toFixed(1) : '0.0'}%
+                  </span>
+                </div>
+                <div style={{ height: 6, background: '#f0f0f0', borderRadius: 3 }}>
                   <div style={{
-                    width: `${totalPrice ? (materialCost / totalPrice) * 100 : 0}%`,
+                    width: `${totalCost > 0 ? (materialCost / totalCost) * 100 : 0}%`,
                     height: '100%',
-                    background: '#1890ff',
-                    borderRadius: 2
+                    background: 'linear-gradient(90deg, #1890ff, #40a9ff)',
+                    borderRadius: 3,
+                    transition: 'width 0.3s ease'
+                  }} />
+                </div>
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontWeight: 600, color: '#52c41a' }}>工序占比：</span>
+                  <span style={{ fontWeight: 700, fontSize: '14px', color: '#52c41a' }}>
+                    {totalCost > 0 ? ((processCost / totalCost) * 100).toFixed(1) : '0.0'}%
+                  </span>
+                </div>
+                <div style={{ height: 6, background: '#f0f0f0', borderRadius: 3 }}>
+                  <div style={{
+                    width: `${totalCost > 0 ? (processCost / totalCost) * 100 : 0}%`,
+                    height: '100%',
+                    background: 'linear-gradient(90deg, #52c41a, #73d13d)',
+                    borderRadius: 3,
+                    transition: 'width 0.3s ease'
                   }} />
                 </div>
               </div>
               <div>
-                <span style={{ fontWeight: 600 }}>工费占比：</span>
-                <span style={{ float: 'right', fontWeight: 600 }}>
-                  {((totalPrice ? (processCost / totalPrice) * 100 : 0) || 0).toFixed(1)}%
-                </span>
-                <div style={{ height: 4, background: '#f0f0f0', marginTop: 4, borderRadius: 2 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontWeight: 600, color: '#fa8c16' }}>利润率：</span>
+                  <span style={{ fontWeight: 700, fontSize: '14px', color: '#fa8c16' }}>
+                    {totalPrice > 0 ? ((profit / totalPrice) * 100).toFixed(1) : '0.0'}%
+                  </span>
+                </div>
+                <div style={{ height: 6, background: '#f0f0f0', borderRadius: 3 }}>
                   <div style={{
-                    width: `${totalPrice ? (processCost / totalPrice) * 100 : 0}%`,
+                    width: `${totalPrice > 0 ? (profit / totalPrice) * 100 : 0}%`,
                     height: '100%',
-                    background: '#52c41a',
-                    borderRadius: 2
+                    background: 'linear-gradient(90deg, #fa8c16, #ffa940)',
+                    borderRadius: 3,
+                    transition: 'width 0.3s ease'
                   }} />
                 </div>
               </div>
