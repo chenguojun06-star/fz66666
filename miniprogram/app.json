@@ -6,7 +6,9 @@
     "pages/scan/index",
     "pages/payroll/payroll",
     "pages/admin/index",
-    "pages/admin/notification/index"
+    "pages/admin/notification/index",
+    "pages/warehouse/sample/list/index",
+    "pages/warehouse/sample/operation/index"
   ],
   "usingComponents": {
     "floating-bell": "/components/floating-bell/index"

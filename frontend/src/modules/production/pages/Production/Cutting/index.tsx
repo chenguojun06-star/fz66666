@@ -14,7 +14,7 @@ import QuickEditModal from '@/components/common/QuickEditModal';
 import api, { compareSizeAsc, fetchProductionOrderDetail, parseProductionOrderLines, useProductionOrderFrozenCache } from '@/utils/api';
 import { QRCodeCanvas } from 'qrcode.react';
 import QRCodeBox from '@/components/common/QRCodeBox';
-import { isSupervisorOrAboveUser, useAuth } from '@/utils/authContext';
+import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
 import type { CuttingTask, MaterialPurchase } from '@/types/production';
 import { ProductionOrderHeader, StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
 import { formatDateTime } from '@/utils/datetime';
@@ -1278,8 +1278,6 @@ const CuttingManagement: React.FC = () => {
         <StyleAttachmentsButton
           styleId={(activeTask as Record<string, unknown>)?.styleId}
           styleNo={record.styleNo || (activeTask as Record<string, unknown>)?.styleNo}
-          modalTitle={(record.styleNo || (activeTask as Record<string, unknown>)?.styleNo) ? `放码纸样（${record.styleNo || (activeTask as Record<string, unknown>)?.styleNo}）` : '放码纸样'}
-          onlyGradingPattern={true}
         />
       )
     },
@@ -1458,8 +1456,6 @@ const CuttingManagement: React.FC = () => {
                       <StyleAttachmentsButton
                         styleId={record.styleId}
                         styleNo={record.styleNo}
-                        modalTitle={record.styleNo ? `放码纸样（${record.styleNo}）` : '放码纸样'}
-                        onlyGradingPattern={true}
                       />
                     )
                   },

@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -37,9 +38,30 @@ public class ProductionOrderProgressRecomputeService {
 
     @Autowired
     private ProductionOrderScanRecordDomainService scanRecordDomainService;
-    
+
     @Autowired
     private CuttingBundleService cuttingBundleService;
+
+    @Async
+    public void recomputeProgressAsync(String orderId) {
+        try {
+            recomputeProgressFromRecords(orderId);
+        } catch (Exception e) {
+            log.error("Async recompute progress failed: orderId={}", orderId, e);
+            try {
+                ProductionOrder order = productionOrderMapper.selectById(orderId);
+                if (order != null) {
+                    scanRecordDomainService.insertOrchestrationFailure(
+                            order,
+                            "recomputeProgressAsync",
+                            "Async recompute failed: " + e.getMessage(),
+                            LocalDateTime.now());
+                }
+            } catch (Exception ex) {
+                log.error("Failed to record orchestration failure", ex);
+            }
+        }
+    }
 
     private boolean isBaseStageName(String processName) {
         String pn = StringUtils.hasText(processName) ? processName.trim() : null;
@@ -73,19 +95,19 @@ public class ProductionOrderProgressRecomputeService {
         if (orderQty <= 0) {
             return null;
         }
-        
+
         // 获取实际裁剪数量（从裁剪菲号汇总）
         int actualCuttingQty = 0;
         try {
             List<CuttingBundle> bundles = cuttingBundleService.list(
-                new LambdaQueryWrapper<CuttingBundle>()
-                    .eq(CuttingBundle::getProductionOrderId, oid));
+                    new LambdaQueryWrapper<CuttingBundle>()
+                            .eq(CuttingBundle::getProductionOrderId, oid));
             if (bundles != null && !bundles.isEmpty()) {
                 for (CuttingBundle bundle : bundles) {
                     actualCuttingQty += bundle.getQuantity() == null ? 0 : bundle.getQuantity();
                 }
-                log.info("订单实际裁剪数量: orderId={}, actualCuttingQty={}, orderQty={}", 
-                    oid, actualCuttingQty, orderQty);
+                log.info("订单实际裁剪数量: orderId={}, actualCuttingQty={}, orderQty={}",
+                        oid, actualCuttingQty, orderQty);
             }
         } catch (Exception e) {
             log.warn("Failed to get actual cutting quantity: orderId={}", oid, e);
@@ -339,13 +361,13 @@ public class ProductionOrderProgressRecomputeService {
                 if (done < 0) {
                     done = 0;
                 }
-                
+
                 // 如果是裁剪阶段，使用实际裁剪数量而不是订单数量
                 int baseQty = orderQty;
                 if (actualCuttingQty > 0 && templateLibraryService.progressStageNameMatches("裁剪", pn)) {
                     baseQty = actualCuttingQty;
-                    log.debug("裁剪阶段使用实际裁剪数量: stage={}, actualQty={}, orderQty={}", 
-                        pn, actualCuttingQty, orderQty);
+                    log.debug("裁剪阶段使用实际裁剪数量: stage={}, actualQty={}, orderQty={}",
+                            pn, actualCuttingQty, orderQty);
                     // 不限制done值，允许超过订单数量
                     if (done > actualCuttingQty) {
                         done = actualCuttingQty;
@@ -355,7 +377,7 @@ public class ProductionOrderProgressRecomputeService {
                         done = orderQty;
                     }
                 }
-                
+
                 BigDecimal ratio = BigDecimal.ZERO;
                 if (baseQty > 0 && done > 0) {
                     ratio = BigDecimal.valueOf(done).divide(BigDecimal.valueOf(baseQty), 6, RoundingMode.HALF_UP);

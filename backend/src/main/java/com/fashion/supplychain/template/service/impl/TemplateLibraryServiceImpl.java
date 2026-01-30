@@ -325,11 +325,108 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
 
     @Override
     public List<Map<String, Object>> resolveProgressNodeUnitPrices(String styleNo) {
-        // 只返回进度节点，不匹配工序单价
-        TemplateLibrary tpl = resolveProgressTemplate(styleNo);
         List<Map<String, Object>> out = new ArrayList<>();
+        String sn = StringUtils.hasText(styleNo) ? styleNo.trim() : "";
+        if (!StringUtils.hasText(sn)) {
+            return out;
+        }
 
-        // 如果没有进度模板，返回空列表（不再返回工序单价数据）
+        // 优先从模板库的 process 类型模板（单价维护-工序进度单价）读取
+        try {
+            TemplateLibrary processTpl = getOne(new LambdaQueryWrapper<TemplateLibrary>()
+                    .eq(TemplateLibrary::getTemplateType, "process")
+                    .eq(TemplateLibrary::getSourceStyleNo, sn)
+                    .orderByDesc(TemplateLibrary::getUpdateTime)
+                    .orderByDesc(TemplateLibrary::getCreateTime)
+                    .last("LIMIT 1"));
+
+            if (processTpl != null && StringUtils.hasText(processTpl.getTemplateContent())) {
+                com.fasterxml.jackson.databind.JsonNode root = objectMapper.readTree(processTpl.getTemplateContent());
+                com.fasterxml.jackson.databind.JsonNode stepsArr = root.get("steps");
+
+                if (stepsArr != null && stepsArr.isArray()) {
+                    for (com.fasterxml.jackson.databind.JsonNode step : stepsArr) {
+                        if (step == null) {
+                            continue;
+                        }
+
+                        String processName = step.hasNonNull("processName") ? step.get("processName").asText("") : "";
+                        processName = StringUtils.hasText(processName) ? processName.trim() : "";
+                        if (!StringUtils.hasText(processName)) {
+                            continue;
+                        }
+
+                        String processCode = step.hasNonNull("processCode") ? step.get("processCode").asText("") : "";
+                        if (!StringUtils.hasText(processCode)) {
+                            processCode = processName;
+                        }
+
+                        // 读取工价（unitPrice 或 price）
+                        BigDecimal up = BigDecimal.ZERO;
+                        if (step.hasNonNull("unitPrice")) {
+                            com.fasterxml.jackson.databind.JsonNode v = step.get("unitPrice");
+                            if (v.isNumber()) {
+                                up = v.decimalValue();
+                            } else {
+                                BigDecimal parsed = parseDecimalText(v.asText(null));
+                                up = parsed != null ? parsed : BigDecimal.ZERO;
+                            }
+                        } else if (step.hasNonNull("price")) {
+                            com.fasterxml.jackson.databind.JsonNode v = step.get("price");
+                            if (v.isNumber()) {
+                                up = v.decimalValue();
+                            } else {
+                                BigDecimal parsed = parseDecimalText(v.asText(null));
+                                up = parsed != null ? parsed : BigDecimal.ZERO;
+                            }
+                        }
+                        if (up.compareTo(BigDecimal.ZERO) < 0) {
+                            up = BigDecimal.ZERO;
+                        }
+
+                        // 读取进度节点
+                        String progressStage = step.hasNonNull("progressStage") ? step.get("progressStage").asText("") : "";
+                        if (!StringUtils.hasText(progressStage)) {
+                            progressStage = processName;
+                        }
+
+                        // 读取机器类型
+                        String machineType = step.hasNonNull("machineType") ? step.get("machineType").asText("") : "";
+
+                        // 读取标准工时
+                        Integer standardTime = null;
+                        if (step.hasNonNull("standardTime")) {
+                            standardTime = step.get("standardTime").asInt(0);
+                        }
+
+                        Map<String, Object> item = new LinkedHashMap<>();
+                        item.put("id", processCode.trim());
+                        item.put("name", processName);
+                        item.put("unitPrice", up.setScale(2, RoundingMode.HALF_UP));
+                        item.put("progressStage", progressStage.trim());
+                        if (StringUtils.hasText(machineType)) {
+                            item.put("machineType", machineType);
+                        }
+                        if (standardTime != null && standardTime > 0) {
+                            item.put("standardTime", standardTime);
+                        }
+                        out.add(item);
+                    }
+
+                    if (!out.isEmpty()) {
+                        log.info("resolveProgressNodeUnitPrices from process template: styleNo={}, count={}", sn, out.size());
+                        return out;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to resolve from process template: styleNo={}", sn, e);
+        }
+
+        // 如果没有 process 模板，回退到旧的 progress 模板
+        TemplateLibrary tpl = resolveProgressTemplate(styleNo);
+
+        // 如果没有进度模板，返回空列表
         if (tpl == null || !StringUtils.hasText(tpl.getTemplateContent())) {
             return out;
         }
@@ -367,7 +464,6 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
                         up = BigDecimal.ZERO;
                     }
 
-                    // 不再从工序单价中匹配价格，只使用模板中的价格
                     Map<String, Object> item = new LinkedHashMap<>();
                     item.put("id", id);
                     item.put("name", name);
@@ -376,8 +472,8 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
                 }
             }
         } catch (Exception e) {
-            log.warn("Failed to resolve progress node unit prices: styleNo={}, templateId={}",
-                    StringUtils.hasText(styleNo) ? styleNo.trim() : null,
+            log.warn("Failed to resolve progress node unit prices from template: styleNo={}, templateId={}",
+                    sn,
                     tpl.getId(),
                     e);
         }
@@ -618,7 +714,10 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
             created.add(upsertTemplate("bom", templateKey, sn + "-BOM模板", sn, content));
         }
 
-        if (typeSet.contains("process")) {
+        // ========== 合并后的工序进度单价模板 ==========
+        // 将 process、process_price、progress 合并为一个综合模板
+        // 包含：工序编码、工序名称、进度节点、机器类型、标准工时、工价
+        if (typeSet.contains("process") || typeSet.contains("process_price") || typeSet.contains("progress")) {
             List<StyleProcess> rows = styleProcessService.listByStyleId(style.getId());
             List<Map<String, Object>> steps = new ArrayList<>();
             for (StyleProcess p : rows) {
@@ -627,32 +726,16 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
                 Map<String, Object> step = new LinkedHashMap<>();
                 step.put("processCode", String.valueOf(p.getProcessCode() == null ? "" : p.getProcessCode()));
                 step.put("processName", String.valueOf(p.getProcessName() == null ? "" : p.getProcessName()));
+                step.put("progressStage", String.valueOf(p.getProgressStage() == null ? "" : p.getProgressStage()));
                 step.put("machineType", String.valueOf(p.getMachineType() == null ? "" : p.getMachineType()));
-                step.put("price", p.getPrice());
-                step.put("standardTime", p.getStandardTime());
+                step.put("standardTime", p.getStandardTime() == null ? 0 : p.getStandardTime());
+                step.put("unitPrice", p.getPrice() == null ? BigDecimal.ZERO : p.getPrice());
                 steps.add(step);
             }
             Map<String, Object> content = new LinkedHashMap<>();
             content.put("steps", steps);
-            created.add(upsertTemplate("process", templateKey, sn + "-工艺模板", sn, content));
-        }
-
-        if (typeSet.contains("process_price")) {
-            List<StyleProcess> rows = styleProcessService.listByStyleId(style.getId());
-            List<Map<String, Object>> steps = new ArrayList<>();
-            for (StyleProcess p : rows) {
-                if (p == null) {
-                    continue;
-                }
-                Map<String, Object> step = new LinkedHashMap<>();
-                step.put("processCode", String.valueOf(p.getProcessCode() == null ? "" : p.getProcessCode()));
-                step.put("processName", String.valueOf(p.getProcessName() == null ? "" : p.getProcessName()));
-                step.put("unitPrice", p.getPrice());
-                steps.add(step);
-            }
-            Map<String, Object> content = new LinkedHashMap<>();
-            content.put("steps", steps);
-            created.add(upsertTemplate("process_price", templateKey, sn + "-工序单价模板", sn, content));
+            // 只生成一个综合模板，类型为 process（工序进度单价模板）
+            created.add(upsertTemplate("process", templateKey, sn + "-工序进度单价模板", sn, content));
         }
 
         if (typeSet.contains("size")) {
@@ -708,50 +791,7 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
             created.add(upsertTemplate("size", templateKey, sn + "-尺码模板", sn, content));
         }
 
-        if (typeSet.contains("progress")) {
-            Map<String, Object> content = new LinkedHashMap<>();
-
-            List<Map<String, Object>> nodes = new ArrayList<>();
-            try {
-                List<StyleProcess> steps = styleProcessService.listByStyleId(style.getId());
-                Set<String> seen = new LinkedHashSet<>();
-                for (StyleProcess p : steps) {
-                    if (p == null) {
-                        continue;
-                    }
-                    String name = String.valueOf(p.getProcessName() == null ? "" : p.getProcessName()).trim();
-                    if (!StringUtils.hasText(name)) {
-                        continue;
-                    }
-                    if (!seen.add(name)) {
-                        continue;
-                    }
-                    Map<String, Object> node = new LinkedHashMap<>();
-                    node.put("name", name);
-                    // 进度模板不再包含 unitPrice，只保留工序名称
-                    nodes.add(node);
-                }
-            } catch (Exception e) {
-                log.warn("Failed to build progress nodes from style process: styleId={}, styleNo={}",
-                        style.getId(),
-                        StringUtils.hasText(sn) ? sn.trim() : null,
-                        e);
-            }
-
-            if (nodes.isEmpty()) {
-                // 默认进度节点只包含名称，不包含单价
-                nodes = List.of(
-                        Map.of("name", "裁剪"),
-                        Map.of("name", "生产"),
-                        Map.of("name", "整烫"),
-                        Map.of("name", "质检"),
-                        Map.of("name", "包装"),
-                        Map.of("name", "入库"));
-            }
-            content.put("nodes", nodes);
-
-            created.add(upsertTemplate("progress", templateKey, sn + "-进度模板", sn, content));
-        }
+        // progress 模板已合并到 process 模板中，不再单独生成
 
         return created;
     }

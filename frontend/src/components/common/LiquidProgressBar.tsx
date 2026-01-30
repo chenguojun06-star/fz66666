@@ -21,6 +21,9 @@ const LiquidProgressBar: React.FC<LiquidProgressBarProps> = ({
   backgroundColor = '#f0f0f0',
   status = 'normal',
 }) => {
+  // 是否已完成
+  const isCompleted = percent >= 100;
+
   // 根据进度和状态自动选择颜色
   const getColors = () => {
     if (color) {
@@ -28,7 +31,7 @@ const LiquidProgressBar: React.FC<LiquidProgressBarProps> = ({
       return { liquidColor: color, liquidColor2: color };
     }
 
-    if (percent >= 100) {
+    if (isCompleted) {
       // 已完成：绿色
       return { liquidColor: '#52c41a', liquidColor2: '#95de64' };
     }
@@ -50,7 +53,7 @@ const LiquidProgressBar: React.FC<LiquidProgressBarProps> = ({
 
   // 脉冲线颜色跟随状态
   const getPulseColor = () => {
-    if (percent >= 100) {
+    if (isCompleted) {
       // 已完成：亮绿色
       return 'rgba(0, 255, 100, 1)';
     }
@@ -93,39 +96,47 @@ const LiquidProgressBar: React.FC<LiquidProgressBarProps> = ({
           transition: 'width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)', // 更慢的过渡动画
         }}
       >
-        {/* 第一层波浪 */}
-        <div
-          className="liquid-bar-wave"
-          style={{
-            width: '200%',
-            height: '300%',
-            position: 'absolute',
-            top: '-100%',
-            left: '-50%',
-            background: `linear-gradient(90deg, ${liquidColor2} 0%, ${liquidColor} 50%, ${liquidColor2} 100%)`,
-            borderRadius: '45%',
-            animation: `liquidBarWave ${8 + Math.max(0, 100 - percent) / 15}s linear infinite`, // 加慢波浪动画
-          }}
-        />
-        {/* 第二层波浪（反向） */}
-        <div
-          className="liquid-bar-wave-2"
-          style={{
-            width: '200%',
-            height: '300%',
-            position: 'absolute',
-            top: '-95%',
-            left: '-50%',
-            background: `linear-gradient(90deg, ${liquidColor} 0%, ${liquidColor2} 50%, ${liquidColor} 100%)`,
-            borderRadius: '43%',
-            opacity: 0.5,
-            animation: `liquidBarWave2 ${10 + Math.max(0, 100 - percent) / 20}s linear infinite`, // 加慢第二层波浪
-          }}
-        />
+        {isCompleted ? (
+          /* 已完成：纯色填充，无动画 */
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              background: `linear-gradient(90deg, ${liquidColor} 0%, ${liquidColor2} 100%)`,
+            }}
+          />
+        ) : (
+          <>
+            {/* 底部填充色 */}
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                background: `linear-gradient(90deg, ${liquidColor2} 0%, ${liquidColor} 50%, ${liquidColor2} 100%)`,
+              }}
+            />
+            {/* 顶部波浪效果 - 只在顶部边缘波动 */}
+            <div
+              style={{
+                width: '200%',
+                height: '8px',
+                position: 'absolute',
+                top: '-2px',
+                left: 0,
+                background: `linear-gradient(90deg, ${liquidColor2} 0%, ${liquidColor} 25%, ${liquidColor2} 50%, ${liquidColor} 75%, ${liquidColor2} 100%)`,
+                borderRadius: '50%',
+                animation: `liquidBarTopWave 2s ease-in-out infinite`,
+              }}
+            />
+          </>
+        )}
       </div>
 
-      {/* 脉冲波浪线效果 - 所有进度都显示 */}
-      {percent >= 0 && (
+      {/* 脉冲波浪线效果 - 未完成时显示 */}
+      {!isCompleted && percent >= 0 && (
         <>
           {/* 上边缘波浪线 */}
           <div
@@ -199,15 +210,10 @@ const LiquidProgressBar: React.FC<LiquidProgressBarProps> = ({
 
       {/* 添加波浪动画的样式 */}
       <style>{`
-        @keyframes liquidBarWave {
-          0% { transform: translateX(0) rotate(0deg); }
-          50% { transform: translateX(-25%) rotate(180deg); }
-          100% { transform: translateX(-50%) rotate(360deg); }
-        }
-        @keyframes liquidBarWave2 {
-          0% { transform: translateX(-50%) rotate(0deg); }
-          50% { transform: translateX(-25%) rotate(-180deg); }
-          100% { transform: translateX(0) rotate(-360deg); }
+        @keyframes liquidBarTopWave {
+          0% { transform: translateX(0); }
+          50% { transform: translateX(-50%); }
+          100% { transform: translateX(0); }
         }
         @keyframes liquidBarPulse {
           0% {

@@ -15,7 +15,7 @@ import QuickEditModal from '@/components/common/QuickEditModal';
 import NodeDetailModal from '@/components/common/NodeDetailModal';
 import { ProductionOrderHeader, StyleCoverThumb } from '@/components/StyleAssets';
 import { compareSizeAsc, generateRequestId, isDuplicateScanMessage, isOrderFrozenByStatus } from '@/utils/api';
-import { isSupervisorOrAboveUser as isSupervisorOrAboveUserFn, useAuth } from '@/utils/authContext';
+import { isSupervisorOrAboveUser as isSupervisorOrAboveUserFn, useAuth } from '@/utils/AuthContext';
 import { useViewport } from '@/utils/useViewport';
 import { formatDateTime, formatDateTimeCompact } from '@/utils/datetime';
 import { CuttingBundle, ProductionOrder, ProductionQueryParams, ScanRecord } from '@/types/production';
@@ -24,505 +24,32 @@ import { productionCuttingApi, productionOrderApi, productionScanApi, production
 import { styleProcessApi } from '@/services/style/styleApi';
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 
+import {
+  defaultNodes,
+  getRecordStageName,
+  stageNameMatches,
+  stripWarehousingNode,
+  clampPercent,
+  formatTime,
+  getOrderShipTime,
+  getNodeIndexFromProgress,
+  parseProgressNodes,
+  findPricingProcessForStage,
+  getProgressFromNodeIndex,
+  isCuttingStageKey,
+  formatTimeCompact
+} from './utils';
+import { ProgressNode } from './types';
+import ModernProgressBoard from './components/ModernProgressBoard';
+
 const { Text } = Typography;
 const { useBreakpoint } = Grid;
 
-/**
- * 从扫码记录中获取进度阶段名称
- * @param r 扫码记录对象
- * @returns 进度阶段名称
- */
-const getRecordStageName = (r: Record<string, unknown>) => {
-  const stage = String(r?.progressStage || '').trim();
-  if (stage) return stage;
-  return String(r?.processName || '').trim();
-};
-
-/**
- * 标准化阶段名称，去除空格并转为小写
- * @param v 阶段名称
- * @returns 标准化后的阶段名称
- */
-const normalizeStageKey = (v: unknown) => String(v || '').trim().replace(/\s+/g, '');
-
-/**
- * 判断是否为质检阶段
- * @param k 阶段名称
- * @returns 是否为质检阶段
- */
-const isQualityStageKey = (k: string) => {
-  const n = normalizeStageKey(k);
-  if (!n) return false;
-  return n.includes('质检') || n.includes('检验') || n.includes('品检') || n.includes('验货');
-};
-
-/**
- * 判断是否为裁剪阶段
- * @param k 阶段名称
- * @returns 是否为裁剪阶段
- */
-const isCuttingStageKey = (k: string) => {
-  const n = normalizeStageKey(k);
-  if (!n) return false;
-  return n.includes('裁剪') || n.includes('裁床') || n.includes('剪裁') || n.includes('开裁');
-};
-
-/**
- * 判断是否为生产阶段
- * @param k 阶段名称
- * @returns 是否为生产阶段
- */
-const isProductionStageKey = (k: string) => {
-  const n = normalizeStageKey(k);
-  if (!n) return false;
-  return n.includes('生产');
-};
-
-/**
- * 判断是否为车缝阶段
- * @param k 阶段名称
- * @returns 是否为车缝阶段
- */
-const isSewingStageKey = (k: string) => {
-  const n = normalizeStageKey(k);
-  if (!n) return false;
-  return n.includes('车缝') || n.includes('缝制') || n.includes('缝纫') || n.includes('车工');
-};
-
-/**
- * 判断是否为整烫阶段
- * @param k 阶段名称
- * @returns 是否为整烫阶段
- */
-const isIroningStageKey = (k: string) => {
-  const n = normalizeStageKey(k);
-  if (!n) return false;
-  return n.includes('整烫') || n.includes('熨烫');
-};
-
-/**
- * 判断是否为包装阶段
- * @param k 阶段名称
- * @returns 是否为包装阶段
- */
-const isPackagingStageKey = (k: string) => {
-  const n = normalizeStageKey(k);
-  if (!n) return false;
-  return n.includes('包装') || n.includes('后整') || n.includes('打包') || n.includes('装箱');
-};
-
-/**
- * 判断是否为出货阶段
- * @param k 阶段名称
- * @returns 是否为出货阶段
- */
-const isShipmentStageKey = (k: string) => {
-  const n = normalizeStageKey(k);
-  if (!n) return false;
-  return n.includes('出货') || n.includes('发货') || n.includes('发运');
-};
-
-/**
- * 获取阶段的规范名称，将不同表述统一为标准名称
- * @param k 原始阶段名称
- * @returns 规范后的阶段名称
- */
-const canonicalStageKey = (k: string) => {
-  const n = normalizeStageKey(k);
-  if (!n) return '';
-  const map: Record<string, string> = {
-    订单创建: '下单',
-    创建订单: '下单',
-    开单: '下单',
-    制单: '下单',
-    物料采购: '采购',
-    面辅料采购: '采购',
-    备料: '采购',
-    到料: '采购',
-    缝制: '车缝',
-    缝纫: '车缝',
-    车工: '车缝',
-    后整: '包装',
-    打包: '包装',
-    装箱: '包装',
-    检验: '质检',
-    品检: '质检',
-    验货: '质检',
-    熨烫: '整烫',
-    发货: '出货',
-    发运: '出货',
-    裁床: '裁剪',
-    剪裁: '裁剪',
-    开裁: '裁剪',
-  };
-  return normalizeStageKey(map[n] || n);
-};
-
-/**
- * 判断两个阶段名称是否匹配
- * @param a 阶段名称a
- * @param b 阶段名称b
- * @returns 是否匹配
- */
-const stageNameMatches = (a: any, b: any) => {
-  const x = canonicalStageKey(a);
-  const y = canonicalStageKey(b);
-  if (!x || !y) return false;
-  if (x === y) return true;
-  if (isCuttingStageKey(x) && isCuttingStageKey(y)) return true;
-  if (isQualityStageKey(x) && isQualityStageKey(y)) return true;
-  if (isPackagingStageKey(x) && isPackagingStageKey(y)) return true;
-  if (isShipmentStageKey(x) && isShipmentStageKey(y)) return true;
-  if (isIroningStageKey(x) && isIroningStageKey(y)) return true;
-  if (isProductionStageKey(x) && isProductionStageKey(y)) return true;
-  if (isSewingStageKey(x) && isSewingStageKey(y)) return true;
-  return x.includes(y) || y.includes(x);
-};
-
-/**
- * 为指定阶段查找对应的计价工序
- * @param list 工序列表
- * @param stageName 阶段名称
- * @returns 匹配的工序对象，找不到则返回null
- */
-const findPricingProcessForStage = (list: StyleProcess[], stageName: string) => {
-  const stage = String(stageName || '').trim();
-  if (!stage) return null;
-  const sorted = [...(Array.isArray(list) ? list : [])].sort((a: any, b: any) => (Number(a?.sortOrder) || 0) - (Number(b?.sortOrder) || 0));
-  for (const p of sorted) {
-    const name = String((p as Record<string, unknown>)?.processName || '').trim();
-    if (!name) continue;
-    if (stageNameMatches(stage, name)) {
-      return p;
-    }
-  }
-  return null;
-};
-
-/**
- * 进度节点类型定义
- */
-type ProgressNode = {
-  id: string;
-  name: string;
-  unitPrice?: number;
-};
-
-/**
- * 过滤掉出货相关的节点
- * @param list 节点列表
- * @returns 过滤后的节点列表
- */
-const stripWarehousingNode = (list: ProgressNode[]) => {
-  return (Array.isArray(list) ? list : []).filter((n) => {
-    const id = String((n as Record<string, unknown>)?.id || '').trim().toLowerCase();
-    const name = String((n as Record<string, unknown>)?.name || '').trim();
-    return !(id === 'shipment' || name === '出货' || name === '发货' || name === '发运');
-  });
-};
-
-/**
- * 默认进度节点配置
- */
-const defaultNodes: ProgressNode[] = [
-  { id: 'cutting', name: '裁剪', unitPrice: 0 },
-  { id: 'production', name: '生产', unitPrice: 0 },
-  { id: 'quality', name: '质检', unitPrice: 0 },
-  { id: 'packaging', name: '包装', unitPrice: 0 },
-];
-
-/**
- * 将数值限制在0-100范围内
- * @param value 输入数值
- * @returns 限制后的数值
- */
-const clampPercent = (value: number) => {
-  if (Number.isNaN(value)) return 0;
-  return Math.max(0, Math.min(100, Math.round(value)));
-};
-
-/**
- * 格式化时间为标准格式
- * @param value 时间字符串
- * @returns 格式化后的时间字符串
- */
-const formatTime = (value?: string) => formatDateTime(value);
-
-/**
- * 格式化时间为紧凑格式（MM-DD HH:mm）
- * @param value 时间字符串
- * @returns 格式化后的时间字符串
- */
-const formatTimeCompact = (value?: string) => formatDateTimeCompact(value);
-
-/**
- * 转义CSV单元格内容
- * @param value 单元格值
- * @returns 转义后的字符串
- */
-
-/**
- * 获取订单发货时间
- * @param order 生产订单对象
- * @returns 发货时间字符串
- */
-const getOrderShipTime = (order: ProductionOrder) => {
-  return order.actualEndDate || order.plannedEndDate || '';
-};
-
-/**
- * 根据进度百分比获取对应的节点索引
- * @param nodes 节点列表
- * @param progress 进度百分比
- * @returns 节点索引
- */
-const getNodeIndexFromProgress = (nodes: ProgressNode[], progress: number) => {
-  if (nodes.length <= 1) return 0;
-  const idx = Math.round((clampPercent(progress) / 100) * (nodes.length - 1));
-  return Math.max(0, Math.min(nodes.length - 1, idx));
-};
-
-/**
- * 根据节点索引获取对应的进度百分比
- * @param nodes 节点列表
- * @param index 节点索引
- * @returns 进度百分比
- */
-const getProgressFromNodeIndex = (nodes: ProgressNode[], index: number) => {
-  if (nodes.length <= 1) return 0;
-  const idx = Math.max(0, Math.min(nodes.length - 1, index));
-  return clampPercent((idx / (nodes.length - 1)) * 100);
-};
 
 
 
-const modernProgressBoardCss = `
-.mpb-wrap{width:100%}
-.mpb-glass{width:100%;padding:8px 10px;border-radius:14px;background:linear-gradient(135deg,rgba(255,255,255,.22),rgba(255,255,255,.10));border:1px solid rgba(255,255,255,.28);box-shadow:0 8px 22px rgba(15,23,42,.08);backdrop-filter:blur(16px) saturate(150%);-webkit-backdrop-filter:blur(16px) saturate(150%)}
-.mpb-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px;min-height:46px}
-.mpb-pill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28);color:rgba(15,23,42,.84);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mpb-pillDot{width:8px;height:8px;border-radius:999px;flex:0 0 auto;box-shadow:0 8px 18px rgba(15,23,42,.12)}
-.mpb-nodesWrap{display:flex;align-items:center;gap:8px;min-height:46px;min-width:120px;flex-wrap:wrap}
-.mpb-mark{display:flex;align-items:center}
-.mpb-node{position:relative;overflow:hidden;width:70px;height:70px;padding:0;border-radius:50%;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.30);color:rgba(15,23,42,.78);backdrop-filter:blur(10px) saturate(160%);-webkit-backdrop-filter:blur(10px) saturate(160%);box-shadow:0 10px 18px rgba(15,23,42,.10)}
-.mpb-node::before{content:"";position:absolute;left:0;top:auto;bottom:0;right:0;width:100%;height:var(--p,0%);background:linear-gradient(0deg,#86efac 0%,#4ade80 26%,#22c55e 52%,#4ade80 78%,#86efac 100%);background-size:100% 200%;animation:mpbNodeFlowVertical 2.8s linear infinite;transition:height .55s cubic-bezier(.2,.8,.2,1);filter:saturate(104%) brightness(.97);box-shadow:inset 0 0 0 1px rgba(255,255,255,.16),inset 0 10px 14px rgba(255,255,255,.10);border-radius:50%}
-.mpb-nodeName{position:relative;z-index:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:50px;font-size:11px;line-height:14px;text-align:center}
-.mpb-nodeQty{position:relative;z-index:1;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;height:16px;min-width:20px;padding:0 4px;border-radius:999px;background:rgba(15,23,42,.06);border:1px solid rgba(255,255,255,.36);color:rgba(15,23,42,.78);font-weight:700;font-size:10px;line-height:16px;font-variant-numeric:tabular-nums}
-.mpb-node.mpb-nodeDone{border-color:rgba(34,197,94,.34);color:rgba(15,23,42,.88)}
-.mpb-node.mpb-nodeCurrent{border-color:rgba(96,165,250,.42);color:rgba(15,23,42,.92);animation:mpbNodeGlow 2.6s ease-in-out infinite}
-.mpb-pop{animation:mpbPop .42s cubic-bezier(.2,.8,.2,1) both}
-.mpb-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:92px}
-.mpb-percent{display:inline-flex;align-items:center;justify-content:center;height:22px;min-width:52px;padding:0 10px;border-radius:999px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28);color:rgba(15,23,42,.82);font-weight:700;font-size:12px;font-variant-numeric:tabular-nums}
-.mpb-stats{color:rgba(15,23,42,.58);font-size:12px;line-height:14px;white-space:nowrap;font-variant-numeric:tabular-nums}
-.mpb-nodeHeaderActions{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;padding-bottom:2px}
-.mpb-nodeHeaderActions .ant-select-selector{border-radius:999px}
-.mpb-nodeHeaderActions::-webkit-scrollbar{height:6px}
-.mpb-nodeHeaderActions::-webkit-scrollbar-thumb{background:rgba(15,23,42,.18);border-radius:999px}
-.mpb-nodeHeaderRow{display:flex;align-items:center;justify-content:space-between;gap:10px;max-width:100%;overflow-x:auto;overscroll-behavior-x:contain}
-.mpb-nodeHeaderRow::-webkit-scrollbar{height:6px}
-.mpb-nodeHeaderRow::-webkit-scrollbar-thumb{background:rgba(15,23,42,.18);border-radius:999px}
-.mpb-nodeHeaderTitle{flex:0 0 auto;white-space:nowrap;font-weight:600}
-.mpb-nodeHeaderRow .mpb-nodeCreateName{flex:0 0 240px;min-width:200px}
-.mpb-nodeHeaderRow .mpb-nodeCreatePrice{flex:0 0 110px}
-.mpb-nodeHeaderRow .mpb-nodeCreateBtn{flex:0 0 auto}
-.mpb-nodeCreateRow{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;padding-bottom:2px}
-.mpb-nodeCreateRow::-webkit-scrollbar{height:6px}
-.mpb-nodeCreateRow::-webkit-scrollbar-thumb{background:rgba(15,23,42,.18);border-radius:999px}
-.mpb-nodeCreateRow .ant-input,.mpb-nodeCreateRow .ant-input-number{border-radius:999px}
-.mpb-nodeCreateRow .ant-input{height:32px}
-.mpb-nodeCreateRow .ant-input-number{height:32px;display:flex;align-items:center}
-.mpb-nodeCreateRow .ant-input-number-input{height:30px}
-.mpb-nodeCreateRow .mpb-nodeCreatePrice{flex:0 0 120px}
-.mpb-nodeCreateRow .mpb-nodeCreateBtn{flex:0 0 auto}
-.mpb-nodeCreateRow .mpb-nodeCreateName{flex:1 1 0;min-width:0}
 
-.mpb-detailTrack{position:relative;height:30px;border-radius:999px;background:rgba(15,23,42,.06);border:1px solid rgba(255,255,255,.34);overflow:hidden;box-shadow:inset 0 1px 2px rgba(15,23,42,.10)}
-.mpb-detailFill{position:absolute;left:0;top:0;bottom:0;width:var(--p,0%);border-radius:999px;background:linear-gradient(90deg,#86efac 0%,#4ade80 26%,#22c55e 52%,#4ade80 78%,#86efac 100%);background-size:200% 100%;animation:mpbNodeFlow 2.8s linear infinite;transition:width .55s cubic-bezier(.2,.8,.2,1);box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
-.mpb-detailBarText{position:absolute;left:0;right:0;top:0;bottom:0;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 12px;color:rgba(15,23,42,.86);font-weight:700;font-size:12px;line-height:30px;pointer-events:none;text-shadow:0 1px 0 rgba(255,255,255,.62)}
-.mpb-detailBarLeft{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mpb-detailBarRight{flex:0 0 auto;white-space:nowrap;font-variant-numeric:tabular-nums}
-.mpb-detailCards{display:flex;gap:4px;min-width:max-content;align-items:stretch}
-.mpb-detailCard{position:relative;overflow:hidden;border-radius:10px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.30);backdrop-filter:blur(14px) saturate(150%);-webkit-backdrop-filter:blur(14px) saturate(150%);box-shadow:0 10px 18px rgba(15,23,42,.08);padding:4px;display:flex;flex-direction:column;gap:6px}
-.mpb-detailCard.mpb-draggable .mpb-detailTrack{cursor:grab}
-.mpb-detailCard.mpb-draggable .mpb-detailTrack:active{cursor:grabbing}
-.mpb-detailCard.mpb-dragging{opacity:.55;transform:scale(.98)}
-.mpb-detailCard.mpb-dragOver{outline:2px dashed rgba(59,130,246,.55);outline-offset:2px}
-.mpb-detailCard .ant-input-number{border-radius:999px}
-.mpb-detailCard .ant-input-number{height:28px;display:flex;align-items:center}
-.mpb-detailCard .ant-input-number-input{height:26px}
-.mpb-detailCard::before{content:"";position:absolute;left:0;top:0;right:0;height:12px;background:linear-gradient(135deg,rgba(255,255,255,.22),rgba(255,255,255,0));opacity:.9;pointer-events:none}
-.mpb-detailBottomRow{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:auto}
-.mpb-detailPriceInline{display:flex;align-items:center;gap:6px;min-width:0;flex:1 1 auto}
-.mpb-detailLabel{color:rgba(15,23,42,.78);font-size:13px;line-height:16px;white-space:nowrap}
-.mpb-detailPriceInput{width:100px;max-width:100%}
-.mpb-detailPriceInput .ant-input-number-input{font-size:13px}
-.mpb-detailActions{display:flex;gap:6px;justify-content:flex-end;flex:0 0 auto}
-.mpb-detailCard.mpb-detailDone{opacity:.74;background:rgba(248,250,252,.42)}
-.mpb-detailCard.mpb-detailDone::before{opacity:.0}
-.mpb-detailCard.mpb-detailDone .mpb-detailFill{animation:none}
-.mpb-detailCard.mpb-detailCurrent{border-color:rgba(96,165,250,.42);box-shadow:0 12px 22px rgba(59,130,246,.14),0 10px 18px rgba(15,23,42,.08)}
-.mpb-detailCard.mpb-detailFrozen{background:rgba(241,245,249,.38);border-color:rgba(148,163,184,.28);box-shadow:0 8px 18px rgba(15,23,42,.06)}
-.mpb-detailCard.mpb-detailFrozen .mpb-detailFill{animation:none;filter:none;opacity:.6}
-@keyframes mpbPop{0%{transform:translateY(-1px) scale(.94);opacity:.0}100%{transform:translateY(0) scale(1);opacity:1}}
-@keyframes mpbNodeFlow{0%{background-position:0% 50%}100%{background-position:100% 50%}}
-@keyframes mpbNodeFlowVertical{0%{background-position:50% 0%}100%{background-position:50% 100%}}
-@keyframes mpbNodeGlow{0%,100%{box-shadow:0 10px 18px rgba(15,23,42,.10),0 0 0 0 rgba(59,130,246,.0)}50%{box-shadow:0 12px 22px rgba(59,130,246,.16),0 0 0 6px rgba(59,130,246,.08)}}
-.mpb-glass.mpb-frozen{background:linear-gradient(135deg,rgba(248,250,252,.62),rgba(241,245,249,.42));border-color:rgba(148,163,184,.32);box-shadow:0 8px 22px rgba(15,23,42,.06);backdrop-filter:blur(16px) saturate(120%);-webkit-backdrop-filter:blur(16px) saturate(120%)}
-.mpb-frozen .mpb-pill,.mpb-frozen .mpb-percent{background:rgba(241,245,249,.22);border-color:rgba(148,163,184,.30);color:rgba(15,23,42,.56)}
-.mpb-frozen .mpb-stats{color:rgba(15,23,42,.42)}
-.mpb-frozen .mpb-pillDot{box-shadow:none}
-.mpb-frozen .mpb-node{background:rgba(241,245,249,.18);border-color:rgba(148,163,184,.30);color:rgba(15,23,42,.52);box-shadow:0 10px 18px rgba(15,23,42,.06)}
-.mpb-frozen .mpb-node::before{background:linear-gradient(90deg,rgba(100,116,139,.22),rgba(148,163,184,.16));animation:none;filter:none}
-.mpb-frozen .mpb-nodeQty{background:rgba(241,245,249,.22);border-color:rgba(148,163,184,.28);color:rgba(15,23,42,.50)}
-.mpb-frozen .mpb-node.mpb-nodeDone{background:rgba(241,245,249,.22);border-color:rgba(148,163,184,.32);color:rgba(15,23,42,.56)}
-.mpb-frozen .mpb-node.mpb-nodeCurrent{animation:none}
-@media (prefers-reduced-motion: reduce){.mpb-pop{animation:none}.mpb-node.mpb-nodeCurrent{animation:none}.mpb-node::before{animation:none}}
 
-/* ========== 深色主题 ========== */
-:root[data-theme="dark"] .mpb-glass{background:linear-gradient(135deg,rgba(30,33,40,.85),rgba(26,28,34,.75));border-color:rgba(255,255,255,.12);box-shadow:0 8px 22px rgba(0,0,0,.35)}
-:root[data-theme="dark"] .mpb-pill{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.15);color:rgba(232,234,237,.88)}
-:root[data-theme="dark"] .mpb-pillDot{box-shadow:0 8px 18px rgba(0,0,0,.25)}
-:root[data-theme="dark"] .mpb-node{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.15);color:rgba(232,234,237,.85);box-shadow:0 10px 18px rgba(0,0,0,.25)}
-:root[data-theme="dark"] .mpb-nodeName{color:rgba(232,234,237,.92)}
-:root[data-theme="dark"] .mpb-nodeQty{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.18);color:rgba(232,234,237,.88)}
-:root[data-theme="dark"] .mpb-node.mpb-nodeDone{border-color:rgba(95,208,104,.45);color:rgba(232,234,237,.92)}
-:root[data-theme="dark"] .mpb-node.mpb-nodeCurrent{border-color:rgba(90,156,255,.5);color:rgba(232,234,237,.95)}
-:root[data-theme="dark"] .mpb-percent{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.15);color:rgba(232,234,237,.88)}
-:root[data-theme="dark"] .mpb-stats{color:rgba(232,234,237,.6)}
-:root[data-theme="dark"] .mpb-detailTrack{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12)}
-:root[data-theme="dark"] .mpb-detailBarText{color:rgba(232,234,237,.92);text-shadow:none}
-:root[data-theme="dark"] .mpb-detailCard{background:rgba(30,33,40,.85);border-color:rgba(255,255,255,.12);box-shadow:0 10px 18px rgba(0,0,0,.3)}
-:root[data-theme="dark"] .mpb-detailCard::before{background:linear-gradient(135deg,rgba(255,255,255,.06),rgba(255,255,255,0))}
-:root[data-theme="dark"] .mpb-detailLabel{color:rgba(232,234,237,.75)}
-:root[data-theme="dark"] .mpb-detailCard.mpb-detailDone{background:rgba(30,33,40,.55)}
-:root[data-theme="dark"] .mpb-detailCard.mpb-detailCurrent{border-color:rgba(90,156,255,.45);box-shadow:0 12px 22px rgba(90,156,255,.18),0 10px 18px rgba(0,0,0,.25)}
-:root[data-theme="dark"] .mpb-detailCard.mpb-detailFrozen{background:rgba(30,33,40,.45);border-color:rgba(255,255,255,.1)}
-:root[data-theme="dark"] .mpb-glass.mpb-frozen{background:linear-gradient(135deg,rgba(30,33,40,.65),rgba(26,28,34,.45));border-color:rgba(255,255,255,.08)}
-:root[data-theme="dark"] .mpb-frozen .mpb-pill,:root[data-theme="dark"] .mpb-frozen .mpb-percent{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.1);color:rgba(232,234,237,.5)}
-:root[data-theme="dark"] .mpb-frozen .mpb-stats{color:rgba(232,234,237,.35)}
-:root[data-theme="dark"] .mpb-frozen .mpb-node{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.1);color:rgba(232,234,237,.45)}
-:root[data-theme="dark"] .mpb-frozen .mpb-nodeQty{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.1);color:rgba(232,234,237,.4)}
-:root[data-theme="dark"] .mpb-nodeHeaderActions::-webkit-scrollbar-thumb,:root[data-theme="dark"] .mpb-nodeHeaderRow::-webkit-scrollbar-thumb,:root[data-theme="dark"] .mpb-nodeCreateRow::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18)}
-
-/* ========== 蓝色主题 ========== */
-:root[data-theme="blue"] .mpb-glass{background:linear-gradient(135deg,rgba(255,255,255,.75),rgba(234,241,255,.55));border-color:rgba(45,127,249,.18);box-shadow:0 8px 22px rgba(11,45,92,.10)}
-:root[data-theme="blue"] .mpb-pill{background:rgba(45,127,249,.08);border-color:rgba(45,127,249,.18);color:#0b2d5c}
-:root[data-theme="blue"] .mpb-pillDot{box-shadow:0 8px 18px rgba(11,45,92,.15)}
-:root[data-theme="blue"] .mpb-node{background:rgba(45,127,249,.06);border-color:rgba(45,127,249,.18);color:#0b2d5c;box-shadow:0 10px 18px rgba(11,45,92,.08)}
-:root[data-theme="blue"] .mpb-nodeName{color:#0b2d5c}
-:root[data-theme="blue"] .mpb-nodeQty{background:rgba(45,127,249,.08);border-color:rgba(45,127,249,.2);color:#0b2d5c}
-:root[data-theme="blue"] .mpb-node.mpb-nodeDone{border-color:rgba(34,197,94,.4);color:#0b2d5c}
-:root[data-theme="blue"] .mpb-node.mpb-nodeCurrent{border-color:rgba(45,127,249,.5);color:#0b2d5c}
-:root[data-theme="blue"] .mpb-percent{background:rgba(45,127,249,.08);border-color:rgba(45,127,249,.18);color:#0b2d5c}
-:root[data-theme="blue"] .mpb-stats{color:rgba(11,45,92,.6)}
-:root[data-theme="blue"] .mpb-detailTrack{background:rgba(45,127,249,.06);border-color:rgba(45,127,249,.18)}
-:root[data-theme="blue"] .mpb-detailBarText{color:#0b2d5c;text-shadow:0 1px 0 rgba(255,255,255,.7)}
-:root[data-theme="blue"] .mpb-detailCard{background:rgba(255,255,255,.75);border-color:rgba(45,127,249,.18);box-shadow:0 10px 18px rgba(11,45,92,.08)}
-:root[data-theme="blue"] .mpb-detailCard::before{background:linear-gradient(135deg,rgba(255,255,255,.4),rgba(255,255,255,0))}
-:root[data-theme="blue"] .mpb-detailLabel{color:rgba(11,45,92,.75)}
-:root[data-theme="blue"] .mpb-detailCard.mpb-detailDone{background:rgba(248,250,252,.65)}
-:root[data-theme="blue"] .mpb-detailCard.mpb-detailCurrent{border-color:rgba(45,127,249,.4);box-shadow:0 12px 22px rgba(45,127,249,.14),0 10px 18px rgba(11,45,92,.08)}
-:root[data-theme="blue"] .mpb-glass.mpb-frozen{background:linear-gradient(135deg,rgba(248,250,252,.75),rgba(241,245,249,.55));border-color:rgba(11,45,92,.12)}
-:root[data-theme="blue"] .mpb-frozen .mpb-pill,:root[data-theme="blue"] .mpb-frozen .mpb-percent{background:rgba(11,45,92,.04);border-color:rgba(11,45,92,.12);color:rgba(11,45,92,.5)}
-:root[data-theme="blue"] .mpb-frozen .mpb-stats{color:rgba(11,45,92,.4)}
-:root[data-theme="blue"] .mpb-frozen .mpb-node{background:rgba(11,45,92,.04);border-color:rgba(11,45,92,.12);color:rgba(11,45,92,.5)}
-:root[data-theme="blue"] .mpb-frozen .mpb-nodeQty{background:rgba(11,45,92,.04);border-color:rgba(11,45,92,.12);color:rgba(11,45,92,.45)}
-:root[data-theme="blue"] .mpb-nodeHeaderActions::-webkit-scrollbar-thumb,:root[data-theme="blue"] .mpb-nodeHeaderRow::-webkit-scrollbar-thumb,:root[data-theme="blue"] .mpb-nodeCreateRow::-webkit-scrollbar-thumb{background:rgba(11,45,92,.18)}
-
-/* ========== 白色主题 ========== */
-:root[data-theme="white"] .mpb-glass{background:linear-gradient(135deg,rgba(255,255,255,.85),rgba(248,249,250,.7));border-color:rgba(31,31,31,.1);box-shadow:0 8px 22px rgba(31,31,31,.06)}
-:root[data-theme="white"] .mpb-pill{background:rgba(31,31,31,.04);border-color:rgba(31,31,31,.12);color:#1f1f1f}
-:root[data-theme="white"] .mpb-node{background:rgba(31,31,31,.04);border-color:rgba(31,31,31,.12);color:#1f1f1f;box-shadow:0 10px 18px rgba(31,31,31,.06)}
-:root[data-theme="white"] .mpb-nodeName{color:#1f1f1f}
-:root[data-theme="white"] .mpb-nodeQty{background:rgba(31,31,31,.06);border-color:rgba(31,31,31,.12);color:#1f1f1f}
-:root[data-theme="white"] .mpb-node.mpb-nodeDone{border-color:rgba(34,197,94,.4);color:#1f1f1f}
-:root[data-theme="white"] .mpb-node.mpb-nodeCurrent{border-color:rgba(45,127,249,.45);color:#1f1f1f}
-:root[data-theme="white"] .mpb-percent{background:rgba(31,31,31,.04);border-color:rgba(31,31,31,.12);color:#1f1f1f}
-:root[data-theme="white"] .mpb-stats{color:rgba(31,31,31,.55)}
-:root[data-theme="white"] .mpb-detailTrack{background:rgba(31,31,31,.04);border-color:rgba(31,31,31,.12)}
-:root[data-theme="white"] .mpb-detailBarText{color:#1f1f1f;text-shadow:0 1px 0 rgba(255,255,255,.7)}
-:root[data-theme="white"] .mpb-detailCard{background:rgba(255,255,255,.85);border-color:rgba(31,31,31,.1);box-shadow:0 10px 18px rgba(31,31,31,.06)}
-:root[data-theme="white"] .mpb-detailLabel{color:rgba(31,31,31,.7)}
-`;
-
-type ModernProgressBoardProps = {
-  nodes: ProgressNode[];
-  progress: number;
-  label: string;
-  totalQty: number;
-  doneQty: number;
-  arrivalRate?: number;
-  frozen?: boolean;
-  nodeDoneMap?: Record<string, number>;
-};
-
-const ModernProgressBoard: React.FC<ModernProgressBoardProps> = ({ nodes, progress, label, totalQty, doneQty, arrivalRate, frozen, nodeDoneMap }) => {
-  const pct = clampPercent(progress);
-  const effectivePct = frozen ? 100 : pct;
-  const ns = Array.isArray(nodes) && nodes.length ? nodes : defaultNodes;
-  const currentIdx = getNodeIndexFromProgress(ns, effectivePct);
-  const segPct = ns.length ? 100 / ns.length : 100;
-  const safeTotal = Math.max(0, Number(totalQty) || 0);
-  const safeDoneRaw = Math.max(0, Math.min(Number(doneQty) || 0, safeTotal));
-  const safeDone = frozen ? safeTotal : safeDoneRaw;
-  const remaining = Math.max(0, safeTotal - safeDone);
-  const labelKey = `${label}-${effectivePct}-${safeDone}-${safeTotal}-${remaining}-${frozen ? 1 : 0}`;
-
-  const stageQty = (i: number, name?: string) => {
-    const total = Number(totalQty) || 0;
-    if (total <= 0) return 0;
-    if (i > currentIdx) return 0;
-    const perNode = name && nodeDoneMap ? Number((nodeDoneMap as Record<string, unknown>)[name]) || 0 : undefined;
-    const done = Number.isFinite(perNode as Record<string, unknown>) ? (perNode as number) : safeDone;
-    if (done <= 0) return 0;
-    if (frozen) return total;
-    if (i <= currentIdx) return Math.max(0, Math.min(done, total));
-    return 0;
-  };
-
-  return (
-    <div className="mpb-wrap" aria-label={`生产进度 ${label} ${effectivePct}%`}>
-      <div className={`mpb-glass ${frozen ? 'mpb-frozen' : ''}`}>
-        <div className="mpb-row">
-          <div className="mpb-nodesWrap">
-            {ns.map((n, i) => {
-              const isDoneNode = i < currentIdx || effectivePct >= 100;
-              const isCurrent = !frozen && i === currentIdx && effectivePct > 0 && effectivePct < 100;
-              const name = String(n?.name || '').trim() || '-';
-              // const isProcurementNode = name.includes('采购') || name.includes('物料');
-              const qty = stageQty(i, name);
-              const nodeStart = i * segPct;
-              const nodeFillRaw = segPct > 0 ? ((effectivePct - nodeStart) / segPct) * 100 : effectivePct;
-              const fillPct = clampPercent(nodeFillRaw);
-              const displayText = String(qty);
-              const badgeKey = `${labelKey}-${i}-${displayText}`;
-              return (
-                <div key={String(n.id || n.name || i)} className="mpb-mark" title={`${name} ${qty}`}>
-                  <div
-                    key={badgeKey}
-                    className={`mpb-node mpb-pop${isDoneNode ? ' mpb-nodeDone' : ''}${isCurrent ? ' mpb-nodeCurrent' : ''}`}
-                    style={{ ['--p' as Record<string, unknown>]: `${fillPct}%` }}
-                  >
-                    <span className="mpb-nodeName">{name}</span>
-                    <span className="mpb-nodeQty">{displayText}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="mpb-right">
-            <div className="mpb-percent">{effectivePct}%</div>
-            <div key={labelKey} className="mpb-stats mpb-pop">
-              {safeDone}/{safeTotal} · 剩 {remaining}
-              {typeof arrivalRate === 'number' ? ` · 到位 ${clampPercent(arrivalRate)}%` : ''}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 /**
  * 生产进度详情组件属性
@@ -2824,7 +2351,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
 
   const pageContent = (
     <div className="production-progress-detail-page">
-      <style>{modernProgressBoardCss}</style>
       {embedded ? (
         <>
           <Card size="small" className="filter-card mb-sm">
@@ -2887,10 +2413,11 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               titleField="styleNo"
               subtitleField="orderNo"
               fields={[
-                { label: '客户', key: 'customerName' },
-                { label: '工厂', key: 'factoryName' },
-                { label: '数量', key: 'quantity', suffix: ' 件' },
-                { label: '交期', key: 'expectedShipDate' },
+                { label: '码数', key: 'size', render: (val: unknown) => val || '-' },
+                { label: '数量', key: 'orderQuantity', render: (val: unknown) => {
+                  const qty = Number(val) || 0;
+                  return qty > 0 ? `${qty} 件` : '-';
+                }},
               ]}
               progressConfig={{
                 calculate: (record: ProductionOrder) => {
@@ -3015,10 +2542,11 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               titleField="styleNo"
               subtitleField="orderNo"
               fields={[
-                { label: '客户', key: 'customerName' },
-                { label: '工厂', key: 'factoryName' },
-                { label: '数量', key: 'quantity', suffix: ' 件' },
-                { label: '交期', key: 'expectedShipDate' },
+                { label: '码数', key: 'size', render: (val: unknown) => val || '-' },
+                { label: '数量', key: 'orderQuantity', render: (val: unknown) => {
+                  const qty = Number(val) || 0;
+                  return qty > 0 ? `${qty} 件` : '-';
+                }},
               ]}
               progressConfig={{
                 calculate: (record: ProductionOrder) => {
@@ -3802,7 +3330,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         unitPrice={nodeDetailUnitPrice}
         processList={nodeDetailProcessList}
         onSaved={() => {
-          void refresh();
+          void fetchOrders();
         }}
       />
     </div>

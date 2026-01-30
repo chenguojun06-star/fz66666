@@ -194,6 +194,17 @@ const system = {
   },
 };
 
+const style = {
+  // 获取SKU库存
+  getInventory(skuCode) {
+    return ok(`/api/style/sku/inventory/${encodeURIComponent(skuCode)}`, 'GET', {});
+  },
+  // 更新库存
+  updateInventory(payload) {
+    return ok('/api/style/sku/inventory/update', 'POST', payload || {});
+  }
+};
+
 const wechat = {
   miniProgramLogin(payload) {
     return raw('/api/wechat/mini-program/login', 'POST', payload || {}, { skipAuthRedirect: true });
@@ -204,9 +215,10 @@ const api = {
   dashboard,
   production,
   system,
+  style,
   wechat,
 };
 
-export { dashboard, production, system, wechat };
+export { dashboard, production, system, style, wechat };
 
 export default api;

@@ -53,7 +53,7 @@ export const StyleCoverThumb: React.FC<{
           // 筛选图片类型附件
           const images = (res.data || []).filter((f: any) => String(f.fileType || '').includes('image'));
           // 取第一张图片作为封面
-          const first = images[0]?.fileUrl || null;
+          const first = (images[0] as any)?.fileUrl || null;
           if (mounted) setUrl(first);
         }
       } catch {
@@ -126,8 +126,8 @@ export const ProductionOrderHeader: React.FC<{
     const resolvedOrderNo = String(orderNo ?? (order as Record<string, unknown>)?.orderNo ?? (order as Record<string, unknown>)?.productionOrderNo ?? '').trim();
     const resolvedStyleNo = String(styleNo ?? (order as Record<string, unknown>)?.styleNo ?? '').trim();
     const resolvedStyleName = String(styleName ?? (order as Record<string, unknown>)?.styleName ?? '').trim();
-    const resolvedStyleId = styleId ?? (order as Record<string, unknown>)?.styleId;
-    const resolvedCover = styleCover ?? (order as Record<string, unknown>)?.styleCover ?? null;
+    const resolvedStyleId = (styleId ?? (order as Record<string, unknown>)?.styleId) as IdLike | undefined;
+    const resolvedCover = (styleCover ?? (order as Record<string, unknown>)?.styleCover ?? null) as string | null;
     const resolvedColor = String(color ?? (order as Record<string, unknown>)?.color ?? '').trim();
 
     const computedSizeItems = React.useMemo(() => {
@@ -250,11 +250,13 @@ export const StyleAttachmentsButton: React.FC<{
   styleNo?: string;
   /** 按钮文本，默认"附件" */
   buttonText?: string;
-  /** 模态框标题，默认"附件" */
+  /** 模态框标题，默认"纸样附件" */
   modalTitle?: string;
-  /** 是否只显示放码纸样，默认false */
+  /** @deprecated 已废弃，不再使用 */
   onlyGradingPattern?: boolean;
-}> = ({ styleId, styleNo, buttonText = '附件', modalTitle = '附件', onlyGradingPattern = false }) => {
+  /** 模态框关闭时的回调 */
+  onModalClose?: () => void;
+}> = ({ styleId, styleNo, buttonText = '纸样', modalTitle = '纸样附件', onModalClose }) => {
   const { modalWidth } = useViewport();
   // 模态框打开状态
   const [open, setOpen] = React.useState(false);
@@ -277,25 +279,33 @@ export const StyleAttachmentsButton: React.FC<{
       const res = await api.get<{ code: number; message: string; data: unknown[] }>('/style/attachment/list', { params: { styleId, styleNo } });
       if (res.code === 200) {
         let attachments = res.data || [];
-        // 如果只显示放码纸样，过滤出 bizType 为 'pattern_grading' 的附件
-        if (onlyGradingPattern) {
-          attachments = attachments.filter((item: any) => {
-            const bizType = String((item as Record<string, unknown>)?.bizType || '').trim();
-            return bizType === 'pattern_grading';
-          });
-        }
-        setData(attachments);
+        // 筛选纸样类型附件（包括开发中和已完成流转的）
+        // pattern/pattern_grading: 开发中的纸样
+        // pattern_final/pattern_grading_final: 样衣完成后流转到数据中心的纸样
+        attachments = attachments.filter((item: any) => {
+          const bizType = String((item as Record<string, unknown>)?.bizType || '').trim();
+          return bizType === 'pattern' || bizType === 'pattern_grading'
+            || bizType === 'pattern_final' || bizType === 'pattern_grading_final';
+        });
+        setData(attachments as StyleAttachment[]);
       } else {
         setData([]);
         message.error(res.message || '获取附件失败');
       }
     } catch (e: unknown) {
       setData([]);
-      message.error(e?.message || '获取附件失败');
+      message.error((e as Error)?.message || '获取附件失败');
     } finally {
       setLoading(false);
     }
-  }, [styleId, styleNo, onlyGradingPattern]);
+  }, [styleId, styleNo]);
+
+  // 检查纸样类型分布
+  const patternTypeInfo = React.useMemo(() => {
+    const hasPattern = data.some((item) => item.bizType === 'pattern' || item.bizType === 'pattern_final');
+    const hasGrading = data.some((item) => item.bizType === 'pattern_grading' || item.bizType === 'pattern_grading_final');
+    return { hasPattern, hasGrading, onlyOneType: (hasPattern && !hasGrading) || (!hasPattern && hasGrading) };
+  }, [data]);
 
   // 当模态框打开时获取附件列表
   React.useEffect(() => {
@@ -305,10 +315,23 @@ export const StyleAttachmentsButton: React.FC<{
   // 表格列配置
   const columns = [
     {
+      title: '纸样类型',
+      dataIndex: 'bizType',
+      key: 'bizType',
+      width: 120,
+      render: (t: string) => {
+        if (t === 'pattern') return <Tag color="blue">原始纸样</Tag>;
+        if (t === 'pattern_final') return <Tag color="blue">原始纸样 ✓</Tag>;
+        if (t === 'pattern_grading') return <Tag color="green">放码纸样</Tag>;
+        if (t === 'pattern_grading_final') return <Tag color="green">放码纸样 ✓</Tag>;
+        return <Tag>{t}</Tag>;
+      }
+    },
+    {
       title: '文件名',
       dataIndex: 'fileName',
       key: 'fileName',
-      width: 320,
+      width: 280,
       ellipsis: true,
       render: (text: string, record: StyleAttachment) => (
         <a
@@ -322,17 +345,17 @@ export const StyleAttachmentsButton: React.FC<{
       )
     },
     {
-      title: '类型',
+      title: '文件类型',
       dataIndex: 'fileType',
       key: 'fileType',
-      width: 120,
+      width: 100,
       render: (t: string) => <Tag>{String(t || '').split('/')[1] || t}</Tag>
     },
     {
       title: '上传时间',
       dataIndex: 'createTime',
       key: 'createTime',
-      width: 180,
+      width: 160,
       ellipsis: true,
     },
   ];
@@ -348,19 +371,51 @@ export const StyleAttachmentsButton: React.FC<{
       <ResizableModal
         open={open}
         title={modalTitle}
-        onCancel={() => setOpen(false)}
-        footer={<Space><Button onClick={() => setOpen(false)}>关闭</Button></Space>}
+        onCancel={() => {
+          setOpen(false);
+          onModalClose?.();
+        }}
+        footer={<Space><Button onClick={() => {
+          setOpen(false);
+          onModalClose?.();
+        }}>关闭</Button></Space>}
         width={modalWidth}
         initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
-        tableDensity="auto"
-        scaleWithViewport
       >
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+          {/* 纸样类型提示 */}
+          {!loading && data.length > 0 && patternTypeInfo.onlyOneType && (
+            <div style={{
+              marginBottom: 12,
+              padding: '8px 12px',
+              background: '#fffbe6',
+              border: '1px solid #ffe58f',
+              borderRadius: 4,
+              fontSize: 13,
+              color: '#ad6800'
+            }}>
+              ⚠️ 当前只有{patternTypeInfo.hasPattern ? '原始纸样' : '放码纸样'}，
+              {patternTypeInfo.hasPattern ? '缺少放码纸样' : '缺少原始纸样'}，请补充上传
+            </div>
+          )}
+          {!loading && data.length === 0 && (
+            <div style={{
+              marginBottom: 12,
+              padding: '8px 12px',
+              background: '#fff2f0',
+              border: '1px solid #ffccc7',
+              borderRadius: 4,
+              fontSize: 13,
+              color: '#a8071a'
+            }}>
+              ⚠️ 暂无纸样附件，请先上传原始纸样和放码纸样
+            </div>
+          )}
           <div ref={tableWrapRef} style={{ flex: '1 1 auto', minHeight: 0 }}>
             <ResizableTable
               rowKey={(r) => String((r as Record<string, unknown>).id)}
-              columns={columns as Record<string, unknown>}
-              dataSource={data}
+              columns={columns as any}
+              dataSource={data as any}
               loading={loading}
               pagination={false}
               scroll={{ x: 'max-content', y: tableScrollY }}

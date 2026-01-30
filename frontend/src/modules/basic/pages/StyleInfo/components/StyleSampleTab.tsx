@@ -8,7 +8,7 @@ import ResizableModal, {
 import RowActions from '@/components/common/RowActions';
 import api from '@/utils/api';
 import type { StyleAttachment, StyleBom } from '@/types/style';
-import { isSupervisorOrAboveUser, useAuth } from '@/utils/authContext';
+import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
 import { formatDateTime } from '@/utils/datetime';
 import { useViewport } from '@/utils/useViewport';
 

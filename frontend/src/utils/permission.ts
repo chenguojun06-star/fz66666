@@ -1,5 +1,5 @@
 import React from 'react';
-import { UserInfo } from './authContext';
+import { UserInfo } from './AuthContext';
 
 /**
  * 权限检查工具函数

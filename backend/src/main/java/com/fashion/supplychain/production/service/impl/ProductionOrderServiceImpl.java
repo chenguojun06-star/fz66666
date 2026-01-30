@@ -236,6 +236,11 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
     }
 
     @Override
+    public void recomputeProgressAsync(String orderId) {
+        progressRecomputeService.recomputeProgressAsync(orderId);
+    }
+
+    @Override
     public ProductionOrder getByOrderNo(String orderNo) {
         if (!StringUtils.hasText(orderNo)) {
             return null;
@@ -308,7 +313,7 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
             }
 
             // if (order.getPlannedEndDate() != null) {
-            //     mp.setExpectedShipDate(order.getPlannedEndDate().toLocalDate());
+            // mp.setExpectedShipDate(order.getPlannedEndDate().toLocalDate());
             // }
 
             // Generate purchaseNo

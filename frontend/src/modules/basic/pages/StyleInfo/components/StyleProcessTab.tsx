@@ -1,9 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Input, InputNumber, Space, Select, Modal, App } from 'antd';
+import { Button, Input, InputNumber, Space, Select, Modal, App, Popover } from 'antd';
 import { PlusOutlined, DeleteOutlined, SaveOutlined, EditOutlined } from '@ant-design/icons';
 import { StyleProcess, TemplateLibrary } from '@/types/style';
 import api, { toNumberSafe } from '@/utils/api';
-import { useViewport } from '@/utils/useViewport';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import { formatDateTime } from '@/utils/datetime';
@@ -19,6 +18,22 @@ interface Props {
   onRefresh?: () => void; // 刷新父组件的回调
 }
 
+// 多码单价数据接口
+interface SizePrice {
+  id?: string;
+  styleId: number;
+  processCode: string;
+  processName: string;
+  progressStage?: string;
+  size: string;
+  price: number;
+}
+
+// 扩展的工序数据，包含各尺码单价
+interface StyleProcessWithSizePrice extends StyleProcess {
+  sizePrices?: Record<string, number>; // { 'XS': 2.5, 'S': 2.5, 'M': 3.0 }
+}
+
 const norm = (v: unknown) => String(v || '').trim();
 
 const isTempId = (id: any) => {
@@ -31,23 +46,30 @@ const StyleProcessTab: React.FC<Props> = ({
   styleId,
   readOnly,
   hidePrice = false,
-  progressNode,
+  progressNode: _progressNode,
   processAssignee,
   processStartTime,
   processCompletedTime,
   onRefresh,
 }) => {
   const { message } = App.useApp();
-  const [data, setData] = useState<StyleProcess[]>([]);
+  const [data, setData] = useState<StyleProcessWithSizePrice[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [deletedIds, setDeletedIds] = useState<Array<string | number>>([]);
-  const snapshotRef = useRef<StyleProcess[] | null>(null);
+  const snapshotRef = useRef<StyleProcessWithSizePrice[] | null>(null);
   const [processTemplateKey, setProcessTemplateKey] = useState<string | undefined>(undefined);
   const [processTemplates, setProcessTemplates] = useState<TemplateLibrary[]>([]);
   const [templateSourceStyleNo, setTemplateSourceStyleNo] = useState('');
   const [templateLoading, setTemplateLoading] = useState(false);
+
+  // 多码单价相关状态
+  const [sizes, setSizes] = useState<string[]>([]);
+  const showSizePrices = true; // 始终显示多码单价列
+  const [newSizeName, setNewSizeName] = useState('');
+  const [addSizePopoverOpen, setAddSizePopoverOpen] = useState(false);
+  const defaultSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 
   const [styleNoOptions, setStyleNoOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [styleNoLoading, setStyleNoLoading] = useState(false);
@@ -133,10 +155,57 @@ const StyleProcessTab: React.FC<Props> = ({
   const fetchProcess = async () => {
     setLoading(true);
     try {
-      const res = await api.get<StyleProcess[]>(`/style/process/list?styleId=${styleId}`);
-      const result = res as Record<string, unknown>;
-      if (result.code === 200) {
-        setData(result.data || []);
+      // 同时获取工序数据和多码单价数据
+      const [processRes, sizePriceRes] = await Promise.all([
+        api.get<StyleProcess[]>(`/style/process/list?styleId=${styleId}`),
+        api.get<{ code: number; data: SizePrice[] }>(`/style/size-price/list`, { params: { styleId } }),
+      ]);
+
+      const processResult = processRes as Record<string, unknown>;
+      const sizePriceResult = sizePriceRes as Record<string, unknown>;
+
+      if (processResult.code === 200) {
+        const processData = (processResult.data || []) as StyleProcess[];
+
+        // 处理多码单价数据
+        let sizePriceData: SizePrice[] = [];
+        let sizeList: string[] = [...defaultSizes];
+
+        if (sizePriceResult.code === 200 && sizePriceResult.data) {
+          sizePriceData = sizePriceResult.data as SizePrice[];
+          // 从已保存的数据中提取尺码列表
+          const savedSizes = new Set<string>();
+          sizePriceData.forEach((sp: SizePrice) => {
+            if (sp.size) savedSizes.add(sp.size.trim());
+          });
+          if (savedSizes.size > 0) {
+            sizeList = Array.from(savedSizes).sort((a, b) => {
+              const order = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '2XL', '3XL'];
+              const ia = order.indexOf(a);
+              const ib = order.indexOf(b);
+              if (ia >= 0 && ib >= 0) return ia - ib;
+              if (ia >= 0) return -1;
+              if (ib >= 0) return 1;
+              return a.localeCompare(b);
+            });
+          }
+        }
+        setSizes(sizeList);
+
+        // 合并工序数据和多码单价
+        const mergedData: StyleProcessWithSizePrice[] = processData.map((proc) => {
+          const sizePrices: Record<string, number> = {};
+          sizeList.forEach((size) => {
+            const found = sizePriceData.find(
+              (sp) => sp.processCode === proc.processCode && sp.size === size
+            );
+            // 如果没有多码单价，使用工序基础单价
+            sizePrices[size] = found ? toNumberSafe(found.price) : toNumberSafe(proc.price);
+          });
+          return { ...proc, sizePrices };
+        });
+
+        setData(mergedData);
         setDeletedIds([]);
         setEditMode(false);
         snapshotRef.current = null;
@@ -198,7 +267,10 @@ const StyleProcessTab: React.FC<Props> = ({
     const nextSort = maxSort + 1;
     // 自动生成工序编码：01、02、03...
     const autoCode = String(nextSort).padStart(2, '0');
-    const newProcess: StyleProcess = {
+    // 初始化各尺码单价为0
+    const sizePrices: Record<string, number> = {};
+    sizes.forEach((s) => { sizePrices[s] = 0; });
+    const newProcess: StyleProcessWithSizePrice = {
       id: newId,
       styleId,
       processCode: autoCode,
@@ -208,8 +280,53 @@ const StyleProcessTab: React.FC<Props> = ({
       standardTime: 0,
       price: 0,
       sortOrder: nextSort,
+      sizePrices,
     };
     setData((prev) => [...prev, newProcess]);
+  };
+
+  // 添加尺码
+  const handleAddSize = () => {
+    const trimmed = newSizeName.trim().toUpperCase();
+    if (!trimmed) {
+      message.warning('请输入尺码');
+      return;
+    }
+    if (sizes.includes(trimmed)) {
+      message.warning('该尺码已存在');
+      return;
+    }
+    setSizes((prev) => [...prev, trimmed]);
+    // 为所有工序添加该尺码的默认单价
+    setData((prev) =>
+      prev.map((row) => ({
+        ...row,
+        sizePrices: { ...(row.sizePrices || {}), [trimmed]: toNumberSafe(row.price) },
+      }))
+    );
+    setNewSizeName('');
+    message.success(`已添加尺码: ${trimmed}`);
+  };
+
+  // 删除尺码
+  const handleRemoveSize = (size: string) => {
+    setSizes((prev) => prev.filter((s) => s !== size));
+    setData((prev) =>
+      prev.map((row) => {
+        const { [size]: _, ...restSizePrices } = row.sizePrices || {};
+        return { ...row, sizePrices: restSizePrices };
+      })
+    );
+    message.success(`已删除尺码: ${size}`);
+  };
+
+  // 更新尺码单价
+  const updateSizePrice = (id: string | number, size: string, value: number) => {
+    setData((prev) =>
+      prev.map((r) =>
+        r.id === id ? { ...r, sizePrices: { ...(r.sizePrices || {}), [size]: value } } : r
+      )
+    );
   };
 
   const applyProcessTemplate = async (templateId: string) => {
@@ -323,6 +440,29 @@ const StyleProcessTab: React.FC<Props> = ({
       if (bad) {
         message.error((bad as Record<string, unknown>)?.message || '保存失败');
         return;
+      }
+
+      // 保存多码单价数据（如果开启了多码单价显示）
+      if (showSizePrices && sizes.length > 0) {
+        try {
+          const sizePriceList: SizePrice[] = [];
+          rows.forEach((row) => {
+            sizes.forEach((size) => {
+              const price = toNumberSafe(row.sizePrices?.[size] ?? row.price);
+              sizePriceList.push({
+                styleId: Number(styleId),
+                processCode: norm(row.processCode),
+                processName: norm(row.processName),
+                progressStage: norm(row.progressStage) || '车缝',
+                size,
+                price,
+              });
+            });
+          });
+          await api.post('/style/size-price/batch-save', sizePriceList);
+        } catch (error) {
+          console.error('保存多码单价失败:', error);
+        }
       }
 
       // 保存成功后调用完成API
@@ -460,6 +600,45 @@ const StyleProcessTab: React.FC<Props> = ({
             `¥${toNumberSafe(text)}`
           ),
       }] : []),
+      // 多码单价列（动态生成）
+      ...(showSizePrices ? sizes.map((size) => ({
+        title: (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+            <span>{size}码</span>
+            {editableMode && (
+              <DeleteOutlined
+                style={{ color: '#ff4d4f', cursor: 'pointer', fontSize: 12 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  Modal.confirm({
+                    title: `确定删除"${size}"码？`,
+                    content: '删除后该尺码的单价数据将被清除',
+                    onOk: () => handleRemoveSize(size),
+                  });
+                }}
+              />
+            )}
+          </div>
+        ),
+        dataIndex: `sizePrice_${size}`,
+        width: 90,
+        render: (_: any, record: StyleProcessWithSizePrice) => {
+          const price = record.sizePrices?.[size] ?? record.price ?? 0;
+          return editableMode ? (
+            <InputNumber
+              value={price}
+              min={0}
+              step={0.01}
+              prefix="¥"
+              size="small"
+              style={{ width: '100%' }}
+              onChange={(v) => updateSizePrice(record.id!, size, toNumberSafe(v))}
+            />
+          ) : (
+            `¥${toNumberSafe(price)}`
+          );
+        },
+      })) : []),
       {
         title: '操作',
         dataIndex: 'operation',
@@ -488,7 +667,7 @@ const StyleProcessTab: React.FC<Props> = ({
           ) : null,
       },
     ];
-  }, [data, editMode, readOnly]);
+  }, [data, editMode, readOnly, showSizePrices, sizes]);
 
   return (
     <div>
@@ -588,6 +767,49 @@ const StyleProcessTab: React.FC<Props> = ({
             添加工序
           </Button>
 
+          {/* 添加码数按钮 */}
+          <Popover
+            trigger="click"
+            placement="bottomRight"
+            open={addSizePopoverOpen}
+            onOpenChange={setAddSizePopoverOpen}
+            content={
+              <div style={{ width: 200 }}>
+                <div style={{ marginBottom: 8, fontWeight: 500 }}>添加新尺码</div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <Input
+                    size="small"
+                    placeholder="如: 3XL, 4XL"
+                    value={newSizeName}
+                    onChange={(e) => setNewSizeName(e.target.value)}
+                    onPressEnter={() => {
+                      handleAddSize();
+                      setAddSizePopoverOpen(false);
+                    }}
+                    style={{ flex: 1 }}
+                  />
+                  <Button
+                    size="small"
+                    type="primary"
+                    onClick={() => {
+                      handleAddSize();
+                      setAddSizePopoverOpen(false);
+                    }}
+                  >
+                    添加
+                  </Button>
+                </div>
+                <div style={{ marginTop: 8, fontSize: 12, color: '#999' }}>
+                  当前: {sizes.join(', ')}
+                </div>
+              </div>
+            }
+          >
+            <Button icon={<PlusOutlined />} disabled={!editMode || Boolean(readOnly)}>
+              添加码数
+            </Button>
+          </Popover>
+
           {!editMode || readOnly ? (
             <Button icon={<EditOutlined />} onClick={enterEdit} disabled={loading || saving || Boolean(readOnly)}>
               编辑
@@ -614,8 +836,8 @@ const StyleProcessTab: React.FC<Props> = ({
       </div>
       <ResizableTable
         bordered
-        dataSource={data}
-        columns={columns as Record<string, unknown>}
+        dataSource={data as unknown as Record<string, unknown>[]}
+        columns={columns as unknown as Record<string, unknown>[]}
         pagination={false}
         loading={loading}
         rowKey="id"

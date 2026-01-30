@@ -2,6 +2,20 @@
   <!-- 通用悬浮铃铛组件 -->
   <floating-bell />
 
+  <!-- 仓库管理卡片 -->
+  <view class="card">
+    <view class="title">仓库</view>
+    <view class="grid-menu">
+      <view class="grid-item" bindtap="navTo" data-url="/pages/warehouse/sample/list/index">
+        <view class="icon-box bg-purple">
+          <text class="iconfont">🧥</text>
+        </view>
+        <text class="menu-name">样衣库存</text>
+      </view>
+      <!-- 后续可扩展面辅料库存等 -->
+    </view>
+  </view>
+
   <view class="card">
     <view class="title">生产</view>
 

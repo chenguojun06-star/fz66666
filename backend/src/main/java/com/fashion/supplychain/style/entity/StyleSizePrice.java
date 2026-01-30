@@ -33,6 +33,11 @@ public class StyleSizePrice {
     private String processName;
 
     /**
+     * 进度节点
+     */
+    private String progressStage;
+
+    /**
      * 尺码
      */
     private String size;

@@ -112,6 +112,7 @@ Page({
       { label: '包装', value: 'packaging' },
       { label: '质检', value: 'quality' },
       { label: '入库', value: 'warehouse' },
+      { label: '查库存', value: 'stock' },
     ],
     scanTypeIndex: 0,
 
@@ -175,6 +176,24 @@ Page({
     defectCategories: ['线头问题', '脏污', '破损', '色差', '尺寸不符', '缝制问题', '其他'],
     // 处理方式
     handleMethods: ['返修', '报废'],
+
+    // 🆕 样板生产确认弹窗数据
+    patternConfirm: {
+      visible: false,
+      loading: false,
+      patternId: '',
+      styleNo: '',
+      color: '',
+      quantity: 0,
+      status: '',
+      operationType: '',
+      operationLabel: '',
+      designer: '',
+      patternDeveloper: '',
+      deliveryTime: '',
+      patternDetail: null,
+      remark: '',
+    },
 
     // 调试模式
     debug: DEBUG_MODE,
@@ -902,7 +921,13 @@ Page({
 
     this.setData({ loading: true });
 
-    // 2. 准备参数
+    // 2. 特殊模式处理：库存查询
+    if (scanType === 'stock') {
+      await this.handleStockQuery(codeStr);
+      return;
+    }
+
+    // 3. 准备参数
     const options = {
       scanType: scanType,
       quantity: this.data.quantity, // 手动输入的数量
@@ -967,9 +992,83 @@ Page({
   },
 
   /**
+   * 处理库存查询
+   */
+  async handleStockQuery(codeStr) {
+    try {
+      // 尝试从菲号中提取SKU信息
+      let skuCode = codeStr;
+
+      // 使用 ScanHandler 中的 qrParser 实例
+      const parseResult = this.scanHandler.qrParser.parse(codeStr);
+      if (parseResult.success && parseResult.data.styleNo && parseResult.data.color && parseResult.data.size) {
+        // 构造标准 SKU 编码格式：款号-颜色-尺码
+        skuCode = `${parseResult.data.styleNo}-${parseResult.data.color}-${parseResult.data.size}`;
+      }
+
+      const stock = await api.style.getInventory(skuCode);
+
+      wx.showModal({
+        title: '库存查询',
+        content: `SKU: ${skuCode}\r\n当前库存: ${stock}`,
+        confirmText: '调整库存',
+        cancelText: '关闭',
+        success: (res) => {
+          if (res.confirm) {
+            this.showStockUpdateDialog(skuCode);
+          }
+        }
+      });
+    } catch (e) {
+      console.error('[handleStockQuery] error:', e);
+      toast.error('查询失败: ' + (e.errMsg || e.message || '未知错误'));
+    } finally {
+      this.setData({ loading: false });
+    }
+  },
+
+  /**
+   * 显示库存更新弹窗
+   */
+  showStockUpdateDialog(skuCode) {
+    wx.showModal({
+      title: '调整库存',
+      content: '请输入调整数量 (正数增加，负数减少)',
+      editable: true,
+      placeholderText: '例如: 10 或 -5',
+      success: async (res) => {
+        if (res.confirm && res.content) {
+          const qty = parseInt(res.content);
+          if (isNaN(qty) || qty === 0) {
+            toast.error('无效数量');
+            return;
+          }
+
+          wx.showLoading({ title: '更新中...' });
+          try {
+            await api.style.updateInventory({ skuCode, quantity: qty });
+            wx.hideLoading();
+            toast.success('库存更新成功');
+          } catch (e) {
+            wx.hideLoading();
+            toast.error('更新失败: ' + (e.errMsg || e.message));
+          }
+        }
+      }
+    });
+  },
+
+  /**
    * 显示确认弹窗
    */
   showConfirmModal(data) {
+    // ✅ 判断是否为样板生产模式
+    const isPatternMode = data.patternId || data.patternDetail;
+    if (isPatternMode) {
+      this.showPatternConfirmModal(data);
+      return;
+    }
+
     // ✅ 判断是否为采购模式
     const isProcurement =
       this.data.scanTypeOptions[this.data.scanTypeIndex].value === 'procurement' ||
@@ -1011,11 +1110,11 @@ Page({
     const sizeDetails =
       skuList.length > 0
         ? skuList
-            .map(
-              item =>
-                `${item.color || '-'}${item.size ? `/${item.size}` : ''}×${Number(item.totalQuantity || 0)}`
-            )
-            .join('，')
+          .map(
+            item =>
+              `${item.color || '-'}${item.size ? `/${item.size}` : ''}×${Number(item.totalQuantity || 0)}`
+          )
+          .join('，')
         : '';
 
     // 构造 Cutting 任务 (如果是裁剪工序)
@@ -2212,6 +2311,128 @@ Page({
         scanCode: item.data.scanCode || '',
         recordId: item.data.scanId || item.data.recordId,
       });
+    }
+  },
+
+  // ==================== 样板生产扫码 ====================
+
+  /**
+   * 显示样板生产确认弹窗
+   */
+  showPatternConfirmModal(data) {
+    const patternDetail = data.patternDetail || {};
+    const operationLabels = {
+      'RECEIVE': '领取样板',
+      'PLATE': '车板扫码',
+      'FOLLOW_UP': '跟单确认',
+      'COMPLETE': '完成确认',
+      'WAREHOUSE_IN': '样衣入库',
+    };
+
+    this.setData({
+      patternConfirm: {
+        visible: true,
+        loading: false,
+        patternId: data.patternId,
+        styleNo: data.styleNo,
+        color: data.color,
+        quantity: data.quantity,
+        status: data.status,
+        operationType: data.operationType,
+        operationLabel: operationLabels[data.operationType] || '操作',
+        designer: data.designer || patternDetail.designer || '-',
+        patternDeveloper: data.patternDeveloper || patternDetail.patternDeveloper || '-',
+        deliveryTime: patternDetail.deliveryTime || '-',
+        patternDetail: patternDetail,
+        remark: '',
+      },
+    });
+  },
+
+  /**
+   * 关闭样板生产确认弹窗
+   */
+  closePatternConfirm() {
+    this.setData({
+      'patternConfirm.visible': false,
+    });
+  },
+
+  /**
+   * 样板生产操作类型选择
+   */
+  onPatternOperationChange(e) {
+    const operationType = e.currentTarget.dataset.type;
+    const operationLabels = {
+      'RECEIVE': '领取样板',
+      'PLATE': '车板扫码',
+      'FOLLOW_UP': '跟单确认',
+      'COMPLETE': '完成确认',
+      'WAREHOUSE_IN': '样衣入库',
+    };
+    this.setData({
+      'patternConfirm.operationType': operationType,
+      'patternConfirm.operationLabel': operationLabels[operationType] || '操作',
+    });
+  },
+
+  /**
+   * 样板生产备注输入
+   */
+  onPatternRemarkInput(e) {
+    this.setData({
+      'patternConfirm.remark': e.detail.value,
+    });
+  },
+
+  /**
+   * 提交样板生产扫码
+   */
+  async submitPatternScan() {
+    const { patternConfirm } = this.data;
+
+    if (patternConfirm.loading) {
+      return;
+    }
+
+    this.setData({ 'patternConfirm.loading': true });
+
+    try {
+      const result = await this.scanHandler.submitPatternScan({
+        patternId: patternConfirm.patternId,
+        operationType: patternConfirm.operationType,
+        operatorRole: 'PLATE_WORKER', // 默认车板师
+        remark: patternConfirm.remark,
+      });
+
+      if (result.success) {
+        toast.success(result.message || '操作成功');
+        this.closePatternConfirm();
+
+        // 添加到本地历史
+        this.addToLocalHistory({
+          time: new Date().toLocaleString(),
+          type: 'pattern',
+          data: {
+            patternId: patternConfirm.patternId,
+            styleNo: patternConfirm.styleNo,
+            color: patternConfirm.color,
+            operationType: patternConfirm.operationType,
+          },
+        });
+
+        // 触发全局刷新
+        if (eventBus && typeof eventBus.emit === 'function') {
+          eventBus.emit('DATA_REFRESH');
+        }
+      } else {
+        toast.error(result.message || '操作失败');
+      }
+    } catch (e) {
+      console.error('[扫码页] 样板扫码提交失败:', e);
+      toast.error(e.message || '提交失败');
+    } finally {
+      this.setData({ 'patternConfirm.loading': false });
     }
   },
 });

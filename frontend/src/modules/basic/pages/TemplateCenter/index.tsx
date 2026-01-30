@@ -1,14 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Card, Form, Input, InputNumber, Select, Space, Table, Tag, Tooltip, Typography } from 'antd';
+import { App, Button, Card, Checkbox, Form, Input, InputNumber, Popover, Select, Space, Table, Tag, Tooltip, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { DeleteOutlined, EditOutlined, EyeOutlined, HolderOutlined, PlusOutlined, RollbackOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, EyeOutlined, HolderOutlined, PlusOutlined, RollbackOutlined, SettingOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
 import api from '@/utils/api';
-import { isAdminUser as isAdminUserFn, useAuth } from '@/utils/authContext';
+import { isAdminUser as isAdminUserFn, useAuth } from '@/utils/AuthContext';
 import { useViewport } from '@/utils/useViewport';
 import { getMaterialTypeLabel } from '@/utils/materialType';
 import type { TemplateLibrary } from '@/types/style';
@@ -28,9 +28,9 @@ const typeLabel = (t: string) => {
   const v = String(t || '').trim().toLowerCase();
   if (v === 'bom') return 'BOM';
   if (v === 'size') return '尺寸';
-  if (v === 'process') return '工艺';
-  if (v === 'process_price') return '工序单价';
-  if (v === 'progress') return '进度';
+  if (v === 'process') return '工序进度单价';
+  if (v === 'process_price') return '工序单价(旧)';
+  if (v === 'progress') return '进度(旧)';
   return v || '-';
 };
 
@@ -39,8 +39,8 @@ const typeColor = (t: string) => {
   if (v === 'bom') return 'blue';
   if (v === 'size') return 'purple';
   if (v === 'process') return 'green';
-  if (v === 'process_price') return 'cyan';
-  if (v === 'progress') return 'orange';
+  if (v === 'process_price') return 'default';
+  if (v === 'progress') return 'default';
   return 'default';
 };
 
@@ -143,6 +143,11 @@ const TemplateCenter: React.FC = () => {
   const [viewContent, setViewContent] = useState<string>('');
   const [viewObj, setViewObj] = useState<unknown>(null);
 
+  // 多码单价相关状态
+  const [showSizePrices, setShowSizePrices] = useState(false);
+  const [templateSizes, setTemplateSizes] = useState<string[]>(['XS', 'S', 'M', 'L', 'XL', 'XXL']);
+  const [newSizeName, setNewSizeName] = useState('');
+
   const isAdminUser = useMemo(() => isAdminUserFn(user), [user]);
 
   const isLocked = (row?: TemplateLibrary | null) => {
@@ -241,10 +246,20 @@ const TemplateCenter: React.FC = () => {
     try {
       const parsed = JSON.parse(content);
       setEditTableData(parsed);
+      // 初始化尺码列表
+      if (parsed.sizes && Array.isArray(parsed.sizes)) {
+        setTemplateSizes(parsed.sizes);
+        setShowSizePrices(true);
+      } else {
+        setTemplateSizes(['XS', 'S', 'M', 'L', 'XL', 'XXL']);
+        setShowSizePrices(false);
+      }
     } catch {
       // Intentionally empty
       // 忽略错误
       setEditTableData(null);
+      setTemplateSizes(['XS', 'S', 'M', 'L', 'XL', 'XXL']);
+      setShowSizePrices(false);
     }
 
     setEditOpen(true);
@@ -278,7 +293,17 @@ const TemplateCenter: React.FC = () => {
       // 将表格数据转换为JSON字符串
       let templateContent = '';
       if (editTableData) {
-        templateContent = JSON.stringify(editTableData);
+        // 如果是工序模板且开启了多码单价，保存尺码列表
+        const finalData = { ...editTableData as Record<string, unknown> };
+        if (templateType === 'process' && showSizePrices && templateSizes.length > 0) {
+          finalData.sizes = templateSizes;
+        } else if (templateType === 'process') {
+          // 不显示多码单价时，删除sizes字段
+          delete finalData.sizes;
+        }
+        templateContent = JSON.stringify(finalData);
+        console.log('[模板保存] 保存内容:', finalData);
+        console.log('[模板保存] steps:', (finalData as any)?.steps);
       } else {
         message.error('模板内容无效');
         return;
@@ -596,7 +621,14 @@ const TemplateCenter: React.FC = () => {
         const price = s?.price;
         return { processName, processCode, machineType, standardTime, unitPrice, price };
       });
-      const unitField = t === 'process_price' ? 'unitPrice' : 'price';
+      // 对于 process 类型，优先使用 unitPrice，其次使用 price
+      const getPriceValue = (s: Record<string, unknown>) => {
+        const up = Number(s?.unitPrice);
+        if (Number.isFinite(up) && up > 0) return up;
+        const p = Number(s?.price);
+        if (Number.isFinite(p) && p > 0) return p;
+        return 0;
+      };
       return (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           <div style={{ border: '1px solid #d9d9d9', padding: 8, borderRadius: 4 }}>
@@ -620,11 +652,8 @@ const TemplateCenter: React.FC = () => {
               {t === 'process_price' ? '单价工序库' : '工价工序库'}
             </div>
             <div style={{ maxHeight: 480, overflow: 'auto' }}>
-              {steps.filter((s) => {
-                const price = s?.[unitField];
-                return price != null && price !== 0;
-              }).map((s, idx) => {
-                const price = Number(s?.[unitField] || 0);
+              {steps.filter((s) => getPriceValue(s) > 0).map((s, idx) => {
+                const price = getPriceValue(s);
                 return (
                   <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderBottom: '1px solid #f0f0f0', fontSize: 13 }}>
                     <span>{String(s?.processName || '-')}</span>
@@ -632,10 +661,7 @@ const TemplateCenter: React.FC = () => {
                   </div>
                 );
               })}
-              {steps.filter((s) => {
-                const price = s?.[unitField];
-                return price != null && price !== 0;
-              }).length === 0 &&
+              {steps.filter((s) => getPriceValue(s) > 0).length === 0 &&
                 <div style={{ padding: 12, textAlign: 'center', color: '#999' }}>暂无价格数据</div>
               }
             </div>
@@ -781,6 +807,20 @@ const TemplateCenter: React.FC = () => {
   type SizeTableData = { sizes: string[]; parts: SizeTablePart[] };
   type BomTableRow = { materialName?: string; spec?: string; quantity?: string | number; unit?: string };
   type BomTableData = BomTableRow[];
+  // 合并后的工序进度单价模板行类型
+  type ProcessStepRow = {
+    processCode?: string;
+    processName?: string;
+    progressStage?: string;  // 进度节点
+    machineType?: string;
+    standardTime?: number;
+    unitPrice?: number;      // 工价（统一使用 unitPrice）
+    price?: number;          // 兼容旧数据
+    sizePrices?: Record<string, number>;  // 多码单价 { 'XS': 1.5, 'S': 1.5, 'M': 2.0 }
+  };
+  type ProcessTableData = { steps: ProcessStepRow[]; sizes?: string[] };  // 添加 sizes 字段存储尺码列表
+  type ProcessPriceRow = { processCode?: string; processName?: string; unitPrice?: number };
+  type ProcessPriceTableData = { steps: ProcessPriceRow[] };
 
   const isSizeTableData = (data: unknown): data is SizeTableData => {
     if (!data || typeof data !== 'object') return false;
@@ -789,6 +829,18 @@ const TemplateCenter: React.FC = () => {
   };
 
   const isBomTableData = (data: unknown): data is BomTableData => Array.isArray(data);
+
+  const isProcessTableData = (data: unknown): data is ProcessTableData => {
+    if (!data || typeof data !== 'object') return false;
+    const rec = data as Record<string, unknown>;
+    return Array.isArray(rec.steps);
+  };
+
+  const isProcessPriceTableData = (data: unknown): data is ProcessPriceTableData => {
+    if (!data || typeof data !== 'object') return false;
+    const rec = data as Record<string, unknown>;
+    return Array.isArray(rec.steps);
+  };
 
   const columns: ColumnsType<TemplateLibraryRecord> = [
     {
@@ -1056,38 +1108,39 @@ const TemplateCenter: React.FC = () => {
         confirmLoading={editSaving}
         width={modalWidth}
         initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
-        scaleWithViewport
       >
         <Form form={createForm} layout="vertical">
-          <Form.Item name="templateName" label="模板名称" rules={[{ required: true, message: '请输入模板名称' }]}>
-            <Input placeholder="例如：外协款-BOM模板" />
-          </Form.Item>
-          <Form.Item name="templateKey" label="模板标识(可选)">
-            <Input placeholder="不填则保持原标识" />
-          </Form.Item>
-          <Form.Item name="templateType" label="模板类型" rules={[{ required: true, message: '请选择模板类型' }]}>
-            <Select
-              placeholder="请选择"
-              options={[
-                { value: 'bom', label: 'BOM' },
-                { value: 'size', label: '尺寸' },
-                { value: 'process', label: '工艺' },
-              ]}
-              disabled
-            />
-          </Form.Item>
-          <Form.Item name="sourceStyleNo" label="来源款号(可选)">
-            <Select
-              allowClear
-              showSearch={{ filterOption: false, onSearch: scheduleFetchStyleNos }}
-              loading={styleNoLoading}
-              placeholder="搜索/选择款号"
-              options={styleNoOptions}
-              onOpenChange={(open) => {
-                if (open && !styleNoOptions.length) fetchStyleNoOptions('');
-              }}
-            />
-          </Form.Item>
+          <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+            <Form.Item name="templateName" label="模板名称" rules={[{ required: true, message: '请输入模板名称' }]} style={{ flex: 2, marginBottom: 0 }}>
+              <Input placeholder="例如：外协款-BOM模板" />
+            </Form.Item>
+            <Form.Item name="templateKey" label="模板标识(可选)" style={{ flex: 1, marginBottom: 0 }}>
+              <Input placeholder="不填则保持原标识" />
+            </Form.Item>
+            <Form.Item name="templateType" label="模板类型" rules={[{ required: true, message: '请选择模板类型' }]} style={{ flex: 1, marginBottom: 0 }}>
+              <Select
+                placeholder="请选择"
+                options={[
+                  { value: 'bom', label: 'BOM' },
+                  { value: 'size', label: '尺寸' },
+                  { value: 'process', label: '工艺' },
+                ]}
+                disabled
+              />
+            </Form.Item>
+            <Form.Item name="sourceStyleNo" label="来源款号(可选)" style={{ flex: 1, marginBottom: 0 }}>
+              <Select
+                allowClear
+                showSearch={{ filterOption: false, onSearch: scheduleFetchStyleNos }}
+                loading={styleNoLoading}
+                placeholder="搜索/选择款号"
+                options={styleNoOptions}
+                onOpenChange={(open) => {
+                  if (open && !styleNoOptions.length) fetchStyleNoOptions('');
+                }}
+              />
+            </Form.Item>
+          </div>
           <Form.Item label="模板内容">
             {editTableData ? (
               <div style={{ maxHeight: 400, overflow: 'auto', border: '1px solid #d9d9d9', padding: 8 }}>
@@ -1226,6 +1279,336 @@ const TemplateCenter: React.FC = () => {
                       </table>
                     );
                   }
+                  // 工序进度单价模板（合并后的综合模板）
+                  if (type === 'process' && isProcessTableData(editTableData)) {
+                    // 多码单价管理组件
+                    const SizePriceManager = () => (
+                      <div style={{ marginBottom: 12, padding: 12, background: '#f9f9f9', borderRadius: 4 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                          <Checkbox
+                            checked={showSizePrices}
+                            onChange={(e) => setShowSizePrices(e.target.checked)}
+                          >
+                            显示多码单价
+                          </Checkbox>
+                          {showSizePrices && (
+                            <span style={{ color: '#666', fontSize: 12 }}>
+                              (各尺码单价不同时使用，默认使用工价)
+                            </span>
+                          )}
+                        </div>
+                        {showSizePrices && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                            <span style={{ color: '#666', fontSize: 13 }}>尺码：</span>
+                            {templateSizes.map((s) => (
+                              <Tag
+                                key={s}
+                                closable
+                                onClose={() => {
+                                  setTemplateSizes((prev) => prev.filter((x) => x !== s));
+                                  // 从所有工序中删除该尺码
+                                  const newData = {
+                                    ...editTableData,
+                                    sizes: templateSizes.filter((x) => x !== s),
+                                    steps: editTableData.steps.map((step: ProcessStepRow) => {
+                                      if (step.sizePrices) {
+                                        const { [s]: _, ...rest } = step.sizePrices;
+                                        return { ...step, sizePrices: rest };
+                                      }
+                                      return step;
+                                    }),
+                                  };
+                                  setEditTableData(newData);
+                                }}
+                              >
+                                {s}
+                              </Tag>
+                            ))}
+                            <Input
+                              size="small"
+                              placeholder="添加尺码"
+                              value={newSizeName}
+                              onChange={(e) => setNewSizeName(e.target.value)}
+                              onPressEnter={() => {
+                                const trimmed = newSizeName.trim().toUpperCase();
+                                if (!trimmed || templateSizes.includes(trimmed)) return;
+                                setTemplateSizes((prev) => [...prev, trimmed]);
+                                // 为所有工序添加该尺码
+                                const newData = {
+                                  ...editTableData,
+                                  sizes: [...templateSizes, trimmed],
+                                  steps: editTableData.steps.map((step: ProcessStepRow) => ({
+                                    ...step,
+                                    sizePrices: {
+                                      ...(step.sizePrices || {}),
+                                      [trimmed]: step.unitPrice ?? step.price ?? 0,
+                                    },
+                                  })),
+                                };
+                                setEditTableData(newData);
+                                setNewSizeName('');
+                              }}
+                              style={{ width: 100 }}
+                            />
+                            <Button
+                              size="small"
+                              type="primary"
+                              onClick={() => {
+                                const trimmed = newSizeName.trim().toUpperCase();
+                                if (!trimmed || templateSizes.includes(trimmed)) return;
+                                setTemplateSizes((prev) => [...prev, trimmed]);
+                                const newData = {
+                                  ...editTableData,
+                                  sizes: [...templateSizes, trimmed],
+                                  steps: editTableData.steps.map((step: ProcessStepRow) => ({
+                                    ...step,
+                                    sizePrices: {
+                                      ...(step.sizePrices || {}),
+                                      [trimmed]: step.unitPrice ?? step.price ?? 0,
+                                    },
+                                  })),
+                                };
+                                setEditTableData(newData);
+                                setNewSizeName('');
+                              }}
+                            >
+                              添加
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    );
+
+                    return (
+                      <div>
+                        <SizePriceManager />
+                        <div style={{ overflowX: 'auto' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: showSizePrices ? 650 + templateSizes.length * 60 : 650 }}>
+                            <thead>
+                              <tr style={{ height: 32 }}>
+                                <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#f9fafb', width: 40, fontSize: 12 }}>排序</th>
+                                <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#f9fafb', width: 55, fontSize: 12 }}>工序编号</th>
+                                <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#f9fafb', width: 80, fontSize: 12 }}>工序名称</th>
+                                <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#f9fafb', width: 70, fontSize: 12 }}>进度节点</th>
+                                <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#f9fafb', width: 70, fontSize: 12 }}>机器类型</th>
+                                <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#f9fafb', width: 55, fontSize: 12 }}>工时(秒)</th>
+                                <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#f9fafb', width: 60, fontSize: 12 }}>工价(元)</th>
+                                {showSizePrices && templateSizes.map((size) => (
+                                  <th key={size} style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#e6f7ff', width: 55, fontSize: 12 }}>
+                                    {size}码
+                                  </th>
+                                ))}
+                                <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#f9fafb', width: 36, fontSize: 12 }}>操作</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {editTableData.steps.map((item: ProcessStepRow, idx: number) => (
+                                <tr key={idx} style={{ height: 32 }}>
+                                  <td style={{ border: '1px solid #e5e7eb', padding: '2px 4px', textAlign: 'center', color: '#999', fontSize: 12 }}>
+                                    {idx + 1}
+                                  </td>
+                                  <td style={{ border: '1px solid #e5e7eb', padding: '2px 4px' }}>
+                                    <Input
+                                      size="small"
+                                      value={item.processCode || ''}
+                                      onChange={(e) => {
+                                        const newData = { ...editTableData, steps: [...editTableData.steps] };
+                                        newData.steps[idx] = { ...newData.steps[idx], processCode: e.target.value };
+                                        setEditTableData(newData);
+                                      }}
+                                      style={{ border: 'none', fontSize: 12 }}
+                                    />
+                                  </td>
+                                  <td style={{ border: '1px solid #e5e7eb', padding: '2px 4px' }}>
+                                    <Input
+                                      size="small"
+                                      value={item.processName || ''}
+                                      onChange={(e) => {
+                                        const newData = { ...editTableData, steps: [...editTableData.steps] };
+                                        newData.steps[idx] = { ...newData.steps[idx], processName: e.target.value };
+                                        setEditTableData(newData);
+                                      }}
+                                      style={{ border: 'none', fontSize: 12 }}
+                                    />
+                                  </td>
+                                  <td style={{ border: '1px solid #e5e7eb', padding: '2px 4px' }}>
+                                    <Input
+                                      size="small"
+                                      value={item.progressStage || ''}
+                                      onChange={(e) => {
+                                        const newData = { ...editTableData, steps: [...editTableData.steps] };
+                                        newData.steps[idx] = { ...newData.steps[idx], progressStage: e.target.value };
+                                        setEditTableData(newData);
+                                      }}
+                                      style={{ border: 'none', fontSize: 12 }}
+                                    />
+                                  </td>
+                                  <td style={{ border: '1px solid #e5e7eb', padding: '2px 4px' }}>
+                                    <Input
+                                      size="small"
+                                      value={item.machineType || ''}
+                                      onChange={(e) => {
+                                        const newData = { ...editTableData, steps: [...editTableData.steps] };
+                                        newData.steps[idx] = { ...newData.steps[idx], machineType: e.target.value };
+                                        setEditTableData(newData);
+                                      }}
+                                      style={{ border: 'none', fontSize: 12 }}
+                                    />
+                                  </td>
+                                  <td style={{ border: '1px solid #e5e7eb', padding: '2px 4px' }}>
+                                    <InputNumber
+                                      size="small"
+                                      value={item.standardTime || 0}
+                                      min={0}
+                                      onChange={(val) => {
+                                        const newData = { ...editTableData, steps: [...editTableData.steps] };
+                                        newData.steps[idx] = { ...newData.steps[idx], standardTime: val || 0 };
+                                        setEditTableData(newData);
+                                      }}
+                                      style={{ width: '100%', fontSize: 12 }}
+                                    />
+                                  </td>
+                                  <td style={{ border: '1px solid #e5e7eb', padding: '2px 4px' }}>
+                                    <InputNumber
+                                      size="small"
+                                      value={item.unitPrice ?? item.price ?? 0}
+                                      min={0}
+                                      precision={2}
+                                      onChange={(val) => {
+                                        const newData = { ...editTableData, steps: [...editTableData.steps] };
+                                        newData.steps[idx] = { ...newData.steps[idx], unitPrice: val || 0 };
+                                        setEditTableData(newData);
+                                      }}
+                                      style={{ width: '100%', fontSize: 12 }}
+                                    />
+                                  </td>
+                                  {showSizePrices && templateSizes.map((size) => (
+                                    <td key={size} style={{ border: '1px solid #e5e7eb', padding: '2px 4px', background: '#fafafa' }}>
+                                      <InputNumber
+                                        size="small"
+                                        value={item.sizePrices?.[size] ?? item.unitPrice ?? item.price ?? 0}
+                                        min={0}
+                                        precision={2}
+                                        onChange={(val) => {
+                                          const newData = { ...editTableData, steps: [...editTableData.steps] };
+                                          newData.steps[idx] = {
+                                            ...newData.steps[idx],
+                                            sizePrices: {
+                                              ...(newData.steps[idx].sizePrices || {}),
+                                              [size]: val || 0,
+                                            },
+                                          };
+                                          setEditTableData(newData);
+                                        }}
+                                        style={{ width: '100%', fontSize: 12 }}
+                                      />
+                                    </td>
+                                  ))}
+                                  <td style={{ border: '1px solid #e5e7eb', padding: '2px 4px', textAlign: 'center' }}>
+                                    <Button
+                                      type="link"
+                                      danger
+                                      size="small"
+                                      icon={<DeleteOutlined style={{ fontSize: 12 }} />}
+                                      onClick={() => {
+                                        const newData = { ...editTableData, steps: editTableData.steps.filter((_: ProcessStepRow, i: number) => i !== idx) };
+                                        setEditTableData(newData);
+                                      }}
+                                      style={{ padding: 0 }}
+                                    />
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                        <Button
+                          type="dashed"
+                          icon={<PlusOutlined />}
+                          size="small"
+                          style={{ width: '100%', marginTop: 8 }}
+                          onClick={() => {
+                            const maxSeq = editTableData.steps.reduce((max: number, s: ProcessStepRow) => {
+                              const code = parseInt(s.processCode || '0', 10);
+                              return code > max ? code : max;
+                            }, 0);
+                            const newCode = String(maxSeq + 1).padStart(2, '0');
+                            const newRow: ProcessStepRow = {
+                              processCode: newCode,
+                              processName: '',
+                              progressStage: '',
+                              machineType: '',
+                              standardTime: 0,
+                              unitPrice: 0,
+                              sizePrices: templateSizes.reduce((acc, size) => ({ ...acc, [size]: 0 }), {}),
+                            };
+                            const newData = { ...editTableData, steps: [...editTableData.steps, newRow] };
+                            setEditTableData(newData);
+                          }}
+                        >
+                          添加工序
+                        </Button>
+                      </div>
+                    );
+                  }
+                  // 工序单价模板（旧格式，兼容）
+                  if (type === 'process_price' && isProcessPriceTableData(editTableData)) {
+                    return (
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr>
+                            <th style={{ border: '1px solid #ccc', padding: 4, background: '#f5f5f5' }}>工序编号</th>
+                            <th style={{ border: '1px solid #ccc', padding: 4, background: '#f5f5f5' }}>工序名称</th>
+                            <th style={{ border: '1px solid #ccc', padding: 4, background: '#f5f5f5' }}>单价(元)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {editTableData.steps.map((item: ProcessPriceRow, idx: number) => (
+                            <tr key={idx}>
+                              <td style={{ border: '1px solid #ccc', padding: 4 }}>
+                                <Input
+                                  size="small"
+                                  value={item.processCode || ''}
+                                  onChange={(e) => {
+                                    const newData = { ...editTableData, steps: [...editTableData.steps] };
+                                    newData.steps[idx] = { ...newData.steps[idx], processCode: e.target.value };
+                                    setEditTableData(newData);
+                                  }}
+                                  style={{ border: 'none' }}
+                                />
+                              </td>
+                              <td style={{ border: '1px solid #ccc', padding: 4 }}>
+                                <Input
+                                  size="small"
+                                  value={item.processName || ''}
+                                  onChange={(e) => {
+                                    const newData = { ...editTableData, steps: [...editTableData.steps] };
+                                    newData.steps[idx] = { ...newData.steps[idx], processName: e.target.value };
+                                    setEditTableData(newData);
+                                  }}
+                                  style={{ border: 'none' }}
+                                />
+                              </td>
+                              <td style={{ border: '1px solid #ccc', padding: 4 }}>
+                                <InputNumber
+                                  size="small"
+                                  value={item.unitPrice || 0}
+                                  min={0}
+                                  precision={2}
+                                  onChange={(val) => {
+                                    const newData = { ...editTableData, steps: [...editTableData.steps] };
+                                    newData.steps[idx] = { ...newData.steps[idx], unitPrice: val || 0 };
+                                    setEditTableData(newData);
+                                  }}
+                                  style={{ width: '100%' }}
+                                />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    );
+                  }
                   // 其他类型暂时显示JSON
                   return (
                     <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0 }}>
@@ -1257,7 +1640,6 @@ const TemplateCenter: React.FC = () => {
         }
         width={modalWidth}
         initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
-        scaleWithViewport
       >
         {renderVisualContent()}
       </ResizableModal>

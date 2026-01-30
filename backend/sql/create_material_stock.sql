@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS `t_material_stock` (
+  `id` varchar(64) NOT NULL COMMENT '主键ID',
+  `material_id` varchar(64) DEFAULT NULL COMMENT '关联物料ID',
+  `material_code` varchar(64) DEFAULT NULL COMMENT '物料编码',
+  `material_name` varchar(128) DEFAULT NULL COMMENT '物料名称',
+  `material_type` varchar(64) DEFAULT NULL COMMENT '物料类型',
+  `specifications` varchar(255) DEFAULT NULL COMMENT '规格',
+  `unit` varchar(32) DEFAULT NULL COMMENT '单位',
+  `color` varchar(64) DEFAULT NULL COMMENT '颜色',
+  `size` varchar(64) DEFAULT NULL COMMENT '尺码',
+  `supplier_name` varchar(128) DEFAULT NULL COMMENT '供应商名称',
+  `quantity` int(11) DEFAULT '0' COMMENT '当前库存数量',
+  `locked_quantity` int(11) DEFAULT '0' COMMENT '占用/冻结数量',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  `delete_flag` int(11) DEFAULT '0' COMMENT '删除标记',
+  PRIMARY KEY (`id`),
+  KEY `idx_material_code` (`material_code`),
+  KEY `idx_material_id` (`material_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='面辅料库存表';

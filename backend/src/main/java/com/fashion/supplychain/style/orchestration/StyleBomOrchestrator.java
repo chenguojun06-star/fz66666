@@ -27,6 +27,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import com.fashion.supplychain.common.UserContext;
 
 @Service
 @Slf4j
@@ -83,6 +84,22 @@ public class StyleBomOrchestrator {
         if (!ok) {
             throw new IllegalStateException("保存失败");
         }
+
+        // 跟单员 = 填写BOM信息的人（自动填充到款式基础信息）
+        try {
+            String currentUser = UserContext.username();
+            if (StringUtils.hasText(currentUser)) {
+                StyleInfo styleInfo = styleInfoService.getById(styleBom.getStyleId());
+                if (styleInfo != null && !StringUtils.hasText(styleInfo.getOrderType())) {
+                    styleInfo.setOrderType(currentUser);
+                    styleInfoService.updateById(styleInfo);
+                    log.info("Synced merchandiser to style info: styleId={}, merchandiser={}", styleBom.getStyleId(), currentUser);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to sync merchandiser: styleId={}, error={}", styleBom.getStyleId(), e.getMessage());
+        }
+
         return true;
     }
 

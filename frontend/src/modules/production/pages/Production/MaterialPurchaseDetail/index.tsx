@@ -1,36 +1,44 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button, Card, Tag, Space, message, Modal, Form, Input, Row, Col, Spin, Alert } from 'antd';
-import { ArrowLeftOutlined, CheckCircleOutlined, EyeOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, CheckCircleOutlined, PrinterOutlined } from '@ant-design/icons';
+import StylePrintModal from '@/components/common/StylePrintModal';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
-import ResizableModal from '@/components/common/ResizableModal';
-import RowActions from '@/components/common/RowActions';
 import type { ColumnsType } from 'antd/es/table';
+import { MATERIAL_ARRIVAL_RATE_THRESHOLD, REMARK_MIN_LENGTH, MATERIAL_PURCHASE_STATUS, MATERIAL_TYPES } from '@/constants/business';
 import { MaterialPurchase as MaterialPurchaseType } from '@/types/production';
-import api, { fetchProductionOrderDetail } from '@/utils/api';
+import api, { parseProductionOrderLines } from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
 import { getMaterialTypeCategory, getMaterialTypeLabel } from '@/utils/materialType';
-import { ProductionOrderHeader, StyleCoverThumb } from '@/components/StyleAssets';
+import { ProductionOrderHeader } from '@/components/StyleAssets';
 import { useViewport } from '@/utils/useViewport';
+import ModalContentLayout from '@/components/common/ModalContentLayout';
 
 const { TextArea } = Input;
 
 const getStatusConfig = (status?: string) => {
   switch (status) {
     case 'waiting_procurement':
+    case MATERIAL_PURCHASE_STATUS.PENDING:
       return { color: 'default', text: '待采购' };
     case 'procurement_in_progress':
+    case MATERIAL_PURCHASE_STATUS.PARTIAL:
+    case 'IN_PROGRESS':
       return { color: 'warning', text: '采购中' };
     case 'procurement_completed':
-      return { color: 'default', text: '采购完成' };
+    case MATERIAL_PURCHASE_STATUS.COMPLETED:
+    case MATERIAL_PURCHASE_STATUS.RECEIVED:
+      return { color: 'success', text: '已完成' };
+    case MATERIAL_PURCHASE_STATUS.CANCELLED:
+      return { color: 'error', text: '已取消' };
     default:
       return { color: 'default', text: status || '-' };
   }
 };
 
 const MaterialPurchaseDetail: React.FC = () => {
-  const { orderId } = useParams<{ orderId: string }>();
+  const { styleNo } = useParams<{ styleNo: string }>();
   const navigate = useNavigate();
   const { isMobile } = useViewport();
 
@@ -38,12 +46,12 @@ const MaterialPurchaseDetail: React.FC = () => {
   const [order, setOrder] = useState<unknown>(null);
   const [purchaseList, setPurchaseList] = useState<MaterialPurchaseType[]>([]);
 
-  const [viewVisible, setViewVisible] = useState(false);
-  const [currentPurchase, setCurrentPurchase] = useState<MaterialPurchaseType | null>(null);
-
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [confirmForm] = Form.useForm();
+
+  // 打印状态
+  const [printModalVisible, setPrintModalVisible] = useState(false);
 
   // 计算物料到货率
   const materialArrivalRate = React.useMemo(() => {
@@ -55,22 +63,31 @@ const MaterialPurchaseDetail: React.FC = () => {
 
   // 加载订单和采购单数据
   const loadData = async () => {
-    if (!orderId) return;
+    if (!styleNo) return;
 
     setLoading(true);
     try {
       // 加载订单信息（订单可能已删除，优雅处理404）
       try {
-        const orderDetail = await fetchProductionOrderDetail(orderId, { acceptAnyData: true });
-        setOrder(orderDetail);
+        // 款号对应的订单可能有多个，只取第一个作为展示
+        const orderRes = await api.get('/production/order/list', {
+          params: { styleNo, page: 1, pageSize: 1 }
+        });
+        const orderResult = orderRes as Record<string, unknown>;
+        const orders = (orderResult?.data as any)?.records || [];
+        if (orders.length > 0) {
+          setOrder(orders[0]);
+        } else {
+          setOrder(null);
+        }
       } catch (orderError: unknown) {
         // 订单已删除或不存在，设置为null但继续加载采购列表
-        console.warn('[MaterialPurchaseDetail] 订单不存在或已删除:', orderId, orderError);
+        console.warn('[MaterialPurchaseDetail] 订单不存在或已删除:', styleNo, orderError);
         setOrder(null);
       }
 
       const purchaseRes = await api.get('/production/purchase/list', {
-        params: { orderId, page: 1, pageSize: 1000 }
+        params: { styleNo, page: 1, pageSize: 1000 }
       });
       const purchaseResult = purchaseRes as Record<string, unknown>;
       if (purchaseResult?.code === 200) {
@@ -78,8 +95,8 @@ const MaterialPurchaseDetail: React.FC = () => {
       } else {
         setPurchaseList(purchaseResult?.data?.records || purchaseResult?.records || []);
       }
-    } catch (error: unknown) {
-      message.error(error.message || '加载数据失败');
+    } catch (error: any) {
+      message.error(error?.message || '加载数据失败');
     } finally {
       setLoading(false);
     }
@@ -103,18 +120,12 @@ const MaterialPurchaseDetail: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, [orderId]);
-
-  // 查看采购单详情
-  const handleView = (record: MaterialPurchaseType) => {
-    setCurrentPurchase(record);
-    setViewVisible(true);
-  };
+  }, [styleNo]);
 
   // 打开确认回料完成对话框
   const handleOpenConfirm = () => {
-    if (materialArrivalRate < 50) {
-      message.warning('物料到货率不足50%，无法确认回料完成');
+    if (materialArrivalRate < MATERIAL_ARRIVAL_RATE_THRESHOLD) {
+      message.warning(`物料到货率不足${MATERIAL_ARRIVAL_RATE_THRESHOLD}%，无法确认回料完成`);
       return;
     }
 
@@ -132,15 +143,15 @@ const MaterialPurchaseDetail: React.FC = () => {
     try {
       const values = await confirmForm.validateFields();
 
-      if (values.remark.trim().length < 10) {
-        message.warning('备注原因至少需要10个字符');
+      if (values.remark.trim().length < REMARK_MIN_LENGTH) {
+        message.warning(`备注原因至少需要${REMARK_MIN_LENGTH}个字符`);
         return;
       }
 
       setConfirmLoading(true);
 
       await api.post('/production/order/confirm-procurement', {
-        id: orderId,
+        styleNo: styleNo,
         remark: values.remark.trim(),
       });
 
@@ -170,8 +181,8 @@ const MaterialPurchaseDetail: React.FC = () => {
       width: 100,
       render: (v: string) => (
         <Tag color={
-          getMaterialTypeCategory(v) === 'accessory' ? 'purple' :
-          getMaterialTypeCategory(v) === 'lining' ? 'cyan' : 'geekblue'
+          getMaterialTypeCategory(v) === MATERIAL_TYPES.ACCESSORY ? 'purple' :
+            getMaterialTypeCategory(v) === MATERIAL_TYPES.LINING ? 'cyan' : 'geekblue'
         }>
           {getMaterialTypeLabel(v)}
         </Tag>
@@ -265,25 +276,6 @@ const MaterialPurchaseDetail: React.FC = () => {
       width: 100,
       ellipsis: true,
     },
-    {
-      title: '操作',
-      key: 'action',
-      width: 80,
-      fixed: 'right' as const,
-      render: (_: any, record: MaterialPurchaseType) => (
-        <RowActions
-          actions={[
-            {
-              key: 'view',
-              label: '查看',
-              icon: <EyeOutlined />,
-              onClick: () => handleView(record),
-              primary: true,
-            },
-          ]}
-        />
-      ),
-    },
   ];
 
   return (
@@ -310,16 +302,24 @@ const MaterialPurchaseDetail: React.FC = () => {
             </h2>
           </Space>
 
-          {order && (
+          <Space>
             <Button
-              type="primary"
-              icon={<CheckCircleOutlined />}
-              onClick={handleOpenConfirm}
-              disabled={materialArrivalRate < 50 || order.procurementManuallyCompleted === 1}
+              icon={<PrinterOutlined />}
+              onClick={() => setPrintModalVisible(true)}
             >
-              确认回料完成
+              打印
             </Button>
-          )}
+            {order && (
+              <Button
+                type="primary"
+                icon={<CheckCircleOutlined />}
+                onClick={handleOpenConfirm}
+                disabled={materialArrivalRate < 50 || order.procurementManuallyCompleted === 1}
+              >
+                确认回料完成
+              </Button>
+            )}
+          </Space>
         </div>
 
         {/* 订单信息卡片 */}
@@ -330,9 +330,13 @@ const MaterialPurchaseDetail: React.FC = () => {
         ) : !order ? (
           <Card size="small" style={{ marginBottom: 16 }}>
             <Alert
-              message="订单不存在或已删除"
-              description={`订单ID: ${orderId}。该订单可能已被删除，但关联的采购记录可能还保留在系统中。`}
-              type="warning"
+              title={purchaseList.length > 0 && (purchaseList[0] as any)?.purchaseNo?.startsWith('MP') ? '样衣开发款采购' : '订单不存在或已删除'}
+              description={
+                purchaseList.length > 0 && (purchaseList[0] as any)?.purchaseNo?.startsWith('MP')
+                  ? `款号: ${styleNo || '未知'}。这是样衣开发款的物料采购记录（采购单号以MP开头），不关联生产订单。`
+                  : `款号: ${styleNo || '未知'}。该款号的订单可能已被删除，但关联的采购记录可能还保留在系统中。`
+              }
+              type={purchaseList.length > 0 && (purchaseList[0] as any)?.purchaseNo?.startsWith('MP') ? 'info' : 'warning'}
               showIcon
             />
             {purchaseList.length > 0 && (
@@ -341,7 +345,7 @@ const MaterialPurchaseDetail: React.FC = () => {
                 <div style={{ marginTop: 4 }}><strong>物料到货率：</strong>
                   <Tag color={
                     materialArrivalRate >= 100 ? 'green' :
-                    materialArrivalRate >= 50 ? 'orange' : 'red'
+                      materialArrivalRate >= 50 ? 'orange' : 'red'
                   }>
                     {materialArrivalRate}%
                   </Tag>
@@ -377,7 +381,7 @@ const MaterialPurchaseDetail: React.FC = () => {
                 <div>
                   <Tag color={
                     materialArrivalRate >= 100 ? 'green' :
-                    materialArrivalRate >= 50 ? 'orange' : 'red'
+                      materialArrivalRate >= 50 ? 'orange' : 'red'
                   }>
                     {materialArrivalRate}%
                   </Tag>
@@ -413,11 +417,7 @@ const MaterialPurchaseDetail: React.FC = () => {
               )}
             </Row>
           </Card>
-        ) : (
-          <Card>
-            <div style={{ textAlign: 'center', color: '#999' }}>订单不存在</div>
-          </Card>
-        )}
+        ) : null}
 
         {/* 采购单列表 */}
         <Card size="small" title={`采购单明细（共 ${purchaseList.length} 项）`}>
@@ -436,147 +436,6 @@ const MaterialPurchaseDetail: React.FC = () => {
           />
         </Card>
 
-        {/* 查看采购单详情弹窗 */}
-        <ResizableModal
-          title="采购单详情"
-          open={viewVisible}
-          onCancel={() => {
-            setViewVisible(false);
-            setCurrentPurchase(null);
-          }}
-          footer={[
-            <Button key="close" onClick={() => {
-              setViewVisible(false);
-              setCurrentPurchase(null);
-            }}>
-              关闭
-            </Button>
-          ]}
-          width="60vw"
-          initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.75 : 720}
-        >
-          {currentPurchase && (
-            <div style={{ padding: 16 }}>
-              <Row gutter={[16, 16]}>
-                <Col span={24}>
-                  {currentPurchase.styleCover && (
-                    <div style={{ marginBottom: 16 }}>
-                      <StyleCoverThumb
-                        styleId={currentPurchase.styleId}
-                        styleNo={currentPurchase.styleNo}
-                        src={currentPurchase.styleCover}
-                        size={120}
-                        borderRadius={8}
-                      />
-                    </div>
-                  )}
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>采购单号</div>
-                  <div>{currentPurchase.purchaseNo || '-'}</div>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>订单号</div>
-                  <div>{currentPurchase.orderNo || '-'}</div>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>款号</div>
-                  <div>{currentPurchase.styleNo || '-'}</div>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>款名</div>
-                  <div>{currentPurchase.styleName || '-'}</div>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>物料类型</div>
-                  <div>
-                    <Tag color={
-                      getMaterialTypeCategory(currentPurchase.materialType) === 'accessory' ? 'purple' :
-                      getMaterialTypeCategory(currentPurchase.materialType) === 'lining' ? 'cyan' : 'geekblue'
-                    }>
-                      {getMaterialTypeLabel(currentPurchase.materialType)}
-                    </Tag>
-                  </div>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>物料名称</div>
-                  <div>{currentPurchase.materialName || '-'}</div>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>物料编码</div>
-                  <div>{currentPurchase.materialCode || '-'}</div>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>规格</div>
-                  <div>{currentPurchase.specifications || '-'}</div>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>颜色</div>
-                  <div>{(currentPurchase as Record<string, unknown>).color || '-'}</div>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>尺码</div>
-                  <div>{(currentPurchase as Record<string, unknown>).size || '-'}</div>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>供应商</div>
-                  <div>{currentPurchase.supplierName || '-'}</div>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>采购数量</div>
-                  <div>{currentPurchase.purchaseQuantity || 0} {currentPurchase.unit || ''}</div>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>到货数量</div>
-                  <div>{currentPurchase.arrivedQuantity || 0} {currentPurchase.unit || ''}</div>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>单价</div>
-                  <div>
-                    {Number.isFinite(Number(currentPurchase.unitPrice))
-                      ? `¥${Number(currentPurchase.unitPrice).toFixed(2)}`
-                      : '-'}
-                  </div>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>总金额</div>
-                  <div>
-                    {Number.isFinite(Number(currentPurchase.purchaseQuantity) * Number(currentPurchase.unitPrice))
-                      ? `¥${(Number(currentPurchase.purchaseQuantity) * Number(currentPurchase.unitPrice)).toFixed(2)}`
-                      : '-'}
-                  </div>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>状态</div>
-                  <div>
-                    <Tag color={getStatusConfig(currentPurchase.status).color}>
-                      {getStatusConfig(currentPurchase.status).text}
-                    </Tag>
-                  </div>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>领取人</div>
-                  <div>{currentPurchase.receiverName || '-'}</div>
-                </Col>
-                {currentPurchase.remark && (
-                  <Col span={24}>
-                    <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>备注</div>
-                    <div>{currentPurchase.remark}</div>
-                  </Col>
-                )}
-                <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>创建时间</div>
-                  <div>{currentPurchase.createTime ? formatDateTime(currentPurchase.createTime) : '-'}</div>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div style={{ fontSize: 12, color: 'var(--neutral-text-lighter)', marginBottom: 4 }}>更新时间</div>
-                  <div>{currentPurchase.updateTime ? formatDateTime(currentPurchase.updateTime) : '-'}</div>
-                </Col>
-              </Row>
-            </div>
-          )}
-        </ResizableModal>
-
         {/* 确认回料完成弹窗 */}
         <Modal
           title="确认回料完成"
@@ -590,15 +449,20 @@ const MaterialPurchaseDetail: React.FC = () => {
           width={600}
         >
           {order && (
-            <div style={{ marginBottom: 16, padding: 16, background: 'var(--color-bg-light)', borderRadius: 4 }}>
-              <div><strong>订单号：</strong>{order.orderNo}</div>
-              <div><strong>款号：</strong>{order.styleNo}</div>
-              <div><strong>物料到货率：</strong>
-                <Tag color={materialArrivalRate >= 100 ? 'green' : 'orange'}>
-                  {materialArrivalRate}%
-                </Tag>
-              </div>
-            </div>
+            <ModalContentLayout.HeaderCard>
+              <ModalContentLayout.FieldRow gap={24}>
+                <ModalContentLayout.Field label="订单号" value={(order as any).orderNo} />
+                <ModalContentLayout.Field label="款号" value={(order as any).styleNo} />
+                <ModalContentLayout.Field
+                  label="物料到货率"
+                  value={
+                    <Tag color={materialArrivalRate >= 100 ? 'green' : 'orange'}>
+                      {materialArrivalRate}%
+                    </Tag>
+                  }
+                />
+              </ModalContentLayout.FieldRow>
+            </ModalContentLayout.HeaderCard>
           )}
 
           <Form form={confirmForm} layout="vertical">
@@ -607,18 +471,36 @@ const MaterialPurchaseDetail: React.FC = () => {
               label="备注原因"
               rules={[
                 { required: true, message: '请输入备注原因' },
-                { min: 10, message: '备注原因至少需要10个字符' },
+                { min: REMARK_MIN_LENGTH, message: `备注原因至少需要${REMARK_MIN_LENGTH}个字符` },
               ]}
             >
               <TextArea
                 rows={4}
-                placeholder="请详细说明回料完成的情况（至少10个字符）"
+                placeholder={`请详细说明回料完成的情况（至少${REMARK_MIN_LENGTH}个字符）`}
                 showCount
                 maxLength={500}
               />
             </Form.Item>
           </Form>
         </Modal>
+
+        {/* 打印预览弹窗 */}
+        <StylePrintModal
+          visible={printModalVisible}
+          onClose={() => setPrintModalVisible(false)}
+          styleId={(order as any)?.styleId}
+          styleNo={(order as any)?.styleNo || styleNo}
+          styleName={(order as any)?.styleName}
+          cover={(order as any)?.styleCover}
+          color={(order as any)?.color}
+          quantity={(order as any)?.orderQuantity}
+          mode="production"
+          extraInfo={{
+            '订单号': (order as any)?.orderNo,
+            '物料到货率': `${materialArrivalRate}%`,
+          }}
+          sizeDetails={order ? parseProductionOrderLines(order) : []}
+        />
       </div>
     </Layout>
   );

@@ -8,6 +8,7 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.common.constant.MaterialConstants;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -117,9 +118,10 @@ public class MaterialPurchaseOrchestrator {
             throw new NoSuchElementException("采购任务不存在");
         }
         int purchaseQty = current.getPurchaseQuantity() == null ? 0 : current.getPurchaseQuantity();
-        if (purchaseQty > 0 && arrivedQuantity * 100 < purchaseQty * 70) {
+        if (purchaseQty > 0 && arrivedQuantity * 100 < purchaseQty * MaterialConstants.ARRIVAL_RATE_THRESHOLD_REMARK) {
             if (!StringUtils.hasText(remark)) {
-                throw new IllegalArgumentException("到货不足70%，请填写备注");
+                throw new IllegalArgumentException(
+                        "到货不足" + MaterialConstants.ARRIVAL_RATE_THRESHOLD_REMARK + "%，请填写备注");
             }
         }
         boolean ok = updateArrivedQuantityAndSync(key, arrivedQuantity, remark);
@@ -354,13 +356,16 @@ public class MaterialPurchaseOrchestrator {
     }
 
     private String mergeKey(MaterialPurchase p) {
+        if (p == null)
+            return "";
         return String.join("|",
-                safe(p == null ? null : p.getMaterialType()),
-                safe(p == null ? null : p.getMaterialCode()),
-                safe(p == null ? null : p.getMaterialName()),
-                safe(p == null ? null : p.getSpecifications()),
-                safe(p == null ? null : p.getUnit()),
-                safe(p == null ? null : p.getSupplierName()));
+                safe(p.getMaterialType()),
+                safe(p.getMaterialCode()),
+                safe(p.getMaterialName()),
+                safe(p.getSpecifications()),
+                safe(p.getColor()),
+                safe(p.getUnit()),
+                safe(p.getSupplierName()));
     }
 
     private String safe(String v) {
@@ -419,7 +424,7 @@ public class MaterialPurchaseOrchestrator {
         }
 
         String status = purchase.getStatus() == null ? "" : purchase.getStatus().trim();
-        if ("completed".equals(status) || "cancelled".equals(status)) {
+        if (MaterialConstants.STATUS_COMPLETED.equals(status) || MaterialConstants.STATUS_CANCELLED.equals(status)) {
             throw new IllegalStateException("该采购任务已结束，无法领取");
         }
 
@@ -429,7 +434,7 @@ public class MaterialPurchaseOrchestrator {
         String rid = safe(receiverIdValue);
         String rname = safe(receiverNameValue);
 
-        boolean alreadyReceived = !"pending".equals(status) && StringUtils.hasText(status);
+        boolean alreadyReceived = !MaterialConstants.STATUS_PENDING.equals(status) && StringUtils.hasText(status);
         if (alreadyReceived) {
             // 检查是否是同一个人
             boolean isSame = false;
@@ -447,8 +452,7 @@ public class MaterialPurchaseOrchestrator {
         boolean ok = receiveAndSync(
                 purchaseId,
                 StringUtils.hasText(rid) ? rid : null,
-                StringUtils.hasText(rname) ? rname : null
-        );
+                StringUtils.hasText(rname) ? rname : null);
         if (!ok) {
             // 再次检查最新状态
             MaterialPurchase latest = materialPurchaseService.getById(purchaseId);
@@ -497,7 +501,7 @@ public class MaterialPurchaseOrchestrator {
         }
 
         String status = purchase.getStatus() == null ? "" : purchase.getStatus().trim();
-        if ("cancelled".equals(status)) {
+        if (MaterialConstants.STATUS_CANCELLED.equals(status)) {
             throw new IllegalStateException("该采购任务已取消，无法回料确认");
         }
 
@@ -752,6 +756,7 @@ public class MaterialPurchaseOrchestrator {
 
     /**
      * 通过扫码获取关联的采购单列表
+     *
      * @param params 包含 scanCode 和 orderNo
      * @return 采购单列表
      */
@@ -875,7 +880,7 @@ public class MaterialPurchaseOrchestrator {
         List<MaterialPurchase> allPurchases = materialPurchaseService.list();
         return allPurchases.stream()
                 .filter(p -> p.getDeleteFlag() == null || p.getDeleteFlag() == 0)
-                .filter(p -> "received".equals(p.getStatus()))
+                .filter(p -> MaterialConstants.STATUS_RECEIVED.equals(p.getStatus()))
                 .filter(p -> p.getReturnConfirmed() == null || p.getReturnConfirmed() == 0)
                 .filter(p -> Objects.equals(p.getReceiverId(), userId))
                 .collect(Collectors.toList());

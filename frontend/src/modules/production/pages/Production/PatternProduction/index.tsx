@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, Table, Button, Space, Input, message, Row, Col, Modal, Form, InputNumber, Tag, Dropdown } from 'antd';
+import { Card, Button, Space, Input, message, Row, Col, Modal, Form, InputNumber, Tag, Dropdown } from 'antd';
 import type { MenuProps } from 'antd';
-import { PlusOutlined, SearchOutlined, AppstoreOutlined, UnorderedListOutlined, EyeOutlined, CheckCircleOutlined, ClockCircleOutlined, SyncOutlined, MoreOutlined, UserOutlined, DeleteOutlined } from '@ant-design/icons';
+import { PlusOutlined, SearchOutlined, AppstoreOutlined, UnorderedListOutlined, EyeOutlined, CheckCircleOutlined, ClockCircleOutlined, SyncOutlined, UserOutlined, PrinterOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import Layout from '@/components/Layout';
+import ResizableTable from '@/components/common/ResizableTable';
 import LiquidProgressLottie from '@/components/common/LiquidProgressLottie';
 import NodeDetailModal from '@/components/common/NodeDetailModal';
 import UniversalCardView from '@/components/common/UniversalCardView';
@@ -34,8 +35,20 @@ interface PatternProductionRecord {
   progressNodes: { [nodeId: string]: number }; // 各工序的完成百分比
   processUnitPrices?: { [processName: string]: number }; // 工序单价汇总（从后端获取）
   processDetails?: { [stageName: string]: Array<{ name: string; unitPrice: number }> }; // 每个节点下的工序明细
+  procurementProgress?: { // 采购进度信息
+    total: number; // 总采购单数
+    completed: number; // 已完成采购单数
+    percent: number; // 完成百分比
+    completedTime?: string; // 最新完成时间
+    receiver?: string; // 最新领取人
+  };
   coverImage?: string; // 封面图片
   patternMaker?: string; // 纸样师傅
+  // 人员信息（从款式基础信息同步）
+  designer?: string; // 设计师
+  patternDeveloper?: string; // 纸样师
+  plateWorker?: string; // 车板师
+  merchandiser?: string; // 跟单员
   status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED'; // 状态
 }
 
@@ -101,6 +114,7 @@ const PatternProduction: React.FC = () => {
   const [nodeDetailStats, setNodeDetailStats] = useState<{ done: number; total: number; percent: number; remaining: number } | undefined>(undefined);
   const [nodeDetailUnitPrice, setNodeDetailUnitPrice] = useState<number | undefined>(undefined);
   const [nodeDetailProcessList, setNodeDetailProcessList] = useState<{ name: string; unitPrice?: number }[]>([]);
+  const [nodeDetailExtraData, setNodeDetailExtraData] = useState<any>(undefined);
 
   // 打开节点详情弹窗
   const openNodeDetail = useCallback((
@@ -109,7 +123,8 @@ const PatternProduction: React.FC = () => {
     nodeName: string,
     stats: { done: number; total: number; percent: number; remaining: number },
     unitPrice?: number,
-    processList?: { name: string; unitPrice?: number }[]
+    processList?: { name: string; unitPrice?: number }[],
+    extraData?: any
   ) => {
     setNodeDetailRecord(record);
     setNodeDetailType(nodeType);
@@ -117,6 +132,7 @@ const PatternProduction: React.FC = () => {
     setNodeDetailStats(stats);
     setNodeDetailUnitPrice(unitPrice);
     setNodeDetailProcessList(processList || []);
+    setNodeDetailExtraData(extraData);
     setNodeDetailVisible(true);
   }, []);
 
@@ -126,7 +142,7 @@ const PatternProduction: React.FC = () => {
       const button = attachmentWrapperRef.current.querySelector('button');
       if (button) {
         button.click();
-        attachmentModal.close(); // 立即关闭moda state，避免重复触发
+        // 注意：不要立即关闭 attachmentModal，因为需要保持 data 来渲染隐藏的按钮组件
       }
     }
   }, [attachmentModal.visible]);
@@ -173,7 +189,7 @@ const PatternProduction: React.FC = () => {
         id: item.id,
         styleNo: item.styleNo || '-',
         color: item.color || '',
-        sizes: [], // 后端暂未提供
+        sizes: item.sizes || [], // 从后端获取码数
         quantity: item.quantity ?? 0,
         releaseTime: formatDateTime(item.releaseTime) || '-',
         deliveryTime: formatDateTime(item.deliveryTime) || '-',
@@ -195,6 +211,12 @@ const PatternProduction: React.FC = () => {
         processUnitPrices: item.processUnitPrices || {},
         // 每个节点下的工序明细（含工序名和单价）
         processDetails: item.processDetails || {},
+        // 采购进度信息
+        procurementProgress: item.procurementProgress || {
+          total: 0,
+          completed: 0,
+          percent: 0,
+        },
       }));
 
       setDataSource(formattedData);
@@ -228,6 +250,104 @@ const PatternProduction: React.FC = () => {
   // 打开查看详情
   const handleOpenDetail = (record: PatternProductionRecord) => {
     detailModal.open(record);
+  };
+
+  // 打印样板生产单（含二维码）
+  const handlePrint = (record: PatternProductionRecord) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      message.error('无法打开打印窗口，请检查浏览器设置');
+      return;
+    }
+
+    // 生成二维码数据
+    const qrData = JSON.stringify({
+      type: 'pattern',
+      id: record.id,
+      styleNo: record.styleNo,
+      color: record.color,
+    });
+
+    // 获取当前用户信息
+    const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+    const printerName = userInfo.realName || userInfo.username || '未知';
+    const printTime = new Date().toLocaleString('zh-CN');
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>样板生产单 - ${record.styleNo}</title>
+        <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: "Microsoft YaHei", sans-serif; padding: 20px; }
+          .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+          .header h1 { font-size: 24px; margin-bottom: 5px; }
+          .header .sub { font-size: 12px; color: #666; }
+          .content { display: flex; gap: 20px; }
+          .info { flex: 1; }
+          .qr-section { text-align: center; }
+          .info-row { display: flex; margin-bottom: 8px; }
+          .info-label { width: 80px; font-weight: bold; color: #333; }
+          .info-value { flex: 1; }
+          .sizes { margin-top: 15px; padding: 10px; background: #f5f5f5; border-radius: 4px; }
+          .sizes-title { font-weight: bold; margin-bottom: 8px; }
+          .sizes-list { display: flex; flex-wrap: wrap; gap: 8px; }
+          .size-tag { background: #1890ff; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+          .footer { margin-top: 20px; padding-top: 10px; border-top: 1px dashed #ccc; font-size: 11px; color: #999; display: flex; justify-content: space-between; }
+          @media print {
+            body { padding: 10px; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>样板生产单</h1>
+          <div class="sub">扫码进行车板/跟单操作</div>
+        </div>
+        <div class="content">
+          <div class="info">
+            <div class="info-row"><span class="info-label">款号：</span><span class="info-value" style="font-size: 18px; font-weight: bold;">${record.styleNo}</span></div>
+            <div class="info-row"><span class="info-label">颜色：</span><span class="info-value">${record.color || '-'}</span></div>
+            <div class="info-row"><span class="info-label">数量：</span><span class="info-value">${record.quantity} 件</span></div>
+            <div class="info-row"><span class="info-label">设计师：</span><span class="info-value">${record.designer || '-'}</span></div>
+            <div class="info-row"><span class="info-label">纸样师：</span><span class="info-value">${record.patternDeveloper || '-'}</span></div>
+            <div class="info-row"><span class="info-label">车板师：</span><span class="info-value">${record.plateWorker || '-'}</span></div>
+            <div class="info-row"><span class="info-label">跟单员：</span><span class="info-value">${record.merchandiser || '-'}</span></div>
+            <div class="info-row"><span class="info-label">交板日期：</span><span class="info-value">${record.deliveryTime || '-'}</span></div>
+            ${record.sizes && record.sizes.length > 0 ? `
+            <div class="sizes">
+              <div class="sizes-title">码数：</div>
+              <div class="sizes-list">
+                ${record.sizes.map(s => `<span class="size-tag">${s}</span>`).join('')}
+              </div>
+            </div>
+            ` : ''}
+          </div>
+          <div class="qr-section">
+            <canvas id="qrcode"></canvas>
+            <div style="margin-top: 5px; font-size: 11px; color: #666;">扫码操作</div>
+          </div>
+        </div>
+        <div class="footer">
+          <span>打印人：${printerName}</span>
+          <span>打印时间：${printTime}</span>
+        </div>
+        <div class="no-print" style="margin-top: 20px; text-align: center;">
+          <button onclick="window.print()" style="padding: 8px 24px; font-size: 14px; cursor: pointer;">打印</button>
+        </div>
+        <script>
+          QRCode.toCanvas(document.getElementById('qrcode'), '${qrData}', { width: 120 }, function(err) {
+            if (err) console.error(err);
+          });
+        </script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   // 维护操作
@@ -273,8 +393,8 @@ const PatternProduction: React.FC = () => {
     });
   };
 
-  // 删除样板生产记录
-  const handleDelete = async (record: PatternProductionRecord) => {
+  // 删除样板生产记录（保留但标记为未使用）
+  const _handleDelete = async (record: PatternProductionRecord) => {
     let deleteReason = '';
     Modal.confirm({
       title: '确认删除',
@@ -354,7 +474,6 @@ const PatternProduction: React.FC = () => {
       dataIndex: 'status',
       key: 'status',
       width: 100,
-      fixed: 'left',
       render: renderStatus,
     },
     {
@@ -362,7 +481,6 @@ const PatternProduction: React.FC = () => {
       dataIndex: 'coverImage',
       key: 'coverImage',
       width: 80,
-      fixed: 'left',
       render: (coverImage: string) => (
         <div style={{
           width: 60,
@@ -387,7 +505,6 @@ const PatternProduction: React.FC = () => {
       dataIndex: 'styleNo',
       key: 'styleNo',
       width: 100,
-      fixed: 'left',
     },
     {
       title: '颜色',
@@ -422,18 +539,6 @@ const PatternProduction: React.FC = () => {
       key: 'patternMaker',
       width: 100,
       render: (text: string) => text || '-',
-    },
-    {
-      title: '下板时间',
-      dataIndex: 'releaseTime',
-      key: 'releaseTime',
-      width: 140,
-    },
-    {
-      title: '交板时间',
-      dataIndex: 'deliveryTime',
-      key: 'deliveryTime',
-      width: 140,
     },
     {
       title: '生产进度',
@@ -475,9 +580,22 @@ const PatternProduction: React.FC = () => {
           width: '100%',
         }}>
           {nodesWithPrices.map((node) => {
-            const percent = progressNodes[node.id] || 0;
-            const completedQty = percent >= 100 ? record.quantity : Math.floor(record.quantity * percent / 100);
-            const remaining = record.quantity - completedQty;
+            // 采购节点使用 procurementProgress 数据，其他节点使用 progressNodes
+            let percent: number;
+            let completedQty: number;
+            let remaining: number;
+
+            if (node.name === '采购' && record.procurementProgress) {
+              // 采购进度使用实际采购单完成数据
+              percent = record.procurementProgress.percent || 0;
+              completedQty = record.procurementProgress.completed || 0;
+              remaining = record.procurementProgress.total - completedQty;
+            } else {
+              // 其他节点使用原有逻辑
+              percent = progressNodes[node.id] || 0;
+              completedQty = percent >= 100 ? record.quantity : Math.floor(record.quantity * percent / 100);
+              remaining = record.quantity - completedQty;
+            }
 
             return (
               <div
@@ -498,13 +616,31 @@ const PatternProduction: React.FC = () => {
                   const processDetails = record.processDetails || {};
                   const nodeProcessList = processDetails[node.name] || [];
 
+                  // 传递额外数据：时间信息 + 采购进度（如果是采购节点）
+                  const extraData: any = {
+                    // 时间节点信息
+                    releaseTime: record.releaseTime,
+                    deliveryTime: record.deliveryTime,
+                    receiveTime: record.receiveTime,
+                    completeTime: record.completeTime,
+                    // 人员信息
+                    patternMaker: record.patternMaker,
+                    receiver: record.receiver,
+                  };
+
+                  // 如果是采购节点，添加采购进度信息
+                  if (node.name === '采购' && record.procurementProgress) {
+                    extraData.procurementProgress = record.procurementProgress;
+                  }
+
                   openNodeDetail(
                     record,
                     node.id,
                     node.name,
                     { done: completedQty, total: record.quantity, percent, remaining },
                     node.unitPrice,
-                    nodeProcessList // 传递该节点下的工序明细
+                    nodeProcessList, // 传递该节点下的工序明细
+                    extraData
                   );
                 }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(59, 130, 246, 0.08)'; }}
@@ -587,7 +723,7 @@ const PatternProduction: React.FC = () => {
     {
       title: '操作',
       key: 'action',
-      width: 120,
+      width: 150,
       fixed: 'right',
       render: (_, record) => {
         // 计算完成进度（0-100）
@@ -612,11 +748,10 @@ const PatternProduction: React.FC = () => {
             onClick: () => handleOpenProgress(record),
           },
           {
-            key: 'view',
-            icon: <EyeOutlined />,
-            label: '查看',
-            onClick: () => handleOpenDetail(record),
-            disabled: isCompleted,
+            key: 'print',
+            icon: <PrinterOutlined />,
+            label: '打印',
+            onClick: () => handlePrint(record),
           },
           {
             key: 'divider1',
@@ -635,24 +770,25 @@ const PatternProduction: React.FC = () => {
             danger: !isCompleted,
             disabled: isCompleted,
           },
-          {
-            key: 'divider2',
-            type: 'divider',
-          },
-          {
-            key: 'delete',
-            icon: <DeleteOutlined />,
-            label: '删除记录',
-            danger: !isCompleted,
-            disabled: isCompleted,
-            onClick: () => handleDelete(record),
-          },
         ].filter(Boolean) as MenuProps['items'];
 
         return (
-          <Dropdown menu={{ items: menuItems }} trigger={['click']}>
-            <Button icon={<MoreOutlined />} />
-          </Dropdown>
+          <Space size={4}>
+            <Button
+              size="small"
+              onClick={() => handleOpenDetail(record)}
+              style={{ fontSize: '12px', padding: '0 8px', height: '24px' }}
+            >
+              查看
+            </Button>
+            {menuItems.length > 0 && (
+              <Dropdown menu={{ items: menuItems }} trigger={['click']}>
+                <Button size="small" style={{ fontSize: '12px', padding: '0 8px', height: '24px' }}>
+                  更多
+                </Button>
+              </Dropdown>
+            )}
+          </Space>
         );
       },
     },
@@ -691,12 +827,15 @@ const PatternProduction: React.FC = () => {
 
           {/* 表格/卡片视图 */}
           {viewMode === 'list' ? (
-            <Table
-              columns={columns}
-              dataSource={dataSource}
+            <ResizableTable
+              columns={columns as any}
+              dataSource={dataSource as any}
               loading={loading}
               rowKey="id"
               scroll={{ x: 'max-content' }}
+              storageKey="pattern-production-table"
+              reorderableColumns={true}
+              resizableColumns={true}
               pagination={{
                 total: dataSource.length,
                 pageSize: 10,
@@ -712,10 +851,8 @@ const PatternProduction: React.FC = () => {
               titleField="styleNo"
               subtitleField="color"
               fields={[
-                { label: '颜色', key: 'color', render: (val) => val || '-' },
+                { label: '码数', key: 'sizes', render: (val: string[]) => val && val.length > 0 ? val.join(', ') : '-' },
                 { label: '数量', key: 'quantity', render: (val) => (val !== null && val !== undefined) ? `${val} 件` : '-' },
-                { label: '下板', key: 'releaseTime' },
-                { label: '交板', key: 'deliveryTime' },
               ]}
               progressConfig={{
                 calculate: calculateProgress,
@@ -733,6 +870,12 @@ const PatternProduction: React.FC = () => {
                 const isCompleted = totalProgress === 100 || record.status === 'COMPLETED';
 
                 return [
+                  {
+                    key: 'view',
+                    icon: <EyeOutlined />,
+                    label: '查看',
+                    onClick: () => handleOpenDetail(record),
+                  },
                   record.status === 'PENDING' && {
                     key: 'receive',
                     icon: <UserOutlined />,
@@ -744,14 +887,6 @@ const PatternProduction: React.FC = () => {
                     icon: <SyncOutlined />,
                     label: '进度',
                     onClick: () => handleOpenProgress(record),
-                  },
-                  {
-                    key: 'view',
-                    icon: <EyeOutlined />,
-                    label: '查看',
-                    onClick: () => handleOpenDetail(record),
-                    disabled: isCompleted,
-                    style: isCompleted ? { color: '#d9d9d9' } : undefined,
                   },
                   {
                     key: 'divider1',
@@ -769,15 +904,6 @@ const PatternProduction: React.FC = () => {
                     key: 'maintenance',
                     label: '维护',
                     onClick: () => handleMaintenance(record),
-                    danger: !isCompleted,
-                    disabled: isCompleted,
-                    style: isCompleted ? { color: '#d9d9d9' } : undefined,
-                  },
-                  {
-                    key: 'delete',
-                    icon: <DeleteOutlined />,
-                    label: '删除',
-                    onClick: () => handleDelete(record),
                     danger: !isCompleted,
                     disabled: isCompleted,
                     style: isCompleted ? { color: '#d9d9d9' } : undefined,
@@ -911,169 +1037,118 @@ const PatternProduction: React.FC = () => {
               关闭
             </Button>
           ]}
-          width={900}
+          width="40vw"
         >
           {detailModal.data && (
-            <div>
-              {/* 封面图和二维码 */}
+            <div style={{ fontSize: 12 }}>
+              {/* 顶部：图片 + 二维码 + 基本信息 */}
               <div style={{
                 display: 'flex',
-                gap: 16,
-                marginBottom: 16,
-                padding: 16,
-                background: '#fafafa',
+                gap: 12,
+                padding: 12,
+                background: '#f8f9fa',
                 borderRadius: 6,
+                marginBottom: 12,
               }}>
                 {/* 封面图 */}
                 {detailModal.data.coverImage && (
-                  <div>
-                    <img
-                      src={detailModal.data.coverImage}
-                      alt={detailModal.data.styleNo}
-                      style={{
-                        width: 160,
-                        height: 160,
-                        objectFit: 'cover',
-                        borderRadius: 6,
-                        border: '1px solid #e5e7eb',
-                      }}
-                    />
-                  </div>
+                  <img
+                    src={detailModal.data.coverImage}
+                    alt={detailModal.data.styleNo}
+                    style={{
+                      width: 80,
+                      height: 80,
+                      objectFit: 'cover',
+                      borderRadius: 4,
+                      border: '1px solid #e5e7eb',
+                    }}
+                  />
                 )}
-                
-                {/* 二维码 - 扫码全流程 */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <div>
-                    <QRCodeBox
-                      value={{
-                        type: 'pattern',
-                        id: detailModal.data.id,
-                        styleNo: detailModal.data.styleNo,
-                        color: detailModal.data.color,
-                        status: detailModal.data.status,
-                        progress: calculateProgress(detailModal.data),
-                      }}
-                      label="📱 扫码查看全流程"
-                      variant="primary"
-                      size={120}
-                    />
+
+                {/* 二维码 */}
+                <QRCodeBox
+                  value={{
+                    type: 'pattern',
+                    id: detailModal.data.id,
+                    styleNo: detailModal.data.styleNo,
+                    color: detailModal.data.color,
+                  }}
+                  label="📱 扫码查看全流程"
+                  variant="primary"
+                  size={80}
+                />
+
+                {/* 基本信息 - 紧凑排列 */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6, color: '#1f2937' }}>
+                    {detailModal.data.styleNo}
                   </div>
-                  <div style={{ fontSize: 12, color: '#6b7280', lineHeight: '18px' }}>
-                    扫描二维码可在移动端查看样板生产全流程，包括：
-                    <br />• 实时工序进度追踪
-                    <br />• 时间节点记录
-                    <br />• 附件资料下载
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', color: '#6b7280' }}>
+                    <span><b>颜色:</b> {detailModal.data.color || '-'}</span>
+                    <span><b>数量:</b> {detailModal.data.quantity}</span>
+                    <span><b>状态:</b> {renderStatus(detailModal.data.status)}</span>
+                  </div>
+                  {/* 人员信息 */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', color: '#6b7280', marginTop: 4 }}>
+                    <span><b>设计师:</b> {detailModal.data.designer || '-'}</span>
+                    <span><b>纸样师:</b> {detailModal.data.patternDeveloper || '-'}</span>
+                    <span><b>车板师:</b> {detailModal.data.plateWorker || '-'}</span>
+                    <span><b>跟单员:</b> {detailModal.data.merchandiser || '-'}</span>
                   </div>
                 </div>
               </div>
 
-              {/* 基本信息 */}
+              {/* 时间节点 - 紧凑横向排列 */}
               <div style={{
-                padding: 16,
-                background: '#fafafa',
-                borderRadius: 6,
-                marginBottom: 16,
-              }}>
-                <Row gutter={[24, 16]}>
-                  <Col span={8}>
-                    <div style={{ marginBottom: 8 }}>
-                      <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>款号</div>
-                      <div style={{ fontSize: 16, fontWeight: 600, color: '#1f2937' }}>{detailModal.data.styleNo}</div>
-                    </div>
-                  </Col>
-                  <Col span={8}>
-                    <div style={{ marginBottom: 8 }}>
-                      <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>颜色</div>
-                      <div style={{ fontSize: 16, fontWeight: 600, color: '#1f2937' }}>{detailModal.data.color}</div>
-                    </div>
-                  </Col>
-                  <Col span={8}>
-                    <div style={{ marginBottom: 8 }}>
-                      <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>状态</div>
-                      <div>{renderStatus(detailModal.data.status)}</div>
-                    </div>
-                  </Col>
-                  <Col span={8}>
-                    <div style={{ marginBottom: 8 }}>
-                      <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>数量</div>
-                      <div style={{ fontSize: 16, fontWeight: 600, color: '#1f2937' }}>{detailModal.data.quantity}</div>
-                    </div>
-                  </Col>
-                  <Col span={8}>
-                    <div style={{ marginBottom: 8 }}>
-                      <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>纸样师傅</div>
-                      <div style={{ fontSize: 16, fontWeight: 600, color: '#1f2937' }}>{detailModal.data.patternMaker}</div>
-                    </div>
-                  </Col>
-                  <Col span={8}>
-                    <div style={{ marginBottom: 8 }}>
-                      <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>领取人</div>
-                      <div style={{ fontSize: 16, fontWeight: 600, color: '#1f2937' }}>{detailModal.data.receiver}</div>
-                    </div>
-                  </Col>
-                </Row>
-              </div>
-
-              {/* 时间信息 */}
-              <div style={{
-                padding: 16,
-                background: '#fff',
-                borderRadius: 6,
-                border: '1px solid #f0f0f0',
-                marginBottom: 16,
-              }}>
-                <h4 style={{ marginBottom: 12, fontSize: 14, fontWeight: 600 }}>⏰ 时间节点</h4>
-                <Row gutter={[24, 16]}>
-                  <Col span={12}>
-                    <div style={{ fontSize: 12, color: '#999' }}>下板时间</div>
-                    <div style={{ fontSize: 14, fontWeight: 500, color: '#1f2937' }}>{detailModal.data.releaseTime}</div>
-                  </Col>
-                  <Col span={12}>
-                    <div style={{ fontSize: 12, color: '#999' }}>交板时间</div>
-                    <div style={{ fontSize: 14, fontWeight: 500, color: '#1f2937' }}>{detailModal.data.deliveryTime}</div>
-                  </Col>
-                  <Col span={12}>
-                    <div style={{ fontSize: 12, color: '#999' }}>领取时间</div>
-                    <div style={{ fontSize: 14, fontWeight: 500, color: '#1f2937' }}>{detailModal.data.receiveTime}</div>
-                  </Col>
-                  <Col span={12}>
-                    <div style={{ fontSize: 12, color: '#999' }}>完成时间</div>
-                    <div style={{ fontSize: 14, fontWeight: 500, color: '#1f2937' }}>{detailModal.data.completeTime}</div>
-                  </Col>
-                </Row>
-              </div>
-
-              {/* 工序进度 */}
-              <div style={{
-                padding: 16,
+                display: 'flex',
+                gap: 8,
+                marginBottom: 12,
+                padding: '8px 12px',
                 background: '#fff',
                 borderRadius: 6,
                 border: '1px solid #f0f0f0',
               }}>
-                <h4 style={{ marginBottom: 16, fontSize: 14, fontWeight: 600 }}>📊 工序进度</h4>
-                <Row gutter={[16, 16]}>
+                <span style={{ fontWeight: 600, color: '#1f2937' }}>⏰</span>
+                <span><b>下板:</b> {detailModal.data.releaseTime}</span>
+                <span style={{ color: '#d9d9d9' }}>|</span>
+                <span><b>交板:</b> {detailModal.data.deliveryTime}</span>
+                <span style={{ color: '#d9d9d9' }}>|</span>
+                <span><b>领取:</b> {detailModal.data.receiveTime}</span>
+                <span style={{ color: '#d9d9d9' }}>|</span>
+                <span><b>完成:</b> {detailModal.data.completeTime}</span>
+              </div>
+
+              {/* 工序进度 - 紧凑展示 */}
+              <div style={{
+                padding: 10,
+                background: '#fff',
+                borderRadius: 6,
+                border: '1px solid #f0f0f0',
+              }}>
+                <div style={{ marginBottom: 8, fontWeight: 600, color: '#1f2937' }}>📊 工序进度</div>
+                <Row gutter={[8, 8]}>
                   {DEFAULT_NODES.map((node) => {
                     const percent = detailModal.data.progressNodes[node.id] || 0;
                     return (
                       <Col span={8} key={node.id}>
                         <div style={{
                           textAlign: 'center',
-                          padding: 12,
+                          padding: 8,
                           background: percent >= 100 ? '#f0fdf4' : '#fafafa',
-                          borderRadius: 6,
+                          borderRadius: 4,
                           border: `1px solid ${percent >= 100 ? '#86efac' : '#e5e7eb'}`,
                         }}>
-                          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{node.name}</div>
+                          <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 4 }}>{node.name}</div>
                           <LiquidProgressLottie
                             progress={percent}
-                            size={60}
+                            size={45}
                             color1="#52c41a"
                             color2="#95de64"
                           />
                           <div style={{
-                            fontSize: 16,
+                            fontSize: 13,
                             fontWeight: 700,
-                            marginTop: 8,
+                            marginTop: 4,
                             color: percent >= 100 ? '#059669' : '#6b7280',
                           }}>
                             {percent}%
@@ -1094,6 +1169,7 @@ const PatternProduction: React.FC = () => {
           onClose={() => {
             setNodeDetailVisible(false);
             setNodeDetailRecord(null);
+            setNodeDetailExtraData(undefined);
           }}
           orderId={nodeDetailRecord?.id}
           orderNo={nodeDetailRecord?.styleNo}
@@ -1102,6 +1178,8 @@ const PatternProduction: React.FC = () => {
           stats={nodeDetailStats}
           unitPrice={nodeDetailUnitPrice}
           processList={nodeDetailProcessList}
+          isPatternProduction={true}
+          extraData={nodeDetailExtraData}
           onSaved={() => {
             // 刷新数据
             void loadData();
@@ -1114,8 +1192,8 @@ const PatternProduction: React.FC = () => {
             <StyleAttachmentsButton
               styleNo={attachmentModal.data.styleNo}
               buttonText="附件管理"
-              modalTitle={`${attachmentModal.data.styleNo} - 附件`}
-              onlyGradingPattern={false}
+              modalTitle={`${attachmentModal.data.styleNo} - 纸样附件`}
+              onModalClose={() => attachmentModal.close()}
             />
           </div>
         )}

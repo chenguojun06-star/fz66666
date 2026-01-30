@@ -120,6 +120,13 @@ public class StyleInfoOrchestrator {
         try {
             boolean result = styleInfoService.saveOrUpdateStyle(styleInfo);
             if (result) {
+                // 同步更新样板生产记录的颜色和数量
+                try {
+                    syncPatternProductionInfo(styleInfo);
+                } catch (Exception e) {
+                    log.warn("同步样板生产信息失败: styleId={}, error={}", styleInfo.getId(), e.getMessage());
+                }
+
                 // 移除自动同步到模板库，只有手动推送时才同步
                 // try {
                 // String styleNo = styleInfo == null ? null : styleInfo.getStyleNo();
@@ -234,7 +241,9 @@ public class StyleInfoOrchestrator {
         }
 
         String currentUser = UserContext.username();
-        boolean ok = styleInfoService.lambdaUpdate()
+
+        // 构建更新链
+        var updateChain = styleInfoService.lambdaUpdate()
                 .eq(StyleInfo::getId, id)
                 .set(StyleInfo::getPatternStatus, "IN_PROGRESS")
                 .set(StyleInfo::getPatternCompletedTime, null)
@@ -244,8 +253,15 @@ public class StyleInfoOrchestrator {
                 // 纸样开始时同步更新生产制单开始时间（生产制单跟随纸样）
                 .set(StyleInfo::getProductionAssignee, currentUser)
                 .set(StyleInfo::getProductionStartTime, LocalDateTime.now())
-                .set(StyleInfo::getUpdateTime, LocalDateTime.now())
-                .update();
+                .set(StyleInfo::getUpdateTime, LocalDateTime.now());
+
+        // 纸样师 = 领取纸样开发的人（如果还没有设置）
+        if (!StringUtils.hasText(current.getSampleSupplier())) {
+            updateChain.set(StyleInfo::getSampleSupplier, currentUser);
+            log.info("Synced pattern developer to style info: styleId={}, patternDeveloper={}", id, currentUser);
+        }
+
+        boolean ok = updateChain.update();
         if (ok) {
             savePatternLog(id, "PATTERN_START", null);
             log.info("纸样开始，已同步更新尺寸表和生产制单开始时间: styleId={}", id);
@@ -733,6 +749,49 @@ public class StyleInfoOrchestrator {
             log.info("自动创建样板生产记录成功: styleId={}, styleNo={}, patternId={}, color={}, quantity={}",
                     styleInfo.getId(), styleInfo.getStyleNo(), patternProduction.getId(),
                     styleInfo.getColor(), styleInfo.getSampleQuantity());
+        }
+    }
+
+    /**
+     * 同步样板生产记录的颜色和数量信息
+     * 当款式的颜色或数量更新时，同步更新对应的样板生产记录
+     */
+    private void syncPatternProductionInfo(StyleInfo styleInfo) {
+        if (styleInfo == null || styleInfo.getId() == null) {
+            return;
+        }
+
+        // 查询该款式对应的样板生产记录
+        LambdaQueryWrapper<PatternProduction> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(PatternProduction::getStyleId, String.valueOf(styleInfo.getId()))
+                .eq(PatternProduction::getDeleteFlag, 0);
+
+        List<PatternProduction> records = patternProductionService.list(wrapper);
+        if (records == null || records.isEmpty()) {
+            return;
+        }
+
+        // 更新颜色和数量
+        String color = styleInfo.getColor();
+        if (!StringUtils.hasText(color)) {
+            color = "-";
+        }
+        Integer quantity = styleInfo.getSampleQuantity();
+        if (quantity == null || quantity == 0) {
+            quantity = 1;
+        }
+
+        for (PatternProduction record : records) {
+            record.setColor(color);
+            record.setQuantity(quantity);
+            record.setDeliveryTime(styleInfo.getDeliveryDate()); // 同步交板时间
+            record.setUpdateTime(LocalDateTime.now());
+        }
+
+        boolean updated = patternProductionService.updateBatchById(records);
+        if (updated) {
+            log.info("同步样板生产记录成功: styleId={}, recordCount={}, color={}, quantity={}",
+                    styleInfo.getId(), records.size(), color, quantity);
         }
     }
 

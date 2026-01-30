@@ -13,7 +13,7 @@ import errorHandler from '@/utils/errorHandler';
 import { formatDateTime } from '@/utils/datetime';
 import { unwrapApiData } from '@/utils/api';
 import { getMaterialReconStatusConfig, materialReconStatusTransitions } from '@/constants/finance';
-import { isSupervisorOrAboveUser, useAuth } from '@/utils/authContext';
+import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
 import { useSync } from '@/utils/syncManager';
 import { useViewport } from '@/utils/useViewport';
 import { useModal } from '@/hooks';

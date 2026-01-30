@@ -9,13 +9,14 @@ import { PlusOutlined, SearchOutlined, EyeOutlined, DeleteOutlined, StarOutlined
 import Layout from '@/components/Layout';
 import UniversalCardView from '@/components/common/UniversalCardView';
 import QRCodeBox from '@/components/common/QRCodeBox';
+import StylePrintModal from '@/components/common/StylePrintModal';
 import { useSync } from '@/utils/syncManager';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import { StyleInfo as StyleInfoType, StyleQueryParams } from '@/types/style';
 import api, { withQuery } from '@/utils/api';
-import { isSupervisorOrAboveUser, useAuth } from '@/utils/authContext';
+import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
 import { formatDateTime, formatDateTimeSecond } from '@/utils/datetime';
 import { toCategoryCn as toCategoryCnUtil } from '@/utils/styleCategory';
 import { useViewport } from '@/utils/useViewport';
@@ -116,7 +117,6 @@ const StyleInfoPage: React.FC = () => {
 
   // 工序表和生产制单弹窗
   const [processModalVisible, setProcessModalVisible] = useState(false);
-  const [sizePriceModalVisible, setSizePriceModalVisible] = useState(false);
   const [pushToOrderModalVisible, setPushToOrderModalVisible] = useState(false);
   const [processData, setProcessData] = useState<any[]>([]);
   const [pushToOrderForm] = Form.useForm();
@@ -125,11 +125,6 @@ const StyleInfoPage: React.FC = () => {
   // 打印功能状态
   const [printModalVisible, setPrintModalVisible] = useState(false);
   const [printingRecord, setPrintingRecord] = useState<StyleInfoType | null>(null);
-  const [printOptions, setPrintOptions] = useState({
-    bom: true,
-    production: true,
-    process: true,
-  });
 
   // 弹窗状态
   const [modalVisible, setModalVisible] = useState(false);
@@ -732,7 +727,8 @@ const StyleInfoPage: React.FC = () => {
       setPushToOrderSaving(true);
 
       // 调用推送到下单管理API
-      // 注意：后端会自动从styleId获取所有文件管理中的附件并复制到订单中
+      // ⚠️ 注意：这只是更新款式状态为"可下单"，不会直接创建大货订单
+      // 用户需要在"下单管理"页面手动填写订单详情后才能创建订单
       const res = await api.post<{ code: number; message: string; data: any }>('/order-management/create-from-style', {
         styleId: currentStyle?.id,
         priceType: values.priceType, // 单价类型：process(工序单价) 或 sizePrice(多码单价)
@@ -740,10 +736,11 @@ const StyleInfoPage: React.FC = () => {
       });
 
       if (res.code === 200) {
-        message.success('推送成功，已添加到下单管理');
+        message.success('推送成功！请前往"下单管理"页面创建订单');
         setPushToOrderModalVisible(false);
         pushToOrderForm.resetFields();
-        // 不跳转页面，留在当前页面
+        // 刷新当前款式信息
+        fetchDetail(String(currentStyle?.id));
       } else {
         message.error(res.message || '推送失败');
       }
@@ -909,6 +906,18 @@ const StyleInfoPage: React.FC = () => {
         commonColors
       };
       normalizedValues.sizeColorConfig = JSON.stringify(sizeColorConfig);
+
+      // 提取第一个有效颜色作为样板生产的颜色字段
+      const firstColor = [color1, color2, color3, color4, color5].find(c => c && c.trim());
+      if (firstColor) {
+        normalizedValues.color = firstColor.trim();
+      }
+
+      // 计算样板数量总和
+      const totalQuantity = (qty1 || 0) + (qty2 || 0) + (qty3 || 0) + (qty4 || 0) + (qty5 || 0);
+      if (totalQuantity > 0) {
+        normalizedValues.sampleQuantity = totalQuantity;
+      }
 
       let res;
       if (currentStyle?.id) {
@@ -1562,19 +1571,7 @@ const StyleInfoPage: React.FC = () => {
                     </Row>
                   )}
 
-                  {/* 第9行：多码单价 */}
-                  {currentStyle?.id && (
-                    <Row gutter={[12, 8]}>
-                      <Col span={24}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                          <Button size="small" onClick={() => setSizePriceModalVisible(true)}>多码单价</Button>
-                          <div style={{ flex: 1, fontSize: 12, color: '#666' }}>
-                            配置不同尺码下的工序单价
-                          </div>
-                        </div>
-                      </Col>
-                    </Row>
-                  )}
+                  {/* 多码单价已整合到工序表中 */}
 
 
                 </Col>
@@ -1860,17 +1857,7 @@ const StyleInfoPage: React.FC = () => {
           )}
         </ResizableModal>
 
-        {/* 多码单价弹窗 */}
-        <ResizableModal
-          title="多码单价配置"
-          open={sizePriceModalVisible}
-          onCancel={() => setSizePriceModalVisible(false)}
-          footer={null}
-          width="60vw"
-          initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.7 : 600}
-        >
-          {currentStyle?.id && <StyleSizePriceTab styleId={currentStyle.id} readOnly={false} />}
-        </ResizableModal>
+        {/* 多码单价已整合到工序表中 */}
 
         {/* 推送到下单管理弹窗 */}
         <ResizableModal
@@ -2090,17 +2077,21 @@ const StyleInfoPage: React.FC = () => {
             titleField="styleNo"
             subtitleField="styleName"
             fields={[
-              { label: '颜色', key: 'color', render: (val) => val || '-' },
-              { label: '码数', key: 'sizes', render: (val, record) => {
-                // 从尺寸数据中提取码数
-                const sizeCount = record.sizeCount || 0;
-                return sizeCount > 0 ? `${sizeCount}个码` : '-';
+              { label: '码数', key: 'sizeColorConfig', render: (val) => {
+                // 从 sizeColorConfig JSON 中解析码数
+                if (!val) return '-';
+                try {
+                  const config = JSON.parse(val);
+                  const sizes = (config.sizes || []).filter((s: string) => s && s.trim());
+                  return sizes.length > 0 ? sizes.join(', ') : '-';
+                } catch {
+                  return '-';
+                }
               }},
-              { label: '数量', key: 'quantity', render: (val, record) => {
-                const qty = record.quantity || record.totalQuantity || 0;
+              { label: '数量', key: 'sampleQuantity', render: (val) => {
+                const qty = Number(val) || 0;
                 return qty > 0 ? `${qty}件` : '-';
               }},
-              { label: '交期', key: 'deliveryDate', render: (val) => val ? formatDateTime(val) : '-' },
             ]}
             progressConfig={{
               show: true,
@@ -2156,20 +2147,30 @@ const StyleInfoPage: React.FC = () => {
                 danger: true,
               },
             ]}
-            onCardClick={(record) => navigate(`/style-info/${record.id}`)}
           />
         )}
       </Card>
 
-      {/* 打印预览弹窗 */}
-      <PrintPreviewModal
+      {/* 打印预览弹窗 - 使用通用打印组件 */}
+      <StylePrintModal
         visible={printModalVisible}
-        record={printingRecord}
-        options={printOptions}
-        onOptionsChange={setPrintOptions}
         onClose={() => {
           setPrintModalVisible(false);
           setPrintingRecord(null);
+        }}
+        styleId={printingRecord?.id}
+        styleNo={printingRecord?.styleNo}
+        styleName={printingRecord?.styleName}
+        cover={printingRecord?.cover}
+        color={printingRecord?.color}
+        quantity={printingRecord?.sampleQuantity}
+        category={printingRecord?.category}
+        season={printingRecord?.season}
+        mode="sample"
+        extraInfo={{
+          '交板日期': printingRecord?.deliveryDate,
+          '设计师': printingRecord?.designer,
+          '跟单员': printingRecord?.merchandiser,
         }}
       />
     </Layout>
@@ -2449,25 +2450,6 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
             )}
           </div>
         )}
-        {currentImage ? (
-          <img src={currentImage.fileUrl} alt="main" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        ) : (
-          <div style={{ textAlign: 'center', padding: '20px' }}>
-            {!styleId ? (
-              <>
-                <div style={{ color: '#1890ff', fontSize: 14, marginBottom: 4 }}>上传设计稿或款式照片</div>
-                <div style={{ color: '#999', fontSize: 12 }}>请先填写上方基础信息并点击“保存基础信息”</div>
-              </>
-            ) : enabled ? (
-              <span style={{ color: '#999' }}>上传设计稿或款式照片</span>
-            ) : (
-              <>
-                <div style={{ color: '#ff4d4f', fontSize: 14, marginBottom: 4 }}>样衣已完成</div>
-                <div style={{ color: '#999', fontSize: 12 }}>请联系管理员退回后修改</div>
-              </>
-            )}
-          </div>
-        )}
       </div>
 
       {/* 缩略图列表 - 固定4个框，对齐主图宽度400px */}
@@ -2623,288 +2605,6 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
         )}
       </div>
     </div>
-  );
-};
-
-// 打印预览弹窗组件
-const PrintPreviewModal: React.FC<{
-  visible: boolean;
-  record: StyleInfoType | null;
-  options: { bom: boolean; production: boolean; process: boolean };
-  onOptionsChange: (options: { bom: boolean; production: boolean; process: boolean }) => void;
-  onClose: () => void;
-}> = ({ visible, record, options, onOptionsChange, onClose }) => {
-  const [bomData, setBomData] = useState<any[]>([]);
-  const [processData, setProcessData] = useState<any[]>([]);
-  const [productionData, setProductionData] = useState<any>({});
-  const [loading, setLoading] = useState(false);
-
-  console.log('📋 PrintPreviewModal 渲染:', { visible, record: record?.styleNo, options });
-
-  // 加载打印数据
-  useEffect(() => {
-    if (!visible || !record) return;
-
-    const loadPrintData = async () => {
-      setLoading(true);
-      try {
-        // 加载BOM数据
-        if (options.bom) {
-          const bomRes = await api.get(`/style/bom/list`, { params: { styleId: record.id } });
-          if (bomRes.code === 200) {
-            setBomData(bomRes.data || []);
-          }
-        }
-
-        // 加载工序数据
-        if (options.process) {
-          const processRes = await api.get(`/style/process/list`, { params: { styleId: record.id } });
-          if (processRes.code === 200) {
-            setProcessData(processRes.data || []);
-          }
-        }
-
-        // 加载生产制单数据
-        if (options.production) {
-          setProductionData({
-            requirement: record.productionRequirement,
-          });
-        }
-      } catch (error) {
-        console.error('加载打印数据失败:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadPrintData();
-  }, [visible, record, options.bom, options.process, options.production]);
-
-  const handlePrint = () => {
-    window.print();
-  };
-
-  if (!record) return null;
-
-  return (
-    <ResizableModal
-      title={`打印预览 - ${record.styleNo}`}
-      open={visible}
-      onCancel={onClose}
-      defaultWidth="80vw"
-      defaultHeight="85vh"
-      footer={
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Checkbox.Group
-            value={Object.keys(options).filter(k => options[k as keyof typeof options])}
-            onChange={(values) => {
-              onOptionsChange({
-                bom: values.includes('bom'),
-                production: values.includes('production'),
-                process: values.includes('process'),
-              });
-            }}
-          >
-            <Checkbox value="bom">BOM表</Checkbox>
-            <Checkbox value="production">生产制单</Checkbox>
-            <Checkbox value="process">工序表</Checkbox>
-          </Checkbox.Group>
-          <Space>
-            <Button onClick={onClose}>取消</Button>
-            <Button type="primary" icon={<PrinterOutlined />} onClick={handlePrint}>
-              打印
-            </Button>
-          </Space>
-        </div>
-      }
-    >
-      <Spin spinning={loading}>
-        <div className="print-preview-content" style={{ background: '#fff', padding: 20 }}>
-          {/* 打印样式 */}
-          <style>{`
-            @media print {
-              @page { margin: 15mm; size: A4; }
-              body * { visibility: hidden; }
-              .print-preview-content, .print-preview-content * { visibility: visible; }
-              .print-preview-content {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-              }
-              .no-print { display: none !important; }
-            }
-          `}</style>
-
-          {/* 固定抬头 */}
-          <div style={{
-            display: 'flex',
-            gap: 24,
-            padding: 16,
-            borderBottom: '2px solid #d9d9d9',
-            marginBottom: 24,
-            background: '#fafafa',
-          }}>
-            {/* 款式图片 */}
-            {record.cover && (
-              <div>
-                <img
-                  src={record.cover}
-                  alt={record.styleNo}
-                  style={{
-                    width: 120,
-                    height: 120,
-                    objectFit: 'cover',
-                    border: '1px solid #d9d9d9',
-                    borderRadius: 4,
-                  }}
-                />
-              </div>
-            )}
-
-            {/* 基础信息 */}
-            <div style={{ flex: 1 }}>
-              <h2 style={{ margin: '0 0 12px 0', fontSize: 18 }}>{record.styleNo} - {record.styleName}</h2>
-              <Row gutter={[16, 8]}>
-                {record.color && (
-                  <Col span={8}>
-                    <span style={{ color: '#666' }}>颜色：</span>
-                    <span style={{ fontWeight: 600 }}>{record.color}</span>
-                  </Col>
-                )}
-                {record.size && (
-                  <Col span={8}>
-                    <span style={{ color: '#666' }}>尺码：</span>
-                    <span style={{ fontWeight: 600 }}>{record.size}</span>
-                  </Col>
-                )}
-                {record.sampleQuantity && (
-                  <Col span={8}>
-                    <span style={{ color: '#666' }}>样衣数量：</span>
-                    <span style={{ fontWeight: 600 }}>{record.sampleQuantity}</span>
-                  </Col>
-                )}
-                {record.category && (
-                  <Col span={8}>
-                    <span style={{ color: '#666' }}>分类：</span>
-                    <span>{record.category}</span>
-                  </Col>
-                )}
-                {record.season && (
-                  <Col span={8}>
-                    <span style={{ color: '#666' }}>季节：</span>
-                    <span>{record.season}</span>
-                  </Col>
-                )}
-                {record.price && (
-                  <Col span={8}>
-                    <span style={{ color: '#666' }}>价格：</span>
-                    <span>¥{record.price}</span>
-                  </Col>
-                )}
-              </Row>
-            </div>
-
-            {/* 二维码 */}
-            <div>
-              <QRCodeBox
-                value={{
-                  type: 'style',
-                  styleNo: record.styleNo,
-                  styleName: record.styleName,
-                  id: record.id,
-                }}
-                size={100}
-                variant="default"
-              />
-            </div>
-          </div>
-
-          {/* BOM表 */}
-          {options.bom && bomData.length > 0 && (
-            <div style={{ marginBottom: 24 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>📋 BOM表（物料清单）</h3>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead>
-                  <tr style={{ background: '#fafafa' }}>
-                    <th style={{ border: '1px solid #d9d9d9', padding: 8, textAlign: 'left' }}>物料编码</th>
-                    <th style={{ border: '1px solid #d9d9d9', padding: 8, textAlign: 'left' }}>物料名称</th>
-                    <th style={{ border: '1px solid #d9d9d9', padding: 8, textAlign: 'left' }}>规格</th>
-                    <th style={{ border: '1px solid #d9d9d9', padding: 8, textAlign: 'right' }}>用量</th>
-                    <th style={{ border: '1px solid #d9d9d9', padding: 8, textAlign: 'left' }}>单位</th>
-                    <th style={{ border: '1px solid #d9d9d9', padding: 8, textAlign: 'left' }}>备注</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bomData.map((item, index) => (
-                    <tr key={index}>
-                      <td style={{ border: '1px solid #d9d9d9', padding: 8 }}>{item.materialCode || '-'}</td>
-                      <td style={{ border: '1px solid #d9d9d9', padding: 8 }}>{item.materialName || '-'}</td>
-                      <td style={{ border: '1px solid #d9d9d9', padding: 8 }}>{item.specifications || '-'}</td>
-                      <td style={{ border: '1px solid #d9d9d9', padding: 8, textAlign: 'right' }}>{item.quantity || 0}</td>
-                      <td style={{ border: '1px solid #d9d9d9', padding: 8 }}>{item.unit || '-'}</td>
-                      <td style={{ border: '1px solid #d9d9d9', padding: 8 }}>{item.remark || '-'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* 工序表 */}
-          {options.process && processData.length > 0 && (
-            <div style={{ marginBottom: 24 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>⚙️ 工序表</h3>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead>
-                  <tr style={{ background: '#fafafa' }}>
-                    <th style={{ border: '1px solid #d9d9d9', padding: 8, textAlign: 'left' }}>序号</th>
-                    <th style={{ border: '1px solid #d9d9d9', padding: 8, textAlign: 'left' }}>工序名称</th>
-                    <th style={{ border: '1px solid #d9d9d9', padding: 8, textAlign: 'right' }}>单价（元）</th>
-                    <th style={{ border: '1px solid #d9d9d9', padding: 8, textAlign: 'left' }}>工序要求</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {processData.map((item, index) => (
-                    <tr key={index}>
-                      <td style={{ border: '1px solid #d9d9d9', padding: 8 }}>{index + 1}</td>
-                      <td style={{ border: '1px solid #d9d9d9', padding: 8 }}>{item.processName || '-'}</td>
-                      <td style={{ border: '1px solid #d9d9d9', padding: 8, textAlign: 'right' }}>
-                        {item.unitPrice ? Number(item.unitPrice).toFixed(2) : '-'}
-                      </td>
-                      <td style={{ border: '1px solid #d9d9d9', padding: 8 }}>{item.requirement || '-'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* 生产制单 */}
-          {options.production && productionData.requirement && (
-            <div style={{ marginBottom: 24 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>📦 生产制单要求</h3>
-              <div style={{
-                padding: 12,
-                border: '1px solid #d9d9d9',
-                borderRadius: 4,
-                background: '#fafafa',
-                whiteSpace: 'pre-wrap',
-                fontSize: 13,
-                lineHeight: 1.8,
-              }}>
-                {productionData.requirement}
-              </div>
-            </div>
-          )}
-
-          {/* 打印时间 */}
-          <div style={{ marginTop: 32, paddingTop: 16, borderTop: '1px solid #d9d9d9', textAlign: 'right', color: '#999', fontSize: 12 }}>
-            打印时间：{new Date().toLocaleString('zh-CN')}
-          </div>
-        </div>
-      </Spin>
-    </ResizableModal>
   );
 };
 

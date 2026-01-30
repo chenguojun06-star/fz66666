@@ -18,8 +18,9 @@
 
 class QRCodeParser {
   constructor() {
-    // 订单号正则：PO + 至少8位数字/字母，支持分隔符 - 或 _
-    this.orderNoPattern = /^PO[-_]?[0-9A-Z]{8,}$/i;
+    // 订单号正则：PO/ORD + 至少8位数字/字母，支持分隔符 - 或 _
+    // 兼容后端ORD前缀和前端PO前缀
+    this.orderNoPattern = /^(PO|ORD)[-_]?[0-9A-Z]{8,}$/i;
   }
 
   /**
@@ -408,9 +409,11 @@ class QRCodeParser {
 
   /**
    * 检查并处理订单类型JSON
+   * 支持 type: 'order' (生产订单) 和 type: 'pattern' (样板生产)
    * @private
    */
   _handleOrderTypeJSON(obj) {
+    // 处理生产订单类型
     if (obj.type === 'order' && obj.orderNo) {
       return {
         scanCode: obj.orderNo,
@@ -421,8 +424,30 @@ class QRCodeParser {
         size: '',
         bundleNo: '',
         isOrderQR: true,
+        qrType: 'order',
       };
     }
+
+    // 处理样板生产类型
+    if (obj.type === 'pattern' && obj.id) {
+      return {
+        scanCode: String(obj.id),
+        quantity: obj.quantity ? parseInt(obj.quantity, 10) : null,
+        orderNo: '',
+        styleNo: obj.styleNo ? String(obj.styleNo).trim() : '',
+        color: obj.color ? String(obj.color).trim() : '',
+        size: '',
+        bundleNo: '',
+        isOrderQR: false,
+        isPatternQR: true,  // 标记为样板生产二维码
+        qrType: 'pattern',
+        patternId: String(obj.id),
+        patternStatus: obj.status || '',
+        designer: obj.designer || '',
+        patternDeveloper: obj.patternDeveloper || '',
+      };
+    }
+
     return null;
   }
 

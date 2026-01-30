@@ -3,8 +3,8 @@ import ReactDOM from 'react-dom/client';
 import { ConfigProvider, theme, App as AntApp } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import App from './App';
-import { AuthProvider } from './utils/authContext';
-import { AppProvider } from './utils/appContext';
+import { AuthProvider } from './utils/AuthContext';
+import { AppProvider } from './utils/AppContext';
 import 'antd/dist/reset.css'; // 引入组件库样式
 import './styles/global.css';
 import './styles/design-system.css'; // 设计系统

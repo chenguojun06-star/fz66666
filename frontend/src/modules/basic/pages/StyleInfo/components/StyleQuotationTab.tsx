@@ -27,7 +27,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
   const otherCost = Number(Form.useWatch('otherCost', form)) || 0;
   const profitRate = Number(Form.useWatch('profitRate', form)) || 0; // 目标利润率
   const totalCost = materialCost + processCost + otherCost; // 总成本
-  
+
   // 计算最终报价和利润 - 每次渲染都从表单获取最新值
   const getTotalPrice = () => {
     const val = form.getFieldValue('totalPrice');

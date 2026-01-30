@@ -5,13 +5,13 @@ import type { ColumnsType } from 'antd/es/table';
 import ResizableModal from './ResizableModal';
 import api from '@/utils/api';
 import { productionOrderApi, productionScanApi } from '@/services/production/productionApi';
-import { useAuth } from '@/utils/authContext';
+import { useAuth } from '@/utils/AuthContext';
 
 const { Text, Title } = Typography;
 const { TextArea } = Input;
 
 /** 节点类型定义 */
-type NodeType = 'cutting' | 'sewing' | 'ironing' | 'quality' | 'packaging' | 'secondaryProcess';
+type NodeType = 'procurement' | 'cutting' | 'sewing' | 'ironing' | 'quality' | 'packaging' | 'secondaryProcess';
 
 /** 历史记录项 */
 interface HistoryItem {
@@ -104,6 +104,21 @@ interface ProcessPriceItem {
   estimatedMinutes?: number;
 }
 
+/** 样板生产扫码记录 */
+interface PatternScanRecord {
+  id: string;
+  patternProductionId?: string;
+  styleId?: string;
+  styleNo?: string;
+  color?: string;
+  operationType?: string;
+  operatorId?: string;
+  operatorName?: string;
+  operatorRole?: string;
+  scanTime?: string;
+  remark?: string;
+}
+
 /** 组件属性 */
 interface NodeDetailModalProps {
   visible: boolean;
@@ -116,11 +131,33 @@ interface NodeDetailModalProps {
   unitPrice?: number;
   /** 该节点下的所有子工序列表（含单价） */
   processList?: ProcessPriceItem[];
+  /** 是否是样板生产（样板生产不显示菲号明细、扫码记录等） */
+  isPatternProduction?: boolean;
+  /** 额外数据（如采购进度信息、时间节点等） */
+  extraData?: {
+    procurementProgress?: {
+      total: number;
+      completed: number;
+      percent: number;
+      completedTime?: string;
+      receiver?: string;
+    };
+    // 时间节点信息
+    releaseTime?: string;
+    deliveryTime?: string;
+    receiveTime?: string;
+    completeTime?: string;
+    // 人员信息
+    patternMaker?: string;
+    receiver?: string;
+  };
   onSaved?: () => void;
 }
 
 /** 节点是否支持委派工厂 */
 const canDelegateFactory = (nodeType: NodeType): boolean => {
+  // 采购节点不支持委派（采购由物料采购单管理）
+  if (nodeType === 'procurement') return false;
   return ['sewing', 'secondaryProcess'].includes(nodeType);
 };
 
@@ -143,6 +180,8 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   stats: nodeStats,
   unitPrice,
   processList = [],
+  isPatternProduction = false,
+  extraData,
   onSaved,
 }) => {
   const { message } = App.useApp();
@@ -154,6 +193,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   const [nodeOperations, setNodeOperations] = useState<NodeOperations>({});
   const [scanRecords, setScanRecords] = useState<ScanRecord[]>([]);
   const [bundles, setBundles] = useState<BundleRecord[]>([]);
+  const [patternScanRecords, setPatternScanRecords] = useState<PatternScanRecord[]>([]);
   const [activeTab, setActiveTab] = useState('settings');
   // 管理员解锁状态（允许在进度>=80%时仍然编辑）
   const [adminUnlocked, setAdminUnlocked] = useState(false);
@@ -229,20 +269,44 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
     }
   }, [orderId]);
 
+  // 加载样板生产扫码记录
+  const loadPatternScanRecords = useCallback(async () => {
+    if (!orderId) return;
+    try {
+      const res = await api.get<{ code: number; data: PatternScanRecord[] }>(
+        `/production/pattern/${orderId}/scan-records`
+      );
+      if (res.code === 0 && Array.isArray(res.data)) {
+        setPatternScanRecords(res.data);
+      }
+    } catch (err) {
+      console.error('加载样板扫码记录失败', err);
+    }
+  }, [orderId]);
+
   // 弹窗打开时加载数据
   useEffect(() => {
     if (visible && orderId) {
       loadFactories();
       loadNodeOperations();
-      loadScanRecords();
-      loadBundles();
+      // 样板生产不加载扫码记录和菲号明细（这些是大货生产的数据）
+      if (!isPatternProduction) {
+        loadScanRecords();
+        loadBundles();
+      } else {
+        // 样板生产时清空这些数据，加载样板扫码记录
+        setScanRecords([]);
+        setBundles([]);
+        loadPatternScanRecords();
+      }
     }
     // 重置状态
     if (!visible) {
       setActiveTab('settings');
       setAdminUnlocked(false); // 关闭弹窗时重置解锁状态
+      setPatternScanRecords([]); // 清空样板扫码记录
     }
-  }, [visible, orderId, loadFactories, loadNodeOperations, loadScanRecords, loadBundles]);
+  }, [visible, orderId, isPatternProduction, loadFactories, loadNodeOperations, loadScanRecords, loadBundles, loadPatternScanRecords]);
 
   // 筛选当前节点的扫码记录
   const filteredScanRecords = useMemo(() => {
@@ -501,6 +565,89 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   // 设置面板内容
   const renderSettingsTab = () => (
     <div style={{ padding: '4px 0' }}>
+      {/* 时间节点信息（从样板生产传递） */}
+      {extraData && (extraData.releaseTime || extraData.deliveryTime) && (
+        <div style={{
+          marginBottom: 10,
+          padding: '8px 10px',
+          background: '#f8f9fa',
+          borderRadius: 6,
+          border: '1px solid #e5e7eb',
+          fontSize: 12,
+        }}>
+          <div style={{ fontWeight: 600, marginBottom: 6, color: '#1f2937' }}>
+            <ClockCircleOutlined style={{ marginRight: 4 }} />
+            时间信息
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', color: '#6b7280' }}>
+            {extraData.releaseTime && <span><b>下板:</b> {extraData.releaseTime}</span>}
+            {extraData.deliveryTime && <span><b>交板:</b> {extraData.deliveryTime}</span>}
+            {extraData.receiveTime && <span><b>领取:</b> {extraData.receiveTime}</span>}
+            {extraData.completeTime && <span><b>完成:</b> {extraData.completeTime}</span>}
+          </div>
+          {(extraData.patternMaker || extraData.receiver) && (
+            <div style={{ display: 'flex', gap: 16, marginTop: 4, color: '#6b7280' }}>
+              {extraData.patternMaker && <span><UserOutlined style={{ marginRight: 2 }} /><b>纸样师傅:</b> {extraData.patternMaker}</span>}
+              {extraData.receiver && <span><UserOutlined style={{ marginRight: 2 }} /><b>领取人:</b> {extraData.receiver}</span>}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 采购进度特殊显示 */}
+      {nodeName === '采购' && extraData?.procurementProgress && (
+        <div style={{
+          marginBottom: 12,
+          padding: '12px 16px',
+          background: extraData.procurementProgress.percent >= 100 ? '#f0fdf4' : '#fef3c7',
+          borderRadius: 8,
+          border: `1px solid ${extraData.procurementProgress.percent >= 100 ? '#86efac' : '#fbbf24'}`,
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            marginBottom: 8,
+          }}>
+            <div style={{
+              fontSize: 16,
+              fontWeight: 700,
+              color: extraData.procurementProgress.percent >= 100 ? '#059669' : '#d97706',
+            }}>
+              {extraData.procurementProgress.percent >= 100 ? '✅ 采购已完成' : '⏳ 采购进行中'}
+            </div>
+            <div style={{
+              fontSize: 18,
+              fontWeight: 700,
+              color: extraData.procurementProgress.percent >= 100 ? '#059669' : '#d97706',
+            }}>
+              {extraData.procurementProgress.percent}%
+            </div>
+          </div>
+          <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 4 }}>
+            已完成采购单：<span style={{ fontWeight: 600, color: '#1f2937' }}>
+              {extraData.procurementProgress.completed} / {extraData.procurementProgress.total}
+            </span>
+          </div>
+          {extraData.procurementProgress.completedTime && (
+            <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 4 }}>
+              <ClockCircleOutlined style={{ marginRight: 4 }} />
+              完成时间：<span style={{ fontWeight: 600, color: '#1f2937' }}>
+                {extraData.procurementProgress.completedTime}
+              </span>
+            </div>
+          )}
+          {extraData.procurementProgress.receiver && (
+            <div style={{ fontSize: 13, color: '#6b7280' }}>
+              <UserOutlined style={{ marginRight: 4 }} />
+              操作人：<span style={{ fontWeight: 600, color: '#1f2937' }}>
+                {extraData.procurementProgress.receiver}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 进度统计 - 紧凑的2x2网格 */}
       <div style={{
         display: 'grid',
@@ -741,6 +888,75 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   );
 
   // 扫码记录 Tab
+  // 样板生产扫码记录 Tab
+  const renderPatternScanRecordsTab = () => {
+    const operationLabels: Record<string, { text: string; color: string }> = {
+      RECEIVE: { text: '领取', color: 'blue' },
+      PLATE: { text: '车板', color: 'purple' },
+      FOLLOW_UP: { text: '跟单', color: 'cyan' },
+      COMPLETE: { text: '完成', color: 'green' },
+      WAREHOUSE_IN: { text: '入库', color: 'orange' },
+    };
+
+    const patternScanColumns: ColumnsType<PatternScanRecord> = [
+      {
+        title: '时间',
+        dataIndex: 'scanTime',
+        width: 150,
+        render: (v) => v ? new Date(v).toLocaleString('zh-CN') : '-',
+      },
+      {
+        title: '操作类型',
+        dataIndex: 'operationType',
+        width: 100,
+        render: (v) => {
+          const op = operationLabels[v] || { text: v, color: 'default' };
+          return <Tag color={op.color}>{op.text}</Tag>;
+        },
+      },
+      {
+        title: '操作员',
+        dataIndex: 'operatorName',
+        width: 100,
+      },
+      {
+        title: '角色',
+        dataIndex: 'operatorRole',
+        width: 80,
+        render: (v) => {
+          const roles: Record<string, string> = {
+            PLATE_WORKER: '车板师',
+            MERCHANDISER: '跟单员',
+            WAREHOUSE: '仓管',
+          };
+          return roles[v] || v || '-';
+        },
+      },
+      {
+        title: '备注',
+        dataIndex: 'remark',
+        ellipsis: true,
+      },
+    ];
+
+    return (
+      <div style={{ padding: '4px 0' }}>
+        <div style={{ marginBottom: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text type="secondary">共 {patternScanRecords.length} 条操作记录</Text>
+        </div>
+        <Table
+          size="small"
+          rowKey="id"
+          dataSource={patternScanRecords}
+          columns={patternScanColumns}
+          pagination={{ pageSize: 10, size: 'small', showSizeChanger: false }}
+          scroll={{ y: 280 }}
+          locale={{ emptyText: '暂无扫码记录' }}
+        />
+      </div>
+    );
+  };
+
   const renderScanRecordsTab = () => (
     <div style={{ padding: '4px 0' }}>
       <div style={{ marginBottom: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -921,17 +1137,24 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
               label: <span><FileTextOutlined /> 设置</span>,
               children: renderSettingsTab(),
             },
-            {
+            // 样板生产显示专用的扫码记录Tab
+            isPatternProduction && {
+              key: 'patternScanRecords',
+              label: <span><HistoryOutlined /> 操作记录 ({patternScanRecords.length})</span>,
+              children: renderPatternScanRecordsTab(),
+            },
+            // 大货生产显示扫码记录、菲号明细、操作员 tab
+            !isPatternProduction && {
               key: 'scanRecords',
               label: <span><HistoryOutlined /> 扫码记录 ({filteredScanRecords.length})</span>,
               children: renderScanRecordsTab(),
             },
-            {
+            !isPatternProduction && {
               key: 'bundles',
               label: <span><UnorderedListOutlined /> 菲号明细 ({bundlesWithStatus.length})</span>,
               children: renderBundlesTab(),
             },
-            {
+            !isPatternProduction && {
               key: 'operators',
               label: <span><UserOutlined /> 操作员 ({operatorSummary.length})</span>,
               children: renderOperatorsTab(),
@@ -941,7 +1164,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
               label: <span><ClockCircleOutlined /> 操作历史 ({currentNodeData.history?.length || 0})</span>,
               children: renderHistoryTab(),
             },
-          ]}
+          ].filter(Boolean)}
         />
       </Spin>
     </ResizableModal>

@@ -123,6 +123,25 @@
   overflow-x: auto;
   overflow-y: hidden;
   padding-left: 6px;
+  scroll-behavior: smooth;
+}
+
+/* 隐藏标签栏滚动条但保留滚动功能 */
+.header-recents::-webkit-scrollbar {
+  height: 4px;
+}
+
+.header-recents::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.header-recents::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 2px;
+}
+
+.header-recents::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .recent-tab {

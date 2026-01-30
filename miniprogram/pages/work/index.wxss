@@ -140,6 +140,39 @@ page {
   white-space: nowrap;
 }
 
+.grid-menu {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20rpx;
+  padding: 20rpx 0;
+}
+
+.grid-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.icon-box {
+  width: 90rpx;
+  height: 90rpx;
+  border-radius: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12rpx;
+}
+
+.bg-purple {
+  background-color: #722ed1;
+  color: #fff;
+}
+
+.menu-name {
+  font-size: 24rpx;
+  color: #333;
+}
+
 .section-title {
   margin-top: 10px;
   font-size: 14px; /* 三级标题 */

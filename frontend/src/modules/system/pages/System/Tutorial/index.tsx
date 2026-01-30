@@ -654,7 +654,7 @@ const SystemTutorial: React.FC = () => {
                       label: '📖 操作步骤',
                       children: (
                         <Steps
-                          direction="vertical"
+                          orientation="vertical"
                           current={-1}
                           items={tutorial.steps.map((step, index) => ({
                             title: (
@@ -663,7 +663,7 @@ const SystemTutorial: React.FC = () => {
                                 <strong>{step.title}</strong>
                               </Space>
                             ),
-                            description: (
+                            content: (
                               <div style={{ paddingLeft: 30 }}>
                                 <Paragraph>{step.description}</Paragraph>
                                 {step.tips && step.tips.length > 0 && (

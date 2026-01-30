@@ -36,7 +36,7 @@ export const paths = {
 
   productionList: '/production',
   materialPurchase: '/production/material',
-  materialPurchaseDetail: '/production/material/:orderNo',
+  materialPurchaseDetail: '/production/material/:styleNo',
   cutting: '/production/cutting',
   cuttingTask: '/production/cutting/task/:orderNo',
   progressDetail: '/production/progress-detail',
@@ -44,6 +44,7 @@ export const paths = {
   warehousing: '/production/warehousing',
   warehousingDetail: '/production/warehousing/detail/:warehousingNo',
   orderTransfer: '/production/transfer',
+  materialPicking: '/production/picking',
 
   materialReconciliation: '/finance/material-reconciliation',
   paymentApproval: '/finance/payment-approval',
@@ -79,6 +80,7 @@ export const permissionCodes = {
   materialPurchase: 'MENU_MATERIAL_PURCHASE',
   cutting: 'MENU_CUTTING',
   progress: 'MENU_PROGRESS',
+  materialPicking: 'MENU_MATERIAL_PICKING',
   warehousing: 'MENU_WAREHOUSING',
   orderTransfer: 'MENU_ORDER_TRANSFER',
 
@@ -130,9 +132,9 @@ export const menuConfig: MenuSection[] = [
     items: [
       { label: '样衣开发', path: paths.styleInfoList, icon: React.createElement(FileTextOutlined) },
       { label: '样板生产', path: paths.patternProduction, icon: React.createElement(ScissorOutlined) },
-      { label: '下单管理', path: paths.orderManagementList, icon: React.createElement(FileTextOutlined) },
       { label: '资料中心', path: paths.dataCenter, icon: React.createElement(DatabaseOutlined) },
       { label: '单价维护', path: paths.templateCenter, icon: React.createElement(BookOutlined) },
+      { label: '下单管理', path: paths.orderManagementList, icon: React.createElement(FileTextOutlined) },
     ],
   },
   {
@@ -205,6 +207,7 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.productionList]: permissionCodes.productionList,
   [paths.materialPurchase]: permissionCodes.materialPurchase,
   [paths.cutting]: permissionCodes.cutting,
+  [paths.materialPicking]: permissionCodes.materialPicking,
   [paths.progressDetail]: permissionCodes.progress,
   [paths.warehousing]: permissionCodes.warehousing,
 

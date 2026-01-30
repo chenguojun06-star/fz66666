@@ -9,3 +9,4 @@ export const OrderTransfer = React.lazy(() => import('./pages/Production/OrderTr
 export const OrderFlow = React.lazy(() => import('./pages/Production/OrderFlow'));
 export const ProgressDetail = React.lazy(() => import('./pages/Production/ProgressDetail'));
 export const PatternProduction = React.lazy(() => import('./pages/Production/PatternProduction'));
+export const MaterialPicking = React.lazy(() => import('./pages/Production/MaterialPicking'));

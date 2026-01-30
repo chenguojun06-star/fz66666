@@ -528,3 +528,113 @@
     </view>
   </view>
 </view>
+<!-- 样板生产确认弹窗 -->
+<view class="modal-backdrop" wx:if="{{patternConfirm.visible}}" catchtap="closePatternConfirm"></view>
+<view wx:if="{{patternConfirm.visible}}" class="modal-wrap pattern-modal show">
+  <view class="modal-container" catchtap="stopPropagation">
+    <view class="modal-header">
+      <text class="modal-title">🧵 样板生产</text>
+      <view class="modal-close" catchtap="closePatternConfirm">×</view>
+    </view>
+
+    <view class="modal-body">
+      <!-- 样板信息卡片 -->
+      <view class="pattern-info-card">
+        <view class="pattern-info-row">
+          <text class="pattern-label">款号</text>
+          <text class="pattern-value highlight">{{patternConfirm.styleNo}}</text>
+        </view>
+        <view class="pattern-info-row">
+          <text class="pattern-label">颜色</text>
+          <text class="pattern-value">{{patternConfirm.color || '-'}}</text>
+        </view>
+        <view class="pattern-info-row">
+          <text class="pattern-label">数量</text>
+          <text class="pattern-value">{{patternConfirm.quantity}} 件</text>
+        </view>
+        <view class="pattern-info-row">
+          <text class="pattern-label">设计师</text>
+          <text class="pattern-value">{{patternConfirm.designer}}</text>
+        </view>
+        <view class="pattern-info-row">
+          <text class="pattern-label">纸样师</text>
+          <text class="pattern-value">{{patternConfirm.patternDeveloper}}</text>
+        </view>
+        <view class="pattern-info-row">
+          <text class="pattern-label">交板日期</text>
+          <text class="pattern-value">{{patternConfirm.deliveryTime}}</text>
+        </view>
+      </view>
+
+      <!-- 操作类型选择 -->
+      <view class="pattern-operation-section">
+        <text class="section-label">选择操作</text>
+        <view class="pattern-operation-list">
+          <view
+            class="pattern-op-item {{patternConfirm.operationType === 'RECEIVE' ? 'active' : ''}}"
+            data-type="RECEIVE"
+            bindtap="onPatternOperationChange"
+          >
+            <text class="op-icon">📥</text>
+            <text class="op-text">领取</text>
+          </view>
+          <view
+            class="pattern-op-item {{patternConfirm.operationType === 'PLATE' ? 'active' : ''}}"
+            data-type="PLATE"
+            bindtap="onPatternOperationChange"
+          >
+            <text class="op-icon">🧵</text>
+            <text class="op-text">车板</text>
+          </view>
+          <view
+            class="pattern-op-item {{patternConfirm.operationType === 'FOLLOW_UP' ? 'active' : ''}}"
+            data-type="FOLLOW_UP"
+            bindtap="onPatternOperationChange"
+          >
+            <text class="op-icon">📋</text>
+            <text class="op-text">跟单</text>
+          </view>
+          <view
+            class="pattern-op-item {{patternConfirm.operationType === 'COMPLETE' ? 'active' : ''}}"
+            data-type="COMPLETE"
+            bindtap="onPatternOperationChange"
+          >
+            <text class="op-icon">✅</text>
+            <text class="op-text">完成</text>
+          </view>
+          <view
+            class="pattern-op-item {{patternConfirm.operationType === 'WAREHOUSE_IN' ? 'active' : ''}}"
+            data-type="WAREHOUSE_IN"
+            bindtap="onPatternOperationChange"
+          >
+            <text class="op-icon">📦</text>
+            <text class="op-text">入库</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 备注输入 -->
+      <view class="pattern-remark">
+        <text class="section-label">备注（选填）</text>
+        <textarea
+          class="pattern-remark-input"
+          placeholder="请输入备注信息..."
+          value="{{patternConfirm.remark}}"
+          bindinput="onPatternRemarkInput"
+          maxlength="200"
+        />
+      </view>
+    </view>
+
+    <view class="modal-footer">
+      <button class="modal-btn cancel" bindtap="closePatternConfirm">取消</button>
+      <button
+        class="modal-btn confirm {{patternConfirm.loading ? 'loading' : ''}}"
+        bindtap="submitPatternScan"
+        disabled="{{patternConfirm.loading}}"
+      >
+        {{patternConfirm.loading ? '提交中...' : patternConfirm.operationLabel}}
+      </button>
+    </view>
+  </view>
+</view>

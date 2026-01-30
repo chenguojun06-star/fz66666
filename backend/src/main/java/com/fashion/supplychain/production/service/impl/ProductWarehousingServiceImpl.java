@@ -9,6 +9,7 @@ import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.style.service.ProductSkuService;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.ParamUtils;
@@ -24,6 +25,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
+import java.util.Arrays;
+import java.util.HashSet;
 import org.springframework.util.StringUtils;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.concurrent.ThreadLocalRandom;
@@ -40,8 +44,29 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
     private static final BigDecimal WAREHOUSING_BATCH_MIN_RATIO = new BigDecimal("0.05");
     private static final BigDecimal WAREHOUSING_BATCH_MAX_RATIO = new BigDecimal("0.15");
 
+    private static final String STATUS_QUALIFIED = "qualified";
+    private static final String STATUS_UNQUALIFIED = "unqualified";
+    private static final String STATUS_REPAIRED = "repaired";
+    private static final String STATUS_COMPLETED = "completed";
+
+    private static final String SCAN_RESULT_SUCCESS = "success";
+    private static final String SCAN_RESULT_FAILURE = "failure";
+    private static final String SCAN_TYPE_QUALITY = "quality";
+    private static final String SCAN_TYPE_WAREHOUSE = "warehouse";
+    private static final String WAREHOUSING_TYPE_MANUAL = "manual";
+    private static final String WAREHOUSING_TYPE_SCAN = "scan";
+
+    private static final Set<String> REPAIRED_STATUS_SET = new HashSet<>(Arrays.asList(
+            "repaired", "返修完成", "已返修", "返修合格", "已修复"));
+
+    private static final Set<String> UNQUALIFIED_STATUS_SET = new HashSet<>(Arrays.asList(
+            "unqualified", "不合格", "次品", "次品待返修", "待返修"));
+
     @Autowired
     private ProductionOrderService productionOrderService;
+
+    @Autowired
+    private ProductSkuService productSkuService;
 
     @Autowired
     private CuttingBundleService cuttingBundleService;
@@ -63,13 +88,11 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
             return false;
         }
         String s = status.toLowerCase();
-        boolean isRepaired = "repaired".equals(s) || "返修完成".equals(status) || "已返修".equals(status)
-                || "返修合格".equals(status) || "已修复".equals(status);
+        boolean isRepaired = REPAIRED_STATUS_SET.contains(s) || REPAIRED_STATUS_SET.contains(status);
         if (isRepaired) {
             return false;
         }
-        return "unqualified".equals(s) || "不合格".equals(status) || "次品".equals(status) || "次品待返修".equals(status)
-                || "待返修".equals(status);
+        return UNQUALIFIED_STATUS_SET.contains(s) || UNQUALIFIED_STATUS_SET.contains(status);
     }
 
     private int remainingRepairQuantityByBundle(String orderId, String cuttingBundleId, String excludeWarehousingId) {
@@ -301,9 +324,9 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
             scanRecordMapper.update(null, new LambdaUpdateWrapper<ScanRecord>()
                     .eq(ScanRecord::getCuttingBundleId, bid)
                     .eq(ScanRecord::getScanType, "production")
-                    .eq(ScanRecord::getScanResult, "success")
-                    .in(ScanRecord::getProcessName, java.util.Arrays.asList("整烫", "二次工艺", "包装"))
-                    .set(ScanRecord::getScanResult, "failure")
+                    .eq(ScanRecord::getScanResult, SCAN_RESULT_SUCCESS)
+                    .in(ScanRecord::getProcessName, Arrays.asList("整烫", "二次工艺", "包装"))
+                    .set(ScanRecord::getScanResult, SCAN_RESULT_FAILURE)
                     .set(ScanRecord::getRemark, "次品退回缝制，后续环节作废")
                     .set(ScanRecord::getUpdateTime, now));
         } catch (Exception e) {
@@ -352,7 +375,7 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
                 continue;
             }
             String qs = w.getQualityStatus() == null ? "" : w.getQualityStatus().trim();
-            if (!StringUtils.hasText(qs) || "qualified".equalsIgnoreCase(qs)) {
+            if (!StringUtils.hasText(qs) || STATUS_QUALIFIED.equalsIgnoreCase(qs)) {
                 throw new IllegalStateException("该菲号已合格入库，不能重复入库");
             }
         }
@@ -390,7 +413,7 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
         }
 
         try {
-            java.util.List<ProductWarehousing> list = this.list(new LambdaQueryWrapper<ProductWarehousing>()
+            List<ProductWarehousing> list = this.list(new LambdaQueryWrapper<ProductWarehousing>()
                     .eq(ProductWarehousing::getOrderId, oid)
                     .eq(ProductWarehousing::getDeleteFlag, 0));
             long sum = 0;
@@ -445,6 +468,33 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
         return baseMapper.selectPage(pageInfo, wrapper);
     }
 
+    private void updateSkuStock(ProductWarehousing w, ProductionOrder order, CuttingBundle bundle, int deltaQuantity) {
+        if (deltaQuantity == 0) {
+            return;
+        }
+        try {
+            String styleNo = w.getStyleNo();
+            String color = null;
+            String size = null;
+
+            if (bundle != null) {
+                color = bundle.getColor();
+                size = bundle.getSize();
+            } else if (order != null) {
+                color = order.getColor();
+                size = order.getSize();
+            }
+
+            if (StringUtils.hasText(styleNo) && StringUtils.hasText(color) && StringUtils.hasText(size)) {
+                String skuCode = String.format("%s-%s-%s", styleNo.trim(), color.trim(), size.trim());
+                productSkuService.updateStock(skuCode, deltaQuantity);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to update SKU stock: warehousingId={}, delta={}, error={}", w.getId(), deltaQuantity,
+                    e.getMessage());
+        }
+    }
+
     private boolean saveWarehousingAndUpdateOrderInternal(ProductWarehousing productWarehousing,
             boolean skipRangeCheck) {
         // 设置默认值
@@ -460,7 +510,7 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
         }
 
         String st = order.getStatus() == null ? "" : order.getStatus().trim();
-        if ("completed".equalsIgnoreCase(st)) {
+        if (STATUS_COMPLETED.equalsIgnoreCase(st)) {
             throw new IllegalStateException("订单已完成，已停止入库");
         }
 
@@ -488,7 +538,7 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
         productWarehousing.setQualifiedQuantity(qualified);
         productWarehousing.setUnqualifiedQuantity(unqualified);
 
-        String computedQualityStatus = unqualified > 0 ? "unqualified" : "qualified";
+        String computedQualityStatus = unqualified > 0 ? STATUS_UNQUALIFIED : STATUS_QUALIFIED;
         productWarehousing.setQualityStatus(computedQualityStatus);
         String repairRemark = trimToNull(productWarehousing.getRepairRemark());
 
@@ -521,13 +571,15 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
                 throw new IllegalArgumentException("菲号与订单不匹配");
             }
             boolean blocked = isBundleBlockedForWarehousing(bundle.getStatus());
-            if (blocked && !"qualified".equalsIgnoreCase(computedQualityStatus)) {
+            if (blocked && !STATUS_QUALIFIED.equalsIgnoreCase(computedQualityStatus)) {
                 throw new IllegalStateException("该菲号为次品待返修，返修完成后才可入库");
             }
-            if (blocked && "qualified".equalsIgnoreCase(computedQualityStatus) && !StringUtils.hasText(repairRemark)) {
+            if (blocked && STATUS_QUALIFIED.equalsIgnoreCase(computedQualityStatus)
+                    && !StringUtils.hasText(repairRemark)) {
                 throw new IllegalStateException("该菲号为次品待返修，请填写返修备注后再质检入库");
             }
-            if (blocked && "qualified".equalsIgnoreCase(computedQualityStatus) && StringUtils.hasText(repairRemark)) {
+            if (blocked && STATUS_QUALIFIED.equalsIgnoreCase(computedQualityStatus)
+                    && StringUtils.hasText(repairRemark)) {
                 ensureRepairQuantityNotExceeded(order.getId(), bundle.getId(), warehousingQty, null);
             }
             productWarehousing.setCuttingBundleId(bundle.getId());
@@ -554,7 +606,7 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
             productWarehousing.setWarehousingNo(buildWarehousingNo(now));
         }
         if (!StringUtils.hasText(productWarehousing.getWarehousingType())) {
-            productWarehousing.setWarehousingType("manual");
+            productWarehousing.setWarehousingType(WAREHOUSING_TYPE_MANUAL);
         }
 
         // 设置入库时间（入库开始时间和完成时间同时设置为当前时间）
@@ -582,27 +634,7 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
         boolean ok = this.save(productWarehousing);
         if (ok) {
             if (bundle != null && StringUtils.hasText(bundle.getId())) {
-                boolean blocked = isBundleBlockedForWarehousing(bundle.getStatus());
-                String nextBundleStatus = "unqualified".equalsIgnoreCase(computedQualityStatus) ? "unqualified"
-                        : ("qualified".equalsIgnoreCase(computedQualityStatus) && blocked
-                                && StringUtils.hasText(repairRemark)
-                                        ? "repaired"
-                                        : "qualified");
-                if ("unqualified".equalsIgnoreCase(nextBundleStatus)) {
-                    invalidateBundleFlowAfterReturnToSewing(bundle.getId(), now);
-                }
-                try {
-                    cuttingBundleService.lambdaUpdate()
-                            .eq(CuttingBundle::getId, bundle.getId())
-                            .set(CuttingBundle::getStatus, nextBundleStatus)
-                            .set(CuttingBundle::getUpdateTime, now)
-                            .update();
-                } catch (Exception e) {
-                    log.warn("Failed to update cutting bundle status after warehousing: bundleId={}, status={}",
-                            bundle.getId(),
-                            nextBundleStatus,
-                            e);
-                }
+                updateBundleStatusAfterWarehousing(bundle, computedQualityStatus, repairRemark, now);
             }
 
             int qualifiedSum = sumQualifiedByOrderId(productWarehousing.getOrderId());
@@ -630,6 +662,11 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
                         productWarehousing == null ? null : productWarehousing.getId(),
                         productWarehousing == null ? null : productWarehousing.getOrderId(),
                         e);
+            }
+
+            // Update SKU Stock
+            if (productWarehousing.getQualifiedQuantity() != null && productWarehousing.getQualifiedQuantity() > 0) {
+                updateSkuStock(productWarehousing, order, bundle, productWarehousing.getQualifiedQuantity());
             }
         }
         return ok;
@@ -667,7 +704,7 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
             throw new NoSuchElementException("订单不存在");
         }
         String st = order.getStatus() == null ? "" : order.getStatus().trim();
-        if ("completed".equalsIgnoreCase(st)) {
+        if (STATUS_COMPLETED.equalsIgnoreCase(st)) {
             throw new IllegalStateException("订单已完成，已停止入库");
         }
         int batchSum = 0;
@@ -698,10 +735,10 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
             w.setOrderId(order.getId());
             w.setWarehousingNo(warehousingNo);
             if (!StringUtils.hasText(w.getWarehousingType())) {
-                w.setWarehousingType("manual");
+                w.setWarehousingType(WAREHOUSING_TYPE_MANUAL);
             }
             if (!StringUtils.hasText(w.getQualityStatus())) {
-                w.setQualityStatus("qualified");
+                w.setQualityStatus(STATUS_QUALIFIED);
             }
         }
 
@@ -731,7 +768,7 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
         if (StringUtils.hasText(oldWarehousing.getOrderId())) {
             ProductionOrder order = productionOrderService.getById(oldWarehousing.getOrderId());
             String st = order == null ? "" : (order.getStatus() == null ? "" : order.getStatus().trim());
-            if ("completed".equalsIgnoreCase(st)) {
+            if (STATUS_COMPLETED.equalsIgnoreCase(st)) {
                 throw new IllegalStateException("订单已完成，已停止入库");
             }
         }
@@ -767,7 +804,7 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
         productWarehousing.setWarehousingQuantity(warehousingQty);
         productWarehousing.setQualifiedQuantity(qualified);
         productWarehousing.setUnqualifiedQuantity(unqualified);
-        String computedQualityStatus = unqualified > 0 ? "unqualified" : "qualified";
+        String computedQualityStatus = unqualified > 0 ? STATUS_UNQUALIFIED : STATUS_QUALIFIED;
         productWarehousing.setQualityStatus(computedQualityStatus);
 
         if (StringUtils.hasText(oldWarehousing.getOrderId())) {
@@ -809,48 +846,42 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
                 } catch (Exception e) {
                     log.warn("Failed to load cutting bundle when updating warehousing: cuttingBundleId={}", bid, e);
                 }
-                if (bundle != null && StringUtils.hasText(bundle.getId())) {
-                    String repairRemark = trimToNull(productWarehousing.getRepairRemark());
-                    if (repairRemark == null) {
-                        repairRemark = trimToNull(oldWarehousing.getRepairRemark());
-                    }
+            }
 
-                    boolean blocked = isBundleBlockedForWarehousing(bundle.getStatus());
-                    if (blocked && !"qualified".equalsIgnoreCase(computedQualityStatus)) {
-                        throw new IllegalStateException("该菲号为次品待返修，返修完成后才可入库");
-                    }
-                    if (blocked && "qualified".equalsIgnoreCase(computedQualityStatus)
-                            && !StringUtils.hasText(repairRemark)) {
-                        throw new IllegalStateException("该菲号为次品待返修，请填写返修备注后再质检入库");
-                    }
-                    if (blocked && "qualified".equalsIgnoreCase(computedQualityStatus) && StringUtils.hasText(repairRemark)) {
-                        String oid = StringUtils.hasText(oldWarehousing.getOrderId()) ? oldWarehousing.getOrderId().trim()
-                                : null;
-                        ensureRepairQuantityNotExceeded(oid, bundle.getId(), warehousingQty, oldWarehousing.getId());
-                    }
-
-                    String nextBundleStatus = "unqualified".equalsIgnoreCase(computedQualityStatus) ? "unqualified"
-                            : ("qualified".equalsIgnoreCase(computedQualityStatus) && blocked
-                                    && StringUtils.hasText(repairRemark)
-                                            ? "repaired"
-                                            : "qualified");
-                    if ("unqualified".equalsIgnoreCase(nextBundleStatus)) {
-                        invalidateBundleFlowAfterReturnToSewing(bundle.getId(), now);
-                    }
-                    try {
-                        cuttingBundleService.lambdaUpdate()
-                                .eq(CuttingBundle::getId, bundle.getId())
-                                .set(CuttingBundle::getStatus, nextBundleStatus)
-                                .set(CuttingBundle::getUpdateTime, now)
-                                .update();
-                    } catch (Exception e) {
-                        log.warn(
-                                "Failed to update cutting bundle status after warehousing update: bundleId={}, status={}",
-                                bundle.getId(),
-                                nextBundleStatus,
-                                e);
-                    }
+            // Update SKU Stock (Differential)
+            int oldQ = oldWarehousing.getQualifiedQuantity() == null ? 0 : oldWarehousing.getQualifiedQuantity();
+            int newQ = productWarehousing.getQualifiedQuantity(); // already set to non-null value above
+            int diff = newQ - oldQ;
+            if (diff != 0) {
+                ProductionOrder order = null;
+                if (StringUtils.hasText(oldWarehousing.getOrderId())) {
+                    order = productionOrderService.getById(oldWarehousing.getOrderId());
                 }
+                updateSkuStock(productWarehousing, order, bundle, diff);
+            }
+
+            if (bundle != null && StringUtils.hasText(bundle.getId())) {
+                String repairRemark = trimToNull(productWarehousing.getRepairRemark());
+                if (repairRemark == null) {
+                    repairRemark = trimToNull(oldWarehousing.getRepairRemark());
+                }
+
+                boolean blocked = isBundleBlockedForWarehousing(bundle.getStatus());
+                if (blocked && !STATUS_QUALIFIED.equalsIgnoreCase(computedQualityStatus)) {
+                    throw new IllegalStateException("该菲号为次品待返修，返修完成后才可入库");
+                }
+                if (blocked && STATUS_QUALIFIED.equalsIgnoreCase(computedQualityStatus)
+                        && !StringUtils.hasText(repairRemark)) {
+                    throw new IllegalStateException("该菲号为次品待返修，请填写返修备注后再质检入库");
+                }
+                if (blocked && STATUS_QUALIFIED.equalsIgnoreCase(computedQualityStatus)
+                        && StringUtils.hasText(repairRemark)) {
+                    String oid = StringUtils.hasText(oldWarehousing.getOrderId())
+                            ? oldWarehousing.getOrderId().trim()
+                            : null;
+                    ensureRepairQuantityNotExceeded(oid, bundle.getId(), warehousingQty, oldWarehousing.getId());
+                }
+                updateBundleStatusAfterWarehousing(bundle, computedQualityStatus, repairRemark, now);
             }
         }
 
@@ -900,137 +931,70 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
         return ok;
     }
 
+    private void updateBundleStatusAfterWarehousing(CuttingBundle bundle, String computedQualityStatus,
+            String repairRemark, LocalDateTime now) {
+        if (bundle == null || !StringUtils.hasText(bundle.getId()))
+            return;
+
+        boolean blocked = isBundleBlockedForWarehousing(bundle.getStatus());
+        String nextBundleStatus;
+        if (STATUS_UNQUALIFIED.equalsIgnoreCase(computedQualityStatus)) {
+            nextBundleStatus = STATUS_UNQUALIFIED;
+        } else if (STATUS_QUALIFIED.equalsIgnoreCase(computedQualityStatus) && blocked
+                && StringUtils.hasText(repairRemark)) {
+            nextBundleStatus = STATUS_REPAIRED;
+        } else {
+            nextBundleStatus = STATUS_QUALIFIED;
+        }
+
+        if (STATUS_UNQUALIFIED.equalsIgnoreCase(nextBundleStatus)) {
+            invalidateBundleFlowAfterReturnToSewing(bundle.getId(), now);
+        }
+
+        try {
+            cuttingBundleService.lambdaUpdate()
+                    .eq(CuttingBundle::getId, bundle.getId())
+                    .set(CuttingBundle::getStatus, nextBundleStatus)
+                    .set(CuttingBundle::getUpdateTime, now)
+                    .update();
+        } catch (Exception e) {
+            log.warn("Failed to update cutting bundle status: bundleId={}, status={}", bundle.getId(), nextBundleStatus,
+                    e);
+        }
+    }
+
     private void upsertWarehousingStageScanRecord(ProductWarehousing warehousing, ProductionOrder order,
             CuttingBundle bundle, LocalDateTime now) {
-        if (warehousing == null || order == null || !StringUtils.hasText(warehousing.getId())
-                || !StringUtils.hasText(order.getId())) {
-            return;
-        }
-
-        String qs = warehousing.getQualityStatus() == null ? "" : warehousing.getQualityStatus().trim();
-        boolean qualified = !StringUtils.hasText(qs) || "qualified".equalsIgnoreCase(qs);
-
-        String requestId = "WAREHOUSING:" + warehousing.getId().trim();
-
-        ScanRecord existing = null;
-        try {
-            existing = scanRecordMapper.selectOne(new LambdaQueryWrapper<ScanRecord>()
-                    .eq(ScanRecord::getRequestId, requestId)
-                    .last("limit 1"));
-        } catch (Exception e) {
-            log.warn("Failed to query existing warehousing stage scan record: requestId={}", requestId, e);
-        }
-
-        int qualifiedQty = warehousing.getQualifiedQuantity() == null ? 0 : warehousing.getQualifiedQuantity();
-        LocalDateTime t = now == null ? LocalDateTime.now() : now;
-
-        UserContext ctx = UserContext.get();
-        String operatorId = ctx == null ? null : ctx.getUserId();
-        String operatorName = ctx == null ? null : ctx.getUsername();
-
-        String cuttingBundleId = trimToNull(warehousing.getCuttingBundleId());
-        Integer cuttingBundleNo = warehousing.getCuttingBundleNo();
-        String cuttingBundleQr = trimToNull(warehousing.getCuttingBundleQrCode());
-        String scanCode = cuttingBundleQr;
-
-        String color = bundle == null ? null : trimToNull(bundle.getColor());
-        String size = bundle == null ? null : trimToNull(bundle.getSize());
-        if (color == null) {
-            color = trimToNull(order.getColor());
-        }
-        if (size == null) {
-            size = trimToNull(order.getSize());
-        }
-
-        if (!qualified) {
-            if (existing != null && StringUtils.hasText(existing.getId())) {
-                ScanRecord patch = new ScanRecord();
-                patch.setId(existing.getId());
-                patch.setScanResult("failure");
-                patch.setRemark("次品退回，质检记录作废");
-                patch.setUpdateTime(t);
-                scanRecordMapper.updateById(patch);
-            }
-            return;
-        }
-
-        if (existing == null) {
-            ScanRecord sr = new ScanRecord();
-            sr.setId(UUID.randomUUID().toString());
-            sr.setScanCode(scanCode);
-            sr.setRequestId(requestId);
-            sr.setOrderId(order.getId());
-            sr.setOrderNo(order.getOrderNo());
-            sr.setStyleId(order.getStyleId());
-            sr.setStyleNo(order.getStyleNo());
-            sr.setColor(color);
-            sr.setSize(size);
-            sr.setQuantity(Math.max(0, qualifiedQty));
-            sr.setProcessCode("quality_warehousing");
-            sr.setProgressStage("质检");
-            sr.setProcessName("质检");
-            sr.setOperatorId(trimToNull(operatorId));
-            sr.setOperatorName(trimToNull(operatorName));
-            sr.setScanTime(t);
-            sr.setScanType("quality");
-            sr.setScanResult("success");
-            sr.setRemark("质检完成");
-            sr.setCuttingBundleId(cuttingBundleId);
-            sr.setCuttingBundleNo(cuttingBundleNo);
-            sr.setCuttingBundleQrCode(cuttingBundleQr);
-            sr.setCreateTime(t);
-            sr.setUpdateTime(t);
-            scanRecordMapper.insert(sr);
-            return;
-        }
-
-        ScanRecord patch = new ScanRecord();
-        patch.setId(existing.getId());
-        patch.setScanCode(scanCode);
-        patch.setOrderId(order.getId());
-        patch.setOrderNo(order.getOrderNo());
-        patch.setStyleId(order.getStyleId());
-        patch.setStyleNo(order.getStyleNo());
-        patch.setColor(color);
-        patch.setSize(size);
-        patch.setQuantity(Math.max(0, qualifiedQty));
-        patch.setProcessCode("quality_warehousing");
-        patch.setProgressStage("质检");
-        patch.setProcessName("质检");
-        patch.setOperatorId(trimToNull(operatorId));
-        patch.setOperatorName(trimToNull(operatorName));
-        patch.setScanTime(t);
-        patch.setScanType("quality");
-        patch.setScanResult("success");
-        patch.setRemark("质检完成");
-        patch.setCuttingBundleId(cuttingBundleId);
-        patch.setCuttingBundleNo(cuttingBundleNo);
-        patch.setCuttingBundleQrCode(cuttingBundleQr);
-        patch.setUpdateTime(t);
-        scanRecordMapper.updateById(patch);
+        upsertScanRecord(warehousing, order, bundle, now, "WAREHOUSING:", "quality_warehousing",
+                "质检", "质检", SCAN_TYPE_QUALITY, "质检完成", "次品退回，质检记录作废");
     }
 
     private void upsertWarehouseScanRecord(ProductWarehousing warehousing, ProductionOrder order,
             CuttingBundle bundle, LocalDateTime now) {
+        String wt = warehousing.getWarehousingType() == null ? "" : warehousing.getWarehousingType().trim();
+        if (WAREHOUSING_TYPE_SCAN.equalsIgnoreCase(wt)) {
+            return;
+        }
+        String warehouse = trimToNull(warehousing.getWarehouse());
+        if (!StringUtils.hasText(warehouse)) {
+            return;
+        }
+        upsertScanRecord(warehousing, order, bundle, now, "WAREHOUSE:", "warehouse_manual",
+                "入库", "入库", SCAN_TYPE_WAREHOUSE, "入库完成", "次品退回，入库记录作废");
+    }
+
+    private void upsertScanRecord(ProductWarehousing warehousing, ProductionOrder order, CuttingBundle bundle,
+            LocalDateTime now, String requestIdPrefix, String processCode, String progressStage,
+            String processName, String scanType, String successRemark, String failureRemark) {
+
         if (warehousing == null || order == null || !StringUtils.hasText(warehousing.getId())
                 || !StringUtils.hasText(order.getId())) {
             return;
         }
 
-        String warehouse = trimToNull(warehousing.getWarehouse());
-        if (!StringUtils.hasText(warehouse)) {
-            return;
-        }
-
-        String wt = warehousing.getWarehousingType() == null ? "" : warehousing.getWarehousingType().trim();
-        if ("scan".equalsIgnoreCase(wt)) {
-            return;
-        }
-
         String qs = warehousing.getQualityStatus() == null ? "" : warehousing.getQualityStatus().trim();
-        boolean qualified = !StringUtils.hasText(qs) || "qualified".equalsIgnoreCase(qs);
-
-        String requestId = "WAREHOUSE:" + warehousing.getId().trim();
+        boolean qualified = !StringUtils.hasText(qs) || STATUS_QUALIFIED.equalsIgnoreCase(qs);
+        String requestId = requestIdPrefix + warehousing.getId().trim();
 
         ScanRecord existing = null;
         try {
@@ -1038,7 +1002,7 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
                     .eq(ScanRecord::getRequestId, requestId)
                     .last("limit 1"));
         } catch (Exception e) {
-            log.warn("Failed to query existing warehouse scan record: requestId={}", requestId, e);
+            log.warn("Failed to query existing scan record: requestId={}", requestId, e);
         }
 
         int qualifiedQty = warehousing.getQualifiedQuantity() == null ? 0 : warehousing.getQualifiedQuantity();
@@ -1066,8 +1030,8 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
             if (existing != null && StringUtils.hasText(existing.getId())) {
                 ScanRecord patch = new ScanRecord();
                 patch.setId(existing.getId());
-                patch.setScanResult("failure");
-                patch.setRemark("次品退回，入库记录作废");
+                patch.setScanResult(SCAN_RESULT_FAILURE);
+                patch.setRemark(failureRemark);
                 patch.setUpdateTime(t);
                 scanRecordMapper.updateById(patch);
             }
@@ -1086,48 +1050,47 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
             sr.setColor(color);
             sr.setSize(size);
             sr.setQuantity(Math.max(0, qualifiedQty));
-            sr.setProcessCode("warehouse_manual");
-            sr.setProgressStage("入库");
-            sr.setProcessName("入库");
+            sr.setProcessCode(processCode);
+            sr.setProgressStage(progressStage);
+            sr.setProcessName(processName);
             sr.setOperatorId(trimToNull(operatorId));
             sr.setOperatorName(trimToNull(operatorName));
             sr.setScanTime(t);
-            sr.setScanType("warehouse");
-            sr.setScanResult("success");
-            sr.setRemark("入库完成");
+            sr.setScanType(scanType);
+            sr.setScanResult(SCAN_RESULT_SUCCESS);
+            sr.setRemark(successRemark);
             sr.setCuttingBundleId(cuttingBundleId);
             sr.setCuttingBundleNo(cuttingBundleNo);
             sr.setCuttingBundleQrCode(cuttingBundleQr);
             sr.setCreateTime(t);
             sr.setUpdateTime(t);
             scanRecordMapper.insert(sr);
-            return;
+        } else {
+            ScanRecord patch = new ScanRecord();
+            patch.setId(existing.getId());
+            patch.setScanCode(scanCode);
+            patch.setOrderId(order.getId());
+            patch.setOrderNo(order.getOrderNo());
+            patch.setStyleId(order.getStyleId());
+            patch.setStyleNo(order.getStyleNo());
+            patch.setColor(color);
+            patch.setSize(size);
+            patch.setQuantity(Math.max(0, qualifiedQty));
+            patch.setProcessCode(processCode);
+            patch.setProgressStage(progressStage);
+            patch.setProcessName(processName);
+            patch.setOperatorId(trimToNull(operatorId));
+            patch.setOperatorName(trimToNull(operatorName));
+            patch.setScanTime(t);
+            patch.setScanType(scanType);
+            patch.setScanResult(SCAN_RESULT_SUCCESS);
+            patch.setRemark(successRemark);
+            patch.setCuttingBundleId(cuttingBundleId);
+            patch.setCuttingBundleNo(cuttingBundleNo);
+            patch.setCuttingBundleQrCode(cuttingBundleQr);
+            patch.setUpdateTime(t);
+            scanRecordMapper.updateById(patch);
         }
-
-        ScanRecord patch = new ScanRecord();
-        patch.setId(existing.getId());
-        patch.setScanCode(scanCode);
-        patch.setOrderId(order.getId());
-        patch.setOrderNo(order.getOrderNo());
-        patch.setStyleId(order.getStyleId());
-        patch.setStyleNo(order.getStyleNo());
-        patch.setColor(color);
-        patch.setSize(size);
-        patch.setQuantity(Math.max(0, qualifiedQty));
-        patch.setProcessCode("warehouse_manual");
-        patch.setProgressStage("入库");
-        patch.setProcessName("入库");
-        patch.setOperatorId(trimToNull(operatorId));
-        patch.setOperatorName(trimToNull(operatorName));
-        patch.setScanTime(t);
-        patch.setScanType("warehouse");
-        patch.setScanResult("success");
-        patch.setRemark("入库完成");
-        patch.setCuttingBundleId(cuttingBundleId);
-        patch.setCuttingBundleNo(cuttingBundleNo);
-        patch.setCuttingBundleQrCode(cuttingBundleQr);
-        patch.setUpdateTime(t);
-        scanRecordMapper.updateById(patch);
     }
 
     private String buildWarehousingNo(LocalDateTime now) {

@@ -1,0 +1,111 @@
+<view class="container">
+  <view class="header">
+    <text class="title">{{title}}</text>
+  </view>
+
+  <form bindsubmit="onSubmit">
+    <!-- 通用字段: 款号 -->
+    <view class="form-item" wx:if="{{type !== 'return'}}">
+      <text class="label">款号</text>
+      <view class="input-wrap">
+        <input name="styleNo" value="{{formData.styleNo}}" placeholder="请输入款号" bindinput="onInput" data-field="styleNo" />
+        <view class="scan-btn" bindtap="handleScanStyle">
+          <image src="/assets/icons/scan.png" mode="aspectFit" />
+        </view>
+      </view>
+    </view>
+
+    <!-- 入库特有字段 -->
+    <block wx:if="{{type === 'inbound'}}">
+      <view class="form-item">
+        <text class="label">款式名称</text>
+        <input name="styleName" placeholder="选填" />
+      </view>
+      <view class="form-item">
+        <text class="label">样衣类型</text>
+        <picker range="{{sampleTypes}}" range-key="label" bindchange="onTypeChange">
+          <view class="picker">
+            {{sampleTypes[typeIndex].label || '请选择'}}
+          </view>
+        </picker>
+      </view>
+      <view class="form-row">
+        <view class="form-item flex-1">
+          <text class="label">颜色</text>
+          <input name="color" placeholder="如: 红色" />
+        </view>
+        <view class="form-item flex-1 ml-20">
+          <text class="label">尺码</text>
+          <input name="size" placeholder="如: M" />
+        </view>
+      </view>
+      <view class="form-item">
+        <text class="label">存放位置</text>
+        <input name="location" placeholder="选填" />
+      </view>
+    </block>
+
+    <!-- 借出特有字段 -->
+    <block wx:if="{{type === 'loan'}}">
+      <!-- 自动加载的库存列表 -->
+      <view class="stock-selection" wx:if="{{stockList.length > 0}}">
+        <text class="section-label">请选择借出规格：</text>
+        <view 
+          class="stock-item {{selectedStockId === item.id ? 'active' : ''}}" 
+          wx:for="{{stockList}}" 
+          wx:key="id"
+          bindtap="onSelectStock"
+          data-id="{{item.id}}"
+        >
+          <view class="stock-info">
+            <text class="stock-spec">{{item.color}} / {{item.size}}</text>
+            <text class="stock-type">{{item.sampleType}}</text>
+          </view>
+          <view class="stock-qty">可用: {{item.quantity - item.loanedQuantity}}</view>
+        </view>
+      </view>
+      <view class="loading-stock" wx:if="{{stockLoading}}">查询库存中...</view>
+      
+      <view class="form-item">
+        <text class="label">借用人</text>
+        <input name="borrower" placeholder="请输入姓名" />
+      </view>
+      <view class="form-item">
+        <text class="label">预计归还时间</text>
+        <picker mode="date" bindchange="onDateChange">
+          <view class="picker">
+            {{returnDate || '请选择日期'}}
+          </view>
+        </picker>
+      </view>
+    </block>
+
+    <!-- 归还特有字段 -->
+    <block wx:if="{{type === 'return'}}">
+      <view class="form-item">
+        <text class="label">借出单号/扫码</text>
+        <view class="input-wrap">
+          <input name="loanId" value="{{formData.loanId}}" placeholder="请输入借出记录ID" />
+          <view class="scan-btn" bindtap="handleScanLoan">
+            <image src="/assets/icons/scan.png" mode="aspectFit" />
+          </view>
+        </view>
+      </view>
+    </block>
+
+    <!-- 通用数量 -->
+    <view class="form-item">
+      <text class="label">数量</text>
+      <input name="quantity" type="number" value="1" />
+    </view>
+
+    <!-- 备注 -->
+    <view class="form-item">
+      <text class="label">备注</text>
+      <textarea name="remark" placeholder="选填" style="height: 100rpx;" />
+    </view>
+
+    <!-- 提交按钮 -->
+    <button form-type="submit" type="primary" class="submit-btn" loading="{{submitting}}">提交</button>
+  </form>
+</view>

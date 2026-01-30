@@ -51,6 +51,7 @@ class ScanHandler {
       BUNDLE: 'bundle', // 菲号扫码（推荐）
       ORDER: 'order', // 订单扫码
       SKU: 'sku', // SKU扫码
+      PATTERN: 'pattern', // 样板生产扫码
     };
   }
 
@@ -98,6 +99,9 @@ class ScanHandler {
    * 确定扫码模式
    */
   _determineScanMode(parsedData) {
+    if (parsedData.isPatternQR) {
+      return this.SCAN_MODE.PATTERN;
+    }
     if (parsedData.isOrderQR) {
       return this.SCAN_MODE.ORDER;
     }
@@ -429,7 +433,13 @@ class ScanHandler {
         bundleNo: parsedData.bundleNo,
         quantity: parsedData.quantity,
         isSku: parsedData.isSkuQR,
+        isPattern: parsedData.isPatternQR,
       });
+
+      // === 步骤1.5：样板生产模式特殊处理 ===
+      if (scanMode === this.SCAN_MODE.PATTERN) {
+        return await this._handlePatternScan(parsedData, manualScanType);
+      }
 
       // === 步骤2：获取订单详情 ===
       const orderDetail = await this._getOrderDetail(parsedData.orderNo);
@@ -859,6 +869,161 @@ class ScanHandler {
         recentRecords: [],
       };
     }
+  }
+
+  // ==================== 样板生产扫码处理 ====================
+
+  /**
+   * 处理样板生产扫码
+   * 样板生产二维码格式：{"type":"pattern","id":"xxx","styleNo":"ST001","color":"黑色"}
+   *
+   * @private
+   * @param {Object} parsedData - 解析后的二维码数据
+   * @param {string} manualScanType - 手动指定的操作类型
+   * @returns {Promise<Object>} 处理结果
+   */
+  async _handlePatternScan(parsedData, manualScanType) {
+    const patternId = parsedData.patternId || parsedData.scanCode;
+
+    if (!patternId) {
+      return this._errorResult('无效的样板生产二维码');
+    }
+
+    console.log('[ScanHandler] 样板生产扫码:', {
+      patternId,
+      styleNo: parsedData.styleNo,
+      color: parsedData.color,
+      manualScanType,
+    });
+
+    try {
+      // 获取样板生产详情（用于展示确认）
+      const patternDetail = await this._getPatternDetail(patternId);
+      if (!patternDetail) {
+        return this._errorResult('样板生产记录不存在');
+      }
+
+      // 确定操作类型
+      const operationType = this._determinePatternOperation(patternDetail, manualScanType);
+
+      // 返回需要确认的数据
+      return {
+        success: true,
+        needConfirm: true,
+        scanMode: this.SCAN_MODE.PATTERN,
+        data: {
+          ...parsedData,
+          patternId: patternId,
+          patternDetail: patternDetail,
+          operationType: operationType,
+          styleNo: patternDetail.styleNo || parsedData.styleNo,
+          color: patternDetail.color || parsedData.color,
+          quantity: patternDetail.quantity,
+          status: patternDetail.status,
+          designer: patternDetail.designer || parsedData.designer,
+          patternDeveloper: patternDetail.patternDeveloper || parsedData.patternDeveloper,
+        },
+        message: '请确认样板生产操作',
+      };
+    } catch (e) {
+      console.error('[ScanHandler] 样板生产扫码失败:', e);
+      return this._errorResult(e.message || '样板生产扫码失败');
+    }
+  }
+
+  /**
+   * 获取样板生产详情
+   * @private
+   */
+  async _getPatternDetail(patternId) {
+    try {
+      const res = await this.api.request({
+        url: `/api/production/pattern/${patternId}`,
+        method: 'GET',
+      });
+      return res || null;
+    } catch (e) {
+      console.error('[ScanHandler] 获取样板生产详情失败:', e);
+      return null;
+    }
+  }
+
+  /**
+   * 根据当前状态确定样板生产操作类型
+   * @private
+   */
+  _determinePatternOperation(patternDetail, manualScanType) {
+    // 如果手动指定了操作类型，优先使用
+    if (manualScanType) {
+      const typeMap = {
+        'receive': 'RECEIVE',
+        'plate': 'PLATE',
+        'followup': 'FOLLOW_UP',
+        'complete': 'COMPLETE',
+        'warehouse': 'WAREHOUSE_IN',
+      };
+      return typeMap[manualScanType] || manualScanType.toUpperCase();
+    }
+
+    // 根据当前状态自动判断
+    const status = patternDetail.status;
+    switch (status) {
+      case 'PENDING':
+        return 'RECEIVE';  // 待领取 → 领取
+      case 'IN_PROGRESS':
+        return 'PLATE';    // 制作中 → 车板
+      case 'COMPLETED':
+        return 'WAREHOUSE_IN'; // 已完成 → 入库
+      default:
+        return 'PLATE';
+    }
+  }
+
+  /**
+   * 提交样板生产扫码
+   * @param {Object} data - 扫码数据
+   * @returns {Promise<Object>} 提交结果
+   */
+  async submitPatternScan(data) {
+    try {
+      const res = await this.api.request({
+        url: '/api/production/pattern/scan',
+        method: 'POST',
+        data: {
+          patternId: data.patternId,
+          operationType: data.operationType,
+          operatorRole: data.operatorRole || 'PLATE_WORKER',
+          remark: data.remark,
+        },
+      });
+
+      if (res) {
+        return {
+          success: true,
+          message: this._getPatternSuccessMessage(data.operationType),
+          data: res,
+        };
+      }
+      return this._errorResult('提交失败');
+    } catch (e) {
+      console.error('[ScanHandler] 提交样板扫码失败:', e);
+      return this._errorResult(e.message || '提交失败');
+    }
+  }
+
+  /**
+   * 获取样板操作成功消息
+   * @private
+   */
+  _getPatternSuccessMessage(operationType) {
+    const messages = {
+      'RECEIVE': '✅ 领取成功',
+      'PLATE': '✅ 车板扫码成功',
+      'FOLLOW_UP': '✅ 跟单扫码成功',
+      'COMPLETE': '✅ 完成确认成功',
+      'WAREHOUSE_IN': '✅ 样衣入库成功',
+    };
+    return messages[operationType] || '✅ 操作成功';
   }
 }
 

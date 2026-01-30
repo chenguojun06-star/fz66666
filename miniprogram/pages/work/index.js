@@ -307,6 +307,11 @@ Page({
     this.loadOrders(true);
   },
 
+  navTo(e) {
+    const url = e.currentTarget.dataset.url;
+    wx.navigateTo({ url });
+  },
+
   goScan() {
     wx.switchTab({ url: '/pages/scan/index' });
   },
