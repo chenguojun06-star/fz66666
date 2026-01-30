@@ -802,6 +802,55 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
             />
           </div>
 
+          {/* 委派工序统计信息 */}
+          {currentNodeData.delegateFactoryId && processList.length > 0 && (
+            <div style={{
+              marginBottom: 10,
+              padding: '10px 12px',
+              background: '#fff7e6',
+              borderRadius: 6,
+              border: '1px solid #ffd591'
+            }}>
+              <Text strong style={{ fontSize: 12, color: '#d46b08', display: 'block', marginBottom: 8 }}>
+                <ToolOutlined /> 委派工序明细
+              </Text>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 8 }}>
+                {processList.map((p, i) => (
+                  <div key={i} style={{
+                    padding: '6px 8px',
+                    background: 'white',
+                    borderRadius: 4,
+                    border: '1px solid #ffe7ba'
+                  }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: '#111827', marginBottom: 2 }}>
+                      {p.name}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#6b7280' }}>
+                      单价: ¥{(p.unitPrice || 0).toFixed(2)} × {nodeStats?.total || 0}件
+                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: '#f97316', marginTop: 2 }}>
+                      小计: ¥{((p.unitPrice || 0) * (nodeStats?.total || 0)).toFixed(2)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{
+                paddingTop: 8,
+                borderTop: '1px solid #ffd591',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <Text type="secondary" style={{ fontSize: 11 }}>
+                  总数量: <Text strong>{nodeStats?.total || 0}</Text> 件
+                </Text>
+                <Text strong style={{ fontSize: 13, color: '#d46b08' }}>
+                  预计总金额: ¥{(processList.reduce((s, p) => s + (p.unitPrice || 0), 0) * (nodeStats?.total || 0)).toFixed(2)}
+                </Text>
+              </div>
+            </div>
+          )}
+
           {/* 外发工序名称 + 委派单价 一行两列 */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
             <div>

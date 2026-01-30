@@ -35,6 +35,11 @@ public class MaterialPurchase {
 
     private Integer arrivedQuantity;
 
+    /**
+     * 入库记录ID（关联最新入库单）
+     */
+    private String inboundRecordId;
+
     private String supplierId;
 
     private String supplierName;

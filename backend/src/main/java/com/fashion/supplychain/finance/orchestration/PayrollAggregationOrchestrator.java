@@ -160,6 +160,11 @@ public class PayrollAggregationOrchestrator {
         dto.setStartTime(startTime);
         dto.setEndTime(endTime);
 
+        // Phase 6: 填充指派信息（从第一条记录获取）
+        dto.setDelegateTargetType(first.getDelegateTargetType());
+        dto.setDelegateTargetName(first.getDelegateTargetName());
+        dto.setActualOperatorName(first.getActualOperatorName());
+
         return dto;
     }
 
@@ -184,5 +189,10 @@ public class PayrollAggregationOrchestrator {
         private Long recordCount; // 扫码次数
         private LocalDateTime startTime;  // 开始时间（最早扫码时间）
         private LocalDateTime endTime;    // 完成时间（最晚扫码时间）
+
+        // Phase 6新增：指派相关字段
+        private String delegateTargetType;   // 指派类型: internal/external/none
+        private String delegateTargetName;   // 被指派人/工厂名称
+        private String actualOperatorName;   // 实际操作员（谁扫的码）
     }
 }

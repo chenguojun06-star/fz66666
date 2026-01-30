@@ -58,6 +58,38 @@ public class SKUServiceImpl implements SKUService {
     private static final String SCAN_MODE_BUNDLE = "BUNDLE"; // 菲号级扫码
     private static final String SCAN_MODE_SKU = "SKU"; // SKU级扫码
 
+    /**
+     * 无工资工序列表（管理类工序，不参与工资结算）
+     * 这些工序是流程节点，不是实际的手工操作
+     */
+    private static final Set<String> NON_PAYABLE_PROCESSES = new HashSet<>(Arrays.asList(
+            "采购", "下单", "订单创建", "接单", "入库", "成品入库", "验收",
+            "procurement", "order", "warehousing", "receiving"
+    ));
+
+    /**
+     * 判断是否为无工资工序
+     * @param processName 工序名称
+     * @return true=无工资工序，false=有工资工序
+     */
+    private boolean isNonPayableProcess(String processName) {
+        if (!StringUtils.hasText(processName)) {
+            return false;
+        }
+        String pn = processName.trim().toLowerCase();
+
+        // 精确匹配
+        for (String nonPayable : NON_PAYABLE_PROCESSES) {
+            if (pn.equalsIgnoreCase(nonPayable)) {
+                return true;
+            }
+        }
+
+        // 模糊匹配（包含关键词）
+        return pn.contains("采购") || pn.contains("下单") || pn.contains("入库") ||
+               pn.contains("procurement") || pn.contains("order") || pn.contains("warehousing");
+    }
+
     @Override
     public String detectScanMode(String scanCode, String color, String size) {
         if (!StringUtils.hasText(scanCode)) {
@@ -588,10 +620,84 @@ public class SKUServiceImpl implements SKUService {
                 return result;
             }
 
-            log.debug("[SKUService] 工序配置读取未实现 - orderNo: {}", orderNo);
+            // 查询订单
+            ProductionOrder order = productionOrderService.getOne(
+                    new LambdaQueryWrapper<ProductionOrder>()
+                            .eq(ProductionOrder::getOrderNo, orderNo)
+                            .last("LIMIT 1"));
 
-            // 返回示例数据（实际应该从ProductionOrder.progressWorkflowJson解析）
+            if (order == null) {
+                log.warn("[SKUService] 订单不存在 - orderNo: {}", orderNo);
+                return result;
+            }
+
+            // 从 progressWorkflowJson 解析工序单价
+            String workflowJson = order.getProgressWorkflowJson();
+            if (!StringUtils.hasText(workflowJson)) {
+                log.warn("[SKUService] 订单无工序配置 - orderNo: {}", orderNo);
+                return result;
+            }
+
+            log.info("[SKUService] 开始解析工序单价 - orderNo: {}, json长度: {}", orderNo, workflowJson.length());
+
+            // 解析JSON
+            ObjectMapper mapper = new ObjectMapper();
+            Map<String, Object> workflow = mapper.readValue(workflowJson, new TypeReference<Map<String, Object>>() {});
+
+            log.info("[SKUService] JSON解析成功 - keys: {}", workflow.keySet());
+
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> nodes = (List<Map<String, Object>>) workflow.get("nodes");
+
+            if (nodes == null || nodes.isEmpty()) {
+                log.warn("[SKUService] workflow.nodes为空 - orderNo: {}", orderNo);
+                return result;
+            }
+
+            log.info("[SKUService] 找到 {} 个工序节点", nodes.size());
+
+            for (Map<String, Object> node : nodes) {
+                String processId = String.valueOf(node.getOrDefault("id", "")).trim();
+                String processName = String.valueOf(node.getOrDefault("name", "")).trim();
+                Object unitPriceObj = node.get("unitPrice");
+
+                log.info("[SKUService] 处理工序 - id: {}, name: {}, unitPrice: {}, nodeKeys: {}",
+                        processId, processName, unitPriceObj, node.keySet());
+
+                if (unitPriceObj != null) {
+                    Map<String, Object> priceInfo = new HashMap<>();
+
+                    // 【关键】保存工序ID和工序名，即使名称乱码也能通过ID匹配
+                    if (StringUtils.hasText(processId)) {
+                        priceInfo.put("id", processId);
+                    }
+                    if (StringUtils.hasText(processName)) {
+                        priceInfo.put("name", processName);
+                        priceInfo.put("processName", processName);
+                    }
+
+                    try {
+                        double unitPrice = Double.parseDouble(unitPriceObj.toString());
+                        priceInfo.put("unitPrice", unitPrice);
+
+                        // 即使名称为空或"??"，只要有ID和单价就添加
+                        if (StringUtils.hasText(processId) || StringUtils.hasText(processName)) {
+                            result.add(priceInfo);
+                            log.info("[SKUService] 添加工序单价 - id: {}, processName: {}, unitPrice: {}",
+                                    processId, processName, unitPrice);
+                        }
+                    } catch (NumberFormatException e) {
+                        log.warn("[SKUService] 工序单价格式错误 - id: {}, processName: {}, unitPrice: {}",
+                                processId, processName, unitPriceObj);
+                    }
+                } else {
+                    log.warn("[SKUService] 跳过工序（无单价）- id: {}, processName: {}", processId, processName);
+                }
+            }
+
+            log.info("[SKUService] 获取工序单价配置完成 - orderNo: {}, 成功解析: {} 个", orderNo, result.size());
             return result;
+
         } catch (Exception e) {
             log.error("[SKUService] 获取工序单价配置失败 - orderNo: {}", orderNo, e);
             return result;
@@ -614,22 +720,60 @@ public class SKUServiceImpl implements SKUService {
                 return result;
             }
 
+            log.info("[SKUService] 查询工序单价 - orderNo: {}, processName: '{}'", orderNo, processName);
+
             // 获取所有工序单价配置
             List<Map<String, Object>> prices = getProcessUnitPrices(orderNo);
 
-            // 查找匹配的工序单价
+            log.info("[SKUService] 获取到 {} 个工序配置", prices.size());
+
+            // 【三层匹配机制】确保即使charset乱码也能匹配到单价
             for (Map<String, Object> priceInfo : prices) {
                 String name = String.valueOf(priceInfo.getOrDefault("name", "")).trim();
+                String id = String.valueOf(priceInfo.getOrDefault("id", "")).trim();
+
+                log.info("[SKUService] 比较工序 - id: '{}', name: '{}', processName: '{}'", id, name, processName);
+
+                // 【优先级1】通过工序名精确匹配（正常情况）
                 if (name.equalsIgnoreCase(processName)) {
                     Object unitPrice = priceInfo.get("unitPrice");
                     result.put("unitPrice", unitPrice != null ? Double.parseDouble(unitPrice.toString()) : 0.0);
                     result.put("found", true);
+                    result.put("matchBy", "name");
+                    log.info("[SKUService] 通过名称匹配成功 - name: '{}', unitPrice: {}", name, unitPrice);
                     break;
+                }
+
+                // 【优先级2】通过工序ID匹配（charset乱码时的fallback）
+                if (StringUtils.hasText(id) && id.equalsIgnoreCase(processName)) {
+                    Object unitPrice = priceInfo.get("unitPrice");
+                    result.put("unitPrice", unitPrice != null ? Double.parseDouble(unitPrice.toString()) : 0.0);
+                    result.put("found", true);
+                    result.put("matchBy", "id");
+                    log.warn("[SKUService] ⚠️ 通过ID匹配成功（名称可能乱码）- id: '{}', unitPrice: {}", id, unitPrice);
+                    break;
+                }
+
+                // 【优先级3】模糊匹配常见工序（最后的兜底）
+                if (StringUtils.hasText(processName)) {
+                    String pn = processName.toLowerCase();
+                    String n = name.toLowerCase();
+                    if ((pn.contains("裁剪") || pn.contains("裁") || pn.contains("cutting")) &&
+                        (n.contains("裁剪") || n.contains("裁") || n.contains("cutting") || n.equals("??"))) {
+                        Object unitPrice = priceInfo.get("unitPrice");
+                        if (unitPrice != null && Double.parseDouble(unitPrice.toString()) > 0) {
+                            result.put("unitPrice", Double.parseDouble(unitPrice.toString()));
+                            result.put("found", true);
+                            result.put("matchBy", "fuzzy");
+                            log.warn("[SKUService] ⚠️ 通过模糊匹配裁剪工序 - processName: '{}', unitPrice: {}", processName, unitPrice);
+                            break;
+                        }
+                    }
                 }
             }
 
-            log.debug("[SKUService] 查询工序单价 - orderNo: {}, processName: {}, unitPrice: {}",
-                    orderNo, processName, result.get("unitPrice"));
+            log.info("[SKUService] 查询工序单价完成 - orderNo: {}, processName: {}, found: {}, unitPrice: {}, matchBy: {}",
+                    orderNo, processName, result.get("found"), result.get("unitPrice"), result.getOrDefault("matchBy", "none"));
 
         } catch (Exception e) {
             log.error("[SKUService] 获取工序单价失败 - orderNo: {}, processName: {}", orderNo, processName, e);
@@ -653,10 +797,25 @@ public class SKUServiceImpl implements SKUService {
                 return false;
             }
 
+            String orderNo = scanRecord.getOrderNo();
+            String processName = scanRecord.getProcessName();
+
+            log.info("[SKUService] 开始附加工序单价 - orderNo: {}, processName: '{}'", orderNo, processName);
+
+            // 【关键】过滤无工资工序（管理类工序不参与工资结算）
+            if (isNonPayableProcess(processName)) {
+                log.info("[SKUService] 跳过无工资工序 - processName: '{}'（采购/下单/入库等管理类工序）", processName);
+                scanRecord.setProcessUnitPrice(java.math.BigDecimal.ZERO);
+                scanRecord.setScanCost(java.math.BigDecimal.ZERO);
+                scanRecord.setUnitPrice(java.math.BigDecimal.ZERO);
+                scanRecord.setTotalAmount(java.math.BigDecimal.ZERO);
+                return true;
+            }
+
             // 获取工序单价
-            Map<String, Object> priceInfo = getUnitPriceByProcess(
-                    scanRecord.getOrderNo(),
-                    scanRecord.getProcessName());
+            Map<String, Object> priceInfo = getUnitPriceByProcess(orderNo, processName);
+
+            log.info("[SKUService] 查询结果 - priceInfo: {}", priceInfo);
 
             // 解析单价
             Object unitPriceObj = priceInfo.get("unitPrice");
@@ -664,27 +823,33 @@ public class SKUServiceImpl implements SKUService {
             if (unitPriceObj != null) {
                 try {
                     unitPrice = new java.math.BigDecimal(unitPriceObj.toString());
+                    log.info("[SKUService] 解析单价成功 - unitPrice: {}", unitPrice);
                 } catch (Exception e) {
                     log.warn("[SKUService] 单价转换失败: {}", unitPriceObj);
                 }
+            } else {
+                log.warn("[SKUService] unitPriceObj 为 null");
             }
 
             if (unitPrice.compareTo(java.math.BigDecimal.ZERO) <= 0
                     && StringUtils.hasText(scanRecord.getProgressStage())) {
                 String stageName = scanRecord.getProgressStage().trim();
+                log.info("[SKUService] 尝试用阶段名称查询 - stageName: '{}'", stageName);
+
                 if (!stageName.equalsIgnoreCase(scanRecord.getProcessName().trim())) {
-                    Map<String, Object> stagePriceInfo = getUnitPriceByProcess(
-                            scanRecord.getOrderNo(),
-                            stageName);
+                    Map<String, Object> stagePriceInfo = getUnitPriceByProcess(orderNo, stageName);
+                    log.info("[SKUService] 阶段查询结果 - stagePriceInfo: {}", stagePriceInfo);
+
                     Object stageUnitPriceObj = stagePriceInfo.get("unitPrice");
                     if (stageUnitPriceObj != null) {
                         try {
                             java.math.BigDecimal stagePrice = new java.math.BigDecimal(stageUnitPriceObj.toString());
                             if (stagePrice.compareTo(java.math.BigDecimal.ZERO) > 0) {
                                 unitPrice = stagePrice;
+                                log.info("[SKUService] 使用阶段单价 - stagePrice: {}", stagePrice);
                             }
                         } catch (Exception e) {
-                            log.warn("[SKUService] 单价转换失败: {}", stageUnitPriceObj);
+                            log.warn("[SKUService] 阶段单价转换失败: {}", stageUnitPriceObj);
                         }
                     }
                 }
@@ -710,7 +875,7 @@ public class SKUServiceImpl implements SKUService {
                 scanRecord.setTotalAmount(scanCost);
             }
 
-            log.debug("[SKUService] 附加工序单价 - processName: {}, unitPrice: {}, quantity: {}, scanCost: {}",
+            log.info("[SKUService] 附加工序单价完成 - processName: {}, unitPrice: {}, quantity: {}, scanCost: {}",
                     scanRecord.getProcessName(), unitPrice, qty, scanCost);
 
             return true;

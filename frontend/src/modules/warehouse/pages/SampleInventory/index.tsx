@@ -145,18 +145,18 @@ const SampleInventory: React.FC = () => {
       fixed: 'right',
       render: (_, record) => (
         <Space size="small">
-          <Button 
-            type="link" 
-            size="small" 
+          <Button
+            type="link"
+            size="small"
             icon={<ExportOutlined />}
             disabled={record.quantity - record.loanedQuantity <= 0}
             onClick={() => loanModal.open(record)}
           >
             借出
           </Button>
-          <Button 
-            type="link" 
-            size="small" 
+          <Button
+            type="link"
+            size="small"
             icon={<HistoryOutlined />}
             onClick={() => historyDrawer.open(record)}
           >
@@ -207,8 +207,10 @@ const SampleInventory: React.FC = () => {
             dataSource={dataSource}
             loading={loading}
             rowKey="id"
-            pagination={pagination.tableProps.pagination}
-            onChange={pagination.tableProps.onChange}
+            pagination={{
+              ...pagination.pagination,
+              onChange: pagination.onChange,
+            }}
           />
         </Card>
 

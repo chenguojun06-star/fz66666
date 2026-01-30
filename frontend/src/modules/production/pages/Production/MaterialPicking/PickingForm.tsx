@@ -127,27 +127,61 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
       { title: '物料名称', dataIndex: 'materialName' },
       { title: '颜色', dataIndex: 'color' }, 
       { title: '规格', dataIndex: 'specification' },
-      { title: '库存', render: (r: any) => {
+      { title: '库存选择', width: 300, render: (r: any) => {
           if (!r.stocks || r.stocks.length === 0) return <span style={{color:'red'}}>无库存</span>;
-          return r.stocks.map((s: any) => (
-              <div key={s.id}>{s.color} {s.size}: {s.quantity}{s.unit}</div>
-          ));
+          
+          const selected = selectedMaterials.find(m => m.key === r.key);
+          const currentStockId = selected?.stockId;
+
+          return (
+              <Select 
+                  style={{ width: '100%' }} 
+                  placeholder="选择库存批次"
+                  value={currentStockId}
+                  onChange={(val) => {
+                      const stock = r.stocks.find((s:any) => s.id === val);
+                      const newSelected = [...selectedMaterials];
+                      const idx = newSelected.findIndex(m => m.key === r.key);
+                      const item = { ...r, stockId: val, stock, pickQuantity: selected?.pickQuantity || 0 };
+                      if (idx > -1) {
+                          newSelected[idx] = item;
+                      } else {
+                          newSelected.push(item);
+                      }
+                      setSelectedMaterials(newSelected);
+                  }}
+              >
+                  {r.stocks.map((s: any) => (
+                      <Select.Option key={s.id} value={s.id}>
+                          {s.color || '-'} {s.size || '-'} (余:{s.quantity}{s.unit})
+                      </Select.Option>
+                  ))}
+              </Select>
+          );
       }},
-      { title: '领料数量', render: (r: any) => (
-          <InputNumber min={0} onChange={(v) => {
-              const exists = selectedMaterials.find(m => m.key === r.key);
-              if (v && v > 0) {
-                  if (exists) {
-                      exists.pickQuantity = v;
-                      setSelectedMaterials([...selectedMaterials]);
-                  } else {
-                      setSelectedMaterials([...selectedMaterials, { ...r, pickQuantity: v }]);
-                  }
-              } else {
-                  setSelectedMaterials(selectedMaterials.filter(m => m.key !== r.key));
-              }
-          }} />
-      )},
+      { title: '领料数量', width: 120, render: (r: any) => {
+          const selected = selectedMaterials.find(m => m.key === r.key);
+          const maxQty = selected?.stock?.quantity || 999999;
+          
+          return (
+              <InputNumber 
+                  min={0} 
+                  max={maxQty}
+                  style={{ width: '100%' }}
+                  value={selected?.pickQuantity}
+                  disabled={!selected?.stockId}
+                  placeholder={!selected?.stockId ? "请先选库存" : "数量"}
+                  onChange={(v) => {
+                      const newSelected = [...selectedMaterials];
+                      const idx = newSelected.findIndex(m => m.key === r.key);
+                      if (idx > -1) {
+                          newSelected[idx] = { ...newSelected[idx], pickQuantity: v };
+                          setSelectedMaterials(newSelected);
+                      }
+                  }} 
+              />
+          );
+      }},
   ];
 
   return (

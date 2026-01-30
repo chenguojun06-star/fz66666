@@ -129,6 +129,35 @@ public class ScanRecord {
     private BigDecimal scanCost;
 
     /**
+     * 指派目标类型（Phase 6新增）
+     * internal=内部员工, external=外部工厂, none=未指派
+     */
+    private String delegateTargetType;
+
+    /**
+     * 指派目标ID（Phase 6新增）
+     * 员工ID或工厂ID
+     */
+    private String delegateTargetId;
+
+    /**
+     * 指派目标名称（Phase 6新增）
+     * 员工名或工厂名
+     */
+    private String delegateTargetName;
+
+    /**
+     * 实际操作员ID（Phase 6新增）
+     * 记录谁实际扫的码（追溯用）
+     */
+    private String actualOperatorId;
+
+    /**
+     * 实际操作员名称（Phase 6新增）
+     */
+    private String actualOperatorName;
+
+    /**
      * 创建时间
      */
     private LocalDateTime createTime;

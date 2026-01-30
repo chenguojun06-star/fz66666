@@ -6,6 +6,7 @@ import ResizableTable from '@/components/common/ResizableTable';
 import api from '@/utils/api';
 import dayjs from 'dayjs';
 import PickingForm from './PickingForm';
+import PickingDetailModal from './PickingDetailModal';
 
 const MaterialPickingList: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -14,6 +15,8 @@ const MaterialPickingList: React.FC = () => {
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [modalVisible, setModalVisible] = useState(false);
+  const [detailVisible, setDetailVisible] = useState(false);
+  const [selectedPickingId, setSelectedPickingId] = useState<string | null>(null);
 
   const fetchList = async (page = current, size = pageSize) => {
     setLoading(true);
@@ -42,6 +45,12 @@ const MaterialPickingList: React.FC = () => {
       title: '领料单号',
       dataIndex: 'pickingNo',
       width: 150,
+      render: (text: string, record: any) => (
+        <a onClick={() => {
+          setSelectedPickingId(record.id);
+          setDetailVisible(true);
+        }}>{text}</a>
+      ),
     },
     {
       title: '生产订单',
@@ -73,6 +82,19 @@ const MaterialPickingList: React.FC = () => {
     {
       title: '备注',
       dataIndex: 'remark',
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 100,
+      render: (_: any, record: any) => (
+        <Space>
+          <a onClick={() => {
+            setSelectedPickingId(record.id);
+            setDetailVisible(true);
+          }}>详情</a>
+        </Space>
+      ),
     },
   ];
 
@@ -107,6 +129,14 @@ const MaterialPickingList: React.FC = () => {
         onSuccess={() => {
           setModalVisible(false);
           fetchList(1);
+        }}
+      />
+      <PickingDetailModal
+        visible={detailVisible}
+        pickingId={selectedPickingId}
+        onCancel={() => {
+          setDetailVisible(false);
+          setSelectedPickingId(null);
         }}
       />
     </PageContainer>

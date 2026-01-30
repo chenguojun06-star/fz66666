@@ -30,8 +30,9 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import Layout from '@/components/Layout';
 import { useModal, useTablePagination } from '@/hooks';
+import { useAuth } from '@/utils/AuthContext';
 import dayjs from 'dayjs';
-import { ok } from '@/utils/request';
+import api from '@/utils/api';
 
 const { Option } = Select;
 
@@ -81,6 +82,7 @@ interface MaterialInventory {
 const _MaterialInventory: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [dataSource, setDataSource] = useState<MaterialInventory[]>([]);
+  const { user } = useAuth(); // 获取当前用户信息
 
   // ===== 使用 useTablePagination 管理分页 =====
   const pagination = useTablePagination(20);
@@ -108,15 +110,17 @@ const _MaterialInventory: React.FC = () => {
     setLoading(true);
     try {
         const { current, pageSize } = pagination.pagination;
-        const res = await ok('/api/production/material/stock/page', 'get', {
-            page: current,
-            pageSize: pageSize,
-            materialCode: searchText, // 简单映射
-            materialType: selectedType,
+        const res = await api.get('/production/material/stock/page', {
+            params: {
+                page: current,
+                pageSize: pageSize,
+                materialCode: searchText,
+                materialType: selectedType,
+            }
         });
-        
-        if (res && res.records) {
-            const list = res.records.map((item: any) => ({
+
+        if (res?.data?.records) {
+            const list = res.data.records.map((item: any) => ({
                 ...item,
                 availableQty: item.quantity, // 暂用总库存代替可用
                 specification: item.specifications, // 字段映射
@@ -129,8 +133,8 @@ const _MaterialInventory: React.FC = () => {
                 lastOutboundDate: '-',
             }));
             setDataSource(list);
-            pagination.setTotal(res.total);
-            
+            pagination.setTotal(res.data.total);
+
             // 简单统计
             setStats({
                 totalValue: 0,
@@ -172,13 +176,34 @@ const _MaterialInventory: React.FC = () => {
   const handleInboundConfirm = async () => {
     try {
       const values = await inboundForm.validateFields();
-      console.log('入库数据:', values);
-      message.success('入库成功！');
-      inboundModal.close();
-      inboundForm.resetFields();
-      // TODO: 调用后端 API
-    } catch (error) {
-      console.error('表单验证失败:', error);
+
+      // 调用手动入库API
+      const response = await api.post('/production/material/inbound/manual', {
+        materialCode: values.materialCode,
+        materialName: values.materialName || '',
+        materialType: values.materialType || '面料',
+        color: values.color || '',
+        size: values.size || '',
+        quantity: values.quantity,
+        warehouseLocation: values.warehouseLocation || '默认仓',
+        supplierName: values.supplierName || '',
+        operatorId: user?.id || '',
+        operatorName: user?.name || user?.username || '系统',
+        remark: values.remark || '',
+      });
+
+      if (response.data.code === 200) {
+        message.success(`入库成功！入库单号：${response.data.data.inboundNo}`);
+        inboundModal.close();
+        inboundForm.resetFields();
+        // 刷新库存列表
+        fetchData();
+      } else {
+        message.error(response.data.message || '入库失败');
+      }
+    } catch (error: any) {
+      console.error('入库失败:', error);
+      message.error(error.response?.data?.message || error.message || '入库操作失败，请重试');
     }
   };
 

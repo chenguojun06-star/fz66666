@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Card, Input, Modal, Select, Space, Switch, Tabs, message } from 'antd';
+import { Button, Card, Input, Modal, Select, Space, Switch, Tabs, Tag, Tooltip, message } from 'antd';
 import { UnifiedRangePicker } from '@/components/common/UnifiedDatePicker';
 import { DownloadOutlined } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
@@ -508,7 +508,76 @@ const PayrollOperatorSummary: React.FC = () => {
         { title: '颜色', dataIndex: 'color', key: 'color', width: 100, ellipsis: true, render: (v: unknown) => String(v || '').trim() || '-' },
         { title: '尺码', dataIndex: 'size', key: 'size', width: 80, ellipsis: true, render: (v: unknown) => String(v || '').trim() || '-' },
         { title: '人员', dataIndex: 'operatorName', key: 'operatorName', width: 120, ellipsis: true },
-        { title: '工序', dataIndex: 'processName', key: 'processName', width: 120, ellipsis: true },
+        {
+            title: '结算类型',
+            dataIndex: 'delegateTargetType',
+            key: 'delegateTargetType',
+            width: 130,
+            ellipsis: true,
+            render: (_: unknown, record: any) => {
+                const type = record.delegateTargetType;
+                const targetName = record.delegateTargetName;
+                const actualOperator = record.actualOperatorName;
+
+                if (!type || type === 'none') {
+                    return <Tag color="default">自己完成</Tag>;
+                }
+
+                if (type === 'internal') {
+                    return (
+                        <Tooltip title={actualOperator && actualOperator !== targetName ? `由 ${actualOperator} 代为操作` : undefined}>
+                            <Tag color="blue">内部指派</Tag>
+                        </Tooltip>
+                    );
+                }
+
+                if (type === 'external') {
+                    return (
+                        <Tooltip title={actualOperator ? `由 ${actualOperator} 代为录入` : undefined}>
+                            <Tag color="orange">外发工厂</Tag>
+                        </Tooltip>
+                    );
+                }
+
+                return <Tag color="default">-</Tag>;
+            },
+        },
+        {
+            title: '指派对象',
+            dataIndex: 'delegateTargetName',
+            key: 'delegateTargetName',
+            width: 120,
+            ellipsis: true,
+            render: (v: unknown, record: any) => {
+                const type = record.delegateTargetType;
+                const name = String(v || '').trim();
+
+                if (!type || type === 'none' || !name) {
+                    return <span style={{ color: '#9ca3af' }}>-</span>;
+                }
+
+                if (type === 'external') {
+                    return <span style={{ color: '#f97316', fontWeight: 600 }}>{name}</span>;
+                }
+
+                return <span style={{ color: '#3b82f6', fontWeight: 600 }}>{name}</span>;
+            },
+        },
+        {
+            title: '工序名称',
+            dataIndex: 'processName',
+            key: 'processName',
+            width: 140,
+            ellipsis: true,
+            render: (v: unknown) => {
+                const processName = String(v || '').trim();
+                return processName ? (
+                    <span style={{ fontWeight: 600, color: '#111827' }}>{processName}</span>
+                ) : (
+                    <span style={{ color: '#9ca3af' }}>未记录</span>
+                );
+            }
+        },
         { title: '生产节点', dataIndex: 'scanType', key: 'scanType', width: 100, render: (v: unknown) => scanTypeText(v) },
         {
             title: <SortableColumnTitle
