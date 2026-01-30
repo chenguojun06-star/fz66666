@@ -64,13 +64,8 @@ public class StyleAttachmentServiceImpl extends ServiceImpl<StyleAttachmentMappe
         if (!StringUtils.hasText(styleId)) {
             return false;
         }
-        // 检查是否有纸样文件
+        // 检查是否有纸样文件（开发纸样即可，不再强制要求放码纸样）
         StyleAttachment pattern = getLatestPattern(styleId.trim(), BIZ_TYPE_PATTERN);
-        if (pattern == null) {
-            return false;
-        }
-        // 检查是否有放码文件
-        StyleAttachment grading = getLatestPattern(styleId.trim(), BIZ_TYPE_PATTERN_GRADING);
-        return grading != null;
+        return pattern != null;
     }
 }

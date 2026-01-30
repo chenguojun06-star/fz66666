@@ -490,7 +490,7 @@ public class StyleInfoOrchestrator {
                 log.warn("样衣完成后自动推送到单价维护失败，但不影响样衣完成操作：{}", e.getMessage());
             }
 
-            // 自动流转附件到数据中心（样板纸样等）
+            // 自动流转附件到数据中心（开发纸样，放码纸样如果存在也一起流转）
             try {
                 List<StyleAttachment> attachments = styleAttachmentService.lambdaQuery()
                         .eq(StyleAttachment::getStyleId, id)
@@ -505,6 +505,8 @@ public class StyleInfoOrchestrator {
                                 .update();
                     }
                     log.info("样衣完成后自动流转附件到数据中心成功：styleId={}, count={}", id, attachments.size());
+                } else {
+                    log.warn("样衣完成时未找到开发纸样附件：styleId={}", id);
                 }
             } catch (Exception e) {
                 log.warn("样衣完成后自动流转附件失败，但不影响样衣完成操作：{}", e.getMessage());

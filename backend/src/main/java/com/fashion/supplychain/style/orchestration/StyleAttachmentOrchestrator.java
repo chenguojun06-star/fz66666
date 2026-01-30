@@ -228,10 +228,8 @@ public class StyleAttachmentOrchestrator {
             missingItems.add("纸样文件");
         }
 
+        // 放码纸样改为可选（不再强制要求）
         StyleAttachment grading = styleAttachmentService.getLatestPattern(styleId, "pattern_grading");
-        if (grading == null) {
-            missingItems.add("放码文件");
-        }
 
         result.put("complete", missingItems.isEmpty());
         result.put("patternFile", pattern);
