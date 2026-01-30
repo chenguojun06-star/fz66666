@@ -10,8 +10,10 @@ export interface MaterialReconciliation {
   materialName: string;
   purchaseId: string;
   purchaseNo: string;
+  sourceType?: 'order' | 'sample'; // 采购类型: order=批量订单, sample=样衣开发
   orderId?: string;
   orderNo?: string;
+  patternProductionId?: string; // 样衣生产ID
   styleId?: string;
   styleNo?: string;
   styleName?: string;
@@ -22,6 +24,10 @@ export interface MaterialReconciliation {
   deductionAmount: number;
   finalAmount: number;
   reconciliationDate: string;
+  expectedArrivalDate?: string; // 预计到货日期
+  actualArrivalDate?: string; // 实际到货日期
+  inboundDate?: string; // 入库日期
+  warehouseLocation?: string; // 仓库库区
   status: 'pending' | 'verified' | 'approved' | 'paid' | 'rejected';
   remark?: string;
   verifiedAt?: string;
@@ -185,4 +191,8 @@ export interface PayrollOperatorProcessSummaryRow {
   totalAmount?: number;
   startTime?: string;
   endTime?: string;
+  // Phase 6: 指派相关字段
+  delegateTargetType?: string;  // 指派类型: internal/external/none
+  delegateTargetName?: string;  // 被指派人/工厂名称
+  actualOperatorName?: string;  // 实际操作员（谁扫的码）
 }

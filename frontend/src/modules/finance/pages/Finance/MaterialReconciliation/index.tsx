@@ -71,22 +71,28 @@ const MaterialReconciliation: React.FC = () => {
   };
 
   const buildMaterialReconCsv = (rows: MaterialReconType[]) => {
-    const header = ['对账单号', '供应商', '物料编码', '物料名称', '采购单号', '订单号', '款号', '数量', '单价(元)', '总金额(元)', '对账日期', '状态'];
+    const header = ['对账单号', '供应商', '物料编码', '物料名称', '采购单号', '采购类型', '订单号', '款号', '数量', '单价(元)', '总金额(元)', '对账日期', '预计到货', '实际到货', '入库日期', '库区', '状态'];
     const lines = [header.map(escapeCsvCell).join(',')];
     for (const r of rows) {
       const st = getMaterialReconStatusConfig((r as Record<string, unknown>)?.status);
+      const sourceTypeText = (r as Record<string, unknown>)?.sourceType === 'sample' ? '样衣采购' : (r as Record<string, unknown>)?.sourceType === 'order' ? '批量订单' : '未知';
       const row = [
         String((r as Record<string, unknown>)?.reconciliationNo || '').trim(),
         String((r as Record<string, unknown>)?.supplierName || '').trim(),
         String((r as Record<string, unknown>)?.materialCode || '').trim(),
         String((r as Record<string, unknown>)?.materialName || '').trim(),
         String((r as Record<string, unknown>)?.purchaseNo || '').trim(),
+        sourceTypeText,
         String((r as Record<string, unknown>)?.orderNo || '').trim(),
         String((r as Record<string, unknown>)?.styleNo || '').trim(),
         String(Number((r as Record<string, unknown>)?.quantity ?? 0) || 0),
         (r as Record<string, unknown>)?.unitPrice == null ? '' : String(Number((r as Record<string, unknown>)?.unitPrice || 0).toFixed(2)),
         (r as Record<string, unknown>)?.totalAmount == null ? '' : String(Number((r as Record<string, unknown>)?.totalAmount || 0).toFixed(2)),
         String(formatDateTime((r as Record<string, unknown>)?.reconciliationDate) || ''),
+        String(formatDateTime((r as Record<string, unknown>)?.expectedArrivalDate) || ''),
+        String(formatDateTime((r as Record<string, unknown>)?.actualArrivalDate) || ''),
+        String(formatDateTime((r as Record<string, unknown>)?.inboundDate) || ''),
+        String((r as Record<string, unknown>)?.warehouseLocation || '').trim(),
         String(st?.text || ''),
       ];
       lines.push(row.map(escapeCsvCell).join(','));
@@ -480,6 +486,17 @@ const MaterialReconciliation: React.FC = () => {
       width: 120,
     },
     {
+      title: '采购类型',
+      dataIndex: 'sourceType',
+      key: 'sourceType',
+      width: 100,
+      render: (value: string) => {
+        if (value === 'sample') return <Tag color="purple">样衣采购</Tag>;
+        if (value === 'order') return <Tag color="blue">批量订单</Tag>;
+        return <Tag color="default">未知</Tag>;
+      },
+    },
+    {
       title: '订单号',
       dataIndex: 'orderNo',
       key: 'orderNo',
@@ -581,6 +598,34 @@ const MaterialReconciliation: React.FC = () => {
       key: 'reconciliationDate',
       width: 120,
       render: (value: unknown) => formatDateTime(value),
+    },
+    {
+      title: '预计到货',
+      dataIndex: 'expectedArrivalDate',
+      key: 'expectedArrivalDate',
+      width: 110,
+      render: (value: unknown) => formatDateTime(value) || '-',
+    },
+    {
+      title: '实际到货',
+      dataIndex: 'actualArrivalDate',
+      key: 'actualArrivalDate',
+      width: 110,
+      render: (value: unknown) => formatDateTime(value) || '-',
+    },
+    {
+      title: '入库日期',
+      dataIndex: 'inboundDate',
+      key: 'inboundDate',
+      width: 110,
+      render: (value: unknown) => formatDateTime(value) || '-',
+    },
+    {
+      title: '库区',
+      dataIndex: 'warehouseLocation',
+      key: 'warehouseLocation',
+      width: 100,
+      render: (value: string) => value || '-',
     },
     {
       title: '对账周期',

@@ -6,6 +6,7 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.orchestration.ProductionOrderOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -471,6 +472,26 @@ public class ProductionOrderController {
     }
 
     /**
+     * 获取订单的采购完成状态（用于工序明细显示）
+     * 返回采购完成率、操作人、完成时间等信息
+     */
+    @GetMapping("/procurement-status/{orderId}")
+    public Result<?> getProcurementStatus(@PathVariable String orderId) {
+        Map<String, Object> status = productionOrderOrchestrator.getProcurementStatus(orderId);
+        return Result.success(status);
+    }
+
+    /**
+     * 获取订单的所有工序节点状态（裁剪、车缝、尾部、入库等）
+     * 用于工序明细显示完成数量、剩余数量、操作人等信息
+     */
+    @GetMapping("/process-status/{orderId}")
+    public Result<?> getAllProcessStatus(@PathVariable String orderId) {
+        Map<String, Map<String, Object>> status = productionOrderOrchestrator.getAllProcessStatus(orderId);
+        return Result.success(status);
+    }
+
+    /**
      * 保存节点操作记录（委派、指定、备注等）
      */
     @PostMapping("/node-operations")
@@ -482,6 +503,25 @@ public class ProductionOrderController {
         order.setNodeOperations(body.getNodeOperations());
         boolean success = productionOrderService.updateById(order);
         return success ? Result.success("保存成功") : Result.fail("保存失败");
+    }
+
+    /**
+     * 工序委派 - 将特定工序委派给工厂，并设置单价
+     */
+    @PostMapping("/delegate-process")
+    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_DELEGATE')")
+    public Result<?> delegateProcess(@Valid @RequestBody DelegateProcessRequest body) {
+        try {
+            productionOrderOrchestrator.delegateProcess(
+                body.getOrderId(),
+                body.getProcessNode(),
+                body.getFactoryId(),
+                body.getUnitPrice()
+            );
+            return Result.success("工序委派成功");
+        } catch (Exception e) {
+            return Result.fail("工序委派失败: " + e.getMessage());
+        }
     }
 
     public static class SaveNodeOperationsRequest {
@@ -504,6 +544,51 @@ public class ProductionOrderController {
 
         public void setNodeOperations(String nodeOperations) {
             this.nodeOperations = nodeOperations;
+        }
+    }
+
+    public static class DelegateProcessRequest {
+        @NotBlank(message = "订单ID不能为空")
+        private String orderId;
+
+        @NotBlank(message = "工序节点不能为空")
+        private String processNode;
+
+        @NotBlank(message = "工厂ID不能为空")
+        private String factoryId;
+
+        private Double unitPrice;
+
+        public String getOrderId() {
+            return orderId;
+        }
+
+        public void setOrderId(String orderId) {
+            this.orderId = orderId;
+        }
+
+        public String getProcessNode() {
+            return processNode;
+        }
+
+        public void setProcessNode(String processNode) {
+            this.processNode = processNode;
+        }
+
+        public String getFactoryId() {
+            return factoryId;
+        }
+
+        public void setFactoryId(String factoryId) {
+            this.factoryId = factoryId;
+        }
+
+        public Double getUnitPrice() {
+            return unitPrice;
+        }
+
+        public void setUnitPrice(Double unitPrice) {
+            this.unitPrice = unitPrice;
         }
     }
 }

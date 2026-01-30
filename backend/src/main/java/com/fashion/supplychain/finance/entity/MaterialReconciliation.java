@@ -14,29 +14,39 @@ import lombok.Data;
 @Data
 @TableName("t_material_reconciliation")
 public class MaterialReconciliation implements com.fashion.supplychain.finance.service.impl.BaseReconciliationServiceImpl.ReconciliationEntity {
-    
+
     @TableId(type = IdType.ASSIGN_UUID)
     private String id;
-    
+
     private String reconciliationNo;
-    
+
     private String supplierId;
-    
+
     private String supplierName;
-    
+
     private String materialId;
-    
+
     private String materialCode;
-    
+
     private String materialName;
-    
+
     private String purchaseId;
-    
+
     private String purchaseNo;
+
+    /**
+     * 采购类型: order=批量订单, sample=样衣开发
+     */
+    private String sourceType;
 
     private String orderId;
 
     private String orderNo;
+
+    /**
+     * 样衣生产ID（样衣采购时关联）
+     */
+    private String patternProductionId;
 
     private String styleId;
 
@@ -46,23 +56,52 @@ public class MaterialReconciliation implements com.fashion.supplychain.finance.s
 
     @TableField(exist = false)
     private Integer productionCompletedQuantity;
-    
+
     private Integer quantity;
-    
+
     private BigDecimal unitPrice;
-    
+
     private BigDecimal totalAmount;
-    
+
     private BigDecimal deductionAmount;
-    
+
     private BigDecimal finalAmount;
-    
+
     private String reconciliationDate;
+
+    /**
+     * 预计到货日期
+     */
+    private LocalDateTime expectedArrivalDate;
+
+    /**
+     * 实际到货日期
+     */
+    private LocalDateTime actualArrivalDate;
+
+    /**
+     * 入库日期
+     */
+    private LocalDateTime inboundDate;
+
+    /**
+     * 仓库库区
+     */
+    private String warehouseLocation;
     
+    /**
+     * 对账状态: pending=待审核, verified=已审核, approved=已批准, paid=已支付, rejected=已驳回
+     */
     private String status;
     
+    /**
+     * 备注说明
+     */
     private String remark;
-
+    
+    /**
+     * 审核通过时间
+     */
     private LocalDateTime verifiedAt;
 
     private LocalDateTime approvedAt;
@@ -72,19 +111,19 @@ public class MaterialReconciliation implements com.fashion.supplychain.finance.s
     private LocalDateTime reReviewAt;
 
     private String reReviewReason;
-    
+
     private LocalDateTime createTime;
-    
+
     private LocalDateTime updateTime;
 
     private String createBy;
 
     private String updateBy;
-    
+
     private Integer deleteFlag;
 
     // ==================== 付款和对账周期字段（新增）====================
-    
+
     /**
      * 已付金额
      */

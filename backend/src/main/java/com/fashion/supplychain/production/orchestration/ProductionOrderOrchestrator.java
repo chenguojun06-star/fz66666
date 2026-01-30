@@ -1491,4 +1491,196 @@ public class ProductionOrderOrchestrator {
 
         return result;
     }
+
+    /**
+     * 获取订单的采购完成状态（用于工序明细显示）
+     * 返回采购完成率、操作人、完成时间等信息
+     *
+     * @param orderId 订单ID
+     * @return 采购状态信息：completed(是否完成)、completionRate(完成率)、operatorName(操作人)、completedTime(完成时间)
+     */
+    public Map<String, Object> getProcurementStatus(String orderId) {
+        Map<String, Object> status = new LinkedHashMap<>();
+
+        // 获取订单信息（包含物料到货率等）
+        ProductionOrder order = productionOrderQueryService.getDetailById(orderId);
+        if (order == null) {
+            throw new NoSuchElementException("订单不存在: " + orderId);
+        }
+
+        // 获取物料到货率和人工确认状态
+        Integer materialArrivalRate = order.getMaterialArrivalRate();
+        Integer manuallyCompleted = order.getProcurementManuallyCompleted();
+        boolean isManuallyConfirmed = (manuallyCompleted != null && manuallyCompleted == 1);
+
+        // 判断采购是否完成
+        boolean procurementComplete = false;
+        String operatorName = null;
+        LocalDateTime completedTime = null;
+
+        if (materialArrivalRate != null && materialArrivalRate >= 100) {
+            // 物料到货率=100%：自动认为采购完成
+            procurementComplete = true;
+            // 从采购单中获取最后一次收货的操作人和时间
+            operatorName = order.getProcurementOperatorName();
+            completedTime = order.getProcurementEndTime();
+        } else if (materialArrivalRate != null && materialArrivalRate >= 50 && isManuallyConfirmed) {
+            // 物料到货率≥50%且已人工确认：可以进入下一步
+            procurementComplete = true;
+            // 使用人工确认的操作人和时间
+            operatorName = order.getProcurementConfirmedByName();
+            completedTime = order.getProcurementConfirmedAt();
+        }
+
+        // 组装返回数据
+        status.put("completed", procurementComplete);
+        status.put("completionRate", materialArrivalRate != null ? materialArrivalRate : 0);
+        status.put("operatorName", operatorName);
+        status.put("completedTime", completedTime);
+        status.put("manuallyConfirmed", isManuallyConfirmed);
+        status.put("procurementStartTime", order.getProcurementStartTime());
+
+        log.info("Retrieved procurement status for order: orderId={}, completed={}, rate={}%, operator={}",
+                 orderId, procurementComplete, materialArrivalRate, operatorName);
+
+        return status;
+    }
+
+    /**
+     * 获取订单的所有工序节点状态（用于工序明细显示）
+     * 返回裁剪、车缝、尾部、质检、入库等工序的完成状态、剩余数量、操作人等信息
+     *
+     * @param orderId 订单ID
+     * @return 工序状态Map，key为工序阶段（cutting/sewing/finishing/quality/warehousing），value为状态详情
+     */
+    public Map<String, Map<String, Object>> getAllProcessStatus(String orderId) {
+        Map<String, Map<String, Object>> allStatus = new LinkedHashMap<>();
+
+        // 获取订单详细信息
+        ProductionOrder order = productionOrderQueryService.getDetailById(orderId);
+        if (order == null) {
+            throw new NoSuchElementException("订单不存在: " + orderId);
+        }
+
+        Integer orderQty = order.getOrderQuantity() != null ? order.getOrderQuantity() : 0;
+        Integer cuttingQty = order.getCuttingQuantity() != null ? order.getCuttingQuantity() : 0;
+        Integer warehousingQty = order.getWarehousingQualifiedQuantity() != null ? order.getWarehousingQualifiedQuantity() : 0;
+
+        // 1. 裁剪工序状态
+        Map<String, Object> cuttingStatus = new LinkedHashMap<>();
+        cuttingStatus.put("completed", order.getCuttingEndTime() != null);
+        cuttingStatus.put("completionRate", order.getCuttingCompletionRate() != null ? order.getCuttingCompletionRate() : 0);
+        cuttingStatus.put("completedQuantity", cuttingQty);
+        cuttingStatus.put("remainingQuantity", orderQty - cuttingQty);
+        cuttingStatus.put("operatorName", order.getCuttingOperatorName());
+        cuttingStatus.put("startTime", order.getCuttingStartTime());
+        cuttingStatus.put("completedTime", order.getCuttingEndTime());
+        cuttingStatus.put("bundleCount", order.getCuttingBundleCount());
+        allStatus.put("cutting", cuttingStatus);
+
+        // 2. 车缝工序状态
+        Map<String, Object> sewingStatus = new LinkedHashMap<>();
+        sewingStatus.put("completed", order.getSewingEndTime() != null);
+        sewingStatus.put("completionRate", order.getSewingCompletionRate() != null ? order.getSewingCompletionRate() : 0);
+        // 车缝的完成数量等于入库数量（因为是按入库数量计算的）
+        sewingStatus.put("completedQuantity", warehousingQty);
+        sewingStatus.put("remainingQuantity", cuttingQty - warehousingQty);
+        sewingStatus.put("operatorName", order.getSewingOperatorName());
+        sewingStatus.put("startTime", order.getSewingStartTime());
+        sewingStatus.put("completedTime", order.getSewingEndTime());
+        allStatus.put("sewing", sewingStatus);
+
+        // 3. 尾部工序状态（与车缝类似）
+        Map<String, Object> finishingStatus = new LinkedHashMap<>();
+        finishingStatus.put("completed", order.getQualityEndTime() != null);
+        finishingStatus.put("completionRate", order.getQualityCompletionRate() != null ? order.getQualityCompletionRate() : 0);
+        finishingStatus.put("completedQuantity", warehousingQty);
+        finishingStatus.put("remainingQuantity", cuttingQty - warehousingQty);
+        finishingStatus.put("operatorName", order.getQualityOperatorName());
+        finishingStatus.put("startTime", order.getQualityStartTime());
+        finishingStatus.put("completedTime", order.getQualityEndTime());
+        allStatus.put("finishing", finishingStatus);
+
+        // 4. 入库工序状态
+        Map<String, Object> warehousingStatus = new LinkedHashMap<>();
+        warehousingStatus.put("completed", order.getWarehousingEndTime() != null);
+        warehousingStatus.put("completionRate", order.getWarehousingCompletionRate() != null ? order.getWarehousingCompletionRate() : 0);
+        warehousingStatus.put("completedQuantity", warehousingQty);
+        warehousingStatus.put("remainingQuantity", cuttingQty - warehousingQty);
+        warehousingStatus.put("operatorName", order.getWarehousingOperatorName());
+        warehousingStatus.put("startTime", order.getWarehousingStartTime());
+        warehousingStatus.put("completedTime", order.getWarehousingEndTime());
+        allStatus.put("warehousing", warehousingStatus);
+
+        log.info("Retrieved all process status for order: orderId={}, cutting={}%, sewing={}%, finishing={}%, warehousing={}%",
+                 orderId,
+                 cuttingStatus.get("completionRate"),
+                 sewingStatus.get("completionRate"),
+                 finishingStatus.get("completionRate"),
+                 warehousingStatus.get("completionRate"));
+
+        return allStatus;
+    }
+
+    /**
+     * 工序委派 - 将特定工序委派给工厂，并设置单价
+     *
+     * @param orderId 订单ID
+     * @param processNode 工序节点（cutting/sewing/finishing/warehousing）
+     * @param factoryId 工厂ID
+     * @param unitPrice 单价（可选）
+     */
+    @Transactional
+    public void delegateProcess(String orderId, String processNode, String factoryId, Double unitPrice) {
+        // 验证订单是否存在
+        ProductionOrder order = productionOrderService.getById(orderId);
+        if (order == null) {
+            throw new RuntimeException("订单不存在: " + orderId);
+        }
+
+        // 构建委派记录
+        String delegationRecord = String.format(
+            "工序[%s]委派给工厂[%s]，单价[%.2f]元，操作时间[%s]，操作人[%s]",
+            getProcessNodeName(processNode),
+            factoryId,
+            unitPrice != null ? unitPrice : 0.0,
+            new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date()),
+            "当前用户" // TODO: 从SecurityContext获取当前登录用户
+        );
+
+        // 保存到订单的nodeOperations字段（JSON格式）
+        String currentOperations = order.getNodeOperations();
+        if (currentOperations == null || currentOperations.isEmpty()) {
+            currentOperations = "{}";
+        }
+
+        // 简单追加记录（实际应该用JSON解析和更新）
+        // TODO: 使用Jackson或Gson进行JSON操作
+        String updatedOperations = currentOperations.replaceFirst("}",
+            String.format("\"%s\":\"%s\"}", processNode, delegationRecord));
+
+        order.setNodeOperations(updatedOperations);
+        productionOrderService.updateById(order);
+
+        log.info("工序委派成功 - 订单:{}, 工序:{}, 工厂:{}, 单价:{}",
+            orderId, processNode, factoryId, unitPrice);
+    }
+
+    /**
+     * 获取工序节点的中文名称
+     */
+    private String getProcessNodeName(String processNode) {
+        switch (processNode) {
+            case "cutting":
+                return "裁剪";
+            case "sewing":
+                return "车缝";
+            case "finishing":
+                return "尾部";
+            case "warehousing":
+                return "入库";
+            default:
+                return processNode;
+        }
+    }
 }

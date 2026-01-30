@@ -76,6 +76,21 @@ public class StyleBom {
     private String remark;
 
     /**
+     * 库存状态：sufficient=充足, insufficient=不足, none=无库存, unchecked=未检查
+     */
+    private String stockStatus;
+
+    /**
+     * 可用库存数量（quantity - locked_quantity）
+     */
+    private Integer availableStock;
+
+    /**
+     * 需采购数量（需求量 - 可用库存，最小为0）
+     */
+    private Integer requiredPurchase;
+
+    /**
      * 领取人
      */
     private String assignee;

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Button, Card, Input, Select, Space, Tag, Form, Table, App, Dropdown, Checkbox } from 'antd';
-import { SearchOutlined, EyeOutlined, DownloadOutlined, DeleteOutlined, CheckCircleOutlined, EditOutlined, SettingOutlined, FileSearchOutlined, AppstoreOutlined, UnorderedListOutlined, PrinterOutlined } from '@ant-design/icons';
+import { Button, Card, Input, Select, Space, Tag, Form, Table, App, Dropdown, Checkbox, Tabs, Alert, InputNumber } from 'antd';
+import { SearchOutlined, EyeOutlined, DownloadOutlined, DeleteOutlined, CheckCircleOutlined, EditOutlined, SettingOutlined, FileSearchOutlined, AppstoreOutlined, UnorderedListOutlined, PrinterOutlined, TeamOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import ResizableModal from '@/components/common/ResizableModal';
 import QuickEditModal from '@/components/common/QuickEditModal';
@@ -115,6 +115,21 @@ const ProductionList: React.FC = () => {
   const [processDetailVisible, setProcessDetailVisible] = useState(false);
   const [processDetailRecord, setProcessDetailRecord] = useState<ProductionOrder | null>(null);
   const [processDetailType, setProcessDetailType] = useState<string>('');
+  const [procurementStatus, setProcurementStatus] = useState<any>(null);
+  const [processStatus, setProcessStatus] = useState<any>(null); // 所有工序节点状态
+  const [processDetailActiveTab, setProcessDetailActiveTab] = useState<string>('process'); // 工序明细Tab: process=工序详情, delegation=工序委派
+
+  // 工厂列表（用于工序委派）
+  const [factories, setFactories] = useState<any[]>([]);
+  const [factoriesLoading, setFactoriesLoading] = useState(false);
+
+  // 工序委派数据（工厂ID、工序名称、数量和单价）
+  const [delegationData, setDelegationData] = useState<Record<string, {
+    factoryId?: string;
+    processName?: string;
+    quantity?: number;
+    unitPrice?: number
+  }>>({});
 
   // 默认显示的核心列（其他列默认隐藏，用户可以添加）
   const defaultVisibleColumns: Record<string, boolean> = {
@@ -916,10 +931,86 @@ const ProductionList: React.FC = () => {
   ];
 
   // 打开工序详情弹窗
-  const openProcessDetail = (record: ProductionOrder, type: string) => {
+  const openProcessDetail = async (record: ProductionOrder, type: string) => {
     setProcessDetailRecord(record);
     setProcessDetailType(type);
     setProcessDetailVisible(true);
+    setProcessDetailActiveTab('process'); // 默认打开工序详情Tab
+
+    // 获取工厂列表（用于工序委派）
+    fetchFactories();
+
+    // 获取所有工序节点状态（裁剪、车缝、尾部、入库等）
+    try {
+      const res = await api.get(`/production/order/process-status/${record.id}`);
+      if (res.code === 200 && res.data) {
+        setProcessStatus(res.data);
+        console.log('[工序状态] 获取成功:', res.data);
+      }
+    } catch (error) {
+      console.error('[工序状态] 获取失败:', error);
+      setProcessStatus(null);
+    }
+
+    // 如果是采购类型，获取采购完成状态
+    if (type === 'procurement' || type === 'all') {
+      try {
+        const res = await api.get(`/production/order/procurement-status/${record.id}`);
+        if (res.code === 200 && res.data) {
+          setProcurementStatus(res.data);
+          console.log('[采购状态] 获取成功:', res.data);
+        }
+      } catch (error) {
+        console.error('[采购状态] 获取失败:', error);
+        setProcurementStatus(null);
+      }
+    }
+  };
+
+  // 获取工厂列表
+  const fetchFactories = async () => {
+    setFactoriesLoading(true);
+    try {
+      const res = await api.get('/system/factory/list', {
+        params: { page: 1, pageSize: 999, status: 'active' }
+      });
+      if (res.code === 200 && res.data?.records) {
+        setFactories(res.data.records);
+        console.log('[工厂列表] 获取成功:', res.data.records.length, '个工厂');
+      }
+    } catch (error) {
+      console.error('[工厂列表] 获取失败:', error);
+      setFactories([]);
+    } finally {
+      setFactoriesLoading(false);
+    }
+  };
+
+  // 保存工序委派
+  const saveDelegation = async (nodeKey: string, orderId: string) => {
+    const data = delegationData[nodeKey];
+    if (!data?.factoryId) {
+      message.warning('请选择委派工厂');
+      return;
+    }
+
+    try {
+      await api.post('/production/order/delegate-process', {
+        orderId,
+        processNode: nodeKey,
+        factoryId: data.factoryId,
+        unitPrice: data.unitPrice || 0
+      });
+      message.success('工序委派保存成功');
+
+      // 刷新工序状态
+      if (processDetailRecord) {
+        openProcessDetail(processDetailRecord);
+      }
+    } catch (error: any) {
+      console.error('[工序委派] 保存失败:', error);
+      message.error(error.message || '保存失败');
+    }
   };
 
   // 从模板同步工序单价到订单
@@ -2631,12 +2722,23 @@ const ProductionList: React.FC = () => {
             setProcessDetailVisible(false);
             setProcessDetailRecord(null);
             setProcessDetailType('');
+            setProcurementStatus(null);
+            setProcessStatus(null);
+            setProcessDetailActiveTab('process');
           }}
           footer={null}
           width="60vw"
           initialHeight={580}
         >
-          {processDetailRecord && (() => {
+          {processDetailRecord && (
+            <Tabs
+              activeKey={processDetailActiveTab}
+              onChange={setProcessDetailActiveTab}
+              items={[
+                {
+                  key: 'process',
+                  label: '工序详情',
+                  children: (() => {
             // 如果是入库类型，显示入库统计数据
             if (processDetailType === 'warehousing') {
               const orderQty = processDetailRecord.orderQuantity || 0;
@@ -2700,9 +2802,20 @@ const ProductionList: React.FC = () => {
                     </div>
                     <div>
                       <span style={{ color: '#6b7280' }}>操作人：</span>
-                      <span style={{ fontWeight: 600, color: '#111827' }}>
-                        {processDetailRecord.warehousingOperatorName || '-'}
-                      </span>
+                      {processDetailRecord.warehousingOperatorName ? (
+                        <a
+                          style={{ cursor: 'pointer', color: '#1890ff', fontWeight: 600 }}
+                          onClick={() => {
+                            if (processDetailRecord?.orderNo) {
+                              navigate(`/finance/payroll-operator-summary?orderNo=${processDetailRecord.orderNo}&processName=入库`);
+                            }
+                          }}
+                        >
+                          {processDetailRecord.warehousingOperatorName}
+                        </a>
+                      ) : (
+                        <span style={{ fontWeight: 600, color: '#111827' }}>-</span>
+                      )}
                     </div>
                     <div>
                       <span style={{ color: '#6b7280' }}>开始时间：</span>
@@ -2965,54 +3078,119 @@ const ProductionList: React.FC = () => {
             const totalPrice = workflowNodes.reduce((sum: number, node: any) => sum + (Number(node.unitPrice) || 0), 0);
             const cuttingQty = processDetailRecord.cuttingQuantity || processDetailRecord.orderQuantity || 0;
 
+            // 根据工序类型获取操作人和完成时间
+            const getOperatorInfo = () => {
+              switch (processDetailType) {
+                case 'cutting':
+                  return {
+                    operatorName: processDetailRecord.cuttingOperatorName,
+                    endTime: processDetailRecord.cuttingEndTime,
+                    processName: '裁剪'
+                  };
+                case 'carSewing':
+                  return {
+                    operatorName: processDetailRecord.carSewingOperatorName,
+                    endTime: processDetailRecord.carSewingEndTime,
+                    processName: '车缝'
+                  };
+                case 'tailProcess':
+                  return {
+                    operatorName: processDetailRecord.tailProcessOperatorName,
+                    endTime: processDetailRecord.tailProcessEndTime,
+                    processName: '尾部'
+                  };
+                default:
+                  return null;
+              }
+            };
+
+            const operatorInfo = getOperatorInfo();
+
             return (
               <div>
-                {/* 订单基本信息 */}
+                {/* 订单基本信息 - 紧凑型 */}
                 <div style={{
                   background: '#f8f9fa',
-                  padding: '16px',
-                  borderRadius: '8px',
-                  marginBottom: '16px',
+                  padding: '12px',
+                  borderRadius: '6px',
+                  marginBottom: '12px',
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(6, 1fr)',
-                  gap: '12px'
+                  gridTemplateColumns: 'repeat(4, 1fr)',
+                  gap: '8px',
+                  fontSize: '12px'
                 }}>
                   <div>
-                    <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>订单号</div>
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>
+                    <span style={{ color: '#6b7280' }}>订单号：</span>
+                    <span style={{ fontWeight: 600, color: '#111827' }}>
                       {processDetailRecord.orderNo || '-'}
-                    </div>
+                    </span>
                   </div>
                   <div>
-                    <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>款号</div>
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>
+                    <span style={{ color: '#6b7280' }}>款号：</span>
+                    <span style={{ fontWeight: 600, color: '#111827' }}>
                       {processDetailRecord.styleNo || '-'}
-                    </div>
+                    </span>
                   </div>
                   <div>
-                    <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>款名</div>
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>
+                    <span style={{ color: '#6b7280' }}>款名：</span>
+                    <span style={{ fontWeight: 600, color: '#111827' }}>
                       {processDetailRecord.styleName || '-'}
-                    </div>
+                    </span>
                   </div>
                   <div>
-                    <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>订单数量</div>
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>
-                      {processDetailRecord.orderQuantity || 0} 件
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>裁剪数量</div>
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#059669' }}>
-                      {cuttingQty} 件
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>总工价</div>
-                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#dc2626' }}>
+                    <span style={{ color: '#6b7280' }}>总工价：</span>
+                    <span style={{ fontWeight: 700, color: '#dc2626' }}>
                       ¥{totalPrice.toFixed(2)}
-                    </div>
+                    </span>
                   </div>
+                  <div>
+                    <span style={{ color: '#6b7280' }}>订单数量：</span>
+                    <span style={{ fontWeight: 600, color: '#111827' }}>
+                      {processDetailRecord.orderQuantity || 0} 件
+                    </span>
+                  </div>
+                  <div>
+                    <span style={{ color: '#6b7280' }}>裁剪数量：</span>
+                    <span style={{ fontWeight: 600, color: '#059669' }}>
+                      {cuttingQty} 件
+                    </span>
+                  </div>
+                  {operatorInfo && (
+                    <>
+                      <div>
+                        <span style={{ color: '#6b7280' }}>{operatorInfo.processName}操作人：</span>
+                        {operatorInfo.operatorName ? (
+                          <a
+                            style={{ cursor: 'pointer', color: '#1890ff', fontWeight: 600 }}
+                            onClick={() => {
+                              if (processDetailRecord?.orderNo) {
+                                navigate(`/finance/payroll-operator-summary?orderNo=${processDetailRecord.orderNo}&processName=${operatorInfo.processName}`);
+                              }
+                            }}
+                          >
+                            {operatorInfo.operatorName}
+                          </a>
+                        ) : (
+                          <span style={{ color: '#9ca3af' }}>-</span>
+                        )}
+                      </div>
+                      <div>
+                        <span style={{ color: '#6b7280' }}>{operatorInfo.processName}完成：</span>
+                        <span style={{ fontWeight: 500, color: '#111827' }}>
+                          {operatorInfo.endTime ? (
+                            new Date(operatorInfo.endTime).toLocaleString('zh-CN', {
+                              month: '2-digit',
+                              day: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })
+                          ) : (
+                            <span style={{ color: '#9ca3af' }}>-</span>
+                          )}
+                        </span>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* 按进度节点分组显示工序 */}
@@ -3059,6 +3237,183 @@ const ProductionList: React.FC = () => {
                             <span style={{ fontSize: '13px', color: '#6b7280' }}>
                               ({processes.length}个工序)
                             </span>
+
+                            {/* 采购节点显示完成状态 */}
+                            {stage.key === 'procurement' && procurementStatus && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: '16px' }}>
+                                {procurementStatus.completed ? (
+                                  <>
+                                    <span style={{
+                                      fontSize: '13px',
+                                      fontWeight: 600,
+                                      color: '#059669',
+                                      background: '#d1fae5',
+                                      padding: '2px 8px',
+                                      borderRadius: '4px'
+                                    }}>
+                                      ✓ 已完成
+                                    </span>
+                                    {procurementStatus.operatorName && (
+                                      <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                                        操作人: <a
+                                          style={{ cursor: 'pointer', color: '#1890ff', fontWeight: 600 }}
+                                          onClick={() => {
+                                            if (processDetailRecord?.orderNo) {
+                                              navigate(`/finance/payroll-operator-summary?orderNo=${processDetailRecord.orderNo}&processName=采购`);
+                                            }
+                                          }}
+                                        >
+                                          {procurementStatus.operatorName}
+                                        </a>
+                                      </span>
+                                    )}
+                                    {procurementStatus.completedTime && (
+                                      <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                                        完成时间: <span style={{ fontWeight: 600, color: '#374151' }}>
+                                          {new Date(procurementStatus.completedTime).toLocaleString('zh-CN', {
+                                            year: 'numeric',
+                                            month: '2-digit',
+                                            day: '2-digit',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                          })}
+                                        </span>
+                                      </span>
+                                    )}
+                                  </>
+                                ) : (
+                                  <span style={{
+                                    fontSize: '13px',
+                                    fontWeight: 600,
+                                    color: '#f59e0b',
+                                    background: '#fef3c7',
+                                    padding: '2px 8px',
+                                    borderRadius: '4px'
+                                  }}>
+                                    进行中 ({procurementStatus.completionRate}%)
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            {/* 裁剪节点显示完成数量和剩余数量 */}
+                            {stage.key === 'cutting' && processStatus?.cutting && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: '16px' }}>
+                                <span style={{
+                                  fontSize: '13px',
+                                  fontWeight: 600,
+                                  color: processStatus.cutting.completed ? '#059669' : '#f59e0b',
+                                  background: processStatus.cutting.completed ? '#d1fae5' : '#fef3c7',
+                                  padding: '2px 8px',
+                                  borderRadius: '4px'
+                                }}>
+                                  {processStatus.cutting.completed ? '✓ 已完成' : `进行中 (${processStatus.cutting.completionRate}%)`}
+                                </span>
+                                <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                                  完成: <span style={{ fontWeight: 600, color: '#059669' }}>{processStatus.cutting.completedQuantity} 件</span>
+                                </span>
+                                {!processStatus.cutting.completed && (
+                                  <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                                    剩余: <span style={{ fontWeight: 600, color: '#f59e0b' }}>{processStatus.cutting.remainingQuantity} 件</span>
+                                  </span>
+                                )}
+                                {processStatus.cutting.bundleCount > 0 && (
+                                  <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                                    扎数: <span style={{ fontWeight: 600, color: '#374151' }}>{processStatus.cutting.bundleCount}</span>
+                                  </span>
+                                )}
+                                {processStatus.cutting.operatorName && (
+                                  <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                                    操作人: <a
+                                      style={{ cursor: 'pointer', color: '#1890ff', fontWeight: 600 }}
+                                      onClick={() => {
+                                        if (processDetailRecord?.orderNo) {
+                                          navigate(`/finance/payroll-operator-summary?orderNo=${processDetailRecord.orderNo}&processName=裁剪`);
+                                        }
+                                      }}
+                                    >
+                                      {processStatus.cutting.operatorName}
+                                    </a>
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            {/* 车缝节点显示完成数量和剩余数量 */}
+                            {stage.key === 'carSewing' && processStatus?.sewing && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: '16px' }}>
+                                <span style={{
+                                  fontSize: '13px',
+                                  fontWeight: 600,
+                                  color: processStatus.sewing.completed ? '#059669' : '#f59e0b',
+                                  background: processStatus.sewing.completed ? '#d1fae5' : '#fef3c7',
+                                  padding: '2px 8px',
+                                  borderRadius: '4px'
+                                }}>
+                                  {processStatus.sewing.completed ? '✓ 已完成' : `进行中 (${processStatus.sewing.completionRate}%)`}
+                                </span>
+                                <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                                  完成: <span style={{ fontWeight: 600, color: '#059669' }}>{processStatus.sewing.completedQuantity} 件</span>
+                                </span>
+                                {!processStatus.sewing.completed && (
+                                  <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                                    剩余: <span style={{ fontWeight: 600, color: '#f59e0b' }}>{processStatus.sewing.remainingQuantity} 件</span>
+                                  </span>
+                                )}
+                                {processStatus.sewing.operatorName && (
+                                  <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                                    操作人: <a
+                                      style={{ cursor: 'pointer', color: '#1890ff', fontWeight: 600 }}
+                                      onClick={() => {
+                                        if (processDetailRecord?.orderNo) {
+                                          navigate(`/finance/payroll-operator-summary?orderNo=${processDetailRecord.orderNo}&processName=车缝`);
+                                        }
+                                      }}
+                                    >
+                                      {processStatus.sewing.operatorName}
+                                    </a>
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            {/* 尾部节点显示完成数量和剩余数量 */}
+                            {stage.key === 'tailProcess' && processStatus?.finishing && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: '16px' }}>
+                                <span style={{
+                                  fontSize: '13px',
+                                  fontWeight: 600,
+                                  color: processStatus.finishing.completed ? '#059669' : '#f59e0b',
+                                  background: processStatus.finishing.completed ? '#d1fae5' : '#fef3c7',
+                                  padding: '2px 8px',
+                                  borderRadius: '4px'
+                                }}>
+                                  {processStatus.finishing.completed ? '✓ 已完成' : `进行中 (${processStatus.finishing.completionRate}%)`}
+                                </span>
+                                <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                                  完成: <span style={{ fontWeight: 600, color: '#059669' }}>{processStatus.finishing.completedQuantity} 件</span>
+                                </span>
+                                {!processStatus.finishing.completed && (
+                                  <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                                    剩余: <span style={{ fontWeight: 600, color: '#f59e0b' }}>{processStatus.finishing.remainingQuantity} 件</span>
+                                  </span>
+                                )}
+                                {processStatus.finishing.operatorName && (
+                                  <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                                    操作人: <a
+                                      style={{ cursor: 'pointer', color: '#1890ff', fontWeight: 600 }}
+                                      onClick={() => {
+                                        if (processDetailRecord?.orderNo) {
+                                          navigate(`/finance/payroll-operator-summary?orderNo=${processDetailRecord.orderNo}&processName=尾部`);
+                                        }
+                                      }}
+                                    >
+                                      {processStatus.finishing.operatorName}
+                                    </a>
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </div>
                           <div style={{ fontSize: '14px', fontWeight: 600, color: '#059669' }}>
                             小计: ¥{stageTotal.toFixed(2)}
@@ -3131,7 +3486,285 @@ const ProductionList: React.FC = () => {
                 )}
               </div>
             );
-          })()}
+                  })(),
+                },
+                {
+                  key: 'delegation',
+                  label: (
+                    <span>
+                      <TeamOutlined style={{ marginRight: 4 }} />
+                      工序委派
+                    </span>
+                  ),
+                  children: (
+                    <div style={{ padding: '8px 0' }}>
+                      {/* 说明文字 - 精简版 */}
+                      <Alert
+                        message="可以为不同的生产节点指定执行工厂"
+                        type="info"
+                        showIcon
+                        closable
+                        style={{ marginBottom: '12px', padding: '6px 12px', fontSize: '12px' }}
+                      />
+
+                      {/* 工序节点委派表格 */}
+                      <div style={{
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '6px',
+                        overflow: 'hidden'
+                      }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                          <thead>
+                            <tr style={{ background: '#f9fafb' }}>
+                              <th colSpan={7} style={{
+                                padding: '8px 12px',
+                                textAlign: 'left',
+                                fontSize: '12px',
+                                color: '#6b7280',
+                                borderBottom: '1px solid #e5e7eb'
+                              }}>
+                                <span style={{ fontWeight: 600, color: '#374151' }}>订单：</span>
+                                <span style={{ marginRight: '16px' }}>{processDetailRecord?.orderNo || '-'}</span>
+                                <span style={{ fontWeight: 600, color: '#374151' }}>款号：</span>
+                                <span style={{ marginRight: '16px' }}>{processDetailRecord?.styleNo || '-'}</span>
+                                <span style={{ fontWeight: 600, color: '#374151' }}>数量：</span>
+                                <span>{processDetailRecord?.orderQuantity || 0} 件</span>
+                              </th>
+                            </tr>
+                            <tr style={{ background: '#f9fafb' }}>
+                              <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '13px', color: '#374151', fontWeight: 600, width: '90px' }}>
+                                生产节点
+                              </th>
+                              <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '13px', color: '#374151', fontWeight: 600, width: '90px' }}>
+                                当前状态
+                              </th>
+                              <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '13px', color: '#374151', fontWeight: 600, width: '140px' }}>
+                                工序名称
+                              </th>
+                              <th style={{ padding: '8px 12px', textAlign: 'right', fontSize: '13px', color: '#374151', fontWeight: 600, width: '90px' }}>
+                                数量
+                              </th>
+                              <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '13px', color: '#374151', fontWeight: 600 }}>
+                                执行工厂
+                              </th>
+                              <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '13px', color: '#374151', fontWeight: 600, width: '110px' }}>
+                                委派单价
+                              </th>
+                              <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '13px', color: '#374151', fontWeight: 600, width: '90px' }}>
+                                委派人
+                              </th>
+                              <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '13px', color: '#374151', fontWeight: 600, width: '110px' }}>
+                                委派时间
+                              </th>
+                              <th style={{ padding: '8px 12px', textAlign: 'center', fontSize: '13px', color: '#374151', fontWeight: 600, width: '90px' }}>
+                                操作
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(() => {
+                              // 解析订单的工序单价配置
+                              let workflowNodes: any[] = [];
+                              try {
+                                if (processDetailRecord?.progressWorkflowJson) {
+                                  const workflow = typeof processDetailRecord.progressWorkflowJson === 'string'
+                                    ? JSON.parse(processDetailRecord.progressWorkflowJson)
+                                    : processDetailRecord.progressWorkflowJson;
+
+                                  const nodes = workflow?.nodes || [];
+                                  if (nodes.length > 0 && nodes[0]?.name) {
+                                    workflowNodes = nodes.map((item: any, idx: number) => ({
+                                      name: item.name || item.processName || '',
+                                      unitPrice: Number(item.unitPrice) || 0,
+                                    }));
+                                  }
+                                }
+
+                                // 如果没有数据，从 progressNodeUnitPrices 读取
+                                if (workflowNodes.length === 0 && Array.isArray(processDetailRecord?.progressNodeUnitPrices)) {
+                                  workflowNodes = processDetailRecord.progressNodeUnitPrices.map((item: any) => ({
+                                    name: item.name || item.processName || '',
+                                    unitPrice: Number(item.unitPrice) || Number(item.price) || 0,
+                                  }));
+                                }
+                              } catch (e) {
+                                console.error('解析工序配置失败:', e);
+                              }
+
+                              return [
+                                { key: 'cutting', name: '裁剪', status: processStatus?.cutting, color: '#92400e' },
+                                { key: 'sewing', name: '车缝', status: processStatus?.sewing, color: '#065f46' },
+                                { key: 'finishing', name: '尾部', status: processStatus?.finishing, color: '#9d174d' },
+                                { key: 'warehousing', name: '入库', status: processStatus?.warehousing, color: '#374151' },
+                              ].map((node) => (
+                                <tr key={node.key} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                                  <td style={{ padding: '6px 12px' }}>
+                                    <span style={{ fontSize: '13px', fontWeight: 600, color: node.color }}>
+                                      {node.name}
+                                    </span>
+                                  </td>
+                                  <td style={{ padding: '6px 12px' }}>
+                                    {node.status && (
+                                      <span style={{
+                                        fontSize: '11px',
+                                        fontWeight: 600,
+                                        color: node.status.completed ? '#059669' : '#f59e0b',
+                                        background: node.status.completed ? '#d1fae5' : '#fef3c7',
+                                        padding: '2px 6px',
+                                        borderRadius: '3px',
+                                        whiteSpace: 'nowrap'
+                                      }}>
+                                        {node.status.completed ? '✓ 完成' : `${node.status.completionRate}%`}
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td style={{ padding: '6px 12px' }}>
+                                    <Select
+                                      placeholder="选择工序"
+                                      size="small"
+                                      style={{ width: '100%', minWidth: '120px' }}
+                                      allowClear
+                                      showSearch
+                                      optionFilterProp="children"
+                                      value={delegationData[node.key]?.processName}
+                                      onChange={(value) => {
+                                        setDelegationData(prev => ({
+                                          ...prev,
+                                          [node.key]: { ...prev[node.key], processName: value }
+                                        }));
+                                      }}
+                                    >
+                                      {workflowNodes.map((proc, idx) => (
+                                        <Select.Option key={idx} value={proc.name}>
+                                          {proc.name} (¥{proc.unitPrice.toFixed(2)})
+                                        </Select.Option>
+                                      ))}
+                                    </Select>
+                                  </td>
+                                  <td style={{ padding: '6px 12px', textAlign: 'right' }}>
+                                    <InputNumber
+                                      placeholder="数量"
+                                      size="small"
+                                      min={0}
+                                      step={1}
+                                      style={{ width: '85px' }}
+                                      value={delegationData[node.key]?.quantity}
+                                      onChange={(value) => {
+                                        setDelegationData(prev => ({
+                                          ...prev,
+                                          [node.key]: { ...prev[node.key], quantity: value || undefined }
+                                        }));
+                                      }}
+                                    />
+                                  </td>
+                                  <td style={{ padding: '6px 12px' }}>
+                                    <Select
+                                      placeholder="选择工厂"
+                                      size="small"
+                                      style={{ width: '100%', maxWidth: '220px' }}
+                                      loading={factoriesLoading}
+                                      allowClear
+                                      showSearch
+                                      optionFilterProp="children"
+                                      value={delegationData[node.key]?.factoryId}
+                                      onChange={(value) => {
+                                        setDelegationData(prev => ({
+                                          ...prev,
+                                          [node.key]: { ...prev[node.key], factoryId: value }
+                                        }));
+                                      }}
+                                    >
+                                      {factories.map((f) => (
+                                        <Select.Option key={f.id} value={f.id}>
+                                          {f.factoryName}
+                                        </Select.Option>
+                                      ))}
+                                    </Select>
+                                  </td>
+                                <td style={{ padding: '6px 12px' }}>
+                                  <InputNumber
+                                    placeholder="单价"
+                                    size="small"
+                                    min={0}
+                                    step={0.01}
+                                    precision={2}
+                                    prefix="¥"
+                                    style={{ width: '100px' }}
+                                    value={delegationData[node.key]?.unitPrice}
+                                    onChange={(value) => {
+                                      setDelegationData(prev => ({
+                                        ...prev,
+                                        [node.key]: { ...prev[node.key], unitPrice: value || undefined }
+                                      }));
+                                    }}
+                                  />
+                                </td>
+                                <td style={{ padding: '6px 12px', fontSize: '12px', color: '#374151' }}>
+                                  {node.status?.operatorName ? (
+                                    <a
+                                      style={{ cursor: 'pointer', color: '#1890ff', fontWeight: 500 }}
+                                      onClick={() => {
+                                        if (processDetailRecord?.orderNo) {
+                                          navigate(`/finance/payroll-operator-summary?orderNo=${processDetailRecord.orderNo}&processName=${node.name}`);
+                                        }
+                                      }}
+                                    >
+                                      {node.status.operatorName}
+                                    </a>
+                                  ) : (
+                                    <span style={{ color: '#9ca3af' }}>-</span>
+                                  )}
+                                </td>
+                                <td style={{ padding: '6px 12px', fontSize: '12px', color: '#6b7280' }}>
+                                  {node.status?.completedTime ? (
+                                    new Date(node.status.completedTime).toLocaleString('zh-CN', {
+                                      month: '2-digit',
+                                      day: '2-digit',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })
+                                  ) : (
+                                    <span style={{ color: '#9ca3af' }}>-</span>
+                                  )}
+                                </td>
+                                <td style={{ padding: '6px 12px', textAlign: 'center' }}>
+                                  <Button
+                                    type="primary"
+                                    size="small"
+                                    onClick={() => processDetailRecord && saveDelegation(node.key, processDetailRecord.id)}
+                                  >
+                                    保存
+                                  </Button>
+                                </td>
+                              </tr>
+                              ));
+                            })()}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* 委派历史记录 */}
+                      <div style={{ marginTop: '16px' }}>
+                        <div style={{
+                          fontSize: '13px',
+                          fontWeight: 600,
+                          color: '#374151',
+                          marginBottom: '8px',
+                          paddingBottom: '6px',
+                          borderBottom: '1px solid #e5e7eb'
+                        }}>
+                          委派历史
+                        </div>
+                        <div style={{ color: '#9ca3af', fontSize: '12px', padding: '16px', textAlign: 'center' }}>
+                          暂无委派记录
+                        </div>
+                      </div>
+                    </div>
+                  ),
+                },
+              ]}
+            />
+          )}
         </ResizableModal>
 
         {/* 打印预览弹窗 - 使用通用打印组件 */}
