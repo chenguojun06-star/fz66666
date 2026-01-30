@@ -2689,30 +2689,30 @@ const PrintPreviewModal: React.FC<{
       onCancel={onClose}
       defaultWidth="80vw"
       defaultHeight="85vh"
-      footer={[
-        <Checkbox.Group
-          key="options"
-          value={Object.keys(options).filter(k => options[k as keyof typeof options])}
-          onChange={(values) => {
-            onOptionsChange({
-              bom: values.includes('bom'),
-              production: values.includes('production'),
-              process: values.includes('process'),
-            });
-          }}
-          style={{ marginRight: 'auto' }}
-        >
-          <Checkbox value="bom">BOM表</Checkbox>
-          <Checkbox value="production">生产制单</Checkbox>
-          <Checkbox value="process">工序表</Checkbox>
-        </Checkbox.Group>,
-        <Button key="cancel" onClick={onClose}>
-          取消
-        </Button>,
-        <Button key="print" type="primary" icon={<PrinterOutlined />} onClick={handlePrint}>
-          打印
-        </Button>,
-      ]}
+      footer={
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Checkbox.Group
+            value={Object.keys(options).filter(k => options[k as keyof typeof options])}
+            onChange={(values) => {
+              onOptionsChange({
+                bom: values.includes('bom'),
+                production: values.includes('production'),
+                process: values.includes('process'),
+              });
+            }}
+          >
+            <Checkbox value="bom">BOM表</Checkbox>
+            <Checkbox value="production">生产制单</Checkbox>
+            <Checkbox value="process">工序表</Checkbox>
+          </Checkbox.Group>
+          <Space>
+            <Button onClick={onClose}>取消</Button>
+            <Button type="primary" icon={<PrinterOutlined />} onClick={handlePrint}>
+              打印
+            </Button>
+          </Space>
+        </div>
+      }
     >
       <Spin spinning={loading}>
         <div className="print-preview-content" style={{ background: '#fff', padding: 20 }}>
