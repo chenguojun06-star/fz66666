@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, Form, InputNumber, Button, Row, Col, Statistic, Divider, App, Table } from 'antd';
 import { SaveOutlined, LockOutlined, EditOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -26,10 +26,16 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
   const processCost = Number(Form.useWatch('processCost', form)) || 0;
   const otherCost = Number(Form.useWatch('otherCost', form)) || 0;
   const profitRate = Number(Form.useWatch('profitRate', form)) || 0; // 目标利润率
-  const totalCost = materialCost + processCost + otherCost; // 总成本
-  // 直接从表单获取最新的totalPrice，而不是依赖useWatch（可能滞后）
-  const totalPrice = Number(form.getFieldValue('totalPrice')) || Number(Form.useWatch('totalPrice', form)) || 0;
-  const profit = totalPrice - totalCost; // 实际毛利
+  const watchTotalPrice = Number(Form.useWatch('totalPrice', form)) || 0; // 监听totalPrice
+  
+  // 使用useMemo计算派生值
+  const totalCost = useMemo(() => materialCost + processCost + otherCost, [materialCost, processCost, otherCost]);
+  const totalPrice = useMemo(() => {
+    // 优先从表单直接获取最新值，fallback到watch的值
+    const formValue = Number(form.getFieldValue('totalPrice'));
+    return formValue || watchTotalPrice || 0;
+  }, [form, watchTotalPrice]);
+  const profit = useMemo(() => totalPrice - totalCost, [totalPrice, totalCost]);
 
   const calcBomCost = (items: unknown[]) => {
     return (items || []).reduce((sum: number, item: any) => {
