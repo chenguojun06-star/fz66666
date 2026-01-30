@@ -376,7 +376,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
             <div style={{ textAlign: 'center', marginBottom: 16 }}>
               <div style={{ fontSize: '13px', color: '#8c8c8c', marginBottom: 8 }}>预计可赚</div>
               <div style={{
-                fontSize: '24px',
+                fontSize: '20px',
                 fontWeight: 700,
                 color: profit >= 0 ? '#3f8600' : '#ff4d4f',
                 marginBottom: 4
