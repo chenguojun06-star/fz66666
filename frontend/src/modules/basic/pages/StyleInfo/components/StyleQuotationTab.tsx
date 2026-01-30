@@ -253,14 +253,36 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                 <Col span={8}>
                   <Form.Item label={<span style={{ fontSize: '14px', fontWeight: 600 }}>物料总成本 (自动)</span>} style={{ marginBottom: 4 }}>
                     <Form.Item name="materialCost" noStyle>
-                      <InputNumber size="middle" style={{ width: '100%', fontSize: '16px' }} prefix="¥" readOnly />
+                      <InputNumber 
+                        size="middle" 
+                        style={{ 
+                          width: '100%', 
+                          fontSize: '16px',
+                          backgroundColor: '#f5f5f5',
+                          cursor: 'not-allowed'
+                        }} 
+                        prefix="¥" 
+                        readOnly 
+                        disabled
+                      />
                     </Form.Item>
                   </Form.Item>
                 </Col>
                 <Col span={8}>
                   <Form.Item label={<span style={{ fontSize: '14px', fontWeight: 600 }}>工序总成本 (自动)</span>} style={{ marginBottom: 4 }}>
                     <Form.Item name="processCost" noStyle>
-                      <InputNumber size="middle" style={{ width: '100%', fontSize: '16px' }} prefix="¥" readOnly />
+                      <InputNumber 
+                        size="middle" 
+                        style={{ 
+                          width: '100%', 
+                          fontSize: '16px',
+                          backgroundColor: '#f5f5f5',
+                          cursor: 'not-allowed'
+                        }} 
+                        prefix="¥" 
+                        readOnly 
+                        disabled
+                      />
                     </Form.Item>
                   </Form.Item>
                 </Col>
@@ -277,20 +299,26 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                   </Form.Item>
                 </Col>
                 <Col span={8}>
-                  <Form.Item label={<span style={{ fontSize: '14px', fontWeight: 600 }}>总成本</span>} name="totalCost" style={{ marginBottom: 4 }}>
-                    <InputNumber size="middle" style={{ width: '100%', fontSize: '16px' }} prefix="¥" readOnly precision={2} />
-                  </Form.Item>
+                  <div style={{ marginBottom: 4 }}>
+                    <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: 4, color: 'rgba(0, 0, 0, 0.88)' }}>总成本</div>
+                    <Statistic 
+                      value={form.getFieldValue('totalCost') || 0} 
+                      precision={2} 
+                      prefix="¥"
+                      valueStyle={{ fontSize: '16px', color: '#1890ff' }}
+                    />
+                  </div>
                 </Col>
                 <Col span={8}>
-                  <Form.Item label={<span style={{ fontSize: '14px', fontWeight: 600 }}>最终报价</span>} name="totalPrice" style={{ marginBottom: 4 }}>
-                    <InputNumber
-                      size="middle"
-                      style={{ width: '100%', fontSize: '18px', fontWeight: 'bold', color: '#ff4d4f' }}
+                  <div style={{ marginBottom: 4 }}>
+                    <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: 4, color: 'rgba(0, 0, 0, 0.88)' }}>最终报价</div>
+                    <Statistic 
+                      value={form.getFieldValue('totalPrice') || 0} 
+                      precision={2} 
                       prefix="¥"
-                      readOnly
-                      precision={2}
+                      valueStyle={{ fontSize: '18px', fontWeight: 'bold', color: '#ff4d4f' }}
                     />
-                  </Form.Item>
+                  </div>
                 </Col>
               </Row>
               {!readOnly && (
