@@ -489,6 +489,26 @@ public class StyleInfoOrchestrator {
             } catch (Exception e) {
                 log.warn("样衣完成后自动推送到单价维护失败，但不影响样衣完成操作：{}", e.getMessage());
             }
+
+            // 自动流转附件到数据中心（样板纸样等）
+            try {
+                List<StyleAttachment> attachments = styleAttachmentService.lambdaQuery()
+                        .eq(StyleAttachment::getStyleId, id)
+                        .in(StyleAttachment::getBizType, "pattern", "pattern_grading")
+                        .list();
+                if (!attachments.isEmpty()) {
+                    for (StyleAttachment attachment : attachments) {
+                        String finalType = "pattern".equals(attachment.getBizType()) ? "pattern_final" : "pattern_grading_final";
+                        styleAttachmentService.lambdaUpdate()
+                                .eq(StyleAttachment::getId, attachment.getId())
+                                .set(StyleAttachment::getBizType, finalType)
+                                .update();
+                    }
+                    log.info("样衣完成后自动流转附件到数据中心成功：styleId={}, count={}", id, attachments.size());
+                }
+            } catch (Exception e) {
+                log.warn("样衣完成后自动流转附件失败，但不影响样衣完成操作：{}", e.getMessage());
+            }
         }
         return ok;
     }
