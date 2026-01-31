@@ -45,9 +45,9 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
       message.error('只能上传 JPG/PNG 格式的图片！');
       return false;
     }
-    const isLt2M = file.size / 1024 / 1024 < 2;
-    if (!isLt2M) {
-      message.error('图片大小不能超过 2MB！');
+    const isLt5M = file.size / 1024 / 1024 < 5;
+    if (!isLt5M) {
+      message.error('图片大小不能超过 5MB！');
       return false;
     }
     return true;
