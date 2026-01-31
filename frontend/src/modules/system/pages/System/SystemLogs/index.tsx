@@ -245,8 +245,7 @@ const SystemLogs: React.FC = () => {
       title: '操作',
       key: 'action',
       width: 100,
-      fixed: 'right' as const,
-      resizable: false,
+      resizable: true,
       render: (_: unknown, record: OperationLog) => (
         <Button type="link" size="small" onClick={() => handleViewDetails(record)}>
           详情
