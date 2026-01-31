@@ -758,14 +758,14 @@ const StyleInfoPage: React.FC = () => {
   // 样衣完成
   const handleCompleteSample = async () => {
     if (!currentStyle?.id) return;
-    
+
     // 检查样板生产是否已完成
     const patternStatus = String((currentStyle as any)?.patternStatus ?? '').trim().toUpperCase();
     if (patternStatus !== 'COMPLETED') {
       message.warning('请先完成样板生产后再进行样衣完成操作');
       return;
     }
-    
+
     try {
       const res = await api.post(`/style/info/${currentStyle.id}/sample/complete`);
       const result = res as any;
@@ -1149,7 +1149,7 @@ const StyleInfoPage: React.FC = () => {
 
           // 记录到后端（异步，不阻塞删除操作）
           try {
-            await api.post('/api/system/operation-log', logData);
+            await api.post('/system/operation-log', logData);
           } catch (logError) {
             console.warn('操作日志记录失败（不影响删除）：', logError);
           }
