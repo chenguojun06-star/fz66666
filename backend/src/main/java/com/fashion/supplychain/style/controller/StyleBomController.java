@@ -7,6 +7,7 @@ import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.orchestration.StyleBomOrchestrator;
+import com.fashion.supplychain.style.service.StyleBomService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +26,9 @@ public class StyleBomController {
 
     @Autowired
     private StyleBomOrchestrator styleBomOrchestrator;
+
+    @Autowired
+    private StyleBomService styleBomService;
 
     @Autowired
     private StyleInfoService styleInfoService;
@@ -182,6 +186,83 @@ public class StyleBomController {
         } catch (Exception e) {
             log.error("Failed to generate material purchase", e);
             return Result.fail("生成失败：" + e.getMessage());
+        }
+    }
+
+    // ==================== 库存检查相关API ====================
+
+    /**
+     * 检查款号BOM库存状态
+     */
+    @PostMapping("/check-stock/{styleId}")
+    public Result<List<StyleBom>> checkBomStock(
+            @PathVariable Long styleId,
+            @RequestParam(required = false, defaultValue = "1") Integer productionQty) {
+        try {
+            // 1. 查询BOM列表
+            List<StyleBom> bomList = styleBomOrchestrator.listByStyleId(styleId);
+            
+            if (bomList == null || bomList.isEmpty()) {
+                return Result.success(bomList);
+            }
+
+            // 2. 检查库存并更新状态
+            List<StyleBom> checkedBomList = styleBomService.saveBomWithStockCheck(bomList, productionQty);
+            
+            log.info("✅ BOM库存检查完成: styleId={}, productionQty={}, bomCount={}", 
+                    styleId, productionQty, checkedBomList.size());
+            
+            return Result.success(checkedBomList);
+        } catch (Exception e) {
+            log.error("❌ BOM库存检查失败: styleId={}, productionQty={}", styleId, productionQty, e);
+            return Result.fail("库存检查失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取BOM库存汇总信息
+     */
+    @GetMapping("/stock-summary/{styleId}")
+    public Result<Map<String, Object>> getBomStockSummary(
+            @PathVariable Long styleId,
+            @RequestParam(required = false, defaultValue = "1") Integer productionQty) {
+        try {
+            Map<String, Object> summary = styleBomService.getBomStockSummary(styleId, productionQty);
+            
+            log.info("✅ BOM库存汇总查询成功: styleId={}, productionQty={}", styleId, productionQty);
+            
+            return Result.success(summary);
+        } catch (Exception e) {
+            log.error("❌ BOM库存汇总查询失败: styleId={}, productionQty={}", styleId, productionQty, e);
+            return Result.fail("库存汇总查询失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 批量检查多个款号的BOM库存
+     */
+    @PostMapping("/batch-check-stock")
+    public Result<Map<Long, List<StyleBom>>> batchCheckBomStock(
+            @RequestBody List<Long> styleIds,
+            @RequestParam(required = false, defaultValue = "1") Integer productionQty) {
+        try {
+            Map<Long, List<StyleBom>> resultMap = new java.util.HashMap<>();
+            
+            for (Long styleId : styleIds) {
+                List<StyleBom> bomList = styleBomOrchestrator.listByStyleId(styleId);
+                if (bomList != null && !bomList.isEmpty()) {
+                    List<StyleBom> checkedBomList = styleBomService.saveBomWithStockCheck(bomList, productionQty);
+                    resultMap.put(styleId, checkedBomList);
+                }
+            }
+            
+            log.info("✅ 批量BOM库存检查完成: styleCount={}, productionQty={}", 
+                    styleIds.size(), productionQty);
+            
+            return Result.success(resultMap);
+        } catch (Exception e) {
+            log.error("❌ 批量BOM库存检查失败: styleIds={}, productionQty={}", styleIds, productionQty, e);
+            return Result.fail("批量库存检查失败: " + e.getMessage());
         }
     }
 }

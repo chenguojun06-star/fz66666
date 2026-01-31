@@ -77,6 +77,11 @@ export interface StyleBom {
   totalPrice?: number;
   supplier: string;
   remark?: string;
+  
+  // 库存检查字段
+  stockStatus?: 'sufficient' | 'insufficient' | 'none' | 'unchecked';
+  availableStock?: number;
+  requiredPurchase?: number;
 }
 
 export interface StyleSize {

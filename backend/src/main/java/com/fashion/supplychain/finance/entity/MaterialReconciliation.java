@@ -88,17 +88,17 @@ public class MaterialReconciliation implements com.fashion.supplychain.finance.s
      * 仓库库区
      */
     private String warehouseLocation;
-    
+
     /**
      * 对账状态: pending=待审核, verified=已审核, approved=已批准, paid=已支付, rejected=已驳回
      */
     private String status;
-    
+
     /**
      * 备注说明
      */
     private String remark;
-    
+
     /**
      * 审核通过时间
      */
