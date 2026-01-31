@@ -79,10 +79,18 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
                     bom.getStockStatus(), bom.getRequiredPurchase());
         }
 
-        // 5. 批量更新BOM（使用updateBatchById避免主键冲突）
-        this.updateBatchById(bomList);
+        // 5. 批量更新BOM（只更新已存在的记录，过滤掉id为空的）
+        List<StyleBom> existingBoms = bomList.stream()
+                .filter(bom -> bom.getId() != null && !bom.getId().trim().isEmpty())
+                .collect(java.util.stream.Collectors.toList());
 
-        log.info("BOM库存状态更新完成");
+        if (!existingBoms.isEmpty()) {
+            this.updateBatchById(existingBoms);
+            log.info("BOM库存状态更新完成: 更新了{}条记录", existingBoms.size());
+        } else {
+            log.warn("BOM列表中没有已保存的记录，跳过更新");
+        }
+
         return bomList;
     }
 

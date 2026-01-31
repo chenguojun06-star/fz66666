@@ -450,32 +450,32 @@ const StyleBomTab: React.FC<Props> = ({
     try {
       const materialCode = String(m.materialCode || '').trim();
       const color = String(merged.color || '').trim();
-      
+
       if (materialCode) {
         // 使用MaterialStockService查询库存（与后端StyleBomService相同逻辑）
         const res = await api.get<{ code: number; data: { records: any[] } }>(
           '/production/material/stock/page',
-          { params: { 
+          { params: {
             materialCode,
             color: color || undefined,  // 如果颜色为空，不传参数
             page: 1,
             pageSize: 1
           } }
         );
-        
+
         if (res.code === 200 && res.data?.records?.length > 0) {
           const stock = res.data.records[0];
           const availableQty = Number(stock.quantity || 0) - Number(stock.lockedQuantity || 0);
           const usageAmount = Number(merged.usageAmount || 0);
           const lossRate = Number(merged.lossRate || 0);
           const requiredQty = Math.ceil(usageAmount * productionQty * (1 + lossRate / 100));
-          
+
           const stockStatus = availableQty >= requiredQty ? 'sufficient' : availableQty > 0 ? 'insufficient' : 'none';
           const requiredPurchase = Math.max(0, requiredQty - availableQty);
-          
+
           // 更新data数组中的对应行
           setData(prev => sortBomRows(
-            prev.map(item => 
+            prev.map(item =>
               String(item.id) === rowId ? {
                 ...item,
                 ...merged,
@@ -485,7 +485,7 @@ const StyleBomTab: React.FC<Props> = ({
               } : item
             )
           ));
-          
+
           const statusText = stockStatus === 'sufficient' ? '库存充足' : stockStatus === 'insufficient' ? '库存不足' : '无库存';
           message.success(`${materialCode} 库存检查完成：${statusText}（可用：${availableQty}）`);
         } else {
@@ -493,9 +493,9 @@ const StyleBomTab: React.FC<Props> = ({
           const usageAmount = Number(merged.usageAmount || 0);
           const lossRate = Number(merged.lossRate || 0);
           const requiredQty = Math.ceil(usageAmount * productionQty * (1 + lossRate / 100));
-          
+
           setData(prev => sortBomRows(
-            prev.map(item => 
+            prev.map(item =>
               String(item.id) === rowId ? {
                 ...item,
                 ...merged,
@@ -505,7 +505,7 @@ const StyleBomTab: React.FC<Props> = ({
               } : item
             )
           ));
-          
+
           message.warning(`${materialCode} 无库存记录`);
         }
       }
