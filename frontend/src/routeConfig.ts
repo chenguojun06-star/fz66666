@@ -64,6 +64,7 @@ export const paths = {
   role: '/system/role',
   factory: '/system/factory',
   loginLog: '/system/login-log',
+  systemLogs: '/system/logs',
   dict: '/system/dict',
   tutorial: '/system/tutorial',
 } as const;
@@ -100,6 +101,7 @@ export const permissionCodes = {
   role: 'MENU_ROLE',
   factory: 'MENU_FACTORY',
   loginLog: 'MENU_LOGIN_LOG',
+  systemLogs: 'MENU_LOGIN_LOG', // 使用相同的权限码，兼容旧数据
   dict: 'MENU_DICT',
   tutorial: 'MENU_TUTORIAL',
 } as const;
@@ -183,7 +185,7 @@ export const menuConfig: MenuSection[] = [
       { label: '角色管理', path: paths.role, icon: React.createElement(UserSwitchOutlined) },
       { label: '供应商管理', path: paths.factory, icon: React.createElement(DatabaseOutlined) },
       { label: '字典管理', path: paths.dict, icon: React.createElement(BookOutlined) },
-      { label: '登录日志', path: paths.loginLog, icon: React.createElement(FileSearchOutlined) },
+      { label: '系统日志', path: paths.systemLogs, icon: React.createElement(FileSearchOutlined) },
       { label: '系统教学', path: paths.tutorial, icon: React.createElement(BookOutlined) },
     ],
   },
@@ -220,6 +222,7 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.role]: permissionCodes.role,
   [paths.factory]: permissionCodes.factory,
   [paths.loginLog]: permissionCodes.loginLog,
+  [paths.systemLogs]: permissionCodes.systemLogs,
   [paths.dict]: permissionCodes.dict,
   [paths.tutorial]: permissionCodes.tutorial,
 };

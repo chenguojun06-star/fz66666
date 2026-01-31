@@ -25,7 +25,7 @@ import {
   SampleInventory,
 } from './modules/warehouse';
 import { Dashboard } from './modules/dashboard';
-import { UserList, UserApproval, RoleList, FactoryList, LoginLogList, Profile, DictManage, Tutorial } from './modules/system';
+import { UserList, UserApproval, RoleList, FactoryList, LoginLogList, SystemLogs, Profile, DictManage, Tutorial } from './modules/system';
 import {
   ProductionList,
   CuttingManagement,
@@ -278,6 +278,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.role} element={<Suspense fallback={<Spin />}><RoleList /></Suspense>} />
           <Route path={paths.factory} element={<Suspense fallback={<Spin />}><FactoryList /></Suspense>} />
           <Route path={paths.loginLog} element={<Suspense fallback={<Spin />}><LoginLogList /></Suspense>} />
+          <Route path={paths.systemLogs} element={<Suspense fallback={<Spin />}><SystemLogs /></Suspense>} />
           <Route path={paths.profile} element={<Suspense fallback={<Spin />}><Profile /></Suspense>} />
           <Route path={paths.orderManagementList} element={<Suspense fallback={<Spin />}><OrderManagement /></Suspense>} />
           <Route path={paths.orderManagementDetail} element={<Suspense fallback={<Spin />}><OrderManagement /></Suspense>} />
