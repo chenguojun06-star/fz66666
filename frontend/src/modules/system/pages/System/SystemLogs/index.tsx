@@ -337,7 +337,7 @@ const SystemLogs: React.FC = () => {
                           { value: '财务管理', label: '财务管理' },
                           { value: '系统设置', label: '系统设置' },
                         ]}
-                        onChange={(value) => setOperationQueryParams((prev) => ({ ...prev, module: value, page: 1 }))}
+                        onChange={(value) => setOperationQueryParams((prev) => ({ ...prev, module: value }))}
                       />
                       <Select
                         placeholder="操作类型"
@@ -351,14 +351,14 @@ const SystemLogs: React.FC = () => {
                           { value: '审批', label: '审批' },
                           { value: '导出', label: '导出' },
                         ]}
-                        onChange={(value) => setOperationQueryParams((prev) => ({ ...prev, operation: value, page: 1 }))}
+                        onChange={(value) => setOperationQueryParams((prev) => ({ ...prev, operation: value }))}
                       />
                       <Input
                         placeholder="操作人"
                         style={{ width: 140 }}
                         allowClear
                         value={operationQueryParams?.operatorName || ''}
-                        onChange={(e) => setOperationQueryParams((prev) => ({ ...prev, operatorName: e.target.value, page: 1 }))}
+                        onChange={(e) => setOperationQueryParams((prev) => ({ ...prev, operatorName: e.target.value }))}
                       />
                       <Select
                         placeholder="目标类型"
@@ -374,17 +374,17 @@ const SystemLogs: React.FC = () => {
                           { value: '用户', label: '用户' },
                           { value: '角色', label: '角色' },
                         ]}
-                        onChange={(value) => setOperationQueryParams((prev) => ({ ...prev, targetType: value, page: 1 }))}
+                        onChange={(value) => setOperationQueryParams((prev) => ({ ...prev, targetType: value }))}
                       />
                       <UnifiedDatePicker
                         placeholder="开始日期"
                         value={operationQueryParams.startDate ? dayjs(String(operationQueryParams.startDate)) : null}
-                        onChange={(d) => setOperationQueryParams((prev) => ({ ...prev, startDate: d ? d.format('YYYY-MM-DD') : '', page: 1 }))}
+                        onChange={(d) => setOperationQueryParams((prev) => ({ ...prev, startDate: d ? d.format('YYYY-MM-DD') : '' }))}
                       />
                       <UnifiedDatePicker
                         placeholder="结束日期"
                         value={operationQueryParams.endDate ? dayjs(String(operationQueryParams.endDate)) : null}
-                        onChange={(d) => setOperationQueryParams((prev) => ({ ...prev, endDate: d ? d.format('YYYY-MM-DD') : '', page: 1 }))}
+                        onChange={(d) => setOperationQueryParams((prev) => ({ ...prev, endDate: d ? d.format('YYYY-MM-DD') : '' }))}
                       />
                       <Button type="primary" onClick={fetchOperationLogs}>
                         查询
