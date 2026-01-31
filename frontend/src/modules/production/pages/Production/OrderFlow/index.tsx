@@ -344,11 +344,44 @@ const OrderFlow: React.FC = () => {
                     label: '成本详情(含BOM+工序)',
                     children: (
                       <div className="order-flow-module">
-                        <StyleQuotationTab
-                          styleId={data.order.styleId}
-                          readOnly={true}
-                          onSaved={() => {}}
-                        />
+                        {/* 如果订单有工序单价配置，显示来自单价维护的成本信息 */}
+                        {data.order.progressNodeUnitPrices && Array.isArray(data.order.progressNodeUnitPrices) && data.order.progressNodeUnitPrices.length > 0 ? (
+                          <Card>
+                            <Alert
+                              message="大货订单成本信息"
+                              description={
+                                <div>
+                                  <p>此订单使用单价维护模块的工序单价配置</p>
+                                  <p style={{ marginTop: 8 }}>工序总成本: ¥{
+                                    data.order.progressNodeUnitPrices.reduce((sum: number, item: any) => {
+                                      return sum + (Number(item.unitPrice) || 0);
+                                    }, 0).toFixed(2)
+                                  }</p>
+                                </div>
+                              }
+                              type="info"
+                              showIcon
+                              style={{ marginBottom: 16 }}
+                            />
+                            <Table
+                              dataSource={data.order.progressNodeUnitPrices}
+                              rowKey={(record: any) => record.processName || record.id}
+                              columns={[
+                                { title: '工序名称', dataIndex: 'processName', key: 'processName', width: 200 },
+                                { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 120, align: 'right', render: (v: any) => `¥${Number(v || 0).toFixed(2)}` },
+                                { title: '说明', dataIndex: 'remark', key: 'remark', ellipsis: true, render: (v: any) => v || '-' },
+                              ]}
+                              pagination={false}
+                            />
+                          </Card>
+                        ) : (
+                          // 样衣订单，从样衣开发模块获取成本信息
+                          <StyleQuotationTab
+                            styleId={data.order.styleId}
+                            readOnly={true}
+                            onSaved={() => {}}
+                          />
+                        )}
                       </div>
                     ),
                   },
