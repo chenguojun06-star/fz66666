@@ -32,6 +32,7 @@ type OrderFlowResponse = {
   stages: FlowStage[];
   warehousings?: ProductWarehousing[];
   cuttingBundles?: CuttingBundle[];
+  materialPurchases?: any[]; // 物料采购信息
 };
 
 type OrderLine = {
@@ -358,7 +359,7 @@ const OrderFlow: React.FC = () => {
                         {/* 解析工序数据：优先使用 progressWorkflowJson，备选 progressNodeUnitPrices */}
                         {(() => {
                           let workflowNodes: any[] = [];
-                          
+
                           // 1. 尝试从 progressWorkflowJson 解析
                           try {
                             if (data?.order?.progressWorkflowJson) {
@@ -429,14 +430,14 @@ const OrderFlow: React.FC = () => {
                           // 如果有工序数据，显示表格
                           if (workflowNodes.length > 0) {
                             const totalPrice = workflowNodes.reduce((sum, item) => sum + (item.unitPrice || 0), 0);
-                            
+
                             return (
                               <Card>
                                 <Alert
                                   message="大货订单工序单价信息"
                                   description={
                                     <div>
-                                      <p>工序数量: <strong>{workflowNodes.length}</strong> 个 | 
+                                      <p>工序数量: <strong>{workflowNodes.length}</strong> 个 |
                                          工序总单价: <strong style={{ color: '#1890ff', fontSize: 16 }}>¥{totalPrice.toFixed(2)}</strong>
                                       </p>
                                     </div>
@@ -449,24 +450,24 @@ const OrderFlow: React.FC = () => {
                                   dataSource={workflowNodes}
                                   rowKey={(record: any) => record.id || `${record.name}-${record.progressStage}`}
                                   columns={[
-                                    { 
-                                      title: '序号', 
-                                      key: 'index', 
-                                      width: 70, 
+                                    {
+                                      title: '序号',
+                                      key: 'index',
+                                      width: 70,
                                       align: 'center',
-                                      render: (_: any, __: any, index: number) => index + 1 
+                                      render: (_: any, __: any, index: number) => index + 1
                                     },
-                                    { 
-                                      title: '工序名称', 
-                                      dataIndex: 'name', 
-                                      key: 'name', 
+                                    {
+                                      title: '工序名称',
+                                      dataIndex: 'name',
+                                      key: 'name',
                                       width: 180,
                                       render: (v: any) => v || '-'
                                     },
-                                    { 
-                                      title: '阶段', 
-                                      dataIndex: 'progressStage', 
-                                      key: 'progressStage', 
+                                    {
+                                      title: '阶段',
+                                      dataIndex: 'progressStage',
+                                      key: 'progressStage',
                                       width: 120,
                                       render: (v: any) => {
                                         const stageMap: Record<string, string> = {
@@ -483,35 +484,35 @@ const OrderFlow: React.FC = () => {
                                         return stageMap[v] || v || '-';
                                       }
                                     },
-                                    { 
-                                      title: '机器类型', 
-                                      dataIndex: 'machineType', 
-                                      key: 'machineType', 
+                                    {
+                                      title: '机器类型',
+                                      dataIndex: 'machineType',
+                                      key: 'machineType',
                                       width: 120,
                                       render: (v: any) => v || '-'
                                     },
-                                    { 
-                                      title: '标准工时(分钟)', 
-                                      dataIndex: 'standardTime', 
-                                      key: 'standardTime', 
+                                    {
+                                      title: '标准工时(分钟)',
+                                      dataIndex: 'standardTime',
+                                      key: 'standardTime',
                                       width: 130,
                                       align: 'right',
                                       render: (v: any) => Number(v || 0).toFixed(2)
                                     },
-                                    { 
-                                      title: '单价(元)', 
-                                      dataIndex: 'unitPrice', 
-                                      key: 'unitPrice', 
-                                      width: 120, 
-                                      align: 'right', 
+                                    {
+                                      title: '单价(元)',
+                                      dataIndex: 'unitPrice',
+                                      key: 'unitPrice',
+                                      width: 120,
+                                      align: 'right',
                                       render: (v: any) => <strong style={{ color: '#1890ff' }}>¥{Number(v || 0).toFixed(2)}</strong>
                                     },
-                                    { 
-                                      title: '说明', 
-                                      dataIndex: 'remark', 
-                                      key: 'remark', 
-                                      ellipsis: true, 
-                                      render: (v: any) => v || '-' 
+                                    {
+                                      title: '说明',
+                                      dataIndex: 'remark',
+                                      key: 'remark',
+                                      ellipsis: true,
+                                      render: (v: any) => v || '-'
                                     },
                                   ]}
                                   pagination={false}
@@ -543,6 +544,172 @@ const OrderFlow: React.FC = () => {
                             />
                           );
                         })()}
+                      </div>
+                    ),
+                  },
+                  {
+                    key: 'material-purchases',
+                    label: `面辅料信息${data?.materialPurchases?.length ? ` (${data.materialPurchases.length})` : ''}`,
+                    children: (
+                      <div className="order-flow-module">
+                        {data?.materialPurchases && data.materialPurchases.length > 0 ? (
+                          <Table
+                            dataSource={data.materialPurchases}
+                            rowKey={(record: any) => record.id || Math.random()}
+                            columns={[
+                              {
+                                title: '序号',
+                                key: 'index',
+                                width: 70,
+                                align: 'center',
+                                render: (_: any, __: any, index: number) => index + 1
+                              },
+                              {
+                                title: '物料类型',
+                                dataIndex: 'materialType',
+                                key: 'materialType',
+                                width: 120,
+                                render: (v: any) => {
+                                  const typeMap: Record<string, string> = {
+                                    'fabric': '面料',
+                                    'accessory': '辅料',
+                                    'other': '其他'
+                                  };
+                                  return typeMap[v] || v || '-';
+                                }
+                              },
+                              {
+                                title: '物料名称',
+                                dataIndex: 'materialName',
+                                key: 'materialName',
+                                width: 200,
+                                ellipsis: true,
+                                render: (v: any) => v || '-'
+                              },
+                              {
+                                title: '规格',
+                                dataIndex: 'specification',
+                                key: 'specification',
+                                width: 150,
+                                ellipsis: true,
+                                render: (v: any) => v || '-'
+                              },
+                              {
+                                title: '颜色',
+                                dataIndex: 'color',
+                                key: 'color',
+                                width: 100,
+                                render: (v: any) => v || '-'
+                              },
+                              {
+                                title: '尺寸',
+                                dataIndex: 'size',
+                                key: 'size',
+                                width: 100,
+                                render: (v: any) => v || '-'
+                              },
+                              {
+                                title: '需求数量',
+                                dataIndex: 'requiredQuantity',
+                                key: 'requiredQuantity',
+                                width: 120,
+                                align: 'right',
+                                render: (v: any, record: any) => `${Number(v || 0).toFixed(2)} ${record.unit || ''}`
+                              },
+                              {
+                                title: '已采购',
+                                dataIndex: 'purchasedQuantity',
+                                key: 'purchasedQuantity',
+                                width: 120,
+                                align: 'right',
+                                render: (v: any, record: any) => {
+                                  const val = Number(v || 0);
+                                  const required = Number(record.requiredQuantity || 0);
+                                  const color = val >= required ? '#52c41a' : '#faad14';
+                                  return <span style={{ color }}>{val.toFixed(2)} {record.unit || ''}</span>;
+                                }
+                              },
+                              {
+                                title: '单价',
+                                dataIndex: 'unitPrice',
+                                key: 'unitPrice',
+                                width: 100,
+                                align: 'right',
+                                render: (v: any) => v ? `¥${Number(v).toFixed(2)}` : '-'
+                              },
+                              {
+                                title: '总价',
+                                dataIndex: 'totalAmount',
+                                key: 'totalAmount',
+                                width: 120,
+                                align: 'right',
+                                render: (v: any, record: any) => {
+                                  const total = Number(v || 0) || (Number(record.purchasedQuantity || 0) * Number(record.unitPrice || 0));
+                                  return total > 0 ? <strong style={{ color: '#1890ff' }}>¥{total.toFixed(2)}</strong> : '-';
+                                }
+                              },
+                              {
+                                title: '供应商',
+                                dataIndex: 'supplierName',
+                                key: 'supplierName',
+                                width: 150,
+                                ellipsis: true,
+                                render: (v: any) => v || '-'
+                              },
+                              {
+                                title: '状态',
+                                dataIndex: 'status',
+                                key: 'status',
+                                width: 100,
+                                render: (v: any) => {
+                                  const statusMap: Record<string, { text: string; color: string }> = {
+                                    'pending': { text: '待采购', color: 'default' },
+                                    'ordering': { text: '订购中', color: 'processing' },
+                                    'received': { text: '已到货', color: 'success' },
+                                    'partial': { text: '部分到货', color: 'warning' }
+                                  };
+                                  const status = statusMap[v] || { text: v || '未知', color: 'default' };
+                                  return <Tag color={status.color}>{status.text}</Tag>;
+                                }
+                              },
+                              {
+                                title: '备注',
+                                dataIndex: 'remark',
+                                key: 'remark',
+                                ellipsis: true,
+                                render: (v: any) => v || '-'
+                              },
+                            ]}
+                            pagination={false}
+                            bordered
+                            scroll={{ x: 'max-content' }}
+                            summary={(pageData) => {
+                              const totalAmount = pageData.reduce((sum, record: any) => {
+                                const amount = Number(record.totalAmount || 0) || (Number(record.purchasedQuantity || 0) * Number(record.unitPrice || 0));
+                                return sum + amount;
+                              }, 0);
+                              
+                              return totalAmount > 0 ? (
+                                <Table.Summary.Row style={{ background: '#fafafa' }}>
+                                  <Table.Summary.Cell index={0} colSpan={9} align="right">
+                                    <strong>合计：</strong>
+                                  </Table.Summary.Cell>
+                                  <Table.Summary.Cell index={1} align="right">
+                                    <strong style={{ color: '#1890ff', fontSize: 16 }}>¥{totalAmount.toFixed(2)}</strong>
+                                  </Table.Summary.Cell>
+                                  <Table.Summary.Cell index={2} colSpan={3} />
+                                </Table.Summary.Row>
+                              ) : null;
+                            }}
+                          />
+                        ) : (
+                          <Alert
+                            message="暂无物料采购信息"
+                            description="此订单尚未录入物料采购数据"
+                            type="info"
+                            showIcon
+                          />
+                        )}
                       </div>
                     ),
                   },
