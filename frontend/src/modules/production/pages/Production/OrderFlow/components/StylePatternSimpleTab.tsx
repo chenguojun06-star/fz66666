@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Tabs, Spin, message } from 'antd';
+import { Card, Tabs, Spin, message, List, Button, Space, Tag } from 'antd';
+import { DownloadOutlined, FileOutlined } from '@ant-design/icons';
 import type { StyleAttachment } from '@/types/style';
-import StyleAttachmentTab from '@/modules/basic/pages/StyleInfo/components/StyleAttachmentTab';
 import StyleSizeTab from '@/modules/basic/pages/StyleInfo/components/StyleSizeTab';
 import api from '@/utils/api';
 
@@ -19,6 +19,30 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
   React.useEffect(() => {
     console.log('StylePatternSimpleTab - styleId:', styleId, 'styleNo:', styleNo);
   }, [styleId, styleNo]);
+
+  // 加载所有纸样文件（包括原始纸样和放码纸样）
+  useEffect(() => {
+    const fetchAllPatternFiles = async () => {
+      if (!styleId) return;
+      try {
+        // 并行加载两种类型的纸样文件
+        const [patternRes, gradingRes] = await Promise.all([
+          api.get('/style/attachment/list', { params: { styleId, bizType: 'pattern' } }),
+          api.get('/style/attachment/list', { params: { styleId, bizType: 'pattern_grading' } })
+        ]);
+        
+        const patternList = patternRes.code === 200 && Array.isArray(patternRes.data) ? patternRes.data : [];
+        const gradingList = gradingRes.code === 200 && Array.isArray(gradingRes.data) ? gradingRes.data : [];
+        
+        // 合并两种类型的文件
+        const allFiles = [...patternList, ...gradingList];
+        setAllPatternFiles(allFiles);
+      } catch (error) {
+        console.error('加载纸样文件失败:', error);
+      }
+    };
+    fetchAllPatternFiles();
+  }, [styleId]);
 
   // 加载生产制单
   useEffect(() => {
@@ -43,6 +67,34 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
     fetchProductionReq();
   }, [styleId]);
 
+  // 下载附件
+  const handleDownload = (record: StyleAttachment) => {
+    if (!record.filePath) {
+      message.error('文件路径不存在');
+      return;
+    }
+    const link = document.createElement('a');
+    link.href = record.filePath;
+    link.download = record.fileName || '文件';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // 获取文件类型标签
+  const getFileTypeTag = (fileName: string) => {
+    const ext = fileName.split('.').pop()?.toLowerCase();
+    const typeMap: Record<string, { color: string; text: string }> = {
+      dxf: { color: 'blue', text: 'DXF' },
+      plt: { color: 'cyan', text: 'PLT' },
+      ets: { color: 'purple', text: 'ETS' },
+      pdf: { color: 'red', text: 'PDF' },
+      zip: { color: 'orange', text: 'ZIP' },
+    };
+    const type = typeMap[ext || ''] || { color: 'default', text: ext?.toUpperCase() || 'FILE' };
+    return <Tag color={type.color}>{type.text}</Tag>;
+  };
+
   return (
     <div style={{ padding: '0 8px' }}>
       <Tabs
@@ -52,13 +104,43 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
             label: `📐 大货纸样 (${allPatternFiles.length})`,
             children: (
               <Card size="small" style={{ marginBottom: 16 }}>
-                <StyleAttachmentTab
-                  styleId={styleId}
-                  bizType="pattern,pattern_grading"
-                  uploadText="上传纸样文件"
-                  readOnly={true}
-                  onListChange={setAllPatternFiles}
-                />
+                {allPatternFiles.length > 0 ? (
+                  <List
+                    dataSource={allPatternFiles}
+                    renderItem={(item) => (
+                      <List.Item
+                        actions={[
+                          <Button
+                            key="download"
+                            type="link"
+                            size="small"
+                            icon={<DownloadOutlined />}
+                            onClick={() => handleDownload(item)}
+                          >
+                            下载
+                          </Button>,
+                        ]}
+                      >
+                        <List.Item.Meta
+                          avatar={<FileOutlined style={{ fontSize: 24, color: '#1890ff' }} />}
+                          title={
+                            <Space>
+                              {item.fileName}
+                              {getFileTypeTag(item.fileName || '')}
+                              {item.bizType === 'pattern' && <Tag color="green">原始纸样</Tag>}
+                              {item.bizType === 'pattern_grading' && <Tag color="purple">放码纸样</Tag>}
+                            </Space>
+                          }
+                          description={item.remark || '暂无描述'}
+                        />
+                      </List.Item>
+                    )}
+                  />
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '24px', color: '#999' }}>
+                    暂无纸样文件
+                  </div>
+                )}
               </Card>
             ),
           },
@@ -84,7 +166,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
                         .split(/\r?\n/)
                         .map(l => String(l || '').replace(/^\s*\d+\s*[.、)）-]?\s*/, '').trim())
                         .filter(l => Boolean(l));
-                      
+
                       return (
                         <div style={{ padding: '8px' }}>
                           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
