@@ -452,13 +452,20 @@ const StyleBomTab: React.FC<Props> = ({
       const color = String(merged.color || '').trim();
       
       if (materialCode) {
-        const res = await api.get<{ code: number; data: any }>(
-          '/warehouse/inventory/check',
-          { params: { materialCode, color } }
+        // 使用MaterialStockService查询库存（与后端StyleBomService相同逻辑）
+        const res = await api.get<{ code: number; data: { records: any[] } }>(
+          '/production/material/stock/page',
+          { params: { 
+            materialCode,
+            color: color || undefined,  // 如果颜色为空，不传参数
+            page: 1,
+            pageSize: 1
+          } }
         );
         
-        if (res.code === 200 && res.data) {
-          const availableQty = Number(res.data.quantity || 0) - Number(res.data.lockedQuantity || 0);
+        if (res.code === 200 && res.data?.records?.length > 0) {
+          const stock = res.data.records[0];
+          const availableQty = Number(stock.quantity || 0) - Number(stock.lockedQuantity || 0);
           const usageAmount = Number(merged.usageAmount || 0);
           const lossRate = Number(merged.lossRate || 0);
           const requiredQty = Math.ceil(usageAmount * productionQty * (1 + lossRate / 100));
@@ -479,11 +486,32 @@ const StyleBomTab: React.FC<Props> = ({
             )
           ));
           
-          message.success(`${materialCode} 库存检查完成：${stockStatus === 'sufficient' ? '库存充足' : stockStatus === 'insufficient' ? '库存不足' : '无库存'}`);
+          const statusText = stockStatus === 'sufficient' ? '库存充足' : stockStatus === 'insufficient' ? '库存不足' : '无库存';
+          message.success(`${materialCode} 库存检查完成：${statusText}（可用：${availableQty}）`);
+        } else {
+          // 无库存记录
+          const usageAmount = Number(merged.usageAmount || 0);
+          const lossRate = Number(merged.lossRate || 0);
+          const requiredQty = Math.ceil(usageAmount * productionQty * (1 + lossRate / 100));
+          
+          setData(prev => sortBomRows(
+            prev.map(item => 
+              String(item.id) === rowId ? {
+                ...item,
+                ...merged,
+                stockStatus: 'none',
+                availableStock: 0,
+                requiredPurchase: requiredQty,
+              } : item
+            )
+          ));
+          
+          message.warning(`${materialCode} 无库存记录`);
         }
       }
     } catch (error) {
       console.log('自动库存检查失败:', error);
+      message.error('库存检查失败，请稍后重试');
     }
   };
 
