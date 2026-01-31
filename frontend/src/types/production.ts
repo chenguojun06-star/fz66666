@@ -32,7 +32,7 @@ export interface ProductionOrder {
   orderDetails?: string;
 
   progressWorkflowJson?: string;
-  progressWorkflowLocked?: number;
+  progressWorkflowLocked?: boolean;
   progressWorkflowLockedAt?: string;
   progressWorkflowLockedBy?: string;
   progressWorkflowLockedByName?: string;
@@ -76,7 +76,7 @@ export interface ProductionOrder {
   progressNodeUnitPrices?: any[]; // 工序节点单价数组
 
   // 采购手动确认相关字段
-  procurementManuallyCompleted?: number;
+  procurementManuallyCompleted?: boolean;
   procurementConfirmedBy?: string;
   procurementConfirmedByName?: string;
   procurementConfirmedAt?: string;
@@ -197,7 +197,7 @@ export interface MaterialPurchase extends Record<string, unknown> {
   styleNo?: string;
   styleName?: string;
   styleCover?: string;
-  returnConfirmed?: number;
+  returnConfirmed?: boolean;
   returnQuantity?: number;
   returnConfirmerId?: string;
   returnConfirmerName?: string;

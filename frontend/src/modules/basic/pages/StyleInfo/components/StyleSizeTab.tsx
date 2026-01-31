@@ -16,6 +16,7 @@ interface Props {
   sizeStartTime?: string;
   sizeCompletedTime?: string;
   simpleView?: boolean; // 简化视图：隐藏领取人信息、操作按钮、提示信息
+  onRefresh?: () => void;
 }
 
 type MatrixCell = {
@@ -50,6 +51,7 @@ const StyleSizeTab: React.FC<Props> = ({
   sizeStartTime,
   sizeCompletedTime,
   simpleView = false,
+  onRefresh,
 }) => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -73,6 +75,34 @@ const StyleSizeTab: React.FC<Props> = ({
   const styleNoReqSeq = useRef(0);
   const styleNoTimerRef = useRef<number | undefined>(undefined);
   const { modalWidth } = useViewport();
+  const [startingSize, setStartingSize] = useState(false);
+
+  // 开始配置尺寸表
+  const handleSizeStart = async () => {
+    const sid = Number(styleId);
+    if (!Number.isFinite(sid) || sid <= 0) {
+      message.error('无效的款式ID');
+      return;
+    }
+
+    setStartingSize(true);
+    try {
+      const res = await api.post<{ code: number; message: string }>(`/style/info/${sid}/size/start`);
+      const result = res as Record<string, unknown>;
+      if (result.code === 200) {
+        message.success('已开始配置尺寸表');
+        if (onRefresh) {
+          await onRefresh();
+        }
+      } else {
+        message.error(result.message || '操作失败');
+      }
+    } catch (error: unknown) {
+      message.error(`操作失败：${error?.message || '请求失败'}`);
+    } finally {
+      setStartingSize(false);
+    }
+  };
 
   const fetchStyleNoOptions = async (keyword?: string) => {
     const seq = (styleNoReqSeq.current += 1);
@@ -623,17 +653,30 @@ const StyleSizeTab: React.FC<Props> = ({
           background: '#f5f5f5',
           borderRadius: 4,
           display: 'flex',
-          gap: 24,
+          alignItems: 'center',
+          justifyContent: 'space-between',
         }}>
-          <span style={{ color: '#666' }}>
-            领取人：<span style={{ color: '#333', fontWeight: 500 }}>{sizeAssignee || '-'}</span>
-          </span>
-          <span style={{ color: '#666' }}>
-            开始时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(sizeStartTime)}</span>
-          </span>
-          <span style={{ color: '#666' }}>
-            完成时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(sizeCompletedTime)}</span>
-          </span>
+          <div style={{ display: 'flex', gap: 24 }}>
+            <span style={{ color: '#666' }}>
+              领取人：<span style={{ color: '#333', fontWeight: 500 }}>{sizeAssignee || '-'}</span>
+            </span>
+            <span style={{ color: '#666' }}>
+              开始时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(sizeStartTime)}</span>
+            </span>
+            <span style={{ color: '#666' }}>
+              完成时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(sizeCompletedTime)}</span>
+            </span>
+          </div>
+          {!sizeStartTime && !sizeCompletedTime && (
+            <Button
+              size="small"
+              onClick={handleSizeStart}
+              loading={startingSize}
+              disabled={Boolean(readOnly)}
+            >
+              开始配置尺寸表
+            </Button>
+          )}
         </div>
       )}
       {!simpleView && (

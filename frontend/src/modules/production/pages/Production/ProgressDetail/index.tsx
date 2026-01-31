@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, App, Button, Card, Collapse, Form, Grid, Input, InputNumber, Modal, Select, Segmented, Space, Tag, Tooltip, Typography } from 'antd';
+import { Alert, App, Button, Card, Collapse, DatePicker, Form, Grid, Input, InputNumber, Modal, Select, Segmented, Space, Tag, Tooltip, Typography } from 'antd';
 import { UnifiedRangePicker } from '@/components/common/UnifiedDatePicker';
 import { DeleteOutlined, EyeOutlined, RollbackOutlined, ScanOutlined, EditOutlined, AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -12,7 +12,6 @@ import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import QuickEditModal from '@/components/common/QuickEditModal';
-import NodeDetailModal from '@/components/common/NodeDetailModal';
 import { ProductionOrderHeader, StyleCoverThumb } from '@/components/StyleAssets';
 import { compareSizeAsc, generateRequestId, isDuplicateScanMessage, isOrderFrozenByStatus } from '@/utils/api';
 import { isSupervisorOrAboveUser as isSupervisorOrAboveUserFn, useAuth } from '@/utils/AuthContext';
@@ -85,6 +84,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
 
   const [cuttingBundlesLoading, setCuttingBundlesLoading] = useState(false);
   const [cuttingBundles, setCuttingBundles] = useState<CuttingBundle[]>([]);
+  const [nodeOps, setNodeOps] = useState<Record<string, any>>({});
+  const [inlineSaving, setInlineSaving] = useState(false);
 
   const [nodes, setNodes] = useState<ProgressNode[]>(defaultNodes);
   const [progressNodesByStyleNo, setProgressNodesByStyleNo] = useState<Record<string, ProgressNode[]>>({});
@@ -142,31 +143,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const [quickEditSaving, setQuickEditSaving] = useState(false);
 
   // 节点详情弹窗状态
-  const [nodeDetailVisible, setNodeDetailVisible] = useState(false);
-  const [nodeDetailOrder, setNodeDetailOrder] = useState<ProductionOrder | null>(null);
-  const [nodeDetailType, setNodeDetailType] = useState<string>('');
-  const [nodeDetailName, setNodeDetailName] = useState<string>('');
-  const [nodeDetailStats, setNodeDetailStats] = useState<{ done: number; total: number; percent: number; remaining: number } | undefined>(undefined);
-  const [nodeDetailUnitPrice, setNodeDetailUnitPrice] = useState<number | undefined>(undefined);
-  const [nodeDetailProcessList, setNodeDetailProcessList] = useState<{ name: string; unitPrice?: number }[]>([]);
 
-  // 打开节点详情弹窗
-  const openNodeDetail = useCallback((
-    order: ProductionOrder,
-    nodeType: string,
-    nodeName: string,
-    stats?: { done: number; total: number; percent: number; remaining: number },
-    unitPrice?: number,
-    processList?: { name: string; unitPrice?: number }[]
-  ) => {
-    setNodeDetailOrder(order);
-    setNodeDetailType(nodeType);
-    setNodeDetailName(nodeName);
-    setNodeDetailStats(stats);
-    setNodeDetailUnitPrice(unitPrice);
-    setNodeDetailProcessList(processList || []);
-    setNodeDetailVisible(true);
-  }, []);
 
   const [orderSortField, setOrderSortField] = useState<string>('createTime');
   const [orderSortOrder, setOrderSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -556,7 +533,12 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     scanHistory: ScanRecord[],
     nodes?: ProgressNode[],
   ): number => {
-    if (!cuttingBundles.length) {
+    const oid = String(order?.id || '').trim();
+    const ono = String(order?.orderNo || '').trim();
+    const bundlesForOrder = (cuttingBundles || []).filter(
+      (b) => String(b?.productionOrderId || '').trim() === oid || String(b?.productionOrderNo || '').trim() === ono
+    );
+    if (!bundlesForOrder.length) {
       return Number(order.productionProgress) || 0;
     }
 
@@ -569,7 +551,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     const nodeCompletion = effectiveNodes.map((node) => {
       const nodeName = node.name;
       // 统计该节点下所有菲号的完成情况
-      const totalQtyForNode = cuttingBundles.reduce((acc, bundle) => acc + (Number(bundle?.quantity) || 0), 0);
+      const totalQtyForNode = bundlesForOrder.reduce((acc, bundle) => acc + (Number(bundle?.quantity) || 0), 0);
 
       // 计算该节点已完成的数量
       const doneQtyForNode = scanHistory
@@ -655,6 +637,87 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
           }
         }
       }
+      const procurementRate = Number((order as Record<string, unknown>)?.procurementCompletionRate) || 0;
+      if (procurementRate > 0) {
+        const qty = Number(order.orderQuantity) || 0;
+        const doneQty = Math.floor(qty * procurementRate / 100);
+        for (const key of Object.keys(stats)) {
+          if (key.includes('采购')) {
+            stats[key] = Math.max(stats[key] || 0, doneQty);
+          }
+        }
+      }
+      const sewingRate = Number((order as Record<string, unknown>)?.sewingCompletionRate) || 0;
+      if (sewingRate > 0) {
+        const qty = Number(order.orderQuantity) || 0;
+        const doneQty = Math.floor(qty * sewingRate / 100);
+        for (const key of Object.keys(stats)) {
+          if (key.includes('缝') || key.includes('车缝') || key.includes('缝制')) {
+            stats[key] = Math.max(stats[key] || 0, doneQty);
+          }
+        }
+      }
+      const ironingRate = Number((order as Record<string, unknown>)?.ironingCompletionRate) || 0;
+      if (ironingRate > 0) {
+        const qty = Number(order.orderQuantity) || 0;
+        const doneQty = Math.floor(qty * ironingRate / 100);
+        for (const key of Object.keys(stats)) {
+          if (key.includes('烫') || key.includes('整烫') || key.includes('熨烫')) {
+            stats[key] = Math.max(stats[key] || 0, doneQty);
+          }
+        }
+      }
+      const qualityRate = Number((order as Record<string, unknown>)?.qualityCompletionRate) || 0;
+      if (qualityRate > 0) {
+        const qty = Number(order.orderQuantity) || 0;
+        const doneQty = Math.floor(qty * qualityRate / 100);
+        for (const key of Object.keys(stats)) {
+          if (key.includes('质检') || key.includes('检验') || key.includes('品检') || key.includes('验货')) {
+            stats[key] = Math.max(stats[key] || 0, doneQty);
+          }
+        }
+      }
+      const packagingRate = Number((order as Record<string, unknown>)?.packagingCompletionRate) || 0;
+      if (packagingRate > 0) {
+        const qty = Number(order.orderQuantity) || 0;
+        const doneQty = Math.floor(qty * packagingRate / 100);
+        for (const key of Object.keys(stats)) {
+          if (key.includes('包装') || key.includes('后整') || key.includes('打包') || key.includes('装箱')) {
+            stats[key] = Math.max(stats[key] || 0, doneQty);
+          }
+        }
+      }
+      // 合成“尾部”节点：根据整烫/质检/包装三者的最小完成率作为尾部完成率
+      const tailRates = [ironingRate, qualityRate, packagingRate].filter((r) => r > 0);
+      if (tailRates.length) {
+        const tailRate = Math.min(...tailRates);
+        const qty = Number(order.orderQuantity) || 0;
+        const doneQty = Math.floor(qty * tailRate / 100);
+        for (const key of Object.keys(stats)) {
+          if (key.includes('尾部')) {
+            stats[key] = Math.max(stats[key] || 0, doneQty);
+          }
+        }
+      }
+      const warehousingRate = Number((order as Record<string, unknown>)?.warehousingCompletionRate) || 0;
+      if (warehousingRate > 0) {
+        const qty = Number(order.orderQuantity) || 0;
+        const doneQty = Math.floor(qty * warehousingRate / 100);
+        for (const key of Object.keys(stats)) {
+          if (key.includes('入库')) {
+            stats[key] = Math.max(stats[key] || 0, doneQty);
+          }
+        }
+      } else {
+        const warehoused = Number((order as Record<string, unknown>)?.warehousingQualifiedQuantity) || 0;
+        if (warehoused > 0) {
+          for (const key of Object.keys(stats)) {
+            if (key.includes('入库')) {
+              stats[key] = Math.max(stats[key] || 0, warehoused);
+            }
+          }
+        }
+      }
       boardStatsByOrderRef.current[oid] = stats;
       setBoardStatsByOrder((prev) => ({ ...prev, [oid]: stats }));
     } catch {
@@ -685,6 +748,35 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const saveNodes = (next: ProgressNode[]) => {
     const stripped = stripWarehousingNode(next);
     setNodes(stripped.length ? stripped : defaultNodes);
+  };
+
+  const getProcessesByNode = (order: ProductionOrder | null): Record<string, { name: string; unitPrice?: number }[]> => {
+    const raw = String((order as Record<string, unknown>)?.progressWorkflowJson ?? '').trim();
+    if (!raw) return {};
+    try {
+      const obj = JSON.parse(raw);
+      const nodes = Array.isArray(obj?.nodes) ? obj.nodes : [];
+      const byNode: Record<string, { name: string; unitPrice?: number }[]> = {};
+      if (nodes.length && nodes[0]?.name) {
+        for (const item of nodes) {
+          const n = String(item?.name || item?.processName || '').trim();
+          const stage = String(item?.progressStage || n).trim();
+          const price = Number(item?.unitPrice) || 0;
+          if (!byNode[stage]) byNode[stage] = [];
+          byNode[stage].push({ name: n, unitPrice: price });
+        }
+        return byNode;
+      }
+      const processesByNode = obj?.processesByNode || {};
+      const result: Record<string, { name: string; unitPrice?: number }[]> = {};
+      for (const k of Object.keys(processesByNode || {})) {
+        const arr = Array.isArray(processesByNode[k]) ? processesByNode[k] : [];
+        result[k] = arr.map((p: any) => ({ name: String(p?.name || p?.processName || '').trim(), unitPrice: Number(p?.unitPrice) || 0 })).filter((x) => x.name);
+      }
+      return result;
+    } catch {
+      return {};
+    }
   };
 
   const ensureNodesFromTemplateIfNeeded = async (order: ProductionOrder) => {
@@ -842,8 +934,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       const res = await productionCuttingApi.list({
         page: 1,
         pageSize: 10000,
-        orderNo: orderNo || undefined,
-        orderId: orderId || undefined,
+        productionOrderId: orderId || undefined,
+        productionOrderNo: orderNo || undefined,
       });
       const result = res as Record<string, unknown>;
       if (result.code === 200) {
@@ -907,6 +999,17 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     await fetchScanHistory(effective);
     await fetchCuttingBundles(effective);
     await fetchPricingProcesses(effective);
+    try {
+      const res = await productionOrderApi.getNodeOperations(String(effective.id || ''));
+      if ((res as any)?.code === 200 && (res as any)?.data) {
+        const parsed = typeof (res as any).data === 'string' ? JSON.parse((res as any).data) : (res as any).data;
+        setNodeOps(parsed || {});
+      } else {
+        setNodeOps({});
+      }
+    } catch {
+      setNodeOps({});
+    }
   };
 
   const getCurrentWorkflowNodeForOrder = (order: ProductionOrder | null): ProgressNode => {
@@ -922,6 +1025,87 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     }
     return picked;
   };
+
+  const currentInlineNode = useMemo(() => {
+    return getCurrentWorkflowNodeForOrder(activeOrder);
+  }, [activeOrder]);
+
+  const cuttingTotalQtyForActive = useMemo(() => {
+    const oid = String(activeOrder?.id || '').trim();
+    const ono = String(activeOrder?.orderNo || '').trim();
+    const bundlesForOrder = (cuttingBundles || []).filter(
+      (b) => String((b as any)?.productionOrderId || '').trim() === oid || String((b as any)?.productionOrderNo || '').trim() === ono
+    );
+    return bundlesForOrder.reduce((s, b) => s + (Number((b as any)?.quantity) || 0), 0);
+  }, [activeOrder, cuttingBundles]);
+
+  const updateInlineOps = (field: string, value: any) => {
+    const k = String(currentInlineNode?.id || '').trim();
+    if (!k) return;
+    setNodeOps((prev) => ({
+      ...prev,
+      [k]: {
+        ...((prev || {})[k] || {}),
+        [field]: value,
+        updatedAt: new Date().toISOString(),
+        updatedByName: String(user?.name || user?.username || '未知')
+      }
+    }));
+  };
+
+  const saveInlineOps = async () => {
+    if (!activeOrder?.id) return;
+    const k = String(currentInlineNode?.id || '').trim();
+    if (!k) return;
+    setInlineSaving(true);
+    try {
+      const updated = { ...(nodeOps || {}) };
+      // 添加历史记录
+      const current = (updated as any)[k] || {};
+      const history = Array.isArray(current.history) ? current.history : [];
+      const fmt = (t: any) => (t ? formatDateTimeCompact(t) : '-');
+      const item = {
+        time: new Date().toISOString(),
+        operatorName: String(user?.name || user?.username || '未知'),
+        action: history.length === 0 ? 'create' : 'update',
+        changes: `领取人: ${String(current.assignee || '-')}; 数量: ${typeof current.assigneeQuantity === 'number' ? current.assigneeQuantity : '-'
+          }; 领取时间: ${fmt(current.receiveTime)}; 完成时间: ${fmt(current.completeTime)}`
+      };
+      (updated as any)[k] = { ...current, history: [...history, item].slice(-20) };
+      const res = await productionOrderApi.saveNodeOperations(String(activeOrder.id), JSON.stringify(updated));
+      if ((res as any)?.code === 200) {
+        message.success('保存成功');
+        setNodeOps(updated);
+      } else {
+        message.error((res as any)?.message || '保存失败');
+      }
+    } catch {
+      message.error('保存失败');
+    } finally {
+      setInlineSaving(false);
+    }
+  };
+
+  useEffect(() => {
+    const id = String(activeOrder?.id || '').trim();
+    if (!id) {
+      setNodeOps({});
+      return;
+    }
+    (async () => {
+      try {
+        const res = await productionOrderApi.getNodeOperations(id);
+        if ((res as any)?.code === 200 && (res as any)?.data) {
+          const parsed = typeof (res as any).data === 'string' ? JSON.parse((res as any).data) : (res as any).data;
+          setNodeOps(parsed || {});
+        } else {
+          setNodeOps({});
+        }
+      } catch {
+        setNodeOps({});
+      }
+    })();
+  }, [activeOrder?.id]);
 
   const closeDetail = () => {
     setDetailOpen(false);
@@ -1571,7 +1755,12 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   };
 
   const nodeStats = useMemo(() => {
-    const bundlesTotalQty = cuttingBundles.reduce((acc, b) => acc + (Number(b?.quantity) || 0), 0);
+    const oid = String(activeOrder?.id || '').trim();
+    const ono = String(activeOrder?.orderNo || '').trim();
+    const bundlesForOrder = (cuttingBundles || []).filter(
+      (b) => String(b?.productionOrderId || '').trim() === oid || String(b?.productionOrderNo || '').trim() === ono
+    );
+    const bundlesTotalQty = bundlesForOrder.reduce((acc, b) => acc + (Number(b?.quantity) || 0), 0);
     const totalQty = bundlesTotalQty > 0 ? bundlesTotalQty : (Number(activeOrder?.orderQuantity) || 0);
     const records = (scanHistory || []).filter((r) => {
       if (String((r as Record<string, unknown>)?.scanResult || '').trim() !== 'success') return false;
@@ -2070,17 +2259,9 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     borderRadius: 8,
                     transition: 'background 0.2s',
                   }}
-                  onClick={() => openNodeDetail(
-                    record,
-                    nodeType,
-                    nodeName,
-                    { done: completedQty, total: nodeQty, percent, remaining },
-                    node.unitPrice,
-                    ns.map(n => ({ name: n.name, unitPrice: n.unitPrice })) // 传递所有工序单价
-                  )}
                   onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(59, 130, 246, 0.08)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-                  title={`点击查看 ${nodeName} 详情`}
+
                 >
                   <LiquidProgressLottie
                     progress={percent}
@@ -2332,6 +2513,45 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               })}
             </div>
           </div>
+          {currentInlineNode?.id && (
+            <Card size="small" styles={{ body: { padding: 10 } }} style={{ marginTop: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <Text strong>{`操作当前节点：${currentInlineNode.name}`}</Text>
+                <Input
+                  placeholder="领取人"
+                  style={{ width: 140 }}
+                  value={String((nodeOps[currentInlineNode.id] || {}).assignee || '')}
+                  onChange={(e) => updateInlineOps('assignee', e.target.value)}
+                />
+                <InputNumber
+                  placeholder="数量"
+                  style={{ width: 120 }}
+                  min={0}
+                  precision={0}
+                  max={cuttingTotalQtyForActive || Number(activeOrder?.orderQuantity) || 0}
+                  value={typeof (nodeOps[currentInlineNode.id] || {}).assigneeQuantity === 'number' ? (nodeOps[currentInlineNode.id] as any).assigneeQuantity : undefined}
+                  onChange={(v) => {
+                    const max = cuttingTotalQtyForActive || Number(activeOrder?.orderQuantity) || 0;
+                    const n = typeof v === 'number' ? Math.max(0, Math.min(v, max)) : undefined;
+                    updateInlineOps('assigneeQuantity', n);
+                  }}
+                />
+                <DatePicker
+                  showTime
+                  style={{ width: 220 }}
+                  value={((nodeOps[currentInlineNode.id] || {}).receiveTime ? dayjs((nodeOps[currentInlineNode.id] as any).receiveTime) : undefined)}
+                  onChange={(v) => updateInlineOps('receiveTime', v ? v.toISOString() : undefined)}
+                />
+                <DatePicker
+                  showTime
+                  style={{ width: 220 }}
+                  value={((nodeOps[currentInlineNode.id] || {}).completeTime ? dayjs((nodeOps[currentInlineNode.id] as any).completeTime) : undefined)}
+                  onChange={(v) => updateInlineOps('completeTime', v ? v.toISOString() : undefined)}
+                />
+                <Button type="primary" size="small" loading={inlineSaving} onClick={saveInlineOps}>保存</Button>
+              </div>
+            </Card>
+          )}
         </div>
       </div>
     );
@@ -2414,10 +2634,12 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               subtitleField="orderNo"
               fields={[
                 { label: '码数', key: 'size', render: (val: unknown) => val || '-' },
-                { label: '数量', key: 'orderQuantity', render: (val: unknown) => {
-                  const qty = Number(val) || 0;
-                  return qty > 0 ? `${qty} 件` : '-';
-                }},
+                {
+                  label: '数量', key: 'orderQuantity', render: (val: unknown) => {
+                    const qty = Number(val) || 0;
+                    return qty > 0 ? `${qty} 件` : '-';
+                  }
+                },
               ]}
               progressConfig={{
                 calculate: (record: ProductionOrder) => {
@@ -2543,10 +2765,12 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               subtitleField="orderNo"
               fields={[
                 { label: '码数', key: 'size', render: (val: unknown) => val || '-' },
-                { label: '数量', key: 'orderQuantity', render: (val: unknown) => {
-                  const qty = Number(val) || 0;
-                  return qty > 0 ? `${qty} 件` : '-';
-                }},
+                {
+                  label: '数量', key: 'orderQuantity', render: (val: unknown) => {
+                    const qty = Number(val) || 0;
+                    return qty > 0 ? `${qty} 件` : '-';
+                  }
+                },
               ]}
               progressConfig={{
                 calculate: (record: ProductionOrder) => {
@@ -3315,24 +3539,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         }}
       />
 
-      {/* 节点详情弹窗 - 水晶球生产节点看板 */}
-      <NodeDetailModal
-        visible={nodeDetailVisible}
-        onClose={() => {
-          setNodeDetailVisible(false);
-          setNodeDetailOrder(null);
-        }}
-        orderId={nodeDetailOrder?.id}
-        orderNo={nodeDetailOrder?.orderNo}
-        nodeType={nodeDetailType}
-        nodeName={nodeDetailName}
-        stats={nodeDetailStats}
-        unitPrice={nodeDetailUnitPrice}
-        processList={nodeDetailProcessList}
-        onSaved={() => {
-          void fetchOrders();
-        }}
-      />
+
     </div>
   );
 

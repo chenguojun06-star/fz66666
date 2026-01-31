@@ -3,6 +3,7 @@ import { Button, Input, Space, Tag, message } from 'antd';
 import api from '@/utils/api';
 import { buildProductionSheetHtml } from '../../DataCenter';
 import { formatDateTime } from '@/utils/datetime';
+import { safePrint } from '@/utils/safePrint';
 
 const { TextArea } = Input;
 
@@ -98,18 +99,10 @@ const StyleProductionTab: React.FC<Props> = ({
     const payload = await fetchProductionSheetPayload();
     if (!payload) return;
     const html = buildWorkorderHtml(payload);
-    const w = window.open('', '_blank');
-    if (!w) {
+    const success = safePrint(html, '生产制单');
+    if (!success) {
       message.error('浏览器拦截了新窗口');
-      return;
     }
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
-    w.focus();
-    setTimeout(() => {
-      w.print();
-    }, 200);
   };
 
   return (

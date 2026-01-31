@@ -832,4 +832,35 @@ public class PatternProductionController {
             return Result.fail("入库失败: " + e.getMessage());
         }
     }
+
+    /**
+     * 样板生产维护
+     */
+    @PostMapping("/{id}/maintenance")
+    public Result<Void> maintenance(@PathVariable String id, @RequestBody Map<String, String> request) {
+        try {
+            String reason = request.get("reason");
+            if (!StringUtils.hasText(reason)) {
+                return Result.fail("请输入维护原因");
+            }
+
+            // 查询样板生产记录
+            PatternProduction pattern = patternProductionService.getById(id);
+            if (pattern == null || pattern.getDeleteFlag() == 1) {
+                return Result.fail("样板生产记录不存在");
+            }
+
+            // 更新维护人和维护时间
+            String currentUsername = UserContext.username();
+            pattern.setMaintainer(currentUsername);
+            pattern.setMaintainTime(LocalDateTime.now());
+            patternProductionService.updateById(pattern);
+
+            log.info("样板生产维护成功: id={}, maintainer={}, reason={}", id, currentUsername, reason);
+            return Result.success();
+        } catch (Exception e) {
+            log.error("样板生产维护失败: id={}", id, e);
+            return Result.fail("维护失败: " + e.getMessage());
+        }
+    }
 }

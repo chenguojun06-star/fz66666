@@ -313,7 +313,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                       value={form.getFieldValue('totalCost') || 0}
                       precision={2}
                       prefix="¥"
-                      valueStyle={{ fontSize: '16px', color: '#1890ff' }}
+                      style={{ fontSize: '16px', color: '#1890ff' }}
                     />
                   </div>
                 </Col>
@@ -324,7 +324,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                       value={form.getFieldValue('totalPrice') || 0}
                       precision={2}
                       prefix="¥"
-                      valueStyle={{ fontSize: '18px', fontWeight: 'bold', color: '#ff4d4f' }}
+                      style={{ fontSize: '18px', fontWeight: 'bold', color: '#ff4d4f' }}
                     />
                   </div>
                 </Col>

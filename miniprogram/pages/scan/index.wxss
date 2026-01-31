@@ -66,7 +66,7 @@ page {
   padding: 8px 10px;
   border-radius: var(--radius-full);
   font-size: 12px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   background: rgba(255, 255, 255, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.7);
   box-shadow:
@@ -99,7 +99,7 @@ page {
 .more-dot {
   font-size: 14px;
   letter-spacing: -2px;
-  color: #9ca3af;
+  color: var(--color-text-disabled);
 }
 
 /* ===== 扫码区 ===== */
@@ -201,7 +201,7 @@ page {
   padding: 6px 4px;
   border-radius: var(--radius-full);
   font-size: 12px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   background: #ffffff;
 }
 .qc-opt:active {
@@ -240,7 +240,7 @@ page {
 .df-label {
   width: 36px;
   font-size: 11px;
-  color: #9ca3af;
+  color: var(--color-text-disabled);
 }
 .df-picker {
   flex: 1;
@@ -306,7 +306,7 @@ page {
 }
 .wh-label {
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--color-text-disabled);
 }
 .wh-input {
   flex: 1;
@@ -347,7 +347,7 @@ page {
 .res-msg {
   flex: 1;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 .res-undo {
   padding: 4px 10px;
@@ -366,7 +366,7 @@ page {
   gap: 6px;
   margin-top: 8px;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 .res-order {
   color: #1f2937;
@@ -378,14 +378,14 @@ page {
 .res-proc {
   padding: 2px 8px;
   background: rgba(16, 185, 129, 0.12);
-  color: #10b981;
+  color: var(--color-success);
   border-radius: var(--radius-full);
   font-size: 11px;
 }
 
 /* 单价警告样式 */
 .res-price-warn {
-  color: #f59e0b;
+  color: var(--color-warning);
   font-weight: 500;
 }
 
@@ -445,7 +445,7 @@ page {
   background: #ffffff;
   border-radius: 10px;
   font-size: 11px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 .sec-refresh:active {
   background: rgba(224, 242, 254, 0.8);
@@ -640,7 +640,7 @@ page {
 
 .cutting-btn.clear {
   background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
-  color: #6b7280;
+  color: var(--color-text-secondary);
   border-color: #d1d5db;
 }
 
@@ -683,7 +683,7 @@ page {
 
 .hgh-style {
   font-size: 12px; /* 辅助字体 */
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 
 .hgh-stage {
@@ -745,12 +745,12 @@ page {
 
 .hgh-time {
   font-size: 10px; /* 备注字体 */
-  color: #9ca3af;
+  color: var(--color-text-disabled);
 }
 
 .hgh-expand {
   font-size: 12px; /* 辅助字体 */
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 
 /* 分组详情 */
@@ -784,7 +784,7 @@ page {
 
 .hdi-label {
   font-size: 11px; /* 备注字体 */
-  color: #6b7280;
+  color: var(--color-text-secondary);
   min-width: 40px;
 }
 
@@ -796,7 +796,7 @@ page {
 
 .hdi-time {
   font-size: 11px; /* 备注字体 */
-  color: #9ca3af;
+  color: var(--color-text-disabled);
   flex: 1;
 }
 
@@ -926,7 +926,7 @@ page {
   margin-top: 12px;
   padding: 10px 12px;
   background: #f0f9ff;
-  border-left: 3px solid #3b82f6;
+  border-left: 3px solid var(--color-primary);
   border-radius: 6px;
 }
 
@@ -946,7 +946,7 @@ page {
   padding: 8px 4px;
   border-radius: var(--radius-md);
   font-size: 12px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   background: #ffffff;
   border: 1px solid transparent;
 }
@@ -990,7 +990,7 @@ page {
   background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
   border-radius: var(--radius-sm);
   margin-bottom: 10px;
-  border-left: 3px solid #3b82f6;
+  border-left: 3px solid var(--color-primary);
 }
 
 .summary-stat {
@@ -1041,7 +1041,7 @@ page {
 
 .pmi-unit {
   font-size: 11px;
-  color: #9ca3af;
+  color: var(--color-text-disabled);
   background: #ffffff;
   padding: 2px 8px;
   border-radius: var(--radius-sm);
@@ -1060,7 +1060,7 @@ page {
 .pmi-label {
   width: 70px;
   font-size: 11px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   flex-shrink: 0;
 }
 
@@ -1157,7 +1157,7 @@ page {
 }
 .mbtn.cancel {
   background: rgba(255, 255, 255, 0.6);
-  color: #6b7280;
+  color: var(--color-text-secondary);
   border: 1px solid var(--color-border);
 }
 .mbtn.ok {
@@ -1255,7 +1255,7 @@ page {
 
 .modal-btn.cancel {
   background: rgba(255, 255, 255, 0.6);
-  color: #6b7280;
+  color: var(--color-text-secondary);
   border: 1px solid var(--color-border);
 }
 

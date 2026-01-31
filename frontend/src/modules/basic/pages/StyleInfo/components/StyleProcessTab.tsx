@@ -76,6 +76,35 @@ const StyleProcessTab: React.FC<Props> = ({
   const styleNoReqSeq = useRef(0);
   const styleNoTimerRef = useRef<number | undefined>(undefined);
 
+  // 开始配置工序
+  const [startingProcess, setStartingProcess] = useState(false);
+  const handleProcessStart = async () => {
+    const sid = Number(styleId);
+    if (!Number.isFinite(sid) || sid <= 0) {
+      message.error('无效的款式ID');
+      return;
+    }
+
+    setStartingProcess(true);
+    try {
+      const res = await api.post<{ code: number; message: string }>(`/style/info/${sid}/process/start`);
+      const result = res as Record<string, unknown>;
+      if (result.code === 200) {
+        message.success('已开始配置工序');
+        // 调用父组件的刷新回调，更新款式数据
+        if (onRefresh) {
+          await onRefresh();
+        }
+      } else {
+        message.error(result.message || '操作失败');
+      }
+    } catch (error: unknown) {
+      message.error(`操作失败：${error?.message || '请求失败'}`);
+    } finally {
+      setStartingProcess(false);
+    }
+  };
+
   const fetchStyleNoOptions = async (keyword?: string) => {
     const seq = (styleNoReqSeq.current += 1);
     setStyleNoLoading(true);
@@ -692,17 +721,30 @@ const StyleProcessTab: React.FC<Props> = ({
         background: '#f5f5f5',
         borderRadius: 4,
         display: 'flex',
-        gap: 24,
+        alignItems: 'center',
+        justifyContent: 'space-between',
       }}>
-        <span style={{ color: '#666' }}>
-          领取人：<span style={{ color: '#333', fontWeight: 500 }}>{processAssignee || '-'}</span>
-        </span>
-        <span style={{ color: '#666' }}>
-          开始时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(processStartTime)}</span>
-        </span>
-        <span style={{ color: '#666' }}>
-          完成时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(processCompletedTime)}</span>
-        </span>
+        <div style={{ display: 'flex', gap: 24 }}>
+          <span style={{ color: '#666' }}>
+            领取人：<span style={{ color: '#333', fontWeight: 500 }}>{processAssignee || '-'}</span>
+          </span>
+          <span style={{ color: '#666' }}>
+            开始时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(processStartTime)}</span>
+          </span>
+          <span style={{ color: '#666' }}>
+            完成时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(processCompletedTime)}</span>
+          </span>
+        </div>
+        {!processStartTime && !processCompletedTime && (
+          <Button
+            size="small"
+            onClick={handleProcessStart}
+            loading={startingProcess}
+            disabled={Boolean(readOnly)}
+          >
+            开始配置工序
+          </Button>
+        )}
       </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <Space>

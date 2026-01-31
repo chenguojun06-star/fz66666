@@ -34,9 +34,10 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
         const patternList = patternRes.code === 200 && Array.isArray(patternRes.data) ? patternRes.data : [];
         const gradingList = gradingRes.code === 200 && Array.isArray(gradingRes.data) ? gradingRes.data : [];
 
-        // 合并两种类型的文件
+        // 合并两种类型的文件，并过滤掉归档版本
         const allFiles = [...patternList, ...gradingList];
-        setAllPatternFiles(allFiles);
+        const activeFiles = allFiles.filter((item: any) => String((item as Record<string, unknown>)?.status || 'active') === 'active');
+        setAllPatternFiles(activeFiles as StyleAttachment[]);
       } catch (error) {
         console.error('加载纸样文件失败:', error);
       }

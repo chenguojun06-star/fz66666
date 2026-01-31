@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fashion.supplychain.system.entity.LoginLog;
 import com.fashion.supplychain.system.mapper.LoginLogMapper;
 import com.fashion.supplychain.system.service.LoginLogService;
+import com.fashion.supplychain.system.entity.OperationLog;
+import com.fashion.supplychain.system.service.OperationLogService;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -17,6 +19,9 @@ import java.util.List;
 
 @Service
 public class LoginLogServiceImpl extends ServiceImpl<LoginLogMapper, LoginLog> implements LoginLogService {
+
+    @javax.annotation.Resource
+    private OperationLogService operationLogService;
 
     @Override
     public Page<LoginLog> getLoginLogPage(Long page, Long pageSize, String username, String loginStatus, String startDate, String endDate) {
@@ -55,6 +60,21 @@ public class LoginLogServiceImpl extends ServiceImpl<LoginLogMapper, LoginLog> i
         log.setLoginTime(LocalDateTime.now());
         log.setLoginStatus("SUCCESS"); // 操作日志默认成功
         save(log);
+
+        // 同步记录到统一的 t_operation_log，供操作日志页面展示
+        try {
+            OperationLog opl = new OperationLog();
+            opl.setModule(resolveModule(bizType));
+            opl.setOperation(resolveOperationLabel(action));
+            opl.setOperatorName(operator);
+            opl.setTargetType(resolveTargetType(bizType));
+            opl.setTargetId(bizId);
+            opl.setReason(remark);
+            opl.setOperationTime(LocalDateTime.now());
+            opl.setStatus("success");
+            operationLogService.save(opl);
+        } catch (Exception ignored) {
+        }
     }
 
     @Override
@@ -74,5 +94,84 @@ public class LoginLogServiceImpl extends ServiceImpl<LoginLogMapper, LoginLog> i
 
         wrapper.orderByDesc(LoginLog::getLoginTime);
         return list(wrapper);
+    }
+
+    private static String resolveModule(String bizType) {
+        String t = safe(bizType);
+        if (t.isEmpty()) return "系统设置";
+        switch (t) {
+            case "user":
+            case "role":
+            case "factory":
+                return "系统设置";
+            case "order":
+            case "production":
+                return "大货生产";
+            case "purchase":
+            case "material":
+                return "物料采购";
+            case "warehouse":
+                return "仓库管理";
+            case "finance":
+                return "财务管理";
+            case "style":
+                return "样衣开发";
+            default:
+                return "系统设置";
+        }
+    }
+
+    private static String resolveTargetType(String bizType) {
+        String t = safe(bizType);
+        switch (t) {
+            case "user":
+                return "用户";
+            case "role":
+                return "角色";
+            case "factory":
+                return "加工厂";
+            case "order":
+                return "订单";
+            case "production":
+                return "生产订单";
+            case "material":
+                return "物料";
+            case "purchase":
+                return "采购单";
+            case "warehouse":
+                return "仓库";
+            case "finance":
+                return "财务";
+            case "style":
+                return "款式";
+            default:
+                return t;
+        }
+    }
+
+    private static String resolveOperationLabel(String action) {
+        String a = safe(action);
+        switch (a) {
+            case "CREATE":
+                return "新增";
+            case "UPDATE":
+                return "修改";
+            case "DELETE":
+                return "删除";
+            case "PERMISSION_UPDATE":
+                return "权限更新";
+            case "APPROVE":
+                return "审批";
+            case "EXPORT":
+                return "导出";
+            default:
+                return a;
+        }
+    }
+
+    private static String safe(String v) {
+        if (v == null) return "";
+        String t = v.trim();
+        return t;
     }
 }

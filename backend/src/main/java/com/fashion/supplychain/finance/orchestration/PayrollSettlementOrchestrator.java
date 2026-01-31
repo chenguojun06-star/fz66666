@@ -3,6 +3,7 @@ package com.fashion.supplychain.finance.orchestration;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.util.TextUtils;
 import com.fashion.supplychain.finance.entity.PayrollSettlement;
 import com.fashion.supplychain.finance.entity.PayrollSettlementItem;
 import com.fashion.supplychain.finance.service.PayrollSettlementItemService;
@@ -64,7 +65,7 @@ public class PayrollSettlementOrchestrator {
     }
 
     public PayrollSettlement detail(String id) {
-        String sid = normalize(id);
+        String sid = TextUtils.safeText(id);
         if (!StringUtils.hasText(sid)) {
             throw new IllegalArgumentException("参数错误");
         }
@@ -76,7 +77,7 @@ public class PayrollSettlementOrchestrator {
     }
 
     public List<PayrollSettlementItem> items(String settlementId) {
-        String sid = normalize(settlementId);
+        String sid = TextUtils.safeText(settlementId);
         if (!StringUtils.hasText(sid)) {
             throw new IllegalArgumentException("参数错误");
         }
@@ -181,9 +182,9 @@ public class PayrollSettlementOrchestrator {
                 continue;
             }
             PayrollSettlementItem item = new PayrollSettlementItem();
-            String opId = normalize(row.get("operatorId"));
-            String opName = normalize(row.get("operatorName"));
-            String processName = normalize(row.get("processName"));
+            String opId = TextUtils.safeText(row.get("operatorId"));
+            String opName = TextUtils.safeText(row.get("operatorName"));
+            String processName = TextUtils.safeText(row.get("processName"));
             item.setOperatorId(StringUtils.hasText(opId) ? opId : "unknown");
             item.setOperatorName(StringUtils.hasText(opName) ? opName : "未知人员");
             item.setProcessName(StringUtils.hasText(processName) ? processName : "未知环节");
@@ -201,10 +202,10 @@ public class PayrollSettlementOrchestrator {
                     ? amount.divide(BigDecimal.valueOf(qty), 2, RoundingMode.HALF_UP)
                     : BigDecimal.ZERO;
             item.setUnitPrice(up);
-            item.setOrderId(normalize(row.get("orderId")));
-            item.setOrderNo(normalize(row.get("orderNo")));
-            item.setStyleNo(normalize(row.get("styleNo")));
-            item.setScanType(normalize(row.get("scanType")));
+            item.setOrderId(TextUtils.safeText(row.get("orderId")));
+            item.setOrderNo(TextUtils.safeText(row.get("orderNo")));
+            item.setStyleNo(TextUtils.safeText(row.get("styleNo")));
+            item.setScanType(TextUtils.safeText(row.get("scanType")));
             item.setCreateTime(now);
             item.setUpdateTime(now);
             items.add(item);
@@ -312,14 +313,14 @@ public class PayrollSettlementOrchestrator {
     }
 
     private ProductionOrder resolveOrder(String orderId, String orderNo) {
-        String id = normalize(orderId);
+        String id = TextUtils.safeText(orderId);
         if (StringUtils.hasText(id)) {
             ProductionOrder order = productionOrderService.getById(id);
             if (order != null && (order.getDeleteFlag() == null || order.getDeleteFlag() == 0)) {
                 return order;
             }
         }
-        String on = normalize(orderNo);
+        String on = TextUtils.safeText(orderNo);
         if (!StringUtils.hasText(on)) {
             return null;
         }
@@ -336,13 +337,13 @@ public class PayrollSettlementOrchestrator {
     private PayrollQuery parseQuery(Map<String, Object> params, boolean includeProcessName, boolean includeSettledDefault) {
         Map<String, Object> safeParams = params == null ? new HashMap<>() : new HashMap<>(params);
         PayrollQuery q = new PayrollQuery();
-        q.orderId = normalize(safeParams.get("orderId"));
-        q.orderNo = normalize(safeParams.get("orderNo"));
-        q.styleNo = normalize(safeParams.get("styleNo"));
-        q.operatorId = normalize(safeParams.get("operatorId"));
-        q.operatorName = normalize(safeParams.get("operatorName"));
-        q.scanType = normalize(safeParams.get("scanType"));
-        q.processName = includeProcessName ? normalize(safeParams.get("processName")) : null;
+        q.orderId = TextUtils.safeText(safeParams.get("orderId"));
+        q.orderNo = TextUtils.safeText(safeParams.get("orderNo"));
+        q.styleNo = TextUtils.safeText(safeParams.get("styleNo"));
+        q.operatorId = TextUtils.safeText(safeParams.get("operatorId"));
+        q.operatorName = TextUtils.safeText(safeParams.get("operatorName"));
+        q.scanType = TextUtils.safeText(safeParams.get("scanType"));
+        q.processName = includeProcessName ? TextUtils.safeText(safeParams.get("processName")) : null;
         q.includeSettled = safeParams.containsKey("includeSettled")
                 ? isTruthy(safeParams.get("includeSettled"))
                 : includeSettledDefault;
@@ -358,9 +359,9 @@ public class PayrollSettlementOrchestrator {
         if (!StringUtils.hasText(q.orderId) && StringUtils.hasText(q.orderNo)) {
             ProductionOrder order = resolveOrder(q.orderId, q.orderNo);
             if (order != null) {
-                q.orderId = normalize(order.getId());
+                q.orderId = TextUtils.safeText(order.getId());
                 if (!StringUtils.hasText(q.styleNo)) {
-                    q.styleNo = normalize(order.getStyleNo());
+                    q.styleNo = TextUtils.safeText(order.getStyleNo());
                 }
             }
         }
@@ -372,7 +373,7 @@ public class PayrollSettlementOrchestrator {
         if (raw == null) {
             return null;
         }
-        String v = normalize(String.valueOf(raw));
+        String v = TextUtils.safeText(String.valueOf(raw));
         if (!StringUtils.hasText(v)) {
             return null;
         }
@@ -410,7 +411,7 @@ public class PayrollSettlementOrchestrator {
         if (raw instanceof Number number) {
             return number.intValue();
         }
-        String v = normalize(String.valueOf(raw));
+        String v = TextUtils.safeText(String.valueOf(raw));
         if (!StringUtils.hasText(v)) {
             return null;
         }
@@ -431,7 +432,7 @@ public class PayrollSettlementOrchestrator {
         if (raw instanceof Number number) {
             return BigDecimal.valueOf(number.doubleValue());
         }
-        String v = normalize(String.valueOf(raw));
+        String v = TextUtils.safeText(String.valueOf(raw));
         if (!StringUtils.hasText(v)) {
             return null;
         }
@@ -442,26 +443,10 @@ public class PayrollSettlementOrchestrator {
         }
     }
 
-    private static String normalize(String value) {
-        if (value == null) {
-            return null;
-        }
-        String v = value.trim();
-        if (v.isEmpty() || "undefined".equalsIgnoreCase(v) || "null".equalsIgnoreCase(v)) {
-            return null;
-        }
-        return v;
-    }
-
-    private static String normalize(Object value) {
-        if (value == null) {
-            return null;
-        }
-        return normalize(String.valueOf(value));
-    }
+    // 使用TextUtils.safeText()替代
 
     private static boolean isTruthy(Object value) {
-        String v = normalize(value);
+        String v = TextUtils.safeText(value);
         if (!StringUtils.hasText(v)) {
             return false;
         }

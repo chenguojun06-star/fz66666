@@ -112,39 +112,6 @@ class ScanHandler {
   }
 
   /**
-   * 处理 SKU 数量获取
-   */
-  _handleSKUQuantity(parsedData, orderDetail) {
-    if (parsedData.quantity) {
-      return null; // 已有数量
-    }
-
-    // 尝试在订单明细中找到该SKU的数量
-    if (orderDetail.items?.length > 0) {
-      const matchedItem = orderDetail.items.find(
-        item => item.color === parsedData.color && item.size === parsedData.size
-      );
-
-      if (matchedItem) {
-        const skuQty = matchedItem.quantity || matchedItem.num;
-        if (skuQty > 0) {
-          parsedData.quantity = Number(skuQty);
-          console.log('[ScanHandler] 自动使用SKU数量:', parsedData.quantity);
-          return null;
-        }
-      }
-    }
-
-    // 需要用户输入
-    return {
-      success: false,
-      message: `请输入 ${parsedData.color}/${parsedData.size} 的数量`,
-      needInput: true,
-      data: parsedData,
-    };
-  }
-
-  /**
    * 处理采购模式扫码
    */
   async _handleProcurementMode(parsedData, orderDetail) {

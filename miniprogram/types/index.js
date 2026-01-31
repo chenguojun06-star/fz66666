@@ -111,4 +111,78 @@
  * @property {string} [unitPriceHint] - 单价提示信息（当单价为0时显示警告）
  */
 
+/**
+ * @typedef {Object} UserInfo
+ * @property {string} id - 用户ID
+ * @property {string} username - 用户名
+ * @property {string} realName - 真实姓名
+ * @property {string} [avatar] - 头像URL
+ * @property {string} [phone] - 手机号
+ * @property {string} role - 角色
+ * @property {string} [factoryId] - 工厂ID
+ * @property {string} [factoryName] - 工厂名称
+ */
+
+/**
+ * @typedef {Object} FactoryInfo
+ * @property {string} id - 工厂ID
+ * @property {string} name - 工厂名称
+ * @property {string} [address] - 地址
+ * @property {string} [contact] - 联系人
+ * @property {string} [phone] - 联系电话
+ */
+
+/**
+ * @typedef {Object} StyleInfo
+ * @property {string} id - 款式ID
+ * @property {string} styleNo - 款号
+ * @property {string} styleName - 款式名称
+ * @property {string} [category] - 品类
+ * @property {string} [season] - 季节
+ * @property {string} [cover] - 封面图URL
+ * @property {string} [createTime] - 创建时间
+ */
+
+/**
+ * @typedef {Object} DashboardStats
+ * @property {number} styleCount - 款式数量
+ * @property {number} productionCount - 生产订单数量
+ * @property {number} pendingReconciliationCount - 待对账数量
+ * @property {number} paymentApprovalCount - 付款审批数量
+ * @property {number} todayScanCount - 今日扫码数量
+ * @property {number} warehousingOrderCount - 入库订单数量
+ * @property {number} unqualifiedQuantity - 不合格品数量
+ * @property {number} materialPurchase - 物料采购数量
+ * @property {number} urgentEventCount - 紧急事件数量
+ */
+
+/**
+ * @typedef {Object} ActivityItem
+ * @property {string} id - 活动ID
+ * @property {string} type - 活动类型
+ * @property {string} content - 活动内容
+ * @property {string} time - 活动时间
+ */
+
+/**
+ * @typedef {Object} ReminderItem
+ * @property {string} id - 提醒ID
+ * @property {string} title - 提醒标题
+ * @property {string} content - 提醒内容
+ * @property {string} type - 提醒类型（'urgent' | 'normal' | 'info'）
+ * @property {string} createTime - 创建时间
+ * @property {string} [expireTime] - 过期时间
+ * @property {boolean} read - 是否已读
+ */
+
+/**
+ * @typedef {Object} WorkItem
+ * @property {string} id - 工作项ID
+ * @property {string} title - 标题
+ * @property {string} description - 描述
+ * @property {string} status - 状态
+ * @property {string} [deadline] - 截止时间
+ * @property {number} [progress] - 进度（0-100）
+ */
+
 export {};

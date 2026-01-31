@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Col, Row, Space, Tag, message } from 'antd';
+import { Button, Col, Row, Space, Tag, message, Tooltip } from 'antd';
 import QRCodeBox from './common/QRCodeBox';
 import api, { parseProductionOrderLines, sortSizeNames, toNumberSafe, ProductionOrderLine } from '../utils/api';
 import { StyleAttachment } from '../types/style';
@@ -8,6 +8,7 @@ import ResizableModal, {
 } from './common/ResizableModal';
 import ResizableTable from './common/ResizableTable';
 import { useViewport } from '../utils/useViewport';
+import { useAuth } from '../utils/AuthContext';
 
 /**
  * 标识类型定义
@@ -57,8 +58,8 @@ export const StyleCoverThumb: React.FC<{
           if (mounted) setUrl(first);
         }
       } catch {
-    // Intentionally empty
-      // 忽略错误
+        // Intentionally empty
+        // 忽略错误
         if (mounted) setUrl(null);
       } finally {
         if (mounted) setLoading(false);
@@ -254,10 +255,15 @@ export const StyleAttachmentsButton: React.FC<{
   modalTitle?: string;
   /** @deprecated 已废弃，不再使用 */
   onlyGradingPattern?: boolean;
+  /** 仅显示使用中的最新纸样（隐藏归档历史版本） */
+  onlyActive?: boolean;
   /** 模态框关闭时的回调 */
   onModalClose?: () => void;
-}> = ({ styleId, styleNo, buttonText = '纸样', modalTitle = '纸样附件', onModalClose }) => {
-  const { modalWidth } = useViewport();
+}> = ({ styleId, styleNo, buttonText = '纸样', modalTitle = '纸样附件', onlyActive, onModalClose }) => {
+  const { modalWidth: _modalWidth } = useViewport();
+  const { user } = useAuth();
+  // 检查是否为管理员（拥有system:manage权限）
+  const isAdmin = user?.permissions?.includes('system:manage') ?? false;
   // 模态框打开状态
   const [open, setOpen] = React.useState(false);
   // 加载状态
@@ -287,6 +293,10 @@ export const StyleAttachmentsButton: React.FC<{
           return bizType === 'pattern' || bizType === 'pattern_grading'
             || bizType === 'pattern_final' || bizType === 'pattern_grading_final';
         });
+        // 在指定场景下，仅展示使用中的最新纸样，隐藏归档历史版本
+        if (onlyActive) {
+          attachments = attachments.filter((item: any) => String((item as Record<string, unknown>)?.status || 'active') === 'active');
+        }
         setData(attachments as StyleAttachment[]);
       } else {
         setData([]);
@@ -328,21 +338,57 @@ export const StyleAttachmentsButton: React.FC<{
       }
     },
     {
+      title: '版本号',
+      dataIndex: 'version',
+      key: 'version',
+      width: 80,
+      render: (v: number) => v ? `V${v}` : '-'
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      width: 90,
+      render: (s: string) => {
+        if (s === 'active') return <Tag color="green">使用中</Tag>;
+        if (s === 'archived') return <Tag color="default">已归档</Tag>;
+        return <Tag>{s || '使用中'}</Tag>;
+      }
+    },
+    {
       title: '文件名',
       dataIndex: 'fileName',
       key: 'fileName',
-      width: 280,
+      width: 240,
       ellipsis: true,
-      render: (text: string, record: StyleAttachment) => (
-        <a
-          href={record.fileUrl}
-          target="_blank"
-          rel="noreferrer"
-          style={{ display: 'inline-block', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-        >
-          {text}
-        </a>
-      )
+      render: (text: string, record: StyleAttachment) => {
+        const isArchived = record.status === 'archived';
+        const canDownload = !isArchived || isAdmin;
+
+        if (!canDownload) {
+          return (
+            <Tooltip title="旧版本仅管理员可下载">
+              <span style={{ color: '#999', cursor: 'not-allowed' }}>{text}</span>
+            </Tooltip>
+          );
+        }
+
+        // 将相对路径转换为后端完整URL
+        const fileUrl = record.fileUrl?.startsWith('http')
+          ? record.fileUrl
+          : `${window.location.protocol}//${window.location.hostname}:8088${record.fileUrl}`;
+
+        return (
+          <a
+            href={fileUrl}
+            target="_blank"
+            rel="noreferrer"
+            style={{ display: 'inline-block', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+          >
+            {text}
+          </a>
+        );
+      }
     },
     {
       title: '文件类型',
@@ -371,6 +417,8 @@ export const StyleAttachmentsButton: React.FC<{
       <ResizableModal
         open={open}
         title={modalTitle}
+        width="60vw"
+        initialHeight={580}
         onCancel={() => {
           setOpen(false);
           onModalClose?.();
@@ -379,8 +427,6 @@ export const StyleAttachmentsButton: React.FC<{
           setOpen(false);
           onModalClose?.();
         }}>关闭</Button></Space>}
-        width={modalWidth}
-        initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
       >
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           {/* 纸样类型提示 */}

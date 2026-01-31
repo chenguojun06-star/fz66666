@@ -90,14 +90,14 @@ management:
     metrics:
       enabled: true
   metrics:
-    export:
-      prometheus:
-        enabled: false
-    distribution:
-      percentiles-histogram:
-        http.server.requests: true
-    tags:
-      application: ${spring.application.name:supplychain}
+      export:
+        prometheus:
+          enabled: true
+      distribution:
+        percentiles-histogram:
+          http.server.requests: true
+      tags:
+        application: ${spring.application.name:supplychain}
   health:
     livenessstate:
       enabled: true

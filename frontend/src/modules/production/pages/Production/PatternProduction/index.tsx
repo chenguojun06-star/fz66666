@@ -50,6 +50,8 @@ interface PatternProductionRecord {
   patternDeveloper?: string; // 纸样师
   plateWorker?: string; // 车板师
   merchandiser?: string; // 跟单员
+  maintainer?: string; // 维护人
+  maintainTime?: string; // 维护时间
   status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED'; // 状态
 }
 
@@ -632,6 +634,20 @@ const PatternProduction: React.FC = () => {
       width: 140,
     },
     {
+      title: '维护人',
+      dataIndex: 'maintainer',
+      key: 'maintainer',
+      width: 100,
+      render: (text: string) => text || '-',
+    },
+    {
+      title: '维护时间',
+      dataIndex: 'maintainTime',
+      key: 'maintainTime',
+      width: 140,
+      render: (text: string) => text || '-',
+    },
+    {
       title: '操作',
       key: 'action',
       width: 150,
@@ -1104,6 +1120,7 @@ const PatternProduction: React.FC = () => {
               styleNo={attachmentModal.data.styleNo}
               buttonText="附件管理"
               modalTitle={`${attachmentModal.data.styleNo} - 纸样附件`}
+              onlyActive
               onModalClose={() => attachmentModal.close()}
             />
           </div>

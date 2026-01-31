@@ -105,6 +105,16 @@ public class PatternProduction {
      */
     private Integer deleteFlag;
 
+    /**
+     * 维护人
+     */
+    private String maintainer;
+
+    /**
+     * 维护时间
+     */
+    private LocalDateTime maintainTime;
+
     // ==================== 操作人字段（自动填充）====================
 
     private String receiverId;

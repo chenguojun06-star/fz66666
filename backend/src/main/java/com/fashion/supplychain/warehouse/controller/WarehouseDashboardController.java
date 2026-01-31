@@ -25,7 +25,7 @@ public class WarehouseDashboardController {
      * 获取仓库统计数据
      */
     @GetMapping("/stats")
-    // @PreAuthorize("hasAuthority('MENU_WAREHOUSE_DASHBOARD')") // TODO: 权限配置后恢复
+    @PreAuthorize("hasAuthority('MENU_WAREHOUSE_DASHBOARD')")
     public Result<WarehouseStatsDTO> getStats() {
         log.info("获取仓库统计数据");
         return Result.success(orchestrator.getWarehouseStats());
@@ -35,7 +35,7 @@ public class WarehouseDashboardController {
      * 获取低库存预警列表
      */
     @GetMapping("/low-stock")
-    // @PreAuthorize("hasAuthority('MENU_WAREHOUSE_DASHBOARD')") // TODO: 权限配置后恢复
+    @PreAuthorize("hasAuthority('MENU_WAREHOUSE_DASHBOARD')")
     public Result<List<LowStockItemDTO>> getLowStockItems() {
         log.info("获取低库存预警列表");
         return Result.success(orchestrator.getLowStockItems());
@@ -45,7 +45,7 @@ public class WarehouseDashboardController {
      * 获取今日出入库操作记录
      */
     @GetMapping("/recent-operations")
-    // @PreAuthorize("hasAuthority('MENU_WAREHOUSE_DASHBOARD')") // TODO: 权限配置后恢复
+    @PreAuthorize("hasAuthority('MENU_WAREHOUSE_DASHBOARD')")
     public Result<List<RecentOperationDTO>> getRecentOperations() {
         log.info("获取今日出入库操作记录");
         return Result.success(orchestrator.getRecentOperations());
@@ -57,7 +57,7 @@ public class WarehouseDashboardController {
      * @param type 物料类型: fabric(面料), accessory(辅料), finished(成品)
      */
     @GetMapping("/trend")
-    // @PreAuthorize("hasAuthority('MENU_WAREHOUSE_DASHBOARD')") // TODO: 权限配置后恢复
+    @PreAuthorize("hasAuthority('MENU_WAREHOUSE_DASHBOARD')")
     public Result<List<TrendDataPointDTO>> getTrendData(
             @RequestParam(defaultValue = "day") String range,
             @RequestParam(defaultValue = "fabric") String type) {

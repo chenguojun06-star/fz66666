@@ -3,6 +3,8 @@ package com.fashion.supplychain.production.orchestration;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.util.TextUtils;
+import com.fashion.supplychain.common.util.NumberUtils;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -75,7 +77,7 @@ public class ProductWarehousingOrchestrator {
             return;
         }
         Integer uq = w.getUnqualifiedQuantity();
-        String qs = trimToNull(w.getQualityStatus());
+        String qs = TextUtils.safeText(w.getQualityStatus());
         boolean hasUnqualified = (uq != null && uq > 0) || (qs != null && "unqualified".equalsIgnoreCase(qs));
 
         if (!hasUnqualified) {
@@ -84,8 +86,8 @@ public class ProductWarehousingOrchestrator {
             return;
         }
 
-        String defectCategory = trimToNull(w.getDefectCategory());
-        String defectRemark = trimToNull(w.getDefectRemark());
+        String defectCategory = TextUtils.safeText(w.getDefectCategory());
+        String defectRemark = TextUtils.safeText(w.getDefectRemark());
 
         if (!StringUtils.hasText(defectCategory)) {
             throw new IllegalArgumentException("请选择次品类别");
@@ -215,7 +217,7 @@ public class ProductWarehousingOrchestrator {
             Map<?, ?> m = (Map<?, ?>) obj;
             String cuttingBundleQrCode = m.get("cuttingBundleQrCode") == null ? null
                     : String.valueOf(m.get("cuttingBundleQrCode"));
-            Integer qty = parseInt(m.get("warehousingQuantity"));
+            Integer qty = NumberUtils.toInt(m.get("warehousingQuantity"));
             if (!StringUtils.hasText(cuttingBundleQrCode) || qty == null || qty <= 0) {
                 continue;
             }
@@ -423,9 +425,9 @@ public class ProductWarehousingOrchestrator {
         String excludeWarehousingId = params == null ? null
                 : String.valueOf(params.getOrDefault("excludeWarehousingId", ""));
 
-        String oid = trimToNull(orderId);
-        String qr = trimToNull(cuttingBundleQrCode);
-        String exId = trimToNull(excludeWarehousingId);
+        String oid = TextUtils.safeText(orderId);
+        String qr = TextUtils.safeText(cuttingBundleQrCode);
+        String exId = TextUtils.safeText(excludeWarehousingId);
 
         if (!StringUtils.hasText(qr)) {
             throw new IllegalArgumentException("cuttingBundleQrCode不能为空");
@@ -468,7 +470,7 @@ public class ProductWarehousingOrchestrator {
                     repairPool += uq;
                 }
 
-                String rr = trimToNull(w.getRepairRemark());
+                String rr = TextUtils.safeText(w.getRepairRemark());
                 if (rr != null) {
                     int q = w.getQualifiedQuantity() == null ? 0 : w.getQualifiedQuantity();
                     if (q > 0) {
@@ -492,7 +494,7 @@ public class ProductWarehousingOrchestrator {
     public Map<String, Object> batchRepairStats(Map<String, Object> body) {
         Object orderIdRaw = body == null ? null : body.get("orderId");
         String orderId = orderIdRaw == null ? null : String.valueOf(orderIdRaw);
-        String oid = trimToNull(orderId);
+        String oid = TextUtils.safeText(orderId);
         if (!StringUtils.hasText(oid)) {
             throw new IllegalArgumentException("订单ID不能为空");
         }
@@ -514,7 +516,7 @@ public class ProductWarehousingOrchestrator {
 
         Object excludeWarehousingIdRaw = body == null ? null : body.get("excludeWarehousingId");
         String excludeWarehousingId = excludeWarehousingIdRaw == null ? null : String.valueOf(excludeWarehousingIdRaw);
-        String exId = trimToNull(excludeWarehousingId);
+        String exId = TextUtils.safeText(excludeWarehousingId);
 
         List<CuttingBundle> bundles = cuttingBundleService.lambdaQuery()
                 .select(CuttingBundle::getId, CuttingBundle::getQrCode, CuttingBundle::getProductionOrderId)
@@ -561,7 +563,7 @@ public class ProductWarehousingOrchestrator {
                     if (uq > 0) {
                         agg[0] += uq;
                     }
-                    String rr = trimToNull(w.getRepairRemark());
+                    String rr = TextUtils.safeText(w.getRepairRemark());
                     if (rr != null) {
                         int q = w.getQualifiedQuantity() == null ? 0 : w.getQualifiedQuantity();
                         if (q > 0) {
@@ -623,7 +625,7 @@ public class ProductWarehousingOrchestrator {
         Object cuttingBundleQrCodeRaw = body == null ? null : body.get("cuttingBundleQrCode");
         String cuttingBundleQrCode = cuttingBundleQrCodeRaw == null ? ""
                 : String.valueOf(cuttingBundleQrCodeRaw).trim();
-        Integer qty = parseInt(body == null ? null : body.get("rollbackQuantity"));
+        Integer qty = NumberUtils.toInt(body == null ? null : body.get("rollbackQuantity"));
         Object remarkRaw = body == null ? null : body.get("rollbackRemark");
         String remark = remarkRaw == null ? "" : String.valueOf(remarkRaw).trim();
 
@@ -803,8 +805,8 @@ public class ProductWarehousingOrchestrator {
         rollbackLog.setQuantity(rq);
         rollbackLog.setProcessCode("warehouse_rollback");
         rollbackLog.setProcessName("入库回退");
-        rollbackLog.setOperatorId(trimToNull(operatorId));
-        rollbackLog.setOperatorName(trimToNull(operatorName));
+        rollbackLog.setOperatorId(TextUtils.safeText(operatorId));
+        rollbackLog.setOperatorName(TextUtils.safeText(operatorName));
         rollbackLog.setScanTime(now);
         rollbackLog.setScanType("warehouse");
         rollbackLog.setScanResult("success");
@@ -878,25 +880,5 @@ public class ProductWarehousingOrchestrator {
         return true;
     }
 
-    private String trimToNull(String v) {
-        if (!StringUtils.hasText(v)) {
-            return null;
-        }
-        String s = v.trim();
-        return s.isEmpty() ? null : s;
-    }
-
-    private Integer parseInt(Object v) {
-        if (v instanceof Number number) {
-            return number.intValue();
-        }
-        if (v == null) {
-            return null;
-        }
-        try {
-            return Integer.parseInt(String.valueOf(v));
-        } catch (Exception e) {
-            return null;
-        }
-    }
+    // 使用TextUtils.safeText()和NumberUtils.toInt()替代
 }

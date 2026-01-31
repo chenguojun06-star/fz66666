@@ -7,6 +7,7 @@ import Layout from '@/components/Layout';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
 import api, { parseProductionOrderLines, toNumberSafe } from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
+import { generateRowKey } from '@/utils/idGenerator';
 import type { CuttingBundle, ProductionOrder, ProductWarehousing } from '@/types/production';
 import StylePatternSimpleTab from './components/StylePatternSimpleTab';
 import StyleQuotationTab from '@/modules/basic/pages/StyleInfo/components/StyleQuotationTab';
@@ -618,7 +619,7 @@ const OrderFlow: React.FC = () => {
                         {data?.materialPurchases && data.materialPurchases.length > 0 ? (
                           <Table
                             dataSource={data.materialPurchases}
-                            rowKey={(record: any) => record.id || Math.random()}
+                            rowKey={(record: any, index: number) => generateRowKey(record, index, 'id')}
                             columns={[
                               {
                                 title: '序号',

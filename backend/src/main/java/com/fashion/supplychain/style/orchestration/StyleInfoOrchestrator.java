@@ -241,19 +241,22 @@ public class StyleInfoOrchestrator {
         }
 
         String currentUser = UserContext.username();
+        LocalDateTime now = LocalDateTime.now();
 
         // 构建更新链
         var updateChain = styleInfoService.lambdaUpdate()
                 .eq(StyleInfo::getId, id)
                 .set(StyleInfo::getPatternStatus, "IN_PROGRESS")
+                .set(StyleInfo::getPatternAssignee, currentUser)
+                .set(StyleInfo::getPatternStartTime, now)
                 .set(StyleInfo::getPatternCompletedTime, null)
                 // 纸样开始时同步更新尺寸表开始时间（尺寸被纸样控制）
                 .set(StyleInfo::getSizeAssignee, currentUser)
-                .set(StyleInfo::getSizeStartTime, LocalDateTime.now())
+                .set(StyleInfo::getSizeStartTime, now)
                 // 纸样开始时同步更新生产制单开始时间（生产制单跟随纸样）
                 .set(StyleInfo::getProductionAssignee, currentUser)
-                .set(StyleInfo::getProductionStartTime, LocalDateTime.now())
-                .set(StyleInfo::getUpdateTime, LocalDateTime.now());
+                .set(StyleInfo::getProductionStartTime, now)
+                .set(StyleInfo::getUpdateTime, now);
 
         // 纸样师 = 领取纸样开发的人（如果还没有设置）
         if (!StringUtils.hasText(current.getSampleSupplier())) {

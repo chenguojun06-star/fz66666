@@ -2204,6 +2204,34 @@ public class DataInitializer implements CommandLineRunner {
             log.warn("Failed to create system operation log table: {}", e.getMessage());
         }
 
+        String createOperationLogTable = "CREATE TABLE IF NOT EXISTS t_operation_log (" +
+                "id BIGINT AUTO_INCREMENT PRIMARY KEY," +
+                "module VARCHAR(100) NOT NULL," +
+                "operation VARCHAR(50) NOT NULL," +
+                "operator_id BIGINT," +
+                "operator_name VARCHAR(50)," +
+                "target_type VARCHAR(50)," +
+                "target_id VARCHAR(64)," +
+                "target_name VARCHAR(100)," +
+                "reason VARCHAR(255)," +
+                "details TEXT," +
+                "ip VARCHAR(50)," +
+                "user_agent VARCHAR(200)," +
+                "operation_time DATETIME DEFAULT CURRENT_TIMESTAMP," +
+                "status VARCHAR(20) DEFAULT 'success'," +
+                "error_message VARCHAR(500)," +
+                "INDEX idx_operation_time (operation_time)," +
+                "INDEX idx_module (module)," +
+                "INDEX idx_operator_name (operator_name)," +
+                "INDEX idx_target_type (target_type)" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+
+        try {
+            jdbcTemplate.execute(createOperationLogTable);
+        } catch (Exception e) {
+            log.warn("Failed to create operation log table: {}", e.getMessage());
+        }
+
         ensurePermissionTables();
         seedDefaultAuthData();
         ensureTemplateLibraryTable();

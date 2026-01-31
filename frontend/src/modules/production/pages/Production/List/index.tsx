@@ -1153,6 +1153,7 @@ const ProductionList: React.FC = () => {
         <StyleAttachmentsButton
           styleId={record.styleId}
           styleNo={record.styleNo}
+          onlyActive
         />
       )
     },

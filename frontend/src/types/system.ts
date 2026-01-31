@@ -56,7 +56,7 @@ export interface LoginLog {
   name: string;
   ip: string;
   loginTime: string;
-  loginStatus: 'success' | 'failure' | 'SUCCESS' | 'FAILED' | string;
+  loginStatus: 'success' | 'failure';
   message?: string;
   userAgent?: string;
 }

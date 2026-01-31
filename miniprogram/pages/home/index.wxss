@@ -30,7 +30,7 @@ page {
   font-size: 11px;
   font-weight: 500;
   color: #ffffff;
-  background: #3b82f6;
+  background: var(--color-primary);
   border-radius: var(--radius-full);
 }
 
@@ -54,7 +54,7 @@ page {
 
 .result-detail {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   margin-top: 4px;
 }
 
@@ -78,7 +78,7 @@ page {
 
 .no-results-text {
   font-size: 14px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   margin-bottom: 16px;
 }
 
@@ -121,7 +121,7 @@ page {
   right: -4px;
   min-width: 18px;
   height: 18px;
-  background: #ff4757;
+  background: var(--color-error);
   color: #ffffff;
   border-radius: 9px;
   font-size: 10px; /* 极小字体 */
@@ -173,7 +173,7 @@ page {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   font-size: 18px; /* 一级标题/图标 */
 }
 .reminder-panel-close:active {
@@ -188,7 +188,7 @@ page {
 
 .reminder-empty {
   text-align: center;
-  color: #9ca3af;
+  color: var(--color-text-disabled);
   padding: 40px 20px;
   font-size: 14px; /* 正文字体 */
 }
@@ -219,12 +219,12 @@ page {
 
 .reminder-item-time {
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--color-text-disabled);
 }
 
 .reminder-item-desc {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 
 /* 遮罩层 */
@@ -288,7 +288,7 @@ page {
 
 .filter-label {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 
 .filter-input {
@@ -355,7 +355,7 @@ page {
 .home-stat-label {
   font-size: 13px;
   font-weight: 600;
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 
 .home-stat-value {
@@ -429,7 +429,7 @@ page {
 
 .home-stat-label {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 
 .home-entries {

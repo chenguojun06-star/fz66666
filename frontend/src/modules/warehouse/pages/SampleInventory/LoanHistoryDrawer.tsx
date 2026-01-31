@@ -126,7 +126,7 @@ const LoanHistoryDrawer: React.FC<LoanHistoryDrawerProps> = ({ visible, stock, o
     <>
       <Drawer
         title={`借还记录 - ${stock?.styleNo} (${stock?.color}/${stock?.size})`}
-        width={720}
+        size="large"
         onClose={onClose}
         open={visible}
       >

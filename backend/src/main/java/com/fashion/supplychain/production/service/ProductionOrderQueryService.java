@@ -80,6 +80,15 @@ public class ProductionOrderQueryService {
     @Autowired
     private ProductionOrderScanRecordDomainService scanRecordDomainService;
 
+    @Autowired
+    private OrderStockFillService orderStockFillService;
+
+    @Autowired
+    private OrderCuttingFillService orderCuttingFillService;
+
+    @Autowired
+    private OrderQualityFillService orderQualityFillService;
+
     public IPage<ProductionOrder> queryPage(Map<String, Object> params) {
         Map<String, Object> safeParams = params == null ? new HashMap<>() : params;
         int page = ParamUtils.getPage(safeParams);
@@ -104,11 +113,11 @@ public class ProductionOrderQueryService {
                         .orderByDesc(ProductionOrder::getCreateTime));
 
         fillStyleCover(resultPage.getRecords());
-        fillCuttingSummary(resultPage.getRecords());
+        orderCuttingFillService.fillCuttingSummary(resultPage.getRecords()); // 使用新服务
         fillCurrentProcessName(resultPage.getRecords());
-        fillStockSummary(resultPage.getRecords());
+        orderStockFillService.fillStockSummary(resultPage.getRecords()); // 使用新服务
         fillFlowStageFields(resultPage.getRecords());
-        fillQualityStats(resultPage.getRecords()); // 新增：填充质量统计字段
+        orderQualityFillService.fillQualityStats(resultPage.getRecords()); // 使用新服务
         fixProductionProgressByCompletedQuantity(resultPage.getRecords());
         fillFactoryUnitPrice(resultPage.getRecords());
         fillQuotationUnitPrice(resultPage.getRecords());
@@ -158,11 +167,11 @@ public class ProductionOrderQueryService {
             return;
         }
         fillStyleCover(productionOrders);
-        fillCuttingSummary(productionOrders);
+        orderCuttingFillService.fillCuttingSummary(productionOrders); // 使用新服务
         fillCurrentProcessName(productionOrders);
-        fillStockSummary(productionOrders);
+        orderStockFillService.fillStockSummary(productionOrders); // 使用新服务
         fillFlowStageFields(productionOrders);
-        fillQualityStats(productionOrders);
+        orderQualityFillService.fillQualityStats(productionOrders); // 使用新服务
         fixProductionProgressByCompletedQuantity(productionOrders);
         fillFactoryUnitPrice(productionOrders);
         fillQuotationUnitPrice(productionOrders);

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Button, Card, Col, Input, Row, Space, Statistic, message, Form, Tabs } from 'antd';
-import { DownloadOutlined, PrinterOutlined, AppstoreOutlined, UnorderedListOutlined, EditOutlined, EyeOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
+import { Button, Card, Col, Input, Row, Space, Statistic, message, Form, Tabs, Select, DatePicker, Upload } from 'antd';
+import { DownloadOutlined, PrinterOutlined, AppstoreOutlined, UnorderedListOutlined, EditOutlined, EyeOutlined, FileTextOutlined, UploadOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import UniversalCardView from '@/components/common/UniversalCardView';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -8,11 +9,15 @@ import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import api from '@/utils/api';
+import { paths } from '@/routeConfig';
 import { StyleInfo, StyleQueryParams } from '@/types/style';
 import { StyleAttachmentsButton } from '@/components/StyleAssets';
 import { toCategoryCn } from '@/utils/styleCategory';
 import { formatDateTime } from '@/utils/datetime';
 import { useViewport } from '@/utils/useViewport';
+import dayjs from 'dayjs';
+
+const { TextArea } = Input;
 
 interface DataCenterStats {
   styleCount: number;
@@ -269,6 +274,7 @@ const AttachmentThumb: React.FC<{ styleId?: string | number; cover?: string | nu
 
 const DataCenter: React.FC = () => {
   const { isMobile, modalWidth } = useViewport();
+  const navigate = useNavigate();
   const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
   const [stats, setStats] = useState<DataCenterStats>({
@@ -300,6 +306,12 @@ const DataCenter: React.FC = () => {
   // 详情弹窗状态
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [detailRecord, setDetailRecord] = useState<StyleInfo | null>(null);
+
+  // 纸样修改弹窗状态
+  const [patternRevisionModalVisible, setPatternRevisionModalVisible] = useState(false);
+  const [patternRevisionRecord, setPatternRevisionRecord] = useState<StyleInfo | null>(null);
+  const [patternRevisionForm] = Form.useForm();
+  const [patternRevisionSaving, setPatternRevisionSaving] = useState(false);
 
   const fetchStats = async () => {
     try {
@@ -407,6 +419,83 @@ const DataCenter: React.FC = () => {
     setDetailModalVisible(true);
   };
 
+  // 打开纸样修改弹窗
+  const openPatternRevisionModal = (record: StyleInfo) => {
+    setPatternRevisionRecord(record);
+    patternRevisionForm.setFieldsValue({
+      styleNo: record.styleNo,
+      revisionType: 'MINOR',
+      revisionReason: '',
+      revisionContent: '',
+      revisionDate: dayjs(),
+    });
+    setPatternRevisionModalVisible(true);
+  };
+
+  // 保存纸样修改记录
+  const handlePatternRevisionSave = async () => {
+    if (!patternRevisionRecord) return;
+    try {
+      setPatternRevisionSaving(true);
+      const values = await patternRevisionForm.validateFields();
+
+      // 1. 如果有上传文件，先上传文件
+      if (values.patternFile && values.patternFile.fileList && values.patternFile.fileList.length > 0) {
+        const file = values.patternFile.fileList[0].originFileObj;
+        if (file) {
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('styleId', String(patternRevisionRecord.id));
+          formData.append('styleNo', patternRevisionRecord.styleNo);
+          formData.append('type', 'pattern');
+
+          const uploadRes = await api.post<{ code: number; message: string }>(
+            '/style/attachment/upload-pattern',
+            formData,
+            {
+              headers: { 'Content-Type': 'multipart/form-data' }
+            }
+          );
+
+          if (uploadRes.code !== 200) {
+            message.error(uploadRes.message || '文件上传失败');
+            setPatternRevisionSaving(false);
+            return;
+          }
+        }
+      }
+
+      // 2. 保存修改记录
+      const data = {
+        styleId: patternRevisionRecord.id,
+        styleNo: values.styleNo,
+        revisionType: values.revisionType,
+        revisionReason: values.revisionReason,
+        revisionContent: values.revisionContent,
+        revisionDate: values.revisionDate?.format('YYYY-MM-DD'),
+        patternMakerName: values.patternMakerName,
+        expectedCompleteDate: values.expectedCompleteDate?.format('YYYY-MM-DD'),
+        remark: values.remark,
+      };
+
+      const res = await api.post<{ code: number; message: string }>('/pattern-revision', data);
+      if (res.code === 200) {
+        message.success('纸样修改记录已保存');
+        setPatternRevisionModalVisible(false);
+        patternRevisionForm.resetFields();
+        // 刷新列表以同步数据
+        fetchStyles();
+      } else {
+        message.error(res.message || '保存失败');
+      }
+    } catch (e: unknown) {
+      const err = e as { message?: string };
+      message.error(err?.message || '保存失败');
+    } finally {
+      setPatternRevisionSaving(false);
+    }
+  };
+
   useEffect(() => {
     fetchStats();
   }, []);
@@ -453,6 +542,20 @@ const DataCenter: React.FC = () => {
         )
       },
       {
+        title: '维护人',
+        dataIndex: 'updateBy',
+        key: 'updateBy',
+        width: 100,
+        render: (v: unknown) => v || '-'
+      },
+      {
+        title: '维护时间',
+        dataIndex: 'updateTime',
+        key: 'updateTime',
+        width: 150,
+        render: (v: unknown) => v ? formatDateTime(v) : '-'
+      },
+      {
         title: '操作',
         key: 'action',
         width: 280,
@@ -473,6 +576,13 @@ const DataCenter: React.FC = () => {
                 title: '编辑生产制单内容',
                 icon: <EditOutlined />,
                 onClick: () => openEditModal(record),
+              },
+              {
+                key: 'patternRevision',
+                label: '纸样修改',
+                title: '记录纸样修改',
+                icon: <FileTextOutlined />,
+                onClick: () => openPatternRevisionModal(record),
               },
               {
                 key: 'print',
@@ -600,6 +710,95 @@ const DataCenter: React.FC = () => {
               rows={15}
               placeholder="请输入生产要求，每行一条&#10;例如：&#10;1. 裁剪前需松布和缩水，确认布号、正反面及染布，裁剪按照合同订单数量明细裁剪；&#10;2. 针织面料需松布24小时可裁剪，拉布经纬纱向要求经直纬平，注意避开布匹瑕疵和色差；"
             />
+          </Form.Item>
+        </Form>
+      </ResizableModal>
+
+      {/* 纸样修改弹窗 */}
+      <ResizableModal
+        open={patternRevisionModalVisible}
+        title={`纸样修改记录 - ${patternRevisionRecord?.styleNo || ''}`}
+        defaultWidth="30vw"
+        defaultHeight="40vh"
+        onCancel={() => {
+          setPatternRevisionModalVisible(false);
+          setPatternRevisionRecord(null);
+          patternRevisionForm.resetFields();
+        }}
+        footer={
+          <Space>
+            <Button onClick={() => {
+              setPatternRevisionModalVisible(false);
+              setPatternRevisionRecord(null);
+              patternRevisionForm.resetFields();
+            }}>取消</Button>
+            <Button type="primary" loading={patternRevisionSaving} onClick={handlePatternRevisionSave}>保存</Button>
+          </Space>
+        }
+        defaultWidth="40vw"
+        defaultHeight="50vh"
+      >
+        <Form form={patternRevisionForm} layout="vertical">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+            <Form.Item name="styleNo" label="款号">
+              <Input disabled />
+            </Form.Item>
+
+            <Form.Item
+              name="revisionType"
+              label="修改类型"
+              rules={[{ required: true, message: '请选择修改类型' }]}
+            >
+              <Select>
+                <Select.Option value="MINOR">小改</Select.Option>
+                <Select.Option value="MAJOR">大改</Select.Option>
+                <Select.Option value="URGENT">紧急修改</Select.Option>
+              </Select>
+            </Form.Item>
+
+            <Form.Item name="revisionDate" label="修改日期">
+              <DatePicker style={{ width: '100%' }} />
+            </Form.Item>
+
+            <Form.Item name="patternMakerName" label="纸样师傅">
+              <Input placeholder="请输入" />
+            </Form.Item>
+          </div>
+
+          <Form.Item
+            name="revisionReason"
+            label="修改原因"
+            rules={[{ required: true, message: '请填写修改原因' }]}
+          >
+            <TextArea rows={3} placeholder="请说明需要修改的原因" />
+          </Form.Item>
+
+          <Form.Item
+            name="revisionContent"
+            label="修改内容"
+            rules={[{ required: true, message: '请填写修改内容' }]}
+          >
+            <TextArea rows={3} placeholder="请详细描述需要修改的内容" />
+          </Form.Item>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+            <Form.Item name="expectedCompleteDate" label="预计完成日期">
+              <DatePicker style={{ width: '100%' }} />
+            </Form.Item>
+
+            <Form.Item name="remark" label="备注" style={{ gridColumn: 'span 3' }}>
+              <Input placeholder="其他说明" />
+            </Form.Item>
+          </div>
+
+          <Form.Item name="patternFile" label="纸样文件">
+            <Upload
+              beforeUpload={() => false}
+              maxCount={1}
+              accept=".pdf,.dwg,.dxf,.ai,.cdr,.zip,.rar,.plt,.pat,.ets,.hpg,.jpg,.jpeg,.png,.bmp,.gif,.svg"
+            >
+              <Button icon={<UploadOutlined />}>选择文件上传</Button>
+            </Upload>
           </Form.Item>
         </Form>
       </ResizableModal>

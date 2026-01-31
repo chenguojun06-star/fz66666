@@ -33,13 +33,24 @@ let undoTimer = null; // 撤销倒计时定时器
 // 重复扫码防护（客户端侧）
 const recentScanExpires = new Map();
 
+// ==================== 常量定义 ====================
+
+// 扫码记录管理常量
+const MAX_RECENT_SCANS = 80;      // 最大保留扫码记录数
+const CLEANUP_BATCH_SIZE = 20;    // 每次清理数量
+const CLEANUP_INTERVAL_MS = 1000; // 清理间隔（毫秒）
+
+// 撤销功能常量
+const UNDO_COUNTDOWN_SECONDS = 10; // 撤销倒计时（秒）
+const UNDO_TIMER_INTERVAL_MS = 1000; // 撤销计时器间隔（毫秒）
+
 // ==================== 辅助函数 ====================
 
 /**
  * 清理过期的扫码记录
  */
 function cleanupRecentScans() {
-  if (recentScanExpires.size <= 80) {
+  if (recentScanExpires.size <= MAX_RECENT_SCANS) {
     return;
   }
   const now = Date.now();
@@ -48,14 +59,14 @@ function cleanupRecentScans() {
       recentScanExpires.delete(k);
     }
   }
-  if (recentScanExpires.size <= 80) {
+  if (recentScanExpires.size <= MAX_RECENT_SCANS) {
     return;
   }
   let removed = 0;
   for (const k of recentScanExpires.keys()) {
     recentScanExpires.delete(k);
     removed += 1;
-    if (removed >= 20) {
+    if (removed >= CLEANUP_BATCH_SIZE) {
       break;
     }
   }
@@ -870,9 +881,39 @@ Page({
 
   /**
    * 数量输入变更
+   * @param {Object} e - 输入事件对象
    */
   onQuantityInput(e) {
-    this.setData({ quantity: e.detail.value });
+    const value = e.detail.value;
+
+    // 验证输入是否为空
+    if (value === '' || value === null || value === undefined) {
+      this.setData({ quantity: '' });
+      return;
+    }
+
+    // 转换为数字并验证
+    const num = parseInt(value, 10);
+
+    // 验证是否为有效数字
+    if (isNaN(num)) {
+      wx.showToast({ title: '请输入有效数字', icon: 'none' });
+      return;
+    }
+
+    // 验证是否为非负数
+    if (num < 0) {
+      wx.showToast({ title: '数量不能为负数', icon: 'none' });
+      return;
+    }
+
+    // 验证最大值（防止异常大数）
+    if (num > 999999) {
+      wx.showToast({ title: '数量不能超过999999', icon: 'none' });
+      return;
+    }
+
+    this.setData({ quantity: num });
   },
 
   /**
@@ -2200,7 +2241,7 @@ Page({
 
     this.setData({
       undoVisible: true,
-      undoCountdown: 10, // 10秒撤销时间
+      undoCountdown: UNDO_COUNTDOWN_SECONDS, // 撤销倒计时（秒）
       undoRecord: record,
     });
 
@@ -2211,7 +2252,7 @@ Page({
       } else {
         this.setData({ undoCountdown: next });
       }
-    }, 1000);
+    }, UNDO_TIMER_INTERVAL_MS);
   },
 
   /**

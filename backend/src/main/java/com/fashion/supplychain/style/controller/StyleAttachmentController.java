@@ -59,6 +59,18 @@ public class StyleAttachmentController {
     }
 
     /**
+     * 资料中心纸样上传（替换原有纸样文件）
+     */
+    @PostMapping("/upload-pattern")
+    public Result<StyleAttachment> uploadPatternForDataCenter(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("styleId") String styleId,
+            @RequestParam("styleNo") String styleNo,
+            @RequestParam(value = "type", defaultValue = "pattern") String type) {
+        return Result.success(styleAttachmentOrchestrator.uploadAndReplacePattern(file, styleId, styleNo, type));
+    }
+
+    /**
      * 纸样资料流回资料中心
      */
     @PostMapping("/pattern/flow-to-center")

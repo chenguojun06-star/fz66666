@@ -11,7 +11,21 @@ export { useRequest } from './useRequest';
 export { useTablePagination } from './useTablePagination';
 export { useTableSelection } from './useTableSelection';
 
+// 性能优化 Hooks
+export {
+  useMemoizedCallback,
+  useMemoizedEventHandler,
+} from './useMemoizedCallback';
+export {
+  useVirtualList,
+  usePagedVirtualList,
+} from './useVirtualList';
+
 export type { ModalState } from './useModal';
 export type { RequestConfig, RequestResult } from './useRequest';
 export type { TablePaginationConfig } from './useTablePagination';
 export type { TableSelectionConfig } from './useTableSelection';
+export type {
+  VirtualListOptions,
+  VirtualListResult,
+} from './useVirtualList';

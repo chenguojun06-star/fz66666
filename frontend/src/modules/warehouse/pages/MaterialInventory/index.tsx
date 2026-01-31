@@ -33,6 +33,7 @@ import { useModal, useTablePagination } from '@/hooks';
 import { useAuth } from '@/utils/AuthContext';
 import dayjs from 'dayjs';
 import api from '@/utils/api';
+import { safePrint } from '@/utils/safePrint';
 
 const { Option } = Select;
 
@@ -360,14 +361,9 @@ const _MaterialInventory: React.FC = () => {
       </html>
     `;
 
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(printContent);
-      printWindow.document.close();
-      printWindow.focus();
-      setTimeout(() => {
-        printWindow.print();
-      }, 250);
+    const success = safePrint(printContent, '物料出库单');
+    if (!success) {
+      message.error('浏览器拦截了新窗口');
     }
   };
 

@@ -2,7 +2,9 @@ package com.fashion.supplychain.production.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.production.dto.ProductionOrderDTO;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.mapper.ProductionOrderDtoConverter;
 import com.fashion.supplychain.production.orchestration.ProductionOrderOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +34,9 @@ public class ProductionOrderController {
     @Autowired
     private ProductionOrderService productionOrderService;
 
+    @Autowired
+    private ProductionOrderDtoConverter productionOrderDtoConverter;
+
     /**
      * 分页查询生产订单列表
      */
@@ -57,6 +62,16 @@ public class ProductionOrderController {
     public Result<?> getByOrderNo(@PathVariable String orderNo) {
         ProductionOrder productionOrder = productionOrderOrchestrator.getDetailByOrderNo(orderNo);
         return Result.success(productionOrder);
+    }
+
+    /**
+     * 根据ID查询生产订单详情（DTO版本，不包含敏感字段）
+     */
+    @GetMapping("/detail-dto/{id}")
+    public Result<ProductionOrderDTO> detailDTO(@PathVariable String id) {
+        ProductionOrder productionOrder = productionOrderOrchestrator.getDetailById(id);
+        ProductionOrderDTO dto = productionOrderDtoConverter.toDTO(productionOrder);
+        return Result.success(dto);
     }
 
     @GetMapping("/flow/{id}")

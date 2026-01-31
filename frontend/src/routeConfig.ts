@@ -25,6 +25,7 @@ export const paths = {
   dashboard: '/dashboard',
 
   styleInfoList: '/style-info',
+  styleInfoNew: '/style-info/new',
   styleInfoDetail: '/style-info/:id',
   patternProduction: '/pattern-production',
 
@@ -33,6 +34,7 @@ export const paths = {
 
   dataCenter: '/data-center',
   templateCenter: '/basic/template-center',
+  patternRevision: '/basic/pattern-revision',
 
   productionList: '/production',
   materialPurchase: '/production/material',
@@ -76,6 +78,7 @@ export const permissionCodes = {
   orderManagement: 'MENU_ORDER_MANAGEMENT',
   dataCenter: 'MENU_DATA_CENTER',
   templateCenter: 'MENU_TEMPLATE_CENTER',
+  patternRevision: 'MENU_PATTERN_REVISION',
 
   productionList: 'MENU_PRODUCTION_LIST',
   materialPurchase: 'MENU_MATERIAL_PURCHASE',

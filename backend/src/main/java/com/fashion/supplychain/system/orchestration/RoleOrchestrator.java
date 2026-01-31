@@ -2,6 +2,7 @@ package com.fashion.supplychain.system.orchestration;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.util.TextUtils;
 import com.fashion.supplychain.system.entity.Role;
 import com.fashion.supplychain.system.entity.SystemOperationLog;
 import com.fashion.supplychain.system.service.RolePermissionService;
@@ -55,7 +56,7 @@ public class RoleOrchestrator {
         if (!UserContext.isTopAdmin()) {
             throw new AccessDeniedException("无权限操作");
         }
-        String remark = role == null ? null : normalize(role.getOperationRemark());
+        String remark = role == null ? null : TextUtils.safeText(role.getOperationRemark());
         if (!StringUtils.hasText(remark)) {
             throw new IllegalArgumentException("操作原因不能为空");
         }
@@ -75,7 +76,7 @@ public class RoleOrchestrator {
         if (!UserContext.isTopAdmin()) {
             throw new AccessDeniedException("无权限操作");
         }
-        String normalized = normalize(remark);
+        String normalized = TextUtils.safeText(remark);
         if (!StringUtils.hasText(normalized)) {
             throw new IllegalArgumentException("操作原因不能为空");
         }
@@ -101,7 +102,7 @@ public class RoleOrchestrator {
         if (id == null) {
             throw new IllegalArgumentException("角色ID不能为空");
         }
-        String normalized = normalize(remark);
+        String normalized = TextUtils.safeText(remark);
         if (!StringUtils.hasText(normalized)) {
             throw new IllegalArgumentException("操作原因不能为空");
         }
@@ -113,13 +114,7 @@ public class RoleOrchestrator {
         return true;
     }
 
-    private static String normalize(String v) {
-        if (!StringUtils.hasText(v)) {
-            return null;
-        }
-        String t = v.trim();
-        return t.isEmpty() ? null : t;
-    }
+    // 使用TextUtils.safeText()替代
 
     private void saveOperationLog(String bizType, String bizId, String action, String remark) {
         try {

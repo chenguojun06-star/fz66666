@@ -1403,14 +1403,16 @@ const StyleBomTab: React.FC<Props> = ({
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         {/* 左侧：库存检查和生成采购单 */}
         <Space>
-          <InputNumber
-            min={1}
-            value={productionQty}
-            onChange={(v) => setProductionQty(v || 1)}
-            style={{ width: 100 }}
-            addonBefore="数量"
-            disabled={checkingStock}
-          />
+          <Space.Compact>
+            <Input style={{ width: 60 }} disabled value="数量" />
+            <InputNumber
+              min={1}
+              value={productionQty}
+              onChange={(v) => setProductionQty(v || 1)}
+              style={{ width: 100 }}
+              disabled={checkingStock}
+            />
+          </Space.Compact>
           <Button
             onClick={handleCheckStock}
             disabled={!data.length || loading}

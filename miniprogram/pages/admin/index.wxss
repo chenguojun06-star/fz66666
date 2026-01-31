@@ -28,7 +28,7 @@ page {
 
 .logout-text {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 
 .title-right-group {
@@ -66,7 +66,7 @@ page {
   min-width: 18px;
   height: 18px;
   padding: 0 4px;
-  background: #ff4757;
+  background: var(--color-error);
   color: #fff;
   font-size: 10px;
   font-weight: 600;
@@ -115,7 +115,7 @@ page {
 
 .profile-role {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   padding: 2px 8px;
   background: rgba(224, 242, 254, 0.5);
   border-radius: var(--radius-md);
@@ -128,7 +128,7 @@ page {
   justify-content: space-between;
   gap: 16px;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   padding: 4px 16px;
   background: rgba(224, 242, 254, 0.5);
   border-radius: var(--radius-md);
@@ -169,7 +169,7 @@ page {
 .user-info-label {
   font-size: 13px;
   font-weight: 600;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   margin-right: 2px;
 }
 
@@ -214,7 +214,7 @@ page {
 
 .info-label {
   font-size: 14px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 
 .info-value {
@@ -284,7 +284,7 @@ page {
 
 .admin-card-badge {
   padding: 2px 8px;
-  background: #ef4444;
+  background: var(--color-error);
   color: #ffffff;
   font-size: 12px;
   font-weight: 600;
@@ -351,13 +351,13 @@ page {
 .stat-value {
   font-size: 20px; /* 正文字体 */
   font-weight: 700;
-  color: #3b82f6;
+  color: var(--color-primary);
   margin-bottom: 4px;
 }
 
 .stat-label {
   font-size: 11px; /* 辅助字体 */
-  color: #6b7280;
+  color: var(--color-text-secondary);
   font-weight: 500;
 }
 
@@ -416,7 +416,7 @@ page {
 
 .salary-label {
   font-size: 12px; /* 辅助字体 */
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 
 .salary-value {

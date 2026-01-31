@@ -9,7 +9,7 @@ import { paths } from './routeConfig';
 import { useViewport } from './utils/useViewport';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import { StyleInfo, OrderManagement, DataCenter, TemplateCenter } from './modules/basic';
+import { StyleInfo, StyleInfoList, OrderManagement, DataCenter, TemplateCenter, PatternRevisionManagement } from './modules/basic';
 import {
   MaterialReconciliation,
   PaymentApproval,
@@ -237,7 +237,8 @@ const AppRoutes: React.FC = () => {
 
         <Route element={<PrivateRoute />}>
           <Route path={paths.dashboard} element={<Suspense fallback={<Spin />}><Dashboard /></Suspense>} />
-          <Route path={paths.styleInfoList} element={<Suspense fallback={<Spin />}><StyleInfo /></Suspense>} />
+          <Route path={paths.styleInfoList} element={<Suspense fallback={<Spin />}><StyleInfoList /></Suspense>} />
+          <Route path="/style-info/new" element={<Suspense fallback={<Spin />}><StyleInfo /></Suspense>} />
           <Route path={paths.styleInfoDetail} element={<Suspense fallback={<Spin />}><StyleInfo /></Suspense>} />
           <Route path={paths.patternProduction} element={<Suspense fallback={<Spin />}><PatternProduction /></Suspense>} />
           <Route path={paths.productionList} element={<Suspense fallback={<Spin />}><ProductionList /></Suspense>} />
@@ -284,6 +285,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.orderManagementDetail} element={<Suspense fallback={<Spin />}><OrderManagement /></Suspense>} />
           <Route path={paths.dataCenter} element={<Suspense fallback={<Spin />}><DataCenter /></Suspense>} />
           <Route path={paths.templateCenter} element={<Suspense fallback={<Spin />}><TemplateCenter /></Suspense>} />
+          <Route path={paths.patternRevision} element={<Suspense fallback={<Spin />}><PatternRevisionManagement /></Suspense>} />
         </Route>
         <Route path="*" element={<Suspense fallback={<Spin />}><NotFound /></Suspense>} />
       </Routes>

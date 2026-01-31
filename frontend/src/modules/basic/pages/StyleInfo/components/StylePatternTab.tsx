@@ -142,13 +142,32 @@ const StylePatternTab: React.FC<Props> = ({
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 20, flexWrap: 'wrap', marginBottom: 16 }}>
-        <Space size="large" wrap>
-          <span>纸样状态：</span>
-          {statusTag}
-          <span>领取人：{patternAssignee || '-'}</span>
-          <span>开始时间：{startTimeText}</span>
-          <span>完成时间：{completedTimeText}</span>
+      {/* 状态栏 - 与BOM/工序保持一致的样式 */}
+      <div style={{
+        marginBottom: 16,
+        padding: '12px 16px',
+        background: '#f5f5f5',
+        borderRadius: 4,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 16,
+        flexWrap: 'wrap',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ color: '#666' }}>纸样状态：</span>
+            {statusTag}
+          </div>
+          <span style={{ color: '#666' }}>
+            领取人：<span style={{ color: '#333', fontWeight: 500 }}>{patternAssignee || '-'}</span>
+          </span>
+          <span style={{ color: '#666' }}>
+            开始时间：<span style={{ color: '#333', fontWeight: 500 }}>{startTimeText}</span>
+          </span>
+          <span style={{ color: '#666' }}>
+            完成时间：<span style={{ color: '#333', fontWeight: 500 }}>{completedTimeText}</span>
+          </span>
           {/* 纸样齐全检查提示 */}
           {patternCheckResult && !patternCheckResult.complete && (
             <span style={{
@@ -165,42 +184,45 @@ const StylePatternTab: React.FC<Props> = ({
               ⚠️ 缺少: {patternCheckResult.missingItems.join('、')}
             </span>
           )}
-        </Space>
+        </div>
 
-        <Space size="large" wrap>
+        <Space size={8} wrap>
           {locked ? (
             <>
-              <Tag color="default">已完成</Tag>
-              <span style={{ color: 'var(--neutral-text-lighter)' }}>无法操作</span>
-              {canRollback ? (
-                <Button danger loading={saving} onClick={openMaintenance}>维护</Button>
-              ) : null}
+              {canRollback && (
+                <Button size="small" danger loading={saving} onClick={openMaintenance}>维护</Button>
+              )}
             </>
           ) : (
             <>
-              <Button loading={saving} onClick={() => call(`/style/info/${styleId}/pattern/start`)}>纸样开发</Button>
-              <Button
-                type="primary"
-                loading={saving}
-                disabled={!hasValidPatternFile}
-                onClick={() => {
-                  if (!hasValidPatternFile) {
-                    message.error('请先上传纸样文件（dxf/plt/ets）');
-                    return;
-                  }
-                  call(`/style/info/${styleId}/pattern/complete`);
-                }}
-              >
-                标记完成
-              </Button>
-              {canRollback ? (
-                <Button danger loading={saving} onClick={openMaintenance}>维护</Button>
-              ) : null}
-              {!hasValidPatternFile ? (
-                <span style={{ color: 'var(--neutral-text-lighter)' }}>
+              {!patternStartTime && !patternCompletedTime && (
+                <Button size="small" loading={saving} onClick={() => call(`/style/info/${styleId}/pattern/start`)}>开始纸样开发</Button>
+              )}
+              {patternStartTime && !patternCompletedTime && (
+                <Button
+                  size="small"
+                  type="primary"
+                  loading={saving}
+                  disabled={!hasValidPatternFile}
+                  onClick={() => {
+                    if (!hasValidPatternFile) {
+                      message.error('请先上传纸样文件（dxf/plt/ets）');
+                      return;
+                    }
+                    call(`/style/info/${styleId}/pattern/complete`);
+                  }}
+                >
+                  标记完成
+                </Button>
+              )}
+              {canRollback && (
+                <Button size="small" danger loading={saving} onClick={openMaintenance}>维护</Button>
+              )}
+              {!hasValidPatternFile && patternStartTime && (
+                <span style={{ color: '#999', fontSize: '12px' }}>
                   需先上传纸样(dxf/plt/ets)
                 </span>
-              ) : null}
+              )}
             </>
           )}
         </Space>

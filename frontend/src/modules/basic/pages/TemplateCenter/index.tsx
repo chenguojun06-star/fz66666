@@ -261,7 +261,7 @@ const TemplateCenter: React.FC = () => {
         return;
       }
     }
-    
+
     setEditTableData(parsed);
     // 初始化尺码列表
     if (parsed && typeof parsed === 'object' && 'sizes' in parsed && Array.isArray(parsed.sizes)) {
@@ -551,7 +551,7 @@ const TemplateCenter: React.FC = () => {
       }
       const tpl: TemplateLibrary = res.data;
       const content = tpl?.templateContent;
-      
+
       // templateContent 现在可能是对象（@JsonRawValue）或字符串
       let obj: unknown = null;
       if (typeof content === 'object' && content !== null) {
@@ -568,7 +568,7 @@ const TemplateCenter: React.FC = () => {
           return;
         }
       }
-      
+
       setViewObj(obj);
       setViewContent(JSON.stringify(obj, null, 2));
     } catch (e: unknown) {
@@ -851,7 +851,7 @@ const TemplateCenter: React.FC = () => {
   };
 
   const isBomTableData = (data: unknown): data is BomTableData => Array.isArray(data);
-  
+
   const isBomTableContainer = (data: unknown): data is BomTableContainer => {
     if (!data || typeof data !== 'object') return false;
     const rec = data as Record<string, unknown>;

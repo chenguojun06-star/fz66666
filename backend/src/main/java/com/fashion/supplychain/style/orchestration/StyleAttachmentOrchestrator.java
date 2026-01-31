@@ -209,8 +209,112 @@ public class StyleAttachmentOrchestrator {
         return styleAttachmentService.listPatternVersions(styleId, bizType);
     }
 
-    /**
-     * 检查纸样是否齐全
+    /**     * 上传纸样文件并替换原有文件（用于资料中心）
+     * 会删除原有的pattern类型文件，上传新文件
+     */
+    public StyleAttachment uploadAndReplacePattern(MultipartFile file, String styleId, String styleNo, String type) {
+        log.info("======= 开始上传纸样文件 =======");
+        log.info("styleId: {}", styleId);
+        log.info("styleNo: {}", styleNo);
+        log.info("type: {}", type);
+        log.info("文件名: {}", file.getOriginalFilename());
+        log.info("文件大小: {} bytes", file.getSize());
+        log.info("uploadPath配置值: {}", uploadPath);
+
+        if (file == null || file.isEmpty()) {
+            log.error("文件为空");
+            throw new IllegalArgumentException("文件为空");
+        }
+        if (!StringUtils.hasText(styleId)) {
+            log.error("styleId为空");
+            throw new IllegalArgumentException("styleId不能为空");
+        }
+
+        String bizType = StringUtils.hasText(type) ? type.trim() : "pattern";
+        log.info("最终bizType: {}", bizType);
+
+        try {
+            // 1. 获取当前版本号
+            List<StyleAttachment> existingPatterns = styleAttachmentService.listByStyleId(styleId.trim(), bizType);
+            int nextVersion = 1;
+            if (existingPatterns != null && !existingPatterns.isEmpty()) {
+                // 找到最大版本号
+                int maxVersion = existingPatterns.stream()
+                    .mapToInt(a -> a.getVersion() == null ? 0 : a.getVersion())
+                    .max()
+                    .orElse(0);
+                nextVersion = maxVersion + 1;
+
+                // 将当前active的纸样改为archived（保留旧版本）
+                for (StyleAttachment existing : existingPatterns) {
+                    if ("active".equals(existing.getStatus())) {
+                        existing.setStatus("archived");
+                        styleAttachmentService.updateById(existing);
+                    }
+                }
+            }
+
+            // 2. 上传新文件
+            log.info("开始保存文件到: {}", uploadPath);
+            File dir = new File(uploadPath);
+            log.info("目录是否存在: {}, 绝对路径: {}", dir.exists(), dir.getAbsolutePath());
+
+            if (!dir.exists()) {
+                log.info("目录不存在，开始创建...");
+                boolean created = dir.mkdirs();
+                log.info("目录创建结果: {}", created);
+            }
+
+            String originalFilename = file.getOriginalFilename();
+            String safeOriginal = originalFilename == null ? "file" : originalFilename;
+            int dot = safeOriginal.lastIndexOf('.');
+            String extension = dot >= 0 ? safeOriginal.substring(dot) : "";
+
+            String newFilename = UUID.randomUUID().toString() + extension;
+            File dest = new File(dir, newFilename);
+            log.info("目标文件路径: {}", dest.getAbsolutePath());
+
+            file.transferTo(dest);
+            log.info("文件保存成功");
+
+            // 3. 创建新记录
+            log.info("开始创建数据库记录...");
+            StyleAttachment attachment = new StyleAttachment();
+            attachment.setId(UUID.randomUUID().toString());
+            attachment.setStyleId(styleId);
+            attachment.setBizType(bizType);
+            attachment.setFileName(safeOriginal);
+            attachment.setFileUrl("/upload/" + newFilename);
+            attachment.setFileSize(file.getSize());
+            attachment.setFileType(extension.length() > 1 ? extension.substring(1) : "");
+            attachment.setCreateTime(LocalDateTime.now());
+            attachment.setVersion(nextVersion);
+            attachment.setStatus("active");
+
+            // 获取当前用户作为维护人
+            String currentUser = UserContext.username();
+            log.info("当前用户: {}", currentUser);
+            if (StringUtils.hasText(currentUser)) {
+                attachment.setUploader(currentUser);
+            }
+
+            log.info("开始保存到数据库...");
+            boolean saved = styleAttachmentService.save(attachment);
+            log.info("数据库保存结果: {}", saved);
+
+            if (!saved) {
+                throw new IllegalStateException("保存附件失败");
+            }
+
+            log.info("纸样文件上传完成，附件ID: {}", attachment.getId());
+            return attachment;
+        } catch (Exception e) {
+            log.error("上传纸样文件失败: " + e.getMessage(), e);
+            throw new RuntimeException("上传失败: " + e.getMessage());
+        }
+    }
+
+    /**     * 检查纸样是否齐全
      */
     public Map<String, Object> checkPatternComplete(String styleId) {
         Map<String, Object> result = new java.util.HashMap<>();

@@ -268,26 +268,33 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
       dataIndex: 'fileName',
       width: 260,
       ellipsis: true,
-      render: (text: string, record: StyleAttachment) => (
-        <Space style={{ maxWidth: '100%' }}>
-          {getFileIcon(resolveFileType(record))}
-          <a
-            href={record.fileUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: 'inline-block',
-              maxWidth: '100%',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              verticalAlign: 'bottom',
-            }}
-          >
-            {text}
-          </a>
-        </Space>
-      )
+      render: (text: string, record: StyleAttachment) => {
+        // 将相对路径转换为后端完整URL
+        const fileUrl = record.fileUrl?.startsWith('http')
+          ? record.fileUrl
+          : `${window.location.protocol}//${window.location.hostname}:8088${record.fileUrl}`;
+
+        return (
+          <Space style={{ maxWidth: '100%' }}>
+            {getFileIcon(resolveFileType(record))}
+            <a
+              href={fileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-block',
+                maxWidth: '100%',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                verticalAlign: 'bottom',
+              }}
+            >
+              {text}
+            </a>
+          </Space>
+        );
+      }
     },
     ...(isPattern ? [{
       title: '版本',

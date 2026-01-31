@@ -14,6 +14,7 @@ import { useSync } from '@/utils/syncManager';
 import { useViewport } from '@/utils/useViewport';
 import * as XLSX from 'xlsx';
 import './styles.css';
+import { safePrint } from '@/utils/safePrint';
 
 // New Imports
 import {
@@ -683,23 +684,10 @@ const MaterialPurchase: React.FC = () => {
 
   const openPurchaseSheet = (autoPrint: boolean) => {
     const html = buildPurchaseSheetHtml(currentPurchase, detailOrder, detailOrderLines, detailPurchases, detailSizePairs);
-    const w = window.open('', '_blank');
-    if (!w) {
+    const success = safePrint(html, '采购单');
+    if (!success) {
       message.error('浏览器拦截了新窗口，请允许弹窗');
       return;
-    }
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
-    if (autoPrint) {
-      setTimeout(() => {
-        try {
-          w.focus();
-          w.print();
-        } catch {
-          null;
-        }
-      }, 250);
     }
   };
 

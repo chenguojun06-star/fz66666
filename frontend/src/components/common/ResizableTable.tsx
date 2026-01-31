@@ -558,9 +558,9 @@ const ResizableTable = <T extends AnyRecord>(props: ResizableTableProps<T>) => {
 
         // 判断是否为操作列
         const maybeAction =
-          titleText.includes('操作') ||
           ['action', 'actions', 'operation', 'operate', 'op'].includes(keyText.toLowerCase()) ||
-          ['action', 'actions', 'operation', 'operate', 'op'].includes(dataIndexText.toLowerCase());
+          ['action', 'actions', 'operation', 'operate', 'op'].includes(dataIndexText.toLowerCase()) ||
+          ['操作', '操作列', '操作区', '操作按钮'].includes(titleText.trim());
 
         const baseWidth = maybeAction
           ? actionColumnWidth

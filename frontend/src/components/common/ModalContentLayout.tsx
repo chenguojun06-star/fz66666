@@ -21,11 +21,11 @@ export const ModalHeaderCard: React.FC<HeaderCardProps> = ({ children, isMobile 
     <div
       style={{
         display: 'flex',
-        gap: isMobile ? 12 : 16,
-        padding: isMobile ? 10 : 12,
+        gap: isMobile ? 10 : 12,
+        padding: isMobile ? 8 : 10,
         background: 'var(--color-bg-gray)',
         borderRadius: 8,
-        marginBottom: 12,
+        marginBottom: 10,
         ...style,
       }}
     >
@@ -59,13 +59,14 @@ export const ModalField: React.FC<FieldProps> = ({
   style,
 }) => {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, ...style }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1.2, minWidth: 0, ...style }}>
       <span
         style={{
           fontSize: labelSize,
           color: 'var(--neutral-text-light)',
           fontWeight: 600,
           whiteSpace: 'nowrap',
+          lineHeight: 1.2,
         }}
       >
         {label}
@@ -75,6 +76,11 @@ export const ModalField: React.FC<FieldProps> = ({
           fontSize: valueSize,
           fontWeight: valueWeight,
           color: valueColor,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          minWidth: 0,
+          lineHeight: 1.2,
         }}
       >
         {value}
@@ -99,14 +105,19 @@ export const ModalPrimaryField: React.FC<PrimaryFieldProps> = ({
   style,
 }) => {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, ...style }}>
-      <span style={{ fontSize: 14, color: 'var(--neutral-text-light)', fontWeight: 600 }}>{label}</span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1.2, minWidth: 0, ...style }}>
+      <span style={{ fontSize: 14, color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap', lineHeight: 1.2 }}>{label}</span>
       <span
         style={{
           fontSize: valueSize,
           fontWeight: 700,
           color: 'var(--neutral-text)',
           letterSpacing: '0.5px',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          minWidth: 0,
+          lineHeight: 1.2,
         }}
       >
         {value}
@@ -136,9 +147,9 @@ export const ModalFieldRow: React.FC<FieldRowProps> = ({
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap,
+        gap: Math.max(8, gap - 8),
         flexWrap: 'wrap',
-        marginBottom: isMobile ? 8 : 12,
+        marginBottom: isMobile ? 6 : 10,
         ...style,
       }}
     >
@@ -198,7 +209,7 @@ export const ModalInfoCard: React.FC<InfoCardProps> = ({ children, padding = 6, 
   return (
     <div
       style={{
-        padding,
+        padding: Math.max(4, padding - 2),
         background: 'var(--neutral-white)',
         borderRadius: 6,
         border: '2px solid var(--table-border-color)',
@@ -275,8 +286,8 @@ export const ModalSectionTitle: React.FC<SectionTitleProps> = ({ children, size 
         fontSize: size,
         fontWeight: 700,
         color: 'var(--neutral-text)',
-        marginTop: 12,
-        marginBottom: 8,
+        marginTop: 10,
+        marginBottom: 6,
         ...style,
       }}
     >

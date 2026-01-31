@@ -131,27 +131,18 @@ const production = {
     // 后端接口用 orderNo 参数进行模糊匹配
     return ok('/api/production/cutting-task/list', 'GET', { orderNo: orderIdOrNo, pageSize: 1 });
   },
+  /**
+   * 撤销扫码记录
+   * @param {Object} payload - 撤销参数
+   * @returns {Promise<Object>}
+   */
   async undoScan(payload) {
     const data = payload || {};
-    const candidates = [
-      '/api/production/scan/undo',
-      '/api/production/scan/revoke',
-      '/api/production/scan/cancel',
-    ];
-    let lastErr = null;
-
-    for (const url of candidates) {
-      try {
-        const resp = await raw(url, 'POST', data);
-        if (resp && resp.code === 200) {
-          return resp.data;
-        }
-        lastErr = createBizError(resp, `POST ${url}`);
-      } catch (e) {
-        lastErr = e;
-      }
+    const resp = await raw('/api/production/scan/undo', 'POST', data);
+    if (resp && resp.code === 200) {
+      return resp.data;
     }
-    throw lastErr || createBizError(null, 'POST /api/production/scan/undo');
+    throw createBizError(resp, 'POST /api/production/scan/undo');
   },
 };
 

@@ -19,9 +19,18 @@ const SystemLogs: React.FC = () => {
   const { modal } = App.useApp();
 
   // ==================== 登录日志 ====================
-  const [loginQueryParams, setLoginQueryParams] = useState<LoginLogQueryParams>({
-    page: 1,
-    pageSize: 10
+  const [loginQueryParams, setLoginQueryParams] = useState<LoginLogQueryParams>(() => {
+    let page = 1;
+    let pageSize = 10;
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem('system-loginlog-pagination') : null;
+      if (raw) {
+        const obj = JSON.parse(raw || '{}');
+        if (Number.isFinite(Number(obj?.page))) page = Number(obj.page);
+        if (Number.isFinite(Number(obj?.pageSize))) pageSize = Number(obj.pageSize);
+      }
+    } catch {}
+    return { page, pageSize } as LoginLogQueryParams;
   });
   const [loginLogs, setLoginLogs] = useState<LoginLog[]>([]);
   const [loginTotal, setLoginTotal] = useState(0);
@@ -51,16 +60,9 @@ const SystemLogs: React.FC = () => {
     }
   }, [activeTab, fetchLoginLogs]);
 
-  const normalizeLoginStatus = (raw: any): 'success' | 'failure' => {
-    const v = String(raw == null ? '' : raw).trim();
-    if (!v) return 'failure';
-    const u = v.toUpperCase();
-    if (u === 'SUCCESS' || u === 'OK' || u === 'PASS') return 'success';
-    if (u === 'FAILED' || u === 'FAILURE' || u === 'ERROR' || u === 'FAIL') return 'failure';
-    const l = v.toLowerCase();
-    if (l === 'success') return 'success';
-    if (l === 'failure') return 'failure';
-    return 'failure';
+  const normalizeLoginStatus = (raw: string | null | undefined): 'success' | 'failure' => {
+    const v = String(raw ?? '').trim().toLowerCase();
+    return v === 'success' ? 'success' : 'failure';
   };
 
   const getStatusText = (status: 'success' | 'failure') => {
@@ -92,9 +94,18 @@ const SystemLogs: React.FC = () => {
   ];
 
   // ==================== 操作日志 ====================
-  const [operationQueryParams, setOperationQueryParams] = useState<OperationLogQueryParams>({
-    page: 1,
-    pageSize: 10
+  const [operationQueryParams, setOperationQueryParams] = useState<OperationLogQueryParams>(() => {
+    let page = 1;
+    let pageSize = 10;
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem('system-operationlog-pagination') : null;
+      if (raw) {
+        const obj = JSON.parse(raw || '{}');
+        if (Number.isFinite(Number(obj?.page))) page = Number(obj.page);
+        if (Number.isFinite(Number(obj?.pageSize))) pageSize = Number(obj.pageSize);
+      }
+    } catch {}
+    return { page, pageSize } as OperationLogQueryParams;
   });
   const [operationLogs, setOperationLogs] = useState<OperationLog[]>([]);
   const [operationTotal, setOperationTotal] = useState(0);
@@ -305,7 +316,10 @@ const SystemLogs: React.FC = () => {
                       showSizeChanger: true,
                       showQuickJumper: true,
                       showTotal: (t) => `共 ${t} 条记录`,
-                      onChange: (page, pageSize) => setLoginQueryParams((prev) => ({ ...prev, page, pageSize })),
+                      onChange: (page, pageSize) => {
+                        try { if (typeof window !== 'undefined') localStorage.setItem('system-loginlog-pagination', JSON.stringify({ page, pageSize })); } catch {}
+                        setLoginQueryParams((prev) => ({ ...prev, page, pageSize }));
+                      },
                     }}
                     scroll={{ x: 'max-content', y: isMobile ? 360 : 560 }}
                   />
@@ -410,6 +424,7 @@ const SystemLogs: React.FC = () => {
                     columns={operationColumns as any}
                     dataSource={operationLogs}
                     loading={operationLoading}
+                    allowFixedColumns={false}
                     pagination={{
                       current: operationQueryParams.page,
                       pageSize: operationQueryParams.pageSize,
@@ -417,7 +432,10 @@ const SystemLogs: React.FC = () => {
                       showSizeChanger: true,
                       showQuickJumper: true,
                       showTotal: (t) => `共 ${t} 条记录`,
-                      onChange: (page, pageSize) => setOperationQueryParams((prev) => ({ ...prev, page, pageSize })),
+                      onChange: (page, pageSize) => {
+                        try { if (typeof window !== 'undefined') localStorage.setItem('system-operationlog-pagination', JSON.stringify({ page, pageSize })); } catch {}
+                        setOperationQueryParams((prev) => ({ ...prev, page, pageSize }));
+                      },
                     }}
                     scroll={{ x: 1200, y: isMobile ? 360 : 560 }}
                   />

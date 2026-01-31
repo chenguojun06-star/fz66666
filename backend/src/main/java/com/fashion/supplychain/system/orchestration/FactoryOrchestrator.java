@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.util.TextUtils;
 import com.fashion.supplychain.system.entity.Factory;
 import com.fashion.supplychain.system.service.FactoryService;
 import com.fashion.supplychain.system.service.LoginLogService;
@@ -26,9 +27,9 @@ public class FactoryOrchestrator {
     public IPage<Factory> list(String page, String pageSize, String factoryCode, String factoryName, String status) {
         int p = parsePositiveIntOrDefault(page, 1, "page");
         int ps = parsePositiveIntOrDefault(pageSize, 10, "pageSize");
-        String code = normalize(factoryCode);
-        String name = normalize(factoryName);
-        String st = normalize(status);
+        String code = TextUtils.safeText(factoryCode);
+        String name = TextUtils.safeText(factoryName);
+        String st = TextUtils.safeText(status);
 
         Page<Factory> pageInfo = new Page<>(p, ps);
         LambdaQueryWrapper<Factory> wrapper = new LambdaQueryWrapper<Factory>()
@@ -82,7 +83,7 @@ public class FactoryOrchestrator {
         if (factory == null || !StringUtils.hasText(factory.getId())) {
             throw new IllegalArgumentException("参数错误");
         }
-        String remark = normalize(factory.getOperationRemark());
+        String remark = TextUtils.safeText(factory.getOperationRemark());
         if (!StringUtils.hasText(remark)) {
             throw new IllegalArgumentException("操作原因不能为空");
         }
@@ -106,7 +107,7 @@ public class FactoryOrchestrator {
         if (!StringUtils.hasText(id)) {
             throw new IllegalArgumentException("参数错误");
         }
-        String normalized = normalize(remark);
+        String normalized = TextUtils.safeText(remark);
         if (!StringUtils.hasText(normalized)) {
             throw new IllegalArgumentException("操作原因不能为空");
         }
@@ -122,16 +123,7 @@ public class FactoryOrchestrator {
         return true;
     }
 
-    private static String normalize(String value) {
-        if (value == null) {
-            return null;
-        }
-        String v = value.trim();
-        if (v.isEmpty() || "undefined".equalsIgnoreCase(v) || "null".equalsIgnoreCase(v)) {
-            return null;
-        }
-        return v;
-    }
+    // 使用TextUtils.safeText()替代
 
     private void saveOperationLog(String bizType, String bizId, String action, String remark) {
         try {
@@ -143,7 +135,7 @@ public class FactoryOrchestrator {
     }
 
     private static int parsePositiveIntOrDefault(String raw, int defaultValue, String name) {
-        String v = normalize(raw);
+        String v = TextUtils.safeText(raw);
         if (!StringUtils.hasText(v)) {
             return defaultValue;
         }

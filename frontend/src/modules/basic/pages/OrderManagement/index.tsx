@@ -23,6 +23,7 @@ import { getMaterialTypeCategory } from '@/utils/materialType';
 import { normalizeCategoryQuery, toCategoryCn } from '@/utils/styleCategory';
 import { useViewport } from '@/utils/useViewport';
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
+import { generateUniqueId } from '@/utils/idGenerator';
 type OrderLine = {
   id: string;
   color: string;
@@ -273,7 +274,7 @@ const OrderManagement: React.FC = () => {
       };
 
       for (const o of list) {
-        const key = String(o?.id || o?.orderNo || '') ? `${String(o?.id || o?.orderNo)}-row` : `order-row-${Math.random()}`;
+        const key = String(o?.id || o?.orderNo || '') ? `${String(o?.id || o?.orderNo)}-row` : `order-row-${generateUniqueId()}`;
         buildRow(o, key, parseProductionOrderLines(o));
       }
 

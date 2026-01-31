@@ -57,6 +57,7 @@ const PurchasePreviewView: React.FC<PurchasePreviewViewProps> = ({ previewList, 
                 styleNo={record.styleNo}
                 modalTitle={record.styleNo ? `放码纸样（${record.styleNo}）` : '放码纸样'}
                 onlyGradingPattern={true}
+                onlyActive
               />
             )
           },

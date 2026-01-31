@@ -87,6 +87,7 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
         <StyleAttachmentsButton
           styleId={record.styleId}
           styleNo={record.styleNo}
+          onlyActive
         />
       )
     },

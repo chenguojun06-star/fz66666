@@ -3,6 +3,8 @@ package com.fashion.supplychain.production.orchestration;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.util.NumberUtils;
+import com.fashion.supplychain.common.util.TextUtils;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
@@ -162,7 +164,7 @@ public class ScanRecordOrchestrator {
             throw new IllegalArgumentException("参数错误");
         }
 
-        String requestId = trimToNull(safeParams.get("requestId"));
+        String requestId = TextUtils.safeText(safeParams.get("requestId"));
         if (!hasText(requestId)) {
             requestId = UUID.randomUUID().toString().replace("-", "");
             safeParams.put("requestId", requestId);
@@ -178,7 +180,7 @@ public class ScanRecordOrchestrator {
             return dup;
         }
 
-        String scanType = trimToNull(safeParams.get("scanType"));
+        String scanType = TextUtils.safeText(safeParams.get("scanType"));
         if (!hasText(scanType)) {
             scanType = "production";
         }
@@ -196,7 +198,7 @@ public class ScanRecordOrchestrator {
         }
 
         boolean autoProcess = false;
-        Integer qty = parseInt(safeParams.get("quantity"));
+        Integer qty = NumberUtils.toInt(safeParams.get("quantity"));
         if ("sewing".equals(scanType)) {
             scanType = "production";
             autoProcess = true;
@@ -208,12 +210,12 @@ public class ScanRecordOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> undo(Map<String, Object> params) {
         Map<String, Object> safeParams = params == null ? new HashMap<>() : new HashMap<>(params);
-        String requestId = trimToNull(safeParams.get("requestId"));
-        String scanCode = trimToNull(safeParams.get("scanCode"));
-        String scanType = trimToNull(safeParams.get("scanType"));
-        String progressStage = trimToNull(safeParams.get("progressStage"));
-        String processCode = trimToNull(safeParams.get("processCode"));
-        Integer qtyParam = parseInt(safeParams.get("quantity"));
+        String requestId = TextUtils.safeText(safeParams.get("requestId"));
+        String scanCode = TextUtils.safeText(safeParams.get("scanCode"));
+        String scanType = TextUtils.safeText(safeParams.get("scanType"));
+        String progressStage = TextUtils.safeText(safeParams.get("progressStage"));
+        String processCode = TextUtils.safeText(safeParams.get("processCode"));
+        Integer qtyParam = NumberUtils.toInt(safeParams.get("quantity"));
 
         if (!hasText(requestId) && !hasText(scanCode)) {
             throw new IllegalArgumentException("参数错误");
@@ -256,7 +258,7 @@ public class ScanRecordOrchestrator {
             if (("warehouse".equals(st) || "quality".equals(st)) && hasText(scanCode)
                     && qtyParam != null && qtyParam > 0) {
                 Map<String, Object> body = new HashMap<>();
-                body.put("orderId", trimToNull(safeParams.get("orderId")));
+                body.put("orderId", TextUtils.safeText(safeParams.get("orderId")));
                 body.put("cuttingBundleQrCode", scanCode);
                 body.put("rollbackQuantity", qtyParam);
                 body.put("rollbackRemark", "撤销扫码");
@@ -307,7 +309,7 @@ public class ScanRecordOrchestrator {
         patch.setUpdateTime(LocalDateTime.now());
         scanRecordService.updateById(patch);
 
-        String oid = trimToNull(target.getOrderId());
+        String oid = TextUtils.safeText(target.getOrderId());
         if (hasText(oid)) {
             productionOrderService.recomputeProgressAsync(oid);
         }
@@ -320,12 +322,12 @@ public class ScanRecordOrchestrator {
 
     private Map<String, Object> executeQualityScan(Map<String, Object> params, String requestId, String operatorId,
             String operatorName) {
-        Integer qty = parseInt(params.get("quantity"));
+        Integer qty = NumberUtils.toInt(params.get("quantity"));
         if (qty == null || qty <= 0) {
             throw new IllegalArgumentException("数量必须大于0");
         }
 
-        String scanCode = trimToNull(params.get("scanCode"));
+        String scanCode = TextUtils.safeText(params.get("scanCode"));
         if (!hasText(scanCode)) {
             throw new IllegalArgumentException("扫码内容不能为空");
         }
@@ -335,8 +337,8 @@ public class ScanRecordOrchestrator {
             throw new IllegalStateException("未匹配到菲号");
         }
 
-        String orderId = trimToNull(params.get("orderId"));
-        String orderNo = trimToNull(params.get("orderNo"));
+        String orderId = TextUtils.safeText(params.get("orderId"));
+        String orderNo = TextUtils.safeText(params.get("orderNo"));
         if (!hasText(orderId) && hasText(bundle.getProductionOrderId())) {
             orderId = bundle.getProductionOrderId().trim();
         }
@@ -466,10 +468,10 @@ public class ScanRecordOrchestrator {
         }
 
         String qualityResult = parseQualityResultFromParams(params);
-        String repairRemark = trimToNull(params.get("repairRemark"));
-        String defectCategory = trimToNull(params.get("defectCategory"));
-        String defectRemark = trimToNull(params.get("defectRemark"));
-        String unqualifiedImageUrls = trimToNull(params.get("unqualifiedImageUrls"));
+        String repairRemark = TextUtils.safeText(params.get("repairRemark"));
+        String defectCategory = TextUtils.safeText(params.get("defectCategory"));
+        String defectRemark = TextUtils.safeText(params.get("defectRemark"));
+        String unqualifiedImageUrls = TextUtils.safeText(params.get("unqualifiedImageUrls"));
 
         int availableQuantity = 0;
         boolean qtyAdjusted = false;
@@ -502,7 +504,7 @@ public class ScanRecordOrchestrator {
                     if (totalQty <= 0) {
                         continue;
                     }
-                    String qs = trimToNull(w.getQualityStatus());
+                    String qs = TextUtils.safeText(w.getQualityStatus());
                     if (!hasText(qs) || "qualified".equalsIgnoreCase(qs)) {
                         hasQualifiedWarehousing = true;
                         break;
@@ -544,8 +546,8 @@ public class ScanRecordOrchestrator {
         w.setCuttingBundleQrCode(bundle.getQrCode());
         w.setWarehousingQuantity(qty);
         if (receivedStage != null) {
-            w.setReceiverId(trimToNull(receivedStage.getOperatorId()));
-            w.setReceiverName(trimToNull(receivedStage.getOperatorName()));
+            w.setReceiverId(TextUtils.safeText(receivedStage.getOperatorId()));
+            w.setReceiverName(TextUtils.safeText(receivedStage.getOperatorName()));
             w.setReceivedTime(receivedStage.getScanTime());
         }
         w.setInspectionStatus("inspected");
@@ -617,11 +619,11 @@ public class ScanRecordOrchestrator {
         if (params == null) {
             return "qualified";
         }
-        String v = trimToNull(params.get("qualityResult"));
+        String v = TextUtils.safeText(params.get("qualityResult"));
         if (hasText(v)) {
             return v.trim();
         }
-        String remark = trimToNull(params.get("remark"));
+        String remark = TextUtils.safeText(params.get("remark"));
         if (!hasText(remark)) {
             return "qualified";
         }
@@ -641,9 +643,9 @@ public class ScanRecordOrchestrator {
         if (params == null) {
             return "confirm";
         }
-        String v = trimToNull(params.get("qualityStage"));
+        String v = TextUtils.safeText(params.get("qualityStage"));
         if (!hasText(v)) {
-            v = trimToNull(params.get("qualityAction"));
+            v = TextUtils.safeText(params.get("qualityAction"));
         }
         if (!hasText(v)) {
             return "confirm";
@@ -711,7 +713,7 @@ public class ScanRecordOrchestrator {
                 if (uq > 0) {
                     repairPool += uq;
                 }
-                String rr = trimToNull(w.getRepairRemark());
+                String rr = TextUtils.safeText(w.getRepairRemark());
                 if (rr != null) {
                     int q = w.getQualifiedQuantity() == null ? 0 : w.getQualifiedQuantity();
                     if (q > 0) {
@@ -730,19 +732,19 @@ public class ScanRecordOrchestrator {
 
     private Map<String, Object> executeWarehouseScan(Map<String, Object> params, String requestId, String operatorId,
             String operatorName) {
-        String warehouse = trimToNull(params.get("warehouse"));
+        String warehouse = TextUtils.safeText(params.get("warehouse"));
         if (!hasText(warehouse)) {
             throw new IllegalArgumentException("请选择仓库");
         }
 
-        Integer qty = parseInt(params.get("quantity"));
+        Integer qty = NumberUtils.toInt(params.get("quantity"));
         if (qty == null || qty <= 0) {
             throw new IllegalArgumentException("入库数量必须大于0");
         }
 
-        String scanCode = trimToNull(params.get("scanCode"));
-        String orderId = trimToNull(params.get("orderId"));
-        String orderNo = trimToNull(params.get("orderNo"));
+        String scanCode = TextUtils.safeText(params.get("scanCode"));
+        String orderId = TextUtils.safeText(params.get("orderId"));
+        String orderNo = TextUtils.safeText(params.get("orderNo"));
 
         CuttingBundle bundle = hasText(scanCode) ? cuttingBundleService.getByQrCode(scanCode) : null;
         if (bundle != null && hasText(bundle.getStatus()) && isBundleBlockedForWarehousingStatus(bundle.getStatus())) {
@@ -794,9 +796,9 @@ public class ScanRecordOrchestrator {
         sr.setColor(resolveColor(params, bundle, order));
         sr.setSize(resolveSize(params, bundle, order));
         sr.setQuantity(qty);
-        sr.setUnitPrice(parseBigDecimal(params.get("unitPrice")));
+        sr.setUnitPrice(NumberUtils.toBigDecimal(params.get("unitPrice")));
         sr.setTotalAmount(computeTotalAmount(sr.getUnitPrice(), qty));
-        sr.setProcessCode(trimToNull(params.get("processCode")));
+        sr.setProcessCode(TextUtils.safeText(params.get("processCode")));
         sr.setProgressStage("入库");
         sr.setProcessName("入库");
         sr.setOperatorId(operatorId);
@@ -804,7 +806,7 @@ public class ScanRecordOrchestrator {
         sr.setScanTime(LocalDateTime.now());
         sr.setScanType("warehouse");
         sr.setScanResult("success");
-        sr.setRemark(trimToNull(params.get("remark")));
+        sr.setRemark(TextUtils.safeText(params.get("remark")));
         if (bundle != null && hasText(bundle.getId())) {
             sr.setCuttingBundleId(bundle.getId());
             sr.setCuttingBundleNo(bundle.getBundleNo());
@@ -865,9 +867,9 @@ public class ScanRecordOrchestrator {
 
     private Map<String, Object> executeProductionScan(Map<String, Object> params, String requestId, String operatorId,
             String operatorName, String scanType, Integer quantity, boolean autoProcess) {
-        String scanCode = trimToNull(params.get("scanCode"));
-        String orderId = trimToNull(params.get("orderId"));
-        String orderNo = trimToNull(params.get("orderNo"));
+        String scanCode = TextUtils.safeText(params.get("scanCode"));
+        String orderId = TextUtils.safeText(params.get("orderId"));
+        String orderNo = TextUtils.safeText(params.get("orderNo"));
 
         CuttingBundle bundle = hasText(scanCode) ? cuttingBundleService.getByQrCode(scanCode) : null;
         if (!hasText(orderId) && bundle != null && hasText(bundle.getProductionOrderId())) {
@@ -891,8 +893,8 @@ public class ScanRecordOrchestrator {
             throw new IllegalStateException("订单已完成，已停止扫码");
         }
 
-        String progressStage = trimToNull(params.get("progressStage"));
-        String processName = trimToNull(params.get("processName"));
+        String progressStage = TextUtils.safeText(params.get("progressStage"));
+        String processName = TextUtils.safeText(params.get("processName"));
 
         String stageName = hasText(progressStage) ? progressStage.trim() : null;
         String pricingProcessName = hasText(processName) ? processName.trim() : null;
@@ -944,7 +946,7 @@ public class ScanRecordOrchestrator {
 
         Integer qty = quantity;
         if (qty == null) {
-            qty = parseInt(params.get("quantity"));
+            qty = NumberUtils.toInt(params.get("quantity"));
         }
         if (qty == null || qty <= 0) {
             throw new IllegalArgumentException("数量必须大于0");
@@ -962,7 +964,7 @@ public class ScanRecordOrchestrator {
         sr.setColor(resolveColor(params, bundle, orderFinal));
         sr.setSize(resolveSize(params, bundle, orderFinal));
         sr.setQuantity(qty);
-        BigDecimal unitPrice = parseBigDecimal(params.get("unitPrice"));
+        BigDecimal unitPrice = NumberUtils.toBigDecimal(params.get("unitPrice"));
         if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
             BigDecimal resolved = resolveUnitPriceFromTemplate(orderFinal.getStyleNo(), pricingProcessNameFinal);
             if (resolved != null && resolved.compareTo(BigDecimal.ZERO) > 0) {
@@ -971,7 +973,7 @@ public class ScanRecordOrchestrator {
         }
         sr.setUnitPrice(unitPrice);
         sr.setTotalAmount(computeTotalAmount(unitPrice, qty));
-        sr.setProcessCode(trimToNull(params.get("processCode")));
+        sr.setProcessCode(TextUtils.safeText(params.get("processCode")));
         sr.setProgressStage(stageNameFinal);
         sr.setProcessName(pricingProcessNameFinal);
         sr.setOperatorId(operatorId);
@@ -979,7 +981,7 @@ public class ScanRecordOrchestrator {
         sr.setScanTime(LocalDateTime.now());
         sr.setScanType(finalScanType);
         sr.setScanResult("success");
-        sr.setRemark(trimToNull(params.get("remark")));
+        sr.setRemark(TextUtils.safeText(params.get("remark")));
         if (bundle != null && hasText(bundle.getId())) {
             sr.setCuttingBundleId(bundle.getId());
             sr.setCuttingBundleNo(bundle.getBundleNo());
@@ -1496,42 +1498,30 @@ public class ScanRecordOrchestrator {
     }
 
     private String resolveColor(Map<String, Object> params, CuttingBundle bundle, ProductionOrder order) {
-        String v = trimToNull(params == null ? null : params.get("color"));
+        String v = TextUtils.safeText(params == null ? null : params.get("color"));
         if (hasText(v)) {
             return v;
         }
-        String b = bundle == null ? null : trimToNull(bundle.getColor());
+        String b = bundle == null ? null : TextUtils.safeText(bundle.getColor());
         if (hasText(b)) {
             return b;
         }
-        return order == null ? null : trimToNull(order.getColor());
+        return order == null ? null : TextUtils.safeText(order.getColor());
     }
 
     private String resolveSize(Map<String, Object> params, CuttingBundle bundle, ProductionOrder order) {
-        String v = trimToNull(params == null ? null : params.get("size"));
+        String v = TextUtils.safeText(params == null ? null : params.get("size"));
         if (hasText(v)) {
             return v;
         }
-        String b = bundle == null ? null : trimToNull(bundle.getSize());
+        String b = bundle == null ? null : TextUtils.safeText(bundle.getSize());
         if (hasText(b)) {
             return b;
         }
-        return order == null ? null : trimToNull(order.getSize());
+        return order == null ? null : TextUtils.safeText(order.getSize());
     }
 
-    private Integer parseInt(Object v) {
-        if (v instanceof Number number) {
-            return number.intValue();
-        }
-        if (v == null) {
-            return null;
-        }
-        try {
-            return Integer.parseInt(String.valueOf(v));
-        } catch (Exception e) {
-            return null;
-        }
-    }
+    // 使用NumberUtils.toInt()、NumberUtils.toBigDecimal()和TextUtils.safeText()替代
 
     private boolean isTruthy(Object v) {
         if (v == null) {
@@ -1551,48 +1541,19 @@ public class ScanRecordOrchestrator {
         return "1".equals(t) || "true".equals(t) || "y".equals(t) || "yes".equals(t) || "on".equals(t);
     }
 
-    private BigDecimal parseBigDecimal(Object v) {
-        if (v == null) {
-            return null;
-        }
-        if (v instanceof BigDecimal decimal) {
-            return decimal;
-        }
-        if (v instanceof Number number) {
-            return BigDecimal.valueOf(number.doubleValue());
-        }
-        try {
-            String s = String.valueOf(v).trim();
-            if (!hasText(s)) {
-                return null;
-            }
-            return new BigDecimal(s);
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
     private BigDecimal computeTotalAmount(BigDecimal unitPrice, int quantity) {
         BigDecimal up = unitPrice == null ? BigDecimal.ZERO : unitPrice;
         int q = Math.max(0, quantity);
         return up.multiply(BigDecimal.valueOf(q)).setScale(2, RoundingMode.HALF_UP);
     }
 
-    private String trimToNull(Object v) {
-        if (v == null) {
-            return null;
-        }
-        String s = String.valueOf(v).trim();
-        return hasText(s) ? s : null;
-    }
-
     public Map<String, Object> resolveUnitPrice(Map<String, Object> params) {
         Map<String, Object> safeParams = params == null ? new HashMap<>() : new HashMap<>(params);
 
-        String scanCode = trimToNull(safeParams.get("scanCode"));
-        String orderId = trimToNull(safeParams.get("orderId"));
-        String orderNo = trimToNull(safeParams.get("orderNo"));
-        String styleNo = trimToNull(safeParams.get("styleNo"));
+        String scanCode = TextUtils.safeText(safeParams.get("scanCode"));
+        String orderId = TextUtils.safeText(safeParams.get("orderId"));
+        String orderNo = TextUtils.safeText(safeParams.get("orderNo"));
+        String styleNo = TextUtils.safeText(safeParams.get("styleNo"));
 
         CuttingBundle bundle = hasText(scanCode) ? cuttingBundleService.getByQrCode(scanCode) : null;
         if (!hasText(orderId) && bundle != null && hasText(bundle.getProductionOrderId())) {
@@ -1602,15 +1563,15 @@ public class ScanRecordOrchestrator {
         ProductionOrder order = null;
         if (!hasText(styleNo)) {
             order = resolveOrder(orderId, orderNo);
-            styleNo = order == null ? null : trimToNull(order.getStyleNo());
+            styleNo = order == null ? null : TextUtils.safeText(order.getStyleNo());
         }
         if (!hasText(styleNo)) {
             throw new IllegalArgumentException("未匹配到款号");
         }
 
-        String processName = trimToNull(safeParams.get("processName"));
+        String processName = TextUtils.safeText(safeParams.get("processName"));
         if (!hasText(processName)) {
-            processName = trimToNull(safeParams.get("progressStage"));
+            processName = TextUtils.safeText(safeParams.get("progressStage"));
         }
         if (!hasText(processName)) {
             throw new IllegalArgumentException("缺少工序名称");

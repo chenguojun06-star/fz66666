@@ -8,6 +8,7 @@ import { Checkbox, Button, Space, Spin, Table, Tag, message, QRCode, Image } fro
 import { PrinterOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
+import { safePrint } from '@/utils/safePrint';
 import ResizableModal from './ResizableModal';
 
 // 打印选项类型
@@ -209,7 +210,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
     const printDate = new Date().toLocaleString('zh-CN');
     const printerInfo = printerAccount ? `打印人: ${printerName} (${printerAccount})` : `打印人: ${printerName}`;
 
-    printWindow.document.write(`
+    const htmlContent = `
       <!DOCTYPE html>
       <html>
       <head>
@@ -238,58 +239,124 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
               padding: 0 5mm;
               z-index: 1000;
             }
+            .print-header-left { font-weight: 500; }
+            .print-header-right { color: #999; }
 
-            .print-header-left {
-              font-weight: 600;
-              color: #333;
-            }
-
-            .print-header-right {
-              color: #999;
-            }
-
-            /* 页脚 - 每页底部显示页码 */
+            /* 页脚 - 每页底部显示 */
             .print-footer {
               position: fixed;
               bottom: 0;
               left: 0;
               right: 0;
               height: 20px;
-              text-align: center;
-              font-size: 10px;
+              background: #fff;
+              border-top: 1px solid #e8e8e8;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              font-size: 9px;
               color: #999;
+              z-index: 1000;
             }
 
-            /* 内容区域留出页眉页脚空间 */
+            /* 内容区域 */
             .print-body {
               margin-top: 30px;
               margin-bottom: 25px;
             }
           }
 
-          /* 屏幕显示时隐藏页眉页脚 */
-          @media screen {
-            .print-header, .print-footer { display: none; }
-          }
-
+          /* 基础样式 */
           body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            font-size: 12px;
+            line-height: 1.6;
+            color: #333;
             padding: 20px;
             background: #fff;
-            margin: 0;
           }
-          table { border-collapse: collapse; width: 100%; margin: 10px 0; }
-          th, td { border: 1px solid #d9d9d9; padding: 8px; text-align: left; }
-          th { background: #fafafa; font-weight: 600; }
-          .print-section { margin-bottom: 24px; page-break-inside: avoid; }
+
+          /* 打印内容样式 */
+          .print-section {
+            margin-bottom: 20px;
+            page-break-inside: avoid;
+          }
           .print-section-title {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 600;
+            color: #1a1a1a;
             margin-bottom: 12px;
             padding-bottom: 8px;
             border-bottom: 2px solid #1890ff;
           }
-          img { max-width: 100%; }
+
+          /* 表格样式 */
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+            margin-bottom: 16px;
+          }
+          th, td {
+            border: 1px solid #d9d9d9;
+            padding: 8px 10px;
+            text-align: left;
+            vertical-align: top;
+          }
+          th {
+            background: #fafafa;
+            font-weight: 600;
+            color: #262626;
+          }
+          tr:nth-child(even) {
+            background: #fafafa;
+          }
+
+          /* 信息网格 */
+          .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px 24px;
+            margin-bottom: 16px;
+          }
+          .info-item {
+            display: flex;
+            gap: 8px;
+          }
+          .info-label {
+            color: #666;
+            min-width: 80px;
+          }
+          .info-value {
+            color: #333;
+            font-weight: 500;
+          }
+
+          /* 图片样式 */
+          .attachment-image {
+            max-width: 200px;
+            max-height: 200px;
+            border: 1px solid #e8e8e8;
+            border-radius: 4px;
+            margin: 4px;
+          }
+
+          /* 二维码样式 */
+          .qr-code {
+            text-align: center;
+            margin: 20px 0;
+          }
+          .qr-code img {
+            width: 120px;
+            height: 120px;
+          }
+
+          /* 隐藏打印按钮 */
+          @media print {
+            .no-print {
+              display: none !important;
+            }
+          }
         </style>
       </head>
       <body>
@@ -310,16 +377,12 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
         </div>
       </body>
       </html>
-    `);
+    `;
 
-    printWindow.document.close();
-
-    // 等待图片加载后打印
-    setTimeout(() => {
-      printWindow.focus();
-      printWindow.print();
-      printWindow.close();
-    }, 500);
+    const success = safePrint(htmlContent, `打印预览 - ${styleNo}`);
+    if (!success) {
+      message.error('无法打开打印窗口，请检查浏览器弹窗设置');
+    }
   };
 
   // 获取模式标题

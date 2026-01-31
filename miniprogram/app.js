@@ -1,48 +1,14 @@
 import { getToken, clearToken } from './utils/storage';
 import * as reminderManager from './utils/reminderManager';
+const { eventBus } = require('./utils/eventBus');
 
 let redirectingToLogin = false;
 let redirectResetTimer = null;
 
-/**
- * 简单的事件总线，用于组件间通信
- */
-const eventBus = {
-  _events: {},
-  on(event, callback) {
-    if (!this._events[event]) {
-      this._events[event] = [];
-    }
-    this._events[event].push(callback);
-  },
-  off(event, callback) {
-    if (!this._events[event]) {
-      return;
-    }
-    if (callback) {
-      this._events[event] = this._events[event].filter(cb => cb !== callback);
-    } else {
-      delete this._events[event];
-    }
-  },
-  emit(event, ...args) {
-    if (!this._events[event]) {
-      return;
-    }
-    this._events[event].forEach(cb => {
-      try {
-        cb(...args);
-      } catch (e) {
-        console.error('EventBus callback error:', e);
-      }
-    });
-  },
-};
-
 App({
   globalData: {
     token: '',
-    eventBus, // 全局事件总线
+    eventBus, // 全局事件总线（使用utils/eventBus.js中的实现）
   },
 
   onLaunch() {
@@ -76,7 +42,7 @@ App({
         tab.setData({ selected: idx });
       }
     } catch (e) {
-      null;
+      console.warn('[App] setTabSelected failed:', e);
     }
   },
 

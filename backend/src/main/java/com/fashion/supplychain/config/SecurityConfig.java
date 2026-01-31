@@ -82,6 +82,8 @@ public class SecurityConfig implements WebMvcConfigurer {
                         .antMatchers("/api/production/order/node-operations/**").authenticated()
                         .antMatchers("/actuator/health", "/actuator/health/**", "/actuator/info", "/actuator/info/**")
                         .permitAll()
+                        .antMatchers("/actuator/prometheus", "/actuator/prometheus/**")
+                        .permitAll()
                         .antMatchers("/api/warehouse/dashboard/**").authenticated()
                         .antMatchers("/actuator/**").hasAnyAuthority(
                                 "ROLE_admin",

@@ -130,6 +130,8 @@ export interface StyleAttachment {
   fileSize: number;
   uploader: string;
   createTime: string;
+  version?: number;
+  status?: 'active' | 'archived';
 }
 
 export interface StyleQueryParams {

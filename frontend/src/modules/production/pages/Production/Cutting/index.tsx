@@ -21,6 +21,7 @@ import { formatDateTime } from '@/utils/datetime';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getMaterialTypeLabel, getMaterialTypeSortKey } from '@/utils/materialType';
 import { useViewport } from '@/utils/useViewport';
+import { safePrint } from '@/utils/safePrint';
 import {
   ModalHeaderCard,
   ModalField,
@@ -479,14 +480,11 @@ const CuttingManagement: React.FC = () => {
   </body>
 </html>`;
 
-    const win = window.open('', '_blank');
-    if (!win) {
+    const success = safePrint(html, '裁剪单打印');
+    if (!success) {
       message.error('浏览器拦截了新窗口，请允许弹窗后重试');
       return;
     }
-    win.document.open();
-    win.document.write(html);
-    win.document.close();
   };
 
   const openSheetPreview = async (task: CuttingTask, afterLoad?: 'download' | 'print') => {
@@ -1278,6 +1276,7 @@ const CuttingManagement: React.FC = () => {
         <StyleAttachmentsButton
           styleId={(activeTask as Record<string, unknown>)?.styleId}
           styleNo={record.styleNo || (activeTask as Record<string, unknown>)?.styleNo}
+          onlyActive
         />
       )
     },
@@ -1456,6 +1455,7 @@ const CuttingManagement: React.FC = () => {
                       <StyleAttachmentsButton
                         styleId={record.styleId}
                         styleNo={record.styleNo}
+                        onlyActive
                       />
                     )
                   },
