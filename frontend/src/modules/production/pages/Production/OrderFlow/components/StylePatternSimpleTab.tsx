@@ -78,5 +78,3 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
 };
 
 export default StylePatternSimpleTab;
-
-export default StylePatternSimpleTab;
