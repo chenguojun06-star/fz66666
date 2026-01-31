@@ -16,6 +16,11 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
   const [gradingFiles, setGradingFiles] = useState<StyleAttachment[]>([]);
   const [downloading, setDownloading] = useState(false);
 
+  // 调试：打印styleId
+  React.useEffect(() => {
+    console.log('StylePatternSimpleTab - styleId:', styleId, 'styleNo:', styleNo);
+  }, [styleId, styleNo]);
+
   // 下载放码文件
   const downloadGradingFiles = () => {
     if (gradingFiles.length === 0) {
