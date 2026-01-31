@@ -347,7 +347,24 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
       width="60vw"
       initialHeight={600}
       footer={
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+        <Space>
+          <Button onClick={onClose}>取消</Button>
+          <Button type="primary" icon={<PrinterOutlined />} onClick={handlePrint}>
+            打印
+          </Button>
+        </Space>
+      }
+    >
+      <Spin spinning={loading}>
+        {/* 打印选项 - 置顶 */}
+        <div style={{ 
+          marginBottom: 16, 
+          padding: '12px 16px', 
+          background: '#f0f2f5',
+          borderRadius: 6,
+          border: '1px solid #d9d9d9'
+        }}>
+          <div style={{ marginBottom: 8, fontWeight: 600, color: '#1f2937' }}>📋 选择打印内容：</div>
           <Checkbox.Group
             value={Object.keys(options).filter(k => options[k as keyof PrintOptions])}
             onChange={(values) => {
@@ -360,6 +377,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
                 attachments: values.includes('attachments'),
               });
             }}
+            style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px' }}
           >
             <Checkbox value="basicInfo">基本信息</Checkbox>
             <Checkbox value="sizeTable">尺寸表</Checkbox>
@@ -368,16 +386,8 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
             <Checkbox value="productionSheet">生产制单</Checkbox>
             <Checkbox value="attachments">纸样附件</Checkbox>
           </Checkbox.Group>
-          <Space>
-            <Button onClick={onClose}>取消</Button>
-            <Button type="primary" icon={<PrinterOutlined />} onClick={handlePrint}>
-              打印
-            </Button>
-          </Space>
         </div>
-      }
-    >
-      <Spin spinning={loading}>
+
         <div className="style-print-content" id="style-print-content" style={{ background: '#fff', padding: 20 }}>
           {/* 预览样式 */}
           <style>{`
