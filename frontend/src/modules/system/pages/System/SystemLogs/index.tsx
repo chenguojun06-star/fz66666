@@ -104,7 +104,7 @@ const SystemLogs: React.FC = () => {
     setOperationLoading(true);
     try {
       const response = await api.get<{ code: number; data: { records: OperationLog[]; total: number } }>(
-        '/system/operation-log/list',
+        '/api/system/operation-log/list',
         { params: operationQueryParams }
       );
       if (response.code === 200) {
