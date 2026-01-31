@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Card, Space, Table, Tabs, Tag, message } from 'antd';
+import { Alert, Button, Card, Space, Table, Tabs, Tag, message } from 'antd';
+import { ReloadOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useLocation } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -85,8 +86,11 @@ const OrderFlow: React.FC = () => {
     setLoading(true);
     try {
       const res = await api.get<{ code: number; message: string; data: unknown }>(`/production/order/flow/${query.orderId}`);
+      console.log('[订单全流程] API返回数据:', res);
       if (res.code === 200) {
-        setData(res.data || null);
+        const flowData = res.data as OrderFlowResponse;
+        console.log('[订单全流程] 工序单价数据:', flowData?.order?.progressNodeUnitPrices);
+        setData(flowData || null);
       } else {
         message.error(res.message || '获取订单全流程失败');
         setData(null);
@@ -245,6 +249,13 @@ const OrderFlow: React.FC = () => {
             <Space wrap>
               {query.orderNo ? <Tag>订单号：{query.orderNo}</Tag> : null}
               {query.styleNo ? <Tag>款号：{query.styleNo}</Tag> : null}
+              <Button 
+                icon={<ReloadOutlined />} 
+                onClick={fetchFlow} 
+                loading={loading}
+              >
+                刷新数据
+              </Button>
             </Space>
           </div>
 
@@ -348,15 +359,18 @@ const OrderFlow: React.FC = () => {
                         {data?.order?.progressNodeUnitPrices && Array.isArray(data.order.progressNodeUnitPrices) && data.order.progressNodeUnitPrices.length > 0 ? (
                           <Card>
                             <Alert
-                              message="大货订单成本信息"
+                              message="大货订单工序单价信息"
                               description={
                                 <div>
                                   <p>此订单使用单价维护模块的工序单价配置</p>
-                                  <p style={{ marginTop: 8 }}>工序总成本: ¥{
-                                    data.order.progressNodeUnitPrices.reduce((sum: number, item: any) => {
-                                      return sum + (Number(item.unitPrice) || 0);
-                                    }, 0).toFixed(2)
-                                  }</p>
+                                  <p style={{ marginTop: 8 }}>
+                                    工序数量: <strong>{data.order.progressNodeUnitPrices.length}</strong> 个 | 
+                                    工序总单价: <strong style={{ color: '#1890ff', fontSize: 16 }}>
+                                      ¥{data.order.progressNodeUnitPrices.reduce((sum: number, item: any) => {
+                                        return sum + (Number(item.unitPrice) || 0);
+                                      }, 0).toFixed(2)}
+                                    </strong>
+                                  </p>
                                 </div>
                               }
                               type="info"
@@ -365,13 +379,54 @@ const OrderFlow: React.FC = () => {
                             />
                             <Table
                               dataSource={data.order.progressNodeUnitPrices}
-                              rowKey={(record: any) => record.processName || record.id}
+                              rowKey={(record: any) => `${record.processName}-${record.progressStage || ''}`}
                               columns={[
-                                { title: '工序名称', dataIndex: 'processName', key: 'processName', width: 200 },
-                                { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 120, align: 'right', render: (v: any) => `¥${Number(v || 0).toFixed(2)}` },
-                                { title: '说明', dataIndex: 'remark', key: 'remark', ellipsis: true, render: (v: any) => v || '-' },
+                                { 
+                                  title: '序号', 
+                                  key: 'index', 
+                                  width: 70, 
+                                  align: 'center',
+                                  render: (_: any, __: any, index: number) => index + 1 
+                                },
+                                { 
+                                  title: '工序名称', 
+                                  dataIndex: 'processName', 
+                                  key: 'processName', 
+                                  width: 200,
+                                  render: (v: any) => v || '-'
+                                },
+                                { 
+                                  title: '阶段', 
+                                  dataIndex: 'progressStage', 
+                                  key: 'progressStage', 
+                                  width: 120,
+                                  render: (v: any) => {
+                                    const stageMap: Record<string, string> = {
+                                      'sample': '样衣',
+                                      'pre_production': '产前',
+                                      'production': '大货生产'
+                                    };
+                                    return stageMap[v] || v || '-';
+                                  }
+                                },
+                                { 
+                                  title: '单价(元)', 
+                                  dataIndex: 'unitPrice', 
+                                  key: 'unitPrice', 
+                                  width: 120, 
+                                  align: 'right', 
+                                  render: (v: any) => <strong style={{ color: '#1890ff' }}>¥{Number(v || 0).toFixed(2)}</strong>
+                                },
+                                { 
+                                  title: '说明', 
+                                  dataIndex: 'remark', 
+                                  key: 'remark', 
+                                  ellipsis: true, 
+                                  render: (v: any) => v || '-' 
+                                },
                               ]}
                               pagination={false}
+                              bordered
                             />
                           </Card>
                         ) : data?.order?.styleId ? (
