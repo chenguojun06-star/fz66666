@@ -1,7 +1,10 @@
 package com.fashion.supplychain.auth;
 
 import cn.hutool.jwt.JWT;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -11,6 +14,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @Service
 public class AuthTokenService {
 
@@ -88,5 +92,56 @@ public class AuthTokenService {
         subject.setOpenid(openid == null ? null : String.valueOf(openid));
         subject.setPermissionRange(permRange == null ? "all" : String.valueOf(permRange));
         return subject;
+    }
+
+    /**
+     * 获取当前登录用户ID
+     * @return 用户ID，未登录时返回null
+     */
+    public String getCurrentUserId() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated() && authentication.getPrincipal() instanceof TokenSubject) {
+                TokenSubject subject = (TokenSubject) authentication.getPrincipal();
+                return subject.getUserId();
+            }
+        } catch (Exception e) {
+            log.debug("Failed to get current user id", e);
+        }
+        return null;
+    }
+
+    /**
+     * 获取当前登录用户姓名
+     * @return 用户姓名，未登录或获取失败时返回"系统管理员"
+     */
+    public String getCurrentUsername() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated() && authentication.getPrincipal() instanceof TokenSubject) {
+                TokenSubject subject = (TokenSubject) authentication.getPrincipal();
+                String username = subject.getUsername();
+                return StringUtils.hasText(username) ? username : "系统管理员";
+            }
+        } catch (Exception e) {
+            log.debug("Failed to get current username", e);
+        }
+        return "系统管理员";
+    }
+
+    /**
+     * 获取当前登录用户的完整信息
+     * @return TokenSubject对象，未登录时返回null
+     */
+    public TokenSubject getCurrentUser() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated() && authentication.getPrincipal() instanceof TokenSubject) {
+                return (TokenSubject) authentication.getPrincipal();
+            }
+        } catch (Exception e) {
+            log.debug("Failed to get current user", e);
+        }
+        return null;
     }
 }
