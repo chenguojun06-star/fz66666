@@ -723,12 +723,16 @@ const StyleSizeTab: React.FC<Props> = ({
               </Button>
             </>
           )}
-      </Space>
-      <div style={{ marginTop: 8, color: '#666', fontSize: 12 }}>
-        💡 提示：相关文件请在"文件管理"标签页统一上传
+        </Space>
+        <div style={{ marginTop: 8, color: '#666', fontSize: 12 }}>
+          💡 提示：相关文件请在"文件管理"标签页统一上传
+        </div>
       </div>
-    </div>
-  )}
+      )}
+
+      <ResizableTable
+        bordered
+        dataSource={rows}
         columns={columns as Record<string, unknown>}
         pagination={false}
         loading={loading}
