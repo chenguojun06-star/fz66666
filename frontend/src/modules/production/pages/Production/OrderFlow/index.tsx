@@ -109,6 +109,65 @@ const OrderFlow: React.FC = () => {
     fetchFlow();
   }, [query.orderId]);
 
+  // 合并采购信息到stages
+  const enrichedStages = useMemo(() => {
+    const stages = data?.stages || [];
+    const materialPurchases = data?.materialPurchases || [];
+    const order = data?.order;
+    
+    // 如果有物料采购记录，添加采购节点
+    if (materialPurchases.length > 0 || (order?.materialArrivalRate !== undefined && order?.materialArrivalRate !== null)) {
+      const purchaseStage: FlowStage = {
+        processName: '采购',
+        status: 'not_started',
+        totalQuantity: 0,
+      };
+
+      // 计算采购状态
+      const materialArrivalRate = order?.materialArrivalRate || 0;
+      if (materialArrivalRate >= 100) {
+        purchaseStage.status = 'completed';
+      } else if (materialArrivalRate > 0) {
+        purchaseStage.status = 'in_progress';
+      }
+
+      // 从物料采购记录中获取时间信息
+      if (materialPurchases.length > 0) {
+        const sortedPurchases = [...materialPurchases].sort((a: any, b: any) => {
+          const timeA = a.createTime ? new Date(a.createTime).getTime() : 0;
+          const timeB = b.createTime ? new Date(b.createTime).getTime() : 0;
+          return timeA - timeB;
+        });
+
+        const firstPurchase = sortedPurchases[0] as any;
+        const lastPurchase = sortedPurchases[sortedPurchases.length - 1] as any;
+
+        purchaseStage.startTime = firstPurchase?.createTime;
+        purchaseStage.startOperatorName = firstPurchase?.creatorName || firstPurchase?.receiverName || '未记录';
+        
+        if (purchaseStage.status === 'completed') {
+          purchaseStage.completeTime = lastPurchase?.updateTime || lastPurchase?.createTime;
+          purchaseStage.completeOperatorName = lastPurchase?.updaterName || lastPurchase?.receiverName || '未记录';
+        }
+
+        // 计算总数量
+        purchaseStage.totalQuantity = materialPurchases.length;
+      }
+
+      // 将采购节点插入到stages的开头（在下单之后）
+      const existingPurchaseIndex = stages.findIndex((s: FlowStage) => s.processName === '采购');
+      if (existingPurchaseIndex >= 0) {
+        // 替换已有的采购节点
+        return [...stages.slice(0, existingPurchaseIndex), purchaseStage, ...stages.slice(existingPurchaseIndex + 1)];
+      } else {
+        // 在第一个节点之后插入采购节点
+        return [stages[0], purchaseStage, ...stages.slice(1)].filter(Boolean);
+      }
+    }
+
+    return stages;
+  }, [data]);
+
   const stageColumns: ColumnsType<FlowStage> = [
     {
       title: '环节',
@@ -314,7 +373,7 @@ const OrderFlow: React.FC = () => {
                       <Table
                         size="small"
                         columns={stageColumns}
-                        dataSource={data?.stages || []}
+                        dataSource={enrichedStages}
                         rowKey={(r) => r.processName}
                         pagination={false}
                         scroll={{ x: 980 }}
@@ -723,9 +782,10 @@ const OrderFlow: React.FC = () => {
                     children: (
                       <div className="order-flow-module">
                         {data?.order?.styleId ? (
-                          <StyleSecondaryProcessTab 
+                          <StyleSecondaryProcessTab
                             styleId={data.order.styleId}
                             readOnly={true}
+                            simpleView={true}
                           />
                         ) : (
                           <Alert

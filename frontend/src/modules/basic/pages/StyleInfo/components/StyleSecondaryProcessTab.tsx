@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { App, Button, Col, Form, Input, InputNumber, Row, Select, Space, Table, Tag } from 'antd';
+import { Alert, App, Button, Col, Form, Input, InputNumber, Row, Select, Space, Table, Tag } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
@@ -35,6 +35,7 @@ interface Props {
   secondaryCompletedTime?: string;
   sampleQuantity?: number; // 样板数量，用于自动填充工艺数量
   onRefresh?: () => void; // 刷新父组件的回调
+  simpleView?: boolean; // 简化视图：隐藏领取人信息、操作按钮
 }
 
 const StyleSecondaryProcessTab: React.FC<Props> = ({
@@ -45,6 +46,7 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
   secondaryCompletedTime,
   sampleQuantity = 0, // 默认为 0
   onRefresh,
+  simpleView = false,
 }) => {
   const { message, modal } = App.useApp();
   const { isMobile, modalWidth } = useViewport();
@@ -304,26 +306,28 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
   return (
     <div style={{ padding: '0 4px' }}>
       {/* 状态栏 */}
-      <div style={{
-        marginBottom: 16,
-        padding: '12px 16px',
-        background: '#f5f5f5',
-        borderRadius: 4,
-        display: 'flex',
-        gap: 24,
-      }}>
-        <span style={{ color: '#666' }}>
-          领取人：<span style={{ color: '#333', fontWeight: 500 }}>{secondaryAssignee || '-'}</span>
-        </span>
-        <span style={{ color: '#666' }}>
-          开始时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(secondaryStartTime)}</span>
-        </span>
-        <span style={{ color: '#666' }}>
-          完成时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(secondaryCompletedTime)}</span>
-        </span>
-      </div>
+      {!simpleView && (
+        <div style={{
+          marginBottom: 16,
+          padding: '12px 16px',
+          background: '#f5f5f5',
+          borderRadius: 4,
+          display: 'flex',
+          gap: 24,
+        }}>
+          <span style={{ color: '#666' }}>
+            领取人：<span style={{ color: '#333', fontWeight: 500 }}>{secondaryAssignee || '-'}</span>
+          </span>
+          <span style={{ color: '#666' }}>
+            开始时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(secondaryStartTime)}</span>
+          </span>
+          <span style={{ color: '#666' }}>
+            完成时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(secondaryCompletedTime)}</span>
+          </span>
+        </div>
+      )}
       {/* 操作按钮 */}
-      {!readOnly && (
+      {!readOnly && !simpleView && (
         <div style={{ marginBottom: 16, display: 'flex', gap: 12 }}>
           <Button
             type="primary"
@@ -341,6 +345,16 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
             </Button>
           )}
         </div>
+      )}
+
+      {/* 简化视图：无数据提示 */}
+      {simpleView && dataSource.length === 0 && (
+        <Alert
+          title="无二次工艺"
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
       )}
 
       {/* 数据表格 */}
