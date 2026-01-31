@@ -385,13 +385,6 @@ const OrderFlow: React.FC = () => {
                       </div>
                     ),
                   },
-                            readOnly={true}
-                            onSaved={() => {}}
-                          />
-                        )}
-                      </div>
-                    ),
-                  },
                   {
                     key: 'style-secondary',
                     label: '二次工艺详情',
