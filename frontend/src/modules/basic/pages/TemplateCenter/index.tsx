@@ -229,12 +229,12 @@ const TemplateCenter: React.FC = () => {
       return;
     }
     setEditingRow(latestRow);
-    let content = String(row?.templateContent ?? '');
+    let contentData: unknown = row?.templateContent;
     if (row?.id) {
       try {
         const res = await api.get<{ code: number; data: TemplateLibrary }>(`/template-library/${row.id}`);
         if (res.code === 200) {
-          content = String(res.data?.templateContent ?? content);
+          contentData = res.data?.templateContent ?? contentData;
         }
       } catch {
         // Intentionally empty
@@ -242,22 +242,32 @@ const TemplateCenter: React.FC = () => {
       }
     }
 
-    // 解析JSON为表格数据
-    try {
-      const parsed = JSON.parse(content);
-      setEditTableData(parsed);
-      // 初始化尺码列表
-      if (parsed.sizes && Array.isArray(parsed.sizes)) {
-        setTemplateSizes(parsed.sizes);
-        setShowSizePrices(true);
-      } else {
+    // 解析JSON为表格数据（templateContent 现在可能是对象或字符串）
+    let parsed: unknown = null;
+    if (typeof contentData === 'object' && contentData !== null) {
+      // 已经是对象，直接使用
+      parsed = contentData;
+    } else {
+      // 是字符串，尝试解析
+      const content = String(contentData ?? '');
+      try {
+        parsed = JSON.parse(content);
+      } catch {
+        // 解析失败
+        setEditTableData(null);
         setTemplateSizes(['XS', 'S', 'M', 'L', 'XL', 'XXL']);
         setShowSizePrices(false);
+        setEditOpen(true);
+        return;
       }
-    } catch {
-      // Intentionally empty
-      // 忽略错误
-      setEditTableData(null);
+    }
+    
+    setEditTableData(parsed);
+    // 初始化尺码列表
+    if (parsed && typeof parsed === 'object' && 'sizes' in parsed && Array.isArray(parsed.sizes)) {
+      setTemplateSizes(parsed.sizes);
+      setShowSizePrices(true);
+    } else {
       setTemplateSizes(['XS', 'S', 'M', 'L', 'XL', 'XXL']);
       setShowSizePrices(false);
     }
@@ -540,16 +550,27 @@ const TemplateCenter: React.FC = () => {
         return;
       }
       const tpl: TemplateLibrary = res.data;
-      const raw = String(tpl?.templateContent ?? '');
-      try {
-        const obj = JSON.parse(raw);
-        setViewObj(obj);
-        setViewContent(JSON.stringify(obj, null, 2));
-      } catch {
-        // Intentionally empty
-        // 忽略错误
-        setViewContent(raw);
+      const content = tpl?.templateContent;
+      
+      // templateContent 现在可能是对象（@JsonRawValue）或字符串
+      let obj: unknown = null;
+      if (typeof content === 'object' && content !== null) {
+        // 已经是对象，直接使用
+        obj = content;
+      } else {
+        // 是字符串，尝试解析
+        const raw = String(content ?? '');
+        try {
+          obj = JSON.parse(raw);
+        } catch {
+          // 解析失败，保留原始字符串
+          setViewContent(raw);
+          return;
+        }
       }
+      
+      setViewObj(obj);
+      setViewContent(JSON.stringify(obj, null, 2));
     } catch (e: unknown) {
       message.error(getErrorMessage(e, '获取模板失败'));
     }
