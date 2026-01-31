@@ -221,6 +221,11 @@ const SystemLogs: React.FC = () => {
       title: '操作',
       key: 'action',
       width: 90,
+      fixed: 'right' as const,
+      render: (_: unknown, record: OperationLog) => (
+        <Button type="link" size="small" onClick={() => handleViewDetails(record)}>
+          详情
+        </Button>
       ),
     },
   ];
