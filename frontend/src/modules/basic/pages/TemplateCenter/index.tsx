@@ -828,6 +828,7 @@ const TemplateCenter: React.FC = () => {
   type SizeTableData = { sizes: string[]; parts: SizeTablePart[] };
   type BomTableRow = { materialName?: string; spec?: string; quantity?: string | number; unit?: string };
   type BomTableData = BomTableRow[];
+  type BomTableContainer = { rows: BomTableRow[] };
   // 合并后的工序进度单价模板行类型
   type ProcessStepRow = {
     processCode?: string;
@@ -850,6 +851,12 @@ const TemplateCenter: React.FC = () => {
   };
 
   const isBomTableData = (data: unknown): data is BomTableData => Array.isArray(data);
+  
+  const isBomTableContainer = (data: unknown): data is BomTableContainer => {
+    if (!data || typeof data !== 'object') return false;
+    const rec = data as Record<string, unknown>;
+    return Array.isArray(rec.rows);
+  };
 
   const isProcessTableData = (data: unknown): data is ProcessTableData => {
     if (!data || typeof data !== 'object') return false;
@@ -1232,7 +1239,8 @@ const TemplateCenter: React.FC = () => {
                     );
                   }
                   // BOM表模板
-                  if (type === 'bom' && isBomTableData(editTableData)) {
+                  if (type === 'bom' && (isBomTableData(editTableData) || isBomTableContainer(editTableData))) {
+                    const bomRows = isBomTableContainer(editTableData) ? editTableData.rows : editTableData;
                     return (
                       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
@@ -1244,15 +1252,16 @@ const TemplateCenter: React.FC = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {editTableData.map((item: BomTableRow, idx: number) => (
+                          {bomRows.map((item: BomTableRow, idx: number) => (
                             <tr key={idx}>
                               <td style={{ border: '1px solid #ccc', padding: 4 }}>
                                 <Input
                                   size="small"
                                   value={item.materialName || ''}
                                   onChange={(e) => {
-                                    const newData = [...editTableData];
-                                    newData[idx].materialName = e.target.value;
+                                    const newRows = [...bomRows];
+                                    newRows[idx] = { ...newRows[idx], materialName: e.target.value };
+                                    const newData = isBomTableContainer(editTableData) ? { rows: newRows } : newRows;
                                     setEditTableData(newData);
                                   }}
                                   style={{ border: 'none' }}
@@ -1263,8 +1272,9 @@ const TemplateCenter: React.FC = () => {
                                   size="small"
                                   value={item.spec || ''}
                                   onChange={(e) => {
-                                    const newData = [...editTableData];
-                                    newData[idx].spec = e.target.value;
+                                    const newRows = [...bomRows];
+                                    newRows[idx] = { ...newRows[idx], spec: e.target.value };
+                                    const newData = isBomTableContainer(editTableData) ? { rows: newRows } : newRows;
                                     setEditTableData(newData);
                                   }}
                                   style={{ border: 'none' }}
@@ -1275,8 +1285,9 @@ const TemplateCenter: React.FC = () => {
                                   size="small"
                                   value={item.quantity || ''}
                                   onChange={(e) => {
-                                    const newData = [...editTableData];
-                                    newData[idx].quantity = e.target.value;
+                                    const newRows = [...bomRows];
+                                    newRows[idx] = { ...newRows[idx], quantity: e.target.value };
+                                    const newData = isBomTableContainer(editTableData) ? { rows: newRows } : newRows;
                                     setEditTableData(newData);
                                   }}
                                   style={{ border: 'none' }}
@@ -1287,8 +1298,9 @@ const TemplateCenter: React.FC = () => {
                                   size="small"
                                   value={item.unit || ''}
                                   onChange={(e) => {
-                                    const newData = [...editTableData];
-                                    newData[idx].unit = e.target.value;
+                                    const newRows = [...bomRows];
+                                    newRows[idx] = { ...newRows[idx], unit: e.target.value };
+                                    const newData = isBomTableContainer(editTableData) ? { rows: newRows } : newRows;
                                     setEditTableData(newData);
                                   }}
                                   style={{ border: 'none' }}
