@@ -30,7 +30,7 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
   const watchedUnitPrice = Form.useWatch('unitPrice', form);
   const watchedArrivedQuantity = Form.useWatch('arrivedQuantity', form);
   const watchedStyleCover = Form.useWatch('styleCover', form);
-  
+
   // Stock check
   const watchedMaterialCode = Form.useWatch('materialCode', form);
   const watchedColor = Form.useWatch('color', form);
@@ -61,13 +61,15 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
     }
     if (info.file.status === 'done') {
       setUploadLoading(false);
-      // 假设后端返回 { code: 200, data: { url: '...' } }
+      // 后端返回格式：{ code: 200, data: "/api/common/download/xxx.jpg" }
       const response = info.file.response;
-      if (response?.code === 200 && response?.data?.url) {
-        form.setFieldsValue({ styleCover: response.data.url });
+      if (response?.code === 200 && response?.data) {
+        // data 本身就是 url 路径
+        const imageUrl = typeof response.data === 'string' ? response.data : response.data.url;
+        form.setFieldsValue({ styleCover: imageUrl });
         message.success('图片上传成功');
       } else {
-        message.error('图片上传失败');
+        message.error(response?.message || '图片上传失败');
       }
     }
     if (info.file.status === 'error') {
@@ -76,22 +78,23 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
     }
   };
 
-  // 自定义上传（可选，如果需要自定义上传逻辑）
+  // 自定义上传
   const customUpload = async (options: any) => {
     const { file, onSuccess, onError } = options;
     const formData = new FormData();
     formData.append('file', file);
 
     try {
-      // 调用上传接口
-      const res = await api.post('/upload/image', formData, {
+      // 调用后端通用上传接口
+      const res = await api.post('/common/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      
-      if (res.code === 200 && res.data?.url) {
-        onSuccess({ code: 200, data: { url: res.data.url } });
+
+      if (res.code === 200 && res.data) {
+        // 后端返回的是相对路径，直接使用
+        onSuccess({ code: 200, data: { url: res.data } });
       } else {
-        onError(new Error('上传失败'));
+        onError(new Error(res.message || '上传失败'));
       }
     } catch (error) {
       onError(error);
@@ -144,7 +147,7 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
         console.error(e);
       }
     };
-    
+
     const timer = setTimeout(checkStock, 500);
     return () => clearTimeout(timer);
   }, [watchedMaterialCode, watchedColor, watchedSize]);
