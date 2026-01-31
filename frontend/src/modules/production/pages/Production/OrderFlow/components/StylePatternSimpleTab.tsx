@@ -139,6 +139,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
           </Row>
         }
         size="small"
+        style={{ marginBottom: 16 }}
       >
         <div style={{ padding: '12px 0', color: '#666', fontSize: 14 }}>
           点击右上角按钮下载生产制单（HTML格式），包含工艺要求、尺寸表等完整信息
