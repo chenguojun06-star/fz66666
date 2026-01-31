@@ -169,16 +169,14 @@ const SystemLogs: React.FC = () => {
       title: '模块',
       dataIndex: 'module',
       key: 'module',
-      width: 100,
-      resizable: true,
+      width: 110,
       render: (v: string) => <Tag color="blue">{v}</Tag>
     },
     {
       title: '操作',
       dataIndex: 'operation',
       key: 'operation',
-      width: 100,
-      resizable: true,
+      width: 90,
       render: (v: string) => {
         const colorMap: Record<string, string> = {
           '删除': 'red',
@@ -190,42 +188,21 @@ const SystemLogs: React.FC = () => {
         return <Tag color={colorMap[v] || 'default'}>{v}</Tag>;
       }
     },
-    { 
-      title: '操作人', 
-      dataIndex: 'operatorName', 
-      key: 'operatorName', 
-      width: 100,
-      resizable: true,
-    },
-    { 
-      title: '目标类型', 
-      dataIndex: 'targetType', 
-      key: 'targetType', 
-      width: 100,
-      resizable: true,
-    },
-    { 
-      title: '目标名称', 
-      dataIndex: 'targetName', 
-      key: 'targetName', 
-      width: 150, 
-      ellipsis: true,
-      resizable: true,
-    },
+    { title: '操作人', dataIndex: 'operatorName', key: 'operatorName', width: 110 },
+    { title: '目标类型', dataIndex: 'targetType', key: 'targetType', width: 110 },
+    { title: '目标名称', dataIndex: 'targetName', key: 'targetName', width: 140, ellipsis: true },
     {
-      title: '操作时间',
+      title: '时间',
       dataIndex: 'operationTime',
       key: 'operationTime',
       width: 170,
-      resizable: true,
       render: (v: unknown) => formatDateTimeSecond(v),
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      width: 100,
-      resizable: true,
+      width: 90,
       render: (v: 'success' | 'failure') => (
         <Tag color={v === 'success' ? 'green' : 'red'}>
           {v === 'success' ? '成功' : '失败'}
@@ -233,19 +210,17 @@ const SystemLogs: React.FC = () => {
       ),
     },
     {
-      title: '操作原因',
+      title: '原因',
       dataIndex: 'reason',
       key: 'reason',
       ellipsis: true,
-      width: 200,
-      resizable: true,
+      width: 180,
       render: (v: string) => v || '-'
     },
     {
       title: '操作',
       key: 'action',
-      width: 100,
-      resizable: true,
+      width: 90,
       render: (_: unknown, record: OperationLog) => (
         <Button type="link" size="small" onClick={() => handleViewDetails(record)}>
           详情
