@@ -173,23 +173,6 @@ const SystemLogs: React.FC = () => {
       resizable: true,
       render: (v: string) => <Tag color="blue">{v}</Tag>
     },
-    {
-      title: '操作',
-      dataIndex: 'operation',
-      key: 'operation',
-      width: 120,
-      resizable: true,
-      render: (v: string) => {
-        const colorMap: Record<string, string> = {
-          '删除': 'red',
-          '新增': 'green',
-          '修改': 'orange',
-          '审批': 'purple',
-          '导出': 'cyan',
-        };
-        return <Tag color={colorMap[v] || 'default'}>{v}</Tag>;
-      }
-    },
     { title: '操作人', dataIndex: 'operatorName', key: 'operatorName', width: 110, resizable: true },
     { title: '目标类型', dataIndex: 'targetType', key: 'targetType', width: 110, resizable: true },
     { title: '目标名称', dataIndex: 'targetName', key: 'targetName', width: 160, resizable: true, ellipsis: true },
@@ -221,6 +204,23 @@ const SystemLogs: React.FC = () => {
       width: 200,
       resizable: true,
       render: (v: string) => v || '-'
+    },
+    {
+      title: '操作',
+      dataIndex: 'operation',
+      key: 'operation',
+      width: 120,
+      resizable: true,
+      render: (v: string) => {
+        const colorMap: Record<string, string> = {
+          '删除': 'red',
+          '新增': 'green',
+          '修改': 'orange',
+          '审批': 'purple',
+          '导出': 'cyan',
+        };
+        return <Tag color={colorMap[v] || 'default'}>{v}</Tag>;
+      }
     },
   ];
 
