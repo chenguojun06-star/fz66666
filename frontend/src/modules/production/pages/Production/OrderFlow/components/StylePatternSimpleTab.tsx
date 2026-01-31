@@ -11,8 +11,7 @@ interface Props {
 }
 
 const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
-  const [patternFiles, setPatternFiles] = useState<StyleAttachment[]>([]);
-  const [gradingFiles, setGradingFiles] = useState<StyleAttachment[]>([]);
+  const [allPatternFiles, setAllPatternFiles] = useState<StyleAttachment[]>([]);
   const [productionReq, setProductionReq] = useState<string>('');
   const [loading, setLoading] = useState(false);
 
@@ -50,30 +49,15 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
         items={[
           {
             key: 'pattern',
-            label: `📐 原始纸样 (${patternFiles.length})`,
+            label: `📐 大货纸样 (${allPatternFiles.length})`,
             children: (
               <Card size="small" style={{ marginBottom: 16 }}>
                 <StyleAttachmentTab
                   styleId={styleId}
-                  bizType="pattern"
-                  uploadText="上传原始纸样"
+                  bizType="pattern,pattern_grading"
+                  uploadText="上传纸样文件"
                   readOnly={true}
-                  onListChange={setPatternFiles}
-                />
-              </Card>
-            ),
-          },
-          {
-            key: 'grading',
-            label: `📐 放码纸样 (${gradingFiles.length})`,
-            children: (
-              <Card size="small" style={{ marginBottom: 16 }}>
-                <StyleAttachmentTab
-                  styleId={styleId}
-                  bizType="pattern_grading"
-                  uploadText="上传放码纸样"
-                  readOnly={true}
-                  onListChange={setGradingFiles}
+                  onListChange={setAllPatternFiles}
                 />
               </Card>
             ),
