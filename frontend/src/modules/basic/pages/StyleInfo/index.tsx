@@ -1111,52 +1111,40 @@ const StyleInfoPage: React.FC = () => {
         }
 
         try {
-          // 记录删除日志到控制台
+          // 记录删除日志到控制台和后端
           const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
           const operator = userInfo.realName || userInfo.username || '未知用户';
-          
-          // 记录到控制台（后端API暂未实现）
-          console.log('🗑️ 删除操作日志：', {
-            模块: '样衣开发',
-            操作: '删除款式',
-            操作人: operator,
-            操作人ID: userInfo.id,
-            款式ID: id,
-            款号: styleNo,
-            款名: record?.styleName,
-            品类: record?.category,
-            季节: record?.season,
-            删除原因: reason,
-            删除时间: new Date().toLocaleString('zh-CN', {
-              year: 'numeric',
-              month: '2-digit',
-              day: '2-digit',
-              hour: '2-digit',
-              minute: '2-digit',
-              second: '2-digit'
-            }),
-          });
 
-          // TODO: 后端实现操作日志API后取消注释
-          // const logData = {
-          //   module: '样衣开发',
-          //   action: '删除款式',
-          //   operator,
-          //   operatorId: userInfo.id,
-          //   targetType: 'STYLE',
-          //   targetId: id,
-          //   targetName: styleNo,
-          //   reason,
-          //   details: JSON.stringify({
-          //     styleNo,
-          //     styleName: record?.styleName,
-          //     category: record?.category,
-          //     season: record?.season,
-          //     deleteTime: new Date().toISOString(),
-          //   }),
-          //   timestamp: new Date().toISOString(),
-          // };
-          // await api.post('/system/operation-log', logData);
+          // 准备日志数据
+          const logData = {
+            module: '样衣开发',
+            operation: '删除',
+            operatorId: userInfo.id,
+            operatorName: operator,
+            targetType: '款式',
+            targetId: String(id),
+            targetName: styleNo,
+            reason,
+            details: JSON.stringify({
+              styleNo,
+              styleName: record?.styleName,
+              category: record?.category,
+              season: record?.season,
+              deleteTime: new Date().toISOString(),
+            }),
+            operationTime: new Date().toISOString(),
+            status: 'success',
+          };
+
+          // 记录到控制台
+          console.log('🗑️ 删除操作日志：', logData);
+
+          // 记录到后端（异步，不阻塞删除操作）
+          try {
+            await api.post('/system/operation-log', logData);
+          } catch (logError) {
+            console.warn('操作日志记录失败（不影响删除）：', logError);
+          }
 
           // 执行删除
           const res = await api.delete(`/style/info/${id}`);
