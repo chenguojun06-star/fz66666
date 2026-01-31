@@ -249,9 +249,9 @@ const OrderFlow: React.FC = () => {
             <Space wrap>
               {query.orderNo ? <Tag>订单号：{query.orderNo}</Tag> : null}
               {query.styleNo ? <Tag>款号：{query.styleNo}</Tag> : null}
-              <Button 
-                icon={<ReloadOutlined />} 
-                onClick={fetchFlow} 
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={fetchFlow}
                 loading={loading}
               >
                 刷新数据
@@ -355,88 +355,194 @@ const OrderFlow: React.FC = () => {
                     label: '成本详情(含BOM+工序)',
                     children: (
                       <div className="order-flow-module">
-                        {/* 如果订单有工序单价配置，显示来自单价维护的成本信息 */}
-                        {data?.order?.progressNodeUnitPrices && Array.isArray(data.order.progressNodeUnitPrices) && data.order.progressNodeUnitPrices.length > 0 ? (
-                          <Card>
-                            <Alert
-                              message="大货订单工序单价信息"
-                              description={
-                                <div>
-                                  <p>此订单使用单价维护模块的工序单价配置</p>
-                                  <p style={{ marginTop: 8 }}>
-                                    工序数量: <strong>{data.order.progressNodeUnitPrices.length}</strong> 个 | 
-                                    工序总单价: <strong style={{ color: '#1890ff', fontSize: 16 }}>
-                                      ¥{data.order.progressNodeUnitPrices.reduce((sum: number, item: any) => {
-                                        return sum + (Number(item.unitPrice) || 0);
-                                      }, 0).toFixed(2)}
-                                    </strong>
-                                  </p>
-                                </div>
-                              }
-                              type="info"
-                              showIcon
-                              style={{ marginBottom: 16 }}
-                            />
-                            <Table
-                              dataSource={data.order.progressNodeUnitPrices}
-                              rowKey={(record: any) => `${record.processName}-${record.progressStage || ''}`}
-                              columns={[
-                                { 
-                                  title: '序号', 
-                                  key: 'index', 
-                                  width: 70, 
-                                  align: 'center',
-                                  render: (_: any, __: any, index: number) => index + 1 
-                                },
-                                { 
-                                  title: '工序名称', 
-                                  dataIndex: 'processName', 
-                                  key: 'processName', 
-                                  width: 200,
-                                  render: (v: any) => v || '-'
-                                },
-                                { 
-                                  title: '阶段', 
-                                  dataIndex: 'progressStage', 
-                                  key: 'progressStage', 
-                                  width: 120,
-                                  render: (v: any) => {
-                                    const stageMap: Record<string, string> = {
-                                      'sample': '样衣',
-                                      'pre_production': '产前',
-                                      'production': '大货生产'
-                                    };
-                                    return stageMap[v] || v || '-';
+                        {/* 解析工序数据：优先使用 progressWorkflowJson，备选 progressNodeUnitPrices */}
+                        {(() => {
+                          let workflowNodes: any[] = [];
+                          
+                          // 1. 尝试从 progressWorkflowJson 解析
+                          try {
+                            if (data?.order?.progressWorkflowJson) {
+                              const workflow = typeof data.order.progressWorkflowJson === 'string'
+                                ? JSON.parse(data.order.progressWorkflowJson)
+                                : data.order.progressWorkflowJson;
+
+                              const nodes = workflow?.nodes || [];
+                              if (nodes.length > 0 && nodes[0]?.name) {
+                                // 新格式：nodes 直接包含所有工序的完整信息
+                                workflowNodes = nodes.map((item: any, idx: number) => ({
+                                  id: item.id || `proc_${idx}`,
+                                  name: item.name || item.processName || '',
+                                  progressStage: item.progressStage || '',
+                                  machineType: item.machineType || '',
+                                  standardTime: item.standardTime || 0,
+                                  unitPrice: Number(item.unitPrice) || 0,
+                                  sortOrder: item.sortOrder ?? idx,
+                                  remark: item.remark || '',
+                                }));
+                                console.log('[订单全流程] 从 progressWorkflowJson.nodes 解析:', workflowNodes.length, '个工序');
+                              } else {
+                                // 旧格式：从 processesByNode 读取
+                                const processesByNode = workflow?.processesByNode || {};
+                                const allProcesses: any[] = [];
+                                let sortIdx = 0;
+
+                                for (const node of nodes) {
+                                  const nodeId = node?.id || '';
+                                  const nodeProcesses = processesByNode[nodeId] || [];
+                                  for (const p of nodeProcesses) {
+                                    allProcesses.push({
+                                      id: p.id || `proc_${sortIdx}`,
+                                      name: p.name || p.processName || '',
+                                      progressStage: p.progressStage || node?.progressStage || node?.name || '',
+                                      machineType: p.machineType || '',
+                                      standardTime: p.standardTime || 0,
+                                      unitPrice: Number(p.unitPrice) || 0,
+                                      sortOrder: sortIdx,
+                                      remark: p.remark || '',
+                                    });
+                                    sortIdx++;
                                   }
-                                },
-                                { 
-                                  title: '单价(元)', 
-                                  dataIndex: 'unitPrice', 
-                                  key: 'unitPrice', 
-                                  width: 120, 
-                                  align: 'right', 
-                                  render: (v: any) => <strong style={{ color: '#1890ff' }}>¥{Number(v || 0).toFixed(2)}</strong>
-                                },
-                                { 
-                                  title: '说明', 
-                                  dataIndex: 'remark', 
-                                  key: 'remark', 
-                                  ellipsis: true, 
-                                  render: (v: any) => v || '-' 
-                                },
-                              ]}
-                              pagination={false}
-                              bordered
+                                }
+                                workflowNodes = allProcesses;
+                                console.log('[订单全流程] 从 progressWorkflowJson.processesByNode 解析:', workflowNodes.length, '个工序');
+                              }
+                            }
+                          } catch (e) {
+                            console.error('[订单全流程] 解析 progressWorkflowJson 失败:', e);
+                          }
+
+                          // 2. 如果没有数据，从 progressNodeUnitPrices 读取
+                          if (workflowNodes.length === 0 && Array.isArray(data?.order?.progressNodeUnitPrices) && data.order.progressNodeUnitPrices.length > 0) {
+                            workflowNodes = data.order.progressNodeUnitPrices.map((item: any, idx: number) => ({
+                              id: item.id || item.processId || `node_${idx}`,
+                              name: item.name || item.processName || '',
+                              progressStage: item.progressStage || '',
+                              machineType: item.machineType || '',
+                              standardTime: item.standardTime || 0,
+                              unitPrice: Number(item.unitPrice) || Number(item.price) || 0,
+                              sortOrder: item.sortOrder ?? idx,
+                              remark: item.remark || '',
+                            }));
+                            console.log('[订单全流程] 从 progressNodeUnitPrices 解析:', workflowNodes.length, '个工序');
+                          }
+
+                          // 如果有工序数据，显示表格
+                          if (workflowNodes.length > 0) {
+                            const totalPrice = workflowNodes.reduce((sum, item) => sum + (item.unitPrice || 0), 0);
+                            
+                            return (
+                              <Card>
+                                <Alert
+                                  message="大货订单工序单价信息"
+                                  description={
+                                    <div>
+                                      <p>工序数量: <strong>{workflowNodes.length}</strong> 个 | 
+                                         工序总单价: <strong style={{ color: '#1890ff', fontSize: 16 }}>¥{totalPrice.toFixed(2)}</strong>
+                                      </p>
+                                    </div>
+                                  }
+                                  type="info"
+                                  showIcon
+                                  style={{ marginBottom: 16 }}
+                                />
+                                <Table
+                                  dataSource={workflowNodes}
+                                  rowKey={(record: any) => record.id || `${record.name}-${record.progressStage}`}
+                                  columns={[
+                                    { 
+                                      title: '序号', 
+                                      key: 'index', 
+                                      width: 70, 
+                                      align: 'center',
+                                      render: (_: any, __: any, index: number) => index + 1 
+                                    },
+                                    { 
+                                      title: '工序名称', 
+                                      dataIndex: 'name', 
+                                      key: 'name', 
+                                      width: 180,
+                                      render: (v: any) => v || '-'
+                                    },
+                                    { 
+                                      title: '阶段', 
+                                      dataIndex: 'progressStage', 
+                                      key: 'progressStage', 
+                                      width: 120,
+                                      render: (v: any) => {
+                                        const stageMap: Record<string, string> = {
+                                          'sample': '样衣',
+                                          'pre_production': '产前',
+                                          'production': '大货生产',
+                                          'procurement': '采购',
+                                          'cutting': '裁剪',
+                                          'carSewing': '车缝',
+                                          'secondaryProcess': '二次工艺',
+                                          'tailProcess': '尾部',
+                                          'warehousing': '入库'
+                                        };
+                                        return stageMap[v] || v || '-';
+                                      }
+                                    },
+                                    { 
+                                      title: '机器类型', 
+                                      dataIndex: 'machineType', 
+                                      key: 'machineType', 
+                                      width: 120,
+                                      render: (v: any) => v || '-'
+                                    },
+                                    { 
+                                      title: '标准工时(分钟)', 
+                                      dataIndex: 'standardTime', 
+                                      key: 'standardTime', 
+                                      width: 130,
+                                      align: 'right',
+                                      render: (v: any) => Number(v || 0).toFixed(2)
+                                    },
+                                    { 
+                                      title: '单价(元)', 
+                                      dataIndex: 'unitPrice', 
+                                      key: 'unitPrice', 
+                                      width: 120, 
+                                      align: 'right', 
+                                      render: (v: any) => <strong style={{ color: '#1890ff' }}>¥{Number(v || 0).toFixed(2)}</strong>
+                                    },
+                                    { 
+                                      title: '说明', 
+                                      dataIndex: 'remark', 
+                                      key: 'remark', 
+                                      ellipsis: true, 
+                                      render: (v: any) => v || '-' 
+                                    },
+                                  ]}
+                                  pagination={false}
+                                  bordered
+                                  scroll={{ x: 'max-content' }}
+                                />
+                              </Card>
+                            );
+                          }
+
+                          // 如果是样衣订单，显示样衣成本
+                          if (data?.order?.styleId) {
+                            return (
+                              <StyleQuotationTab
+                                styleId={data.order.styleId}
+                                readOnly={true}
+                                onSaved={() => {}}
+                              />
+                            );
+                          }
+
+                          // 没有任何数据
+                          return (
+                            <Alert
+                              message="暂无工序单价数据"
+                              description="此订单尚未配置工序单价信息"
+                              type="warning"
+                              showIcon
                             />
-                          </Card>
-                        ) : data?.order?.styleId ? (
-                          // 样衣订单，从样衣开发模块获取成本信息
-                          <StyleQuotationTab
-                            styleId={data.order.styleId}
-                            readOnly={true}
-                            onSaved={() => {}}
-                          />
-                        ) : null}
+                          );
+                        })()}
                       </div>
                     ),
                   },
