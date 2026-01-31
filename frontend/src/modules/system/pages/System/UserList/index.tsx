@@ -423,7 +423,7 @@ const UserList: React.FC = () => {
     logModal.open();
     setLogLoading(true);
     try {
-      const res = await api.get('/system/operation-log/list', {
+      const res = await api.get('/api/system/operation-log/list', {
         params: { bizType, bizId },
       });
       const result = res as Record<string, unknown>;

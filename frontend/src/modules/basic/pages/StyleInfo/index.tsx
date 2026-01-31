@@ -1141,7 +1141,7 @@ const StyleInfoPage: React.FC = () => {
 
           // 记录到后端（异步，不阻塞删除操作）
           try {
-            await api.post('/system/operation-log', logData);
+            await api.post('/api/system/operation-log', logData);
           } catch (logError) {
             console.warn('操作日志记录失败（不影响删除）：', logError);
           }
