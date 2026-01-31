@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { App, Button, Card, Checkbox, Col, Form, Input, InputNumber, Row, Select, Space, Tabs, Tag, Upload, Segmented, Statistic, Spin } from 'antd';
+import { App, Button, Card, Checkbox, Col, Form, Input, InputNumber, Row, Select, Space, Tabs, Tag, Upload, Segmented, Statistic, Spin, Modal } from 'antd';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
 import { patternProductionApi } from '@/services/production/productionApi';
 import type { PatternDevelopmentStats } from '@/types/production';
@@ -1072,17 +1072,37 @@ const StyleInfoPage: React.FC = () => {
   };
 
   const handleDelete = async (id: string | number) => {
-    try {
-      const res = await api.delete(`/style/info/${id}`);
-      if (res.code === 200) {
-        message.success('删除成功');
-        fetchData();
-      } else {
-        message.error(res.message || '删除失败');
-      }
-    } catch (error) {
-      message.error('删除失败');
-    }
+    // 获取款式信息用于确认提示
+    const record = data.find(item => item.id === id);
+    const styleNo = record?.styleNo || '该款式';
+    
+    Modal.confirm({
+      title: '确认删除',
+      content: (
+        <div>
+          <div style={{ marginBottom: 8 }}>确定要删除款式 <strong style={{ color: '#f5222d' }}>{styleNo}</strong> 吗？</div>
+          <div style={{ color: '#ff4d4f', fontSize: 12 }}>
+            ⚠️ 删除后将无法恢复，相关的尺寸表、BOM表、工序表等数据也将一并删除！
+          </div>
+        </div>
+      ),
+      okText: '确认删除',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          const res = await api.delete(`/style/info/${id}`);
+          if (res.code === 200) {
+            message.success('删除成功');
+            fetchData();
+          } else {
+            message.error(res.message || '删除失败');
+          }
+        } catch (error) {
+          message.error('删除失败');
+        }
+      },
+    });
   };
 
   const updateProductionReqRow = (index: number, value: string) => {
