@@ -87,6 +87,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
 }) => {
   const [options, setOptions] = useState<PrintOptions>(DEFAULT_PRINT_OPTIONS);
   const [loading, setLoading] = useState(false);
+  const [expanded, setExpanded] = useState(false); // 展开/收起状态
   const [data, setData] = useState<PrintData>({
     sizes: [],
     bom: [],
@@ -357,14 +358,24 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
     >
       <Spin spinning={loading}>
         {/* 打印选项 - 置顶 */}
-        <div style={{ 
-          marginBottom: 16, 
-          padding: '12px 16px', 
+        <div style={{
+          marginBottom: 16,
+          padding: '12px 16px',
           background: '#f0f2f5',
           borderRadius: 6,
           border: '1px solid #d9d9d9'
         }}>
-          <div style={{ marginBottom: 8, fontWeight: 600, color: '#1f2937' }}>📋 选择打印内容：</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <div style={{ fontWeight: 600, color: '#1f2937' }}>📋 选择打印内容：</div>
+            <Button 
+              size="small" 
+              type={expanded ? 'default' : 'primary'}
+              onClick={() => setExpanded(!expanded)}
+              style={{ fontSize: 12 }}
+            >
+              {expanded ? '▲ 收起预览' : '▼ 展开预览'}
+            </Button>
+          </div>
           <Checkbox.Group
             value={Object.keys(options).filter(k => options[k as keyof PrintOptions])}
             onChange={(values) => {
@@ -388,18 +399,20 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
           </Checkbox.Group>
         </div>
 
-        <div className="style-print-content" id="style-print-content" style={{ background: '#fff', padding: 20 }}>
-          {/* 预览样式 */}
-          <style>{`
-            .print-section { margin-bottom: 24px; }
-            .print-section-title {
-              font-size: 16px;
-              font-weight: 600;
-              margin-bottom: 12px;
-              padding-bottom: 8px;
-              border-bottom: 2px solid #1890ff;
-            }
-          `}</style>
+        {/* 内容预览区域 - 可展开/收起 */}
+        {expanded && (
+          <div className="style-print-content" id="style-print-content" style={{ background: '#fff', padding: 20, border: '1px solid #d9d9d9', borderRadius: 6 }}>
+            {/* 预览样式 */}
+            <style>{`
+              .print-section { margin-bottom: 24px; }
+              .print-section-title {
+                font-size: 16px;
+                font-weight: 600;
+                margin-bottom: 12px;
+                padding-bottom: 8px;
+                border-bottom: 2px solid #1890ff;
+              }
+            `}</style>
 
           {/* 基本信息 */}
           {options.basicInfo && (
@@ -717,6 +730,22 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
             </div>
           )}
         </div>
+        )}
+
+        {/* 未展开时的提示 */}
+        {!expanded && (
+          <div style={{ 
+            textAlign: 'center', 
+            padding: '40px 20px', 
+            color: '#999',
+            background: '#fafafa',
+            borderRadius: 6,
+            border: '1px dashed #d9d9d9'
+          }}>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>👆</div>
+            <div style={{ fontSize: 14 }}>点击"展开预览"按钮查看打印内容</div>
+          </div>
+        )}
       </Spin>
     </ResizableModal>
   );
