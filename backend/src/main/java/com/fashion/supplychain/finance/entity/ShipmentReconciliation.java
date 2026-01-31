@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -149,6 +150,20 @@ public class ShipmentReconciliation implements com.fashion.supplychain.finance.s
 
     private String createBy;
     private String updateBy;
+
+    // ==================== 操作人字段（自动填充）====================
+
+    private String reconciliationOperatorId;
+
+    private String reconciliationOperatorName;
+
+    private LocalDateTime reconciliationTime;
+
+    private String auditorId;
+
+    private String auditorName;
+
+    private LocalDateTime auditTime;
 
     public String getCreateBy() {
         return createBy;

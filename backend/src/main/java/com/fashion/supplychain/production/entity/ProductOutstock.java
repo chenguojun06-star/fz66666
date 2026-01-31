@@ -3,6 +3,8 @@ package com.fashion.supplychain.production.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.TableField;
 import java.time.LocalDateTime;
 import lombok.Data;
 
@@ -38,4 +40,18 @@ public class ProductOutstock {
     private LocalDateTime updateTime;
 
     private Integer deleteFlag;
+
+    // ==================== 操作人字段（自动填充）====================
+
+    @TableField(fill = FieldFill.INSERT)
+    private String operatorId;
+
+    @TableField(fill = FieldFill.INSERT)
+    private String operatorName;
+
+    @TableField(fill = FieldFill.INSERT)
+    private String creatorId;
+
+    @TableField(fill = FieldFill.INSERT)
+    private String creatorName;
 }

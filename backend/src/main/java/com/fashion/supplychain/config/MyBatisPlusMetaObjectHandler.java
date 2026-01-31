@@ -1,7 +1,7 @@
 package com.fashion.supplychain.config;
 
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
-import com.fashion.supplychain.system.service.AuthTokenService;
+import com.fashion.supplychain.auth.AuthTokenService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.reflection.MetaObject;
 import org.springframework.beans.factory.annotation.Autowired;
