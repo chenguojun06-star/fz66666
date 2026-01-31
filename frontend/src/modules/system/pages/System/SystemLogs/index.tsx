@@ -169,7 +169,8 @@ const SystemLogs: React.FC = () => {
       title: '模块',
       dataIndex: 'module',
       key: 'module',
-      width: 110,
+      width: 130,
+      minWidth: 100,
       resizable: true,
       render: (v: string) => <Tag color="blue">{v}</Tag>
     },
