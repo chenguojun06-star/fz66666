@@ -15,6 +15,7 @@ interface Props {
   sizeAssignee?: string;
   sizeStartTime?: string;
   sizeCompletedTime?: string;
+  simpleView?: boolean; // 简化视图：隐藏领取人信息、操作按钮、提示信息
 }
 
 type MatrixCell = {
@@ -48,6 +49,7 @@ const StyleSizeTab: React.FC<Props> = ({
   sizeAssignee,
   sizeStartTime,
   sizeCompletedTime,
+  simpleView = false,
 }) => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -614,27 +616,30 @@ const StyleSizeTab: React.FC<Props> = ({
   return (
     <div>
       {/* 状态栏 */}
-      <div style={{
-        marginBottom: 16,
-        padding: '12px 16px',
-        background: '#f5f5f5',
-        borderRadius: 4,
-        display: 'flex',
-        gap: 24,
-      }}>
-        <span style={{ color: '#666' }}>
-          领取人：<span style={{ color: '#333', fontWeight: 500 }}>{sizeAssignee || '-'}</span>
-        </span>
-        <span style={{ color: '#666' }}>
-          开始时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(sizeStartTime)}</span>
-        </span>
-        <span style={{ color: '#666' }}>
-          完成时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(sizeCompletedTime)}</span>
-        </span>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <div />
-        <Space>
+      {!simpleView && (
+        <div style={{
+          marginBottom: 16,
+          padding: '12px 16px',
+          background: '#f5f5f5',
+          borderRadius: 4,
+          display: 'flex',
+          gap: 24,
+        }}>
+          <span style={{ color: '#666' }}>
+            领取人：<span style={{ color: '#333', fontWeight: 500 }}>{sizeAssignee || '-'}</span>
+          </span>
+          <span style={{ color: '#666' }}>
+            开始时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(sizeStartTime)}</span>
+          </span>
+          <span style={{ color: '#666' }}>
+            完成时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(sizeCompletedTime)}</span>
+          </span>
+        </div>
+      )}
+      {!simpleView && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div />
+          <Space>
           <Select
             allowClear
             showSearch
@@ -718,15 +723,12 @@ const StyleSizeTab: React.FC<Props> = ({
               </Button>
             </>
           )}
-        </Space>
-        <div style={{ marginTop: 8, color: '#666', fontSize: 12 }}>
-          💡 提示：相关文件请在"文件管理"标签页统一上传
-        </div>
+      </Space>
+      <div style={{ marginTop: 8, color: '#666', fontSize: 12 }}>
+        💡 提示：相关文件请在"文件管理"标签页统一上传
       </div>
-
-      <ResizableTable
-        bordered
-        dataSource={rows}
+    </div>
+  )}
         columns={columns as Record<string, unknown>}
         pagination={false}
         loading={loading}
