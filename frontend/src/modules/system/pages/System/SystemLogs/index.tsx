@@ -170,6 +170,7 @@ const SystemLogs: React.FC = () => {
       dataIndex: 'module',
       key: 'module',
       width: 100,
+      resizable: true,
       render: (v: string) => <Tag color="blue">{v}</Tag>
     },
     {
@@ -177,6 +178,7 @@ const SystemLogs: React.FC = () => {
       dataIndex: 'operation',
       key: 'operation',
       width: 100,
+      resizable: true,
       render: (v: string) => {
         const colorMap: Record<string, string> = {
           '删除': 'red',
@@ -188,14 +190,34 @@ const SystemLogs: React.FC = () => {
         return <Tag color={colorMap[v] || 'default'}>{v}</Tag>;
       }
     },
-    { title: '操作人', dataIndex: 'operatorName', key: 'operatorName', width: 100 },
-    { title: '目标类型', dataIndex: 'targetType', key: 'targetType', width: 100 },
-    { title: '目标名称', dataIndex: 'targetName', key: 'targetName', width: 150, ellipsis: true },
+    { 
+      title: '操作人', 
+      dataIndex: 'operatorName', 
+      key: 'operatorName', 
+      width: 100,
+      resizable: true,
+    },
+    { 
+      title: '目标类型', 
+      dataIndex: 'targetType', 
+      key: 'targetType', 
+      width: 100,
+      resizable: true,
+    },
+    { 
+      title: '目标名称', 
+      dataIndex: 'targetName', 
+      key: 'targetName', 
+      width: 150, 
+      ellipsis: true,
+      resizable: true,
+    },
     {
       title: '操作时间',
       dataIndex: 'operationTime',
       key: 'operationTime',
       width: 170,
+      resizable: true,
       render: (v: unknown) => formatDateTimeSecond(v),
     },
     {
@@ -203,6 +225,7 @@ const SystemLogs: React.FC = () => {
       dataIndex: 'status',
       key: 'status',
       width: 100,
+      resizable: true,
       render: (v: 'success' | 'failure') => (
         <Tag color={v === 'success' ? 'green' : 'red'}>
           {v === 'success' ? '成功' : '失败'}
@@ -215,6 +238,7 @@ const SystemLogs: React.FC = () => {
       key: 'reason',
       ellipsis: true,
       width: 200,
+      resizable: true,
       render: (v: string) => v || '-'
     },
     {
@@ -222,6 +246,7 @@ const SystemLogs: React.FC = () => {
       key: 'action',
       width: 100,
       fixed: 'right' as const,
+      resizable: false,
       render: (_: unknown, record: OperationLog) => (
         <Button type="link" size="small" onClick={() => handleViewDetails(record)}>
           详情
