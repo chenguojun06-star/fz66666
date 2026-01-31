@@ -420,7 +420,7 @@ const StyleBomTab: React.FC<Props> = ({
     fetchMaterials(1, '');
   };
 
-  const fillRowFromMaterial = (rid: string, material: any) => {
+  const fillRowFromMaterial = async (rid: string, material: any) => {
     const rowId = String(rid || '').trim();
     if (!rowId) return;
     const m = material || {};
@@ -445,6 +445,46 @@ const StyleBomTab: React.FC<Props> = ({
         })
       )
     );
+
+    // 自动检查该物料的库存状态
+    try {
+      const materialCode = String(m.materialCode || '').trim();
+      const color = String(merged.color || '').trim();
+      
+      if (materialCode) {
+        const res = await api.get<{ code: number; data: any }>(
+          '/warehouse/inventory/check',
+          { params: { materialCode, color } }
+        );
+        
+        if (res.code === 200 && res.data) {
+          const availableQty = Number(res.data.quantity || 0) - Number(res.data.lockedQuantity || 0);
+          const usageAmount = Number(merged.usageAmount || 0);
+          const lossRate = Number(merged.lossRate || 0);
+          const requiredQty = Math.ceil(usageAmount * productionQty * (1 + lossRate / 100));
+          
+          const stockStatus = availableQty >= requiredQty ? 'sufficient' : availableQty > 0 ? 'insufficient' : 'none';
+          const requiredPurchase = Math.max(0, requiredQty - availableQty);
+          
+          // 更新data数组中的对应行
+          setData(prev => sortBomRows(
+            prev.map(item => 
+              String(item.id) === rowId ? {
+                ...item,
+                ...merged,
+                stockStatus,
+                availableStock: availableQty,
+                requiredPurchase,
+              } : item
+            )
+          ));
+          
+          message.success(`${materialCode} 库存检查完成：${stockStatus === 'sufficient' ? '库存充足' : stockStatus === 'insufficient' ? '库存不足' : '无库存'}`);
+        }
+      }
+    } catch (error) {
+      console.log('自动库存检查失败:', error);
+    }
   };
 
   useEffect(() => {
@@ -1498,8 +1538,8 @@ const StyleBomTab: React.FC<Props> = ({
                       showSizeChanger: false,
                     }}
                     onRow={(record) => ({
-                      onDoubleClick: () => {
-                        fillRowFromMaterial(materialTargetRowId, record);
+                      onDoubleClick: async () => {
+                        await fillRowFromMaterial(materialTargetRowId, record);
                         setMaterialModalOpen(false);
                       },
                     })}
@@ -1516,6 +1556,19 @@ const StyleBomTab: React.FC<Props> = ({
                         width: 90,
                         render: (v: unknown) => `¥${Number(v || 0).toFixed(2)}`,
                       },
+                      {
+                        title: '库存',
+                        dataIndex: 'quantity',
+                        width: 80,
+                        render: (v: unknown) => {
+                          const qty = Number(v || 0);
+                          return (
+                            <span style={{ color: qty > 0 ? '#52c41a' : '#ff4d4f', fontWeight: 600 }}>
+                              {qty}
+                            </span>
+                          );
+                        },
+                      },
                       { title: '状态', dataIndex: 'status', width: 90 },
                       {
                         title: '操作',
@@ -1530,8 +1583,8 @@ const StyleBomTab: React.FC<Props> = ({
                                 label: '选用',
                                 title: '选用',
                                 icon: <CheckOutlined />,
-                                onClick: () => {
-                                  fillRowFromMaterial(materialTargetRowId, record);
+                                onClick: async () => {
+                                  await fillRowFromMaterial(materialTargetRowId, record);
                                   setMaterialModalOpen(false);
                                 },
                                 primary: true,
