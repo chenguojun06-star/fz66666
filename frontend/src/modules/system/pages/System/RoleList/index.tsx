@@ -227,7 +227,7 @@ const RoleList: React.FC = () => {
     setLogVisible(true);
     setLogLoading(true);
     try {
-      const res = await api.get('/api/system/operation-log/list', {
+      const res = await api.get('/system/operation-log/list', {
         params: { bizType, bizId },
       });
       const result = res as { code?: number; data?: unknown; message?: unknown };
