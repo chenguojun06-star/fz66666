@@ -10,6 +10,7 @@ import { formatDateTime } from '@/utils/datetime';
 import type { CuttingBundle, ProductionOrder, ProductWarehousing } from '@/types/production';
 import StylePatternSimpleTab from './components/StylePatternSimpleTab';
 import StyleQuotationTab from '@/modules/basic/pages/StyleInfo/components/StyleQuotationTab';
+import StyleSecondaryProcessTab from '@/modules/basic/pages/StyleInfo/components/StyleSecondaryProcessTab';
 import './styles.css';
 
 type FlowStage = {
@@ -437,7 +438,7 @@ const OrderFlow: React.FC = () => {
                                   message="工序单价信息"
                                   description={
                                     <div>
-                                      <p>工序数量: <strong>{workflowNodes.length}</strong> 个 | 
+                                      <p>工序数量: <strong>{workflowNodes.length}</strong> 个 |
                                          工序总单价: <strong style={{ color: '#1890ff', fontSize: 16 }}>¥{totalPrice.toFixed(2)}</strong>
                                       </p>
                                       <p style={{ marginTop: 8, color: '#faad14' }}>
@@ -721,12 +722,19 @@ const OrderFlow: React.FC = () => {
                     label: '二次工艺详情',
                     children: (
                       <div className="order-flow-module">
-                        <Alert
-                          message="二次工艺功能"
-                          description="二次工艺功能开发中，敬请期待..."
-                          type="info"
-                          showIcon
-                        />
+                        {data?.order?.styleId ? (
+                          <StyleSecondaryProcessTab 
+                            styleId={data.order.styleId}
+                            readOnly={true}
+                          />
+                        ) : (
+                          <Alert
+                            message="暂无二次工艺信息"
+                            description="此订单未关联款号，无法显示二次工艺详情"
+                            type="info"
+                            showIcon
+                          />
+                        )}
                       </div>
                     ),
                   },
