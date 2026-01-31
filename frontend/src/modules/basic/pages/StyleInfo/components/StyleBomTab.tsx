@@ -92,6 +92,9 @@ const StyleBomTab: React.FC<Props> = ({
   const [materialTargetRowId, setMaterialTargetRowId] = useState('');
   const [materialCreateForm] = Form.useForm();
 
+  const [checkingStock, setCheckingStock] = useState(false);
+  const [productionQty, setProductionQty] = useState(1);
+
   const locked = Boolean(readOnly);
 
   const isSupervisorOrAbove = isSupervisorOrAboveUser(user);
@@ -771,6 +774,58 @@ const StyleBomTab: React.FC<Props> = ({
     });
   };
 
+  // 检查库存状态
+  const handleCheckStock = async () => {
+    const sid = Number(styleId);
+    if (!Number.isFinite(sid) || sid <= 0) {
+      message.error('无效的款式ID');
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      message.warning('暂无BOM数据，无需检查');
+      return;
+    }
+
+    setCheckingStock(true);
+    try {
+      const res = await api.post<{ code: number; message: string; data: StyleBom[] }>(
+        `/style/bom/check-stock/${sid}`,
+        null,
+        { params: { productionQty } }
+      );
+      const result = res as Record<string, unknown>;
+      
+      if (result.code === 200) {
+        const checkedBomList = result.data as StyleBom[];
+        setData(sortBomRows(checkedBomList));
+        
+        // 统计库存状态
+        const stats = {
+          sufficient: 0,
+          insufficient: 0,
+          none: 0,
+          unchecked: 0,
+        };
+        
+        checkedBomList.forEach((bom) => {
+          const status = bom.stockStatus || 'unchecked';
+          stats[status as keyof typeof stats] = (stats[status as keyof typeof stats] || 0) + 1;
+        });
+
+        message.success(
+          `库存检查完成：充足 ${stats.sufficient} | 不足 ${stats.insufficient} | 无库存 ${stats.none}`
+        );
+      } else {
+        message.error(result.message || '检查失败');
+      }
+    } catch (error: unknown) {
+      message.error(`检查失败：${error?.message || '请求失败'}`);
+    } finally {
+      setCheckingStock(false);
+    }
+  };
+
   // 开始BOM配置
   const handleBomStart = async () => {
     const sid = Number(styleId);
@@ -1095,6 +1150,41 @@ const StyleBomTab: React.FC<Props> = ({
       }
     },
     {
+      title: '库存状态',
+      dataIndex: 'stockStatus',
+      width: 110,
+      render: (status: string, record: StyleBom) => {
+        if (!status) {
+          return <Tag color="default">未检查</Tag>;
+        }
+        
+        const statusConfig: Record<string, { color: string; text: string }> = {
+          sufficient: { color: 'success', text: '库存充足' },
+          insufficient: { color: 'warning', text: '库存不足' },
+          none: { color: 'error', text: '无库存' },
+          unchecked: { color: 'default', text: '未检查' },
+        };
+        
+        const config = statusConfig[status] || { color: 'default', text: '未知' };
+        
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <Tag color={config.color}>{config.text}</Tag>
+            {status === 'insufficient' || status === 'none' ? (
+              <span style={{ fontSize: 12, color: '#ff4d4f' }}>
+                需采购: {record.requiredPurchase || 0}
+              </span>
+            ) : null}
+            {status === 'sufficient' && record.availableStock !== undefined ? (
+              <span style={{ fontSize: 12, color: '#52c41a' }}>
+                可用: {record.availableStock}
+              </span>
+            ) : null}
+          </div>
+        );
+      }
+    },
+    {
       title: '操作',
       dataIndex: 'operation',
       width: 110,
@@ -1243,15 +1333,32 @@ const StyleBomTab: React.FC<Props> = ({
         </Space>
       </div>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        {/* 左侧：生成采购单按钮 */}
-        <Button
-          type="primary"
-          onClick={handleGeneratePurchase}
-          disabled={locked || !data.length || loading}
-          loading={loading}
-        >
-          📦 生成采购单
-        </Button>
+        {/* 左侧：库存检查和生成采购单 */}
+        <Space>
+          <InputNumber
+            min={1}
+            value={productionQty}
+            onChange={(v) => setProductionQty(v || 1)}
+            style={{ width: 100 }}
+            addonBefore="数量"
+            disabled={checkingStock}
+          />
+          <Button
+            onClick={handleCheckStock}
+            disabled={!data.length || loading}
+            loading={checkingStock}
+          >
+            🔍 检查库存
+          </Button>
+          <Button
+            type="primary"
+            onClick={handleGeneratePurchase}
+            disabled={locked || !data.length || loading}
+            loading={loading}
+          >
+            📦 生成采购单
+          </Button>
+        </Space>
 
         {/* 右侧：BOM配置操作按钮 */}
         <Space wrap>

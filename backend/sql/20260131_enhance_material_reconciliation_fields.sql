@@ -25,7 +25,7 @@ ADD COLUMN actual_arrival_date DATETIME COMMENT '实际到货日期' AFTER expec
 ALTER TABLE t_material_reconciliation
 ADD COLUMN inbound_date DATETIME COMMENT '入库日期' AFTER actual_arrival_date;
 -- 6. 添加仓库库区（从入库记录同步）
-ALTER TABLE t_material_reconciliation 
+ALTER TABLE t_material_reconciliation
 ADD COLUMN warehouse_location VARCHAR(100) COMMENT '仓库库区' AFTER inbound_date;
 -- 验证字段
 SELECT
