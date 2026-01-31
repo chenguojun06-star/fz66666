@@ -353,7 +353,7 @@ const OrderFlow: React.FC = () => {
                   },
                   {
                     key: 'style-cost',
-                    label: '成本详情(含BOM+工序)',
+                    label: '工序详细信息',
                     children: (
                       <div className="order-flow-module">
                         {/* 解析工序数据：优先使用 progressWorkflowJson，备选 progressNodeUnitPrices */}
@@ -434,11 +434,14 @@ const OrderFlow: React.FC = () => {
                             return (
                               <Card>
                                 <Alert
-                                  message="大货订单工序单价信息"
+                                  message="工序单价信息"
                                   description={
                                     <div>
-                                      <p>工序数量: <strong>{workflowNodes.length}</strong> 个 |
+                                      <p>工序数量: <strong>{workflowNodes.length}</strong> 个 | 
                                          工序总单价: <strong style={{ color: '#1890ff', fontSize: 16 }}>¥{totalPrice.toFixed(2)}</strong>
+                                      </p>
+                                      <p style={{ marginTop: 8, color: '#faad14' }}>
+                                        💡 提示：单价修改需要到"单价维护"模块中修改，修改后点击"刷新数据"按钮可更新单价
                                       </p>
                                     </div>
                                   }
@@ -688,7 +691,7 @@ const OrderFlow: React.FC = () => {
                                 const amount = Number(record.totalAmount || 0) || (Number(record.purchasedQuantity || 0) * Number(record.unitPrice || 0));
                                 return sum + amount;
                               }, 0);
-                              
+
                               return totalAmount > 0 ? (
                                 <Table.Summary.Row style={{ background: '#fafafa' }}>
                                   <Table.Summary.Cell index={0} colSpan={9} align="right">
