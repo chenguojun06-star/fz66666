@@ -164,7 +164,7 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
         {/* 款号信息区域 */}
         <Row gutter={[16, 0]}>
         <Col xs={24} md={6}>
-          <Form.Item name="styleCover" label="图片">
+          <Form.Item label="图片">
             <Upload
               name="file"
               listType="picture-card"
@@ -184,6 +184,10 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
                 uploadButton
               )}
             </Upload>
+            {/* 隐藏的表单项存储图片URL */}
+            <Form.Item name="styleCover" hidden>
+              <Input />
+            </Form.Item>
           </Form.Item>
         </Col>
         <Col xs={24} md={6}>

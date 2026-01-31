@@ -1128,10 +1128,6 @@ const StyleInfoPage: React.FC = () => {
     return (
       <Layout>
         <Card className="page-card">
-          <div style={{ marginBottom: 16 }}>
-            <Button type="link" onClick={() => navigate('/style-info')}>← 返回列表</Button>
-          </div>
-
           {/* 基础信息 - 固定在上面 */}
           <Card
             title="样衣详情"
@@ -1160,7 +1156,7 @@ const StyleInfoPage: React.FC = () => {
               )
             }
           >
-            <Form layout="horizontal" form={form} labelCol={{ flex: '80px' }} wrapperCol={{ flex: 1 }}>
+            <Form layout="horizontal" form={form} labelCol={{ span: 8 }} wrapperCol={{ span: 16 }}>
               <Row gutter={16}>
                 <Col xs={24} lg={6}>
                   <CoverImageUpload
@@ -1172,124 +1168,144 @@ const StyleInfoPage: React.FC = () => {
                   />
                 </Col>
                 <Col xs={24} lg={18}>
-                  {/* 第1行：款号、款名、设计师 */}
-                  <Row gutter={[12, 8]}>
-                    <Col span={8}>
-                      <Form.Item name="styleNo" label="款号" rules={[{ required: true, message: '请输入款号' }]}>
-                        <Input placeholder="请输入款号" disabled={editLocked || Boolean(currentStyle?.id)} />
-                      </Form.Item>
-                    </Col>
-                    <Col span={8}>
-                      <Form.Item name="styleName" label="款名" rules={[{ required: true, message: '请输入款名' }]}>
-                        <Input placeholder="请输入款名" disabled={editLocked} />
-                      </Form.Item>
-                    </Col>
-                    <Col span={8}>
-                      <Form.Item name="sampleNo" label="设计师">
-                        <Input placeholder="请输入设计师" disabled={editLocked} />
-                      </Form.Item>
-                    </Col>
-                  </Row>
+                  {/* 款号信息区域 */}
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 12, paddingLeft: 4, borderLeft: '3px solid #2D7FF9' }}>
+                      &nbsp;款号信息
+                    </div>
+                    <Row gutter={[16, 0]}>
+                      <Col xs={24} md={6}>
+                        <Form.Item name="styleNo" label="款号" rules={[{ required: true, message: '请输入款号' }]}>
+                          <Input placeholder="请输入款号" disabled={editLocked || Boolean(currentStyle?.id)} />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} md={6}>
+                        <Form.Item name="styleName" label="款名" rules={[{ required: true, message: '请输入款名' }]}>
+                          <Input placeholder="请输入款名" disabled={editLocked} />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} md={6}>
+                        <Form.Item name="category" label="品类" rules={[{ required: true, message: '请选择品类' }]}>
+                          <Select placeholder="请选择品类" options={categoryOptions} disabled={isFieldLocked(currentStyle?.category)} />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} md={6}>
+                        <Form.Item name="season" label="季节">
+                          <Select placeholder="请选择季节" options={seasonOptions} disabled={isFieldLocked(currentStyle?.season)} />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                  </div>
 
-                  {/* 第2行：季节、客户、纸样师、纸样号、车板师 */}
-                  <Row gutter={[12, 8]}>
-                    <Col span={24 / 5}>
-                      <Form.Item name="season" label="季节">
-                        <Select placeholder="请选择季节" options={seasonOptions} disabled={isFieldLocked(currentStyle?.season)} />
-                      </Form.Item>
-                    </Col>
-                    <Col span={24 / 5}>
-                      <Form.Item name="customer" label="客户">
-                        <Input placeholder="请选择客户" disabled={isFieldLocked(currentStyle?.customer)} />
-                      </Form.Item>
-                    </Col>
-                    <Col span={24 / 5}>
-                      <Form.Item name="sampleSupplier" label="纸样师">
-                        <Input placeholder="请输入纸样师" disabled={isFieldLocked(currentStyle?.sampleSupplier)} />
-                      </Form.Item>
-                    </Col>
-                    <Col span={24 / 5}>
-                      <Form.Item name="patternNo" label="纸样号">
-                        <Input placeholder="请输入纸样号" disabled={isFieldLocked(currentStyle?.patternNo)} />
-                      </Form.Item>
-                    </Col>
-                    <Col span={24 / 5}>
-                      <Form.Item name="plateWorker" label="车板师">
-                        <Input placeholder="请输入车板师" disabled={isFieldLocked(currentStyle?.plateWorker)} />
-                      </Form.Item>
-                    </Col>
-                  </Row>
+                  {/* 客户信息区域 */}
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 12, paddingLeft: 4, borderLeft: '3px solid #52C41A' }}>
+                      &nbsp;客户信息
+                    </div>
+                    <Row gutter={[16, 0]}>
+                      <Col xs={24} md={6}>
+                        <Form.Item name="customer" label="客户">
+                          <Input placeholder="请选择客户" disabled={isFieldLocked(currentStyle?.customer)} />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} md={6}>
+                        <Form.Item name="orderType" label="跟单员">
+                          <Input placeholder="请输入跟单员" disabled={isFieldLocked(currentStyle?.orderType)} />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} md={6}>
+                        <Form.Item name="sampleNo" label="设计师">
+                          <Input placeholder="请输入设计师" disabled={editLocked} />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} md={6}>
+                        <Form.Item name="price" label="打板价">
+                          <InputNumber style={{ width: '100%' }} min={0} prefix="¥" precision={2} disabled />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                  </div>
 
-                  {/* 第3行：板类、品类、下板时间、交板日期、样衣周期 */}
-                  <Row gutter={[12, 8]}>
-                    <Col span={24 / 5}>
-                      <Form.Item name="plateType" label="板类">
-                        <Select placeholder="请选择板类" disabled={isFieldLocked(currentStyle?.plateType)}>
-                          <Select.Option value="首单">首单</Select.Option>
-                          <Select.Option value="复板">复板</Select.Option>
-                          <Select.Option value="公司版">公司版</Select.Option>
-                          <Select.Option value="复板1">复板1</Select.Option>
-                          <Select.Option value="复板2">复板2</Select.Option>
-                          <Select.Option value="复板3">复板3</Select.Option>
-                          <Select.Option value="复板4">复板4</Select.Option>
-                          <Select.Option value="复板5">复板5</Select.Option>
-                        </Select>
-                      </Form.Item>
-                    </Col>
-                    <Col span={24 / 5}>
-                      <Form.Item name="category" label="品类" rules={[{ required: true, message: '请选择品类' }]}>
-                        <Select placeholder="请选择品类" options={categoryOptions} disabled={isFieldLocked(currentStyle?.category)} />
-                      </Form.Item>
-                    </Col>
-                    <Col span={24 / 5}>
-                      <Form.Item name="createTime" label="下板时间">
-                        <UnifiedDatePicker
-                          disabled={editLocked}
-                          allowClear
-                          showTime
-                          placeholder="请选择下板时间"
-                          format="YYYY-MM-DD HH:mm"
-                          style={{ width: '100%' }}
-                        />
-                      </Form.Item>
-                    </Col>
-                    <Col span={24 / 5}>
-                      <Form.Item name="deliveryDate" label="交板日期">
-                        <UnifiedDatePicker
-                          disabled={isFieldLocked(currentStyle?.deliveryDate)}
-                          allowClear
-                          showTime
-                          placeholder="请选择交板日期"
-                          format="YYYY-MM-DD HH:mm"
-                          style={{ width: '100%' }}
-                        />
-                      </Form.Item>
-                    </Col>
-                    <Col span={24 / 5}>
-                      <Form.Item name="cycle" label="样衣周期[天]" labelCol={{ flex: '100px' }}>
-                        <InputNumber style={{ width: '100%' }} min={0} disabled={isFieldLocked(currentStyle?.cycle)} />
-                      </Form.Item>
-                    </Col>
-                  </Row>
+                  {/* 版次信息区域 */}
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 12, paddingLeft: 4, borderLeft: '3px solid #FAAD14' }}>
+                      &nbsp;版次信息
+                    </div>
+                    <Row gutter={[16, 0]}>
+                      <Col xs={24} md={6}>
+                        <Form.Item name="plateType" label="板类">
+                          <Select placeholder="请选择板类" disabled={isFieldLocked(currentStyle?.plateType)}>
+                            <Select.Option value="首单">首单</Select.Option>
+                            <Select.Option value="复板">复板</Select.Option>
+                            <Select.Option value="公司版">公司版</Select.Option>
+                            <Select.Option value="复板1">复板1</Select.Option>
+                            <Select.Option value="复板2">复板2</Select.Option>
+                            <Select.Option value="复板3">复板3</Select.Option>
+                            <Select.Option value="复板4">复板4</Select.Option>
+                            <Select.Option value="复板5">复板5</Select.Option>
+                          </Select>
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} md={6}>
+                        <Form.Item name="sampleSupplier" label="纸样师">
+                          <Input placeholder="请输入纸样师" disabled={isFieldLocked(currentStyle?.sampleSupplier)} />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} md={6}>
+                        <Form.Item name="patternNo" label="纸样号">
+                          <Input placeholder="请输入纸样号" disabled={isFieldLocked(currentStyle?.patternNo)} />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} md={6}>
+                        <Form.Item name="plateWorker" label="车板师">
+                          <Input placeholder="请输入车板师" disabled={isFieldLocked(currentStyle?.plateWorker)} />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                  </div>
 
-                  {/* 第4行：跟单员、打板价、备注（备注占两列） */}
-                  <Row gutter={[12, 8]}>
-                    <Col span={24 / 5}>
-                      <Form.Item name="orderType" label="跟单员">
-                        <Input placeholder="请输入跟单员" disabled={isFieldLocked(currentStyle?.orderType)} />
-                      </Form.Item>
-                    </Col>
-                    <Col span={24 / 5}>
-                      <Form.Item name="price" label="打板价">
-                        <InputNumber style={{ width: '100%' }} min={0} prefix="¥" precision={2} disabled />
-                      </Form.Item>
-                    </Col>
-                    <Col span={24 / 5 * 3}>
-                      <Form.Item name="remark" label="备注">
-                        <Input.TextArea rows={2} placeholder="请输入备注" disabled={isFieldLocked(currentStyle?.remark)} />
-                      </Form.Item>
-                    </Col>
-                  </Row>
+                  {/* 时间信息区域 */}
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 12, paddingLeft: 4, borderLeft: '3px solid #8B5CF6' }}>
+                      &nbsp;时间信息
+                    </div>
+                    <Row gutter={[16, 0]}>
+                      <Col xs={24} md={6}>
+                        <Form.Item name="createTime" label="下板时间">
+                          <UnifiedDatePicker
+                            disabled={editLocked}
+                            allowClear
+                            showTime
+                            placeholder="请选择下板时间"
+                            format="YYYY-MM-DD HH:mm"
+                            style={{ width: '100%' }}
+                          />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} md={6}>
+                        <Form.Item name="deliveryDate" label="交板日期">
+                          <UnifiedDatePicker
+                            disabled={isFieldLocked(currentStyle?.deliveryDate)}
+                            allowClear
+                            showTime
+                            placeholder="请选择交板日期"
+                            format="YYYY-MM-DD HH:mm"
+                            style={{ width: '100%' }}
+                          />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} md={6}>
+                        <Form.Item name="cycle" label="样衣周期[天]">
+                          <InputNumber style={{ width: '100%' }} min={0} disabled={isFieldLocked(currentStyle?.cycle)} />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} md={6}>
+                        <Form.Item name="remark" label="备注">
+                          <Input.TextArea rows={1} placeholder="请输入备注" disabled={isFieldLocked(currentStyle?.remark)} />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                  </div>
 
                   {/* 颜色码数配置表 */}
                   <Row gutter={[12, 8]} style={{ marginBottom: 12 }}>
