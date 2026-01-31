@@ -148,9 +148,9 @@ const SystemLogs: React.FC = () => {
             {record.reason && <div><strong>操作原因：</strong>{record.reason}</div>}
             {record.ip && <div><strong>IP地址：</strong>{record.ip}</div>}
           </div>
-          <div style={{ 
-            backgroundColor: '#f5f5f5', 
-            padding: 12, 
+          <div style={{
+            backgroundColor: '#f5f5f5',
+            padding: 12,
             borderRadius: 4,
             fontFamily: 'monospace',
             fontSize: 12
@@ -165,17 +165,17 @@ const SystemLogs: React.FC = () => {
   };
 
   const operationColumns = [
-    { 
-      title: '模块', 
-      dataIndex: 'module', 
-      key: 'module', 
+    {
+      title: '模块',
+      dataIndex: 'module',
+      key: 'module',
       width: 120,
       render: (v: string) => <Tag color="blue">{v}</Tag>
     },
-    { 
-      title: '操作', 
-      dataIndex: 'operation', 
-      key: 'operation', 
+    {
+      title: '操作',
+      dataIndex: 'operation',
+      key: 'operation',
       width: 100,
       render: (v: string) => {
         const colorMap: Record<string, string> = {
