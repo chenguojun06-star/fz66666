@@ -69,32 +69,45 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
     <Form
       form={form}
       layout="horizontal"
-      labelCol={{ span: 8 }}
-      wrapperCol={{ span: 16 }}
+      labelCol={{ span: 6 }}
+      wrapperCol={{ span: 18 }}
     >
+      {/* 款号信息区域 */}
       <Row gutter={[16, 0]}>
-        <Col xs={24} lg={12}>
+        <Col xs={24} md={6}>
           <Form.Item label="图片">
             {watchedStyleCover ? (
               <img
                 src={watchedStyleCover}
                 alt=""
-                style={{ width: 96, height: 96, objectFit: 'cover', borderRadius: 6, display: 'block' }}
+                style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, display: 'block' }}
               />
             ) : (
-              <div style={{ width: 96, height: 96, background: '#f5f5f5', borderRadius: 6 }} />
+              <div style={{ width: 80, height: 80, background: '#f5f5f5', borderRadius: 6 }} />
             )}
           </Form.Item>
+        </Col>
+        <Col xs={24} md={6}>
+          <Form.Item name="orderNo" label="订单号">
+            <Input disabled />
+          </Form.Item>
+        </Col>
+        <Col xs={24} md={6}>
           <Form.Item name="purchaseNo" label="采购单号">
             <Input disabled placeholder="自动生成" />
           </Form.Item>
+        </Col>
+        <Col xs={24} md={6}>
           <Form.Item name="styleNo" label="款号">
             <Input disabled />
           </Form.Item>
-          <Form.Item name="styleName" label="款名">
-            <Input disabled />
-          </Form.Item>
-          <Form.Item name="materialType" label="面料辅料类型" rules={[{ required: true, message: '请选择面料辅料类型' }]}>
+        </Col>
+      </Row>
+
+      {/* 面料信息和单位区域 */}
+      <Row gutter={[16, 0]}>
+        <Col xs={24} md={6}>
+          <Form.Item name="materialType" label="面料辅料类型" rules={[{ required: true, message: '必填' }]}>
             <Select>
               <Option value="fabricA">面料A</Option>
               <Option value="fabricB">面料B</Option>
@@ -113,12 +126,43 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
               <Option value="accessoryE">辅料E</Option>
             </Select>
           </Form.Item>
-          <Form.Item name="materialCode" label="物料编码" rules={[{ required: true, message: '请输入物料编码' }]}>
+        </Col>
+        <Col xs={24} md={6}>
+          <Form.Item name="materialCode" label="物料编码" rules={[{ required: true, message: '必填' }]}>
             <Input />
           </Form.Item>
-          
-          {/* Stock Info Display */}
-          {watchedMaterialCode && (
+        </Col>
+        <Col xs={24} md={6}>
+          <Form.Item name="materialName" label="物料名称" rules={[{ required: true, message: '必填' }]}>
+            <Input />
+          </Form.Item>
+        </Col>
+        <Col xs={24} md={6}>
+          <Form.Item name="unit" label="单位" rules={[{ required: true, message: '必填' }]}>
+            <Input />
+          </Form.Item>
+        </Col>
+      </Row>
+
+      <Row gutter={[16, 0]}>
+        <Col xs={24} md={6}>
+          <Form.Item name="color" label="颜色">
+            <Input placeholder="输入颜色" />
+          </Form.Item>
+        </Col>
+        <Col xs={24} md={6}>
+          <Form.Item name="size" label="尺码">
+            <Input placeholder="输入尺码" />
+          </Form.Item>
+        </Col>
+        <Col xs={24} md={6}>
+          <Form.Item name="specifications" label="规格">
+            <Input />
+          </Form.Item>
+        </Col>
+        <Col xs={24} md={6}>
+          {/* 库存信息显示 */}
+          {watchedMaterialCode ? (
             <Form.Item label="当前库存">
               {stockInfo ? (
                 <div>
@@ -138,44 +182,31 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
                 <span style={{ color: '#999' }}>查询中...</span>
               )}
             </Form.Item>
+          ) : (
+            <div style={{ height: 32 }} />
           )}
+        </Col>
+      </Row>
 
-          <Form.Item name="materialName" label="物料名称" rules={[{ required: true, message: '请输入物料名称' }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="color" label="颜色">
-            <Input placeholder="输入颜色" />
-          </Form.Item>
-          <Form.Item name="size" label="尺码">
-            <Input placeholder="输入尺码" />
-          </Form.Item>
-          <Form.Item name="specifications" label="规格">
-            <Input />
-          </Form.Item>
-          <Form.Item name="unit" label="单位" rules={[{ required: true, message: '请输入单位' }]}>
+      {/* 供应商信息区域 */}
+      <Row gutter={[16, 0]}>
+        <Col xs={24} md={6}>
+          <Form.Item name="supplierName" label="供应商" rules={[{ required: true, message: '必填' }]}>
             <Input />
           </Form.Item>
         </Col>
-        <Col xs={24} lg={12}>
-          <Form.Item name="orderNo" label="订单号">
-            <Input disabled />
-          </Form.Item>
-          <Form.Item name="purchaseQuantity" label="采购数量" rules={[{ required: true, message: '请输入采购数量' }]}>
-            <InputNumber style={{ width: '100%' }} min={0} />
-          </Form.Item>
-          <Form.Item name="arrivedQuantity" label="到货数量">
-            <InputNumber style={{ width: '100%' }} min={0} />
-          </Form.Item>
-          <Form.Item name="supplierName" label="供应商" rules={[{ required: true, message: '请输入供应商' }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="unitPrice" label="单价(元)" rules={[{ required: true, message: '请输入单价' }]}>
+        <Col xs={24} md={6}>
+          <Form.Item name="unitPrice" label="单价(元)" rules={[{ required: true, message: '必填' }]}>
             <InputNumber style={{ width: '100%' }} min={0} step={0.01} />
           </Form.Item>
+        </Col>
+        <Col xs={24} md={6}>
           <Form.Item name="totalAmount" label="金额(元)">
             <InputNumber disabled style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item name="status" label="状态" rules={[{ required: true, message: '请选择状态' }]}>
+        </Col>
+        <Col xs={24} md={6}>
+          <Form.Item name="status" label="状态" rules={[{ required: true, message: '必填' }]}>
             <Select>
               <Option value="pending">待采购</Option>
               <Option value="partial">部分到货</Option>
@@ -185,7 +216,22 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
           </Form.Item>
         </Col>
       </Row>
-      <Form.Item name="remark" label="备注">
+
+      <Row gutter={[16, 0]}>
+        <Col xs={24} md={6}>
+          <Form.Item name="purchaseQuantity" label="采购数量" rules={[{ required: true, message: '必填' }]}>
+            <InputNumber style={{ width: '100%' }} min={0} />
+          </Form.Item>
+        </Col>
+        <Col xs={24} md={6}>
+          <Form.Item name="arrivedQuantity" label="到货数量">
+            <InputNumber style={{ width: '100%' }} min={0} />
+          </Form.Item>
+        </Col>
+      </Row>
+
+      {/* 备注区域 */}
+      <Form.Item name="remark" label="备注" labelCol={{ span: 3 }} wrapperCol={{ span: 21 }}>
         <Input.TextArea autoSize={{ minRows: 4, maxRows: 8 }} />
       </Form.Item>
     </Form>
