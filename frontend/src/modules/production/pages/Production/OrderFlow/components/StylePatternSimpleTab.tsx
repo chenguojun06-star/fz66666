@@ -69,12 +69,12 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
 
   // 下载附件
   const handleDownload = (record: StyleAttachment) => {
-    if (!record.filePath) {
+    if (!record.fileUrl) {
       message.error('文件路径不存在');
       return;
     }
     const link = document.createElement('a');
-    link.href = record.filePath;
+    link.href = record.fileUrl;
     link.download = record.fileName || '文件';
     document.body.appendChild(link);
     link.click();
@@ -131,7 +131,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
                               {item.bizType === 'pattern_grading' && <Tag color="purple">放码纸样</Tag>}
                             </Space>
                           }
-                          description={item.remark || '暂无描述'}
+                          description={`上传者: ${item.uploader || '-'} | 上传时间: ${item.createTime || '-'}`}
                         />
                       </List.Item>
                     )}
