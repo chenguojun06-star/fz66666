@@ -795,11 +795,11 @@ const StyleBomTab: React.FC<Props> = ({
         { params: { productionQty } }
       );
       const result = res as Record<string, unknown>;
-      
+
       if (result.code === 200) {
         const checkedBomList = result.data as StyleBom[];
         setData(sortBomRows(checkedBomList));
-        
+
         // 统计库存状态
         const stats = {
           sufficient: 0,
@@ -807,7 +807,7 @@ const StyleBomTab: React.FC<Props> = ({
           none: 0,
           unchecked: 0,
         };
-        
+
         checkedBomList.forEach((bom) => {
           const status = bom.stockStatus || 'unchecked';
           stats[status as keyof typeof stats] = (stats[status as keyof typeof stats] || 0) + 1;
@@ -1157,16 +1157,16 @@ const StyleBomTab: React.FC<Props> = ({
         if (!status) {
           return <Tag color="default">未检查</Tag>;
         }
-        
+
         const statusConfig: Record<string, { color: string; text: string }> = {
           sufficient: { color: 'success', text: '库存充足' },
           insufficient: { color: 'warning', text: '库存不足' },
           none: { color: 'error', text: '无库存' },
           unchecked: { color: 'default', text: '未检查' },
         };
-        
+
         const config = statusConfig[status] || { color: 'default', text: '未知' };
-        
+
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <Tag color={config.color}>{config.text}</Tag>
