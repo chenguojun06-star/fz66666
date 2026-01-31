@@ -419,7 +419,7 @@ const SystemLogs: React.FC = () => {
                       showTotal: (t) => `共 ${t} 条记录`,
                       onChange: (page, pageSize) => setOperationQueryParams((prev) => ({ ...prev, page, pageSize })),
                     }}
-                    scroll={{ x: 'max-content', y: isMobile ? 360 : 560 }}
+                    scroll={{ x: 1200, y: isMobile ? 360 : 560 }}
                   />
                 </>
               ),
