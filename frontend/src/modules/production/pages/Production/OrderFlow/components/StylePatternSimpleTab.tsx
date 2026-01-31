@@ -30,10 +30,10 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
           api.get('/style/attachment/list', { params: { styleId, bizType: 'pattern' } }),
           api.get('/style/attachment/list', { params: { styleId, bizType: 'pattern_grading' } })
         ]);
-        
+
         const patternList = patternRes.code === 200 && Array.isArray(patternRes.data) ? patternRes.data : [];
         const gradingList = gradingRes.code === 200 && Array.isArray(gradingRes.data) ? gradingRes.data : [];
-        
+
         // 合并两种类型的文件
         const allFiles = [...patternList, ...gradingList];
         setAllPatternFiles(allFiles);
@@ -149,7 +149,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
             label: '📏 尺寸表',
             children: (
               <Card size="small" style={{ marginBottom: 16 }}>
-                <StyleSizeTab styleId={styleId} readOnly={true} />
+                <StyleSizeTab styleId={styleId} readOnly={true} simpleView={true} />
               </Card>
             ),
           },
