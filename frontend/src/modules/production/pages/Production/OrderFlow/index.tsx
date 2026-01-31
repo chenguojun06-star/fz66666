@@ -345,7 +345,7 @@ const OrderFlow: React.FC = () => {
                     children: (
                       <div className="order-flow-module">
                         {/* 如果订单有工序单价配置，显示来自单价维护的成本信息 */}
-                        {data.order.progressNodeUnitPrices && Array.isArray(data.order.progressNodeUnitPrices) && data.order.progressNodeUnitPrices.length > 0 ? (
+                        {data?.order?.progressNodeUnitPrices && Array.isArray(data.order.progressNodeUnitPrices) && data.order.progressNodeUnitPrices.length > 0 ? (
                           <Card>
                             <Alert
                               message="大货订单成本信息"
@@ -374,10 +374,17 @@ const OrderFlow: React.FC = () => {
                               pagination={false}
                             />
                           </Card>
-                        ) : (
+                        ) : data?.order?.styleId ? (
                           // 样衣订单，从样衣开发模块获取成本信息
                           <StyleQuotationTab
                             styleId={data.order.styleId}
+                            readOnly={true}
+                            onSaved={() => {}}
+                          />
+                        ) : null}
+                      </div>
+                    ),
+                  },
                             readOnly={true}
                             onSaved={() => {}}
                           />
