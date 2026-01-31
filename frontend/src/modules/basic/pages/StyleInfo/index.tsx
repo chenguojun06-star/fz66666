@@ -758,6 +758,14 @@ const StyleInfoPage: React.FC = () => {
   // 样衣完成
   const handleCompleteSample = async () => {
     if (!currentStyle?.id) return;
+    
+    // 检查样板生产是否已完成
+    const patternStatus = String((currentStyle as any)?.patternStatus ?? '').trim().toUpperCase();
+    if (patternStatus !== 'COMPLETED') {
+      message.warning('请先完成样板生产后再进行样衣完成操作');
+      return;
+    }
+    
     try {
       const res = await api.post(`/style/info/${currentStyle.id}/sample/complete`);
       const result = res as any;
