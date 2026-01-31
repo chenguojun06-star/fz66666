@@ -272,7 +272,7 @@ const _MaterialInventory: React.FC = () => {
       return;
     }
 
-    console.log('物料出库数据:', {
+    // console.log('物料出库数据:', {
       materialCode: outboundModal.data?.materialCode,
       materialName: outboundModal.data?.materialName,
       batches: selectedBatches.map(item => ({

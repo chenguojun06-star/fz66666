@@ -732,7 +732,7 @@ Page({
       });
 
       if (DEBUG_MODE) {
-        console.log(
+        // console.log(
           '[loadMyHistory] 加载成功, 分组数:',
           groupedHistory.length,
           '总记录:',
@@ -1012,7 +1012,7 @@ Page({
     } catch (e) {
       // 处理入库工序：需要打开质检入库弹窗
       if (e.needWarehousing && e.warehousingData) {
-        console.log('[扫码页] 检测到入库工序，打开质检入库弹窗:', e.warehousingData);
+        // console.log('[扫码页] 检测到入库工序，打开质检入库弹窗:', e.warehousingData);
         this.showQualityModal(e.warehousingData);
         this.setData({ loading: false });
         return;
@@ -1137,7 +1137,7 @@ Page({
         unitPrice: item.unitPrice,
       }));
 
-      console.log('[showConfirmModal] 面料采购单:', materialPurchases.length);
+      // console.log('[showConfirmModal] 面料采购单:', materialPurchases.length);
     } else {
       // 非采购模式：使用SKU列表
       skuList = data.skuItems
@@ -1664,19 +1664,19 @@ Page({
       const detail = this.data.scanConfirm.detail;
       const cuttingTasks = this.data.scanConfirm.cuttingTasks;
 
-      console.log('[onRegenerateCuttingBundles] detail:', detail);
-      console.log('[onRegenerateCuttingBundles] cuttingTasks:', cuttingTasks);
+      // console.log('[onRegenerateCuttingBundles] detail:', detail);
+      // console.log('[onRegenerateCuttingBundles] cuttingTasks:', cuttingTasks);
 
       // 验证数据
       this._validateCuttingData(cuttingTasks, detail.orderId);
 
       // 构建菲号生成参数
       const bundleParams = this._buildBundleParams(cuttingTasks);
-      console.log('[onRegenerateCuttingBundles] bundleParams:', bundleParams);
+      // console.log('[onRegenerateCuttingBundles] bundleParams:', bundleParams);
 
       // 调用生成菲号接口
       const result = await api.production.generateCuttingBundles(detail.orderId, bundleParams);
-      console.log('[onRegenerateCuttingBundles] result:', result);
+      // console.log('[onRegenerateCuttingBundles] result:', result);
 
       toast.success('菲号生成成功');
 

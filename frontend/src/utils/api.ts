@@ -286,14 +286,14 @@ export const fetchProductionOrderDetail = async (
       (error as { response: { status: number } }).response.status === 404;
     if (!is404) {
       if (!opts?.silent404) {
-        console.debug('[fetchProductionOrderDetail] 请求失败:', oid, error);
+        // console.debug('[fetchProductionOrderDetail] 请求失败:', oid, error);
       }
       return null;
     }
   }
 
   if (!opts?.silent404) {
-    console.debug('[fetchProductionOrderDetail] 订单不存在或已删除:', oid);
+    // console.debug('[fetchProductionOrderDetail] 订单不存在或已删除:', oid);
   }
   return null;
 };

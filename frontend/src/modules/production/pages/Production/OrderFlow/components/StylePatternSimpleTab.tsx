@@ -17,7 +17,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
 
   // 调试：打印styleId
   React.useEffect(() => {
-    console.log('StylePatternSimpleTab - styleId:', styleId, 'styleNo:', styleNo);
+    // console.log('StylePatternSimpleTab - styleId:', styleId, 'styleNo:', styleNo);
   }, [styleId, styleNo]);
 
   // 加载所有纸样文件（包括原始纸样和放码纸样）
@@ -52,11 +52,11 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
       setLoading(true);
       try {
         const res = await api.get(`/style/info/${styleId}`);
-        console.log('生产制单API返回:', res);
+        // console.log('生产制单API返回:', res);
         if (res.code === 200 && res.data) {
           // 使用description字段，而不是productionRequirement
           const rows = res.data.description || '';
-          console.log('生产制单description字段:', rows);
+          // console.log('生产制单description字段:', rows);
           setProductionReq(rows);
         }
       } catch (error) {

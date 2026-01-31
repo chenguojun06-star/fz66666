@@ -510,7 +510,7 @@ const StyleBomTab: React.FC<Props> = ({
         }
       }
     } catch (error) {
-      console.log('自动库存检查失败:', error);
+      // console.log('自动库存检查失败:', error);
       message.error('库存检查失败，请稍后重试');
     }
   };

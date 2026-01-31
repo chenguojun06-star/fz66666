@@ -312,8 +312,8 @@ const TemplateCenter: React.FC = () => {
           delete finalData.sizes;
         }
         templateContent = JSON.stringify(finalData);
-        console.log('[模板保存] 保存内容:', finalData);
-        console.log('[模板保存] steps:', (finalData as any)?.steps);
+        // console.log('[模板保存] 保存内容:', finalData);
+        // console.log('[模板保存] steps:', (finalData as any)?.steps);
       } else {
         message.error('模板内容无效');
         return;

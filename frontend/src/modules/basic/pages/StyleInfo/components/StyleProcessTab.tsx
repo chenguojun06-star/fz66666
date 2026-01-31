@@ -264,7 +264,7 @@ const StyleProcessTab: React.FC<Props> = ({
       try {
         const res = await api.post(`/style/info/${styleId}/process/start`);
         if (res.code === 200) {
-          console.log('工序配置已开始');
+          // console.log('工序配置已开始');
           // 刷新数据以获取最新的开始时间
           if (onRefresh) onRefresh();
         }
@@ -498,7 +498,7 @@ const StyleProcessTab: React.FC<Props> = ({
       if (styleId && data.length > 0) {
         try {
           await api.post(`/style/info/${styleId}/process/complete`);
-          console.log('工序配置已完成');
+          // console.log('工序配置已完成');
         } catch (error) {
           console.error('记录工序完成时间失败:', error);
         }

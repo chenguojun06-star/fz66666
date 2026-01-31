@@ -673,11 +673,11 @@ const OrderManagement: React.FC = () => {
     try {
       const res = await templateLibraryApi.progressNodeUnitPrices(sn);
       const result = res as Record<string, unknown>;
-      console.log('[订单] 从模板加载工序:', { styleNo: sn, code: result.code, data: result.data });
+      // console.log('[订单] 从模板加载工序:', { styleNo: sn, code: result.code, data: result.data });
       if (result.code !== 200) return;
       const rows = Array.isArray(result.data) ? result.data : [];
       const normalized = buildProgressNodesFromTemplate(rows);
-      console.log('[订单] 解析后的工序节点:', normalized);
+      // console.log('[订单] 解析后的工序节点:', normalized);
       if (normalized.length) {
         setProgressNodes(normalized);
       }
@@ -737,7 +737,7 @@ const OrderManagement: React.FC = () => {
         sortOrder: idx,
       }));
 
-    console.log('[订单保存] progressWorkflowJson 工序列表:', ensuredProcesses.map(p => `${p.name}(${p.progressStage}): ¥${p.unitPrice}`));
+    // console.log('[订单保存] progressWorkflowJson 工序列表:', ensuredProcesses.map(p => `${p.name}(${p.progressStage}): ¥${p.unitPrice}`));
 
     // 新格式：直接在 nodes 里保存所有工序的完整信息
     // processesByNode 作为兼容字段也保存一份（按 progressStage 分组）

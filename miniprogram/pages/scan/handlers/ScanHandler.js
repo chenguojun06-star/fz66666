@@ -115,14 +115,14 @@ class ScanHandler {
    * 处理采购模式扫码
    */
   async _handleProcurementMode(parsedData, orderDetail) {
-    console.log('[ScanHandler] 检测到采购模式，查询面料采购单');
+    // console.log('[ScanHandler] 检测到采购模式，查询面料采购单');
 
     try {
       const materialPurchases = await this.api.production.getMaterialPurchases({
         orderNo: parsedData.orderNo,
       });
 
-      console.log('[ScanHandler] 发现面料采购单:', materialPurchases?.length || 0);
+      // console.log('[ScanHandler] 发现面料采购单:', materialPurchases?.length || 0);
 
       return {
         success: true,
@@ -146,7 +146,7 @@ class ScanHandler {
    * 处理订单扫码（有SKU明细）
    */
   async _handleOrderWithItems(parsedData, orderDetail) {
-    console.log('[ScanHandler] 发现订单明细:', orderDetail.items.length);
+    // console.log('[ScanHandler] 发现订单明细:', orderDetail.items.length);
 
     // 预判工序
     let nextStage = '未知';
@@ -163,11 +163,11 @@ class ScanHandler {
     let materialPurchases = [];
     if (nextStage === '采购') {
       try {
-        console.log('[ScanHandler] 预判为采购工序，补查面料采购单');
+        // console.log('[ScanHandler] 预判为采购工序，补查面料采购单');
         materialPurchases = await this.api.production.getMaterialPurchases({
           orderNo: parsedData.orderNo,
         });
-        console.log('[ScanHandler] 补获面料采购单:', materialPurchases?.length || 0);
+        // console.log('[ScanHandler] 补获面料采购单:', materialPurchases?.length || 0);
       } catch (e) {
         console.error('[ScanHandler] 补获采购单失败:', e);
       }
@@ -206,7 +206,7 @@ class ScanHandler {
         const skuQty = matchedItem.quantity || matchedItem.num;
         if (skuQty > 0) {
           parsedData.quantity = Number(skuQty);
-          console.log('[ScanHandler] 自动使用SKU数量:', parsedData.quantity);
+          // console.log('[ScanHandler] 自动使用SKU数量:', parsedData.quantity);
         }
       }
     }
@@ -236,7 +236,7 @@ class ScanHandler {
 
     if (orderQuantity && orderQuantity > 0) {
       parsedData.quantity = Number(orderQuantity);
-      console.log('[ScanHandler] 自动使用订单数量:', parsedData.quantity);
+      // console.log('[ScanHandler] 自动使用订单数量:', parsedData.quantity);
     } else {
       throw {
         needInput: true,
@@ -254,7 +254,7 @@ class ScanHandler {
       return null;
     }
 
-    console.log('[ScanHandler] 订单扫码, manualScanType:', manualScanType);
+    // console.log('[ScanHandler] 订单扫码, manualScanType:', manualScanType);
 
     // 采购模式特殊处理
     const isProcurementMode =
@@ -368,7 +368,7 @@ class ScanHandler {
   async handleScan(rawScanCode, input = null) {
     const { manualQuantity, manualScanType, manualWarehouse } = this._parseManualInput(input);
 
-    console.log(
+    // console.log(
       '[ScanHandler] 处理扫码:',
       rawScanCode,
       manualQuantity ? `数量:${manualQuantity}` : '',
@@ -394,7 +394,7 @@ class ScanHandler {
 
       const scanMode = this._determineScanMode(parsedData);
 
-      console.log('[ScanHandler] 解析成功:', {
+      // console.log('[ScanHandler] 解析成功:', {
         scanMode,
         orderNo: parsedData.orderNo,
         bundleNo: parsedData.bundleNo,
@@ -415,7 +415,7 @@ class ScanHandler {
       }
 
       // 🔍 调试：打印订单详情中的关键工序字段
-      console.log('[ScanHandler] 订单详情工序信息:', {
+      // console.log('[ScanHandler] 订单详情工序信息:', {
         currentProcessName: orderDetail.currentProcessName,
         currentProgress: orderDetail.currentProgress,
         progressStage: orderDetail.progressStage,
@@ -856,7 +856,7 @@ class ScanHandler {
       return this._errorResult('无效的样板生产二维码');
     }
 
-    console.log('[ScanHandler] 样板生产扫码:', {
+    // console.log('[ScanHandler] 样板生产扫码:', {
       patternId,
       styleNo: parsedData.styleNo,
       color: parsedData.color,

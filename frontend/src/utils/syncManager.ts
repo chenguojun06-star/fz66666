@@ -165,7 +165,7 @@ class SyncManager {
   stopAll(): void {
     const taskIds = Array.from(this.tasks.keys());
     taskIds.forEach((taskId) => this.stopSync(taskId));
-    console.log('[同步管理器] 所有任务已停止');
+    // console.log('[同步管理器] 所有任务已停止');
   }
 
   /**

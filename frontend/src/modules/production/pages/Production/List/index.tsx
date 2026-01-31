@@ -945,7 +945,7 @@ const ProductionList: React.FC = () => {
       const res = await api.get(`/production/order/process-status/${record.id}`);
       if (res.code === 200 && res.data) {
         setProcessStatus(res.data);
-        console.log('[工序状态] 获取成功:', res.data);
+        // console.log('[工序状态] 获取成功:', res.data);
       }
     } catch (error) {
       console.error('[工序状态] 获取失败:', error);
@@ -958,7 +958,7 @@ const ProductionList: React.FC = () => {
         const res = await api.get(`/production/order/procurement-status/${record.id}`);
         if (res.code === 200 && res.data) {
           setProcurementStatus(res.data);
-          console.log('[采购状态] 获取成功:', res.data);
+          // console.log('[采购状态] 获取成功:', res.data);
         }
       } catch (error) {
         console.error('[采购状态] 获取失败:', error);
@@ -976,7 +976,7 @@ const ProductionList: React.FC = () => {
       });
       if (res.code === 200 && res.data?.records) {
         setFactories(res.data.records);
-        console.log('[工厂列表] 获取成功:', res.data.records.length, '个工厂');
+        // console.log('[工厂列表] 获取成功:', res.data.records.length, '个工厂');
       }
     } catch (error) {
       console.error('[工厂列表] 获取失败:', error);
@@ -1062,7 +1062,7 @@ const ProductionList: React.FC = () => {
         processesByNode,
       });
 
-      console.log('[同步工序] 新的工序数据:', allProcesses.map(p => `${p.name}(${p.progressStage}): ¥${p.unitPrice}`));
+      // console.log('[同步工序] 新的工序数据:', allProcesses.map(p => `${p.name}(${p.progressStage}): ¥${p.unitPrice}`));
 
       // 使用 quickEdit API 更新订单
       const updateRes = await productionOrderApi.quickEdit({
@@ -2974,7 +2974,7 @@ const ProductionList: React.FC = () => {
                     unitPrice: Number(item.unitPrice) || 0,
                     sortOrder: item.sortOrder ?? idx,
                   }));
-                  console.log('[工序明细] 从 nodes 直接解析:', workflowNodes.map(n => `${n.name}(${n.progressStage}): ¥${n.unitPrice}`));
+                  // console.log('[工序明细] 从 nodes 直接解析:', workflowNodes.map(n => `${n.name}(${n.progressStage}): ¥${n.unitPrice}`));
                 } else {
                   // 旧格式：从 processesByNode 读取
                   const processesByNode = workflow?.processesByNode || {};
@@ -3000,7 +3000,7 @@ const ProductionList: React.FC = () => {
 
                   if (allProcesses.length > 0) {
                     workflowNodes = allProcesses;
-                    console.log('[工序明细] 从 processesByNode 解析:', workflowNodes.map(n => `${n.name}(${n.progressStage}): ¥${n.unitPrice}`));
+                    // console.log('[工序明细] 从 processesByNode 解析:', workflowNodes.map(n => `${n.name}(${n.progressStage}): ¥${n.unitPrice}`));
                   }
                 }
               }
@@ -3016,10 +3016,10 @@ const ProductionList: React.FC = () => {
                   unitPrice: Number(item.unitPrice) || Number(item.price) || 0,
                   sortOrder: item.sortOrder ?? idx,
                 }));
-                console.log('[工序明细] 从 progressNodeUnitPrices 解析:', workflowNodes.map(n => `${n.name}(${n.progressStage}): ¥${n.unitPrice}`));
+                // console.log('[工序明细] 从 progressNodeUnitPrices 解析:', workflowNodes.map(n => `${n.name}(${n.progressStage}): ¥${n.unitPrice}`));
               }
 
-              console.log('[工序明细] 最终工序列表:', workflowNodes.map(n => `${n.name}(${n.progressStage}): ¥${n.unitPrice}`));
+              // console.log('[工序明细] 最终工序列表:', workflowNodes.map(n => `${n.name}(${n.progressStage}): ¥${n.unitPrice}`));
             } catch (e) {
               console.error('解析工艺模板失败:', e);
             }

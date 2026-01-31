@@ -66,7 +66,7 @@ class SyncManager {
 
     if (DEBUG_MODE) {
       if (DEBUG) {
-        console.log(`[同步管理器] 同步任务已启动: ${taskId}, 间隔: ${config.interval}ms`);
+        // console.log(`[同步管理器] 同步任务已启动: ${taskId}, 间隔: ${config.interval}ms`);
       }
     }
     return true;
@@ -90,7 +90,7 @@ class SyncManager {
 
     if (DEBUG_MODE) {
       if (DEBUG) {
-        console.log(`[同步管理器] 同步任务已停止: ${taskId}`);
+        // console.log(`[同步管理器] 同步任务已停止: ${taskId}`);
       }
     }
     return true;
@@ -275,7 +275,7 @@ class SyncManager {
       if (hasChanged) {
         if (DEBUG_MODE) {
           if (DEBUG) {
-            console.log(`[同步管理器] 任务数据已变更: ${taskId}`);
+            // console.log(`[同步管理器] 任务数据已变更: ${taskId}`);
           }
         }
 

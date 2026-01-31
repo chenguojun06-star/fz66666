@@ -787,7 +787,7 @@ Page({
       // 更新列表
       const newList = newPage.records.map(r => transformOrderData(r));
 
-      console.log(`[Sync] Orders updated: ${newList.length} items`);
+      // console.log(`[Sync] Orders updated: ${newList.length} items`);
       this.setData({ 'orders.list': newList });
     };
 

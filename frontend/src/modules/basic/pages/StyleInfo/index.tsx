@@ -213,7 +213,7 @@ const StyleInfoDetailPage: React.FC = () => {
 
   const handleSaveProduction = async () => {
     // 占位函数，实际逻辑在Tab组件内
-    console.log('生产制单保存');
+    // console.log('生产制单保存');
   };
 
   const resetProductionReqFromCurrent = () => {
@@ -224,7 +224,7 @@ const StyleInfoDetailPage: React.FC = () => {
 
   const handleRollbackProductionReq = async () => {
     // 占位函数
-    console.log('生产制单回退');
+    // console.log('生产制单回退');
   };
 
   // 推送到订单弹窗确认

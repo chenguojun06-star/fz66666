@@ -563,10 +563,10 @@ const StyleInfoPage: React.FC = () => {
             icon: <PrinterOutlined />,
             label: '打印',
             onClick: () => {
-              console.log('🖨️ 打印按钮被点击', record);
+              // console.log('🖨️ 打印按钮被点击', record);
               setPrintingRecord(record);
               setPrintModalVisible(true);
-              console.log('✅ 状态已更新: printModalVisible=true');
+              // console.log('✅ 状态已更新: printModalVisible=true');
             },
           });
           items.push({ type: 'divider' });
@@ -1140,7 +1140,7 @@ const StyleInfoPage: React.FC = () => {
           };
 
           // 记录到控制台
-          console.log('🗑️ 删除操作日志：', logData);
+          // console.log('🗑️ 删除操作日志：', logData);
 
           // 记录到后端（异步，不阻塞删除操作）
           try {

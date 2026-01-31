@@ -333,7 +333,7 @@ class StageDetector {
       const sewingProcessList = this._extractSewingProcesses(orderDetail);
 
       // 🔍 调试：打印关键参数
-      console.log('[StageDetector] detectByBundle 关键参数:', {
+      // console.log('[StageDetector] detectByBundle 关键参数:', {
         scanCount: scanCount,
         sewingProcessList: sewingProcessList,
         isLegacyConfig: sewingProcessList.length === 1 && sewingProcessList[0] === '车缝',
@@ -473,7 +473,7 @@ class StageDetector {
         return !isSystemGenerated && isValidScan;
       });
 
-      console.log('[StageDetector] 扫码历史统计:', {
+      // console.log('[StageDetector] 扫码历史统计:', {
         总记录数: allRecords.length,
         手动扫码数: manualRecords.length,
         系统记录数: allRecords.length - manualRecords.length,
@@ -514,7 +514,7 @@ class StageDetector {
           stage === '车缝' || stage === 'è½¦ç¼' || name === '车缝' || name === 'è½¦ç¼';
 
         const match = isSewing;
-        console.log('[StageDetector] 节点筛选:', {
+        // console.log('[StageDetector] 节点筛选:', {
           name: node.name,
           progressStage: node.progressStage,
           sortOrder: node.sortOrder,
@@ -532,7 +532,7 @@ class StageDetector {
       const singleNode = nodes.find(n => n.name === '车缝' || n.name === 'è½¦ç¼');
       // 如果这个节点没有 progressStage 字段，说明是旧版本配置
       if (singleNode && !singleNode.progressStage) {
-        console.log('[StageDetector] 检测到旧版本配置（无progressStage），保持1个车缝工序');
+        // console.log('[StageDetector] 检测到旧版本配置（无progressStage），保持1个车缝工序');
         return sewingProcesses; // 返回 ["车缝"]，扫1次就进入大烫
       }
     }

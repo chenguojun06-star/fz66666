@@ -17,7 +17,7 @@ async function loadMyPanelData(pageInstance, forceRefresh = false) {
 
   // 防止重复加载
   if (isMyPanelLoading) {
-    console.log('[DataHandler] 面板数据正在加载中，跳过');
+    // console.log('[DataHandler] 面板数据正在加载中，跳过');
     return myPanelData;
   }
 
@@ -25,7 +25,7 @@ async function loadMyPanelData(pageInstance, forceRefresh = false) {
   if (!forceRefresh && myPanelData && myPanelData._timestamp) {
     const cacheAge = Date.now() - myPanelData._timestamp;
     if (cacheAge < 5 * 60 * 1000) {
-      console.log('[DataHandler] 使用缓存的面板数据');
+      // console.log('[DataHandler] 使用缓存的面板数据');
       return myPanelData;
     }
   }
