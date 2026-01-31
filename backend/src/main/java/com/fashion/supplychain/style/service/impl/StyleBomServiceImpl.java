@@ -79,10 +79,10 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
                     bom.getStockStatus(), bom.getRequiredPurchase());
         }
 
-        // 5. 批量保存BOM
-        this.saveBatch(bomList);
+        // 5. 批量更新BOM（使用updateBatchById避免主键冲突）
+        this.updateBatchById(bomList);
 
-        log.info("BOM保存完成，包含库存状态");
+        log.info("BOM库存状态更新完成");
         return bomList;
     }
 

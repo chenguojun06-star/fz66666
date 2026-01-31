@@ -201,17 +201,17 @@ public class StyleBomController {
         try {
             // 1. 查询BOM列表
             List<StyleBom> bomList = styleBomOrchestrator.listByStyleId(styleId);
-            
+
             if (bomList == null || bomList.isEmpty()) {
                 return Result.success(bomList);
             }
 
             // 2. 检查库存并更新状态
             List<StyleBom> checkedBomList = styleBomService.saveBomWithStockCheck(bomList, productionQty);
-            
-            log.info("✅ BOM库存检查完成: styleId={}, productionQty={}, bomCount={}", 
+
+            log.info("✅ BOM库存检查完成: styleId={}, productionQty={}, bomCount={}",
                     styleId, productionQty, checkedBomList.size());
-            
+
             return Result.success(checkedBomList);
         } catch (Exception e) {
             log.error("❌ BOM库存检查失败: styleId={}, productionQty={}", styleId, productionQty, e);
@@ -228,9 +228,9 @@ public class StyleBomController {
             @RequestParam(required = false, defaultValue = "1") Integer productionQty) {
         try {
             Map<String, Object> summary = styleBomService.getBomStockSummary(styleId, productionQty);
-            
+
             log.info("✅ BOM库存汇总查询成功: styleId={}, productionQty={}", styleId, productionQty);
-            
+
             return Result.success(summary);
         } catch (Exception e) {
             log.error("❌ BOM库存汇总查询失败: styleId={}, productionQty={}", styleId, productionQty, e);
@@ -247,7 +247,7 @@ public class StyleBomController {
             @RequestParam(required = false, defaultValue = "1") Integer productionQty) {
         try {
             Map<Long, List<StyleBom>> resultMap = new java.util.HashMap<>();
-            
+
             for (Long styleId : styleIds) {
                 List<StyleBom> bomList = styleBomOrchestrator.listByStyleId(styleId);
                 if (bomList != null && !bomList.isEmpty()) {
@@ -255,10 +255,10 @@ public class StyleBomController {
                     resultMap.put(styleId, checkedBomList);
                 }
             }
-            
-            log.info("✅ 批量BOM库存检查完成: styleCount={}, productionQty={}", 
+
+            log.info("✅ 批量BOM库存检查完成: styleCount={}, productionQty={}",
                     styleIds.size(), productionQty);
-            
+
             return Result.success(resultMap);
         } catch (Exception e) {
             log.error("❌ 批量BOM库存检查失败: styleIds={}, productionQty={}", styleIds, productionQty, e);
