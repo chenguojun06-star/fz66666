@@ -1075,25 +1075,79 @@ const StyleInfoPage: React.FC = () => {
     // 获取款式信息用于确认提示
     const record = data.find(item => item.id === id);
     const styleNo = record?.styleNo || '该款式';
+    let deleteReason = '';
     
     Modal.confirm({
       title: '确认删除',
+      width: 500,
       content: (
         <div>
-          <div style={{ marginBottom: 8 }}>确定要删除款式 <strong style={{ color: '#f5222d' }}>{styleNo}</strong> 吗？</div>
-          <div style={{ color: '#ff4d4f', fontSize: 12 }}>
+          <div style={{ marginBottom: 12 }}>
+            确定要删除款式 <strong style={{ color: '#f5222d' }}>{styleNo}</strong> 吗？
+          </div>
+          <div style={{ marginBottom: 16, color: '#ff4d4f', fontSize: 12, padding: '8px 12px', background: '#fff2f0', borderRadius: 4 }}>
             ⚠️ 删除后将无法恢复，相关的尺寸表、BOM表、工序表等数据也将一并删除！
           </div>
+          <div style={{ marginBottom: 8, fontWeight: 600 }}>请输入删除原因（必填）：</div>
+          <Input.TextArea
+            placeholder="请详细说明删除原因，此信息将记录到操作日志中"
+            autoSize={{ minRows: 3, maxRows: 6 }}
+            maxLength={200}
+            showCount
+            onChange={(e) => {
+              deleteReason = e.target.value;
+            }}
+          />
         </div>
       ),
       okText: '确认删除',
       cancelText: '取消',
       okButtonProps: { danger: true },
       onOk: async () => {
+        const reason = deleteReason.trim();
+        if (!reason) {
+          message.error('请输入删除原因');
+          return Promise.reject(new Error('请输入删除原因'));
+        }
+        
         try {
+          // 记录删除日志
+          const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+          const operator = userInfo.realName || userInfo.username || '未知用户';
+          const logData = {
+            module: '样衣开发',
+            action: '删除款式',
+            operator,
+            operatorId: userInfo.id,
+            targetType: 'STYLE',
+            targetId: id,
+            targetName: styleNo,
+            reason,
+            details: JSON.stringify({
+              styleNo,
+              styleName: record?.styleName,
+              category: record?.category,
+              season: record?.season,
+              deleteTime: new Date().toISOString(),
+            }),
+            timestamp: new Date().toISOString(),
+          };
+          
+          // 先记录日志
+          await api.post('/system/operation-log', logData).catch(err => {
+            console.error('记录操作日志失败:', err);
+          });
+          
+          // 执行删除
           const res = await api.delete(`/style/info/${id}`);
           if (res.code === 200) {
             message.success('删除成功');
+            console.log('✅ 删除操作已记录：', {
+              款式: styleNo,
+              操作人: operator,
+              原因: reason,
+              时间: new Date().toLocaleString('zh-CN'),
+            });
             fetchData();
           } else {
             message.error(res.message || '删除失败');
