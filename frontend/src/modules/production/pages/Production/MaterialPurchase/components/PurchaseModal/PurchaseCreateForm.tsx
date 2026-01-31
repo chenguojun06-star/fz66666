@@ -1,10 +1,26 @@
 import React, { useEffect, useState } from 'react';
-import { Form, Input, InputNumber, Row, Col, Select, Tag, Tooltip } from 'antd';
+import { Form, Input, InputNumber, Row, Col, Select, Tag, Tooltip, Upload, message } from 'antd';
+import { PlusOutlined, LoadingOutlined } from '@ant-design/icons';
+import type { UploadChangeParam } from 'antd/es/upload';
+import type { RcFile, UploadFile, UploadProps } from 'antd/es/upload/interface';
 import { MaterialPurchase as MaterialPurchaseType } from '@/types/production';
 import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import api from '@/utils/api';
 
 const { Option } = Select;
+
+// 上传组件样式
+const uploadStyles = `
+  .avatar-uploader .ant-upload {
+    width: 104px !important;
+    height: 104px !important;
+    border-radius: 6px;
+  }
+  .avatar-uploader .ant-upload-select {
+    width: 104px !important;
+    height: 104px !important;
+  }
+`;
 
 interface PurchaseCreateFormProps {
   form: any;
@@ -20,6 +36,74 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
   const watchedColor = Form.useWatch('color', form);
   const watchedSize = Form.useWatch('size', form);
   const [stockInfo, setStockInfo] = useState<{ quantity: number, location: string, safetyStock: number } | null>(null);
+  const [uploadLoading, setUploadLoading] = useState(false);
+
+  // 图片上传前验证
+  const beforeUpload = (file: RcFile) => {
+    const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png' || file.type === 'image/jpg';
+    if (!isJpgOrPng) {
+      message.error('只能上传 JPG/PNG 格式的图片！');
+      return false;
+    }
+    const isLt2M = file.size / 1024 / 1024 < 2;
+    if (!isLt2M) {
+      message.error('图片大小不能超过 2MB！');
+      return false;
+    }
+    return true;
+  };
+
+  // 图片上传处理
+  const handleUploadChange: UploadProps['onChange'] = (info: UploadChangeParam<UploadFile>) => {
+    if (info.file.status === 'uploading') {
+      setUploadLoading(true);
+      return;
+    }
+    if (info.file.status === 'done') {
+      setUploadLoading(false);
+      // 假设后端返回 { code: 200, data: { url: '...' } }
+      const response = info.file.response;
+      if (response?.code === 200 && response?.data?.url) {
+        form.setFieldsValue({ styleCover: response.data.url });
+        message.success('图片上传成功');
+      } else {
+        message.error('图片上传失败');
+      }
+    }
+    if (info.file.status === 'error') {
+      setUploadLoading(false);
+      message.error('图片上传失败');
+    }
+  };
+
+  // 自定义上传（可选，如果需要自定义上传逻辑）
+  const customUpload = async (options: any) => {
+    const { file, onSuccess, onError } = options;
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      // 调用上传接口
+      const res = await api.post('/upload/image', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      if (res.code === 200 && res.data?.url) {
+        onSuccess({ code: 200, data: { url: res.data.url } });
+      } else {
+        onError(new Error('上传失败'));
+      }
+    } catch (error) {
+      onError(error);
+    }
+  };
+
+  const uploadButton = (
+    <div>
+      {uploadLoading ? <LoadingOutlined /> : <PlusOutlined />}
+      <div style={{ marginTop: 8, fontSize: 12 }}>上传图片</div>
+    </div>
+  );
 
   useEffect(() => {
     const qty = Number(watchedArrivedQuantity || 0);
@@ -66,25 +150,37 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
   }, [watchedMaterialCode, watchedColor, watchedSize]);
 
   return (
-    <Form
-      form={form}
-      layout="horizontal"
-      labelCol={{ span: 6 }}
-      wrapperCol={{ span: 18 }}
-    >
-      {/* 款号信息区域 */}
-      <Row gutter={[16, 0]}>
+    <>
+      <style>{uploadStyles}</style>
+      <Form
+        form={form}
+        layout="horizontal"
+        labelCol={{ span: 6 }}
+        wrapperCol={{ span: 18 }}
+      >
+        {/* 款号信息区域 */}
+        <Row gutter={[16, 0]}>
         <Col xs={24} md={6}>
-          <Form.Item label="图片">
-            {watchedStyleCover ? (
-              <img
-                src={watchedStyleCover}
-                alt=""
-                style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, display: 'block' }}
-              />
-            ) : (
-              <div style={{ width: 80, height: 80, background: '#f5f5f5', borderRadius: 6 }} />
-            )}
+          <Form.Item name="styleCover" label="图片">
+            <Upload
+              name="file"
+              listType="picture-card"
+              className="avatar-uploader"
+              showUploadList={false}
+              beforeUpload={beforeUpload}
+              onChange={handleUploadChange}
+              customRequest={customUpload}
+            >
+              {watchedStyleCover ? (
+                <img
+                  src={watchedStyleCover}
+                  alt="款式图片"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                uploadButton
+              )}
+            </Upload>
           </Form.Item>
         </Col>
         <Col xs={24} md={6}>
@@ -234,7 +330,8 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
       <Form.Item name="remark" label="备注" labelCol={{ span: 3 }} wrapperCol={{ span: 21 }}>
         <Input.TextArea autoSize={{ minRows: 4, maxRows: 8 }} />
       </Form.Item>
-    </Form>
+      </Form>
+    </>
   );
 };
 
