@@ -365,38 +365,40 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
           borderRadius: 6,
           border: '1px solid #d9d9d9'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <div style={{ fontWeight: 600, color: '#1f2937' }}>📋 选择打印内容：</div>
-            <Button 
-              size="small" 
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+              <div style={{ fontWeight: 600, color: '#1f2937', whiteSpace: 'nowrap' }}>📋 选择打印内容：</div>
+              <Checkbox.Group
+                value={Object.keys(options).filter(k => options[k as keyof PrintOptions])}
+                onChange={(values) => {
+                  setOptions({
+                    basicInfo: values.includes('basicInfo'),
+                    sizeTable: values.includes('sizeTable'),
+                    bomTable: values.includes('bomTable'),
+                    processTable: values.includes('processTable'),
+                    productionSheet: values.includes('productionSheet'),
+                    attachments: values.includes('attachments'),
+                  });
+                }}
+                style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px' }}
+              >
+                <Checkbox value="basicInfo">基本信息</Checkbox>
+                <Checkbox value="sizeTable">尺寸表</Checkbox>
+                <Checkbox value="bomTable">BOM表</Checkbox>
+                <Checkbox value="processTable">工序表</Checkbox>
+                <Checkbox value="productionSheet">生产制单</Checkbox>
+                <Checkbox value="attachments">纸样附件</Checkbox>
+              </Checkbox.Group>
+            </div>
+            <Button
+              size="small"
               type={expanded ? 'default' : 'primary'}
               onClick={() => setExpanded(!expanded)}
-              style={{ fontSize: 12 }}
+              style={{ fontSize: 12, flexShrink: 0 }}
             >
               {expanded ? '▲ 收起预览' : '▼ 展开预览'}
             </Button>
           </div>
-          <Checkbox.Group
-            value={Object.keys(options).filter(k => options[k as keyof PrintOptions])}
-            onChange={(values) => {
-              setOptions({
-                basicInfo: values.includes('basicInfo'),
-                sizeTable: values.includes('sizeTable'),
-                bomTable: values.includes('bomTable'),
-                processTable: values.includes('processTable'),
-                productionSheet: values.includes('productionSheet'),
-                attachments: values.includes('attachments'),
-              });
-            }}
-            style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px' }}
-          >
-            <Checkbox value="basicInfo">基本信息</Checkbox>
-            <Checkbox value="sizeTable">尺寸表</Checkbox>
-            <Checkbox value="bomTable">BOM表</Checkbox>
-            <Checkbox value="processTable">工序表</Checkbox>
-            <Checkbox value="productionSheet">生产制单</Checkbox>
-            <Checkbox value="attachments">纸样附件</Checkbox>
-          </Checkbox.Group>
         </div>
 
         {/* 内容预览区域 - 可展开/收起 */}
@@ -463,7 +465,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
 
                 {/* 二维码 */}
                 <div style={{ flexShrink: 0, textAlign: 'center' }}>
-                  <QRCode value={qrValue} size={100} />
+                  <QRCode value={qrValue} size={160} />
                 </div>
               </div>
 
@@ -734,9 +736,9 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
 
         {/* 未展开时的提示 */}
         {!expanded && (
-          <div style={{ 
-            textAlign: 'center', 
-            padding: '40px 20px', 
+          <div style={{
+            textAlign: 'center',
+            padding: '40px 20px',
             color: '#999',
             background: '#fafafa',
             borderRadius: 6,
