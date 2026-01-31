@@ -9,6 +9,7 @@ import LiquidProgressLottie from '@/components/common/LiquidProgressLottie';
 import NodeDetailModal from '@/components/common/NodeDetailModal';
 import UniversalCardView from '@/components/common/UniversalCardView';
 import QRCodeBox from '@/components/common/QRCodeBox';
+import StylePrintModal from '@/components/common/StylePrintModal';
 import { StyleAttachmentsButton } from '@/components/StyleAssets';
 import api from '@/utils/api';
 import { useModal } from '@/hooks';
@@ -252,102 +253,12 @@ const PatternProduction: React.FC = () => {
     detailModal.open(record);
   };
 
-  // 打印样板生产单（含二维码）
+  // 打印模态框
+  const printModal = useModal<PatternProductionRecord>();
+
+  // 打印样板生产单（使用通用打印模态框）
   const handlePrint = (record: PatternProductionRecord) => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      message.error('无法打开打印窗口，请检查浏览器设置');
-      return;
-    }
-
-    // 生成二维码数据
-    const qrData = JSON.stringify({
-      type: 'pattern',
-      id: record.id,
-      styleNo: record.styleNo,
-      color: record.color,
-    });
-
-    // 获取当前用户信息
-    const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
-    const printerName = userInfo.realName || userInfo.username || '未知';
-    const printTime = new Date().toLocaleString('zh-CN');
-
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>样板生产单 - ${record.styleNo}</title>
-        <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
-        <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { font-family: "Microsoft YaHei", sans-serif; padding: 20px; }
-          .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }
-          .header h1 { font-size: 24px; margin-bottom: 5px; }
-          .header .sub { font-size: 12px; color: #666; }
-          .content { display: flex; gap: 20px; }
-          .info { flex: 1; }
-          .qr-section { text-align: center; }
-          .info-row { display: flex; margin-bottom: 8px; }
-          .info-label { width: 80px; font-weight: bold; color: #333; }
-          .info-value { flex: 1; }
-          .sizes { margin-top: 15px; padding: 10px; background: #f5f5f5; border-radius: 4px; }
-          .sizes-title { font-weight: bold; margin-bottom: 8px; }
-          .sizes-list { display: flex; flex-wrap: wrap; gap: 8px; }
-          .size-tag { background: #1890ff; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
-          .footer { margin-top: 20px; padding-top: 10px; border-top: 1px dashed #ccc; font-size: 11px; color: #999; display: flex; justify-content: space-between; }
-          @media print {
-            body { padding: 10px; }
-            .no-print { display: none; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <h1>样板生产单</h1>
-          <div class="sub">扫码进行车板/跟单操作</div>
-        </div>
-        <div class="content">
-          <div class="info">
-            <div class="info-row"><span class="info-label">款号：</span><span class="info-value" style="font-size: 18px; font-weight: bold;">${record.styleNo}</span></div>
-            <div class="info-row"><span class="info-label">颜色：</span><span class="info-value">${record.color || '-'}</span></div>
-            <div class="info-row"><span class="info-label">数量：</span><span class="info-value">${record.quantity} 件</span></div>
-            <div class="info-row"><span class="info-label">设计师：</span><span class="info-value">${record.designer || '-'}</span></div>
-            <div class="info-row"><span class="info-label">纸样师：</span><span class="info-value">${record.patternDeveloper || '-'}</span></div>
-            <div class="info-row"><span class="info-label">车板师：</span><span class="info-value">${record.plateWorker || '-'}</span></div>
-            <div class="info-row"><span class="info-label">跟单员：</span><span class="info-value">${record.merchandiser || '-'}</span></div>
-            <div class="info-row"><span class="info-label">交板日期：</span><span class="info-value">${record.deliveryTime || '-'}</span></div>
-            ${record.sizes && record.sizes.length > 0 ? `
-            <div class="sizes">
-              <div class="sizes-title">码数：</div>
-              <div class="sizes-list">
-                ${record.sizes.map(s => `<span class="size-tag">${s}</span>`).join('')}
-              </div>
-            </div>
-            ` : ''}
-          </div>
-          <div class="qr-section">
-            <canvas id="qrcode"></canvas>
-            <div style="margin-top: 5px; font-size: 11px; color: #666;">扫码操作</div>
-          </div>
-        </div>
-        <div class="footer">
-          <span>打印人：${printerName}</span>
-          <span>打印时间：${printTime}</span>
-        </div>
-        <div class="no-print" style="margin-top: 20px; text-align: center;">
-          <button onclick="window.print()" style="padding: 8px 24px; font-size: 14px; cursor: pointer;">打印</button>
-        </div>
-        <script>
-          QRCode.toCanvas(document.getElementById('qrcode'), '${qrData}', { width: 120 }, function(err) {
-            if (err) console.error(err);
-          });
-        </script>
-      </body>
-      </html>
-    `);
-    printWindow.document.close();
+    printModal.open(record);
   };
 
   // 维护操作
@@ -1197,6 +1108,25 @@ const PatternProduction: React.FC = () => {
             />
           </div>
         )}
+
+        {/* 打印弹窗 */}
+        <StylePrintModal
+          visible={printModal.visible}
+          onClose={printModal.close}
+          styleNo={printModal.data?.styleNo}
+          color={printModal.data?.color}
+          quantity={printModal.data?.quantity}
+          mode="production"
+          extraInfo={{
+            designer: printModal.data?.designer,
+            patternDeveloper: printModal.data?.patternDeveloper,
+            plateWorker: printModal.data?.plateWorker,
+            merchandiser: printModal.data?.merchandiser,
+            deliveryTime: printModal.data?.deliveryTime,
+            sizes: printModal.data?.sizes,
+            isPattern: true, // 标记为样板打印
+          }}
+        />
       </div>
     </Layout>
   );
