@@ -3,6 +3,8 @@ package com.fashion.supplychain.production.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.TableField;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -102,4 +104,10 @@ public class PatternProduction {
      * 删除标记（0=未删除，1=已删除）
      */
     private Integer deleteFlag;
+
+    // ==================== 操作人字段（自动填充）====================
+
+    private String receiverId;
+
+    private String patternMakerId;
 }

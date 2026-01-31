@@ -3,6 +3,8 @@ package com.fashion.supplychain.style.entity;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 import java.math.BigDecimal;
@@ -88,4 +90,20 @@ public class SecondaryProcess {
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updatedAt;
+
+    // ==================== 操作人字段（自动填充）====================
+
+    @TableField(fill = FieldFill.INSERT)
+    private String creatorId;
+
+    @TableField(fill = FieldFill.INSERT)
+    private String creatorName;
+
+    private String assigneeId;
+
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private String operatorId;
+
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private String operatorName;
 }

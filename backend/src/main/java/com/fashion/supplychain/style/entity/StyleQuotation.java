@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -80,4 +81,24 @@ public class StyleQuotation {
      * 是否锁定（0=未锁定，1=已锁定）
      */
     private Integer isLocked;
+
+    // ==================== 操作人字段（自动填充）====================
+
+    @TableField(fill = FieldFill.INSERT)
+    private String creatorId;
+
+    @TableField(fill = FieldFill.INSERT)
+    private String creatorName;
+
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private String updaterId;
+
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private String updaterName;
+
+    private String auditorId;
+
+    private String auditorName;
+
+    private LocalDateTime auditTime;
 }

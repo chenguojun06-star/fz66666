@@ -3,6 +3,8 @@ package com.fashion.supplychain.production.entity;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.TableField;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.Data;
@@ -95,6 +97,20 @@ public class MaterialPurchase {
     private LocalDateTime updateTime;
 
     private Integer deleteFlag;
+
+    // ==================== 操作人字段（自动填充）====================
+
+    @TableField(fill = FieldFill.INSERT)
+    private String creatorId;
+
+    @TableField(fill = FieldFill.INSERT)
+    private String creatorName;
+
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private String updaterId;
+
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private String updaterName;
 
     // ==================== 到货日期字段（新增）====================
 

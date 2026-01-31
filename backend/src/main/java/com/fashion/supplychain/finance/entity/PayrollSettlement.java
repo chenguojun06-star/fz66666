@@ -3,6 +3,8 @@ package com.fashion.supplychain.finance.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.TableField;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.Data;
@@ -44,4 +46,18 @@ public class PayrollSettlement {
     private String createBy;
 
     private String updateBy;
+
+    // ==================== 操作人字段（自动填充）====================
+
+    private String auditorId;
+
+    private String auditorName;
+
+    private LocalDateTime auditTime;
+
+    private String confirmerId;
+
+    private String confirmerName;
+
+    private LocalDateTime confirmTime;
 }

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import java.time.LocalDateTime;
 import lombok.Data;
 
@@ -55,4 +56,18 @@ public class CuttingTask {
 
     @TableField(exist = false)
     private Integer cuttingBundleCount;
+
+    // ==================== 操作人字段（自动填充）====================
+
+    @TableField(fill = FieldFill.INSERT)
+    private String creatorId;
+
+    @TableField(fill = FieldFill.INSERT)
+    private String creatorName;
+
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private String updaterId;
+
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private String updaterName;
 }
