@@ -54,6 +54,9 @@ const StyleSizePriceTab: React.FC<Props> = ({ styleId, readOnly }) => {
 
   // 获取尺码列表（从已保存的多码单价中提取，或使用默认尺码）
   const fetchSizes = async () => {
+    if (!styleId || styleId === 'undefined') {
+      return [];
+    }
     try {
       // 先尝试从已保存的多码单价中获取尺码
       const res = await api.get<{ code: number; data: SizePrice[] }>(`/style/size-price/list`, {
@@ -92,6 +95,9 @@ const StyleSizePriceTab: React.FC<Props> = ({ styleId, readOnly }) => {
 
   // 获取工序列表
   const fetchProcesses = async () => {
+    if (!styleId || styleId === 'undefined') {
+      return [];
+    }
     try {
       const res = await api.get<{ code: number; data: any[] }>(`/style/process/list`, {
         params: { styleId }

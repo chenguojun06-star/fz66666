@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fashion.supplychain.common.DataPermissionHelper;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.CuttingTask;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
@@ -103,14 +104,19 @@ public class ProductionOrderQueryService {
         String currentProcessName = ParamUtils
                 .toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "currentProcessName"));
 
-        IPage<ProductionOrder> resultPage = productionOrderMapper.selectPage(pageInfo,
-                new LambdaQueryWrapper<ProductionOrder>()
-                        .eq(StringUtils.hasText(orderNo), ProductionOrder::getOrderNo, orderNo)
-                        .like(StringUtils.hasText(styleNo), ProductionOrder::getStyleNo, styleNo)
-                        .like(StringUtils.hasText(factoryName), ProductionOrder::getFactoryName, factoryName)
-                        .eq(StringUtils.hasText(status), ProductionOrder::getStatus, status)
-                        .eq(ProductionOrder::getDeleteFlag, 0)
-                        .orderByDesc(ProductionOrder::getCreateTime));
+        QueryWrapper<ProductionOrder> wrapper = new QueryWrapper<ProductionOrder>();
+        wrapper.eq(StringUtils.hasText(orderNo), "order_no", orderNo)
+                .like(StringUtils.hasText(styleNo), "style_no", styleNo)
+                .like(StringUtils.hasText(factoryName), "factory_name", factoryName)
+                .eq(StringUtils.hasText(status), "status", status)
+                .eq("delete_flag", 0);
+
+        // ✅ 应用操作人权限过滤 - 工人只看自己创建的订单
+        DataPermissionHelper.applyOperatorFilter(wrapper, "created_by_id", "created_by_name");
+
+        wrapper.orderByDesc("create_time");
+
+        IPage<ProductionOrder> resultPage = productionOrderMapper.selectPage(pageInfo, wrapper);
 
         fillStyleCover(resultPage.getRecords());
         orderCuttingFillService.fillCuttingSummary(resultPage.getRecords()); // 使用新服务

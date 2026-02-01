@@ -6,6 +6,7 @@ import com.fashion.supplychain.style.entity.StyleQuotation;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.StyleQuotationService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,12 +25,14 @@ public class StyleQuotationController {
     private StyleInfoService styleInfoService;
 
     @GetMapping
+    @PreAuthorize("hasAuthority('STYLE_VIEW')")
     public Result<StyleQuotation> getByStyleId(@RequestParam Long styleId) {
         StyleQuotation quotation = styleQuotationService.getByStyleId(styleId);
         return Result.success(quotation);
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     @Transactional
     public Result<Boolean> saveOrUpdate(@RequestBody StyleQuotation styleQuotation) {
         if (styleQuotation == null || styleQuotation.getStyleId() == null) {

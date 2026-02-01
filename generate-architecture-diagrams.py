@@ -1,0 +1,325 @@
+#!/usr/bin/env python3
+"""
+生成架构依赖关系 Mermaid 图
+"""
+
+mermaid_graph = """# 后端架构依赖关系可视化图谱
+
+## 1. 核心模块依赖关系
+
+```mermaid
+graph TB
+    subgraph production["生产模块 (production)"]
+        PO[ProductionOrderOrchestrator<br/>12依赖]
+        SR[ScanRecordOrchestrator<br/>10依赖]
+        PW[ProductWarehousingOrchestrator<br/>7依赖]
+        MI[MaterialInboundOrchestrator<br/>4依赖]
+        MP[MaterialPurchaseOrchestrator<br/>5依赖]
+    end
+
+    subgraph finance["财务模块 (finance)"]
+        PS[PayrollSettlementOrchestrator<br/>4依赖]
+        MR[MaterialReconciliationOrchestrator<br/>3依赖]
+        SHR[ShipmentReconciliationOrchestrator<br/>5依赖]
+    end
+
+    subgraph style_mod["款式模块 (style)"]
+        SI[StyleInfoOrchestrator<br/>8依赖]
+        SB[StyleBomOrchestrator<br/>5依赖]
+        SA[StyleAttachmentOrchestrator<br/>2依赖]
+    end
+
+    subgraph system["系统模块 (system)"]
+        U[UserOrchestrator<br/>5依赖]
+        R[RoleOrchestrator<br/>3依赖]
+        F[FactoryOrchestrator<br/>2依赖]
+    end
+
+    subgraph template["模板模块 (template)"]
+        TL[TemplateLibraryOrchestrator<br/>3依赖]
+    end
+
+    %% 跨模块依赖
+    PO -->|调用| SA
+    PW -->|调用| PO
+    MP -->|调用| PO
+    MP -->|调用| MR
+    SHR -->|调用| PO
+    SB -->|调用| MI
+
+    %% 样式
+    classDef productionClass fill:#e1f5ff,stroke:#01579b,stroke-width:2px
+    classDef financeClass fill:#fff9e6,stroke:#f57c00,stroke-width:2px
+    classDef styleClass fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px
+    classDef systemClass fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    classDef templateClass fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+
+    class PO,SR,PW,MI,MP productionClass
+    class PS,MR,SHR financeClass
+    class SI,SB,SA styleClass
+    class U,R,F systemClass
+    class TL templateClass
+```
+
+## 2. Service 违规依赖链（红色警告）
+
+```mermaid
+graph LR
+    subgraph finance_violation["❌ 财务模块违规"]
+        MRS[MaterialReconciliationSyncServiceImpl]
+        MRS -->|跨模块调用| MaterialInboundService
+        MRS -->|跨模块调用| MaterialPurchaseService
+    end
+
+    subgraph template_violation["❌ 模板模块违规"]
+        TLS[TemplateLibraryServiceImpl]
+        TLS -->|跨模块调用| StyleInfoService
+        TLS -->|跨模块调用| StyleBomService
+        TLS -->|跨模块调用| StyleSizeService
+        TLS -->|跨模块调用| StyleProcessService
+    end
+
+    subgraph production_violation["❌ 生产模块违规"]
+        POS[ProductionOrderServiceImpl]
+        POS -->|跨模块调用| StyleInfoService
+        POS -->|跨模块调用| StyleBomService
+    end
+
+    classDef violationClass fill:#ffebee,stroke:#c62828,stroke-width:3px
+    class MRS,TLS,POS violationClass
+```
+
+## 3. Mapper 直连问题（橙色警告）
+
+```mermaid
+graph LR
+    subgraph mapper_violation["⚠️ Orchestrator 直连 Mapper"]
+        PWO[ProductWarehousingOrchestrator]
+        SHRO[ShipmentReconciliationOrchestrator]
+        PSO[PayrollSettlementOrchestrator]
+        WDO[WarehouseDashboardOrchestrator]
+
+        PWO -.->|直连| SRM[ScanRecordMapper]
+        SHRO -.->|直连| SRM2[ScanRecordMapper]
+        SHRO -.->|直连| DIM[DeductionItemMapper]
+        WDO -.->|直连| M1[Mapper1]
+        WDO -.->|直连| M2[Mapper2]
+        WDO -.->|直连| M3[Mapper3]
+    end
+
+    classDef warningClass fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
+    classDef mapperClass fill:#fafafa,stroke:#616161,stroke-width:1px
+    class PWO,SHRO,PSO,WDO warningClass
+    class SRM,SRM2,DIM,M1,M2,M3 mapperClass
+```
+
+## 4. 理想架构（三层模型）
+
+```mermaid
+graph TB
+    subgraph controller["Controller 层"]
+        C1[OrderController]
+        C2[FinanceController]
+        C3[StyleController]
+    end
+
+    subgraph orchestrator["Orchestrator 层<br/>（业务协调）"]
+        O1[ProductionOrderOrchestrator]
+        O2[MaterialReconciliationOrchestrator]
+        O3[StyleInfoOrchestrator]
+    end
+
+    subgraph service["Service 层<br/>（单领域CRUD）"]
+        S1[ProductionOrderService]
+        S2[MaterialPurchaseService]
+        S3[StyleInfoService]
+        S4[StyleBomService]
+    end
+
+    subgraph mapper["Mapper 层<br/>（数据访问）"]
+        M1[ProductionOrderMapper]
+        M2[MaterialPurchaseMapper]
+        M3[StyleInfoMapper]
+    end
+
+    C1 --> O1
+    C2 --> O2
+    C3 --> O3
+
+    O1 --> S1
+    O1 --> S2
+    O1 --> S3
+
+    O2 --> S2
+    O2 --> S4
+
+    O3 --> S3
+    O3 --> S4
+
+    S1 --> M1
+    S2 --> M2
+    S3 --> M3
+
+    classDef controllerClass fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef orchestratorClass fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    classDef serviceClass fill:#fff9c4,stroke:#fbc02d,stroke-width:2px
+    classDef mapperClass fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+
+    class C1,C2,C3 controllerClass
+    class O1,O2,O3 orchestratorClass
+    class S1,S2,S3,S4 serviceClass
+    class M1,M2,M3 mapperClass
+```
+
+## 5. 当前架构问题可视化
+
+```mermaid
+graph TB
+    subgraph current["❌ 当前架构问题"]
+        C[Controller]
+        O[Orchestrator]
+        S1[Service A]
+        S2[Service B]
+        S3[Service C]
+        M1[Mapper A]
+        M2[Mapper B]
+
+        C --> O
+        O --> S1
+        O -.->|违规：直连Mapper| M1
+        S1 -.->|违规：跨Service调用| S2
+        S2 -.->|违规：跨Service调用| S3
+        S1 --> M1
+        S2 --> M2
+    end
+
+    subgraph target["✅ 目标架构"]
+        C2[Controller]
+        O2[Orchestrator]
+        S4[Service A]
+        S5[Service B]
+        S6[Service C]
+        M3[Mapper A]
+        M4[Mapper B]
+        M5[Mapper C]
+
+        C2 --> O2
+        O2 --> S4
+        O2 --> S5
+        O2 --> S6
+        S4 --> M3
+        S5 --> M4
+        S6 --> M5
+    end
+
+    classDef problemClass fill:#ffebee,stroke:#c62828,stroke-width:2px
+    classDef goodClass fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+
+    class C,O,S1,S2,S3,M1,M2 problemClass
+    class C2,O2,S4,S5,S6,M3,M4,M5 goodClass
+```
+
+## 6. 模块职责矩阵
+
+```mermaid
+graph LR
+    subgraph modules["模块职责"]
+        production["🏭 production<br/>生产订单<br/>裁剪任务<br/>扫码记录<br/>物料采购<br/>成品入库"]
+        finance["💰 finance<br/>工资结算<br/>物料对账<br/>发货对账<br/>财务审批"]
+        style_mod["👔 style<br/>款式资料<br/>BOM清单<br/>尺码规格<br/>工序模板"]
+        system["⚙️ system<br/>用户管理<br/>权限控制<br/>工厂配置<br/>日志审计"]
+        template["📋 template<br/>模板库<br/>工序标准<br/>单价管理"]
+        warehouse["📦 warehouse<br/>库存管理<br/>入库出库<br/>库存报表"]
+    end
+
+    production -->|需要| style_mod
+    production -->|触发| finance
+    production -->|更新| warehouse
+    finance -->|查询| production
+    template -->|应用到| style_mod
+    template -->|应用到| production
+
+    classDef moduleClass fill:#e1f5ff,stroke:#01579b,stroke-width:2px
+    class production,finance,style_mod,system,template,warehouse moduleClass
+```
+
+## 7. 整改前后对比
+
+### 整改前（当前状态）
+
+```mermaid
+graph TB
+    subgraph before["整改前：架构评分 60/100"]
+        B1[❌ Service 违规: 34处]
+        B2[❌ Mapper 直连: 5处]
+        B3[⚠️ 过度复杂: 1处]
+        B4[✅ Orchestrator: 32个]
+        B5[✅ Service: 50个]
+    end
+
+    classDef problemClass fill:#ffebee,stroke:#c62828,stroke-width:2px
+    classDef warningClass fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
+    classDef goodClass fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+
+    class B1,B2 problemClass
+    class B3 warningClass
+    class B4,B5 goodClass
+```
+
+### 整改后（目标状态）
+
+```mermaid
+graph TB
+    subgraph after["整改后：架构评分 95/100"]
+        A1[✅ Service 违规: 0处]
+        A2[✅ Mapper 直连: 0处]
+        A3[✅ 复杂度适中]
+        A4[✅ Orchestrator: 35个<br/>+3个新增]
+        A5[✅ Service: 52个<br/>+2个新增]
+        A6[✅ 模块边界清晰]
+    end
+
+    classDef goodClass fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    class A1,A2,A3,A4,A5,A6 goodClass
+```
+
+## 图例说明
+
+### 节点类型
+- 🔧 **Orchestrator**: 业务协调层，负责跨Service协调
+- 📦 **Service**: 单领域CRUD，负责数据访问
+- 🗄️ **Mapper**: MyBatis Plus 数据访问层
+
+### 连接类型
+- **实线 (→)**: 正常的层级调用
+- **虚线 (-.->)**: 违规调用（需要整改）
+
+### 颜色标注
+- 🔴 **红色**: 严重违规（Service 跨调用）
+- 🟠 **橙色**: 中等问题（Mapper 直连）
+- 🟡 **黄色**: 轻微问题（复杂度过高）
+- 🟢 **绿色**: 符合规范
+
+### 模块图标
+- 🏭 **production**: 生产管理
+- 💰 **finance**: 财务管理
+- 👔 **style**: 款式管理
+- ⚙️ **system**: 系统管理
+- 📋 **template**: 模板管理
+- 📦 **warehouse**: 仓储管理
+
+---
+
+**生成时间**: 2026-02-01
+**工具**: Mermaid Graph Generator v1.0
+**建议**: 在支持 Mermaid 的 Markdown 编辑器中查看（如 Typora, VS Code, GitHub）
+"""
+
+print(mermaid_graph)
+
+# 保存到文件
+output_path = "/Users/guojunmini4/Documents/服装66666/后端架构依赖关系可视化图谱-2026-02-01.md"
+with open(output_path, 'w', encoding='utf-8') as f:
+    f.write(mermaid_graph)
+
+print(f"\n✅ 可视化图谱已保存到: {output_path}")

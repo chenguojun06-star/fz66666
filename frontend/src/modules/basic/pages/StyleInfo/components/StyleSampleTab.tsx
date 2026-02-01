@@ -58,6 +58,9 @@ const StyleSampleTab: React.FC<Props> = ({
   const [loading, setLoading] = useState(false);
 
   const fetchAll = useCallback(async () => {
+    if (!styleId || styleId === 'undefined') {
+      return;
+    }
     setLoading(true);
     try {
       const [bomRes, fileRes, logRes] = await Promise.all([

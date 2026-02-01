@@ -9,11 +9,11 @@ import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
-import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
+import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.style.service.ProductSkuService;
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -48,7 +48,7 @@ public class ProductWarehousingOrchestrator {
     private CuttingBundleService cuttingBundleService;
 
     @Autowired
-    private ScanRecordMapper scanRecordMapper;
+    private ScanRecordService scanRecordService;
 
     @Autowired
     private ProductionOrderScanRecordDomainService scanRecordDomainService;
@@ -816,18 +816,13 @@ public class ProductWarehousingOrchestrator {
         rollbackLog.setCuttingBundleQrCode(bundle.getQrCode());
         rollbackLog.setCreateTime(now);
         rollbackLog.setUpdateTime(now);
-        scanRecordMapper.insert(rollbackLog);
+        scanRecordService.save(rollbackLog);
 
         try {
-            List<ScanRecord> warehouseScans = scanRecordMapper.selectList(new LambdaQueryWrapper<ScanRecord>()
-                    .eq(ScanRecord::getOrderId, oid)
-                    .eq(ScanRecord::getCuttingBundleId, bundle.getId())
-                    .eq(ScanRecord::getScanType, "warehouse")
-                    .eq(ScanRecord::getScanResult, "success")
-                    .ne(ScanRecord::getProcessCode, "warehouse_rollback")
-                    .orderByDesc(ScanRecord::getScanTime)
-                    .orderByDesc(ScanRecord::getCreateTime));
+            List<ScanRecord> warehouseScans = scanRecordService.listByCondition(
+                    oid, bundle.getId(), "warehouse", "success", "warehouse_rollback");
             if (warehouseScans != null) {
+                List<ScanRecord> toUpdate = new ArrayList<>();
                 for (ScanRecord sr : warehouseScans) {
                     if (sr == null || !StringUtils.hasText(sr.getId())) {
                         continue;
@@ -837,7 +832,10 @@ public class ProductWarehousingOrchestrator {
                     patch.setScanResult("failure");
                     patch.setRemark("入库记录已回退作废");
                     patch.setUpdateTime(now);
-                    scanRecordMapper.updateById(patch);
+                    toUpdate.add(patch);
+                }
+                if (!toUpdate.isEmpty()) {
+                    scanRecordService.batchUpdateRecords(toUpdate);
                 }
             }
         } catch (Exception e) {
@@ -849,14 +847,9 @@ public class ProductWarehousingOrchestrator {
         }
 
         try {
-            List<ScanRecord> inspectionRecords = scanRecordMapper.selectList(new LambdaQueryWrapper<ScanRecord>()
-                    .eq(ScanRecord::getOrderId, oid)
-                    .eq(ScanRecord::getCuttingBundleId, bundle.getId())
-                    .eq(ScanRecord::getProcessCode, "quality_warehousing")
-                    .eq(ScanRecord::getScanResult, "success")
-                    .orderByDesc(ScanRecord::getScanTime)
-                    .orderByDesc(ScanRecord::getCreateTime));
+            List<ScanRecord> inspectionRecords = scanRecordService.listQualityWarehousingRecords(oid, bundle.getId());
             if (inspectionRecords != null) {
+                List<ScanRecord> toUpdate = new ArrayList<>();
                 for (ScanRecord sr : inspectionRecords) {
                     if (sr == null || !StringUtils.hasText(sr.getId())) {
                         continue;
@@ -866,7 +859,10 @@ public class ProductWarehousingOrchestrator {
                     patch.setScanResult("failure");
                     patch.setRemark("质检入库已回退作废");
                     patch.setUpdateTime(now);
-                    scanRecordMapper.updateById(patch);
+                    toUpdate.add(patch);
+                }
+                if (!toUpdate.isEmpty()) {
+                    scanRecordService.batchUpdateRecords(toUpdate);
                 }
             }
         } catch (Exception e) {

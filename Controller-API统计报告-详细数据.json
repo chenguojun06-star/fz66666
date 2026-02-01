@@ -1,0 +1,3321 @@
+{
+  "summary": {
+    "total_endpoints": 334,
+    "total_controllers": 51,
+    "http_methods": {
+      "GET": 148,
+      "POST": 137,
+      "PUT": 28,
+      "DELETE": 21
+    },
+    "function_types": {
+      "other_query": 62,
+      "create": 93,
+      "detail_query": 88,
+      "list_query": 41,
+      "statistics": 16,
+      "batch_operation": 6,
+      "update": 27,
+      "export": 1
+    },
+    "api_categories": {
+      "pc": 262,
+      "miniprogram": 30,
+      "admin": 42
+    }
+  },
+  "modules": {
+    "common": {
+      "count": 7,
+      "controllers": [
+        "PerformanceController",
+        "CommonController"
+      ],
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/api/common/download/{fileName:.+}",
+          "java_method": "downloadFile",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "CommonController",
+          "file": "backend/src/main/java/com/fashion/supplychain/common/CommonController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/common/upload",
+          "java_method": "upload",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "CommonController",
+          "file": "backend/src/main/java/com/fashion/supplychain/common/CommonController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/monitor/performance/stats",
+          "java_method": "getAllStats",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "PerformanceController",
+          "file": "backend/src/main/java/com/fashion/supplychain/common/PerformanceController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/monitor/performance/stats/{methodName}",
+          "java_method": "getMethodStats",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "PerformanceController",
+          "file": "backend/src/main/java/com/fashion/supplychain/common/PerformanceController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/monitor/performance/slow-methods",
+          "java_method": "getSlowMethods",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "PerformanceController",
+          "file": "backend/src/main/java/com/fashion/supplychain/common/PerformanceController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/monitor/performance/clear",
+          "java_method": "clearStats",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "PerformanceController",
+          "file": "backend/src/main/java/com/fashion/supplychain/common/PerformanceController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/monitor/performance/report",
+          "java_method": "printReport",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "PerformanceController",
+          "file": "backend/src/main/java/com/fashion/supplychain/common/PerformanceController.java"
+        }
+      ]
+    },
+    "logistics": {
+      "count": 16,
+      "controllers": [
+        "LogisticsController"
+      ],
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/api/logistics/express-order/{id}",
+          "java_method": "getExpressOrderDetail",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "LogisticsController",
+          "file": "backend/src/main/java/com/fashion/supplychain/logistics/controller/LogisticsController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/logistics/express-order/by-tracking-no/{trackingNo}",
+          "java_method": "getExpressOrderByTrackingNo",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "LogisticsController",
+          "file": "backend/src/main/java/com/fashion/supplychain/logistics/controller/LogisticsController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/logistics/express-order/list",
+          "java_method": "queryExpressOrderPage",
+          "func_type": "list_query",
+          "category": "pc",
+          "controller": "LogisticsController",
+          "file": "backend/src/main/java/com/fashion/supplychain/logistics/controller/LogisticsController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/logistics/express-order/list-all",
+          "java_method": "queryExpressOrderList",
+          "func_type": "list_query",
+          "category": "pc",
+          "controller": "LogisticsController",
+          "file": "backend/src/main/java/com/fashion/supplychain/logistics/controller/LogisticsController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/logistics/express-order/by-order/{orderId}",
+          "java_method": "getExpressOrdersByOrderId",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "LogisticsController",
+          "file": "backend/src/main/java/com/fashion/supplychain/logistics/controller/LogisticsController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/logistics/express-order/{id}/tracks",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "LogisticsController",
+          "file": "backend/src/main/java/com/fashion/supplychain/logistics/controller/LogisticsController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/logistics/express-order/pending-sync",
+          "java_method": "getPendingSyncList",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "LogisticsController",
+          "file": "backend/src/main/java/com/fashion/supplychain/logistics/controller/LogisticsController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/logistics/express-companies",
+          "java_method": "getExpressCompanies",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "LogisticsController",
+          "file": "backend/src/main/java/com/fashion/supplychain/logistics/controller/LogisticsController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/logistics/statistics",
+          "java_method": "getStatistics",
+          "func_type": "statistics",
+          "category": "pc",
+          "controller": "LogisticsController",
+          "file": "backend/src/main/java/com/fashion/supplychain/logistics/controller/LogisticsController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/logistics/express-order",
+          "java_method": "createExpressOrder",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "LogisticsController",
+          "file": "backend/src/main/java/com/fashion/supplychain/logistics/controller/LogisticsController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/logistics/express-order/{id}/update-status",
+          "java_method": "updateLogisticsStatus",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "LogisticsController",
+          "file": "backend/src/main/java/com/fashion/supplychain/logistics/controller/LogisticsController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/logistics/express-order/{id}/confirm-sign",
+          "java_method": "confirmSign",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "LogisticsController",
+          "file": "backend/src/main/java/com/fashion/supplychain/logistics/controller/LogisticsController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/logistics/express-order/{id}/sync-track",
+          "java_method": "syncLogisticsTrack",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "LogisticsController",
+          "file": "backend/src/main/java/com/fashion/supplychain/logistics/controller/LogisticsController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/logistics/express-order/batch-sync-track",
+          "java_method": "batchSyncLogisticsTrack",
+          "func_type": "batch_operation",
+          "category": "pc",
+          "controller": "LogisticsController",
+          "file": "backend/src/main/java/com/fashion/supplychain/logistics/controller/LogisticsController.java"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/logistics/express-order/{id}",
+          "java_method": "updateExpressOrder",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "LogisticsController",
+          "file": "backend/src/main/java/com/fashion/supplychain/logistics/controller/LogisticsController.java"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/logistics/express-order/{id}",
+          "java_method": "deleteExpressOrder",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "LogisticsController",
+          "file": "backend/src/main/java/com/fashion/supplychain/logistics/controller/LogisticsController.java"
+        }
+      ]
+    },
+    "stock": {
+      "count": 5,
+      "controllers": [
+        "SampleStockController"
+      ],
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/api/stock/sample/page",
+          "java_method": "page",
+          "func_type": "list_query",
+          "category": "pc",
+          "controller": "SampleStockController",
+          "file": "backend/src/main/java/com/fashion/supplychain/stock/controller/SampleStockController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/stock/sample/loan/list",
+          "java_method": "listLoans",
+          "func_type": "list_query",
+          "category": "pc",
+          "controller": "SampleStockController",
+          "file": "backend/src/main/java/com/fashion/supplychain/stock/controller/SampleStockController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/stock/sample/inbound",
+          "java_method": "inbound",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "SampleStockController",
+          "file": "backend/src/main/java/com/fashion/supplychain/stock/controller/SampleStockController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/stock/sample/loan",
+          "java_method": "loan",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "SampleStockController",
+          "file": "backend/src/main/java/com/fashion/supplychain/stock/controller/SampleStockController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/stock/sample/return",
+          "java_method": "returnSample",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "SampleStockController",
+          "file": "backend/src/main/java/com/fashion/supplychain/stock/controller/SampleStockController.java"
+        }
+      ]
+    },
+    "payroll": {
+      "count": 0,
+      "controllers": [
+        "PayrollSettlementController"
+      ],
+      "endpoints": []
+    },
+    "warehouse": {
+      "count": 4,
+      "controllers": [
+        "WarehouseDashboardController"
+      ],
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/api/warehouse/dashboard/stats",
+          "java_method": "getStats",
+          "func_type": "statistics",
+          "category": "pc",
+          "controller": "WarehouseDashboardController",
+          "file": "backend/src/main/java/com/fashion/supplychain/warehouse/controller/WarehouseDashboardController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/warehouse/dashboard/low-stock",
+          "java_method": "getLowStockItems",
+          "func_type": "statistics",
+          "category": "pc",
+          "controller": "WarehouseDashboardController",
+          "file": "backend/src/main/java/com/fashion/supplychain/warehouse/controller/WarehouseDashboardController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/warehouse/dashboard/recent-operations",
+          "java_method": "getRecentOperations",
+          "func_type": "statistics",
+          "category": "pc",
+          "controller": "WarehouseDashboardController",
+          "file": "backend/src/main/java/com/fashion/supplychain/warehouse/controller/WarehouseDashboardController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/warehouse/dashboard/trend",
+          "java_method": "getTrendData",
+          "func_type": "statistics",
+          "category": "pc",
+          "controller": "WarehouseDashboardController",
+          "file": "backend/src/main/java/com/fashion/supplychain/warehouse/controller/WarehouseDashboardController.java"
+        }
+      ]
+    },
+    "finance": {
+      "count": 38,
+      "controllers": [
+        "PayrollApprovalController",
+        "PayrollSettlementController",
+        "ShipmentReconciliationController",
+        "ReconciliationCompatController",
+        "FinishedProductSettlementController",
+        "OrderReconciliationApprovalController",
+        "MaterialReconciliationController"
+      ],
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/api/finance/reconciliation/order-profit",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "ReconciliationCompatController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/ReconciliationCompatController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/finance/reconciliation/return",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "ReconciliationCompatController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/ReconciliationCompatController.java"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/finance/reconciliation/status",
+          "java_method": "unknown",
+          "func_type": "update",
+          "category": "pc",
+          "controller": "ReconciliationCompatController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/ReconciliationCompatController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/finance/payroll-settlement/operator-summary",
+          "java_method": "getOperatorSummary",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "PayrollSettlementController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/PayrollSettlementController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/finance/finished-settlement/page",
+          "java_method": "page",
+          "func_type": "list_query",
+          "category": "pc",
+          "controller": "FinishedProductSettlementController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/FinishedProductSettlementController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/finance/finished-settlement/detail/{orderNo}",
+          "java_method": "getByOrderNo",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "FinishedProductSettlementController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/FinishedProductSettlementController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/finance/finished-settlement/export",
+          "java_method": "unknown",
+          "func_type": "export",
+          "category": "pc",
+          "controller": "FinishedProductSettlementController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/FinishedProductSettlementController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/finance/finished-settlement/approval-status/{id}",
+          "java_method": "getApprovalStatus",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "FinishedProductSettlementController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/FinishedProductSettlementController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/finance/finished-settlement/approve",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "FinishedProductSettlementController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/FinishedProductSettlementController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/finance/order-reconciliation-approval/list",
+          "java_method": "list",
+          "func_type": "list_query",
+          "category": "pc",
+          "controller": "OrderReconciliationApprovalController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/OrderReconciliationApprovalController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/finance/order-reconciliation-approval/verify",
+          "java_method": "verify",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "OrderReconciliationApprovalController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/OrderReconciliationApprovalController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/finance/order-reconciliation-approval/approve",
+          "java_method": "approve",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "OrderReconciliationApprovalController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/OrderReconciliationApprovalController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/finance/order-reconciliation-approval/pay",
+          "java_method": "pay",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "OrderReconciliationApprovalController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/OrderReconciliationApprovalController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/finance/order-reconciliation-approval/return",
+          "java_method": "returnToPrevious",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "OrderReconciliationApprovalController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/OrderReconciliationApprovalController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/finance/payroll-approval/list",
+          "java_method": "list",
+          "func_type": "list_query",
+          "category": "pc",
+          "controller": "PayrollApprovalController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/PayrollApprovalController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/finance/payroll-approval/update-status",
+          "java_method": "updateStatus",
+          "func_type": "update",
+          "category": "pc",
+          "controller": "PayrollApprovalController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/PayrollApprovalController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/finance/payroll-approval/return",
+          "java_method": "returnToPrevious",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "PayrollApprovalController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/PayrollApprovalController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/finance/shipment-reconciliation/list",
+          "java_method": "listAll",
+          "func_type": "list_query",
+          "category": "pc",
+          "controller": "ShipmentReconciliationController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/ShipmentReconciliationController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/finance/shipment-reconciliation/list-all",
+          "java_method": "listAll",
+          "func_type": "list_query",
+          "category": "pc",
+          "controller": "ShipmentReconciliationController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/ShipmentReconciliationController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/finance/shipment-reconciliation/{id}",
+          "java_method": "getById",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "ShipmentReconciliationController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/ShipmentReconciliationController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/finance/shipment-reconciliation/deduction-items/{reconciliationId}",
+          "java_method": "getDeductionItems",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "ShipmentReconciliationController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/ShipmentReconciliationController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/finance/shipment-reconciliation/{orderId}/logs",
+          "java_method": "getId",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "ShipmentReconciliationController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/ShipmentReconciliationController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/finance/shipment-reconciliation",
+          "java_method": "save",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "ShipmentReconciliationController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/ShipmentReconciliationController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/finance/shipment-reconciliation/update-status",
+          "java_method": "unknown",
+          "func_type": "update",
+          "category": "pc",
+          "controller": "ShipmentReconciliationController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/ShipmentReconciliationController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/finance/shipment-reconciliation/return",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "ShipmentReconciliationController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/ShipmentReconciliationController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/finance/shipment-reconciliation/backfill",
+          "java_method": "getDeductionItems",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "ShipmentReconciliationController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/ShipmentReconciliationController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/finance/shipment-reconciliation/deduction-items/{reconciliationId}",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "ShipmentReconciliationController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/ShipmentReconciliationController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/finance/shipment-reconciliation/{orderId}/remark",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "ShipmentReconciliationController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/ShipmentReconciliationController.java"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/finance/shipment-reconciliation",
+          "java_method": "update",
+          "func_type": "update",
+          "category": "pc",
+          "controller": "ShipmentReconciliationController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/ShipmentReconciliationController.java"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/finance/shipment-reconciliation/{id}",
+          "java_method": "delete",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "ShipmentReconciliationController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/ShipmentReconciliationController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/finance/material-reconciliation/list",
+          "java_method": "getById",
+          "func_type": "list_query",
+          "category": "pc",
+          "controller": "MaterialReconciliationController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/MaterialReconciliationController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/finance/material-reconciliation/{id}",
+          "java_method": "getById",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "MaterialReconciliationController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/MaterialReconciliationController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/finance/material-reconciliation",
+          "java_method": "save",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "MaterialReconciliationController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/MaterialReconciliationController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/finance/material-reconciliation/update-status",
+          "java_method": "unknown",
+          "func_type": "update",
+          "category": "pc",
+          "controller": "MaterialReconciliationController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/MaterialReconciliationController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/finance/material-reconciliation/return",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "MaterialReconciliationController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/MaterialReconciliationController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/finance/material-reconciliation/backfill",
+          "java_method": "getId",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "MaterialReconciliationController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/MaterialReconciliationController.java"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/finance/material-reconciliation",
+          "java_method": "update",
+          "func_type": "update",
+          "category": "pc",
+          "controller": "MaterialReconciliationController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/MaterialReconciliationController.java"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/finance/material-reconciliation/{id}",
+          "java_method": "delete",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "MaterialReconciliationController",
+          "file": "backend/src/main/java/com/fashion/supplychain/finance/controller/MaterialReconciliationController.java"
+        }
+      ]
+    },
+    "production": {
+      "count": 132,
+      "controllers": [
+        "MaterialPurchaseController",
+        "MaterialStockController",
+        "MaterialInboundController",
+        "OrderManagementController",
+        "MaterialPickingController",
+        "PatternRevisionController",
+        "CuttingTaskController",
+        "PatternProductionController",
+        "ProductionOrderController",
+        "CuttingBundleController",
+        "ScanRecordController",
+        "ProductWarehousingController",
+        "OrderTransferController",
+        "MaterialDatabaseController"
+      ],
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/list",
+          "java_method": "unknown",
+          "func_type": "list_query",
+          "category": "pc",
+          "controller": "MaterialPurchaseController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/MaterialPurchaseController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/{id}",
+          "java_method": "getById",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "MaterialPurchaseController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/MaterialPurchaseController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/demand/preview",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "MaterialPurchaseController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/MaterialPurchaseController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/by-scan-code",
+          "java_method": "getByScanCode",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "MaterialPurchaseController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/MaterialPurchaseController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/my-tasks",
+          "java_method": "getMyTasks",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "MaterialPurchaseController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/MaterialPurchaseController.java"
+        },
+        {
+          "method": "POST",
+          "path": "",
+          "java_method": "save",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "MaterialPurchaseController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/MaterialPurchaseController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/batch",
+          "java_method": "batch",
+          "func_type": "batch_operation",
+          "category": "pc",
+          "controller": "MaterialPurchaseController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/MaterialPurchaseController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/update-arrived-quantity",
+          "java_method": "updateArrivedQuantity",
+          "func_type": "update",
+          "category": "pc",
+          "controller": "MaterialPurchaseController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/MaterialPurchaseController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/demand/generate",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "MaterialPurchaseController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/MaterialPurchaseController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/receive",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "MaterialPurchaseController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/MaterialPurchaseController.java"
+        },
+        {
+          "method": "POST",
+          "path": "",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "MaterialPurchaseController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/MaterialPurchaseController.java"
+        },
+        {
+          "method": "POST",
+          "path": "",
+          "java_method": "delete",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "MaterialPurchaseController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/MaterialPurchaseController.java"
+        },
+        {
+          "method": "PUT",
+          "path": "",
+          "java_method": "update",
+          "func_type": "update",
+          "category": "pc",
+          "controller": "MaterialPurchaseController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/MaterialPurchaseController.java"
+        },
+        {
+          "method": "PUT",
+          "path": "/quick-edit",
+          "java_method": "unknown",
+          "func_type": "update",
+          "category": "pc",
+          "controller": "MaterialPurchaseController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/MaterialPurchaseController.java"
+        },
+        {
+          "method": "DELETE",
+          "path": "/{id}",
+          "java_method": "delete",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "MaterialPurchaseController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/MaterialPurchaseController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/material/inbound/list",
+          "java_method": "unknown",
+          "func_type": "list_query",
+          "category": "pc",
+          "controller": "MaterialInboundController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/MaterialInboundController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/material/inbound/by-purchase/{purchaseId}",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "MaterialInboundController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/MaterialInboundController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/material/inbound/{id}",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "MaterialInboundController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/MaterialInboundController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/material/inbound/generate-no",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "MaterialInboundController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/MaterialInboundController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/material/inbound/confirm-arrival",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "MaterialInboundController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/MaterialInboundController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/material/inbound/manual",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "MaterialInboundController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/MaterialInboundController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/order-management/create-from-style",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "OrderManagementController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/OrderManagementController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/order/transfer/pending",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "OrderTransferController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/OrderTransferController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/order/transfer/my-transfers",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "OrderTransferController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/OrderTransferController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/order/transfer/received",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "OrderTransferController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/OrderTransferController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/order/transfer/search-users",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "OrderTransferController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/OrderTransferController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/order/transfer/pending-count",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "OrderTransferController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/OrderTransferController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/order/transfer/create",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "OrderTransferController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/OrderTransferController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/order/transfer/accept/{transferId}",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "OrderTransferController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/OrderTransferController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/order/transfer/reject/{transferId}",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "OrderTransferController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/OrderTransferController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/pattern-revision/list",
+          "java_method": "unknown",
+          "func_type": "list_query",
+          "category": "pc",
+          "controller": "PatternRevisionController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/PatternRevisionController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/pattern-revision/{id}",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "PatternRevisionController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/PatternRevisionController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/pattern-revision/next-version",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "PatternRevisionController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/PatternRevisionController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/pattern-revision",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "PatternRevisionController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/PatternRevisionController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/pattern-revision/{id}/submit",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "PatternRevisionController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/PatternRevisionController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/pattern-revision/{id}/approve",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "PatternRevisionController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/PatternRevisionController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/pattern-revision/{id}/reject",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "PatternRevisionController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/PatternRevisionController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/pattern-revision/{id}/complete",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "PatternRevisionController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/PatternRevisionController.java"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/pattern-revision/{id}",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "PatternRevisionController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/PatternRevisionController.java"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/pattern-revision/{id}",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "PatternRevisionController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/PatternRevisionController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/cutting-task/list",
+          "java_method": "unknown",
+          "func_type": "list_query",
+          "category": "pc",
+          "controller": "CuttingTaskController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/CuttingTaskController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/cutting-task/my-tasks",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "CuttingTaskController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/CuttingTaskController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/cutting-task/receive",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "CuttingTaskController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/CuttingTaskController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/cutting-task/rollback",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "CuttingTaskController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/CuttingTaskController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/cutting-task/custom/create",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "CuttingTaskController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/CuttingTaskController.java"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/production/cutting-task/quick-edit",
+          "java_method": "unknown",
+          "func_type": "update",
+          "category": "pc",
+          "controller": "CuttingTaskController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/CuttingTaskController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/warehousing/list",
+          "java_method": "getById",
+          "func_type": "list_query",
+          "category": "pc",
+          "controller": "ProductWarehousingController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ProductWarehousingController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/warehousing/{id}",
+          "java_method": "getById",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "ProductWarehousingController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ProductWarehousingController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/warehousing/repair-stats",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "ProductWarehousingController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ProductWarehousingController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/warehousing",
+          "java_method": "save",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "ProductWarehousingController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ProductWarehousingController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/warehousing/batch",
+          "java_method": "update",
+          "func_type": "batch_operation",
+          "category": "pc",
+          "controller": "ProductWarehousingController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ProductWarehousingController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/warehousing/rollback-by-bundle",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "ProductWarehousingController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ProductWarehousingController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/warehousing/repair-stats/batch",
+          "java_method": "unknown",
+          "func_type": "batch_operation",
+          "category": "pc",
+          "controller": "ProductWarehousingController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ProductWarehousingController.java"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/production/warehousing",
+          "java_method": "update",
+          "func_type": "update",
+          "category": "pc",
+          "controller": "ProductWarehousingController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ProductWarehousingController.java"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/production/warehousing/{id}",
+          "java_method": "delete",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "ProductWarehousingController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ProductWarehousingController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/order/list",
+          "java_method": "unknown",
+          "func_type": "list_query",
+          "category": "pc",
+          "controller": "ProductionOrderController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ProductionOrderController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/order/detail/{id}",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "ProductionOrderController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ProductionOrderController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/order/by-order-no/{orderNo}",
+          "java_method": "detailDTO",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "ProductionOrderController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ProductionOrderController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/order/detail-dto/{id}",
+          "java_method": "detailDTO",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "ProductionOrderController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ProductionOrderController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/order/flow/{id}",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "ProductionOrderController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ProductionOrderController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/order/node-operations/{id}",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "ProductionOrderController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ProductionOrderController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/order/procurement-status/{orderId}",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "ProductionOrderController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ProductionOrderController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/order/process-status/{orderId}",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "ProductionOrderController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ProductionOrderController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/order",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "ProductionOrderController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ProductionOrderController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/order/save",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "ProductionOrderController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ProductionOrderController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/order/scrap",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "ProductionOrderController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ProductionOrderController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/order/update-progress",
+          "java_method": "unknown",
+          "func_type": "update",
+          "category": "pc",
+          "controller": "ProductionOrderController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ProductionOrderController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/order/update-material-rate",
+          "java_method": "unknown",
+          "func_type": "update",
+          "category": "pc",
+          "controller": "ProductionOrderController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ProductionOrderController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/order/complete",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "ProductionOrderController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ProductionOrderController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/order/close",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "ProductionOrderController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ProductionOrderController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/order/progress-workflow/lock",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "ProductionOrderController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ProductionOrderController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/order/progress-workflow/rollback",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "ProductionOrderController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ProductionOrderController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/order/confirm-procurement",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "ProductionOrderController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ProductionOrderController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/order/recompute-progress",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "ProductionOrderController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ProductionOrderController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/order/node-operations",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "ProductionOrderController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ProductionOrderController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/order/delegate-process",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "ProductionOrderController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ProductionOrderController.java"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/production/order",
+          "java_method": "unknown",
+          "func_type": "update",
+          "category": "pc",
+          "controller": "ProductionOrderController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ProductionOrderController.java"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/production/order/quick-edit",
+          "java_method": "unknown",
+          "func_type": "update",
+          "category": "pc",
+          "controller": "ProductionOrderController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ProductionOrderController.java"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/production/order/delete/{id}",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "ProductionOrderController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ProductionOrderController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/material/database/list",
+          "java_method": "list",
+          "func_type": "list_query",
+          "category": "pc",
+          "controller": "MaterialDatabaseController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/MaterialDatabaseController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/material/database/{id}",
+          "java_method": "getById",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "MaterialDatabaseController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/MaterialDatabaseController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/material/database",
+          "java_method": "save",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "MaterialDatabaseController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/MaterialDatabaseController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/material/database/{id}/complete",
+          "java_method": "complete",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "MaterialDatabaseController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/MaterialDatabaseController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/material/database/{id}/return",
+          "java_method": "returnToPending",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "MaterialDatabaseController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/MaterialDatabaseController.java"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/material/database",
+          "java_method": "update",
+          "func_type": "update",
+          "category": "pc",
+          "controller": "MaterialDatabaseController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/MaterialDatabaseController.java"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/material/database/{id}",
+          "java_method": "delete",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "MaterialDatabaseController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/MaterialDatabaseController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/scan/list",
+          "java_method": "unknown",
+          "func_type": "list_query",
+          "category": "miniprogram",
+          "controller": "ScanRecordController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ScanRecordController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/scan/order/{orderId}",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "miniprogram",
+          "controller": "ScanRecordController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ScanRecordController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/scan/style/{styleNo}",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "miniprogram",
+          "controller": "ScanRecordController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ScanRecordController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/scan/history",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "miniprogram",
+          "controller": "ScanRecordController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ScanRecordController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/scan/my-history",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "miniprogram",
+          "controller": "ScanRecordController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ScanRecordController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/scan/personal-stats",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "miniprogram",
+          "controller": "ScanRecordController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ScanRecordController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/scan/my-quality-tasks",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "miniprogram",
+          "controller": "ScanRecordController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ScanRecordController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/scan/sku/list/{orderNo}",
+          "java_method": "unknown",
+          "func_type": "list_query",
+          "category": "miniprogram",
+          "controller": "ScanRecordController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ScanRecordController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/scan/sku/progress",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "miniprogram",
+          "controller": "ScanRecordController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ScanRecordController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/scan/sku/order-progress/{orderNo}",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "miniprogram",
+          "controller": "ScanRecordController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ScanRecordController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/scan/sku/statistics",
+          "java_method": "unknown",
+          "func_type": "statistics",
+          "category": "miniprogram",
+          "controller": "ScanRecordController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ScanRecordController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/scan/sku/is-completed",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "miniprogram",
+          "controller": "ScanRecordController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ScanRecordController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/scan/sku/report/{orderNo}",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "miniprogram",
+          "controller": "ScanRecordController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ScanRecordController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/scan/process-prices/{orderNo}",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "miniprogram",
+          "controller": "ScanRecordController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ScanRecordController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/scan/process-price/{orderNo}/{processName}",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "miniprogram",
+          "controller": "ScanRecordController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ScanRecordController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/scan/order-total-cost/{orderNo}",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "miniprogram",
+          "controller": "ScanRecordController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ScanRecordController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/scan/execute",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "miniprogram",
+          "controller": "ScanRecordController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ScanRecordController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/scan/unit-price",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "miniprogram",
+          "controller": "ScanRecordController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ScanRecordController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/scan/undo",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "miniprogram",
+          "controller": "ScanRecordController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ScanRecordController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/scan/cleanup",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "miniprogram",
+          "controller": "ScanRecordController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ScanRecordController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/scan/delete-full-link/{orderId}",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "miniprogram",
+          "controller": "ScanRecordController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ScanRecordController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/scan/sku/detect-mode",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "miniprogram",
+          "controller": "ScanRecordController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ScanRecordController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/scan/sku/validate",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "miniprogram",
+          "controller": "ScanRecordController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/ScanRecordController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/pattern/development-stats",
+          "java_method": "getDevelopmentStats",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "PatternProductionController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/PatternProductionController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/pattern/list",
+          "java_method": "list",
+          "func_type": "list_query",
+          "category": "pc",
+          "controller": "PatternProductionController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/PatternProductionController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/pattern/{id}",
+          "java_method": "getById",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "PatternProductionController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/PatternProductionController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/pattern/{patternId}/scan-records",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "PatternProductionController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/PatternProductionController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/pattern/{id}/receive",
+          "java_method": "receive",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "PatternProductionController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/PatternProductionController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/pattern/{id}/progress",
+          "java_method": "updateProgress",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "PatternProductionController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/PatternProductionController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/pattern/scan",
+          "java_method": "submitScan",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "PatternProductionController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/PatternProductionController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/pattern/{patternId}/receive",
+          "java_method": "receivePattern",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "PatternProductionController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/PatternProductionController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/pattern/{patternId}/complete",
+          "java_method": "completePattern",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "PatternProductionController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/PatternProductionController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/pattern/{patternId}/warehouse-in",
+          "java_method": "warehouseIn",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "PatternProductionController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/PatternProductionController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/pattern/{id}/maintenance",
+          "java_method": "maintenance",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "PatternProductionController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/PatternProductionController.java"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/production/pattern/{id}",
+          "java_method": "delete",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "PatternProductionController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/PatternProductionController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/material/stock/page",
+          "java_method": "getPage",
+          "func_type": "list_query",
+          "category": "pc",
+          "controller": "MaterialStockController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/MaterialStockController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/material/stock/summary",
+          "java_method": "unknown",
+          "func_type": "statistics",
+          "category": "pc",
+          "controller": "MaterialStockController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/MaterialStockController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/picking/page",
+          "java_method": "page",
+          "func_type": "list_query",
+          "category": "pc",
+          "controller": "MaterialPickingController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/MaterialPickingController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/picking/{id}/items",
+          "java_method": "getItems",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "MaterialPickingController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/MaterialPickingController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/picking",
+          "java_method": "create",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "MaterialPickingController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/MaterialPickingController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/cutting/list",
+          "java_method": "unknown",
+          "func_type": "list_query",
+          "category": "miniprogram",
+          "controller": "CuttingBundleController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/CuttingBundleController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/cutting/summary",
+          "java_method": "unknown",
+          "func_type": "statistics",
+          "category": "miniprogram",
+          "controller": "CuttingBundleController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/CuttingBundleController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/cutting/by-code/{qrCode}",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "miniprogram",
+          "controller": "CuttingBundleController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/CuttingBundleController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/production/cutting/by-no",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "miniprogram",
+          "controller": "CuttingBundleController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/CuttingBundleController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/cutting/generate",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "miniprogram",
+          "controller": "CuttingBundleController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/CuttingBundleController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/production/cutting/receive",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "miniprogram",
+          "controller": "CuttingBundleController",
+          "file": "backend/src/main/java/com/fashion/supplychain/production/controller/CuttingBundleController.java"
+        }
+      ]
+    },
+    "system": {
+      "count": 41,
+      "controllers": [
+        "LoginLogController",
+        "UserController",
+        "RoleController",
+        "DictController",
+        "PermissionController",
+        "FactoryController",
+        "AuthController",
+        "OperationLogController",
+        "SerialController"
+      ],
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/api/system/factory/list",
+          "java_method": "unknown",
+          "func_type": "list_query",
+          "category": "admin",
+          "controller": "FactoryController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/FactoryController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/system/factory/{id}",
+          "java_method": "getById",
+          "func_type": "detail_query",
+          "category": "admin",
+          "controller": "FactoryController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/FactoryController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/system/factory",
+          "java_method": "save",
+          "func_type": "create",
+          "category": "admin",
+          "controller": "FactoryController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/FactoryController.java"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/system/factory",
+          "java_method": "update",
+          "func_type": "update",
+          "category": "admin",
+          "controller": "FactoryController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/FactoryController.java"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/system/factory/{id}",
+          "java_method": "delete",
+          "func_type": "detail_query",
+          "category": "admin",
+          "controller": "FactoryController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/FactoryController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/system/login-log/list",
+          "java_method": "unknown",
+          "func_type": "list_query",
+          "category": "admin",
+          "controller": "LoginLogController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/LoginLogController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/system/login-log/operations",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "admin",
+          "controller": "LoginLogController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/LoginLogController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/system/login-log/operation",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "admin",
+          "controller": "LoginLogController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/LoginLogController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/system/dict/list",
+          "java_method": "unknown",
+          "func_type": "list_query",
+          "category": "admin",
+          "controller": "DictController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/DictController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth/register",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "admin",
+          "controller": "AuthController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/AuthController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/system/operation-log/list",
+          "java_method": "unknown",
+          "func_type": "list_query",
+          "category": "admin",
+          "controller": "OperationLogController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/OperationLogController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/system/operation-log/{id}",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "admin",
+          "controller": "OperationLogController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/OperationLogController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/system/operation-log",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "admin",
+          "controller": "OperationLogController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/OperationLogController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/system/role/list",
+          "java_method": "unknown",
+          "func_type": "list_query",
+          "category": "admin",
+          "controller": "RoleController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/RoleController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/system/role/{id}",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "admin",
+          "controller": "RoleController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/RoleController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/system/role/{id}/permission-ids",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "admin",
+          "controller": "RoleController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/RoleController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/system/role",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "admin",
+          "controller": "RoleController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/RoleController.java"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/system/role",
+          "java_method": "unknown",
+          "func_type": "update",
+          "category": "admin",
+          "controller": "RoleController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/RoleController.java"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/system/role/{id}/permission-ids",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "admin",
+          "controller": "RoleController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/RoleController.java"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/system/role/{id}",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "admin",
+          "controller": "RoleController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/RoleController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/system/serial/generate",
+          "java_method": "generate",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "SerialController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/SerialController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/system/user/list",
+          "java_method": "unknown",
+          "func_type": "list_query",
+          "category": "admin",
+          "controller": "UserController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/UserController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/system/user/{id}",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "admin",
+          "controller": "UserController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/UserController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/system/user/me",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "admin",
+          "controller": "UserController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/UserController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/system/user/online-count",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "admin",
+          "controller": "UserController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/UserController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/system/user/permissions",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "admin",
+          "controller": "UserController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/UserController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/system/user/pending",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "admin",
+          "controller": "UserController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/UserController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/system/user",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "admin",
+          "controller": "UserController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/UserController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/system/user/login",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "admin",
+          "controller": "UserController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/UserController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/system/user/{id}/approve",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "admin",
+          "controller": "UserController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/UserController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/system/user/{id}/reject",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "admin",
+          "controller": "UserController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/UserController.java"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/system/user/me",
+          "java_method": "unknown",
+          "func_type": "update",
+          "category": "admin",
+          "controller": "UserController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/UserController.java"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/system/user",
+          "java_method": "unknown",
+          "func_type": "update",
+          "category": "admin",
+          "controller": "UserController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/UserController.java"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/system/user/status",
+          "java_method": "unknown",
+          "func_type": "update",
+          "category": "admin",
+          "controller": "UserController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/UserController.java"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/system/user/{id}",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "admin",
+          "controller": "UserController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/UserController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/system/permission/list",
+          "java_method": "unknown",
+          "func_type": "list_query",
+          "category": "admin",
+          "controller": "PermissionController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/PermissionController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/system/permission/tree",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "admin",
+          "controller": "PermissionController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/PermissionController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/system/permission/{id}",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "admin",
+          "controller": "PermissionController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/PermissionController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/system/permission",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "admin",
+          "controller": "PermissionController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/PermissionController.java"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/system/permission",
+          "java_method": "unknown",
+          "func_type": "update",
+          "category": "admin",
+          "controller": "PermissionController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/PermissionController.java"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/system/permission/{id}",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "admin",
+          "controller": "PermissionController",
+          "file": "backend/src/main/java/com/fashion/supplychain/system/controller/PermissionController.java"
+        }
+      ]
+    },
+    "dashboard": {
+      "count": 8,
+      "controllers": [
+        "DashboardController"
+      ],
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/api/dashboard",
+          "java_method": "unknown",
+          "func_type": "statistics",
+          "category": "pc",
+          "controller": "DashboardController",
+          "file": "backend/src/main/java/com/fashion/supplychain/dashboard/controller/DashboardController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/dashboard/urgent-events",
+          "java_method": "unknown",
+          "func_type": "statistics",
+          "category": "pc",
+          "controller": "DashboardController",
+          "file": "backend/src/main/java/com/fashion/supplychain/dashboard/controller/DashboardController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/dashboard/delivery-alert",
+          "java_method": "unknown",
+          "func_type": "statistics",
+          "category": "pc",
+          "controller": "DashboardController",
+          "file": "backend/src/main/java/com/fashion/supplychain/dashboard/controller/DashboardController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/dashboard/quality-stats",
+          "java_method": "unknown",
+          "func_type": "statistics",
+          "category": "pc",
+          "controller": "DashboardController",
+          "file": "backend/src/main/java/com/fashion/supplychain/dashboard/controller/DashboardController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/dashboard/top-stats",
+          "java_method": "unknown",
+          "func_type": "statistics",
+          "category": "pc",
+          "controller": "DashboardController",
+          "file": "backend/src/main/java/com/fashion/supplychain/dashboard/controller/DashboardController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/dashboard/order-cutting-chart",
+          "java_method": "unknown",
+          "func_type": "statistics",
+          "category": "pc",
+          "controller": "DashboardController",
+          "file": "backend/src/main/java/com/fashion/supplychain/dashboard/controller/DashboardController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/dashboard/scan-count-chart",
+          "java_method": "unknown",
+          "func_type": "statistics",
+          "category": "pc",
+          "controller": "DashboardController",
+          "file": "backend/src/main/java/com/fashion/supplychain/dashboard/controller/DashboardController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/dashboard/overdue-orders",
+          "java_method": "unknown",
+          "func_type": "statistics",
+          "category": "pc",
+          "controller": "DashboardController",
+          "file": "backend/src/main/java/com/fashion/supplychain/dashboard/controller/DashboardController.java"
+        }
+      ]
+    },
+    "wechat": {
+      "count": 1,
+      "controllers": [
+        "WeChatMiniProgramAuthController"
+      ],
+      "endpoints": [
+        {
+          "method": "POST",
+          "path": "/api/wechat/mini-program/login",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "miniprogram",
+          "controller": "WeChatMiniProgramAuthController",
+          "file": "backend/src/main/java/com/fashion/supplychain/wechat/controller/WeChatMiniProgramAuthController.java"
+        }
+      ]
+    },
+    "style": {
+      "count": 66,
+      "controllers": [
+        "StyleProcessController",
+        "StyleSizePriceController",
+        "StyleInfoController",
+        "ProductSkuController",
+        "StyleSizeController",
+        "StyleBomController",
+        "SecondaryProcessController",
+        "StyleAttachmentController",
+        "StyleOperationLogController",
+        "StyleQuotationController"
+      ],
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/api/style/info/list",
+          "java_method": "unknown",
+          "func_type": "list_query",
+          "category": "pc",
+          "controller": "StyleInfoController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleInfoController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/style/info/development-stats",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "StyleInfoController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleInfoController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/style/info/{id}",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "StyleInfoController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleInfoController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/style/info/{id}/production-req/lock",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "StyleInfoController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleInfoController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/style/info",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "StyleInfoController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleInfoController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/style/info/{id}/production-requirements/rollback",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "StyleInfoController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleInfoController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/style/info/{id}/pattern/start",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "StyleInfoController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleInfoController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/style/info/{id}/pattern/complete",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "StyleInfoController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleInfoController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/style/info/{id}/pattern/reset",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "StyleInfoController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleInfoController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/style/info/{id}/sample/start",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "StyleInfoController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleInfoController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/style/info/{id}/sample/progress",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "StyleInfoController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleInfoController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/style/info/{id}/sample/complete",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "StyleInfoController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleInfoController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/style/info/{id}/sample/reset",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "StyleInfoController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleInfoController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/style/info/{id}/bom/start",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "StyleInfoController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleInfoController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/style/info/{id}/bom/complete",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "StyleInfoController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleInfoController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/style/info/{id}/process/start",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "StyleInfoController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleInfoController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/style/info/{id}/process/complete",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "StyleInfoController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleInfoController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/style/info/{id}/secondary/start",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "StyleInfoController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleInfoController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/style/info/{id}/secondary/complete",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "StyleInfoController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleInfoController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/style/info/{id}/secondary/skip",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "StyleInfoController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleInfoController.java"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/style/info",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "StyleInfoController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleInfoController.java"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/style/info/{id}/production-requirements",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "StyleInfoController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleInfoController.java"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/style/info/{id}",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "StyleInfoController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleInfoController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/style/sku/inventory/{skuCode}",
+          "java_method": "getInventory",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "ProductSkuController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/ProductSkuController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/style/sku/list",
+          "java_method": "list",
+          "func_type": "list_query",
+          "category": "pc",
+          "controller": "ProductSkuController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/ProductSkuController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/style/sku/inventory/update",
+          "java_method": "updateInventory",
+          "func_type": "update",
+          "category": "pc",
+          "controller": "ProductSkuController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/ProductSkuController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/style/sku/sync/{styleId}",
+          "java_method": "syncSkus",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "ProductSkuController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/ProductSkuController.java"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/style/sku/{id}",
+          "java_method": "update",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "ProductSkuController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/ProductSkuController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/style/process/list",
+          "java_method": "listByStyleId",
+          "func_type": "list_query",
+          "category": "pc",
+          "controller": "StyleProcessController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleProcessController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/style/process",
+          "java_method": "save",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "StyleProcessController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleProcessController.java"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/style/process",
+          "java_method": "update",
+          "func_type": "update",
+          "category": "pc",
+          "controller": "StyleProcessController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleProcessController.java"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/style/process/{id}",
+          "java_method": "delete",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "StyleProcessController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleProcessController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/style/size-price/list",
+          "java_method": "list",
+          "func_type": "list_query",
+          "category": "pc",
+          "controller": "StyleSizePriceController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleSizePriceController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/style/size-price/batch-save",
+          "java_method": "batchSave",
+          "func_type": "batch_operation",
+          "category": "pc",
+          "controller": "StyleSizePriceController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleSizePriceController.java"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/style/size-price/{id}",
+          "java_method": "delete",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "StyleSizePriceController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleSizePriceController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/style/bom/list",
+          "java_method": "listByStyleId",
+          "func_type": "list_query",
+          "category": "pc",
+          "controller": "StyleBomController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleBomController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/style/bom/sync-jobs/{jobId}",
+          "java_method": "getSyncJob",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "StyleBomController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleBomController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/style/bom/stock-summary/{styleId}",
+          "java_method": "getBomStockSummary",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "StyleBomController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleBomController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/style/bom",
+          "java_method": "save",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "StyleBomController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleBomController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/style/bom/{styleId}/sync-material-database",
+          "java_method": "syncMaterialDatabase",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "StyleBomController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleBomController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/style/bom/{styleId}/sync-material-database/async",
+          "java_method": "syncMaterialDatabaseAsync",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "StyleBomController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleBomController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/style/bom/generate-purchase",
+          "java_method": "generatePurchase",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "StyleBomController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleBomController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/style/bom/check-stock/{styleId}",
+          "java_method": "checkBomStock",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "StyleBomController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleBomController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/style/bom/batch-check-stock",
+          "java_method": "batchCheckBomStock",
+          "func_type": "batch_operation",
+          "category": "pc",
+          "controller": "StyleBomController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleBomController.java"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/style/bom",
+          "java_method": "update",
+          "func_type": "update",
+          "category": "pc",
+          "controller": "StyleBomController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleBomController.java"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/style/bom/{id}",
+          "java_method": "delete",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "StyleBomController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleBomController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/style/quotation",
+          "java_method": "getByStyleId",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "StyleQuotationController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleQuotationController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/style/quotation",
+          "java_method": "saveOrUpdate",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "StyleQuotationController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleQuotationController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/style/operation-log/list",
+          "java_method": "list",
+          "func_type": "list_query",
+          "category": "admin",
+          "controller": "StyleOperationLogController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleOperationLogController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/style/size/list",
+          "java_method": "listByStyleId",
+          "func_type": "list_query",
+          "category": "pc",
+          "controller": "StyleSizeController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleSizeController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/style/size",
+          "java_method": "save",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "StyleSizeController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleSizeController.java"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/style/size",
+          "java_method": "update",
+          "func_type": "update",
+          "category": "pc",
+          "controller": "StyleSizeController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleSizeController.java"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/style/size/{id}",
+          "java_method": "delete",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "StyleSizeController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleSizeController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/style/secondary-process/list",
+          "java_method": "listByStyleId",
+          "func_type": "list_query",
+          "category": "pc",
+          "controller": "SecondaryProcessController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/SecondaryProcessController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/style/secondary-process/{id}",
+          "java_method": "getById",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "SecondaryProcessController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/SecondaryProcessController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/style/secondary-process",
+          "java_method": "create",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "SecondaryProcessController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/SecondaryProcessController.java"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/style/secondary-process/{id}",
+          "java_method": "update",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "SecondaryProcessController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/SecondaryProcessController.java"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/style/secondary-process/{id}",
+          "java_method": "delete",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "SecondaryProcessController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/SecondaryProcessController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/style/attachment/list",
+          "java_method": "list",
+          "func_type": "list_query",
+          "category": "pc",
+          "controller": "StyleAttachmentController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleAttachmentController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/style/attachment/pattern/versions",
+          "java_method": "patternVersions",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "StyleAttachmentController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleAttachmentController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/style/attachment/pattern/check",
+          "java_method": "checkPattern",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "StyleAttachmentController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleAttachmentController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/style/attachment/upload",
+          "java_method": "upload",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "StyleAttachmentController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleAttachmentController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/style/attachment/pattern/upload",
+          "java_method": "uploadPattern",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "StyleAttachmentController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleAttachmentController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/style/attachment/upload-pattern",
+          "java_method": "uploadPatternForDataCenter",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "StyleAttachmentController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleAttachmentController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/style/attachment/pattern/flow-to-center",
+          "java_method": "flowPatternToCenter",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "StyleAttachmentController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleAttachmentController.java"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/style/attachment/{id}",
+          "java_method": "delete",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "StyleAttachmentController",
+          "file": "backend/src/main/java/com/fashion/supplychain/style/controller/StyleAttachmentController.java"
+        }
+      ]
+    },
+    "template": {
+      "count": 14,
+      "controllers": [
+        "TemplateOperationLogController",
+        "TemplateLibraryController"
+      ],
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/api/template-library/list",
+          "java_method": "unknown",
+          "func_type": "list_query",
+          "category": "pc",
+          "controller": "TemplateLibraryController",
+          "file": "backend/src/main/java/com/fashion/supplychain/template/controller/TemplateLibraryController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/template-library/type/{templateType}",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "TemplateLibraryController",
+          "file": "backend/src/main/java/com/fashion/supplychain/template/controller/TemplateLibraryController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/template-library/{id}",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "TemplateLibraryController",
+          "file": "backend/src/main/java/com/fashion/supplychain/template/controller/TemplateLibraryController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/template-library/process-unit-prices",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "TemplateLibraryController",
+          "file": "backend/src/main/java/com/fashion/supplychain/template/controller/TemplateLibraryController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/template-library/progress-node-unit-prices",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "TemplateLibraryController",
+          "file": "backend/src/main/java/com/fashion/supplychain/template/controller/TemplateLibraryController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/template-library",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "TemplateLibraryController",
+          "file": "backend/src/main/java/com/fashion/supplychain/template/controller/TemplateLibraryController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/template-library/save",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "TemplateLibraryController",
+          "file": "backend/src/main/java/com/fashion/supplychain/template/controller/TemplateLibraryController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/template-library/{id}/rollback",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "TemplateLibraryController",
+          "file": "backend/src/main/java/com/fashion/supplychain/template/controller/TemplateLibraryController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/template-library/create-from-style",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "TemplateLibraryController",
+          "file": "backend/src/main/java/com/fashion/supplychain/template/controller/TemplateLibraryController.java"
+        },
+        {
+          "method": "POST",
+          "path": "/api/template-library/apply-to-style",
+          "java_method": "unknown",
+          "func_type": "create",
+          "category": "pc",
+          "controller": "TemplateLibraryController",
+          "file": "backend/src/main/java/com/fashion/supplychain/template/controller/TemplateLibraryController.java"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/template-library",
+          "java_method": "unknown",
+          "func_type": "update",
+          "category": "pc",
+          "controller": "TemplateLibraryController",
+          "file": "backend/src/main/java/com/fashion/supplychain/template/controller/TemplateLibraryController.java"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/template-library/{id}",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "TemplateLibraryController",
+          "file": "backend/src/main/java/com/fashion/supplychain/template/controller/TemplateLibraryController.java"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/template-library/{id}",
+          "java_method": "unknown",
+          "func_type": "detail_query",
+          "category": "pc",
+          "controller": "TemplateLibraryController",
+          "file": "backend/src/main/java/com/fashion/supplychain/template/controller/TemplateLibraryController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/template-library/operation-log/list",
+          "java_method": "list",
+          "func_type": "list_query",
+          "category": "admin",
+          "controller": "TemplateOperationLogController",
+          "file": "backend/src/main/java/com/fashion/supplychain/template/controller/TemplateOperationLogController.java"
+        }
+      ]
+    },
+    "datacenter": {
+      "count": 2,
+      "controllers": [
+        "DataCenterController"
+      ],
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/api/data-center/stats",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "DataCenterController",
+          "file": "backend/src/main/java/com/fashion/supplychain/datacenter/controller/DataCenterController.java"
+        },
+        {
+          "method": "GET",
+          "path": "/api/data-center/production-sheet",
+          "java_method": "unknown",
+          "func_type": "other_query",
+          "category": "pc",
+          "controller": "DataCenterController",
+          "file": "backend/src/main/java/com/fashion/supplychain/datacenter/controller/DataCenterController.java"
+        }
+      ]
+    }
+  },
+  "duplicates": [],
+  "optimization_suggestions": [
+    {
+      "type": "list_page_duplicate",
+      "title": "同一Controller同时存在/list和/page端点",
+      "count": 1,
+      "items": [
+        {
+          "module": "stock",
+          "controller": "SampleStockController",
+          "list": "/api/stock/sample/loan/list",
+          "page": "/api/stock/sample/page"
+        }
+      ],
+      "recommendation": "建议保留/page端点（支持分页），废弃/list端点或用查询参数区分"
+    },
+    {
+      "type": "query_param_opportunity",
+      "title": "可以用查询参数合并的端点",
+      "count": 16,
+      "items": [
+        {
+          "module": "logistics",
+          "base_path": "/api/logistics/express-order",
+          "endpoints": [
+            "/api/logistics/express-order/{id}",
+            "/api/logistics/express-order/list",
+            "/api/logistics/express-order/list-all",
+            "/api/logistics/express-order/pending-sync"
+          ],
+          "count": 4
+        },
+        {
+          "module": "warehouse",
+          "base_path": "/api/warehouse/dashboard",
+          "endpoints": [
+            "/api/warehouse/dashboard/stats",
+            "/api/warehouse/dashboard/low-stock",
+            "/api/warehouse/dashboard/recent-operations",
+            "/api/warehouse/dashboard/trend"
+          ],
+          "count": 4
+        },
+        {
+          "module": "finance",
+          "base_path": "/api/finance/shipment-reconciliation",
+          "endpoints": [
+            "/api/finance/shipment-reconciliation/list",
+            "/api/finance/shipment-reconciliation/list-all",
+            "/api/finance/shipment-reconciliation/{id}"
+          ],
+          "count": 3
+        },
+        {
+          "module": "production",
+          "base_path": "/api/production/material/inbound",
+          "endpoints": [
+            "/api/production/material/inbound/list",
+            "/api/production/material/inbound/{id}",
+            "/api/production/material/inbound/generate-no"
+          ],
+          "count": 3
+        },
+        {
+          "module": "production",
+          "base_path": "/api/production/order/transfer",
+          "endpoints": [
+            "/api/production/order/transfer/pending",
+            "/api/production/order/transfer/my-transfers",
+            "/api/production/order/transfer/received",
+            "/api/production/order/transfer/search-users",
+            "/api/production/order/transfer/pending-count"
+          ],
+          "count": 5
+        }
+      ],
+      "recommendation": "建议用单一端点 + 查询参数替代多个相似端点"
+    },
+    {
+      "type": "overlapping_details",
+      "title": "同一Controller有多个详情查询端点",
+      "count": 10,
+      "items": [
+        {
+          "controller": "LogisticsController",
+          "endpoints": [
+            "/api/logistics/express-order/{id}",
+            "/api/logistics/express-order/{id}/tracks",
+            "/api/logistics/express-order/{id}/update-status",
+            "/api/logistics/express-order/{id}/confirm-sign",
+            "/api/logistics/express-order/{id}/sync-track",
+            "/api/logistics/express-order/{id}",
+            "/api/logistics/express-order/{id}"
+          ],
+          "count": 7
+        },
+        {
+          "controller": "PatternRevisionController",
+          "endpoints": [
+            "/api/pattern-revision/{id}",
+            "/api/pattern-revision/{id}/submit",
+            "/api/pattern-revision/{id}/approve",
+            "/api/pattern-revision/{id}/reject",
+            "/api/pattern-revision/{id}/complete",
+            "/api/pattern-revision/{id}",
+            "/api/pattern-revision/{id}"
+          ],
+          "count": 7
+        },
+        {
+          "controller": "ProductionOrderController",
+          "endpoints": [
+            "/api/production/order/detail/{id}",
+            "/api/production/order/detail-dto/{id}",
+            "/api/production/order/flow/{id}",
+            "/api/production/order/node-operations/{id}",
+            "/api/production/order/delete/{id}"
+          ],
+          "count": 5
+        },
+        {
+          "controller": "MaterialDatabaseController",
+          "endpoints": [
+            "/api/material/database/{id}",
+            "/api/material/database/{id}/complete",
+            "/api/material/database/{id}/return",
+            "/api/material/database/{id}"
+          ],
+          "count": 4
+        },
+        {
+          "controller": "PatternProductionController",
+          "endpoints": [
+            "/api/production/pattern/{id}",
+            "/api/production/pattern/{id}/receive",
+            "/api/production/pattern/{id}/progress",
+            "/api/production/pattern/{id}/maintenance",
+            "/api/production/pattern/{id}"
+          ],
+          "count": 5
+        }
+      ],
+      "recommendation": "建议评估是否可以合并为单一详情端点"
+    }
+  ]
+}

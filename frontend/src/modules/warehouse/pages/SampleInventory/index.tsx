@@ -41,7 +41,7 @@ const SampleInventory: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/stock/sample/page', {
+      const res = await api.get('/stock/sample/list', {
         params: {
           page: pagination.pagination.current,
           pageSize: pagination.pagination.pageSize,

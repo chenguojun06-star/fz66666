@@ -38,6 +38,8 @@ export interface StyleInfo {
 
   orderCount?: number;
   latestOrderTime?: string;
+  latestOrderCreator?: string;
+  firstOrderTime?: string;
 
   // 码数颜色配置（JSON字符串）
   sizeColorConfig?: string;

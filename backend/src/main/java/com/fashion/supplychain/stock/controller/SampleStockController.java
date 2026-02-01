@@ -19,12 +19,12 @@ public class SampleStockController {
 
     @Autowired
     private SampleStockService sampleStockService;
-    
+
     @Autowired
     private SampleLoanMapper sampleLoanMapper;
 
-    @GetMapping("/page")
-    public Result<IPage<SampleStock>> page(@RequestParam Map<String, Object> params) {
+    @GetMapping("/list")
+    public Result<IPage<SampleStock>> list(@RequestParam Map<String, Object> params) {
         return Result.success(sampleStockService.queryPage(params));
     }
 
@@ -33,13 +33,13 @@ public class SampleStockController {
         sampleStockService.inbound(stock);
         return Result.success();
     }
-    
+
     @PostMapping("/loan")
     public Result<Void> loan(@RequestBody SampleLoan loan) {
         sampleStockService.loan(loan);
         return Result.success();
     }
-    
+
     @PostMapping("/return")
     public Result<Void> returnSample(@RequestBody Map<String, Object> params) {
         String loanId = (String) params.get("loanId");
@@ -48,7 +48,7 @@ public class SampleStockController {
         sampleStockService.returnSample(loanId, returnQuantity, remark);
         return Result.success();
     }
-    
+
     @GetMapping("/loan/list")
     public Result<List<SampleLoan>> listLoans(@RequestParam String sampleStockId) {
         return Result.success(sampleLoanMapper.selectList(new LambdaQueryWrapper<SampleLoan>()

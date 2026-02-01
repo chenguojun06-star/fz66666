@@ -3,6 +3,7 @@ import { EyeOutlined, DeleteOutlined } from '@ant-design/icons';
 import UniversalCardView from '@/components/common/UniversalCardView';
 import { StyleInfo } from '@/types/style';
 import { useNavigate } from 'react-router-dom';
+import dayjs from 'dayjs';
 
 interface StyleCardViewProps {
   data: StyleInfo[];
@@ -59,6 +60,20 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
           render: (val) => {
             const qty = Number(val) || 0;
             return qty > 0 ? `${qty}件` : '-';
+          }
+        },
+        {
+          label: '交板日期',
+          key: 'deliveryDate',
+          render: (val: unknown) => {
+            return val ? dayjs(val as string).format('YYYY-MM-DD') : '-';
+          }
+        },
+        {
+          label: '创建时间',
+          key: 'createTime',
+          render: (val: unknown) => {
+            return val ? dayjs(val as string).format('YYYY-MM-DD') : '-';
           }
         },
       ]}

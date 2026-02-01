@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
 import com.fashion.supplychain.production.orchestration.ProductionOrderFinanceOrchestrationService;
@@ -118,6 +119,14 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
             productionOrder.setProductionProgress(0);
             productionOrder.setMaterialArrivalRate(0);
             productionOrder.setStatus("pending");
+
+            // ✅ 记录创建人信息 - 操作人追踪必要设定
+            String currentUserId = UserContext.userId();
+            String currentUserName = UserContext.username();
+            if (StringUtils.hasText(currentUserId)) {
+                productionOrder.setCreatedById(currentUserId);
+                productionOrder.setCreatedByName(currentUserName);
+            }
         }
 
         boolean ok = this.saveOrUpdate(productionOrder);

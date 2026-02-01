@@ -4,10 +4,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.finance.entity.MaterialReconciliation;
 import com.fashion.supplychain.finance.service.MaterialReconciliationService;
 import com.fashion.supplychain.finance.service.MaterialReconciliationSyncService;
-import com.fashion.supplychain.production.entity.MaterialInbound;
-import com.fashion.supplychain.production.entity.MaterialPurchase;
-import com.fashion.supplychain.production.service.MaterialInboundService;
-import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -17,12 +13,13 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 
 /**
  * 物料对账同步服务实现类
  *
  * 核心逻辑：入库 → 对账的数据流转
+ * 
+ * 注意：本Service只处理单模块内的CRUD操作，跨模块协调请使用MaterialReconciliationSyncOrchestrator
  *
  * @author Fashion Supply Chain System
  * @since 2026-01-31
@@ -34,200 +31,74 @@ public class MaterialReconciliationSyncServiceImpl implements MaterialReconcilia
     @Autowired
     private MaterialReconciliationService materialReconciliationService;
 
-    @Autowired
-    private MaterialInboundService materialInboundService;
-
-    @Autowired
-    private MaterialPurchaseService materialPurchaseService;
-
+    /**
+     * 创建物料对账记录（单模块操作）
+     * 
+     * 注意：此方法只在本模块内创建记录，不处理跨模块数据查询
+     * 完整的同步逻辑（含跨模块查询）请使用 MaterialReconciliationSyncOrchestrator.syncFromInbound()
+     *
+     * @param reconciliation 对账记录
+     * @return 对账记录ID
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public String syncFromInbound(MaterialInbound inbound, MaterialPurchase purchase) {
-        if (inbound == null) {
-            throw new RuntimeException("入库记录不能为空");
+    public String createReconciliation(MaterialReconciliation reconciliation) {
+        if (reconciliation == null) {
+            throw new RuntimeException("对账记录不能为空");
         }
 
-        if (purchase == null) {
-            throw new RuntimeException("采购单不能为空");
+        // 生成对账单号
+        if (reconciliation.getReconciliationNo() == null) {
+            reconciliation.setReconciliationNo(generateReconciliationNo());
         }
 
-        log.info("开始同步入库记录到物料对账: inboundNo={}, purchaseNo={}",
-                inbound.getInboundNo(), purchase.getPurchaseNo());
-
-        // 1. 检查是否已同步（避免重复）
-        LambdaQueryWrapper<MaterialReconciliation> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(MaterialReconciliation::getPurchaseId, purchase.getId())
-               .eq(MaterialReconciliation::getMaterialCode, inbound.getMaterialCode());
-
-        MaterialReconciliation existing = materialReconciliationService.getOne(wrapper);
-
-        if (existing != null) {
-            log.warn("该入库记录已同步到对账，跳过: reconciliationNo={}", existing.getReconciliationNo());
-            return existing.getId();
+        // 默认值设置
+        if (reconciliation.getDeductionAmount() == null) {
+            reconciliation.setDeductionAmount(BigDecimal.ZERO);
+        }
+        if (reconciliation.getPaidAmount() == null) {
+            reconciliation.setPaidAmount(BigDecimal.ZERO);
+        }
+        if (reconciliation.getStatus() == null) {
+            reconciliation.setStatus("pending");
         }
 
-        // 2. 创建对账记录
-        MaterialReconciliation reconciliation = new MaterialReconciliation();
-
-        // 基本信息
-        reconciliation.setReconciliationNo(generateReconciliationNo());
-        reconciliation.setSupplierId(purchase.getSupplierId());
-        reconciliation.setSupplierName(purchase.getSupplierName());
-        reconciliation.setMaterialId(purchase.getMaterialId());
-        reconciliation.setMaterialCode(inbound.getMaterialCode());
-        reconciliation.setMaterialName(inbound.getMaterialName());
-
-        // 关联信息
-        reconciliation.setPurchaseId(purchase.getId());
-        reconciliation.setPurchaseNo(purchase.getPurchaseNo());
-        reconciliation.setSourceType(purchase.getSourceType()); // order=批量订单, sample=样衣开发
-        reconciliation.setOrderId(purchase.getOrderId());
-        reconciliation.setOrderNo(purchase.getOrderNo());
-        reconciliation.setPatternProductionId(purchase.getPatternProductionId()); // 样衣生产ID
-        reconciliation.setStyleId(purchase.getStyleId());
-        reconciliation.setStyleNo(purchase.getStyleNo());
-        reconciliation.setStyleName(purchase.getStyleName());
-
-        // 数量和金额（使用入库数量）
-        reconciliation.setQuantity(inbound.getInboundQuantity());
-        reconciliation.setUnitPrice(purchase.getUnitPrice() != null ? purchase.getUnitPrice() : BigDecimal.ZERO);
-
-        BigDecimal totalAmount = reconciliation.getUnitPrice()
-                .multiply(BigDecimal.valueOf(inbound.getInboundQuantity()));
-        reconciliation.setTotalAmount(totalAmount);
-        reconciliation.setDeductionAmount(BigDecimal.ZERO); // 默认无扣款
-        reconciliation.setFinalAmount(totalAmount);
-        reconciliation.setPaidAmount(BigDecimal.ZERO); // 默认未付款
-
-        // 对账周期（使用入库时间）
-        LocalDateTime inboundTime = inbound.getInboundTime();
-        reconciliation.setPeriodStartDate(inboundTime.withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0));
-        reconciliation.setPeriodEndDate(inboundTime.withDayOfMonth(inboundTime.toLocalDate().lengthOfMonth()).withHour(23).withMinute(59).withSecond(59));
-        reconciliation.setReconciliationDate(inboundTime.format(DateTimeFormatter.ofPattern("yyyy-MM")));
-
-        // 时间信息（从采购单和入库记录获取）
-        reconciliation.setExpectedArrivalDate(purchase.getExpectedArrivalDate()); // 预计到货
-        reconciliation.setActualArrivalDate(purchase.getActualArrivalDate()); // 实际到货
-        reconciliation.setInboundDate(inbound.getInboundTime()); // 入库时间
-        reconciliation.setWarehouseLocation(inbound.getWarehouseLocation()); // 仓库库区
-
-        // 状态和操作人
-        reconciliation.setStatus("pending"); // 待对账
-        reconciliation.setReconciliationOperatorId(inbound.getOperatorId());
-        reconciliation.setReconciliationOperatorName(inbound.getOperatorName());
-
-        reconciliation.setRemark(String.format("由入库单 %s 自动生成", inbound.getInboundNo()));
-
-        // 3. 保存对账记录
+        // 保存对账记录
         materialReconciliationService.save(reconciliation);
 
-        log.info("入库记录同步到物料对账成功: reconciliationNo={}, materialCode={}, quantity={}, amount={}",
+        log.info("物料对账记录创建成功: reconciliationNo={}, materialCode={}, quantity={}, amount={}",
                 reconciliation.getReconciliationNo(), reconciliation.getMaterialCode(),
                 reconciliation.getQuantity(), reconciliation.getTotalAmount());
 
         return reconciliation.getId();
     }
 
+    /**
+     * 检查入库记录是否已同步
+     * 
+     * 注意：此方法需要在Orchestrator中调用，因为需要查询入库记录信息
+     *
+     * @param purchaseId 采购单ID
+     * @param materialCode 物料编码
+     * @param inboundNo 入库单号
+     * @return 是否已同步
+     */
     @Override
-    @Transactional(rollbackFor = Exception.class)
-    public int syncFromPurchase(String purchaseId) {
+    public boolean isReconciliationExists(String purchaseId, String materialCode, String inboundNo) {
         if (purchaseId == null || purchaseId.trim().isEmpty()) {
-            throw new RuntimeException("采购单ID不能为空");
-        }
-
-        // 1. 查询采购单
-        MaterialPurchase purchase = materialPurchaseService.getById(purchaseId);
-        if (purchase == null) {
-            throw new RuntimeException("采购单不存在: " + purchaseId);
-        }
-
-        // 2. 查询该采购单的所有入库记录
-        List<MaterialInbound> inboundList = materialInboundService.listByPurchaseId(purchaseId);
-
-        if (inboundList.isEmpty()) {
-            log.warn("采购单 {} 没有入库记录，无法同步", purchaseId);
-            return 0;
-        }
-
-        // 3. 逐条同步
-        int syncCount = 0;
-        for (MaterialInbound inbound : inboundList) {
-            try {
-                if (!isInboundSynced(inbound.getId())) {
-                    syncFromInbound(inbound, purchase);
-                    syncCount++;
-                }
-            } catch (Exception e) {
-                log.error("同步入库记录失败: inboundId={}", inbound.getId(), e);
-                // 继续处理下一条
-            }
-        }
-
-        log.info("采购单 {} 同步完成，共同步 {} 条对账记录", purchaseId, syncCount);
-        return syncCount;
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public int syncByDateRange(String startDate, String endDate) {
-        // 1. 查询指定时间范围的入库记录
-        LambdaQueryWrapper<MaterialInbound> wrapper = new LambdaQueryWrapper<>();
-
-        LocalDateTime startDateTime = LocalDate.parse(startDate, DateTimeFormatter.ofPattern("yyyy-MM-dd")).atStartOfDay();
-        LocalDateTime endDateTime = LocalDate.parse(endDate, DateTimeFormatter.ofPattern("yyyy-MM-dd")).atTime(23, 59, 59);
-
-        wrapper.between(MaterialInbound::getInboundTime, startDateTime, endDateTime);
-        wrapper.isNotNull(MaterialInbound::getPurchaseId); // 只同步有采购单的入库记录
-
-        List<MaterialInbound> inboundList = materialInboundService.list(wrapper);
-
-        if (inboundList.isEmpty()) {
-            log.info("时间范围 {} 至 {} 没有入库记录", startDate, endDate);
-            return 0;
-        }
-
-        // 2. 逐条同步
-        int syncCount = 0;
-        for (MaterialInbound inbound : inboundList) {
-            try {
-                if (isInboundSynced(inbound.getId())) {
-                    continue; // 已同步，跳过
-                }
-
-                // 查询关联的采购单
-                MaterialPurchase purchase = materialPurchaseService.getById(inbound.getPurchaseId());
-                if (purchase == null) {
-                    log.warn("入库记录 {} 的采购单 {} 不存在", inbound.getInboundNo(), inbound.getPurchaseId());
-                    continue;
-                }
-
-                syncFromInbound(inbound, purchase);
-                syncCount++;
-            } catch (Exception e) {
-                log.error("同步入库记录失败: inboundId={}", inbound.getId(), e);
-            }
-        }
-
-        log.info("时间范围同步完成: {} 至 {}，共同步 {} 条对账记录", startDate, endDate, syncCount);
-        return syncCount;
-    }
-
-    @Override
-    public boolean isInboundSynced(String inboundId) {
-        if (inboundId == null || inboundId.trim().isEmpty()) {
-            return false;
-        }
-
-        // 通过remark字段判断（包含入库单号）
-        MaterialInbound inbound = materialInboundService.getById(inboundId);
-        if (inbound == null) {
             return false;
         }
 
         LambdaQueryWrapper<MaterialReconciliation> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(MaterialReconciliation::getPurchaseId, inbound.getPurchaseId())
-               .eq(MaterialReconciliation::getMaterialCode, inbound.getMaterialCode())
-               .like(MaterialReconciliation::getRemark, inbound.getInboundNo());
+        wrapper.eq(MaterialReconciliation::getPurchaseId, purchaseId);
+        
+        if (materialCode != null && !materialCode.trim().isEmpty()) {
+            wrapper.eq(MaterialReconciliation::getMaterialCode, materialCode);
+        }
+        
+        if (inboundNo != null && !inboundNo.trim().isEmpty()) {
+            wrapper.like(MaterialReconciliation::getRemark, inboundNo);
+        }
 
         return materialReconciliationService.count(wrapper) > 0;
     }

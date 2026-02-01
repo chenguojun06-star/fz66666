@@ -45,7 +45,7 @@ public class MaterialInboundOrchestrator {
     private MaterialStockService materialStockService;
 
     @Autowired
-    private MaterialReconciliationSyncService materialReconciliationSyncService;
+    private com.fashion.supplychain.finance.orchestration.MaterialReconciliationSyncOrchestrator materialReconciliationSyncOrchestrator;
 
     /**
      * 采购到货入库完整流程
@@ -132,7 +132,7 @@ public class MaterialInboundOrchestrator {
 
         // 6. 同步到物料对账（核心功能：数据回流！）
         try {
-            String reconciliationId = materialReconciliationSyncService.syncFromInbound(inbound, purchase);
+            String reconciliationId = materialReconciliationSyncOrchestrator.syncFromInbound(inbound, purchase);
             log.info("✅ 数据已回流到物料对账: reconciliationId={}", reconciliationId);
         } catch (Exception e) {
             log.error("❌ 同步到物料对账失败: inboundNo={}", inboundNo, e);

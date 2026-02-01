@@ -55,6 +55,9 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
 
   // 获取报价单及关联成本
   const fetchData = async () => {
+    if (!styleId || styleId === 'undefined') {
+      return;
+    }
     setLoading(true);
     try {
       // 1. 获取现有报价单

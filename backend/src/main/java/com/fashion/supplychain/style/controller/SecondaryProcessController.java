@@ -6,6 +6,7 @@ import com.fashion.supplychain.style.service.SecondaryProcessService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,6 +24,7 @@ public class SecondaryProcessController {
 
     @Operation(summary = "根据款号ID查询二次工艺列表")
     @GetMapping("/list")
+    @PreAuthorize("hasAuthority('STYLE_VIEW')")
     public Result<List<SecondaryProcess>> listByStyleId(@RequestParam Long styleId) {
         List<SecondaryProcess> list = secondaryProcessService.listByStyleId(styleId);
         return Result.success(list);
@@ -30,6 +32,7 @@ public class SecondaryProcessController {
 
     @Operation(summary = "根据ID查询二次工艺")
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('STYLE_VIEW')")
     public Result<SecondaryProcess> getById(@PathVariable Long id) {
         SecondaryProcess process = secondaryProcessService.getById(id);
         return Result.success(process);
@@ -37,6 +40,7 @@ public class SecondaryProcessController {
 
     @Operation(summary = "新建二次工艺")
     @PostMapping
+    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<SecondaryProcess> create(@RequestBody SecondaryProcess process) {
         secondaryProcessService.save(process);
         return Result.success(process);
@@ -44,6 +48,7 @@ public class SecondaryProcessController {
 
     @Operation(summary = "更新二次工艺")
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<SecondaryProcess> update(@PathVariable Long id, @RequestBody SecondaryProcess process) {
         process.setId(id);
         secondaryProcessService.updateById(process);
@@ -52,6 +57,7 @@ public class SecondaryProcessController {
 
     @Operation(summary = "删除二次工艺")
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<Void> delete(@PathVariable Long id) {
         secondaryProcessService.removeById(id);
         return Result.success(null);

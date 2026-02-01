@@ -38,11 +38,11 @@ find frontend/src -type f \( -name "*.ts" -o -name "*.tsx" \) ! -path "*/node_mo
       break
     fi
   done
-  
+
   if [ "$skip" = true ]; then
     continue
   fi
-  
+
   # 注释掉 console.log/debug/info（保留error/warn）
   # 使用 perl 进行多行匹配和替换
   perl -i -pe 's{^(\s*)(console\.(?:log|debug|info)\()}{$1// $2}g' "$file"
@@ -78,11 +78,11 @@ find miniprogram -type f -name "*.js" ! -path "*/node_modules/*" ! -path "*/mini
       break
     fi
   done
-  
+
   if [ "$skip" = true ]; then
     continue
   fi
-  
+
   # 注释掉 console.log/debug（保留error/warn）
   perl -i -pe 's{^(\s*)(console\.(?:log|debug)\()}{$1// $2}g' "$file"
 done

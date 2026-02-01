@@ -99,8 +99,10 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
   return (
     <Row gutter={[16, 16]}>
       {dataSource.map((record, index) => {
-        // 计算是否已完成
-        const isCompleted = progressConfig ? progressConfig.calculate(record) >= 100 : false;
+        // 计算是否已完成 - 添加防护检查
+        const isCompleted = progressConfig && typeof progressConfig.calculate === 'function'
+          ? progressConfig.calculate(record) >= 100
+          : false;
         // 过滤操作按钮：已完成的订单移除编辑按钮
         const actionButtons = actions?.(record)?.filter(action => {
           if (!action || action.type === 'divider') return false;
@@ -162,31 +164,20 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
                 ))}
 
                 {/* 进度条作为分割线（可选） */}
-                {progressConfig?.show !== false && progressConfig && (
+                {progressConfig?.show !== false && progressConfig && typeof progressConfig.calculate === 'function' && (
                   <div style={{
                     marginTop: '8px',
                     marginBottom: '4px',
                     animation: 'progressFadeIn 0.6s ease-out'
                   }}>
                     {progressConfig.type === 'liquid' ? (
-                      // 液体波浪进度条
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <LiquidProgressBar
-                          percent={progressConfig.calculate(record)}
-                          width="100%"
-                          height={14}
-                          status={progressConfig.getStatus?.(record)}
-                        />
-                        <span style={{
-                          fontSize: '11px',
-                          color: progressConfig.calculate(record) >= 100 ? '#52c41a' : '#666',
-                          minWidth: progressConfig.calculate(record) >= 100 ? '40px' : '28px',
-                          fontWeight: 600,
-                          textAlign: 'right'
-                        }}>
-                          {progressConfig.calculate(record) >= 100 ? '已完成' : `${progressConfig.calculate(record)}%`}
-                        </span>
-                      </div>
+                      // 液体波浪进度条 - 加粗版本，百分比在内部
+                      <LiquidProgressBar
+                        percent={progressConfig.calculate(record)}
+                        width="100%"
+                        height={20}
+                        status={progressConfig.getStatus?.(record)}
+                      />
                     ) : (
                       // 胶囊椭圆形进度条（默认）
                       <div

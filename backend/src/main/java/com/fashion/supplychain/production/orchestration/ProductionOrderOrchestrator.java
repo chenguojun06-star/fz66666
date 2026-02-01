@@ -718,6 +718,29 @@ public class ProductionOrderOrchestrator {
         updateEntity.setProcurementConfirmedAt(now);
         updateEntity.setProcurementConfirmRemark(remark.trim());
 
+        // 计算采购完成后的进度（采购是第1个节点）
+        try {
+            String workflowJson = order.getProgressWorkflowJson();
+            if (StringUtils.hasText(workflowJson)) {
+                ObjectMapper mapper = new ObjectMapper();
+                Map<String, Object> workflow = mapper.readValue(workflowJson, new TypeReference<Map<String, Object>>() {});
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> nodes = (List<Map<String, Object>>) workflow.get("nodes");
+
+                if (nodes != null && !nodes.isEmpty()) {
+                    int totalNodes = nodes.size();
+                    // 采购完成 = 第1个节点完成 = 1/N * 100
+                    int progress = (int) Math.round(100.0 / totalNodes);
+                    updateEntity.setProductionProgress(progress);
+                    log.info("Order procurement confirmed - updating progress: orderId={}, totalNodes={}, progress={}%",
+                            orderId, totalNodes, progress);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to calculate procurement progress: orderId={}", orderId, e);
+            // 即使计算失败也继续，不阻断采购确认流程
+        }
+
         boolean updated = productionOrderService.updateById(updateEntity);
         if (!updated) {
             throw new RuntimeException("更新采购确认信息失败");

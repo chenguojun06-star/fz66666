@@ -5,6 +5,7 @@ import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.style.entity.StyleSizePrice;
 import com.fashion.supplychain.style.service.StyleSizePriceService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,6 +24,7 @@ public class StyleSizePriceController {
      * 根据款号ID查询多码单价列表
      */
     @GetMapping("/list")
+    @PreAuthorize("hasAuthority('STYLE_VIEW')")
     public Result<List<StyleSizePrice>> list(@RequestParam Long styleId) {
         QueryWrapper<StyleSizePrice> qw = new QueryWrapper<>();
         qw.eq("style_id", styleId);
@@ -35,6 +37,7 @@ public class StyleSizePriceController {
      * 批量保存多码单价
      */
     @PostMapping("/batch-save")
+    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<Boolean> batchSave(@RequestBody List<StyleSizePrice> list) {
         if (list == null || list.isEmpty()) {
             return Result.fail("数据不能为空");
@@ -55,6 +58,7 @@ public class StyleSizePriceController {
      * 删除多码单价
      */
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<Boolean> delete(@PathVariable String id) {
         boolean success = styleSizePriceService.removeById(id);
         return Result.success(success);

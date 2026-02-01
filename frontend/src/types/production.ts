@@ -112,6 +112,26 @@ export interface ScanRecord {
   cuttingBundleQrCode?: string;
   createTime?: string;
   updateTime?: string;
+
+  // Phase 3-6 新增字段（扫码系统增强）
+  /** 当前工序阶段 */
+  currentProgressStage?: string;
+  /** 工序节点单价列表（JSON格式） */
+  progressNodeUnitPrices?: string;
+  /** 累计扫码次数 */
+  cumulativeScanCount?: number;
+  /** 总扫码次数 */
+  totalScanCount?: number;
+  /** 进度百分比 */
+  progressPercentage?: number;
+  /** 总成本 */
+  totalPieceCost?: number;
+  /** 平均成本 */
+  averagePieceCost?: number;
+  /** 工序指派ID */
+  assignmentId?: number;
+  /** 指派操作员名称 */
+  assignedOperatorName?: string;
 }
 
 export interface CuttingBundle {

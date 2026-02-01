@@ -11,6 +11,7 @@ import com.fashion.supplychain.style.service.StyleBomService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -37,26 +38,31 @@ public class StyleBomController {
     private MaterialPurchaseService materialPurchaseService;
 
     @GetMapping("/list")
+    @PreAuthorize("hasAuthority('STYLE_VIEW')")
     public Result<List<StyleBom>> listByStyleId(@RequestParam Long styleId) {
         return Result.success(styleBomOrchestrator.listByStyleId(styleId));
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<Boolean> save(@RequestBody StyleBom styleBom) {
         return Result.success(styleBomOrchestrator.save(styleBom));
     }
 
     @PutMapping
+    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<Boolean> update(@RequestBody StyleBom styleBom) {
         return Result.success(styleBomOrchestrator.update(styleBom));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<Boolean> delete(@PathVariable String id) {
         return Result.success(styleBomOrchestrator.delete(id));
     }
 
     @PostMapping("/{styleId}/sync-material-database")
+    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<Map<String, Object>> syncMaterialDatabase(@PathVariable Long styleId,
             @RequestParam(required = false, defaultValue = "0") String force) {
         boolean forceUpdateCompleted = force != null
@@ -65,6 +71,7 @@ public class StyleBomController {
     }
 
     @PostMapping("/{styleId}/sync-material-database/async")
+    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<Map<String, Object>> syncMaterialDatabaseAsync(@PathVariable Long styleId,
             @RequestParam(required = false, defaultValue = "0") String force) {
         boolean forceUpdateCompleted = force != null
@@ -73,6 +80,7 @@ public class StyleBomController {
     }
 
     @GetMapping("/sync-jobs/{jobId}")
+    @PreAuthorize("hasAuthority('STYLE_VIEW')")
     public Result<Map<String, Object>> getSyncJob(@PathVariable String jobId) {
         return Result.success(styleBomOrchestrator.getSyncJob(jobId));
     }
@@ -82,6 +90,7 @@ public class StyleBomController {
      * 用于样衣开发阶段的物料采购
      */
     @PostMapping("/generate-purchase")
+    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<Integer> generatePurchase(@RequestBody Map<String, Object> params) {
         try {
             Long styleId = null;
@@ -195,6 +204,7 @@ public class StyleBomController {
      * 检查款号BOM库存状态
      */
     @PostMapping("/check-stock/{styleId}")
+    @PreAuthorize("hasAuthority('STYLE_VIEW')")
     public Result<List<StyleBom>> checkBomStock(
             @PathVariable Long styleId,
             @RequestParam(required = false, defaultValue = "1") Integer productionQty) {
@@ -223,6 +233,7 @@ public class StyleBomController {
      * 获取BOM库存汇总信息
      */
     @GetMapping("/stock-summary/{styleId}")
+    @PreAuthorize("hasAuthority('STYLE_VIEW')")
     public Result<Map<String, Object>> getBomStockSummary(
             @PathVariable Long styleId,
             @RequestParam(required = false, defaultValue = "1") Integer productionQty) {
@@ -242,6 +253,7 @@ public class StyleBomController {
      * 批量检查多个款号的BOM库存
      */
     @PostMapping("/batch-check-stock")
+    @PreAuthorize("hasAuthority('STYLE_VIEW')")
     public Result<Map<Long, List<StyleBom>>> batchCheckBomStock(
             @RequestBody List<Long> styleIds,
             @RequestParam(required = false, defaultValue = "1") Integer productionQty) {

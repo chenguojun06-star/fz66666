@@ -337,6 +337,7 @@ const StyleInfoDetailPage: React.FC = () => {
               {
                 key: '2',
                 label: 'BOM清单',
+                disabled: !currentStyle?.id, // 需要先保存款式
                 children: (
                   <StyleBomTab
                     styleId={currentStyle?.id}
@@ -350,6 +351,7 @@ const StyleInfoDetailPage: React.FC = () => {
               {
                 key: '5',
                 label: '纸样开发',
+                disabled: !currentStyle?.id,
                 children: (
                   <StylePatternTab
                     styleId={currentStyle?.id}
@@ -364,6 +366,7 @@ const StyleInfoDetailPage: React.FC = () => {
               {
                 key: '6',
                 label: '尺寸表',
+                disabled: !currentStyle?.id,
                 children: (
                   <StyleSizeTab
                     styleId={currentStyle?.id}
@@ -377,6 +380,7 @@ const StyleInfoDetailPage: React.FC = () => {
               {
                 key: '7',
                 label: '工序单价',
+                disabled: !currentStyle?.id,
                 children: (
                   <StyleProcessTab
                     styleId={currentStyle?.id}
@@ -390,6 +394,7 @@ const StyleInfoDetailPage: React.FC = () => {
               {
                 key: '8',
                 label: '生产制单',
+                disabled: !currentStyle?.id,
                 children: (
                   <StyleProductionTab
                     styleId={currentStyle?.id}
@@ -413,6 +418,7 @@ const StyleInfoDetailPage: React.FC = () => {
               {
                 key: '9',
                 label: '二次工艺',
+                disabled: !currentStyle?.id,
                 children: (
                   <StyleSecondaryProcessTab
                     styleId={currentStyle?.id}
@@ -428,11 +434,13 @@ const StyleInfoDetailPage: React.FC = () => {
               {
                 key: '10',
                 label: '码数单价',
+                disabled: !currentStyle?.id,
                 children: <StyleSizePriceTab styleId={currentStyle?.id} />
               },
               {
                 key: '11',
                 label: '样板生产',
+                disabled: !currentStyle?.id,
                 children: (
                   <StyleSampleTab
                     styleId={currentStyle?.id}
@@ -447,11 +455,13 @@ const StyleInfoDetailPage: React.FC = () => {
               {
                 key: '3',
                 label: '报价单',
+                disabled: !currentStyle?.id,
                 children: <StyleQuotationTab styleId={currentStyle?.id} />
               },
               {
                 key: '4',
                 label: '附件文件',
+                disabled: !currentStyle?.id,
                 children: <StyleAttachmentTab styleId={currentStyle?.id} />
               }
             ]}

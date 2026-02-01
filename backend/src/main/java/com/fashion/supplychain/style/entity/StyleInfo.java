@@ -247,6 +247,12 @@ public class StyleInfo {
     private Integer orderCount;
 
     /**
+     * 最近下单人
+     */
+    @TableField(exist = false)
+    private String latestOrderCreator;
+
+    /**
      * 码数颜色配置（JSON格式）
      * 存储样板的尺码、颜色、数量配置信息
      */

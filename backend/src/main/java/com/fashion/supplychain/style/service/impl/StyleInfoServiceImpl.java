@@ -106,6 +106,8 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
         Map<String, Integer> countByStyleNo = new HashMap<>();
         Map<String, LocalDateTime> latestOrderTimeByStyleId = new HashMap<>();
         Map<String, LocalDateTime> latestOrderTimeByStyleNo = new HashMap<>();
+        Map<String, String> latestOrderCreatorByStyleId = new HashMap<>();
+        Map<String, String> latestOrderCreatorByStyleNo = new HashMap<>();
 
         if (!styleIds.isEmpty() || !styleNos.isEmpty()) {
             ProductionOrderService productionOrderService = productionOrderServiceProvider.getIfAvailable();
@@ -156,9 +158,13 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
                 }
             }
 
-            // 查询最近下单时间
+            // 查询最近下单时间和下单人
             QueryWrapper<ProductionOrder> timeQw = new QueryWrapper<>();
-            timeQw.select("style_id as styleId", "style_no as styleNo", "MAX(create_time) as latestTime")
+            timeQw.select("style_id as styleId", "style_no as styleNo", "MAX(create_time) as latestTime",
+                         "(SELECT created_by_name FROM t_production_order po2 WHERE " +
+                         "(po2.style_id = t_production_order.style_id OR po2.style_no = t_production_order.style_no) " +
+                         "AND (po2.delete_flag IS NULL OR po2.delete_flag = 0) " +
+                         "ORDER BY po2.create_time DESC LIMIT 1) as latestCreator")
                     .and(w -> {
                         boolean hasPrev = false;
                         if (!styleIds.isEmpty()) {
@@ -187,13 +193,20 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
                 if (latestTimeObj instanceof LocalDateTime) {
                     latestTime = (LocalDateTime) latestTimeObj;
                 }
+                String latestCreator = r.get("latestCreator") == null ? null : String.valueOf(r.get("latestCreator")).trim();
 
                 if (latestTime != null) {
                     if (StringUtils.hasText(sid)) {
                         latestOrderTimeByStyleId.put(sid, latestTime);
+                        if (StringUtils.hasText(latestCreator)) {
+                            latestOrderCreatorByStyleId.put(sid, latestCreator);
+                        }
                     }
                     if (StringUtils.hasText(sno)) {
                         latestOrderTimeByStyleNo.put(sno, latestTime);
+                        if (StringUtils.hasText(latestCreator)) {
+                            latestOrderCreatorByStyleNo.put(sno, latestCreator);
+                        }
                     }
                 }
             }
@@ -209,6 +222,7 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
                 s.setOrderCount(byId);
                 if (StringUtils.hasText(idKey)) {
                     s.setLatestOrderTime(latestOrderTimeByStyleId.get(idKey));
+                    s.setLatestOrderCreator(latestOrderCreatorByStyleId.get(idKey));
                 }
                 continue;
             }
@@ -216,6 +230,7 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
             s.setOrderCount(StringUtils.hasText(sno) ? countByStyleNo.getOrDefault(sno, 0) : 0);
             if (StringUtils.hasText(sno)) {
                 s.setLatestOrderTime(latestOrderTimeByStyleNo.get(sno));
+                s.setLatestOrderCreator(latestOrderCreatorByStyleNo.get(sno));
             }
         }
     }

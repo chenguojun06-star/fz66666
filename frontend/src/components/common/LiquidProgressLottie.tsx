@@ -5,6 +5,10 @@ interface LiquidProgressLottieProps {
   size?: number;
   color1?: string;
   color2?: string;
+  width?: number;  // 新增：胶囊宽度
+  height?: number; // 新增：胶囊高度
+  text?: string;   // 新增：自定义文本
+  nodeName?: string; // 新增：工序名称
 }
 
 const LiquidProgressLottie: React.FC<LiquidProgressLottieProps> = ({
@@ -12,22 +16,55 @@ const LiquidProgressLottie: React.FC<LiquidProgressLottieProps> = ({
   size = 60,
   color1 = '#52c41a',
   color2 = '#95de64',
+  width,
+  height,
+  text,
+  nodeName,
 }) => {
+  // 小圆球：使用固定的圆形尺寸，比原来小一点
+  const ballSize = size * 0.8; // 缩小到原来的80%
+  const ballWidth = width || ballSize;
+  const ballHeight = height || ballSize;
+  const borderRadius = '50%'; // 圆形
+
+  // 根据颜色判断状态，计算脉冲线颜色
+  const getPulseColor = () => {
+    // 已完成：灰色
+    if (progress >= 100) {
+      return 'rgba(156, 163, 175, 0.8)'; // 灰色
+    }
+
+    // 根据主色判断状态
+    if (color1.includes('ef4444') || color1.includes('ff4d4f')) {
+      // 延期：亮红色
+      return 'rgba(255, 80, 80, 1)';
+    } else if (color1.includes('f59e0b') || color1.includes('faad14')) {
+      // 快延期：亮黄色
+      return 'rgba(255, 220, 50, 1)';
+    } else {
+      // 正常：亮绿色
+      return 'rgba(0, 255, 100, 1)';
+    }
+  };
+
+  const pulseColor = getPulseColor();
+
   return (
     <div
       style={{
-        width: size,
-        height: size,
+        width: ballWidth,
+        height: ballHeight,
         position: 'relative',
         display: 'inline-block',
       }}
     >
+      {/* 圆球边框 */}
       <div
         style={{
           width: '100%',
           height: '100%',
-          borderRadius: '50%',
-          border: '3px solid #d1d1d1',
+          borderRadius: borderRadius,
+          border: '2px solid #d1d1d1',
           position: 'absolute',
           top: 0,
           left: 0,
@@ -35,13 +72,15 @@ const LiquidProgressLottie: React.FC<LiquidProgressLottieProps> = ({
         }}
       />
 
+      {/* 液体进度条容器 - 从下往上填充 */}
       <div
         style={{
           width: '100%',
           height: '100%',
-          borderRadius: '50%',
+          borderRadius: borderRadius,
           overflow: 'hidden',
           position: 'relative',
+          background: '#f0f0f0',
         }}
       >
         {/* 第一层波浪 */}
@@ -81,21 +120,49 @@ const LiquidProgressLottie: React.FC<LiquidProgressLottieProps> = ({
         />
       </div>
 
+      {/* 文字显示在圆球内部中心 */}
       <div
         style={{
           position: 'absolute',
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          fontSize: size > 50 ? 14 : 12,
-          fontWeight: 700,
-          color: '#555',
-          textShadow: '0 1px 2px rgba(255,255,255,0.8)',
+          fontSize: 11,
+          fontWeight: 600,
           pointerEvents: 'none',
           zIndex: 2,
+          whiteSpace: 'nowrap',
+          textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 2,
         }}
       >
-        {Math.round(progress)}%
+        {/* 工序名称 */}
+        {nodeName && (
+          <span
+            style={{
+              color: '#1f2937',
+              fontWeight: 700,
+              fontSize: 12,
+              textShadow: '0 1px 2px rgba(255,255,255,0.8)',
+            }}
+          >
+            {nodeName}
+          </span>
+        )}
+        {/* 进度文字 */}
+        <span
+          style={{
+            color: progress >= 100 ? '#059669' : '#6b7280',
+            fontSize: 10,
+            fontWeight: 600,
+            textShadow: '0 1px 2px rgba(255,255,255,0.8)',
+          }}
+        >
+          {text || `${Math.round(progress)}%`}
+        </span>
       </div>
 
       <style>{`

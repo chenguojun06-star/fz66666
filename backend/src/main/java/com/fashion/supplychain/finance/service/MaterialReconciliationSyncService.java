@@ -1,16 +1,13 @@
 package com.fashion.supplychain.finance.service;
 
-import com.fashion.supplychain.production.entity.MaterialInbound;
-import com.fashion.supplychain.production.entity.MaterialPurchase;
+import com.fashion.supplychain.finance.entity.MaterialReconciliation;
 
 /**
  * 物料对账同步服务
  *
- * 职责：将物料入库、采购数据同步到对账系统
- *
- * 数据流向：
- * MaterialInbound（入库记录）→ MaterialReconciliation（物料对账）
- * MaterialPurchase（采购记录）→ MaterialReconciliation（物料对账）
+ * 职责：本模块内的对账记录创建和查询
+ * 
+ * 注意：跨模块同步请使用 MaterialReconciliationSyncOrchestrator
  *
  * @author Fashion Supply Chain System
  * @since 2026-01-31
@@ -18,40 +15,25 @@ import com.fashion.supplychain.production.entity.MaterialPurchase;
 public interface MaterialReconciliationSyncService {
 
     /**
-     * 从入库记录同步到物料对账
+     * 创建物料对账记录（单模块操作）
+     * 
+     * 注意：此方法只在本模块内创建记录，不处理跨模块数据查询
+     * 完整的同步逻辑（含跨模块查询）请使用 MaterialReconciliationSyncOrchestrator.syncFromInbound()
      *
-     * 触发时机：采购到货入库成功后
-     *
-     * @param inbound 入库记录
-     * @param purchase 关联的采购单
+     * @param reconciliation 对账记录
      * @return 对账记录ID
      */
-    String syncFromInbound(MaterialInbound inbound, MaterialPurchase purchase);
+    String createReconciliation(MaterialReconciliation reconciliation);
 
     /**
-     * 从采购记录批量同步到物料对账
-     *
-     * 用途：补录历史数据、定期同步
+     * 检查对账记录是否已存在
+     * 
+     * 注意：此方法需要在Orchestrator中调用，因为需要查询入库记录信息
      *
      * @param purchaseId 采购单ID
-     * @return 同步的对账记录数量
+     * @param materialCode 物料编码
+     * @param inboundNo 入库单号
+     * @return 是否已存在
      */
-    int syncFromPurchase(String purchaseId);
-
-    /**
-     * 根据时间范围批量同步
-     *
-     * @param startDate 开始日期（YYYY-MM-DD）
-     * @param endDate 结束日期（YYYY-MM-DD）
-     * @return 同步的对账记录数量
-     */
-    int syncByDateRange(String startDate, String endDate);
-
-    /**
-     * 检查入库记录是否已同步到对账
-     *
-     * @param inboundId 入库记录ID
-     * @return true=已同步，false=未同步
-     */
-    boolean isInboundSynced(String inboundId);
+    boolean isReconciliationExists(String purchaseId, String materialCode, String inboundNo);
 }

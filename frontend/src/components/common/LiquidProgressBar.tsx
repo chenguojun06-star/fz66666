@@ -86,7 +86,7 @@ const LiquidProgressBar: React.FC<LiquidProgressBarProps> = ({
       {/* 液体波浪容器 */}
       <div
         style={{
-          width: `${Math.max(15, percent)}%`, // 最小15%宽度，确保动画可见
+          width: `${Math.max(5, percent)}%`, // 最小5%宽度，0%时也显示一点点
           height: '100%',
           position: 'absolute',
           left: 0,
@@ -128,11 +128,30 @@ const LiquidProgressBar: React.FC<LiquidProgressBarProps> = ({
                 left: 0,
                 background: `linear-gradient(90deg, ${liquidColor2} 0%, ${liquidColor} 25%, ${liquidColor2} 50%, ${liquidColor} 75%, ${liquidColor2} 100%)`,
                 borderRadius: '50%',
-                animation: `liquidBarTopWave 2s ease-in-out infinite`,
+                animation: `liquidBarTopWave 4s ease-in-out infinite`,
               }}
             />
           </>
         )}
+      </div>
+
+      {/* 百分比文字显示在进度条内部 */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          fontSize: height > 16 ? 12 : 10,
+          fontWeight: 700,
+          color: '#000',
+          textShadow: '0 1px 2px rgba(255,255,255,0.8)',
+          pointerEvents: 'none',
+          zIndex: 10,
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {isCompleted ? '已完成' : `${Math.round(percent)}%`}
       </div>
 
       {/* 脉冲波浪线效果 - 未完成时显示 */}
@@ -149,7 +168,7 @@ const LiquidProgressBar: React.FC<LiquidProgressBarProps> = ({
               left: 0,
               overflow: 'visible',
               pointerEvents: 'none',
-              animation: 'liquidBarPulse 3s linear infinite',
+              animation: 'liquidBarPulse 5s linear infinite',
             }}
           >
             <svg
@@ -183,7 +202,7 @@ const LiquidProgressBar: React.FC<LiquidProgressBarProps> = ({
               left: 0,
               overflow: 'visible',
               pointerEvents: 'none',
-              animation: 'liquidBarPulse 3s linear infinite',
+              animation: 'liquidBarPulse 5s linear infinite',
             }}
           >
             <svg

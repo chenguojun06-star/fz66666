@@ -24,6 +24,7 @@ import { normalizeCategoryQuery, toCategoryCn } from '@/utils/styleCategory';
 import { useViewport } from '@/utils/useViewport';
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 import { generateUniqueId } from '@/utils/idGenerator';
+import OrderRankingDashboard from './components/OrderRankingDashboard';
 type OrderLine = {
   id: string;
   color: string;
@@ -1131,6 +1132,13 @@ const OrderManagement: React.FC = () => {
       render: (v: string) => v ? formatDateTime(v) : '-',
     },
     {
+      title: '下单人',
+      dataIndex: 'latestOrderCreator',
+      key: 'latestOrderCreator',
+      width: 100,
+      render: (v: string) => v || '-',
+    },
+    {
       title: '是否下单',
       key: 'hasOrder',
       width: 100,
@@ -1247,6 +1255,9 @@ const OrderManagement: React.FC = () => {
           </Space>
         </div>
 
+        {/* 下单排行数据看板 */}
+        <OrderRankingDashboard onOrderClick={openCreate} />
+
         <Card size="small" className="filter-card mb-sm">
           <Space wrap>
             <Input
@@ -1298,6 +1309,8 @@ const OrderManagement: React.FC = () => {
                 const qty = Number(val) || Number(record?.quantity) || 0;
                 return qty > 0 ? `${qty}件` : '-';
               }},
+              { label: '最近下单时间', key: 'latestOrderTime', render: (val) => val ? dayjs(val).format('YYYY-MM-DD') : '-' },
+              { label: '下单人', key: 'latestOrderCreator', render: (val) => val || '-' }
             ]}
             progressConfig={{ show: false }}
             actions={(record) => [

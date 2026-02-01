@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, App, Button, Card, Collapse, DatePicker, Form, Grid, Input, InputNumber, Modal, Select, Segmented, Space, Tag, Tooltip, Typography } from 'antd';
 import { UnifiedRangePicker } from '@/components/common/UnifiedDatePicker';
-import { DeleteOutlined, EyeOutlined, RollbackOutlined, ScanOutlined, EditOutlined, AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EyeOutlined, RollbackOutlined, ScanOutlined, EditOutlined, AppstoreOutlined, UnorderedListOutlined, PrinterOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useLocation } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -12,8 +12,10 @@ import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import QuickEditModal from '@/components/common/QuickEditModal';
+import StylePrintModal from '@/components/common/StylePrintModal';
+import NodeDetailModal from '@/components/common/NodeDetailModal';
 import { ProductionOrderHeader, StyleCoverThumb } from '@/components/StyleAssets';
-import { compareSizeAsc, generateRequestId, isDuplicateScanMessage, isOrderFrozenByStatus } from '@/utils/api';
+import { compareSizeAsc, generateRequestId, isDuplicateScanMessage, isOrderFrozenByStatus, parseProductionOrderLines } from '@/utils/api';
 import { isSupervisorOrAboveUser as isSupervisorOrAboveUserFn, useAuth } from '@/utils/AuthContext';
 import { useViewport } from '@/utils/useViewport';
 import { formatDateTime, formatDateTimeCompact } from '@/utils/datetime';
@@ -78,7 +80,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const [total, setTotal] = useState(0);
   const [orders, setOrders] = useState<ProductionOrder[]>([]);
 
-  const [detailOpen, setDetailOpen] = useState(false);
+  // ===== 详情弹窗相关状态已删除 =====
+  // detailOpen 已移除，activeOrder和scanHistory保留用于快速编辑和进度统计
   const [activeOrder, setActiveOrder] = useState<ProductionOrder | null>(null);
   const [scanHistory, setScanHistory] = useState<ScanRecord[]>([]);
 
@@ -142,8 +145,25 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const [quickEditRecord, setQuickEditRecord] = useState<ProductionOrder | null>(null);
   const [quickEditSaving, setQuickEditSaving] = useState(false);
 
-  // 节点详情弹窗状态
+  // 打印功能状态
+  const [printingRecord, setPrintingRecord] = useState<ProductionOrder | null>(null);
+  const [printModalVisible, setPrintModalVisible] = useState(false);
 
+  // 监听 printingRecord 变化，打开打印弹窗
+  useEffect(() => {
+    if (printingRecord) {
+      setPrintModalVisible(true);
+    }
+  }, [printingRecord]);
+
+  // 节点详情弹窗状态
+  const [nodeDetailVisible, setNodeDetailVisible] = useState(false);
+  const [nodeDetailOrder, setNodeDetailOrder] = useState<ProductionOrder | null>(null);
+  const [nodeDetailType, setNodeDetailType] = useState<string>('');
+  const [nodeDetailName, setNodeDetailName] = useState<string>('');
+  const [nodeDetailStats, setNodeDetailStats] = useState<{ done: number; total: number; percent: number; remaining: number } | undefined>(undefined);
+  const [nodeDetailUnitPrice, setNodeDetailUnitPrice] = useState<number | undefined>(undefined);
+  const [nodeDetailProcessList, setNodeDetailProcessList] = useState<{ name: string; unitPrice?: number }[]>([]);
 
   const [orderSortField, setOrderSortField] = useState<string>('createTime');
   const [orderSortOrder, setOrderSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -152,6 +172,24 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     setOrderSortField(field);
     setOrderSortOrder(order);
   };
+
+  // 打开节点详情弹窗
+  const openNodeDetail = useCallback((
+    order: ProductionOrder,
+    nodeType: string,
+    nodeName: string,
+    stats?: { done: number; total: number; percent: number; remaining: number },
+    unitPrice?: number,
+    processList?: { name: string; unitPrice?: number }[]
+  ) => {
+    setNodeDetailOrder(order);
+    setNodeDetailType(nodeType);
+    setNodeDetailName(nodeName);
+    setNodeDetailStats(stats);
+    setNodeDetailUnitPrice(unitPrice);
+    setNodeDetailProcessList(processList || []);
+    setNodeDetailVisible(true);
+  }, []);
 
   const queryParamsRef = useRef(queryParams);
   const dateRangeRef = useRef(dateRange);
@@ -995,7 +1033,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     setNodeWorkflowLocked(Number((effective as Record<string, unknown>)?.progressWorkflowLocked) === 1);
     setNodeWorkflowDirty(false);
     await ensureNodesFromTemplateIfNeeded(effective);
-    setDetailOpen(true);
+    // setDetailOpen(true); // 详情弹窗已删除
     await fetchScanHistory(effective);
     await fetchCuttingBundles(effective);
     await fetchPricingProcesses(effective);
@@ -1107,12 +1145,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     })();
   }, [activeOrder?.id]);
 
-  const closeDetail = () => {
-    setDetailOpen(false);
-    setActiveOrder(null);
-    setScanHistory([]);
-    setCuttingBundles([]);
-  };
+  // ===== closeDetail 函数已删除 =====
 
   const openScan = async (order: ProductionOrder) => {
     if (isOrderFrozenByStatus(order)) {
@@ -1989,31 +2022,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     return Math.ceil(cq * 0.9);
   };
 
-  // 查看扫码记录
-  const handleViewScanHistory = async (order: ProductionOrder) => {
-    const detail = order?.id ? await fetchOrderDetail(order.id) : null;
-    const effective = detail || order;
-    setActiveOrder(effective);
-    setNodeWorkflowLocked(Number((effective as Record<string, unknown>)?.progressWorkflowLocked) === 1);
-    setNodeWorkflowDirty(false);
-    await ensureNodesFromTemplateIfNeeded(effective);
-    await fetchScanHistory(effective);
-    await fetchCuttingBundles(effective);
-    setDetailOpen(true);
-  };
-
-  // 查看详情
-  const handleViewDetail = async (order: ProductionOrder) => {
-    const detail = order?.id ? await fetchOrderDetail(order.id) : null;
-    const effective = detail || order;
-    setActiveOrder(effective);
-    setNodeWorkflowLocked(Number((effective as Record<string, unknown>)?.progressWorkflowLocked) === 1);
-    setNodeWorkflowDirty(false);
-    await ensureNodesFromTemplateIfNeeded(effective);
-    await fetchScanHistory(effective);
-    await fetchCuttingBundles(effective);
-    setDetailOpen(true);
-  };
+  // ===== handleViewScanHistory 和 handleViewDetail 函数已删除 =====
 
   // 快速编辑
   const handleQuickEdit = (order: ProductionOrder) => {
@@ -2259,13 +2268,23 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     borderRadius: 8,
                     transition: 'background 0.2s',
                   }}
+                  onClick={() => openNodeDetail(
+                    record,
+                    nodeType,
+                    nodeName,
+                    { done: completedQty, total: nodeQty, percent, remaining },
+                    node.unitPrice,
+                    ns.map(n => ({ name: n.name, unitPrice: n.unitPrice }))
+                  )}
                   onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(59, 130, 246, 0.08)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-
+                  title={`点击查看 ${nodeName} 详情`}
                 >
                   <LiquidProgressLottie
                     progress={percent}
                     size={60}
+                    nodeName={nodeName}
+                    text={`${completedQty}/${nodeQty}`}
                     color1={
                       percent >= 100
                         ? '#9ca3af'
@@ -2295,22 +2314,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                         })()
                     }
                   />
-                  <div style={{
-                    fontSize: 14,
-                    fontWeight: 700,
-                    color: '#1f2937',
-                    letterSpacing: '0.3px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                  }}>
-                    <span>{nodeName}</span>
-                    <span style={{
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color: percent >= 100 ? '#059669' : '#6b7280',
-                    }}>({completedQty}/{nodeQty})</span>
-                  </div>
                 </div>
               );
             })}
@@ -2327,12 +2330,13 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         return (
           <RowActions
             actions={[
+              // 明细按钮已删除（详情弹窗功能）
               {
-                key: 'detail',
-                label: '明细',
-                title: '明细',
-                icon: <EyeOutlined />,
-                onClick: () => openDetail(record),
+                key: 'print',
+                label: '打印',
+                title: '打印',
+                icon: <PrinterOutlined />,
+                onClick: () => setPrintingRecord(record),
                 primary: true,
               },
               {
@@ -2382,192 +2386,9 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     },
   ];
 
-  const detailNodeCards = useMemo(() => {
-    const order = activeOrder;
-    if (!order) return null;
-    const frozen = isOrderFrozenByStatus(order);
-    const pct = clampPercent(Number(order.productionProgress) || 0);
-    const effectivePct = frozen ? 100 : pct;
-    const currentIdx = getNodeIndexFromProgress(nodes, effectivePct);
-    const canEditWorkflow = isSupervisorOrAbove && !nodeWorkflowSaving && !nodeWorkflowLocked && !isOrderFrozenByStatus(order);
-    const canReorderWorkflow = false;
-    const totalUnitPrice = nodes.reduce((sum, n) => sum + (Number(n.unitPrice) || 0), 0);
-    const orderQty = Number(order.orderQuantity) || 0;
-    const totalOrderCost = totalUnitPrice * orderQty;
-    const cardWidth = Math.round((screens.md ? 260 : 240) * 0.6);
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <Card size="small" styles={{ body: { padding: 12 } }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-            <Space wrap size={16}>
-              <Text>
-                单件工价合计：<Text strong>¥{totalUnitPrice.toFixed(2)}</Text>
-              </Text>
-              <Text>
-                订单工价合计：<Text strong>¥{totalOrderCost.toFixed(2)}</Text>
-              </Text>
-              <Text type="secondary">（订单数量：{orderQty}）</Text>
-            </Space>
-            <Text strong style={{ fontSize: 14 }}>进度节点</Text>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Text type="secondary" style={{ fontSize: 13 }}>进度模板：</Text>
-                <Select
-                  allowClear
-                  size="small"
-                  style={{ width: 180 }}
-                  placeholder="选择进度模板"
-                  value={progressTemplateId}
-                  onChange={(v) => setProgressTemplateId(v)}
-                  options={progressTemplates.map((t) => ({ value: String(t.id || ''), label: t.templateName }))}
-                  disabled={templateApplying || processPriceApplying || nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(order)}
-                />
-                <Button size="small" onClick={applyProgressTemplateToOrder} loading={templateApplying} disabled={processPriceApplying || nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(order) || !progressTemplateId}>
-                  导入节点
-                </Button>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Text type="secondary" style={{ fontSize: 13 }}>工序单价：</Text>
-                <Select
-                  allowClear
-                  size="small"
-                  style={{ width: 180 }}
-                  placeholder="选择工序单价模板"
-                  value={processPriceTemplateId}
-                  onChange={(v) => setProcessPriceTemplateId(v)}
-                  options={processPriceTemplates.map((t) => ({ value: String(t.id || ''), label: t.templateName }))}
-                  disabled={templateApplying || processPriceApplying || nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(order)}
-                />
-                <Button size="small" onClick={applyProcessPriceTemplateToOrder} loading={processPriceApplying} disabled={templateApplying || nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(order) || !processPriceTemplateId}>
-                  导入单价
-                </Button>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        <div>
-          <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
-            <div className="mpb-detailCards">
-              {nodes.map((n, idx) => {
-                const stat = nodeStats.statsByName[n.name] || { done: 0, total: nodeStats.totalQty, remaining: nodeStats.totalQty, percent: 0 };
-                const percent = clampPercent(stat.percent);
-                const isDone = frozen || idx < currentIdx || effectivePct >= 100;
-                const isCurrent = !frozen && idx === currentIdx && effectivePct > 0 && effectivePct < 100;
-                const fillPct = isDone ? 100 : percent;
-                const isDragging = draggingNodeId === String(n.id);
-                const isDragOver = !!draggingNodeId && draggingNodeId !== String(n.id) && dragOverNodeId === String(n.id);
-                return (
-                  <div
-                    key={n.id}
-                    className={`mpb-detailCard mpb-pop${canReorderWorkflow ? ' mpb-draggable' : ''}${isDragging ? ' mpb-dragging' : ''}${isDragOver ? ' mpb-dragOver' : ''}${isDone ? ' mpb-detailDone' : ''}${isCurrent ? ' mpb-detailCurrent' : ''}${frozen ? ' mpb-detailFrozen' : ''}`}
-                    style={{ width: cardWidth, ['--p' as Record<string, unknown>]: `${fillPct}%` }}
-                    title={`${n.name} ${stat.done}/${stat.total} · 剩 ${stat.remaining} · ${percent.toFixed(0)}%`}
-                    onDragOver={(e) => {
-                      if (!canReorderWorkflow) return;
-                      if (!draggingNodeId) return;
-                      if (String(n.id) === String(draggingNodeId)) return;
-                      e.preventDefault();
-                      setDragOverNodeId(String(n.id));
-                    }}
-                    onDragLeave={() => {
-                      setDragOverNodeId((prev) => (prev === String(n.id) ? null : prev));
-                    }}
-                    onDrop={(e) => {
-                      if (!canReorderWorkflow) return;
-                      e.preventDefault();
-                      const fromId = String(draggingNodeId || e.dataTransfer.getData('text/plain') || '').trim();
-                      reorderNodeBefore(fromId, String(n.id));
-                      setDraggingNodeId(null);
-                      setDragOverNodeId(null);
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <div
-                        className="mpb-detailTrack"
-                        style={{ ['--p' as Record<string, unknown>]: `${fillPct}%`, flex: 1 }}
-                        draggable={canReorderWorkflow}
-                        onDragStart={(e) => {
-                          if (!canReorderWorkflow) return;
-                          e.dataTransfer.setData('text/plain', String(n.id));
-                          e.dataTransfer.effectAllowed = 'move';
-                          setDraggingNodeId(String(n.id));
-                        }}
-                        onDragEnd={() => {
-                          setDraggingNodeId(null);
-                          setDragOverNodeId(null);
-                        }}
-                      >
-                        <div className="mpb-detailFill" />
-                        <div className="mpb-detailBarText">
-                          <span className="mpb-detailBarLeft">{n.name}</span>
-                          <span className="mpb-detailBarRight">
-                            {`${stat.done}/${stat.total} · ${percent.toFixed(0)}%`}
-                          </span>
-                        </div>
-                      </div>
-                      <Button type="text" size="small" danger icon={<DeleteOutlined />} aria-label="删除" disabled={!canEditWorkflow} onClick={() => removeNode(n.id)} style={{ flexShrink: 0 }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          {currentInlineNode?.id && (
-            <Card size="small" styles={{ body: { padding: 10 } }} style={{ marginTop: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <Text strong>{`操作当前节点：${currentInlineNode.name}`}</Text>
-                <Input
-                  placeholder="领取人"
-                  style={{ width: 140 }}
-                  value={String((nodeOps[currentInlineNode.id] || {}).assignee || '')}
-                  onChange={(e) => updateInlineOps('assignee', e.target.value)}
-                />
-                <InputNumber
-                  placeholder="数量"
-                  style={{ width: 120 }}
-                  min={0}
-                  precision={0}
-                  max={cuttingTotalQtyForActive || Number(activeOrder?.orderQuantity) || 0}
-                  value={typeof (nodeOps[currentInlineNode.id] || {}).assigneeQuantity === 'number' ? (nodeOps[currentInlineNode.id] as any).assigneeQuantity : undefined}
-                  onChange={(v) => {
-                    const max = cuttingTotalQtyForActive || Number(activeOrder?.orderQuantity) || 0;
-                    const n = typeof v === 'number' ? Math.max(0, Math.min(v, max)) : undefined;
-                    updateInlineOps('assigneeQuantity', n);
-                  }}
-                />
-                <DatePicker
-                  showTime
-                  style={{ width: 220 }}
-                  value={((nodeOps[currentInlineNode.id] || {}).receiveTime ? dayjs((nodeOps[currentInlineNode.id] as any).receiveTime) : undefined)}
-                  onChange={(v) => updateInlineOps('receiveTime', v ? v.toISOString() : undefined)}
-                />
-                <DatePicker
-                  showTime
-                  style={{ width: 220 }}
-                  value={((nodeOps[currentInlineNode.id] || {}).completeTime ? dayjs((nodeOps[currentInlineNode.id] as any).completeTime) : undefined)}
-                  onChange={(v) => updateInlineOps('completeTime', v ? v.toISOString() : undefined)}
-                />
-                <Button type="primary" size="small" loading={inlineSaving} onClick={saveInlineOps}>保存</Button>
-              </div>
-            </Card>
-          )}
-        </div>
-      </div>
-    );
-  }, [activeOrder, dragOverNodeId, draggingNodeId, isSupervisorOrAbove, nodeStats, nodeWorkflowLocked, nodeWorkflowSaving, nodes, screens.md]);
-
-  const autoOpenDetailOnceRef = useRef(false);
-
-  useEffect(() => {
-    if (!embedded) return;
-    if (autoOpenDetailOnceRef.current) return;
-    if (detailOpen) return;
-    if (!String(queryParams.orderNo || '').trim()) return;
-    if (!orders.length) return;
-    autoOpenDetailOnceRef.current = true;
-    openDetail(orders[0]);
-  }, [detailOpen, embedded, openDetail, orders, queryParams.orderNo]);
+  // ===== detailNodeCards (useMemo) 已删除 =====
+  // ===== 自动打开详情弹窗的逻辑已删除 =====
+  // autoOpenDetailOnceRef 和 useEffect 已移除（详情弹窗功能）
 
   const pageContent = (
     <div className="production-progress-detail-page">
@@ -2640,41 +2461,55 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     return qty > 0 ? `${qty} 件` : '-';
                   }
                 },
+                {
+                  label: '下单日期', key: 'createTime', render: (val: unknown) => {
+                    return val ? dayjs(val as string).format('YYYY-MM-DD') : '-';
+                  }
+                },
+                {
+                  label: '订单交期', key: 'plannedEndDate', render: (val: unknown) => {
+                    return val ? dayjs(val as string).format('YYYY-MM-DD') : '-';
+                  }
+                },
               ]}
               progressConfig={{
                 calculate: (record: ProductionOrder) => {
-                  const prices = record.progressNodeUnitPrices || [];
-                  if (prices.length === 0) return 0;
-                  const completedCount = prices.filter((p: { completedQuantity?: number; quantity?: number }) =>
-                    (p.completedQuantity || 0) >= (p.quantity || 0)
-                  ).length;
-                  return Math.round((completedCount / prices.length) * 100);
+                  const progress = Number(record.productionProgress) || 0;
+                  return Math.min(100, Math.max(0, progress));
                 },
                 getStatus: (record: ProductionOrder) => {
-                  const shipDate = record.expectedShipDate;
-                  if (!shipDate) return 'normal';
-                  const now = new Date();
-                  const delivery = new Date(shipDate);
-                  const diffDays = Math.ceil((delivery.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-                  if (diffDays < 0) return 'danger';
-                  if (diffDays <= 3) return 'warning';
+                  // 优先检查交期状态
+                  if (record.plannedEndDate) {
+                    const now = new Date();
+                    const deadline = new Date(record.plannedEndDate);
+                    const diffDays = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+                    // 超期3天以上 - 深通红色 (danger)
+                    if (diffDays <= -4) return 'danger';
+                    // 超期1-3天 - 红色 (danger)
+                    if (diffDays < 0) return 'danger';
+                    // 当天交期(0天) - 微红色 (warning)
+                    if (diffDays === 0) return 'warning';
+                  }
+
+                  // 其次检查订单状态
+                  const status = String(record.status || '').toLowerCase();
+                  if (status === 'completed') return 'normal';
+                  if (status === 'delayed') return 'danger';
+                  if (status === 'production') return 'warning';
                   return 'normal';
                 },
                 show: true,
                 type: 'liquid', // 液体波浪进度条
               }}
               actions={(record: ProductionOrder) => [
+                // 扫码记录查看功能已移除（原详情弹窗功能）
                 {
-                  key: 'scan',
-                  icon: <ScanOutlined />,
-                  label: '扫码记录',
-                  onClick: () => handleViewScanHistory(record),
-                },
-                {
-                  key: 'view',
-                  icon: <EyeOutlined />,
-                  label: '查看详情',
-                  onClick: () => handleViewDetail(record),
+                  key: 'print',
+                  icon: <PrinterOutlined />,
+                  label: '打印',
+                  iconOnly: true,
+                  onClick: () => setPrintingRecord(record),
                 },
                 {
                   key: 'divider1',
@@ -2683,7 +2518,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 {
                   key: 'edit',
                   icon: <EditOutlined />,
-                  label: '快速编辑',
+                  label: '编辑',
                   onClick: () => handleQuickEdit(record),
                 },
               ].filter(Boolean)}
@@ -2771,24 +2606,42 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     return qty > 0 ? `${qty} 件` : '-';
                   }
                 },
+                {
+                  label: '下单日期', key: 'createTime', render: (val: unknown) => {
+                    return val ? dayjs(val as string).format('YYYY-MM-DD') : '-';
+                  }
+                },
+                {
+                  label: '订单交期', key: 'plannedEndDate', render: (val: unknown) => {
+                    return val ? dayjs(val as string).format('YYYY-MM-DD') : '-';
+                  }
+                },
               ]}
               progressConfig={{
                 calculate: (record: ProductionOrder) => {
-                  const prices = record.progressNodeUnitPrices || [];
-                  if (prices.length === 0) return 0;
-                  const completedCount = prices.filter((p: { completedQuantity?: number; quantity?: number }) =>
-                    (p.completedQuantity || 0) >= (p.quantity || 0)
-                  ).length;
-                  return Math.round((completedCount / prices.length) * 100);
+                  const progress = Number(record.productionProgress) || 0;
+                  return Math.min(100, Math.max(0, progress));
                 },
                 getStatus: (record: ProductionOrder) => {
-                  const shipDate = record.expectedShipDate;
-                  if (!shipDate) return 'normal';
-                  const now = new Date();
-                  const delivery = new Date(shipDate);
-                  const diffDays = Math.ceil((delivery.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-                  if (diffDays < 0) return 'danger';
-                  if (diffDays <= 3) return 'warning';
+                  // 优先检查交期状态
+                  if (record.plannedEndDate) {
+                    const now = new Date();
+                    const deadline = new Date(record.plannedEndDate);
+                    const diffDays = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+                    // 超期3天以上 - 深通红色 (danger)
+                    if (diffDays <= -4) return 'danger';
+                    // 超期1-3天 - 红色 (danger)
+                    if (diffDays < 0) return 'danger';
+                    // 当天交期(0天) - 微红色 (warning)
+                    if (diffDays === 0) return 'warning';
+                  }
+
+                  // 其次检查订单状态
+                  const status = String(record.status || '').toLowerCase();
+                  if (status === 'completed') return 'normal';
+                  if (status === 'delayed') return 'danger';
+                  if (status === 'production') return 'warning';
                   return 'normal';
                 },
                 show: true,
@@ -2796,16 +2649,16 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               }}
               actions={(record: ProductionOrder) => [
                 {
-                  key: 'scan',
-                  icon: <ScanOutlined />,
-                  label: '扫码记录',
-                  onClick: () => handleViewScanHistory(record),
+                  key: 'print',
+                  icon: <PrinterOutlined />,
+                  label: '打印',
+                  onClick: () => setPrintingRecord(record),
                 },
                 {
-                  key: 'view',
-                  icon: <EyeOutlined />,
-                  label: '查看详情',
-                  onClick: () => handleViewDetail(record),
+                  key: 'close',
+                  icon: <CloseCircleOutlined />,
+                  label: '关单',
+                  onClick: () => handleCloseOrder(record),
                 },
                 {
                   key: 'divider1',
@@ -2814,7 +2667,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 {
                   key: 'edit',
                   icon: <EditOutlined />,
-                  label: '快速编辑',
+                  label: '编辑',
                   onClick: () => handleQuickEdit(record),
                 },
               ].filter(Boolean)}
@@ -2823,160 +2676,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         </Card>
       )}
 
-      <ResizableModal
-        open={detailOpen}
-        onCancel={closeDetail}
-        footer={
-          <div className="modal-footer-actions">
-            <Button onClick={closeDetail}>关闭</Button>
-          </div>
-        }
-        width={modalWidth}
-        initialHeight={modalInitialHeight}
-        scaleWithViewport
-        destroyOnHidden
-        title={
-          screens.md ? (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 12, paddingRight: 40 }}>
-              <div />
-              <div style={{ fontWeight: 600, textAlign: 'center' }}>{activeOrder ? `订单明细：${activeOrder.orderNo}` : '订单明细'}</div>
-              <div style={{ justifySelf: 'end' }}>
-                {activeOrder ? (
-                  <Space size={4}>
-                    <Button type="link" size="small" icon={<ScanOutlined />} title="登记" aria-label="登记" onClick={() => openScan(activeOrder)} />
-                    {isSupervisorOrAbove ? (
-                      <Button type="link" size="small" icon={<RollbackOutlined />} title="回流" aria-label="回流" onClick={() => void openRollback(activeOrder)} />
-                    ) : null}
-                  </Space>
-                ) : null}
-              </div>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ fontWeight: 600 }}>{activeOrder ? `订单明细：${activeOrder.orderNo}` : '订单明细'}</div>
-              {activeOrder ? (
-                <Space wrap>
-                  <Button type="link" size="small" icon={<ScanOutlined />} title="登记" aria-label="登记" onClick={() => openScan(activeOrder)} />
-                  {isSupervisorOrAbove ? (
-                    <Button type="link" size="small" icon={<RollbackOutlined />} title="回流" aria-label="回流" onClick={() => void openRollback(activeOrder)} />
-                  ) : null}
-                </Space>
-              ) : null}
-            </div>
-          )
-        }
-      >
-        {activeOrder && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <Card size="small" styles={{ body: { padding: 12 } }}>
-              <ProductionOrderHeader
-                order={activeOrder}
-                color={String(activeOrder?.color || '').trim()}
-                coverSize={160}
-                qrSize={120}
-              />
-              <div
-                style={{
-                  marginTop: 12,
-                  display: 'grid',
-                  gridTemplateColumns: screens.lg ? 'repeat(4, minmax(0, 1fr))' : screens.md ? 'repeat(2, minmax(0, 1fr))' : '1fr',
-                  columnGap: 16,
-                  rowGap: 10,
-                  alignItems: 'start',
-                }}
-              >
-                <div>
-                  <Text type="secondary">订单数量</Text>
-                  <div style={{ fontWeight: 600 }}>{Number(activeOrder.orderQuantity) || 0}</div>
-                </div>
-                <div>
-                  <Text type="secondary">完成数量</Text>
-                  <div style={{ fontWeight: 600 }}>{Number(activeOrder.completedQuantity) || 0}</div>
-                </div>
-                <div>
-                  <Text type="secondary">物料到位率</Text>
-                  <div style={{ fontWeight: 600 }}>{clampPercent(Number(activeOrder.materialArrivalRate) || 0)}%</div>
-                </div>
-                <div>
-                  <Text type="secondary">生产进度</Text>
-                  <div style={{ fontWeight: 600 }}>{clampPercent(Number(activeOrder.productionProgress) || 0)}%</div>
-                </div>
-
-                <div>
-                  <Text type="secondary">下单时间</Text>
-                  <div>{formatTime(activeOrder.createTime)}</div>
-                </div>
-                <div>
-                  <Text type="secondary">订单交期</Text>
-                  <div>{formatTime(getOrderShipTime(activeOrder))}</div>
-                </div>
-                <div>
-                  <Text type="secondary">计划开始</Text>
-                  <div>{formatTime(activeOrder.plannedStartDate)}</div>
-                </div>
-                <div>
-                  <Text type="secondary">计划交期</Text>
-                  <div>{formatTime(activeOrder.plannedEndDate)}</div>
-                </div>
-
-                <div>
-                  <Text type="secondary">状态</Text>
-                  <div>
-                    {(() => {
-                      const map: unknown = {
-                        pending: { color: 'default', label: '待开始' },
-                        production: { color: 'success', label: '生产中' },
-                        completed: { color: 'default', label: '已完成' },
-                        delayed: { color: 'warning', label: '延期' },
-                      };
-                      const value: unknown = (activeOrder as Record<string, unknown>).status;
-                      const t = map[value] || { color: 'default', label: '未知' };
-                      return <Tag color={t.color}>{t.label}</Tag>;
-                    })()}
-                  </div>
-                </div>
-                <div>
-                  <Text type="secondary">加工厂</Text>
-                  <div>{activeOrder.factoryName || '-'}</div>
-                </div>
-                <div>
-                  <Text type="secondary">实际开始</Text>
-                  <div>{formatTime(activeOrder.actualStartDate)}</div>
-                </div>
-                <div>
-                  <Text type="secondary">实际完成</Text>
-                  <div>{formatTime(activeOrder.actualEndDate)}</div>
-                </div>
-              </div>
-            </Card>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, alignItems: 'start' }}>
-              <Card
-                title={
-                  <div className="mpb-nodeHeaderRow">
-                    <div className="mpb-nodeHeaderActions" style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-start', width: '100%' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', width: '100%' }}>
-                        {nodeWorkflowLocked ? (
-                          <Tag color="default">已锁定</Tag>
-                        ) : (
-                          <Tag color={nodeWorkflowDirty ? 'warning' : 'default'}>{nodeWorkflowDirty ? '可编辑（未锁定）' : '可编辑'}</Tag>
-                        )}
-                        <Button size="small" type="primary" onClick={saveNodeWorkflow} loading={nodeWorkflowSaving} disabled={nodeWorkflowSaving || !isSupervisorOrAbove || nodeWorkflowLocked || isOrderFrozenByStatus(activeOrder)}>
-                          保存并锁定
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                }
-                size="small"
-              >
-                {detailNodeCards}
-
-              </Card>
-            </div>
-          </div>
-        )}
-      </ResizableModal>
+      {/* ===== 详情弹窗已删除 ===== */}
 
       <ResizableModal
         title="登记"
@@ -3539,6 +3239,49 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         }}
       />
 
+      {/* 打印预览弹窗 - 使用通用打印组件 */}
+      <StylePrintModal
+        visible={printModalVisible}
+        onClose={() => {
+          setPrintModalVisible(false);
+          setPrintingRecord(null);
+        }}
+        styleId={printingRecord?.styleId}
+        styleNo={printingRecord?.styleNo}
+        styleName={printingRecord?.styleName}
+        cover={printingRecord?.styleCover}
+        color={printingRecord?.color}
+        quantity={printingRecord?.orderQuantity}
+        category={printingRecord?.category}
+        mode="production"
+        extraInfo={{
+          '订单号': printingRecord?.orderNo,
+          '订单数量': printingRecord?.orderQuantity,
+          '加工厂': printingRecord?.factoryName,
+          '跟单员': printingRecord?.merchandiser,
+          '订单交期': printingRecord?.plannedEndDate,
+        }}
+        sizeDetails={printingRecord ? parseProductionOrderLines(printingRecord) : []}
+      />
+
+      {/* 节点详情弹窗 - 水晶球生产节点看板 */}
+      <NodeDetailModal
+        visible={nodeDetailVisible}
+        onClose={() => {
+          setNodeDetailVisible(false);
+          setNodeDetailOrder(null);
+        }}
+        orderId={nodeDetailOrder?.id}
+        orderNo={nodeDetailOrder?.orderNo}
+        nodeType={nodeDetailType}
+        nodeName={nodeDetailName}
+        stats={nodeDetailStats}
+        unitPrice={nodeDetailUnitPrice}
+        processList={nodeDetailProcessList}
+        onSaved={() => {
+          void fetchOrders();
+        }}
+      />
 
     </div>
   );

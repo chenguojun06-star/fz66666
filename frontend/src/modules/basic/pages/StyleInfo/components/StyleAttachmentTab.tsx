@@ -87,6 +87,9 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
 
   // 获取附件列表
   const fetchList = async () => {
+    if (!styleId || styleId === 'undefined') {
+      return;
+    }
     setLoading(true);
     try {
       const res = await api.get<StyleAttachment[]>('/style/attachment/list', {

@@ -11,6 +11,7 @@ import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -167,7 +168,7 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
         }
 
         @Override
-        public java.util.List<Map<String, Object>> getScanStatsByOrder(String orderNo) {
+        public List<Map<String, Object>> getScanStatsByOrder(String orderNo) {
                 if (!StringUtils.hasText(orderNo)) {
                         return java.util.Collections.emptyList();
                 }
@@ -177,5 +178,38 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
                                                 .eq("order_no", orderNo.trim())
                                                 .eq("scan_result", "success")
                                                 .groupBy("color", "size"));
+        }
+
+        @Override
+        public List<ScanRecord> listByCondition(String orderId, String cuttingBundleId, String scanType, String scanResult, String excludeProcessCode) {
+                LambdaQueryWrapper<ScanRecord> wrapper = new LambdaQueryWrapper<ScanRecord>()
+                        .eq(StringUtils.hasText(orderId), ScanRecord::getOrderId, orderId)
+                        .eq(StringUtils.hasText(cuttingBundleId), ScanRecord::getCuttingBundleId, cuttingBundleId)
+                        .eq(StringUtils.hasText(scanType), ScanRecord::getScanType, scanType)
+                        .eq(StringUtils.hasText(scanResult), ScanRecord::getScanResult, scanResult)
+                        .ne(StringUtils.hasText(excludeProcessCode), ScanRecord::getProcessCode, excludeProcessCode)
+                        .orderByDesc(ScanRecord::getScanTime)
+                        .orderByDesc(ScanRecord::getCreateTime);
+                return baseMapper.selectList(wrapper);
+        }
+
+        @Override
+        public List<ScanRecord> listQualityWarehousingRecords(String orderId, String cuttingBundleId) {
+                LambdaQueryWrapper<ScanRecord> wrapper = new LambdaQueryWrapper<ScanRecord>()
+                        .eq(StringUtils.hasText(orderId), ScanRecord::getOrderId, orderId)
+                        .eq(StringUtils.hasText(cuttingBundleId), ScanRecord::getCuttingBundleId, cuttingBundleId)
+                        .eq(ScanRecord::getProcessCode, "quality_warehousing")
+                        .eq(ScanRecord::getScanResult, "success")
+                        .orderByDesc(ScanRecord::getScanTime)
+                        .orderByDesc(ScanRecord::getCreateTime);
+                return baseMapper.selectList(wrapper);
+        }
+
+        @Override
+        public boolean batchUpdateRecords(List<ScanRecord> records) {
+                if (records == null || records.isEmpty()) {
+                        return true;
+                }
+                return this.updateBatchById(records);
         }
 }

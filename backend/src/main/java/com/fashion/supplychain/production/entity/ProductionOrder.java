@@ -213,6 +213,16 @@ public class ProductionOrder {
     @TableField(exist = false)
     private LocalDateTime orderEndTime;
 
+    /**
+     * 创建人ID（数据库字段）
+     */
+    private String createdById;
+
+    /**
+     * 创建人姓名（数据库字段）
+     */
+    private String createdByName;
+
     @TableField(exist = false)
     private String orderOperatorName;
 

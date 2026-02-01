@@ -65,6 +65,13 @@ export interface ShipmentReconciliation {
   reReviewReason?: string;
   createTime?: string;
   updateTime?: string;
+  // Phase 6: 成本利润字段
+  totalMaterialCost?: number;     // 总物料成本
+  totalProcessCost?: number;      // 总工序成本
+  totalCost?: number;             // 总成本
+  profit?: number;                // 利润
+  profitMargin?: number;          // 利润率（百分比）
+  costBreakdown?: string;         // 成本明细JSON
 }
 
 export interface DeductionItem {

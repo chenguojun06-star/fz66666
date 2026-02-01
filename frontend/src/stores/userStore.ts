@@ -1,19 +1,19 @@
 /**
  * 用户状态管理
- * 
+ *
  * 管理用户登录状态、权限、个人信息等
- * 
+ *
  * 使用示例：
  * ```tsx
  * import { useUserStore } from '@/stores/userStore';
- * 
+ *
  * function MyComponent() {
  *   const { user, permissions, fetchUser, logout } = useUserStore();
- *   
+ *
  *   useEffect(() => {
  *     fetchUser();
  *   }, []);
- *   
+ *
  *   return <div>{user?.username}</div>;
  * }
  * ```
@@ -46,7 +46,7 @@ interface UserState {
   token: string | null;
   loading: boolean;
   error: string | null;
-  
+
   // 操作
   setUser: (user: User | null) => void;
   setToken: (token: string | null) => void;
@@ -89,9 +89,9 @@ export const useUserStore = create<UserState>()(
         set({ permissions });
       },
 
-      
-      
-      
+
+
+
 
       // 获取用户信息
       fetchUser: async () => {

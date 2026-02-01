@@ -7,14 +7,6 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fashion.supplychain.common.ParamUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fashion.supplychain.style.entity.StyleBom;
-import com.fashion.supplychain.style.entity.StyleInfo;
-import com.fashion.supplychain.style.entity.StyleProcess;
-import com.fashion.supplychain.style.entity.StyleSize;
-import com.fashion.supplychain.style.service.StyleBomService;
-import com.fashion.supplychain.style.service.StyleInfoService;
-import com.fashion.supplychain.style.service.StyleProcessService;
-import com.fashion.supplychain.style.service.StyleSizeService;
 import com.fashion.supplychain.template.entity.TemplateLibrary;
 import com.fashion.supplychain.template.mapper.TemplateLibraryMapper;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
@@ -24,15 +16,11 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -51,18 +39,6 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
 
     @Autowired
     private ObjectMapper objectMapper;
-
-    @Autowired
-    private StyleInfoService styleInfoService;
-
-    @Autowired
-    private StyleBomService styleBomService;
-
-    @Autowired
-    private StyleSizeService styleSizeService;
-
-    @Autowired
-    private StyleProcessService styleProcessService;
 
     private String normalizeStageName(String v) {
         if (!StringUtils.hasText(v)) {
@@ -666,186 +642,68 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
     }
 
     @Override
-    public List<TemplateLibrary> createFromStyle(String sourceStyleNo, List<String> templateTypes) {
-        String sn = String.valueOf(sourceStyleNo == null ? "" : sourceStyleNo).trim();
-        if (!StringUtils.hasText(sn)) {
-            throw new IllegalArgumentException("sourceStyleNo不能为空");
-        }
-        StyleInfo style = styleInfoService.lambdaQuery().eq(StyleInfo::getStyleNo, sn).one();
-        if (style == null || style.getId() == null) {
-            throw new NoSuchElementException("款号不存在");
+    public boolean upsertTemplate(TemplateLibrary template) {
+        if (template == null || !StringUtils.hasText(template.getTemplateType())
+                || !StringUtils.hasText(template.getTemplateKey())) {
+            throw new IllegalArgumentException("模板参数不完整");
         }
 
-        Set<String> typeSet;
-        if (templateTypes == null || templateTypes.isEmpty()) {
-            typeSet = Set.of("bom", "size", "process", "process_price", "progress");
+        LocalDateTime now = LocalDateTime.now();
+
+        TemplateLibrary existing = getOne(new LambdaQueryWrapper<TemplateLibrary>()
+                .eq(TemplateLibrary::getTemplateType, template.getTemplateType())
+                .eq(TemplateLibrary::getTemplateKey, template.getTemplateKey())
+                .last("LIMIT 1"));
+
+        if (existing != null) {
+            // 更新现有模板
+            existing.setTemplateName(template.getTemplateName());
+            existing.setSourceStyleNo(template.getSourceStyleNo());
+            existing.setTemplateContent(template.getTemplateContent());
+            existing.setLocked(template.getLocked() != null ? template.getLocked() : 1);
+            existing.setUpdateTime(now);
+            return updateById(existing);
         } else {
-            typeSet = templateTypes.stream()
-                    .filter(Objects::nonNull)
-                    .map(s -> String.valueOf(s).trim().toLowerCase())
-                    .filter(StringUtils::hasText)
-                    .collect(Collectors.toSet());
-        }
-
-        List<TemplateLibrary> created = new ArrayList<>();
-        String templateKey = "style_" + sn;
-
-        if (typeSet.contains("bom")) {
-            List<StyleBom> rows = styleBomService.listByStyleId(style.getId());
-            List<Map<String, Object>> mapped = new ArrayList<>();
-            for (StyleBom r : rows) {
-                if (r == null)
-                    continue;
-                Map<String, Object> item = new LinkedHashMap<>();
-                item.put("materialType", String.valueOf(r.getMaterialType() == null ? "" : r.getMaterialType()));
-                item.put("materialName", String.valueOf(r.getMaterialName() == null ? "" : r.getMaterialName()));
-                item.put("color", String.valueOf(r.getColor() == null ? "" : r.getColor()));
-                item.put("specification", String.valueOf(r.getSpecification() == null ? "" : r.getSpecification()));
-                item.put("unit", String.valueOf(r.getUnit() == null ? "" : r.getUnit()));
-                item.put("usageAmount", r.getUsageAmount() == null ? 0 : r.getUsageAmount());
-                item.put("lossRate", r.getLossRate() == null ? 0 : r.getLossRate());
-                item.put("unitPrice", r.getUnitPrice() == null ? 0 : r.getUnitPrice());
-                item.put("supplier", String.valueOf(r.getSupplier() == null ? "" : r.getSupplier()));
-                item.put("codePrefix", "MAT");
-                mapped.add(item);
+            // 创建新模板
+            if (!StringUtils.hasText(template.getId())) {
+                template.setId(UUID.randomUUID().toString());
             }
-            Map<String, Object> content = new LinkedHashMap<>();
-            content.put("rows", mapped);
-            created.add(upsertTemplate("bom", templateKey, sn + "-BOM模板", sn, content));
+            template.setLocked(template.getLocked() != null ? template.getLocked() : 1);
+            template.setCreateTime(now);
+            template.setUpdateTime(now);
+            return save(template);
         }
-
-        // ========== 合并后的工序进度单价模板 ==========
-        // 将 process、process_price、progress 合并为一个综合模板
-        // 包含：工序编码、工序名称、进度节点、机器类型、标准工时、工价
-        if (typeSet.contains("process") || typeSet.contains("process_price") || typeSet.contains("progress")) {
-            List<StyleProcess> rows = styleProcessService.listByStyleId(style.getId());
-            List<Map<String, Object>> steps = new ArrayList<>();
-            for (StyleProcess p : rows) {
-                if (p == null)
-                    continue;
-                Map<String, Object> step = new LinkedHashMap<>();
-                step.put("processCode", String.valueOf(p.getProcessCode() == null ? "" : p.getProcessCode()));
-                step.put("processName", String.valueOf(p.getProcessName() == null ? "" : p.getProcessName()));
-                step.put("progressStage", String.valueOf(p.getProgressStage() == null ? "" : p.getProgressStage()));
-                step.put("machineType", String.valueOf(p.getMachineType() == null ? "" : p.getMachineType()));
-                step.put("standardTime", p.getStandardTime() == null ? 0 : p.getStandardTime());
-                step.put("unitPrice", p.getPrice() == null ? BigDecimal.ZERO : p.getPrice());
-                steps.add(step);
-            }
-            Map<String, Object> content = new LinkedHashMap<>();
-            content.put("steps", steps);
-            // 只生成一个综合模板，类型为 process（工序进度单价模板）
-            created.add(upsertTemplate("process", templateKey, sn + "-工序进度单价模板", sn, content));
-        }
-
-        if (typeSet.contains("size")) {
-            List<StyleSize> list = styleSizeService.listByStyleId(style.getId());
-            List<String> sizes = list.stream()
-                    .filter(Objects::nonNull)
-                    .map(StyleSize::getSizeName)
-                    .filter(StringUtils::hasText)
-                    .map(s -> String.valueOf(s).trim())
-                    .distinct()
-                    .collect(Collectors.toList());
-
-            Map<String, Map<String, StyleSize>> byPart = new LinkedHashMap<>();
-            for (StyleSize r : list) {
-                if (r == null)
-                    continue;
-                String part = String.valueOf(r.getPartName() == null ? "" : r.getPartName()).trim();
-                String size = String.valueOf(r.getSizeName() == null ? "" : r.getSizeName()).trim();
-                if (!StringUtils.hasText(part) || !StringUtils.hasText(size))
-                    continue;
-                byPart.computeIfAbsent(part, k -> new LinkedHashMap<>()).put(size, r);
-            }
-
-            List<Map<String, Object>> parts = new ArrayList<>();
-            int idx = 0;
-            for (Map.Entry<String, Map<String, StyleSize>> entry : byPart.entrySet()) {
-                String partName = entry.getKey();
-                Map<String, StyleSize> mp = entry.getValue();
-                Map<String, Object> part = new LinkedHashMap<>();
-                part.put("partName", partName);
-                StyleSize any = mp.values().stream().filter(Objects::nonNull).findFirst().orElse(null);
-                part.put("measureMethod",
-                        any != null ? String.valueOf(any.getMeasureMethod() == null ? "" : any.getMeasureMethod())
-                                : "");
-                part.put("tolerance", any != null && any.getTolerance() != null ? any.getTolerance() : 0);
-
-                Map<String, Object> values = new LinkedHashMap<>();
-                for (String sizeName : sizes) {
-                    StyleSize cell = mp.get(sizeName);
-                    BigDecimal v = cell == null ? BigDecimal.ZERO
-                            : (cell.getStandardValue() == null ? BigDecimal.ZERO : cell.getStandardValue());
-                    values.put(sizeName, v);
-                }
-                part.put("values", values);
-                part.put("sort", idx);
-                idx += 1;
-                parts.add(part);
-            }
-
-            Map<String, Object> content = new LinkedHashMap<>();
-            content.put("sizes", sizes);
-            content.put("parts", parts);
-            created.add(upsertTemplate("size", templateKey, sn + "-尺码模板", sn, content));
-        }
-
-        // progress 模板已合并到 process 模板中，不再单独生成
-
-        return created;
     }
 
     @Override
-    public boolean applyToStyle(String templateId, Long targetStyleId, String mode) {
-        String tid = String.valueOf(templateId == null ? "" : templateId).trim();
-        if (!StringUtils.hasText(tid)) {
-            throw new IllegalArgumentException("templateId不能为空");
-        }
-        if (targetStyleId == null) {
-            throw new IllegalArgumentException("targetStyleId不能为空");
+    public Map<String, BigDecimal> parseProcessUnitPrices(String processJson) {
+        Map<String, BigDecimal> result = new LinkedHashMap<>();
+        if (!StringUtils.hasText(processJson)) {
+            return result;
         }
 
-        StyleInfo style = styleInfoService.getById(targetStyleId);
-        if (style == null) {
-            throw new NoSuchElementException("目标款号不存在");
+        try {
+            Map<String, Object> content = objectMapper.readValue(processJson, new TypeReference<Map<String, Object>>() {});
+            List<Map<String, Object>> steps = coerceListOfMap(content.get("steps"));
+
+            for (Map<String, Object> step : steps) {
+                if (step == null) continue;
+
+                String processName = String.valueOf(step.getOrDefault("processName", "")).trim();
+                if (!StringUtils.hasText(processName)) {
+                    processName = String.valueOf(step.getOrDefault("name", "")).trim();
+                }
+                if (!StringUtils.hasText(processName)) continue;
+
+                Object priceObj = step.containsKey("unitPrice") ? step.get("unitPrice") : step.get("price");
+                BigDecimal price = toBigDecimal(priceObj);
+                result.put(processName, price);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to parse process unit prices from JSON", e);
         }
 
-        // 移除纸样状态检查，工序单价是独立模块，不应该受纸样状态限制
-        // String status = String.valueOf(style.getPatternStatus() == null ? "" : style.getPatternStatus()).trim();
-        // if ("COMPLETED".equalsIgnoreCase(status)) {
-        //     throw new IllegalArgumentException("纸样已完成，无法修改，请先回退");
-        // }
-
-        TemplateLibrary tpl = getById(tid);
-        if (tpl == null) {
-            throw new NoSuchElementException("模板不存在");
-        }
-
-        String templateType = String.valueOf(tpl.getTemplateType() == null ? "" : tpl.getTemplateType()).trim()
-                .toLowerCase();
-        String m = String.valueOf(mode == null ? "" : mode).trim().toLowerCase();
-        boolean overwrite = "overwrite".equals(m) || "cover".equals(m) || "true".equals(m);
-
-        if ("bom".equals(templateType)) {
-            return applyBomTemplate(tpl, targetStyleId, overwrite);
-        }
-        if ("size".equals(templateType)) {
-            return applySizeTemplate(tpl, targetStyleId, overwrite);
-        }
-        if ("process".equals(templateType)) {
-            return applyProcessTemplate(tpl, targetStyleId, overwrite);
-        }
-
-        if ("process_price".equals(templateType)) {
-            return applyProcessPriceTemplate(tpl, targetStyleId, overwrite);
-        }
-
-        if ("progress".equals(templateType)) {
-            throw new IllegalArgumentException("进度模板请在生产进度中导入");
-        }
-
-        throw new IllegalArgumentException("不支持的模板类型");
+        return result;
     }
 
     @Override
@@ -880,266 +738,6 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
             out.put(name, p);
         }
         return out;
-    }
-
-    private TemplateLibrary upsertTemplate(String type, String key, String name, String sourceStyleNo, Object content) {
-        String t = String.valueOf(type == null ? "" : type).trim().toLowerCase();
-        String k = String.valueOf(key == null ? "" : key).trim();
-        String n = String.valueOf(name == null ? "" : name).trim();
-        String ssn = String.valueOf(sourceStyleNo == null ? "" : sourceStyleNo).trim();
-
-        if (!StringUtils.hasText(t) || !StringUtils.hasText(k) || !StringUtils.hasText(n)) {
-            throw new IllegalArgumentException("模板参数不完整");
-        }
-
-        String json;
-        try {
-            json = objectMapper.writeValueAsString(content);
-        } catch (Exception e) {
-            throw new IllegalArgumentException("模板内容序列化失败");
-        }
-
-        TemplateLibrary existing = getOne(new LambdaQueryWrapper<TemplateLibrary>()
-                .eq(TemplateLibrary::getTemplateType, t)
-                .eq(TemplateLibrary::getTemplateKey, k)
-                .last("LIMIT 1"));
-
-        LocalDateTime now = LocalDateTime.now();
-        if (existing != null) {
-            String existingKey = String.valueOf(existing.getTemplateKey() == null ? "" : existing.getTemplateKey())
-                    .trim();
-            String existingName = String.valueOf(existing.getTemplateName() == null ? "" : existing.getTemplateName())
-                    .trim();
-            boolean isStyleAutoKey = StringUtils.hasText(existingKey) && existingKey.startsWith("style_");
-            if (!isStyleAutoKey || !StringUtils.hasText(existingName) || existingName.equals(n)) {
-                existing.setTemplateName(n);
-            }
-            existing.setSourceStyleNo(StringUtils.hasText(ssn) ? ssn : null);
-            existing.setTemplateContent(json);
-            existing.setLocked(1);
-            existing.setUpdateTime(now);
-            updateById(existing);
-            return existing;
-        }
-
-        TemplateLibrary created = new TemplateLibrary();
-        created.setId(UUID.randomUUID().toString());
-        created.setTemplateType(t);
-        created.setTemplateKey(k);
-        created.setTemplateName(n);
-        created.setSourceStyleNo(StringUtils.hasText(ssn) ? ssn : null);
-        created.setTemplateContent(json);
-        created.setLocked(1);
-        created.setCreateTime(now);
-        created.setUpdateTime(now);
-        save(created);
-        return created;
-    }
-
-    private boolean applyBomTemplate(TemplateLibrary tpl, Long targetStyleId, boolean overwrite) {
-        Map<String, Object> content = parseContentMap(tpl.getTemplateContent());
-        Object rowsRaw = content.get("rows");
-        List<Map<String, Object>> rows = coerceListOfMap(rowsRaw);
-
-        if (overwrite) {
-            styleBomService.remove(new LambdaQueryWrapper<StyleBom>().eq(StyleBom::getStyleId, targetStyleId));
-        }
-
-        String stamp = String.valueOf(System.currentTimeMillis());
-        String suffix = stamp.substring(Math.max(0, stamp.length() - 6));
-
-        List<StyleBom> toSave = new ArrayList<>();
-        int i = 0;
-        for (Map<String, Object> r : rows) {
-            if (r == null)
-                continue;
-            String codePrefix = String.valueOf(r.getOrDefault("codePrefix", "MAT")).trim();
-            if (!StringUtils.hasText(codePrefix))
-                codePrefix = "MAT";
-            i += 1;
-
-            StyleBom b = new StyleBom();
-            b.setStyleId(targetStyleId);
-            b.setMaterialType(String.valueOf(r.getOrDefault("materialType", "")).trim());
-            b.setMaterialName(String.valueOf(r.getOrDefault("materialName", "")).trim());
-            b.setColor(String.valueOf(r.getOrDefault("color", "")).trim());
-            b.setSpecification(String.valueOf(r.getOrDefault("specification", "")).trim());
-            b.setSize(String.valueOf(r.getOrDefault("size", "")).trim());
-            b.setUnit(String.valueOf(r.getOrDefault("unit", "")).trim());
-            b.setSupplier(String.valueOf(r.getOrDefault("supplier", "")).trim());
-
-            BigDecimal usageAmount = toBigDecimal(r.get("usageAmount"));
-            BigDecimal lossRate = toBigDecimal(r.get("lossRate"));
-            BigDecimal unitPrice = toBigDecimal(r.get("unitPrice"));
-
-            b.setUsageAmount(usageAmount);
-            b.setLossRate(lossRate);
-            b.setUnitPrice(unitPrice);
-            b.setMaterialCode(codePrefix + "-" + suffix + "-" + "%02d".formatted(i));
-            b.setTotalPrice(calcBomTotal(usageAmount, lossRate, unitPrice));
-            b.setCreateTime(LocalDateTime.now());
-            b.setUpdateTime(LocalDateTime.now());
-            toSave.add(b);
-        }
-
-        if (toSave.isEmpty()) {
-            return true;
-        }
-        return styleBomService.saveBatch(toSave);
-    }
-
-    private boolean applyProcessTemplate(TemplateLibrary tpl, Long targetStyleId, boolean overwrite) {
-        Map<String, Object> content = parseContentMap(tpl.getTemplateContent());
-        List<Map<String, Object>> steps = coerceListOfMap(content.get("steps"));
-
-        if (overwrite) {
-            styleProcessService
-                    .remove(new LambdaQueryWrapper<StyleProcess>().eq(StyleProcess::getStyleId, targetStyleId));
-        }
-
-        List<StyleProcess> toSave = new ArrayList<>();
-        int idx = 0;
-        for (Map<String, Object> s : steps) {
-            if (s == null)
-                continue;
-            idx += 1;
-            StyleProcess p = new StyleProcess();
-            p.setStyleId(targetStyleId);
-            p.setProcessCode(String.valueOf(s.getOrDefault("processCode", "")).trim());
-            p.setProcessName(String.valueOf(s.getOrDefault("processName", "")).trim());
-            p.setMachineType(String.valueOf(s.getOrDefault("machineType", "")).trim());
-            p.setPrice(toBigDecimal(s.get("price")));
-            BigDecimal stdTime = toBigDecimal(s.get("standardTime"));
-            p.setStandardTime(stdTime == null ? 0 : stdTime.intValue());
-            p.setSortOrder(idx);
-            p.setCreateTime(LocalDateTime.now());
-            p.setUpdateTime(LocalDateTime.now());
-            toSave.add(p);
-        }
-        if (toSave.isEmpty()) {
-            return true;
-        }
-        return styleProcessService.saveBatch(toSave);
-    }
-
-    private boolean applyProcessPriceTemplate(TemplateLibrary tpl, Long targetStyleId, boolean overwrite) {
-        Map<String, Object> content = parseContentMap(tpl.getTemplateContent());
-        List<Map<String, Object>> steps = coerceListOfMap(content.get("steps"));
-        if (steps.isEmpty()) {
-            return true;
-        }
-
-        LinkedHashMap<String, BigDecimal> byCode = new LinkedHashMap<>();
-        LinkedHashMap<String, BigDecimal> byName = new LinkedHashMap<>();
-        for (Map<String, Object> s : steps) {
-            if (s == null) {
-                continue;
-            }
-            String code = norm(String.valueOf(s.getOrDefault("processCode", "")));
-            String name = norm(String.valueOf(s.getOrDefault("processName", "")));
-            Object v = s.containsKey("unitPrice") ? s.get("unitPrice") : s.get("price");
-            BigDecimal p = toBigDecimal(v);
-            if (StringUtils.hasText(code)) {
-                byCode.put(code, p);
-            }
-            if (StringUtils.hasText(name)) {
-                byName.put(name, p);
-            }
-        }
-
-        List<StyleProcess> existing = styleProcessService
-                .list(new LambdaQueryWrapper<StyleProcess>().eq(StyleProcess::getStyleId, targetStyleId));
-        if (existing == null || existing.isEmpty()) {
-            return true;
-        }
-
-        LocalDateTime now = LocalDateTime.now();
-        List<StyleProcess> toUpdate = new ArrayList<>();
-        for (StyleProcess p : existing) {
-            if (p == null || !StringUtils.hasText(p.getId())) {
-                continue;
-            }
-            String codeKey = norm(p.getProcessCode());
-            String nameKey = norm(p.getProcessName());
-            BigDecimal next = null;
-            if (StringUtils.hasText(codeKey) && byCode.containsKey(codeKey)) {
-                next = byCode.get(codeKey);
-            } else if (StringUtils.hasText(nameKey) && byName.containsKey(nameKey)) {
-                next = byName.get(nameKey);
-            }
-            if (next == null) {
-                continue;
-            }
-
-            BigDecimal cur = p.getPrice() == null ? BigDecimal.ZERO : p.getPrice();
-            if (!overwrite && cur.compareTo(BigDecimal.ZERO) > 0) {
-                continue;
-            }
-            p.setPrice(next);
-            p.setUpdateTime(now);
-            toUpdate.add(p);
-        }
-
-        if (toUpdate.isEmpty()) {
-            return true;
-        }
-        return styleProcessService.updateBatchById(toUpdate);
-    }
-
-    private static String norm(String s) {
-        if (s == null) {
-            return null;
-        }
-        String v = s.trim();
-        if (!StringUtils.hasText(v)) {
-            return null;
-        }
-        return v.toLowerCase();
-    }
-
-    private boolean applySizeTemplate(TemplateLibrary tpl, Long targetStyleId, boolean overwrite) {
-        Map<String, Object> content = parseContentMap(tpl.getTemplateContent());
-        List<String> sizes = coerceListOfString(content.get("sizes"));
-        List<Map<String, Object>> parts = coerceListOfMap(content.get("parts"));
-
-        if (overwrite) {
-            styleSizeService.remove(new LambdaQueryWrapper<StyleSize>().eq(StyleSize::getStyleId, targetStyleId));
-        }
-
-        List<StyleSize> toSave = new ArrayList<>();
-        int sort = 0;
-        for (Map<String, Object> p : parts) {
-            if (p == null)
-                continue;
-            String partName = String.valueOf(p.getOrDefault("partName", "")).trim();
-            if (!StringUtils.hasText(partName))
-                continue;
-            String measureMethod = String.valueOf(p.getOrDefault("measureMethod", "")).trim();
-            BigDecimal tolerance = toBigDecimal(p.get("tolerance"));
-            Map<String, Object> values = coerceMap(p.get("values"));
-
-            for (String sizeName : sizes) {
-                if (!StringUtils.hasText(sizeName))
-                    continue;
-                StyleSize row = new StyleSize();
-                row.setStyleId(targetStyleId);
-                row.setSizeName(sizeName);
-                row.setPartName(partName);
-                row.setMeasureMethod(measureMethod);
-                row.setTolerance(tolerance);
-                row.setSort(sort);
-                row.setStandardValue(toBigDecimal(values.get(sizeName)));
-                row.setCreateTime(LocalDateTime.now());
-                row.setUpdateTime(LocalDateTime.now());
-                toSave.add(row);
-            }
-            sort += 1;
-        }
-
-        if (toSave.isEmpty()) {
-            return true;
-        }
-        return styleSizeService.saveBatch(toSave);
     }
 
     private Map<String, Object> parseContentMap(String json) {
@@ -1209,13 +807,5 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
         } catch (Exception e) {
             return BigDecimal.ZERO;
         }
-    }
-
-    private static BigDecimal calcBomTotal(BigDecimal usageAmount, BigDecimal lossRate, BigDecimal unitPrice) {
-        BigDecimal u = usageAmount == null ? BigDecimal.ZERO : usageAmount;
-        BigDecimal l = lossRate == null ? BigDecimal.ZERO : lossRate;
-        BigDecimal p = unitPrice == null ? BigDecimal.ZERO : unitPrice;
-        BigDecimal qty = u.multiply(BigDecimal.ONE.add(l.movePointLeft(2)));
-        return qty.multiply(p);
     }
 }
