@@ -52,13 +52,35 @@ public class ProductWarehousingController {
         return Result.success(productWarehousingOrchestrator.rollbackByBundle(body));
     }
 
-    @GetMapping("/repair-stats")
-    public Result<?> repairStats(@RequestParam Map<String, Object> params) {
-        return Result.success(productWarehousingOrchestrator.repairStats(params));
+    /**
+     * 统一的报修统计端点（支持单个和批量）
+     *
+     * @param params 查询参数（GET方式，用于单个查询）
+     * @param body 请求体（POST方式，用于批量查询）
+     * @return 统计结果
+     */
+    @RequestMapping(value = "/repair-stats", method = {RequestMethod.GET, RequestMethod.POST})
+    public Result<?> repairStats(
+            @RequestParam(required = false) Map<String, Object> params,
+            @RequestBody(required = false) Map<String, Object> body) {
+
+        // 智能路由：根据请求方式和参数选择单个或批量处理
+        if (body != null && !body.isEmpty()) {
+            // POST请求 + body存在 = 批量处理
+            return Result.success(productWarehousingOrchestrator.batchRepairStats(body));
+        } else {
+            // GET请求或POST无body = 单个处理
+            return Result.success(productWarehousingOrchestrator.repairStats(params != null ? params : body));
+        }
     }
 
+    /**
+     * @deprecated 请使用 POST /repair-stats（统一端点支持批量）
+     * 将在 2026-05-01 移除
+     */
+    @Deprecated
     @PostMapping("/repair-stats/batch")
     public Result<?> batchRepairStats(@RequestBody Map<String, Object> body) {
-        return Result.success(productWarehousingOrchestrator.batchRepairStats(body));
+        return repairStats(null, body);
     }
 }

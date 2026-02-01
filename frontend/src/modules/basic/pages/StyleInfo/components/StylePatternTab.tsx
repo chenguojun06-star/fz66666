@@ -196,7 +196,7 @@ const StylePatternTab: React.FC<Props> = ({
           ) : (
             <>
               {!patternStartTime && !patternCompletedTime && (
-                <Button size="small" loading={saving} onClick={() => call(`/style/info/${styleId}/pattern/start`)}>开始纸样开发</Button>
+                <Button type="primary" size="small" loading={saving} onClick={() => call(`/style/info/${styleId}/pattern/start`)}>开始纸样开发</Button>
               )}
               {patternStartTime && !patternCompletedTime && (
                 <Button

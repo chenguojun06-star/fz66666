@@ -18,7 +18,7 @@ import com.fashion.supplychain.style.service.StyleBomService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.StyleOperationLogService;
 import com.fashion.supplychain.style.service.StyleQuotationService;
-import com.fashion.supplychain.template.service.TemplateLibraryService;
+import com.fashion.supplychain.template.orchestration.TemplateLibraryOrchestrator;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.util.List;
@@ -46,7 +46,7 @@ public class StyleInfoOrchestrator {
     private StyleAttachmentService styleAttachmentService;
 
     @Autowired
-    private TemplateLibraryService templateLibraryService;
+    private TemplateLibraryOrchestrator templateLibraryOrchestrator;
 
     @Autowired
     private ProductionOrderService productionOrderService;
@@ -502,7 +502,10 @@ public class StyleInfoOrchestrator {
                 if (updated != null && StringUtils.hasText(updated.getStyleNo())) {
                     // 推送所有类型：BOM、工序、工序单价、进度节点
                     List<String> templateTypes = List.of("bom", "process", "process_price", "progress");
-                    templateLibraryService.createFromStyle(updated.getStyleNo(), templateTypes);
+                    Map<String, Object> body = new HashMap<>();
+                    body.put("sourceStyleNo", updated.getStyleNo());
+                    body.put("templateTypes", templateTypes);
+                    templateLibraryOrchestrator.createFromStyle(body);
                     log.info("样衣完成后自动推送到单价维护成功：styleNo={}", updated.getStyleNo());
                 }
             } catch (Exception e) {
@@ -590,7 +593,10 @@ public class StyleInfoOrchestrator {
         try {
             String styleNoTrimmed = styleNo == null ? null : styleNo.trim();
             if (StringUtils.hasText(styleNoTrimmed)) {
-                templateLibraryService.createFromStyle(styleNoTrimmed, List.of());
+                Map<String, Object> body = new HashMap<>();
+                body.put("sourceStyleNo", styleNoTrimmed);
+                body.put("templateTypes", List.of());
+                templateLibraryOrchestrator.createFromStyle(body);
             }
         } catch (Exception e) {
             log.warn("Failed to create templates from style: styleNo={}", styleNo, e);
@@ -809,6 +815,61 @@ public class StyleInfoOrchestrator {
             throw new IllegalArgumentException("请输入款名");
         }
         // 品类不再必填，允许创建空记录
+    }
+
+    /**
+     * 开始配置尺寸表
+     */
+    public boolean startSize(Long id) {
+        StyleInfo current = styleInfoService.getById(id);
+        if (current == null) {
+            throw new NoSuchElementException("款号不存在");
+        }
+        if (current.getSizeCompletedTime() != null) {
+            throw new IllegalStateException("尺寸表已完成，无法重新开始");
+        }
+
+        String currentUser = UserContext.username();
+        boolean ok = styleInfoService.lambdaUpdate()
+                .eq(StyleInfo::getId, id)
+                .set(StyleInfo::getSizeAssignee, currentUser)
+                .set(StyleInfo::getSizeStartTime, LocalDateTime.now())
+                .set(StyleInfo::getUpdateTime, LocalDateTime.now())
+                .update();
+
+        if (!ok) {
+            throw new IllegalStateException("操作失败");
+        }
+        log.info("尺寸表配置已开始: styleId={}, assignee={}", id, currentUser);
+        return true;
+    }
+
+    /**
+     * 完成尺寸表配置
+     */
+    public boolean completeSize(Long id) {
+        StyleInfo current = styleInfoService.getById(id);
+        if (current == null) {
+            throw new NoSuchElementException("款号不存在");
+        }
+        if (current.getSizeCompletedTime() != null) {
+            throw new IllegalStateException("尺寸表已完成，无法重复操作");
+        }
+        if (current.getSizeStartTime() == null) {
+            throw new IllegalStateException("请先点击'开始尺寸表配置'");
+        }
+
+        boolean ok = styleInfoService.lambdaUpdate()
+                .eq(StyleInfo::getId, id)
+                .set(StyleInfo::getSizeCompletedTime, LocalDateTime.now())
+                .set(StyleInfo::getUpdateTime, LocalDateTime.now())
+                .update();
+
+        if (!ok) {
+            throw new IllegalStateException("操作失败");
+        }
+        log.info("尺寸表配置已完成: styleId={}", id);
+        return true;
     }
 
     public boolean startBom(Long id) {

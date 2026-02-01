@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Card, Form, Input, Modal, Select, Tabs } from 'antd';
+import { App, Card, Form, Input, Modal, Select, Tabs } from 'antd';
 import Layout from '@/components/Layout';
+import api from '@/utils/api';
 import { useStyleDetail } from './hooks/useStyleDetail';
 import { useStyleFormActions } from './hooks/useStyleFormActions';
 import StyleBasicInfoForm from './components/StyleBasicInfoForm';
-import StyleColorSizeTable from './components/StyleColorSizeTable';
 import StyleActionButtons from './components/StyleActionButtons';
 
 // Tab组件导入
@@ -13,7 +13,6 @@ import StyleBomTab from './components/StyleBomTab';
 import StyleQuotationTab from './components/StyleQuotationTab';
 import StyleAttachmentTab from './components/StyleAttachmentTab';
 import StylePatternTab from './components/StylePatternTab';
-import StyleSampleTab from './components/StyleSampleTab';
 import StyleSizeTab from './components/StyleSizeTab';
 import StyleProcessTab from './components/StyleProcessTab';
 import StyleProductionTab from './components/StyleProductionTab';
@@ -27,6 +26,7 @@ const StyleInfoDetailPage: React.FC = () => {
   const location = window.location;
   const isNewPath = location.pathname.endsWith('/new');
   const styleIdParam = isNewPath ? 'new' : (params.id as string | undefined);
+  const { message } = App.useApp();
 
   // ===== 1. 核心Hooks（数据+操作） =====
   const {
@@ -46,7 +46,6 @@ const StyleInfoDetailPage: React.FC = () => {
     resetForm: _resetForm,
   } = useStyleDetail(styleIdParam);
 
-  // ===== 2. 颜色码数配置（15个状态） =====
   const [commonColors, setCommonColors] = useState<string[]>(['黑色', '白色', '灰色', '蓝色', '红色']);
   const [commonSizes, setCommonSizes] = useState<string[]>(['XS', 'S', 'M', 'L', 'XL', 'XXL']);
 
@@ -112,24 +111,24 @@ const StyleInfoDetailPage: React.FC = () => {
       }
     }
 
-    // 兼容旧版：从单独字段读取
-    setSize1(currentStyle.size1 || '');
-    setSize2(currentStyle.size2 || '');
-    setSize3(currentStyle.size3 || '');
-    setSize4(currentStyle.size4 || '');
-    setSize5(currentStyle.size5 || '');
+    const legacy = currentStyle as any;
+    setSize1(legacy.size1 || '');
+    setSize2(legacy.size2 || '');
+    setSize3(legacy.size3 || '');
+    setSize4(legacy.size4 || '');
+    setSize5(legacy.size5 || '');
 
-    setColor1(currentStyle.color1 || '');
-    setColor2(currentStyle.color2 || '');
-    setColor3(currentStyle.color3 || '');
-    setColor4(currentStyle.color4 || '');
-    setColor5(currentStyle.color5 || '');
+    setColor1(legacy.color1 || '');
+    setColor2(legacy.color2 || '');
+    setColor3(legacy.color3 || '');
+    setColor4(legacy.color4 || '');
+    setColor5(legacy.color5 || '');
 
-    setQty1(currentStyle.qty1 || 0);
-    setQty2(currentStyle.qty2 || 0);
-    setQty3(currentStyle.qty3 || 0);
-    setQty4(currentStyle.qty4 || 0);
-    setQty5(currentStyle.qty5 || 0);
+    setQty1(legacy.qty1 || 0);
+    setQty2(legacy.qty2 || 0);
+    setQty3(legacy.qty3 || 0);
+    setQty4(legacy.qty4 || 0);
+    setQty5(legacy.qty5 || 0);
   }, [currentStyle]);
 
   // sizeColorConfig对象
@@ -174,8 +173,8 @@ const StyleInfoDetailPage: React.FC = () => {
   const [productionReqRows, setProductionReqRows] = useState<string[]>(() =>
     Array.from({ length: productionReqRowCount }).map(() => '')
   );
-  const [productionSaving, _setProductionSaving] = useState(false);
-  const [productionRollbackSaving, _setProductionRollbackSaving] = useState(false);
+  const [productionSaving, setProductionSaving] = useState(false);
+  const [productionRollbackSaving, setProductionRollbackSaving] = useState(false);
   const productionReqLocked = false;
   const productionReqEditable = true;
 
@@ -186,9 +185,11 @@ const StyleInfoDetailPage: React.FC = () => {
 
   // 生产制单辅助函数
   const updateProductionReqRow = (index: number, value: string) => {
-    const newRows = [...productionReqRows];
-    newRows[index] = value;
-    setProductionReqRows(newRows);
+    setProductionReqRows((prev) => {
+      const next = [...prev];
+      next[index] = value;
+      return next;
+    });
   };
 
   const parseProductionReqRows = (value: unknown) => {
@@ -212,19 +213,60 @@ const StyleInfoDetailPage: React.FC = () => {
   };
 
   const handleSaveProduction = async () => {
-    // 占位函数，实际逻辑在Tab组件内
-    // console.log('生产制单保存');
-  };
-
-  const resetProductionReqFromCurrent = () => {
-    if ((currentStyle as any)?.productionRequirements) {
-      setProductionReqRows(parseProductionReqRows((currentStyle as any).productionRequirements));
+    if (!currentStyle?.id) {
+      message.warning('请先保存款式基本信息');
+      return;
+    }
+    setProductionSaving(true);
+    try {
+      const content = _serializeProductionReqRows(productionReqRows);
+      await api.put(`/style/info/${currentStyle.id}/production-requirements`, {
+        description: content,
+        productionRequirements: content,
+      });
+      message.success('生产制单保存成功');
+      // 刷新详情
+      fetchDetail(String(currentStyle.id));
+    } catch (e: any) {
+      message.error(e?.response?.data?.message || e?.message || '保存失败');
+    } finally {
+      setProductionSaving(false);
     }
   };
 
+  const resetProductionReqFromCurrent = () => {
+    const src = (currentStyle as any)?.productionRequirements || (currentStyle as any)?.description;
+    if (src) {
+      setProductionReqRows(parseProductionReqRows(src));
+    }
+  };
+
+  useEffect(() => {
+    if (!currentStyle) return;
+    const src = (currentStyle as any)?.productionRequirements || (currentStyle as any)?.description;
+    if (src) {
+      setProductionReqRows(parseProductionReqRows(src));
+    } else {
+      setProductionReqRows(Array.from({ length: productionReqRowCount }).map(() => ''));
+    }
+  }, [currentStyle, productionReqRowCount]);
+
   const handleRollbackProductionReq = async () => {
-    // 占位函数
-    // console.log('生产制单回退');
+    if (!currentStyle?.id) {
+      message.warning('请先保存款式基本信息');
+      return;
+    }
+    setProductionRollbackSaving(true);
+    try {
+      await api.post(`/style/info/${currentStyle.id}/production-requirements/rollback`);
+      message.success('已回退到上一版本');
+      // 刷新详情
+      fetchDetail(String(currentStyle.id));
+    } catch (e: any) {
+      message.error(e?.response?.data?.message || e?.message || '回退失败');
+    } finally {
+      setProductionRollbackSaving(false);
+    }
   };
 
   // 推送到订单弹窗确认
@@ -274,7 +316,6 @@ const StyleInfoDetailPage: React.FC = () => {
               onCompleteSample={handleCompleteSample}
               onPushToOrder={handlePushToOrder}
               onUnlock={handleUnlock}
-              onBackToList={handleBackToList}
             />
           }
         >
@@ -341,10 +382,10 @@ const StyleInfoDetailPage: React.FC = () => {
                 children: (
                   <StyleBomTab
                     styleId={currentStyle?.id}
-                    bomAssignee={currentStyle?.bomAssignee}
-                    bomStartTime={currentStyle?.bomStartTime}
-                    bomCompletedTime={currentStyle?.bomCompletedTime}
-                    onRefresh={() => fetchDetail(styleIdParam!)}
+                    bomAssignee={(currentStyle as any)?.bomAssignee}
+                    bomStartTime={(currentStyle as any)?.bomStartTime}
+                    bomCompletedTime={(currentStyle as any)?.bomCompletedTime}
+                    onRefresh={() => { void fetchDetail(styleIdParam!); }}
                   />
                 )
               },
@@ -355,11 +396,11 @@ const StyleInfoDetailPage: React.FC = () => {
                 children: (
                   <StylePatternTab
                     styleId={currentStyle?.id}
-                    patternAssignee={currentStyle?.patternAssignee}
-                    patternStartTime={currentStyle?.patternStartTime}
-                    patternCompletedTime={currentStyle?.patternCompletedTime}
+                    patternAssignee={(currentStyle as any)?.patternAssignee}
+                    patternStartTime={(currentStyle as any)?.patternStartTime}
+                    patternCompletedTime={(currentStyle as any)?.patternCompletedTime}
                     patternStatus={currentStyle?.patternStatus}
-                    onRefresh={() => fetchDetail(styleIdParam!)}
+                    onRefresh={() => { void fetchDetail(styleIdParam!); }}
                   />
                 )
               },
@@ -370,10 +411,10 @@ const StyleInfoDetailPage: React.FC = () => {
                 children: (
                   <StyleSizeTab
                     styleId={currentStyle?.id}
-                    sizeAssignee={currentStyle?.sizeAssignee}
-                    sizeStartTime={currentStyle?.sizeStartTime}
-                    sizeCompletedTime={currentStyle?.sizeCompletedTime}
-                    onRefresh={() => fetchDetail(styleIdParam!)}
+                    sizeAssignee={(currentStyle as any)?.sizeAssignee}
+                    sizeStartTime={(currentStyle as any)?.sizeStartTime}
+                    sizeCompletedTime={(currentStyle as any)?.sizeCompletedTime}
+                    onRefresh={() => { void fetchDetail(styleIdParam!); }}
                   />
                 )
               },
@@ -384,10 +425,10 @@ const StyleInfoDetailPage: React.FC = () => {
                 children: (
                   <StyleProcessTab
                     styleId={currentStyle?.id}
-                    processAssignee={currentStyle?.processAssignee}
-                    processStartTime={currentStyle?.processStartTime}
-                    processCompletedTime={currentStyle?.processCompletedTime}
-                    onRefresh={() => fetchDetail(styleIdParam!)}
+                    processAssignee={(currentStyle as any)?.processAssignee}
+                    processStartTime={(currentStyle as any)?.processStartTime}
+                    processCompletedTime={(currentStyle as any)?.processCompletedTime}
+                    onRefresh={() => { void fetchDetail(styleIdParam!); }}
                   />
                 )
               },
@@ -427,7 +468,7 @@ const StyleInfoDetailPage: React.FC = () => {
                     secondaryStartTime={(currentStyle as any)?.secondaryStartTime}
                     secondaryCompletedTime={(currentStyle as any)?.secondaryCompletedTime}
                     sampleQuantity={(currentStyle as any)?.sampleQuantity}
-                    onRefresh={() => fetchDetail(styleIdParam!)}
+                    onRefresh={() => { void fetchDetail(styleIdParam!); }}
                   />
                 )
               },
@@ -436,21 +477,6 @@ const StyleInfoDetailPage: React.FC = () => {
                 label: '码数单价',
                 disabled: !currentStyle?.id,
                 children: <StyleSizePriceTab styleId={currentStyle?.id} />
-              },
-              {
-                key: '11',
-                label: '样板生产',
-                disabled: !currentStyle?.id,
-                children: (
-                  <StyleSampleTab
-                    styleId={currentStyle?.id}
-                    styleNo={(currentStyle as any)?.styleNo}
-                    color={(currentStyle as any)?.color}
-                    sampleStatus={(currentStyle as any)?.sampleStatus}
-                    sampleCompletedTime={(currentStyle as any)?.sampleCompletedTime}
-                    onRefresh={() => fetchDetail(styleIdParam!)}
-                  />
-                )
               },
               {
                 key: '3',
@@ -480,6 +506,7 @@ const StyleInfoDetailPage: React.FC = () => {
         }}
         confirmLoading={pushToOrderSaving}
         width={500}
+        forceRender
       >
         <Form form={pushToOrderForm} layout="vertical">
           <Form.Item

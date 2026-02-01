@@ -91,8 +91,9 @@ export default defineConfig({
     allowedHosts: true,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8088',
-        changeOrigin: true
+        target: 'http://127.0.0.1:8088',  // ⚠️ 后端实际运行在8088端口
+        changeOrigin: true,
+        rewrite: (path) => path  // 保持路径不变
       }
     }
   },

@@ -50,6 +50,25 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
 }) => {
   const navigate = useNavigate();
 
+  const cleanRemark = (value: unknown) => {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    const cleaned = raw
+      .replace(/(^|[；;]\s*)回料确认:[^；;]*/g, '')
+      .replace(/^[；;\s]+|[；;\s]+$/g, '')
+      .replace(/[；;\s]{2,}/g, ' ')
+      .trim();
+    return cleaned;
+  };
+
+  const resolveCompletedTime = (record: MaterialPurchaseType) => {
+    return record.returnConfirmTime || record.actualArrivalDate || '';
+  };
+
+  const resolveOperatorName = (record: MaterialPurchaseType) => {
+    return String(record.returnConfirmerName || '').trim() || String(record.receiverName || '').trim();
+  };
+
   const columns: ColumnsType<MaterialPurchaseType> = [
     {
       title: '图片',
@@ -264,13 +283,10 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       dataIndex: 'actualArrivalDate',
       key: 'actualArrivalDate',
       width: 160,
-      render: (v: string) => v ? new Date(v).toLocaleString('zh-CN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-      }) : '-',
+      render: (_: string, record: MaterialPurchaseType) => {
+        const completedTime = resolveCompletedTime(record);
+        return completedTime ? formatDateTime(completedTime) : '-';
+      },
     },
     {
       title: '采购员',
@@ -278,6 +294,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       key: 'receiverName',
       width: 100,
       ellipsis: true,
+      render: (_: string, record: MaterialPurchaseType) => resolveOperatorName(record) || '-',
     },
     {
       title: '备注',
@@ -285,7 +302,10 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       key: 'remark',
       width: 150,
       ellipsis: true,
-      render: (v: string) => <span title={v}>{v || '-'}</span>,
+      render: (v: string) => {
+        const text = cleanRemark(v) || '-';
+        return <span title={text}>{text}</span>;
+      },
     },
     {
       title: '操作',

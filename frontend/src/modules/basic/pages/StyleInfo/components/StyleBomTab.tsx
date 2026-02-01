@@ -145,7 +145,7 @@ const StyleBomTab: React.FC<Props> = ({
     const sn = String(sourceStyleNo ?? '').trim();
     setTemplateLoading(true);
     try {
-      const res = await api.get<{ code: number; data: { records: unknown[]; total: number } }>('/template-library/list', {
+      const res = await api.get<{ code: number; data: unknown }>('/template-library/list', {
         params: {
           page: 1,
           pageSize: 200,
@@ -156,8 +156,17 @@ const StyleBomTab: React.FC<Props> = ({
       });
       const result = res as Record<string, unknown>;
       if (result.code === 200) {
-        const records = (result.data?.records || []) as TemplateLibrary[];
-        setBomTemplates(Array.isArray(records) ? records : []);
+        // 兼容两种格式：直接数组 或 分页对象 { records: [...] }
+        const data = result.data as unknown;
+        let records: TemplateLibrary[] = [];
+        if (Array.isArray(data)) {
+          // 后端返回直接数组（listByType）
+          records = data as TemplateLibrary[];
+        } else if (data && typeof data === 'object' && 'records' in data) {
+          // 后端返回分页对象（queryPage）
+          records = ((data as Record<string, unknown>).records || []) as TemplateLibrary[];
+        }
+        setBomTemplates(records);
         return;
       }
     } catch {
@@ -1451,6 +1460,7 @@ const StyleBomTab: React.FC<Props> = ({
             </>
           ) : isSupervisorOrAbove ? (
             <Button
+              type="default"
               onClick={() => enterTableEdit()}
               disabled={locked || loading || templateLoading || Boolean(editingKey) || !data.length}
             >

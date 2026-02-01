@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type { AxiosInstance, AxiosRequestConfig } from 'axios';
+import { setupLegacyApiAdapter } from './legacyApiAdapter';
 
 export type ApiResult<T = any> = {
   code: number;
@@ -119,6 +120,15 @@ export const createApiClient = (): ApiClient => {
         delete?: (key: string) => void;
       };
 
+      // 如果是 FormData，删除默认的 Content-Type，让浏览器自动设置 multipart/form-data
+      if (config.data instanceof FormData) {
+        if (typeof headers.delete === 'function') {
+          headers.delete('Content-Type');
+        } else {
+          delete headers['Content-Type'];
+        }
+      }
+
       const toLatin1HeaderValue = (input: unknown) => {
         let val = input == null ? '' : String(input);
         if (!val) return '';
@@ -231,6 +241,9 @@ export const createApiClient = (): ApiClient => {
       return Promise.reject(enrichedError);
     }
   );
+
+  // 启用废弃端点自动适配器（兼容期至2026-05-01）
+  setupLegacyApiAdapter(client);
 
   return client;
 };

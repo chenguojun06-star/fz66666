@@ -7,7 +7,7 @@ import com.fashion.supplychain.production.orchestration.MaterialDatabaseOrchestr
 import com.fashion.supplychain.production.service.MaterialDatabaseService;
 import com.fashion.supplychain.style.service.StyleBomService;
 import com.fashion.supplychain.style.service.StyleInfoService;
-import com.fashion.supplychain.template.service.TemplateLibraryService;
+import com.fashion.supplychain.template.orchestration.TemplateLibraryOrchestrator;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -50,7 +50,7 @@ public class StyleBomOrchestrator {
     private StyleInfoService styleInfoService;
 
     @Autowired
-    private TemplateLibraryService templateLibraryService;
+    private TemplateLibraryOrchestrator templateLibraryOrchestrator;
 
     @Autowired
     private MaterialDatabaseService materialDatabaseService;
@@ -379,7 +379,10 @@ public class StyleBomOrchestrator {
             StyleInfo style = styleId == null ? null : styleInfoService.getById(styleId);
             String styleNo = style == null ? null : style.getStyleNo();
             if (styleNo != null && !styleNo.trim().isEmpty()) {
-                templateLibraryService.createFromStyle(styleNo.trim(), List.of("bom"));
+                Map<String, Object> body = new HashMap<>();
+                body.put("sourceStyleNo", styleNo.trim());
+                body.put("templateTypes", List.of("bom"));
+                templateLibraryOrchestrator.createFromStyle(body);
             }
         } catch (Exception e) {
             log.warn("Failed to sync templates from style bom: styleId={}", styleId, e);

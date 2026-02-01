@@ -299,6 +299,44 @@ public class PatternProductionController {
     }
 
     /**
+     * 统一的样板工作流操作端点（替代5个分散端点）
+     *
+     * @param id 样板ID
+     * @param action 操作类型：receive/complete/warehouse-in/maintenance
+     * @param request 可选参数（用于warehouse-in的remark和maintenance的reason）
+     * @return 操作结果
+     */
+    @PostMapping("/{id}/workflow-action")
+    public Result<?> workflowAction(
+            @PathVariable String id,
+            @RequestParam String action,
+            @RequestBody(required = false) Map<String, Object> request) {
+
+        // 智能路由到对应的操作方法
+        switch (action.toLowerCase()) {
+            case "receive":
+                return receive(id, request);
+            case "complete":
+                Map<String, Object> completeRequest = new HashMap<>();
+                completeRequest.put("patternId", id);
+                completeRequest.put("operationType", "COMPLETE");
+                completeRequest.put("operatorRole", "PLATE_WORKER");
+                return submitScan(completeRequest);
+            case "warehouse-in":
+                return warehouseIn(id, request);
+            case "maintenance":
+                if (request == null || !request.containsKey("reason")) {
+                    return Result.fail("请输入维护原因");
+                }
+                Map<String, String> maintenanceRequest = new HashMap<>();
+                maintenanceRequest.put("reason", String.valueOf(request.get("reason")));
+                return maintenance(id, maintenanceRequest);
+            default:
+                return Result.fail("不支持的操作: " + action);
+        }
+    }
+
+    /**
      * 领取样板（纸样师傅领取）
      */
     @PostMapping("/{id}/receive")
@@ -764,32 +802,30 @@ public class PatternProductionController {
     }
 
     /**
-     * PC端领取样板生产
+     * @deprecated 请使用 POST /{id}/workflow-action?action=receive
+     * 将在 2026-05-01 移除
      */
+    @Deprecated
     @PostMapping("/{patternId}/receive")
     public Result<Map<String, Object>> receivePattern(@PathVariable String patternId) {
-        Map<String, Object> request = new HashMap<>();
-        request.put("patternId", patternId);
-        request.put("operationType", "RECEIVE");
-        request.put("operatorRole", "PLATE_WORKER");
-        return submitScan(request);
+        return (Result) workflowAction(patternId, "receive", null);
     }
 
     /**
-     * PC端完成样板生产
+     * @deprecated 请使用 POST /{id}/workflow-action?action=complete
+     * 将在 2026-05-01 移除
      */
+    @Deprecated
     @PostMapping("/{patternId}/complete")
     public Result<Map<String, Object>> completePattern(@PathVariable String patternId) {
-        Map<String, Object> request = new HashMap<>();
-        request.put("patternId", patternId);
-        request.put("operationType", "COMPLETE");
-        request.put("operatorRole", "PLATE_WORKER");
-        return submitScan(request);
+        return (Result) workflowAction(patternId, "complete", null);
     }
 
     /**
-     * 触发样衣入库
+     * @deprecated 请使用 POST /{id}/workflow-action?action=warehouse-in
+     * 将在 2026-05-01 移除
      */
+    @Deprecated
     @PostMapping("/{patternId}/warehouse-in")
     public Result<Map<String, Object>> warehouseIn(
             @PathVariable String patternId,
@@ -834,8 +870,10 @@ public class PatternProductionController {
     }
 
     /**
-     * 样板生产维护
+     * @deprecated 请使用 POST /{id}/workflow-action?action=maintenance
+     * 将在 2026-05-01 移除
      */
+    @Deprecated
     @PostMapping("/{id}/maintenance")
     public Result<Void> maintenance(@PathVariable String id, @RequestBody Map<String, String> request) {
         try {

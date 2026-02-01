@@ -25,6 +25,61 @@ interface ProcessRow {
   [key: string]: any; // 动态尺码价格字段
 }
 
+const normalizeSize = (value: string) => String(value || '').trim().toUpperCase().replace(/\s+/g, '');
+
+const expandXlSize = (value: string) => {
+  const match = value.match(/^(\d+)XL$/i);
+  if (match) {
+    const count = Number(match[1]);
+    if (Number.isFinite(count) && count > 0) {
+      return `${'X'.repeat(count)}L`;
+    }
+  }
+  return value;
+};
+
+const sizeOrder = ['XXXS', 'XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'XXXXL', 'XXXXXL', 'XXXXXXL'];
+
+const getSizeWeight = (value: string) => {
+  const normalized = expandXlSize(normalizeSize(value));
+  if (!normalized) {
+    return { group: 3, num: 0, text: '' };
+  }
+  if (normalized === '均码' || normalized === 'FREE' || normalized === 'F') {
+    return { group: 2, num: 0, text: normalized };
+  }
+  if (/^\d+(?:\.\d+)?$/.test(normalized)) {
+    return { group: 1, num: Number(normalized), text: normalized };
+  }
+  const mappedIndex = sizeOrder.indexOf(normalized);
+  if (mappedIndex >= 0) {
+    return { group: 0, num: mappedIndex, text: normalized };
+  }
+  const xlMatch = normalized.match(/^(\d+)X?L$/);
+  if (xlMatch) {
+    const count = Number(xlMatch[1]);
+    if (Number.isFinite(count) && count > 0) {
+      return { group: 0, num: sizeOrder.length + count, text: normalized };
+    }
+  }
+  return { group: 2, num: 0, text: normalized };
+};
+
+const sortSizes = (list: string[]) => {
+  const unique = Array.from(new Set(list.map((v) => normalizeSize(v)).filter(Boolean)));
+  return unique.sort((a, b) => {
+    const wa = getSizeWeight(a);
+    const wb = getSizeWeight(b);
+    if (wa.group !== wb.group) {
+      return wa.group - wb.group;
+    }
+    if (wa.group === 0 || wa.group === 1) {
+      return wa.num - wb.num;
+    }
+    return wa.text.localeCompare(wb.text, 'zh-Hans-CN', { numeric: true });
+  });
+};
+
 const StyleSizePriceTab: React.FC<Props> = ({ styleId, readOnly }) => {
   const { message } = App.useApp();
   const [data, setData] = useState<ProcessRow[]>([]);
@@ -70,7 +125,7 @@ const StyleSizePriceTab: React.FC<Props> = ({ styleId, readOnly }) => {
             sizeSet.add(item.size.trim());
           }
         });
-        const sizeList = Array.from(sizeSet).sort();
+        const sizeList = sortSizes(Array.from(sizeSet));
         if (sizeList.length > 0) {
           setSizes(sizeList);
           return sizeList;
@@ -78,7 +133,7 @@ const StyleSizePriceTab: React.FC<Props> = ({ styleId, readOnly }) => {
       }
 
       // 如果没有已保存的数据，使用默认尺码
-      const defaultSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+      const defaultSizes = sortSizes(['XS', 'S', 'M', 'L', 'XL', 'XXL']);
       setSizes(defaultSizes);
       return defaultSizes;
     } catch (error) {
@@ -87,7 +142,7 @@ const StyleSizePriceTab: React.FC<Props> = ({ styleId, readOnly }) => {
       }
       console.error('获取尺码失败', error);
       // 出错时也使用默认尺码
-      const defaultSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+      const defaultSizes = sortSizes(['XS', 'S', 'M', 'L', 'XL', 'XXL']);
       setSizes(defaultSizes);
       return defaultSizes;
     }
@@ -197,7 +252,7 @@ const StyleSizePriceTab: React.FC<Props> = ({ styleId, readOnly }) => {
     }
 
     // 添加尺码到列表
-    const newSizes = [...sizes, trimmed];
+    const newSizes = sortSizes([...sizes, trimmed]);
     setSizes(newSizes);
 
     // 为所有工序添加该尺码的默认单价
@@ -212,7 +267,7 @@ const StyleSizePriceTab: React.FC<Props> = ({ styleId, readOnly }) => {
 
   // 删除尺码
   const removeSize = (size: string) => {
-    const newSizes = sizes.filter(s => s !== size);
+    const newSizes = sortSizes(sizes.filter(s => s !== size));
     setSizes(newSizes);
 
     // 从所有工序中删除该尺码的价格字段
@@ -426,7 +481,7 @@ const StyleSizePriceTab: React.FC<Props> = ({ styleId, readOnly }) => {
                 <Button icon={<SaveOutlined />} type="primary" onClick={saveAll} loading={saving} style={{ marginRight: 8 }}>
                   保存
                 </Button>
-                <Button disabled={saving} onClick={() => { setEditMode(false); fetchData(); }}>
+                <Button type="default" disabled={saving} onClick={() => { setEditMode(false); fetchData(); }}>
                   取消
                 </Button>
               </>

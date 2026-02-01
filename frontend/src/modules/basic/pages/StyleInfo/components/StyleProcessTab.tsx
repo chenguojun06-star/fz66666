@@ -32,6 +32,7 @@ interface SizePrice {
 // 扩展的工序数据，包含各尺码单价
 interface StyleProcessWithSizePrice extends StyleProcess {
   sizePrices?: Record<string, number>; // { 'XS': 2.5, 'S': 2.5, 'M': 3.0 }
+  sizePriceTouched?: Record<string, boolean>;
 }
 
 const norm = (v: unknown) => String(v || '').trim();
@@ -146,7 +147,7 @@ const StyleProcessTab: React.FC<Props> = ({
     const sn = String(sourceStyleNo ?? '').trim();
     setTemplateLoading(true);
     try {
-      const res = await api.get<{ code: number; data: { records: unknown[]; total: number } }>('/template-library/list', {
+      const res = await api.get<{ code: number; data: { records: unknown[]; total: number } | unknown[] }>('/template-library/list', {
         params: {
           page: 1,
           pageSize: 200,
@@ -157,8 +158,10 @@ const StyleProcessTab: React.FC<Props> = ({
       });
       const result = res as Record<string, unknown>;
       if (result.code === 200) {
-        const records = (result.data?.records || []) as TemplateLibrary[];
-        setProcessTemplates(Array.isArray(records) ? records : []);
+        // 兼容两种返回格式：分页格式 {records: [...]} 或 直接数组 [...]
+        const data = result.data as { records?: unknown[] } | unknown[];
+        const records = Array.isArray(data) ? data : ((data as { records?: unknown[] })?.records || []);
+        setProcessTemplates(Array.isArray(records) ? records as TemplateLibrary[] : []);
         return;
       }
     } catch {
@@ -224,17 +227,27 @@ const StyleProcessTab: React.FC<Props> = ({
         // 合并工序数据和多码单价
         const mergedData: StyleProcessWithSizePrice[] = processData.map((proc) => {
           const sizePrices: Record<string, number> = {};
+          const sizePriceTouched: Record<string, boolean> = {};
           sizeList.forEach((size) => {
             const found = sizePriceData.find(
               (sp) => sp.processCode === proc.processCode && sp.size === size
             );
             // 如果没有多码单价，使用工序基础单价
             sizePrices[size] = found ? toNumberSafe(found.price) : toNumberSafe(proc.price);
+            sizePriceTouched[size] = Boolean(found);
           });
-          return { ...proc, sizePrices };
+          return { ...proc, sizePrices, sizePriceTouched };
         });
 
-        setData(mergedData);
+        const sortedData = [...mergedData]
+          .sort((a, b) => toNumberSafe(a.sortOrder) - toNumberSafe(b.sortOrder))
+          .map((row, index) => ({
+            ...row,
+            sortOrder: index + 1,
+            processCode: String(index + 1).padStart(2, '0'),
+          }));
+
+        setData(sortedData);
         setDeletedIds([]);
         setEditMode(false);
         snapshotRef.current = null;
@@ -298,7 +311,11 @@ const StyleProcessTab: React.FC<Props> = ({
     const autoCode = String(nextSort).padStart(2, '0');
     // 初始化各尺码单价为0
     const sizePrices: Record<string, number> = {};
-    sizes.forEach((s) => { sizePrices[s] = 0; });
+    const sizePriceTouched: Record<string, boolean> = {};
+    sizes.forEach((s) => {
+      sizePrices[s] = 0;
+      sizePriceTouched[s] = false;
+    });
     const newProcess: StyleProcessWithSizePrice = {
       id: newId,
       styleId,
@@ -310,6 +327,7 @@ const StyleProcessTab: React.FC<Props> = ({
       price: 0,
       sortOrder: nextSort,
       sizePrices,
+      sizePriceTouched,
     };
     setData((prev) => [...prev, newProcess]);
   };
@@ -331,6 +349,7 @@ const StyleProcessTab: React.FC<Props> = ({
       prev.map((row) => ({
         ...row,
         sizePrices: { ...(row.sizePrices || {}), [trimmed]: toNumberSafe(row.price) },
+        sizePriceTouched: { ...(row.sizePriceTouched || {}), [trimmed]: false },
       }))
     );
     setNewSizeName('');
@@ -343,7 +362,8 @@ const StyleProcessTab: React.FC<Props> = ({
     setData((prev) =>
       prev.map((row) => {
         const { [size]: _, ...restSizePrices } = row.sizePrices || {};
-        return { ...row, sizePrices: restSizePrices };
+        const { [size]: __, ...restTouched } = row.sizePriceTouched || {};
+        return { ...row, sizePrices: restSizePrices, sizePriceTouched: restTouched };
       })
     );
     message.success(`已删除尺码: ${size}`);
@@ -353,7 +373,13 @@ const StyleProcessTab: React.FC<Props> = ({
   const updateSizePrice = (id: string | number, size: string, value: number) => {
     setData((prev) =>
       prev.map((r) =>
-        r.id === id ? { ...r, sizePrices: { ...(r.sizePrices || {}), [size]: value } } : r
+        r.id === id
+          ? {
+            ...r,
+            sizePrices: { ...(r.sizePrices || {}), [size]: value },
+            sizePriceTouched: { ...(r.sizePriceTouched || {}), [size]: true },
+          }
+          : r
       )
     );
   };
@@ -405,12 +431,39 @@ const StyleProcessTab: React.FC<Props> = ({
   };
 
   const updateField = (id: string | number, field: keyof StyleProcess, value: any) => {
-    setData((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
+    setData((prev) => prev.map((r) => {
+      if (r.id !== id) return r;
+      if (field !== 'price') {
+        return { ...r, [field]: value };
+      }
+      const nextPrice = toNumberSafe(value);
+      const oldPrice = toNumberSafe(r.price);
+      const nextSizePrices: Record<string, number> = { ...(r.sizePrices || {}) };
+      const touched = r.sizePriceTouched || {};
+
+      sizes.forEach((s) => {
+        const current = toNumberSafe(nextSizePrices[s]);
+        const isTouched = Boolean(touched[s]);
+        if (!isTouched || current === oldPrice) {
+          nextSizePrices[s] = nextPrice;
+        }
+      });
+
+      return {
+        ...r,
+        price: nextPrice,
+        sizePrices: nextSizePrices,
+      };
+    }));
   };
 
   const saveAll = async () => {
     if (readOnly) return;
-    const rows = data;
+    const rows = data.map((r, index) => ({
+      ...r,
+      sortOrder: index + 1,
+      processCode: String(index + 1).padStart(2, '0'),
+    }));
     if (!rows.length) {
       message.error('请先添加工序');
       return;
@@ -524,17 +577,7 @@ const StyleProcessTab: React.FC<Props> = ({
         title: '排序',
         dataIndex: 'sortOrder',
         width: 80,
-        render: (text: number, record: StyleProcess) =>
-          editableMode ? (
-            <InputNumber
-              value={record.sortOrder}
-              min={0}
-              style={{ width: '100%' }}
-              onChange={(v) => updateField(record.id!, 'sortOrder', toNumberSafe(v))}
-            />
-          ) : (
-            text
-          ),
+        render: (_: number, _record: StyleProcess, index: number) => index + 1,
       },
       {
         title: '工序编码',
@@ -853,7 +896,7 @@ const StyleProcessTab: React.FC<Props> = ({
           </Popover>
 
           {!editMode || readOnly ? (
-            <Button icon={<EditOutlined />} onClick={enterEdit} disabled={loading || saving || Boolean(readOnly)}>
+            <Button type="primary" icon={<EditOutlined />} onClick={enterEdit} disabled={loading || saving || Boolean(readOnly)}>
               编辑
             </Button>
           ) : (

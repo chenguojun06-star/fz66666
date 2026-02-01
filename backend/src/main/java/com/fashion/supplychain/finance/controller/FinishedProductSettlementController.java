@@ -43,7 +43,7 @@ public class FinishedProductSettlementController {
     private static final Map<String, String> approvalStatus = new HashMap<>();
 
     @Operation(summary = "分页查询成品结算列表")
-    @GetMapping("/page")
+    @GetMapping("/list")
     @PreAuthorize("hasAuthority('FINANCE_SETTLEMENT_VIEW')")
     public Result<Page<FinishedProductSettlement>> page(
             @RequestParam(defaultValue = "1") Integer page,

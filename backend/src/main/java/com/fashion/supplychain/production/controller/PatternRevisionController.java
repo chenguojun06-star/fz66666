@@ -15,7 +15,7 @@ import java.util.Map;
 
 /**
  * 纸样修改记录控制器
- * 
+ *
  * @author system
  * @date 2026-01-31
  */
@@ -136,76 +136,94 @@ public class PatternRevisionController {
     }
 
     /**
-     * 提交审核
+     * 统一的工作流操作端点（替代4个分散端点）
+     *
+     * @param id 纸样修改记录ID
+     * @param action 操作类型：submit/approve/reject/complete
+     * @param params 可选参数（用于approve和reject的comment）
+     * @return 操作结果
      */
+    @PostMapping("/{id}/workflow")
+    @PreAuthorize("hasAnyAuthority('PATTERN_REVISION_SUBMIT', 'PATTERN_REVISION_APPROVE', 'PATTERN_REVISION_REJECT', 'PATTERN_REVISION_COMPLETE')")
+    public Result<?> workflow(
+            @PathVariable String id,
+            @RequestParam String action,
+            @RequestBody(required = false) Map<String, String> params) {
+
+        try {
+            // 智能路由到对应的Service方法
+            switch (action.toLowerCase()) {
+                case "submit":
+                    boolean submitSuccess = patternRevisionService.submitForApproval(id);
+                    return submitSuccess ? Result.success() : Result.fail("提交失败");
+
+                case "approve":
+                    String approveComment = params != null ? params.getOrDefault("comment", "") : "";
+                    boolean approveSuccess = patternRevisionService.approve(id, approveComment);
+                    return approveSuccess ? Result.success() : Result.fail("审核失败");
+
+                case "reject":
+                    String rejectComment = params != null ? params.getOrDefault("comment", "") : "";
+                    if (!StringUtils.hasText(rejectComment)) {
+                        return Result.fail("请填写拒绝原因");
+                    }
+                    boolean rejectSuccess = patternRevisionService.reject(id, rejectComment);
+                    return rejectSuccess ? Result.success() : Result.fail("拒绝失败");
+
+                case "complete":
+                    boolean completeSuccess = patternRevisionService.complete(id);
+                    return completeSuccess ? Result.success() : Result.fail("完成失败");
+
+                default:
+                    return Result.fail("不支持的操作: " + action);
+            }
+        } catch (Exception e) {
+            return Result.fail(e.getMessage());
+        }
+    }
+
+    /**
+     * @deprecated 请使用 POST /{id}/workflow?action=submit
+     * 将在 2026-05-01 移除
+     */
+    @Deprecated
     @PostMapping("/{id}/submit")
     @PreAuthorize("hasAuthority('PATTERN_REVISION_SUBMIT')")
     public Result<?> submit(@PathVariable String id) {
-        try {
-            boolean success = patternRevisionService.submitForApproval(id);
-            if (!success) {
-                return Result.fail("提交失败");
-            }
-            return Result.success();
-        } catch (Exception e) {
-            return Result.fail(e.getMessage());
-        }
+        return workflow(id, "submit", null);
     }
 
     /**
-     * 审核通过
+     * @deprecated 请使用 POST /{id}/workflow?action=approve
+     * 将在 2026-05-01 移除
      */
+    @Deprecated
     @PostMapping("/{id}/approve")
     @PreAuthorize("hasAuthority('PATTERN_REVISION_APPROVE')")
     public Result<?> approve(@PathVariable String id, @RequestBody Map<String, String> params) {
-        String comment = params.getOrDefault("comment", "");
-        try {
-            boolean success = patternRevisionService.approve(id, comment);
-            if (!success) {
-                return Result.fail("审核失败");
-            }
-            return Result.success();
-        } catch (Exception e) {
-            return Result.fail(e.getMessage());
-        }
+        return workflow(id, "approve", params);
     }
 
     /**
-     * 审核拒绝
+     * @deprecated 请使用 POST /{id}/workflow?action=reject
+     * 将在 2026-05-01 移除
      */
+    @Deprecated
     @PostMapping("/{id}/reject")
     @PreAuthorize("hasAuthority('PATTERN_REVISION_REJECT')")
     public Result<?> reject(@PathVariable String id, @RequestBody Map<String, String> params) {
-        String comment = params.getOrDefault("comment", "");
-        if (!StringUtils.hasText(comment)) {
-            return Result.fail("请填写拒绝原因");
-        }
-        try {
-            boolean success = patternRevisionService.reject(id, comment);
-            if (!success) {
-                return Result.fail("拒绝失败");
-            }
-            return Result.success();
-        } catch (Exception e) {
-            return Result.fail(e.getMessage());
-        }
+        return workflow(id, "reject", params);
     }
 
     /**
-     * 完成修改
+     * @deprecated 请使用 POST /{id}/workflow?action=complete
+     * 将在 2026-05-01 移除
      */
+    @Deprecated
     @PostMapping("/{id}/complete")
     @PreAuthorize("hasAuthority('PATTERN_REVISION_COMPLETE')")
     public Result<?> complete(@PathVariable String id) {
-        try {
-            boolean success = patternRevisionService.complete(id);
-            if (!success) {
-                return Result.fail("完成失败");
-            }
-            return Result.success();
-        } catch (Exception e) {
-            return Result.fail(e.getMessage());
-        }
+        return workflow(id, "complete", null);
     }
 
     /**

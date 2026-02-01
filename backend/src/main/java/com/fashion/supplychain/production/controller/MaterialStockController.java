@@ -18,7 +18,7 @@ public class MaterialStockController {
     @Autowired
     private MaterialStockService materialStockService;
 
-    @GetMapping("/page")
+    @GetMapping("/list")
     public Result<IPage<MaterialStock>> getPage(@RequestParam Map<String, Object> params) {
         return Result.success(materialStockService.queryPage(params));
     }

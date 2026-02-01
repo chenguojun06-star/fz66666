@@ -813,13 +813,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
             who = "未命名";
         }
 
-        String prefix = "回料确认:";
         String remark = existed.getRemark() == null ? "" : existed.getRemark().trim();
-        if (!remark.contains(prefix)) {
-            String time = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
-            String add = prefix + who + " " + time;
-            remark = remark.isEmpty() ? add : (remark + "；" + add);
-        }
 
         MaterialPurchase patch = new MaterialPurchase();
         patch.setId(purchaseId);

@@ -188,39 +188,65 @@ const PatternProduction: React.FC = () => {
       const records = response.data?.records || [];
 
       // 转换后端数据格式为前端格式
-      const formattedData: PatternProductionRecord[] = records.map((item: any) => ({
-        id: item.id,
-        styleNo: item.styleNo || '-',
-        color: item.color || '',
-        sizes: item.sizes || [], // 从后端获取码数
-        quantity: item.quantity ?? 0,
-        releaseTime: formatDateTime(item.releaseTime) || '-',
-        deliveryTime: formatDateTime(item.deliveryTime) || '-',
-        receiver: item.receiver || '-',
-        receiveTime: formatDateTime(item.receiveTime) || '-',
-        completeTime: formatDateTime(item.completeTime) || '-',
-        coverImage: item.coverImage,
-        patternMaker: item.patternMaker || '-',
-        status: item.status || 'PENDING',
-        progressNodes: item.progressNodes ? JSON.parse(item.progressNodes) : {
+      const formattedData: PatternProductionRecord[] = records.map((item: any) => {
+        const baseProgressNodes = item.progressNodes ? JSON.parse(item.progressNodes) : {
           cutting: 0,
           sewing: 0,
           ironing: 0,
           quality: 0,
           secondary: 0,
           packaging: 0,
-        },
-        // 工序单价汇总从后端获取（从样板开发的工艺配置汇总）
-        processUnitPrices: item.processUnitPrices || {},
-        // 每个节点下的工序明细（含工序名和单价）
-        processDetails: item.processDetails || {},
-        // 采购进度信息
-        procurementProgress: item.procurementProgress || {
+        };
+
+        const completedFlag = String(item.status || '').toUpperCase() === 'COMPLETED' || Boolean(item.completeTime);
+        const progressNodes = completedFlag
+          ? {
+            ...baseProgressNodes,
+            procurement: 100,
+            cutting: 100,
+            sewing: 100,
+            tail: 100,
+            warehousing: 100,
+          }
+          : baseProgressNodes;
+
+        const baseProcurementProgress = item.procurementProgress || {
           total: 0,
           completed: 0,
           percent: 0,
-        },
-      }));
+        };
+
+        const procurementProgress = completedFlag
+          ? {
+            ...baseProcurementProgress,
+            percent: 100,
+            completed: Number(baseProcurementProgress.total || 0),
+          }
+          : baseProcurementProgress;
+
+        return {
+          id: item.id,
+          styleNo: item.styleNo || '-',
+          color: item.color || '',
+          sizes: item.sizes || [], // 从后端获取码数
+          quantity: item.quantity ?? 0,
+          releaseTime: formatDateTime(item.releaseTime) || '-',
+          deliveryTime: formatDateTime(item.deliveryTime) || '-',
+          receiver: item.receiver || '-',
+          receiveTime: formatDateTime(item.receiveTime) || '-',
+          completeTime: formatDateTime(item.completeTime) || '-',
+          coverImage: item.coverImage,
+          patternMaker: item.patternMaker || '-',
+          status: item.status || 'PENDING',
+          progressNodes,
+          // 工序单价汇总从后端获取（从样板开发的工艺配置汇总）
+          processUnitPrices: item.processUnitPrices || {},
+          // 每个节点下的工序明细（含工序名和单价）
+          processDetails: item.processDetails || {},
+          // 采购进度信息
+          procurementProgress,
+        };
+      });
 
       setDataSource(formattedData);
     } catch (error) {

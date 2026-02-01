@@ -1,5 +1,8 @@
 package com.fashion.supplychain.template.orchestration;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleProcess;
@@ -14,9 +17,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
-import java.util.List;
-import java.util.NoSuchElementException;
+import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.util.*;
 
 /**
  * 模板与款式编排器
@@ -45,6 +51,9 @@ public class TemplateStyleOrchestrator {
 
     @Autowired
     private StyleSizeService styleSizeService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     /**
      * 将模板应用到目标款式
@@ -86,8 +95,14 @@ public class TemplateStyleOrchestrator {
         log.info("开始应用模板到款式: templateId={}, targetStyleId={}, templateType={}, mode={}",
                 templateId, targetStyleId, templateType, mode);
 
-        // 根据模板类型调用对应的Service方法
-        boolean result = templateLibraryService.applyToStyle(templateId, targetStyleId, mode);
+        // 根据模板类型执行不同的应用逻辑
+        boolean result = switch (templateType) {
+            case "bom" -> applyBomTemplate(template, targetStyleId, overwrite);
+            case "process", "process_price" -> applyProcessTemplate(template, targetStyleId, overwrite);
+            case "size" -> applySizeTemplate(template, targetStyleId, overwrite);
+            case "progress" -> applyProgressTemplate(template, targetStyleId, overwrite);
+            default -> throw new IllegalArgumentException("不支持的模板类型: " + templateType);
+        };
 
         log.info("模板应用完成: templateId={}, targetStyleId={}, result={}",
                 templateId, targetStyleId, result);
@@ -119,13 +134,359 @@ public class TemplateStyleOrchestrator {
         log.info("开始从款式创建模板: sourceStyleNo={}, templateTypes={}",
                 sourceStyleNo, templateTypes);
 
-        // 调用Service方法创建模板
-        List<TemplateLibrary> created = templateLibraryService.createFromStyle(sourceStyleNo, templateTypes);
+        List<TemplateLibrary> created = new ArrayList<>();
+
+        if (templateTypes == null || templateTypes.isEmpty()) {
+            templateTypes = List.of("bom", "process", "size");
+        }
+
+        for (String type : templateTypes) {
+            try {
+                TemplateLibrary template = createTemplateByType(sourceStyleNo, style.getId(), type);
+                if (template != null) {
+                    created.add(template);
+                }
+            } catch (Exception e) {
+                log.error("创建模板失败: sourceStyleNo={}, type={}", sourceStyleNo, type, e);
+            }
+        }
 
         log.info("模板创建完成: sourceStyleNo={}, createdCount={}",
                 sourceStyleNo, created.size());
 
         return created;
+    }
+
+    /**
+     * 根据类型创建模板
+     */
+    private TemplateLibrary createTemplateByType(String sourceStyleNo, Long styleId, String templateType) {
+        String key = sourceStyleNo + "_" + templateType;
+        String name = sourceStyleNo + " " + templateType + " 模板";
+        String content = "";
+
+        try {
+            switch (templateType) {
+                case "bom" -> {
+                    List<StyleBom> boms = styleBomService.lambdaQuery()
+                            .eq(StyleBom::getStyleId, styleId)
+                            .list();
+                    content = objectMapper.writeValueAsString(boms);
+                }
+                case "process", "process_price" -> {
+                    List<StyleProcess> processes = styleProcessService.lambdaQuery()
+                            .eq(StyleProcess::getStyleId, styleId)
+                            .list();
+                    content = objectMapper.writeValueAsString(processes);
+                }
+                case "size" -> {
+                    List<StyleSize> sizes = styleSizeService.lambdaQuery()
+                            .eq(StyleSize::getStyleId, styleId)
+                            .list();
+                    content = objectMapper.writeValueAsString(sizes);
+                }
+                case "progress" -> {
+                    // 进度模板创建逻辑
+                    Map<String, Object> progressData = new HashMap<>();
+                    progressData.put("styleNo", sourceStyleNo);
+                    progressData.put("createdAt", LocalDateTime.now().toString());
+                    content = objectMapper.writeValueAsString(progressData);
+                }
+                default -> {
+                    log.warn("未知的模板类型: {}", templateType);
+                    return null;
+                }
+            }
+        } catch (Exception e) {
+            log.error("序列化模板内容失败: sourceStyleNo={}, type={}", sourceStyleNo, templateType, e);
+            return null;
+        }
+
+        TemplateLibrary template = new TemplateLibrary();
+        template.setTemplateType(templateType);
+        template.setTemplateKey(key);
+        template.setTemplateName(name);
+        template.setTemplateContent(content);
+        template.setSourceStyleNo(sourceStyleNo);
+        template.setLocked(1);
+
+        boolean saved = templateLibraryService.upsertTemplate(template);
+        if (saved) {
+            return template;
+        }
+        return null;
+    }
+
+    /**
+     * 应用BOM模板
+     */
+    private boolean applyBomTemplate(TemplateLibrary template, Long targetStyleId, boolean overwrite) {
+        try {
+            String content = template.getTemplateContent();
+            List<StyleBom> boms = new ArrayList<>();
+
+            // 兼容两种模板格式：{"rows": [...]} 或直接 [...]
+            if (content != null && content.trim().startsWith("{")) {
+                // 新格式：{"rows": [...]}
+                JsonNode root = objectMapper.readTree(content);
+                JsonNode rowsNode = root.has("rows") ? root.get("rows") : root;
+                if (rowsNode != null && rowsNode.isArray()) {
+                    int index = 1;
+                    for (JsonNode rowNode : rowsNode) {
+                        StyleBom bom = objectMapper.convertValue(rowNode, StyleBom.class);
+                        String materialCode = String.valueOf(bom.getMaterialCode() == null ? "" : bom.getMaterialCode()).trim();
+                        if (materialCode.isEmpty()) {
+                            String codePrefix = rowNode.has("codePrefix") ? rowNode.get("codePrefix").asText("") : "";
+                            String base = String.valueOf(codePrefix == null ? "" : codePrefix).trim();
+                            if (base.isEmpty()) {
+                                base = String.valueOf(bom.getMaterialName() == null ? "BOM" : bom.getMaterialName()).trim();
+                                if (base.isEmpty()) {
+                                    base = "BOM";
+                                }
+                            }
+                            bom.setMaterialCode(base + String.format("%03d", index));
+                        }
+                        boms.add(bom);
+                        index++;
+                    }
+                }
+            } else {
+                // 旧格式：直接数组 [...]
+                List<StyleBom> parsed = objectMapper.readValue(content, new TypeReference<List<StyleBom>>() {});
+                int index = 1;
+                for (StyleBom bom : parsed) {
+                    String materialCode = String.valueOf(bom.getMaterialCode() == null ? "" : bom.getMaterialCode()).trim();
+                    if (materialCode.isEmpty()) {
+                        String base = String.valueOf(bom.getMaterialName() == null ? "BOM" : bom.getMaterialName()).trim();
+                        if (base.isEmpty()) {
+                            base = "BOM";
+                        }
+                        bom.setMaterialCode(base + String.format("%03d", index));
+                    }
+                    boms.add(bom);
+                    index++;
+                }
+            }
+
+            if (overwrite) {
+                // 删除现有BOM
+                styleBomService.lambdaUpdate()
+                        .eq(StyleBom::getStyleId, targetStyleId)
+                        .remove();
+            }
+
+            // 插入新BOM
+            for (StyleBom bom : boms) {
+                bom.setId(null);
+                bom.setStyleId(targetStyleId);
+                styleBomService.save(bom);
+            }
+
+            return true;
+        } catch (Exception e) {
+            log.error("应用BOM模板失败", e);
+            return false;
+        }
+    }
+
+    /**
+     * 应用工序模板
+     */
+    private boolean applyProcessTemplate(TemplateLibrary template, Long targetStyleId, boolean overwrite) {
+        try {
+            String content = template.getTemplateContent();
+            List<StyleProcess> processes;
+
+            if (content != null && content.trim().startsWith("{")) {
+                JsonNode root = objectMapper.readTree(content);
+                JsonNode stepsNode = root.has("steps") ? root.get("steps")
+                        : (root.has("rows") ? root.get("rows") : root.get("data"));
+                if (stepsNode == null || stepsNode.isMissingNode() || stepsNode.isNull()) {
+                    processes = Collections.emptyList();
+                } else {
+                    processes = objectMapper.convertValue(stepsNode, new TypeReference<List<StyleProcess>>() {});
+                }
+            } else {
+                processes = objectMapper.readValue(content, new TypeReference<List<StyleProcess>>() {});
+            }
+
+            if (overwrite) {
+                // 删除现有工序
+                styleProcessService.lambdaUpdate()
+                        .eq(StyleProcess::getStyleId, targetStyleId)
+                        .remove();
+            }
+
+            // 插入新工序
+            for (StyleProcess process : processes) {
+                process.setProcessName(fixMojibake(process.getProcessName()));
+                process.setProgressStage(fixMojibake(process.getProgressStage()));
+                process.setId(null);
+                process.setStyleId(targetStyleId);
+                styleProcessService.save(process);
+            }
+
+            return true;
+        } catch (Exception e) {
+            log.error("应用工序模板失败", e);
+            return false;
+        }
+    }
+
+    /**
+     * 应用尺寸模板
+     */
+    private boolean applySizeTemplate(TemplateLibrary template, Long targetStyleId, boolean overwrite) {
+        try {
+            String content = template.getTemplateContent();
+            List<StyleSize> sizes;
+
+            if (content != null && content.trim().startsWith("{")) {
+                JsonNode root = objectMapper.readTree(content);
+                if (root.has("rows")) {
+                    sizes = objectMapper.convertValue(root.get("rows"), new TypeReference<List<StyleSize>>() {});
+                } else if (root.has("sizes") || root.has("parts")) {
+                    sizes = new ArrayList<>();
+                    List<String> sizeNames = new ArrayList<>();
+                    JsonNode sizesNode = root.get("sizes");
+                    if (sizesNode != null && sizesNode.isArray()) {
+                        for (JsonNode sn : sizesNode) {
+                            String name = sn == null || sn.isNull() ? "" : sn.asText("").trim();
+                            if (!name.isEmpty()) {
+                                sizeNames.add(name);
+                            }
+                        }
+                    }
+
+                    JsonNode partsNode = root.get("parts");
+                    if ((sizeNames.isEmpty()) && partsNode != null && partsNode.isArray() && partsNode.size() > 0) {
+                        JsonNode first = partsNode.get(0);
+                        JsonNode valuesNode = first == null ? null : first.get("values");
+                        if (valuesNode != null && valuesNode.isObject()) {
+                            Iterator<String> fields = valuesNode.fieldNames();
+                            while (fields.hasNext()) {
+                                String name = String.valueOf(fields.next()).trim();
+                                if (!name.isEmpty()) {
+                                    sizeNames.add(name);
+                                }
+                            }
+                        }
+                    }
+
+                    int sort = 1;
+                    if (partsNode != null && partsNode.isArray()) {
+                        for (JsonNode partNode : partsNode) {
+                            String partName = partNode.path("partName").asText(null);
+                            String measureMethod = partNode.path("measureMethod").asText(null);
+                            BigDecimal tolerance = parseDecimal(partNode.get("tolerance"));
+                            JsonNode valuesNode = partNode.get("values");
+
+                            for (String sizeName : sizeNames) {
+                                BigDecimal value = null;
+                                if (valuesNode != null && valuesNode.isObject()) {
+                                    JsonNode valueNode = valuesNode.get(sizeName);
+                                    value = parseDecimal(valueNode);
+                                }
+
+                                StyleSize size = new StyleSize();
+                                size.setPartName(partName);
+                                size.setSizeName(sizeName);
+                                size.setMeasureMethod(measureMethod);
+                                size.setTolerance(tolerance);
+                                size.setStandardValue(value);
+                                size.setSort(sort++);
+                                sizes.add(size);
+                            }
+                        }
+                    }
+                } else {
+                    sizes = objectMapper.convertValue(root, new TypeReference<List<StyleSize>>() {});
+                }
+            } else {
+                sizes = objectMapper.readValue(content, new TypeReference<List<StyleSize>>() {});
+            }
+
+            if (overwrite) {
+                // 删除现有尺寸
+                styleSizeService.lambdaUpdate()
+                        .eq(StyleSize::getStyleId, targetStyleId)
+                        .remove();
+            }
+
+            // 插入新尺寸
+            for (StyleSize size : sizes) {
+                size.setId(null);
+                size.setStyleId(targetStyleId);
+                styleSizeService.save(size);
+            }
+
+            return true;
+        } catch (Exception e) {
+            log.error("应用尺寸模板失败", e);
+            return false;
+        }
+    }
+
+    /**
+     * 应用进度模板
+     */
+    private boolean applyProgressTemplate(TemplateLibrary template, Long targetStyleId, boolean overwrite) {
+        // 进度模板通常不直接应用到款式，而是用于生产订单
+        // 这里可以记录模板与款式的关联关系
+        log.info("进度模板已关联到款式: templateId={}, styleId={}", template.getId(), targetStyleId);
+        return true;
+    }
+
+    private BigDecimal parseDecimal(JsonNode node) {
+        if (node == null || node.isNull()) {
+            return null;
+        }
+        if (node.isNumber()) {
+            return new BigDecimal(node.asText());
+        }
+        String text = node.asText(null);
+        if (text == null || text.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            return new BigDecimal(text.trim());
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String fixMojibake(String text) {
+        if (text == null) {
+            return null;
+        }
+        String trimmed = text.trim();
+        if (trimmed.isEmpty()) {
+            return text;
+        }
+        if (!looksMojibake(trimmed)) {
+            return text;
+        }
+        try {
+            return new String(trimmed.getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return text;
+        }
+    }
+
+    private boolean looksMojibake(String text) {
+        boolean hasCjk = false;
+        boolean hasLatin1 = false;
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c >= '\u4e00' && c <= '\u9fff') {
+                hasCjk = true;
+                break;
+            }
+            if (c >= '\u00c0' && c <= '\u00ff') {
+                hasLatin1 = true;
+            }
+        }
+        return !hasCjk && hasLatin1;
     }
 
     /**

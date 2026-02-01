@@ -7,7 +7,7 @@ import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleProcess;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.StyleProcessService;
-import com.fashion.supplychain.template.service.TemplateLibraryService;
+import com.fashion.supplychain.template.orchestration.TemplateLibraryOrchestrator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -41,7 +41,7 @@ public class OrderManagementController {
   private StyleProcessService styleProcessService;
 
   @Autowired
-  private TemplateLibraryService templateLibraryService;
+  private TemplateLibraryOrchestrator templateLibraryOrchestrator;
 
   @Autowired
   private ObjectMapper objectMapper;
@@ -98,7 +98,10 @@ public class OrderManagementController {
       if (StringUtils.hasText(style.getStyleNo())) {
         // 推送 BOM、工序、工序单价、进度节点 到模板库
         List<String> templateTypes = List.of("bom", "process", "process_price", "progress");
-        templateLibraryService.createFromStyle(style.getStyleNo(), templateTypes);
+        Map<String, Object> body = new HashMap<>();
+        body.put("sourceStyleNo", style.getStyleNo());
+        body.put("templateTypes", templateTypes);
+        templateLibraryOrchestrator.createFromStyle(body);
         log.info("推送到下单管理时同步单价维护成功: styleId={}, styleNo={}", styleId, style.getStyleNo());
       }
     } catch (Exception e) {

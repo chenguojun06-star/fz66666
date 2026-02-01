@@ -256,7 +256,7 @@ export const useProductWarehousing = () => {
   };
 
   const isOrderFrozenById = (orderId: any) => {
-    return orderFrozen.isFrozenById(orderId);
+    return orderFrozen.isFrozenById[orderId] || false;
   };
 
   // Sync logic

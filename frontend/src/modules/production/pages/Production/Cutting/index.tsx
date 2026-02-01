@@ -725,7 +725,7 @@ const CuttingManagement: React.FC = () => {
   };
 
   const isOrderFrozenById = (orderId: any) => {
-    return orderFrozen.isFrozenById(orderId);
+    return orderFrozen.isFrozenById[orderId] || false;
   };
 
   const fetchBundles = async () => {
@@ -1426,17 +1426,18 @@ const CuttingManagement: React.FC = () => {
                     key: 'productionOrderNo',
                     width: 230,
                     render: (v: any, record: CuttingTask) => (
-                      <Button
-                        type="link"
-                        size="small"
-                        onClick={() => goToEntry(record)}
+                      <a
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          goToEntry(record);
+                        }}
                         title={String(v || '').trim() || '-'}
-                        style={{ padding: 0, height: 'auto', color: '#2D7FF9', whiteSpace: 'normal' }}
+                        style={{ color: '#1890ff', cursor: 'pointer' }}
                       >
-                        <span className="order-no-wrap" style={{ width: '100%' }}>
+                        <span className="order-no-wrap">
                           {String(v || '').trim() || '-'}
                         </span>
-                      </Button>
+                      </a>
                     ),
                   },
                   {

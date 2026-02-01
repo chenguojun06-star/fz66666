@@ -319,12 +319,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 // 自定义钩子，方便组件使用上下文
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context) return context;
-  const metaEnv = (import.meta as unknown as { env?: { DEV?: boolean } }).env;
-  if (metaEnv?.DEV) {
-    throw new Error('必须在认证上下文提供者内部使用该钩子');
+  if (!context) {
+    // 在开发环境下给出警告，但不抛出错误（避免热重载问题）
+    const metaEnv = (import.meta as unknown as { env?: { DEV?: boolean } }).env;
+    if (metaEnv?.DEV) {
+      console.error('[AuthContext] useAuth must be used within AuthProvider. Returning fallback context.');
+    }
+    return fallbackAuthContext;
   }
-  return fallbackAuthContext;
+  return context;
 };
 
 export const isAdminUser = (user?: Partial<UserInfo> | null) => {

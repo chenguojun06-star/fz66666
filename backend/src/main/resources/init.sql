@@ -204,7 +204,16 @@ CREATE TABLE IF NOT EXISTS t_production_order (
     actual_end_date DATETIME COMMENT '实际完成日期',
     delete_flag INT DEFAULT 0 COMMENT '删除标志(0:正常,1:删除)',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    INDEX idx_style_no (style_no),
+    INDEX idx_factory_id (factory_id),
+    INDEX idx_status (status),
+    INDEX idx_delete_flag (delete_flag),
+    INDEX idx_create_time (create_time),
+    INDEX idx_update_time (update_time),
+    INDEX idx_style_status (style_no, status),
+    INDEX idx_factory_status (factory_id, status),
+    INDEX idx_status_create_time (status, create_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='生产订单表';
 
 -- 14. 物料采购表
@@ -241,7 +250,17 @@ CREATE TABLE IF NOT EXISTS t_material_purchase (
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     delete_flag INT NOT NULL DEFAULT 0 COMMENT '删除标识：0-未删除，1-已删除',
-    INDEX idx_order_id (order_id)
+    INDEX idx_order_id (order_id),
+    INDEX idx_order_no (order_no),
+    INDEX idx_style_no (style_no),
+    INDEX idx_supplier_id (supplier_id),
+    INDEX idx_material_code (material_code),
+    INDEX idx_status (status),
+    INDEX idx_delete_flag (delete_flag),
+    INDEX idx_create_time (create_time),
+    INDEX idx_order_delete_flag (order_id, delete_flag),
+    INDEX idx_style_delete_flag (style_no, delete_flag),
+    INDEX idx_status_create_time (status, create_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='物料采购表';
 
 -- 15. 质检入库表
@@ -318,7 +337,17 @@ CREATE TABLE IF NOT EXISTS t_scan_record (
     INDEX idx_style_no (style_no),
     INDEX idx_request_id (request_id),
     INDEX idx_scan_time (scan_time),
-    INDEX idx_payroll_settlement_id (payroll_settlement_id)
+    INDEX idx_payroll_settlement_id (payroll_settlement_id),
+    INDEX idx_scan_result (scan_result),
+    INDEX idx_scan_type (scan_type),
+    INDEX idx_operator_id (operator_id),
+    INDEX idx_process_code (process_code),
+    INDEX idx_order_scan_result (order_id, scan_result),
+    INDEX idx_order_scan_type (order_id, scan_type),
+    INDEX idx_order_scan_time (order_id, scan_time),
+    INDEX idx_bundle_scan_result (cutting_bundle_id, scan_result),
+    INDEX idx_bundle_scan_type (cutting_bundle_id, scan_type),
+    INDEX idx_scan_result_time (scan_result, scan_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='扫码记录表';
 
 CREATE TABLE IF NOT EXISTS t_payroll_settlement (

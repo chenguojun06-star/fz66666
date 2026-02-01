@@ -43,6 +43,13 @@ export {
   returnFinanceReconciliation,
 } from './finance';
 
+// 废弃端点适配器（兼容期至2026-05-01）
+export {
+  setupLegacyApiAdapter,
+  getDeprecatedEndpoints,
+  isDeprecatedEndpoint,
+} from './legacyApiAdapter';
+
 // 为了保持向后兼容，默认导出 createApiClient
 import { createApiClient } from './core';
 export default createApiClient();

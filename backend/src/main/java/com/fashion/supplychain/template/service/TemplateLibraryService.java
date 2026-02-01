@@ -13,9 +13,9 @@ public interface TemplateLibraryService extends IService<TemplateLibrary> {
 
     List<TemplateLibrary> listByType(String templateType);
 
-    List<TemplateLibrary> createFromStyle(String sourceStyleNo, List<String> templateTypes);
+    boolean upsertTemplate(TemplateLibrary template);
 
-    boolean applyToStyle(String templateId, Long targetStyleId, String mode);
+    Map<String, BigDecimal> parseProcessUnitPrices(String processJson);
 
     Map<String, BigDecimal> resolveProcessUnitPrices(String styleNo);
 

@@ -35,6 +35,17 @@ public class StyleQuotationController {
     @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     @Transactional
     public Result<Boolean> saveOrUpdate(@RequestBody StyleQuotation styleQuotation) {
+        return doSaveOrUpdate(styleQuotation);
+    }
+
+    @PutMapping
+    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
+    @Transactional
+    public Result<Boolean> update(@RequestBody StyleQuotation styleQuotation) {
+        return doSaveOrUpdate(styleQuotation);
+    }
+
+    private Result<Boolean> doSaveOrUpdate(StyleQuotation styleQuotation) {
         if (styleQuotation == null || styleQuotation.getStyleId() == null) {
             throw new IllegalArgumentException("styleId不能为空");
         }

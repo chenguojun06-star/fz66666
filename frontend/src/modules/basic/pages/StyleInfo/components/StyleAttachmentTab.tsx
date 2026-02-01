@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Button, Upload, message, Tag, Space, Modal } from 'antd';
+import { App, Button, Upload, Tag, Space, Modal } from 'antd';
 import {
   UploadOutlined,
   DeleteOutlined,
@@ -28,6 +28,7 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
   const [data, setData] = useState<StyleAttachment[]>([]);
   const [loading, setLoading] = useState(false);
   const { tableScrollY } = useViewport();
+  const { message } = App.useApp();
 
   const isPattern = useMemo(() => {
     const type = String(bizType || '').trim().toLowerCase();

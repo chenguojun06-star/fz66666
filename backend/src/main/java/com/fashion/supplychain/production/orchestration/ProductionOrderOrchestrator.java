@@ -379,11 +379,12 @@ public class ProductionOrderOrchestrator {
             throw new IllegalStateException("订单已完成，无法报废");
         }
 
-        ProductionOrder detail = productionOrderQueryService.getDetailById(oid);
-        ProductionOrder check = detail != null ? detail : existed;
-        if (isProcurementCompleted(check)) {
-            throw new IllegalStateException("物料采购完成，无法报废");
-        }
+        // 2026-02-01: 移除采购完成限制 - 允许在任何阶段报废订单
+        // ProductionOrder detail = productionOrderQueryService.getDetailById(oid);
+        // ProductionOrder check = detail != null ? detail : existed;
+        // if (isProcurementCompleted(check)) {
+        //     throw new IllegalStateException("物料采购完成，无法报废");
+        // }
 
         boolean ok = productionOrderService.deleteById(oid);
         if (!ok) {

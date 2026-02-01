@@ -35,6 +35,9 @@ public class TemplateLibraryOrchestrator {
     private TemplateOperationLogService templateOperationLogService;
 
     @Autowired
+    private TemplateStyleOrchestrator templateStyleOrchestrator;
+
+    @Autowired
     private com.fashion.supplychain.production.orchestration.ProductionOrderOrchestrator productionOrderOrchestrator;
 
     public IPage<TemplateLibrary> list(Map<String, Object> params) {
@@ -374,7 +377,7 @@ public class TemplateLibraryOrchestrator {
         } else {
             types = List.of();
         }
-        List<TemplateLibrary> created = templateLibraryService.createFromStyle(sourceStyleNo, types);
+        List<TemplateLibrary> created = templateStyleOrchestrator.createTemplateFromStyle(sourceStyleNo, types);
         return created;
     }
 
@@ -407,7 +410,7 @@ public class TemplateLibraryOrchestrator {
             }
         }
         String mode = body == null ? null : (body.get("mode") == null ? null : String.valueOf(body.get("mode")));
-        boolean ok = templateLibraryService.applyToStyle(templateId, targetStyleId, mode);
+        boolean ok = templateStyleOrchestrator.applyTemplateToStyle(templateId, targetStyleId, mode);
         if (!ok) {
             throw new IllegalStateException("导入失败");
         }

@@ -107,8 +107,10 @@ public class MaterialInboundController {
     }
 
     /**
-     * 根据采购单ID查询入库记录
+     * @deprecated 已废弃，请使用 GET /list?purchaseId=xxx
+     * @since 2026-02-01 标记废弃，将在2026-05-01删除
      */
+    @Deprecated
     @GetMapping("/by-purchase/{purchaseId}")
     @PreAuthorize("hasAuthority('material:inbound:query')")
     public Result<?> listByPurchaseId(@PathVariable String purchaseId) {

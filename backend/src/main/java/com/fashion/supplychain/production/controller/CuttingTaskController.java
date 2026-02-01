@@ -17,8 +17,21 @@ public class CuttingTaskController {
     @Autowired
     private CuttingTaskService cuttingTaskService;
 
+    /**
+     * 【新版统一查询】分页查询裁剪任务列表
+     * 支持参数：
+     * - myTasks: true表示查询当前用户的裁剪任务
+     * - 其他筛选参数：orderId, status等
+     *
+     * @since 2026-02-01 优化版本
+     */
     @GetMapping("/list")
     public Result<?> list(@RequestParam Map<String, Object> params) {
+        // 智能路由：我的任务
+        if ("true".equals(String.valueOf(params.get("myTasks")))) {
+            return Result.success(cuttingTaskOrchestrator.getMyTasks());
+        }
+
         return Result.success(cuttingTaskOrchestrator.queryPage(params));
     }
 
@@ -67,8 +80,10 @@ public class CuttingTaskController {
     }
 
     /**
-     * 获取当前用户的裁剪任务（已领取待完成）
+     * @deprecated 已废弃，请使用 GET /list?myTasks=true
+     * @since 2026-02-01 标记废弃，将在2026-05-01删除
      */
+    @Deprecated
     @GetMapping("/my-tasks")
     public Result<?> getMyTasks() {
         return Result.success(cuttingTaskOrchestrator.getMyTasks());

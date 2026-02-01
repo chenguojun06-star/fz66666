@@ -473,19 +473,24 @@ const MaterialPurchase: React.FC = () => {
   }, []);
 
   const filterOutMissingOrders = useCallback(async (records: MaterialPurchaseType[]) => {
-    const orderNos = Array.from(
-      new Set(records.map((r) => String(r.orderNo || '').trim()).filter(Boolean))
-    );
-    if (!orderNos.length) return records;
-    await ensureOrderExistCache(orderNos);
-    const cache = orderExistCacheRef.current;
-    return records.filter((r) => {
-      const no = String(r.orderNo || '').trim();
-      if (!no) return true;
-      const exists = cache.get(no);
-      return exists !== false;
-    });
-  }, [ensureOrderExistCache]);
+    // ⚠️ 临时禁用订单存在性检查，避免过滤掉有效的采购记录
+    // TODO: 后续优化 - 只在订单列表页面进行过滤，采购列表应显示所有记录
+    return records;
+
+    // 原有逻辑（已注释）
+    // const orderNos = Array.from(
+    //   new Set(records.map((r) => String(r.orderNo || '').trim()).filter(Boolean))
+    // );
+    // if (!orderNos.length) return records;
+    // await ensureOrderExistCache(orderNos);
+    // const cache = orderExistCacheRef.current;
+    // return records.filter((r) => {
+    //   const no = String(r.orderNo || '').trim();
+    //   if (!no) return true;
+    //   const exists = cache.get(no);
+    //   return exists !== false;
+    // });
+  }, []);
 
   useEffect(() => {
     if (!visible) return;
@@ -579,8 +584,9 @@ const MaterialPurchase: React.FC = () => {
         return null;
       }
     },
-    (newData, oldData) => {
-      if (oldData !== null && newData) {
+    (newData) => {
+      // ⚠️ 修复：无论首次加载还是更新，都应该设置数据
+      if (newData) {
         setPurchaseList(newData.records);
         setTotal(newData.total);
       }
@@ -670,7 +676,8 @@ const MaterialPurchase: React.FC = () => {
     const orderId = String(record?.orderId || record?.id || '').trim();
     const status = String(record?.status || '').trim().toLowerCase();
     if (status === 'completed') return true;
-    return orderFrozen.isFrozenById(orderNo) || orderFrozen.isFrozenById(orderId);
+    // isFrozenById 是 Record<string, boolean>，不是函数
+    return orderFrozen.isFrozenById[orderNo] || orderFrozen.isFrozenById[orderId] || false;
   };
 
   const openQuickEditSafe = async (record: MaterialPurchaseType) => {

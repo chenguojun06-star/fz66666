@@ -31,12 +31,46 @@ public class OrderTransferController {
     private UserService userService;
 
     /**
+     * 【新版统一查询】查询转移记录
+     * 支持参数：
+     * - type=pending: 待处理的转移请求
+     * - type=my-transfers: 我发起的转移记录
+     * - type=received: 收到的转移请求
+     *
+     * @since 2026-02-01 优化版本
+     */
+    @GetMapping("/list")
+    public Result<?> list(@RequestParam Map<String, Object> params) {
+        String type = (String) params.get("type");
+
+        try {
+            if ("pending".equals(type)) {
+                IPage<OrderTransfer> page = orderTransferService.queryPendingTransfers(params);
+                return Result.success(page);
+            } else if ("my-transfers".equals(type)) {
+                IPage<OrderTransfer> page = orderTransferService.queryMyTransfers(params);
+                return Result.success(page);
+            } else if ("received".equals(type)) {
+                IPage<OrderTransfer> page = orderTransferService.queryReceivedTransfers(params);
+                return Result.success(page);
+            } else {
+                // 默认查询待处理
+                IPage<OrderTransfer> page = orderTransferService.queryPendingTransfers(params);
+                return Result.success(page);
+            }
+        } catch (Exception e) {
+            log.error("查询转移记录失败", e);
+            return Result.fail(e.getMessage());
+        }
+    }
+
+    /**
      * 发起订单转移请求
      */
     @PostMapping("/create")
     public Result<?> createTransfer(@RequestBody Map<String, Object> params) {
         String orderId = (String) params.get("orderId");
-        Long toUserId = params.get("toUserId") != null ? 
+        Long toUserId = params.get("toUserId") != null ?
                 Long.parseLong(params.get("toUserId").toString()) : null;
         String message = (String) params.get("message");
 
@@ -57,8 +91,10 @@ public class OrderTransferController {
     }
 
     /**
-     * 查询待处理的转移请求
+     * @deprecated 已废弃，请使用 GET /list?type=pending
+     * @since 2026-02-01 标记废弃，将在2026-05-01删除
      */
+    @Deprecated
     @GetMapping("/pending")
     public Result<?> queryPendingTransfers(@RequestParam Map<String, Object> params) {
         try {
@@ -90,7 +126,7 @@ public class OrderTransferController {
     @PostMapping("/reject/{transferId}")
     public Result<?> rejectTransfer(@PathVariable Long transferId, @RequestBody Map<String, Object> params) {
         String rejectReason = (String) params.get("rejectReason");
-        
+
         try {
             boolean success = orderTransferService.rejectTransfer(transferId, rejectReason);
             return success ? Result.success("拒绝成功") : Result.fail("拒绝失败");
@@ -101,8 +137,10 @@ public class OrderTransferController {
     }
 
     /**
-     * 查询我发起的转移记录
+     * @deprecated 已废弃，请使用 GET /list?type=my-transfers
+     * @since 2026-02-01 标记废弃，将在2026-05-01删除
      */
+    @Deprecated
     @GetMapping("/my-transfers")
     public Result<?> queryMyTransfers(@RequestParam Map<String, Object> params) {
         try {
@@ -115,8 +153,10 @@ public class OrderTransferController {
     }
 
     /**
-     * 查询收到的转移请求
+     * @deprecated 已废弃，请使用 GET /list?type=received
+     * @since 2026-02-01 标记废弃，将在2026-05-01删除
      */
+    @Deprecated
     @GetMapping("/received")
     public Result<?> queryReceivedTransfers(@RequestParam Map<String, Object> params) {
         try {
@@ -136,10 +176,10 @@ public class OrderTransferController {
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "1") Long page,
             @RequestParam(defaultValue = "20") Long pageSize) {
-        
+
         try {
             LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
-            
+
             if (StringUtils.hasText(keyword)) {
                 queryWrapper.and(wrapper -> wrapper
                         .like(User::getName, keyword)
@@ -148,12 +188,12 @@ public class OrderTransferController {
                         .or()
                         .eq(User::getId, keyword));
             }
-            
+
             queryWrapper.eq(User::getStatus, 1) // 只查询启用的用户
                     .orderByAsc(User::getName);
 
             Page<User> userPage = userService.page(new Page<>(page, pageSize), queryWrapper);
-            
+
             // 只返回必要的字段
             Map<String, Object> result = new HashMap<>();
             result.put("total", userPage.getTotal());
@@ -164,7 +204,7 @@ public class OrderTransferController {
                 userInfo.put("username", user.getUsername());
                 return userInfo;
             }).toList());
-            
+
             return Result.success(result);
         } catch (Exception e) {
             log.error("搜索用户失败", e);

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ApiResponse } from '../../types/api';
 import { createApiClient, toNumberSafe } from './core';
 
@@ -196,15 +196,41 @@ export const ensureProductionOrderUnlocked = async (
 
 export type UseProductionOrderFrozenCacheOptions = {
   id?: string | null;
+  ids?: unknown[];
   rule?: ProductionOrderFrozenRule;
   ttlMs?: number;
   enabled?: boolean;
+  acceptAnyData?: boolean;
 };
 
+/**
+ * Hook 支持两种调用方式：
+ * 1. 新方式：useProductionOrderFrozenCache({ id, rule, ... })
+ * 2. 旧方式（兼容）：useProductionOrderFrozenCache(ids[], { rule, ... })
+ */
 export const useProductionOrderFrozenCache = (
-  options: UseProductionOrderFrozenCacheOptions
+  idsOrOptions?: unknown[] | UseProductionOrderFrozenCacheOptions,
+  legacyOptions?: Partial<UseProductionOrderFrozenCacheOptions>
 ) => {
-  const { id, rule = 'status', ttlMs = CACHE_TTL_MS, enabled = true } = options;
+  // 兼容两种调用方式
+  const options: UseProductionOrderFrozenCacheOptions = Array.isArray(idsOrOptions)
+    ? { ...legacyOptions, ids: idsOrOptions }
+    : (idsOrOptions || {});
+
+  const { id, ids, rule = 'status', ttlMs = CACHE_TTL_MS, enabled = true } = options;
+
+  // 合并单个 id 和 ids 数组
+  const allIds = useMemo(() => {
+    const set = new Set<string>();
+    if (id) set.add(String(id).trim());
+    if (ids) {
+      ids.forEach((i) => {
+        const s = String(i ?? '').trim();
+        if (s) set.add(s);
+      });
+    }
+    return Array.from(set);
+  }, [id, ids]);
 
   const cacheRef = useRef<Map<string, CacheEntry>>(new Map());
   const [isFrozenById, setIsFrozenById] = useState<Record<string, boolean>>({});
@@ -220,19 +246,41 @@ export const useProductionOrderFrozenCache = (
   }, [id, ensureCache, rule]);
 
   useEffect(() => {
-    if (!enabled || !id) return;
+    if (!enabled || allIds.length === 0) return;
 
     const run = async () => {
-      try {
-        const { frozen } = await primeProductionOrderFrozenCache(id, { ttlMs, rule });
-        setIsFrozenById((prev) => ({ ...prev, [id]: frozen }));
-      } catch {
-        // Ignore
+      for (const currentId of allIds) {
+        try {
+          const { frozen } = await primeProductionOrderFrozenCache(currentId, { ttlMs, rule });
+          setIsFrozenById((prev) => ({ ...prev, [currentId]: frozen }));
+        } catch {
+          // Ignore
+        }
       }
     };
 
     run();
-  }, [id, rule, ttlMs, enabled]);
+  }, [allIds.join(','), rule, ttlMs, enabled]);
 
-  return { cacheRef, isFrozenById, ensureUnlocked: ensureProductionOrderUnlocked };
+  // 包装 ensureUnlocked，支持回调函数作为错误处理
+  const ensureUnlocked = useCallback(async (
+    orderId: string,
+    onFrozenOrOptions?: (() => void) | { rule?: ProductionOrderFrozenRule; message?: string }
+  ): Promise<boolean> => {
+    try {
+      const opts = typeof onFrozenOrOptions === 'function' ? { rule } : onFrozenOrOptions;
+      await ensureProductionOrderUnlocked(orderId, opts);
+      return true;
+    } catch (err: unknown) {
+      if ((err as { frozen?: boolean })?.frozen) {
+        if (typeof onFrozenOrOptions === 'function') {
+          onFrozenOrOptions();
+        }
+        return false;
+      }
+      throw err;
+    }
+  }, [rule]);
+
+  return { cacheRef, isFrozenById, isFrozen, ensureUnlocked };
 };

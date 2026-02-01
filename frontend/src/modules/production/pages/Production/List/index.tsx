@@ -2025,6 +2025,7 @@ const ProductionList: React.FC = () => {
                   label: '打印',
                   onClick: () => {
                     setPrintingRecord(record);
+                    setPrintModalVisible(true);
                   },
                 },
                 {
@@ -2056,6 +2057,7 @@ const ProductionList: React.FC = () => {
 
         {/* 快速编辑弹窗 */}
         <QuickEditModal
+          visible={quickEditModal.visible}
           loading={quickEditSaving}
           initialValues={{
             remarks: quickEditModal.data?.remarks,

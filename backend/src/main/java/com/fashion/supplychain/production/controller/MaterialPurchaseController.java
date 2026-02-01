@@ -30,8 +30,28 @@ public class MaterialPurchaseController {
     @Autowired
     private PatternProductionService patternProductionService;
 
+    /**
+     * 【新版统一查询】分页查询物料采购列表
+     * 支持参数：
+     * - scanCode: 扫码查询（需配合orderNo）
+     * - myTasks: true表示查询当前用户的采购任务
+     * - 其他筛选参数：orderId, styleNo, status等
+     *
+     * @since 2026-02-01 优化版本
+     */
     @GetMapping("/list")
     public Result<?> list(@RequestParam Map<String, Object> params) {
+        // 智能路由：扫码查询
+        if (params.containsKey("scanCode")) {
+            return Result.success(materialPurchaseOrchestrator.getByScanCode(params));
+        }
+
+        // 智能路由：我的任务
+        if ("true".equals(String.valueOf(params.get("myTasks")))) {
+            return Result.success(materialPurchaseOrchestrator.getMyTasks());
+        }
+
+        // 默认分页查询
         IPage<MaterialPurchase> page = materialPurchaseOrchestrator.list(params);
 
         // 补充下单数量字段（订单或样板生产）
@@ -191,14 +211,40 @@ public class MaterialPurchaseController {
         return Result.success(materialPurchaseOrchestrator.receive(body));
     }
 
-    @PostMapping({ "/return-confirm", "/returnConfirm" })
+    /**
+     * 确认退货
+     */
+    @PostMapping("/return-confirm")
     public Result<?> returnConfirm(@RequestBody Map<String, Object> body) {
         return Result.success(materialPurchaseOrchestrator.returnConfirm(body));
     }
 
-    @PostMapping({ "/return-confirm/reset", "/returnConfirm/reset" })
+    /**
+     * @deprecated 已废弃，请使用 POST /return-confirm（统一命名风格）
+     * @since 2026-02-01 标记废弃，将在2026-05-01删除
+     */
+    @Deprecated
+    @PostMapping("/returnConfirm")
+    public Result<?> returnConfirmLegacy(@RequestBody Map<String, Object> body) {
+        return returnConfirm(body);
+    }
+
+    /**
+     * 重置退货确认
+     */
+    @PostMapping("/return-confirm/reset")
     public Result<?> resetReturnConfirm(@RequestBody Map<String, Object> body) {
         return Result.success(materialPurchaseOrchestrator.resetReturnConfirm(body));
+    }
+
+    /**
+     * @deprecated 已废弃，请使用 POST /return-confirm/reset（统一命名风格）
+     * @since 2026-02-01 标记废弃，将在2026-05-01删除
+     */
+    @Deprecated
+    @PostMapping("/returnConfirm/reset")
+    public Result<?> resetReturnConfirmLegacy(@RequestBody Map<String, Object> body) {
+        return resetReturnConfirm(body);
     }
 
     @DeleteMapping("/{id}")
@@ -207,19 +253,20 @@ public class MaterialPurchaseController {
     }
 
     /**
-     * 通过扫码获取关联的采购单列表
-     * @param params 包含 scanCode 和 orderNo
-     * @return 采购单列表
+     * @deprecated 已废弃，请使用 GET /list?scanCode=xxx&orderNo=xxx
+     * @since 2026-02-01 标记废弃，将在2026-05-01删除
      */
+    @Deprecated
     @GetMapping("/by-scan-code")
     public Result<List<MaterialPurchase>> getByScanCode(@RequestParam Map<String, Object> params) {
         return Result.success(materialPurchaseOrchestrator.getByScanCode(params));
     }
 
     /**
-     * 获取当前用户的采购任务
-     * @return 采购任务列表
+     * @deprecated 已废弃，请使用 GET /list?myTasks=true
+     * @since 2026-02-01 标记废弃，将在2026-05-01删除
      */
+    @Deprecated
     @GetMapping("/my-tasks")
     public Result<List<MaterialPurchase>> getMyTasks() {
         return Result.success(materialPurchaseOrchestrator.getMyTasks());

@@ -273,15 +273,15 @@ const _MaterialInventory: React.FC = () => {
     }
 
     // console.log('物料出库数据:', {
-      materialCode: outboundModal.data?.materialCode,
-      materialName: outboundModal.data?.materialName,
-      batches: selectedBatches.map(item => ({
-        batchNo: item.batchNo,
-        warehouseLocation: item.warehouseLocation,
-        color: item.color,
-        outboundQty: item.outboundQty,
-      })),
-    });
+    //   materialCode: outboundModal.data?.materialCode,
+    //   materialName: outboundModal.data?.materialName,
+    //   batches: selectedBatches.map(item => ({
+    //     batchNo: item.batchNo,
+    //     warehouseLocation: item.warehouseLocation,
+    //     color: item.color,
+    //     outboundQty: item.outboundQty,
+    //   })),
+    // });
 
     message.success(`成功出库 ${selectedBatches.length} 个批次，共 ${selectedBatches.reduce((sum, item) => sum + (item.outboundQty || 0), 0)} ${outboundModal.data?.unit || '件'}`);
     outboundModal.close();
@@ -475,7 +475,11 @@ const _MaterialInventory: React.FC = () => {
       key: 'stock',
       width: 300,
       render: (_, record) => {
-        const isLow = record.availableQty < record.safetyStock;
+        const availableQty = record.availableQty ?? 0;
+        const inTransitQty = record.inTransitQty ?? 0;
+        const lockedQty = record.lockedQty ?? 0;
+        const safetyStock = record.safetyStock ?? 0;
+        const isLow = availableQty < safetyStock;
         return (
           <Space orientation="vertical" size={10} style={{ width: '100%' }}>
             <div style={{
@@ -487,7 +491,7 @@ const _MaterialInventory: React.FC = () => {
               <div>
                 <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4, fontWeight: 500 }}>可用库存</div>
                 <div style={{ fontSize: 16, fontWeight: 700, color: isLow ? '#ff4d4f' : '#52c41a' }}>
-                  {record.availableQty.toLocaleString()}
+                  {availableQty.toLocaleString()}
                   {isLow && <WarningOutlined style={{ marginLeft: 4, fontSize: 14 }} />}
                 </div>
                 <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 2 }}>{record.unit}</div>
@@ -495,14 +499,14 @@ const _MaterialInventory: React.FC = () => {
               <div>
                 <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4, fontWeight: 500 }}>在途</div>
                 <div style={{ fontSize: 16, fontWeight: 700, color: '#1890ff' }}>
-                  {record.inTransitQty.toLocaleString()}
+                  {inTransitQty.toLocaleString()}
                 </div>
                 <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 2 }}>{record.unit}</div>
               </div>
               <div>
                 <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4, fontWeight: 500 }}>锁定</div>
                 <div style={{ fontSize: 16, fontWeight: 700, color: '#fa8c16' }}>
-                  {record.lockedQty.toLocaleString()}
+                  {lockedQty.toLocaleString()}
                 </div>
                 <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 2 }}>{record.unit}</div>
               </div>
@@ -514,9 +518,9 @@ const _MaterialInventory: React.FC = () => {
               borderTop: '1px solid #f0f0f0',
               fontWeight: 500
             }}>
-              <span style={{ color: '#8c8c8c' }}>安全库存:</span> {record.safetyStock} {record.unit}
+              <span style={{ color: '#8c8c8c' }}>安全库存:</span> {safetyStock} {record.unit}
               <span style={{ margin: '0 8px', color: '#d9d9d9' }}>|</span>
-              <span style={{ color: '#8c8c8c' }}>库位:</span> {record.warehouseLocation}
+              <span style={{ color: '#8c8c8c' }}>库位:</span> {record.warehouseLocation || '-'}
             </div>
           </Space>
         );
@@ -531,7 +535,7 @@ const _MaterialInventory: React.FC = () => {
           <div>
             <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4, fontWeight: 500 }}>单价</div>
             <div style={{ fontSize: 16, fontWeight: 700, color: '#262626' }}>
-              ¥{record.unitPrice.toFixed(2)}
+              ¥{(record.unitPrice ?? 0).toFixed(2)}
             </div>
             <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 2 }}>/{record.unit}</div>
           </div>
@@ -541,7 +545,7 @@ const _MaterialInventory: React.FC = () => {
           }}>
             <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4, fontWeight: 500 }}>库存总值</div>
             <div style={{ fontSize: 18, fontWeight: 700, color: '#1890ff' }}>
-              ¥{record.totalValue.toLocaleString()}
+              ¥{(record.totalValue ?? 0).toLocaleString()}
             </div>
           </div>
         </Space>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, Space } from 'antd';
-import { ArrowLeftOutlined, SaveOutlined, CheckCircleOutlined, SendOutlined } from '@ant-design/icons';
+import { SaveOutlined, CheckCircleOutlined, SendOutlined } from '@ant-design/icons';
 
 interface StyleActionButtonsProps {
   // 状态
@@ -17,7 +17,6 @@ interface StyleActionButtonsProps {
   onCompleteSample: () => void;
   onPushToOrder: () => void;
   onUnlock: () => void;
-  onBackToList: () => void;
 }
 
 /**
@@ -35,38 +34,43 @@ const StyleActionButtons: React.FC<StyleActionButtonsProps> = ({
   onSave,
   onCompleteSample,
   onPushToOrder,
-  onUnlock,
-  onBackToList
+  onUnlock
 }) => {
+  const primaryButtonStyle: React.CSSProperties = {
+    borderRadius: 6,
+    paddingInline: 12,
+  };
+
+  const sampleButtonStyle: React.CSSProperties = {
+    ...primaryButtonStyle,
+    backgroundColor: sampleCompleted ? '#d9d9d9' : '#52c41a',
+    borderColor: sampleCompleted ? '#d9d9d9' : '#52c41a',
+  };
+
+  const saveButtonText = isNewPage
+    ? '创建款式'
+    : (editLocked ? '解锁编辑' : '保存信息');
+
+  const handleSaveOrUnlock = () => {
+    if (!isNewPage && editLocked) {
+      onUnlock();
+      return;
+    }
+    onSave();
+  };
+
   return (
     <Space>
-      {/* 返回列表（仅详情页显示） */}
-      {!isNewPage && (
-        <Button
-          icon={<ArrowLeftOutlined />}
-          onClick={onBackToList}
-        >
-          返回列表
-        </Button>
-      )}
-
-      {/* 解锁编辑（已保存且锁定时显示） */}
-      {editLocked && (
-        <Button
-          onClick={onUnlock}
-        >
-          解锁编辑
-        </Button>
-      )}
-
-      {/* 保存基础信息 */}
+      {/* 保存信息 / 解锁编辑 */}
       <Button
         type="primary"
         icon={<SaveOutlined />}
         loading={saving}
-        onClick={onSave}
+        onClick={handleSaveOrUnlock}
+        style={primaryButtonStyle}
+        size="small"
       >
-        {isNewPage ? '创建款式' : '保存基础信息'}
+        {saveButtonText}
       </Button>
 
       {/* 样衣完成（仅详情页显示） */}
@@ -76,8 +80,9 @@ const StyleActionButtons: React.FC<StyleActionButtonsProps> = ({
           icon={<CheckCircleOutlined />}
           loading={completingSample}
           disabled={sampleCompleted}
-          style={{ backgroundColor: sampleCompleted ? '#d9d9d9' : '#52c41a', borderColor: sampleCompleted ? '#d9d9d9' : '#52c41a' }}
+          style={sampleButtonStyle}
           onClick={onCompleteSample}
+          size="small"
         >
           {sampleCompleted ? '样衣已完成' : '样衣完成'}
         </Button>
@@ -91,6 +96,8 @@ const StyleActionButtons: React.FC<StyleActionButtonsProps> = ({
           loading={pushingToOrder}
           disabled={!hasProcessData}
           onClick={onPushToOrder}
+          style={primaryButtonStyle}
+          size="small"
         >
           推送到下单管理
         </Button>

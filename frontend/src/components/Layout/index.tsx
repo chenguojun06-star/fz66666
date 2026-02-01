@@ -1,6 +1,6 @@
 import React, { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Avatar, Badge, Button, Dropdown, Layout as AntLayout, Menu, message, Popover } from 'antd';
+import { App, Avatar, Badge, Button, Dropdown, Layout as AntLayout, Menu, Popover } from 'antd';
 import { BellOutlined, CloseOutlined, DownOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined, SettingOutlined } from '@ant-design/icons';
 import { isAdminUser as isAdminUserFn, useAuth } from '../../utils/AuthContext';
 import { menuConfig, resolvePermissionCode } from '../../routeConfig';
@@ -30,7 +30,8 @@ interface UrgentEvent {
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthenticated } = useAuth();
+  const { message } = App.useApp();
   const recentPagesStorageKey = 'layout.header.recentPages';
   const sidebarCollapsedStorageKey = 'layout.sidebar.collapsed';
   const maxRecentPages = 12;
@@ -147,8 +148,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   // 获取紧急事件
   const fetchUrgentEvents = async () => {
+    if (!isAuthenticated) {
+      return;
+    }
     try {
-      const response = (await api.get('/dashboard/urgent-events')) as ApiResult<UrgentEvent[]>;
+      const response = (await api.get('/dashboard/urgent-events', { timeout: 3000 })) as ApiResult<UrgentEvent[]>;
       if (response.code === 200) {
         setUrgentEvents(response.data || []);
       }

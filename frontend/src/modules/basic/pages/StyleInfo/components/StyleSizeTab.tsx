@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Input, InputNumber, message, Space, Select, Modal } from 'antd';
+import { App, Button, Input, InputNumber, Space, Select, Modal } from 'antd';
 import { DeleteOutlined, EditOutlined, PlusOutlined, SaveOutlined } from '@ant-design/icons';
 import { StyleSize, TemplateLibrary } from '@/types/style';
 import api, { sortSizeNames, toNumberSafe } from '@/utils/api';
@@ -76,6 +76,7 @@ const StyleSizeTab: React.FC<Props> = ({
   const styleNoTimerRef = useRef<number | undefined>(undefined);
   const { modalWidth } = useViewport();
   const [startingSize, setStartingSize] = useState(false);
+  const { message } = App.useApp();
 
   // 开始配置尺寸表
   const handleSizeStart = async () => {
@@ -145,7 +146,7 @@ const StyleSizeTab: React.FC<Props> = ({
     const sn = String(sourceStyleNo ?? '').trim();
     setTemplateLoading(true);
     try {
-      const res = await api.get<{ code: number; data: { records: unknown[]; total: number } }>('/template-library/list', {
+      const res = await api.get<{ code: number; data: { records: unknown[]; total: number } | unknown[] }>('/template-library/list', {
         params: {
           page: 1,
           pageSize: 200,
@@ -156,8 +157,10 @@ const StyleSizeTab: React.FC<Props> = ({
       });
       const result = res as Record<string, unknown>;
       if (result.code === 200) {
-        const records = (result.data?.records || []) as TemplateLibrary[];
-        setSizeTemplates(Array.isArray(records) ? records : []);
+        // 兼容两种返回格式：分页格式 {records: [...]} 或 直接数组 [...]
+        const data = result.data as { records?: unknown[] } | unknown[];
+        const records = Array.isArray(data) ? data : ((data as { records?: unknown[] })?.records || []);
+        setSizeTemplates(Array.isArray(records) ? records as TemplateLibrary[] : []);
         return;
       }
     } catch {
@@ -738,10 +741,10 @@ const StyleSizeTab: React.FC<Props> = ({
           >
             导入模板
           </Button>
-          <Button icon={<PlusOutlined />} onClick={handleAddPart} disabled={loading || saving}>
+          <Button type="default" icon={<PlusOutlined />} onClick={handleAddPart} disabled={loading || saving}>
             新增部位
           </Button>
-          <Button icon={<PlusOutlined />} onClick={() => setAddSizeOpen(true)} disabled={loading || saving || Boolean(readOnly)}>
+          <Button type="default" icon={<PlusOutlined />} onClick={() => setAddSizeOpen(true)} disabled={loading || saving || Boolean(readOnly)}>
             新增尺码
           </Button>
           {!editMode || readOnly ? (

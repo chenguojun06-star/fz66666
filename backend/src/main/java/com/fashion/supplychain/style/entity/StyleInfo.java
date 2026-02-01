@@ -112,7 +112,6 @@ public class StyleInfo {
 
     private String patternStatus;
 
-    @TableField(exist = false)
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime patternStartTime;
 

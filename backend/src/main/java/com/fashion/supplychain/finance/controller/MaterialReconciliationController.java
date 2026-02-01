@@ -49,16 +49,58 @@ public class MaterialReconciliationController {
         return Result.success(materialReconciliationOrchestrator.delete(id));
     }
 
-    @PostMapping("/update-status")
-    public Result<?> updateStatus(@Valid @RequestBody UpdateStatusRequest body) {
-        String message = reconciliationStatusOrchestrator.updateMaterialStatus(body.getId(), body.getStatus());
-        return Result.successMessage(message);
+    /**
+     * 统一的状态操作端点（替代2个分散端点）
+     *
+     * @param id 对账记录ID
+     * @param action 操作类型：update/return
+     * @param status 目标状态（用于update操作）
+     * @param reason 退回原因（用于return操作）
+     * @return 操作结果
+     */
+    @PostMapping("/{id}/status-action")
+    public Result<?> statusAction(
+            @PathVariable String id,
+            @RequestParam String action,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String reason) {
+
+        // 智能路由到对应的Orchestrator方法
+        switch (action.toLowerCase()) {
+            case "update":
+                if (status == null || status.trim().isEmpty()) {
+                    return Result.fail("status不能为空");
+                }
+                String updateMessage = reconciliationStatusOrchestrator.updateMaterialStatus(id, status);
+                return Result.successMessage(updateMessage);
+
+            case "return":
+                String returnMessage = reconciliationStatusOrchestrator.returnMaterialToPrevious(id, reason);
+                return Result.successMessage(returnMessage);
+
+            default:
+                return Result.fail("不支持的操作: " + action);
+        }
     }
 
+    /**
+     * @deprecated 请使用 POST /{id}/status-action?action=update&status=xxx
+     * 将在 2026-05-01 移除
+     */
+    @Deprecated
+    @PostMapping("/update-status")
+    public Result<?> updateStatus(@Valid @RequestBody UpdateStatusRequest body) {
+        return statusAction(body.getId(), "update", body.getStatus(), null);
+    }
+
+    /**
+     * @deprecated 请使用 POST /{id}/status-action?action=return&reason=xxx
+     * 将在 2026-05-01 移除
+     */
+    @Deprecated
     @PostMapping("/return")
     public Result<?> returnToPrevious(@Valid @RequestBody IdReasonRequest body) {
-        String message = reconciliationStatusOrchestrator.returnMaterialToPrevious(body.getId(), body.getReason());
-        return Result.successMessage(message);
+        return statusAction(body.getId(), "return", null, body.getReason());
     }
 
     @PostMapping("/backfill")

@@ -30,7 +30,7 @@ public class UserController {
 
     /**
      * 分页查询用户列表
-     * 
+     *
      * @param page     当前页码
      * @param pageSize 每页条数
      * @param username 用户名
@@ -53,7 +53,7 @@ public class UserController {
 
     /**
      * 获取用户详情
-     * 
+     *
      * @param id 用户ID
      * @return 用户信息
      */
@@ -74,7 +74,7 @@ public class UserController {
 
     /**
      * 新增用户
-     * 
+     *
      * @param user 用户信息
      * @return 操作结果
      */
@@ -86,7 +86,7 @@ public class UserController {
 
     /**
      * 更新用户
-     * 
+     *
      * @param user 用户信息
      * @return 操作结果
      */
@@ -98,7 +98,7 @@ public class UserController {
 
     /**
      * 删除用户
-     * 
+     *
      * @param id 用户ID
      * @return 操作结果
      */
@@ -111,7 +111,7 @@ public class UserController {
 
     /**
      * 切换用户状态
-     * 
+     *
      * @param id     用户ID
      * @param status 状态
      * @return 操作结果
@@ -125,7 +125,7 @@ public class UserController {
 
     /**
      * 用户登录
-     * 
+     *
      * @param loginData 登录信息
      * @return 登录结果
      */
@@ -217,10 +217,10 @@ public class UserController {
     public Result<?> getPermissionsByRole(@RequestParam(required = false) Long roleId) {
         return Result.success(userOrchestrator.permissionsByRole(roleId));
     }
-    
+
     /**
      * 获取待审批用户列表
-     * 
+     *
      * @param page     当前页码
      * @param pageSize 每页条数
      * @return 待审批用户列表
@@ -232,38 +232,57 @@ public class UserController {
         Page<User> userPage = userOrchestrator.listPendingUsers(page, pageSize);
         return Result.success(userPage);
     }
-    
+
     /**
-     * 批准用户
-     * 
-     * @param id 用户ID
+     * 统一的用户审批操作端点（替代2个分散端点）
+     *
+     * @param id     用户ID
+     * @param action 操作类型：approve/reject
+     * @param body   审批信息（包含remark）
      * @return 操作结果
      */
+    @PostMapping("/{id}/approval-action")
+    public Result<?> approvalAction(
+            @PathVariable Long id,
+            @RequestParam String action,
+            @RequestBody(required = false) User body) {
+
+        String remark = body == null ? null : body.getApprovalRemark();
+        if (remark == null) {
+            remark = body == null ? null : body.getOperationRemark();
+        }
+
+        // 智能路由到对应的Orchestrator方法
+        switch (action.toLowerCase()) {
+            case "approve":
+                userOrchestrator.approveUser(id, remark);
+                return Result.successMessage("用户已批准");
+            case "reject":
+                userOrchestrator.rejectUser(id, remark);
+                return Result.successMessage("用户已拒绝");
+            default:
+                return Result.fail("不支持的操作: " + action);
+        }
+    }
+
+    /**
+     * @deprecated 请使用 POST /{id}/approval-action?action=approve
+     * 将在 2026-05-01 移除
+     */
+    @Deprecated
     @PostMapping("/{id}/approve")
     public Result<?> approveUser(@PathVariable Long id,
             @RequestBody(required = false) User body) {
-        String remark = body == null ? null : body.getOperationRemark();
-        if (remark == null) {
-            remark = body == null ? null : body.getApprovalRemark();
-        }
-        userOrchestrator.approveUser(id, remark);
-        return Result.successMessage("用户已批准");
+        return approvalAction(id, "approve", body);
     }
-    
+
     /**
-     * 拒绝用户
-     * 
-     * @param id     用户ID
-     * @param reason 拒绝原因
-     * @return 操作结果
+     * @deprecated 请使用 POST /{id}/approval-action?action=reject
+     * 将在 2026-05-01 移除
      */
+    @Deprecated
     @PostMapping("/{id}/reject")
     public Result<?> rejectUser(@PathVariable Long id, @RequestBody(required = false) User reason) {
-        String remark = reason == null ? null : reason.getApprovalRemark();
-        if (remark == null) {
-            remark = reason == null ? null : reason.getOperationRemark();
-        }
-        userOrchestrator.rejectUser(id, remark);
-        return Result.successMessage("用户已拒绝");
+        return approvalAction(id, "reject", reason);
     }
 }

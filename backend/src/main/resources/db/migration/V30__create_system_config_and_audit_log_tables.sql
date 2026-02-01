@@ -1,0 +1,70 @@
+-- 系统参数配置表
+CREATE TABLE IF NOT EXISTS t_system_config (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
+    config_key VARCHAR(100) NOT NULL COMMENT '配置键',
+    config_name VARCHAR(200) NOT NULL COMMENT '配置名称',
+    config_value TEXT COMMENT '配置值',
+    default_value TEXT COMMENT '默认值',
+    config_type VARCHAR(20) DEFAULT 'string' COMMENT '配置类型: string-字符串, number-数字, boolean-布尔, json-JSON对象',
+    category VARCHAR(100) COMMENT '配置分类',
+    description TEXT COMMENT '配置描述',
+    editable TINYINT DEFAULT 1 COMMENT '是否可编辑: 0-不可编辑, 1-可编辑',
+    is_system TINYINT DEFAULT 0 COMMENT '是否系统内置: 0-否, 1-是',
+    sort_order INT DEFAULT 0 COMMENT '排序号',
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    create_by VARCHAR(50) COMMENT '创建人',
+    update_by VARCHAR(50) COMMENT '更新人',
+    UNIQUE KEY uk_config_key (config_key),
+    INDEX idx_category (category),
+    INDEX idx_is_system (is_system)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统参数配置表';
+
+-- 操作审计日志表
+CREATE TABLE IF NOT EXISTS t_audit_log (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
+    operation_type VARCHAR(50) COMMENT '操作类型: CREATE-创建, UPDATE-更新, DELETE-删除, QUERY-查询, EXPORT-导出, LOGIN-登录, LOGOUT-登出',
+    module VARCHAR(50) COMMENT '业务模块: system-系统, style-款式, production-生产, finance-财务, warehouse-仓库',
+    biz_type VARCHAR(100) COMMENT '业务类型',
+    biz_id VARCHAR(100) COMMENT '业务ID',
+    biz_desc VARCHAR(500) COMMENT '业务描述',
+    operation_content TEXT COMMENT '操作内容',
+    before_data LONGTEXT COMMENT '变更前数据(JSON)',
+    after_data LONGTEXT COMMENT '变更后数据(JSON)',
+    operator_id VARCHAR(50) COMMENT '操作人ID',
+    operator_name VARCHAR(100) COMMENT '操作人名称',
+    operator_ip VARCHAR(50) COMMENT '操作人IP',
+    user_agent VARCHAR(500) COMMENT '操作人设备信息',
+    request_url VARCHAR(500) COMMENT '请求URL',
+    request_method VARCHAR(10) COMMENT '请求方法: GET, POST, PUT, DELETE',
+    request_params LONGTEXT COMMENT '请求参数',
+    response_result LONGTEXT COMMENT '响应结果',
+    status TINYINT DEFAULT 1 COMMENT '执行状态: 0-失败, 1-成功',
+    error_msg TEXT COMMENT '错误信息',
+    execution_time BIGINT COMMENT '执行耗时(ms)',
+    operation_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '操作时间',
+    remark VARCHAR(500) COMMENT '备注',
+    INDEX idx_operation_type (operation_type),
+    INDEX idx_module (module),
+    INDEX idx_operator_id (operator_id),
+    INDEX idx_status (status),
+    INDEX idx_operation_time (operation_time),
+    INDEX idx_biz_type_biz_id (biz_type, biz_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='操作审计日志表';
+
+-- 插入默认系统配置
+INSERT INTO t_system_config (config_key, config_name, config_value, config_type, category, description, editable, is_system, sort_order) VALUES
+('system.name', '系统名称', '服装供应链管理系统', 'string', '基础配置', '系统显示名称', 1, 1, 1),
+('system.logo', '系统Logo', '', 'string', '基础配置', '系统Logo URL', 1, 1, 2),
+('system.copyright', '版权信息', '© 2024 服装供应链管理系统', 'string', '基础配置', '页面底部版权信息', 1, 1, 3),
+('system.login.captcha', '登录验证码', 'true', 'boolean', '安全设置', '是否开启登录验证码', 1, 1, 10),
+('system.login.maxRetry', '登录最大重试次数', '5', 'number', '安全设置', '登录失败最大重试次数', 1, 1, 11),
+('system.login.lockTime', '登录锁定时间(分钟)', '30', 'number', '安全设置', '登录失败锁定时间', 1, 1, 12),
+('system.password.minLength', '密码最小长度', '6', 'number', '安全设置', '密码最小长度要求', 1, 1, 13),
+('system.password.complexity', '密码复杂度', 'false', 'boolean', '安全设置', '是否要求密码包含字母和数字', 1, 1, 14),
+('system.session.timeout', '会话超时时间(分钟)', '120', 'number', '安全设置', '用户会话超时时间', 1, 1, 15),
+('system.file.maxSize', '文件上传最大大小(MB)', '50', 'number', '文件设置', '允许上传的文件最大大小', 1, 1, 20),
+('system.file.allowedTypes', '允许的文件类型', 'jpg,png,gif,pdf,doc,docx,xls,xlsx', 'string', '文件设置', '允许上传的文件类型', 1, 1, 21),
+('system.auditLog.retentionDays', '审计日志保留天数', '90', 'number', '日志设置', '审计日志保留天数', 1, 1, 30),
+('system.order.autoComplete', '订单自动完成天数', '7', 'number', '业务设置', '订单完成后自动确认天数', 1, 1, 40),
+('system.order.reminderDays', '订单提醒提前天数', '3', 'number', '业务设置', '交期提醒提前天数', 1, 1, 41);

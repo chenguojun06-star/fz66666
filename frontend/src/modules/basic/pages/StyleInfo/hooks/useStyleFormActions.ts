@@ -199,16 +199,16 @@ export const useStyleFormActions = ({
   const handleCompleteSample = async () => {
     if (!currentStyle?.id) return;
 
-    // 检查样板生产是否已完成
-    const patternStatus = String((currentStyle as any)?.patternStatus ?? '').trim().toUpperCase();
-    if (patternStatus !== 'COMPLETED') {
-      message.warning('请先完成样板生产后再进行样衣完成操作');
+    // 检查样衣生产（样板生产模块）是否已完成
+    const productionCompletedTime = (currentStyle as any)?.productionCompletedTime;
+    if (!productionCompletedTime) {
+      message.warning('请先完成样衣生产后再进行样衣完成操作');
       return;
     }
 
     setCompletingSample(true);
     try {
-      const res = await api.post(`/style/info/${currentStyle.id}/sample/complete`);
+      const res = await api.post(`/style/info/${currentStyle.id}/sample/complete`, null, { timeout: 30000 });
       if (res.code === 200) {
         message.success('样衣开发已完成');
         fetchDetail(String(currentStyle.id));
@@ -217,8 +217,9 @@ export const useStyleFormActions = ({
         message.error(res.message || '操作失败');
         return false;
       }
-    } catch (error) {
-      message.error('操作失败');
+    } catch (error: any) {
+      const errMsg = error?.response?.data?.message || error?.message || '操作失败';
+      message.error(errMsg);
       return false;
     } finally {
       setCompletingSample(false);

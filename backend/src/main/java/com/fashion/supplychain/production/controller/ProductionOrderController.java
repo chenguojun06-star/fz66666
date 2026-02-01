@@ -13,16 +13,17 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
-import javax.validation.constraints.Max;
-import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Size;
-import java.math.BigDecimal;
 import java.util.Map;
 
 /**
  * 生产订单Controller
+ * 核心CRUD操作
+ *
+ * 其他操作已拆分到：
+ * - ProductionOrderOperationController: 订单操作（报废、完成、关闭、工序委派）
+ * - ProductionOrderProgressController: 进度相关（更新进度、物料到位率、工作流锁定/回退、采购确认）
+ * - ProductionOrderNodeController: 节点操作记录、工序状态查询
  */
 @RestController
 @RequestMapping("/api/production/order")
@@ -38,18 +39,50 @@ public class ProductionOrderController {
     private ProductionOrderDtoConverter productionOrderDtoConverter;
 
     /**
-     * 分页查询生产订单列表
+     * 【新版统一查询】分页查询生产订单列表
+     * 支持参数：
+     * - id: 按ID查询（返回单条）
+     * - orderNo: 按订单号查询（模糊匹配）
+     * - status: 按状态查询
+     * - styleNo: 按款号查询
+     * - factoryId: 按工厂查询
+     * - page, size: 分页参数
+     *
+     * @since 2026-02-01 优化版本
      */
     @GetMapping("/list")
+    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_VIEW')")
     public Result<?> list(@RequestParam Map<String, Object> params) {
+        // 如果指定了id参数，直接返回单条详情（优化：减少前端判断）
+        if (params.containsKey("id") && params.get("id") != null) {
+            String id = params.get("id").toString();
+            ProductionOrder detail = productionOrderOrchestrator.getDetailById(id);
+            return Result.success(detail);
+        }
+
+        // 如果指定了orderNo且没有其他筛选条件，优化为精确查询
+        if (params.containsKey("orderNo") && params.size() <= 3) { // orderNo + page + size
+            String orderNo = params.get("orderNo").toString();
+            // 如果看起来是完整订单号（如PO开头），尝试精确匹配
+            if (orderNo.startsWith("PO") && orderNo.length() >= 10) {
+                ProductionOrder detail = productionOrderOrchestrator.getDetailByOrderNo(orderNo);
+                if (detail != null) {
+                    // 返回分页格式以保持前端兼容
+                    return Result.success(detail);
+                }
+            }
+        }
+
         IPage<ProductionOrder> page = productionOrderOrchestrator.queryPage(params);
         return Result.success(page);
     }
 
     /**
      * 根据ID查询生产订单详情
+     * 推荐使用：GET /list?id={id} （统一查询接口）
      */
     @GetMapping("/detail/{id}")
+    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_VIEW')")
     public Result<?> detail(@PathVariable String id) {
         ProductionOrder productionOrder = productionOrderOrchestrator.getDetailById(id);
         return Result.success(productionOrder);
@@ -57,24 +90,40 @@ public class ProductionOrderController {
 
     /**
      * 根据订单号查询生产订单详情（支持扫码场景）
+     *
+     * @deprecated 已废弃，请使用 GET /list?orderNo={orderNo}
+     * @since 2026-02-01 标记废弃，将在2026-05-01删除
      */
+    @Deprecated
     @GetMapping("/by-order-no/{orderNo}")
+    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_VIEW')")
     public Result<?> getByOrderNo(@PathVariable String orderNo) {
-        ProductionOrder productionOrder = productionOrderOrchestrator.getDetailByOrderNo(orderNo);
-        return Result.success(productionOrder);
+        // 内部转发到新接口
+        java.util.Map<String, Object> params = new java.util.HashMap<>();
+        params.put("orderNo", orderNo);
+        return list(params);
     }
 
     /**
      * 根据ID查询生产订单详情（DTO版本，不包含敏感字段）
+     *
+     * @deprecated 已废弃，请使用 GET /detail/{id} 并在前端过滤字段
+     * @since 2026-02-01 标记废弃，将在2026-05-01删除
      */
+    @Deprecated
     @GetMapping("/detail-dto/{id}")
+    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_VIEW')")
     public Result<ProductionOrderDTO> detailDTO(@PathVariable String id) {
         ProductionOrder productionOrder = productionOrderOrchestrator.getDetailById(id);
         ProductionOrderDTO dto = productionOrderDtoConverter.toDTO(productionOrder);
         return Result.success(dto);
     }
 
+    /**
+     * 获取订单流程信息
+     */
     @GetMapping("/flow/{id}")
+    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_VIEW')")
     public Result<?> flow(@PathVariable String id) {
         return Result.success(productionOrderOrchestrator.getOrderFlow(id));
     }
@@ -83,6 +132,7 @@ public class ProductionOrderController {
      * 保存或更新生产订单
      */
     @PostMapping
+    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_CREATE')")
     public Result<?> add(@RequestBody ProductionOrder productionOrder) {
         return upsert(productionOrder);
     }
@@ -91,319 +141,52 @@ public class ProductionOrderController {
      * 更新生产订单
      */
     @PutMapping
+    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_UPDATE')")
     public Result<?> update(@RequestBody ProductionOrder productionOrder) {
         return upsert(productionOrder);
     }
 
     /**
      * 保存或更新生产订单（兼容旧版本）
+     *
+     * @deprecated 已废弃，请使用 POST /api/production/order（新增）或 PUT /api/production/order（更新）
+     * @since 2026-02-01 标记废弃，将在2026-05-01删除
      */
+    @Deprecated
     @PostMapping("/save")
+    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_CREATE') or hasAuthority('PRODUCTION_ORDER_UPDATE')")
     public Result<?> save(@RequestBody ProductionOrder productionOrder) {
         return upsert(productionOrder);
     }
 
     /**
-     * 根据ID删除生产订单
+     * 根据ID删除生产订单（RESTful标准）
      */
-    @DeleteMapping("/delete/{id}")
-    public Result<?> delete(@PathVariable String id) {
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_DELETE')")
+    public Result<?> deleteById(@PathVariable String id) {
         productionOrderOrchestrator.deleteById(id);
         return Result.successMessage("删除成功");
     }
 
-    @PostMapping("/scrap")
-    public Result<?> scrap(@Valid @RequestBody ScrapOrderRequest body) {
-        productionOrderOrchestrator.scrapOrder(body.getId(), body.getRemark());
-        return Result.successMessage("报废成功");
-    }
-
     /**
-     * 更新生产进度
+     * 根据ID删除生产订单
+     *
+     * @deprecated 已废弃，请使用 DELETE /api/production/order/{id}（RESTful标准）
+     * @since 2026-02-01 标记废弃，将在2026-05-01删除
      */
-    @PostMapping("/update-progress")
-    public Result<?> updateProgress(@Valid @RequestBody UpdateProgressRequest body) {
-        productionOrderOrchestrator.updateProductionProgress(
-                body.getId(),
-                body.getProgress(),
-                body.getRollbackRemark(),
-                body.getRollbackToProcessName());
-        return Result.successMessage("更新成功");
-    }
-
-    /**
-     * 更新物料到位率
-     */
-    @PostMapping("/update-material-rate")
-    public Result<?> updateMaterialRate(@Valid @RequestBody UpdateMaterialRateRequest body) {
-        productionOrderOrchestrator.updateMaterialArrivalRate(body.getId(), body.getRate());
-        return Result.successMessage("更新成功");
-    }
-
-    @PostMapping("/complete")
-    public Result<?> complete(@Valid @RequestBody CompleteProductionRequest body) {
-        productionOrderOrchestrator.completeProduction(body.getId(), body.getTolerancePercent());
-        ProductionOrder detail = productionOrderOrchestrator.getDetailById(body.getId());
-        return Result.success(detail);
-    }
-
-    @PostMapping("/close")
-    public Result<?> close(@Valid @RequestBody CloseOrderRequest body) {
-        ProductionOrder updated = productionOrderOrchestrator.closeOrder(body.getId(), body.getSourceModule());
-        return Result.success(updated);
-    }
-
-    @PostMapping("/progress-workflow/lock")
-    public Result<?> lockProgressWorkflow(@Valid @RequestBody LockProgressWorkflowRequest body) {
-        ProductionOrder updated = productionOrderOrchestrator.lockProgressWorkflow(body.getId(),
-                body.getWorkflowJson());
-        return Result.success(updated);
-    }
-
-    @PostMapping("/progress-workflow/rollback")
-    public Result<?> rollbackProgressWorkflow(@Valid @RequestBody RollbackProgressWorkflowRequest body) {
-        ProductionOrder updated = productionOrderOrchestrator.rollbackProgressWorkflow(body.getId(), body.getReason());
-        return Result.success(updated);
-    }
-
-    /**
-     * 手动确认采购完成（允许50%物料差异）
-     * 适用场景：物料到货率在50%-99%之间，需要人工确认后才能进入下一阶段
-     */
-    @PostMapping("/confirm-procurement")
-    public Result<?> confirmProcurement(@Valid @RequestBody ConfirmProcurementRequest body) {
-        ProductionOrder updated = productionOrderOrchestrator.confirmProcurement(body.getId(), body.getRemark());
-        return Result.success(updated);
-    }
-
-    private Result<?> upsert(ProductionOrder productionOrder) {
-        productionOrderOrchestrator.saveOrUpdateOrder(productionOrder);
-        if (productionOrder != null && StringUtils.hasText(productionOrder.getId())) {
-            ProductionOrder detail = productionOrderOrchestrator.getDetailById(productionOrder.getId());
-            return Result.success(detail != null ? detail : productionOrder);
-        }
-        return Result.success(productionOrder);
-    }
-
-    public static class UpdateProgressRequest {
-        @NotBlank(message = "id不能为空")
-        private String id;
-
-        @NotNull(message = "progress不能为空")
-        @Min(value = 0, message = "progress最小为0")
-        @Max(value = 100, message = "progress最大为100")
-        private Integer progress;
-
-        private String rollbackRemark;
-        private String rollbackToProcessName;
-
-        public String getId() {
-            return id;
-        }
-
-        public void setId(String id) {
-            this.id = id;
-        }
-
-        public Integer getProgress() {
-            return progress;
-        }
-
-        public void setProgress(Integer progress) {
-            this.progress = progress;
-        }
-
-        public String getRollbackRemark() {
-            return rollbackRemark;
-        }
-
-        public void setRollbackRemark(String rollbackRemark) {
-            this.rollbackRemark = rollbackRemark;
-        }
-
-        public String getRollbackToProcessName() {
-            return rollbackToProcessName;
-        }
-
-        public void setRollbackToProcessName(String rollbackToProcessName) {
-            this.rollbackToProcessName = rollbackToProcessName;
-        }
-    }
-
-    public static class UpdateMaterialRateRequest {
-        @NotBlank(message = "id不能为空")
-        private String id;
-
-        @NotNull(message = "rate不能为空")
-        @Min(value = 0, message = "rate最小为0")
-        @Max(value = 100, message = "rate最大为100")
-        private Integer rate;
-
-        public String getId() {
-            return id;
-        }
-
-        public void setId(String id) {
-            this.id = id;
-        }
-
-        public Integer getRate() {
-            return rate;
-        }
-
-        public void setRate(Integer rate) {
-            this.rate = rate;
-        }
-    }
-
-    public static class ScrapOrderRequest {
-        @NotBlank(message = "id不能为空")
-        private String id;
-
-        @NotBlank(message = "remark不能为空")
-        private String remark;
-
-        public String getId() {
-            return id;
-        }
-
-        public void setId(String id) {
-            this.id = id;
-        }
-
-        public String getRemark() {
-            return remark;
-        }
-
-        public void setRemark(String remark) {
-            this.remark = remark;
-        }
-    }
-
-    public static class CompleteProductionRequest {
-        @NotBlank(message = "id不能为空")
-        private String id;
-
-        private BigDecimal tolerancePercent;
-
-        public String getId() {
-            return id;
-        }
-
-        public void setId(String id) {
-            this.id = id;
-        }
-
-        public BigDecimal getTolerancePercent() {
-            return tolerancePercent;
-        }
-
-        public void setTolerancePercent(BigDecimal tolerancePercent) {
-            this.tolerancePercent = tolerancePercent;
-        }
-    }
-
-    public static class CloseOrderRequest {
-        @NotBlank(message = "id不能为空")
-        private String id;
-
-        @NotBlank(message = "sourceModule不能为空")
-        private String sourceModule;
-
-        public String getId() {
-            return id;
-        }
-
-        public void setId(String id) {
-            this.id = id;
-        }
-
-        public String getSourceModule() {
-            return sourceModule;
-        }
-
-        public void setSourceModule(String sourceModule) {
-            this.sourceModule = sourceModule;
-        }
-    }
-
-    public static class LockProgressWorkflowRequest {
-        @NotBlank(message = "id不能为空")
-        private String id;
-
-        @NotBlank(message = "workflowJson不能为空")
-        private String workflowJson;
-
-        public String getId() {
-            return id;
-        }
-
-        public void setId(String id) {
-            this.id = id;
-        }
-
-        public String getWorkflowJson() {
-            return workflowJson;
-        }
-
-        public void setWorkflowJson(String workflowJson) {
-            this.workflowJson = workflowJson;
-        }
-    }
-
-    public static class RollbackProgressWorkflowRequest {
-        @NotBlank(message = "id不能为空")
-        private String id;
-
-        @NotBlank(message = "reason不能为空")
-        private String reason;
-
-        public String getId() {
-            return id;
-        }
-
-        public void setId(String id) {
-            this.id = id;
-        }
-
-        public String getReason() {
-            return reason;
-        }
-
-        public void setReason(String reason) {
-            this.reason = reason;
-        }
-    }
-
-    public static class ConfirmProcurementRequest {
-        @NotBlank(message = "订单ID不能为空")
-        private String id;
-
-        @NotBlank(message = "确认备注不能为空")
-        @Size(min = 10, message = "确认备注至少需要10个字符，请详细说明确认原因")
-        private String remark;
-
-        public String getId() {
-            return id;
-        }
-
-        public void setId(String id) {
-            this.id = id;
-        }
-
-        public String getRemark() {
-            return remark;
-        }
-
-        public void setRemark(String remark) {
-            this.remark = remark;
-        }
+    @Deprecated
+    @DeleteMapping("/delete/{id}")
+    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_DELETE')")
+    public Result<?> delete(@PathVariable String id) {
+        return deleteById(id);
     }
 
     /**
      * 快速编辑订单（备注、预计出货日期、工序数据等）
      */
     @PutMapping("/quick-edit")
+    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_UPDATE')")
     public Result<?> quickEdit(@RequestBody Map<String, Object> payload) {
         String id = (String) payload.get("id");
         if (id == null || id.trim().isEmpty()) {
@@ -441,169 +224,12 @@ public class ProductionOrderController {
         return success ? Result.success("更新成功") : Result.fail("更新失败");
     }
 
-    /**
-     * 重新计算订单进度（基于扫描记录）
-     * 用于修复进度不同步的问题
-     */
-    @PostMapping("/recompute-progress")
-    public Result<?> recomputeProgress(@RequestBody Map<String, Object> payload) {
-        String id = (String) payload.get("id");
-        String orderNo = (String) payload.get("orderNo");
-
-        String targetId = id;
-        if (!StringUtils.hasText(targetId) && StringUtils.hasText(orderNo)) {
-            ProductionOrder order = productionOrderService.lambdaQuery()
-                    .eq(ProductionOrder::getOrderNo, orderNo.trim())
-                    .last("LIMIT 1")
-                    .one();
-            if (order != null) {
-                targetId = order.getId();
-            }
+    private Result<?> upsert(ProductionOrder productionOrder) {
+        productionOrderOrchestrator.saveOrUpdateOrder(productionOrder);
+        if (productionOrder != null && StringUtils.hasText(productionOrder.getId())) {
+            ProductionOrder detail = productionOrderOrchestrator.getDetailById(productionOrder.getId());
+            return Result.success(detail != null ? detail : productionOrder);
         }
-
-        if (!StringUtils.hasText(targetId)) {
-            return Result.fail("缺少id或orderNo参数");
-        }
-
-        ProductionOrder updated = productionOrderService.recomputeProgressFromRecords(targetId);
-        if (updated == null) {
-            return Result.fail("订单不存在或重计算失败");
-        }
-        return Result.success(updated);
-    }
-
-    // ==================== 节点操作记录 API ====================
-
-    /**
-     * 获取订单的节点操作记录
-     */
-    @GetMapping("/node-operations/{id}")
-    public Result<?> getNodeOperations(@PathVariable String id) {
-        ProductionOrder order = productionOrderService.getById(id);
-        if (order == null) {
-            return Result.fail("订单不存在");
-        }
-        return Result.success(order.getNodeOperations());
-    }
-
-    /**
-     * 获取订单的采购完成状态（用于工序明细显示）
-     * 返回采购完成率、操作人、完成时间等信息
-     */
-    @GetMapping("/procurement-status/{orderId}")
-    public Result<?> getProcurementStatus(@PathVariable String orderId) {
-        Map<String, Object> status = productionOrderOrchestrator.getProcurementStatus(orderId);
-        return Result.success(status);
-    }
-
-    /**
-     * 获取订单的所有工序节点状态（裁剪、车缝、尾部、入库等）
-     * 用于工序明细显示完成数量、剩余数量、操作人等信息
-     */
-    @GetMapping("/process-status/{orderId}")
-    public Result<?> getAllProcessStatus(@PathVariable String orderId) {
-        Map<String, Map<String, Object>> status = productionOrderOrchestrator.getAllProcessStatus(orderId);
-        return Result.success(status);
-    }
-
-    /**
-     * 保存节点操作记录（委派、指定、备注等）
-     */
-    @PostMapping("/node-operations")
-    public Result<?> saveNodeOperations(@Valid @RequestBody SaveNodeOperationsRequest body) {
-        ProductionOrder order = productionOrderService.getById(body.getId());
-        if (order == null) {
-            return Result.fail("订单不存在");
-        }
-        order.setNodeOperations(body.getNodeOperations());
-        boolean success = productionOrderService.updateById(order);
-        return success ? Result.success("保存成功") : Result.fail("保存失败");
-    }
-
-    /**
-     * 工序委派 - 将特定工序委派给工厂，并设置单价
-     */
-    @PostMapping("/delegate-process")
-    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_DELEGATE')")
-    public Result<?> delegateProcess(@Valid @RequestBody DelegateProcessRequest body) {
-        try {
-            productionOrderOrchestrator.delegateProcess(
-                body.getOrderId(),
-                body.getProcessNode(),
-                body.getFactoryId(),
-                body.getUnitPrice()
-            );
-            return Result.success("工序委派成功");
-        } catch (Exception e) {
-            return Result.fail("工序委派失败: " + e.getMessage());
-        }
-    }
-
-    public static class SaveNodeOperationsRequest {
-        @NotBlank(message = "id不能为空")
-        private String id;
-
-        private String nodeOperations;
-
-        public String getId() {
-            return id;
-        }
-
-        public void setId(String id) {
-            this.id = id;
-        }
-
-        public String getNodeOperations() {
-            return nodeOperations;
-        }
-
-        public void setNodeOperations(String nodeOperations) {
-            this.nodeOperations = nodeOperations;
-        }
-    }
-
-    public static class DelegateProcessRequest {
-        @NotBlank(message = "订单ID不能为空")
-        private String orderId;
-
-        @NotBlank(message = "工序节点不能为空")
-        private String processNode;
-
-        @NotBlank(message = "工厂ID不能为空")
-        private String factoryId;
-
-        private Double unitPrice;
-
-        public String getOrderId() {
-            return orderId;
-        }
-
-        public void setOrderId(String orderId) {
-            this.orderId = orderId;
-        }
-
-        public String getProcessNode() {
-            return processNode;
-        }
-
-        public void setProcessNode(String processNode) {
-            this.processNode = processNode;
-        }
-
-        public String getFactoryId() {
-            return factoryId;
-        }
-
-        public void setFactoryId(String factoryId) {
-            this.factoryId = factoryId;
-        }
-
-        public Double getUnitPrice() {
-            return unitPrice;
-        }
-
-        public void setUnitPrice(Double unitPrice) {
-            this.unitPrice = unitPrice;
-        }
+        return Result.success(productionOrder);
     }
 }

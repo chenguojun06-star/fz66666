@@ -61,22 +61,42 @@ public class StyleBomController {
         return Result.success(styleBomOrchestrator.delete(id));
     }
 
+    /**
+     * 统一的物料数据库同步端点（替代2个分散端点）
+     *
+     * @param styleId 款式ID
+     * @param force 是否强制更新已完成状态（0/1/true/false/yes/no）
+     * @param async 是否异步执行（true=异步，false=同步，默认false）
+     * @return 同步结果或任务ID
+     */
     @PostMapping("/{styleId}/sync-material-database")
     @PreAuthorize("hasAuthority('STYLE_UPDATE')")
-    public Result<Map<String, Object>> syncMaterialDatabase(@PathVariable Long styleId,
-            @RequestParam(required = false, defaultValue = "0") String force) {
+    public Result<Map<String, Object>> syncMaterialDatabase(
+            @PathVariable Long styleId,
+            @RequestParam(required = false, defaultValue = "0") String force,
+            @RequestParam(required = false, defaultValue = "false") boolean async) {
+
         boolean forceUpdateCompleted = force != null
                 && ("1".equals(force.trim()) || "true".equalsIgnoreCase(force.trim()) || "yes".equalsIgnoreCase(force.trim()));
-        return Result.success(styleBomOrchestrator.syncToMaterialDatabase(styleId, forceUpdateCompleted));
+
+        // 智能路由：根据async参数选择同步或异步执行
+        if (async) {
+            return Result.success(styleBomOrchestrator.startSyncToMaterialDatabaseJob(styleId, forceUpdateCompleted));
+        } else {
+            return Result.success(styleBomOrchestrator.syncToMaterialDatabase(styleId, forceUpdateCompleted));
+        }
     }
 
+    /**
+     * @deprecated 请使用 POST /{styleId}/sync-material-database?async=true
+     * 将在 2026-05-01 移除
+     */
+    @Deprecated
     @PostMapping("/{styleId}/sync-material-database/async")
     @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<Map<String, Object>> syncMaterialDatabaseAsync(@PathVariable Long styleId,
             @RequestParam(required = false, defaultValue = "0") String force) {
-        boolean forceUpdateCompleted = force != null
-                && ("1".equals(force.trim()) || "true".equalsIgnoreCase(force.trim()) || "yes".equalsIgnoreCase(force.trim()));
-        return Result.success(styleBomOrchestrator.startSyncToMaterialDatabaseJob(styleId, forceUpdateCompleted));
+        return syncMaterialDatabase(styleId, force, true);
     }
 
     @GetMapping("/sync-jobs/{jobId}")
