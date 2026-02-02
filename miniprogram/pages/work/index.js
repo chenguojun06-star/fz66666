@@ -190,6 +190,10 @@ Page({
       styleNo: '',
       factoryName: '',
     },
+    orderStats: {
+      orderCount: 0,
+      totalQuantity: 0,
+    },
     orders: { loading: false, page: 1, pageSize: 10, hasMore: true, list: [] },
     rollback: {
       open: false,
@@ -753,7 +757,21 @@ Page({
         return api.production.listOrders(params);
       },
       r => transformOrderData(r)
-    );
+    ).then(() => {
+      this.updateOrderStats();
+    });
+  },
+
+  updateOrderStats(list) {
+    const source = Array.isArray(list) ? list : (this.data.orders.list || []);
+    const orderCount = source.length;
+    const totalQuantity = source.reduce((sum, item) => sum + Number(item.orderQuantity || 0), 0);
+    this.setData({
+      orderStats: {
+        orderCount,
+        totalQuantity,
+      },
+    });
   },
 
   /**
@@ -789,6 +807,7 @@ Page({
 
       // console.log(`[Sync] Orders updated: ${newList.length} items`);
       this.setData({ 'orders.list': newList });
+      this.updateOrderStats(newList);
     };
 
     // 启动同步 (30 秒轮询一次)

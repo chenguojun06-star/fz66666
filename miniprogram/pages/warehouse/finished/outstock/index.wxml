@@ -1,0 +1,88 @@
+<view class="container">
+  <view class="search-bar">
+    <view class="search-input-wrap">
+      <icon type="search" size="14" color="#999" />
+      <input
+        class="search-input"
+        placeholder="搜索订单号/款号"
+        value="{{keyword}}"
+        bindinput="onKeywordInput"
+        bindconfirm="onSearch"
+      />
+    </view>
+  </view>
+
+  <scroll-view
+    scroll-y
+    class="list-container"
+    bindscrolltolower="onLoadMore"
+    refresher-enabled
+    refresher-triggered="{{isRefreshing}}"
+    bindrefresherrefresh="onRefresh"
+  >
+    <block wx:if="{{list.length > 0}}">
+      <view class="list-item" wx:for="{{list}}" wx:key="id">
+        <view class="item-content">
+          <view class="item-header">
+            <text class="item-title">{{item.orderNo || '-'}}</text>
+            <text class="tag">可出库 {{item.availableQty || 0}}</text>
+          </view>
+          <view class="item-desc">款号：{{item.styleNo || '-'}} {{item.styleName || ''}}</view>
+          <view class="item-meta">
+            <text>入库合格：{{item.warehousingQualifiedQuantity || 0}}</text>
+            <text class="ml-20">已出库：{{item.outstockQuantity || 0}}</text>
+          </view>
+        </view>
+        <view class="item-action">
+          <view class="action-btn" bindtap="openOutstockModal" data-index="{{index}}">出库</view>
+        </view>
+      </view>
+    </block>
+
+    <view wx:else class="empty-state">
+      <image src="/assets/icons/empty.svg" mode="widthFix" class="empty-img" />
+      <text>暂无可出库订单</text>
+    </view>
+
+    <view class="loading-more" wx:if="{{loading}}">
+      <text>加载中...</text>
+    </view>
+    <view class="no-more" wx:if="{{!hasMore && list.length > 0}}">
+      <text>没有更多了</text>
+    </view>
+  </scroll-view>
+
+  <view wx:if="{{modal.visible}}" class="modal">
+    <view class="modal-box">
+      <view class="modal-head">成品出库</view>
+      <view class="modal-body">
+        <view class="modal-row">
+          <text class="label">订单号</text>
+          <text class="value">{{modal.order.orderNo || '-'}}</text>
+        </view>
+        <view class="modal-row">
+          <text class="label">款号</text>
+          <text class="value">{{modal.order.styleNo || '-'}}</text>
+        </view>
+        <view class="modal-row">
+          <text class="label">可出库</text>
+          <text class="value">{{modal.order.availableQty || 0}}</text>
+        </view>
+        <view class="modal-row">
+          <text class="label">出库数量</text>
+          <input class="modal-input" type="number" placeholder="请输入数量" value="{{modal.quantity}}" bindinput="onModalQuantityInput" />
+        </view>
+        <view class="modal-row">
+          <text class="label">备注</text>
+          <textarea class="modal-textarea" placeholder="选填" value="{{modal.remark}}" bindinput="onModalRemarkInput" />
+        </view>
+      </view>
+      <view class="modal-actions">
+        <view class="btn cancel" bindtap="closeOutstockModal">取消</view>
+        <view class="btn ok {{modal.submitting ? 'disabled' : ''}}" bindtap="onConfirmOutstock">
+          {{modal.submitting ? '提交中...' : '确认出库'}}
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

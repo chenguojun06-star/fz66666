@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Card, Input, Select, Space, Form, InputNumber, Upload, message, Segmented, Tooltip, Tabs, Modal, Collapse } from 'antd';
-import { PlusOutlined, DownloadOutlined, QuestionCircleOutlined, SearchOutlined } from '@ant-design/icons';
+import { PlusOutlined, DownloadOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { useModal } from '@/hooks';
 import Layout from '@/components/Layout';

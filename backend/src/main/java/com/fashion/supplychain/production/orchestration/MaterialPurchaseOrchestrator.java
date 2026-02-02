@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.orchestration;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.finance.orchestration.MaterialReconciliationOrchestrator;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
@@ -129,6 +130,56 @@ public class MaterialPurchaseOrchestrator {
             throw new IllegalStateException("更新失败");
         }
         return true;
+    }
+
+    public MaterialPurchase createInstruction(Map<String, Object> params) {
+        Map<String, Object> safeParams = params == null ? new LinkedHashMap<>() : params;
+        String materialId = ParamUtils.toTrimmedString(safeParams.get("materialId"));
+        String materialCode = ParamUtils.toTrimmedString(safeParams.get("materialCode"));
+        String materialName = ParamUtils.toTrimmedString(safeParams.get("materialName"));
+        String materialType = ParamUtils.toTrimmedString(safeParams.get("materialType"));
+        String specifications = ParamUtils.toTrimmedString(safeParams.get("specifications"));
+        String unit = ParamUtils.toTrimmedString(safeParams.get("unit"));
+        String color = ParamUtils.toTrimmedString(safeParams.get("color"));
+        String size = ParamUtils.toTrimmedString(safeParams.get("size"));
+        String receiverId = ParamUtils.toTrimmedString(safeParams.get("receiverId"));
+        String receiverName = ParamUtils.toTrimmedString(safeParams.get("receiverName"));
+        String remark = ParamUtils.toTrimmedString(safeParams.get("remark"));
+        Integer qty = coerceInt(safeParams.get("purchaseQuantity"));
+
+        if (!StringUtils.hasText(materialCode) && !StringUtils.hasText(materialName)) {
+            throw new IllegalArgumentException("物料信息不能为空");
+        }
+        if (qty == null || qty <= 0) {
+            throw new IllegalArgumentException("采购数量必须大于0");
+        }
+        if (!StringUtils.hasText(receiverId) || !StringUtils.hasText(receiverName)) {
+            throw new IllegalArgumentException("请指定采购人");
+        }
+
+        MaterialPurchase purchase = new MaterialPurchase();
+        purchase.setMaterialId(materialId);
+        purchase.setMaterialCode(materialCode);
+        purchase.setMaterialName(materialName);
+        purchase.setMaterialType(materialType);
+        purchase.setSpecifications(specifications);
+        purchase.setUnit(unit);
+        purchase.setColor(color);
+        purchase.setSize(size);
+        purchase.setPurchaseQuantity(qty);
+        purchase.setArrivedQuantity(0);
+        purchase.setStatus(MaterialConstants.STATUS_RECEIVED);
+        purchase.setReceiverId(receiverId);
+        purchase.setReceiverName(receiverName);
+        purchase.setReceivedTime(LocalDateTime.now());
+        purchase.setRemark(remark);
+        purchase.setSourceType("stock");
+
+        boolean ok = saveAndSync(purchase);
+        if (!ok) {
+            throw new IllegalStateException("创建采购指令失败");
+        }
+        return materialPurchaseService.getById(purchase.getId());
     }
 
     public Object previewDemand(String orderId) {

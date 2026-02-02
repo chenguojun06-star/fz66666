@@ -37,7 +37,7 @@ public class SystemOperationLogAspect {
         String operation = resolveOperation(method);
         String operatorName = resolveOperator();
         String ip = request == null ? null : request.getRemoteAddr();
-        String userAgent = request == null ? null : request.getHeader("User-Agent");
+        String userAgent = limitLength(request == null ? null : request.getHeader("User-Agent"), 200);
         String targetId = resolveTargetId(pjp.getArgs());
         LocalDateTime now = LocalDateTime.now();
         try {
@@ -153,5 +153,15 @@ public class SystemOperationLogAspect {
             } catch (NoSuchMethodException ignore) {}
         }
         return null;
+    }
+
+    private static String limitLength(String value, int max) {
+        if (value == null) {
+            return null;
+        }
+        if (max <= 0 || value.length() <= max) {
+            return value;
+        }
+        return value.substring(0, max);
     }
 }

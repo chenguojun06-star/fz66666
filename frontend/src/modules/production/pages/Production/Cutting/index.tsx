@@ -22,6 +22,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { getMaterialTypeLabel, getMaterialTypeSortKey } from '@/utils/materialType';
 import { useViewport } from '@/utils/useViewport';
 import { safePrint } from '@/utils/safePrint';
+import StandardSearchBar from '@/components/common/StandardSearchBar';
+import StandardToolbar from '@/components/common/StandardToolbar';
+import type { Dayjs } from 'dayjs';
 import {
   ModalHeaderCard,
   ModalField,
@@ -134,6 +137,7 @@ const CuttingManagement: React.FC = () => {
   const [activeTask, setActiveTask] = useState<CuttingTask | null>(null);
 
   const [taskQuery, setTaskQuery] = useState({ page: 1, pageSize: 10, status: '' as string, orderNo: '', styleNo: '' });
+  const [taskDateRange, setTaskDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const [taskLoading, setTaskLoading] = useState(false);
   const [taskList, setTaskList] = useState<CuttingTask[]>([]);
   const [taskTotal, setTaskTotal] = useState(0);
@@ -165,17 +169,16 @@ const CuttingManagement: React.FC = () => {
     }
   };
 
+  // Sheet Preview states (previously from useSheetPreview hook)
   const [sheetPreviewOpen, setSheetPreviewOpen] = useState(false);
   const [sheetPreviewLoading, setSheetPreviewLoading] = useState(false);
   const [sheetPreviewTask, setSheetPreviewTask] = useState<CuttingTask | null>(null);
   const [sheetPreviewBundles, setSheetPreviewBundles] = useState<CuttingBundleRow[]>([]);
   const [sheetPreviewPurchaseLoading, setSheetPreviewPurchaseLoading] = useState(false);
   const [sheetPreviewPurchases, setSheetPreviewPurchases] = useState<MaterialPurchase[]>([]);
-  const sheetPreviewPurchaseReqSeq = useRef(0);
   const [sheetPreviewOrderDetail, setSheetPreviewOrderDetail] = useState<any>(null);
-
-  const sheetPreviewTableWrapRef = useRef<HTMLDivElement | null>(null);
-  const sheetPreviewTableScrollY = useResizableModalTableScrollY({ open: sheetPreviewOpen, ref: sheetPreviewTableWrapRef });
+  const sheetPreviewTableWrapRef = useRef<HTMLDivElement>(null);
+  const sheetPreviewTableScrollY = useResizableModalTableScrollY(sheetPreviewTableWrapRef);
 
   const [entryPurchaseLoading, setEntryPurchaseLoading] = useState(false);
   const [entryPurchases, setEntryPurchases] = useState<MaterialPurchase[]>([]);
@@ -194,7 +197,7 @@ const CuttingManagement: React.FC = () => {
   const [entryColorText, setEntryColorText] = useState('');
   const [entrySizeItems, setEntrySizeItems] = useState<Array<{ size: string; quantity: number }>>([]);
 
-  const fetchAllBundlesByOrderNo = async (orderNo: string) => {
+  async function fetchAllBundlesByOrderNo(orderNo: string) {
     const on = String(orderNo || '').trim();
     if (!on) return [] as CuttingBundleRow[];
     try {
@@ -210,9 +213,9 @@ const CuttingManagement: React.FC = () => {
       // 忽略错误
       return [] as CuttingBundleRow[];
     }
-  };
+  }
 
-  const fetchSortedPurchasesByOrderNo = async (orderNo: string) => {
+  async function fetchSortedPurchasesByOrderNo(orderNo: string) {
     const no = String(orderNo || '').trim();
     if (!no) return [] as MaterialPurchase[];
     try {
@@ -236,6 +239,63 @@ const CuttingManagement: React.FC = () => {
       // 忽略错误
       return [] as MaterialPurchase[];
     }
+  }
+
+  // Sheet Preview Functions
+  const openSheetPreview = async (task: CuttingTask) => {
+    setSheetPreviewTask(task);
+    setSheetPreviewOpen(true);
+    setSheetPreviewLoading(true);
+    setSheetPreviewPurchaseLoading(true);
+
+    try {
+      const orderNo = task.productionOrderNo;
+      if (orderNo) {
+        // Fetch bundles
+        const bundles = await fetchAllBundlesByOrderNo(orderNo);
+        setSheetPreviewBundles(bundles);
+
+        // Fetch order detail
+        const detail = await fetchProductionOrderDetail(orderNo);
+        setSheetPreviewOrderDetail(detail);
+
+        // Fetch purchases
+        const purchases = await fetchSortedPurchasesByOrderNo(orderNo);
+        setSheetPreviewPurchases(purchases);
+      }
+    } catch (err) {
+      message.error('加载数据失败');
+    } finally {
+      setSheetPreviewLoading(false);
+      setSheetPreviewPurchaseLoading(false);
+    }
+  };
+
+  const downloadSheetCsv = () => {
+    if (!sheetPreviewTask || !sheetPreviewBundles.length) return;
+
+    const csv = [
+      ['订单号', '款号', '颜色', '尺码', '数量', '扎号', '二维码'],
+      ...sheetPreviewBundles.map(b => [
+        b.productionOrderNo || '',
+        b.styleNo || '',
+        b.color || '',
+        b.size || '',
+        b.quantity || '',
+        b.bundleNo || '',
+        b.qrCode || ''
+      ])
+    ].map(row => row.join(',')).join('\n');
+
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `裁剪单_${sheetPreviewTask.productionOrderNo}_${Date.now()}.csv`;
+    link.click();
+  };
+
+  const triggerSheetPrint = () => {
+    safePrint();
   };
 
   const fetchStyleInfoOptions = async (keyword?: string) => {
@@ -341,201 +401,6 @@ const CuttingManagement: React.FC = () => {
       setCreateTaskSubmitting(false);
     }
   };
-
-  const downloadSheetCsvFrom = (task: CuttingTask | null, bundles: CuttingBundleRow[], purchases?: MaterialPurchase[]) => {
-    const on = String(task?.productionOrderNo || '').trim() || 'unknown';
-    const escapeCsv = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-    const headers = ['订单号', '款号', '颜色', '尺码', '扎号', '数量', '二维码内容'];
-    const lines = [headers.join(',')];
-    for (const r of bundles) {
-      const row = [
-        String(r.productionOrderNo || ''),
-        String(r.styleNo || ''),
-        String(r.color || ''),
-        String(r.size || ''),
-        String(r.bundleNo ?? ''),
-        String(r.quantity ?? ''),
-        String(r.qrCode || ''),
-      ]
-        .map(escapeCsv)
-        .join(',');
-      lines.push(row);
-    }
-
-    const purchaseRows = (purchases || []).filter(Boolean);
-    if (purchaseRows.length) {
-      lines.push('');
-      lines.push(escapeCsv('面辅料采购明细'));
-      const purchaseHeaders = ['类型', '物料编码', '物料名称', '规格', '单位', '采购数量', '单价(元)', '总费用(元)', '供应商'];
-      lines.push(purchaseHeaders.map(escapeCsv).join(','));
-      for (const r of purchaseRows as Record<string, unknown>[]) {
-        const qty = Number(r?.purchaseQuantity ?? 0) || 0;
-        const unitPrice = Number(r?.unitPrice);
-        const unitPriceText = Number.isFinite(unitPrice) ? unitPrice.toFixed(2) : '';
-        const totalAmountRaw = Number(r?.totalAmount);
-        const totalAmount = Number.isFinite(totalAmountRaw)
-          ? totalAmountRaw
-          : (Number.isFinite(unitPrice) ? qty * unitPrice : NaN);
-        const totalText = Number.isFinite(totalAmount) ? Number(totalAmount).toFixed(2) : '';
-
-        const row = [
-          getMaterialTypeLabel(r?.materialType),
-          String(r?.materialCode || ''),
-          String(r?.materialName || ''),
-          String(r?.specifications || ''),
-          String(r?.unit || ''),
-          String(qty),
-          String(unitPriceText),
-          String(totalText),
-          String(r?.supplierName || ''),
-        ]
-          .map(escapeCsv)
-          .join(',');
-        lines.push(row);
-      }
-    }
-    const csv = `\uFEFF${lines.join('\n')}`;
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `裁剪单_${on}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  };
-
-  const triggerSheetPrintFrom = (task: CuttingTask | null, bundles: CuttingBundleRow[]) => {
-    const on = String(task?.productionOrderNo || '').trim();
-    if (!on) {
-      message.warning('未找到订单号');
-      return;
-    }
-    if (!bundles.length) {
-      message.warning('没有可打印的裁剪单内容');
-      return;
-    }
-
-    const title = `裁剪单 - ${on}`;
-    const safe = (v: unknown) => String(v ?? '').replace(/[<>&]/g, (s) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' } as Record<string, unknown>)[s] || s);
-
-    const rowsHtml = bundles
-      .map(
-        (r, idx) => `
-          <tr>
-            <td>${idx + 1}</td>
-            <td>${safe(r.color)}</td>
-            <td>${safe(r.size)}</td>
-            <td>${safe(r.bundleNo)}</td>
-            <td style="text-align:right">${safe(r.quantity)}</td>
-            <td style="word-break:break-all">${safe(r.qrCode)}</td>
-          </tr>`
-      )
-      .join('');
-
-    const html = `<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <title>${safe(title)}</title>
-    <style>
-      @page { margin: 10mm; }
-      body { font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Arial, sans-serif; color: #111; }
-      h1 { font-size: 16px; margin: 0 0 8px; }
-      .meta { font-size: 12px; margin: 0 0 10px; display: flex; flex-wrap: wrap; gap: 12px; }
-      table { width: 100%; border-collapse: collapse; font-size: 12px; }
-      th, td { border: 1px solid #d1d5db; padding: 6px 8px; vertical-align: middle; text-align: center; }
-      th { background: #f3f3f3; text-align: center; }
-      .right { text-align: right; }
-    </style>
-  </head>
-  <body>
-    <h1>${safe(title)}</h1>
-    <div class="meta">
-      <div>款号：${safe(task?.styleNo || '')}</div>
-      <div>款名：${safe(task?.styleName || '')}</div>
-      <div>下单数：${safe(task?.orderQuantity ?? '')}</div>
-      <div>裁剪数：${safe(task?.cuttingQuantity ?? bundles.reduce((s, x) => s + (Number(x.quantity) || 0), 0))}</div>
-      <div>扎数：${safe(task?.cuttingBundleCount ?? bundles.length)}</div>
-    </div>
-    <table>
-      <thead>
-        <tr>
-          <th style="width:48px">序号</th>
-          <th style="width:90px">颜色</th>
-          <th style="width:80px">尺码</th>
-          <th style="width:70px">扎号</th>
-          <th style="width:80px" class="right">数量</th>
-          <th>二维码内容</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${rowsHtml}
-      </tbody>
-    </table>
-    <script>
-      window.onload = function(){ window.print(); };
-    </script>
-  </body>
-</html>`;
-
-    const success = safePrint(html, '裁剪单打印');
-    if (!success) {
-      message.error('浏览器拦截了新窗口，请允许弹窗后重试');
-      return;
-    }
-  };
-
-  const openSheetPreview = async (task: CuttingTask, afterLoad?: 'download' | 'print') => {
-    const on = String(task?.productionOrderNo || '').trim();
-    if (!on) {
-      message.warning('未找到订单号');
-      return;
-    }
-
-    const purchaseSeq = (sheetPreviewPurchaseReqSeq.current += 1);
-    setSheetPreviewTask(task);
-    setSheetPreviewOpen(true);
-    setSheetPreviewLoading(true);
-    setSheetPreviewPurchaseLoading(true);
-    setSheetPreviewPurchases([]);
-    setSheetPreviewOrderDetail(null);
-    try {
-      // 独立获取各个数据，避免一个失败影响其他
-      const bundlesPromise = fetchAllBundlesByOrderNo(on);
-      const purchasesPromise = fetchSortedPurchasesByOrderNo(on);
-      const orderDetailPromise = fetchProductionOrderDetail(on).catch((err) => {
-        console.error('❌ 订单详情获取失败:', err);
-        return null;
-      });
-
-      const [rows, purchases, orderDetail] = await Promise.all([
-        bundlesPromise,
-        purchasesPromise,
-        orderDetailPromise,
-      ]);
-      setSheetPreviewBundles(rows);
-      if (orderDetail) {
-        setSheetPreviewOrderDetail(orderDetail);
-      } else {
-        console.warn('⚠️ 订单详情获取失败，将使用 bundles 或 task 数据作为备选');
-      }
-      if (purchaseSeq === sheetPreviewPurchaseReqSeq.current) setSheetPreviewPurchases(purchases);
-      if (afterLoad === 'download') {
-        downloadSheetCsvFrom(task, rows, purchases);
-      }
-      if (afterLoad === 'print') {
-        triggerSheetPrintFrom(task, rows);
-      }
-    } finally {
-      setSheetPreviewLoading(false);
-      if (purchaseSeq === sheetPreviewPurchaseReqSeq.current) setSheetPreviewPurchaseLoading(false);
-    }
-  };
-
-  const downloadSheetCsv = () => downloadSheetCsvFrom(sheetPreviewTask, sheetPreviewBundles, sheetPreviewPurchases);
-  const triggerSheetPrint = () => triggerSheetPrintFrom(sheetPreviewTask, sheetPreviewBundles);
 
   const activeOrderNo = useMemo(() => String((activeTask as Record<string, unknown>)?.productionOrderNo ?? '').trim(), [activeTask]);
 
@@ -1371,42 +1236,30 @@ const CuttingManagement: React.FC = () => {
 
           {isEntryPage ? null : (
             <Card size="small" title="裁剪任务" className="mb-sm">
-              <Form layout="inline" size="small" style={{ marginBottom: 12 }}>
-                <Form.Item label="状态">
-                  <Select
-                    value={taskQuery.status}
-                    style={{ width: 140 }}
-                    onChange={(value) => setTaskQuery(prev => ({ ...prev, status: value, page: 1 }))}
-                  >
-                    <Option value="">全部</Option>
-                    <Option value="pending">待领取</Option>
-                    <Option value="received">已领取</Option>
-                    <Option value="bundled">已完成</Option>
-                  </Select>
-                </Form.Item>
-                <Form.Item label="订单号">
-                  <Input
-                    value={taskQuery.orderNo}
-                    style={{ width: 180 }}
-                    placeholder="订单号"
-                    onChange={(e) => setTaskQuery(prev => ({ ...prev, orderNo: e.target.value, page: 1 }))}
+              <StandardToolbar
+                left={(
+                  <StandardSearchBar
+                    searchValue={taskQuery.orderNo || ''}
+                    onSearchChange={(value) => setTaskQuery(prev => ({ ...prev, orderNo: value, page: 1 }))}
+                    searchPlaceholder="订单号/款号"
+                    dateValue={taskDateRange}
+                    onDateChange={setTaskDateRange}
+                    statusValue={taskQuery.status || ''}
+                    onStatusChange={(value) => setTaskQuery(prev => ({ ...prev, status: value, page: 1 }))}
+                    statusOptions={[
+                      { label: '待领取', value: 'pending' },
+                      { label: '已领取', value: 'received' },
+                      { label: '已完成', value: 'bundled' },
+                    ]}
                   />
-                </Form.Item>
-                <Form.Item label="款号">
-                  <Input
-                    value={taskQuery.styleNo}
-                    style={{ width: 160 }}
-                    placeholder="款号"
-                    onChange={(e) => setTaskQuery(prev => ({ ...prev, styleNo: e.target.value, page: 1 }))}
-                  />
-                </Form.Item>
-                <Form.Item className="filter-actions">
-                  <Space>
+                )}
+                right={(
+                  <>
                     <Button type="primary" onClick={fetchTasks}>查询</Button>
                     <Button onClick={() => setTaskQuery({ page: 1, pageSize: 10, status: '', orderNo: '', styleNo: '' })}>重置</Button>
-                  </Space>
-                </Form.Item>
-              </Form>
+                  </>
+                )}
+              />
 
               <ResizableTable<CuttingTask>
                 storageKey="cutting-task-table-v2"

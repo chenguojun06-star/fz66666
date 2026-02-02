@@ -1,21 +1,19 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Card, Checkbox, Form, Input, InputNumber, Popover, Select, Space, Table, Tag, Tooltip, Typography } from 'antd';
+import { App, Button, Card, Checkbox, Form, Input, InputNumber, Select, Space, Table, Tag, Tooltip, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { DeleteOutlined, EditOutlined, EyeOutlined, HolderOutlined, PlusOutlined, RollbackOutlined, SettingOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, RollbackOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
+import StandardSearchBar from '@/components/common/StandardSearchBar';
+import StandardToolbar from '@/components/common/StandardToolbar';
 import api from '@/utils/api';
 import { isAdminUser as isAdminUserFn, useAuth } from '@/utils/AuthContext';
 import { useViewport } from '@/utils/useViewport';
 import { getMaterialTypeLabel } from '@/utils/materialType';
 import type { TemplateLibrary } from '@/types/style';
-
-type ProgressNodeInput = { name: string };
-
-type ProcessPriceStepInput = { processName: string; unitPrice?: number };
 
 type PageResp<T> = {
   records: T[];
@@ -29,8 +27,6 @@ const typeLabel = (t: string) => {
   if (v === 'bom') return 'BOM';
   if (v === 'size') return '尺寸';
   if (v === 'process') return '工序进度单价';
-  if (v === 'process_price') return '工序单价(旧)';
-  if (v === 'progress') return '进度(旧)';
   return v || '-';
 };
 
@@ -39,8 +35,6 @@ const typeColor = (t: string) => {
   if (v === 'bom') return 'blue';
   if (v === 'size') return 'purple';
   if (v === 'process') return 'green';
-  if (v === 'process_price') return 'default';
-  if (v === 'progress') return 'default';
   return 'default';
 };
 
@@ -52,6 +46,14 @@ const formatTemplateKey = (raw: unknown) => {
   if (key.startsWith('progress_custom_')) return { text: '自定义', full: key };
   return { text: key, full: key };
 };
+
+const MAIN_PROGRESS_STAGE_OPTIONS = [
+  { value: '采购', label: '采购' },
+  { value: '裁剪', label: '裁剪' },
+  { value: '车缝', label: '车缝' },
+  { value: '二次工艺', label: '二次工艺' },
+  { value: '入库', label: '入库' },
+];
 
 const hasErrorFields = (err: unknown): err is { errorFields: unknown } => {
   return typeof err === 'object' && err !== null && 'errorFields' in err;
@@ -67,55 +69,15 @@ const getErrorMessage = (err: unknown, fallback: string) => {
   return fallback;
 };
 
-const parseProgressNodeItems = (raw: string): Array<{ name: string; unitPrice: number }> => {
-  const text = String(raw ?? '').trim();
-  if (!text) return [];
-  try {
-    const obj = JSON.parse(text);
-    const nodesRaw = (obj as Record<string, unknown>)?.nodes;
-    if (!Array.isArray(nodesRaw)) return [];
-    return nodesRaw
-      .map((n) => {
-        const item = n as { name?: unknown; unitPrice?: unknown };
-        const name = String(item?.name || '').trim();
-        const p = Number(item?.unitPrice);
-        const unitPrice = Number.isFinite(p) && p >= 0 ? p : 0;
-        return { name, unitPrice };
-      })
-      .filter((n) => n.name);
-  } catch {
-    return [];
-  }
-};
-
-const parseProcessPriceSteps = (raw: string): Array<{ processName: string; unitPrice: number; estimatedMinutes?: number }> => {
-  const text = String(raw ?? '').trim();
-  if (!text) return [];
-  try {
-    const obj = JSON.parse(text);
-    const stepsRaw = (obj as Record<string, unknown>)?.steps;
-    if (!Array.isArray(stepsRaw)) return [];
-    return stepsRaw
-      .map((s) => {
-        const item = s as { processName?: unknown; unitPrice?: unknown; price?: unknown; estimatedMinutes?: unknown };
-        const processName = String(item?.processName || '').trim();
-        const p = Number(item?.unitPrice ?? item?.price);
-        const unitPrice = Number.isFinite(p) && p >= 0 ? p : 0;
-        const m = Number(item?.estimatedMinutes);
-        const estimatedMinutes = Number.isFinite(m) && m > 0 ? m : undefined;
-        return { processName, unitPrice, estimatedMinutes };
-      })
-      .filter((s) => s.processName);
-  } catch {
-    return [];
-  }
-};
 
 const TemplateCenter: React.FC = () => {
   const { modal, message } = App.useApp();
   const { user } = useAuth();
   const { modalWidth, isMobile } = useViewport();
   const [queryForm] = Form.useForm();
+  const [templateType, setTemplateType] = useState('');
+  const [keyword, setKeyword] = useState('');
+  const [sourceStyleNo, setSourceStyleNo] = useState('');
   const [createForm] = Form.useForm();
   const [applyForm] = Form.useForm();
 
@@ -155,59 +117,6 @@ const TemplateCenter: React.FC = () => {
     return Number.isFinite(v) && v === 1;
   };
 
-
-  const normalizeStageName = (v: unknown) => String(v ?? '').trim().replace(/\s+/g, '');
-
-  const isProductionStage = (name: string) => {
-    const n = normalizeStageName(name);
-    if (!n) return false;
-    return n.includes('生产') || n.includes('车缝') || n.includes('缝制') || n.includes('缝纫') || n.includes('车工');
-  };
-
-  const isIroningStage = (name: string) => {
-    const n = normalizeStageName(name);
-    if (!n) return false;
-    return n.includes('整烫') || n.includes('熨烫');
-  };
-
-  const isCuttingStage = (name: string) => {
-    const n = normalizeStageName(name);
-    if (!n) return false;
-    return n.includes('裁剪') || n.includes('裁床') || n.includes('剪裁') || n.includes('开裁');
-  };
-
-  const isShipmentStage = (name: string) => {
-    const n = normalizeStageName(name);
-    if (!n) return false;
-    return n.includes('出货') || n.includes('发货') || n.includes('发运');
-  };
-
-  const isQualityStage = (name: string) => {
-    const n = normalizeStageName(name);
-    if (!n) return false;
-    return n.includes('质检') || n.includes('检验') || n.includes('品检') || n.includes('验货');
-  };
-
-  const isPackagingStage = (name: string) => {
-    const n = normalizeStageName(name);
-    if (!n) return false;
-    return n.includes('包装') || n.includes('后整') || n.includes('打包') || n.includes('装箱');
-  };
-
-  const stageNameMatches = (stageName: string, recordProcessName: string) => {
-    const a = normalizeStageName(stageName);
-    const b = normalizeStageName(recordProcessName);
-    if (!a || !b) return false;
-    if (a === b) return true;
-    if (a.includes(b) || b.includes(a)) return true;
-    if (isCuttingStage(a) && isCuttingStage(b)) return true;
-    if (isQualityStage(a) && isQualityStage(b)) return true;
-    if (isPackagingStage(a) && isPackagingStage(b)) return true;
-    if (isIroningStage(a) && isIroningStage(b)) return true;
-    if (isProductionStage(a) && isProductionStage(b)) return true;
-    if (isShipmentStage(a) && isShipmentStage(b)) return true;
-    return false;
-  };
 
   const openEdit = async (row: TemplateLibrary) => {
     // 先从服务器获取最新数据，确保 locked 状态是最新的
@@ -262,6 +171,19 @@ const TemplateCenter: React.FC = () => {
       }
     }
 
+    const normalizedType = String(latestRow?.templateType || '').trim().toLowerCase();
+    if (normalizedType === 'process' && Array.isArray(parsed)) {
+      parsed = { steps: normalizeProcessSteps(parsed as ProcessStepRow[]) };
+    }
+    if (normalizedType === 'process' && parsed && typeof parsed === 'object' && Array.isArray((parsed as Record<string, unknown>).steps)) {
+      parsed = {
+        ...(parsed as Record<string, unknown>),
+        steps: normalizeProcessSteps(((parsed as Record<string, unknown>).steps as ProcessStepRow[])),
+      };
+    }
+    if (normalizedType === 'size' && Array.isArray(parsed)) {
+      parsed = convertStyleSizeListToTable(parsed as Record<string, unknown>[]);
+    }
     setEditTableData(parsed);
     // 初始化尺码列表
     if (parsed && typeof parsed === 'object' && 'sizes' in parsed && Array.isArray(parsed.sizes)) {
@@ -434,11 +356,13 @@ const TemplateCenter: React.FC = () => {
     setLoading(true);
     try {
       const v = queryForm.getFieldsValue();
+      const selectedType = String(v.templateType || '').trim();
+      const requestType = selectedType === 'process_size' ? 'process' : selectedType;
       const res = await api.get<{ code: number; message: string; data: PageResp<TemplateLibrary> }>('/template-library/list', {
         params: {
           page: p,
           pageSize: ps,
-          templateType: v.templateType || '',
+          templateType: requestType || '',
           keyword: v.keyword || '',
           sourceStyleNo: v.sourceStyleNo || '',
         },
@@ -448,7 +372,25 @@ const TemplateCenter: React.FC = () => {
         return;
       }
       const pageData: PageResp<TemplateLibrary> = res.data || { records: [], total: 0 };
-      setData(Array.isArray(pageData.records) ? pageData.records : []);
+      const records = Array.isArray(pageData.records) ? pageData.records : [];
+      const filtered = records.filter((row) => {
+        const t = String(row?.templateType || '').trim().toLowerCase();
+        if (t === 'process_price' || t === 'progress') return false;
+        if (selectedType === 'process_size') {
+          try {
+            const raw = (row as TemplateLibrary & Record<string, unknown>)?.templateContent;
+            const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+            const sizes = parsed && typeof parsed === 'object' && Array.isArray((parsed as Record<string, unknown>).sizes)
+              ? (parsed as Record<string, unknown>).sizes as unknown[]
+              : [];
+            return sizes.length > 0;
+          } catch {
+            return false;
+          }
+        }
+        return true;
+      });
+      setData(filtered);
       setTotal(Number(pageData.total || 0));
       pageRef.current = p;
       pageSizeRef.current = ps;
@@ -471,7 +413,8 @@ const TemplateCenter: React.FC = () => {
       { value: '', label: '全部类型' },
       { value: 'bom', label: 'BOM' },
       { value: 'size', label: '尺寸' },
-      { value: 'process', label: '工艺' },
+      { value: 'process', label: '工序进度单价' },
+      { value: 'process_size', label: '多码工序进度单价' },
     ],
     []
   );
@@ -632,7 +575,7 @@ const TemplateCenter: React.FC = () => {
     if (t === 'process' || t === 'process_price') {
       const stepsRaw = Array.isArray((obj as Record<string, unknown>)?.steps)
         ? ((obj as Record<string, unknown>).steps as Array<Record<string, unknown>>)
-        : [];
+        : (Array.isArray(obj) ? (obj as Array<Record<string, unknown>>) : []);
       const steps = stepsRaw.map((s) => {
         const processName = String(s?.processName ?? '').trim();
         const processCode = s?.processCode == null ? '' : String(s.processCode);
@@ -692,7 +635,9 @@ const TemplateCenter: React.FC = () => {
     }
 
     if (t === 'bom') {
-      const rows = Array.isArray((obj as Record<string, unknown>)?.rows) ? ((obj as Record<string, unknown>).rows as Record<string, unknown>[]) : [];
+      const rows = Array.isArray((obj as Record<string, unknown>)?.rows)
+        ? ((obj as Record<string, unknown>).rows as Record<string, unknown>[])
+        : (Array.isArray(obj) ? (obj as Record<string, unknown>[]) : []);
       return (
         <Table
           size="small"
@@ -745,9 +690,17 @@ const TemplateCenter: React.FC = () => {
       );
     }
 
-    if (t === 'size' && isSizeTableData(obj)) {
-      const sizes = obj.sizes.map((s) => String(s || '').trim()).filter(Boolean);
-      const parts = obj.parts as Record<string, unknown>[];
+    if (t === 'size') {
+      const tableData = isSizeTableData(obj)
+        ? obj
+        : (Array.isArray(obj) ? convertStyleSizeListToTable(obj as Record<string, unknown>[]) : null);
+      if (!tableData) {
+        return (
+          <div style={{ padding: 12, textAlign: 'center', color: '#999' }}>暂无数据</div>
+        );
+      }
+      const sizes = tableData.sizes.map((s) => String(s || '').trim()).filter(Boolean);
+      const parts = tableData.parts as Record<string, unknown>[];
 
       const baseCols: ColumnsType<Record<string, unknown>> = [
         { title: '部位', dataIndex: 'partName', key: 'partName', width: 160, render: (v: unknown) => String(v || '-') },
@@ -824,7 +777,7 @@ const TemplateCenter: React.FC = () => {
   };
 
   type TemplateLibraryRecord = TemplateLibrary & Record<string, unknown>;
-  type SizeTablePart = { partName: string; values?: Record<string, string> };
+  type SizeTablePart = { partName: string; values?: Record<string, string>; measureMethod?: string; tolerance?: string | number };
   type SizeTableData = { sizes: string[]; parts: SizeTablePart[] };
   type BomTableRow = { materialName?: string; spec?: string; quantity?: string | number; unit?: string };
   type BomTableData = BomTableRow[];
@@ -868,6 +821,45 @@ const TemplateCenter: React.FC = () => {
     if (!data || typeof data !== 'object') return false;
     const rec = data as Record<string, unknown>;
     return Array.isArray(rec.steps);
+  };
+
+  const convertStyleSizeListToTable = (rows: Record<string, unknown>[]): SizeTableData => {
+    const sizeSet: string[] = [];
+    const partMap = new Map<string, SizeTablePart>();
+    rows.forEach((row) => {
+      const sizeName = String(row?.sizeName ?? '').trim();
+      const partName = String(row?.partName ?? '').trim();
+      if (!sizeName || !partName) return;
+      if (!sizeSet.includes(sizeName)) sizeSet.push(sizeName);
+      if (!partMap.has(partName)) {
+        partMap.set(partName, {
+          partName,
+          measureMethod: String(row?.measureMethod ?? '').trim() || undefined,
+          tolerance: row?.tolerance as string | number | undefined,
+          values: {},
+        });
+      }
+      const part = partMap.get(partName)!;
+      const value = row?.standardValue;
+      const v = value == null ? '' : String(value);
+      part.values = { ...(part.values || {}), [sizeName]: v };
+    });
+    return { sizes: sizeSet, parts: Array.from(partMap.values()) };
+  };
+
+  const normalizeProcessSteps = (steps: ProcessStepRow[]) => {
+    const sorted = [...steps].sort((a, b) => {
+      const na = Number.parseInt(String(a.processCode ?? '').trim() || '0', 10);
+      const nb = Number.parseInt(String(b.processCode ?? '').trim() || '0', 10);
+      if (Number.isFinite(na) && Number.isFinite(nb) && na !== nb) {
+        return na - nb;
+      }
+      return 0;
+    });
+    return sorted.map((s, idx) => ({
+      ...s,
+      processCode: String(idx + 1).padStart(2, '0'),
+    }));
   };
 
   const columns: ColumnsType<TemplateLibraryRecord> = [
@@ -994,42 +986,61 @@ const TemplateCenter: React.FC = () => {
         className="page-card"
         title="单价维护"
       >
-        <Form form={queryForm} layout="inline" initialValues={{ templateType: '' }}>
-          <Form.Item name="templateType" label="类型">
-            <Select style={{ width: 160 }} options={templateTypeOptions} />
-          </Form.Item>
-          <Form.Item name="keyword" label="名称">
-            <Input style={{ width: 180 }} placeholder="模糊搜索" allowClear />
-          </Form.Item>
-          <Form.Item name="sourceStyleNo" label="来源款号">
-            <Select
-              allowClear
-              showSearch={{ filterOption: false, onSearch: scheduleFetchStyleNos }}
-              loading={styleNoLoading}
-              style={{ width: 200 }}
-              placeholder="搜索/选择款号"
-              options={styleNoOptions}
-              onOpenChange={(open) => {
-                if (open && !styleNoOptions.length) fetchStyleNoOptions('');
-              }}
-            />
-          </Form.Item>
-          <Form.Item>
-            <Space>
+        <StandardToolbar
+          left={(
+            <Space wrap>
+              <StandardSearchBar
+                searchValue={keyword}
+                onSearchChange={(value) => {
+                  setKeyword(value);
+                  queryForm.setFieldsValue({ keyword: value });
+                }}
+                searchPlaceholder="名称/关键字"
+                statusValue={templateType}
+                onStatusChange={(value) => {
+                  setTemplateType(value);
+                  queryForm.setFieldsValue({ templateType: value });
+                }}
+                statusOptions={templateTypeOptions.map((opt) => ({ label: opt.label, value: opt.value }))}
+              />
+              <Select
+                allowClear
+                showSearch={{ filterOption: false, onSearch: scheduleFetchStyleNos }}
+                loading={styleNoLoading}
+                style={{ width: 200 }}
+                placeholder="搜索/选择款号"
+                options={styleNoOptions}
+                value={sourceStyleNo || undefined}
+                onChange={(value) => {
+                  const v = String(value || '').trim();
+                  setSourceStyleNo(v);
+                  queryForm.setFieldsValue({ sourceStyleNo: v || undefined });
+                }}
+                onOpenChange={(open) => {
+                  if (open && !styleNoOptions.length) fetchStyleNoOptions('');
+                }}
+              />
+            </Space>
+          )}
+          right={(
+            <>
               <Button type="primary" onClick={() => fetchList({ page: 1 })}>
                 查询
               </Button>
               <Button
                 onClick={() => {
+                  setTemplateType('');
+                  setKeyword('');
+                  setSourceStyleNo('');
                   queryForm.resetFields();
                   fetchList({ page: 1 });
                 }}
               >
                 重置
               </Button>
-            </Space>
-          </Form.Item>
-        </Form>
+            </>
+          )}
+        />
 
         <div style={{ height: 12 }} />
 
@@ -1078,7 +1089,7 @@ const TemplateCenter: React.FC = () => {
               options={[
                 { value: 'bom', label: 'BOM' },
                 { value: 'size', label: '尺寸' },
-                { value: 'process', label: '工艺' },
+                { value: 'process', label: '工序进度单价' },
               ]}
             />
           </Form.Item>
@@ -1465,15 +1476,19 @@ const TemplateCenter: React.FC = () => {
                                     />
                                   </td>
                                   <td style={{ border: '1px solid #e5e7eb', padding: '2px 4px' }}>
-                                    <Input
+                                    <Select
                                       size="small"
-                                      value={item.progressStage || ''}
-                                      onChange={(e) => {
+                                      value={item.progressStage || undefined}
+                                      options={MAIN_PROGRESS_STAGE_OPTIONS}
+                                      placeholder="选择父节点"
+                                      allowClear
+                                      onChange={(value) => {
                                         const newData = { ...editTableData, steps: [...editTableData.steps] };
-                                        newData.steps[idx] = { ...newData.steps[idx], progressStage: e.target.value };
+                                        newData.steps[idx] = { ...newData.steps[idx], progressStage: value || '' };
                                         setEditTableData(newData);
                                       }}
-                                      style={{ border: 'none', fontSize: 12 }}
+                                      style={{ width: '100%', fontSize: 12 }}
+                                      bordered={false}
                                     />
                                   </td>
                                   <td style={{ border: '1px solid #e5e7eb', padding: '2px 4px' }}>
@@ -1544,7 +1559,8 @@ const TemplateCenter: React.FC = () => {
                                       size="small"
                                       icon={<DeleteOutlined style={{ fontSize: 12 }} />}
                                       onClick={() => {
-                                        const newData = { ...editTableData, steps: editTableData.steps.filter((_: ProcessStepRow, i: number) => i !== idx) };
+                                        const kept = editTableData.steps.filter((_: ProcessStepRow, i: number) => i !== idx);
+                                        const newData = { ...editTableData, steps: normalizeProcessSteps(kept) };
                                         setEditTableData(newData);
                                       }}
                                       style={{ padding: 0 }}
@@ -1561,13 +1577,8 @@ const TemplateCenter: React.FC = () => {
                           size="small"
                           style={{ width: '100%', marginTop: 8 }}
                           onClick={() => {
-                            const maxSeq = editTableData.steps.reduce((max: number, s: ProcessStepRow) => {
-                              const code = parseInt(s.processCode || '0', 10);
-                              return code > max ? code : max;
-                            }, 0);
-                            const newCode = String(maxSeq + 1).padStart(2, '0');
                             const newRow: ProcessStepRow = {
-                              processCode: newCode,
+                              processCode: '',
                               processName: '',
                               progressStage: '',
                               machineType: '',
@@ -1575,7 +1586,7 @@ const TemplateCenter: React.FC = () => {
                               unitPrice: 0,
                               sizePrices: templateSizes.reduce((acc, size) => ({ ...acc, [size]: 0 }), {}),
                             };
-                            const newData = { ...editTableData, steps: [...editTableData.steps, newRow] };
+                            const newData = { ...editTableData, steps: normalizeProcessSteps([...editTableData.steps, newRow]) };
                             setEditTableData(newData);
                           }}
                         >

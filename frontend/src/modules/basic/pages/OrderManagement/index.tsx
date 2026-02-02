@@ -20,11 +20,13 @@ import QRCodeBox from '@/components/common/QRCodeBox';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
 import { getMaterialTypeCategory } from '@/utils/materialType';
-import { normalizeCategoryQuery, toCategoryCn } from '@/utils/styleCategory';
+import { toCategoryCn } from '@/utils/styleCategory';
 import { useViewport } from '@/utils/useViewport';
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 import { generateUniqueId } from '@/utils/idGenerator';
 import OrderRankingDashboard from './components/OrderRankingDashboard';
+import StandardSearchBar from '@/components/common/StandardSearchBar';
+import StandardToolbar from '@/components/common/StandardToolbar';
 type OrderLine = {
   id: string;
   color: string;
@@ -85,7 +87,8 @@ const OrderManagement: React.FC = () => {
   const [queryParams, setQueryParams] = useState<StyleQueryParams>({
     page: 1,
     pageSize: 10,
-    onlyCompleted: true
+    onlyCompleted: true,
+    keyword: ''
   });
   const [styles, setStyles] = useState<StyleInfo[]>([]);
   const [total, setTotal] = useState(0);
@@ -446,11 +449,14 @@ const OrderManagement: React.FC = () => {
     const styleNo = (params.get('styleNo') || '').trim();
     const styleName = (params.get('styleName') || '').trim();
     if (styleNo || styleName) {
+      const keyword = styleNo || styleName;
       setQueryParams((prev) => ({
         ...prev,
         page: 1,
-        styleNo: styleNo || prev.styleNo,
-        styleName: styleName || prev.styleName,
+        keyword,
+        styleNo: undefined,
+        styleName: undefined,
+        category: undefined,
       }));
     }
   }, [location.search]);
@@ -1156,6 +1162,8 @@ const OrderManagement: React.FC = () => {
           styleId={(record as Record<string, unknown>).id}
           styleNo={record.styleNo}
           modalTitle={`纸样附件（${record.styleNo}）`}
+          bizTypes={['order']}
+          buttonText="附件"
         />
       )
     },
@@ -1259,25 +1267,26 @@ const OrderManagement: React.FC = () => {
         <OrderRankingDashboard onOrderClick={openCreate} />
 
         <Card size="small" className="filter-card mb-sm">
-          <Space wrap>
-            <Input
-              placeholder="款号"
-              style={{ width: 180 }}
-              onChange={(e) => setQueryParams(prev => ({ ...prev, styleNo: e.target.value, page: 1 }))}
-            />
-            <Input
-              placeholder="款名"
-              style={{ width: 220 }}
-              onChange={(e) => setQueryParams(prev => ({ ...prev, styleName: e.target.value, page: 1 }))}
-            />
-            <Input
-              placeholder="品类"
-              style={{ width: 180 }}
-              onChange={(e) =>
-                setQueryParams((prev) => ({ ...prev, category: normalizeCategoryQuery(e.target.value), page: 1 }))
-              }
-            />
-          </Space>
+          <StandardToolbar
+            left={(
+              <StandardSearchBar
+                searchValue={String(queryParams.keyword || '')}
+                onSearchChange={(value) =>
+                  setQueryParams((prev) => ({
+                    ...prev,
+                    page: 1,
+                    keyword: value,
+                    styleNo: undefined,
+                    styleName: undefined,
+                    category: undefined,
+                  }))
+                }
+                searchPlaceholder="搜索款号/款名/品类"
+                showDate={false}
+                showStatus={false}
+              />
+            )}
+          />
         </Card>
 
         {viewMode === 'table' ? (
@@ -1365,8 +1374,9 @@ const OrderManagement: React.FC = () => {
                         <StyleAttachmentsButton
                           styleId={selectedStyle?.id}
                           styleNo={selectedStyle?.styleNo}
-                          buttonText="查看纸样"
+                          buttonText="查看附件"
                           modalTitle={selectedStyle?.styleNo ? `纸样附件（${selectedStyle.styleNo}）` : '纸样附件'}
+                          bizTypes={['order']}
                         />
                       </div>
                     </div>

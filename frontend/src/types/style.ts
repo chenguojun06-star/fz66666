@@ -140,6 +140,7 @@ export interface StyleQueryParams {
   styleNo?: string;
   styleName?: string;
   category?: string;
+  keyword?: string;
   onlyCompleted?: boolean | number;
   page: number;
   pageSize: number;

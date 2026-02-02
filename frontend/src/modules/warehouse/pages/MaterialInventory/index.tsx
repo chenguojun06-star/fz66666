@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Card,
   Table,
@@ -9,17 +9,15 @@ import {
   message,
   Select,
   Image,
-  Statistic,
   Row,
   Col,
   Tooltip,
-  Modal,
   Form,
   InputNumber,
 } from 'antd';
+import type { Dayjs } from 'dayjs';
 import {
   PlusOutlined,
-  SearchOutlined,
   DownloadOutlined,
   WarningOutlined,
   PrinterOutlined,
@@ -30,10 +28,15 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import Layout from '@/components/Layout';
 import { useModal, useTablePagination } from '@/hooks';
-import { useAuth } from '@/utils/AuthContext';
+import { useAuth, isSupervisorOrAbove, isAdmin as isAdminUser } from '@/utils/AuthContext';
 import dayjs from 'dayjs';
 import api from '@/utils/api';
 import { safePrint } from '@/utils/safePrint';
+import MaterialAlertRanking, { MaterialStockAlertItem } from './components/MaterialAlertRanking';
+import './MaterialInventory.css';
+import StandardModal from '@/components/common/StandardModal';
+import StandardSearchBar from '@/components/common/StandardSearchBar';
+import StandardToolbar from '@/components/common/StandardToolbar';
 
 const { Option } = Select;
 
@@ -77,6 +80,7 @@ interface MaterialInventory {
   fabricWidth?: string;       // 门幅（仅面料）
   fabricWeight?: string;      // 克重（仅面料）
   fabricComposition?: string; // 成分（仅面料）
+  size?: string;              // 尺码（兼容筛选/展示）
   updateTime?: string;
 }
 
@@ -89,7 +93,8 @@ const _MaterialInventory: React.FC = () => {
   const pagination = useTablePagination(20);
 
   const [searchText, setSearchText] = useState('');
-  const [selectedType, setSelectedType] = useState<string | undefined>(undefined);
+  const [selectedType, setSelectedType] = useState<string>('');
+  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
 
   // ===== 使用 useModal 管理弹窗 =====
   const detailModal = useModal<MaterialInventory>();
@@ -99,6 +104,14 @@ const _MaterialInventory: React.FC = () => {
   const [inboundForm] = Form.useForm();
   const [outboundForm] = Form.useForm();
   const [batchDetails, setBatchDetails] = useState<MaterialBatchDetail[]>([]);
+
+  const [alertLoading, setAlertLoading] = useState(false);
+  const [alertList, setAlertList] = useState<MaterialStockAlertItem[]>([]);
+  const [instructionVisible, setInstructionVisible] = useState(false);
+  const [instructionSubmitting, setInstructionSubmitting] = useState(false);
+  const [instructionTarget, setInstructionTarget] = useState<MaterialStockAlertItem | null>(null);
+  const [receiverOptions, setReceiverOptions] = useState<Array<{ label: string; value: string; name: string; roleName?: string }>>([]);
+  const [instructionForm] = Form.useForm();
 
   const [stats, setStats] = useState({
     totalValue: 0,
@@ -116,7 +129,9 @@ const _MaterialInventory: React.FC = () => {
                 page: current,
                 pageSize: pageSize,
                 materialCode: searchText,
-                materialType: selectedType,
+                materialType: selectedType || undefined,
+                startDate: dateRange?.[0]?.format('YYYY-MM-DD'),
+                endDate: dateRange?.[1]?.format('YYYY-MM-DD'),
             }
         });
 
@@ -154,7 +169,204 @@ const _MaterialInventory: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, [pagination.pagination.current, pagination.pagination.pageSize, searchText, selectedType]);
+  }, [pagination.pagination.current, pagination.pagination.pageSize, searchText, selectedType, dateRange]);
+
+  const fetchAlerts = async () => {
+    setAlertLoading(true);
+    try {
+      const res = await api.get('/production/material/stock/alerts', {
+        params: {
+          days: 30,
+          leadDays: 7,
+          limit: 50,
+          onlyNeed: true,
+        },
+      });
+      if (res?.code === 200 && Array.isArray(res.data)) {
+        setAlertList(res.data as MaterialStockAlertItem[]);
+      } else {
+        setAlertList([]);
+      }
+    } catch (e) {
+      console.error(e);
+      setAlertList([]);
+    } finally {
+      setAlertLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAlerts();
+    const timer = setInterval(fetchAlerts, 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const alertOptions = useMemo(() => {
+    return alertList.map((item) => {
+      const key = `${item.materialCode || ''}|${item.color || ''}|${item.size || ''}`;
+      const label = `${item.materialName || item.materialCode || '物料'}${item.color ? `/${item.color}` : ''}${item.size ? `/${item.size}` : ''}`;
+      return { label, value: key };
+    });
+  }, [alertList]);
+
+  const loadReceivers = async () => {
+    try {
+      const res = await api.get('/system/user/list', {
+        params: { page: 1, pageSize: 200 },
+      });
+      if (res?.code === 200 && res.data?.records) {
+        const items = res.data.records.map((item: any) => {
+          const name = String(item.name || item.username || item.id || '').trim();
+          return {
+            label: name,
+            value: String(item.id || ''),
+            name,
+            roleName: String(item.roleName || ''),
+          };
+        }).filter((item: any) => item.value);
+        const supervisors = items.filter((item: any) => {
+          const roleName = String(item.roleName || '');
+          return roleName.includes('主管') || roleName.includes('管理员');
+        });
+        setReceiverOptions(supervisors);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const openInstruction = (alert: MaterialStockAlertItem) => {
+    if (!isSupervisorOrAbove(user) && !isAdminUser(user)) {
+      message.error('仅主管可下发采购需求');
+      return;
+    }
+    const target = alert;
+    setInstructionTarget(target);
+    const suggested = Number(target.suggestedSafetyStock ?? target.safetyStock ?? 0);
+    const current = Number(target.quantity ?? 0);
+    const shortage = Math.max(0, suggested - current);
+    const receiverId = String(user?.id || '').trim();
+    const receiverName = String(user?.name || user?.username || '').trim();
+
+    const materialKey = `${target.materialCode || ''}|${target.color || ''}|${target.size || ''}`;
+    instructionForm.setFieldsValue({
+      materialSelect: materialKey,
+      purchaseQuantity: shortage > 0 ? shortage : 1,
+      receiverId: receiverId || undefined,
+      receiverName: receiverName || undefined,
+      remark: '',
+    });
+
+    setInstructionVisible(true);
+    if (!receiverOptions.length) {
+      loadReceivers();
+    }
+  };
+
+  const openInstructionEmpty = () => {
+    if (!isSupervisorOrAbove(user) && !isAdminUser(user)) {
+      message.error('仅主管可下发采购需求');
+      return;
+    }
+    setInstructionTarget(null);
+    instructionForm.resetFields();
+    setInstructionVisible(true);
+    if (!receiverOptions.length) {
+      loadReceivers();
+    }
+  };
+
+  const handleMaterialSelect = (value: string) => {
+    const target = alertList.find((item) => {
+      const key = `${item.materialCode || ''}|${item.color || ''}|${item.size || ''}`;
+      return key === value;
+    }) || null;
+    setInstructionTarget(target);
+    if (target) {
+      const suggested = Number(target.suggestedSafetyStock ?? target.safetyStock ?? 0);
+      const current = Number(target.quantity ?? 0);
+      const shortage = Math.max(0, suggested - current);
+      instructionForm.setFieldsValue({
+        purchaseQuantity: shortage > 0 ? shortage : 1,
+      });
+    }
+  };
+
+  const closeInstruction = () => {
+    setInstructionVisible(false);
+    setInstructionTarget(null);
+    instructionForm.resetFields();
+  };
+
+  const handleSendInstruction = async () => {
+    if (!instructionTarget) {
+      message.error('请选择物料');
+      return;
+    }
+    try {
+      const values = await instructionForm.validateFields();
+      const receiverId = String(values.receiverId || '').trim();
+      const receiverName = String(values.receiverName || '').trim();
+      if (!receiverId || !receiverName) {
+        message.error('请选择采购人');
+        return;
+      }
+      setInstructionSubmitting(true);
+      const payload = {
+        materialId: instructionTarget.materialId,
+        materialCode: instructionTarget.materialCode,
+        materialName: instructionTarget.materialName,
+        materialType: instructionTarget.materialType,
+        unit: instructionTarget.unit,
+        color: instructionTarget.color,
+        size: instructionTarget.size,
+        purchaseQuantity: values.purchaseQuantity,
+        receiverId,
+        receiverName,
+        remark: values.remark || '',
+      };
+      const res = await api.post('/production/purchase/instruction', payload);
+      if (res?.code === 200) {
+        message.success('指令已下发');
+        closeInstruction();
+      } else {
+        message.error(res?.message || '指令下发失败');
+      }
+    } catch (e: any) {
+      if (e?.errorFields) return;
+      message.error(e?.message || '指令下发失败');
+    } finally {
+      setInstructionSubmitting(false);
+    }
+  };
+
+  const buildAlertFromRecord = (record: MaterialInventory): MaterialStockAlertItem => {
+    const key = `${record.materialCode || ''}|${record.color || ''}|${record.size || ''}`;
+    const matched = alertList.find((item) => {
+      const itemKey = `${item.materialCode || ''}|${item.color || ''}|${item.size || ''}`;
+      return itemKey === key;
+    });
+    if (matched) {
+      return matched;
+    }
+    return {
+      materialId: record.id,
+      materialCode: record.materialCode,
+      materialName: record.materialName,
+      materialType: record.materialType,
+      unit: record.unit,
+      color: record.color,
+      size: record.size,
+      quantity: record.quantity,
+      safetyStock: record.safetyStock,
+      suggestedSafetyStock: record.safetyStock,
+    };
+  };
+
+  const openInstructionFromRecord = (record: MaterialInventory) => {
+    const alert = buildAlertFromRecord(record);
+    openInstruction(alert);
+  };
 
   // 查看详情（出入库记录）
   const handleViewDetail = (record: MaterialInventory) => {
@@ -400,36 +612,38 @@ const _MaterialInventory: React.FC = () => {
               {record.materialType}
             </Tag>
           </Space>
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '6px',
-          }}>
-            <div style={{ fontSize: 13, color: '#595959', fontWeight: 500 }}>
-              <span style={{ color: '#8c8c8c' }}>面料编号:</span> <strong style={{ color: '#262626' }}>{record.materialCode}</strong>
+          <div className="material-info-grid">
+            <div className="material-info-item">
+              <span className="material-info-label">物料编号</span>
+              <span className="material-info-value">{record.materialCode || '-'}</span>
             </div>
-            <div style={{ fontSize: 13, color: '#595959', fontWeight: 500 }}>
-              <span style={{ color: '#8c8c8c' }}>面料名称:</span> <span style={{ color: '#262626', fontWeight: 600 }}>{record.materialName}</span>
+            <div className="material-info-item">
+              <span className="material-info-label">物料名称</span>
+              <span className="material-info-value">{record.materialName || '-'}</span>
             </div>
-            <div style={{ fontSize: 13, color: '#595959', fontWeight: 500 }}>
-              <span style={{ color: '#8c8c8c' }}>供应商:</span> {record.supplierName}
+            <div className="material-info-item">
+              <span className="material-info-label">布行</span>
+              <span className="material-info-value">{record.supplierName || '-'}</span>
             </div>
-          </div>
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '6px',
-            paddingTop: 4,
-            borderTop: '1px solid #f0f0f0'
-          }}>
-            <div style={{ fontSize: 13, color: '#595959', fontWeight: 500 }}>
-              <span style={{ color: '#8c8c8c' }}>规格:</span> {record.specification}
-              {record.color && (
-                <>
-                  <span style={{ margin: '0 6px', color: '#d9d9d9' }}>|</span>
-                  <span style={{ color: '#1890ff', fontWeight: 600 }}>{record.color}</span>
-                </>
-              )}
+            <div className="material-info-item">
+              <span className="material-info-label">规格</span>
+              <span className="material-info-value">{record.specification || '-'}</span>
+            </div>
+            <div className="material-info-item">
+              <span className="material-info-label">颜色</span>
+              <span className="material-info-value">{record.color || '-'}</span>
+            </div>
+            <div className="material-info-item">
+              <span className="material-info-label">尺码</span>
+              <span className="material-info-value">{record.size || '-'}</span>
+            </div>
+            <div className="material-info-item">
+              <span className="material-info-label">单位</span>
+              <span className="material-info-value">{record.unit || '-'}</span>
+            </div>
+            <div className="material-info-item">
+              <span className="material-info-label">库位</span>
+              <span className="material-info-value">{record.warehouseLocation || '-'}</span>
             </div>
           </div>
         </Space>
@@ -482,33 +696,28 @@ const _MaterialInventory: React.FC = () => {
         const isLow = availableQty < safetyStock;
         return (
           <Space orientation="vertical" size={10} style={{ width: '100%' }}>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
-              gap: '12px',
-              width: '100%'
-            }}>
+            <div className="stock-grid">
               <div>
-                <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4, fontWeight: 500 }}>可用库存</div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: isLow ? '#ff4d4f' : '#52c41a' }}>
+                <div className="stock-label">可用库存</div>
+                <div className={`stock-value ${isLow ? 'stock-value--warn' : 'stock-value--ok'}`}>
                   {availableQty.toLocaleString()}
                   {isLow && <WarningOutlined style={{ marginLeft: 4, fontSize: 14 }} />}
                 </div>
-                <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 2 }}>{record.unit}</div>
+                <div className="stock-unit">{record.unit}</div>
               </div>
               <div>
-                <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4, fontWeight: 500 }}>在途</div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: '#1890ff' }}>
+                <div className="stock-label">在途</div>
+                <div className="stock-value stock-value--info">
                   {inTransitQty.toLocaleString()}
                 </div>
-                <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 2 }}>{record.unit}</div>
+                <div className="stock-unit">{record.unit}</div>
               </div>
               <div>
-                <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4, fontWeight: 500 }}>锁定</div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: '#fa8c16' }}>
+                <div className="stock-label">锁定</div>
+                <div className="stock-value stock-value--lock">
                   {lockedQty.toLocaleString()}
                 </div>
-                <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 2 }}>{record.unit}</div>
+                <div className="stock-unit">{record.unit}</div>
               </div>
             </div>
             <div style={{
@@ -589,7 +798,16 @@ const _MaterialInventory: React.FC = () => {
       width: 180,
       fixed: 'right',
       render: (_, record) => (
-        <Space size="small" orientation="vertical">
+        <Space size="small" orientation="vertical" className="table-action-compact">
+          <Space size="small">
+            <Button
+              size="small"
+              icon={<WarningOutlined />}
+              onClick={() => openInstructionFromRecord(record)}
+            >
+              采购指令
+            </Button>
+          </Space>
           <Space size="small">
             <Button
               type="primary"
@@ -634,46 +852,65 @@ const _MaterialInventory: React.FC = () => {
   return (
     <Layout>
       <div style={{ padding: '16px 24px' }}>
-        <Row gutter={16} style={{ marginBottom: 16 }}>
-          <Col span={6}>
-            <Card><Statistic title="库存总值" value={stats.totalValue} precision={2} prefix="¥" styles={{ value: { color: '#3f8600' } }} /></Card>
-          </Col>
-          <Col span={6}>
-            <Card><Statistic title="库存总量" value={stats.totalQty} suffix="件/米" /></Card>
-          </Col>
-          <Col span={6}>
-            <Card><Statistic title="低于安全库存" value={stats.lowStockCount} suffix="种" styles={{ value: { color: stats.lowStockCount > 0 ? '#cf1322' : undefined } }} /></Card>
-          </Col>
-          <Col span={6}>
-            <Card><Statistic title="物料种类" value={stats.materialTypes} suffix="类" /></Card>
-          </Col>
-        </Row>
+        <Card size="small" className="material-summary-bar">
+          <div className="material-summary-content">
+            <div className="material-summary-item">
+              <span className="material-summary-label">库存总值</span>
+              <span className="material-summary-value">¥{Number(stats.totalValue || 0).toLocaleString()}</span>
+            </div>
+            <div className="material-summary-item">
+              <span className="material-summary-label">库存总量</span>
+              <span className="material-summary-value">{Number(stats.totalQty || 0).toLocaleString()} 件/米</span>
+            </div>
+            <div className="material-summary-item">
+              <span className="material-summary-label">低于安全库存</span>
+              <span className="material-summary-value">{Number(stats.lowStockCount || 0).toLocaleString()} 种</span>
+            </div>
+            <div className="material-summary-item">
+              <span className="material-summary-label">物料种类</span>
+              <span className="material-summary-value">{Number(stats.materialTypes || 0).toLocaleString()} 类</span>
+            </div>
+          </div>
+        </Card>
+
+        <div className="material-alerts-section">
+          <MaterialAlertRanking
+            loading={alertLoading}
+            alerts={alertList}
+            onSendInstruction={openInstruction}
+          />
+        </div>
 
         <Card>
-          <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+          <div style={{ marginBottom: 16 }}>
             <h2 style={{ margin: 0 }}>📦 面辅料进销存</h2>
-            <Space>
-              <Button icon={<DownloadOutlined />}>导出</Button>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => handleInbound()}>入库</Button>
-            </Space>
           </div>
 
-          <Space style={{ marginBottom: 16 }} wrap>
-            <Input
-              placeholder="搜索物料编号/名称"
-              prefix={<SearchOutlined />}
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              style={{ width: 220 }}
-              allowClear
-            />
-            <Select placeholder="物料类别" value={selectedType} onChange={setSelectedType} style={{ width: 120 }} allowClear>
-              <Option value="面料">面料</Option>
-              <Option value="辅料">辅料</Option>
-              <Option value="配件">配件</Option>
-            </Select>
-            <Button type="primary" icon={<SearchOutlined />}>查询</Button>
-          </Space>
+          <StandardToolbar
+            left={(
+              <StandardSearchBar
+                searchValue={searchText}
+                onSearchChange={setSearchText}
+                searchPlaceholder="搜索物料编号/名称"
+                dateValue={dateRange}
+                onDateChange={setDateRange}
+                statusValue={selectedType}
+                onStatusChange={setSelectedType}
+                statusOptions={[
+                  { label: '面料', value: '面料' },
+                  { label: '辅料', value: '辅料' },
+                  { label: '配件', value: '配件' },
+                ]}
+              />
+            )}
+            right={(
+              <>
+                <Button icon={<WarningOutlined />} onClick={openInstructionEmpty}>发出采购需求</Button>
+                <Button icon={<DownloadOutlined />}>导出</Button>
+                <Button type="primary" icon={<PlusOutlined />} onClick={() => handleInbound()}>入库</Button>
+              </>
+            )}
+          />
 
           <Table
             columns={columns}
@@ -686,8 +923,114 @@ const _MaterialInventory: React.FC = () => {
         </Card>
       </div>
 
+      <StandardModal
+        title="下发采购指令"
+        open={instructionVisible}
+        onCancel={closeInstruction}
+        onOk={handleSendInstruction}
+        confirmLoading={instructionSubmitting}
+        okText="下发"
+        centered
+        size="md"
+      >
+        <Form form={instructionForm} layout="vertical">
+          {!instructionTarget && (
+            <Form.Item
+              name="materialSelect"
+              label="选择物料"
+              rules={[{ required: true, message: '请选择物料' }]}
+            >
+              <Select
+                showSearch
+                placeholder="请选择预警物料"
+                options={alertOptions}
+                onChange={handleMaterialSelect}
+                filterOption={(input, option) =>
+                  String(option?.label || '').toLowerCase().includes(String(input || '').toLowerCase())
+                }
+              />
+            </Form.Item>
+          )}
+          <Form.Item label="物料信息">
+            <div className="material-info-grid">
+              <div className="material-info-item">
+                <span className="material-info-label">物料编号</span>
+                <span className="material-info-value">{instructionTarget?.materialCode || '-'}</span>
+              </div>
+              <div className="material-info-item">
+                <span className="material-info-label">物料名称</span>
+                <span className="material-info-value">{instructionTarget?.materialName || '-'}</span>
+              </div>
+              <div className="material-info-item">
+                <span className="material-info-label">类型</span>
+                <span className="material-info-value">{instructionTarget?.materialType || '-'}</span>
+              </div>
+              <div className="material-info-item">
+                <span className="material-info-label">单位</span>
+                <span className="material-info-value">{instructionTarget?.unit || '-'}</span>
+              </div>
+              <div className="material-info-item">
+                <span className="material-info-label">颜色</span>
+                <span className="material-info-value">{instructionTarget?.color || '-'}</span>
+              </div>
+              <div className="material-info-item">
+                <span className="material-info-label">尺码</span>
+                <span className="material-info-value">{instructionTarget?.size || '-'}</span>
+              </div>
+              <div className="material-info-item">
+                <span className="material-info-label">单件用量</span>
+                <span className="material-info-value">{instructionTarget?.perPieceUsage ?? '-'}</span>
+              </div>
+              <div className="material-info-item">
+                <span className="material-info-label">最少/最大可产</span>
+                <span className="material-info-value">
+                  {instructionTarget?.minProductionQty ?? '-'} / {instructionTarget?.maxProductionQty ?? '-'}
+                </span>
+              </div>
+            </div>
+          </Form.Item>
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item
+                name="purchaseQuantity"
+                label="采购数量"
+                rules={[{ required: true, message: '请输入采购数量' }]}
+              >
+                <InputNumber min={1} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="receiverId"
+                label="采购人"
+                rules={[{ required: true, message: '请选择采购人' }]}
+              >
+                <Select
+                  showSearch
+                  placeholder="请选择采购人"
+                  options={receiverOptions}
+                  onChange={(value) => {
+                    const hit = receiverOptions.find((item) => item.value === value);
+                    instructionForm.setFieldsValue({ receiverName: hit?.name || '' });
+                  }}
+                  filterOption={(input, option) =>
+                    String(option?.label || '').toLowerCase().includes(String(input || '').toLowerCase())
+                  }
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item name="receiverName" hidden>
+            <Input />
+          </Form.Item>
+          <Form.Item name="remark" label="备注">
+            <Input.TextArea rows={3} placeholder="可选" />
+          </Form.Item>
+        </Form>
+      </StandardModal>
+
       {/* 详情模态框 - 出入库记录 */}
-      <Modal
+      <StandardModal
         title="出入库记录"
         open={detailModal.visible}
         onCancel={detailModal.close}
@@ -696,7 +1039,7 @@ const _MaterialInventory: React.FC = () => {
             关闭
           </Button>,
         ]}
-        width={800}
+        size="md"
       >
         {detailModal.data && (
           <div>
@@ -772,10 +1115,10 @@ const _MaterialInventory: React.FC = () => {
             />
           </div>
         )}
-      </Modal>
+      </StandardModal>
 
       {/* 入库模态框 */}
-      <Modal
+      <StandardModal
         title={
           <Space>
             <ScanOutlined style={{ color: '#1890ff' }} />
@@ -788,7 +1131,7 @@ const _MaterialInventory: React.FC = () => {
           inboundForm.resetFields();
         }}
         onOk={handleInboundConfirm}
-        width={600}
+        size="md"
       >
         <Form
           form={inboundForm}
@@ -853,10 +1196,10 @@ const _MaterialInventory: React.FC = () => {
             <Input.TextArea rows={3} placeholder="请输入备注信息" />
           </Form.Item>
         </Form>
-      </Modal>
+      </StandardModal>
 
       {/* 出库模态框 */}
-      <Modal
+      <StandardModal
         title={
           <Space>
             <ExportOutlined style={{ color: '#1890ff' }} />
@@ -870,7 +1213,7 @@ const _MaterialInventory: React.FC = () => {
           outboundForm.resetFields();
         }}
         onOk={handleOutboundConfirm}
-        width={1100}
+        size="lg"
         okText="确认出库"
         cancelText="取消"
       >
@@ -1023,7 +1366,7 @@ const _MaterialInventory: React.FC = () => {
             </div>
           </Space>
         )}
-      </Modal>
+      </StandardModal>
     </Layout>
   );
 };

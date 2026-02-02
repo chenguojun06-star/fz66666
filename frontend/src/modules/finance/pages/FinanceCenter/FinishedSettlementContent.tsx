@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Form, Input, Button, Space, App, DatePicker, Select, Modal, Tooltip, Timeline } from 'antd';
+import { Card, Form, Input, Button, Space, App, Select, Tooltip, Timeline } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { SearchOutlined, ReloadOutlined, DownloadOutlined, FileExcelOutlined, CheckCircleOutlined, EditOutlined, HistoryOutlined } from '@ant-design/icons';
+import { ReloadOutlined, DownloadOutlined, FileExcelOutlined, CheckCircleOutlined, EditOutlined, HistoryOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
+import StandardSearchBar from '@/components/common/StandardSearchBar';
+import StandardToolbar from '@/components/common/StandardToolbar';
 import RowActions from '@/components/common/RowActions';
+import StandardModal from '@/components/common/StandardModal';
 import dayjs from 'dayjs';
 import styles from './FinishedSettlementContent.module.css';
-
-const { RangePicker } = DatePicker;
+import type { Dayjs } from 'dayjs';
 
 interface FinishedSettlementRow {
   orderId: string;
@@ -62,6 +64,7 @@ const FinishedSettlementContent: React.FC = () => {
   const [remarkText, setRemarkText] = useState<string>('');
   const [logModalVisible, setLogModalVisible] = useState(false);
   const [orderLogs, setOrderLogs] = useState<any[]>([]);
+  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const [pageParams, setPageParams] = useState<PageParams>({
     page: 1,
     pageSize: 20,
@@ -482,39 +485,37 @@ const FinishedSettlementContent: React.FC = () => {
   return (
     <>
       <Card>
-        <Form
-          form={form}
-          layout="inline"
-          style={{ marginBottom: 16 }}
-          onFinish={handleSearch}
-        >
-          <Form.Item name="orderNo" label="订单号">
-            <Input placeholder="输入订单号" allowClear style={{ width: 180 }} />
-          </Form.Item>
-
-          <Form.Item name="styleNo" label="款号">
-            <Input placeholder="输入款号" allowClear style={{ width: 150 }} />
-          </Form.Item>
-
-          <Form.Item name="status" label="状态">
-            <Select placeholder="选择状态" allowClear style={{ width: 150 }}>
-              <Select.Option value="PENDING">待确认</Select.Option>
-              <Select.Option value="CONFIRMED">已确认</Select.Option>
-              <Select.Option value="IN_PRODUCTION">生产中</Select.Option>
-              <Select.Option value="COMPLETED">已完成</Select.Option>
-              <Select.Option value="CANCELLED">已取消</Select.Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item name="dateRange" label="日期范围">
-            <RangePicker format="YYYY-MM-DD" />
-          </Form.Item>
-
-          <Form.Item>
-            <Space>
-              <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
-                查询
-              </Button>
+        <StandardToolbar
+          left={(
+            <StandardSearchBar
+              searchValue={String(form.getFieldValue('orderNo') || '')}
+              onSearchChange={(value) => {
+                form.setFieldsValue({ orderNo: value, styleNo: undefined });
+                handleSearch();
+              }}
+              searchPlaceholder="搜索订单号/款号"
+              dateValue={dateRange}
+              onDateChange={(value) => {
+                setDateRange(value);
+                form.setFieldsValue({ dateRange: value || undefined });
+                handleSearch();
+              }}
+              statusValue={String(form.getFieldValue('status') || '')}
+              onStatusChange={(value) => {
+                form.setFieldsValue({ status: value || undefined });
+                handleSearch();
+              }}
+              statusOptions={[
+                { label: '待确认', value: 'PENDING' },
+                { label: '已确认', value: 'CONFIRMED' },
+                { label: '生产中', value: 'IN_PRODUCTION' },
+                { label: '已完成', value: 'COMPLETED' },
+                { label: '已取消', value: 'CANCELLED' },
+              ]}
+            />
+          )}
+          right={(
+            <>
               <Button onClick={handleReset} icon={<ReloadOutlined />}>
                 重置
               </Button>
@@ -526,15 +527,12 @@ const FinishedSettlementContent: React.FC = () => {
               >
                 导出选中 ({selectedRowKeys.length})
               </Button>
-              <Button
-                onClick={handleExport}
-                icon={<DownloadOutlined />}
-              >
+              <Button onClick={handleExport} icon={<DownloadOutlined />}>
                 导出全部
               </Button>
-            </Space>
-          </Form.Item>
-        </Form>
+            </>
+          )}
+        />
 
         <ResizableTable<FinishedSettlementRow>
           storageKey="finance-finished-settlement"
@@ -561,14 +559,14 @@ const FinishedSettlementContent: React.FC = () => {
       </Card>
 
       {/* 审批核实弹窗 */}
-      <Modal
+      <StandardModal
         title="审批核实"
         open={verifyModalVisible}
         onOk={handleVerifyConfirm}
         onCancel={handleVerifyCancel}
-        width={600}
         okText="确认核实"
         cancelText="取消"
+        size="sm"
       >
         {currentRecord && (
           <div className={styles.verifyModal}>
@@ -622,16 +620,16 @@ const FinishedSettlementContent: React.FC = () => {
             </div>
           </div>
         )}
-      </Modal>
+      </StandardModal>
       {/* 备注编辑弹窗 */}
-      <Modal
+      <StandardModal
         title="编辑备注"
         open={remarkModalVisible}
         onOk={saveRemark}
         onCancel={() => setRemarkModalVisible(false)}
-        width={600}
         okText="保存"
         cancelText="取消"
+        size="sm"
       >
         <Form.Item label="备注内容">
           <Input.TextArea
@@ -643,15 +641,15 @@ const FinishedSettlementContent: React.FC = () => {
             showCount
           />
         </Form.Item>
-      </Modal>
+      </StandardModal>
 
       {/* 操作日志弹窗 */}
-      <Modal
+      <StandardModal
         title="操作日志"
         open={logModalVisible}
         onCancel={() => setLogModalVisible(false)}
         footer={<Button onClick={() => setLogModalVisible(false)}>关闭</Button>}
-        width={700}
+        size="md"
       >
         {orderLogs.length > 0 ? (
           <Timeline
@@ -678,7 +676,8 @@ const FinishedSettlementContent: React.FC = () => {
             暂无操作日志
           </div>
         )}
-      </Modal>    </>
+      </StandardModal>
+    </>
   );
 };
 

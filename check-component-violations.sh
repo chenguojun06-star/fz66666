@@ -228,7 +228,7 @@ find frontend/src/modules -name "*.tsx" -type f -exec sed -i '' \\
 
 ---
 
-**生成时间**: $(date '+%Y-%m-%d %H:%M:%S')  
+**生成时间**: $(date '+%Y-%m-%d %H:%M:%S')
 **工具**: check-component-violations.sh
 EOF
 

@@ -133,6 +133,21 @@
   border-top: 1rpx solid #f0f0f0;
 }
 
+.item-actions {
+  margin-top: 12rpx;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.action-link {
+  font-size: 24rpx;
+  color: #2D7FF9;
+  padding: 6rpx 16rpx;
+  border: 1rpx solid #d6e8ff;
+  border-radius: 20rpx;
+  background-color: #f5f9ff;
+}
+
 .stock-info {
   font-size: 24rpx;
 }

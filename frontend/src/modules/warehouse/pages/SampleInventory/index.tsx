@@ -4,28 +4,26 @@ import {
   Table,
   Button,
   Space,
-  Input,
   Tag,
   Tooltip,
-  Select,
   Image,
 } from 'antd';
 import {
   PlusOutlined,
-  SearchOutlined,
   HistoryOutlined,
   ExportOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import Layout from '@/components/Layout';
+import StandardSearchBar from '@/components/common/StandardSearchBar';
+import StandardToolbar from '@/components/common/StandardToolbar';
 import api from '@/utils/api';
 import { useModal, useTablePagination } from '@/hooks';
 import { SampleStock, SampleTypeMap } from './types';
 import InboundModal from './InboundModal';
 import LoanModal from './LoanModal';
 import LoanHistoryDrawer from './LoanHistoryDrawer';
-
-const { Option } = Select;
+import type { Dayjs } from 'dayjs';
 
 const SampleInventory: React.FC = () => {
   const pagination = useTablePagination(20);
@@ -33,6 +31,7 @@ const SampleInventory: React.FC = () => {
   const [dataSource, setDataSource] = useState<SampleStock[]>([]);
   const [searchText, setSearchText] = useState('');
   const [sampleType, setSampleType] = useState<string | undefined>(undefined);
+  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
 
   const inboundModal = useModal<void>();
   const loanModal = useModal<SampleStock>();
@@ -171,35 +170,29 @@ const SampleInventory: React.FC = () => {
     <Layout>
       <div style={{ padding: '16px 24px' }}>
         <Card>
-          <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-            <Space>
-              <Input
-                placeholder="搜索款号"
-                prefix={<SearchOutlined />}
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                onPressEnter={loadData}
-                style={{ width: 200 }}
-                allowClear
-              />
-              <Select
-                placeholder="样衣类型"
-                value={sampleType}
-                onChange={setSampleType}
-                style={{ width: 150 }}
-                allowClear
-              >
-                {Object.entries(SampleTypeMap).map(([key, label]) => (
-                  <Option key={key} value={key}>{label}</Option>
-                ))}
-              </Select>
-              <Button type="primary" onClick={loadData} icon={<SearchOutlined />}>
-                查询
-              </Button>
-            </Space>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => inboundModal.open()}>
-              样衣入库
-            </Button>
+          <div style={{ marginBottom: 16 }}>
+            <StandardToolbar
+              left={(
+                <StandardSearchBar
+                  searchValue={searchText}
+                  onSearchChange={setSearchText}
+                  searchPlaceholder="搜索款号"
+                  dateValue={dateRange}
+                  onDateChange={setDateRange}
+                  statusValue={sampleType || ''}
+                  onStatusChange={(value) => setSampleType(value || undefined)}
+                  statusOptions={Object.entries(SampleTypeMap).map(([key, label]) => ({
+                    label,
+                    value: key,
+                  }))}
+                />
+              )}
+              right={(
+                <Button type="primary" icon={<PlusOutlined />} onClick={() => inboundModal.open()}>
+                  样衣入库
+                </Button>
+              )}
+            />
           </div>
 
           <Table

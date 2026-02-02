@@ -58,6 +58,7 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
         String styleNo = (String) params.getOrDefault("styleNo", "");
         String styleName = (String) params.getOrDefault("styleName", "");
         String category = (String) params.getOrDefault("category", "");
+        String keyword = (String) params.getOrDefault("keyword", "");
 
         boolean onlyCompleted = false;
         Object onlyCompletedRaw = params.get("onlyCompleted");
@@ -68,13 +69,19 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
 
         // 使用条件构造器进行查询
         IPage<StyleInfo> resultPage = baseMapper.selectPage(pageInfo,
-                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<StyleInfo>()
-                        .like(StringUtils.hasText(styleNo), StyleInfo::getStyleNo, styleNo)
-                        .like(StringUtils.hasText(styleName), StyleInfo::getStyleName, styleName)
-                        .eq(StringUtils.hasText(category), StyleInfo::getCategory, category)
-                        .eq(onlyCompleted, StyleInfo::getSampleStatus, "COMPLETED")
-                        .eq(StyleInfo::getStatus, "ENABLED")
-                        .orderByDesc(StyleInfo::getCreateTime));
+            new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<StyleInfo>()
+                .like(StringUtils.hasText(styleNo), StyleInfo::getStyleNo, styleNo)
+                .like(StringUtils.hasText(styleName), StyleInfo::getStyleName, styleName)
+                .eq(StringUtils.hasText(category), StyleInfo::getCategory, category)
+                .and(StringUtils.hasText(keyword), wrapper -> wrapper
+                    .like(StyleInfo::getStyleNo, keyword)
+                    .or()
+                    .like(StyleInfo::getStyleName, keyword)
+                    .or()
+                    .like(StyleInfo::getCategory, keyword))
+                .eq(onlyCompleted, StyleInfo::getSampleStatus, "COMPLETED")
+                .eq(StyleInfo::getStatus, "ENABLED")
+                .orderByDesc(StyleInfo::getCreateTime));
 
         fillQuotationPriceFields(resultPage.getRecords());
         fillProgressFields(resultPage.getRecords());

@@ -27,22 +27,22 @@ const ProductionList: React.FC = () => {
   const {
     productionList,
     loading,
-    pagination,
+    total,
+    queryParams,
+    setQueryParams,
     fetchProductionList,
-    handlePageChange,
   } = useOrderList();
 
   const {
-    quickEdit,
-    closeOrder,
-    scrapOrder,
+    handleQuickEditSave,
+    handleCloseOrder,
+    handleScrapOrder,
   } = useOrderActions(() => {
     // 操作后刷新列表
-    fetchProductionList(filters);
+    fetchProductionList();
   });
 
   // ===== 状态管理 =====
-  const [filters, setFilters] = useState<any>({});
   const [activeTab, setActiveTab] = useState<string>('all');
 
   // 弹窗状态
@@ -72,24 +72,24 @@ const ProductionList: React.FC = () => {
     localStorage.setItem('production-list-visible-columns', JSON.stringify(visibleColumns));
   }, [visibleColumns]);
 
-  // ===== 初始加载 =====
-  useEffect(() => {
-    fetchProductionList(filters);
-  }, []);
-
   // ===== 处理函数 =====
 
   // 筛选
   const handleSearch = (newFilters: any) => {
-    setFilters(newFilters);
-    fetchProductionList(newFilters);
+    setQueryParams({
+      ...queryParams,
+      ...newFilters,
+      page: 1,
+    });
   };
 
   // 重置筛选
   const handleReset = () => {
-    setFilters({});
+    setQueryParams({
+      page: 1,
+      pageSize: 10,
+    });
     setActiveTab('all');
-    fetchProductionList({});
   };
 
   // 导出Excel
@@ -166,7 +166,7 @@ const ProductionList: React.FC = () => {
       });
 
       // 调用快速编辑API更新订单
-      await quickEdit(record, { progressWorkflowJson });
+      await handleQuickEditSave({ progressWorkflowJson });
       message.success(`已同步 ${allProcesses.length} 个工序`);
     } catch (e) {
       console.error('同步工序失败:', e);
@@ -177,12 +177,11 @@ const ProductionList: React.FC = () => {
   // Tab切换
   const handleTabChange = (key: string) => {
     setActiveTab(key);
-    const newFilters = {
-      ...filters,
+    setQueryParams({
+      ...queryParams,
       status: key === 'all' ? undefined : key,
-    };
-    setFilters(newFilters);
-    fetchProductionList(newFilters);
+      page: 1,
+    });
   };
 
   // ===== 渲染 =====
@@ -194,7 +193,7 @@ const ProductionList: React.FC = () => {
       <div style={{ padding: isMobile ? 12 : 24 }}>
         {/* 筛选面板 */}
         <FilterPanel
-          filters={filters}
+          filters={queryParams}
           onSearch={handleSearch}
           onReset={handleReset}
           onExport={handleExport}
@@ -208,7 +207,7 @@ const ProductionList: React.FC = () => {
           items={[
             {
               key: 'all',
-              label: `全部订单 (${activeTab === 'all' ? pagination.total : '-'})`,
+              label: `全部订单 (${total})`,
             },
             {
               key: 'in_progress',
@@ -230,10 +229,12 @@ const ProductionList: React.FC = () => {
           dataSource={productionList}
           loading={loading}
           pagination={{
-            current: pagination.page,
-            pageSize: pagination.pageSize,
-            total: pagination.total,
-            onChange: handlePageChange,
+            current: queryParams.page,
+            pageSize: queryParams.pageSize,
+            total: total,
+            onChange: (page, pageSize) => {
+              setQueryParams({ ...queryParams, page, pageSize });
+            },
             showSizeChanger: true,
             showQuickJumper: true,
             showTotal: (total) => `共 ${total} 条`,
@@ -269,7 +270,7 @@ const ProductionList: React.FC = () => {
           }}
           onSave={async (updates) => {
             if (currentRecord) {
-              await quickEdit(currentRecord, updates);
+              await handleQuickEditSave(updates);
               setQuickEditVisible(false);
               setCurrentRecord(null);
             }
@@ -296,7 +297,7 @@ const ProductionList: React.FC = () => {
             setCurrentRecord(null);
           }}
           onSave={() => {
-            fetchProductionList(filters);
+            fetchProductionList();
           }}
         />
       </div>

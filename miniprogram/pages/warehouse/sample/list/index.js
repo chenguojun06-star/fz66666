@@ -1,4 +1,4 @@
-const app = getApp();
+const api = require('../../../../utils/api');
 
 Page({
   data: {
@@ -46,7 +46,7 @@ Page({
 
   async loadData(reset = false) {
     if (this.data.loading) return;
-    
+
     if (reset) {
       this.setData({ page: 1, hasMore: true, list: [] });
     }
@@ -57,23 +57,17 @@ Page({
 
     try {
       const { page, pageSize, keyword } = this.data;
-      // 调用后端API
-      // 注意：小程序request需要封装，这里假设 app.request 或 wx.request
-      // 实际开发需替换为真实的请求逻辑
-      const res = await this.request('/stock/sample/page', {
+      const data = await api.stock.listSamples({
         page,
         pageSize,
-        styleNo: keyword // 搜索款号
+        styleNo: keyword
       });
-
-      if (res.code === 200) {
-        const records = res.data.records || [];
-        this.setData({
-          list: reset ? records : [...this.data.list, ...records],
-          hasMore: records.length === pageSize,
-          page: page + 1
-        });
-      }
+      const records = (data && data.records) || [];
+      this.setData({
+        list: reset ? records : [...this.data.list, ...records],
+        hasMore: records.length === pageSize,
+        page: page + 1
+      });
     } catch (error) {
       console.error('加载列表失败', error);
       wx.showToast({ title: '加载失败', icon: 'none' });
@@ -97,31 +91,15 @@ Page({
       url: `/pages/warehouse/sample/operation/index?type=${type}`
     });
   },
-
-  // 简单的请求封装，实际应引用 utils/request.js
-  request(url, data, method = 'GET') {
-    return new Promise((resolve, reject) => {
-      // 检查 token
-      const token = wx.getStorageSync('token');
-      // const baseUrl = 'http://localhost:8080/api'; // 开发环境
-      // 假设已经在 app.js 或 config 中配置了 baseUrl
-      const baseUrl = 'http://localhost:8080/api'; 
-
-      wx.request({
-        url: baseUrl + url,
-        data,
-        method,
-        header: {
-          'Authorization': token ? `Bearer ${token}` : '',
-          'content-type': 'application/json'
-        },
-        success: (res) => {
-          resolve(res.data);
-        },
-        fail: (err) => {
-          reject(err);
-        }
-      });
+  navToLoanList(e) {
+    const id = e.currentTarget.dataset.id;
+    const styleNo = e.currentTarget.dataset.styleno;
+    if (!id) {
+      wx.showToast({ title: '样衣信息缺失', icon: 'none' });
+      return;
+    }
+    wx.navigateTo({
+      url: `/pages/warehouse/sample/loan-list/index?sampleStockId=${id}&styleNo=${encodeURIComponent(styleNo || '')}`
     });
   }
 });

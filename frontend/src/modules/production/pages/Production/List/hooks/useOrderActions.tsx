@@ -167,3 +167,5 @@ export const useOrderActions = (onSuccess?: () => void) => {
     handleScrapOrder,
   };
 };
+
+export default useOrderActions;

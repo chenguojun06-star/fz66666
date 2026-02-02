@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Tabs, Spin, message, List, Button, Space, Tag } from 'antd';
-import { DownloadOutlined, FileOutlined } from '@ant-design/icons';
+import { DownloadOutlined, FileOutlined, ReloadOutlined } from '@ant-design/icons';
 import type { StyleAttachment } from '@/types/style';
 import StyleSizeTab from '@/modules/basic/pages/StyleInfo/components/StyleSizeTab';
+import StyleSecondaryProcessTab from '@/modules/basic/pages/StyleInfo/components/StyleSecondaryProcessTab';
 import api from '@/utils/api';
 
 interface Props {
@@ -20,53 +21,56 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
     // console.log('StylePatternSimpleTab - styleId:', styleId, 'styleNo:', styleNo);
   }, [styleId, styleNo]);
 
-  // 加载所有纸样文件（包括原始纸样和放码纸样）
+  const fetchAllPatternFiles = async () => {
+    if (!styleId) return;
+    try {
+      // 并行加载两种类型的纸样文件
+      const [patternRes, gradingRes] = await Promise.all([
+        api.get('/style/attachment/list', { params: { styleId, bizType: 'pattern' } }),
+        api.get('/style/attachment/list', { params: { styleId, bizType: 'pattern_grading' } })
+      ]);
+
+      const patternList = patternRes.code === 200 && Array.isArray(patternRes.data) ? patternRes.data : [];
+      const gradingList = gradingRes.code === 200 && Array.isArray(gradingRes.data) ? gradingRes.data : [];
+
+      // 合并两种类型的文件，并过滤掉归档版本
+      const allFiles = [...patternList, ...gradingList];
+      const activeFiles = allFiles.filter((item: any) => String((item as Record<string, unknown>)?.status || 'active') === 'active');
+      setAllPatternFiles(activeFiles as StyleAttachment[]);
+    } catch (error) {
+      console.error('加载纸样文件失败:', error);
+    }
+  };
+
   useEffect(() => {
-    const fetchAllPatternFiles = async () => {
-      if (!styleId) return;
-      try {
-        // 并行加载两种类型的纸样文件
-        const [patternRes, gradingRes] = await Promise.all([
-          api.get('/style/attachment/list', { params: { styleId, bizType: 'pattern' } }),
-          api.get('/style/attachment/list', { params: { styleId, bizType: 'pattern_grading' } })
-        ]);
-
-        const patternList = patternRes.code === 200 && Array.isArray(patternRes.data) ? patternRes.data : [];
-        const gradingList = gradingRes.code === 200 && Array.isArray(gradingRes.data) ? gradingRes.data : [];
-
-        // 合并两种类型的文件，并过滤掉归档版本
-        const allFiles = [...patternList, ...gradingList];
-        const activeFiles = allFiles.filter((item: any) => String((item as Record<string, unknown>)?.status || 'active') === 'active');
-        setAllPatternFiles(activeFiles as StyleAttachment[]);
-      } catch (error) {
-        console.error('加载纸样文件失败:', error);
-      }
-    };
     fetchAllPatternFiles();
   }, [styleId]);
 
-  // 加载生产制单
-  useEffect(() => {
-    const fetchProductionReq = async () => {
-      if (!styleId) return;
-      setLoading(true);
-      try {
-        const res = await api.get(`/style/info/${styleId}`);
-        // console.log('生产制单API返回:', res);
-        if (res.code === 200 && res.data) {
-          // 使用description字段，而不是productionRequirement
-          const rows = res.data.description || '';
-          // console.log('生产制单description字段:', rows);
-          setProductionReq(rows);
-        }
-      } catch (error) {
-        console.error('加载生产制单失败:', error);
-      } finally {
-        setLoading(false);
+  const fetchProductionReq = async () => {
+    if (!styleId) return;
+    setLoading(true);
+    try {
+      const res = await api.get(`/style/info/${styleId}`);
+      if (res.code === 200 && res.data) {
+        const rows = res.data.description || '';
+        setProductionReq(rows);
       }
-    };
+    } catch (error) {
+      console.error('加载生产制单失败:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchProductionReq();
   }, [styleId]);
+
+  const handleRefresh = () => {
+    fetchAllPatternFiles();
+    fetchProductionReq();
+    message.success('已同步最新信息');
+  };
 
   // 下载附件
   const handleDownload = (record: StyleAttachment) => {
@@ -98,7 +102,15 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
 
   return (
     <div style={{ padding: '0 8px' }}>
+      <div style={{ marginBottom: 8, color: '#666', fontSize: 12 }}>
+        款号：<span style={{ color: '#333', fontWeight: 500 }}>{styleNo || '-'}</span>
+      </div>
       <Tabs
+        tabBarExtraContent={
+          <Button size="small" icon={<ReloadOutlined />} onClick={handleRefresh}>
+            更新
+          </Button>
+        }
         items={[
           {
             key: 'pattern',
@@ -195,6 +207,15 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
                     </div>
                   )}
                 </Spin>
+              </Card>
+            ),
+          },
+          {
+            key: 'secondary',
+            label: '🧵 二次工艺',
+            children: (
+              <Card size="small" style={{ marginBottom: 16 }}>
+                <StyleSecondaryProcessTab styleId={styleId} styleNo={styleNo} readOnly simpleView />
               </Card>
             ),
           },

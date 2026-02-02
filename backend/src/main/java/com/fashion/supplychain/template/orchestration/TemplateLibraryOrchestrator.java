@@ -89,7 +89,7 @@ public class TemplateLibraryOrchestrator {
         if (!StringUtils.hasText(type)) {
             throw new IllegalArgumentException("templateType不能为空");
         }
-        if (!List.of("bom", "size", "process", "process_price", "progress").contains(type)) {
+        if (!List.of("bom", "size", "process").contains(type)) {
             throw new IllegalArgumentException("不支持的模板类型");
         }
         if (!StringUtils.hasText(name)) {

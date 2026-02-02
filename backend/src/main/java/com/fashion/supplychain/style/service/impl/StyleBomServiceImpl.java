@@ -31,6 +31,15 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
     }
 
     @Override
+    public List<StyleBom> listByMaterialCodes(java.util.List<String> materialCodes) {
+        if (materialCodes == null || materialCodes.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        return list(new LambdaQueryWrapper<StyleBom>()
+                .in(StyleBom::getMaterialCode, materialCodes));
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public List<StyleBom> saveBomWithStockCheck(List<StyleBom> bomList, Integer productionQty) {
         if (bomList == null || bomList.isEmpty()) {

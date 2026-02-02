@@ -9,7 +9,6 @@ import {
   Image,
   Empty,
   Button,
-  Input,
   Row,
   Col,
   Tabs,
@@ -21,7 +20,6 @@ import {
   BookOutlined,
   PlayCircleOutlined,
   QuestionCircleOutlined,
-  SearchOutlined,
   RocketOutlined,
   CheckCircleOutlined,
   FileTextOutlined,
@@ -29,8 +27,10 @@ import {
   BulbOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons';
+import StandardSearchBar from '@/components/common/StandardSearchBar';
 import Layout from '@/components/Layout';
 import './style.css';
+import type { Dayjs } from 'dayjs';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -56,6 +56,7 @@ interface Tutorial {
 const SystemTutorial: React.FC = () => {
   const [searchText, setSearchText] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const [filteredTutorials, setFilteredTutorials] = useState<Tutorial[]>([]);
 
   // 教程数据
@@ -594,13 +595,18 @@ const SystemTutorial: React.FC = () => {
       {/* 搜索和分类 */}
       <Card style={{ marginBottom: 24 }}>
         <Space orientation="vertical" size={16} style={{ width: '100%' }}>
-          <Input
-            size="large"
-            placeholder="搜索教程标题、标签或步骤..."
-            prefix={<SearchOutlined />}
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            allowClear
+          <StandardSearchBar
+            searchValue={searchText}
+            onSearchChange={setSearchText}
+            searchPlaceholder="搜索教程标题、标签或步骤"
+            dateValue={dateRange}
+            onDateChange={setDateRange}
+            statusValue={activeCategory}
+            onStatusChange={setActiveCategory}
+            statusOptions={categories.map((cat) => ({
+              label: cat.label,
+              value: cat.key,
+            }))}
           />
           <Space wrap size={[12, 12]}>
             {categories.map((cat) => (

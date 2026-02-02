@@ -7,10 +7,12 @@ import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleProcess;
 import com.fashion.supplychain.style.entity.StyleSize;
+import com.fashion.supplychain.style.entity.StyleSizePrice;
 import com.fashion.supplychain.style.service.StyleBomService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.StyleProcessService;
 import com.fashion.supplychain.style.service.StyleSizeService;
+import com.fashion.supplychain.style.service.StyleSizePriceService;
 import com.fashion.supplychain.template.entity.TemplateLibrary;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +23,6 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
 import java.util.*;
 
 /**
@@ -51,6 +52,9 @@ public class TemplateStyleOrchestrator {
 
     @Autowired
     private StyleSizeService styleSizeService;
+
+    @Autowired
+    private StyleSizePriceService styleSizePriceService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -98,9 +102,8 @@ public class TemplateStyleOrchestrator {
         // 根据模板类型执行不同的应用逻辑
         boolean result = switch (templateType) {
             case "bom" -> applyBomTemplate(template, targetStyleId, overwrite);
-            case "process", "process_price" -> applyProcessTemplate(template, targetStyleId, overwrite);
+            case "process" -> applyProcessTemplate(template, targetStyleId, overwrite);
             case "size" -> applySizeTemplate(template, targetStyleId, overwrite);
-            case "progress" -> applyProgressTemplate(template, targetStyleId, overwrite);
             default -> throw new IllegalArgumentException("不支持的模板类型: " + templateType);
         };
 
@@ -173,24 +176,53 @@ public class TemplateStyleOrchestrator {
                             .list();
                     content = objectMapper.writeValueAsString(boms);
                 }
-                case "process", "process_price" -> {
+                case "process" -> {
                     List<StyleProcess> processes = styleProcessService.lambdaQuery()
                             .eq(StyleProcess::getStyleId, styleId)
                             .list();
-                    content = objectMapper.writeValueAsString(processes);
+                    List<StyleSizePrice> sizePrices = styleSizePriceService.lambdaQuery()
+                            .eq(StyleSizePrice::getStyleId, styleId)
+                            .list();
+
+                    Map<String, Map<String, BigDecimal>> priceMap = new HashMap<>();
+                    Set<String> sizeSet = new LinkedHashSet<>();
+                    for (StyleSizePrice sp : sizePrices) {
+                        if (sp == null) continue;
+                        String pCode = StringUtils.hasText(sp.getProcessCode()) ? sp.getProcessCode().trim() : "";
+                        String size = StringUtils.hasText(sp.getSize()) ? sp.getSize().trim().toUpperCase() : "";
+                        if (!StringUtils.hasText(pCode) || !StringUtils.hasText(size)) continue;
+                        sizeSet.add(size);
+                        priceMap.computeIfAbsent(pCode, k -> new HashMap<>()).put(size, sp.getPrice());
+                    }
+
+                    List<Map<String, Object>> steps = new ArrayList<>();
+                    for (StyleProcess p : processes) {
+                        Map<String, Object> row = new HashMap<>();
+                        row.put("processCode", p.getProcessCode());
+                        row.put("processName", p.getProcessName());
+                        row.put("progressStage", p.getProgressStage());
+                        row.put("machineType", p.getMachineType());
+                        row.put("standardTime", p.getStandardTime());
+                        row.put("unitPrice", p.getPrice());
+                        Map<String, BigDecimal> sizePrice = priceMap.get(StringUtils.hasText(p.getProcessCode()) ? p.getProcessCode().trim() : "");
+                        if (sizePrice != null && !sizePrice.isEmpty()) {
+                            row.put("sizePrices", sizePrice);
+                        }
+                        steps.add(row);
+                    }
+
+                    Map<String, Object> payload = new HashMap<>();
+                    payload.put("steps", steps);
+                    if (!sizeSet.isEmpty()) {
+                        payload.put("sizes", new ArrayList<>(sizeSet));
+                    }
+                    content = objectMapper.writeValueAsString(payload);
                 }
                 case "size" -> {
                     List<StyleSize> sizes = styleSizeService.lambdaQuery()
                             .eq(StyleSize::getStyleId, styleId)
                             .list();
                     content = objectMapper.writeValueAsString(sizes);
-                }
-                case "progress" -> {
-                    // 进度模板创建逻辑
-                    Map<String, Object> progressData = new HashMap<>();
-                    progressData.put("styleNo", sourceStyleNo);
-                    progressData.put("createdAt", LocalDateTime.now().toString());
-                    content = objectMapper.writeValueAsString(progressData);
                 }
                 default -> {
                     log.warn("未知的模板类型: {}", templateType);
@@ -425,16 +457,6 @@ public class TemplateStyleOrchestrator {
             log.error("应用尺寸模板失败", e);
             return false;
         }
-    }
-
-    /**
-     * 应用进度模板
-     */
-    private boolean applyProgressTemplate(TemplateLibrary template, Long targetStyleId, boolean overwrite) {
-        // 进度模板通常不直接应用到款式，而是用于生产订单
-        // 这里可以记录模板与款式的关联关系
-        log.info("进度模板已关联到款式: templateId={}, styleId={}", template.getId(), targetStyleId);
-        return true;
     }
 
     private BigDecimal parseDecimal(JsonNode node) {

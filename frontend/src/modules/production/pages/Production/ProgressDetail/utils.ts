@@ -243,6 +243,87 @@ export const getNodeIndexFromProgress = (nodes: ProgressNode[], progress: number
   return Math.max(0, Math.min(nodes.length - 1, idx));
 };
 
+export const getProgressLabelForTable = (
+  order: ProductionOrder,
+  progressNodesByStyleNo: Record<string, ProgressNode[]>,
+  defaultNodes: ProgressNode[],
+) => {
+  const cp = String(order.currentProcessName || '').trim();
+  const progress = clampPercent(Number(order.productionProgress) || 0);
+  const ns = stripWarehousingNode(resolveNodesForListOrder(order, progressNodesByStyleNo, defaultNodes));
+  const idx = getNodeIndexFromProgress(ns, progress);
+  const derived = ns[idx]?.name || '生产';
+  if (!cp) return derived;
+  const cpInNodes = ns.some((n) => String(n?.name || '').trim() === cp);
+  return cpInNodes ? cp : derived;
+};
+
+export const getProgressPercentForTable = (
+  order: ProductionOrder,
+  nodes: ProgressNode[],
+) => {
+  const raw = Number((order as any)?.productionProgress);
+  const direct = clampPercent(Number.isFinite(raw) ? raw : 0);
+  if (direct > 0) return direct;
+
+  const cp = String((order as any)?.currentProcessName || '').trim();
+  if (cp && Array.isArray(nodes) && nodes.length) {
+    const idx = nodes.findIndex((n) => String(n?.name || '').trim() === cp);
+    if (idx >= 0) {
+      return clampPercent(getProgressFromNodeIndex(nodes, idx));
+    }
+  }
+
+  const rate = clampPercent(Number((order as any)?.materialArrivalRate) || 0);
+  const base = 5 + Math.round((15 * rate) / 100);
+  return clampPercent(base);
+};
+
+export const getQuotationUnitPriceForOrder = (order: ProductionOrder) => {
+  const v = Number((order as any)?.quotationUnitPrice);
+  if (Number.isFinite(v) && v > 0) {
+    return v;
+  }
+  return 0;
+};
+
+export const getCloseMinRequired = (cuttingQuantity: number) => {
+  const cq = Number(cuttingQuantity ?? 0);
+  if (!Number.isFinite(cq) || cq <= 0) return 0;
+  return Math.ceil(cq * 0.9);
+};
+
+export const getCurrentWorkflowNodeForOrder = (
+  order: ProductionOrder | null,
+  progressNodesByStyleNo: Record<string, ProgressNode[]>,
+  nodes: ProgressNode[],
+  fallbackNodes: ProgressNode[],
+): ProgressNode => {
+  const ns = stripWarehousingNode(resolveNodesForOrder(order, progressNodesByStyleNo, nodes));
+  const progress = Number(order?.productionProgress) || 0;
+  const idx = getNodeIndexFromProgress(ns, progress);
+  let picked: ProgressNode | undefined = ns[idx] || ns[0];
+  if (!picked || !String(picked?.name || '').trim()) {
+    picked = ns.find((n) => String(n?.name || '').trim()) || fallbackNodes.find((n) => String(n?.name || '').trim());
+  }
+  if (!picked) {
+    return { id: '', name: '', unitPrice: 0 } as ProgressNode;
+  }
+  return picked;
+};
+
+export const calcCuttingTotalQty = (
+  order: ProductionOrder | null,
+  cuttingBundles: CuttingBundle[],
+): number => {
+  const oid = String(order?.id || '').trim();
+  const ono = String(order?.orderNo || '').trim();
+  const bundlesForOrder = (cuttingBundles || []).filter(
+    (b) => String((b as any)?.productionOrderId || '').trim() === oid || String((b as any)?.productionOrderNo || '').trim() === ono
+  );
+  return bundlesForOrder.reduce((s, b) => s + (Number((b as any)?.quantity) || 0), 0);
+};
+
 /**
  * 根据节点索引获取对应的进度百分比
  * @param nodes 节点列表
@@ -282,4 +363,151 @@ export const parseProgressNodes = (raw: string): ProgressNode[] => {
     // 忽略错误
     return [];
   }
+};
+
+export const parseWorkflowNodesFromOrder = (order: ProductionOrder | null): ProgressNode[] => {
+  const raw = String((order as Record<string, unknown>)?.progressWorkflowJson ?? '').trim();
+  if (!raw) return [];
+  return parseProgressNodes(raw);
+};
+
+export const resolveNodesForOrder = (
+  order: ProductionOrder | null,
+  progressNodesByStyleNo: Record<string, ProgressNode[]>,
+  fallbackNodes: ProgressNode[],
+): ProgressNode[] => {
+  const orderNodes = parseWorkflowNodesFromOrder(order);
+  if (orderNodes.length) {
+    const styleNo = String((order as Record<string, unknown>)?.styleNo || '').trim();
+    const styleNodes = styleNo && progressNodesByStyleNo[styleNo] ? progressNodesByStyleNo[styleNo] : [];
+    if (styleNodes.length > 0) {
+      const hasAnyPrice = orderNodes.some(n => (Number(n.unitPrice) || 0) > 0);
+      if (!hasAnyPrice) {
+        const priceMap = new Map<string, number>();
+        styleNodes.forEach(sn => {
+          const price = Number(sn.unitPrice) || 0;
+          if (price > 0) {
+            priceMap.set(sn.name, price);
+          }
+        });
+        return orderNodes.map(n => ({
+          ...n,
+          unitPrice: priceMap.get(n.name) ?? (Number(n.unitPrice) || 0)
+        }));
+      }
+    }
+    return orderNodes;
+  }
+  const sn = String((order as Record<string, unknown>)?.styleNo || '').trim();
+  if (sn && progressNodesByStyleNo[sn]?.length) {
+    return progressNodesByStyleNo[sn].filter(n => (Number(n.unitPrice) || 0) > 0);
+  }
+  return fallbackNodes?.length ? fallbackNodes : defaultNodes;
+};
+
+export const resolveNodesForListOrder = (
+  order: ProductionOrder | null,
+  progressNodesByStyleNo: Record<string, ProgressNode[]>,
+  fallbackNodes: ProgressNode[],
+): ProgressNode[] => {
+  const orderNodes = parseWorkflowNodesFromOrder(order);
+  if (orderNodes.length) {
+    return orderNodes;
+  }
+  const sn = String((order as Record<string, unknown>)?.styleNo || '').trim();
+  if (sn && progressNodesByStyleNo[sn]?.length) {
+    return progressNodesByStyleNo[sn];
+  }
+  return fallbackNodes?.length ? fallbackNodes : defaultNodes;
+};
+
+export const getProcessesByNodeFromOrder = (
+  order: ProductionOrder | null,
+): Record<string, { name: string; unitPrice?: number }[]> => {
+  const raw = String((order as Record<string, unknown>)?.progressWorkflowJson ?? '').trim();
+  if (!raw) return {};
+  try {
+    const obj = JSON.parse(raw);
+    const nodes = Array.isArray(obj?.nodes) ? obj.nodes : [];
+    const byNode: Record<string, { name: string; unitPrice?: number }[]> = {};
+    if (nodes.length && nodes[0]?.name) {
+      for (const item of nodes) {
+        const n = String(item?.name || item?.processName || '').trim();
+        const stage = String(item?.progressStage || n).trim();
+        const price = Number(item?.unitPrice) || 0;
+        if (!byNode[stage]) byNode[stage] = [];
+        byNode[stage].push({ name: n, unitPrice: price });
+      }
+      return byNode;
+    }
+    const processesByNode = obj?.processesByNode || {};
+    const result: Record<string, { name: string; unitPrice?: number }[]> = {};
+    for (const k of Object.keys(processesByNode || {})) {
+      const arr = Array.isArray(processesByNode[k]) ? processesByNode[k] : [];
+      result[k] = arr
+        .map((p: any) => ({ name: String(p?.name || p?.processName || '').trim(), unitPrice: Number(p?.unitPrice) || 0 }))
+        .filter((x) => x.name);
+    }
+    return result;
+  } catch {
+    return {};
+  }
+};
+
+/**
+ * 基于菲号完成情况计算进度
+ * @param order 生产订单
+ * @param cuttingBundles 裁剪捆包列表
+ * @param scanHistory 扫码历史记录
+ * @param nodes 节点列表
+ * @returns 计算后的进度百分比
+ */
+export const calculateProgressFromBundles = (
+  order: ProductionOrder,
+  cuttingBundles: CuttingBundle[],
+  scanHistory: ScanRecord[],
+  nodes?: ProgressNode[],
+): number => {
+  const oid = String(order?.id || '').trim();
+  const ono = String(order?.orderNo || '').trim();
+  const bundlesForOrder = (cuttingBundles || []).filter(
+    (b) => String(b?.productionOrderId || '').trim() === oid || String(b?.productionOrderNo || '').trim() === ono
+  );
+  if (!bundlesForOrder.length) {
+    return Number(order.productionProgress) || 0;
+  }
+
+  const effectiveNodes = stripWarehousingNode(Array.isArray(nodes) && nodes.length ? nodes : defaultNodes);
+  if (effectiveNodes.length <= 1) {
+    return Number(order.productionProgress) || 0;
+  }
+
+  const nodeCompletion = effectiveNodes.map((node) => {
+    const nodeName = node.name;
+    const totalQtyForNode = bundlesForOrder.reduce((acc, bundle) => acc + (Number(bundle?.quantity) || 0), 0);
+
+    const doneQtyForNode = scanHistory
+      .filter((r) => String(r?.scanResult || '').trim() === 'success')
+      .filter((r) => String(r?.scanType || '').trim() === 'production')
+      .filter((r) => stageNameMatches(nodeName, getRecordStageName(r)))
+      .reduce((acc, r) => acc + (Number(r?.quantity) || 0), 0);
+
+    const completionRate = totalQtyForNode > 0 ? doneQtyForNode / totalQtyForNode : 0;
+    return { nodeName, completionRate };
+  });
+
+  let totalProgress = 0;
+  const nodeWeight = 100 / effectiveNodes.length;
+
+  for (let i = 0; i < nodeCompletion.length; i++) {
+    const { completionRate } = nodeCompletion[i];
+    if (completionRate >= 0.98) {
+      totalProgress += nodeWeight;
+    } else {
+      totalProgress += nodeWeight * completionRate;
+      break;
+    }
+  }
+
+  return clampPercent(totalProgress);
 };

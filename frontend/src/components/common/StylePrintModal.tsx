@@ -8,8 +8,7 @@ import { Checkbox, Button, Space, Spin, Table, Tag, message, QRCode, Image } fro
 import { PrinterOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
-import { safePrint } from '@/utils/safePrint';
-import ResizableModal from './ResizableModal';
+import StandardModal from '@/components/common/StandardModal';
 
 // 打印选项类型
 export interface PrintOptions {
@@ -97,10 +96,8 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
     productionSheet: null,
   });
 
-  // 加载打印数据
   useEffect(() => {
     if (!visible || !styleId) return;
-
     const loadData = async () => {
       setLoading(true);
       try {
@@ -184,13 +181,6 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
     const printContent = document.getElementById('style-print-content');
     if (!printContent) {
       message.error('无法获取打印内容');
-      return;
-    }
-
-    // 创建新窗口并打印
-    const printWindow = window.open('', '_blank', 'width=800,height=600');
-    if (!printWindow) {
-      message.error('无法打开打印窗口，请检查浏览器弹窗设置');
       return;
     }
 
@@ -365,23 +355,53 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
           <span class="print-header-left">${headerInfo}</span>
           <span class="print-header-right">${printerInfo}  |  打印时间: ${printDate}</span>
         </div>
-
-        <!-- 固定页脚 -->
-        <div class="print-footer">
-          服装供应链管理系统
-        </div>
-
-        <!-- 打印内容 -->
+        <!-- 内容区域 -->
         <div class="print-body">
           ${printContent.innerHTML}
+        </div>
+        <!-- 固定页脚 -->
+        <div class="print-footer">
+          打印预览 - ${styleNo}
         </div>
       </body>
       </html>
     `;
 
-    const success = safePrint(htmlContent, `打印预览 - ${styleNo}`);
-    if (!success) {
-      message.error('无法打开打印窗口，请检查浏览器弹窗设置');
+    // 使用隐藏 iframe 打印，避免打开新窗口
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.style.opacity = '0';
+    iframe.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(iframe);
+
+    const printDoc = iframe.contentWindow?.document;
+    if (!printDoc) {
+      iframe.remove();
+      message.error('打印失败，请检查浏览器设置');
+      return;
+    }
+
+    printDoc.open();
+    printDoc.write(htmlContent);
+    printDoc.close();
+
+    const triggerPrint = () => {
+      const win = iframe.contentWindow;
+      if (!win) return;
+      win.focus();
+      win.print();
+      setTimeout(() => iframe.remove(), 1000);
+    };
+
+    if (iframe.contentWindow?.document?.readyState === 'complete') {
+      triggerPrint();
+    } else {
+      iframe.onload = triggerPrint;
     }
   };
 
@@ -404,12 +424,11 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
   });
 
   return (
-    <ResizableModal
+    <StandardModal
       title={`打印预览 - ${styleNo}`}
       open={visible}
       onCancel={onClose}
-      width="60vw"
-      initialHeight={600}
+      size="lg"
       footer={
         <Space>
           <Button onClick={onClose}>取消</Button>
@@ -812,7 +831,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
           </div>
         )}
       </Spin>
-    </ResizableModal>
+    </StandardModal>
   );
 };
 

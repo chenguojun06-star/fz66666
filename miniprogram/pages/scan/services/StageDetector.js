@@ -333,7 +333,7 @@ class StageDetector {
       const sewingProcessList = this._extractSewingProcesses(orderDetail);
 
       // 🔍 调试：打印关键参数
-      // console.log('[StageDetector] detectByBundle 关键参数:', {
+      console.log('[StageDetector] detectByBundle 关键参数:', {
         scanCount: scanCount,
         sewingProcessList: sewingProcessList,
         isLegacyConfig: sewingProcessList.length === 1 && sewingProcessList[0] === '车缝',
@@ -473,11 +473,13 @@ class StageDetector {
         return !isSystemGenerated && isValidScan;
       });
 
-      // console.log('[StageDetector] 扫码历史统计:', {
+      /*
+      console.log('[StageDetector] 扫码历史统计:', {
         总记录数: allRecords.length,
         手动扫码数: manualRecords.length,
         系统记录数: allRecords.length - manualRecords.length,
       });
+      */
 
       return manualRecords;
     } catch (e) {
@@ -514,12 +516,14 @@ class StageDetector {
           stage === '车缝' || stage === 'è½¦ç¼' || name === '车缝' || name === 'è½¦ç¼';
 
         const match = isSewing;
-        // console.log('[StageDetector] 节点筛选:', {
+        /*
+        console.log('[StageDetector] 节点筛选:', {
           name: node.name,
           progressStage: node.progressStage,
           sortOrder: node.sortOrder,
           match: match,
         });
+        */
         return match;
       })
       .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))

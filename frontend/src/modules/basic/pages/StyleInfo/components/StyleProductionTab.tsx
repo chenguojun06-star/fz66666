@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
-import { Button, Input, Space, Tag, message } from 'antd';
+import React from 'react';
+import { Button, Input, Space, Table, Tag, message } from 'antd';
 import api from '@/utils/api';
 import { buildProductionSheetHtml } from '../../DataCenter';
 import { formatDateTime } from '@/utils/datetime';
 import { safePrint } from '@/utils/safePrint';
 
-const { TextArea } = Input;
 
 interface Props {
   styleId: string | number;
+  styleNo?: string;
   productionReqRows: string[];
   productionReqRowCount: number;
   productionReqLocked: boolean;
@@ -27,9 +27,10 @@ interface Props {
 
 const StyleProductionTab: React.FC<Props> = ({
   styleId,
+  styleNo,
   productionReqRows,
   productionReqRowCount,
-  productionReqLocked,
+  productionReqLocked: _productionReqLocked,
   productionReqEditable,
   productionReqSaving,
   productionReqRollbackSaving,
@@ -105,8 +106,39 @@ const StyleProductionTab: React.FC<Props> = ({
     }
   };
 
+  const tableData = Array.from({ length: Math.max(1, Number(productionReqRowCount) || 15) }).map((_, idx) => ({
+    key: idx + 1,
+    index: idx + 1,
+    value: productionReqRows[idx] || '',
+  }));
+
+  const columns = [
+    {
+      title: '序号',
+      dataIndex: 'index',
+      key: 'index',
+      width: 80,
+      align: 'center' as const,
+    },
+    {
+      title: '生产要求',
+      dataIndex: 'value',
+      key: 'value',
+      render: (_: string, record: { index: number; value: string }) => (
+        <Input
+          value={record.value}
+          onChange={(e) => onProductionReqChange(record.index - 1, e.target.value)}
+          placeholder="请输入生产要求"
+        />
+      ),
+    },
+  ];
+
   return (
     <div data-production-req>
+      <div style={{ marginBottom: 8, color: '#666', fontSize: 12 }}>
+        款号：<span style={{ color: '#333', fontWeight: 500 }}>{styleNo || '-'}</span>
+      </div>
       {/* 状态栏 */}
       <div style={{
         marginBottom: 16,
@@ -138,6 +170,14 @@ const StyleProductionTab: React.FC<Props> = ({
           <Button size="small" onClick={printWorkorder}>
             打印制单
           </Button>
+          <Button
+            size="small"
+            onClick={onProductionReqRollback}
+            loading={Boolean(productionReqRollbackSaving)}
+            disabled={!productionReqCanRollback}
+          >
+            退回编辑
+          </Button>
           <Button size="small" onClick={onProductionReqReset} disabled={Boolean(productionReqSaving)}>
             取消
           </Button>
@@ -149,25 +189,13 @@ const StyleProductionTab: React.FC<Props> = ({
           💡 提示：相关文件请在"文件管理"标签页统一上传
         </div>
       </div>
-
-      <TextArea
-        value={productionReqRows.join('\n')}
-        onChange={(e) => {
-          const lines = e.target.value.split('\n');
-          const maxLines = Math.max(lines.length, productionReqRowCount || 15);
-          // 确保数组长度足够
-          for (let i = 0; i < maxLines; i++) {
-            const line = i < lines.length ? lines[i] : '';
-            onProductionReqChange?.(i, line);
-          }
-        }}
-        placeholder="请输入生产要求，每行一条&#10;例如：&#10;1. 面料要求...&#10;2. 工艺要求...&#10;3. 包装要求..."
-        rows={20}
-        style={{
-          fontSize: '14px',
-          lineHeight: '1.8',
-          fontFamily: 'monospace'
-        }}
+      <Table
+        size="small"
+        bordered
+        pagination={false}
+        columns={columns}
+        dataSource={tableData}
+        style={{ marginTop: 8 }}
       />
     </div>
   );

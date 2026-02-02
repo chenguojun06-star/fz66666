@@ -55,8 +55,11 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
                 .eq(SampleStock::getColor, stock.getColor())
                 .eq(SampleStock::getSize, stock.getSize())
                 .eq(SampleStock::getSampleType, stock.getSampleType());
-        
+
         SampleStock exist = this.getOne(query);
+        if (exist != null && !StringUtils.hasText(stock.getRemark())) {
+            throw new IllegalArgumentException("重复入库需填写备注原因");
+        }
         if (exist != null) {
             // Update quantity
             baseMapper.updateStockQuantity(exist.getId(), stock.getQuantity());
@@ -80,16 +83,16 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
         if (stock == null) {
             throw new IllegalArgumentException("样衣库存不存在");
         }
-        
+
         int loanQty = loan.getQuantity() == null ? 1 : loan.getQuantity();
         if (loanQty <= 0) {
              throw new IllegalArgumentException("借出数量必须大于0");
         }
-        
+
         // Check available stock
-        int available = (stock.getQuantity() == null ? 0 : stock.getQuantity()) - 
+        int available = (stock.getQuantity() == null ? 0 : stock.getQuantity()) -
                         (stock.getLoanedQuantity() == null ? 0 : stock.getLoanedQuantity());
-        
+
         if (available < loanQty) {
             throw new IllegalStateException("可用库存不足，无法借出");
         }
@@ -123,7 +126,7 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
         }
 
         // Update loan status
-        // For simplicity, we assume full return or mark as returned. 
+        // For simplicity, we assume full return or mark as returned.
         // If partial return is needed, we might need split logic or just update status if qty matches.
         // Here assuming full return or final return for this record.
         loan.setStatus("returned");

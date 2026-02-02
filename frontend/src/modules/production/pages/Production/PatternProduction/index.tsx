@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Button, Space, Input, message, Row, Col, Modal, Form, InputNumber, Tag, Dropdown } from 'antd';
 import type { MenuProps } from 'antd';
-import { PlusOutlined, SearchOutlined, AppstoreOutlined, UnorderedListOutlined, EyeOutlined, CheckCircleOutlined, ClockCircleOutlined, SyncOutlined, UserOutlined, PrinterOutlined } from '@ant-design/icons';
+import { PlusOutlined, AppstoreOutlined, UnorderedListOutlined, EyeOutlined, CheckCircleOutlined, ClockCircleOutlined, SyncOutlined, UserOutlined, PrinterOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import Layout from '@/components/Layout';
+import StandardSearchBar from '@/components/common/StandardSearchBar';
+import StandardToolbar from '@/components/common/StandardToolbar';
+import StandardModal from '@/components/common/StandardModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import LiquidProgressLottie from '@/components/common/LiquidProgressLottie';
 import NodeDetailModal from '@/components/common/NodeDetailModal';
@@ -15,6 +18,7 @@ import api from '@/utils/api';
 import { useModal } from '@/hooks';
 import { formatDateTime } from '@/utils/datetime';
 import './style.css';
+import type { Dayjs } from 'dayjs';
 
 interface ProgressNode {
   id: string;
@@ -24,6 +28,7 @@ interface ProgressNode {
 
 interface PatternProductionRecord {
   id: string;
+  styleId?: string;
   styleNo: string;
   color: string;
   sizes?: string[]; // 码数列表
@@ -92,6 +97,8 @@ const PatternProduction: React.FC = () => {
   const [dataSource, setDataSource] = useState<PatternProductionRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
+  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
+  const [statusValue, setStatusValue] = useState('');
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
   const [operationLogVisible, setOperationLogVisible] = useState(false);
 
@@ -116,7 +123,7 @@ const PatternProduction: React.FC = () => {
   const [nodeDetailName, setNodeDetailName] = useState<string>('');
   const [nodeDetailStats, setNodeDetailStats] = useState<{ done: number; total: number; percent: number; remaining: number } | undefined>(undefined);
   const [nodeDetailUnitPrice, setNodeDetailUnitPrice] = useState<number | undefined>(undefined);
-  const [nodeDetailProcessList, setNodeDetailProcessList] = useState<{ name: string; unitPrice?: number }[]>([]);
+  const [nodeDetailProcessList, setNodeDetailProcessList] = useState<{ id?: string; processCode?: string; code?: string; name: string; unitPrice?: number }[]>([]);
   const [nodeDetailExtraData, setNodeDetailExtraData] = useState<any>(undefined);
 
   // 打开节点详情弹窗
@@ -126,7 +133,7 @@ const PatternProduction: React.FC = () => {
     nodeName: string,
     stats: { done: number; total: number; percent: number; remaining: number },
     unitPrice?: number,
-    processList?: { name: string; unitPrice?: number }[],
+    processList?: { id?: string; processCode?: string; code?: string; name: string; unitPrice?: number }[],
     extraData?: any
   ) => {
     setNodeDetailRecord(record);
@@ -226,6 +233,7 @@ const PatternProduction: React.FC = () => {
 
         return {
           id: item.id,
+          styleId: item.styleId,
           styleNo: item.styleNo || '-',
           color: item.color || '',
           sizes: item.sizes || [], // 从后端获取码数
@@ -553,7 +561,12 @@ const PatternProduction: React.FC = () => {
                 onClick={() => {
                   // 获取该节点下的工序明细列表
                   const processDetails = record.processDetails || {};
-                  const nodeProcessList = processDetails[node.name] || [];
+                  const nodeProcessList = (processDetails[node.name] || []).map((item: any) => ({
+                    ...item,
+                    id: String(item?.id || item?.processCode || item?.code || '').trim() || undefined,
+                    processCode: String(item?.processCode || item?.code || item?.id || '').trim() || undefined,
+                    name: String(item?.name || item?.processName || '').trim(),
+                  }));
 
                   // 传递额外数据：时间信息 + 采购进度（如果是采购节点）
                   const extraData: any = {
@@ -726,17 +739,16 @@ const PatternProduction: React.FC = () => {
         ].filter(Boolean) as MenuProps['items'];
 
         return (
-          <Space size={4}>
+          <Space size={4} className="table-action-compact">
             <Button
               size="small"
               onClick={() => handleOpenDetail(record)}
-              style={{ fontSize: '12px', padding: '0 8px', height: '24px' }}
             >
               查看
             </Button>
             {menuItems.length > 0 && (
               <Dropdown menu={{ items: menuItems }} trigger={['click']}>
-                <Button size="small" style={{ fontSize: '12px', padding: '0 8px', height: '24px' }}>
+                <Button size="small">
                   更多
                 </Button>
               </Dropdown>
@@ -754,27 +766,36 @@ const PatternProduction: React.FC = () => {
           {/* 页面标题和操作区 */}
           <div className="page-header">
             <h2 className="page-title">样板生产</h2>
-            <Space wrap>
-              <Button
-                icon={viewMode === 'list' ? <AppstoreOutlined /> : <UnorderedListOutlined />}
-                onClick={() => setViewMode(viewMode === 'list' ? 'card' : 'list')}
-              >
-                {viewMode === 'list' ? '卡片视图' : '列表视图'}
-              </Button>
-              <Button type="primary" icon={<PlusOutlined />}>
-                新增样板
-              </Button>
-            </Space>
           </div>
 
           {/* 筛选区 */}
           <Card size="small" className="filter-card mb-sm">
-            <Input
-              placeholder="搜索款号或颜色"
-              prefix={<SearchOutlined />}
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              style={{ width: 200 }}
+            <StandardToolbar
+              left={(
+                <StandardSearchBar
+                  searchValue={searchText}
+                  onSearchChange={setSearchText}
+                  searchPlaceholder="搜索款号或颜色"
+                  dateValue={dateRange}
+                  onDateChange={setDateRange}
+                  statusValue={statusValue}
+                  onStatusChange={setStatusValue}
+                  statusOptions={[]}
+                />
+              )}
+              right={(
+                <>
+                  <Button
+                    icon={viewMode === 'list' ? <AppstoreOutlined /> : <UnorderedListOutlined />}
+                    onClick={() => setViewMode(viewMode === 'list' ? 'card' : 'list')}
+                  >
+                    {viewMode === 'list' ? '卡片视图' : '列表视图'}
+                  </Button>
+                  <Button type="primary" icon={<PlusOutlined />}>
+                    新增样板
+                  </Button>
+                </>
+              )}
             />
           </Card>
 
@@ -868,7 +889,7 @@ const PatternProduction: React.FC = () => {
         </Card>
 
         {/* 工序进度更新对话框 */}
-        <Modal
+        <StandardModal
           title="更新工序进度"
           open={progressModal.visible}
           onOk={handleUpdateProgress}
@@ -876,9 +897,9 @@ const PatternProduction: React.FC = () => {
             progressModal.close();
             form.resetFields();
           }}
-          width={600}
           okText="保存"
           cancelText="取消"
+          size="sm"
         >
           {progressModal.data && (
             <div style={{ marginBottom: 16 }}>
@@ -913,10 +934,10 @@ const PatternProduction: React.FC = () => {
               </Form.Item>
             ))}
           </Form>
-        </Modal>
+        </StandardModal>
 
         {/* 操作历史弹窗 */}
-        <Modal
+        <StandardModal
           title={
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <ClockCircleOutlined style={{ color: '#1890ff' }} />
@@ -930,7 +951,7 @@ const PatternProduction: React.FC = () => {
               关闭
             </Button>
           ]}
-          width={800}
+          size="md"
         >
           {operationLogs.length === 0 ? (
             <div style={{
@@ -973,10 +994,10 @@ const PatternProduction: React.FC = () => {
               ))}
             </div>
           )}
-        </Modal>
+        </StandardModal>
 
         {/* 查看详情弹窗 */}
-        <Modal
+        <StandardModal
           title={
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <EyeOutlined style={{ color: '#1890ff' }} />
@@ -990,7 +1011,7 @@ const PatternProduction: React.FC = () => {
               关闭
             </Button>
           ]}
-          width="40vw"
+          size="lg"
         >
           {detailModal.data && (
             <div style={{ fontSize: 12 }}>
@@ -1114,7 +1135,7 @@ const PatternProduction: React.FC = () => {
               </div>
             </div>
           )}
-        </Modal>
+        </StandardModal>
 
         {/* 节点详情弹窗 - 水晶球生产节点看板 */}
         <NodeDetailModal
@@ -1156,6 +1177,7 @@ const PatternProduction: React.FC = () => {
         <StylePrintModal
           visible={printModal.visible}
           onClose={printModal.close}
+          styleId={printModal.data?.styleId}
           styleNo={printModal.data?.styleNo}
           color={printModal.data?.color}
           quantity={printModal.data?.quantity}

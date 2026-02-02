@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { App, Avatar, Badge, Button, Dropdown, Layout as AntLayout, Menu, Popover } from 'antd';
 import { BellOutlined, CloseOutlined, DownOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined, SettingOutlined } from '@ant-design/icons';
 import { isAdminUser as isAdminUserFn, useAuth } from '../../utils/AuthContext';
-import { menuConfig, resolvePermissionCode } from '../../routeConfig';
+import { menuConfig, resolvePermissionCode, paths } from '../../routeConfig';
 import { useViewport } from '../../utils/useViewport';
 import api, { ApiResult } from '../../utils/api';
 import './styles.css';
@@ -436,6 +436,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                               navigate(`/production/warehousing?orderNo=${event.orderNo}`);
                             } else if (event.type === 'approval') {
                               navigate(`/finance/payment-approval?orderNo=${event.orderNo}`);
+                            } else if (event.type === 'material') {
+                              navigate(paths.materialInventory);
                             }
                           }}
                         >

@@ -15,6 +15,7 @@ interface ProcessDetailModalProps {
   activeTab: string;
   onTabChange: (key: string) => void;
   delegationContent?: React.ReactNode; // 工序委派Tab内容（从父组件传入）
+  scanRecordContent?: React.ReactNode; // 操作历史Tab内容（从父组件传入）
 }
 
 const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
@@ -27,6 +28,7 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
   activeTab,
   onTabChange,
   delegationContent,
+  scanRecordContent,
 }) => {
   const navigate = useNavigate();
 
@@ -146,8 +148,8 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: '12px',
-          marginBottom: '12px'
+          gap: '8px',
+          marginBottom: '8px'
         }}>
           {[
             { label: '合格入库', value: qualifiedQty, color: '#059669', percent: qualifiedRate },
@@ -161,20 +163,20 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
                 background: '#ffffff',
                 border: '1px solid #e5e7eb',
                 borderRadius: '6px',
-                padding: '12px',
+                padding: '6px',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '6px',
+                gap: '4px',
               }}
             >
-              <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: 500 }}>
+              <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500 }}>
                 {item.label}
               </span>
-              <span style={{ fontSize: '24px', fontWeight: 700, color: item.color }}>
+              <span style={{ fontSize: '18px', fontWeight: 700, color: item.color }}>
                 {item.value}
               </span>
               {item.percent !== undefined && (
-                <span style={{ fontSize: '11px', color: '#9ca3af' }}>
+                <span style={{ fontSize: '10px', color: '#9ca3af' }}>
                   占比 {item.percent}%
                 </span>
               )}
@@ -673,6 +675,7 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
       open={visible}
       onCancel={onClose}
       footer={null}
+      className="process-detail-modal"
       width="60vw"
       initialHeight={580}
     >
@@ -689,6 +692,11 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
             key: 'delegation',
             label: '工序委派',
             children: delegationContent,
+          }] : []),
+          ...(scanRecordContent ? [{
+            key: 'scanRecords',
+            label: '操作历史',
+            children: scanRecordContent,
           }] : []),
         ]}
       />

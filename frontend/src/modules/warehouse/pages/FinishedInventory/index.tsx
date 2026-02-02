@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Table, Button, Space, Input, Tag, Select, Image, Statistic, Row, Col, Modal, Form, InputNumber, Checkbox, App } from 'antd';
-import { PlusOutlined, SearchOutlined, DownloadOutlined, ExportOutlined, HistoryOutlined } from '@ant-design/icons';
+import { Card, Table, Button, Space, Tag, Select, Image, Statistic, Row, Col, Form, InputNumber, Checkbox, App } from 'antd';
+import { PlusOutlined, DownloadOutlined, ExportOutlined, HistoryOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import Layout from '@/components/Layout';
+import StandardModal from '@/components/common/StandardModal';
+import StandardSearchBar from '@/components/common/StandardSearchBar';
+import StandardToolbar from '@/components/common/StandardToolbar';
 import { useModal, useTablePagination } from '@/hooks';
+import type { Dayjs } from 'dayjs';
 
 const { Option } = Select;
 
@@ -44,6 +48,8 @@ const _FinishedInventory: React.FC = () => {
   const { message, modal } = App.useApp();
   const [dataSource, setDataSource] = useState<FinishedInventory[]>([]);
   const [searchText, setSearchText] = useState('');
+  const [statusValue, setStatusValue] = useState('');
+  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
 
   // ===== 使用 useTablePagination 管理分页 =====
   const pagination = useTablePagination(20);
@@ -351,7 +357,7 @@ const _FinishedInventory: React.FC = () => {
       width: 150,
       fixed: 'right',
       render: (_, record) => (
-        <Space size="small" orientation="vertical">
+        <Space size="small" orientation="vertical" className="table-action-compact">
           <Button
             type="primary"
             size="small"
@@ -472,40 +478,39 @@ const _FinishedInventory: React.FC = () => {
         </Row>
 
         <Card>
-          <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+          <div style={{ marginBottom: 16 }}>
             <h2 style={{ margin: 0 }}>📦 成品进销存</h2>
-            <Space>
-              <Button icon={<DownloadOutlined />}>导出</Button>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => {
-                if (dataSource.length > 0) {
-                  handleOutbound(dataSource[0]);
-                } else {
-                  message.info('暂无库存数据');
-                }
-              }}>出库</Button>
-            </Space>
           </div>
 
-          <Space style={{ marginBottom: 16 }} wrap>
-            <Input
-              placeholder="搜索订单号/款号/SKU"
-              prefix={<SearchOutlined />}
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              style={{ width: 250 }}
-              allowClear
-            />
-            <Select placeholder="颜色" style={{ width: 120 }} allowClear>
-              <Option value="白色">白色</Option>
-              <Option value="黑色">黑色</Option>
-            </Select>
-            <Select placeholder="尺码" style={{ width: 120 }} allowClear>
-              <Option value="M">M</Option>
-              <Option value="L">L</Option>
-              <Option value="XL">XL</Option>
-            </Select>
-            <Button type="primary" icon={<SearchOutlined />}>查询</Button>
-          </Space>
+          <StandardToolbar
+            left={(
+              <StandardSearchBar
+                searchValue={searchText}
+                onSearchChange={setSearchText}
+                searchPlaceholder="搜索订单号/款号/SKU"
+                dateValue={dateRange}
+                onDateChange={setDateRange}
+                statusValue={statusValue}
+                onStatusChange={setStatusValue}
+                statusOptions={[
+                  { label: '可用库存', value: 'available' },
+                  { label: '次品库存', value: 'defect' },
+                ]}
+              />
+            )}
+            right={(
+              <>
+                <Button icon={<DownloadOutlined />}>导出</Button>
+                <Button type="primary" icon={<PlusOutlined />} onClick={() => {
+                  if (dataSource.length > 0) {
+                    handleOutbound(dataSource[0]);
+                  } else {
+                    message.info('暂无库存数据');
+                  }
+                }}>出库</Button>
+              </>
+            )}
+          />
 
           <Table
             columns={columns}
@@ -517,7 +522,7 @@ const _FinishedInventory: React.FC = () => {
         </Card>
 
         {/* 出库模态框 */}
-        <Modal
+        <StandardModal
           title={
             <Space>
               <ExportOutlined style={{ color: '#1890ff' }} />
@@ -530,7 +535,7 @@ const _FinishedInventory: React.FC = () => {
             setSkuDetails([]);
           }}
           onOk={handleOutboundConfirm}
-          width={1200}
+          size="lg"
           okText="确认出库"
           cancelText="取消"
         >
@@ -616,10 +621,10 @@ const _FinishedInventory: React.FC = () => {
               </div>
             </Space>
           )}
-        </Modal>
+        </StandardModal>
 
         {/* 入库记录模态框 */}
-        <Modal
+        <StandardModal
           title={
             <Space>
               <HistoryOutlined />
@@ -628,7 +633,7 @@ const _FinishedInventory: React.FC = () => {
           }
           open={inboundHistoryModal.visible}
           onCancel={inboundHistoryModal.close}
-          width={900}
+          size="md"
           footer={[
             <Button key="close" onClick={inboundHistoryModal.close}>
               关闭
@@ -724,7 +729,7 @@ const _FinishedInventory: React.FC = () => {
               </Card>
             </Space>
           )}
-        </Modal>
+        </StandardModal>
       </div>
     </Layout>
   );

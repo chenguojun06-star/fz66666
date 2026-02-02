@@ -100,6 +100,7 @@ public class ProductionOrderQueryService {
         String orderNo = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "orderNo"));
         String styleNo = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "styleNo"));
         String factoryName = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "factoryName"));
+        String keyword = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "keyword"));
         String status = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "status"));
         String currentProcessName = ParamUtils
                 .toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "currentProcessName"));
@@ -108,6 +109,12 @@ public class ProductionOrderQueryService {
         wrapper.eq(StringUtils.hasText(orderNo), "order_no", orderNo)
                 .like(StringUtils.hasText(styleNo), "style_no", styleNo)
                 .like(StringUtils.hasText(factoryName), "factory_name", factoryName)
+            .and(StringUtils.hasText(keyword), w -> w
+                .like("order_no", keyword)
+                .or()
+                .like("style_no", keyword)
+                .or()
+                .like("factory_name", keyword))
                 .eq(StringUtils.hasText(status), "status", status)
                 .eq("delete_flag", 0);
 

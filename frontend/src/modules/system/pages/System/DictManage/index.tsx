@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { App, Button, Card, Col, Form, Input, Modal, Row, Select, Space, Table, Tag } from 'antd';
+import { App, Button, Card, Col, Form, Input, Row, Select, Space, Table, Tag } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
+import StandardModal from '@/components/common/StandardModal';
 import api from '@/utils/api';
 import { useModal } from '@/hooks';
 import type { ColumnsType } from 'antd/es/table';
@@ -403,13 +404,13 @@ const DictManage: React.FC = () => {
         }}
       />
 
-      <Modal
+      <StandardModal
         title={dictModal.data ? '编辑字典项' : '新建字典项'}
         open={dictModal.visible}
         onCancel={dictModal.close}
         onOk={handleSave}
-        width={600}
         destroyOnHidden
+        size="sm"
       >
         <Form form={form} layout="vertical" style={{ marginTop: 24 }}>
           <Form.Item
@@ -459,7 +460,7 @@ const DictManage: React.FC = () => {
             <Input.TextArea rows={3} placeholder="请输入备注信息" />
           </Form.Item>
         </Form>
-      </Modal>
+      </StandardModal>
     </Card>
     </Layout>
   );

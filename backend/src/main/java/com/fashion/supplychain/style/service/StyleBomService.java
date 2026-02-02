@@ -22,6 +22,11 @@ public interface StyleBomService extends IService<StyleBom> {
     List<StyleBom> saveBomWithStockCheck(List<StyleBom> bomList, Integer productionQty);
 
     /**
+     * 根据物料编码列表批量查询BOM
+     */
+    List<StyleBom> listByMaterialCodes(java.util.List<String> materialCodes);
+
+    /**
      * 获取BOM库存汇总信息
      *
      * @param styleId 款号ID

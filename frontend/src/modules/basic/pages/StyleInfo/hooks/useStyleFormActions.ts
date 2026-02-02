@@ -229,7 +229,7 @@ export const useStyleFormActions = ({
   /**
    * 推送到下单管理
    */
-  const handlePushToOrder = async (priceType: string, remark?: string) => {
+  const handlePushToOrder = async (priceType: string, remark?: string, targetTypes?: string[]) => {
     if (!currentStyle?.id) {
       message.error('请先保存样衣信息');
       return false;
@@ -243,6 +243,7 @@ export const useStyleFormActions = ({
           styleId: currentStyle.id,
           priceType, // 'process' 或 'sizePrice'
           remark,
+          targetTypes: Array.isArray(targetTypes) ? targetTypes : [],
         }
       );
 

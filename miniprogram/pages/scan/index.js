@@ -732,7 +732,7 @@ Page({
       });
 
       if (DEBUG_MODE) {
-        // console.log(
+        console.log(
           '[loadMyHistory] 加载成功, 分组数:',
           groupedHistory.length,
           '总记录:',

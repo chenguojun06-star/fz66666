@@ -36,6 +36,12 @@ const production = {
   listOrders(params) {
     return ok('/api/production/order/list', 'GET', params || {});
   },
+  listOutstock(params) {
+    return ok('/api/production/outstock/list', 'GET', params || {});
+  },
+  createOutstock(payload) {
+    return ok('/api/production/outstock', 'POST', payload || {});
+  },
   /**
    * 查询订单详情（智能识别UUID或订单号）
    * @param {string} idOrOrderNo - 订单ID（UUID）或订单号
@@ -46,15 +52,15 @@ const production = {
     // UUID格式检测：32位hex或标准UUID格式
     const uuidPattern =
       /^[a-f0-9]{32}$|^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
-    const endpoint = uuidPattern.test(value)
-      ? `/api/production/order/detail/${encodeURIComponent(value)}`
-      : `/api/production/order/by-order-no/${encodeURIComponent(value)}`;
-    return ok(endpoint, 'GET', {});
+    if (uuidPattern.test(value)) {
+      return ok(`/api/production/order/detail/${encodeURIComponent(value)}`, 'GET', {});
+    }
+    return ok('/api/production/order/list', 'GET', { orderNo: value });
   },
   // 通过订单号查询订单详情（用于扫码场景）
   orderDetailByOrderNo(orderNo) {
     const on = String(orderNo || '').trim();
-    return ok(`/api/production/order/by-order-no/${encodeURIComponent(on)}`, 'GET', {});
+    return ok('/api/production/order/list', 'GET', { orderNo: on });
   },
   updateProgress(payload) {
     return ok('/api/production/order/update-progress', 'POST', payload || {});
@@ -70,7 +76,7 @@ const production = {
     return ok('/api/production/scan/list', 'GET', params || {});
   },
   myScanHistory(params) {
-    return ok('/api/production/scan/my-history', 'GET', params || {});
+    return ok('/api/production/scan/list', 'GET', { currentUser: 'true', ...(params || {}) });
   },
   personalScanStats(params) {
     return ok('/api/production/scan/personal-stats', 'GET', params || {});
@@ -87,20 +93,27 @@ const production = {
   receivePurchase(payload) {
     return ok('/api/production/purchase/receive', 'POST', payload || {});
   },
+  createPurchaseInstruction(payload) {
+    return ok('/api/production/purchase/instruction', 'POST', payload || {});
+  },
   updateArrivedQuantity(payload) {
     return ok('/api/production/purchase/update-arrived-quantity', 'POST', payload || {});
   },
   // 通过扫码获取关联的采购单
   getMaterialPurchases(params) {
-    return ok('/api/production/purchase/by-scan-code', 'GET', params || {});
+    const payload = { ...(params || {}) };
+    if (!payload.scanCode) {
+      delete payload.scanCode;
+    }
+    return ok('/api/production/purchase/list', 'GET', payload);
   },
   // 获取我的采购任务
   myProcurementTasks() {
-    return ok('/api/production/purchase/my-tasks', 'GET', {});
+    return ok('/api/production/purchase/list', 'GET', { myTasks: 'true' });
   },
   // 获取我的裁剪任务
   myCuttingTasks() {
-    return ok('/api/production/cutting-task/my-tasks', 'GET', {});
+    return ok('/api/production/cutting-task/list', 'GET', { myTasks: 'true' });
   },
   // 获取我的质检待处理任务（已领取未确认结果）
   myQualityTasks() {
@@ -112,7 +125,7 @@ const production = {
   },
   // 查询裁剪菲号信息（验证菲号是否存在，获取准确数量）
   getCuttingBundle(orderNo, bundleNo) {
-    return ok('/api/production/cutting/by-no', 'GET', { orderNo, bundleNo });
+    return ok('/api/production/cutting/list', 'GET', { orderNo, bundleNo });
   },
   // 获取订单的裁剪任务汇总（按颜色尺码分组）
   getCuttingTasks(params) {
@@ -131,6 +144,15 @@ const production = {
     // 后端接口用 orderNo 参数进行模糊匹配
     return ok('/api/production/cutting-task/list', 'GET', { orderNo: orderIdOrNo, pageSize: 1 });
   },
+  // 获取样板生产详情
+  getPatternDetail(patternId) {
+    const id = String(patternId || '').trim();
+    return ok(`/api/production/pattern/${encodeURIComponent(id)}`, 'GET', {});
+  },
+  // 提交样板生产扫码
+  submitPatternScan(payload) {
+    return ok('/api/production/pattern/scan', 'POST', payload || {});
+  },
   /**
    * 撤销扫码记录
    * @param {Object} payload - 撤销参数
@@ -143,6 +165,30 @@ const production = {
       return resp.data;
     }
     throw createBizError(resp, 'POST /api/production/scan/undo');
+  },
+};
+
+const stock = {
+  listSamples(params) {
+    return ok('/api/stock/sample/list', 'GET', params || {});
+  },
+  inboundSample(payload) {
+    return ok('/api/stock/sample/inbound', 'POST', payload || {});
+  },
+  loanSample(payload) {
+    return ok('/api/stock/sample/loan', 'POST', payload || {});
+  },
+  returnSample(payload) {
+    return ok('/api/stock/sample/return', 'POST', payload || {});
+  },
+  listSampleLoans(sampleStockId) {
+    return ok('/api/stock/sample/loan/list', 'GET', { sampleStockId });
+  },
+};
+
+const material = {
+  listStockAlerts(params) {
+    return ok('/api/production/material/stock/alerts', 'GET', params || {});
   },
 };
 
@@ -186,6 +232,9 @@ const system = {
 };
 
 const style = {
+  listStyles(params) {
+    return ok('/api/style/info/list', 'GET', params || {});
+  },
   // 获取SKU库存
   getInventory(skuCode) {
     return ok(`/api/style/sku/inventory/${encodeURIComponent(skuCode)}`, 'GET', {});
@@ -194,6 +243,12 @@ const style = {
   updateInventory(payload) {
     return ok('/api/style/sku/inventory/update', 'POST', payload || {});
   }
+};
+
+const orderManagement = {
+  createFromStyle(payload) {
+    return ok('/api/order-management/create-from-style', 'POST', payload || {});
+  },
 };
 
 const wechat = {
@@ -206,10 +261,13 @@ const api = {
   dashboard,
   production,
   system,
+  stock,
+  material,
   style,
+  orderManagement,
   wechat,
 };
 
-export { dashboard, production, system, style, wechat };
+export { dashboard, production, system, stock, material, style, orderManagement, wechat };
 
 export default api;

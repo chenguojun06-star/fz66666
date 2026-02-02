@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Card, Dropdown, Input, Select, Space, Tag, Form, message, Modal } from 'antd';
-import { CheckOutlined, DownloadOutlined, MoreOutlined, PlusOutlined, RollbackOutlined, SearchOutlined, SendOutlined } from '@ant-design/icons';
+import { CheckOutlined, DownloadOutlined, MoreOutlined, PlusOutlined, RollbackOutlined, SendOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
+import StandardSearchBar from '@/components/common/StandardSearchBar';
+import StandardToolbar from '@/components/common/StandardToolbar';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
@@ -17,6 +19,7 @@ import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
 import { useSync } from '@/utils/syncManager';
 import { useViewport } from '@/utils/useViewport';
 import { useModal } from '@/hooks';
+import type { Dayjs } from 'dayjs';
 
 const { Option } = Select;
 
@@ -30,6 +33,7 @@ const MaterialReconciliation: React.FC = () => {
     page: 1,
     pageSize: 10
   });
+  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const [filterForm] = Form.useForm();
   const saveFormRef = React.useRef<(() => Promise<void>) | null>(null);
 
@@ -729,117 +733,87 @@ const MaterialReconciliation: React.FC = () => {
           {/* 页面标题和操作区 */}
           <div className="page-header">
             <h2 className="page-title">物料对账</h2>
-            <Space>
-              <Dropdown
-                trigger={['click']}
-                menu={{
-                  items: [
-                    {
-                      key: 'export',
-                      label: exporting ? '导出中...' : '导出',
-                      icon: <DownloadOutlined />,
-                      disabled: exporting,
-                      onClick: exportCsv,
-                    },
-                    { type: 'divider' as const },
-                    {
-                      key: 'batchAudit',
-                      label: approvalSubmitting ? '处理中...' : '批量审核',
-                      icon: <CheckOutlined />,
-                      disabled:
-                        approvalSubmitting ||
-                        !selectedRowKeys.length ||
-                        !reconciliationList.some((r) => selectedRowKeys.includes(String(r.id)) && r.status === 'pending'),
-                      onClick: batchAudit,
-                    },
-                    {
-                      key: 'batchSubmit',
-                      label: approvalSubmitting ? '处理中...' : '批量提交',
-                      icon: <SendOutlined />,
-                      disabled:
-                        approvalSubmitting ||
-                        !selectedRowKeys.length ||
-                        !reconciliationList.some((r) => selectedRowKeys.includes(String(r.id)) && (r.status === 'verified' || r.status === 'rejected')),
-                      onClick: batchSubmit,
-                    },
-                    {
-                      key: 'batchReturn',
-                      label: approvalSubmitting ? '处理中...' : '批量退回',
-                      icon: <RollbackOutlined />,
-                      disabled:
-                        approvalSubmitting ||
-                        !selectedRowKeys.length ||
-                        !reconciliationList.some((r) => selectedRowKeys.includes(String(r.id)) && (r.status === 'verified' || r.status === 'approved' || r.status === 'paid')),
-                      onClick: batchReturn,
-                      danger: true,
-                    },
-                    { type: 'divider' as const },
-                    {
-                      key: 'create',
-                      label: '新增物料对账',
-                      icon: <PlusOutlined />,
-                      onClick: () => openDialog(),
-                    },
-                  ],
-                }}
-              >
-                <Button icon={<MoreOutlined />}>操作</Button>
-              </Dropdown>
-            </Space>
           </div>
 
           {/* 筛选区 */}
           <Card size="small" className="filter-card mb-sm">
-            <Form form={filterForm} layout="inline" size="small">
-              <Form.Item label="对账单号">
-                <Input
-                  placeholder="请输入对账单号"
-                  onChange={(e) => setQueryParams({ ...queryParams, reconciliationNo: e.target.value })}
-                  style={{ width: 150 }}
+            <StandardToolbar
+              left={(
+                <StandardSearchBar
+                  searchValue={queryParams.reconciliationNo || ''}
+                  onSearchChange={(value) => setQueryParams({ ...queryParams, reconciliationNo: value, page: 1 })}
+                  searchPlaceholder="搜索对账单号/供应商/物料"
+                  dateValue={dateRange}
+                  onDateChange={setDateRange}
+                  statusValue={queryParams.status || ''}
+                  onStatusChange={(value) => setQueryParams({ ...queryParams, status: value, page: 1 })}
+                  statusOptions={[
+                    { label: '待审核', value: 'pending' },
+                    { label: '已验证', value: 'verified' },
+                    { label: '已批准', value: 'approved' },
+                    { label: '已付款', value: 'paid' },
+                    { label: '已拒绝', value: 'rejected' },
+                  ]}
                 />
-              </Form.Item>
-              <Form.Item label="供应商">
-                <Input
-                  placeholder="请输入供应商"
-                  onChange={(e) => setQueryParams({ ...queryParams, supplierName: e.target.value })}
-                  style={{ width: 150 }}
-                />
-              </Form.Item>
-              <Form.Item label="物料编码">
-                <Input
-                  placeholder="请输入物料编码"
-                  onChange={(e) => setQueryParams({ ...queryParams, materialCode: e.target.value })}
-                  style={{ width: 120 }}
-                />
-              </Form.Item>
-              <Form.Item label="状态">
-                <Select
-                  placeholder="请选择状态"
-                  onChange={(value) => setQueryParams({ ...queryParams, status: value })}
-                  style={{ width: 100 }}
+              )}
+              right={(
+                <Dropdown
+                  trigger={['click']}
+                  menu={{
+                    items: [
+                      {
+                        key: 'export',
+                        label: exporting ? '导出中...' : '导出',
+                        icon: <DownloadOutlined />,
+                        disabled: exporting,
+                        onClick: exportCsv,
+                      },
+                      { type: 'divider' as const },
+                      {
+                        key: 'batchAudit',
+                        label: approvalSubmitting ? '处理中...' : '批量审核',
+                        icon: <CheckOutlined />,
+                        disabled:
+                          approvalSubmitting ||
+                          !selectedRowKeys.length ||
+                          !reconciliationList.some((r) => selectedRowKeys.includes(String(r.id)) && r.status === 'pending'),
+                        onClick: batchAudit,
+                      },
+                      {
+                        key: 'batchSubmit',
+                        label: approvalSubmitting ? '处理中...' : '批量提交',
+                        icon: <SendOutlined />,
+                        disabled:
+                          approvalSubmitting ||
+                          !selectedRowKeys.length ||
+                          !reconciliationList.some((r) => selectedRowKeys.includes(String(r.id)) && (r.status === 'verified' || r.status === 'rejected')),
+                        onClick: batchSubmit,
+                      },
+                      {
+                        key: 'batchReturn',
+                        label: approvalSubmitting ? '处理中...' : '批量退回',
+                        icon: <RollbackOutlined />,
+                        disabled:
+                          approvalSubmitting ||
+                          !selectedRowKeys.length ||
+                          !reconciliationList.some((r) => selectedRowKeys.includes(String(r.id)) && (r.status === 'verified' || r.status === 'approved' || r.status === 'paid')),
+                        onClick: batchReturn,
+                        danger: true,
+                      },
+                      { type: 'divider' as const },
+                      {
+                        key: 'create',
+                        label: '新增物料对账',
+                        icon: <PlusOutlined />,
+                        onClick: () => openDialog(),
+                      },
+                    ],
+                  }}
                 >
-                  <Option value="">全部</Option>
-                  <Option value="pending">待审核</Option>
-                  <Option value="verified">已验证</Option>
-                  <Option value="approved">已批准</Option>
-                  <Option value="paid">已付款</Option>
-                  <Option value="rejected">已拒绝</Option>
-                </Select>
-              </Form.Item>
-              <Form.Item className="filter-actions">
-                <Space>
-                  <Button type="primary" icon={<SearchOutlined />} onClick={() => fetchReconciliationList()} loading={queryLoading}>
-                    查询
-                  </Button>
-                  <Button onClick={() => {
-                    setQueryParams({ page: 1, pageSize: 10 });
-                    fetchReconciliationList();
-                  }} loading={queryLoading}>
-                    重置
-                  </Button>
-                </Space>
-              </Form.Item>
-            </Form>
+                  <Button icon={<MoreOutlined />}>操作</Button>
+                </Dropdown>
+              )}
+            />
           </Card>
 
           {/* 表格区 */}

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { App, Button, Card, Divider, Input, InputNumber, Popconfirm, Select, Space, Spin, Table, Tabs, Tag, Timeline, Typography, DatePicker } from 'antd';
+import { Alert, App, Button, Card, Divider, Input, InputNumber, Popconfirm, Select, Space, Spin, Table, Tabs, Tag, Timeline, Typography, DatePicker } from 'antd';
 import { SaveOutlined, TeamOutlined, ShopOutlined, FileTextOutlined, HistoryOutlined, UnorderedListOutlined, UserOutlined, DollarOutlined, ToolOutlined, DeleteOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import ResizableModal from './ResizableModal';
@@ -7,9 +7,21 @@ import dayjs from 'dayjs';
 import api from '@/utils/api';
 import { productionOrderApi, productionScanApi } from '@/services/production/productionApi';
 import { useAuth } from '@/utils/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import OperationHistoryTable, { OperationHistoryRow } from '@/components/common/OperationHistoryTable';
+import { getScanTypeFromNodeKey, matchRecordToStage } from '@/utils/productionStage';
 
 const { Text, Title } = Typography;
-const { TextArea } = Input;
+
+const formatDelegationTime = (value?: string) => (value ? dayjs(value).format('MM/DD HH:mm') : '-');
+
+const patternOperationLabels: Record<string, { text: string; color: string }> = {
+  RECEIVE: { text: '领取', color: 'blue' },
+  PLATE: { text: '车板', color: 'purple' },
+  FOLLOW_UP: { text: '跟单', color: 'cyan' },
+  COMPLETE: { text: '完成', color: 'green' },
+  WAREHOUSE_IN: { text: '入库', color: 'orange' },
+};
 
 /** 节点类型定义 */
 type NodeType = 'procurement' | 'cutting' | 'sewing' | 'ironing' | 'quality' | 'packaging' | 'secondaryProcess';
@@ -101,6 +113,9 @@ interface OperatorSummary {
 
 /** 工序单价项 */
 interface ProcessPriceItem {
+  id?: string;
+  processCode?: string;
+  code?: string;
   name: string;
   unitPrice?: number;
   quantity?: number;
@@ -190,6 +205,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
 }) => {
   const { message } = App.useApp();
   const { user } = useAuth(); // 获取当前用户
+  const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -198,6 +214,10 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   const [scanRecords, setScanRecords] = useState<ScanRecord[]>([]);
   const [bundles, setBundles] = useState<BundleRecord[]>([]);
   const [patternScanRecords, setPatternScanRecords] = useState<PatternScanRecord[]>([]);
+  const [orderDetail, setOrderDetail] = useState<Record<string, unknown> | null>(null);
+  const [orderSummary, setOrderSummary] = useState<{ orderNo?: string; styleNo?: string; orderQuantity?: number }>({
+    orderNo,
+  });
   const [activeTab, setActiveTab] = useState('settings');
   // 管理员解锁状态（允许在进度>=80%时仍然编辑）
   const [adminUnlocked, setAdminUnlocked] = useState(false);
@@ -211,6 +231,27 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
 
   // 当前节点的操作数据
   const currentNodeData = nodeOperations[nodeTypeKey] || {};
+  const matchedProcess = useMemo(() => {
+    const byName = (p: any, target: string) => {
+      const candidates = [p?.name, p?.processName, p?.label, p?.title].map((v) => String(v || '').trim());
+      return candidates.some((v) => v && v === target);
+    };
+    const pickedName = String(currentNodeData.delegateProcessName || '').trim();
+    const nodeLabel = String(nodeName || '').trim();
+    if (pickedName) {
+      const byPicked = processList.find((p) => byName(p as any, pickedName));
+      if (byPicked) return byPicked as any;
+    }
+    if (nodeLabel) {
+      const byNode = processList.find((p) => byName(p as any, nodeLabel));
+      if (byNode) return byNode as any;
+    }
+    return (processList[0] as any) || null;
+  }, [currentNodeData.delegateProcessName, nodeName, processList]);
+
+  const delegateProcessCode = useMemo(() => {
+    return String((matchedProcess as any)?.id || (matchedProcess as any)?.processCode || (matchedProcess as any)?.code || '').trim();
+  }, [matchedProcess]);
 
   const normalizeText = (input?: string): string => {
     const t = String(input || '').trim();
@@ -254,6 +295,35 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
     } finally {
       setLoading(false);
     }
+  }, [orderId, orderNo]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      if (!orderId) {
+        setOrderSummary({ orderNo });
+        return;
+      }
+      try {
+        const res = await productionOrderApi.detail(orderId);
+        const result = res as Record<string, unknown>;
+        if (!cancelled && result.code === 200 && result.data) {
+          const data = result.data as Record<string, unknown>;
+          setOrderDetail(data);
+          setOrderSummary({
+            orderNo: String(data.orderNo || orderNo || '').trim() || undefined,
+            styleNo: String(data.styleNo || '').trim() || undefined,
+            orderQuantity: Number(data.orderQuantity ?? 0) || 0,
+          });
+        }
+      } catch {
+        if (!cancelled) setOrderSummary({ orderNo });
+      }
+    };
+    run();
+    return () => {
+      cancelled = true;
+    };
   }, [orderId, orderNo]);
 
   // 加载扫码记录
@@ -329,11 +399,10 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
 
   // 筛选当前节点的扫码记录
   const filteredScanRecords = useMemo(() => {
-    return scanRecords.filter(r => {
-      const recordNode = r.progressStage || r.processName || '';
-      return recordNode.includes(nodeName) || nodeName.includes(recordNode);
-    });
-  }, [scanRecords, nodeName]);
+    return scanRecords.filter((r) =>
+      matchRecordToStage(r.progressStage, r.processName, String(nodeTypeKey || '').trim(), normalizeText(nodeName))
+    );
+  }, [scanRecords, nodeName, nodeTypeKey, normalizeText]);
 
   // 计算菲号在当前节点的完成情况
   const bundlesWithStatus = useMemo(() => {
@@ -373,6 +442,90 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
     });
     return Array.from(map.values()).sort((a, b) => b.totalQty - a.totalQty);
   }, [filteredScanRecords]);
+
+  const formatHistoryTime = useCallback((value?: string) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm') : '-'), []);
+
+  const formatScanDetail = useCallback((record: ScanRecord) => {
+    const parts: string[] = [];
+    const nodeLabel = normalizeText(record.processName || record.progressStage);
+    if (nodeLabel) parts.push(nodeLabel);
+    if (typeof record.quantity === 'number') parts.push(`${record.quantity}件`);
+    const colorSize = [record.color, record.size].filter(Boolean).join('/');
+    if (colorSize) parts.push(colorSize);
+    const bundle = record.cuttingBundleNo || record.cuttingBundleQrCode;
+    if (bundle) parts.push(`菲号${bundle}`);
+    if (record.scanCode) parts.push(`码:${record.scanCode}`);
+    return parts.filter(Boolean).join(' · ') || '-';
+  }, [normalizeText]);
+
+  const historyTableRows = useMemo<OperationHistoryRow[]>(() => {
+    const rows: OperationHistoryRow[] = [];
+    const stageName = nodeName || '-';
+    const detail = orderDetail || {};
+    const orderFieldMap: Record<string, { operator: string; endTime: string; startTime?: string; altTime?: string }> = {
+      procurement: { operator: 'procurementOperatorName', endTime: 'procurementEndTime', startTime: 'procurementStartTime', altTime: 'procurementConfirmedAt' },
+      cutting: { operator: 'cuttingOperatorName', endTime: 'cuttingEndTime', startTime: 'cuttingStartTime' },
+      sewing: { operator: 'sewingOperatorName', endTime: 'sewingEndTime', startTime: 'sewingStartTime' },
+      quality: { operator: 'qualityOperatorName', endTime: 'qualityEndTime', startTime: 'qualityStartTime' },
+      warehousing: { operator: 'warehousingOperatorName', endTime: 'warehousingEndTime', startTime: 'warehousingStartTime' },
+    };
+    const field = orderFieldMap[String(nodeTypeKey || '').trim()];
+    if (field) {
+      const operatorName = String((detail as any)?.[field.operator] || '').trim();
+      const timeValue = (detail as any)?.[field.endTime] || (detail as any)?.[field.altTime || ''] || (detail as any)?.[field.startTime || ''];
+      if (operatorName || timeValue) {
+        rows.push({
+          type: '我的订单',
+          stageName,
+          processName: normalizeText(currentNodeData.delegateProcessName) || '-',
+          operatorName: operatorName || '-',
+          quantity: '-',
+          time: formatHistoryTime(timeValue),
+          remark: '同步自我的订单',
+        });
+      }
+    }
+
+    filteredScanRecords.forEach((record) => {
+      rows.push({
+        type: '扫码',
+        stageName,
+        processName: normalizeText(record.processName || record.progressStage) || '-',
+        operatorName: String(record.operatorName || record.actualOperatorName || '-').trim() || '-',
+        quantity: typeof record.quantity === 'number' ? `${record.quantity}` : '0',
+        time: formatHistoryTime(record.scanTime || record.createTime),
+        remark: formatScanDetail(record),
+      });
+    });
+
+    patternScanRecords.forEach((record) => {
+      const op = patternOperationLabels[record.operationType || ''] || { text: record.operationType || '扫码', color: 'default' };
+      rows.push({
+        type: op.text,
+        stageName,
+        processName: normalizeText(record.operationType) || '-',
+        operatorName: String(record.operatorName || '-').trim() || '-',
+        quantity: '-',
+        time: formatHistoryTime(record.scanTime),
+        remark: record.remark || '-',
+      });
+    });
+
+    (currentNodeData.history || []).forEach((item) => {
+      rows.push({
+        type: '委派',
+        stageName,
+        processName: normalizeText(currentNodeData.delegateProcessName) || '-',
+        operatorName: String(item.operatorName || '-').trim() || '-',
+        quantity: '-',
+        time: formatHistoryTime(item.time),
+        remark: item.changes || '-',
+      });
+    });
+
+    return rows.sort((a, b) => dayjs(b.time).valueOf() - dayjs(a.time).valueOf());
+  }, [currentNodeData.delegateProcessName, currentNodeData.history, filteredScanRecords, formatHistoryTime, formatScanDetail, nodeName, orderDetail, patternScanRecords, normalizeText, nodeTypeKey]);
+
 
   // 更新当前节点数据
   const updateNodeData = (field: keyof NodeOperationData, value: string | number | undefined) => {
@@ -467,6 +620,32 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
       );
       if (res.code === 200) {
         message.success('保存成功');
+        // PC手动操作同步为扫码记录（确保PC/手机数据互通）
+        const qty = currentData.assigneeQuantity;
+        if (!isPatternProduction && typeof qty === 'number' && qty > 0) {
+          const scanType = (() => {
+            if (nodeTypeKey === 'cutting') return 'cutting';
+            if (nodeTypeKey === 'procurement') return 'procurement';
+            if (nodeTypeKey === 'warehousing') return 'warehousing';
+            return 'production';
+          })();
+          try {
+            await productionScanApi.execute({
+              orderId,
+              orderNo: orderSummary.orderNo || orderNo,
+              quantity: qty,
+              scanType,
+              progressStage: nodeName,
+              processName: fixedProcessName || nodeName,
+              processCode: delegateProcessCode || undefined,
+              unitPrice: Number.isFinite(fixedUnitPrice) ? fixedUnitPrice : undefined,
+              remark: 'PC同步',
+              manual: true,
+            });
+          } catch (syncErr: any) {
+            message.warning(syncErr?.message || 'PC同步扫码失败');
+          }
+        }
         setAdminUnlocked(false); // 保存后重置解锁状态
         onSaved?.();
         onClose();
@@ -589,529 +768,148 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   ];
 
   // 设置面板内容
-  const renderSettingsTab = () => (
-    <div style={{ padding: '4px 0' }}>
-      {/* 时间节点信息（从样板生产传递） */}
-      {extraData && (extraData.releaseTime || extraData.deliveryTime) && (
-        <div style={{
-          marginBottom: 6,
-          padding: '6px 8px',
-          background: '#f8f9fa',
-          borderRadius: 6,
-          border: '1px solid #e5e7eb',
-          fontSize: 12,
-          lineHeight: 1.1,
-        }}>
-          <div style={{ fontWeight: 600, marginBottom: 6, color: '#1f2937', lineHeight: 1.1 }}>
-            <ClockCircleOutlined style={{ marginRight: 4 }} />
-            时间信息
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 12px', color: '#6b7280', lineHeight: 1.1 }}>
-            {extraData.releaseTime && (
-              <span style={{ display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 1, overflow: 'hidden', maxWidth: '100%', lineHeight: 1.1 }}>
-                <b>下板:</b> {extraData.releaseTime}
-              </span>
-            )}
-            {extraData.deliveryTime && (
-              <span style={{ display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 1, overflow: 'hidden', maxWidth: '100%', lineHeight: 1.1 }}>
-                <b>交板:</b> {extraData.deliveryTime}
-              </span>
-            )}
-            {extraData.receiveTime && (
-              <span style={{ display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 1, overflow: 'hidden', maxWidth: '100%', lineHeight: 1.1 }}>
-                <b>领取:</b> {extraData.receiveTime}
-              </span>
-            )}
-            {extraData.completeTime && (
-              <span style={{ display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 1, overflow: 'hidden', maxWidth: '100%', lineHeight: 1.1 }}>
-                <b>完成:</b> {extraData.completeTime}
-              </span>
-            )}
-          </div>
-          {(extraData.patternMaker || extraData.receiver) && (
-            <div style={{ display: 'flex', gap: 16, marginTop: 4, color: '#6b7280', lineHeight: 1.1 }}>
-              {extraData.patternMaker && (
-                <span style={{ display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 1, overflow: 'hidden', maxWidth: '100%', lineHeight: 1.1 }}>
-                  <UserOutlined style={{ marginRight: 2 }} />
-                  <b>纸样师傅:</b> {extraData.patternMaker}
-                </span>
-              )}
-              {extraData.receiver && (
-                <span style={{ display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 1, overflow: 'hidden', maxWidth: '100%', lineHeight: 1.1 }}>
-                  <UserOutlined style={{ marginRight: 2 }} />
-                  <b>领取人:</b> {extraData.receiver}
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+  const renderSettingsTab = () => {
+    const fixedProcessName = String(
+      currentNodeData.delegateProcessName || (matchedProcess as any)?.name || (matchedProcess as any)?.processName || nodeName || ''
+    ).trim();
+    const fixedUnitPrice = (() => {
+      if (typeof currentNodeData.delegatePrice === 'number') return currentNodeData.delegatePrice;
+      const picked = Number((matchedProcess as any)?.unitPrice);
+      if (Number.isFinite(picked)) return picked;
+      return Number(unitPrice) || 0;
+    })();
+    const delegateUser = currentNodeData.updatedByName || currentNodeData.updatedBy || currentNodeData.assignee || '-';
+    const orderInfoLine = `${orderSummary.orderNo || orderNo || '-'}  款号：${orderSummary.styleNo || '-'}  数量：${orderSummary.orderQuantity || 0} 件`;
 
-      {/* 采购进度特殊显示 */}
-      {nodeName === '采购' && extraData?.procurementProgress && (
-        <div style={{
-          marginBottom: 12,
-          padding: '12px 16px',
-          background: extraData.procurementProgress.percent >= 100 ? '#f0fdf4' : '#fef3c7',
-          borderRadius: 8,
-          border: `1px solid ${extraData.procurementProgress.percent >= 100 ? '#86efac' : '#fbbf24'}`,
-          lineHeight: 1.1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 12,
-        }}>
-          <div style={{ minWidth: 0 }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              marginBottom: 8,
-              lineHeight: 1.1,
-            }}>
-              <div style={{
-                fontSize: 16,
-                fontWeight: 700,
-                color: extraData.procurementProgress.percent >= 100 ? '#059669' : '#d97706',
-                lineHeight: 1.1,
-              }}>
-                {extraData.procurementProgress.percent >= 100 ? '✅ 采购已完成' : '⏳ 采购进行中'}
-              </div>
-              <div style={{
-                fontSize: 18,
-                fontWeight: 700,
-                color: extraData.procurementProgress.percent >= 100 ? '#059669' : '#d97706',
-                lineHeight: 1.1,
-              }}>
-                {extraData.procurementProgress.percent}%
-              </div>
-            </div>
-            <div style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: '4px 16px',
-              fontSize: 13,
-              color: '#6b7280',
-              lineHeight: 1.1,
-            }}>
-              <span style={{ fontWeight: 600, color: '#1f2937', display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 1, overflow: 'hidden' }}>
-                已完成采购单：{extraData.procurementProgress.completed} / {extraData.procurementProgress.total}
-              </span>
-              {extraData.procurementProgress.completedTime && (
-                <span style={{ display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 1, overflow: 'hidden', lineHeight: 1.1 }}>
-                  <ClockCircleOutlined style={{ marginRight: 4 }} />
-                  完成时间：<span style={{ fontWeight: 600, color: '#1f2937' }}>{extraData.procurementProgress.completedTime}</span>
-                </span>
-              )}
-              {extraData.procurementProgress.receiver && (
-                <span style={{ display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 1, overflow: 'hidden', lineHeight: 1.1 }}>
-                  <UserOutlined style={{ marginRight: 4 }} />
-                  操作人：<span style={{ fontWeight: 600, color: '#1f2937' }}>{extraData.procurementProgress.receiver}</span>
-                </span>
-              )}
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <div style={{
-              padding: '8px 12px',
-              borderRadius: 8,
-              background: 'white',
-              border: '1px solid #d1fae5',
-              fontWeight: 700,
-              color: '#059669',
-              fontSize: 16
-            }}>
-              {(nodeStats?.done || 0)}/{nodeStats?.total || 0} {(nodeStats?.percent || 0).toFixed(0)}%
-            </div>
-            {processList.length > 0 && (
-              <div style={{
-                padding: '8px 12px',
-                borderRadius: 8,
-                background: '#e6f4ff',
-                border: '1px solid #bae0ff',
-                color: '#0958d9'
-              }}>
-                <div style={{ fontSize: 14, fontWeight: 700 }}>工序单价明细 ({processList.length}项)</div>
-                <div style={{ fontSize: 15 }}>采购: ¥{(unitPrice || 0).toFixed(2)}</div>
-                <div style={{ fontSize: 15 }}>总计: ¥{processList.reduce((s, p) => s + (p.unitPrice || 0), 0).toFixed(2)}</div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {unitPrice !== undefined && nodeName !== '采购' && (
-        <div style={{
-          marginBottom: 8,
-          padding: '8px 12px',
-          background: (nodeStats?.percent || 0) >= 100 ? '#f0fdf4' : '#fef3c7',
-          borderRadius: 8,
-          border: `1px solid ${(nodeStats?.percent || 0) >= 100 ? '#86efac' : '#fbbf24'}`,
-          lineHeight: 1.1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 8,
-        }}>
-          <div style={{ minWidth: 0 }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              marginBottom: 6,
-              lineHeight: 1.1,
-            }}>
-              <div style={{
-                fontSize: 16,
-                fontWeight: 700,
-                color: (nodeStats?.percent || 0) >= 100 ? '#059669' : '#d97706',
-                lineHeight: 1.1,
-              }}>
-                {(nodeStats?.percent || 0) >= 100 ? `✅ ${nodeName}已完成` : `⏳ ${nodeName}进行中`}
-              </div>
-              <div style={{
-                fontSize: 18,
-                fontWeight: 700,
-                color: (nodeStats?.percent || 0) >= 100 ? '#059669' : '#d97706',
-                lineHeight: 1.1,
-              }}>
-                {(nodeStats?.percent || 0).toFixed(0)}%
-              </div>
-            </div>
-            <div style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: '4px 16px',
-              fontSize: 13,
-              color: '#6b7280',
-              lineHeight: 1.1,
-            }}>
-              <span style={{ fontWeight: 600, color: '#1f2937', display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 1, overflow: 'hidden' }}>
-                已完成：{nodeStats?.done || 0} / {nodeStats?.total || 0}
-              </span>
-              {currentNodeData.completeTime && (
-                <span style={{ display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 1, overflow: 'hidden', lineHeight: 1.1 }}>
-                  <ClockCircleOutlined style={{ marginRight: 4 }} />
-                  完成时间：<span style={{ fontWeight: 600, color: '#1f2937' }}>{new Date(currentNodeData.completeTime).toLocaleString('zh-CN')}</span>
-                </span>
-              )}
-              {currentNodeData.assignee && (
-                <span style={{ display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 1, overflow: 'hidden', lineHeight: 1.1 }}>
-                  <UserOutlined style={{ marginRight: 4 }} />
-                  操作人：<span style={{ fontWeight: 600, color: '#1f2937' }}>{currentNodeData.assignee}</span>
-                </span>
-              )}
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-            <div style={{
-              padding: '8px 12px',
-              borderRadius: 8,
-              background: 'white',
-              border: '1px solid #d1fae5',
-              fontWeight: 700,
-              color: '#059669',
-              fontSize: 16
-            }}>
-              {(nodeStats?.done || 0)}/{nodeStats?.total || 0} {(nodeStats?.percent || 0).toFixed(0)}%
-            </div>
-            <div style={{
-              padding: '8px 12px',
-              borderRadius: 8,
-              background: '#e6f4ff',
-              border: '1px solid #bae0ff',
-              color: '#0958d9'
-            }}>
-              <div style={{ fontSize: 14, fontWeight: 700 }}>工序单价明细 ({processList.length}项)</div>
-              <div style={{ fontSize: 15 }}>{nodeName}: ¥{(unitPrice || 0).toFixed(2)}</div>
-              <div style={{ fontSize: 15 }}>总计: ¥{processList.reduce((s, p) => s + (p.unitPrice || 0), 0).toFixed(2)}</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-
-
-      {/* 进度超过80%提示 + 管理解锁 */}
-      {isHighProgress && (
-        <div style={{
-          marginBottom: 8,
-          padding: '6px 10px',
-          background: adminUnlocked ? '#f0f9ff' : '#fff7e6',
-          borderRadius: 4,
-          border: `1px solid ${adminUnlocked ? '#91caff' : '#ffd591'}`,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <Text type={adminUnlocked ? 'secondary' : 'warning'} style={{ fontSize: 12 }}>
-            {adminUnlocked
-              ? '🔓 已解锁编辑，修改后请保存'
-              : `⚠️ 进度已达 ${(nodeStats?.percent || 0).toFixed(0)}%，设置已锁定`}
-          </Text>
-          {adminUnlocked ? (
-            <Button
-              size="small"
-              onClick={() => setAdminUnlocked(false)}
-              style={{ fontSize: 12 }}
-            >
-              重新锁定
-            </Button>
-          ) : (
-            <Popconfirm
-              title="管理解锁"
-              description="解锁后可修改委派设置，确定要解锁吗？"
-              onConfirm={() => {
-                setAdminUnlocked(true);
-                message.info('已解锁，可以修改设置');
-              }}
-              okText="确定解锁"
-              cancelText="取消"
-            >
-              <Button size="small" type="link" danger style={{ fontSize: 12, padding: '0 4px' }}>
-                管理解锁
-              </Button>
-            </Popconfirm>
-          )}
-        </div>
-      )}
-
-      {/* 二次工艺类型（仅二次工艺节点显示） */}
-      {nodeTypeKey === 'secondaryProcess' && (
-        <>
-          <div style={{ marginBottom: 6 }}>
-            <Text strong style={{ display: 'block', marginBottom: 4, fontSize: 13 }}>
-              <FileTextOutlined /> 工艺类型
-            </Text>
-            <Select
-              allowClear
-              placeholder="选择工艺类型"
-              style={{ width: '100%' }}
-              value={currentNodeData.processType}
-              onChange={(v) => updateNodeData('processType', v)}
-              options={secondaryProcessTypes.map(t => ({ value: t, label: t }))}
-              disabled={disableEdit}
-            />
-          </div>
-          <Divider style={{ margin: '6px 0' }} />
-        </>
-      )}
-
-      {/* 委派工厂（仅支持委派的节点显示） */}
-      {canDelegateFactory(nodeTypeKey as NodeType) && (
-        <>
-
-          {/* 委派工序统计信息 */}
-          {currentNodeData.delegateFactoryId && processList.length > 0 && (
-            <div style={{
-              marginBottom: 10,
-              padding: '10px 12px',
-              background: '#fff7e6',
-              borderRadius: 6,
-              border: '1px solid #ffd591'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <Text strong style={{ fontSize: 12, color: '#d46b08' }}>
-                  <ToolOutlined /> 委派工序明细
-                </Text>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <Text type="secondary" style={{ fontSize: 11 }}>
-                    总数量: <Text strong>{nodeStats?.total || 0}</Text> 件
-                  </Text>
-                  <Text strong style={{ fontSize: 13, color: '#d46b08' }}>
-                    预计总金额: ¥{(processList.reduce((s, p) => s + (p.unitPrice || 0), 0) * (nodeStats?.total || 0)).toFixed(2)}
-                  </Text>
-                </div>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 8 }}>
-                {processList.map((p, i) => (
-                  <div key={i} style={{
-                    padding: '6px 8px',
-                    background: 'white',
-                    borderRadius: 4,
-                    border: '1px solid #ffe7ba'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: '#111827' }}>{p.name}</div>
-                      <div style={{ fontSize: 12, color: '#6b7280' }}>单价: ¥{(p.unitPrice || 0).toFixed(2)}</div>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: '#f97316' }}>小计: ¥{((p.unitPrice || 0) * (nodeStats?.total || 0)).toFixed(2)}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 单行：委派工厂 + 外发工序 + 单价 + 负责人 */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, lineHeight: 1.1, flexWrap: 'nowrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 280 }}>
-              <Text strong style={{ fontSize: 13 }}>
-                <ShopOutlined /> 委派工厂
-              </Text>
-              <Select
-                allowClear
-                showSearch
-                placeholder="选择帮忙做货的工厂"
-                style={{ width: 200 }}
-                value={currentNodeData.delegateFactoryId}
-                onChange={handleFactoryChange}
-                filterOption={(input, option) =>
-                  (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-                }
-                options={factories?.map(f => ({ value: f.id, label: f.factoryName })) || []}
-                disabled={disableEdit}
-              />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 220 }}>
-              <Text strong style={{ fontSize: 13 }}>
-                <ToolOutlined /> 外发工序
-              </Text>
-              <Input
-                placeholder="车缝、锁边"
-                value={currentNodeData.delegateProcessName}
-                onChange={(e) => updateNodeData('delegateProcessName', e.target.value)}
-                disabled={disableEdit}
-                style={{ width: 160 }}
-              />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 220 }}>
-              <Text strong style={{ fontSize: 13 }}>
-                <DollarOutlined /> 单价
-              </Text>
-              <Space.Compact>
-                <InputNumber
-                  placeholder="元/件"
-                  style={{ width: 120 }}
-                  min={0}
-                  precision={2}
-                  value={currentNodeData.delegatePrice}
-                  onChange={handlePriceChange}
-                  disabled={disableEdit}
-                />
-                <Button disabled style={{ pointerEvents: 'none' }}>元</Button>
-              </Space.Compact>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 220 }}>
-              <Text strong style={{ fontSize: 13 }}>
-                <TeamOutlined /> 负责人
-              </Text>
-              <Input
-                placeholder="姓名"
-                value={currentNodeData.assignee}
-                onChange={(e) => updateNodeData('assignee', e.target.value)}
-                disabled={disableEdit}
-                style={{ width: 140 }}
-              />
-            </div>
-          </div>
-          {currentNodeData.delegatePrice && nodeStats?.total && (
-            <Text type="secondary" style={{ fontSize: 11, marginBottom: 6, display: 'block' }}>
-              预计总金额: ¥{(currentNodeData.delegatePrice * nodeStats.total).toFixed(2)}
-            </Text>
-          )}
-
-          <Divider style={{ margin: '6px 0' }} />
-        </>
-      )}
-
-      <div style={{ marginBottom: 6 }}>
-        <Text strong style={{ display: 'block', marginBottom: 4, fontSize: 13 }}>
-          <ClockCircleOutlined /> 领取与完成时间
-        </Text>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <UserOutlined />
-            <Text type="secondary">领取人</Text>
-            <Input
-              placeholder="账号/姓名"
-              value={currentNodeData.assignee}
-              onChange={(e) => updateNodeData('assignee', e.target.value)}
-              disabled={disableEdit}
-              style={{ width: 160 }}
-            />
-            <Text type="secondary">数量</Text>
-            <InputNumber
-              placeholder="件数"
-              style={{ width: 120 }}
-              min={0}
-              precision={0}
-              max={cuttingTotalQty || nodeStats?.total || 0}
-              value={typeof currentNodeData.assigneeQuantity === 'number' ? currentNodeData.assigneeQuantity : undefined}
-              onChange={(v) => {
-                const max = cuttingTotalQty || nodeStats?.total || 0;
-                const n = typeof v === 'number' ? Math.max(0, Math.min(v, max)) : undefined;
-                updateNodeData('assigneeQuantity', n);
-              }}
-              disabled={disableEdit}
-            />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <ClockCircleOutlined />
-            <Text type="secondary">领取时间</Text>
-            <DatePicker
-              showTime
-              style={{ width: 220 }}
-              value={currentNodeData.receiveTime ? dayjs(currentNodeData.receiveTime) : undefined}
-              onChange={(v) => updateNodeData('receiveTime', v ? v.toISOString() : undefined)}
-              disabled={disableEdit}
-            />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <ClockCircleOutlined />
-            <Text type="secondary">完成时间</Text>
-            <DatePicker
-              showTime
-              style={{ width: 220 }}
-              value={currentNodeData.completeTime ? dayjs(currentNodeData.completeTime) : undefined}
-              onChange={(v) => updateNodeData('completeTime', v ? v.toISOString() : undefined)}
-              disabled={disableEdit}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* 备注 */}
-      <div style={{ marginBottom: 4 }}>
-        <Text strong style={{ display: 'block', marginBottom: 4, fontSize: 13 }}>
-          <FileTextOutlined /> 备注
-        </Text>
-        <TextArea
-          rows={1}
-          placeholder="加急、特殊要求等"
-          value={currentNodeData.remark}
-          onChange={(e) => updateNodeData('remark', e.target.value)}
-          maxLength={200}
-          disabled={disableEdit}
+    return (
+      <div style={{ padding: '4px 0' }}>
+        <Alert
+          type="info"
+          showIcon
+          message="可以为不同的生产节点指定执行工厂"
+          style={{ marginBottom: 10 }}
         />
-      </div>
-
-      {/* 更新时间和操作人 */}
-      {currentNodeData.updatedAt && (
-        <div style={{ marginTop: 4, padding: '6px 10px', background: '#f5f5f5', borderRadius: 4 }}>
-          <Text type="secondary" style={{ fontSize: 11 }}>
-            更新: {new Date(currentNodeData.updatedAt).toLocaleString()}
-            {currentNodeData.updatedByName && (
-              <span style={{ marginLeft: 8 }}>
-                by <span style={{ color: '#1890ff' }}>{currentNodeData.updatedByName}</span>
-              </span>
-            )}
-          </Text>
+        <div style={{
+          padding: '8px 10px',
+          border: '1px solid var(--color-border)',
+          borderRadius: 6,
+          marginBottom: 6,
+          fontSize: 12,
+          color: 'var(--color-text-secondary)'
+        }}>
+          订单：{orderInfoLine}
         </div>
-      )}
-    </div>
-  );
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
+          gap: 8,
+          padding: '6px 8px',
+          background: 'var(--color-bg-base)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 6,
+          fontSize: 12,
+          color: 'var(--color-text-secondary)',
+          fontWeight: 600,
+          width: '100%',
+          overflow: 'hidden',
+        }}>
+          <div>生产节点</div>
+          <div>当前状态</div>
+          <div>工序编号</div>
+          <div>工序名称</div>
+          <div>数量</div>
+          <div>执行工厂</div>
+          <div>委派单价</div>
+          <div>委派人</div>
+          <div>委派时间</div>
+          <div>操作</div>
+        </div>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
+          gap: 8,
+          padding: '8px',
+          border: '1px solid var(--color-border)',
+          borderTop: 'none',
+          borderRadius: '0 0 6px 6px',
+          alignItems: 'center',
+          marginBottom: 10,
+          width: '100%',
+          overflow: 'hidden',
+        }}>
+          <div style={{ fontWeight: 600, color: 'var(--color-text-primary)', minWidth: 0 }}>{nodeName || '-'}</div>
+          <div style={{ color: 'var(--color-text-secondary)', minWidth: 0 }}>
+            {typeof nodeStats?.percent === 'number'
+              ? (nodeStats.percent >= 100 ? '完成' : `${Math.round(nodeStats.percent)}%`)
+              : '-'}
+          </div>
+          <div style={{ color: 'var(--color-text-secondary)', minWidth: 0 }}>{delegateProcessCode || '-'}</div>
+          <Select
+            value={fixedProcessName || undefined}
+            placeholder="选择工序"
+            options={processList.map((p) => ({ value: String((p as any)?.name || '').trim(), label: String((p as any)?.name || '').trim() })).filter((o) => o.value)}
+            disabled
+            style={{ width: '100%', minWidth: 0 }}
+          />
+          <InputNumber
+            placeholder="数量"
+            min={0}
+            precision={0}
+            value={typeof currentNodeData.assigneeQuantity === 'number' ? currentNodeData.assigneeQuantity : undefined}
+            onChange={(v) => updateNodeData('assigneeQuantity', v)}
+            disabled={disableEdit}
+            style={{ width: '100%', minWidth: 0 }}
+          />
+          <Select
+            allowClear
+            showSearch
+            placeholder="选择工厂"
+            value={currentNodeData.delegateFactoryId}
+            onChange={handleFactoryChange}
+            filterOption={(input, option) =>
+              (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+            }
+            options={factories?.map(f => ({ value: f.id, label: f.factoryName })) || []}
+            disabled={disableEdit}
+            style={{ width: '100%', minWidth: 0 }}
+          />
+          <Input
+            prefix="¥"
+            value={Number.isFinite(fixedUnitPrice) ? fixedUnitPrice.toFixed(2) : '0.00'}
+            disabled
+            style={{ width: '100%', minWidth: 0 }}
+          />
+          <div style={{ color: 'var(--color-text-secondary)', minWidth: 0 }}>{delegateUser}</div>
+          <div style={{ color: 'var(--color-text-secondary)', minWidth: 0 }}>{formatDelegationTime(currentNodeData.updatedAt)}</div>
+          <Button size="small" type="primary" loading={saving} onClick={handleSave} disabled={disableEdit}>
+            保存
+          </Button>
+        </div>
+
+        <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 4 }}>委派历史</div>
+        {currentNodeData.history && currentNodeData.history.length > 0 ? (
+          <div style={{ border: '1px solid var(--color-border)', borderRadius: 6, padding: '10px' }}>
+            {currentNodeData.history.slice().reverse().map((h, idx) => (
+              <div key={`${h.time}-${idx}`} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '6px 0', borderBottom: idx === currentNodeData.history.length - 1 ? 'none' : '1px solid var(--color-border)' }}>
+                <div style={{ color: 'var(--color-text-primary)' }}>{h.operatorName || '-'}</div>
+                <div style={{ color: 'var(--color-text-secondary)' }}>{formatDelegationTime(h.time)}</div>
+                <div style={{ color: 'var(--color-text-secondary)', flex: 1 }}>{h.changes || '-'}</div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ border: '1px solid var(--color-border)', borderRadius: 6, padding: '24px', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+            暂无委派记录
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // 扫码记录 Tab
   // 样板生产扫码记录 Tab
   const renderPatternScanRecordsTab = () => {
-    const operationLabels: Record<string, { text: string; color: string }> = {
-      RECEIVE: { text: '领取', color: 'blue' },
-      PLATE: { text: '车板', color: 'purple' },
-      FOLLOW_UP: { text: '跟单', color: 'cyan' },
-      COMPLETE: { text: '完成', color: 'green' },
-      WAREHOUSE_IN: { text: '入库', color: 'orange' },
-    };
-
     const patternScanColumns: ColumnsType<PatternScanRecord> = [
       {
         title: '时间',
@@ -1124,7 +922,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
         dataIndex: 'operationType',
         width: 100,
         render: (v) => {
-          const op = operationLabels[v] || { text: v, color: 'default' };
+          const op = patternOperationLabels[v] || { text: v, color: 'default' };
           return <Tag color={op.color}>{op.text}</Tag>;
         },
       },
@@ -1231,65 +1029,46 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
     </div>
   );
 
-  // 操作历史 Tab
-  const renderHistoryTab = () => {
-    const history = currentNodeData.history || [];
-    const getActionColor = (action: string) => {
-      switch (action) {
-        case 'create': return 'green';
-        case 'update': return 'blue';
-        case 'clear': return 'red';
-        case 'admin_unlock_update': return 'orange'; // 管理解锁修改
-        default: return 'gray';
-      }
-    };
-    const getActionText = (action: string) => {
-      switch (action) {
-        case 'create': return '创建';
-        case 'update': return '修改';
-        case 'clear': return '清空';
-        case 'admin_unlock_update': return '管理解锁修改';
-        default: return action;
-      }
-    };
-
-    return (
-      <div style={{ padding: '8px 0' }}>
-        {history.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>
-            <ClockCircleOutlined style={{ fontSize: 32, marginBottom: 8 }} />
-            <div>暂无操作记录</div>
-          </div>
-        ) : (
-          <Timeline
-            style={{ maxHeight: 350, overflowY: 'auto', padding: '8px 0' }}
-            items={[...history].reverse().map((item, index) => ({
-              key: index,
-              color: getActionColor(item.action),
-              children: (
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    <Tag color={getActionColor(item.action)} style={{ margin: 0 }}>
-                      {getActionText(item.action)}
-                    </Tag>
-                    <Text strong>{item.operatorName}</Text>
-                  </div>
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    {new Date(item.time).toLocaleString()}
-                  </Text>
-                  {item.changes && (
-                    <div style={{ marginTop: 4, fontSize: 13, color: '#666' }}>
-                      {item.changes}
-                    </div>
-                  )}
-                </div>
-              ),
-            }))}
-          />
-        )}
+  // 操作历史 Tab（与“我的订单”表格一致）
+  const renderHistoryTab = () => (
+    <div style={{ padding: '8px 0' }}>
+      <div style={{
+        fontSize: '13px',
+        fontWeight: 600,
+        color: '#374151',
+        marginBottom: '8px',
+        paddingBottom: '6px',
+        borderBottom: '1px solid #e5e7eb'
+      }}>
+        生产扫码记录（记录所有操作人）
       </div>
-    );
-  };
+      <OperationHistoryTable
+        rows={historyTableRows}
+        renderOperator={(row) => {
+          if (!row.operatorName || row.operatorName === '-') return '-';
+          return (
+            <a
+              style={{ cursor: 'pointer', color: '#1890ff', fontWeight: 600 }}
+              onClick={() => {
+                const orderValue = orderSummary.orderNo || orderNo || '';
+                const processValue = String(row.processName || '').trim();
+                const scanTypeValue = getScanTypeFromNodeKey(nodeTypeKey);
+                if (orderValue) {
+                  const params = new URLSearchParams();
+                  params.set('orderNo', orderValue);
+                  if (scanTypeValue) params.set('scanType', scanTypeValue);
+                  if (processValue && processValue !== '-') params.set('processName', processValue);
+                  navigate(`/finance/payroll-operator-summary?${params.toString()}`);
+                }
+              }}
+            >
+              {row.operatorName}
+            </a>
+          );
+        }}
+      />
+    </div>
+  );
 
   // 检查是否有设置数据
   const hasSettings = !!(
@@ -1311,6 +1090,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
       }
       open={visible}
       onCancel={onClose}
+      className="node-detail-modal"
       footer={
         <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
           <div>
@@ -1360,12 +1140,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
                 label: <span><HistoryOutlined /> 操作记录 ({patternScanRecords.length})</span>,
                 children: renderPatternScanRecordsTab(),
               },
-              // 大货生产显示扫码记录、菲号明细、操作员 tab
-              showProductionTabs && {
-                key: 'scanRecords',
-                label: <span><HistoryOutlined /> 扫码记录 ({filteredScanRecords.length})</span>,
-                children: renderScanRecordsTab(),
-              },
+              // 大货生产显示菲号明细、操作员 tab（扫码记录已合并到操作历史）
               showProductionTabs && {
                 key: 'bundles',
                 label: <span><UnorderedListOutlined /> 菲号明细 ({bundlesWithStatus.length})</span>,
@@ -1378,7 +1153,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
               },
               {
                 key: 'history',
-                label: <span><ClockCircleOutlined /> 操作历史 ({currentNodeData.history?.length || 0})</span>,
+                label: <span><ClockCircleOutlined /> 操作历史 ({historyTableRows.length})</span>,
                 children: renderHistoryTab(),
               },
             ].filter(Boolean);

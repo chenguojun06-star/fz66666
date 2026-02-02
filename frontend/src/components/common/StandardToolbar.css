@@ -1,0 +1,22 @@
+.standard-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+.standard-toolbar-left {
+  flex: 1;
+  min-width: 260px;
+}
+
+.standard-toolbar-right {
+  display: flex;
+  align-items: center;
+}
+
+.standard-toolbar-left,
+.standard-toolbar-right {
+  min-height: 40px;
+}

@@ -4,18 +4,39 @@
 
 /* ========== Ant Design 按钮全局覆盖 ========== */
 
+/* 按钮基础高度与胶囊统一 */
+.ant-btn:not(.ant-btn-icon-only) {
+  height: 40px !important;
+  padding: 0 24px !important;
+  border-radius: var(--radius-pill) !important;
+  font-size: 14px !important;
+  line-height: 38px !important;
+  font-weight: 500 !important;
+}
+
+.ant-btn.ant-btn-sm:not(.ant-btn-icon-only) {
+  height: 24px !important;
+  padding: 0 8px !important;
+  font-size: 12px !important;
+  line-height: 22px !important;
+  border-radius: var(--radius-pill) !important;
+}
+
+.ant-btn.ant-btn-lg:not(.ant-btn-icon-only) {
+  height: 40px !important;
+  padding: 0 24px !important;
+  font-size: 14px !important;
+  line-height: 38px !important;
+}
+
 /* 主按钮 - 镂空胶囊形（白底+彩色边框） */
 .ant-btn-primary {
   background: #ffffff !important;
   border: 2px solid !important;
   border-color: #40a9ff !important;
   color: #40a9ff !important;
-  border-radius: 999px !important; /* 胶囊形 */
-  font-weight: 500 !important;
   box-shadow: 0 2px 8px rgba(64, 169, 255, 0.15) !important;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  height: auto !important;
-  padding: 10px 24px !important;
 }
 
 .ant-btn-primary:hover {
@@ -39,24 +60,12 @@
 }
 
 /* 小尺寸主按钮 */
-.ant-btn-primary.ant-btn-sm {
-  padding: 6px 16px !important;
-  font-size: 13px !important;
-}
-
-/* 大尺寸主按钮 */
-.ant-btn-primary.ant-btn-lg {
-  padding: 14px 32px !important;
-  font-size: 16px !important;
-}
+/* 主按钮尺寸统一由基础覆盖 */
 
 /* 次要按钮 - 统一为胶囊形 */
 .ant-btn-default {
-  border-radius: 999px !important;
   border-color: #e5e7eb !important;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  font-weight: 500 !important;
-  padding: 10px 24px !important;
 }
 
 .ant-btn-default:hover {
@@ -66,17 +75,10 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
 }
 
-.ant-btn-default.ant-btn-sm {
-  padding: 6px 16px !important;
-}
-
-.ant-btn-default.ant-btn-lg {
-  padding: 14px 32px !important;
-}
+/* 次按钮尺寸统一由基础覆盖 */
 
 /* 幽灵按钮 */
 .ant-btn-ghost {
-  border-radius: 999px !important;
   border-color: #2D7FF9 !important;
   color: #2D7FF9 !important;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
@@ -89,7 +91,6 @@
 
 /* 文本按钮 */
 .ant-btn-text {
-  border-radius: 999px !important;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
@@ -100,7 +101,6 @@
 
 /* 链接按钮 */
 .ant-btn-link {
-  border-radius: 999px !important;
   color: #2D7FF9 !important;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
@@ -108,6 +108,8 @@
 .ant-btn-link:hover {
   color: #1E6FE8 !important;
 }
+
+/* 文本/链接按钮尺寸统一由基础覆盖 */
 
 /* 危险按钮 */
 .ant-btn-dangerous.ant-btn-primary {

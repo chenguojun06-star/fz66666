@@ -10,11 +10,13 @@ import com.fashion.supplychain.dashboard.dto.QualityStatsResponse;
 import com.fashion.supplychain.dashboard.dto.ScanCountChartResponse;
 import com.fashion.supplychain.dashboard.dto.TopStatsResponse;
 import com.fashion.supplychain.dashboard.dto.UrgentEventDto;
+import com.fashion.supplychain.production.dto.MaterialStockAlertDto;
 import com.fashion.supplychain.dashboard.service.DashboardQueryService;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.production.orchestration.MaterialStockOrchestrator;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -24,6 +26,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -31,12 +34,15 @@ public class DashboardOrchestrator {
 
     private final DashboardQueryService dashboardQueryService;
     private final ProductionOrderService productionOrderService;
+    private final MaterialStockOrchestrator materialStockOrchestrator;
 
     public DashboardOrchestrator(
             DashboardQueryService dashboardQueryService,
-            ProductionOrderService productionOrderService) {
+            ProductionOrderService productionOrderService,
+            MaterialStockOrchestrator materialStockOrchestrator) {
         this.dashboardQueryService = dashboardQueryService;
         this.productionOrderService = productionOrderService;
+        this.materialStockOrchestrator = materialStockOrchestrator;
     }
 
     public DashboardResponse dashboard(String startDate, String endDate, String brand, String factory) {
@@ -187,6 +193,24 @@ public class DashboardOrchestrator {
             event.setOrderNo(order.getOrderNo());
             event.setTime(order.getPlannedEndDate() == null ? "" : order.getPlannedEndDate().format(formatter));
             events.add(event);
+        }
+
+        try {
+            Map<String, Object> params = new java.util.HashMap<>();
+            params.put("onlyNeed", "true");
+            params.put("limit", 5);
+            List<MaterialStockAlertDto> alerts = materialStockOrchestrator.listAlerts(params);
+            for (MaterialStockAlertDto alert : alerts) {
+                UrgentEventDto event = new UrgentEventDto();
+                event.setId(alert.getStockId());
+                event.setType("material");
+                event.setTitle("库存预警：" + (alert.getMaterialName() == null ? "物料" : alert.getMaterialName()));
+                event.setOrderNo(alert.getMaterialCode());
+                event.setTime(alert.getLastOutTime() == null ? "" : alert.getLastOutTime().format(formatter));
+                events.add(event);
+            }
+        } catch (Exception e) {
+            // ignore alert failures
         }
 
         // 注意：当前未实现紧急事件追踪

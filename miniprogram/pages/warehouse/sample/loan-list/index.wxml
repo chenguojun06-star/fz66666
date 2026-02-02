@@ -1,0 +1,46 @@
+<view class="container">
+  <view class="header">
+    <text class="title">借调记录</text>
+    <text class="subtitle" wx:if="{{styleNo}}">款号：{{styleNo}}</text>
+  </view>
+
+  <view class="list" wx:if="{{list.length > 0}}">
+    <view class="card" wx:for="{{list}}" wx:key="id">
+      <view class="row">
+        <text class="label">借用人</text>
+        <text class="value">{{item.borrower || '-'}}</text>
+      </view>
+      <view class="row">
+        <text class="label">数量</text>
+        <text class="value">{{item.quantity || 0}}</text>
+      </view>
+      <view class="row">
+        <text class="label">状态</text>
+        <text class="value status {{item.status === 'returned' ? 'status-returned' : (item.status === 'lost' ? 'status-lost' : 'status-borrowed')}}">{{item.statusText}}</text>
+      </view>
+      <view class="row">
+        <text class="label">借出时间</text>
+        <text class="value">{{item.loanDate || '-'}}</text>
+      </view>
+      <view class="row">
+        <text class="label">预计归还</text>
+        <text class="value">{{item.expectedReturnDate || '-'}}</text>
+      </view>
+      <view class="row">
+        <text class="label">实际归还</text>
+        <text class="value">{{item.returnDate || '-'}}</text>
+      </view>
+      <view class="row" wx:if="{{item.remark}}">
+        <text class="label">备注</text>
+        <text class="value">{{item.remark}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty" wx:else>
+    <image src="/assets/icons/empty.svg" mode="widthFix" class="empty-img" />
+    <text>暂无借调记录</text>
+  </view>
+
+  <view class="loading" wx:if="{{loading}}">加载中...</view>
+</view>

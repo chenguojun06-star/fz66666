@@ -3,15 +3,15 @@
   <view class="search-bar">
     <view class="search-input-wrap">
       <icon type="search" size="14" color="#999" />
-      <input 
-        class="search-input" 
-        placeholder="搜索款号" 
-        value="{{keyword}}" 
+      <input
+        class="search-input"
+        placeholder="搜索款号"
+        value="{{keyword}}"
         bindinput="onKeywordInput"
         bindconfirm="onSearch"
       />
       <view class="scan-icon" bindtap="handleScan">
-        <image src="/assets/icons/scan.png" mode="aspectFit" style="width: 20px; height: 20px;" />
+        <image src="/assets/icons/scan.svg" mode="aspectFit" style="width: 20px; height: 20px;" />
       </view>
     </view>
   </view>
@@ -39,8 +39,8 @@
   </view>
 
   <!-- 列表内容 -->
-  <scroll-view 
-    scroll-y 
+  <scroll-view
+    scroll-y
     class="list-container"
     bindscrolltolower="onLoadMore"
     refresher-enabled
@@ -72,13 +72,18 @@
               <text class="value orange">{{item.loanedQuantity}}</text>
             </view>
           </view>
+          <view class="item-actions">
+            <view class="action-link" bindtap="navToLoanList" data-id="{{item.id}}" data-styleno="{{item.styleNo}}">
+              借调记录
+            </view>
+          </view>
         </view>
       </view>
     </block>
-    
+
     <!-- 空状态 -->
     <view wx:else class="empty-state">
-      <image src="/assets/images/empty.png" mode="widthFix" class="empty-img" />
+      <image src="/assets/icons/empty.svg" mode="widthFix" class="empty-img" />
       <text>暂无样衣库存数据</text>
     </view>
 

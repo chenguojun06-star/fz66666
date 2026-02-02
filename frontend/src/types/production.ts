@@ -286,6 +286,7 @@ export interface ProductionQueryParams {
   styleNo?: string;
   factoryName?: string;
   status?: string;
+  keyword?: string;
   page: number;
   pageSize: number;
 }

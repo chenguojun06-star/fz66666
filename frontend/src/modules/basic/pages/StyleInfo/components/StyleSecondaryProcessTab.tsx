@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Alert, App, Button, Col, Form, Input, InputNumber, Row, Select, Space, Table, Tag } from 'antd';
+import { Alert, App, Button, Col, Form, Input, InputNumber, Row, Select, Table, Tag } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
@@ -29,6 +29,7 @@ interface SecondaryProcess {
 
 interface Props {
   styleId: number | string;
+  styleNo?: string;
   readOnly?: boolean;
   secondaryAssignee?: string;
   secondaryStartTime?: string;
@@ -40,6 +41,7 @@ interface Props {
 
 const StyleSecondaryProcessTab: React.FC<Props> = ({
   styleId,
+  styleNo,
   readOnly = false,
   secondaryAssignee,
   secondaryStartTime,
@@ -282,16 +284,19 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
         <RowActions
           actions={[
             {
+              key: 'view',
               label: '查看',
               icon: <EyeOutlined />,
               onClick: () => handleView(record)
             },
             {
+              key: 'edit',
               label: '编辑',
               icon: <EditOutlined />,
               onClick: () => handleEdit(record)
             },
             {
+              key: 'delete',
               label: '删除',
               icon: <DeleteOutlined />,
               danger: true,
@@ -305,6 +310,9 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
 
   return (
     <div style={{ padding: '0 4px' }}>
+      <div style={{ marginBottom: 8, color: '#666', fontSize: 12 }}>
+        款号：<span style={{ color: '#333', fontWeight: 500 }}>{styleNo || '-'}</span>
+      </div>
       {/* 状态栏 */}
       {!simpleView && (
         <div style={{

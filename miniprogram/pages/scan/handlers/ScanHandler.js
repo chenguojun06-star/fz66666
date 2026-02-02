@@ -368,7 +368,7 @@ class ScanHandler {
   async handleScan(rawScanCode, input = null) {
     const { manualQuantity, manualScanType, manualWarehouse } = this._parseManualInput(input);
 
-    // console.log(
+    console.log(
       '[ScanHandler] 处理扫码:',
       rawScanCode,
       manualQuantity ? `数量:${manualQuantity}` : '',
@@ -394,7 +394,7 @@ class ScanHandler {
 
       const scanMode = this._determineScanMode(parsedData);
 
-      // console.log('[ScanHandler] 解析成功:', {
+      console.log('[ScanHandler] 解析成功:', {
         scanMode,
         orderNo: parsedData.orderNo,
         bundleNo: parsedData.bundleNo,
@@ -415,7 +415,7 @@ class ScanHandler {
       }
 
       // 🔍 调试：打印订单详情中的关键工序字段
-      // console.log('[ScanHandler] 订单详情工序信息:', {
+      console.log('[ScanHandler] 订单详情工序信息:', {
         currentProcessName: orderDetail.currentProcessName,
         currentProgress: orderDetail.currentProgress,
         progressStage: orderDetail.progressStage,
@@ -856,12 +856,14 @@ class ScanHandler {
       return this._errorResult('无效的样板生产二维码');
     }
 
-    // console.log('[ScanHandler] 样板生产扫码:', {
+    /*
+    console.log('[ScanHandler] 样板生产扫码:', {
       patternId,
       styleNo: parsedData.styleNo,
       color: parsedData.color,
       manualScanType,
     });
+    */
 
     try {
       // 获取样板生产详情（用于展示确认）
@@ -904,10 +906,7 @@ class ScanHandler {
    */
   async _getPatternDetail(patternId) {
     try {
-      const res = await this.api.request({
-        url: `/api/production/pattern/${patternId}`,
-        method: 'GET',
-      });
+      const res = await this.api.production.getPatternDetail(patternId);
       return res || null;
     } catch (e) {
       console.error('[ScanHandler] 获取样板生产详情失败:', e);
@@ -953,15 +952,11 @@ class ScanHandler {
    */
   async submitPatternScan(data) {
     try {
-      const res = await this.api.request({
-        url: '/api/production/pattern/scan',
-        method: 'POST',
-        data: {
-          patternId: data.patternId,
-          operationType: data.operationType,
-          operatorRole: data.operatorRole || 'PLATE_WORKER',
-          remark: data.remark,
-        },
+      const res = await this.api.production.submitPatternScan({
+        patternId: data.patternId,
+        operationType: data.operationType,
+        operatorRole: data.operatorRole || 'PLATE_WORKER',
+        remark: data.remark,
       });
 
       if (res) {

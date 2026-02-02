@@ -11,6 +11,7 @@ interface StyleActionButtonsProps {
   isNewPage: boolean;
   sampleCompleted: boolean;
   hasProcessData: boolean;
+  pushedToOrder: boolean;
 
   // 操作
   onSave: () => void;
@@ -31,6 +32,7 @@ const StyleActionButtons: React.FC<StyleActionButtonsProps> = ({
   isNewPage,
   sampleCompleted,
   hasProcessData,
+  pushedToOrder,
   onSave,
   onCompleteSample,
   onPushToOrder,
@@ -94,12 +96,12 @@ const StyleActionButtons: React.FC<StyleActionButtonsProps> = ({
           type="primary"
           icon={<SendOutlined />}
           loading={pushingToOrder}
-          disabled={!hasProcessData}
+          disabled={!hasProcessData || pushedToOrder}
           onClick={onPushToOrder}
           style={primaryButtonStyle}
           size="small"
         >
-          推送到下单管理
+          {pushedToOrder ? '已推送' : '推送到下单管理'}
         </Button>
       )}
     </Space>

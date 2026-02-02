@@ -10,7 +10,7 @@
       <view class="input-wrap">
         <input name="styleNo" value="{{formData.styleNo}}" placeholder="请输入款号" bindinput="onInput" data-field="styleNo" />
         <view class="scan-btn" bindtap="handleScanStyle">
-          <image src="/assets/icons/scan.png" mode="aspectFit" />
+          <image src="/assets/icons/scan.svg" mode="aspectFit" />
         </view>
       </view>
     </view>
@@ -50,9 +50,9 @@
       <!-- 自动加载的库存列表 -->
       <view class="stock-selection" wx:if="{{stockList.length > 0}}">
         <text class="section-label">请选择借出规格：</text>
-        <view 
-          class="stock-item {{selectedStockId === item.id ? 'active' : ''}}" 
-          wx:for="{{stockList}}" 
+        <view
+          class="stock-item {{selectedStockId === item.id ? 'active' : ''}}"
+          wx:for="{{stockList}}"
           wx:key="id"
           bindtap="onSelectStock"
           data-id="{{item.id}}"
@@ -65,7 +65,7 @@
         </view>
       </view>
       <view class="loading-stock" wx:if="{{stockLoading}}">查询库存中...</view>
-      
+
       <view class="form-item">
         <text class="label">借用人</text>
         <input name="borrower" placeholder="请输入姓名" />
@@ -87,7 +87,7 @@
         <view class="input-wrap">
           <input name="loanId" value="{{formData.loanId}}" placeholder="请输入借出记录ID" />
           <view class="scan-btn" bindtap="handleScanLoan">
-            <image src="/assets/icons/scan.png" mode="aspectFit" />
+            <image src="/assets/icons/scan.svg" mode="aspectFit" />
           </view>
         </view>
       </view>

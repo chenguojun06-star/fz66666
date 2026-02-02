@@ -253,13 +253,15 @@ export const StyleAttachmentsButton: React.FC<{
   buttonText?: string;
   /** 模态框标题，默认"纸样附件" */
   modalTitle?: string;
+  /** 仅展示指定业务类型 */
+  bizTypes?: string[];
   /** @deprecated 已废弃，不再使用 */
   onlyGradingPattern?: boolean;
   /** 仅显示使用中的最新纸样（隐藏归档历史版本） */
   onlyActive?: boolean;
   /** 模态框关闭时的回调 */
   onModalClose?: () => void;
-}> = ({ styleId, styleNo, buttonText = '纸样', modalTitle = '纸样附件', onlyActive, onModalClose }) => {
+}> = ({ styleId, styleNo, buttonText = '纸样', modalTitle = '纸样附件', bizTypes, onlyActive, onModalClose }) => {
   const { modalWidth: _modalWidth } = useViewport();
   const { user } = useAuth();
   // 检查是否为管理员（拥有system:manage权限）
@@ -285,14 +287,22 @@ export const StyleAttachmentsButton: React.FC<{
       const res = await api.get<{ code: number; message: string; data: unknown[] }>('/style/attachment/list', { params: { styleId, styleNo } });
       if (res.code === 200) {
         let attachments = res.data || [];
-        // 筛选纸样类型附件（包括开发中和已完成流转的）
-        // pattern/pattern_grading: 开发中的纸样
-        // pattern_final/pattern_grading_final: 样衣完成后流转到数据中心的纸样
-        attachments = attachments.filter((item: any) => {
-          const bizType = String((item as Record<string, unknown>)?.bizType || '').trim();
-          return bizType === 'pattern' || bizType === 'pattern_grading'
-            || bizType === 'pattern_final' || bizType === 'pattern_grading_final';
-        });
+        const normalizedBizTypes = (bizTypes || []).map((t) => String(t || '').trim()).filter(Boolean);
+        if (normalizedBizTypes.length) {
+          attachments = attachments.filter((item: any) => {
+            const bizType = String((item as Record<string, unknown>)?.bizType || '').trim();
+            return normalizedBizTypes.includes(bizType);
+          });
+        } else {
+          // 默认筛选纸样类型附件（包括开发中和已完成流转的）
+          // pattern/pattern_grading: 开发中的纸样
+          // pattern_final/pattern_grading_final: 样衣完成后流转到数据中心的纸样
+          attachments = attachments.filter((item: any) => {
+            const bizType = String((item as Record<string, unknown>)?.bizType || '').trim();
+            return bizType === 'pattern' || bizType === 'pattern_grading'
+              || bizType === 'pattern_final' || bizType === 'pattern_grading_final';
+          });
+        }
         // 在指定场景下，仅展示使用中的最新纸样，隐藏归档历史版本
         if (onlyActive) {
           attachments = attachments.filter((item: any) => String((item as Record<string, unknown>)?.status || 'active') === 'active');
@@ -334,6 +344,7 @@ export const StyleAttachmentsButton: React.FC<{
         if (t === 'pattern_final') return <Tag color="blue">原始纸样 ✓</Tag>;
         if (t === 'pattern_grading') return <Tag color="green">放码纸样</Tag>;
         if (t === 'pattern_grading_final') return <Tag color="green">放码纸样 ✓</Tag>;
+        if (t === 'order') return <Tag color="purple">下单附件</Tag>;
         return <Tag>{t}</Tag>;
       }
     },

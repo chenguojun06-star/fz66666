@@ -159,7 +159,7 @@ public class WeChatMiniProgramAuthOrchestrator {
             log.setLoginTime(LocalDateTime.now());
             log.setLoginStatus(safeTrim(status));
             log.setMessage(safeTrim(message));
-            log.setUserAgent(safeTrim(userAgent));
+            log.setUserAgent(limitLength(safeTrim(userAgent), 200));
             if (log.getUsername() != null && !log.getUsername().isBlank()) {
                 loginLogService.save(log);
             }
@@ -175,5 +175,15 @@ public class WeChatMiniProgramAuthOrchestrator {
         }
         String t = s.trim();
         return t.isEmpty() ? null : t;
+    }
+
+    private static String limitLength(String value, int max) {
+        if (value == null) {
+            return null;
+        }
+        if (max <= 0 || value.length() <= max) {
+            return value;
+        }
+        return value.substring(0, max);
     }
 }

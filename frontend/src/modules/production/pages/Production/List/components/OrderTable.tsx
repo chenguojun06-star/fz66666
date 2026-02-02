@@ -4,8 +4,7 @@
  */
 import React from 'react';
 import { Table, Tag, Button, Space } from 'antd';
-import { StyleCoverThumb } from '@/components/StyleAssets';
-import StyleAttachmentsButton from '@/components/StyleAssets/StyleAttachmentsButton';
+import { StyleCoverThumb, StyleAttachmentsButton } from '@/components/StyleAssets';
 import LiquidProgressBar from '@/components/common/LiquidProgressBar';
 import { ProductionOrder } from '@/types/production';
 import { formatDateTime } from '@/utils/datetime';

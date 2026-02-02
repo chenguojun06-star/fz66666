@@ -40,12 +40,12 @@ replace_color() {
     local old_color="$1"
     local new_var="$2"
     local description="$3"
-    
+
     echo "🔄 替换 $description..."
-    
+
     # 查找匹配数量
     local count=$(find "$FRONTEND_DIR" -name "*.tsx" -type f -exec grep -l "color.*['\"]$old_color" {} \; | wc -l | tr -d ' ')
-    
+
     if [ "$count" -gt 0 ]; then
         # 执行替换（多种格式）
         find "$FRONTEND_DIR" -name "*.tsx" -type f -exec sed -i '' \
@@ -54,7 +54,7 @@ replace_color() {
             -e "s/color:['\"]$old_color['\"]]/color:'$new_var'/g" \
             -e "s/color:['\"]$old_color['\"]/color:'$new_var'/g" \
             {} +
-        
+
         color_counts["$description"]=$count
         echo "   ✅ 修复 $count 处"
     else

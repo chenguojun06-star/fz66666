@@ -1,8 +1,10 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Alert, App, Button, Card, Checkbox, Empty, Input, Select, Space, Spin, Tabs, Tag, Form, Row, Col } from 'antd';
 import type { MenuProps } from 'antd';
-import { PlusOutlined, SearchOutlined, EditOutlined, CheckOutlined, CloseOutlined, SettingOutlined, FileSearchOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, CheckOutlined, CloseOutlined, SettingOutlined, FileSearchOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
+import StandardSearchBar from '@/components/common/StandardSearchBar';
+import StandardToolbar from '@/components/common/StandardToolbar';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
@@ -13,6 +15,7 @@ import { useSync } from '@/utils/syncManager';
 import { useViewport } from '@/utils/useViewport';
 import { useModal } from '@/hooks';
 import './styles.css';
+import type { Dayjs } from 'dayjs';
 
 const { Option } = Select;
 
@@ -39,6 +42,7 @@ const UserList: React.FC = () => {
 
   const [roleOptions, setRoleOptions] = useState<Role[]>([]);
   const [roleOptionsLoading, setRoleOptionsLoading] = useState(false);
+  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
 
   const [permTree, setPermTree] = useState<any[]>([]);
   const [permCheckedIds, setPermCheckedIds] = useState<Set<number>>(new Set());
@@ -771,9 +775,6 @@ const UserList: React.FC = () => {
           {/* 页面标题和操作区 */}
           <div className="page-header">
             <h2 className="page-title">人员管理</h2>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => openDialog()}>
-              新增人员
-            </Button>
           </div>
 
           {/* 待审批用户提醒 */}
@@ -799,56 +800,28 @@ const UserList: React.FC = () => {
 
           {/* 筛选区 */}
           <Card size="small" className="filter-card mb-sm">
-            <Form layout="inline" size="small">
-              <Form.Item label="用户名">
-                <Input
-                  placeholder="请输入用户名"
-                  onChange={(e) => setQueryParams({ ...queryParams, username: e.target.value })}
-                  style={{ width: 150 }}
+            <StandardToolbar
+              left={(
+                <StandardSearchBar
+                  searchValue={queryParams.username || ''}
+                  onSearchChange={(value) => setQueryParams({ ...queryParams, username: value, page: 1 })}
+                  searchPlaceholder="搜索用户名/姓名"
+                  dateValue={dateRange}
+                  onDateChange={setDateRange}
+                  statusValue={queryParams.status || ''}
+                  onStatusChange={(value) => setQueryParams({ ...queryParams, status: value, page: 1 })}
+                  statusOptions={[
+                    { label: '启用', value: 'active' },
+                    { label: '停用', value: 'inactive' },
+                  ]}
                 />
-              </Form.Item>
-              <Form.Item label="姓名">
-                <Input
-                  placeholder="请输入姓名"
-                  onChange={(e) => setQueryParams({ ...queryParams, name: e.target.value })}
-                  style={{ width: 150 }}
-                />
-              </Form.Item>
-              <Form.Item label="角色">
-                <Select
-                  placeholder="请选择角色"
-                  onChange={(value) => setQueryParams({ ...queryParams, roleName: value })}
-                  style={{ width: 120 }}
-                  loading={roleOptionsLoading}
-                >
-                  <Option value="">全部</Option>
-                  {roleOptions.map((r) => (
-                    <Option key={String(r.id)} value={r.roleName}>{r.roleName}</Option>
-                  ))}
-                </Select>
-              </Form.Item>
-              <Form.Item label="状态">
-                <Select
-                  placeholder="请选择状态"
-                  onChange={(value) => setQueryParams({ ...queryParams, status: value })}
-                  style={{ width: 100 }}
-                >
-                  <Option value="">全部</Option>
-                  <Option value="active">启用</Option>
-                  <Option value="inactive">停用</Option>
-                </Select>
-              </Form.Item>
-              <Form.Item className="filter-actions">
-                <Space>
-                  <Button type="primary" icon={<SearchOutlined />} onClick={() => setQueryParams(prev => ({ ...prev, page: 1 }))}>
-                    查询
-                  </Button>
-                  <Button onClick={() => setQueryParams({ page: 1, pageSize: 10 })}>
-                    重置
-                  </Button>
-                </Space>
-              </Form.Item>
-            </Form>
+              )}
+              right={(
+                <Button type="primary" icon={<PlusOutlined />} onClick={() => openDialog()}>
+                  新增人员
+                </Button>
+              )}
+            />
           </Card>
 
           {/* 表格区 */}

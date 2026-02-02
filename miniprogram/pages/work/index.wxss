@@ -163,14 +163,66 @@ page {
   margin-bottom: 12rpx;
 }
 
-.bg-purple {
-  background-color: #722ed1;
-  color: #fff;
+.iconfont {
+  font-size: 36rpx;
+  opacity: 0.8;
+}
+
+.bg-soft-blue {
+  background-color: var(--color-blue-light);
+  color: var(--color-primary);
+}
+
+.bg-soft-slate {
+  background-color: var(--color-bg-gray);
+  color: var(--color-text-primary);
+}
+
+.bg-soft-amber {
+  background-color: var(--color-border-light);
+  color: var(--color-warning);
+}
+
+.bg-soft-green {
+  background-color: var(--color-blue-lighter);
+  color: var(--color-success);
 }
 
 .menu-name {
   font-size: 24rpx;
-  color: #333;
+  color: var(--color-text-primary);
+}
+
+.title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12rpx;
+}
+
+.title-stats {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.title-stat-value {
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+}
+
+.title-stat-primary {
+  color: var(--color-primary);
+}
+
+.title-stat-accent {
+  color: var(--color-warning);
+}
+
+.title-stat-sep {
+  color: var(--color-text-disabled);
 }
 
 .section-title {

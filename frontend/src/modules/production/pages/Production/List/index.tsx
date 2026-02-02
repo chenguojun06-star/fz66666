@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button, Card, Input, Select, Space, Tag, Form, App, Dropdown, Checkbox, Alert, InputNumber } from 'antd';
-import { SearchOutlined, DownloadOutlined, DeleteOutlined, CheckCircleOutlined, EditOutlined, SettingOutlined, AppstoreOutlined, UnorderedListOutlined, PrinterOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import { DownloadOutlined, DeleteOutlined, CheckCircleOutlined, EditOutlined, SettingOutlined, AppstoreOutlined, UnorderedListOutlined, PrinterOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
+import StandardSearchBar from '@/components/common/StandardSearchBar';
+import StandardToolbar from '@/components/common/StandardToolbar';
 
 import QuickEditModal from '@/components/common/QuickEditModal';
 import StylePrintModal from '@/components/common/StylePrintModal';
@@ -15,15 +17,18 @@ import api, {
   withQuery,
   isApiSuccess,
 } from '@/utils/api';
-import { productionOrderApi } from '@/services/production/productionApi';
+import { productionOrderApi, productionScanApi } from '@/services/production/productionApi';
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
+import type { Dayjs } from 'dayjs';
 import './styles.css';
 import dayjs from 'dayjs';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import UniversalCardView from '@/components/common/UniversalCardView';
+import OperationHistoryTable from '@/components/common/OperationHistoryTable';
+import { buildHistoryRowsForList } from '@/utils/operationHistory';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
@@ -59,6 +64,7 @@ const ProductionList: React.FC = () => {
     page: 1,
     pageSize: 10
   });
+  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
 
   const [sortField, setSortField] = useState<string>('createTime');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -91,6 +97,8 @@ const ProductionList: React.FC = () => {
   const [procurementStatus, setProcurementStatus] = useState<any>(null);
   const [processStatus, setProcessStatus] = useState<any>(null); // 所有工序节点状态
   const [processDetailActiveTab, setProcessDetailActiveTab] = useState<string>('process'); // 工序明细Tab: process=工序详情, delegation=工序委派
+  const [processDetailScanRecords, setProcessDetailScanRecords] = useState<any[]>([]);
+  const [processDetailNodeOperations, setProcessDetailNodeOperations] = useState<Record<string, any> | null>(null);
 
   // 工厂列表（用于工序委派）
   const [factories, setFactories] = useState<any[]>([]);
@@ -103,6 +111,109 @@ const ProductionList: React.FC = () => {
     quantity?: number;
     unitPrice?: number
   }>>({});
+
+  const mainStages = useMemo(() => ([
+    { key: 'procurement', name: '采购', keywords: ['采购', '物料', '备料'] },
+    { key: 'cutting', name: '裁剪', keywords: ['裁剪', '裁床', '开裁'] },
+    { key: 'carSewing', name: '车缝', keywords: ['车缝', '缝制', '缝纫', '车工', '生产'] },
+    { key: 'secondaryProcess', name: '二次工艺', keywords: ['二次工艺', '二次', '工艺'] },
+    { key: 'tailProcess', name: '尾部', keywords: ['尾部', '整烫', '包装', '质检', '后整', '剪线'] },
+    { key: 'warehousing', name: '入库', keywords: ['入库', '仓库'] },
+  ]), []);
+
+  const matchStageKey = (progressStage: string, processName: string) => {
+    const text = `${progressStage || ''} ${processName || ''}`;
+    for (const stage of mainStages) {
+      if (stage.keywords.some(kw => text.includes(kw))) {
+        return stage.key;
+      }
+    }
+    return 'tailProcess';
+  };
+
+  const workflowNodes = useMemo(() => {
+    let nodes: any[] = [];
+    try {
+      if (processDetailRecord?.progressWorkflowJson) {
+        const workflow = typeof processDetailRecord.progressWorkflowJson === 'string'
+          ? JSON.parse(processDetailRecord.progressWorkflowJson)
+          : processDetailRecord.progressWorkflowJson;
+
+        const rawNodes = workflow?.nodes || [];
+        if (rawNodes.length > 0 && rawNodes[0]?.name) {
+          nodes = rawNodes.map((item: any, idx: number) => ({
+            id: item.id || `proc_${idx}`,
+            name: item.name || item.processName || '',
+            progressStage: item.progressStage || '',
+            unitPrice: Number(item.unitPrice) || 0,
+            sortOrder: item.sortOrder ?? idx,
+          }));
+        } else {
+          const processesByNode = workflow?.processesByNode || {};
+          const allProcesses: any[] = [];
+          let sortIdx = 0;
+          for (const node of rawNodes) {
+            const nodeId = node?.id || '';
+            const nodeProcesses = processesByNode[nodeId] || [];
+            for (const p of nodeProcesses) {
+              allProcesses.push({
+                id: p.id || `proc_${sortIdx}`,
+                name: p.name || p.processName || '',
+                progressStage: p.progressStage || node?.progressStage || node?.name || '',
+                unitPrice: Number(p.unitPrice) || 0,
+                sortOrder: sortIdx,
+              });
+              sortIdx++;
+            }
+          }
+          nodes = allProcesses;
+        }
+      }
+
+      if (nodes.length === 0 && Array.isArray(processDetailRecord?.progressNodeUnitPrices)) {
+        nodes = processDetailRecord.progressNodeUnitPrices.map((item: any, idx: number) => ({
+          id: item.id || item.processId || `node_${idx}`,
+          name: item.name || item.processName || '',
+          progressStage: item.progressStage || '',
+          unitPrice: Number(item.unitPrice) || Number(item.price) || 0,
+          sortOrder: item.sortOrder ?? idx,
+        }));
+      }
+    } catch (e) {
+      console.error('解析工序配置失败:', e);
+    }
+    return nodes;
+  }, [processDetailRecord]);
+
+  const childProcessesByStage = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    mainStages.forEach(s => { map[s.key] = []; });
+    workflowNodes.forEach((node) => {
+      const stageKey = matchStageKey(String(node?.progressStage || ''), String(node?.name || ''));
+      if (!map[stageKey]) {
+        map[stageKey] = [];
+      }
+      map[stageKey].push(node);
+    });
+    return map;
+  }, [workflowNodes, mainStages]);
+
+  const stageKeyByType: Record<string, string> = {
+    procurement: 'procurement',
+    cutting: 'cutting',
+    carSewing: 'carSewing',
+    secondaryProcess: 'secondaryProcess',
+    tailProcess: 'tailProcess',
+    warehousing: 'warehousing',
+  };
+
+  const activeStageKeys = useMemo(() => {
+    if (!processDetailType || processDetailType === 'all') {
+      return mainStages.map(s => s.key);
+    }
+    const key = stageKeyByType[processDetailType] || processDetailType;
+    return [key];
+  }, [processDetailType, mainStages]);
 
   // 默认显示的核心列（其他列默认隐藏，用户可以添加）
   const defaultVisibleColumns: Record<string, boolean> = {
@@ -758,6 +869,40 @@ const ProductionList: React.FC = () => {
         console.error('[采购状态] 获取失败:', error);
         setProcurementStatus(null);
       }
+    }
+
+    // 获取扫码记录
+    try {
+      const res = await productionScanApi.listByOrderId(record.id, { page: 1, pageSize: 1000 });
+      if (res.code === 200 && Array.isArray(res.data)) {
+        setProcessDetailScanRecords(res.data);
+      } else {
+        setProcessDetailScanRecords([]);
+      }
+    } catch (error) {
+      console.error('[扫码记录] 获取失败:', error);
+      setProcessDetailScanRecords([]);
+    }
+
+    // 获取委派记录（nodeOperations）
+    try {
+      const res = await productionOrderApi.getNodeOperations(record.id);
+      if (res.code === 200 && res.data) {
+        const raw = res.data;
+        const parsed = typeof raw === 'string' ? (() => {
+          try {
+            return JSON.parse(raw);
+          } catch {
+            return {};
+          }
+        })() : raw;
+        setProcessDetailNodeOperations(parsed || {});
+      } else {
+        setProcessDetailNodeOperations(null);
+      }
+    } catch (error) {
+      console.error('[委派记录] 获取失败:', error);
+      setProcessDetailNodeOperations(null);
     }
   };
 
@@ -1849,70 +1994,42 @@ const ProductionList: React.FC = () => {
           {/* 页面标题和操作区 */}
           <div className="page-header">
             <h2 className="page-title">我的订单</h2>
-            <Space wrap>
-              <Button
-                icon={viewMode === 'list' ? <AppstoreOutlined /> : <UnorderedListOutlined />}
-                onClick={() => setViewMode(viewMode === 'list' ? 'card' : 'list')}
-              >
-                {viewMode === 'list' ? '卡片视图' : '列表视图'}
-              </Button>
-              <Button icon={<DownloadOutlined />} onClick={exportSelected} disabled={!selectedRowKeys.length}>
-                导出
-              </Button>
-            </Space>
           </div>
 
           {/* 筛选区 */}
           <Card size="small" className="filter-card mb-sm">
-            <Form layout="inline" size="small">
-              <Form.Item label="订单号">
-                <Input
-                  placeholder="请输入订单号"
-                  onChange={(e) => setQueryParams({ ...queryParams, orderNo: e.target.value })}
-                  style={{ width: 150 }}
+            <StandardToolbar
+              left={(
+                <StandardSearchBar
+                  searchValue={queryParams.orderNo || ''}
+                  onSearchChange={(value) => setQueryParams({ ...queryParams, orderNo: value, page: 1 })}
+                  searchPlaceholder="搜索订单号/款号/加工厂"
+                  dateValue={dateRange}
+                  onDateChange={setDateRange}
+                  statusValue={queryParams.status || ''}
+                  onStatusChange={(value) => setQueryParams({ ...queryParams, status: value, page: 1 })}
+                  statusOptions={[
+                    { label: '待生产', value: 'pending' },
+                    { label: '生产中', value: 'production' },
+                    { label: '已完成', value: 'completed' },
+                    { label: '已逾期', value: 'delayed' },
+                  ]}
                 />
-              </Form.Item>
-              <Form.Item label="款号">
-                <Input
-                  placeholder="请输入款号"
-                  onChange={(e) => setQueryParams({ ...queryParams, styleNo: e.target.value })}
-                  style={{ width: 120 }}
-                />
-              </Form.Item>
-              <Form.Item label="加工厂">
-                <Input
-                  placeholder="请输入加工厂名称"
-                  onChange={(e) => setQueryParams({ ...queryParams, factoryName: e.target.value })}
-                  style={{ width: 150 }}
-                />
-              </Form.Item>
-              <Form.Item label="状态">
-                <Select
-                  placeholder="请选择状态"
-                  onChange={(value) => setQueryParams({ ...queryParams, status: value })}
-                  style={{ width: 100 }}
-                >
-                  <Option value="">全部</Option>
-                  <Option value="pending">待生产</Option>
-                  <Option value="production">生产中</Option>
-                  <Option value="completed">已完成</Option>
-                  <Option value="delayed">已逾期</Option>
-                </Select>
-              </Form.Item>
-              <Form.Item className="filter-actions">
-                <Space>
-                  <Button type="primary" icon={<SearchOutlined />} onClick={() => fetchProductionList()}>
-                    查询
+              )}
+              right={(
+                <>
+                  <Button
+                    icon={viewMode === 'list' ? <AppstoreOutlined /> : <UnorderedListOutlined />}
+                    onClick={() => setViewMode(viewMode === 'list' ? 'card' : 'list')}
+                  >
+                    {viewMode === 'list' ? '卡片视图' : '列表视图'}
                   </Button>
-                  <Button onClick={() => {
-                    setQueryParams({ page: 1, pageSize: 10 });
-                    fetchProductionList();
-                  }}>
-                    重置
+                  <Button icon={<DownloadOutlined />} onClick={exportSelected} disabled={!selectedRowKeys.length}>
+                    导出
                   </Button>
-                </Space>
-              </Form.Item>
-            </Form>
+                </>
+              )}
+            />
           </Card>
 
           {/* 表格/卡片区 */}
@@ -2079,6 +2196,8 @@ const ProductionList: React.FC = () => {
             setProcurementStatus(null);
             setProcessStatus(null);
             setProcessDetailActiveTab('process');
+            setProcessDetailScanRecords([]);
+            setProcessDetailNodeOperations(null);
           }}
           record={processDetailRecord}
           processType={processDetailType}
@@ -2153,40 +2272,25 @@ const ProductionList: React.FC = () => {
                   </thead>
                   <tbody>
                     {(() => {
-                      // 解析订单的工序单价配置
-                      let workflowNodes: any[] = [];
-                      try {
-                        if (processDetailRecord?.progressWorkflowJson) {
-                          const workflow = typeof processDetailRecord.progressWorkflowJson === 'string'
-                            ? JSON.parse(processDetailRecord.progressWorkflowJson)
-                            : processDetailRecord.progressWorkflowJson;
+                      const stageColorMap: Record<string, string> = {
+                        procurement: '#1e40af',
+                        cutting: '#92400e',
+                        carSewing: '#065f46',
+                        secondaryProcess: '#5b21b6',
+                        tailProcess: '#9d174d',
+                        warehousing: '#374151',
+                      };
 
-                          const nodes = workflow?.nodes || [];
-                          if (nodes.length > 0 && nodes[0]?.name) {
-                            workflowNodes = nodes.map((item: any) => ({
-                              name: item.name || item.processName || '',
-                              unitPrice: Number(item.unitPrice) || 0,
-                            }));
-                          }
-                        }
+                      const stageStatusMap: Record<string, any> = {
+                        cutting: processStatus?.cutting,
+                        carSewing: processStatus?.sewing,
+                        tailProcess: processStatus?.finishing,
+                        warehousing: processStatus?.warehousing,
+                      };
 
-                        // 如果没有数据，从 progressNodeUnitPrices 读取
-                        if (workflowNodes.length === 0 && Array.isArray(processDetailRecord?.progressNodeUnitPrices)) {
-                          workflowNodes = processDetailRecord.progressNodeUnitPrices.map((item: any) => ({
-                            name: item.name || item.processName || '',
-                            unitPrice: Number(item.unitPrice) || Number(item.price) || 0,
-                          }));
-                        }
-                      } catch (e) {
-                        console.error('解析工序配置失败:', e);
-                      }
+                      const stagesToShow = mainStages.filter(s => activeStageKeys.includes(s.key));
 
-                      return [
-                        { key: 'cutting', name: '裁剪', status: processStatus?.cutting, color: '#92400e' },
-                        { key: 'sewing', name: '车缝', status: processStatus?.sewing, color: '#065f46' },
-                        { key: 'finishing', name: '尾部', status: processStatus?.finishing, color: '#9d174d' },
-                        { key: 'warehousing', name: '入库', status: processStatus?.warehousing, color: '#374151' },
-                      ].map((node) => (
+                      return stagesToShow.map((node) => (
                         <tr key={node.key} style={{ borderBottom: '1px solid #f3f4f6' }}>
                           <td style={{ padding: '6px 12px' }}>
                             <span style={{ fontSize: '13px', fontWeight: 600, color: node.color }}>
@@ -2194,17 +2298,17 @@ const ProductionList: React.FC = () => {
                             </span>
                           </td>
                           <td style={{ padding: '6px 12px' }}>
-                            {node.status && (
+                            {stageStatusMap[node.key] && (
                               <span style={{
                                 fontSize: '11px',
                                 fontWeight: 600,
-                                color: node.status.completed ? '#059669' : '#f59e0b',
-                                background: node.status.completed ? '#d1fae5' : '#fef3c7',
+                                color: stageStatusMap[node.key].completed ? '#059669' : '#f59e0b',
+                                background: stageStatusMap[node.key].completed ? '#d1fae5' : '#fef3c7',
                                 padding: '2px 6px',
                                 borderRadius: '3px',
                                 whiteSpace: 'nowrap'
                               }}>
-                                {node.status.completed ? '✓ 完成' : `${node.status.completionRate}%`}
+                                {stageStatusMap[node.key].completed ? '✓ 完成' : `${stageStatusMap[node.key].completionRate}%`}
                               </span>
                             )}
                           </td>
@@ -2223,8 +2327,9 @@ const ProductionList: React.FC = () => {
                                   [node.key]: { ...prev[node.key], processName: value }
                                 }));
                               }}
+                              disabled={childProcessesByStage[node.key]?.length === 0}
                             >
-                              {workflowNodes.map((proc, idx) => (
+                              {(childProcessesByStage[node.key] || []).map((proc, idx) => (
                                 <Select.Option key={idx} value={proc.name}>
                                   {proc.name} (¥{proc.unitPrice.toFixed(2)})
                                 </Select.Option>
@@ -2290,7 +2395,7 @@ const ProductionList: React.FC = () => {
                           />
                         </td>
                         <td style={{ padding: '6px 12px', fontSize: '12px', color: '#374151' }}>
-                          {node.status?.operatorName ? (
+                          {stageStatusMap[node.key]?.operatorName ? (
                             <a
                               style={{ cursor: 'pointer', color: '#1890ff', fontWeight: 500 }}
                               onClick={() => {
@@ -2299,15 +2404,15 @@ const ProductionList: React.FC = () => {
                                 }
                               }}
                             >
-                              {node.status.operatorName}
+                              {stageStatusMap[node.key].operatorName}
                             </a>
                           ) : (
                             <span style={{ color: '#9ca3af' }}>-</span>
                           )}
                         </td>
                         <td style={{ padding: '6px 12px', fontSize: '12px', color: '#6b7280' }}>
-                          {node.status?.completedTime ? (
-                            new Date(node.status.completedTime).toLocaleString('zh-CN', {
+                          {stageStatusMap[node.key]?.completedTime ? (
+                            new Date(stageStatusMap[node.key].completedTime).toLocaleString('zh-CN', {
                               month: '2-digit',
                               day: '2-digit',
                               hour: '2-digit',
@@ -2349,6 +2454,28 @@ const ProductionList: React.FC = () => {
                   暂无委派记录
                 </div>
               </div>
+            </div>
+          )}
+          scanRecordContent={processDetailRecord && (
+            <div style={{ padding: '8px 0' }}>
+              <div style={{
+                fontSize: '13px',
+                fontWeight: 600,
+                color: '#374151',
+                marginBottom: '8px',
+                paddingBottom: '6px',
+                borderBottom: '1px solid #e5e7eb'
+              }}>
+                操作历史（扫码/委派/同步）
+              </div>
+              <OperationHistoryTable rows={buildHistoryRowsForList({
+                records: Array.isArray(processDetailScanRecords) ? processDetailScanRecords : [],
+                activeStageKeys,
+                childProcessesByStage,
+                nodeOperations: processDetailNodeOperations as Record<string, any> | null,
+                formatDateTime,
+                matchStageKey,
+              })} />
             </div>
           )}
         />

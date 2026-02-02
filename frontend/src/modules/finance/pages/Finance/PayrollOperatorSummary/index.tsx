@@ -149,12 +149,16 @@ const PayrollOperatorSummary: React.FC = () => {
     useEffect(() => {
         const urlOrderNo = searchParams.get('orderNo');
         const urlProcessName = searchParams.get('processName');
+        const urlScanType = searchParams.get('scanType');
 
         if (urlOrderNo && !hasAutoFetched.current) {
             hasAutoFetched.current = true;
             setOrderNo(urlOrderNo);
             if (urlProcessName) {
                 setProcessName(urlProcessName);
+            }
+            if (urlScanType) {
+                setScanType(urlScanType);
             }
             // 延迟执行查询，确保状态已更新
             setTimeout(() => {
@@ -163,7 +167,7 @@ const PayrollOperatorSummary: React.FC = () => {
                     styleNo: '',
                     operatorName: '',
                     processName: urlProcessName || '',
-                    scanType: undefined,
+                    scanType: urlScanType || undefined,
                     includeSettled: true,
                 };
                 doFetchData(payload);

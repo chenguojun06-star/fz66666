@@ -72,7 +72,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
   commonSizes, setCommonSizes, commonColors, setCommonColors
 }) => {
   return (
-    <Row gutter={16}>
+    <Row gutter={16} className="square-inputs">
         {/* 左侧：封面图上传 */}
         <Col xs={24} lg={6}>
           <CoverImageUpload

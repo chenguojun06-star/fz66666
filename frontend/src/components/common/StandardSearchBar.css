@@ -1,0 +1,29 @@
+.standard-search-bar {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.standard-search-row {
+  width: 100%;
+}
+
+.standard-search-input {
+  width: 260px;
+}
+
+.standard-search-date {
+  width: 260px;
+}
+
+.standard-search-status {
+  width: 120px;
+}
+
+.standard-search-bar .ant-picker {
+  padding: 0 14px;
+}
+
+.standard-search-bar .ant-select-selector {
+  padding: 0 12px !important;
+  align-items: center;
+}

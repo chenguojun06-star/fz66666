@@ -1,7 +1,8 @@
-import React from 'react';
-import { Button, Card, Input, Space } from 'antd';
-import { SearchOutlined } from '@ant-design/icons';
+import React, { useState } from 'react';
+import { Button, Card, Space } from 'antd';
+import StandardSearchBar from '@/components/common/StandardSearchBar';
 import { StyleQueryParams } from '@/types/style';
+import type { Dayjs } from 'dayjs';
 
 interface StyleFilterPanelProps {
   queryParams: Partial<StyleQueryParams>;
@@ -20,50 +21,30 @@ const StyleFilterPanel: React.FC<StyleFilterPanelProps> = ({
   onSearch,
   loading = false
 }) => {
-  const handleStyleNoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onQueryChange({ ...queryParams, styleNo: e.target.value });
-  };
-
-  const handleStyleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onQueryChange({ ...queryParams, styleName: e.target.value });
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      onSearch();
-    }
-  };
+  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
+  const [statusValue, setStatusValue] = useState('');
 
   return (
     <Card size="small" className="filter-card mb-sm">
-      <Space wrap>
-        <Input
-          placeholder="搜索款号"
-          prefix={<SearchOutlined />}
-          style={{ width: 180 }}
-          allowClear
-          value={queryParams.styleNo}
-          onChange={handleStyleNoChange}
-          onPressEnter={handleKeyPress}
-          disabled={loading}
+      <Space orientation="vertical" style={{ width: '100%' }} size="middle">
+        <StandardSearchBar
+          searchValue={queryParams.styleNo || ''}
+          onSearchChange={(value) => {
+            onQueryChange({ ...queryParams, styleNo: value });
+            onSearch();
+          }}
+          searchPlaceholder="搜索款号/款名"
+          dateValue={dateRange}
+          onDateChange={setDateRange}
+          statusValue={statusValue}
+          onStatusChange={setStatusValue}
+          statusOptions={[]}
         />
-        <Input
-          placeholder="搜索款名"
-          style={{ width: 220 }}
-          allowClear
-          value={queryParams.styleName}
-          onChange={handleStyleNameChange}
-          onPressEnter={handleKeyPress}
-          disabled={loading}
-        />
-        <Button
-          type="primary"
-          icon={<SearchOutlined />}
-          onClick={onSearch}
-          loading={loading}
-        >
-          查询
-        </Button>
+        <Space>
+          <Button type="primary" onClick={onSearch} loading={loading}>
+            查询
+          </Button>
+        </Space>
       </Space>
     </Card>
   );

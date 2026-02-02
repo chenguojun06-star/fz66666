@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { App, Card, Form, Input, Modal, Select, Tabs } from 'antd';
+import { App, Card, Checkbox, Form, Input, Modal, Select, Tabs } from 'antd';
 import Layout from '@/components/Layout';
 import api from '@/utils/api';
 import { useStyleDetail } from './hooks/useStyleDetail';
@@ -149,7 +149,7 @@ const StyleInfoDetailPage: React.FC = () => {
     handleCompleteSample,
     handlePushToOrder: handlePushToOrderDirect,
     handleUnlock,
-    handleBackToList,
+    handleBackToList: _handleBackToList,
   } = useStyleFormActions({
     form,
     currentStyle,
@@ -167,6 +167,14 @@ const StyleInfoDetailPage: React.FC = () => {
   const [processData, _setProcessData] = useState<any[]>([]);
   const [pushToOrderForm] = Form.useForm();
   const [pushToOrderSaving, setPushToOrderSaving] = useState(false);
+  const [pushToOrderTargets, setPushToOrderTargets] = useState<string[]>([
+    'pattern',
+    'size',
+    'process',
+    'production',
+    'secondary',
+    'sizePrice',
+  ]);
 
   // 生产制单相关状态
   const productionReqRowCount = 15;
@@ -280,7 +288,7 @@ const StyleInfoDetailPage: React.FC = () => {
       const values = await pushToOrderForm.validateFields();
       setPushToOrderSaving(true);
 
-      await handlePushToOrderDirect(values.priceType, values.remark);
+      await handlePushToOrderDirect(values.priceType, values.remark, pushToOrderTargets);
 
       setPushToOrderModalVisible(false);
       pushToOrderForm.resetFields();
@@ -311,7 +319,8 @@ const StyleInfoDetailPage: React.FC = () => {
               editLocked={editLocked}
               isNewPage={isNewPage}
               sampleCompleted={currentStyle?.sampleStatus === 'COMPLETED'}
-              hasProcessData={processData?.length > 0}
+              hasProcessData={processData?.length > 0 || Boolean((currentStyle as any)?.processCompletedTime)}
+              pushedToOrder={Boolean((currentStyle as any)?.orderType)}
               onSave={handleSave}
               onCompleteSample={handleCompleteSample}
               onPushToOrder={handlePushToOrder}
@@ -439,6 +448,7 @@ const StyleInfoDetailPage: React.FC = () => {
                 children: (
                   <StyleProductionTab
                     styleId={currentStyle?.id}
+                    styleNo={currentStyle?.styleNo}
                     productionReqRows={productionReqRows}
                     productionReqRowCount={productionReqRowCount}
                     productionReqLocked={productionReqLocked}
@@ -449,7 +459,7 @@ const StyleInfoDetailPage: React.FC = () => {
                     onProductionReqSave={handleSaveProduction}
                     onProductionReqReset={resetProductionReqFromCurrent}
                     onProductionReqRollback={handleRollbackProductionReq}
-                    productionReqCanRollback={false}
+                    productionReqCanRollback
                     productionAssignee={(currentStyle as any)?.productionAssignee}
                     productionStartTime={(currentStyle as any)?.productionStartTime}
                     productionCompletedTime={(currentStyle as any)?.productionCompletedTime}
@@ -463,6 +473,7 @@ const StyleInfoDetailPage: React.FC = () => {
                 children: (
                   <StyleSecondaryProcessTab
                     styleId={currentStyle?.id}
+                    styleNo={currentStyle?.styleNo}
                     readOnly={false}
                     secondaryAssignee={(currentStyle as any)?.secondaryAssignee}
                     secondaryStartTime={(currentStyle as any)?.secondaryStartTime}
@@ -509,6 +520,27 @@ const StyleInfoDetailPage: React.FC = () => {
         forceRender
       >
         <Form form={pushToOrderForm} layout="vertical">
+          <Form.Item label="同步目标（勾选才会过去）">
+            <Checkbox.Group
+              value={pushToOrderTargets}
+              onChange={(values) => setPushToOrderTargets(values.map((v) => String(v)))}
+            >
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                  gap: 8,
+                }}
+              >
+                <Checkbox value="pattern">纸样开发</Checkbox>
+                <Checkbox value="size">尺寸表</Checkbox>
+                <Checkbox value="process">工序单价</Checkbox>
+                <Checkbox value="production">生产制单</Checkbox>
+                <Checkbox value="secondary">二次工艺</Checkbox>
+                <Checkbox value="sizePrice">码数单价</Checkbox>
+              </div>
+            </Checkbox.Group>
+          </Form.Item>
           <Form.Item
             label="单价类型"
             name="priceType"

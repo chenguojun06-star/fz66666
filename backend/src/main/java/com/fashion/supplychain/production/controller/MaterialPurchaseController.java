@@ -196,6 +196,11 @@ public class MaterialPurchaseController {
         return Result.success(materialPurchaseOrchestrator.updateArrivedQuantity(params));
     }
 
+    @PostMapping("/instruction")
+    public Result<MaterialPurchase> createInstruction(@RequestBody Map<String, Object> params) {
+        return Result.success(materialPurchaseOrchestrator.createInstruction(params));
+    }
+
     @GetMapping("/demand/preview")
     public Result<?> previewDemand(@RequestParam String orderId) {
         return Result.success(materialPurchaseOrchestrator.previewDemand(orderId));

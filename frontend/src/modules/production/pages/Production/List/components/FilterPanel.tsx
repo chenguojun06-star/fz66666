@@ -3,17 +3,15 @@
  * 功能：订单号/款号/加工厂/状态筛选、日期范围、批量导出
  */
 import React from 'react';
-import { Button, Card, Input, Select, Space, DatePicker } from 'antd';
-import { SearchOutlined, DownloadOutlined } from '@ant-design/icons';
+import { Button, Card, Space } from 'antd';
+import { DownloadOutlined } from '@ant-design/icons';
+import StandardSearchBar from '@/components/common/StandardSearchBar';
 import { ProductionQueryParams } from '@/types/production';
-import dayjs from 'dayjs';
-
-const { Option } = Select;
-const { RangePicker } = DatePicker;
+import type { Dayjs } from 'dayjs';
 
 interface FilterPanelProps {
-  queryParams: ProductionQueryParams;
-  onSearch: (params: ProductionQueryParams) => void;
+  filters: any;
+  onSearch: (params: any) => void;
   onReset: () => void;
   onExport?: () => void;
   selectedCount?: number;
@@ -21,127 +19,73 @@ interface FilterPanelProps {
 }
 
 const FilterPanel: React.FC<FilterPanelProps> = ({
-  queryParams,
+  filters,
   onSearch,
   onReset,
   onExport,
   selectedCount = 0,
   loading = false,
 }) => {
-  const [localParams, setLocalParams] = React.useState<ProductionQueryParams>(queryParams);
+  const [localParams, setLocalParams] = React.useState<any>(filters);
 
   React.useEffect(() => {
-    setLocalParams(queryParams);
-  }, [queryParams]);
-
-  const handleSearch = () => {
-    onSearch(localParams);
-  };
+    setLocalParams(filters);
+  }, [filters]);
 
   const handleReset = () => {
     const resetParams: ProductionQueryParams = {
       page: 1,
-      pageSize: queryParams.pageSize || 10,
+      pageSize: localParams?.pageSize || 10,
     };
     setLocalParams(resetParams);
     onReset();
   };
 
-  const handleFieldChange = (field: keyof ProductionQueryParams, value: any) => {
-    setLocalParams(prev => ({
-      ...prev,
-      [field]: value,
-      page: 1, // 修改筛选条件时重置页码
-    }));
+  const updateParams = (partial: Partial<ProductionQueryParams>) => {
+    const nextParams = {
+      ...localParams,
+      ...partial,
+      page: 1,
+    };
+    setLocalParams(nextParams);
+    onSearch(nextParams);
   };
+
+  const [dateRange, setDateRange] = React.useState<[Dayjs | null, Dayjs | null] | null>(null);
 
   return (
     <Card style={{ marginBottom: 16 }}>
-      <Space direction="vertical" style={{ width: '100%' }} size="middle">
-        {/* 第一行：主要筛选条件 */}
-        <Space wrap>
-          <Input
-            placeholder="订单号"
-            value={localParams.orderNo || ''}
-            onChange={(e) => handleFieldChange('orderNo', e.target.value)}
-            onPressEnter={handleSearch}
-            style={{ width: 160 }}
-            allowClear
-          />
-          <Input
-            placeholder="款号"
-            value={localParams.styleNo || ''}
-            onChange={(e) => handleFieldChange('styleNo', e.target.value)}
-            onPressEnter={handleSearch}
-            style={{ width: 160 }}
-            allowClear
-          />
-          <Input
-            placeholder="款名"
-            value={localParams.styleName || ''}
-            onChange={(e) => handleFieldChange('styleName', e.target.value)}
-            onPressEnter={handleSearch}
-            style={{ width: 160 }}
-            allowClear
-          />
-          <Input
-            placeholder="加工厂"
-            value={localParams.factoryName || ''}
-            onChange={(e) => handleFieldChange('factoryName', e.target.value)}
-            onPressEnter={handleSearch}
-            style={{ width: 160 }}
-            allowClear
-          />
-          <Select
-            placeholder="状态"
-            value={localParams.status || undefined}
-            onChange={(value) => handleFieldChange('status', value)}
-            style={{ width: 120 }}
-            allowClear
-          >
-            <Option value="pending">待生产</Option>
-            <Option value="production">生产中</Option>
-            <Option value="completed">已完成</Option>
-            <Option value="delayed">已逾期</Option>
-          </Select>
-        </Space>
-
-        {/* 第二行：日期筛选和操作按钮 */}
-        <Space wrap>
-          <RangePicker
-            value={
-              localParams.startDate && localParams.endDate
-                ? [dayjs(localParams.startDate), dayjs(localParams.endDate)]
-                : null
+      <Space orientation="vertical" style={{ width: '100%' }} size="middle">
+        <StandardSearchBar
+          searchValue={localParams.orderNo || ''}
+          onSearchChange={(value) => updateParams({ orderNo: value })}
+          searchPlaceholder="搜索订单号/款号/加工厂"
+          dateValue={dateRange}
+          onDateChange={(value) => {
+            setDateRange(value);
+            if (value && value[0] && value[1]) {
+              updateParams({
+                startDate: value[0].format('YYYY-MM-DD'),
+                endDate: value[1].format('YYYY-MM-DD'),
+              });
+              return;
             }
-            onChange={(dates) => {
-              if (dates && dates[0] && dates[1]) {
-                handleFieldChange('startDate', dates[0].format('YYYY-MM-DD'));
-                handleFieldChange('endDate', dates[1].format('YYYY-MM-DD'));
-              } else {
-                setLocalParams(prev => {
-                  const { startDate, endDate, ...rest } = prev;
-                  return rest;
-                });
-              }
-            }}
-            placeholder={['开始日期', '结束日期']}
-            style={{ width: 240 }}
-          />
+            updateParams({ startDate: undefined, endDate: undefined });
+          }}
+          statusValue={localParams.status || ''}
+          onStatusChange={(value) => updateParams({ status: value })}
+          statusOptions={[
+            { label: '待生产', value: 'pending' },
+            { label: '生产中', value: 'production' },
+            { label: '已完成', value: 'completed' },
+            { label: '已逾期', value: 'delayed' },
+          ]}
+        />
 
-          <Button
-            type="primary"
-            icon={<SearchOutlined />}
-            onClick={handleSearch}
-            loading={loading}
-          >
-            搜索
-          </Button>
-
+        <Space wrap>
           <Button onClick={handleReset}>
             重置
           </Button>
-
           {onExport && (
             <Button
               icon={<DownloadOutlined />}

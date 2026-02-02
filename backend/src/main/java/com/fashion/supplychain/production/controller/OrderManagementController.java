@@ -1,19 +1,15 @@
 package com.fashion.supplychain.production.controller;
 
 import com.fashion.supplychain.common.Result;
-import com.fashion.supplychain.production.entity.ProductionOrder;
-import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleProcess;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.StyleProcessService;
+import com.fashion.supplychain.style.orchestration.StyleAttachmentOrchestrator;
 import com.fashion.supplychain.template.orchestration.TemplateLibraryOrchestrator;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -31,8 +27,6 @@ public class OrderManagementController {
 
   private static final Logger log = LoggerFactory.getLogger(OrderManagementController.class);
 
-  @Autowired
-  private ProductionOrderService productionOrderService;
 
   @Autowired
   private StyleInfoService styleInfoService;
@@ -41,10 +35,11 @@ public class OrderManagementController {
   private StyleProcessService styleProcessService;
 
   @Autowired
-  private TemplateLibraryOrchestrator templateLibraryOrchestrator;
+  private StyleAttachmentOrchestrator styleAttachmentOrchestrator;
 
   @Autowired
-  private ObjectMapper objectMapper;
+  private TemplateLibraryOrchestrator templateLibraryOrchestrator;
+
 
   /**
    * 从样衣开发推送到下单管理
@@ -76,6 +71,11 @@ public class OrderManagementController {
       return Result.fail("款号不存在");
     }
 
+    // 已推送过则禁止重复推送
+    if (StringUtils.hasText(style.getOrderType())) {
+      return Result.fail("该款已推送到下单管理，无需重复推送");
+    }
+
     // ========== 核心修复：只更新款式状态，不创建订单 ==========
     // 检查是否有工序单价配置
     List<StyleProcess> processList = styleProcessService.listByStyleId(styleId);
@@ -92,20 +92,51 @@ public class OrderManagementController {
           styleId, style.getStyleNo(), currentProgressNode);
     }
 
-    // ========== 同步工序单价到单价维护（模板库）==========
-    // 这样用户可以在"单价维护"页面查看和修改工序单价
-    try {
-      if (StringUtils.hasText(style.getStyleNo())) {
-        // 推送 BOM、工序、工序单价、进度节点 到模板库
-        List<String> templateTypes = List.of("bom", "process", "process_price", "progress");
-        Map<String, Object> body = new HashMap<>();
-        body.put("sourceStyleNo", style.getStyleNo());
-        body.put("templateTypes", templateTypes);
-        templateLibraryOrchestrator.createFromStyle(body);
-        log.info("推送到下单管理时同步单价维护成功: styleId={}, styleNo={}", styleId, style.getStyleNo());
+    // 绑定跟单员为当前推送人（复用orderType字段）
+    String currentUser = UserContext.username();
+    if (StringUtils.hasText(currentUser)) {
+      style.setOrderType(currentUser.trim());
+      styleInfoService.updateById(style);
+    }
+
+    // ========== 根据勾选的目标进行同步 ==========
+    List<String> targetTypes = parseTargetTypes(payload == null ? null : payload.get("targetTypes"));
+    if (targetTypes != null && !targetTypes.isEmpty()) {
+      try {
+        if (StringUtils.hasText(style.getStyleNo())) {
+          List<String> templateTypes = new ArrayList<>();
+          if (targetTypes.contains("size")) {
+            templateTypes.add("size");
+          }
+          if (targetTypes.contains("process") || targetTypes.contains("sizePrice")) {
+            templateTypes.add("process");
+          }
+          if (targetTypes.contains("process_price")) {
+            templateTypes.add("process_price");
+          }
+          if (targetTypes.contains("progress")) {
+            templateTypes.add("progress");
+          }
+
+          if (!templateTypes.isEmpty()) {
+            Map<String, Object> body = new HashMap<>();
+            body.put("sourceStyleNo", style.getStyleNo());
+            body.put("templateTypes", templateTypes);
+            templateLibraryOrchestrator.createFromStyle(body);
+            log.info("推送到下单管理时同步单价维护成功: styleId={}, styleNo={}, types={}", styleId, style.getStyleNo(), templateTypes);
+          }
+        }
+      } catch (Exception e) {
+        log.warn("推送到下单管理时同步单价维护失败，但不影响推送操作: styleId={}, error={}", styleId, e.getMessage());
       }
-    } catch (Exception e) {
-      log.warn("推送到下单管理时同步单价维护失败，但不影响推送操作: styleId={}, error={}", styleId, e.getMessage());
+
+      try {
+        if (targetTypes.contains("pattern")) {
+          styleAttachmentOrchestrator.flowPatternToDataCenter(String.valueOf(styleId));
+        }
+      } catch (Exception e) {
+        log.warn("推送到下单管理时同步资料中心失败，但不影响推送操作: styleId={}, error={}", styleId, e.getMessage());
+      }
     }
 
     // 返回成功，但不创建订单
@@ -117,71 +148,25 @@ public class OrderManagementController {
     return Result.success(data);
   }
 
-  /**
-   * 将 StyleProcess 列表转换为 progressWorkflowJson 格式
-   * 格式: {"nodes": [{"id": "xxx", "name": "裁剪", "unitPrice": 1.5}, ...]}
-   */
-  private String buildProgressWorkflowJson(List<StyleProcess> processList) {
-    if (processList == null || processList.isEmpty()) {
+  private List<String> parseTargetTypes(Object raw) {
+    if (raw == null) {
       return null;
     }
-
-    // 按 progressStage（进度节点）分组聚合工序
-    Map<String, List<StyleProcess>> byStage = new LinkedHashMap<>();
-    for (StyleProcess p : processList) {
-      String stage = p.getProgressStage();
-      if (!StringUtils.hasText(stage)) {
-        stage = p.getProcessName(); // 如果没有进度节点，使用工序名称
+    List<String> out = new ArrayList<>();
+    if (raw instanceof List<?>) {
+      for (Object it : (List<?>) raw) {
+        if (it == null) continue;
+        String v = String.valueOf(it).trim();
+        if (v.length() > 0) out.add(v);
       }
-      if (!StringUtils.hasText(stage)) {
-        continue;
-      }
-      stage = stage.trim();
-      byStage.computeIfAbsent(stage, k -> new ArrayList<>()).add(p);
+      return out;
     }
-
-    // 构建节点列表
-    List<Map<String, Object>> nodes = new ArrayList<>();
-    for (Map.Entry<String, List<StyleProcess>> entry : byStage.entrySet()) {
-      String stageName = entry.getKey();
-      List<StyleProcess> processes = entry.getValue();
-
-      // 计算该进度节点下所有工序的单价总和
-      BigDecimal totalPrice = BigDecimal.ZERO;
-      List<Map<String, Object>> subProcesses = new ArrayList<>();
-
-      for (StyleProcess p : processes) {
-        BigDecimal price = p.getPrice();
-        if (price != null && price.compareTo(BigDecimal.ZERO) > 0) {
-          totalPrice = totalPrice.add(price);
-        }
-
-        Map<String, Object> subProcess = new LinkedHashMap<>();
-        subProcess.put("id", StringUtils.hasText(p.getProcessCode()) ? p.getProcessCode() : p.getId());
-        subProcess.put("processName", StringUtils.hasText(p.getProcessName()) ? p.getProcessName() : stageName);
-        subProcess.put("unitPrice", price != null ? price.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO);
-        subProcesses.add(subProcess);
-      }
-
-      Map<String, Object> node = new LinkedHashMap<>();
-      node.put("id", stageName.toLowerCase().replaceAll("[^a-z0-9]", "_"));
-      node.put("name", stageName);
-      node.put("unitPrice", totalPrice.setScale(2, RoundingMode.HALF_UP));
-      node.put("processes", subProcesses);
-      nodes.add(node);
+    String s = String.valueOf(raw).trim();
+    if (!s.isEmpty()) {
+      out.add(s);
     }
-
-    if (nodes.isEmpty()) {
-      return null;
-    }
-
-    try {
-      Map<String, Object> root = new LinkedHashMap<>();
-      root.put("nodes", nodes);
-      return objectMapper.writeValueAsString(root);
-    } catch (Exception e) {
-      log.warn("序列化工序JSON失败", e);
-      return null;
-    }
+    return out;
   }
+
+
 }

@@ -2,10 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { Button, Card, Input, Select, Space, Tag, Form, Row, Col, InputNumber, Upload, message, Modal } from 'antd';
 import type { MenuProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { PlusOutlined, SearchOutlined, EditOutlined, UploadOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, UploadOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
 import Layout from '@/components/Layout';
-import ResizableModal from '@/components/common/ResizableModal';
+import StandardModal from '@/components/common/StandardModal';
+import StandardSearchBar from '@/components/common/StandardSearchBar';
+import StandardToolbar from '@/components/common/StandardToolbar';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import { MaterialDatabase, MaterialDatabaseQueryParams } from '@/types/production';
@@ -14,6 +16,7 @@ import { formatDateTime } from '@/utils/datetime';
 import { getMaterialTypeCategory, getMaterialTypeLabel, normalizeMaterialType } from '@/utils/materialType';
 import { useViewport } from '@/utils/useViewport';
 import { useModal, useRequest, useTablePagination } from '@/hooks';
+import type { Dayjs } from 'dayjs';
 
 const { Option } = Select;
 
@@ -30,7 +33,7 @@ const toLocalDateTimeInputValue = (): string => {
 
 const MaterialDatabasePage: React.FC = () => {
   const [_messageApi, contextHolder] = message.useMessage();
-  const { isMobile, modalWidth } = useViewport();
+  const { isMobile } = useViewport();
 
   // ===== 使用 Hooks 优化状态管理 =====
   // Modal 状态管理（替代 visible, currentMaterial, mode）
@@ -42,12 +45,11 @@ const MaterialDatabasePage: React.FC = () => {
   // ===== 保留的状态 =====
   const [dataList, setDataList] = useState<MaterialDatabase[]>([]);
   const [loading, setLoading] = useState(false);
-  // 额外的查询条件（不包括 page/pageSize）
-  const [extraFilters, setExtraFilters] = useState<Partial<MaterialDatabaseQueryParams>>({});
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [statusValue, setStatusValue] = useState('');
+  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const [form] = Form.useForm();
   const [imageFiles, setImageFiles] = useState<UploadFile[]>([]);
-
-  const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
   // ===== 获取列表函数 =====
   const fetchList = async () => {
@@ -56,7 +58,9 @@ const MaterialDatabasePage: React.FC = () => {
       const fullQueryParams: MaterialDatabaseQueryParams = {
         page: pagination.current,
         pageSize: pagination.pageSize,
-        ...extraFilters,
+        materialCode: searchKeyword || undefined,
+        materialName: searchKeyword || undefined,
+        materialType: statusValue || undefined,
       };
 
       const res = await api.get<{ code: number; data: { records: MaterialDatabase[]; total: number } }>(
@@ -84,11 +88,8 @@ const MaterialDatabasePage: React.FC = () => {
   }, [
     pagination.current,
     pagination.pageSize,
-    extraFilters.materialCode,
-    extraFilters.materialName,
-    extraFilters.styleNo,
-    extraFilters.materialType,
-    extraFilters.supplierName,
+    searchKeyword,
+    statusValue,
   ]);
 
   // 上传物料图片
@@ -458,92 +459,51 @@ const MaterialDatabasePage: React.FC = () => {
       {contextHolder}
       <div style={{ padding: '16px 24px' }}>
         <Card>
-          {/* 页面标题和操作区 */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          {/* 页面标题 */}
+          <div style={{ marginBottom: 16 }}>
             <h2 style={{ margin: 0 }}>📦 面辅料数据库</h2>
-            <Space wrap>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => openDialog('create')}>
-                新增面辅料
-              </Button>
-            </Space>
           </div>
 
           {/* 筛选区 */}
           <Card size="small" style={{ marginBottom: 16, background: '#fafafa' }}>
-            <Form layout="inline" size="small">
-              <Form.Item label="面料编号">
-                <Input
-                  placeholder="请输入面料编号"
-                  value={extraFilters.materialCode}
-                  onChange={(e) => setExtraFilters({ ...extraFilters, materialCode: e.target.value })}
-                  style={{ width: 120 }}
+            <StandardToolbar
+              left={(
+                <StandardSearchBar
+                  searchValue={searchKeyword}
+                  onSearchChange={setSearchKeyword}
+                  searchPlaceholder="搜索面料编号/名称"
+                  dateValue={dateRange}
+                  onDateChange={setDateRange}
+                  statusValue={statusValue}
+                  onStatusChange={setStatusValue}
+                  statusOptions={[
+                    { label: '面料', value: 'fabric' },
+                    { label: '面料A', value: 'fabricA' },
+                    { label: '面料B', value: 'fabricB' },
+                    { label: '面料C', value: 'fabricC' },
+                    { label: '面料D', value: 'fabricD' },
+                    { label: '面料E', value: 'fabricE' },
+                    { label: '里料', value: 'lining' },
+                    { label: '里料A', value: 'liningA' },
+                    { label: '里料B', value: 'liningB' },
+                    { label: '里料C', value: 'liningC' },
+                    { label: '里料D', value: 'liningD' },
+                    { label: '里料E', value: 'liningE' },
+                    { label: '辅料', value: 'accessory' },
+                    { label: '辅料A', value: 'accessoryA' },
+                    { label: '辅料B', value: 'accessoryB' },
+                    { label: '辅料C', value: 'accessoryC' },
+                    { label: '辅料D', value: 'accessoryD' },
+                    { label: '辅料E', value: 'accessoryE' },
+                  ]}
                 />
-              </Form.Item>
-              <Form.Item label="面料名称">
-                <Input
-                  placeholder="请输入面料名称"
-                  value={extraFilters.materialName}
-                  onChange={(e) => setExtraFilters({ ...extraFilters, materialName: e.target.value })}
-                  style={{ width: 120 }}
-                />
-              </Form.Item>
-              <Form.Item label="款号">
-                <Input
-                  placeholder="请输入款号"
-                  value={extraFilters.styleNo}
-                  onChange={(e) => setExtraFilters({ ...extraFilters, styleNo: e.target.value })}
-                  style={{ width: 100 }}
-                />
-              </Form.Item>
-              <Form.Item label="物料类型">
-                <Select
-                  placeholder="请选择物料类型"
-                  value={extraFilters.materialType || ''}
-                  onChange={(value) => setExtraFilters({ ...extraFilters, materialType: value })}
-                  style={{ width: 120 }}
-                >
-                  <Option value="">全部</Option>
-                  <Option value="fabric">面料</Option>
-                  <Option value="fabricA">面料A</Option>
-                  <Option value="fabricB">面料B</Option>
-                  <Option value="fabricC">面料C</Option>
-                  <Option value="fabricD">面料D</Option>
-                  <Option value="fabricE">面料E</Option>
-                  <Option value="lining">里料</Option>
-                  <Option value="liningA">里料A</Option>
-                  <Option value="liningB">里料B</Option>
-                  <Option value="liningC">里料C</Option>
-                  <Option value="liningD">里料D</Option>
-                  <Option value="liningE">里料E</Option>
-                  <Option value="accessory">辅料</Option>
-                  <Option value="accessoryA">辅料A</Option>
-                  <Option value="accessoryB">辅料B</Option>
-                  <Option value="accessoryC">辅料C</Option>
-                  <Option value="accessoryD">辅料D</Option>
-                  <Option value="accessoryE">辅料E</Option>
-                </Select>
-              </Form.Item>
-              <Form.Item label="供应商">
-                <Input
-                  placeholder="请输入供应商"
-                  value={extraFilters.supplierName}
-                  onChange={(e) => setExtraFilters({ ...extraFilters, supplierName: e.target.value })}
-                  style={{ width: 120 }}
-                />
-              </Form.Item>
-              <Form.Item>
-                <Space>
-                  <Button type="primary" icon={<SearchOutlined />} onClick={() => fetchList()}>
-                    查询
-                  </Button>
-                  <Button onClick={() => {
-                    setExtraFilters({});
-                  }}>
-                    重置
-                  </Button>
-                </Space>
-              </Form.Item>
-            </Form>
+              )}
+              right={(
+                <Button type="primary" icon={<PlusOutlined />} onClick={() => openDialog('create')}>
+                  新增面辅料
+                </Button>
+              )}
+            />
           </Card>
 
           {/* 表格区 */}
@@ -563,13 +523,11 @@ const MaterialDatabasePage: React.FC = () => {
         </Card>
 
         {/* 新增/编辑弹窗 */}
-        <ResizableModal
+        <StandardModal
           title={currentMaterial ? '编辑面辅料' : '新增面辅料'}
           open={visible}
           onCancel={closeDialog}
-          width={modalWidth}
-          initialHeight={modalInitialHeight}
-          minWidth={isMobile ? 320 : 520}
+          size="lg"
           footer={[
             <Button key="cancel" onClick={closeDialog}>
               取消
@@ -750,7 +708,7 @@ const MaterialDatabasePage: React.FC = () => {
               </Col>
             </Row>
           </Form>
-        </ResizableModal>
+        </StandardModal>
       </div>
     </Layout>
   );

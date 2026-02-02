@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, App, Button, Card, Collapse, DatePicker, Form, Grid, Input, InputNumber, Modal, Select, Segmented, Space, Tag, Tooltip, Typography } from 'antd';
+import { App, Button, Card, DatePicker, Form, Grid, Input, InputNumber, Modal, Select, Space, Tag, Tooltip, Typography } from 'antd';
 import { UnifiedRangePicker } from '@/components/common/UnifiedDatePicker';
 import { DeleteOutlined, EyeOutlined, RollbackOutlined, ScanOutlined, EditOutlined, AppstoreOutlined, UnorderedListOutlined, PrinterOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -7,22 +7,22 @@ import { useLocation } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import UniversalCardView from '@/components/common/UniversalCardView';
 import LiquidProgressLottie from '@/components/common/LiquidProgressLottie';
-import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import QuickEditModal from '@/components/common/QuickEditModal';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import NodeDetailModal from '@/components/common/NodeDetailModal';
+import StandardSearchBar from '@/components/common/StandardSearchBar';
+import StandardToolbar from '@/components/common/StandardToolbar';
 import { ProductionOrderHeader, StyleCoverThumb } from '@/components/StyleAssets';
-import { compareSizeAsc, generateRequestId, isDuplicateScanMessage, isOrderFrozenByStatus, parseProductionOrderLines } from '@/utils/api';
+import { generateRequestId, isDuplicateScanMessage, isOrderFrozenByStatus, parseProductionOrderLines } from '@/utils/api';
 import { isSupervisorOrAboveUser as isSupervisorOrAboveUserFn, useAuth } from '@/utils/AuthContext';
 import { useViewport } from '@/utils/useViewport';
 import { formatDateTime, formatDateTimeCompact } from '@/utils/datetime';
 import { CuttingBundle, ProductionOrder, ProductionQueryParams, ScanRecord } from '@/types/production';
 import type { StyleProcess, TemplateLibrary } from '@/types/style';
 import { productionCuttingApi, productionOrderApi, productionScanApi, productionWarehousingApi } from '@/services/production/productionApi';
-import { styleProcessApi } from '@/services/style/styleApi';
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 
 import {
@@ -37,11 +37,38 @@ import {
   parseProgressNodes,
   findPricingProcessForStage,
   getProgressFromNodeIndex,
-  isCuttingStageKey,
-  formatTimeCompact
+  formatTimeCompact,
+  getQuotationUnitPriceForOrder,
+  getCloseMinRequired,
+  calculateProgressFromBundles,
+  resolveNodesForOrder,
+  resolveNodesForListOrder,
+  getProcessesByNodeFromOrder,
+  getCurrentWorkflowNodeForOrder,
+  calcCuttingTotalQty
 } from './utils';
 import { ProgressNode } from './types';
 import ModernProgressBoard from './components/ModernProgressBoard';
+import ScanEntryModal from './components/ScanEntryModal';
+import ScanConfirmModal from './components/ScanConfirmModal';
+import RollbackModal from './components/RollbackModal';
+import { ensureBoardStatsForOrder } from './hooks/useBoardStats';
+import { useScanBundles } from './hooks/useScanBundles';
+import { useScanConfirm } from './hooks/useScanConfirm';
+import { useNodeStats } from './hooks/useNodeStats';
+import { useSubmitScan } from './hooks/useSubmitScan';
+import { useNodeWorkflowActions } from './hooks/useNodeWorkflowActions';
+import { useOrderSync } from './hooks/useOrderSync';
+import { useInlineNodeOps } from './hooks/useInlineNodeOps';
+import { useOpenScan } from './hooks/useOpenScan';
+import { useOrderProgress } from './hooks/useOrderProgress';
+import { useCloseOrder } from './hooks/useCloseOrder';
+import {
+  fetchScanHistory as fetchScanHistoryHelper,
+  fetchCuttingBundles as fetchCuttingBundlesHelper,
+  fetchPricingProcesses as fetchPricingProcessesHelper,
+} from './helpers/fetchers';
+import { fetchNodeOperations } from './helpers/nodeOperations';
 
 const { Text } = Typography;
 const { useBreakpoint } = Grid;
@@ -72,7 +99,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const location = useLocation();
   const screens = useBreakpoint();
   const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
-  const [queryParams, setQueryParams] = useState<ProductionQueryParams>({ page: 1, pageSize: 10 });
+  const [queryParams, setQueryParams] = useState<ProductionQueryParams>({ page: 1, pageSize: 10, keyword: '' });
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
 
@@ -114,20 +141,18 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
 
   const [scanOpen, setScanOpen] = useState(false);
   const [scanSubmitting, setScanSubmitting] = useState(false);
-  const [scanConfirmVisible, setScanConfirmVisible] = useState(false);
-  const [scanConfirmRemain, setScanConfirmRemain] = useState(0);
-  const [scanConfirmLoading, setScanConfirmLoading] = useState(false);
-  const [scanConfirmPayload, setScanConfirmPayload] = useState<any | null>(null);
-  const [scanConfirmDetail, setScanConfirmDetail] = useState<any | null>(null);
-  const [scanConfirmMeta, setScanConfirmMeta] = useState<any | null>(null);
   const [scanForm] = Form.useForm();
   const scanInputRef = useRef<unknown>(null);
   const scanSubmittingRef = useRef(false);
   const orderSyncingRef = useRef(false);
   const activeOrderRef = useRef<ProductionOrder | null>(null);
   const lastFailedRequestRef = useRef<{ key: string; requestId: string } | null>(null);
-  const scanConfirmTimerRef = useRef<number | null>(null);
-  const scanConfirmTickRef = useRef<number | null>(null);
+  const {
+    state: scanConfirmState,
+    openConfirm: openScanConfirm,
+    closeConfirm: closeScanConfirmState,
+    setLoading: setScanConfirmLoading,
+  } = useScanConfirm();
 
   const [scanBundlesExpanded, setScanBundlesExpanded] = useState(false);
   const [bundleSelectedQr, setBundleSelectedQr] = useState('');
@@ -163,10 +188,18 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const [nodeDetailName, setNodeDetailName] = useState<string>('');
   const [nodeDetailStats, setNodeDetailStats] = useState<{ done: number; total: number; percent: number; remaining: number } | undefined>(undefined);
   const [nodeDetailUnitPrice, setNodeDetailUnitPrice] = useState<number | undefined>(undefined);
-  const [nodeDetailProcessList, setNodeDetailProcessList] = useState<{ name: string; unitPrice?: number }[]>([]);
+  const [nodeDetailProcessList, setNodeDetailProcessList] = useState<{ id?: string; processCode?: string; code?: string; name: string; unitPrice?: number }[]>([]);
 
   const [orderSortField, setOrderSortField] = useState<string>('createTime');
   const [orderSortOrder, setOrderSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  const statusOptions = useMemo(() => ([
+    { label: '待生产', value: 'pending' },
+    { label: '生产中', value: 'production' },
+    { label: '已完成', value: 'completed' },
+    { label: '已关闭', value: 'closed' },
+    { label: '已取消', value: 'cancelled' },
+  ]), []);
 
   const handleOrderSort = (field: string, order: 'asc' | 'desc') => {
     setOrderSortField(field);
@@ -180,7 +213,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     nodeName: string,
     stats?: { done: number; total: number; percent: number; remaining: number },
     unitPrice?: number,
-    processList?: { name: string; unitPrice?: number }[]
+    processList?: { id?: string; processCode?: string; code?: string; name: string; unitPrice?: number }[]
   ) => {
     setNodeDetailOrder(order);
     setNodeDetailType(nodeType);
@@ -276,61 +309,23 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     }
   }, []);
 
-  const clearScanConfirmTimers = () => {
-    if (scanConfirmTimerRef.current) {
-      window.clearTimeout(scanConfirmTimerRef.current);
-      scanConfirmTimerRef.current = null;
-    }
-    if (scanConfirmTickRef.current) {
-      window.clearInterval(scanConfirmTickRef.current);
-      scanConfirmTickRef.current = null;
-    }
-  };
-
-  useEffect(() => () => {
-    clearScanConfirmTimers();
-  }, []);
-
   const closeScanConfirm = (silent?: boolean) => {
-    clearScanConfirmTimers();
-    setScanConfirmVisible(false);
-    setScanConfirmRemain(0);
-    setScanConfirmLoading(false);
-    setScanConfirmPayload(null);
-    setScanConfirmDetail(null);
-    setScanConfirmMeta(null);
+    closeScanConfirmState();
     if (!silent) {
       message.info('已取消');
     }
   };
 
-  const openScanConfirm = (payload: any, detail: any, meta: any) => {
-    clearScanConfirmTimers();
-    setScanConfirmPayload(payload || null);
-    setScanConfirmDetail(detail || null);
-    setScanConfirmMeta(meta || null);
-    setScanConfirmVisible(true);
-    setScanConfirmRemain(15);
-    const expireAt = Date.now() + 15000;
-    scanConfirmTimerRef.current = window.setTimeout(() => {
-      closeScanConfirm(true);
-    }, 15000);
-    scanConfirmTickRef.current = window.setInterval(() => {
-      const remain = Math.max(0, Math.ceil((expireAt - Date.now()) / 1000));
-      setScanConfirmRemain((prev) => (prev === remain ? prev : remain));
-    }, 500);
-  };
-
   const submitConfirmedScan = async () => {
-    if (!scanConfirmPayload || scanConfirmLoading) return;
+    if (!scanConfirmState.payload || scanConfirmState.loading) return;
     if (!activeOrder) return;
     setScanConfirmLoading(true);
-    const meta = scanConfirmMeta || {};
+    const meta = scanConfirmState.meta || {};
     const attemptKey = meta.attemptKey || '';
     const attemptRequestId = meta.attemptRequestId || '';
     const values = meta.values || {};
     try {
-      const response = await productionScanApi.execute(scanConfirmPayload);
+      const response = await productionScanApi.execute(scanConfirmState.payload);
       const result = response as Record<string, unknown>;
       if (result.code === 200) {
         lastFailedRequestRef.current = null;
@@ -347,7 +342,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         } else {
           message.success(serverMsg || '扫码成功');
         }
-        const effectiveNodes = stripWarehousingNode(resolveNodesForOrder(activeOrder));
+        const effectiveNodes = stripWarehousingNode(resolveNodesForOrder(activeOrder, progressNodesByStyleNo, nodes));
         const isProd = String(values.scanType || '').trim() === 'production';
         if (!isDuplicate && isProd) {
           const updated = await fetchScanHistory(activeOrder);
@@ -421,8 +416,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   }, [
     queryParams.page,
     queryParams.pageSize,
-    queryParams.orderNo,
-    queryParams.styleNo,
+    queryParams.keyword,
+    queryParams.status,
     // 使用稳定的值，null 转换为固定字符串
     dateRange?.[0]?.valueOf() ?? 'null-start',
     dateRange?.[1]?.valueOf() ?? 'null-end'
@@ -441,11 +436,14 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     const styleNo = String(params.get('styleNo') || '').trim();
     const orderNo = String(params.get('orderNo') || '').trim();
     if (!styleNo && !orderNo) return;
+    const keyword = orderNo || styleNo;
     setQueryParams((prev) => ({
       ...prev,
       page: 1,
-      styleNo: styleNo || prev.styleNo,
-      orderNo: orderNo || prev.orderNo,
+      keyword,
+      orderNo: undefined,
+      styleNo: undefined,
+      factoryName: undefined,
     }));
   }, [location.search]);
 
@@ -479,41 +477,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     })();
   }, []);
 
-  const parseProgressNodes = (raw: string): ProgressNode[] => {
-    const text = String(raw ?? '').trim();
-    if (!text) return [];
-    try {
-      const obj = JSON.parse(text);
-      // 支持两种格式：nodes (进度节点) 和 steps (工序单价)
-      let itemsRaw = (obj as Record<string, unknown>)?.nodes;
-      if (!Array.isArray(itemsRaw)) {
-        itemsRaw = (obj as Record<string, unknown>)?.steps;
-      }
-      if (!Array.isArray(itemsRaw)) return [];
-
-      const normalized: ProgressNode[] = itemsRaw
-        .map((n: any) => {
-          const name = String(n?.name || n?.processName || '').trim();
-          const p = Number(n?.unitPrice);
-          const unitPrice = Number.isFinite(p) && p >= 0 ? p : 0;
-          const id = String(n?.id || n?.processCode || name || '');
-          return { id, name, unitPrice };
-        })
-        .filter((n: ProgressNode) => n.name);
-      return stripWarehousingNode(normalized);
-    } catch {
-      // Intentionally empty
-      // 忽略错误
-      return [];
-    }
-  };
-
-  const parseWorkflowNodesFromOrder = (order: ProductionOrder | null): ProgressNode[] => {
-    const raw = String((order as Record<string, unknown>)?.progressWorkflowJson ?? '').trim();
-    if (!raw) return [];
-    return parseProgressNodes(raw);
-  };
-
   const fetchTemplateNodes = async (templateId: string): Promise<ProgressNode[]> => {
     const tid = String(templateId || '').trim();
     if (!tid) return [];
@@ -524,247 +487,38 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     return parseProgressNodes(String(tpl?.templateContent ?? ''));
   };
 
-  const resolveNodesForOrder = (order: ProductionOrder | null): ProgressNode[] => {
-    const orderNodes = parseWorkflowNodesFromOrder(order);
-    if (orderNodes.length) {
-      // 如果订单有进度节点，但单价都是0，则从款号工序单价中回填（只回填有单价的）
-      const styleNo = String((order as Record<string, unknown>)?.styleNo || '').trim();
-      const styleNodes = styleNo && progressNodesByStyleNo[styleNo] ? progressNodesByStyleNo[styleNo] : [];
-      if (styleNodes.length > 0) {
-        const hasAnyPrice = orderNodes.some(n => (Number(n.unitPrice) || 0) > 0);
-        if (!hasAnyPrice) {
-          // 创建名称到单价的映射（只保存有单价的工序）
-          const priceMap = new Map<string, number>();
-          styleNodes.forEach(sn => {
-            const price = Number(sn.unitPrice) || 0;
-            if (price > 0) {
-              priceMap.set(sn.name, price);
-            }
-          });
-          // 回填单价（只回填有单价的）
-          return orderNodes.map(n => ({
-            ...n,
-            unitPrice: priceMap.get(n.name) ?? (Number(n.unitPrice) || 0)
+
+  const ensureNodesFromTemplateIfNeeded = async (order: ProductionOrder) => {
+    if (!order) return;
+    const templateId = String((order as any)?.progressTemplateId || '').trim();
+    if (!templateId) return;
+
+    try {
+      const templateNodes = await fetchTemplateNodes(templateId);
+      if (templateNodes && templateNodes.length > 0) {
+        setNodes(templateNodes);
+        if (order.styleNo) {
+          setProgressNodesByStyleNo(prev => ({
+            ...prev,
+            [order.styleNo]: templateNodes
           }));
         }
       }
-      return orderNodes;
+    } catch (error) {
+      // Silently ignore template loading errors
     }
-    const sn = String((order as Record<string, unknown>)?.styleNo || '').trim();
-    if (sn && progressNodesByStyleNo[sn]?.length) {
-      // 从款号带入时，只带单价>0的工序
-      return progressNodesByStyleNo[sn].filter(n => (Number(n.unitPrice) || 0) > 0);
-    }
-    return nodes?.length ? nodes : defaultNodes;
   };
 
-  /**
-   * 基于菲号完成情况计算进度
-   * @param order 生产订单
-   * @param cuttingBundles 裁剪捆包列表
-   * @param scanHistory 扫码历史记录
-   * @returns 计算后的进度百分比
-   */
-  const calculateProgressFromBundles = (
-    order: ProductionOrder,
-    cuttingBundles: CuttingBundle[],
-    scanHistory: ScanRecord[],
-    nodes?: ProgressNode[],
-  ): number => {
-    const oid = String(order?.id || '').trim();
-    const ono = String(order?.orderNo || '').trim();
-    const bundlesForOrder = (cuttingBundles || []).filter(
-      (b) => String(b?.productionOrderId || '').trim() === oid || String(b?.productionOrderNo || '').trim() === ono
-    );
-    if (!bundlesForOrder.length) {
-      return Number(order.productionProgress) || 0;
-    }
-
-    const effectiveNodes = stripWarehousingNode(Array.isArray(nodes) && nodes.length ? nodes : defaultNodes);
-    if (effectiveNodes.length <= 1) {
-      return Number(order.productionProgress) || 0;
-    }
-
-    // 计算每个节点的完成情况
-    const nodeCompletion = effectiveNodes.map((node) => {
-      const nodeName = node.name;
-      // 统计该节点下所有菲号的完成情况
-      const totalQtyForNode = bundlesForOrder.reduce((acc, bundle) => acc + (Number(bundle?.quantity) || 0), 0);
-
-      // 计算该节点已完成的数量
-      const doneQtyForNode = scanHistory
-        .filter((r) => String(r?.scanResult || '').trim() === 'success')
-        .filter((r) => String(r?.scanType || '').trim() === 'production')
-        .filter((r) => stageNameMatches(nodeName, getRecordStageName(r)))
-        .reduce((acc, r) => acc + (Number(r?.quantity) || 0), 0);
-
-      // 计算该节点的完成率
-      const completionRate = totalQtyForNode > 0 ? doneQtyForNode / totalQtyForNode : 0;
-      return { nodeName, completionRate };
-    });
-
-    // 计算整体进度：每个节点按顺序贡献进度，前一个节点未完成，后续节点不贡献
-    let totalProgress = 0;
-    const nodeWeight = 100 / effectiveNodes.length;
-
-    for (let i = 0; i < nodeCompletion.length; i++) {
-      const { completionRate } = nodeCompletion[i];
-      // 如果当前节点完成率达到98%，视为完全完成
-      if (completionRate >= 0.98) {
-        totalProgress += nodeWeight;
-      } else {
-        // 当前节点只贡献部分进度，后续节点不贡献
-        totalProgress += nodeWeight * completionRate;
-        break;
-      }
-    }
-
-    return clampPercent(totalProgress);
+  const lockNodeWorkflow = () => {
+    setNodeWorkflowLocked(true);
+    setNodeWorkflowDirty(false);
   };
 
-  const resolveNodesForListOrder = (order: ProductionOrder | null): ProgressNode[] => {
-    const orderNodes = parseWorkflowNodesFromOrder(order);
-    if (orderNodes.length) {
-      return orderNodes;
-    }
-    const sn = String((order as Record<string, unknown>)?.styleNo || '').trim();
-    if (sn && progressNodesByStyleNo[sn]?.length) {
-      return progressNodesByStyleNo[sn];
-    }
-    return defaultNodes;
-  };
 
   const boardStatsByOrderRef = useRef<Record<string, Record<string, number>>>({});
   useEffect(() => {
     boardStatsByOrderRef.current = boardStatsByOrder;
   }, [boardStatsByOrder]);
-
-  const ensureBoardStatsForOrder = async (order: ProductionOrder, ns: ProgressNode[]) => {
-    const oid = String(order?.id || '').trim();
-    if (!oid) return;
-    const existing = boardStatsByOrderRef.current[oid];
-    if (existing && ns.every((n) => {
-      const name = String((n as Record<string, unknown>)?.name || '').trim();
-      return !name || Object.prototype.hasOwnProperty.call(existing, name);
-    })) {
-      return;
-    }
-    if (boardStatsLoadingRef.current[oid]) return;
-    boardStatsLoadingRef.current[oid] = true;
-    try {
-      const res = await productionScanApi.listByOrderId(oid, { page: 1, pageSize: 500 });
-      const result = res as Record<string, unknown>;
-      const records: ScanRecord[] = result?.code === 200 && Array.isArray(result?.data?.records) ? result.data.records : [];
-      const valid = records
-        .filter((r) => String((r as Record<string, unknown>)?.scanResult || '').trim() === 'success')
-        .filter((r) => (Number((r as Record<string, unknown>)?.quantity) || 0) > 0);
-      const stats: Record<string, number> = {};
-      for (const n of ns || []) {
-        const nodeName = String((n as Record<string, unknown>)?.name || '').trim();
-        if (!nodeName) continue;
-        const done = valid
-          .filter((r) => stageNameMatches(nodeName, getRecordStageName(r)))
-          .reduce((acc, r) => acc + (Number((r as Record<string, unknown>)?.quantity) || 0), 0);
-        stats[nodeName] = done;
-      }
-      const cuttingVal = Number((order as Record<string, unknown>)?.cuttingQuantity) || 0;
-      if (cuttingVal > 0) {
-        for (const key of Object.keys(stats)) {
-          if (key.includes('裁剪')) {
-            stats[key] = Math.max(stats[key] || 0, cuttingVal);
-          }
-        }
-      }
-      const procurementRate = Number((order as Record<string, unknown>)?.procurementCompletionRate) || 0;
-      if (procurementRate > 0) {
-        const qty = Number(order.orderQuantity) || 0;
-        const doneQty = Math.floor(qty * procurementRate / 100);
-        for (const key of Object.keys(stats)) {
-          if (key.includes('采购')) {
-            stats[key] = Math.max(stats[key] || 0, doneQty);
-          }
-        }
-      }
-      const sewingRate = Number((order as Record<string, unknown>)?.sewingCompletionRate) || 0;
-      if (sewingRate > 0) {
-        const qty = Number(order.orderQuantity) || 0;
-        const doneQty = Math.floor(qty * sewingRate / 100);
-        for (const key of Object.keys(stats)) {
-          if (key.includes('缝') || key.includes('车缝') || key.includes('缝制')) {
-            stats[key] = Math.max(stats[key] || 0, doneQty);
-          }
-        }
-      }
-      const ironingRate = Number((order as Record<string, unknown>)?.ironingCompletionRate) || 0;
-      if (ironingRate > 0) {
-        const qty = Number(order.orderQuantity) || 0;
-        const doneQty = Math.floor(qty * ironingRate / 100);
-        for (const key of Object.keys(stats)) {
-          if (key.includes('烫') || key.includes('整烫') || key.includes('熨烫')) {
-            stats[key] = Math.max(stats[key] || 0, doneQty);
-          }
-        }
-      }
-      const qualityRate = Number((order as Record<string, unknown>)?.qualityCompletionRate) || 0;
-      if (qualityRate > 0) {
-        const qty = Number(order.orderQuantity) || 0;
-        const doneQty = Math.floor(qty * qualityRate / 100);
-        for (const key of Object.keys(stats)) {
-          if (key.includes('质检') || key.includes('检验') || key.includes('品检') || key.includes('验货')) {
-            stats[key] = Math.max(stats[key] || 0, doneQty);
-          }
-        }
-      }
-      const packagingRate = Number((order as Record<string, unknown>)?.packagingCompletionRate) || 0;
-      if (packagingRate > 0) {
-        const qty = Number(order.orderQuantity) || 0;
-        const doneQty = Math.floor(qty * packagingRate / 100);
-        for (const key of Object.keys(stats)) {
-          if (key.includes('包装') || key.includes('后整') || key.includes('打包') || key.includes('装箱')) {
-            stats[key] = Math.max(stats[key] || 0, doneQty);
-          }
-        }
-      }
-      // 合成“尾部”节点：根据整烫/质检/包装三者的最小完成率作为尾部完成率
-      const tailRates = [ironingRate, qualityRate, packagingRate].filter((r) => r > 0);
-      if (tailRates.length) {
-        const tailRate = Math.min(...tailRates);
-        const qty = Number(order.orderQuantity) || 0;
-        const doneQty = Math.floor(qty * tailRate / 100);
-        for (const key of Object.keys(stats)) {
-          if (key.includes('尾部')) {
-            stats[key] = Math.max(stats[key] || 0, doneQty);
-          }
-        }
-      }
-      const warehousingRate = Number((order as Record<string, unknown>)?.warehousingCompletionRate) || 0;
-      if (warehousingRate > 0) {
-        const qty = Number(order.orderQuantity) || 0;
-        const doneQty = Math.floor(qty * warehousingRate / 100);
-        for (const key of Object.keys(stats)) {
-          if (key.includes('入库')) {
-            stats[key] = Math.max(stats[key] || 0, doneQty);
-          }
-        }
-      } else {
-        const warehoused = Number((order as Record<string, unknown>)?.warehousingQualifiedQuantity) || 0;
-        if (warehoused > 0) {
-          for (const key of Object.keys(stats)) {
-            if (key.includes('入库')) {
-              stats[key] = Math.max(stats[key] || 0, warehoused);
-            }
-          }
-        }
-      }
-      boardStatsByOrderRef.current[oid] = stats;
-      setBoardStatsByOrder((prev) => ({ ...prev, [oid]: stats }));
-    } catch {
-      // Intentionally empty
-      // 忽略错误
-    } finally {
-      boardStatsLoadingRef.current[oid] = false;
-    }
-  };
 
   useEffect(() => {
     if (!orders.length) return;
@@ -773,8 +527,14 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     const run = async () => {
       for (const o of queue) {
         if (cancelled) return;
-        const ns = stripWarehousingNode(resolveNodesForListOrder(o));
-        await ensureBoardStatsForOrder(o, ns);
+        const ns = stripWarehousingNode(resolveNodesForListOrder(o, progressNodesByStyleNo, defaultNodes));
+        await ensureBoardStatsForOrder({
+          order: o,
+          nodes: ns,
+          boardStatsByOrderRef,
+          boardStatsLoadingRef,
+          setBoardStatsByOrder,
+        });
       }
     };
     void run();
@@ -788,243 +548,16 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     setNodes(stripped.length ? stripped : defaultNodes);
   };
 
-  const getProcessesByNode = (order: ProductionOrder | null): Record<string, { name: string; unitPrice?: number }[]> => {
-    const raw = String((order as Record<string, unknown>)?.progressWorkflowJson ?? '').trim();
-    if (!raw) return {};
-    try {
-      const obj = JSON.parse(raw);
-      const nodes = Array.isArray(obj?.nodes) ? obj.nodes : [];
-      const byNode: Record<string, { name: string; unitPrice?: number }[]> = {};
-      if (nodes.length && nodes[0]?.name) {
-        for (const item of nodes) {
-          const n = String(item?.name || item?.processName || '').trim();
-          const stage = String(item?.progressStage || n).trim();
-          const price = Number(item?.unitPrice) || 0;
-          if (!byNode[stage]) byNode[stage] = [];
-          byNode[stage].push({ name: n, unitPrice: price });
-        }
-        return byNode;
-      }
-      const processesByNode = obj?.processesByNode || {};
-      const result: Record<string, { name: string; unitPrice?: number }[]> = {};
-      for (const k of Object.keys(processesByNode || {})) {
-        const arr = Array.isArray(processesByNode[k]) ? processesByNode[k] : [];
-        result[k] = arr.map((p: any) => ({ name: String(p?.name || p?.processName || '').trim(), unitPrice: Number(p?.unitPrice) || 0 })).filter((x) => x.name);
-      }
-      return result;
-    } catch {
-      return {};
-    }
-  };
+  const getProcessesByNode = (order: ProductionOrder | null) => getProcessesByNodeFromOrder(order);
 
-  const ensureNodesFromTemplateIfNeeded = async (order: ProductionOrder) => {
-    const orderNodes = parseWorkflowNodesFromOrder(order);
-    if (orderNodes.length) {
-      // 使用 resolveNodesForOrder 以便回填款号工序单价
-      const resolvedNodes = resolveNodesForOrder(order);
-      saveNodes(resolvedNodes);
-      return;
-    }
-    const styleNo = String(order.styleNo || '').trim();
-    if (!styleNo) return;
+  const fetchScanHistory = (order: ProductionOrder, options?: { silent?: boolean }) =>
+    fetchScanHistoryHelper({ order, setScanHistory, message, options });
 
-    if (progressNodesByStyleNo[styleNo]?.length) {
-      saveNodes(progressNodesByStyleNo[styleNo]);
-      return;
-    }
+  const fetchCuttingBundles = (order: ProductionOrder) =>
+    fetchCuttingBundlesHelper({ order, setCuttingBundles, setCuttingBundlesLoading, message });
 
-    try {
-      const res = await templateLibraryApi.progressNodeUnitPrices(styleNo);
-      const result = res as Record<string, unknown>;
-      if (result.code === 200) {
-        const rows = Array.isArray(result.data) ? result.data : [];
-        const normalized: ProgressNode[] = rows
-          .map((n: any) => {
-            const name = String(n?.name || '').trim();
-            const id = String(n?.id || name || '').trim() || name;
-            const p = Number(n?.unitPrice);
-            const unitPrice = Number.isFinite(p) && p >= 0 ? p : 0;
-            return { id, name, unitPrice };
-          })
-          .filter((n: ProgressNode) => n.name);
-        const stripped = stripWarehousingNode(normalized);
-        if (stripped.length) {
-          setProgressNodesByStyleNo((prev) => ({ ...prev, [styleNo]: stripped }));
-          saveNodes(stripped);
-          return;
-        }
-      }
-    } catch {
-      // Intentionally empty
-      // 忽略错误
-    }
-
-    try {
-      const res = await templateLibraryApi.list({
-        page: 1,
-        pageSize: 10,
-        templateType: 'progress',
-        sourceStyleNo: styleNo,
-        keyword: '',
-      });
-      const result = res as Record<string, unknown>;
-      if (result.code !== 200) return;
-      const records = (result.data?.records || []) as TemplateLibrary[];
-      const list = Array.isArray(records) ? [...records] : [];
-      list.sort((a, b) => {
-        const ta = Date.parse(String((a as Record<string, unknown>)?.updateTime || (a as Record<string, unknown>)?.createTime || '')) || 0;
-        const tb = Date.parse(String((b as Record<string, unknown>)?.updateTime || (b as Record<string, unknown>)?.createTime || '')) || 0;
-        return tb - ta;
-      });
-      const picked = list[0] || null;
-      if (picked?.id) {
-        const parsed = await fetchTemplateNodes(picked.id);
-        if (parsed.length) {
-          saveNodes(parsed);
-          return;
-        }
-      }
-    } catch {
-      // Intentionally empty
-      // 忽略错误
-    }
-
-    try {
-      let list = progressTemplates;
-      if (!list.length) {
-        const res = await templateLibraryApi.listByType('progress');
-        const result = res as Record<string, unknown>;
-        if (result.code === 200) {
-          list = Array.isArray(result.data) ? result.data : [];
-          list = [...list].sort((a, b) => {
-            const ta = Date.parse(String((a as Record<string, unknown>)?.updateTime || (a as Record<string, unknown>)?.createTime || '')) || 0;
-            const tb = Date.parse(String((b as Record<string, unknown>)?.updateTime || (b as Record<string, unknown>)?.createTime || '')) || 0;
-            return tb - ta;
-          });
-          setProgressTemplates(list);
-        }
-      }
-      const sorted = [...list].sort((a, b) => {
-        const ta = Date.parse(String((a as Record<string, unknown>)?.updateTime || (a as Record<string, unknown>)?.createTime || '')) || 0;
-        const tb = Date.parse(String((b as Record<string, unknown>)?.updateTime || (b as Record<string, unknown>)?.createTime || '')) || 0;
-        return tb - ta;
-      });
-      const def = sorted.find((t) => String(t.templateKey || '').trim() === 'default') || sorted[0];
-      if (def?.id) {
-        const parsed = await fetchTemplateNodes(def.id);
-        if (parsed.length) {
-          saveNodes(parsed);
-        }
-      }
-    } catch {
-      // Intentionally empty
-      // 忽略错误
-    }
-  };
-
-  const lockNodeWorkflow = () => {
-    setNodeWorkflowLocked(true);
-    setNodeWorkflowDirty(false);
-  };
-
-  useEffect(() => {
-    const locked = Number((activeOrder as Record<string, unknown>)?.progressWorkflowLocked) === 1;
-    setNodeWorkflowLocked(locked);
-    setNodeWorkflowDirty(false);
-  }, [activeOrder?.id, (activeOrder as Record<string, unknown>)?.progressWorkflowLocked]);
-
-  const fetchScanHistory = async (order: ProductionOrder, options?: { silent?: boolean }): Promise<ScanRecord[]> => {
-    const silent = options?.silent === true;
-    if (!order.id) {
-      setScanHistory([]);
-      return [];
-    }
-    try {
-      const response = await productionScanApi.listByOrderId(String(order.id), { page: 1, pageSize: 200 });
-      const result = response as Record<string, unknown>;
-      if (result.code === 200) {
-        const records = Array.isArray(result.data?.records) ? result.data.records : [];
-        setScanHistory(records);
-        return records;
-      } else if (!silent) {
-        message.error(result.message || '获取扫码记录失败');
-      }
-    } catch {
-      // Intentionally empty
-      // 忽略错误
-      if (!silent) {
-        message.error('获取扫码记录失败');
-      }
-    } finally {
-    }
-    return [];
-  };
-
-  const fetchCuttingBundles = async (order: ProductionOrder): Promise<CuttingBundle[]> => {
-    const orderNo = String(order?.orderNo || '').trim();
-    const orderId = String(order?.id || '').trim();
-    if (!orderNo && !orderId) {
-      setCuttingBundles([]);
-      return [];
-    }
-    setCuttingBundlesLoading(true);
-    try {
-      const res = await productionCuttingApi.list({
-        page: 1,
-        pageSize: 10000,
-        productionOrderId: orderId || undefined,
-        productionOrderNo: orderNo || undefined,
-      });
-      const result = res as Record<string, unknown>;
-      if (result.code === 200) {
-        const data = result.data;
-        const records = Array.isArray(data)
-          ? (data as CuttingBundle[])
-          : Array.isArray(data?.records)
-            ? (data.records as CuttingBundle[])
-            : Array.isArray(data?.list)
-              ? (data.list as CuttingBundle[])
-              : [];
-        records.sort((a, b) => (Number(a?.bundleNo) || 0) - (Number(b?.bundleNo) || 0));
-        setCuttingBundles(records);
-        return records;
-      }
-      message.error(result.message || '获取扎号列表失败');
-    } catch (e: unknown) {
-      message.error(e?.result?.message || e?.message || '获取扎号列表失败');
-    } finally {
-      setCuttingBundlesLoading(false);
-    }
-    setCuttingBundles([]);
-    return [];
-  };
-
-  const fetchPricingProcesses = async (order: ProductionOrder): Promise<StyleProcess[]> => {
-    const styleId = String((order as Record<string, unknown>)?.styleId || '').trim();
-    if (!styleId) {
-      setPricingProcesses([]);
-      return [];
-    }
-    setPricingProcessLoading(true);
-    try {
-      const res = await styleProcessApi.listByStyleId(styleId);
-      const result = res as Record<string, unknown>;
-      if (result.code === 200) {
-        const list = Array.isArray(result.data) ? (result.data as StyleProcess[]) : [];
-        setPricingProcesses(list);
-        return list;
-      }
-      setPricingProcesses([]);
-      return [];
-    } catch {
-      // Intentionally empty
-      // 忽略错误
-      setPricingProcesses([]);
-      return [];
-    } finally {
-      setPricingProcessLoading(false);
-    }
-  };
+  const fetchPricingProcesses = (order: ProductionOrder) =>
+    fetchPricingProcessesHelper({ order, setPricingProcesses, setPricingProcessLoading });
 
   const openDetail = async (order: ProductionOrder) => {
     const detail = order?.id ? await fetchOrderDetail(order.id) : null;
@@ -1038,167 +571,75 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     await fetchCuttingBundles(effective);
     await fetchPricingProcesses(effective);
     try {
-      const res = await productionOrderApi.getNodeOperations(String(effective.id || ''));
-      if ((res as any)?.code === 200 && (res as any)?.data) {
-        const parsed = typeof (res as any).data === 'string' ? JSON.parse((res as any).data) : (res as any).data;
-        setNodeOps(parsed || {});
-      } else {
-        setNodeOps({});
-      }
+      const parsed = await fetchNodeOperations(String(effective.id || ''));
+      setNodeOps(parsed || {});
     } catch {
       setNodeOps({});
     }
-  };
-
-  const getCurrentWorkflowNodeForOrder = (order: ProductionOrder | null): ProgressNode => {
-    const ns = stripWarehousingNode(resolveNodesForOrder(order));
-    const progress = Number(order?.productionProgress) || 0;
-    const idx = getNodeIndexFromProgress(ns, progress);
-    let picked: ProgressNode | undefined = ns[idx] || ns[0];
-    if (!picked || !String(picked?.name || '').trim()) {
-      picked = ns.find((n) => String(n?.name || '').trim()) || defaultNodes.find((n) => String(n?.name || '').trim());
-    }
-    if (!picked) {
-      return { id: '', name: '', unitPrice: 0 } as ProgressNode;
-    }
-    return picked;
   };
 
   const currentInlineNode = useMemo(() => {
-    return getCurrentWorkflowNodeForOrder(activeOrder);
-  }, [activeOrder]);
+    return getCurrentWorkflowNodeForOrder(activeOrder, progressNodesByStyleNo, nodes, defaultNodes);
+  }, [activeOrder, progressNodesByStyleNo, nodes]);
 
   const cuttingTotalQtyForActive = useMemo(() => {
-    const oid = String(activeOrder?.id || '').trim();
-    const ono = String(activeOrder?.orderNo || '').trim();
-    const bundlesForOrder = (cuttingBundles || []).filter(
-      (b) => String((b as any)?.productionOrderId || '').trim() === oid || String((b as any)?.productionOrderNo || '').trim() === ono
-    );
-    return bundlesForOrder.reduce((s, b) => s + (Number((b as any)?.quantity) || 0), 0);
+    return calcCuttingTotalQty(activeOrder, cuttingBundles);
   }, [activeOrder, cuttingBundles]);
 
-  const updateInlineOps = (field: string, value: any) => {
-    const k = String(currentInlineNode?.id || '').trim();
-    if (!k) return;
-    setNodeOps((prev) => ({
-      ...prev,
-      [k]: {
-        ...((prev || {})[k] || {}),
-        [field]: value,
-        updatedAt: new Date().toISOString(),
-        updatedByName: String(user?.name || user?.username || '未知')
-      }
-    }));
-  };
-
-  const saveInlineOps = async () => {
-    if (!activeOrder?.id) return;
-    const k = String(currentInlineNode?.id || '').trim();
-    if (!k) return;
-    setInlineSaving(true);
-    try {
-      const updated = { ...(nodeOps || {}) };
-      // 添加历史记录
-      const current = (updated as any)[k] || {};
-      const history = Array.isArray(current.history) ? current.history : [];
-      const fmt = (t: any) => (t ? formatDateTimeCompact(t) : '-');
-      const item = {
-        time: new Date().toISOString(),
-        operatorName: String(user?.name || user?.username || '未知'),
-        action: history.length === 0 ? 'create' : 'update',
-        changes: `领取人: ${String(current.assignee || '-')}; 数量: ${typeof current.assigneeQuantity === 'number' ? current.assigneeQuantity : '-'
-          }; 领取时间: ${fmt(current.receiveTime)}; 完成时间: ${fmt(current.completeTime)}`
-      };
-      (updated as any)[k] = { ...current, history: [...history, item].slice(-20) };
-      const res = await productionOrderApi.saveNodeOperations(String(activeOrder.id), JSON.stringify(updated));
-      if ((res as any)?.code === 200) {
-        message.success('保存成功');
-        setNodeOps(updated);
-      } else {
-        message.error((res as any)?.message || '保存失败');
-      }
-    } catch {
-      message.error('保存失败');
-    } finally {
-      setInlineSaving(false);
-    }
-  };
-
-  useEffect(() => {
-    const id = String(activeOrder?.id || '').trim();
-    if (!id) {
-      setNodeOps({});
-      return;
-    }
-    (async () => {
-      try {
-        const res = await productionOrderApi.getNodeOperations(id);
-        if ((res as any)?.code === 200 && (res as any)?.data) {
-          const parsed = typeof (res as any).data === 'string' ? JSON.parse((res as any).data) : (res as any).data;
-          setNodeOps(parsed || {});
-        } else {
-          setNodeOps({});
-        }
-      } catch {
-        setNodeOps({});
-      }
-    })();
-  }, [activeOrder?.id]);
+  const { updateInlineOps, saveInlineOps } = useInlineNodeOps({
+    activeOrder,
+    currentInlineNode,
+    nodeOps,
+    setNodeOps,
+    setInlineSaving,
+    user,
+    productionOrderApi,
+    message,
+    fetchNodeOperations,
+    formatDateTimeCompact,
+  });
 
   // ===== closeDetail 函数已删除 =====
 
-  const openScan = async (order: ProductionOrder) => {
-    if (isOrderFrozenByStatus(order)) {
-      message.error('订单已完成，无法操作');
-      return;
+  // 提前定义 fetchOrderDetail 以避免在 useOpenScan 中的引用错误
+  const fetchOrderDetail = async (orderId: string): Promise<ProductionOrder | null> => {
+    const oid = String(orderId || '').trim();
+    if (!oid) return null;
+    try {
+      const res = await productionOrderApi.detail(oid);
+      const result = res as Record<string, unknown>;
+      if (result.code === 200) {
+        return (result.data || null) as ProductionOrder | null;
+      }
+      return null;
+    } catch {
+      // Intentionally empty
+      // 忽略错误
+      return null;
     }
-    const detail = order?.id ? await fetchOrderDetail(order.id) : null;
-    const effective = detail || order;
-    setActiveOrder(effective);
-    setNodeWorkflowLocked(Number((effective as Record<string, unknown>)?.progressWorkflowLocked) === 1);
-    setNodeWorkflowDirty(false);
-    await ensureNodesFromTemplateIfNeeded(effective);
-    await fetchScanHistory(effective);
-    await fetchCuttingBundles(effective);
-    const procs = await fetchPricingProcesses(effective);
-    setScanBundlesExpanded(false);
-    setBundleSelectedQr('');
-    setScanOpen(true);
-    scanForm.resetFields();
-
-    const currentNode = getCurrentWorkflowNodeForOrder(effective);
-    const currentNodeName = String(currentNode?.name || '').trim();
-    const currentNodeCode = String(currentNode?.id || '').trim();
-    const currentUnitPrice = Number(currentNode?.unitPrice);
-    const baseUnitPrice = Number.isFinite(currentUnitPrice) && currentUnitPrice >= 0 ? currentUnitPrice : undefined;
-
-    scanForm.setFieldsValue({
-      scanType: 'production',
-      orderNo: effective.orderNo,
-      scanCode: '',
-      progressStage: currentNodeName || undefined,
-      processCode: currentNodeCode || '',
-      color: '',
-      size: '',
-      quantity: undefined,
-      baseUnitPrice,
-      unitPrice: baseUnitPrice,
-    });
-
-    const matched = findPricingProcessForStage(procs, currentNodeName);
-    const autoPicked = matched || (procs.length === 1 ? procs[0] : null);
-    if (autoPicked) {
-      const name = String((autoPicked as Record<string, unknown>)?.processName || '').trim();
-      const price = Number((autoPicked as Record<string, unknown>)?.price);
-      scanForm.setFieldsValue({
-        processName: name || undefined,
-        unitPrice: Number.isFinite(price) && price >= 0 ? price : baseUnitPrice,
-      });
-    }
-    setTimeout(() => {
-      scanInputRef.current?.focus?.();
-    }, 0);
   };
+
+  const openScan = useOpenScan({
+    isOrderFrozenByStatus,
+    message,
+    fetchOrderDetail,
+    setActiveOrder,
+    setNodeWorkflowLocked,
+    setNodeWorkflowDirty,
+    ensureNodesFromTemplateIfNeeded,
+    fetchScanHistory,
+    fetchCuttingBundles,
+    fetchPricingProcesses,
+    setScanBundlesExpanded,
+    setBundleSelectedQr,
+    setScanOpen,
+    scanForm,
+    progressNodesByStyleNo,
+    nodes,
+    defaultNodes,
+    findPricingProcessForStage,
+    scanInputRef,
+  });
 
   const applyProgressTemplateToOrder = async () => {
     if (!activeOrder?.id) {
@@ -1420,12 +861,20 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     }
   };
 
+  const handleRollbackModeChange = useCallback((next: 'step' | 'bundle') => {
+    setRollbackMode(next);
+    rollbackForm.resetFields();
+    if (next === 'bundle' && rollbackOrder) {
+      void loadRollbackBundles(rollbackOrder);
+    }
+  }, [rollbackOrder, rollbackForm]);
+
   const openRollback = (order: ProductionOrder) => {
     if (!isSupervisorOrAbove) {
       message.error('无权限回流');
       return;
     }
-    const effectiveNodes = stripWarehousingNode(resolveNodesForListOrder(order));
+    const effectiveNodes = stripWarehousingNode(resolveNodesForListOrder(order, progressNodesByStyleNo, defaultNodes));
     const idx = getNodeIndexFromProgress(effectiveNodes, Number(order.productionProgress) || 0);
     if (idx <= 0) {
       message.info('当前已是第一步');
@@ -1469,7 +918,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     if (!scanOpen) return;
     if (!activeOrder?.id) return;
 
-    const currentNode = getCurrentWorkflowNodeForOrder(activeOrder);
+    const currentNode = getCurrentWorkflowNodeForOrder(activeOrder, progressNodesByStyleNo, nodes, defaultNodes);
     const name = String(currentNode?.name || '').trim();
     const code = String(currentNode?.id || '').trim();
     const p = Number(currentNode?.unitPrice);
@@ -1480,547 +929,86 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     });
   }, [scanOpen, activeOrder?.id, activeOrder?.productionProgress, nodes, scanForm]);
 
-  const matchedBundle = useMemo(() => {
-    const code = String(watchScanCode || '').trim();
-    if (!code || !cuttingBundles.length) return null;
-    return cuttingBundles.find((b) => String(b.qrCode || '').trim() === code) || null;
-  }, [watchScanCode, cuttingBundles]);
+  const {
+    matchedBundle,
+    bundleDoneByQrForSelectedNode,
+    bundleMetaByQrForSelectedNode,
+    bundleSummary,
+    isBundleCompletedForSelectedNode,
+  } = useScanBundles({
+    scanOpen,
+    watchScanCode,
+    watchProgressStage,
+    watchScanType,
+    cuttingBundles,
+    scanHistory,
+    scanForm,
+    bundleSelectedQr,
+    setBundleSelectedQr,
+  });
 
-  useEffect(() => {
-    if (!scanOpen) return;
-    if (matchedBundle) {
-      const matchedQty = Number(matchedBundle?.quantity);
-      scanForm.setFieldsValue({
-        color: matchedBundle?.color || '',
-        size: matchedBundle?.size || '',
-        quantity: Number.isFinite(matchedQty) && matchedQty > 0 ? matchedQty : undefined,
-      });
-      return;
-    }
-    const code = String(watchScanCode || '').trim();
-    if (!code) {
-      scanForm.setFieldsValue({ color: '', size: '', quantity: undefined });
-      if (bundleSelectedQr) setBundleSelectedQr('');
-      return;
-    }
-    if (bundleSelectedQr && bundleSelectedQr !== code) {
-      setBundleSelectedQr('');
-    }
-  }, [matchedBundle, scanOpen, scanForm, watchScanCode, bundleSelectedQr]);
+  const submitScan = useSubmitScan({
+    activeOrder,
+    user,
+    scanForm,
+    bundleSelectedQr,
+    matchedBundle,
+    isBundleCompletedForSelectedNode,
+    setCuttingBundles,
+    setScanSubmitting,
+    scanSubmittingRef,
+    lastFailedRequestRef,
+    openScanConfirm,
+    progressNodesByStyleNo,
+    nodes,
+    defaultNodes,
+    productionCuttingApi,
+    message,
+    generateRequestId,
+  });
 
-  const bundleDoneByQrForSelectedNode = useMemo(() => {
-    const pn = String(watchProgressStage || '').trim();
-    const st = String(watchScanType || '').trim();
-    if (!pn) return {} as Record<string, number>;
-    const map: Record<string, number> = {};
-    for (const r of scanHistory) {
-      if (String((r as Record<string, unknown>)?.scanResult || '').trim() !== 'success') continue;
-      if (st && String((r as Record<string, unknown>)?.scanType || '').trim() !== st) continue;
-      if (getRecordStageName(r) !== pn) continue;
-      const qr = String((r as Record<string, unknown>)?.cuttingBundleQrCode || '').trim();
-      if (!qr) continue;
-      map[qr] = (map[qr] || 0) + (Number((r as Record<string, unknown>)?.quantity) || 0);
-    }
-    return map;
-  }, [scanHistory, watchProgressStage, watchScanType]);
-
-  const bundleMetaByQrForSelectedNode = useMemo(() => {
-    const pn = String(watchProgressStage || '').trim();
-    const st = String(watchScanType || '').trim();
-    if (!pn) return {} as Record<string, { operatorId: string; operatorIds: string[]; receiveTime?: string; completeTime?: string }>;
-
-    const qtyByQr: Record<string, number> = {};
-    for (const b of cuttingBundles) {
-      const qr = String((b as Record<string, unknown>)?.qrCode || '').trim();
-      if (!qr) continue;
-      qtyByQr[qr] = Number((b as Record<string, unknown>)?.quantity) || 0;
-    }
-
-    const grouped: Record<string, ScanRecord[]> = {};
-    for (const r of scanHistory) {
-      if (String((r as Record<string, unknown>)?.scanResult || '').trim() !== 'success') continue;
-      if (st && String((r as Record<string, unknown>)?.scanType || '').trim() !== st) continue;
-      if (getRecordStageName(r) !== pn) continue;
-      const qr = String((r as Record<string, unknown>)?.cuttingBundleQrCode || '').trim();
-      if (!qr) continue;
-      if (!grouped[qr]) grouped[qr] = [];
-      grouped[qr].push(r);
-    }
-
-    const meta: Record<string, { operatorId: string; operatorIds: string[]; receiveTime?: string; completeTime?: string }> = {};
-    for (const [qr, records] of Object.entries(grouped)) {
-      const sorted = [...records].sort((a, b) => {
-        const ta = dayjs(String((a as Record<string, unknown>)?.scanTime || '')).valueOf() || 0;
-        const tb = dayjs(String((b as Record<string, unknown>)?.scanTime || '')).valueOf() || 0;
-        return ta - tb;
-      });
-
-      const operatorIds: string[] = [];
-      const seen = new Set<string>();
-      for (const r of sorted) {
-        const id = String((r as Record<string, unknown>)?.operatorId || '').trim();
-        if (!id) continue;
-        if (seen.has(id)) continue;
-        seen.add(id);
-        operatorIds.push(id);
-      }
-
-      const receiveTime = String((sorted[0] as Record<string, unknown>)?.scanTime || '').trim() || undefined;
-
-      const total = Number(qtyByQr[qr]) || 0;
-      let cum = 0;
-      let completeTime: string | undefined;
-      if (total > 0) {
-        for (const r of sorted) {
-          cum += Number((r as Record<string, unknown>)?.quantity) || 0;
-          if (!completeTime && cum >= total) {
-            completeTime = String((r as Record<string, unknown>)?.scanTime || '').trim() || undefined;
-            break;
-          }
-        }
-      }
-
-      const lastOperatorId = String((sorted[sorted.length - 1] as Record<string, unknown>)?.operatorId || '').trim();
-      meta[qr] = {
-        operatorId: lastOperatorId || '-',
-        operatorIds,
-        receiveTime,
-        completeTime,
-      };
-    }
-    return meta;
-  }, [scanHistory, watchProgressStage, watchScanType, cuttingBundles]);
-
-  const isBundleCompletedForSelectedNode = (b: CuttingBundle | null | undefined) => {
-    const pn = String(watchProgressStage || '').trim();
-    if (!pn || !b) return false;
-    const qr = String(b.qrCode || '').trim();
-    if (!qr) return false;
-    const done = Number(bundleDoneByQrForSelectedNode[qr]) || 0;
-    const total = Number(b.quantity) || 0;
-    return total > 0 && done >= total;
-  };
-
-  const bundleSummary = useMemo(() => {
-    const sizeMap: Record<string, number> = {};
-    let totalQty = 0;
-    for (const b of cuttingBundles) {
-      const size = String(b.size || '').trim() || '-';
-      const qty = Number(b.quantity) || 0;
-      totalQty += qty;
-      sizeMap[size] = (sizeMap[size] || 0) + qty;
-    }
-    const sizeRows = Object.entries(sizeMap)
-      .map(([size, qty]) => ({ size, qty }))
-      .sort((a, b) => compareSizeAsc(a.size, b.size));
-    return { totalQty, sizeRows };
-  }, [cuttingBundles]);
-
-  const submitScan = async () => {
-    if (!activeOrder) return;
-    if (!user?.id || !user?.name) {
-      message.error('未获取到当前登录人员信息');
-      return;
-    }
-
-    if (scanSubmittingRef.current) return;
-    scanSubmittingRef.current = true;
-    setScanSubmitting(true);
-
-    let attemptKey = '';
-    let attemptRequestId = '';
-    let didOpenConfirm = false;
-    try {
-      const stg = String(scanForm.getFieldValue('progressStage') || '').trim();
-      if (!stg) {
-        const currentNode = getCurrentWorkflowNodeForOrder(activeOrder);
-        const name = String(currentNode?.name || '').trim();
-        const code = String(currentNode?.id || '').trim();
-        const p = Number(currentNode?.unitPrice);
-        scanForm.setFieldsValue({
-          progressStage: name || undefined,
-          processCode: code || '',
-          unitPrice: Number.isFinite(p) && p >= 0 ? p : undefined,
-        });
-      }
-      const values = await scanForm.validateFields();
-      const scanCode = String(values.scanCode || '').trim();
-      if (!scanCode) {
-        message.error('请扫码或选择扎号');
-        return;
-      }
-      if (isCuttingStageKey(values.progressStage)) {
-        const selectedQr = String(bundleSelectedQr || '').trim();
-        if (!selectedQr || selectedQr !== scanCode) {
-          message.error('请先在扎号列表选择菲号');
-          return;
-        }
-      }
-      let selectedBundle = matchedBundle;
-      if (!selectedBundle) {
-        const parts = scanCode.split('-').filter(Boolean);
-        const looksLikeBundleQr = parts.length >= 6 && /\d+$/.test(parts[parts.length - 1] || '');
-        if (looksLikeBundleQr) {
-          try {
-            const res = await productionCuttingApi.getByCode(scanCode);
-            const result = res as Record<string, unknown>;
-            if (result.code !== 200) {
-              message.error(result.message || '未找到对应的裁剪扎号');
-              return;
-            }
-            if (result.data) {
-              const fetched = result.data as CuttingBundle;
-              const fetchedOrderNo = String((fetched as Record<string, unknown>)?.productionOrderNo || '').trim();
-              const fetchedOrderId = String((fetched as Record<string, unknown>)?.productionOrderId || '').trim();
-              const currentOrderNo = String(activeOrder.orderNo || '').trim();
-              const currentOrderId = String(activeOrder.id || '').trim();
-              const belongsToOrder =
-                (fetchedOrderNo && currentOrderNo && fetchedOrderNo === currentOrderNo)
-                || (fetchedOrderId && currentOrderId && fetchedOrderId === currentOrderId);
-              if (!belongsToOrder) {
-                message.error('扎号与当前订单不匹配');
-                return;
-              }
-              selectedBundle = fetched;
-              setCuttingBundles((prev) => {
-                const next = Array.isArray(prev) ? [...prev] : [];
-                const exists = next.some((b) => String(b?.qrCode || '').trim() === String(fetched?.qrCode || '').trim());
-                if (!exists) {
-                  next.push(fetched);
-                  next.sort((a, b) => (Number(a?.bundleNo) || 0) - (Number(b?.bundleNo) || 0));
-                }
-                return next;
-              });
-              const fetchedQty = Number((fetched as Record<string, unknown>)?.quantity);
-              const formQty = Number(values.quantity);
-              const nextQty = Number.isFinite(fetchedQty) && fetchedQty > 0
-                ? fetchedQty
-                : (Number.isFinite(formQty) && formQty > 0 ? formQty : undefined);
-              scanForm.setFieldsValue({
-                color: (fetched as Record<string, unknown>)?.color || values.color || '',
-                size: (fetched as Record<string, unknown>)?.size || values.size || '',
-                quantity: nextQty,
-              });
-            }
-          } catch {
-            // Intentionally empty
-            // 忽略错误
-          }
-        }
-      }
-      if (selectedBundle && isBundleCompletedForSelectedNode(selectedBundle)) {
-        message.error('该扎号在当前环节已完成，请选择其他扎号');
-        return;
-      }
-
-      const bundleQty = Number(selectedBundle?.quantity);
-      const formQty = Number(values.quantity);
-      const resolvedQty = Number.isFinite(bundleQty) && bundleQty > 0
-        ? bundleQty
-        : (Number.isFinite(formQty) && formQty > 0 ? formQty : null);
-      if (!resolvedQty) {
-        message.error('请填写数量');
-        return;
-      }
-
-      const formUnitPrice = Number(values.unitPrice ?? scanForm.getFieldValue('baseUnitPrice'));
-      const resolvedUnitPrice = Number.isFinite(formUnitPrice) && formUnitPrice >= 0 ? formUnitPrice : undefined;
-
-      // 自动填充扎号信息，简化用户操作
-      const bundleInfo = {
-        color: selectedBundle?.color || values.color,
-        size: selectedBundle?.size || values.size,
-        quantity: resolvedQty,
-      };
-
-      const payloadBase: unknown = {
-        scanType: values.scanType || 'production',
-        scanCode: scanCode || undefined,
-        orderId: activeOrder.id,
-        orderNo: activeOrder.orderNo,
-        styleId: activeOrder.styleId,
-        styleNo: activeOrder.styleNo,
-        processCode: values.processCode,
-        progressStage: values.progressStage,
-        processName: values.processName,
-        unitPrice: resolvedUnitPrice,
-        ...bundleInfo,
-        operatorId: user.id,
-        operatorName: user.name,
-      };
-
-      const requestKey = JSON.stringify(payloadBase);
-      const requestId = lastFailedRequestRef.current?.key === requestKey
-        ? lastFailedRequestRef.current.requestId
-        : generateRequestId();
-      attemptKey = requestKey;
-      attemptRequestId = requestId;
-      const payload = { ...payloadBase, requestId };
-
-      const detail = {
-        scanCode,
-        quantity: resolvedQty,
-        progressStage: values.progressStage,
-        processName: values.processName,
-        unitPrice: resolvedUnitPrice,
-        orderNo: activeOrder.orderNo,
-        styleNo: activeOrder.styleNo,
-        color: values.color,
-        size: values.size,
-      };
-
-      didOpenConfirm = true;
-      openScanConfirm(payload, detail, { attemptKey, attemptRequestId, values });
-      return;
-    } catch (error) {
-      if ((error as Record<string, unknown>).errorFields) {
-        const firstError = (error as Record<string, unknown>).errorFields[0];
-        message.error(firstError.errors[0] || '表单验证失败');
-      } else {
-        message.error('系统繁忙');
-      }
-    } finally {
-      if (!didOpenConfirm) {
-        setScanSubmitting(false);
-        scanSubmittingRef.current = false;
-      }
-    }
-  };
-
-  const nodeStats = useMemo(() => {
-    const oid = String(activeOrder?.id || '').trim();
-    const ono = String(activeOrder?.orderNo || '').trim();
-    const bundlesForOrder = (cuttingBundles || []).filter(
-      (b) => String(b?.productionOrderId || '').trim() === oid || String(b?.productionOrderNo || '').trim() === ono
-    );
-    const bundlesTotalQty = bundlesForOrder.reduce((acc, b) => acc + (Number(b?.quantity) || 0), 0);
-    const totalQty = bundlesTotalQty > 0 ? bundlesTotalQty : (Number(activeOrder?.orderQuantity) || 0);
-    const records = (scanHistory || []).filter((r) => {
-      if (String((r as Record<string, unknown>)?.scanResult || '').trim() !== 'success') return false;
-      const q = Number((r as Record<string, unknown>)?.quantity) || 0;
-      return q > 0;
-    });
-
-    const statsByName: Record<string, { done: number; total: number; remaining: number; percent: number }> = {};
-    const total = Math.max(0, totalQty);
-
-    for (const n of nodes || []) {
-      const nodeName = String((n as Record<string, unknown>)?.name || '').trim();
-      if (!nodeName) continue;
-      const doneFromScans = records
-        .filter((r) => stageNameMatches(nodeName, getRecordStageName(r)))
-        .reduce((acc, r) => acc + (Number((r as Record<string, unknown>)?.quantity) || 0), 0);
-
-      let done = doneFromScans;
-      if (nodeName.includes('裁剪') && bundlesTotalQty > 0) {
-        done = Math.max(done, bundlesTotalQty);
-      }
-
-      const safeDone = Math.max(0, Math.min(done, total));
-      const remaining = Math.max(0, total - safeDone);
-      const percent = total ? clampPercent((safeDone / total) * 100) : 0;
-      statsByName[nodeName] = { done: safeDone, total, remaining, percent };
-    }
-
-    return { statsByName, totalQty: total };
-  }, [scanHistory, activeOrder?.id, activeOrder?.orderQuantity, cuttingBundles, nodes]);
+  const nodeStats = useNodeStats({ scanHistory, activeOrder, cuttingBundles, nodes });
 
   const currentNodeIdx = useMemo(() => {
     return getNodeIndexFromProgress(nodes, Number(activeOrder?.productionProgress) || 0);
   }, [nodes, activeOrder?.productionProgress]);
 
-  const reorderNodeBefore = (fromId: string, toId: string) => {
-    const from = String(fromId || '').trim();
-    const to = String(toId || '').trim();
-    if (!from || !to || from === to) return;
-
-    const fromIdx = nodes.findIndex((n) => String(n.id) === from);
-    const toIdx = nodes.findIndex((n) => String(n.id) === to);
-    if (fromIdx < 0 || toIdx < 0) return;
-
-    const next = [...nodes];
-    const [picked] = next.splice(fromIdx, 1);
-    const insertIdx = fromIdx < toIdx ? toIdx - 1 : toIdx;
-    next.splice(insertIdx, 0, picked);
-    saveNodes(next);
-    setNodeWorkflowDirty(true);
-  };
-
-  const removeNode = (nodeId: string) => {
-    if (!activeOrder?.id) {
-      message.error('未选择订单');
-      return;
-    }
-    if (!isSupervisorOrAbove) {
-      message.error('无权限操作进度节点');
-      return;
-    }
-    if (nodeWorkflowLocked) {
-      message.error('流程已锁定，如需修改请先退回');
-      return;
-    }
-    if (nodes.length <= 1) {
-      message.error('至少保留一个节点');
-      return;
-    }
-    const target = nodes.find((n) => String(n.id) === String(nodeId));
-    Modal.confirm({
-      title: '确认删除节点？',
-      content: `将删除「${target?.name || '该节点'}」`,
-      okText: '删除',
-      cancelText: '取消',
-      okButtonProps: { danger: true },
-      onOk: () => {
-        const next = nodes.filter((n) => String(n.id) !== String(nodeId));
-        saveNodes(next.length ? next : defaultNodes);
-        setNodeWorkflowDirty(true);
-      },
-    });
-  };
-
-  const updateNodeUnitPrice = (nodeId: string, unitPrice: number) => {
-    if (!activeOrder?.id) return;
-    if (!isSupervisorOrAbove) return;
-    if (nodeWorkflowLocked) return;
-    const p = Number(unitPrice);
-    const nextPrice = Number.isFinite(p) && p >= 0 ? p : 0;
-    const next = nodes.map((n) => (String(n.id) === String(nodeId) ? { ...n, unitPrice: nextPrice } : n));
-    saveNodes(next);
-    setNodeWorkflowDirty(true);
-  };
+  const { reorderNodeBefore, removeNode, updateNodeUnitPrice } = useNodeWorkflowActions({
+    activeOrderId: activeOrder?.id,
+    isSupervisorOrAbove,
+    nodeWorkflowLocked,
+    nodes,
+    defaultNodes,
+    saveNodes,
+    setNodeWorkflowDirty,
+    message,
+    Modal,
+  });
 
 
-  const fetchOrderDetail = async (orderId: string): Promise<ProductionOrder | null> => {
-    const oid = String(orderId || '').trim();
-    if (!oid) return null;
-    try {
-      const res = await productionOrderApi.detail(oid);
-      const result = res as Record<string, unknown>;
-      if (result.code === 200) {
-        return (result.data || null) as ProductionOrder | null;
-      }
-      return null;
-    } catch {
-      // Intentionally empty
-      // 忽略错误
-      return null;
-    }
-  };
+  useOrderSync({
+    fetchOrders,
+    fetchOrderDetail,
+    fetchScanHistory,
+    activeOrderRef,
+    setActiveOrder,
+    orderSyncingRef,
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-    const run = async () => {
-      if (orderSyncingRef.current) return;
-      orderSyncingRef.current = true;
-      try {
-        await fetchOrders({ silent: true });
-        const current = activeOrderRef.current;
-        if (current?.id) {
-          const detail = await fetchOrderDetail(current.id);
-          if (!cancelled && detail) {
-            setActiveOrder(detail);
-          }
-          const base = detail || current;
-          if (base) {
-            await fetchScanHistory(base, { silent: true });
-          }
-        }
-      } finally {
-        orderSyncingRef.current = false;
-      }
-    };
-    run();
-    const timer = window.setInterval(run, 30000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(timer);
-    };
-  }, []); // 移除所有函数依赖，避免重复创建定时器
+  const { updateOrderProgress } = useOrderProgress({
+    activeOrder,
+    fetchOrders,
+    fetchOrderDetail,
+    setActiveOrder,
+    ensureNodesFromTemplateIfNeeded,
+    fetchScanHistory,
+    progressNodesByStyleNo,
+    nodes,
+    productionOrderApi,
+    message,
+  });
 
-  const updateOrderProgress = async (
-    order: ProductionOrder,
-    nextProgress: number,
-    opts?: { rollbackRemark?: string; rollbackToProcessName?: string }
-  ) => {
-    if (!order.id) return;
-    try {
-      const payload: unknown = { id: order.id, progress: clampPercent(nextProgress) };
-      if (opts?.rollbackRemark) payload.rollbackRemark = opts.rollbackRemark;
-      if (opts?.rollbackToProcessName) payload.rollbackToProcessName = opts.rollbackToProcessName;
 
-      const response = await productionOrderApi.updateProgress(payload);
-      const result = response as Record<string, unknown>;
-      if (result.code === 200) {
-        message.success('进度已更新');
-        await fetchOrders();
-        if (activeOrder?.id === order.id) {
-          const p = clampPercent(nextProgress);
-          const detail = await fetchOrderDetail(order.id);
-          const nodeSource = (detail || activeOrder || order) as ProductionOrder;
-          const effectiveNodes = stripWarehousingNode(resolveNodesForOrder(nodeSource));
-          const idx = getNodeIndexFromProgress(effectiveNodes, p);
-          const derivedName = String(effectiveNodes[idx]?.name || '').trim();
-          const nextName = String(opts?.rollbackToProcessName || derivedName || '').trim();
-          if (detail) {
-            setActiveOrder({ ...detail, currentProcessName: nextName || (detail as Record<string, unknown>).currentProcessName });
-            await ensureNodesFromTemplateIfNeeded(detail);
-          } else {
-            setActiveOrder((prev) => (prev ? { ...prev, productionProgress: p, currentProcessName: nextName || prev.currentProcessName } : prev));
-          }
-          await fetchScanHistory(detail || order);
-        }
-      } else {
-        message.error(result.message || '更新进度失败');
-      }
-    } catch {
-      // Intentionally empty
-      // 忽略错误
-      message.error('更新进度失败');
-    }
-  };
-
-  const getProgressLabelForTable = (order: ProductionOrder) => {
-    const cp = String(order.currentProcessName || '').trim();
-    const progress = clampPercent(Number(order.productionProgress) || 0);
-    const ns = stripWarehousingNode(resolveNodesForListOrder(order));
-    const idx = getNodeIndexFromProgress(ns, progress);
-    const derived = ns[idx]?.name || '生产';
-    if (!cp) return derived;
-    const cpInNodes = ns.some((n) => String(n?.name || '').trim() === cp);
-    return cpInNodes ? cp : derived;
-  };
-
-  const getProgressPercentForTable = (order: ProductionOrder, nodes: ProgressNode[]) => {
-    const raw = Number((order as Record<string, unknown>).productionProgress);
-    const direct = clampPercent(Number.isFinite(raw) ? raw : 0);
-    if (direct > 0) return direct;
-
-    const cp = String((order as Record<string, unknown>).currentProcessName || '').trim();
-    if (cp && Array.isArray(nodes) && nodes.length) {
-      const idx = nodes.findIndex((n) => String(n?.name || '').trim() === cp);
-      if (idx >= 0) {
-        return clampPercent(getProgressFromNodeIndex(nodes, idx));
-      }
-    }
-
-    const rate = clampPercent(Number((order as Record<string, unknown>).materialArrivalRate) || 0);
-    const base = 5 + Math.round((15 * rate) / 100);
-    return clampPercent(base);
-  };
-
-  const getQuotationUnitPriceForOrder = (order: ProductionOrder) => {
-    const v = Number((order as Record<string, unknown>)?.quotationUnitPrice);
-    if (Number.isFinite(v) && v > 0) {
-      return v;
-    }
-    return 0;
-  };
-
-  const getCloseMinRequired = (cuttingQuantity: number) => {
-    const cq = Number(cuttingQuantity ?? 0);
-    if (!Number.isFinite(cq) || cq <= 0) return 0;
-    return Math.ceil(cq * 0.9);
-  };
 
   // ===== handleViewScanHistory 和 handleViewDetail 函数已删除 =====
 
@@ -2049,68 +1037,17 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     }
   };
 
-  const handleCloseOrder = (order: ProductionOrder) => {
-    if (!isSupervisorOrAbove) {
-      message.error('无权限关单');
-      return;
-    }
-
-    const orderId = String((order as Record<string, unknown>)?.id || '').trim();
-    if (!orderId) {
-      message.error('订单ID为空，无法关单');
-      return;
-    }
-
-    const cuttingQty = Number((order as Record<string, unknown>)?.cuttingQuantity ?? 0) || 0;
-    const minRequired = getCloseMinRequired(cuttingQty);
-    const orderQty = Number((order as Record<string, unknown>)?.orderQuantity ?? 0) || 0;
-    const warehousingQualified = Number((order as Record<string, unknown>)?.warehousingQualifiedQuantity ?? 0) || 0;
-
-    if ((order as Record<string, unknown>)?.status === 'completed') {
-      message.info('该订单已完成，无需关单');
-      return;
-    }
-
-    if (minRequired <= 0) {
-      message.warning('裁剪数量异常，无法关单');
-      return;
-    }
-
-    if (warehousingQualified < minRequired) {
-      message.warning(`关单条件未满足：合格入库${warehousingQualified}/${minRequired}（裁剪${cuttingQty}，允许差异10%）`);
-      return;
-    }
-
-    Modal.confirm({
-      title: `确认关单：${String((order as Record<string, unknown>)?.orderNo || '').trim() || '-'}`,
-      okText: '确认关单',
-      cancelText: '取消',
-      okButtonProps: { danger: true },
-      content: (
-        <div>
-          <div>订单数量：{orderQty}</div>
-          <div>关单阈值（裁剪数90%）：{minRequired}</div>
-          <div>当前裁剪数：{cuttingQty}</div>
-          <div>当前合格入库：{warehousingQualified}</div>
-          <div style={{ marginTop: 8 }}>关单后订单状态将变为“已完成”，并自动生成对账记录。</div>
-        </div>
-      ),
-      onOk: async () => {
-        const result = await productionOrderApi.close(orderId, 'productionProgress');
-        if ((result as Record<string, unknown>)?.code !== 200) {
-          throw new Error((result as Record<string, unknown>)?.message || '关单失败');
-        }
-        message.success('关单成功');
-        await fetchOrders();
-        if (activeOrder?.id === orderId) {
-          const detail = await fetchOrderDetail(orderId);
-          if (detail) {
-            setActiveOrder(detail);
-          }
-        }
-      },
-    });
-  };
+  const handleCloseOrder = useCloseOrder({
+    isSupervisorOrAbove,
+    message,
+    Modal,
+    productionOrderApi,
+    fetchOrders,
+    fetchOrderDetail,
+    setActiveOrder,
+    activeOrderId: activeOrder?.id,
+    getCloseMinRequired,
+  });
 
   const columns: unknown[] = [
     {
@@ -2215,7 +1152,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       align: 'center' as const,
       render: (_: any, record: ProductionOrder) => {
         // 获取该订单的工序节点
-        const ns = stripWarehousingNode(resolveNodesForListOrder(record));
+        const ns = stripWarehousingNode(resolveNodesForListOrder(record, progressNodesByStyleNo, defaultNodes));
         const totalQty = Number(record.orderQuantity) || 0;
         const nodeDoneMap = boardStatsByOrder[String(record.id || '')];
 
@@ -2274,7 +1211,12 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     nodeName,
                     { done: completedQty, total: nodeQty, percent, remaining },
                     node.unitPrice,
-                    ns.map(n => ({ name: n.name, unitPrice: n.unitPrice }))
+                    ns.map(n => ({
+                      id: String(n.id || '').trim() || undefined,
+                      processCode: String(n.id || '').trim() || undefined,
+                      name: n.name,
+                      unitPrice: n.unitPrice,
+                    }))
                   )}
                   onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(59, 130, 246, 0.08)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
@@ -2395,39 +1337,39 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       {embedded ? (
         <>
           <Card size="small" className="filter-card mb-sm">
-            <Form layout="inline" size="small">
-              <Form.Item label="订单号">
-                <Input
-                  placeholder="请输入订单号"
-                  style={{ width: 180 }}
-                  allowClear
-                  value={queryParams.orderNo}
-                  onChange={(e) => setQueryParams((prev) => ({ ...prev, page: 1, orderNo: e.target.value }))}
+            <StandardToolbar
+              left={(
+                <StandardSearchBar
+                  searchValue={String(queryParams.keyword || '')}
+                  onSearchChange={(value) =>
+                    setQueryParams((prev) => ({
+                      ...prev,
+                      page: 1,
+                      keyword: value,
+                      orderNo: undefined,
+                      styleNo: undefined,
+                      factoryName: undefined,
+                    }))
+                  }
+                  searchPlaceholder="搜索订单号/款号/工厂"
+                  dateValue={dateRange}
+                  onDateChange={(value) => setDateRange(value)}
+                  statusValue={String(queryParams.status || '')}
+                  onStatusChange={(value) => setQueryParams((prev) => ({ ...prev, page: 1, status: value || undefined }))}
+                  statusOptions={statusOptions}
                 />
-              </Form.Item>
-              <Form.Item label="款号">
-                <Input
-                  placeholder="请输入款号"
-                  style={{ width: 180 }}
-                  allowClear
-                  value={queryParams.styleNo}
-                  onChange={(e) => setQueryParams((prev) => ({ ...prev, page: 1, styleNo: e.target.value }))}
-                />
-              </Form.Item>
-              <Form.Item label="下单时间">
-                <UnifiedRangePicker value={dateRange as Record<string, unknown>} onChange={(v) => setDateRange(v as Record<string, unknown>)} />
-              </Form.Item>
-              <Form.Item className="filter-actions">
+              )}
+              right={(
                 <Button
                   onClick={() => {
-                    setQueryParams({ page: 1, pageSize: queryParams.pageSize });
+                    setQueryParams({ page: 1, pageSize: queryParams.pageSize, keyword: '' });
                     setDateRange(null);
                   }}
                 >
                   重置
                 </Button>
-              </Form.Item>
-            </Form>
+              )}
+            />
           </Card>
 
           {viewMode === 'list' ? (
@@ -2540,39 +1482,39 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
           </div>
 
           <Card size="small" className="filter-card mb-sm">
-            <Form layout="inline" size="small">
-              <Form.Item label="订单号">
-                <Input
-                  placeholder="请输入订单号"
-                  style={{ width: 180 }}
-                  allowClear
-                  value={queryParams.orderNo}
-                  onChange={(e) => setQueryParams((prev) => ({ ...prev, page: 1, orderNo: e.target.value }))}
+            <StandardToolbar
+              left={(
+                <StandardSearchBar
+                  searchValue={String(queryParams.keyword || '')}
+                  onSearchChange={(value) =>
+                    setQueryParams((prev) => ({
+                      ...prev,
+                      page: 1,
+                      keyword: value,
+                      orderNo: undefined,
+                      styleNo: undefined,
+                      factoryName: undefined,
+                    }))
+                  }
+                  searchPlaceholder="搜索订单号/款号/工厂"
+                  dateValue={dateRange}
+                  onDateChange={(value) => setDateRange(value)}
+                  statusValue={String(queryParams.status || '')}
+                  onStatusChange={(value) => setQueryParams((prev) => ({ ...prev, page: 1, status: value || undefined }))}
+                  statusOptions={statusOptions}
                 />
-              </Form.Item>
-              <Form.Item label="款号">
-                <Input
-                  placeholder="请输入款号"
-                  style={{ width: 180 }}
-                  allowClear
-                  value={queryParams.styleNo}
-                  onChange={(e) => setQueryParams((prev) => ({ ...prev, page: 1, styleNo: e.target.value }))}
-                />
-              </Form.Item>
-              <Form.Item label="下单时间">
-                <UnifiedRangePicker value={dateRange as Record<string, unknown>} onChange={(v) => setDateRange(v as Record<string, unknown>)} />
-              </Form.Item>
-              <Form.Item className="filter-actions">
+              )}
+              right={(
                 <Button
                   onClick={() => {
-                    setQueryParams({ page: 1, pageSize: queryParams.pageSize });
+                    setQueryParams({ page: 1, pageSize: queryParams.pageSize, keyword: '' });
                     setDateRange(null);
                   }}
                 >
                   重置
                 </Button>
-              </Form.Item>
-            </Form>
+              )}
+            />
           </Card>
 
           {viewMode === 'list' ? (
@@ -2678,384 +1620,54 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
 
       {/* ===== 详情弹窗已删除 ===== */}
 
-      <ResizableModal
-        title="登记"
+      <ScanEntryModal
         open={scanOpen}
         onCancel={closeScan}
         onOk={submitScan}
         confirmLoading={scanSubmitting}
-        okText="提交"
-        cancelText="关闭"
-        width={modalWidth}
-        initialHeight={modalInitialHeight}
-        tableDensity="dense"
-        tablePaddingX={4}
-        tablePaddingY={2}
-        minFontSize={11}
-        maxFontSize={13}
-        scaleWithViewport
-      >
-        <Form form={scanForm} layout="vertical">
-          <Alert
-            type="info"
-            showIcon
-            style={{ marginBottom: 10 }}
-            title={(
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <div>同一菲号在同一进度环节只能登记一次；重复提交会提示“已扫码更新/忽略”。</div>
-                <div>计价工序用于单价/金额结算；同一菲号同一进度环节仅保留一个计价工序（后续修改会覆盖）。</div>
-                <div>每次登记都会记录当前登录人员与时间（当前：{String(user?.name || '-')}）。</div>
-              </div>
-            )}
-          />
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
-            <Text type="secondary">扫码登记（可从扎号列表选择）</Text>
-          </div>
+        modalWidth={modalWidth}
+        modalInitialHeight={modalInitialHeight}
+        scanForm={scanForm}
+        userName={String(user?.name || '-')}
+        scanInputRef={scanInputRef}
+        scanBundlesExpanded={scanBundlesExpanded}
+        onBundlesExpandedChange={setScanBundlesExpanded}
+        cuttingBundles={cuttingBundles}
+        cuttingBundlesLoading={cuttingBundlesLoading}
+        bundleSummary={bundleSummary}
+        matchedBundle={matchedBundle}
+        screens={screens}
+        setBundleSelectedQr={setBundleSelectedQr}
+        isBundleCompletedForSelectedNode={isBundleCompletedForSelectedNode}
+        bundleDoneByQrForSelectedNode={bundleDoneByQrForSelectedNode}
+        bundleMetaByQrForSelectedNode={bundleMetaByQrForSelectedNode}
+        formatTimeCompact={formatTimeCompact}
+        nodes={nodes}
+        currentNodeIdx={currentNodeIdx}
+        pricingProcessLoading={pricingProcessLoading}
+        pricingProcesses={pricingProcesses}
+      />
 
-          <Collapse
-            size="small"
-            activeKey={scanBundlesExpanded ? ['bundles'] : []}
-            onChange={(keys) => {
-              const list = Array.isArray(keys) ? keys : [keys];
-              setScanBundlesExpanded(list.map((k) => String(k)).includes('bundles'));
-            }}
-            style={{ marginBottom: 8 }}
-            items={[
-              {
-                key: 'bundles',
-                label: (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-                    <div>裁剪扎号明细（菲号）</div>
-                    <Space size={8}>
-                      <Text type="secondary">共 {cuttingBundles.length} 扎</Text>
-                      <Text type="secondary">合计 {bundleSummary.totalQty}</Text>
-                      {matchedBundle ? <Tag color="success">已匹配：{matchedBundle.bundleNo}</Tag> : null}
-                    </Space>
-                  </div>
-                ),
-                children: scanBundlesExpanded ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: screens.md ? '1fr 1fr' : '1fr', gap: 12 }}>
-                      <div>
-                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                          {bundleSummary.sizeRows.length ? (
-                            bundleSummary.sizeRows.map((r) => (
-                              <Tag key={r.size} color="default">
-                                {r.size}：{r.qty}
-                              </Tag>
-                            ))
-                          ) : (
-                            <Text type="secondary">暂无扎号数据</Text>
-                          )}
-                        </div>
-                      </div>
-                      <div>
-                        <Select
-                          showSearch
-                          allowClear
-                          optionFilterProp="label"
-                          placeholder={cuttingBundlesLoading ? '加载中...' : '选择扎号可自动带出码数/数量'}
-                          loading={cuttingBundlesLoading}
-                          value={matchedBundle ? String(matchedBundle.qrCode || '') : undefined}
-                          onChange={(v) => {
-                            const code = String(v || '').trim();
-                            const b = cuttingBundles.find((x) => String(x.qrCode || '').trim() === code);
-                            setBundleSelectedQr(code);
-                            const pickedQty = Number(b?.quantity);
-                            scanForm.setFieldsValue({
-                              scanCode: code || '',
-                              color: b?.color || '',
-                              size: b?.size || '',
-                              quantity: Number.isFinite(pickedQty) && pickedQty > 0 ? pickedQty : undefined,
-                            });
-                            setTimeout(() => scanInputRef.current?.focus?.(), 0);
-                          }}
-                          options={cuttingBundles.map((b) => ({
-                            value: String(b.qrCode || ''),
-                            label: `扎号 ${b.bundleNo}｜码数 ${String(b.size || '-')}｜颜色 ${String(b.color || '-')}｜数量 ${Number(b.quantity) || 0}`,
-                            disabled: isBundleCompletedForSelectedNode(b),
-                          }))}
-                        />
-                      </div>
-                    </div>
-
-                    <div style={{ maxHeight: screens.lg ? 440 : 320, overflowY: 'auto' }}>
-                      <ResizableTable
-                        rowKey={(r: Record<string, unknown>) => String(r.qrCode || r.id || r.bundleNo)}
-                        size="small"
-                        pagination={false}
-                        scroll={{ x: 'max-content' }}
-                        minColumnWidth={50}
-                        defaultColumnWidth={80}
-                        rowSelection={{
-                          type: 'radio',
-                          selectedRowKeys: matchedBundle ? [String(matchedBundle.qrCode || '')] : [],
-                          getCheckboxProps: (r: Record<string, unknown>) => ({ disabled: Boolean(r?.completed) }),
-                          onChange: (_keys: React.Key[], rows: unknown[]) => {
-                            const r = rows?.[0];
-                            const code = String(r?.qrCode || '').trim();
-                            if (!code) return;
-                            setBundleSelectedQr(code);
-                            const pickedQty = Number(r?.quantity);
-                            scanForm.setFieldsValue({
-                              scanCode: code,
-                              color: r?.color || '',
-                              size: r?.size || '',
-                              quantity: Number.isFinite(pickedQty) && pickedQty > 0 ? pickedQty : undefined,
-                            });
-                            setTimeout(() => scanInputRef.current?.focus?.(), 0);
-                          },
-                        }}
-                        onRow={(r: Record<string, unknown>) => ({
-                          onClick: () => {
-                            if (r?.completed) return;
-                            const code = String(r?.qrCode || '').trim();
-                            if (!code) return;
-                            setBundleSelectedQr(code);
-                            const pickedQty = Number(r?.quantity);
-                            scanForm.setFieldsValue({
-                              scanCode: code,
-                              color: r?.color || '',
-                              size: r?.size || '',
-                              quantity: Number.isFinite(pickedQty) && pickedQty > 0 ? pickedQty : undefined,
-                            });
-                            setTimeout(() => scanInputRef.current?.focus?.(), 0);
-                          },
-                        })}
-                        dataSource={cuttingBundles.map((b) => {
-                          const qr = String(b.qrCode || '').trim();
-                          const total = Number(b.quantity) || 0;
-                          const done = Number(bundleDoneByQrForSelectedNode[qr]) || 0;
-                          const remaining = Math.max(0, total - done);
-                          const completed = total > 0 && done >= total;
-                          const meta = (bundleMetaByQrForSelectedNode as Record<string, unknown>)?.[qr] || {};
-                          return {
-                            ...b,
-                            done,
-                            remaining,
-                            completed,
-                            operatorId: meta.operatorId || '-',
-                            operatorIds: Array.isArray(meta.operatorIds) ? meta.operatorIds : [],
-                            receiveTime: meta.receiveTime || '',
-                            completeTime: meta.completeTime || '',
-                          } as Record<string, unknown>;
-                        })}
-                        columns={[
-                          { title: '菲号', dataIndex: 'bundleNo', key: 'bundleNo', width: 70 },
-                          { title: '码数', dataIndex: 'size', key: 'size', width: 70, render: (v) => v || '-' },
-                          { title: '颜色', dataIndex: 'color', key: 'color', width: 90, render: (v) => v || '-' },
-                          { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 70, render: (v) => Number(v) || 0 },
-                          {
-                            title: '完成度',
-                            key: 'doneRate',
-                            width: 110,
-                            render: (_: any, r: any) => {
-                              const total = Number(r?.quantity) || 0;
-                              const done = Number(r?.done) || 0;
-                              return (
-                                <span>
-                                  {done} / {total}
-                                </span>
-                              );
-                            },
-                          },
-                          {
-                            title: '状态',
-                            dataIndex: 'completed',
-                            key: 'completed',
-                            width: 64,
-                            render: (v: unknown) => (v
-                              ? <Tag color="success" style={{ marginInlineEnd: 0, paddingInline: 2, lineHeight: '16px', fontSize: 'var(--font-size-xs)' }}>已完成</Tag>
-                              : <Tag style={{ marginInlineEnd: 0, paddingInline: 2, lineHeight: '16px', fontSize: 'var(--font-size-xs)' }}>未完成</Tag>),
-                          },
-                          {
-                            title: '生产人员ID',
-                            dataIndex: 'operatorId',
-                            key: 'operatorId',
-                            width: 120,
-                            render: (_: any, r: any) => {
-                              const ids = Array.isArray(r?.operatorIds) ? (r.operatorIds as string[]) : [];
-                              const title = ids.length ? ids.join(', ') : String(r?.operatorId || '-');
-                              const text = String(r?.operatorId || '-');
-                              return (
-                                <Tooltip title={title} placement="topLeft">
-                                  <span style={{ display: 'inline-block', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {text}
-                                  </span>
-                                </Tooltip>
-                              );
-                            },
-                          },
-                          {
-                            title: '领取时间',
-                            dataIndex: 'receiveTime',
-                            key: 'receiveTime',
-                            width: 100,
-                            render: (v: unknown) => formatTimeCompact(v),
-                          },
-                          {
-                            title: '完成时间',
-                            dataIndex: 'completeTime',
-                            key: 'completeTime',
-                            width: 100,
-                            render: (v: unknown) => formatTimeCompact(v),
-                          },
-                        ]}
-                      />
-                    </div>
-                  </div>
-                ) : null,
-              },
-            ]}
-          />
-
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: screens.lg ? '1.1fr 0.9fr 2fr' : screens.md ? '1fr 1fr' : '1fr',
-              gap: 12,
-              alignItems: 'end',
-            }}
-          >
-            <Form.Item label="订单号" name="orderNo" style={{ marginBottom: 8 }}>
-              <Input disabled />
-            </Form.Item>
-            <div style={{ marginBottom: 8 }}>
-              <div style={{ marginBottom: 8, fontSize: '14px', color: 'rgba(0, 0, 0, 0.88)' }}>类型</div>
-              <Input value="生产" disabled />
-            </div>
-            <Form.Item name="scanType" hidden>
-              <Input />
-            </Form.Item>
-            <Form.Item
-              label="扫码内容（二维码）"
-              name="scanCode"
-              rules={[{ required: true, message: '请扫码输入' }]}
-              style={{ marginBottom: 8 }}
-            >
-              <Input
-                ref={scanInputRef}
-                placeholder="请扫码输入（或从扎号列表选择）"
-              />
-            </Form.Item>
-          </div>
-
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: screens.lg ? '1fr 1fr' : '1fr',
-              gap: 12,
-              alignItems: 'end',
-            }}
-          >
-            <Form.Item label="进度节点" name="progressStage" rules={[{ required: true, message: '请选择节点' }]} style={{ marginBottom: 0 }}>
-              <Select
-                showSearch
-                options={nodes.map((n, idx) => ({ value: n.name, label: n.name, disabled: idx < currentNodeIdx }))}
-                placeholder="请选择节点"
-                disabled
-              />
-            </Form.Item>
-            <Form.Item
-              label="计价工序"
-              name="processName"
-              style={{ marginBottom: 0 }}
-            >
-              <Select
-                showSearch
-                allowClear
-                loading={pricingProcessLoading}
-                placeholder={pricingProcessLoading ? '加载中...' : pricingProcesses.length ? '选择计价小工序（可不选）' : '无工序单价（可不选）'}
-                disabled={!pricingProcessLoading && pricingProcesses.length === 0}
-                options={[...pricingProcesses]
-                  .sort((a: any, b: any) => (Number(a?.sortOrder) || 0) - (Number(b?.sortOrder) || 0))
-                  .map((p: any) => ({
-                    value: String(p?.processName || '').trim(),
-                    label: String(p?.processName || '').trim(),
-                  }))
-                  .filter((x) => x.value)}
-                onChange={(v) => {
-                  const name = String(v || '').trim();
-                  if (!name) {
-                    scanForm.setFieldsValue({ unitPrice: scanForm.getFieldValue('baseUnitPrice') });
-                    return;
-                  }
-                  const picked = pricingProcesses.find((p) => String((p as Record<string, unknown>)?.processName || '').trim() === name);
-                  const price = Number((picked as Record<string, unknown>)?.price);
-                  if (Number.isFinite(price) && price >= 0) {
-                    scanForm.setFieldsValue({ unitPrice: price });
-                    return;
-                  }
-                  scanForm.setFieldsValue({ unitPrice: scanForm.getFieldValue('baseUnitPrice') });
-                }}
-              />
-            </Form.Item>
-          </div>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: screens.lg ? 'repeat(4, 1fr)' : screens.md ? '1fr 1fr' : '1fr',
-              gap: 12,
-              alignItems: 'end',
-              marginTop: 8,
-            }}
-          >
-            <Form.Item label="颜色" name="color" style={{ marginBottom: 0 }}>
-              <Input placeholder="可选" />
-            </Form.Item>
-            <Form.Item label="码数" name="size" style={{ marginBottom: 0 }}>
-              <Input placeholder="可选" />
-            </Form.Item>
-            <Form.Item label="数量" name="quantity" style={{ marginBottom: 0 }}>
-              <InputNumber min={1} style={{ width: '100%' }} />
-            </Form.Item>
-            <Form.Item label="单价" name="unitPrice" style={{ marginBottom: 0 }}>
-              <InputNumber min={0} precision={2} style={{ width: '100%' }} />
-            </Form.Item>
-          </div>
-          <Form.Item name="processCode" hidden>
-            <Input />
-          </Form.Item>
-          <Form.Item name="baseUnitPrice" hidden>
-            <Input />
-          </Form.Item>
-        </Form>
-      </ResizableModal>
-
-      <Modal
-        title="扫码确认"
-        open={scanConfirmVisible}
+      <ScanConfirmModal
+        open={scanConfirmState.visible}
+        loading={scanConfirmState.loading}
+        remain={scanConfirmState.remain}
+        detail={scanConfirmState.detail}
         onCancel={() => closeScanConfirm()}
-        footer={[
-          <Button key="cancel" onClick={() => closeScanConfirm()} disabled={scanConfirmLoading}>
-            取消
-          </Button>,
-          <Button key="submit" type="primary" onClick={submitConfirmedScan} loading={scanConfirmLoading}>
-            领取
-          </Button>,
-        ]}
-      >
-        <div style={{ marginBottom: 8, color: '#6b7280' }}>请在 {scanConfirmRemain} 秒内完成操作</div>
-        {scanConfirmDetail && (
-          <div style={{ display: 'grid', gap: 6 }}>
-            <div>二维码：{scanConfirmDetail.scanCode || '-'}</div>
-            <div>数量：{scanConfirmDetail.quantity || '-'}</div>
-            <div>环节：{scanConfirmDetail.progressStage || scanConfirmDetail.processName || '-'}</div>
-            <div>工序：{scanConfirmDetail.processName || '-'}</div>
-            <div>单价：{scanConfirmDetail.unitPrice ?? '-'}</div>
-            <div>订单号：{scanConfirmDetail.orderNo || '-'}</div>
-            <div>款号：{scanConfirmDetail.styleNo || '-'}</div>
-            <div>颜色：{scanConfirmDetail.color || '-'}</div>
-            <div>尺码：{scanConfirmDetail.size || '-'}</div>
-          </div>
-        )}
-      </Modal>
+        onSubmit={submitConfirmedScan}
+      />
 
-      <ResizableModal
-        title="回流"
+      <RollbackModal
         open={rollbackOpen}
-        centered
+        confirmLoading={rollbackSubmitting}
+        modalWidth={modalWidth}
+        rollbackForm={rollbackForm}
+        rollbackMode={rollbackMode}
+        rollbackStepMeta={rollbackStepMeta}
+        rollbackBundlesLoading={rollbackBundlesLoading}
+        rollbackBundles={rollbackBundles}
         onCancel={closeRollback}
+        onModeChange={handleRollbackModeChange}
         onOk={async () => {
           if (!rollbackOrder?.id) return;
           if (rollbackSubmitting) return;
@@ -3134,95 +1746,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             setRollbackSubmitting(false);
           }
         }}
-        confirmLoading={rollbackSubmitting}
-        okText="确认"
-        cancelText="取消"
-        width={modalWidth}
-        scaleWithViewport
-      >
-        <Form form={rollbackForm} layout="vertical">
-          <Form.Item label="回流方式" style={{ marginBottom: 8 }}>
-            <Segmented
-              value={rollbackMode}
-              options={[
-                { label: '退回上一步', value: 'step' },
-                { label: '按扎号回退入库', value: 'bundle' },
-              ]}
-              onChange={(v) => {
-                const next = v as Record<string, unknown>;
-                setRollbackMode(next);
-                rollbackForm.resetFields();
-                if (next === 'bundle' && rollbackOrder) {
-                  void loadRollbackBundles(rollbackOrder);
-                }
-              }}
-            />
-          </Form.Item>
-
-          {rollbackMode === 'step' ? (
-            <>
-              <div style={{ marginBottom: 8 }}>
-                <Text type="secondary">
-                  目标：{rollbackStepMeta?.nextProcessName ? `退回到「${rollbackStepMeta.nextProcessName}」` : '-'}
-                </Text>
-              </div>
-              <Form.Item label="问题点（必填）" name="stepRemark" rules={[{ required: true, message: '请填写问题点' }]}>
-                <Input.TextArea placeholder="请输入问题点（必填）" autoSize={{ minRows: 3, maxRows: 6 }} />
-              </Form.Item>
-            </>
-          ) : (
-            <>
-              <Form.Item label="选择扎号" name="selectedQr" rules={[{ required: true, message: '请选择扎号' }]}>
-                <Select
-                  showSearch
-                  allowClear
-                  optionFilterProp="label"
-                  placeholder={rollbackBundlesLoading ? '加载中...' : '请选择扎号'}
-                  loading={rollbackBundlesLoading}
-                  options={rollbackBundles.map((b) => ({
-                    value: String(b.qrCode || ''),
-                    label: `扎号 ${b.bundleNo}｜码数 ${String(b.size || '-')}｜颜色 ${String(b.color || '-')}｜数量 ${Number(b.quantity) || 0}`,
-                  }))}
-                  onChange={(v) => {
-                    const code = String(v || '').trim();
-                    const b = rollbackBundles.find((x) => String(x.qrCode || '').trim() === code);
-                    rollbackForm.setFieldsValue({
-                      scannedQr: code,
-                      color: b?.color || '',
-                      size: b?.size || '',
-                      quantity: Number(b?.quantity) || 0,
-                      rollbackQuantity: Number(b?.quantity) || 0,
-                    });
-                  }}
-                />
-              </Form.Item>
-
-              <Form.Item label="扎号二维码（必须扫码）" name="scannedQr" rules={[{ required: true, message: '请扫码输入扎号二维码' }]}>
-                <Input placeholder="选择扎号后自动带出" disabled />
-              </Form.Item>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12 }}>
-                <Form.Item label="颜色" name="color">
-                  <Input disabled />
-                </Form.Item>
-                <Form.Item label="码数" name="size">
-                  <Input disabled />
-                </Form.Item>
-                <Form.Item label="扎号数量" name="quantity">
-                  <InputNumber style={{ width: '100%' }} disabled />
-                </Form.Item>
-                <Form.Item label="回退数量" name="rollbackQuantity">
-                  <InputNumber style={{ width: '100%' }} disabled />
-                </Form.Item>
-              </div>
-
-              <Form.Item label="问题点（必填）" name="remark" rules={[{ required: true, message: '请填写问题点' }]}>
-                <Input.TextArea placeholder="请输入问题点（必填）" autoSize={{ minRows: 3, maxRows: 6 }} />
-              </Form.Item>
-            </>
-          )}
-        </Form>
-      </ResizableModal>
+      />
 
       {/* 快速编辑弹窗 */}
       <QuickEditModal

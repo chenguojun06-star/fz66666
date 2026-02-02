@@ -53,7 +53,7 @@ function resolveAppId() {
 async function resolveLoginCode() {
   const appId = resolveAppId();
   if (!appId || appId === 'touristappid') {
-    return '';
+    return 'mock_dev';
   }
   const loginRes = await new Promise((resolve, reject) => {
     wx.login({
