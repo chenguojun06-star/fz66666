@@ -348,7 +348,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                         height: '40px',
                         backgroundColor: isLocked ? 'var(--neutral-border)' : undefined,
                         borderColor: isLocked ? 'var(--neutral-border)' : undefined,
-                        color: isLocked ? '#8c8c8c' : undefined,
+                        color: isLocked ? 'var(--neutral-text-disabled)' : undefined,
                       }}
                     >
                       {isLocked ? '已保存（已锁定）' : '保存报价单'}
@@ -381,7 +381,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
               <div style={{
                 fontSize: '20px',
                 fontWeight: 700,
-                color: profit >= 0 ? '#3f8600' : '#ff4d4f',
+                color: profit >= 0 ? 'var(--success-color-dark)' : 'var(--error-color)',
                 marginBottom: 4
               }}>
                 {profit >= 0 ? '+' : ''}¥{profit.toFixed(2)}

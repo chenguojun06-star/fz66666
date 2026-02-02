@@ -1416,7 +1416,7 @@ const OrderManagement: React.FC = () => {
                                         选择"本厂"，订单完成后数据流向<strong>工资结算</strong>（按人员工序统计扫码工资）
                                       </div>
                                       <div>
-                                        <span style={{ color: '#ff7875' }}>● 加工厂生产：</span>
+                                        <span style={{ color: 'var(--error-color-light)' }}>● 加工厂生产：</span>
                                         选择其他加工厂，订单完成后数据流向<strong>订单结算</strong>（按工厂扫码结算加工费）
                                       </div>
                                       <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${tooltipTheme.divider}`, fontSize: 12, opacity: 0.9 }}>

@@ -1482,10 +1482,10 @@ const ProductionList: React.FC = () => {
 
             {/* 数字信息 */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              <span style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>
+              <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--neutral-text)' }}>
                 {qualified}/{total}
               </span>
-              <span style={{ fontSize: '11px', color: '#9ca3af' }}>
+              <span style={{ fontSize: '11px', color: 'var(--neutral-text-disabled)' }}>
                 {qualified > 0 ? '已入库' : '未入库'}
               </span>
             </div>
@@ -1942,8 +1942,8 @@ const ProductionList: React.FC = () => {
               },
               {
                 key: 'close',
-                label: <span style={{ color: frozen ? undefined : '#1890ff' }}>{frozen ? '关单(已完成)' : '关单'}</span>,
-                icon: <CheckCircleOutlined style={{ color: frozen ? undefined : '#1890ff' }} />,
+                label: <span style={{ color: frozen ? undefined : 'var(--primary-color)' }}>{frozen ? '关单(已完成)' : '关单'}</span>,
+                icon: <CheckCircleOutlined style={{ color: frozen ? undefined : 'var(--primary-color)' }} />,
                 disabled: frozen,
                 onClick: () => handleCloseOrder(record),
               },
@@ -2232,40 +2232,40 @@ const ProductionList: React.FC = () => {
                         color: 'var(--neutral-text-secondary)',
                         borderBottom: '1px solid #e5e7eb'
                       }}>
-                        <span style={{ fontWeight: 600, color: '#374151' }}>订单：</span>
+                        <span style={{ fontWeight: 600, color: 'var(--neutral-text)' }}>订单：</span>
                         <span style={{ marginRight: '16px' }}>{processDetailRecord?.orderNo || '-'}</span>
-                        <span style={{ fontWeight: 600, color: '#374151' }}>款号：</span>
+                        <span style={{ fontWeight: 600, color: 'var(--neutral-text)' }}>款号：</span>
                         <span style={{ marginRight: '16px' }}>{processDetailRecord?.styleNo || '-'}</span>
-                        <span style={{ fontWeight: 600, color: '#374151' }}>数量：</span>
+                        <span style={{ fontWeight: 600, color: 'var(--neutral-text)' }}>数量：</span>
                         <span>{processDetailRecord?.orderQuantity || 0} 件</span>
                       </th>
                     </tr>
                     <tr style={{ background: '#f9fafb' }}>
-                      <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '13px', color: '#374151', fontWeight: 600, width: '90px' }}>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '13px', color: 'var(--neutral-text)', fontWeight: 600, width: '90px' }}>
                         生产节点
                       </th>
-                      <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '13px', color: '#374151', fontWeight: 600, width: '90px' }}>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '13px', color: 'var(--neutral-text)', fontWeight: 600, width: '90px' }}>
                         当前状态
                       </th>
-                      <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '13px', color: '#374151', fontWeight: 600, width: '140px' }}>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '13px', color: 'var(--neutral-text)', fontWeight: 600, width: '140px' }}>
                         工序名称
                       </th>
-                      <th style={{ padding: '8px 12px', textAlign: 'right', fontSize: '13px', color: '#374151', fontWeight: 600, width: '90px' }}>
+                      <th style={{ padding: '8px 12px', textAlign: 'right', fontSize: '13px', color: 'var(--neutral-text)', fontWeight: 600, width: '90px' }}>
                         数量
                       </th>
-                      <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '13px', color: '#374151', fontWeight: 600 }}>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '13px', color: 'var(--neutral-text)', fontWeight: 600 }}>
                         执行工厂
                       </th>
-                      <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '13px', color: '#374151', fontWeight: 600, width: '110px' }}>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '13px', color: 'var(--neutral-text)', fontWeight: 600, width: '110px' }}>
                         委派单价
                       </th>
-                      <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '13px', color: '#374151', fontWeight: 600, width: '90px' }}>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '13px', color: 'var(--neutral-text)', fontWeight: 600, width: '90px' }}>
                         委派人
                       </th>
-                      <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '13px', color: '#374151', fontWeight: 600, width: '110px' }}>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '13px', color: 'var(--neutral-text)', fontWeight: 600, width: '110px' }}>
                         委派时间
                       </th>
-                      <th style={{ padding: '8px 12px', textAlign: 'center', fontSize: '13px', color: '#374151', fontWeight: 600, width: '90px' }}>
+                      <th style={{ padding: '8px 12px', textAlign: 'center', fontSize: '13px', color: 'var(--neutral-text)', fontWeight: 600, width: '90px' }}>
                         操作
                       </th>
                     </tr>
@@ -2302,7 +2302,7 @@ const ProductionList: React.FC = () => {
                               <span style={{
                                 fontSize: '11px',
                                 fontWeight: 600,
-                                color: stageStatusMap[node.key].completed ? '#059669' : '#f59e0b',
+                                color: stageStatusMap[node.key].completed ? 'var(--success-color)' : 'var(--warning-color)',
                                 background: stageStatusMap[node.key].completed ? '#d1fae5' : '#fef3c7',
                                 padding: '2px 6px',
                                 borderRadius: '3px',
@@ -2394,7 +2394,7 @@ const ProductionList: React.FC = () => {
                             }}
                           />
                         </td>
-                        <td style={{ padding: '6px 12px', fontSize: '12px', color: '#374151' }}>
+                        <td style={{ padding: '6px 12px', fontSize: '12px', color: 'var(--neutral-text)' }}>
                           {stageStatusMap[node.key]?.operatorName ? (
                             <a
                               style={{ cursor: 'pointer', color: 'var(--primary-color)', fontWeight: 500 }}
@@ -2407,7 +2407,7 @@ const ProductionList: React.FC = () => {
                               {stageStatusMap[node.key].operatorName}
                             </a>
                           ) : (
-                            <span style={{ color: '#9ca3af' }}>-</span>
+                            <span style={{ color: 'var(--neutral-text-disabled)' }}>-</span>
                           )}
                         </td>
                         <td style={{ padding: '6px 12px', fontSize: '12px', color: 'var(--neutral-text-secondary)' }}>
@@ -2419,7 +2419,7 @@ const ProductionList: React.FC = () => {
                               minute: '2-digit'
                             })
                           ) : (
-                            <span style={{ color: '#9ca3af' }}>-</span>
+                            <span style={{ color: 'var(--neutral-text-disabled)' }}>-</span>
                           )}
                         </td>
                         <td style={{ padding: '6px 12px', textAlign: 'center' }}>
@@ -2443,14 +2443,14 @@ const ProductionList: React.FC = () => {
                 <div style={{
                   fontSize: '13px',
                   fontWeight: 600,
-                  color: '#374151',
+                  color: 'var(--neutral-text)',
                   marginBottom: '8px',
                   paddingBottom: '6px',
                   borderBottom: '1px solid #e5e7eb'
                 }}>
                   委派历史
                 </div>
-                <div style={{ color: '#9ca3af', fontSize: '12px', padding: '16px', textAlign: 'center' }}>
+                <div style={{ color: 'var(--neutral-text-disabled)', fontSize: '12px', padding: '16px', textAlign: 'center' }}>
                   暂无委派记录
                 </div>
               </div>
@@ -2461,7 +2461,7 @@ const ProductionList: React.FC = () => {
               <div style={{
                 fontSize: '13px',
                 fontWeight: 600,
-                color: '#374151',
+                color: 'var(--neutral-text)',
                 marginBottom: '8px',
                 paddingBottom: '6px',
                 borderBottom: '1px solid #e5e7eb'

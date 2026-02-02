@@ -37,9 +37,9 @@ replace_color() {
     local old_color="$1"
     local new_var="$2"
     local description="$3"
-    
+
     echo "🔄 替换 $description..."
-    
+
     # 执行替换（多种格式）
     find "$FRONTEND_DIR" -name "*.tsx" -type f -exec sed -i '' \
         -e "s/color: ['\"]$old_color['\"]]/color: '$new_var'/g" \
@@ -47,7 +47,7 @@ replace_color() {
         -e "s/color:['\"]$old_color['\"]]/color:'$new_var'/g" \
         -e "s/color:['\"]$old_color['\"]/color:'$new_var'/g" \
         {} +
-    
+
     echo "   ✅ 已处理"
 echo "🚀 开始批量替换..."
 echo ""

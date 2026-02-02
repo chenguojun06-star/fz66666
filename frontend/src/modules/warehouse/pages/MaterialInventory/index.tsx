@@ -655,30 +655,30 @@ const _MaterialInventory: React.FC = () => {
       width: 260,
       render: (_, record) => {
         if (record.materialType !== '面料') {
-          return <div style={{ textAlign: 'center', color: '#bfbfbf', fontSize: 12 }}>-</div>;
+          return <div style={{ textAlign: 'center', color: 'var(--neutral-text-disabled)', fontSize: 12 }}>-</div>;
         }
         return (
           <Space orientation="vertical" size={6} style={{ width: '100%' }}>
             {record.fabricWidth && (
-              <div style={{ fontSize: 13, color: '#595959', fontWeight: 500 }}>
+              <div style={{ fontSize: 13, color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
                 <span style={{ color: 'var(--neutral-text-disabled)' }}>门幅:</span>{' '}
                 <span style={{ color: 'var(--primary-color)', fontWeight: 700, fontSize: 14 }}>{record.fabricWidth}</span>
               </div>
             )}
             {record.fabricWeight && (
-              <div style={{ fontSize: 13, color: '#595959', fontWeight: 500 }}>
+              <div style={{ fontSize: 13, color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
                 <span style={{ color: 'var(--neutral-text-disabled)' }}>克重:</span>{' '}
                 <span style={{ color: 'var(--primary-color)', fontWeight: 700, fontSize: 14 }}>{record.fabricWeight}</span>
               </div>
             )}
             {record.fabricComposition && (
-              <div style={{ fontSize: 13, color: '#595959', fontWeight: 500 }}>
+              <div style={{ fontSize: 13, color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
                 <span style={{ color: 'var(--neutral-text-disabled)' }}>成分:</span>{' '}
                 <span style={{ color: 'var(--primary-color)', fontWeight: 700, fontSize: 14 }}>{record.fabricComposition}</span>
               </div>
             )}
             {!record.fabricWidth && !record.fabricWeight && !record.fabricComposition && (
-              <div style={{ textAlign: 'center', color: '#bfbfbf', fontSize: 12 }}>-</div>
+              <div style={{ textAlign: 'center', color: 'var(--neutral-text-disabled)', fontSize: 12 }}>-</div>
             )}
           </Space>
         );
@@ -722,7 +722,7 @@ const _MaterialInventory: React.FC = () => {
             </div>
             <div style={{
               fontSize: 13,
-              color: '#595959',
+              color: 'var(--neutral-text-secondary)',
               paddingTop: 8,
               borderTop: '1px solid #f0f0f0',
               fontWeight: 500
@@ -767,15 +767,15 @@ const _MaterialInventory: React.FC = () => {
       render: (_, record) => (
         <Space orientation="vertical" size={6} style={{ width: '100%' }}>
           <div style={{ padding: '4px 8px', background: '#f0f9ff', borderRadius: 4 }}>
-            <div style={{ fontSize: 12, color: '#0958d9', marginBottom: 2 }}>📥 最后入库</div>
-            <div style={{ fontSize: 12, color: '#595959' }}>{record.lastInboundDate}</div>
+            <div style={{ fontSize: 12, color: 'var(--primary-color)', marginBottom: 2 }}>📥 最后入库</div>
+            <div style={{ fontSize: 12, color: 'var(--neutral-text-secondary)' }}>{record.lastInboundDate}</div>
             {record.lastInboundBy && (
               <div style={{ fontSize: 11, color: 'var(--neutral-text-disabled)' }}>操作人: {record.lastInboundBy}</div>
             )}
           </div>
           <div style={{ padding: '4px 8px', background: '#fff7e6', borderRadius: 4 }}>
             <div style={{ fontSize: 12, color: 'var(--warning-color-dark)', marginBottom: 2 }}>📤 最后出库</div>
-            <div style={{ fontSize: 12, color: '#595959' }}>{record.lastOutboundDate}</div>
+            <div style={{ fontSize: 12, color: 'var(--neutral-text-secondary)' }}>{record.lastOutboundDate}</div>
             {record.lastOutboundBy && (
               <div style={{ fontSize: 11, color: 'var(--neutral-text-disabled)' }}>操作人: {record.lastOutboundBy}</div>
             )}
@@ -788,7 +788,7 @@ const _MaterialInventory: React.FC = () => {
       key: 'remark',
       width: 200,
       render: (_, record) => (
-        <div style={{ fontSize: 13, color: '#595959', lineHeight: 1.5 }}>
+        <div style={{ fontSize: 13, color: 'var(--neutral-text-secondary)', lineHeight: 1.5 }}>
           {record.remark || '-'}
         </div>
       ),
@@ -1291,7 +1291,7 @@ const _MaterialInventory: React.FC = () => {
                     width: 100,
                     align: 'center' as const,
                     render: (qty: number) => (
-                      <span style={{ color: '#059669', fontWeight: 600 }}>{qty}</span>
+                      <span style={{ color: 'var(--success-color)', fontWeight: 600 }}>{qty}</span>
                     ),
                   },
                   {
@@ -1301,7 +1301,7 @@ const _MaterialInventory: React.FC = () => {
                     width: 100,
                     align: 'center' as const,
                     render: (qty: number) => (
-                      <span style={{ color: '#fb923c', fontWeight: 600 }}>{qty}</span>
+                      <span style={{ color: 'var(--warning-color)', fontWeight: 600 }}>{qty}</span>
                     ),
                   },
                   {
@@ -1338,7 +1338,7 @@ const _MaterialInventory: React.FC = () => {
                           <strong>合计</strong>
                         </Table.Summary.Cell>
                         <Table.Summary.Cell index={1} align="center">
-                          <strong style={{ color: '#059669' }}>{totalAvailable}</strong>
+                          <strong style={{ color: 'var(--success-color)' }}>{totalAvailable}</strong>
                         </Table.Summary.Cell>
                         <Table.Summary.Cell index={2} />
                         <Table.Summary.Cell index={3} align="center">
@@ -1360,7 +1360,7 @@ const _MaterialInventory: React.FC = () => {
               borderRadius: 4,
               padding: '8px 12px',
               fontSize: 13,
-              color: '#0050b3'
+              color: 'var(--primary-color)'
             }}>
               💡 提示：请在"出库数量"列输入需要出库的数量，系统将自动汇总。出库数量不能超过可用库存。
             </div>

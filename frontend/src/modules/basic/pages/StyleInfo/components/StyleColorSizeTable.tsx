@@ -279,8 +279,8 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
         {/* 汇总数量 */}
         {totalQty > 0 && (
           <div style={{ marginTop: 8, padding: '4px 8px', background: '#f0f9ff', border: '1px solid #91d5ff', borderRadius: 4, display: 'inline-block' }}>
-            <span style={{ fontWeight: 500, color: '#0958d9' }}>汇总数量：</span>
-            <span style={{ fontSize: 16, fontWeight: 600, color: '#0958d9' }}>{totalQty}</span>
+            <span style={{ fontWeight: 500, color: 'var(--primary-color)' }}>汇总数量：</span>
+            <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--primary-color)' }}>{totalQty}</span>
           </div>
         )}
       </Col>

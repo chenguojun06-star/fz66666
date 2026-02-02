@@ -624,7 +624,7 @@ const PatternProduction: React.FC = () => {
                 <div style={{
                   fontSize: 14,
                   fontWeight: 700,
-                  color: '#1f2937',
+                  color: 'var(--neutral-text)',
                   letterSpacing: '0.3px',
                   display: 'flex',
                   alignItems: 'center',
@@ -644,7 +644,7 @@ const PatternProduction: React.FC = () => {
                   whiteSpace: 'nowrap',
                 }}>
                   {node.unitPrice > 0 && (
-                    <span style={{ color: '#f59e0b' }}>¥{node.unitPrice}</span>
+                    <span style={{ color: 'var(--warning-color)' }}>¥{node.unitPrice}</span>
                   )}
                 </div>
               </div>
@@ -1054,7 +1054,7 @@ const PatternProduction: React.FC = () => {
 
                 {/* 基本信息 - 紧凑排列 */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6, color: '#1f2937' }}>
+                  <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6, color: 'var(--neutral-text)' }}>
                     {detailModal.data.styleNo}
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', color: 'var(--neutral-text-secondary)' }}>
@@ -1082,7 +1082,7 @@ const PatternProduction: React.FC = () => {
                 borderRadius: 6,
                 border: '1px solid #f0f0f0',
               }}>
-                <span style={{ fontWeight: 600, color: '#1f2937' }}>⏰</span>
+                <span style={{ fontWeight: 600, color: 'var(--neutral-text)' }}>⏰</span>
                 <span><b>下板:</b> {detailModal.data.releaseTime}</span>
                 <span style={{ color: 'var(--neutral-border)' }}>|</span>
                 <span><b>交板:</b> {detailModal.data.deliveryTime}</span>
@@ -1099,7 +1099,7 @@ const PatternProduction: React.FC = () => {
                 borderRadius: 6,
                 border: '1px solid #f0f0f0',
               }}>
-                <div style={{ marginBottom: 8, fontWeight: 600, color: '#1f2937' }}>📊 工序进度</div>
+                <div style={{ marginBottom: 8, fontWeight: 600, color: 'var(--neutral-text)' }}>📊 工序进度</div>
                 <Row gutter={[8, 8]}>
                   {DEFAULT_NODES.map((node) => {
                     const percent = detailModal.data.progressNodes[node.id] || 0;
@@ -1116,8 +1116,8 @@ const PatternProduction: React.FC = () => {
                           <LiquidProgressLottie
                             progress={percent}
                             size={45}
-                            color1="#52c41a"
-                            color2="#95de64"
+                            color1="var(--success-color)"
+                            color2="var(--success-light)"
                           />
                           <div style={{
                             fontSize: 13,

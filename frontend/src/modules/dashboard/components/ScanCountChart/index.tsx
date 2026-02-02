@@ -102,7 +102,7 @@ const ScanCountChart: React.FC = () => {
       data: data.dates,
       axisLine: {
         lineStyle: {
-          color: '#e0e0e0',
+          color: 'var(--neutral-text-disabled)',
         },
       },
       axisLabel: {
@@ -125,7 +125,7 @@ const ScanCountChart: React.FC = () => {
       },
       splitLine: {
         lineStyle: {
-          color: '#f0f0f0',
+          color: 'var(--neutral-bg-light)',
         },
       },
     },
@@ -137,10 +137,10 @@ const ScanCountChart: React.FC = () => {
         data: data.scanCounts,
         lineStyle: {
           width: 3,
-          color: '#8b5cf6',
+          color: 'var(--primary-color-light)',
         },
         itemStyle: {
-          color: '#8b5cf6',
+          color: 'var(--primary-color-light)',
         },
         areaStyle: {
           color: {
@@ -163,10 +163,10 @@ const ScanCountChart: React.FC = () => {
         data: data.scanQuantities,
         lineStyle: {
           width: 3,
-          color: '#f59e0b',
+          color: 'var(--warning-color)',
         },
         itemStyle: {
-          color: '#f59e0b',
+          color: 'var(--warning-color)',
         },
         areaStyle: {
           color: {

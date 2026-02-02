@@ -420,7 +420,7 @@ const DashboardContent: React.FC = () => {
   };
 
   // 迷你柱状图数据（用 CSS 渲染）
-  const renderMiniBar = (data: number[], color: string = '#975FE4') => {
+  const renderMiniBar = (data: number[], color: string = 'var(--primary-color)') => {
     const max = Math.max(...data, 1);
     return (
       <div className={styles.miniBarContainer}>
@@ -446,7 +446,7 @@ const DashboardContent: React.FC = () => {
     seriesField: 'type',
     smooth: true,
     animation: { appear: { animation: 'path-in', duration: 1000 } },
-    color: ['#597ef7', '#73d13d'],
+    color: ['var(--primary-color)', 'var(--success-color)'],
     lineStyle: { lineWidth: 2 },
     point: { size: 3, shape: 'circle' },
     legend: { position: 'top-right' as const },

@@ -295,7 +295,7 @@ const OrderTable: React.FC<OrderTableProps> = ({
               <span style={{ fontSize: 14, fontWeight: 600 }}>
                 {qualified}/{total}
               </span>
-              <span style={{ fontSize: 11, color: '#9ca3af' }}>
+              <span style={{ fontSize: 11, color: 'var(--neutral-text-disabled)' }}>
                 {qualified > 0 ? '已入库' : '未入库'}
               </span>
             </div>

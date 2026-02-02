@@ -750,7 +750,7 @@ const StyleProcessTab: React.FC<Props> = ({
           padding: '10px 16px',
           background: 'var(--primary-color)',
           borderRadius: 4,
-          color: '#fff',
+          color: 'var(--neutral-white)',
           fontSize: '15px',
           fontWeight: 600,
         }}>

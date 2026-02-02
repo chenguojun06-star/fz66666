@@ -40,12 +40,7 @@
   right: -5%;
   width: 110%;
   height: calc(var(--progress, 0%) + 8px);
-  background: linear-gradient(0deg,
-    #52c41a 0%,
-    #73d13d 25%,
-    #95de64 50%,
-    #73d13d 75%,
-    #52c41a 100%);
+  background: var(--success-color);
   background-size: 100% 400%;
   animation: patternWaveFlow 8s ease-in-out infinite,
              patternLiquidSway 6s ease-in-out infinite;

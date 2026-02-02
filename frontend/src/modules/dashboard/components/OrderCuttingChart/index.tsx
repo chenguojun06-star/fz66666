@@ -102,7 +102,7 @@ const OrderCuttingChart: React.FC = () => {
       data: data.dates,
       axisLine: {
         lineStyle: {
-          color: '#e0e0e0',
+          color: 'var(--neutral-border)',
         },
       },
       axisLabel: {
@@ -125,7 +125,7 @@ const OrderCuttingChart: React.FC = () => {
       },
       splitLine: {
         lineStyle: {
-          color: '#f0f0f0',
+          color: 'var(--neutral-border)',
         },
       },
     },
@@ -137,10 +137,10 @@ const OrderCuttingChart: React.FC = () => {
         data: data.orderQuantities,
         lineStyle: {
           width: 3,
-          color: '#3b82f6',
+          color: 'var(--primary-color)',
         },
         itemStyle: {
-          color: '#3b82f6',
+          color: 'var(--primary-color)',
         },
         areaStyle: {
           color: {
@@ -163,10 +163,10 @@ const OrderCuttingChart: React.FC = () => {
         data: data.cuttingQuantities,
         lineStyle: {
           width: 3,
-          color: '#10b981',
+          color: 'var(--success-color)',
         },
         itemStyle: {
-          color: '#10b981',
+          color: 'var(--success-color)',
         },
         areaStyle: {
           color: {

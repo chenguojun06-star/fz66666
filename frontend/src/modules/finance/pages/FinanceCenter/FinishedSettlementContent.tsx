@@ -76,14 +76,14 @@ const FinishedSettlementContent: React.FC = () => {
     PENDING: { text: '待确认', color: 'var(--warning-color)' },
     CONFIRMED: { text: '已确认', color: 'var(--primary-color)' },
     IN_PRODUCTION: { text: '生产中', color: 'var(--success-color)' },
-    COMPLETED: { text: '已完成', color: '#13c2c2' },
+    COMPLETED: { text: '已完成', color: 'var(--info-color)' },
     CANCELLED: { text: '已取消', color: 'var(--error-color)' },
     // 小写状态
     pending: { text: '待确认', color: 'var(--warning-color)' },
     confirmed: { text: '已确认', color: 'var(--primary-color)' },
     in_production: { text: '生产中', color: 'var(--success-color)' },
     production: { text: '生产中', color: 'var(--success-color)' },
-    completed: { text: '已完成', color: '#13c2c2' },
+    completed: { text: '已完成', color: 'var(--info-color)' },
     cancelled: { text: '已取消', color: 'var(--error-color)' },
   };
 
@@ -272,7 +272,7 @@ const FinishedSettlementContent: React.FC = () => {
       },
       render: (text: string | undefined, _record: FinishedSettlementRow) => (
         <Tooltip title={text || '暂无备注'}>
-          <span style={{ cursor: 'pointer', color: text ? '#1890ff' : '#999' }}>
+          <span style={{ cursor: 'pointer', color: text ? 'var(--primary-color)' : 'var(--neutral-text-disabled)' }}>
             {text || '暂无'}
           </span>
         </Tooltip>

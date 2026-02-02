@@ -557,14 +557,14 @@ const PayrollOperatorSummary: React.FC = () => {
                 const name = String(v || '').trim();
 
                 if (!type || type === 'none' || !name) {
-                    return <span style={{ color: '#9ca3af' }}>-</span>;
+                    return <span style={{ color: 'var(--neutral-text-disabled)' }}>-</span>;
                 }
 
                 if (type === 'external') {
-                    return <span style={{ color: '#f97316', fontWeight: 600 }}>{name}</span>;
+                    return <span style={{ color: 'var(--warning-color)', fontWeight: 600 }}>{name}</span>;
                 }
 
-                return <span style={{ color: '#3b82f6', fontWeight: 600 }}>{name}</span>;
+                return <span style={{ color: 'var(--primary-color)', fontWeight: 600 }}>{name}</span>;
             },
         },
         {
@@ -576,9 +576,9 @@ const PayrollOperatorSummary: React.FC = () => {
             render: (v: unknown) => {
                 const processName = String(v || '').trim();
                 return processName ? (
-                    <span style={{ fontWeight: 600, color: '#111827' }}>{processName}</span>
+                    <span style={{ fontWeight: 600, color: 'var(--neutral-text)' }}>{processName}</span>
                 ) : (
-                    <span style={{ color: '#9ca3af' }}>未记录</span>
+                    <span style={{ color: 'var(--neutral-text-disabled)' }}>未记录</span>
                 );
             }
         },

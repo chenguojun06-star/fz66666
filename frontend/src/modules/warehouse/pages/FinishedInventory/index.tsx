@@ -243,7 +243,7 @@ const _FinishedInventory: React.FC = () => {
               paddingTop: 4,
               borderTop: '1px solid #f0f0f0'
             }}>
-              <div style={{ fontSize: 13, color: '#595959', fontWeight: 500 }}>
+              <div style={{ fontSize: 13, color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
                 <span style={{ color: 'var(--neutral-text-disabled)' }}>质检入库号:</span>{' '}
                 <span style={{ color: 'var(--primary-color)', fontWeight: 600 }}>{record.qualityInspectionNo}</span>
               </div>
@@ -335,17 +335,17 @@ const _FinishedInventory: React.FC = () => {
       width: 180,
       render: (_, record) => (
         <Space orientation="vertical" size={6} style={{ width: '100%' }}>
-          <div style={{ fontSize: 13, color: '#595959', fontWeight: 500 }}>
+          <div style={{ fontSize: 13, color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
             <span style={{ color: 'var(--neutral-text-disabled)' }}>入库时间:</span>{' '}
             <span style={{ fontWeight: 600 }}>{record.lastInboundDate}</span>
           </div>
           {record.lastInboundBy && (
-            <div style={{ fontSize: 13, color: '#595959', fontWeight: 500 }}>
+            <div style={{ fontSize: 13, color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
               <span style={{ color: 'var(--neutral-text-disabled)' }}>操作人:</span>{' '}
               <span style={{ color: 'var(--primary-color)', fontWeight: 600 }}>{record.lastInboundBy}</span>
             </div>
           )}
-          <div style={{ fontSize: 13, color: '#595959', fontWeight: 500 }}>
+          <div style={{ fontSize: 13, color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
             <span style={{ color: 'var(--neutral-text-disabled)' }}>库位:</span>{' '}
             <span style={{ fontWeight: 600 }}>{record.warehouseLocation}</span>
           </div>
@@ -420,7 +420,7 @@ const _FinishedInventory: React.FC = () => {
       width: 100,
       align: 'center',
       render: (qty: number) => (
-        <span style={{ color: '#059669', fontWeight: 600 }}>{qty}</span>
+        <span style={{ color: 'var(--success-color)', fontWeight: 600 }}>{qty}</span>
       ),
     },
     {
@@ -430,7 +430,7 @@ const _FinishedInventory: React.FC = () => {
       width: 100,
       align: 'center',
       render: (qty: number) => (
-        <span style={{ color: '#fb923c', fontWeight: 600 }}>{qty}</span>
+        <span style={{ color: 'var(--warning-color)', fontWeight: 600 }}>{qty}</span>
       ),
     },
     {
@@ -440,7 +440,7 @@ const _FinishedInventory: React.FC = () => {
       width: 100,
       align: 'center',
       render: (qty: number) => (
-        <span style={{ color: '#ef4444', fontWeight: 600 }}>{qty}</span>
+        <span style={{ color: 'var(--error-color)', fontWeight: 600 }}>{qty}</span>
       ),
     },
     {
@@ -473,7 +473,7 @@ const _FinishedInventory: React.FC = () => {
             <Card><Statistic title="可用库存" value={1650} suffix="件" styles={{ value: { color: 'var(--success-color-dark)' } }} /></Card>
           </Col>
           <Col span={8}>
-            <Card><Statistic title="次品数量" value={35} suffix="件" styles={{ value: { color: '#cf1322' } }} /></Card>
+            <Card><Statistic title="次品数量" value={35} suffix="件" styles={{ value: { color: 'var(--error-color)' } }} /></Card>
           </Col>
         </Row>
 
@@ -593,7 +593,7 @@ const _FinishedInventory: React.FC = () => {
                             <strong>合计</strong>
                           </Table.Summary.Cell>
                           <Table.Summary.Cell index={1} align="center">
-                            <strong style={{ color: '#059669' }}>{totalAvailable}</strong>
+                            <strong style={{ color: 'var(--success-color)' }}>{totalAvailable}</strong>
                           </Table.Summary.Cell>
                           <Table.Summary.Cell index={2} colSpan={2} />
                           <Table.Summary.Cell index={3} align="center">
@@ -615,7 +615,7 @@ const _FinishedInventory: React.FC = () => {
                 borderRadius: 4,
                 padding: '8px 12px',
                 fontSize: 13,
-                color: '#0050b3'
+                color: 'var(--primary-color)'
               }}>
                 💡 提示：请在"出库数量"列输入需要出库的数量，系统将自动汇总。出库数量不能超过可用库存。
               </div>
@@ -659,7 +659,7 @@ const _FinishedInventory: React.FC = () => {
                   </div>
                   <div>
                     <span style={{ color: 'var(--neutral-text-disabled)', marginRight: 8 }}>当前库存:</span>
-                    <strong style={{ color: '#059669', fontSize: 16 }}>
+                    <strong style={{ color: 'var(--success-color)', fontSize: 16 }}>
                       {inboundHistoryModal.data.quantity} 件
                     </strong>
                   </div>
@@ -685,7 +685,7 @@ const _FinishedInventory: React.FC = () => {
                     dataIndex: 'quantity',
                     width: 100,
                     align: 'center',
-                    render: (text) => <strong style={{ color: '#059669' }}>{text} 件</strong>,
+                    render: (text) => <strong style={{ color: 'var(--success-color)' }}>{text} 件</strong>,
                   },
                   {
                     title: '库位',
@@ -714,14 +714,14 @@ const _FinishedInventory: React.FC = () => {
               <Card size="small" style={{ background: '#e6f7ff', borderColor: '#91d5ff' }}>
                 <Space size={40}>
                   <div>
-                    <span style={{ color: '#0050b3' }}>总入库次数:</span>
+                    <span style={{ color: 'var(--primary-color)' }}>总入库次数:</span>
                     <strong style={{ marginLeft: 8, fontSize: 16, color: 'var(--primary-color)' }}>
                       {inboundHistory.length} 次
                     </strong>
                   </div>
                   <div>
-                    <span style={{ color: '#0050b3' }}>累计入库数量:</span>
-                    <strong style={{ marginLeft: 8, fontSize: 16, color: '#059669' }}>
+                    <span style={{ color: 'var(--primary-color)' }}>累计入库数量:</span>
+                    <strong style={{ marginLeft: 8, fontSize: 16, color: 'var(--success-color)' }}>
                       {inboundHistory.reduce((sum, item) => sum + item.quantity, 0)} 件
                     </strong>
                   </div>

@@ -49,7 +49,7 @@
 }
 
 .tutorial-card .ant-card-head {
-  background: linear-gradient(to right, #f8f9fa, #ffffff);
+  background: var(--neutral-bg);
   border-bottom: 2px solid #e9ecef;
 }
 

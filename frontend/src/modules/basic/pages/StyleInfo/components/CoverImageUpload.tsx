@@ -301,7 +301,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
                         title="设置为主图"
                       >
                         {currentIndex === idx ? (
-                          <StarFilled style={{ color: '#fff', fontSize: 14 }} />
+                          <StarFilled style={{ color: 'var(--neutral-white)', fontSize: 14 }} />
                         ) : (
                           <StarOutlined style={{ color: 'var(--warning-color)', fontSize: 14 }} />
                         )}
@@ -336,7 +336,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
                         top: 2,
                         right: 2,
                         background: '#faad14',
-                        color: '#fff',
+                        color: 'var(--neutral-white)',
                         fontSize: 10,
                         padding: '2px 6px',
                         borderRadius: 2,

@@ -76,7 +76,7 @@
 @media (prefers-reduced-motion: reduce){.mpb-pop{animation:none}.mpb-node.mpb-nodeCurrent{animation:none}.mpb-node::before{animation:none}}
 
 /* ========== 深色主题 ========== */
-:root[data-theme="dark"] .mpb-glass{background:linear-gradient(135deg,rgba(30,33,40,.85),rgba(26,28,34,.75));border-color:rgba(255,255,255,.12);box-shadow:0 8px 22px rgba(0,0,0,.35)}
+:root[data-theme="dark"] .mpb-glass{background:rgba(30,33,40,.85);border-color:rgba(255,255,255,.12);box-shadow:0 8px 22px rgba(0,0,0,.35)}
 :root[data-theme="dark"] .mpb-pill{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.15);color:rgba(232,234,237,.88)}
 :root[data-theme="dark"] .mpb-pillDot{box-shadow:0 8px 18px rgba(0,0,0,.25)}
 :root[data-theme="dark"] .mpb-node{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.15);color:rgba(232,234,237,.85);box-shadow:0 10px 18px rgba(0,0,0,.25)}
@@ -89,12 +89,12 @@
 :root[data-theme="dark"] .mpb-detailTrack{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12)}
 :root[data-theme="dark"] .mpb-detailBarText{color:rgba(232,234,237,.92);text-shadow:none}
 :root[data-theme="dark"] .mpb-detailCard{background:rgba(30,33,40,.85);border-color:rgba(255,255,255,.12);box-shadow:0 10px 18px rgba(0,0,0,.3)}
-:root[data-theme="dark"] .mpb-detailCard::before{background:linear-gradient(135deg,rgba(255,255,255,.06),rgba(255,255,255,0))}
+:root[data-theme="dark"] .mpb-detailCard::before{background:rgba(255,255,255,.03)}
 :root[data-theme="dark"] .mpb-detailLabel{color:rgba(232,234,237,.75)}
 :root[data-theme="dark"] .mpb-detailCard.mpb-detailDone{background:rgba(30,33,40,.55)}
 :root[data-theme="dark"] .mpb-detailCard.mpb-detailCurrent{border-color:rgba(90,156,255,.45);box-shadow:0 12px 22px rgba(90,156,255,.18),0 10px 18px rgba(0,0,0,.25)}
 :root[data-theme="dark"] .mpb-detailCard.mpb-detailFrozen{background:rgba(30,33,40,.45);border-color:rgba(255,255,255,.1)}
-:root[data-theme="dark"] .mpb-glass.mpb-frozen{background:linear-gradient(135deg,rgba(30,33,40,.65),rgba(26,28,34,.45));border-color:rgba(255,255,255,.08)}
+:root[data-theme="dark"] .mpb-glass.mpb-frozen{background:rgba(30,33,40,.65);border-color:rgba(255,255,255,.08)}
 :root[data-theme="dark"] .mpb-frozen .mpb-pill,:root[data-theme="dark"] .mpb-frozen .mpb-percent{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.1);color:rgba(232,234,237,.5)}
 :root[data-theme="dark"] .mpb-frozen .mpb-stats{color:rgba(232,234,237,.35)}
 :root[data-theme="dark"] .mpb-frozen .mpb-node{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.1);color:rgba(232,234,237,.45)}
@@ -102,7 +102,7 @@
 :root[data-theme="dark"] .mpb-nodeHeaderActions::-webkit-scrollbar-thumb,:root[data-theme="dark"] .mpb-nodeHeaderRow::-webkit-scrollbar-thumb,:root[data-theme="dark"] .mpb-nodeCreateRow::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18)}
 
 /* ========== 蓝色主题 ========== */
-:root[data-theme="blue"] .mpb-glass{background:linear-gradient(135deg,rgba(255,255,255,.75),rgba(234,241,255,.55));border-color:rgba(45,127,249,.18);box-shadow:0 8px 22px rgba(11,45,92,.10)}
+:root[data-theme="blue"] .mpb-glass{background:rgba(255,255,255,.75);border-color:rgba(45,127,249,.18);box-shadow:0 8px 22px rgba(11,45,92,.10)}
 :root[data-theme="blue"] .mpb-pill{background:rgba(45,127,249,.08);border-color:rgba(45,127,249,.18);color:#0b2d5c}
 :root[data-theme="blue"] .mpb-pillDot{box-shadow:0 8px 18px rgba(11,45,92,.15)}
 :root[data-theme="blue"] .mpb-node{background:rgba(45,127,249,.06);border-color:rgba(45,127,249,.18);color:#0b2d5c;box-shadow:0 10px 18px rgba(11,45,92,.08)}
@@ -115,11 +115,11 @@
 :root[data-theme="blue"] .mpb-detailTrack{background:rgba(45,127,249,.06);border-color:rgba(45,127,249,.18)}
 :root[data-theme="blue"] .mpb-detailBarText{color:#0b2d5c;text-shadow:0 1px 0 rgba(255,255,255,.7)}
 :root[data-theme="blue"] .mpb-detailCard{background:rgba(255,255,255,.75);border-color:rgba(45,127,249,.18);box-shadow:0 10px 18px rgba(11,45,92,.08)}
-:root[data-theme="blue"] .mpb-detailCard::before{background:linear-gradient(135deg,rgba(255,255,255,.4),rgba(255,255,255,0))}
+:root[data-theme="blue"] .mpb-detailCard::before{background:rgba(255,255,255,.2)}
 :root[data-theme="blue"] .mpb-detailLabel{color:rgba(11,45,92,.75)}
 :root[data-theme="blue"] .mpb-detailCard.mpb-detailDone{background:rgba(248,250,252,.65)}
 :root[data-theme="blue"] .mpb-detailCard.mpb-detailCurrent{border-color:rgba(45,127,249,.4);box-shadow:0 12px 22px rgba(45,127,249,.14),0 10px 18px rgba(11,45,92,.08)}
-:root[data-theme="blue"] .mpb-glass.mpb-frozen{background:linear-gradient(135deg,rgba(248,250,252,.75),rgba(241,245,249,.55));border-color:rgba(11,45,92,.12)}
+:root[data-theme="blue"] .mpb-glass.mpb-frozen{background:rgba(248,250,252,.75);border-color:rgba(11,45,92,.12)}
 :root[data-theme="blue"] .mpb-frozen .mpb-pill,:root[data-theme="blue"] .mpb-frozen .mpb-percent{background:rgba(11,45,92,.04);border-color:rgba(11,45,92,.12);color:rgba(11,45,92,.5)}
 :root[data-theme="blue"] .mpb-frozen .mpb-stats{color:rgba(11,45,92,.4)}
 :root[data-theme="blue"] .mpb-frozen .mpb-node{background:rgba(11,45,92,.04);border-color:rgba(11,45,92,.12);color:rgba(11,45,92,.5)}
@@ -127,7 +127,7 @@
 :root[data-theme="blue"] .mpb-nodeHeaderActions::-webkit-scrollbar-thumb,:root[data-theme="blue"] .mpb-nodeHeaderRow::-webkit-scrollbar-thumb,:root[data-theme="blue"] .mpb-nodeCreateRow::-webkit-scrollbar-thumb{background:rgba(11,45,92,.18)}
 
 /* ========== 白色主题 ========== */
-:root[data-theme="white"] .mpb-glass{background:linear-gradient(135deg,rgba(255,255,255,.85),rgba(248,249,250,.7));border-color:rgba(31,31,31,.1);box-shadow:0 8px 22px rgba(31,31,31,.06)}
+:root[data-theme="white"] .mpb-glass{background:rgba(255,255,255,.85);border-color:rgba(31,31,31,.1);box-shadow:0 8px 22px rgba(31,31,31,.06)}
 :root[data-theme="white"] .mpb-pill{background:rgba(31,31,31,.04);border-color:rgba(31,31,31,.12);color:#1f1f1f}
 :root[data-theme="white"] .mpb-node{background:rgba(31,31,31,.04);border-color:rgba(31,31,31,.12);color:#1f1f1f;box-shadow:0 10px 18px rgba(31,31,31,.06)}
 :root[data-theme="white"] .mpb-nodeName{color:#1f1f1f}

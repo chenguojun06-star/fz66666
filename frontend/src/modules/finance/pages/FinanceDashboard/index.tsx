@@ -220,7 +220,7 @@ const FinanceDashboard: React.FC = () => {
     data: trendData,
     xField: 'month',
     yField: 'value',
-    color: '#597ef7',
+    color: 'var(--primary-color)',
     columnStyle: {
       radius: [4, 4, 0, 0],
     },

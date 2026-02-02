@@ -189,7 +189,7 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
   // 获取文件图标
   const getFileIcon = (type: string) => {
     const t = String(type || '').toLowerCase();
-    if (t.includes('image') || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(t)) return <FileImageOutlined style={{ color: '#87d068' }} />;
+    if (t.includes('image') || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(t)) return <FileImageOutlined style={{ color: 'var(--success-color)' }} />;
     if (t.includes('pdf') || t === 'pdf') return <FilePdfOutlined style={{ color: 'var(--error-color)' }} />;
     return <FileOutlined style={{ color: 'var(--primary-color)' }} />;
   };

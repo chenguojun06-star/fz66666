@@ -26,7 +26,7 @@ const StyleStatsCard: React.FC<StyleStatsCardProps> = ({
       style={{ background: '#f8f9fa', borderRadius: 8, border: '1px solid #e9ecef' }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <span style={{ fontSize: 14, fontWeight: 600, color: '#374151' }}>📊 开发费用统计</span>
+        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-text)' }}>📊 开发费用统计</span>
         <Segmented
           value={rangeType}
           onChange={onRangeChange}
@@ -46,7 +46,7 @@ const StyleStatsCard: React.FC<StyleStatsCardProps> = ({
               value={stats?.materialCost ?? 0}
               precision={2}
               prefix="¥"
-              styles={{ value: { color: '#374151', fontSize: 18, fontWeight: 600 } }}
+              styles={{ value: { color: 'var(--neutral-text)', fontSize: 18, fontWeight: 600 } }}
             />
           </Col>
           <Col span={6}>
@@ -55,7 +55,7 @@ const StyleStatsCard: React.FC<StyleStatsCardProps> = ({
               value={stats?.processCost ?? 0}
               precision={2}
               prefix="¥"
-              styles={{ value: { color: '#374151', fontSize: 18, fontWeight: 600 } }}
+              styles={{ value: { color: 'var(--neutral-text)', fontSize: 18, fontWeight: 600 } }}
             />
           </Col>
           <Col span={6}>
@@ -64,7 +64,7 @@ const StyleStatsCard: React.FC<StyleStatsCardProps> = ({
               value={stats?.secondaryProcessCost ?? 0}
               precision={2}
               prefix="¥"
-              styles={{ value: { color: '#374151', fontSize: 18, fontWeight: 600 } }}
+              styles={{ value: { color: 'var(--neutral-text)', fontSize: 18, fontWeight: 600 } }}
             />
           </Col>
           <Col span={6}>

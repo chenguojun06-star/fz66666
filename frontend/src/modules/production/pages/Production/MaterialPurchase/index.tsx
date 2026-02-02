@@ -1192,7 +1192,7 @@ const MaterialPurchase: React.FC = () => {
           scaleWithViewport
         >
           <Form form={returnConfirmForm} layout="vertical" preserve={false}>
-            <div style={{ marginBottom: 12, color: '#1f1f1f' }}>
+            <div style={{ marginBottom: 12, color: 'var(--neutral-text)' }}>
               确认人：{String(user?.name || user?.username || '未命名').trim() || '未命名'}
             </div>
             <div style={{ border: '1px solid #f0f0f0', borderRadius: 6 }}>
@@ -1213,7 +1213,7 @@ const MaterialPurchase: React.FC = () => {
                     return (
                       <tr key={String(t?.id || idx)}>
                         <td style={{ padding: '8px 10px', borderBottom: '1px solid #f5f5f5' }}>
-                          <div style={{ fontWeight: 600, color: '#1f1f1f' }}>{String(t?.materialName || '-')}</div>
+                          <div style={{ fontWeight: 600, color: 'var(--neutral-text)' }}>{String(t?.materialName || '-')}</div>
                           <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--neutral-text-disabled)' }}>{String(t?.materialCode || '')}</div>
                           <Form.Item name={['items', idx, 'purchaseId']} initialValue={String(t?.id || '')} hidden>
                             <Input />
