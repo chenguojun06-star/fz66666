@@ -161,8 +161,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
           setActiveOrder(null);
         }}
         footer={null}
-        defaultWidth="80vw"
-        defaultHeight="80vh"
+        defaultWidth="60vw"
+        defaultHeight="60vh"
       >
         {activeOrder && (
           <div>

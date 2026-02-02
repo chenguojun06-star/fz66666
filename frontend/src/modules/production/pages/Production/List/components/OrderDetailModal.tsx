@@ -81,7 +81,7 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
       onCancel={onClose}
       footer={null}
       defaultWidth={isMobile ? '95vw' : '60vw'}
-      defaultHeight={isMobile ? '90vh' : '70vh'}
+      defaultHeight={isMobile ? '90vh' : '60vh'}
     >
       <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
         {/* 左侧：图片和二维码 */}

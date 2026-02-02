@@ -8,7 +8,6 @@ import RowActions from '@/components/common/RowActions';
 import api from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
 import { useAuth } from '@/utils/AuthContext';
-import { useViewport } from '@/utils/useViewport';
 
 // 订单结算审批记录类型
 interface OrderReconciliationApprovalRecord {
@@ -66,7 +65,6 @@ const formatMoney = (value: unknown) => {
 
 const OrderReconciliationApproval: React.FC = () => {
   const { user } = useAuth();
-  const { modalWidth } = useViewport();
 
   const [list, setList] = useState<OrderReconciliationApprovalRecord[]>([]);
   const [total, setTotal] = useState(0);
@@ -334,8 +332,8 @@ const OrderReconciliationApproval: React.FC = () => {
         title="订单结算审批详情"
         open={detailOpen}
         onCancel={() => setDetailOpen(false)}
-        defaultWidth={modalWidth}
-        defaultHeight={window.innerHeight * 0.85}
+        defaultWidth="60vw"
+        defaultHeight="60vh"
         footer={null}
       >
         {detailRecord && (

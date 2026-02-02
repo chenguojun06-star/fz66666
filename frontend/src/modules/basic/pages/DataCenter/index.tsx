@@ -832,7 +832,7 @@ const DataCenter: React.FC = () => {
           </Space>
         }
         defaultWidth="60vw"
-        defaultHeight="70vh"
+        defaultHeight="60vh"
       >
         {detailRecord && (
           <div style={{ padding: '16px' }}>
