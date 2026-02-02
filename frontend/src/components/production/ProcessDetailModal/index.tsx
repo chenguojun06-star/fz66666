@@ -163,7 +163,7 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
                 background: '#ffffff',
                 border: '1px solid #e5e7eb',
                 borderRadius: '6px',
-                padding: '6px',
+                padding: '8px',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '4px',

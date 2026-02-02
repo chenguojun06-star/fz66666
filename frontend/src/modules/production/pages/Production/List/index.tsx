@@ -1481,7 +1481,7 @@ const ProductionList: React.FC = () => {
             </div>
 
             {/* 数字信息 */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--neutral-text)' }}>
                 {qualified}/{total}
               </span>

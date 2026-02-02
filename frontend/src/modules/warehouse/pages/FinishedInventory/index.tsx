@@ -240,7 +240,7 @@ const _FinishedInventory: React.FC = () => {
             <div style={{
               display: 'flex',
               flexDirection: 'column',
-              gap: '6px',
+              gap: '8px',
               paddingTop: 4,
               borderTop: '1px solid #f0f0f0'
             }}>

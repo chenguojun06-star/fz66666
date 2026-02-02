@@ -70,7 +70,7 @@ const ScanCountChart: React.FC = () => {
         params.forEach((item: any) => {
           html += `
             <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 2px 0;">
-              <span style="display: flex; align-items: center; gap: 6px;">
+              <span style="display: flex; align-items: center; gap: 8px;">
                 <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: ${item.color};"></span>
                 <span>${item.seriesName}</span>
               </span>
