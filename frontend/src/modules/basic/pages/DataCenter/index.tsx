@@ -704,8 +704,8 @@ const DataCenter: React.FC = () => {
             <Button type="primary" loading={editSaving} onClick={handleEditSave}>保存</Button>
           </Space>
         }
-        defaultWidth="50vw"
-        defaultHeight="60vh"
+        defaultWidth="40vw"
+        defaultHeight="50vh"
       >
         <Form form={editForm} layout="vertical">
           <Form.Item
