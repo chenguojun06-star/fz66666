@@ -8,6 +8,7 @@ import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import StandardModal from '@/components/common/StandardModal';
 import ResizableTable from '@/components/common/ResizableTable';
+import RowActions from '@/components/common/RowActions';
 import LiquidProgressLottie from '@/components/common/LiquidProgressLottie';
 import NodeDetailModal from '@/components/common/NodeDetailModal';
 import UniversalCardView from '@/components/common/UniversalCardView';
@@ -739,21 +740,24 @@ const PatternProduction: React.FC = () => {
         ].filter(Boolean) as MenuProps['items'];
 
         return (
-          <Space size={4} className="table-action-compact">
-            <Button
-              size="small"
-              onClick={() => handleOpenDetail(record)}
-            >
-              查看
-            </Button>
-            {menuItems.length > 0 && (
-              <Dropdown menu={{ items: menuItems }} trigger={['click']}>
-                <Button size="small">
-                  更多
-                </Button>
-              </Dropdown>
-            )}
-          </Space>
+          <RowActions
+            actions={[
+              {
+                key: 'view',
+                label: '查看',
+                onClick: () => handleOpenDetail(record)
+              },
+              ...(menuItems.length > 0
+                ? [
+                    {
+                      key: 'more',
+                      label: '更多',
+                      children: menuItems
+                    }
+                  ]
+                : [])
+            ]}
+          />
         );
       },
     },
