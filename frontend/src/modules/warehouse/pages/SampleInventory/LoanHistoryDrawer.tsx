@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Drawer, Table, Button, Tag, Space, Popconfirm, message, Input, Modal } from 'antd';
+import RowActions from '@/components/common/RowActions';
 import { SampleLoan, SampleStock } from './types';
 import api from '@/utils/api';
 import dayjs from 'dayjs';
@@ -113,11 +114,16 @@ const LoanHistoryDrawer: React.FC<LoanHistoryDrawerProps> = ({ visible, stock, o
       title: '操作',
       key: 'action',
       render: (_: any, record: SampleLoan) => (
-        record.status === 'borrowed' && (
-          <Button type="link" size="small" onClick={() => handleReturnClick(record)}>
-            归还
-          </Button>
-        )
+        record.status === 'borrowed' ? (
+          <RowActions
+            actions={[
+              {
+                label: '归还',
+                onClick: () => handleReturnClick(record)
+              }
+            ]}
+          />
+        ) : null
       ),
     },
   ];
