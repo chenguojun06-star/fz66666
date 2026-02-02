@@ -6,6 +6,7 @@ import React from 'react';
 import { Table, Tag, Button, Space } from 'antd';
 import { StyleCoverThumb, StyleAttachmentsButton } from '@/components/StyleAssets';
 import LiquidProgressBar from '@/components/common/LiquidProgressBar';
+import RowActions from '@/components/common/RowActions';
 import { ProductionOrder } from '@/types/production';
 import { formatDateTime } from '@/utils/datetime';
 import { useNavigate } from 'react-router-dom';
@@ -327,37 +328,34 @@ const OrderTable: React.FC<OrderTableProps> = ({
       fixed: isMobile ? undefined : ('right' as const),
       width: 140,
       render: (_: any, record: ProductionOrder) => (
-        <Space size="small">
-          <Button
-            size="small"
-            icon={<InfoCircleOutlined />}
-            onClick={(e) => {
-              e.stopPropagation();
-              onRowClick?.(record);
-            }}
-          >
-            详情
-          </Button>
-          <Button
-            size="small"
-            icon={<EditOutlined />}
-            onClick={(e) => {
-              e.stopPropagation();
-              onQuickEdit?.(record);
-            }}
-          >
-            快编
-          </Button>
-          <Button
-            size="small"
-            icon={<SyncOutlined />}
-            onClick={(e) => {
-              e.stopPropagation();
-              onSyncProcess?.(record);
-            }}
-          >
-            同步
-          </Button>
+        <RowActions
+          actions={[
+            {
+              label: '详情',
+              icon: <InfoCircleOutlined />,
+              onClick: (e) => {
+                e.stopPropagation();
+                onRowClick?.(record);
+              }
+            },
+            {
+              label: '快编',
+              icon: <EditOutlined />,
+              onClick: (e) => {
+                e.stopPropagation();
+                onQuickEdit?.(record);
+              }
+            },
+            {
+              label: '同步',
+              icon: <SyncOutlined />,
+              onClick: (e) => {
+                e.stopPropagation();
+                onSyncProcess?.(record);
+              }
+            }
+          ]}
+        />
         </Space>
       ),
     },

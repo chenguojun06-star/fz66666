@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { Button, Table, Modal, Tag, Space, Input, App } from 'antd';
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
+import RowActions from '@/components/common/RowActions';
 import Layout from '@/components/Layout';
 import api from '@/utils/api';
 import errorHandler from '@/utils/errorHandler';
@@ -203,24 +204,22 @@ const OrderTransferPage: React.FC = () => {
       render: (_: any, record: OrderTransfer) => {
         if (record.status === 'pending') {
           return (
-            <Space>
-              <Button
-                type="primary"
-                size="small"
-                icon={<CheckOutlined />}
-                onClick={() => handleAccept(record)}
-              >
-                接受
-              </Button>
-              <Button
-                danger
-                size="small"
-                icon={<CloseOutlined />}
-                onClick={() => handleReject(record)}
-              >
-                拒绝
-              </Button>
-            </Space>
+            <RowActions
+              actions={[
+                {
+                  label: '接受',
+                  type: 'primary',
+                  icon: <CheckOutlined />,
+                  onClick: () => handleAccept(record)
+                },
+                {
+                  label: '拒绝',
+                  danger: true,
+                  icon: <CloseOutlined />,
+                  onClick: () => handleReject(record)
+                }
+              ]}
+            />
           );
         }
         if (record.status === 'rejected' && record.rejectReason) {

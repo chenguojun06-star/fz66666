@@ -27,6 +27,7 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import Layout from '@/components/Layout';
+import RowActions from '@/components/common/RowActions';
 import { useModal, useTablePagination } from '@/hooks';
 import { useAuth, isSupervisorOrAbove, isAdmin as isAdminUser } from '@/utils/AuthContext';
 import dayjs from 'dayjs';
@@ -798,53 +799,37 @@ const _MaterialInventory: React.FC = () => {
       width: 180,
       fixed: 'right',
       render: (_, record) => (
-        <Space size="small" orientation="vertical" className="table-action-compact">
-          <Space size="small">
-            <Button
-              size="small"
-              icon={<WarningOutlined />}
-              onClick={() => openInstructionFromRecord(record)}
-            >
-              采购指令
-            </Button>
-          </Space>
-          <Space size="small">
-            <Button
-              type="primary"
-              size="small"
-              icon={<InboxOutlined />}
-              onClick={() => handleInbound(record)}
-            >
-              入库
-            </Button>
-            <Button
-              size="small"
-              icon={<ExportOutlined />}
-              onClick={() => handleOutbound(record)}
-            >
-              出库
-            </Button>
-          </Space>
-          <Space size="small">
-            <Button
-              type="link"
-              size="small"
-              icon={<PrinterOutlined />}
-              onClick={() => handlePrintOutbound(record)}
-            >
-              打印出库单
-            </Button>
-            <Tooltip title="查看最近出入库记录" placement="top">
-              <Button
-                type="link"
-                size="small"
-                onClick={() => handleViewDetail(record)}
-              >
-                详情
-              </Button>
-            </Tooltip>
-          </Space>
-        </Space>
+        <RowActions
+          vertical
+          actions={[
+            {
+              label: '采购指令',
+              icon: <WarningOutlined />,
+              onClick: () => openInstructionFromRecord(record)
+            },
+            {
+              label: '入库',
+              type: 'primary',
+              icon: <InboxOutlined />,
+              onClick: () => handleInbound(record)
+            },
+            {
+              label: '出库',
+              icon: <ExportOutlined />,
+              onClick: () => handleOutbound(record)
+            },
+            {
+              label: '打印出库单',
+              icon: <PrinterOutlined />,
+              onClick: () => handlePrintOutbound(record)
+            },
+            {
+              label: '详情',
+              tooltip: '查看最近出入库记录',
+              onClick: () => handleViewDetail(record)
+            }
+          ]}
+        />
       ),
     },
   ];

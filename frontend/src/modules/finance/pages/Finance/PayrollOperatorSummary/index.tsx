@@ -5,6 +5,7 @@ import { DownloadOutlined } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
+import RowActions from '@/components/common/RowActions';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import api, { unwrapApiData } from '@/utils/api';
 import type { PayrollOperatorProcessSummaryRow } from '@/types/finance';
@@ -479,28 +480,21 @@ const PayrollOperatorSummary: React.FC = () => {
             fixed: 'right' as const,
             render: (_: unknown, record: Record<string, unknown>) => {
                 const approved = Boolean(record.approvalTime);
-                return (
-                    <Space size="small">
-                        <Button
-                            type="link"
-                            size="small"
-                            disabled={approved}
-                            onClick={() => handleApprove(String(record.operatorName))}
-                        >
-                            {approved ? '已审核' : '审核'}
-                        </Button>
-                        {approved && (
-                            <Button
-                                type="link"
-                                size="small"
-                                danger
-                                onClick={() => openRejectModal(String(record.operatorName))}
-                            >
-                                退回
-                            </Button>
-                        )}
-                    </Space>
-                );
+                const actions = [
+                    {
+                        label: approved ? '已审核' : '审核',
+                        disabled: approved,
+                        onClick: () => handleApprove(String(record.operatorName))
+                    }
+                ];
+                if (approved) {
+                    actions.push({
+                        label: '退回',
+                        danger: true,
+                        onClick: () => openRejectModal(String(record.operatorName))
+                    });
+                }
+                return <RowActions actions={actions} />;
             },
         },
     ];

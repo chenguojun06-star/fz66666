@@ -13,6 +13,7 @@ import {
   HistoryOutlined,
   ExportOutlined,
 } from '@ant-design/icons';
+import RowActions from '@/components/common/RowActions';
 import type { ColumnsType } from 'antd/es/table';
 import Layout from '@/components/Layout';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
@@ -143,25 +144,21 @@ const SampleInventory: React.FC = () => {
       width: 150,
       fixed: 'right',
       render: (_, record) => (
-        <Space size="small">
-          <Button
-            type="link"
-            size="small"
-            icon={<ExportOutlined />}
-            disabled={record.quantity - record.loanedQuantity <= 0}
-            onClick={() => loanModal.open(record)}
-          >
-            借出
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            icon={<HistoryOutlined />}
-            onClick={() => historyDrawer.open(record)}
-          >
-            记录
-          </Button>
-        </Space>
+        <RowActions
+          actions={[
+            {
+              label: '借出',
+              icon: <ExportOutlined />,
+              disabled: record.quantity - record.loanedQuantity <= 0,
+              onClick: () => loanModal.open(record)
+            },
+            {
+              label: '记录',
+              icon: <HistoryOutlined />,
+              onClick: () => historyDrawer.open(record)
+            }
+          ]}
+        />
       ),
     },
   ];
