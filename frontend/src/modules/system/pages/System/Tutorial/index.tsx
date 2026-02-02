@@ -665,7 +665,7 @@ const SystemTutorial: React.FC = () => {
                           items={tutorial.steps.map((step, index) => ({
                             title: (
                               <Space>
-                                <Badge count={index + 1} style={{ backgroundColor: '#52c41a' }} />
+                                <Badge count={index + 1} style={{ backgroundColor: 'var(--success-color)' }} />
                                 <strong>{step.title}</strong>
                               </Space>
                             ),
@@ -713,7 +713,7 @@ const SystemTutorial: React.FC = () => {
                             key: index,
                             label: (
                               <Space>
-                                <QuestionCircleOutlined style={{ color: '#faad14' }} />
+                                <QuestionCircleOutlined style={{ color: 'var(--warning-color)' }} />
                                 <strong>{faq.question}</strong>
                               </Space>
                             ),

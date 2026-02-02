@@ -551,7 +551,7 @@ const TemplateCenter: React.FC = () => {
                   {String(n?.name || '-')}
                 </div>
               ))}
-              {nodes.length === 0 && <div style={{ padding: 12, textAlign: 'center', color: '#999' }}>暂无数据</div>}
+              {nodes.length === 0 && <div style={{ padding: 12, textAlign: 'center', color: 'var(--neutral-text-disabled)' }}>暂无数据</div>}
             </div>
           </div>
           <div style={{ border: '1px solid #d9d9d9', padding: 8, borderRadius: 4 }}>
@@ -564,7 +564,7 @@ const TemplateCenter: React.FC = () => {
                 </div>
               ))}
               {nodes.filter((n) => n?.unitPrice != null && n.unitPrice !== 0).length === 0 &&
-                <div style={{ padding: 12, textAlign: 'center', color: '#999' }}>暂无单价数据</div>
+                <div style={{ padding: 12, textAlign: 'center', color: 'var(--neutral-text-disabled)' }}>暂无单价数据</div>
               }
             </div>
           </div>
@@ -603,12 +603,12 @@ const TemplateCenter: React.FC = () => {
               {steps.map((s, idx) => (
                 <div key={idx} style={{ padding: '6px 8px', borderBottom: '1px solid #f0f0f0', fontSize: 13 }}>
                   <div>{String(s?.processName || '-')}</div>
-                  {s?.processCode && <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>编码: {s.processCode}</div>}
-                  {t === 'process' && s?.machineType && <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>机器: {s.machineType}</div>}
-                  {t === 'process' && s?.standardTime && <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>工时: {s.standardTime}秒</div>}
+                  {s?.processCode && <div style={{ fontSize: 11, color: 'var(--neutral-text-disabled)', marginTop: 2 }}>编码: {s.processCode}</div>}
+                  {t === 'process' && s?.machineType && <div style={{ fontSize: 11, color: 'var(--neutral-text-disabled)', marginTop: 2 }}>机器: {s.machineType}</div>}
+                  {t === 'process' && s?.standardTime && <div style={{ fontSize: 11, color: 'var(--neutral-text-disabled)', marginTop: 2 }}>工时: {s.standardTime}秒</div>}
                 </div>
               ))}
-              {steps.length === 0 && <div style={{ padding: 12, textAlign: 'center', color: '#999' }}>暂无数据</div>}
+              {steps.length === 0 && <div style={{ padding: 12, textAlign: 'center', color: 'var(--neutral-text-disabled)' }}>暂无数据</div>}
             </div>
           </div>
           <div style={{ border: '1px solid #d9d9d9', padding: 8, borderRadius: 4 }}>
@@ -626,7 +626,7 @@ const TemplateCenter: React.FC = () => {
                 );
               })}
               {steps.filter((s) => getPriceValue(s) > 0).length === 0 &&
-                <div style={{ padding: 12, textAlign: 'center', color: '#999' }}>暂无价格数据</div>
+                <div style={{ padding: 12, textAlign: 'center', color: 'var(--neutral-text-disabled)' }}>暂无价格数据</div>
               }
             </div>
           </div>
@@ -696,7 +696,7 @@ const TemplateCenter: React.FC = () => {
         : (Array.isArray(obj) ? convertStyleSizeListToTable(obj as Record<string, unknown>[]) : null);
       if (!tableData) {
         return (
-          <div style={{ padding: 12, textAlign: 'center', color: '#999' }}>暂无数据</div>
+          <div style={{ padding: 12, textAlign: 'center', color: 'var(--neutral-text-disabled)' }}>暂无数据</div>
         );
       }
       const sizes = tableData.sizes.map((s) => String(s || '').trim()).filter(Boolean);
@@ -1336,14 +1336,14 @@ const TemplateCenter: React.FC = () => {
                             显示多码单价
                           </Checkbox>
                           {showSizePrices && (
-                            <span style={{ color: '#666', fontSize: 12 }}>
+                            <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 12 }}>
                               (各尺码单价不同时使用，默认使用工价)
                             </span>
                           )}
                         </div>
                         {showSizePrices && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                            <span style={{ color: '#666', fontSize: 13 }}>尺码：</span>
+                            <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 13 }}>尺码：</span>
                             {templateSizes.map((s) => (
                               <Tag
                                 key={s}
@@ -1448,7 +1448,7 @@ const TemplateCenter: React.FC = () => {
                             <tbody>
                               {editTableData.steps.map((item: ProcessStepRow, idx: number) => (
                                 <tr key={idx} style={{ height: 32 }}>
-                                  <td style={{ border: '1px solid #e5e7eb', padding: '2px 4px', textAlign: 'center', color: '#999', fontSize: 12 }}>
+                                  <td style={{ border: '1px solid #e5e7eb', padding: '2px 4px', textAlign: 'center', color: 'var(--neutral-text-disabled)', fontSize: 12 }}>
                                     {idx + 1}
                                   </td>
                                   <td style={{ border: '1px solid #e5e7eb', padding: '2px 4px' }}>
@@ -1662,7 +1662,7 @@ const TemplateCenter: React.FC = () => {
                 })()}
               </div>
             ) : (
-              <div style={{ color: '#999', padding: 8 }}>无效的模板内容</div>
+              <div style={{ color: 'var(--neutral-text-disabled)', padding: 8 }}>无效的模板内容</div>
             )}
           </Form.Item>
         </Form>

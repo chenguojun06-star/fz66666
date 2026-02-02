@@ -214,18 +214,18 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
         ) : (
           <div style={{ textAlign: 'center', padding: '20px' }}>
             {isNewMode ? (
-              <span style={{ color: '#999' }}>点击下方按钮选择图片</span>
+              <span style={{ color: 'var(--neutral-text-disabled)' }}>点击下方按钮选择图片</span>
             ) : !styleId ? (
               <>
-                <div style={{ color: '#1890ff', fontSize: 14, marginBottom: 4 }}>上传设计稿或款式照片</div>
-                <div style={{ color: '#999', fontSize: 12 }}>请先填写上方基础信息并点击"保存基础信息"</div>
+                <div style={{ color: 'var(--primary-color)', fontSize: 14, marginBottom: 4 }}>上传设计稿或款式照片</div>
+                <div style={{ color: 'var(--neutral-text-disabled)', fontSize: 12 }}>请先填写上方基础信息并点击"保存基础信息"</div>
               </>
             ) : enabled ? (
-              <span style={{ color: '#999' }}>上传设计稿或款式照片</span>
+              <span style={{ color: 'var(--neutral-text-disabled)' }}>上传设计稿或款式照片</span>
             ) : (
               <>
-                <div style={{ color: '#ff4d4f', fontSize: 14, marginBottom: 4 }}>样衣已完成</div>
-                <div style={{ color: '#999', fontSize: 12 }}>请联系管理员退回后修改</div>
+                <div style={{ color: 'var(--error-color)', fontSize: 14, marginBottom: 4 }}>样衣已完成</div>
+                <div style={{ color: 'var(--neutral-text-disabled)', fontSize: 12 }}>请联系管理员退回后修改</div>
               </>
             )}
           </div>
@@ -303,7 +303,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
                         {currentIndex === idx ? (
                           <StarFilled style={{ color: '#fff', fontSize: 14 }} />
                         ) : (
-                          <StarOutlined style={{ color: '#faad14', fontSize: 14 }} />
+                          <StarOutlined style={{ color: 'var(--warning-color)', fontSize: 14 }} />
                         )}
                       </div>
                       <div
@@ -324,7 +324,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
                         }}
                         title="删除图片"
                       >
-                        <DeleteOutlined style={{ color: '#ff4d4f', fontSize: 14 }} />
+                        <DeleteOutlined style={{ color: 'var(--error-color)', fontSize: 14 }} />
                       </div>
                     </div>
                   )}
@@ -347,7 +347,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
                   )}
                 </>
               ) : (
-                <span style={{ color: '#d9d9d9', fontSize: 12 }}>细节图{idx + 1}</span>
+                <span style={{ color: 'var(--neutral-border)', fontSize: 12 }}>细节图{idx + 1}</span>
               )}
             </div>
           );
@@ -375,10 +375,10 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
               {isNewMode ? '选择图片（最多4张）' : !styleId ? '请先保存' : !enabled ? '已锁定' : '上传图片（最多4张）'}
             </Button>
           </Upload>
-          {displayImages.length > 0 && <span style={{ color: '#999', fontSize: 12 }}>共 {displayImages.length} 张{isNewMode ? '（保存时上传）' : ''}</span>}
+          {displayImages.length > 0 && <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 12 }}>共 {displayImages.length} 张{isNewMode ? '（保存时上传）' : ''}</span>}
         </div>
         {isNewMode && pendingFiles.length > 0 && (
-          <div style={{ fontSize: 12, color: '#1890ff', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <div style={{ fontSize: 12, color: 'var(--primary-color)', display: 'flex', alignItems: 'center', gap: 4 }}>
             <span>💡</span>
             <span>填写上方基础信息并点击"保存基础信息"后，即可上传图片</span>
           </div>

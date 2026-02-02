@@ -258,7 +258,7 @@ const StyleInfoListPage: React.FC = () => {
         cancelText="取消"
       >
         <div style={{ marginBottom: 16 }}>
-          <div style={{ marginBottom: 8, color: '#666' }}>
+          <div style={{ marginBottom: 8, color: 'var(--neutral-text-secondary)' }}>
             维护说明：将重置 <strong>{maintenanceRecord?.styleNo}</strong> 的完成状态，允许再次修改和提交
           </div>
           <textarea

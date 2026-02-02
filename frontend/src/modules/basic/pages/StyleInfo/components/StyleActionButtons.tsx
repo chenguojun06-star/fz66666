@@ -45,8 +45,8 @@ const StyleActionButtons: React.FC<StyleActionButtonsProps> = ({
 
   const sampleButtonStyle: React.CSSProperties = {
     ...primaryButtonStyle,
-    backgroundColor: sampleCompleted ? '#d9d9d9' : '#52c41a',
-    borderColor: sampleCompleted ? '#d9d9d9' : '#52c41a',
+    backgroundColor: sampleCompleted ? 'var(--neutral-border)' : 'var(--success-color)',
+    borderColor: sampleCompleted ? 'var(--neutral-border)' : 'var(--success-color)',
   };
 
   const saveButtonText = isNewPage

@@ -1285,7 +1285,7 @@ const CuttingManagement: React.FC = () => {
                           goToEntry(record);
                         }}
                         title={String(v || '').trim() || '-'}
-                        style={{ color: '#1890ff', cursor: 'pointer' }}
+                        style={{ color: 'var(--primary-color)', cursor: 'pointer' }}
                       >
                         <span className="order-no-wrap">
                           {String(v || '').trim() || '-'}

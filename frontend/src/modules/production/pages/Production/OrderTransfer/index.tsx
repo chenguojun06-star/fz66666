@@ -224,9 +224,9 @@ const OrderTransferPage: React.FC = () => {
           );
         }
         if (record.status === 'rejected' && record.rejectReason) {
-          return <span style={{ color: '#999' }}>拒绝原因: {record.rejectReason}</span>;
+          return <span style={{ color: 'var(--neutral-text-disabled)' }}>拒绝原因: {record.rejectReason}</span>;
         }
-        return <span style={{ color: '#999' }}>-</span>;
+        return <span style={{ color: 'var(--neutral-text-disabled)' }}>-</span>;
       },
     },
   ];

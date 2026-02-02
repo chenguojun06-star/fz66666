@@ -661,20 +661,20 @@ const _MaterialInventory: React.FC = () => {
           <Space orientation="vertical" size={6} style={{ width: '100%' }}>
             {record.fabricWidth && (
               <div style={{ fontSize: 13, color: '#595959', fontWeight: 500 }}>
-                <span style={{ color: '#8c8c8c' }}>门幅:</span>{' '}
-                <span style={{ color: '#1890ff', fontWeight: 700, fontSize: 14 }}>{record.fabricWidth}</span>
+                <span style={{ color: 'var(--neutral-text-disabled)' }}>门幅:</span>{' '}
+                <span style={{ color: 'var(--primary-color)', fontWeight: 700, fontSize: 14 }}>{record.fabricWidth}</span>
               </div>
             )}
             {record.fabricWeight && (
               <div style={{ fontSize: 13, color: '#595959', fontWeight: 500 }}>
-                <span style={{ color: '#8c8c8c' }}>克重:</span>{' '}
-                <span style={{ color: '#1890ff', fontWeight: 700, fontSize: 14 }}>{record.fabricWeight}</span>
+                <span style={{ color: 'var(--neutral-text-disabled)' }}>克重:</span>{' '}
+                <span style={{ color: 'var(--primary-color)', fontWeight: 700, fontSize: 14 }}>{record.fabricWeight}</span>
               </div>
             )}
             {record.fabricComposition && (
               <div style={{ fontSize: 13, color: '#595959', fontWeight: 500 }}>
-                <span style={{ color: '#8c8c8c' }}>成分:</span>{' '}
-                <span style={{ color: '#1890ff', fontWeight: 700, fontSize: 14 }}>{record.fabricComposition}</span>
+                <span style={{ color: 'var(--neutral-text-disabled)' }}>成分:</span>{' '}
+                <span style={{ color: 'var(--primary-color)', fontWeight: 700, fontSize: 14 }}>{record.fabricComposition}</span>
               </div>
             )}
             {!record.fabricWidth && !record.fabricWeight && !record.fabricComposition && (
@@ -727,9 +727,9 @@ const _MaterialInventory: React.FC = () => {
               borderTop: '1px solid #f0f0f0',
               fontWeight: 500
             }}>
-              <span style={{ color: '#8c8c8c' }}>安全库存:</span> {safetyStock} {record.unit}
-              <span style={{ margin: '0 8px', color: '#d9d9d9' }}>|</span>
-              <span style={{ color: '#8c8c8c' }}>库位:</span> {record.warehouseLocation || '-'}
+              <span style={{ color: 'var(--neutral-text-disabled)' }}>安全库存:</span> {safetyStock} {record.unit}
+              <span style={{ margin: '0 8px', color: 'var(--neutral-border)' }}>|</span>
+              <span style={{ color: 'var(--neutral-text-disabled)' }}>库位:</span> {record.warehouseLocation || '-'}
             </div>
           </Space>
         );
@@ -742,18 +742,18 @@ const _MaterialInventory: React.FC = () => {
       render: (_, record) => (
         <Space orientation="vertical" size={10} style={{ width: '100%' }}>
           <div>
-            <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4, fontWeight: 500 }}>单价</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#262626' }}>
+            <div style={{ fontSize: 13, color: 'var(--neutral-text-disabled)', marginBottom: 4, fontWeight: 500 }}>单价</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--neutral-text)' }}>
               ¥{(record.unitPrice ?? 0).toFixed(2)}
             </div>
-            <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 2 }}>/{record.unit}</div>
+            <div style={{ fontSize: 12, color: 'var(--neutral-text-disabled)', marginTop: 2 }}>/{record.unit}</div>
           </div>
           <div style={{
             paddingTop: 8,
             borderTop: '1px solid #f0f0f0'
           }}>
-            <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4, fontWeight: 500 }}>库存总值</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: '#1890ff' }}>
+            <div style={{ fontSize: 13, color: 'var(--neutral-text-disabled)', marginBottom: 4, fontWeight: 500 }}>库存总值</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--primary-color)' }}>
               ¥{(record.totalValue ?? 0).toLocaleString()}
             </div>
           </div>
@@ -770,14 +770,14 @@ const _MaterialInventory: React.FC = () => {
             <div style={{ fontSize: 12, color: '#0958d9', marginBottom: 2 }}>📥 最后入库</div>
             <div style={{ fontSize: 12, color: '#595959' }}>{record.lastInboundDate}</div>
             {record.lastInboundBy && (
-              <div style={{ fontSize: 11, color: '#8c8c8c' }}>操作人: {record.lastInboundBy}</div>
+              <div style={{ fontSize: 11, color: 'var(--neutral-text-disabled)' }}>操作人: {record.lastInboundBy}</div>
             )}
           </div>
           <div style={{ padding: '4px 8px', background: '#fff7e6', borderRadius: 4 }}>
-            <div style={{ fontSize: 12, color: '#d46b08', marginBottom: 2 }}>📤 最后出库</div>
+            <div style={{ fontSize: 12, color: 'var(--warning-color-dark)', marginBottom: 2 }}>📤 最后出库</div>
             <div style={{ fontSize: 12, color: '#595959' }}>{record.lastOutboundDate}</div>
             {record.lastOutboundBy && (
-              <div style={{ fontSize: 11, color: '#8c8c8c' }}>操作人: {record.lastOutboundBy}</div>
+              <div style={{ fontSize: 11, color: 'var(--neutral-text-disabled)' }}>操作人: {record.lastOutboundBy}</div>
             )}
           </div>
         </Space>
@@ -1121,7 +1121,7 @@ const _MaterialInventory: React.FC = () => {
       <StandardModal
         title={
           <Space>
-            <ScanOutlined style={{ color: '#1890ff' }} />
+            <ScanOutlined style={{ color: 'var(--primary-color)' }} />
             扫码入库
           </Space>
         }
@@ -1202,7 +1202,7 @@ const _MaterialInventory: React.FC = () => {
       <StandardModal
         title={
           <Space>
-            <ExportOutlined style={{ color: '#1890ff' }} />
+            <ExportOutlined style={{ color: 'var(--primary-color)' }} />
             <span>物料出库 - 批次明细</span>
           </Space>
         }
@@ -1223,19 +1223,19 @@ const _MaterialInventory: React.FC = () => {
             <Card size="small" style={{ background: '#f5f5f5' }}>
               <Row gutter={24}>
                 <Col span={6}>
-                  <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4 }}>面料编号</div>
+                  <div style={{ fontSize: 13, color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>面料编号</div>
                   <div style={{ fontSize: 14, fontWeight: 600 }}>{outboundModal.data.materialCode}</div>
                 </Col>
                 <Col span={8}>
-                  <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4 }}>面料名称</div>
+                  <div style={{ fontSize: 13, color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>面料名称</div>
                   <div style={{ fontSize: 14, fontWeight: 600 }}>{outboundModal.data.materialName}</div>
                 </Col>
                 <Col span={5}>
-                  <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4 }}>物料类型</div>
+                  <div style={{ fontSize: 13, color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>物料类型</div>
                   <div><Tag color="blue">{outboundModal.data.materialType}</Tag></div>
                 </Col>
                 <Col span={5}>
-                  <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 4 }}>颜色</div>
+                  <div style={{ fontSize: 13, color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>颜色</div>
                   <div style={{ fontSize: 14, fontWeight: 600 }}>{outboundModal.data.color || '-'}</div>
                 </Col>
               </Row>
@@ -1247,7 +1247,7 @@ const _MaterialInventory: React.FC = () => {
                 fontSize: 14,
                 fontWeight: 600,
                 marginBottom: 12,
-                color: '#262626'
+                color: 'var(--neutral-text)'
               }}>
                 📋 请选择需要出库的批次，并输入数量：
               </div>
@@ -1259,7 +1259,7 @@ const _MaterialInventory: React.FC = () => {
                     key: 'batchNo',
                     width: 160,
                     render: (text: string) => (
-                      <span style={{ fontWeight: 600, color: '#1890ff' }}>{text}</span>
+                      <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{text}</span>
                     ),
                   },
                   {
@@ -1342,7 +1342,7 @@ const _MaterialInventory: React.FC = () => {
                         </Table.Summary.Cell>
                         <Table.Summary.Cell index={2} />
                         <Table.Summary.Cell index={3} align="center">
-                          <strong style={{ color: '#1890ff', fontSize: 15 }}>
+                          <strong style={{ color: 'var(--primary-color)', fontSize: 15 }}>
                             {totalOutbound} {outboundModal.data.unit}
                           </strong>
                         </Table.Summary.Cell>

@@ -105,7 +105,7 @@ const WarehouseDashboard: React.FC = () => {
       width: 100,
       align: 'right',
       render: (qty, record) => (
-        <span style={{ color: '#ff4d4f', fontWeight: 600 }}>
+        <span style={{ color: 'var(--error-color)', fontWeight: 600 }}>
           {qty} {record.unit}
         </span>
       ),
@@ -124,7 +124,7 @@ const WarehouseDashboard: React.FC = () => {
       width: 100,
       align: 'right',
       render: (_, record) => (
-        <span style={{ color: '#faad14', fontWeight: 600 }}>
+        <span style={{ color: 'var(--warning-color)', fontWeight: 600 }}>
           {record.safetyStock - record.availableQty} {record.unit}
         </span>
       ),
@@ -139,9 +139,9 @@ const WarehouseDashboard: React.FC = () => {
       width: 80,
       render: (type) => (
         type === 'inbound' ? (
-          <span style={{ color: '#52c41a' }}>入库</span>
+          <span style={{ color: 'var(--success-color)' }}>入库</span>
         ) : (
-          <span style={{ color: '#1890ff' }}>出库</span>
+          <span style={{ color: 'var(--primary-color)' }}>出库</span>
         )
       ),
     },
@@ -244,7 +244,7 @@ const WarehouseDashboard: React.FC = () => {
               title: '物料种类',
               value: stats.materialCount,
               suffix: '种',
-              valueColor: '#52c41a',
+              valueColor: 'var(--success-color)',
             },
             {
               title: '成品总数',
@@ -321,7 +321,7 @@ const WarehouseDashboard: React.FC = () => {
           style={{ marginTop: 16 }}
           extra={
             <Space size="middle">
-              <span style={{ fontSize: 13, color: '#666' }}>物料类型：</span>
+              <span style={{ fontSize: 13, color: 'var(--neutral-text-secondary)' }}>物料类型：</span>
               <Select
                 value={materialType}
                 onChange={setMaterialType}
@@ -333,7 +333,7 @@ const WarehouseDashboard: React.FC = () => {
                   { label: '👔 成品', value: 'finished' },
                 ]}
               />
-              <span style={{ fontSize: 13, color: '#666' }}>时间范围：</span>
+              <span style={{ fontSize: 13, color: 'var(--neutral-text-secondary)' }}>时间范围：</span>
               <Radio.Group
                 value={timeRange}
                 onChange={(e) => setTimeRange(e.target.value)}
@@ -355,7 +355,7 @@ const WarehouseDashboard: React.FC = () => {
             smooth
             areaStyle
             yAxisLabel="数量"
-            color={['#1890ff', '#52c41a']}
+            color={['#1890ff', 'var(--success-color)']}
           />
         </DashboardCard>
 
@@ -383,7 +383,7 @@ const WarehouseDashboard: React.FC = () => {
                 icon={<InboxOutlined />}
                 block
                 size="large"
-                style={{ background: '#52c41a', borderColor: '#52c41a' }}
+                style={{ background: 'var(--success-color)', borderColor: 'var(--success-color)' }}
                 onClick={() => navigate('/warehouse/finished')}
               >
                 成品库存

@@ -220,7 +220,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
         const unitPrice = toNumberSafe(record.unitPrice);
         const qty = usageAmount * (1 + lossRate / 100);
         const total = qty * unitPrice;
-        return <span style={{ color: '#1890ff', fontWeight: 600 }}>¥{total.toFixed(2)}</span>;
+        return <span style={{ color: 'var(--primary-color)', fontWeight: 600 }}>¥{total.toFixed(2)}</span>;
       }
     },
   ];
@@ -234,7 +234,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
     { title: '工序描述', dataIndex: 'description', key: 'description', ellipsis: true,
       render: (v: unknown) => String(v || '').trim() || '-' },
     { title: '单价', dataIndex: 'price', key: 'price', width: 100, align: 'right',
-      render: (v: unknown) => <span style={{ color: '#52c41a', fontWeight: 600 }}>¥{toNumberSafe(v).toFixed(2)}</span> },
+      render: (v: unknown) => <span style={{ color: 'var(--success-color)', fontWeight: 600 }}>¥{toNumberSafe(v).toFixed(2)}</span> },
   ];
 
   // 二次工艺表格列定义
@@ -250,7 +250,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
     { title: '完成时间', dataIndex: 'completedTime', key: 'completedTime', width: 160,
       render: (v: unknown) => v ? String(v) : '-' },
     { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 100, align: 'right',
-      render: (v: unknown) => <span style={{ color: '#fa8c16', fontWeight: 600 }}>¥{toNumberSafe(v).toFixed(2)}</span> },
+      render: (v: unknown) => <span style={{ color: 'var(--warning-color)', fontWeight: 600 }}>¥{toNumberSafe(v).toFixed(2)}</span> },
   ];
 
   return (
@@ -316,7 +316,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                       value={form.getFieldValue('totalCost') || 0}
                       precision={2}
                       prefix="¥"
-                      style={{ fontSize: '16px', color: '#1890ff' }}
+                      style={{ fontSize: '16px', color: 'var(--primary-color)' }}
                     />
                   </div>
                 </Col>
@@ -327,7 +327,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                       value={form.getFieldValue('totalPrice') || 0}
                       precision={2}
                       prefix="¥"
-                      style={{ fontSize: '18px', fontWeight: 'bold', color: '#ff4d4f' }}
+                      style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--error-color)' }}
                     />
                   </div>
                 </Col>
@@ -346,8 +346,8 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                         fontSize: '14px',
                         marginTop: '4px',
                         height: '40px',
-                        backgroundColor: isLocked ? '#d9d9d9' : undefined,
-                        borderColor: isLocked ? '#d9d9d9' : undefined,
+                        backgroundColor: isLocked ? 'var(--neutral-border)' : undefined,
+                        borderColor: isLocked ? 'var(--neutral-border)' : undefined,
                         color: isLocked ? '#8c8c8c' : undefined,
                       }}
                     >
@@ -377,7 +377,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
         <Col span={6}>
           <Card title="💰 成本结构" size="small" style={{ height: '100%' }} styles={{ body: { padding: '12px' } }}>
             <div style={{ textAlign: 'center', marginBottom: 16 }}>
-              <div style={{ fontSize: '13px', color: '#8c8c8c', marginBottom: 8 }}>预计可赚</div>
+              <div style={{ fontSize: '13px', color: 'var(--neutral-text-disabled)', marginBottom: 8 }}>预计可赚</div>
               <div style={{
                 fontSize: '20px',
                 fontWeight: 700,
@@ -386,7 +386,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
               }}>
                 {profit >= 0 ? '+' : ''}¥{profit.toFixed(2)}
               </div>
-              <div style={{ fontSize: '12px', color: profit >= 0 ? '#52c41a' : '#ff4d4f' }}>
+              <div style={{ fontSize: '12px', color: profit >= 0 ? 'var(--success-color)' : '#ff4d4f' }}>
                 {profit >= 0 ? `✓ 利润率 ${profitRate}%` : '✗ 报价低于成本'}
               </div>
             </div>
@@ -394,8 +394,8 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
             <div style={{ fontSize: '13px', lineHeight: 1.8 }}>
               <div style={{ marginBottom: 12 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontWeight: 600, color: '#1890ff' }}>物料占比：</span>
-                  <span style={{ fontWeight: 700, fontSize: '14px', color: '#1890ff' }}>
+                  <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>物料占比：</span>
+                  <span style={{ fontWeight: 700, fontSize: '14px', color: 'var(--primary-color)' }}>
                     {totalCost > 0 ? ((materialCost / totalCost) * 100).toFixed(1) : '0.0'}%
                   </span>
                 </div>
@@ -411,8 +411,8 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
               </div>
               <div style={{ marginBottom: 12 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontWeight: 600, color: '#52c41a' }}>工序占比：</span>
-                  <span style={{ fontWeight: 700, fontSize: '14px', color: '#52c41a' }}>
+                  <span style={{ fontWeight: 600, color: 'var(--success-color)' }}>工序占比：</span>
+                  <span style={{ fontWeight: 700, fontSize: '14px', color: 'var(--success-color)' }}>
                     {totalCost > 0 ? ((processCost / totalCost) * 100).toFixed(1) : '0.0'}%
                   </span>
                 </div>
@@ -428,8 +428,8 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
               </div>
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontWeight: 600, color: '#fa8c16' }}>利润率：</span>
-                  <span style={{ fontWeight: 700, fontSize: '14px', color: '#fa8c16' }}>
+                  <span style={{ fontWeight: 600, color: 'var(--warning-color)' }}>利润率：</span>
+                  <span style={{ fontWeight: 700, fontSize: '14px', color: 'var(--warning-color)' }}>
                     {totalPrice > 0 ? ((profit / totalPrice) * 100).toFixed(1) : '0.0'}%
                   </span>
                 </div>
@@ -470,7 +470,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                   <strong style={{ fontSize: '15px' }}>物料总成本：</strong>
                 </Table.Summary.Cell>
                 <Table.Summary.Cell index={8} align="right">
-                  <strong style={{ color: '#1890ff', fontSize: '16px', fontWeight: 700 }}>
+                  <strong style={{ color: 'var(--primary-color)', fontSize: '16px', fontWeight: 700 }}>
                     ¥{materialCost.toFixed(2)}
                   </strong>
                 </Table.Summary.Cell>
@@ -504,7 +504,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                     <strong style={{ fontSize: '15px' }}>工序小计：</strong>
                   </Table.Summary.Cell>
                   <Table.Summary.Cell index={3} align="right">
-                    <strong style={{ color: '#52c41a', fontSize: '16px', fontWeight: 700 }}>
+                    <strong style={{ color: 'var(--success-color)', fontSize: '16px', fontWeight: 700 }}>
                       ¥{processTotal.toFixed(2)}
                     </strong>
                   </Table.Summary.Cell>
@@ -539,7 +539,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                       <strong style={{ fontSize: '15px' }}>二次工艺总费用：</strong>
                     </Table.Summary.Cell>
                     <Table.Summary.Cell index={5} align="right">
-                      <strong style={{ color: '#fa8c16', fontSize: '16px', fontWeight: 700 }}>
+                      <strong style={{ color: 'var(--warning-color)', fontSize: '16px', fontWeight: 700 }}>
                         ¥{secondaryTotal.toFixed(2)}
                       </strong>
                     </Table.Summary.Cell>
@@ -564,10 +564,10 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
               </span>
             </Col>
             <Col>
-              <span style={{ fontSize: '20px', fontWeight: 700, color: '#52c41a' }}>
+              <span style={{ fontSize: '20px', fontWeight: 700, color: 'var(--success-color)' }}>
                 ¥{processCost.toFixed(2)}
               </span>
-              <span style={{ fontSize: '13px', color: '#8c8c8c', marginLeft: 8 }}>
+              <span style={{ fontSize: '13px', color: 'var(--neutral-text-disabled)', marginLeft: 8 }}>
                 = ¥{processList.reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0).toFixed(2)} + ¥{secondaryProcessList.reduce((sum, item) => sum + (Number(item.unitPrice) || 0), 0).toFixed(2)}
               </span>
             </Col>

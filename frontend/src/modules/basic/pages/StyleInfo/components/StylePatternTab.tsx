@@ -156,23 +156,23 @@ const StylePatternTab: React.FC<Props> = ({
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ color: '#666' }}>纸样状态：</span>
+            <span style={{ color: 'var(--neutral-text-secondary)' }}>纸样状态：</span>
             {statusTag}
           </div>
-          <span style={{ color: '#666' }}>
-            领取人：<span style={{ color: '#333', fontWeight: 500 }}>{patternAssignee || '-'}</span>
+          <span style={{ color: 'var(--neutral-text-secondary)' }}>
+            领取人：<span style={{ color: 'var(--neutral-text)', fontWeight: 500 }}>{patternAssignee || '-'}</span>
           </span>
-          <span style={{ color: '#666' }}>
-            开始时间：<span style={{ color: '#333', fontWeight: 500 }}>{startTimeText}</span>
+          <span style={{ color: 'var(--neutral-text-secondary)' }}>
+            开始时间：<span style={{ color: 'var(--neutral-text)', fontWeight: 500 }}>{startTimeText}</span>
           </span>
-          <span style={{ color: '#666' }}>
-            完成时间：<span style={{ color: '#333', fontWeight: 500 }}>{completedTimeText}</span>
+          <span style={{ color: 'var(--neutral-text-secondary)' }}>
+            完成时间：<span style={{ color: 'var(--neutral-text)', fontWeight: 500 }}>{completedTimeText}</span>
           </span>
           {/* 纸样齐全检查提示 */}
           {patternCheckResult && !patternCheckResult.complete && (
             <span style={{
               fontSize: '12px',
-              color: '#faad14',
+              color: 'var(--warning-color)',
               backgroundColor: '#fffbe6',
               border: '1px solid #ffe58f',
               padding: '2px 8px',
@@ -219,7 +219,7 @@ const StylePatternTab: React.FC<Props> = ({
                 <Button size="small" danger loading={saving} onClick={openMaintenance}>维护</Button>
               )}
               {!hasValidPatternFile && patternStartTime && (
-                <span style={{ color: '#999', fontSize: '12px' }}>
+                <span style={{ color: 'var(--neutral-text-disabled)', fontSize: '12px' }}>
                   需先上传纸样(dxf/plt/ets)
                 </span>
               )}

@@ -93,7 +93,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
                 navigate(`/production/material/${styleNo}`);
               }
             }}
-            style={{ cursor: 'pointer', color: '#1890ff' }}
+            style={{ cursor: 'pointer', color: 'var(--primary-color)' }}
           >
             {styleNo || '-'}
           </a>

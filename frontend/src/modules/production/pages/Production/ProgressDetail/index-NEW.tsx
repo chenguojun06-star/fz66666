@@ -131,7 +131,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             ))}
           </div>
         ) : (
-          <div style={{ fontSize: 14, color: '#999', textAlign: 'center', padding: 60 }}>
+          <div style={{ fontSize: 14, color: 'var(--neutral-text-disabled)', textAlign: 'center', padding: 60 }}>
             列表视图待实现
           </div>
         )}

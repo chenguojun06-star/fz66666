@@ -347,7 +347,7 @@ const PatternProduction: React.FC = () => {
       title: '确认删除',
       content: (
         <div>
-          <div style={{ marginBottom: 12, color: '#ff4d4f', fontWeight: 600 }}>
+          <div style={{ marginBottom: 12, color: 'var(--error-color)', fontWeight: 600 }}>
             删除样板生产记录：{record.styleNo} - {record.color}
           </div>
           <div style={{ marginBottom: 8, fontWeight: 600 }}>请输入删除原因：</div>
@@ -442,7 +442,7 @@ const PatternProduction: React.FC = () => {
           {coverImage ? (
             <img src={coverImage} alt="样板图" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
-            <span style={{ color: '#ccc', fontSize: 12 }}>无图</span>
+            <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 12 }}>无图</span>
           )}
         </div>
       ),
@@ -609,7 +609,7 @@ const PatternProduction: React.FC = () => {
                       ? '#ef4444'
                       : getDeliveryStatus(record.deliveryTime) === 'warning'
                       ? '#f59e0b'
-                      : '#52c41a'
+                      : 'var(--success-color)'
                   }
                   color2={
                     percent >= 100
@@ -634,13 +634,13 @@ const PatternProduction: React.FC = () => {
                   <span style={{
                     fontSize: 13,
                     fontWeight: 600,
-                    color: percent >= 100 ? '#059669' : '#6b7280',
+                    color: percent >= 100 ? '#059669' : 'var(--neutral-text-secondary)',
                   }}>({completedQty}/{record.quantity})</span>
                 </div>
                 <div style={{
                   fontSize: 12,
                   fontWeight: 500,
-                  color: '#6b7280',
+                  color: 'var(--neutral-text-secondary)',
                   whiteSpace: 'nowrap',
                 }}>
                   {node.unitPrice > 0 && (
@@ -872,7 +872,7 @@ const PatternProduction: React.FC = () => {
                     label: '附件',
                     onClick: () => attachmentModal.open(record),
                     disabled: isCompleted,
-                    style: isCompleted ? { color: '#d9d9d9' } : undefined,
+                    style: isCompleted ? { color: 'var(--neutral-border)' } : undefined,
                   },
                   {
                     key: 'maintenance',
@@ -880,7 +880,7 @@ const PatternProduction: React.FC = () => {
                     onClick: () => handleMaintenance(record),
                     danger: !isCompleted,
                     disabled: isCompleted,
-                    style: isCompleted ? { color: '#d9d9d9' } : undefined,
+                    style: isCompleted ? { color: 'var(--neutral-border)' } : undefined,
                   },
                 ] as const;
               }}
@@ -908,7 +908,7 @@ const PatternProduction: React.FC = () => {
                 <div><strong>颜色:</strong> {progressModal.data.color}</div>
                 <div><strong>状态:</strong> {renderStatus(progressModal.data.status)}</div>
               </div>
-              <div style={{ fontSize: 12, color: '#999' }}>
+              <div style={{ fontSize: 12, color: 'var(--neutral-text-disabled)' }}>
                 当所有工序进度达到 100% 时，系统将自动标记为已完成
               </div>
             </div>
@@ -940,7 +940,7 @@ const PatternProduction: React.FC = () => {
         <StandardModal
           title={
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <ClockCircleOutlined style={{ color: '#1890ff' }} />
+              <ClockCircleOutlined style={{ color: 'var(--primary-color)' }} />
               <span>操作历史记录</span>
             </div>
           }
@@ -957,7 +957,7 @@ const PatternProduction: React.FC = () => {
             <div style={{
               textAlign: 'center',
               padding: '40px 0',
-              color: '#999',
+              color: 'var(--neutral-text-disabled)',
             }}>
               <ClockCircleOutlined style={{ fontSize: 48, marginBottom: 16 }} />
               <div>暂无操作记录</div>
@@ -978,16 +978,16 @@ const PatternProduction: React.FC = () => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                     <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
                       <Tag color="blue">{log.action}</Tag>
-                      <span style={{ fontSize: 13, color: '#666' }}>
+                      <span style={{ fontSize: 13, color: 'var(--neutral-text-secondary)' }}>
                         <UserOutlined style={{ marginRight: 4 }} />
                         {log.operator}
                       </span>
                     </div>
-                    <span style={{ fontSize: 12, color: '#999' }}>
+                    <span style={{ fontSize: 12, color: 'var(--neutral-text-disabled)' }}>
                       {log.time}
                     </span>
                   </div>
-                  <div style={{ fontSize: 13, color: '#333', paddingLeft: 8 }}>
+                  <div style={{ fontSize: 13, color: 'var(--neutral-text)', paddingLeft: 8 }}>
                     {log.detail}
                   </div>
                 </div>
@@ -1000,7 +1000,7 @@ const PatternProduction: React.FC = () => {
         <StandardModal
           title={
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <EyeOutlined style={{ color: '#1890ff' }} />
+              <EyeOutlined style={{ color: 'var(--primary-color)' }} />
               <span>样板详情</span>
             </div>
           }
@@ -1057,13 +1057,13 @@ const PatternProduction: React.FC = () => {
                   <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6, color: '#1f2937' }}>
                     {detailModal.data.styleNo}
                   </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', color: '#6b7280' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', color: 'var(--neutral-text-secondary)' }}>
                     <span><b>颜色:</b> {detailModal.data.color || '-'}</span>
                     <span><b>数量:</b> {detailModal.data.quantity}</span>
                     <span><b>状态:</b> {renderStatus(detailModal.data.status)}</span>
                   </div>
                   {/* 人员信息 */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', color: '#6b7280', marginTop: 4 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', color: 'var(--neutral-text-secondary)', marginTop: 4 }}>
                     <span><b>设计师:</b> {detailModal.data.designer || '-'}</span>
                     <span><b>纸样师:</b> {detailModal.data.patternDeveloper || '-'}</span>
                     <span><b>车板师:</b> {detailModal.data.plateWorker || '-'}</span>
@@ -1084,11 +1084,11 @@ const PatternProduction: React.FC = () => {
               }}>
                 <span style={{ fontWeight: 600, color: '#1f2937' }}>⏰</span>
                 <span><b>下板:</b> {detailModal.data.releaseTime}</span>
-                <span style={{ color: '#d9d9d9' }}>|</span>
+                <span style={{ color: 'var(--neutral-border)' }}>|</span>
                 <span><b>交板:</b> {detailModal.data.deliveryTime}</span>
-                <span style={{ color: '#d9d9d9' }}>|</span>
+                <span style={{ color: 'var(--neutral-border)' }}>|</span>
                 <span><b>领取:</b> {detailModal.data.receiveTime}</span>
-                <span style={{ color: '#d9d9d9' }}>|</span>
+                <span style={{ color: 'var(--neutral-border)' }}>|</span>
                 <span><b>完成:</b> {detailModal.data.completeTime}</span>
               </div>
 
@@ -1123,7 +1123,7 @@ const PatternProduction: React.FC = () => {
                             fontSize: 13,
                             fontWeight: 700,
                             marginTop: 4,
-                            color: percent >= 100 ? '#059669' : '#6b7280',
+                            color: percent >= 100 ? '#059669' : 'var(--neutral-text-secondary)',
                           }}>
                             {percent}%
                           </div>

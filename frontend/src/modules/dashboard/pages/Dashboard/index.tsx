@@ -332,7 +332,7 @@ const Dashboard: React.FC = () => {
                 icon={<SettingOutlined />}
                 onClick={() => setSettingsVisible(true)}
                 title="设置快捷入口"
-                style={{ color: '#666' }}
+                style={{ color: 'var(--neutral-text-secondary)' }}
               />
             </div>
             <div className="card-content">
@@ -376,7 +376,7 @@ const Dashboard: React.FC = () => {
         ]}
       >
         <div style={{ padding: '16px 0' }}>
-          <p style={{ marginBottom: 16, color: '#666' }}>
+          <p style={{ marginBottom: 16, color: 'var(--neutral-text-secondary)' }}>
             勾选需要在首页显示的快捷入口（至少保留一个）
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>

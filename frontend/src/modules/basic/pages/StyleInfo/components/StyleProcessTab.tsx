@@ -679,7 +679,7 @@ const StyleProcessTab: React.FC<Props> = ({
             <span>{size}码</span>
             {editableMode && (
               <DeleteOutlined
-                style={{ color: '#ff4d4f', cursor: 'pointer', fontSize: 12 }}
+                style={{ color: 'var(--error-color)', cursor: 'pointer', fontSize: 12 }}
                 onClick={(e) => {
                   e.stopPropagation();
                   Modal.confirm({
@@ -768,14 +768,14 @@ const StyleProcessTab: React.FC<Props> = ({
         justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', gap: 24 }}>
-          <span style={{ color: '#666' }}>
-            领取人：<span style={{ color: '#333', fontWeight: 500 }}>{processAssignee || '-'}</span>
+          <span style={{ color: 'var(--neutral-text-secondary)' }}>
+            领取人：<span style={{ color: 'var(--neutral-text)', fontWeight: 500 }}>{processAssignee || '-'}</span>
           </span>
-          <span style={{ color: '#666' }}>
-            开始时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(processStartTime)}</span>
+          <span style={{ color: 'var(--neutral-text-secondary)' }}>
+            开始时间：<span style={{ color: 'var(--neutral-text)', fontWeight: 500 }}>{formatDateTime(processStartTime)}</span>
           </span>
-          <span style={{ color: '#666' }}>
-            完成时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(processCompletedTime)}</span>
+          <span style={{ color: 'var(--neutral-text-secondary)' }}>
+            完成时间：<span style={{ color: 'var(--neutral-text)', fontWeight: 500 }}>{formatDateTime(processCompletedTime)}</span>
           </span>
         </div>
         {!processStartTime && !processCompletedTime && (
@@ -884,7 +884,7 @@ const StyleProcessTab: React.FC<Props> = ({
                     添加
                   </Button>
                 </div>
-                <div style={{ marginTop: 8, fontSize: 12, color: '#999' }}>
+                <div style={{ marginTop: 8, fontSize: 12, color: 'var(--neutral-text-disabled)' }}>
                   当前: {sizes.join(', ')}
                 </div>
               </div>

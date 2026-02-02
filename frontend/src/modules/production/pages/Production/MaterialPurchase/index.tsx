@@ -1046,7 +1046,7 @@ const MaterialPurchase: React.FC = () => {
                             + '合并方式：相同物料（类型/编码/名称/规格/单位/供应商相同）会共用同一采购单号，便于采购合单。'
                           }
                         >
-                          <QuestionCircleOutlined style={{ color: '#999', cursor: 'pointer' }} />
+                          <QuestionCircleOutlined style={{ color: 'var(--neutral-text-disabled)', cursor: 'pointer' }} />
                         </Tooltip>
                       </div>
                       <Space wrap>
@@ -1214,7 +1214,7 @@ const MaterialPurchase: React.FC = () => {
                       <tr key={String(t?.id || idx)}>
                         <td style={{ padding: '8px 10px', borderBottom: '1px solid #f5f5f5' }}>
                           <div style={{ fontWeight: 600, color: '#1f1f1f' }}>{String(t?.materialName || '-')}</div>
-                          <div style={{ fontSize: 'var(--font-size-sm)', color: '#8c8c8c' }}>{String(t?.materialCode || '')}</div>
+                          <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--neutral-text-disabled)' }}>{String(t?.materialCode || '')}</div>
                           <Form.Item name={['items', idx, 'purchaseId']} initialValue={String(t?.id || '')} hidden>
                             <Input />
                           </Form.Item>

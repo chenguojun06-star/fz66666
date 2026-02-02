@@ -702,7 +702,7 @@ const PayrollOperatorSummary: React.FC = () => {
                             style={{ width: 320 }}
                         />
                         <Space>
-                            <span style={{ color: '#6b7280' }}>包含已结算</span>
+                            <span style={{ color: 'var(--neutral-text-secondary)' }}>包含已结算</span>
                             <Switch checked={includeSettled} onChange={setIncludeSettled} />
                         </Space>
                         <Button type="primary" onClick={fetchData} loading={loading}>
@@ -732,11 +732,11 @@ const PayrollOperatorSummary: React.FC = () => {
                                 <>
                                     <Card size="small" className="mb-sm">
                                         <Space wrap>
-                                            <span style={{ color: '#6b7280' }}>行数 {rows.length}</span>
-                                            <span style={{ color: '#6b7280' }}>数量合计 {totalQuantity}</span>
-                                            <span style={{ color: '#6b7280' }}>金额合计 {totalAmount.toFixed(2)}</span>
+                                            <span style={{ color: 'var(--neutral-text-secondary)' }}>行数 {rows.length}</span>
+                                            <span style={{ color: 'var(--neutral-text-secondary)' }}>数量合计 {totalQuantity}</span>
+                                            <span style={{ color: 'var(--neutral-text-secondary)' }}>金额合计 {totalAmount.toFixed(2)}</span>
                                             {dateRange?.[0] && dateRange?.[1] && (
-                                                <span style={{ color: '#6b7280' }}>
+                                                <span style={{ color: 'var(--neutral-text-secondary)' }}>
                                                     统计周期：{dayjs(dateRange[0]).format('YYYY-MM-DD')} ~ {dayjs(dateRange[1]).format('YYYY-MM-DD')}
                                                 </span>
                                             )}
@@ -774,9 +774,9 @@ const PayrollOperatorSummary: React.FC = () => {
                                 <>
                                     <Card size="small" className="mb-sm">
                                         <Space wrap>
-                                            <span style={{ color: '#6b7280' }}>人员数 {summaryRows.length}</span>
-                                            <span style={{ color: '#6b7280' }}>总数量 {summaryRows.reduce((sum, r) => sum + toNumberOrZero(r.totalQuantity), 0)}</span>
-                                            <span style={{ color: '#6b7280' }}>总金额 {summaryRows.reduce((sum, r) => sum + toNumberOrZero(r.totalAmount), 0).toFixed(2)}</span>
+                                            <span style={{ color: 'var(--neutral-text-secondary)' }}>人员数 {summaryRows.length}</span>
+                                            <span style={{ color: 'var(--neutral-text-secondary)' }}>总数量 {summaryRows.reduce((sum, r) => sum + toNumberOrZero(r.totalQuantity), 0)}</span>
+                                            <span style={{ color: 'var(--neutral-text-secondary)' }}>总金额 {summaryRows.reduce((sum, r) => sum + toNumberOrZero(r.totalAmount), 0).toFixed(2)}</span>
                                             <Button
                                                 type="primary"
                                                 onClick={handleBatchApprove}
@@ -827,7 +827,7 @@ const PayrollOperatorSummary: React.FC = () => {
                     cancelText="取消"
                 >
                     <div style={{ marginBottom: 16 }}>
-                        <div style={{ marginBottom: 8, color: '#6b7280' }}>退回人员：{rejectOperator}</div>
+                        <div style={{ marginBottom: 8, color: 'var(--neutral-text-secondary)' }}>退回人员：{rejectOperator}</div>
                         <Input.TextArea
                             placeholder="请输入退回原因（必填）"
                             rows={4}

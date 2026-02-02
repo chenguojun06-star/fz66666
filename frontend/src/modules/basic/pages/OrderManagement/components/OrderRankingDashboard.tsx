@@ -147,7 +147,7 @@ const OrderRankingDashboard: React.FC<OrderRankingDashboardProps> = ({ onOrderCl
             >
               <span
                 className="rank-number"
-                style={{ backgroundColor: rankColors[idx] || '#d9d9d9' }}
+                style={{ backgroundColor: rankColors[idx] || 'var(--neutral-border)' }}
               >
                 {idx + 1}
               </span>

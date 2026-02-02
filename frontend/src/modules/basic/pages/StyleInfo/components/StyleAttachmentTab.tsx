@@ -190,8 +190,8 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
   const getFileIcon = (type: string) => {
     const t = String(type || '').toLowerCase();
     if (t.includes('image') || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(t)) return <FileImageOutlined style={{ color: '#87d068' }} />;
-    if (t.includes('pdf') || t === 'pdf') return <FilePdfOutlined style={{ color: '#ff4d4f' }} />;
-    return <FileOutlined style={{ color: '#1890ff' }} />;
+    if (t.includes('pdf') || t === 'pdf') return <FilePdfOutlined style={{ color: 'var(--error-color)' }} />;
+    return <FileOutlined style={{ color: 'var(--primary-color)' }} />;
   };
 
   // 格式化文件大小

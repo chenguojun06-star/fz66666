@@ -1386,7 +1386,7 @@ const OrderManagement: React.FC = () => {
                         <Col xs={24} sm={12}>
                           <div>
                             <div style={{ marginBottom: 8, fontSize: '14px', color: 'var(--neutral-text)' }}>
-                              订单号<span style={{ color: '#ff4d4f', marginLeft: 4 }}>*</span>
+                              订单号<span style={{ color: 'var(--error-color)', marginLeft: 4 }}>*</span>
                             </div>
                             <Form.Item
                               name="orderNo"
@@ -1412,7 +1412,7 @@ const OrderManagement: React.FC = () => {
                                     <div style={{ fontSize: 13, color: tooltipTheme.text }}>
                                       <div style={{ marginBottom: 8, fontWeight: 600, color: tooltipTheme.text }}>📋 加工方式说明</div>
                                       <div style={{ marginBottom: 6 }}>
-                                        <span style={{ color: '#40a9ff' }}>● 本厂生产：</span>
+                                        <span style={{ color: 'var(--primary-color-light)' }}>● 本厂生产：</span>
                                         选择"本厂"，订单完成后数据流向<strong>工资结算</strong>（按人员工序统计扫码工资）
                                       </div>
                                       <div>
@@ -1429,7 +1429,7 @@ const OrderManagement: React.FC = () => {
                                     body: { background: tooltipTheme.background, color: tooltipTheme.text, border: `1px solid ${tooltipTheme.border}` },
                                   }}
                                 >
-                                  <QuestionCircleOutlined style={{ color: '#1890ff', cursor: 'help' }} />
+                                  <QuestionCircleOutlined style={{ color: 'var(--primary-color)', cursor: 'help' }} />
                                 </Tooltip>
                               </Space>
                             }

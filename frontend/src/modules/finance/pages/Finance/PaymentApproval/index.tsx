@@ -181,7 +181,7 @@ const ApprovalDetailModal: React.FC<ApprovalDetailModalProps> = ({
         <>
           <Card size="small" className="mb-sm">
             <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-              <div style={{ width: 84, height: 84, borderRadius: 12, background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, color: '#999' }}>
+              <div style={{ width: 84, height: 84, borderRadius: 12, background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, color: 'var(--neutral-text-disabled)' }}>
                 👤
               </div>
 
@@ -232,7 +232,7 @@ const ApprovalDetailModal: React.FC<ApprovalDetailModalProps> = ({
           </Card>
         </>
       ) : (
-        <div style={{ color: '#999' }}>未选择记录</div>
+        <div style={{ color: 'var(--neutral-text-disabled)' }}>未选择记录</div>
       )}
     </ResizableModal>
   );

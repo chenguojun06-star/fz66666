@@ -1159,7 +1159,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         // 空数据提示
         if (!ns || ns.length === 0) {
           return (
-            <div style={{ color: '#999', fontSize: 14, padding: '20px 0' }}>
+            <div style={{ color: 'var(--neutral-text-disabled)', fontSize: 14, padding: '20px 0' }}>
               暂无工序进度数据
             </div>
           );
@@ -1232,13 +1232,13 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                         ? '#9ca3af'
                         : (() => {
                           const shipDate = record.expectedShipDate;
-                          if (!shipDate) return '#52c41a';
+                          if (!shipDate) return 'var(--success-color)';
                           const now = new Date();
                           const delivery = new Date(shipDate);
                           const diffDays = Math.ceil((delivery.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
                           if (diffDays < 0) return '#ef4444'; // 延期红色
                           if (diffDays <= 3) return '#f59e0b'; // 预警黄色
-                          return '#52c41a'; // 正常绿色
+                          return 'var(--success-color)'; // 正常绿色
                         })()
                     }
                     color2={

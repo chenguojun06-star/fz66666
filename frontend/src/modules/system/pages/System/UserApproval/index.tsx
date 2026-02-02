@@ -304,12 +304,12 @@ const UserApproval: React.FC = () => {
             <p>
               批准用户"<strong>{currentUser?.name || currentUser?.username}</strong>"
             </p>
-            <p style={{ color: '#999', fontSize: 12, marginBottom: 16 }}>
+            <p style={{ color: 'var(--neutral-text-disabled)', fontSize: 12, marginBottom: 16 }}>
               批准后该用户可以正常登录系统
             </p>
             <div>
               <div style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>
-                选择角色<span style={{ color: '#ff4d4f' }}>*</span>
+                选择角色<span style={{ color: 'var(--error-color)' }}>*</span>
               </div>
               <Select
                 style={{ width: '100%' }}
@@ -323,7 +323,7 @@ const UserApproval: React.FC = () => {
                 }))}
               />
               <div style={{ display: 'block', margin: '16px 0 8px', fontWeight: 500 }}>
-                批准原因<span style={{ color: '#ff4d4f' }}>*</span>
+                批准原因<span style={{ color: 'var(--error-color)' }}>*</span>
               </div>
               <TextArea
                 rows={3}
@@ -354,7 +354,7 @@ const UserApproval: React.FC = () => {
             <p>
               确定拒绝用户"<strong>{currentUser?.name || currentUser?.username}</strong>"吗？
             </p>
-            <p style={{ color: '#999', fontSize: 12 }}>拒绝后该用户将无法登录系统</p>
+            <p style={{ color: 'var(--neutral-text-disabled)', fontSize: 12 }}>拒绝后该用户将无法登录系统</p>
           </div>
           <TextArea
             placeholder="请输入拒绝原因"

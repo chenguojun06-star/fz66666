@@ -340,7 +340,7 @@ const MaterialPurchaseDetail: React.FC = () => {
               showIcon
             />
             {purchaseList.length > 0 && (
-              <div style={{ marginTop: 12, fontSize: 12, color: '#666' }}>
+              <div style={{ marginTop: 12, fontSize: 12, color: 'var(--neutral-text-secondary)' }}>
                 <div><strong>采购单数：</strong>{purchaseList.length} 个</div>
                 <div style={{ marginTop: 4 }}><strong>物料到货率：</strong>
                   <Tag color={
@@ -369,15 +369,15 @@ const MaterialPurchaseDetail: React.FC = () => {
             />
             <Row gutter={[16, 12]} style={{ marginTop: 12 }}>
               <Col xs={24} sm={8} md={6}>
-                <div style={{ fontSize: 12, color: '#999' }}>工厂</div>
+                <div style={{ fontSize: 12, color: 'var(--neutral-text-disabled)' }}>工厂</div>
                 <div>{order?.factoryName || '-'}</div>
               </Col>
               <Col xs={24} sm={8} md={6}>
-                <div style={{ fontSize: 12, color: '#999' }}>采购单数</div>
+                <div style={{ fontSize: 12, color: 'var(--neutral-text-disabled)' }}>采购单数</div>
                 <div>{purchaseList.length} 个</div>
               </Col>
               <Col xs={24} sm={8} md={6}>
-                <div style={{ fontSize: 12, color: '#999' }}>物料到货率</div>
+                <div style={{ fontSize: 12, color: 'var(--neutral-text-disabled)' }}>物料到货率</div>
                 <div>
                   <Tag color={
                     materialArrivalRate >= 100 ? 'green' :
@@ -388,7 +388,7 @@ const MaterialPurchaseDetail: React.FC = () => {
                 </div>
               </Col>
               <Col xs={24} sm={8} md={6}>
-                <div style={{ fontSize: 12, color: '#999' }}>回料完成状态</div>
+                <div style={{ fontSize: 12, color: 'var(--neutral-text-disabled)' }}>回料完成状态</div>
                 <div>
                   {order?.procurementManuallyCompleted === 1 ? (
                     <Tag color="success">已确认</Tag>
@@ -402,15 +402,15 @@ const MaterialPurchaseDetail: React.FC = () => {
               {order?.procurementManuallyCompleted === 1 && (
                 <>
                   <Col xs={24} sm={8} md={6}>
-                    <div style={{ fontSize: 12, color: '#999' }}>确认人</div>
+                    <div style={{ fontSize: 12, color: 'var(--neutral-text-disabled)' }}>确认人</div>
                     <div>{order.procurementConfirmedByName || '-'}</div>
                   </Col>
                   <Col xs={24} sm={8} md={6}>
-                    <div style={{ fontSize: 12, color: '#999' }}>确认时间</div>
+                    <div style={{ fontSize: 12, color: 'var(--neutral-text-disabled)' }}>确认时间</div>
                     <div>{order.procurementConfirmedAt ? formatDateTime(order.procurementConfirmedAt) : '-'}</div>
                   </Col>
                   <Col xs={24}>
-                    <div style={{ fontSize: 12, color: '#999' }}>备注</div>
+                    <div style={{ fontSize: 12, color: 'var(--neutral-text-disabled)' }}>备注</div>
                     <div>{order.procurementConfirmRemark || '-'}</div>
                   </Col>
                 </>

@@ -355,7 +355,7 @@ const ProductionList: React.FC = () => {
     items: [
       {
         key: 'column-settings-title',
-        label: <div style={{ fontWeight: 600, color: '#666', padding: '0 4px' }}>选择要显示的列</div>,
+        label: <div style={{ fontWeight: 600, color: 'var(--neutral-text-secondary)', padding: '0 4px' }}>选择要显示的列</div>,
         disabled: true,
       },
       { type: 'divider' as const },
@@ -377,7 +377,7 @@ const ProductionList: React.FC = () => {
         key: 'reset-columns',
         label: (
           <div
-            style={{ color: '#1890ff', textAlign: 'center', cursor: 'pointer' }}
+            style={{ color: 'var(--primary-color)', textAlign: 'center', cursor: 'pointer' }}
             onClick={(e) => {
               e.stopPropagation();
               resetColumnSettings();
@@ -808,7 +808,7 @@ const ProductionList: React.FC = () => {
               const processName = titles.operator.replace('员', '');
               return (
                 <a
-                  style={{ cursor: 'pointer', color: '#1890ff' }}
+                  style={{ cursor: 'pointer', color: 'var(--primary-color)' }}
                   onClick={() => {
                     if (orderNo) {
                       navigate(`/finance/payroll-operator-summary?orderNo=${orderNo}&processName=${processName}`);
@@ -1193,7 +1193,7 @@ const ProductionList: React.FC = () => {
               width="100%"
               height={12}
             />
-            <span style={{ fontSize: '12px', color: '#666', minWidth: '40px' }}>
+            <span style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)', minWidth: '40px' }}>
               {rate || 0}%
             </span>
           </div>
@@ -1234,7 +1234,7 @@ const ProductionList: React.FC = () => {
               width="100%"
               height={12}
             />
-            <span style={{ fontSize: '12px', color: '#666', minWidth: '40px' }}>
+            <span style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)', minWidth: '40px' }}>
               {rate || 0}%
             </span>
           </div>
@@ -1262,7 +1262,7 @@ const ProductionList: React.FC = () => {
         // 如果没有二次工艺配置，显示占位符
         if (!hasSecondaryProcess) {
           return (
-            <span style={{ color: '#999', fontSize: '12px' }}>-</span>
+            <span style={{ color: 'var(--neutral-text-disabled)', fontSize: '12px' }}>-</span>
           );
         }
 
@@ -1293,7 +1293,7 @@ const ProductionList: React.FC = () => {
               width="100%"
               height={12}
             />
-            <span style={{ fontSize: '12px', color: '#666', minWidth: '40px' }}>
+            <span style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)', minWidth: '40px' }}>
               {rate || 0}%
             </span>
           </div>
@@ -1334,7 +1334,7 @@ const ProductionList: React.FC = () => {
               width="100%"
               height={12}
             />
-            <span style={{ fontSize: '12px', color: '#666', minWidth: '40px' }}>
+            <span style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)', minWidth: '40px' }}>
               {rate || 0}%
             </span>
           </div>
@@ -1375,7 +1375,7 @@ const ProductionList: React.FC = () => {
               width="100%"
               height={12}
             />
-            <span style={{ fontSize: '12px', color: '#666', minWidth: '40px' }}>
+            <span style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)', minWidth: '40px' }}>
               {rate || 0}%
             </span>
           </div>
@@ -1557,7 +1557,7 @@ const ProductionList: React.FC = () => {
             { type: 'divider' as const },
             {
               key: 'column-settings-title',
-              label: <div style={{ fontWeight: 600, color: '#666', padding: '0 4px' }}>显示列</div>,
+              label: <div style={{ fontWeight: 600, color: 'var(--neutral-text-secondary)', padding: '0 4px' }}>显示列</div>,
               disabled: true,
             },
             { type: 'divider' as const },
@@ -1704,7 +1704,7 @@ const ProductionList: React.FC = () => {
             { type: 'divider' as const },
             {
               key: 'process-summary-title',
-              label: <div style={{ fontWeight: 600, color: '#666', padding: '0 4px' }}>工序汇总</div>,
+              label: <div style={{ fontWeight: 600, color: 'var(--neutral-text-secondary)', padding: '0 4px' }}>工序汇总</div>,
               disabled: true,
             },
             { type: 'divider' as const },
@@ -2229,7 +2229,7 @@ const ProductionList: React.FC = () => {
                         padding: '8px 12px',
                         textAlign: 'left',
                         fontSize: '12px',
-                        color: '#6b7280',
+                        color: 'var(--neutral-text-secondary)',
                         borderBottom: '1px solid #e5e7eb'
                       }}>
                         <span style={{ fontWeight: 600, color: '#374151' }}>订单：</span>
@@ -2397,7 +2397,7 @@ const ProductionList: React.FC = () => {
                         <td style={{ padding: '6px 12px', fontSize: '12px', color: '#374151' }}>
                           {stageStatusMap[node.key]?.operatorName ? (
                             <a
-                              style={{ cursor: 'pointer', color: '#1890ff', fontWeight: 500 }}
+                              style={{ cursor: 'pointer', color: 'var(--primary-color)', fontWeight: 500 }}
                               onClick={() => {
                                 if (processDetailRecord?.orderNo) {
                                   navigate(`/finance/payroll-operator-summary?orderNo=${processDetailRecord.orderNo}&processName=${node.name}`);
@@ -2410,7 +2410,7 @@ const ProductionList: React.FC = () => {
                             <span style={{ color: '#9ca3af' }}>-</span>
                           )}
                         </td>
-                        <td style={{ padding: '6px 12px', fontSize: '12px', color: '#6b7280' }}>
+                        <td style={{ padding: '6px 12px', fontSize: '12px', color: 'var(--neutral-text-secondary)' }}>
                           {stageStatusMap[node.key]?.completedTime ? (
                             new Date(stageStatusMap[node.key].completedTime).toLocaleString('zh-CN', {
                               month: '2-digit',

@@ -64,27 +64,27 @@ const OrderProgressCard: React.FC<OrderProgressCardProps> = ({
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, fontSize: 13 }}>
-            <div><span style={{ color: '#666' }}>款号：</span>{order.styleNo}</div>
-            <div><span style={{ color: '#666' }}>款名：</span>{order.styleName || '-'}</div>
-            <div><span style={{ color: '#666' }}>工厂：</span>{order.factoryName || '-'}</div>
-            <div><span style={{ color: '#666' }}>数量：</span>{order.orderQuantity}</div>
-            <div><span style={{ color: '#666' }}>完成：</span>{order.completedQuantity || 0}</div>
-            <div><span style={{ color: '#666' }}>入库：</span>{order.warehousingQualifiedQuantity || 0}</div>
+            <div><span style={{ color: 'var(--neutral-text-secondary)' }}>款号：</span>{order.styleNo}</div>
+            <div><span style={{ color: 'var(--neutral-text-secondary)' }}>款名：</span>{order.styleName || '-'}</div>
+            <div><span style={{ color: 'var(--neutral-text-secondary)' }}>工厂：</span>{order.factoryName || '-'}</div>
+            <div><span style={{ color: 'var(--neutral-text-secondary)' }}>数量：</span>{order.orderQuantity}</div>
+            <div><span style={{ color: 'var(--neutral-text-secondary)' }}>完成：</span>{order.completedQuantity || 0}</div>
+            <div><span style={{ color: 'var(--neutral-text-secondary)' }}>入库：</span>{order.warehousingQualifiedQuantity || 0}</div>
           </div>
 
           <div style={{ marginTop: 12 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-              <span style={{ fontSize: 12, color: '#666' }}>生产进度</span>
+              <span style={{ fontSize: 12, color: 'var(--neutral-text-secondary)' }}>生产进度</span>
               <span style={{ fontSize: 12, fontWeight: 600 }}>{order.productionProgress}%</span>
             </div>
             <Progress
               percent={order.productionProgress}
               status={order.productionProgress === 100 ? 'success' : 'active'}
-              strokeColor={order.productionProgress === 100 ? '#52c41a' : '#1890ff'}
+              strokeColor={order.productionProgress === 100 ? 'var(--success-color)' : '#1890ff'}
             />
           </div>
 
-          <div style={{ marginTop: 8, fontSize: 12, color: '#999' }}>
+          <div style={{ marginTop: 8, fontSize: 12, color: 'var(--neutral-text-disabled)' }}>
             创建时间：{formatDateTime(order.createTime)}
           </div>
         </div>

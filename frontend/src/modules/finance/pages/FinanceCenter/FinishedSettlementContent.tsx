@@ -73,18 +73,18 @@ const FinishedSettlementContent: React.FC = () => {
   // 订单状态映射（支持大写和小写）
   const statusMap: Record<string, { text: string; color: string }> = {
     // 大写状态
-    PENDING: { text: '待确认', color: '#faad14' },
-    CONFIRMED: { text: '已确认', color: '#1890ff' },
-    IN_PRODUCTION: { text: '生产中', color: '#52c41a' },
+    PENDING: { text: '待确认', color: 'var(--warning-color)' },
+    CONFIRMED: { text: '已确认', color: 'var(--primary-color)' },
+    IN_PRODUCTION: { text: '生产中', color: 'var(--success-color)' },
     COMPLETED: { text: '已完成', color: '#13c2c2' },
-    CANCELLED: { text: '已取消', color: '#f5222d' },
+    CANCELLED: { text: '已取消', color: 'var(--error-color)' },
     // 小写状态
-    pending: { text: '待确认', color: '#faad14' },
-    confirmed: { text: '已确认', color: '#1890ff' },
-    in_production: { text: '生产中', color: '#52c41a' },
-    production: { text: '生产中', color: '#52c41a' },
+    pending: { text: '待确认', color: 'var(--warning-color)' },
+    confirmed: { text: '已确认', color: 'var(--primary-color)' },
+    in_production: { text: '生产中', color: 'var(--success-color)' },
+    production: { text: '生产中', color: 'var(--success-color)' },
     completed: { text: '已完成', color: '#13c2c2' },
-    cancelled: { text: '已取消', color: '#f5222d' },
+    cancelled: { text: '已取消', color: 'var(--error-color)' },
   };
 
   // 表格列定义
@@ -115,7 +115,7 @@ const FinishedSettlementContent: React.FC = () => {
       key: 'status',
       width: 100,
       render: (status) => {
-        const statusInfo = statusMap[status] || { text: status, color: '#666' };
+        const statusInfo = statusMap[status] || { text: status, color: 'var(--neutral-text-secondary)' };
         return (
           <span
             style={{
@@ -168,7 +168,7 @@ const FinishedSettlementContent: React.FC = () => {
       width: 100,
       align: 'right',
       render: (val) => (
-        <span style={{ color: val > 0 ? '#f5222d' : '#666' }}>
+        <span style={{ color: val > 0 ? 'var(--error-color)' : '#666' }}>
           {val?.toLocaleString() || '-'}
         </span>
       ),
@@ -204,7 +204,7 @@ const FinishedSettlementContent: React.FC = () => {
       width: 120,
       align: 'right',
       render: (val) => (
-        <span style={{ color: val > 0 ? '#f5222d' : '#666' }}>
+        <span style={{ color: val > 0 ? 'var(--error-color)' : '#666' }}>
           ¥{val?.toFixed(2) || '0.00'}
         </span>
       ),
@@ -216,7 +216,7 @@ const FinishedSettlementContent: React.FC = () => {
       width: 130,
       align: 'right',
       render: (val) => (
-        <span style={{ fontWeight: 600, color: '#1890ff' }}>
+        <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>
           ¥{val?.toFixed(2) || '0.00'}
         </span>
       ),
@@ -231,7 +231,7 @@ const FinishedSettlementContent: React.FC = () => {
         <span
           style={{
             fontWeight: 600,
-            color: val >= 0 ? '#52c41a' : '#f5222d',
+            color: val >= 0 ? 'var(--success-color)' : 'var(--error-color)',
           }}
         >
           ¥{val?.toFixed(2) || '0.00'}
@@ -248,7 +248,7 @@ const FinishedSettlementContent: React.FC = () => {
         <span
           style={{
             fontWeight: 600,
-            color: val >= 0 ? '#52c41a' : '#f5222d',
+            color: val >= 0 ? 'var(--success-color)' : 'var(--error-color)',
           }}
         >
           {val !== null && val !== undefined ? `${val.toFixed(2)}%` : '-'}
@@ -659,10 +659,10 @@ const FinishedSettlementContent: React.FC = () => {
                   <div style={{ fontWeight: 600, marginBottom: 4 }}>
                     {log.action || log.operationType}
                   </div>
-                  <div style={{ color: '#666', fontSize: '13px', marginBottom: 4 }}>
+                  <div style={{ color: 'var(--neutral-text-secondary)', fontSize: '13px', marginBottom: 4 }}>
                     {log.description || log.content}
                   </div>
-                  <div style={{ color: '#999', fontSize: '12px' }}>
+                  <div style={{ color: 'var(--neutral-text-disabled)', fontSize: '12px' }}>
                     <span>{log.operatorName || log.userName || '系统'}</span>
                     <span style={{ margin: '0 8px' }}>·</span>
                     <span>{log.createTime ? dayjs(log.createTime).format('YYYY-MM-DD HH:mm:ss') : '-'}</span>
@@ -672,7 +672,7 @@ const FinishedSettlementContent: React.FC = () => {
             }))}
           />
         ) : (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
+          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--neutral-text-disabled)' }}>
             暂无操作日志
           </div>
         )}

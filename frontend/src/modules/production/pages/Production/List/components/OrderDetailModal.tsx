@@ -108,16 +108,16 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
               {order.orderNo}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, fontSize: 13 }}>
-              <div><span style={{ color: '#666' }}>款号：</span>{order.styleNo}</div>
-              <div><span style={{ color: '#666' }}>款名：</span>{order.styleName}</div>
-              <div><span style={{ color: '#666' }}>加工厂：</span>{order.factoryName || '-'}</div>
-              <div><span style={{ color: '#666' }}>颜色：</span>{colors}</div>
-              <div><span style={{ color: '#666' }}>尺码：</span>{sizes}</div>
-              <div><span style={{ color: '#666' }}>订单数量：</span>{order.orderQuantity}</div>
-              <div><span style={{ color: '#666' }}>入库数量：</span>{totalWarehoused}</div>
-              <div><span style={{ color: '#666' }}>生产进度：</span>{order.productionProgress}%</div>
-              <div><span style={{ color: '#666' }}>创建时间：</span>{formatDateTime(order.createTime)}</div>
-              <div><span style={{ color: '#666' }}>预计出货：</span>{formatDateTime(order.expectedShipDate)}</div>
+              <div><span style={{ color: 'var(--neutral-text-secondary)' }}>款号：</span>{order.styleNo}</div>
+              <div><span style={{ color: 'var(--neutral-text-secondary)' }}>款名：</span>{order.styleName}</div>
+              <div><span style={{ color: 'var(--neutral-text-secondary)' }}>加工厂：</span>{order.factoryName || '-'}</div>
+              <div><span style={{ color: 'var(--neutral-text-secondary)' }}>颜色：</span>{colors}</div>
+              <div><span style={{ color: 'var(--neutral-text-secondary)' }}>尺码：</span>{sizes}</div>
+              <div><span style={{ color: 'var(--neutral-text-secondary)' }}>订单数量：</span>{order.orderQuantity}</div>
+              <div><span style={{ color: 'var(--neutral-text-secondary)' }}>入库数量：</span>{totalWarehoused}</div>
+              <div><span style={{ color: 'var(--neutral-text-secondary)' }}>生产进度：</span>{order.productionProgress}%</div>
+              <div><span style={{ color: 'var(--neutral-text-secondary)' }}>创建时间：</span>{formatDateTime(order.createTime)}</div>
+              <div><span style={{ color: 'var(--neutral-text-secondary)' }}>预计出货：</span>{formatDateTime(order.expectedShipDate)}</div>
             </div>
           </div>
 
@@ -130,7 +130,7 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
               fontSize: 12,
               marginTop: 8
             }}>
-              <div style={{ color: '#666', marginBottom: 4 }}>备注：</div>
+              <div style={{ color: 'var(--neutral-text-secondary)', marginBottom: 4 }}>备注：</div>
               <div>{order.remarks}</div>
             </div>
           )}

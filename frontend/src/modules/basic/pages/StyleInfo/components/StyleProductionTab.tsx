@@ -136,8 +136,8 @@ const StyleProductionTab: React.FC<Props> = ({
 
   return (
     <div data-production-req>
-      <div style={{ marginBottom: 8, color: '#666', fontSize: 12 }}>
-        款号：<span style={{ color: '#333', fontWeight: 500 }}>{styleNo || '-'}</span>
+      <div style={{ marginBottom: 8, color: 'var(--neutral-text-secondary)', fontSize: 12 }}>
+        款号：<span style={{ color: 'var(--neutral-text)', fontWeight: 500 }}>{styleNo || '-'}</span>
       </div>
       {/* 状态栏 */}
       <div style={{
@@ -148,14 +148,14 @@ const StyleProductionTab: React.FC<Props> = ({
         display: 'flex',
         gap: 24,
       }}>
-        <span style={{ color: '#666' }}>
-          领取人：<span style={{ color: '#333', fontWeight: 500 }}>{productionAssignee || '-'}</span>
+        <span style={{ color: 'var(--neutral-text-secondary)' }}>
+          领取人：<span style={{ color: 'var(--neutral-text)', fontWeight: 500 }}>{productionAssignee || '-'}</span>
         </span>
-        <span style={{ color: '#666' }}>
-          开始时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(productionStartTime)}</span>
+        <span style={{ color: 'var(--neutral-text-secondary)' }}>
+          开始时间：<span style={{ color: 'var(--neutral-text)', fontWeight: 500 }}>{formatDateTime(productionStartTime)}</span>
         </span>
-        <span style={{ color: '#666' }}>
-          完成时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(productionCompletedTime)}</span>
+        <span style={{ color: 'var(--neutral-text-secondary)' }}>
+          完成时间：<span style={{ color: 'var(--neutral-text)', fontWeight: 500 }}>{formatDateTime(productionCompletedTime)}</span>
         </span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
@@ -185,7 +185,7 @@ const StyleProductionTab: React.FC<Props> = ({
             保存
           </Button>
         </Space>
-        <div style={{ marginTop: 8, color: '#666', fontSize: 12 }}>
+        <div style={{ marginTop: 8, color: 'var(--neutral-text-secondary)', fontSize: 12 }}>
           💡 提示：相关文件请在"文件管理"标签页统一上传
         </div>
       </div>

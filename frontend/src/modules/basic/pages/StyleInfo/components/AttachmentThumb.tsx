@@ -49,11 +49,11 @@ const AttachmentThumb: React.FC<AttachmentThumbProps> = ({ styleId }) => {
       }}
     >
       {loading ? (
-        <span style={{ color: '#999', fontSize: 'var(--font-size-sm)' }}>...</span>
+        <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-sm)' }}>...</span>
       ) : url ? (
         <img src={url} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       ) : (
-        <span style={{ color: '#ccc', fontSize: 'var(--font-size-sm)' }}>无图</span>
+        <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-sm)' }}>无图</span>
       )}
     </div>
   );

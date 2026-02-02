@@ -102,8 +102,8 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
 
   return (
     <div style={{ padding: '0 8px' }}>
-      <div style={{ marginBottom: 8, color: '#666', fontSize: 12 }}>
-        款号：<span style={{ color: '#333', fontWeight: 500 }}>{styleNo || '-'}</span>
+      <div style={{ marginBottom: 8, color: 'var(--neutral-text-secondary)', fontSize: 12 }}>
+        款号：<span style={{ color: 'var(--neutral-text)', fontWeight: 500 }}>{styleNo || '-'}</span>
       </div>
       <Tabs
         tabBarExtraContent={
@@ -135,7 +135,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
                         ]}
                       >
                         <List.Item.Meta
-                          avatar={<FileOutlined style={{ fontSize: 24, color: '#1890ff' }} />}
+                          avatar={<FileOutlined style={{ fontSize: 24, color: 'var(--primary-color)' }} />}
                           title={
                             <Space>
                               {item.fileName}
@@ -150,7 +150,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
                     )}
                   />
                 ) : (
-                  <div style={{ textAlign: 'center', padding: '24px', color: '#999' }}>
+                  <div style={{ textAlign: 'center', padding: '24px', color: 'var(--neutral-text-disabled)' }}>
                     暂无纸样文件
                   </div>
                 )}
@@ -202,7 +202,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
                       );
                     })()
                   ) : (
-                    <div style={{ textAlign: 'center', padding: '24px', color: '#999' }}>
+                    <div style={{ textAlign: 'center', padding: '24px', color: 'var(--neutral-text-disabled)' }}>
                       暂无生产制单内容
                     </div>
                   )}

@@ -242,7 +242,7 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
           ? toNumberSafe(record.totalPrice)
           : toNumberSafe(record.quantity || 0) * toNumberSafe(record.unitPrice || 0);
         return (
-          <span style={{ color: '#1890ff', fontWeight: 600 }}>
+          <span style={{ color: 'var(--primary-color)', fontWeight: 600 }}>
             ¥{total.toFixed(2)}
           </span>
         );
@@ -310,8 +310,8 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
 
   return (
     <div style={{ padding: '0 4px' }}>
-      <div style={{ marginBottom: 8, color: '#666', fontSize: 12 }}>
-        款号：<span style={{ color: '#333', fontWeight: 500 }}>{styleNo || '-'}</span>
+      <div style={{ marginBottom: 8, color: 'var(--neutral-text-secondary)', fontSize: 12 }}>
+        款号：<span style={{ color: 'var(--neutral-text)', fontWeight: 500 }}>{styleNo || '-'}</span>
       </div>
       {/* 状态栏 */}
       {!simpleView && (
@@ -323,14 +323,14 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
           display: 'flex',
           gap: 24,
         }}>
-          <span style={{ color: '#666' }}>
-            领取人：<span style={{ color: '#333', fontWeight: 500 }}>{secondaryAssignee || '-'}</span>
+          <span style={{ color: 'var(--neutral-text-secondary)' }}>
+            领取人：<span style={{ color: 'var(--neutral-text)', fontWeight: 500 }}>{secondaryAssignee || '-'}</span>
           </span>
-          <span style={{ color: '#666' }}>
-            开始时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(secondaryStartTime)}</span>
+          <span style={{ color: 'var(--neutral-text-secondary)' }}>
+            开始时间：<span style={{ color: 'var(--neutral-text)', fontWeight: 500 }}>{formatDateTime(secondaryStartTime)}</span>
           </span>
-          <span style={{ color: '#666' }}>
-            完成时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(secondaryCompletedTime)}</span>
+          <span style={{ color: 'var(--neutral-text-secondary)' }}>
+            完成时间：<span style={{ color: 'var(--neutral-text)', fontWeight: 500 }}>{formatDateTime(secondaryCompletedTime)}</span>
           </span>
         </div>
       )}
@@ -347,7 +347,7 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
           {!secondaryCompletedTime && (
             <Button
               onClick={handleSkipSecondary}
-              style={{ color: '#666' }}
+              style={{ color: 'var(--neutral-text-secondary)' }}
             >
               无二次工艺
             </Button>

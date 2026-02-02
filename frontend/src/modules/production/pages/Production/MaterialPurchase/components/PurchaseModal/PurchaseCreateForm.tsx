@@ -272,7 +272,7 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
                   <Tag color={stockInfo.quantity < stockInfo.safetyStock ? 'red' : 'green'}>
                     {stockInfo.quantity} {form.getFieldValue('unit') || ''}
                   </Tag>
-                  <span style={{ fontSize: 12, color: '#999' }}>
+                  <span style={{ fontSize: 12, color: 'var(--neutral-text-disabled)' }}>
                     位置: {stockInfo.location}
                   </span>
                   {stockInfo.quantity < stockInfo.safetyStock && (
@@ -282,7 +282,7 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
                   )}
                 </div>
               ) : (
-                <span style={{ color: '#999' }}>查询中...</span>
+                <span style={{ color: 'var(--neutral-text-disabled)' }}>查询中...</span>
               )}
             </Form.Item>
           ) : (

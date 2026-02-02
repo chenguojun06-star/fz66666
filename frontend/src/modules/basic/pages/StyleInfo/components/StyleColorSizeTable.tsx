@@ -154,7 +154,7 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
 
               {/* 颜色行 */}
               <tr>
-                <td style={{ padding: '4px 8px', border: '1px solid #d9d9d9', background: '#fafafa', fontWeight: 500, whiteSpace: 'nowrap', color: '#ff4d4f' }}>颜色</td>
+                <td style={{ padding: '4px 8px', border: '1px solid #d9d9d9', background: '#fafafa', fontWeight: 500, whiteSpace: 'nowrap', color: 'var(--error-color)' }}>颜色</td>
                 <td style={{ padding: '2px 4px', border: '1px solid #d9d9d9', whiteSpace: 'nowrap' }}>
                   <DictAutoComplete dictType="color" size="small" value={color1} onChange={setColor1} style={{ width: '80px', textAlign: 'center' }} disabled={isFieldLocked(color1)} />
                 </td>
@@ -174,7 +174,7 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
 
               {/* 数量行 */}
               <tr>
-                <td style={{ padding: '4px 8px', border: '1px solid #d9d9d9', background: '#fafafa', fontWeight: 500, whiteSpace: 'nowrap', color: '#ff4d4f' }}>数量</td>
+                <td style={{ padding: '4px 8px', border: '1px solid #d9d9d9', background: '#fafafa', fontWeight: 500, whiteSpace: 'nowrap', color: 'var(--error-color)' }}>数量</td>
                 <td style={{ padding: '2px 4px', border: '1px solid #d9d9d9', whiteSpace: 'nowrap' }}>
                   <InputNumber size="small" value={qty1} onChange={(val) => setQty1(val || 0)} style={{ width: '80px' }} min={0} disabled={isFieldLocked(qty1)} />
                 </td>

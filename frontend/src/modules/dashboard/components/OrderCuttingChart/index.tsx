@@ -61,7 +61,7 @@ const OrderCuttingChart: React.FC = () => {
       borderColor: '#ddd',
       borderWidth: 1,
       textStyle: {
-        color: '#333',
+        color: 'var(--neutral-text)',
         fontSize: 13,
       },
       formatter: (params: any) => {
@@ -86,7 +86,7 @@ const OrderCuttingChart: React.FC = () => {
       top: 5,
       textStyle: {
         fontSize: 13,
-        color: '#666',
+        color: 'var(--neutral-text-secondary)',
       },
     },
     grid: {
@@ -106,7 +106,7 @@ const OrderCuttingChart: React.FC = () => {
         },
       },
       axisLabel: {
-        color: '#666',
+        color: 'var(--neutral-text-secondary)',
         fontSize: 12,
       },
     },
@@ -119,7 +119,7 @@ const OrderCuttingChart: React.FC = () => {
         show: false,
       },
       axisLabel: {
-        color: '#666',
+        color: 'var(--neutral-text-secondary)',
         fontSize: 12,
         formatter: (value: number) => value.toLocaleString(),
       },

@@ -718,7 +718,7 @@ const RoleList: React.FC = () => {
             <Button onClick={() => setPermKeyword('')} disabled={!String(permKeyword || '').trim()}>
               清空搜索
             </Button>
-            <span style={{ color: '#6b7280' }}>已选 {checkedPermIds.size} 项</span>
+            <span style={{ color: 'var(--neutral-text-secondary)' }}>已选 {checkedPermIds.size} 项</span>
           </Space>
 
           <Space wrap>

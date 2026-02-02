@@ -486,7 +486,7 @@ const FactoryList: React.FC = () => {
                 </div>
               )}
             </Upload>
-            <div style={{ fontSize: 'var(--font-size-sm)', color: '#999', marginTop: 4 }}>支持jpg、png格式，最大10MB（非必填）</div>
+            <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--neutral-text-disabled)', marginTop: 4 }}>支持jpg、png格式，最大10MB（非必填）</div>
           </Form.Item>
           <Form.Item name="status" label="状态" rules={[{ required: true, message: '请选择状态' }]}>
             <Select

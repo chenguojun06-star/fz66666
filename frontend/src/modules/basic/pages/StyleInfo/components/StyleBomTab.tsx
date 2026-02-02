@@ -1248,12 +1248,12 @@ const StyleBomTab: React.FC<Props> = ({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <Tag color={config.color}>{config.text}</Tag>
             {status === 'insufficient' || status === 'none' ? (
-              <span style={{ fontSize: 12, color: '#ff4d4f' }}>
+              <span style={{ fontSize: 12, color: 'var(--error-color)' }}>
                 需采购: {record.requiredPurchase || 0}
               </span>
             ) : null}
             {status === 'sufficient' && record.availableStock !== undefined ? (
-              <span style={{ fontSize: 12, color: '#52c41a' }}>
+              <span style={{ fontSize: 12, color: 'var(--success-color)' }}>
                 可用: {record.availableStock}
               </span>
             ) : null}
@@ -1376,14 +1376,14 @@ const StyleBomTab: React.FC<Props> = ({
         alignItems: 'center',
       }}>
         <Space size="large" wrap>
-          <span style={{ color: '#666' }}>
-            领取人：<span style={{ color: '#333', fontWeight: 500 }}>{bomAssignee || '-'}</span>
+          <span style={{ color: 'var(--neutral-text-secondary)' }}>
+            领取人：<span style={{ color: 'var(--neutral-text)', fontWeight: 500 }}>{bomAssignee || '-'}</span>
           </span>
-          <span style={{ color: '#666' }}>
-            开始时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(bomStartTime)}</span>
+          <span style={{ color: 'var(--neutral-text-secondary)' }}>
+            开始时间：<span style={{ color: 'var(--neutral-text)', fontWeight: 500 }}>{formatDateTime(bomStartTime)}</span>
           </span>
-          <span style={{ color: '#666' }}>
-            完成时间：<span style={{ color: '#333', fontWeight: 500 }}>{formatDateTime(bomCompletedTime)}</span>
+          <span style={{ color: 'var(--neutral-text-secondary)' }}>
+            完成时间：<span style={{ color: 'var(--neutral-text)', fontWeight: 500 }}>{formatDateTime(bomCompletedTime)}</span>
           </span>
         </Space>
 
@@ -1603,7 +1603,7 @@ const StyleBomTab: React.FC<Props> = ({
                         render: (v: unknown) => {
                           const qty = Number(v || 0);
                           return (
-                            <span style={{ color: qty > 0 ? '#52c41a' : '#ff4d4f', fontWeight: 600 }}>
+                            <span style={{ color: qty > 0 ? 'var(--success-color)' : '#ff4d4f', fontWeight: 600 }}>
                               {qty}
                             </span>
                           );

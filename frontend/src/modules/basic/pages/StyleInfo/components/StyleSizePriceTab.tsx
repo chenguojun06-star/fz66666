@@ -376,7 +376,7 @@ const StyleSizePriceTab: React.FC<Props> = ({ styleId, readOnly }) => {
           background: '#fff7e6',
           border: '1px solid #ffd591',
           borderRadius: '4px',
-          color: '#d46b08',
+          color: 'var(--warning-color-dark)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center'
@@ -398,7 +398,7 @@ const StyleSizePriceTab: React.FC<Props> = ({ styleId, readOnly }) => {
             background: '#f0f7ff',
             borderRadius: '4px',
             fontSize: '13px',
-            color: '#666',
+            color: 'var(--neutral-text-secondary)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'flex-start'
@@ -409,7 +409,7 @@ const StyleSizePriceTab: React.FC<Props> = ({ styleId, readOnly }) => {
                 <li>此功能用于配置不同尺码下的工序单价</li>
                 <li>默认使用工序表中的单价，可针对特殊尺码调整价格</li>
                 <li>例如：XL码和XXL码的车缝工序可能比S码更贵</li>
-                <li style={{ color: '#1890ff', fontWeight: 500 }}>
+                <li style={{ color: 'var(--primary-color)', fontWeight: 500 }}>
                   当前已加载 {processes.length} 个工序，{sizes.length} 个尺码
                 </li>
               </ul>

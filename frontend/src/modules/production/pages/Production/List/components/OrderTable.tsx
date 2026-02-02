@@ -74,7 +74,7 @@ const OrderTable: React.FC<OrderTableProps> = ({
       fixed: isMobile ? undefined : ('left' as const),
       render: (v: any, record: ProductionOrder) => (
         <a
-          style={{ color: '#1890ff' }}
+          style={{ color: 'var(--primary-color)' }}
           onClick={(e) => {
             e.stopPropagation();
             navigate(`/production/order-flow?orderId=${record.id}&orderNo=${record.orderNo}&styleNo=${record.styleNo}`);
@@ -181,7 +181,7 @@ const OrderTable: React.FC<OrderTableProps> = ({
           }}
         >
           <LiquidProgressBar percent={rate || 0} width="100%" height={12} />
-          <span style={{ fontSize: 12, color: '#666', minWidth: 40 }}>
+          <span style={{ fontSize: 12, color: 'var(--neutral-text-secondary)', minWidth: 40 }}>
             {rate || 0}%
           </span>
         </div>
@@ -208,7 +208,7 @@ const OrderTable: React.FC<OrderTableProps> = ({
           }}
         >
           <LiquidProgressBar percent={rate || 0} width="100%" height={12} />
-          <span style={{ fontSize: 12, color: '#666', minWidth: 40 }}>
+          <span style={{ fontSize: 12, color: 'var(--neutral-text-secondary)', minWidth: 40 }}>
             {rate || 0}%
           </span>
         </div>
@@ -235,7 +235,7 @@ const OrderTable: React.FC<OrderTableProps> = ({
           }}
         >
           <LiquidProgressBar percent={rate || 0} width="100%" height={12} />
-          <span style={{ fontSize: 12, color: '#666', minWidth: 40 }}>
+          <span style={{ fontSize: 12, color: 'var(--neutral-text-secondary)', minWidth: 40 }}>
             {rate || 0}%
           </span>
         </div>
