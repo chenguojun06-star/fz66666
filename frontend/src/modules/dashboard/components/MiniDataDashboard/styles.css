@@ -18,7 +18,7 @@
 }
 
 .mini-data-dashboard .ant-card-head {
-  background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
+  background: var(--neutral-bg-dark);
   border-radius: 20px 20px 0 0;
   padding: 12px 20px;
   border-bottom: none;
@@ -95,7 +95,7 @@
   align-items: center;
   gap: 12px;
   padding: 14px 18px;
-  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+  background: var(--neutral-bg);
   border-radius: 24px;
   transition: all 0.3s ease;
   border: 1px solid rgba(0, 0, 0, 0.05);
@@ -127,23 +127,23 @@
 }
 
 .mini-stat-icon--warehousing {
-  background: linear-gradient(135deg, #a5b4fc 0%, #818cf8 100%);
+  background: var(--primary-color);
 }
 
 .mini-stat-icon--defective {
-  background: linear-gradient(135deg, #fdba74 0%, #fb923c 100%);
+  background: var(--warning-color);
 }
 
 .mini-stat-icon--defect-rate {
-  background: linear-gradient(135deg, #fca5a5 0%, #f87171 100%);
+  background: var(--error-color);
 }
 
 .mini-stat-icon--qualified {
-  background: linear-gradient(135deg, #6ee7b7 0%, #34d399 100%);
+  background: var(--success-color);
 }
 
 .mini-stat-icon--repair {
-  background: linear-gradient(135deg, #c4b5fd 0%, #a78bfa 100%);
+  background: var(--primary-color-light);
 }
     border-color: rgba(255, 255, 255, 0.15);
   }
@@ -162,23 +162,23 @@
 }
 
 .mini-stat-icon--warehousing {
-  background: linear-gradient(135deg, #93c5fd 0%, #60a5fa 100%);
+  background: var(--primary-color);
 }
 
 .mini-stat-icon--defective {
-  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  background: var(--warning-color);
 }
 
 .mini-stat-icon--defect-rate {
-  background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+  background: var(--error-color);
 }
 
 .mini-stat-icon--qualified {
-  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  background: var(--success-color);
 }
 
 .mini-stat-icon--repair {
-  background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+  background: var(--primary-color-light);
 }
 
 .mini-stat-content {

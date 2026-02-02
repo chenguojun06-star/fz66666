@@ -748,7 +748,7 @@ const StyleProcessTab: React.FC<Props> = ({
         <div style={{
           marginBottom: 12,
           padding: '10px 16px',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          background: 'var(--primary-color)',
           borderRadius: 4,
           color: '#fff',
           fontSize: '15px',

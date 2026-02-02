@@ -32,37 +32,23 @@ git branch "$BACKUP_TAG"
 echo "   如需回滚: git checkout $BACKUP_TAG"
 echo ""
 
-# 颜色映射计数器
-declare -A color_counts
-
 # 函数: 替换颜色
 replace_color() {
     local old_color="$1"
     local new_var="$2"
     local description="$3"
-
+    
     echo "🔄 替换 $description..."
-
-    # 查找匹配数量
-    local count=$(find "$FRONTEND_DIR" -name "*.tsx" -type f -exec grep -l "color.*['\"]$old_color" {} \; | wc -l | tr -d ' ')
-
-    if [ "$count" -gt 0 ]; then
-        # 执行替换（多种格式）
-        find "$FRONTEND_DIR" -name "*.tsx" -type f -exec sed -i '' \
-            -e "s/color: ['\"]$old_color['\"]]/color: '$new_var'/g" \
-            -e "s/color: ['\"]$old_color['\"]/color: '$new_var'/g" \
-            -e "s/color:['\"]$old_color['\"]]/color:'$new_var'/g" \
-            -e "s/color:['\"]$old_color['\"]/color:'$new_var'/g" \
-            {} +
-
-        color_counts["$description"]=$count
-        echo "   ✅ 修复 $count 处"
-    else
-        echo "   ⏭️  未发现该颜色"
-    fi
-}
-
-# 开始替换
+    
+    # 执行替换（多种格式）
+    find "$FRONTEND_DIR" -name "*.tsx" -type f -exec sed -i '' \
+        -e "s/color: ['\"]$old_color['\"]]/color: '$new_var'/g" \
+        -e "s/color: ['\"]$old_color['\"]/color: '$new_var'/g" \
+        -e "s/color:['\"]$old_color['\"]]/color:'$new_var'/g" \
+        -e "s/color:['\"]$old_color['\"]/color:'$new_var'/g" \
+        {} +
+    
+    echo "   ✅ 已处理"
 echo "🚀 开始批量替换..."
 echo ""
 
@@ -110,20 +96,6 @@ replace_color "#ffffff" "var(--neutral-bg)" "白色 #ffffff"
 echo ""
 echo "======================================"
 echo "✅ 批量替换完成！"
-echo ""
-
-# 统计总数
-total_fixed=0
-for count in "${color_counts[@]}"; do
-    total_fixed=$((total_fixed + count))
-done
-
-echo "📊 修复统计:"
-for desc in "${!color_counts[@]}"; do
-    echo "   - $desc: ${color_counts[$desc]} 处"
-done
-echo ""
-echo "   总计修复: $total_fixed 处"
 echo ""
 
 # 验证结果

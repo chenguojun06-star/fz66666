@@ -403,7 +403,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                   <div style={{
                     width: `${totalCost > 0 ? (materialCost / totalCost) * 100 : 0}%`,
                     height: '100%',
-                    background: 'linear-gradient(90deg, #1890ff, #40a9ff)',
+                    background: 'var(--primary-color)',
                     borderRadius: 3,
                     transition: 'width 0.3s ease'
                   }} />
@@ -420,7 +420,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                   <div style={{
                     width: `${totalCost > 0 ? (processCost / totalCost) * 100 : 0}%`,
                     height: '100%',
-                    background: 'linear-gradient(90deg, #52c41a, #73d13d)',
+                    background: 'var(--success-color)',
                     borderRadius: 3,
                     transition: 'width 0.3s ease'
                   }} />
@@ -437,7 +437,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                   <div style={{
                     width: `${totalPrice > 0 ? (profit / totalPrice) * 100 : 0}%`,
                     height: '100%',
-                    background: 'linear-gradient(90deg, #fa8c16, #ffa940)',
+                    background: 'var(--warning-color)',
                     borderRadius: 3,
                     transition: 'width 0.3s ease'
                   }} />

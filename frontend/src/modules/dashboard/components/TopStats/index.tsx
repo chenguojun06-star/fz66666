@@ -115,28 +115,28 @@ const TopStats: React.FC = () => {
       icon: <TagsOutlined />,
       label: '样衣开发',
       color: '#8b5cf6',
-      bgGradient: 'linear-gradient(135deg, #c4b5fd 0%, #a78bfa 100%)',
+      bgGradient: 'var(--primary-color-light)',
     },
     {
       key: 'bulkOrder' as keyof TopStatsData,
       icon: <ShoppingCartOutlined />,
       label: '大货下单',
       color: '#3b82f6',
-      bgGradient: 'linear-gradient(135deg, #93c5fd 0%, #60a5fa 100%)',
+      bgGradient: 'var(--primary-color)',
     },
     {
       key: 'cutting' as keyof TopStatsData,
       icon: <ScissorOutlined />,
       label: '裁剪数量',
       color: '#f59e0b',
-      bgGradient: 'linear-gradient(135deg, #fcd34d 0%, #fbbf24 100%)',
+      bgGradient: 'var(--warning-color)',
     },
     {
       key: 'warehousing' as keyof TopStatsData,
       icon: <InboxOutlined />,
       label: '出入库数量',
       color: '#10b981',
-      bgGradient: 'linear-gradient(135deg, #6ee7b7 0%, #34d399 100%)',
+      bgGradient: 'var(--success-color)',
     },
   ];
 
