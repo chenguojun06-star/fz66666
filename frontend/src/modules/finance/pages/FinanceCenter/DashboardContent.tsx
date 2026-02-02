@@ -564,13 +564,13 @@ const DashboardContent: React.FC = () => {
                 <InfoCircleOutlined className={styles.infoIcon} />
               </Tooltip>
             </div>
-            <div className={styles.statValue} style={{ color: statData.defectCount > 0 ? '#f5222d' : '#262626' }}>
+            <div className={styles.statValue} style={{ color: statData.defectCount > 0 ? 'var(--error-color)' : 'var(--neutral-text)' }}>
               {statData.defectCount.toLocaleString()}
             </div>
             <div className={styles.tinyChart}>
               <div className={styles.defectInfo}>
                 <span className={styles.defectLabel}>次品率</span>
-                <span className={styles.defectValue} style={{ color: statData.defectRate > 5 ? '#f5222d' : '#52c41a' }}>
+                <span className={styles.defectValue} style={{ color: statData.defectRate > 5 ? 'var(--error-color)' : 'var(--success-color)' }}>
                   {statData.defectRate.toFixed(1)}%
                 </span>
               </div>

@@ -8,6 +8,7 @@ import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
 import StylePrintModal from '@/components/common/StylePrintModal';
+import StandardToolbar from '@/components/common/StandardToolbar';
 import api from '@/utils/api';
 import { paths } from '@/routeConfig';
 import { StyleInfo, StyleQueryParams } from '@/types/style';
@@ -262,11 +263,11 @@ const AttachmentThumb: React.FC<{ styleId?: string | number; cover?: string | nu
   return (
     <div style={{ width: 56, height: 56, borderRadius: 6, overflow: 'hidden', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       {loading ? (
-        <span style={{ color: '#999', fontSize: 'var(--font-size-sm)' }}>...</span>
+        <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 'var(--font-size-sm)' }}>...</span>
       ) : url ? (
         <img src={url} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       ) : (
-        <span style={{ color: '#ccc', fontSize: 'var(--font-size-sm)' }}>无图</span>
+        <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-sm)' }}>无图</span>
       )}
     </div>
   );
@@ -632,19 +633,25 @@ const DataCenter: React.FC = () => {
         </Row>
 
         <Card size="small" className="filter-card mt-sm mb-sm">
-          <Space wrap>
-            <Input
-              placeholder="款号"
-              style={{ width: 180 }}
-              onChange={(e) => setQueryParams(prev => ({ ...prev, styleNo: e.target.value, page: 1 }))}
-            />
-            <Input
-              placeholder="款名"
-              style={{ width: 220 }}
-              onChange={(e) => setQueryParams(prev => ({ ...prev, styleName: e.target.value, page: 1 }))}
-            />
-            <Button onClick={() => fetchStyles()} loading={loading}>刷新</Button>
-          </Space>
+          <StandardToolbar
+            left={(
+              <Space wrap>
+                <Input
+                  placeholder="款号"
+                  style={{ width: 180 }}
+                  onChange={(e) => setQueryParams(prev => ({ ...prev, styleNo: e.target.value, page: 1 }))}
+                />
+                <Input
+                  placeholder="款名"
+                  style={{ width: 220 }}
+                  onChange={(e) => setQueryParams(prev => ({ ...prev, styleName: e.target.value, page: 1 }))}
+                />
+              </Space>
+            )}
+            right={(
+              <Button onClick={() => fetchStyles()} loading={loading}>刷新</Button>
+            )}
+          />
         </Card>
 
         <ResizableTable
@@ -844,18 +851,18 @@ const DataCenter: React.FC = () => {
                   {detailRecord.cover ? (
                     <img src={detailRecord.cover} alt="封面" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
-                    <span style={{ color: '#999' }}>暂无封面</span>
+                    <span style={{ color: 'var(--neutral-text-secondary)' }}>暂无封面</span>
                   )}
                 </div>
               </Col>
               <Col span={16}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div><span style={{ color: '#666' }}>款号：</span>{detailRecord.styleNo}</div>
-                  <div><span style={{ color: '#666' }}>款名：</span>{detailRecord.styleName}</div>
-                  <div><span style={{ color: '#666' }}>品类：</span>{toCategoryCn(detailRecord.category)}</div>
-                  <div><span style={{ color: '#666' }}>颜色：</span>{detailRecord.color || '-'}</div>
-                  <div><span style={{ color: '#666' }}>推送人：</span>{(detailRecord as any).productionAssignee || '-'}</div>
-                  <div><span style={{ color: '#666' }}>推送时间：</span>{(detailRecord as any).productionCompletedTime ? formatDateTime((detailRecord as any).productionCompletedTime) : '-'}</div>
+                  <div><span style={{ color: 'var(--neutral-text-secondary)' }}>款号：</span>{detailRecord.styleNo}</div>
+                  <div><span style={{ color: 'var(--neutral-text-secondary)' }}>款名：</span>{detailRecord.styleName}</div>
+                  <div><span style={{ color: 'var(--neutral-text-secondary)' }}>品类：</span>{toCategoryCn(detailRecord.category)}</div>
+                  <div><span style={{ color: 'var(--neutral-text-secondary)' }}>颜色：</span>{detailRecord.color || '-'}</div>
+                  <div><span style={{ color: 'var(--neutral-text-secondary)' }}>推送人：</span>{(detailRecord as any).productionAssignee || '-'}</div>
+                  <div><span style={{ color: 'var(--neutral-text-secondary)' }}>推送时间：</span>{(detailRecord as any).productionCompletedTime ? formatDateTime((detailRecord as any).productionCompletedTime) : '-'}</div>
                 </div>
                 <div style={{ marginTop: 16 }}>
                   <div style={{ fontWeight: 600, marginBottom: 8 }}>生产要求：</div>
