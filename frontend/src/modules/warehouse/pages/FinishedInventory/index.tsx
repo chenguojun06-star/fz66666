@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Table, Button, Space, Tag, Select, Image, Statistic, Row, Col, Form, InputNumber, Checkbox, App } from 'antd';
 import { PlusOutlined, DownloadOutlined, ExportOutlined, HistoryOutlined } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
+import type { ColumnsType } from 'antd';
 import Layout from '@/components/Layout';
 import StandardModal from '@/components/common/StandardModal';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
+import RowActions from '@/components/common/RowActions';
 import { useModal, useTablePagination } from '@/hooks';
 import type { Dayjs } from 'dayjs';
 
@@ -357,23 +358,21 @@ const _FinishedInventory: React.FC = () => {
       width: 150,
       fixed: 'right',
       render: (_, record) => (
-        <Space size="small" orientation="vertical" className="table-action-compact">
-          <Button
-            type="primary"
-            size="small"
-            icon={<ExportOutlined />}
-            onClick={() => handleOutbound(record)}
-          >
-            出库
-          </Button>
-          <Button
-            size="small"
-            icon={<HistoryOutlined />}
-            onClick={() => handleViewInboundHistory(record)}
-          >
-            入库记录
-          </Button>
-        </Space>
+        <RowActions
+          actions={[
+            {
+              label: '出库',
+              icon: <ExportOutlined />,
+              type: 'primary',
+              onClick: () => handleOutbound(record)
+            },
+            {
+              label: '入库记录',
+              icon: <HistoryOutlined />,
+              onClick: () => handleViewInboundHistory(record)
+            }
+          ]}
+        />
       ),
     },
   ];

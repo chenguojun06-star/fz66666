@@ -3,6 +3,7 @@ import { App, Button, Card, Col, Form, Input, Row, Select, Space, Table, Tag } f
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import StandardModal from '@/components/common/StandardModal';
+import RowActions from '@/components/common/RowActions';
 import api from '@/utils/api';
 import { useModal } from '@/hooks';
 import type { ColumnsType } from 'antd/es/table';
@@ -335,25 +336,21 @@ const DictManage: React.FC = () => {
       width: 150,
       fixed: 'right',
       render: (_: any, record: DictItem) => (
-        <Space size="small">
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          >
-            编辑
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            danger
-            icon={<DeleteOutlined />}
-            onClick={() => handleDelete(record)}
-          >
-            删除
-          </Button>
-        </Space>
+        <RowActions
+          actions={[
+            {
+              label: '编辑',
+              icon: <EditOutlined />,
+              onClick: () => handleEdit(record)
+            },
+            {
+              label: '删除',
+              icon: <DeleteOutlined />,
+              danger: true,
+              onClick: () => handleDelete(record)
+            }
+          ]}
+        />
       )
     }
   ];

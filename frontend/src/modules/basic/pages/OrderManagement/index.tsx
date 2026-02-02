@@ -1577,9 +1577,16 @@ const OrderManagement: React.FC = () => {
                           key: 'action',
                           width: isMobile ? 90 : 120,
                           render: (_: any, record: OrderLine) => (
-                            <Button danger type="link" onClick={() => removeOrderLine(record.id)} disabled={orderLines.length <= 1}>
-                              删除
-                            </Button>
+                            <RowActions
+                              actions={[
+                                {
+                                  label: '删除',
+                                  danger: true,
+                                  disabled: orderLines.length <= 1,
+                                  onClick: () => removeOrderLine(record.id)
+                                }
+                              ]}
+                            />
                           )
                         }
                       ]}

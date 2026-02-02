@@ -3,6 +3,7 @@ import { Button, Card, Table, message, Space, Tag } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { PageContainer } from '@/components/Layout/PageContainer';
 import ResizableTable from '@/components/common/ResizableTable';
+import RowActions from '@/components/common/RowActions';
 import api from '@/utils/api';
 import dayjs from 'dayjs';
 import PickingForm from './PickingForm';
@@ -88,12 +89,17 @@ const MaterialPickingList: React.FC = () => {
       key: 'action',
       width: 100,
       render: (_: any, record: any) => (
-        <Space>
-          <a onClick={() => {
-            setSelectedPickingId(record.id);
-            setDetailVisible(true);
-          }}>详情</a>
-        </Space>
+        <RowActions
+          actions={[
+            {
+              label: '详情',
+              onClick: () => {
+                setSelectedPickingId(record.id);
+                setDetailVisible(true);
+              }
+            }
+          ]}
+        />
       ),
     },
   ];
