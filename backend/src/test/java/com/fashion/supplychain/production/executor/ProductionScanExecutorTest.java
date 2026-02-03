@@ -98,19 +98,19 @@ class ProductionScanExecutorTest {
         lenient().when(productionOrderService.getOne(any(LambdaQueryWrapper.class))).thenReturn(mockOrder);
         lenient().doNothing().when(inventoryValidator).validateNotExceedOrderQuantity(
                 any(ProductionOrder.class), anyString(), anyString(), anyInt(), any(CuttingBundle.class));
-        
+
         // Mock process detection (lenient)
         lenient().when(processStageDetector.resolveAutoProcessName(any(ProductionOrder.class))).thenReturn("车缝");
-        
+
         // Mock template/price resolution (lenient)
         lenient().when(templateLibraryService.getById(anyString())).thenReturn(null);
-        
+
         // Mock style attachment (lenient)
         lenient().when(styleAttachmentService.checkPatternComplete(anyString())).thenReturn(true);
-        
+
         // Mock material purchase (lenient)
         lenient().when(materialPurchaseService.list(any(LambdaQueryWrapper.class))).thenReturn(java.util.Collections.emptyList());
-        
+
         // Mock SKU validation
         lenient().when(skuService.validateSKU(any(ScanRecord.class))).thenReturn(true);
     }

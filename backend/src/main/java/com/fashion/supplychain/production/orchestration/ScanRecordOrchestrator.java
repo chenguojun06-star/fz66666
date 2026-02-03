@@ -496,121 +496,6 @@ public class ScanRecordOrchestrator {
         );
     }
 
-    private Map<String, Object> tryUpdateExistingBundleScanRecord(CuttingBundle bundle, ProductionOrder order,
-            String requestId, String scanCode, String scanType, String progressStage, String processName, int quantity,
-            BigDecimal unitPrice, String operatorId, String operatorName, String color, String size, String processCode,
-            String remark, boolean includeBundle) {
-        if (bundle == null || !hasText(bundle.getId()) || order == null || !hasText(order.getId())) {
-            return null;
-        }
-
-        try {
-            ScanRecord existing = scanRecordService.getOne(new LambdaQueryWrapper<ScanRecord>()
-                    .eq(ScanRecord::getCuttingBundleId, bundle.getId())
-                    .eq(ScanRecord::getScanType, scanType)
-                    .eq(ScanRecord::getScanResult, "success")
-                    .gt(ScanRecord::getQuantity, 0)
-                    .eq(ScanRecord::getProgressStage, progressStage)
-                    .last("limit 1"));
-            if (existing == null || !hasText(existing.getId())) {
-                return null;
-            }
-
-            // 检查是否是同一个操作人（领取锁定规则）
-            String existingOperatorId = existing.getOperatorId() == null ? null : existing.getOperatorId().trim();
-            String existingOperatorName = existing.getOperatorName() == null ? null : existing.getOperatorName().trim();
-            boolean isSameOperator = false;
-            if (hasText(operatorId) && hasText(existingOperatorId)) {
-                isSameOperator = operatorId.equals(existingOperatorId);
-            } else if (hasText(operatorName) && hasText(existingOperatorName)) {
-                isSameOperator = operatorName.equals(existingOperatorName);
-            }
-            if (!isSameOperator) {
-                String otherName = hasText(existingOperatorName) ? existingOperatorName : "他人";
-                throw new IllegalStateException("该菲号「" + progressStage + "」环节已被「" + otherName + "」领取，无法重复操作");
-            }
-
-            int existedQty = existing.getQuantity() == null ? 0 : existing.getQuantity();
-            int nextQty = Math.max(existedQty, quantity);
-
-            ScanRecord patch = new ScanRecord();
-            patch.setId(existing.getId());
-            patch.setScanCode(scanCode);
-            patch.setOrderId(order.getId());
-            patch.setOrderNo(order.getOrderNo());
-            patch.setStyleId(order.getStyleId());
-            patch.setStyleNo(order.getStyleNo());
-            patch.setColor(color);
-            patch.setSize(size);
-            patch.setQuantity(nextQty);
-            patch.setUnitPrice(unitPrice);
-            patch.setTotalAmount(computeTotalAmount(unitPrice, nextQty));
-            patch.setProcessCode(processCode);
-            patch.setProgressStage(progressStage);
-            patch.setProcessName(processName);
-            patch.setOperatorId(operatorId);
-            patch.setOperatorName(operatorName);
-            patch.setScanTime(LocalDateTime.now());
-            patch.setScanType(scanType);
-            patch.setScanResult("success");
-            patch.setRemark(remark);
-            patch.setCuttingBundleId(bundle.getId());
-            patch.setCuttingBundleNo(bundle.getBundleNo());
-            patch.setCuttingBundleQrCode(bundle.getQrCode());
-            patch.setUpdateTime(LocalDateTime.now());
-
-            if (skuService != null) {
-                skuService.attachProcessUnitPrice(patch);
-            }
-            validateScanRecordForSave(patch);
-            scanRecordService.updateById(patch);
-
-            productionOrderService.recomputeProgressAsync(order.getId());
-
-            Map<String, Object> result = new HashMap<>();
-            result.put("success", true);
-            result.put("message", "已扫码更新");
-
-            ScanRecord returned = new ScanRecord();
-            returned.setId(existing.getId());
-            returned.setScanCode(scanCode);
-            returned.setRequestId(requestId);
-            returned.setOrderId(order.getId());
-            returned.setOrderNo(order.getOrderNo());
-            returned.setStyleId(order.getStyleId());
-            returned.setStyleNo(order.getStyleNo());
-            returned.setColor(color);
-            returned.setSize(size);
-            returned.setQuantity(nextQty);
-            returned.setUnitPrice(unitPrice);
-            returned.setTotalAmount(computeTotalAmount(unitPrice, nextQty));
-            returned.setProcessCode(processCode);
-            returned.setProgressStage(progressStage);
-            returned.setProcessName(processName);
-            returned.setOperatorId(operatorId);
-            returned.setOperatorName(operatorName);
-            returned.setScanTime(LocalDateTime.now());
-            returned.setScanType(scanType);
-            returned.setScanResult("success");
-            returned.setRemark(remark);
-            returned.setCuttingBundleId(bundle.getId());
-            returned.setCuttingBundleNo(bundle.getBundleNo());
-            returned.setCuttingBundleQrCode(bundle.getQrCode());
-            result.put("scanRecord", returned);
-            if (includeBundle) {
-                result.put("cuttingBundle", bundle);
-            }
-            return result;
-        } catch (Exception e) {
-            log.warn("Failed to try update existing scan record: orderId={}, requestId={}, scanCode={}",
-                    order == null ? null : order.getId(),
-                    requestId,
-                    scanCode,
-                    e);
-            return null;
-        }
-    }
-
     private void validateScanRecordForSave(ScanRecord sr) {
         if (sr == null) {
             return;
@@ -662,7 +547,17 @@ public class ScanRecordOrchestrator {
                 return null;
             }
 
-            String normalized = normalizeFixedProductionNodeName(pn);
+            // 标准化固定生产节点名称（内联逻辑）
+            String normalized = null;
+            if (hasText(pn)) {
+                String n = pn.trim();
+                for (String node : FIXED_PRODUCTION_NODES) {
+                    if (node.equals(n)) {
+                        normalized = node;
+                        break;
+                    }
+                }
+            }
             if (hasText(normalized)) {
                 BigDecimal exact = prices.get(normalized);
                 if (exact != null && exact.compareTo(BigDecimal.ZERO) > 0) {
@@ -837,73 +732,7 @@ public class ScanRecordOrchestrator {
         return result;
     }
 
-    // ========== 已迁移到 InventoryValidator，保留委托方法以兼容 ==========
-    private void validateNotExceedOrderQuantity(ProductionOrder order, String scanType, String progressStage,
-            int incomingQty, CuttingBundle bundle) {
-        inventoryValidator.validateNotExceedOrderQuantity(order, scanType, progressStage, incomingQty, bundle);
-    }
-
-    private long computeStageDoneQuantity(String orderId, String scanType, String progressStage) {
-        String oid = hasText(orderId) ? orderId.trim() : null;
-        if (!hasText(oid)) {
-            return 0L;
-        }
-        String st = hasText(scanType) ? scanType.trim() : null;
-        String pn = hasText(progressStage) ? progressStage.trim() : null;
-        try {
-            LambdaQueryWrapper<ScanRecord> qw = new LambdaQueryWrapper<ScanRecord>()
-                    .select(ScanRecord::getQuantity)
-                    .eq(ScanRecord::getOrderId, oid)
-                    .eq(hasText(st), ScanRecord::getScanType, st)
-                    .eq(hasText(pn), ScanRecord::getProgressStage, pn)
-                    .eq(ScanRecord::getScanResult, "success")
-                    .gt(ScanRecord::getQuantity, 0);
-            List<ScanRecord> list = scanRecordService.list(qw);
-            long sum = 0L;
-            if (list != null) {
-                for (ScanRecord r : list) {
-                    if (r == null) {
-                        continue;
-                    }
-                    int q = r.getQuantity() == null ? 0 : r.getQuantity();
-                    if (q > 0) {
-                        sum += q;
-                    }
-                }
-            }
-            return Math.max(0L, sum);
-        } catch (Exception e) {
-            return 0L;
-        }
-    }
-
-    private int computeExistingBundleQuantity(String orderId, String scanType, String progressStage,
-            CuttingBundle bundle) {
-        if (bundle == null || !hasText(bundle.getId())) {
-            return 0;
-        }
-        String oid = hasText(orderId) ? orderId.trim() : null;
-        if (!hasText(oid)) {
-            return 0;
-        }
-        String st = hasText(scanType) ? scanType.trim() : null;
-        String pn = hasText(progressStage) ? progressStage.trim() : null;
-        try {
-            ScanRecord existing = scanRecordService.getOne(new LambdaQueryWrapper<ScanRecord>()
-                    .select(ScanRecord::getQuantity)
-                    .eq(ScanRecord::getOrderId, oid)
-                    .eq(hasText(st), ScanRecord::getScanType, st)
-                    .eq(hasText(pn), ScanRecord::getProgressStage, pn)
-                    .eq(ScanRecord::getScanResult, "success")
-                    .eq(ScanRecord::getCuttingBundleId, bundle.getId())
-                    .gt(ScanRecord::getQuantity, 0)
-                    .last("limit 1"));
-            int q = existing == null || existing.getQuantity() == null ? 0 : existing.getQuantity();
-            return Math.max(0, q);
-        } catch (Exception e) {
-            return 0;
-        }
-    }
+    // ========== 已迁移到 InventoryValidator ==========
 
     public IPage<ScanRecord> list(Map<String, Object> params) {
         return scanRecordService.queryPage(params);
@@ -1091,39 +920,5 @@ public class ScanRecordOrchestrator {
 
     private boolean hasText(String value) {
         return value != null && !value.trim().isEmpty();
-    }
-
-    /**
-     * 裁剪环节检查纸样是否齐全（只记录警告，不阻止流程）
-     */
-    private void checkPatternForCutting(String styleId) {
-        if (!hasText(styleId)) {
-            return;
-        }
-        try {
-            boolean complete = styleAttachmentService != null && styleAttachmentService.checkPatternComplete(styleId);
-            if (!complete) {
-                log.warn("Pattern files not complete for styleId={}, cutting scan continues with warning", styleId);
-            }
-        } catch (Exception e) {
-            log.warn("Failed to check pattern complete for styleId={}: {}", styleId, e.getMessage());
-        }
-    }
-
-    /**
-     * 标准化固定生产节点名称
-     */
-    private String normalizeFixedProductionNodeName(String name) {
-        if (!hasText(name)) {
-            return null;
-        }
-        String n = name.trim();
-        String[] FIXED_PRODUCTION_NODES = {"采购", "裁剪", "车缝", "大烫", "质检", "二次工艺", "包装", "入库"};
-        for (String node : FIXED_PRODUCTION_NODES) {
-            if (node.equals(n)) {
-                return node;
-            }
-        }
-        return n;
     }
 }
