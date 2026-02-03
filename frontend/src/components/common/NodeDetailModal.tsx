@@ -495,9 +495,9 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
         type: '扫码',
         stageName,
         processName: normalizeText(record.processName || record.progressStage) || '-',
-        operatorName: String(record.operatorName || record.actualOperatorName || '-').trim() || '-',
+        operatorName: String(record.operatorName || (record as any).actualOperatorName || '-').trim() || '-',
         quantity: typeof record.quantity === 'number' ? `${record.quantity}` : '0',
-        time: formatHistoryTime(record.scanTime || record.createTime),
+        time: formatHistoryTime(record.scanTime || (record as any).createTime),
         remark: formatScanDetail(record),
       });
     });
@@ -633,7 +633,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
             if (nodeTypeKey === 'warehousing') return 'warehousing';
             return 'production';
           })();
-          
+
           // 提取工序名称和单价（修复：定义在函数作用域内）
           const fixedProcessName = String(
             currentData.delegateProcessName || (matchedProcess as any)?.name || (matchedProcess as any)?.processName || nodeName || ''
@@ -644,7 +644,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
             if (Number.isFinite(picked)) return picked;
             return Number(unitPrice) || 0;
           })();
-          
+
           try {
             await productionScanApi.execute({
               orderId,

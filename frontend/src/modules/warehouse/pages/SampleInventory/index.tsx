@@ -147,12 +147,14 @@ const SampleInventory: React.FC = () => {
         <RowActions
           actions={[
             {
+              key: 'loan',
               label: '借出',
               icon: <ExportOutlined />,
               disabled: record.quantity - record.loanedQuantity <= 0,
               onClick: () => loanModal.open(record)
             },
             {
+              key: 'history',
               label: '记录',
               icon: <HistoryOutlined />,
               onClick: () => historyDrawer.open(record)

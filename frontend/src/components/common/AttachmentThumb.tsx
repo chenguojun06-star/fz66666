@@ -8,7 +8,7 @@ interface AttachmentThumbProps {
 /**
  * 附件缩略图组件（公共组件）
  * 显示款式的第一张图片附件
- * 
+ *
  * 使用位置：
  * - 款式管理列表
  * - 款式详情页
@@ -25,7 +25,7 @@ const AttachmentThumb: React.FC<AttachmentThumbProps> = ({ styleId }) => {
         const res = await api.get<{ code: number; data: unknown[] }>(`/style/attachment/list?styleId=${styleId}`);
         if (res.code === 200) {
           const images = (res.data || []).filter((f: any) => String(f.fileType || '').includes('image'));
-          if (mounted) setUrl(images[0]?.fileUrl || null);
+          if (mounted) setUrl((images[0] as any)?.fileUrl || null);
         }
       } catch {
         // 忽略错误

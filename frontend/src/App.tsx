@@ -115,7 +115,7 @@ const GlobalImagePreview: React.FC = () => {
     };
 
     const pickSrc = (img: HTMLImageElement) => {
-      const current = (img as Record<string, unknown>).currentSrc;
+      const current = (img as any).currentSrc;
       if (typeof current === 'string' && current) return current;
       const s = img.getAttribute('src');
       return s || '';
@@ -170,7 +170,6 @@ const GlobalImagePreview: React.FC = () => {
       initialHeight={getModalSize.height}
       contentPadding={0}
       destroyOnHidden
-      scaleWithViewport={false}
     >
       {src ? (
         <div
@@ -206,11 +205,12 @@ const AppRoutes: React.FC = () => {
   const backgroundLocation = (location.state as Record<string, unknown>)?.backgroundLocation;
 
   React.useEffect(() => {
-    (window as Record<string, unknown>).__appAuthLogoutNavigate = () => navigate(paths.login, { replace: true });
+    const w = window as any;
+    (window as any).__appAuthLogoutNavigate = () => navigate(paths.login, { replace: true });
   }, [navigate]);
 
   React.useEffect(() => {
-    const w: unknown = window as Record<string, unknown>;
+    const w = window as any;
     if (w.__appAuthLogoutListenerInstalled) {
       return;
     }
@@ -306,7 +306,6 @@ const AppRoutes: React.FC = () => {
                 }
                 width={modalWidth}
                 initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
-                scaleWithViewport
                 destroyOnHidden
               >
                 <Suspense fallback={<Spin />}>
