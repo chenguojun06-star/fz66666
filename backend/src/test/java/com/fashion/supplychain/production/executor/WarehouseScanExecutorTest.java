@@ -1,5 +1,6 @@
 package com.fashion.supplychain.production.executor;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.production.entity.*;
 import com.fashion.supplychain.production.helper.InventoryValidator;
 import com.fashion.supplychain.production.service.*;
@@ -91,9 +92,18 @@ class WarehouseScanExecutorTest {
         // Mock 菲号状态检查（不是次品）
         mockBundle.setStatus("qualified");
 
+        // Mock 次品检查（没有待返修） - lenient模式
+        lenient().when(productWarehousingService.list(any(LambdaQueryWrapper.class))).thenReturn(java.util.Collections.emptyList());
+
+        // Mock 入库保存
+        when(productWarehousingService.saveWarehousingAndUpdateOrder(any(ProductWarehousing.class))).thenReturn(true);
+
+        // Mock 查找生成的记录（返回null，会创建新记录） - lenient模式
+        lenient().when(scanRecordService.getOne(any(LambdaQueryWrapper.class))).thenReturn(null);
+
         // Mock save成功
         when(scanRecordService.saveScanRecord(any(ScanRecord.class))).thenReturn(true);
-        doNothing().when(productionOrderService).recomputeProgressFromRecords(anyString());
+        when(productionOrderService.recomputeProgressFromRecords(anyString())).thenReturn(mockOrder);
         doNothing().when(inventoryValidator).validateNotExceedOrderQuantity(
                 any(ProductionOrder.class), anyString(), anyString(), anyInt(), any(CuttingBundle.class));
 

@@ -137,10 +137,10 @@ class QualityScanExecutorTest {
         // Given: 质检确认，有次品
         baseParams.put("qualityStage", "confirm");
         baseParams.put("qualityResult", "unqualified");
-        baseParams.put("quantity", "50");  // 添加必须参数
+        baseParams.put("quantity", "50");
         baseParams.put("unqualifiedQuantity", "5");
-        baseParams.put("defectType", "色差");
-        baseParams.put("handleMethod", "返修");
+        baseParams.put("defectCategory", "质量问题");
+        baseParams.put("defectRemark", "返修");  // 只能是"返修"或"报废"
 
         // Mock 菲号查询
         CuttingBundle mockBundle = new CuttingBundle();
@@ -158,7 +158,6 @@ class QualityScanExecutorTest {
 
         // Mock 入库保存
         when(productWarehousingService.saveWarehousingAndUpdateOrder(any(ProductWarehousing.class))).thenReturn(true);
-        when(productWarehousingService.list(any(LambdaQueryWrapper.class))).thenReturn(java.util.Collections.emptyList());
         doNothing().when(inventoryValidator).validateNotExceedOrderQuantity(
                 any(ProductionOrder.class), anyString(), anyString(), anyInt(), any(CuttingBundle.class));
 
@@ -202,7 +201,6 @@ class QualityScanExecutorTest {
 
         // Mock 入库保存
         when(productWarehousingService.saveWarehousingAndUpdateOrder(any(ProductWarehousing.class))).thenReturn(true);
-        when(productWarehousingService.list(any(LambdaQueryWrapper.class))).thenReturn(java.util.Collections.emptyList());
         doNothing().when(inventoryValidator).validateNotExceedOrderQuantity(
                 any(ProductionOrder.class), anyString(), anyString(), anyInt(), any(CuttingBundle.class));
 
@@ -219,7 +217,7 @@ class QualityScanExecutorTest {
 
         // Then: 验证成品入库
         assertNotNull(result);
-        assertEquals("success", result.get("status"));
+        assertTrue((Boolean) result.get("success"), "应该返回success=true");
     }
 
     @Test
