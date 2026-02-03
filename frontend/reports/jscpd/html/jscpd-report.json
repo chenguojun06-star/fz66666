@@ -1,6 +1,6 @@
 {
   "statistics": {
-    "detectionDate": "2026-02-03T14:03:17.303Z",
+    "detectionDate": "2026-02-03T14:14:29.521Z",
     "formats": {
       "typescript": {
         "sources": {
@@ -1700,18 +1700,6 @@
             "newDuplicatedLines": 0,
             "newClones": 0
           },
-          "src/modules/basic/pages/StyleInfoList/components/AttachmentThumb.tsx": {
-            "lines": 16,
-            "tokens": 155,
-            "sources": 1,
-            "clones": 1,
-            "duplicatedLines": 12,
-            "duplicatedTokens": 141,
-            "percentage": 75,
-            "percentageTokens": 90.97,
-            "newDuplicatedLines": 0,
-            "newClones": 0
-          },
           "src/modules/basic/pages/StyleInfo/components/StyleSizeTab.tsx": {
             "lines": 272,
             "tokens": 2296,
@@ -1868,18 +1856,6 @@
             "newDuplicatedLines": 0,
             "newClones": 0
           },
-          "src/modules/basic/pages/StyleInfo/components/AttachmentThumb.tsx": {
-            "lines": 15,
-            "tokens": 155,
-            "sources": 1,
-            "clones": 1,
-            "duplicatedLines": 12,
-            "duplicatedTokens": 141,
-            "percentage": 80,
-            "percentageTokens": 90.97,
-            "newDuplicatedLines": 0,
-            "newClones": 0
-          },
           "src/modules/basic/pages/OrderManagement/components/OrderRankingDashboard.tsx": {
             "lines": 34,
             "tokens": 418,
@@ -2001,8 +1977,8 @@
             "newClones": 0
           },
           "src/modules/finance/pages/FinanceCenter/FinishedSettlementContent.tsx": {
-            "lines": 577,
-            "tokens": 5080,
+            "lines": 581,
+            "tokens": 5092,
             "sources": 1,
             "clones": 0,
             "duplicatedLines": 0,
@@ -2468,6 +2444,18 @@
             "newDuplicatedLines": 0,
             "newClones": 0
           },
+          "src/components/common/AttachmentThumb.tsx": {
+            "lines": 15,
+            "tokens": 155,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
           "src/components/PrivateRoute/index.tsx": {
             "lines": 19,
             "tokens": 209,
@@ -2602,14 +2590,14 @@
           }
         },
         "total": {
-          "lines": 20509,
-          "tokens": 194498,
-          "sources": 136,
-          "clones": 41,
-          "duplicatedLines": 986,
-          "duplicatedTokens": 10760,
-          "percentage": 4.81,
-          "percentageTokens": 5.53,
+          "lines": 20497,
+          "tokens": 194355,
+          "sources": 135,
+          "clones": 40,
+          "duplicatedLines": 974,
+          "duplicatedTokens": 10619,
+          "percentage": 4.75,
+          "percentageTokens": 5.46,
           "newDuplicatedLines": 0,
           "newClones": 0
         }
@@ -3372,18 +3360,6 @@
             "newDuplicatedLines": 0,
             "newClones": 0
           },
-          "src/modules/basic/pages/StyleInfoList/components/AttachmentThumb.tsx": {
-            "lines": 61,
-            "tokens": 574,
-            "sources": 1,
-            "clones": 3,
-            "duplicatedLines": 78,
-            "duplicatedTokens": 835,
-            "percentage": 127.87,
-            "percentageTokens": 145.47,
-            "newDuplicatedLines": 0,
-            "newClones": 0
-          },
           "src/modules/basic/pages/StyleInfo/components/StyleSizeTab.tsx": {
             "lines": 819,
             "tokens": 8815,
@@ -3540,18 +3516,6 @@
             "newDuplicatedLines": 0,
             "newClones": 0
           },
-          "src/modules/basic/pages/StyleInfo/components/AttachmentThumb.tsx": {
-            "lines": 60,
-            "tokens": 574,
-            "sources": 1,
-            "clones": 1,
-            "duplicatedLines": 60,
-            "duplicatedTokens": 574,
-            "percentage": 100,
-            "percentageTokens": 100,
-            "newDuplicatedLines": 0,
-            "newClones": 0
-          },
           "src/modules/basic/pages/OrderManagement/components/OrderRankingDashboard.tsx": {
             "lines": 171,
             "tokens": 1841,
@@ -3625,8 +3589,8 @@
             "newClones": 0
           },
           "src/modules/warehouse/pages/FinishedInventory/index.tsx": {
-            "lines": 735,
-            "tokens": 7461,
+            "lines": 750,
+            "tokens": 7525,
             "sources": 1,
             "clones": 0,
             "duplicatedLines": 0,
@@ -3673,14 +3637,14 @@
             "newClones": 0
           },
           "src/modules/finance/pages/FinanceCenter/FinishedSettlementContent.tsx": {
-            "lines": 682,
-            "tokens": 6257,
+            "lines": 686,
+            "tokens": 6269,
             "sources": 1,
             "clones": 2,
             "duplicatedLines": 10,
             "duplicatedTokens": 140,
-            "percentage": 1.47,
-            "percentageTokens": 2.24,
+            "percentage": 1.46,
+            "percentageTokens": 2.23,
             "newDuplicatedLines": 0,
             "newClones": 0
           },
@@ -3721,14 +3685,14 @@
             "newClones": 0
           },
           "src/modules/dashboard/components/ScanCountChart/index.tsx": {
-            "lines": 206,
-            "tokens": 1546,
+            "lines": 207,
+            "tokens": 1598,
             "sources": 1,
             "clones": 5,
             "duplicatedLines": 110,
             "duplicatedTokens": 804,
-            "percentage": 53.4,
-            "percentageTokens": 52.01,
+            "percentage": 53.14,
+            "percentageTokens": 50.31,
             "newDuplicatedLines": 0,
             "newClones": 0
           },
@@ -4224,6 +4188,18 @@
             "newDuplicatedLines": 0,
             "newClones": 0
           },
+          "src/components/common/AttachmentThumb.tsx": {
+            "lines": 64,
+            "tokens": 574,
+            "sources": 1,
+            "clones": 2,
+            "duplicatedLines": 18,
+            "duplicatedTokens": 261,
+            "percentage": 28.13,
+            "percentageTokens": 45.47,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
           "src/components/PrivateRoute/index.tsx": {
             "lines": 34,
             "tokens": 375,
@@ -4370,14 +4346,14 @@
           }
         },
         "total": {
-          "lines": 40820,
-          "tokens": 383549,
-          "sources": 146,
-          "clones": 94,
-          "duplicatedLines": 1403,
-          "duplicatedTokens": 16535,
-          "percentage": 3.44,
-          "percentageTokens": 4.31,
+          "lines": 40783,
+          "tokens": 383103,
+          "sources": 145,
+          "clones": 93,
+          "duplicatedLines": 1343,
+          "duplicatedTokens": 15961,
+          "percentage": 3.29,
+          "percentageTokens": 4.17,
           "newDuplicatedLines": 0,
           "newClones": 0
         }
@@ -4472,14 +4448,14 @@
       }
     },
     "total": {
-      "lines": 72802,
-      "tokens": 683149,
-      "sources": 367,
-      "clones": 147,
-      "duplicatedLines": 2502,
-      "duplicatedTokens": 28758,
-      "percentage": 3.44,
-      "percentageTokens": 4.21,
+      "lines": 72753,
+      "tokens": 682560,
+      "sources": 365,
+      "clones": 145,
+      "duplicatedLines": 2430,
+      "duplicatedTokens": 28043,
+      "percentage": 3.34,
+      "percentageTokens": 4.11,
       "newDuplicatedLines": 0,
       "newClones": 0
     }
@@ -7798,78 +7774,6 @@
       }
     },
     {
-      "format": "javascript",
-      "lines": 13,
-      "fragment": ": 'hidden',\n        background: '#f5f5f5',\n        display: 'flex',\n        alignItems: 'center',\n        justifyContent: 'center',\n      }}\n    >\n      {loading ? (\n        <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-sm)' }}>...</span>\n      ) : url ? (\n        <img src={url} alt=\"cover\" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />\n      ) : (\n        <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-sm)' }}",
-      "tokens": 0,
-      "firstFile": {
-        "name": "src/modules/basic/pages/StyleInfo/components/AttachmentThumb.tsx",
-        "start": 43,
-        "end": 55,
-        "startLoc": {
-          "line": 43,
-          "column": 17,
-          "position": 404
-        },
-        "endLoc": {
-          "line": 55,
-          "column": 2,
-          "position": 545
-        }
-      },
-      "secondFile": {
-        "name": "src/modules/basic/pages/StyleInfoList/components/AttachmentThumb.tsx",
-        "start": 44,
-        "end": 56,
-        "startLoc": {
-          "line": 44,
-          "column": 17,
-          "position": 404
-        },
-        "endLoc": {
-          "line": 56,
-          "column": 2,
-          "position": 545
-        }
-      }
-    },
-    {
-      "format": "tsx",
-      "lines": 61,
-      "fragment": "import React, { useEffect, useState } from 'react';\nimport api from '@/utils/api';\n\ninterface AttachmentThumbProps {\n  styleId: string | number;\n}\n\n/**\n * 附件缩略图组件\n * 显示款式的第一张图片附件\n */\nconst AttachmentThumb: React.FC<AttachmentThumbProps> = ({ styleId }) => {\n  const [url, setUrl] = useState<string | null>(null);\n  const [loading, setLoading] = useState<boolean>(false);\n\n  useEffect(() => {\n    let mounted = true;\n    (async () => {\n      setLoading(true);\n      try {\n        const res = await api.get<{ code: number; data: unknown[] }>(`/style/attachment/list?styleId=${styleId}`);\n        if (res.code === 200) {\n          const images = (res.data || []).filter((f: any) => String(f.fileType || '').includes('image'));\n          if (mounted) setUrl(images[0]?.fileUrl || null);\n        }\n      } catch {\n        // 忽略错误\n        if (mounted) setUrl(null);\n      } finally {\n        if (mounted) setLoading(false);\n      }\n    })();\n    return () => {\n      mounted = false;\n    };\n  }, [styleId]);\n\n  return (\n    <div\n      style={{\n        width: 56,\n        height: 56,\n        overflow: 'hidden',\n        background: '#f5f5f5',\n        display: 'flex',\n        alignItems: 'center',\n        justifyContent: 'center',\n      }}\n    >\n      {loading ? (\n        <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-sm)' }}>...</span>\n      ) : url ? (\n        <img src={url} alt=\"cover\" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />\n      ) : (\n        <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-sm)' }}>无图</span>\n      )}\n    </div>\n  );\n};\n\nexport default AttachmentThumb;",
-      "tokens": 0,
-      "firstFile": {
-        "name": "src/modules/basic/pages/StyleInfo/components/AttachmentThumb.tsx",
-        "start": 1,
-        "end": 61,
-        "startLoc": {
-          "line": 1,
-          "column": 1,
-          "position": 0
-        },
-        "endLoc": {
-          "line": 61,
-          "column": 2,
-          "position": 574
-        }
-      },
-      "secondFile": {
-        "name": "src/modules/basic/pages/StyleInfoList/components/AttachmentThumb.tsx",
-        "start": 1,
-        "end": 62,
-        "startLoc": {
-          "line": 1,
-          "column": 1,
-          "position": 0
-        },
-        "endLoc": {
-          "line": 62,
-          "column": 2,
-          "position": 574
-        }
-      }
-    },
-    {
       "format": "tsx",
       "lines": 14,
       "fragment": ",\n      dataIndex: 'materialType',\n      key: 'materialType',\n      width: 120,\n      render: (v: unknown) => {\n        const type = String(v || '').trim();\n        const category = getMaterialTypeCategory(type);\n        const text = getMaterialTypeLabel(type);\n        const color = category === 'accessory' ? 'purple' : category === 'lining' ? 'cyan' : 'geekblue';\n        return <Tag color={color}>{text}</Tag>;\n      },\n    },\n    {\n      title: '规格'",
@@ -7984,32 +7888,32 @@
       "tokens": 0,
       "firstFile": {
         "name": "src/modules/warehouse/pages/FinishedInventory/index.tsx",
-        "start": 319,
-        "end": 326,
+        "start": 334,
+        "end": 341,
         "startLoc": {
-          "line": 319,
+          "line": 334,
           "column": 23,
-          "position": 3674
+          "position": 3738
         },
         "endLoc": {
-          "line": 326,
+          "line": 341,
           "column": 8,
-          "position": 3792
+          "position": 3856
         }
       },
       "secondFile": {
         "name": "src/modules/warehouse/pages/FinishedInventory/index.tsx",
-        "start": 312,
-        "end": 319,
+        "start": 327,
+        "end": 334,
         "startLoc": {
-          "line": 312,
+          "line": 327,
           "column": 23,
-          "position": 3554
+          "position": 3618
         },
         "endLoc": {
-          "line": 319,
+          "line": 334,
           "column": 2,
-          "position": 3672
+          "position": 3736
         }
       }
     },
@@ -8020,32 +7924,32 @@
       "tokens": 0,
       "firstFile": {
         "name": "src/modules/warehouse/pages/FinishedInventory/index.tsx",
-        "start": 548,
-        "end": 560,
+        "start": 563,
+        "end": 575,
         "startLoc": {
-          "line": 548,
+          "line": 563,
           "column": 2,
-          "position": 5796
+          "position": 5860
         },
         "endLoc": {
-          "line": 560,
+          "line": 575,
           "column": 2,
-          "position": 6031
+          "position": 6095
         }
       },
       "secondFile": {
         "name": "src/modules/warehouse/pages/FinishedInventory/index.tsx",
-        "start": 545,
-        "end": 552,
+        "start": 560,
+        "end": 567,
         "startLoc": {
-          "line": 545,
+          "line": 560,
           "column": 3,
-          "position": 5732
+          "position": 5796
         },
         "endLoc": {
-          "line": 552,
+          "line": 567,
           "column": 2,
-          "position": 5873
+          "position": 5937
         }
       }
     },
@@ -8128,17 +8032,17 @@
       "tokens": 0,
       "firstFile": {
         "name": "src/modules/finance/pages/FinanceCenter/FinishedSettlementContent.tsx",
-        "start": 449,
-        "end": 454,
+        "start": 453,
+        "end": 458,
         "startLoc": {
-          "line": 449,
+          "line": 453,
           "column": 2,
-          "position": 4039
+          "position": 4051
         },
         "endLoc": {
-          "line": 454,
+          "line": 458,
           "column": 8,
-          "position": 4109
+          "position": 4121
         }
       },
       "secondFile": {
@@ -8467,17 +8371,17 @@
       },
       "secondFile": {
         "name": "src/modules/dashboard/components/ScanCountChart/index.tsx",
-        "start": 51,
-        "end": 85,
+        "start": 52,
+        "end": 86,
         "startLoc": {
-          "line": 51,
+          "line": 52,
           "column": 35,
-          "position": 520
+          "position": 572
         },
         "endLoc": {
-          "line": 85,
+          "line": 86,
           "column": 7,
-          "position": 735
+          "position": 787
         }
       }
     },
@@ -8503,17 +8407,17 @@
       },
       "secondFile": {
         "name": "src/modules/dashboard/components/ScanCountChart/index.tsx",
-        "start": 85,
-        "end": 105,
+        "start": 86,
+        "end": 106,
         "startLoc": {
-          "line": 85,
+          "line": 86,
           "column": 7,
-          "position": 739
+          "position": 791
         },
         "endLoc": {
-          "line": 105,
+          "line": 106,
           "column": 31,
-          "position": 867
+          "position": 919
         }
       }
     },
@@ -8539,17 +8443,17 @@
       },
       "secondFile": {
         "name": "src/modules/dashboard/components/ScanCountChart/index.tsx",
-        "start": 105,
-        "end": 128,
+        "start": 106,
+        "end": 129,
         "startLoc": {
-          "line": 105,
+          "line": 106,
           "column": 31,
-          "position": 868
+          "position": 920
         },
         "endLoc": {
-          "line": 128,
+          "line": 129,
           "column": 26,
-          "position": 1013
+          "position": 1065
         }
       }
     },
@@ -8575,17 +8479,17 @@
       },
       "secondFile": {
         "name": "src/modules/dashboard/components/ScanCountChart/index.tsx",
-        "start": 191,
-        "end": 207,
+        "start": 192,
+        "end": 208,
         "startLoc": {
-          "line": 191,
+          "line": 192,
           "column": 22,
-          "position": 1420
+          "position": 1472
         },
         "endLoc": {
-          "line": 207,
+          "line": 208,
           "column": 15,
-          "position": 1545
+          "position": 1597
         }
       }
     },
@@ -8730,78 +8634,6 @@
           "line": 76,
           "column": 3,
           "position": 916
-        }
-      }
-    },
-    {
-      "format": "tsx",
-      "lines": 7,
-      "fragment": "(async () => {\n      setLoading(true);\n      try {\n        const res = await api.get<{ code: number; data: unknown[] }>(`/style/attachment/list?styleId=${styleId}`);\n        if (res.code === 200) {\n          const images = (res.data || []).filter((f: any) => String(f.fileType || '').includes('image'));\n          const",
-      "tokens": 0,
-      "firstFile": {
-        "name": "src/modules/basic/pages/DataCenter/index.tsx",
-        "start": 241,
-        "end": 247,
-        "startLoc": {
-          "line": 241,
-          "column": 5,
-          "position": 2832
-        },
-        "endLoc": {
-          "line": 247,
-          "column": 6,
-          "position": 2956
-        }
-      },
-      "secondFile": {
-        "name": "src/modules/basic/pages/StyleInfoList/components/AttachmentThumb.tsx",
-        "start": 18,
-        "end": 24,
-        "startLoc": {
-          "line": 18,
-          "column": 5,
-          "position": 145
-        },
-        "endLoc": {
-          "line": 24,
-          "column": 3,
-          "position": 269
-        }
-      }
-    },
-    {
-      "format": "tsx",
-      "lines": 13,
-      "fragment": ">\n      {loading ? (\n        <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 'var(--font-size-sm)' }}>...</span>\n      ) : url ? (\n        <img src={url} alt=\"cover\" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />\n      ) : (\n        <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-sm)' }}>无图</span>\n      )}\n    </div>\n  );\n};\n\nconst",
-      "tokens": 0,
-      "firstFile": {
-        "name": "src/modules/basic/pages/DataCenter/index.tsx",
-        "start": 264,
-        "end": 276,
-        "startLoc": {
-          "line": 264,
-          "column": 2,
-          "position": 3164
-        },
-        "endLoc": {
-          "line": 276,
-          "column": 6,
-          "position": 3301
-        }
-      },
-      "secondFile": {
-        "name": "src/modules/basic/pages/StyleInfoList/components/AttachmentThumb.tsx",
-        "start": 50,
-        "end": 62,
-        "startLoc": {
-          "line": 50,
-          "column": 5,
-          "position": 432
-        },
-        "endLoc": {
-          "line": 62,
-          "column": 7,
-          "position": 569
         }
       }
     },
@@ -9310,6 +9142,78 @@
       }
     },
     {
+      "format": "tsx",
+      "lines": 7,
+      "fragment": "(async () => {\n      setLoading(true);\n      try {\n        const res = await api.get<{ code: number; data: unknown[] }>(`/style/attachment/list?styleId=${styleId}`);\n        if (res.code === 200) {\n          const images = (res.data || []).filter((f: any) => String(f.fileType || '').includes('image'));\n          if",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/components/common/AttachmentThumb.tsx",
+        "start": 22,
+        "end": 28,
+        "startLoc": {
+          "line": 22,
+          "column": 5,
+          "position": 145
+        },
+        "endLoc": {
+          "line": 28,
+          "column": 3,
+          "position": 269
+        }
+      },
+      "secondFile": {
+        "name": "src/modules/basic/pages/DataCenter/index.tsx",
+        "start": 241,
+        "end": 247,
+        "startLoc": {
+          "line": 241,
+          "column": 5,
+          "position": 2832
+        },
+        "endLoc": {
+          "line": 247,
+          "column": 6,
+          "position": 2956
+        }
+      }
+    },
+    {
+      "format": "tsx",
+      "lines": 13,
+      "fragment": ">\n      {loading ? (\n        <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-sm)' }}>...</span>\n      ) : url ? (\n        <img src={url} alt=\"cover\" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />\n      ) : (\n        <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-sm)' }}>无图</span>\n      )}\n    </div>\n  );\n};\n\nexport",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/components/common/AttachmentThumb.tsx",
+        "start": 53,
+        "end": 65,
+        "startLoc": {
+          "line": 53,
+          "column": 5,
+          "position": 432
+        },
+        "endLoc": {
+          "line": 65,
+          "column": 7,
+          "position": 569
+        }
+      },
+      "secondFile": {
+        "name": "src/modules/basic/pages/DataCenter/index.tsx",
+        "start": 264,
+        "end": 276,
+        "startLoc": {
+          "line": 264,
+          "column": 2,
+          "position": 3164
+        },
+        "endLoc": {
+          "line": 276,
+          "column": 6,
+          "position": 3301
+        }
+      }
+    },
+    {
       "format": "typescript",
       "lines": 13,
       "fragment": "fn();\n      const duration = performance.now() - start;\n      this.recordMetric(fullName, duration, false);\n\n      if (duration > threshold) {\n        console.warn(\n          `🐌 慢操作: ${name}`,\n          `耗时: ${duration.toFixed(2)}ms`,\n          `阈值: ${threshold}ms`\n        );\n      }\n\n      return",
@@ -9692,16 +9596,16 @@
       "secondFile": {
         "name": "src/modules/basic/pages/DataCenter/index.tsx",
         "start": 261,
-        "end": 62,
+        "end": 276,
         "startLoc": {
           "line": 261,
           "column": 6,
           "position": 3109
         },
         "endLoc": {
-          "line": 62,
-          "column": 7,
-          "position": 569
+          "line": 276,
+          "column": 6,
+          "position": 3301
         }
       }
     },
