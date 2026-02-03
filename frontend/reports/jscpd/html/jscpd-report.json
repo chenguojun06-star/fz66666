@@ -1,6 +1,6 @@
 {
   "statistics": {
-    "detectionDate": "2026-02-03T14:14:29.521Z",
+    "detectionDate": "2026-02-03T14:17:09.411Z",
     "formats": {
       "typescript": {
         "sources": {
@@ -1197,26 +1197,26 @@
             "newClones": 0
           },
           "src/modules/production/pages/Production/ProductWarehousing/components/WarehousingList.tsx": {
-            "lines": 106,
-            "tokens": 570,
+            "lines": 70,
+            "tokens": 386,
             "sources": 1,
-            "clones": 1,
-            "duplicatedLines": 52,
-            "duplicatedTokens": 273,
-            "percentage": 49.06,
-            "percentageTokens": 47.89,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
             "newDuplicatedLines": 0,
             "newClones": 0
           },
           "src/modules/production/pages/Production/ProductWarehousing/components/WarehousingDetail.tsx": {
-            "lines": 238,
-            "tokens": 3318,
+            "lines": 203,
+            "tokens": 3139,
             "sources": 1,
-            "clones": 1,
-            "duplicatedLines": 52,
-            "duplicatedTokens": 273,
-            "percentage": 21.85,
-            "percentageTokens": 8.23,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
             "newDuplicatedLines": 0,
             "newClones": 0
           },
@@ -1248,11 +1248,11 @@
             "lines": 31,
             "tokens": 166,
             "sources": 1,
-            "clones": 0,
-            "duplicatedLines": 0,
-            "duplicatedTokens": 0,
-            "percentage": 0,
-            "percentageTokens": 0,
+            "clones": 1,
+            "duplicatedLines": 15,
+            "duplicatedTokens": 92,
+            "percentage": 48.39,
+            "percentageTokens": 55.42,
             "newDuplicatedLines": 0,
             "newClones": 0
           },
@@ -2408,6 +2408,18 @@
             "newDuplicatedLines": 0,
             "newClones": 0
           },
+          "src/components/common/ImagePreviewModal.tsx": {
+            "lines": 30,
+            "tokens": 161,
+            "sources": 1,
+            "clones": 1,
+            "duplicatedLines": 15,
+            "duplicatedTokens": 92,
+            "percentage": 50,
+            "percentageTokens": 57.14,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
           "src/components/common/HorizontalProgressPriceView.tsx": {
             "lines": 333,
             "tokens": 2097,
@@ -2590,14 +2602,14 @@
           }
         },
         "total": {
-          "lines": 20497,
-          "tokens": 194355,
-          "sources": 135,
+          "lines": 20456,
+          "tokens": 194153,
+          "sources": 136,
           "clones": 40,
-          "duplicatedLines": 974,
-          "duplicatedTokens": 10619,
-          "percentage": 4.75,
-          "percentageTokens": 5.46,
+          "duplicatedLines": 937,
+          "duplicatedTokens": 10438,
+          "percentage": 4.58,
+          "percentageTokens": 5.38,
           "newDuplicatedLines": 0,
           "newClones": 0
         }
@@ -2845,26 +2857,26 @@
             "newClones": 0
           },
           "src/modules/production/pages/Production/ProductWarehousing/components/WarehousingList.tsx": {
-            "lines": 176,
-            "tokens": 986,
+            "lines": 137,
+            "tokens": 784,
             "sources": 1,
-            "clones": 1,
-            "duplicatedLines": 52,
-            "duplicatedTokens": 268,
-            "percentage": 29.55,
-            "percentageTokens": 27.18,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
             "newDuplicatedLines": 0,
             "newClones": 0
           },
           "src/modules/production/pages/Production/ProductWarehousing/components/WarehousingDetail.tsx": {
-            "lines": 498,
-            "tokens": 6611,
+            "lines": 460,
+            "tokens": 6414,
             "sources": 1,
-            "clones": 7,
-            "duplicatedLines": 179,
-            "duplicatedTokens": 2169,
-            "percentage": 35.94,
-            "percentageTokens": 32.81,
+            "clones": 6,
+            "duplicatedLines": 127,
+            "duplicatedTokens": 1901,
+            "percentage": 27.61,
+            "percentageTokens": 29.64,
             "newDuplicatedLines": 0,
             "newClones": 0
           },
@@ -4140,6 +4152,18 @@
             "newDuplicatedLines": 0,
             "newClones": 0
           },
+          "src/components/common/ImagePreviewModal.tsx": {
+            "lines": 65,
+            "tokens": 327,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
           "src/components/common/HorizontalProgressPriceView.tsx": {
             "lines": 440,
             "tokens": 2775,
@@ -4346,14 +4370,14 @@
           }
         },
         "total": {
-          "lines": 40783,
-          "tokens": 383103,
-          "sources": 145,
-          "clones": 93,
-          "duplicatedLines": 1343,
-          "duplicatedTokens": 15961,
-          "percentage": 3.29,
-          "percentageTokens": 4.17,
+          "lines": 40771,
+          "tokens": 383031,
+          "sources": 146,
+          "clones": 92,
+          "duplicatedLines": 1291,
+          "duplicatedTokens": 15693,
+          "percentage": 3.17,
+          "percentageTokens": 4.1,
           "newDuplicatedLines": 0,
           "newClones": 0
         }
@@ -4448,14 +4472,14 @@
       }
     },
     "total": {
-      "lines": 72753,
-      "tokens": 682560,
-      "sources": 365,
-      "clones": 145,
-      "duplicatedLines": 2430,
-      "duplicatedTokens": 28043,
-      "percentage": 3.34,
-      "percentageTokens": 4.11,
+      "lines": 72700,
+      "tokens": 682286,
+      "sources": 367,
+      "clones": 144,
+      "duplicatedLines": 2341,
+      "duplicatedTokens": 27594,
+      "percentage": 3.22,
+      "percentageTokens": 4.04,
       "newDuplicatedLines": 0,
       "newClones": 0
     }
@@ -5070,78 +5094,6 @@
           "line": 102,
           "column": 43,
           "position": 1212
-        }
-      }
-    },
-    {
-      "format": "javascript",
-      "lines": 53,
-      "fragment": "}}>-</div>\n                  )}\n                </div>\n              </div>\n            </div>\n          </Card>\n        </Card>\n      </div>\n\n      <ResizableModal\n        open={previewOpen}\n        title={previewTitle}\n        footer={\n          <div className=\"modal-footer-actions\">\n            <Button\n              onClick={() => {\n                setPreviewOpen(false);\n                setPreviewUrl('');\n                setPreviewTitle('');\n              }}\n            >\n              关闭\n            </Button>\n          </div>\n        }\n        onCancel={() => {\n          setPreviewOpen(false);\n          setPreviewUrl('');\n          setPreviewTitle('');\n        }}\n        width={600}\n        minWidth={600}\n        minHeight={600}\n        initialHeight={600}\n      >\n        {previewUrl ? (\n          <div\n            style={{\n              width: '100%',\n              height: '100%',\n              display: 'flex',\n              justifyContent: 'center',\n              alignItems: 'center',\n            }}\n          >\n            <img\n              src={previewUrl}\n              alt=\"\"\n              style={{\n                maxWidth: '100%',\n                maxHeight: '100%',\n                objectFit: 'contain',\n              }}",
-      "tokens": 0,
-      "firstFile": {
-        "name": "src/modules/production/pages/Production/ProductWarehousing/components/WarehousingDetail.tsx",
-        "start": 438,
-        "end": 490,
-        "startLoc": {
-          "line": 438,
-          "column": 2,
-          "position": 6298
-        },
-        "endLoc": {
-          "line": 490,
-          "column": 2,
-          "position": 6571
-        }
-      },
-      "secondFile": {
-        "name": "src/modules/production/pages/Production/ProductWarehousing/components/WarehousingList.tsx",
-        "start": 121,
-        "end": 168,
-        "startLoc": {
-          "line": 121,
-          "column": 9,
-          "position": 705
-        },
-        "endLoc": {
-          "line": 168,
-          "column": 2,
-          "position": 946
-        }
-      }
-    },
-    {
-      "format": "tsx",
-      "lines": 53,
-      "fragment": "<ResizableModal\n        open={previewOpen}\n        title={previewTitle}\n        footer={\n          <div className=\"modal-footer-actions\">\n            <Button\n              onClick={() => {\n                setPreviewOpen(false);\n                setPreviewUrl('');\n                setPreviewTitle('');\n              }}\n            >\n              关闭\n            </Button>\n          </div>\n        }\n        onCancel={() => {\n          setPreviewOpen(false);\n          setPreviewUrl('');\n          setPreviewTitle('');\n        }}\n        width={600}\n        minWidth={600}\n        minHeight={600}\n        initialHeight={600}\n      >\n        {previewUrl ? (\n          <div\n            style={{\n              width: '100%',\n              height: '100%',\n              display: 'flex',\n              justifyContent: 'center',\n              alignItems: 'center',\n            }}\n          >\n            <img\n              src={previewUrl}\n              alt=\"\"\n              style={{\n                maxWidth: '100%',\n                maxHeight: '100%',\n                objectFit: 'contain',\n              }}\n            />\n          </div>\n        ) : null}\n      </ResizableModal>\n    </Layout>\n  );\n};\n\nexport default WarehousingDetail",
-      "tokens": 0,
-      "firstFile": {
-        "name": "src/modules/production/pages/Production/ProductWarehousing/components/WarehousingDetail.tsx",
-        "start": 447,
-        "end": 499,
-        "startLoc": {
-          "line": 447,
-          "column": 7,
-          "position": 6342
-        },
-        "endLoc": {
-          "line": 499,
-          "column": 18,
-          "position": 6610
-        }
-      },
-      "secondFile": {
-        "name": "src/modules/production/pages/Production/ProductWarehousing/components/WarehousingList.tsx",
-        "start": 125,
-        "end": 177,
-        "startLoc": {
-          "line": 125,
-          "column": 7,
-          "position": 717
-        },
-        "endLoc": {
-          "line": 177,
-          "column": 16,
-          "position": 985
         }
       }
     },
@@ -9102,6 +9054,42 @@
           "line": 181,
           "column": 2,
           "position": 1190
+        }
+      }
+    },
+    {
+      "format": "javascript",
+      "lines": 16,
+      "fragment": "={open}\n      title={title}\n      footer={\n        <div className=\"modal-footer-actions\">\n          <Button onClick={onClose}>关闭</Button>\n        </div>\n      }\n      onCancel={onClose}\n      width={600}\n      minWidth={600}\n      minHeight={600}\n      initialHeight={600}\n    >\n      {imageUrl ? (\n        <div\n          style={{",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src/components/common/ImagePreviewModal.tsx",
+        "start": 28,
+        "end": 43,
+        "startLoc": {
+          "line": 28,
+          "column": 5,
+          "position": 131
+        },
+        "endLoc": {
+          "line": 43,
+          "column": 2,
+          "position": 223
+        }
+      },
+      "secondFile": {
+        "name": "src/modules/production/pages/Production/ProductWarehousing/components/PreviewModal.tsx",
+        "start": 15,
+        "end": 27,
+        "startLoc": {
+          "line": 15,
+          "column": 5,
+          "position": 119
+        },
+        "endLoc": {
+          "line": 27,
+          "column": 6,
+          "position": 197
         }
       }
     },

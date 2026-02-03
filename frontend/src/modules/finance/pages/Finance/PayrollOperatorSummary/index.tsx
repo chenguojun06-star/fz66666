@@ -11,6 +11,54 @@ import api, { unwrapApiData } from '@/utils/api';
 import type { PayrollOperatorProcessSummaryRow } from '@/types/finance';
 import dayjs from 'dayjs';
 
+// 工具函数：创建可排序的数字列配置
+const createSortableNumberColumn = (
+    title: string,
+    dataIndex: string,
+    sortField: string,
+    sortOrder: 'asc' | 'desc',
+    onSort: (field: string) => void,
+    width: number,
+    renderFn: (v: unknown) => string | number
+) => ({
+    title: <SortableColumnTitle
+        title={title}
+        sortField={sortField}
+        fieldName={dataIndex}
+        sortOrder={sortOrder}
+        onSort={onSort}
+    />,
+    dataIndex,
+    key: dataIndex,
+    width,
+    align: 'right' as const,
+    render: renderFn,
+});
+
+// 工具函数：创建可排序的时间列配置
+const createSortableTimeColumn = (
+    title: string,
+    dataIndex: string,
+    sortField: string,
+    sortOrder: 'asc' | 'desc',
+    onSort: (field: string) => void,
+    width: number
+) => ({
+    title: <SortableColumnTitle
+        title={title}
+        sortField={sortField}
+        fieldName={dataIndex}
+        sortOrder={sortOrder}
+        onSort={onSort}
+        align="left"
+    />,
+    dataIndex,
+    key: dataIndex,
+    width,
+    ellipsis: true,
+    render: (v: unknown) => v ? dayjs(v as string).format('YYYY-MM-DD HH:mm:ss') : '-',
+});
+
 const PayrollOperatorSummary: React.FC = () => {
     const [searchParams] = useSearchParams();
     const [activeTab, setActiveTab] = useState('detail');
@@ -379,62 +427,10 @@ const PayrollOperatorSummary: React.FC = () => {
     // 工资汇总表格列定义
     const summaryColumns: unknown[] = [
         { title: '人员', dataIndex: 'operatorName', key: 'operatorName', width: 140, ellipsis: true },
-        {
-            title: <SortableColumnTitle
-                title="总数量"
-                sortField={sortField}
-                fieldName="totalQuantity"
-                sortOrder={sortOrder}
-                onSort={handleSort}
-            />,
-            dataIndex: 'totalQuantity',
-            key: 'totalQuantity',
-            width: 120,
-            align: 'right' as const,
-            render: (v: unknown) => toNumberOrZero(v) || 0,
-        },
-        {
-            title: <SortableColumnTitle
-                title="总金额(元)"
-                sortField={sortField}
-                fieldName="totalAmount"
-                sortOrder={sortOrder}
-                onSort={handleSort}
-            />,
-            dataIndex: 'totalAmount',
-            key: 'totalAmount',
-            width: 140,
-            align: 'right' as const,
-            render: (v: unknown) => toMoneyText(v),
-        },
-        {
-            title: <SortableColumnTitle
-                title="扫码次数"
-                sortField={sortField}
-                fieldName="recordCount"
-                sortOrder={sortOrder}
-                onSort={handleSort}
-            />,
-            dataIndex: 'recordCount',
-            key: 'recordCount',
-            width: 120,
-            align: 'right' as const,
-            render: (v: unknown) => toNumberOrZero(v) || 0,
-        },
-        {
-            title: <SortableColumnTitle
-                title="订单数"
-                sortField={sortField}
-                fieldName="orderCount"
-                sortOrder={sortOrder}
-                onSort={handleSort}
-            />,
-            dataIndex: 'orderCount',
-            key: 'orderCount',
-            width: 100,
-            align: 'right' as const,
-            render: (v: unknown) => toNumberOrZero(v) || 0,
-        },
+        createSortableNumberColumn('总数量', 'totalQuantity', sortField, sortOrder, handleSort, 120, (v) => toNumberOrZero(v) || 0),
+        createSortableNumberColumn('总金额(元)', 'totalAmount', sortField, sortOrder, handleSort, 140, toMoneyText),
+        createSortableNumberColumn('扫码次数', 'recordCount', sortField, sortOrder, handleSort, 120, (v) => toNumberOrZero(v) || 0),
+        createSortableNumberColumn('订单数', 'orderCount', sortField, sortOrder, handleSort, 100, (v) => toNumberOrZero(v) || 0),
         {
             title: '备注',
             dataIndex: 'remark',
@@ -443,36 +439,8 @@ const PayrollOperatorSummary: React.FC = () => {
             ellipsis: true,
             render: (v: unknown) => String(v || '').trim() || '-',
         },
-        {
-            title: <SortableColumnTitle
-                title="审核时间"
-                sortField={sortField}
-                fieldName="approvalTime"
-                sortOrder={sortOrder}
-                onSort={handleSort}
-                align="left"
-            />,
-            dataIndex: 'approvalTime',
-            key: 'approvalTime',
-            width: 160,
-            ellipsis: true,
-            render: (v: unknown) => v ? dayjs(v as string).format('YYYY-MM-DD HH:mm:ss') : '-',
-        },
-        {
-            title: <SortableColumnTitle
-                title="付款时间"
-                sortField={sortField}
-                fieldName="paymentTime"
-                sortOrder={sortOrder}
-                onSort={handleSort}
-                align="left"
-            />,
-            dataIndex: 'paymentTime',
-            key: 'paymentTime',
-            width: 160,
-            ellipsis: true,
-            render: (v: unknown) => v ? dayjs(v as string).format('YYYY-MM-DD HH:mm:ss') : '-',
-        },
+        createSortableTimeColumn('审核时间', 'approvalTime', sortField, sortOrder, handleSort, 160),
+        createSortableTimeColumn('付款时间', 'paymentTime', sortField, sortOrder, handleSort, 160),
         {
             title: '操作',
             key: 'action',
