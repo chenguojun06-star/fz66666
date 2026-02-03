@@ -201,7 +201,7 @@ const DashboardContent: React.FC = () => {
       }
 
       // 获取当前周期数据
-      const response = await api.get('/finance/finished-settlement/page', {
+      const response = await api.get('/finance/finished-settlement/list', {
         params: queryParams
       });
       let records: SettlementRow[] = response.data?.records || [];
@@ -217,7 +217,7 @@ const DashboardContent: React.FC = () => {
         prevQueryParams.factoryId = selectedFactory;
       }
 
-      const prevResponse = await api.get('/finance/finished-settlement/page', {
+      const prevResponse = await api.get('/finance/finished-settlement/list', {
         params: prevQueryParams
       });
       let prevRecords: SettlementRow[] = prevResponse.data?.records || [];

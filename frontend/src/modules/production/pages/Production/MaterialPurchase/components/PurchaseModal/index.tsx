@@ -16,7 +16,7 @@ interface PurchaseModalProps {
   modalInitialHeight: number;
   isMobile: boolean;
   submitLoading: boolean;
-  
+
   // Data for View Mode
   currentPurchase: MaterialPurchaseType | null;
   detailOrder: ProductionOrder | null;
@@ -25,11 +25,11 @@ interface PurchaseModalProps {
   detailLoading: boolean;
   detailSizePairs: Array<{ size: string; quantity: number }>;
   detailFrozen: boolean;
-  
+
   // Data for Preview Mode
   previewList: MaterialPurchaseType[];
   previewOrderId: string;
-  
+
   // Handlers & Utils
   isSupervisorOrAbove: boolean;
   form: FormInstance;
@@ -83,12 +83,14 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
   onSavePreview,
   isOrderFrozenForRecord,
 }) => {
+  const normalizeStatus = (status?: MaterialPurchaseType['status'] | string) => String(status || '').trim().toLowerCase();
+
   const getFooter = () => {
     if (dialogMode === 'view') {
       return [
         <Button
           key="receiveAll"
-          disabled={!detailPurchases.some((p) => p.status === 'pending')}
+          disabled={!detailPurchases.some((p) => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING)}
           loading={submitLoading}
           onClick={onReceiveAll}
         >
@@ -96,7 +98,12 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
         </Button>,
         <Button
           key="returnAll"
-          disabled={!detailPurchases.some((p) => p.status === MATERIAL_PURCHASE_STATUS.RECEIVED || p.status === MATERIAL_PURCHASE_STATUS.PARTIAL || p.status === MATERIAL_PURCHASE_STATUS.COMPLETED)}
+          disabled={!detailPurchases.some((p) => {
+            const status = normalizeStatus(p.status);
+            return status === MATERIAL_PURCHASE_STATUS.RECEIVED
+              || status === MATERIAL_PURCHASE_STATUS.PARTIAL
+              || status === MATERIAL_PURCHASE_STATUS.COMPLETED;
+          })}
           loading={submitLoading}
           onClick={onBatchReturn}
         >
@@ -129,7 +136,7 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
         </Button>
       ];
     }
-    
+
     if (dialogMode === 'preview') {
       return [
         <Button key="cancel" onClick={onCancel}>
@@ -145,7 +152,7 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
         </Button>
       ];
     }
-    
+
     // Create Mode
     return [
       <Button key="cancel" onClick={onCancel}>

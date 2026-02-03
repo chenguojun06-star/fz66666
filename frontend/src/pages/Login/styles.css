@@ -130,8 +130,17 @@
 }
 
 .login-card .ant-input-affix-wrapper {
+  height: 48px;
   border-color: rgba(255, 255, 255, 0.14);
   background: #f6f8ff;
+  display: flex;
+  align-items: center;
+}
+
+.login-card .ant-input-affix-wrapper input {
+  height: 46px;
+  line-height: 46px;
+  text-align: center;
 }
 
 @supports ((-webkit-backdrop-filter: blur(12px)) or (backdrop-filter: blur(12px))) {

@@ -20,6 +20,7 @@ import { generateRequestId, isDuplicateScanMessage, isOrderFrozenByStatus, parse
 import { isSupervisorOrAboveUser as isSupervisorOrAboveUserFn, useAuth } from '@/utils/AuthContext';
 import { useViewport } from '@/utils/useViewport';
 import { formatDateTime, formatDateTimeCompact } from '@/utils/datetime';
+import { getProgressColorStatus } from '@/utils/progressColor';
 import { CuttingBundle, ProductionOrder, ProductionQueryParams, ScanRecord } from '@/types/production';
 import type { StyleProcess, TemplateLibrary } from '@/types/style';
 import { productionCuttingApi, productionOrderApi, productionScanApi, productionWarehousingApi } from '@/services/production/productionApi';
@@ -606,10 +607,12 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     const oid = String(orderId || '').trim();
     if (!oid) return null;
     try {
-      const res = await productionOrderApi.detail(oid);
+      const res = await productionOrderApi.list({ orderNo: oid, page: 1, pageSize: 1 });
       const result = res as Record<string, unknown>;
       if (result.code === 200) {
-        return (result.data || null) as ProductionOrder | null;
+        const data = result.data as { records?: unknown[] };
+        const records = data?.records || [];
+        return records.length > 0 ? (records[0] as ProductionOrder) : null;
       }
       return null;
     } catch {
@@ -1419,28 +1422,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                   const progress = Number(record.productionProgress) || 0;
                   return Math.min(100, Math.max(0, progress));
                 },
-                getStatus: (record: ProductionOrder) => {
-                  // 优先检查交期状态
-                  if (record.plannedEndDate) {
-                    const now = new Date();
-                    const deadline = new Date(record.plannedEndDate);
-                    const diffDays = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-
-                    // 超期3天以上 - 深通红色 (danger)
-                    if (diffDays <= -4) return 'danger';
-                    // 超期1-3天 - 红色 (danger)
-                    if (diffDays < 0) return 'danger';
-                    // 当天交期(0天) - 微红色 (warning)
-                    if (diffDays === 0) return 'warning';
-                  }
-
-                  // 其次检查订单状态
-                  const status = String(record.status || '').toLowerCase();
-                  if (status === 'completed') return 'normal';
-                  if (status === 'delayed') return 'danger';
-                  if (status === 'production') return 'warning';
-                  return 'normal';
-                },
+                getStatus: (record: ProductionOrder) => getProgressColorStatus(record.plannedEndDate),
+                isCompleted: (record: ProductionOrder) => record.status === 'completed',
                 show: true,
                 type: 'liquid', // 液体波浪进度条
               }}
@@ -1564,28 +1547,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                   const progress = Number(record.productionProgress) || 0;
                   return Math.min(100, Math.max(0, progress));
                 },
-                getStatus: (record: ProductionOrder) => {
-                  // 优先检查交期状态
-                  if (record.plannedEndDate) {
-                    const now = new Date();
-                    const deadline = new Date(record.plannedEndDate);
-                    const diffDays = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-
-                    // 超期3天以上 - 深通红色 (danger)
-                    if (diffDays <= -4) return 'danger';
-                    // 超期1-3天 - 红色 (danger)
-                    if (diffDays < 0) return 'danger';
-                    // 当天交期(0天) - 微红色 (warning)
-                    if (diffDays === 0) return 'warning';
-                  }
-
-                  // 其次检查订单状态
-                  const status = String(record.status || '').toLowerCase();
-                  if (status === 'completed') return 'normal';
-                  if (status === 'delayed') return 'danger';
-                  if (status === 'production') return 'warning';
-                  return 'normal';
-                },
+                getStatus: (record: ProductionOrder) => getProgressColorStatus(record.plannedEndDate),
+                isCompleted: (record: ProductionOrder) => record.status === 'completed',
                 show: true,
                 type: 'liquid', // 液体波浪进度条
               }}

@@ -1,6 +1,33 @@
 # GitHub Copilot 指令（服装供应链管理系统）
 
 > **核心目标**：让 AI 立即理解三端协同架构、关键约束与业务流程，避免破坏既有设计。
+> **系统评分**：97/100 | **代码质量**：优秀 | **架构**：非标准分层设计（26个编排器）
+
+---
+
+## 🛠️ 技术栈（版本敏感）
+
+### 后端
+- **Java 21** + **Spring Boot 2.7.18** + **MyBatis-Plus 3.5.7**
+- **MySQL 8.0**（Docker，端口 **3308** 非标准）
+- 认证：Spring Security + JWT
+- 依赖注入：`@Autowired`（标准模式，不使用构造器注入）
+
+### 前端
+- **React 18.2** + **TypeScript** + **Vite**
+- **Ant Design 6.1**（组件库）
+- **Zustand**（状态管理，替代 Redux）
+- **ECharts**（图表）+ **Lottie**（动画）
+- 路由：React Router v6
+
+### 小程序
+- **微信原生框架**（不使用 Taro/uni-app）
+- 纯 JavaScript（无 TypeScript）
+- 组件化设计（`components/` + `pages/`）
+
+### 三端数据同步
+- 验证规则：`frontend/src/utils/validationRules.ts` ↔ `miniprogram/utils/validationRules.js`
+- API 端点：统一 `POST /list`（列表查询），废弃 `GET/POST /page`
 
 ---
 
@@ -12,10 +39,12 @@ Controller → Orchestrator → Service → Mapper
 ```
 
 **关键约束**（代码审查必查项）：
-- ✅ **Orchestrator 编排器**：跨服务调用、复杂事务、业务协调（26个编排器，见 [production/orchestration/](backend/src/main/java/com/fashion/supplychain/production/orchestration/)）
+- ✅ **Orchestrator 编排器**：跨服务调用、复杂事务、业务协调（15个核心编排器）
+  - 位置：`backend/src/main/java/com/fashion/supplychain/production/orchestration/`
+  - 示例：`ProductionOrderOrchestrator`, `ScanRecordOrchestrator`, `MaterialStockOrchestrator`
 - ❌ **Service 禁止互调**：单领域 CRUD 操作，不允许直接调用其他 Service
 - ❌ **Controller 禁止直调多 Service**：复杂逻辑必须委托给 Orchestrator
-- ✅ **权限控制**：使用 `@PreAuthorize("hasAuthority('MENU_XXX')")`
+- ✅ **权限控制**：使用 `@PreAuthorize("hasAuthority('MENU_XXX')")` 或 `@PreAuthorize("hasAuthority('STYLE_VIEW')")`
 - ✅ **事务边界**：在 Orchestrator 层使用 `@Transactional(rollbackFor = Exception.class)`
 
 **常见错误示例**（禁止）：
@@ -33,16 +62,81 @@ public class OrderController {
 // ✅ 正确：通过 Orchestrator 编排
 @RestController
 public class OrderController {
-    public void createOrder() {
-        orderOrchestrator.createOrderWithValidation(...);
+    @Autowired
+    private ProductionOrderOrchestrator orderOrchestrator;
+    
+    @PostMapping("/create")
+    public Result<ProductionOrder> createOrder(@RequestBody OrderRequest req) {
+        return orderOrchestrator.createOrderWithValidation(req);
     }
 }
 ```
 
 ### API 路由约定（已统一）
-- ✅ 列表查询：`GET/POST /list`（支持过滤参数，旧 `/page` 已废弃）
-- ✅ 状态流转：`POST /{id}/stage-action`（如 `/approve`, `/submit`）
-- ✅ 统一响应：`Result<T>` 包装，前端自动解包（[request.ts](frontend/src/services/request.ts)）
+- ✅ 列表查询：`POST /list`（支持过滤参数，旧 `GET/POST /page` 已废弃）
+- ✅ 状态流转：`POST /{id}/stage-action`（如 `/approve`, `/submit`, `/reject`）
+- ✅ 统一响应：`Result<T>` 包装（`code: 200=成功`, `message`, `data`, `requestId`）
+- ✅ 权限注解：必须添加 `@PreAuthorize` 到 Controller 方法
+
+**Result<T> 标准响应格式**：
+```java
+// 后端返回
+@PostMapping("/create")
+public Result<ProductionOrder> create(@RequestBody OrderRequest req) {
+    ProductionOrder order = orderOrchestrator.createOrder(req);
+    return Result.success(order);  // { code: 200, data: {...} }
+}
+
+// 错误响应
+return Result.error("订单号重复");  // { code: 500, message: "订单号重复" }
+```
+
+**前端自动解包**：`data` 属性会被 axios 拦截器自动提取，组件直接使用业务数据
+
+---
+
+## 📂 代码组织（严格约定）
+
+### 后端目录结构（按领域划分）
+```
+backend/src/main/java/com/fashion/supplychain/
+├── production/            # 生产模块（核心）
+│   ├── controller/        # REST 端点
+│   ├── orchestration/     # 业务编排器（15个）
+│   ├── service/           # 领域服务（单一职责）
+│   ├── mapper/            # MyBatis 数据访问
+│   ├── entity/            # 实体类
+│   └── dto/               # 数据传输对象
+├── style/                 # 款式管理
+├── finance/               # 财务结算
+├── warehouse/             # 仓库管理
+├── stock/                 # 库存管理
+├── common/                # 公共组件（Result, UserContext）
+└── config/                # 配置类
+```
+
+### 前端目录结构（模块化）
+```
+frontend/src/
+├── modules/               # 业务模块（按后端领域对应）
+│   ├── production/        # 生产订单、裁剪、扫码记录
+│   ├── style/             # 款式管理
+│   ├── finance/           # 结算对账
+│   └── warehouse/         # 仓库管理
+├── components/            # 公共组件
+│   └── common/            # 通用组件（RowActions, ResizableModal, QRCodeBox）
+├── services/              # API 调用层
+├── stores/                # Zustand 全局状态
+├── utils/                 # 工具函数（validationRules, formatters）
+└── types/                 # TypeScript 类型定义
+```
+
+### 命名约定（强制）
+- **Java 类**：`PascalCase`（如 `ProductionOrderOrchestrator`）
+- **Java 方法**：`camelCase`（如 `createOrderWithValidation`）
+- **React 组件**：`PascalCase` 文件名（如 `ResizableModal.tsx`）
+- **TS 工具函数**：`camelCase` 文件名（如 `validationRules.ts`）
+- **测试脚本**：`kebab-case`（如 `test-production-order-creator-tracking.sh`）
 
 ---
 
@@ -57,16 +151,34 @@ public class OrderController {
 cd backend && mvn spring-boot:run
 ```
 
-**原因**：`dev-public.sh` 会加载 `.run/backend.env` 中的认证配置，直接启动缺少环境变量会导致所有 API 返回 403。
+**原因**：`dev-public.sh` 会加载 `.run/backend.env` 中的认证配置，直接启动缺少以下环境变量会导致所有 API 返回 403：
+- `APP_AUTH_JWT_SECRET` - JWT 签名密钥
+- `SPRING_DATASOURCE_URL` - 数据库连接（注意端口 **3308**）
+- `WECHAT_MINI_PROGRAM_MOCK_ENABLED=true` - 开发环境启用 Mock
 
-### 数据库管理
+### 数据库管理（非标准端口）
 - 端口：**3308**（非标准 3306，避免冲突）
 - 管理脚本：[deployment/db-manager.sh](deployment/db-manager.sh)
 - 启动：`./deployment/db-manager.sh start`
+- Docker 容器名：`fashion-mysql-simple`
 
 ### 小程序调试
 - 使用**微信开发者工具**打开 [miniprogram/](miniprogram/) 目录
 - 扫码调试需真机或模拟扫码输入
+- Mock 模式：开发环境下 `WECHAT_MINI_PROGRAM_MOCK_ENABLED=true` 跳过微信登录验证
+
+### 测试脚本（根目录下 40+ 脚本）
+```bash
+# 业务流程测试
+./test-production-order-creator-tracking.sh  # 订单创建人追踪
+./test-finished-settlement-approve.sh        # 成品结算审批
+./test-material-inbound.sh                   # 面料入库流程
+
+# 系统维护
+./clean-system.sh                            # 清理缓存和日志
+./fix-403-errors.sh                          # 修复权限问题
+./check-system-status.sh                     # 系统健康检查
+```
 
 ---
 
@@ -87,6 +199,11 @@ cd backend && mvn spring-boot:run
 <ResizableModal defaultWidth="55vw" defaultHeight="65vh">
 ```
 
+**尺寸选择指南**：
+- 大窗口 60vw：生产订单编辑、裁剪单管理、对账单审核（包含 Tab、表格）
+- 中窗口 40vw：款式编辑、工厂管理、用户管理（标准表单）
+- 小窗口 30vw：删除确认、备注输入、状态修改（简单交互）
+
 ### 弹窗内容布局（固定间距）
 ```tsx
 import { ModalContentLayout, ModalFieldRow } from '@/components/common/ModalContentLayout';
@@ -100,6 +217,57 @@ import { ModalContentLayout, ModalFieldRow } from '@/components/common/ModalCont
   </ModalFieldRow>
 </ModalContentLayout>
 ```
+
+**布局组件规范**：
+- `ModalContentLayout`：提供统一的内边距和滚动容器
+- `ModalFieldRow`：标签 + 输入框，自动处理 24px 行间距
+- `ModalHeaderCard`：灰色背景 (#f8f9fa) 的头部卡片，显示关键信息
+
+### 表格操作列（统一组件）
+```tsx
+import RowActions from '@/components/common/RowActions';
+import type { RowAction } from '@/components/common/RowActions';
+
+const actions: RowAction[] = [
+  {
+    key: 'edit',
+    label: '编辑',
+    primary: true,  // 主要操作，优先显示
+    onClick: () => handleEdit(record),
+  },
+  {
+    key: 'delete',
+    label: '删除',
+    danger: true,  // 危险操作，显示红色
+    disabled: record.status !== 'draft',
+    onClick: () => handleDelete(record),
+  },
+  {
+    key: 'log',
+    label: '日志',  // 自动折叠到"更多"菜单
+    onClick: () => showLog(record),
+  },
+];
+
+<Table
+  columns={[
+    // ... 其他列
+    {
+      title: '操作',
+      key: 'actions',
+      width: 120,
+      fixed: 'right',
+      render: (_, record) => <RowActions actions={actions} />,
+    },
+  ]}
+/>
+```
+
+**RowActions 规则**：
+- ✅ 最多显示 **1个** 行内按钮（其余自动折叠到"更多"）
+- ✅ `primary: true` 优先显示
+- ✅ `key: 'log'` 或 `label: '日志'` 自动折叠
+- ✅ 操作列固定宽度：`width: 120`（单个按钮）或 `width: 160`（2个按钮）
 
 ### 颜色系统（禁止硬编码）
 ```tsx

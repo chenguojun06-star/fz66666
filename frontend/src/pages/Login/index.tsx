@@ -56,8 +56,10 @@ const Login: React.FC = () => {
             name="username"
             rules={[{ required: true, message: '请输入用户名' }]}
             label="用户名"
+            htmlFor="login_username"
           >
             <Input
+              id="login_username"
               prefix={<UserOutlined className="site-form-item-icon" />}
               placeholder="请输入用户名"
               size="large"
@@ -71,8 +73,10 @@ const Login: React.FC = () => {
             name="password"
             rules={[{ required: true, message: '请输入密码' }]}
             label="密码"
+            htmlFor="login_password"
           >
             <Input.Password
+              id="login_password"
               prefix={<LockOutlined className="site-form-item-icon" />}
               placeholder="请输入密码"
               size="large"

@@ -124,7 +124,7 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
         return;
       }
       try {
-        const res = await api.get('/production/material/stock/page', {
+        const res = await api.get('/production/material/stock/list', {
           params: {
             page: 1,
             pageSize: 1,

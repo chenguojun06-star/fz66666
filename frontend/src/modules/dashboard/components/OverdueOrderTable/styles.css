@@ -104,8 +104,18 @@
 .overdue-days {
   color: #ef4444;
   font-weight: 600;
+  padding: 4px 8px;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 4px;
+  display: inline-block;
 }
 
 .overdue-order-table .ant-table-tbody > tr:hover > td {
   background: #f9fafb;
+}
+
+/* 深色主题下延期天数样式 */
+:root[data-theme="dark"] .overdue-days {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.2);
 }

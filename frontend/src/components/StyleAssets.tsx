@@ -186,7 +186,7 @@ export const ProductionOrderHeader: React.FC<{
               <div style={{ marginTop: 12, textAlign: 'center' }}>
                 <QRCodeBox
                   value={qrValue}
-                  label={`订单号: ${resolvedOrderNo || '-'}`}
+                  label={resolvedOrderNo && resolvedOrderNo !== '-' ? `订单号: ${resolvedOrderNo}` : `款号: ${resolvedStyleNo || '-'}`}
                   variant="primary"
                   size={qrSize}
                 />

@@ -475,7 +475,8 @@ public class MaterialPurchaseOrchestrator {
         }
 
         String status = purchase.getStatus() == null ? "" : purchase.getStatus().trim();
-        if (MaterialConstants.STATUS_COMPLETED.equals(status) || MaterialConstants.STATUS_CANCELLED.equals(status)) {
+        String normalizedStatus = status.toLowerCase();
+        if (MaterialConstants.STATUS_COMPLETED.equals(normalizedStatus) || MaterialConstants.STATUS_CANCELLED.equals(normalizedStatus)) {
             throw new IllegalStateException("该采购任务已结束，无法领取");
         }
 
@@ -485,7 +486,7 @@ public class MaterialPurchaseOrchestrator {
         String rid = safe(receiverIdValue);
         String rname = safe(receiverNameValue);
 
-        boolean alreadyReceived = !MaterialConstants.STATUS_PENDING.equals(status) && StringUtils.hasText(status);
+        boolean alreadyReceived = !MaterialConstants.STATUS_PENDING.equals(normalizedStatus) && StringUtils.hasText(normalizedStatus);
         if (alreadyReceived) {
             // 检查是否是同一个人
             boolean isSame = false;
@@ -931,7 +932,12 @@ public class MaterialPurchaseOrchestrator {
         List<MaterialPurchase> allPurchases = materialPurchaseService.list();
         return allPurchases.stream()
                 .filter(p -> p.getDeleteFlag() == null || p.getDeleteFlag() == 0)
-                .filter(p -> MaterialConstants.STATUS_RECEIVED.equals(p.getStatus()))
+                .filter(p -> {
+                    String status = p.getStatus();
+                    if (status == null) return false;
+                    String normalizedStatus = status.toLowerCase();
+                    return MaterialConstants.STATUS_RECEIVED.equals(normalizedStatus);
+                })
                 .filter(p -> p.getReturnConfirmed() == null || p.getReturnConfirmed() == 0)
                 .filter(p -> Objects.equals(p.getReceiverId(), userId))
                 .collect(Collectors.toList());

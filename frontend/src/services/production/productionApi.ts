@@ -8,7 +8,7 @@ export type ProductionOrderListParams = ProductionQueryParams & {
 
 export const productionOrderApi = {
   list: (params: ProductionOrderListParams) => api.get<{ code: number; data: { records: unknown[]; total: number } }>('/production/order/list', { params }),
-  detail: (orderId: string) => api.get<{ code: number; data: unknown }>(`/production/order/detail/${encodeURIComponent(String(orderId || '').trim())}`),
+  // detail 已废弃，统一使用 list({ orderNo: 'xxx' }) 查询单个订单
   close: (id: string, sourceModule: string) => api.post<{ code: number; message: string; data: boolean }>('/production/order/close', { id, sourceModule }),
   updateProgress: (payload: Record<string, unknown>) => api.post<{ code: number; message: string; data: boolean }>('/production/order/update-progress', payload),
   saveProgressWorkflow: (payload: Record<string, unknown>) => api.post<{ code: number; message: string; data: boolean }>('/production/order/progress-workflow/lock', payload),

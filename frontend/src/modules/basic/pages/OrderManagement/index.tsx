@@ -1580,6 +1580,7 @@ const OrderManagement: React.FC = () => {
                             <RowActions
                               actions={[
                                 {
+                                  key: 'delete',
                                   label: '删除',
                                   danger: true,
                                   disabled: orderLines.length <= 1,

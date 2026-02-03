@@ -16,6 +16,7 @@ export interface CardField {
 export interface CardProgressConfig {
   calculate: (record: any) => number;
   getStatus?: (record: any) => 'normal' | 'warning' | 'danger'; // liquid 类型使用 normal/warning/danger
+  isCompleted?: (record: any) => boolean; // 明确指定是否完成
   show?: boolean; // 是否显示进度条
   type?: 'capsule' | 'liquid'; // 进度条类型：capsule=胶囊条（默认），liquid=液体波浪条
 }
@@ -177,6 +178,7 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
                         width="100%"
                         height={20}
                         status={progressConfig.getStatus?.(record)}
+                        isCompleted={progressConfig.isCompleted?.(record)}
                       />
                     ) : (
                       // 胶囊椭圆形进度条（默认）

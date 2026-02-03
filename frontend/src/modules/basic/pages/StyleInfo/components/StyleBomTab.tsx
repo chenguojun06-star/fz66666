@@ -463,7 +463,7 @@ const StyleBomTab: React.FC<Props> = ({
       if (materialCode) {
         // 使用MaterialStockService查询库存（与后端StyleBomService相同逻辑）
         const res = await api.get<{ code: number; data: { records: any[] } }>(
-          '/production/material/stock/page',
+          '/production/material/stock/list',
           { params: {
             materialCode,
             color: color || undefined,  // 如果颜色为空，不传参数

@@ -51,6 +51,8 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
   onBatchReturn,
   isOrderFrozenForRecord,
 }) => {
+  const normalizeStatus = (status?: MaterialPurchaseType['status'] | string) => String(status || '').trim().toLowerCase();
+
   return (
     <div className="purchase-detail-view">
       <ProductionOrderHeader
@@ -62,20 +64,24 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
         color={String(detailOrder?.color || currentPurchase?.color || '').trim() || buildColorSummary(detailOrderLines) || ''}
         sizeItems={detailSizePairs.map((x) => ({ size: x.size, quantity: x.quantity }))}
         totalQuantity={getOrderQtyTotal(detailOrderLines)}
-        qrCodeValue={currentPurchase?.orderNo
-          ? JSON.stringify({
-            type: 'order',
-            orderNo: currentPurchase.orderNo,
-            styleNo: currentPurchase.styleNo,
-            styleName: currentPurchase.styleName,
-            purchaseCount: detailPurchases.length,
-          })
-          : JSON.stringify({
-            type: 'purchase',
-            purchaseNo: currentPurchase?.purchaseNo,
-            styleNo: currentPurchase?.styleNo,
-            styleName: currentPurchase?.styleName,
-          })}
+        qrCodeValue={
+          currentPurchase?.orderNo && currentPurchase.orderNo !== '-'
+            ? JSON.stringify({
+              type: 'order',
+              orderNo: currentPurchase.orderNo,
+              styleNo: currentPurchase.styleNo,
+              styleName: currentPurchase.styleName,
+              purchaseCount: detailPurchases.length,
+            })
+            : JSON.stringify({
+              type: 'sample',
+              styleNo: currentPurchase?.styleNo,
+              styleName: currentPurchase?.styleName,
+              color: String(detailOrder?.color || currentPurchase?.color || '').trim() || buildColorSummary(detailOrderLines) || '',
+              quantity: getOrderQtyTotal(detailOrderLines),
+              purchaseNo: currentPurchase?.purchaseNo,
+            })
+        }
         coverSize={160}
         qrSize={120}
       />
@@ -89,14 +95,19 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
             <Button
               size="small"
               type="primary"
-              disabled={detailFrozen || !detailPurchases.some((p) => p.status === 'pending')}
+              disabled={detailFrozen || !detailPurchases.some((p) => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING)}
               onClick={onReceiveAll}
             >
               一键领取全部
             </Button>
             <Button
               size="small"
-              disabled={detailFrozen || !detailPurchases.some((p) => p.status === 'received' || p.status === 'partial' || p.status === 'completed')}
+              disabled={detailFrozen || !detailPurchases.some((p) => {
+                const status = normalizeStatus(p.status);
+                return status === MATERIAL_PURCHASE_STATUS.RECEIVED
+                  || status === MATERIAL_PURCHASE_STATUS.PARTIAL
+                  || status === MATERIAL_PURCHASE_STATUS.COMPLETED;
+              })}
               onClick={onBatchReturn}
             >
               批量回料确认
@@ -218,12 +229,13 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                     width: 140,
                     render: (_: any, record: MaterialPurchaseType) => {
                       const frozen = isOrderFrozenForRecord(record);
+                      const status = normalizeStatus(record.status);
                       return (
                         <Space size={4}>
                           <Button
                             type="link"
                             size="small"
-                            disabled={frozen || record.status !== MATERIAL_PURCHASE_STATUS.PENDING}
+                            disabled={frozen || status !== MATERIAL_PURCHASE_STATUS.PENDING}
                             onClick={() => onReceive(record)}
                           >
                             领取
@@ -233,7 +245,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                             size="small"
                             disabled={
                               frozen
-                              || !(record.status === 'received' || record.status === 'partial' || record.status === 'completed')
+                              || !(status === MATERIAL_PURCHASE_STATUS.RECEIVED || status === MATERIAL_PURCHASE_STATUS.PARTIAL || status === MATERIAL_PURCHASE_STATUS.COMPLETED)
                               || Number(record?.returnConfirmed || 0) === 1
                             }
                             onClick={() => onConfirmReturn(record)}

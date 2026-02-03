@@ -137,10 +137,10 @@ const OrderCuttingChart: React.FC = () => {
         data: data.orderQuantities,
         lineStyle: {
           width: 3,
-          color: 'var(--primary-color)',
+          color: '#6366f1', // 紫色
         },
         itemStyle: {
-          color: 'var(--primary-color)',
+          color: '#6366f1',
         },
         areaStyle: {
           color: {
@@ -150,8 +150,8 @@ const OrderCuttingChart: React.FC = () => {
             x2: 0,
             y2: 1,
             colorStops: [
-              { offset: 0, color: 'rgba(59, 130, 246, 0.2)' },
-              { offset: 1, color: 'rgba(59, 130, 246, 0.02)' },
+              { offset: 0, color: 'rgba(99, 102, 241, 0.3)' },
+              { offset: 1, color: 'rgba(99, 102, 241, 0.05)' },
             ],
           },
         },
@@ -163,10 +163,10 @@ const OrderCuttingChart: React.FC = () => {
         data: data.cuttingQuantities,
         lineStyle: {
           width: 3,
-          color: 'var(--success-color)',
+          color: '#f59e0b', // 橙色
         },
         itemStyle: {
-          color: 'var(--success-color)',
+          color: '#f59e0b',
         },
         areaStyle: {
           color: {
@@ -176,8 +176,8 @@ const OrderCuttingChart: React.FC = () => {
             x2: 0,
             y2: 1,
             colorStops: [
-              { offset: 0, color: 'rgba(16, 185, 129, 0.2)' },
-              { offset: 1, color: 'rgba(16, 185, 129, 0.02)' },
+              { offset: 0, color: 'rgba(245, 158, 11, 0.3)' },
+              { offset: 1, color: 'rgba(245, 158, 11, 0.05)' },
             ],
           },
         },

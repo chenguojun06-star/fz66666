@@ -113,19 +113,15 @@ export const fetchProductionOrderDetail = async (
   const key = String(id || '').trim() || String(orderNo || '').trim();
   if (!key) throw new Error('缺少订单ID或订单号');
 
-  const byIdPath = `/production/order/detail/${encodeURIComponent(key)}`;
-  const byNoPath = `/production/order/by-order-no/${encodeURIComponent(key)}`;
-
+  // 统一使用 /list 端点查询单个订单
   try {
-    const resp = await api.get<ApiResponse>(byIdPath);
-    if (resp && resp.code === 200 && resp.data) return resp.data;
-  } catch {
-    // Try by order number
-  }
-
-  try {
-    const resp = await api.get<ApiResponse>(byNoPath);
-    if (resp && resp.code === 200 && resp.data) return resp.data;
+    const resp = await api.get<ApiResponse>('/production/order/list', {
+      params: { orderNo: key }
+    });
+    if (resp && resp.code === 200 && resp.data) {
+      const records = (resp.data as { records?: unknown[] })?.records || [];
+      if (records.length > 0) return records[0];
+    }
   } catch {
     // Failed
   }

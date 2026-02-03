@@ -305,16 +305,20 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
         return;
       }
       try {
-        const res = await productionOrderApi.detail(orderId);
+        const res = await productionOrderApi.list({ orderNo: orderId, page: 1, pageSize: 1 });
         const result = res as Record<string, unknown>;
         if (!cancelled && result.code === 200 && result.data) {
-          const data = result.data as Record<string, unknown>;
-          setOrderDetail(data);
-          setOrderSummary({
-            orderNo: String(data.orderNo || orderNo || '').trim() || undefined,
-            styleNo: String(data.styleNo || '').trim() || undefined,
-            orderQuantity: Number(data.orderQuantity ?? 0) || 0,
-          });
+          const data = result.data as { records?: unknown[] };
+          const records = data?.records || [];
+          if (records.length > 0) {
+            const orderData = records[0] as Record<string, unknown>;
+            setOrderDetail(orderData);
+            setOrderSummary({
+              orderNo: String(orderData.orderNo || orderNo || '').trim() || undefined,
+              styleNo: String(orderData.styleNo || '').trim() || undefined,
+              orderQuantity: Number(orderData.orderQuantity ?? 0) || 0,
+            });
+          }
         }
       } catch {
         if (!cancelled) setOrderSummary({ orderNo });

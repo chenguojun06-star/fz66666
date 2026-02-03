@@ -125,7 +125,7 @@ const _MaterialInventory: React.FC = () => {
     setLoading(true);
     try {
         const { current, pageSize } = pagination.pagination;
-        const res = await api.get('/production/material/stock/page', {
+        const res = await api.get('/production/material/stock/list', {
             params: {
                 page: current,
                 pageSize: pageSize,

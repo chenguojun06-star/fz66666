@@ -7,6 +7,7 @@ interface LiquidProgressBarProps {
   color?: string;
   backgroundColor?: string;
   status?: 'normal' | 'warning' | 'danger'; // normal=正常绿色, warning=快延期黄色, danger=延期红色
+  isCompleted?: boolean; // 明确指定是否已完成，避免自动判断
 }
 
 /**
@@ -20,9 +21,10 @@ const LiquidProgressBar: React.FC<LiquidProgressBarProps> = ({
   color,
   backgroundColor = '#f0f0f0',
   status = 'normal',
+  isCompleted: externalIsCompleted,
 }) => {
-  // 是否已完成
-  const isCompleted = percent >= 100;
+  // 是否已完成：优先使用外部传入的值，否则根据进度判断（兼容旧用法）
+  const isCompleted = externalIsCompleted !== undefined ? externalIsCompleted : percent >= 100;
 
   // 根据进度和状态自动选择颜色
   const getColors = () => {

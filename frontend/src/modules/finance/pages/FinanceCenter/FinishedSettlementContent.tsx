@@ -321,7 +321,7 @@ const FinishedSettlementContent: React.FC = () => {
   const loadData = async (params: PageParams = pageParams) => {
     setLoading(true);
     try {
-      const response = await api.get('/finance/finished-settlement/page', { params });
+      const response = await api.get('/finance/finished-settlement/list', { params });
       setData(response.data?.records || []);
       setTotal(response.data?.total || 0);
     } catch (error: unknown) {

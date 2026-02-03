@@ -35,12 +35,63 @@ import java.util.Objects;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
-            if (existing == null || !hasText(existing.getId())) {
-                return null;
-            }
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-            String otherName = hasText(existing.getOperatorName()) ? existing.getOperatorName() : "他人";
-            throw new IllegalStateException("该菲号「" + progressStage + "」环节已被「" + otherName + "」领取，无法重复操作");
+@Service
+@Slf4j
+public class ScanRecordOrchestrator {
+
+    private static final List<String> FIXED_PRODUCTION_NODES = Arrays.asList(
+            "采购",
+            "裁剪",
+            "车缝",
+            "大烫",
+            "质检",
+            "二次工艺",
+            "包装",
+            "入库");
+
+    @Autowired
+    private ScanRecordService scanRecordService;
+
+    @Autowired
+    private ProductionCleanupOrchestrator productionCleanupOrchestrator;
+
+    @Autowired
+    private ProductionOrderService productionOrderService;
+
+    @Autowired
+    private CuttingBundleService cuttingBundleService;
+
+    @Autowired
+    private MaterialPurchaseService materialPurchaseService;
+
+    @Autowired
+    private ProductWarehousingService productWarehousingService;
+
+    @Autowired
+    private ProductWarehousingOrchestrator productWarehousingOrchestrator;
+
+    @Autowired
+    private TemplateLibraryService templateLibraryService;
+
+    @Autowired
+    private ProductionOrderScanRecordDomainService scanRecordDomainService;
+
+    @Autowired
+    private SKUService skuService;
+
+    @Autowired
+    private com.fashion.supplychain.style.service.StyleAttachmentService styleAttachmentService;
+
+    private boolean isAutoSkippableStageName(ProductionOrder order, String processName) {
+        String pn = hasText(processName) ? processName.trim() : null;
+        if (!hasText(pn)) {
+            return true;
+        }
         if (templateLibraryService.progressStageNameMatches(ProductionOrderScanRecordDomainService.STAGE_ORDER_CREATED,
                 pn)) {
             return true;
@@ -814,27 +865,6 @@ import org.springframework.dao.DuplicateKeyException;
                 || "待返修".equals(status);
     }
 
-    private ScanRecord findExistingOnceScan(ProductionOrder order, CuttingBundle bundle, String scanType,
-            String progressStage) {
-        LambdaQueryWrapper<ScanRecord> qw = new LambdaQueryWrapper<ScanRecord>()
-                .eq(ScanRecord::getScanResult, "success")
-                .eq(ScanRecord::getScanType, scanType)
-                .eq(ScanRecord::getProgressStage, progressStage)
-                .orderByDesc(ScanRecord::getScanTime)
-                .orderByDesc(ScanRecord::getCreateTime)
-                .last("limit 1");
-        if (bundle != null && hasText(bundle.getId())) {
-            qw.eq(ScanRecord::getCuttingBundleId, bundle.getId());
-        } else if (order != null && hasText(order.getId())) {
-            qw.eq(ScanRecord::getOrderId, order.getId());
-        }
-        try {
-            return scanRecordService.getOne(qw);
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
     private Map<String, Object> executeProductionScan(Map<String, Object> params, String requestId, String operatorId,
             String operatorName, String scanType, Integer quantity, boolean autoProcess) {
         String scanCode = TextUtils.safeText(params.get("scanCode"));
@@ -920,11 +950,6 @@ import org.springframework.dao.DuplicateKeyException;
         }
         if (qty == null || qty <= 0) {
             throw new IllegalArgumentException("数量必须大于0");
-        }
-
-        ScanRecord existedOnce = findExistingOnceScan(orderFinal, bundle, finalScanType, stageNameFinal);
-        if (existedOnce != null) {
-            throw new IllegalStateException("该工序已被领取，无法重复操作");
         }
 
         validateNotExceedOrderQuantity(orderFinal, finalScanType, stageNameFinal, qty, bundle);

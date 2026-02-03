@@ -137,10 +137,10 @@ const ScanCountChart: React.FC = () => {
         data: data.scanCounts,
         lineStyle: {
           width: 3,
-          color: 'var(--primary-color-light)',
+          color: '#3b82f6', // 蓝色
         },
         itemStyle: {
-          color: 'var(--primary-color-light)',
+          color: '#3b82f6',
         },
         areaStyle: {
           color: {
@@ -150,8 +150,8 @@ const ScanCountChart: React.FC = () => {
             x2: 0,
             y2: 1,
             colorStops: [
-              { offset: 0, color: 'rgba(139, 92, 246, 0.2)' },
-              { offset: 1, color: 'rgba(139, 92, 246, 0.02)' },
+              { offset: 0, color: 'rgba(59, 130, 246, 0.3)' },
+              { offset: 1, color: 'rgba(59, 130, 246, 0.05)' },
             ],
           },
         },
@@ -163,10 +163,10 @@ const ScanCountChart: React.FC = () => {
         data: data.scanQuantities,
         lineStyle: {
           width: 3,
-          color: 'var(--warning-color)',
+          color: '#10b981', // 绿色
         },
         itemStyle: {
-          color: 'var(--warning-color)',
+          color: '#10b981',
         },
         areaStyle: {
           color: {
@@ -176,8 +176,8 @@ const ScanCountChart: React.FC = () => {
             x2: 0,
             y2: 1,
             colorStops: [
-              { offset: 0, color: 'rgba(245, 158, 11, 0.2)' },
-              { offset: 1, color: 'rgba(245, 158, 11, 0.02)' },
+              { offset: 0, color: 'rgba(16, 185, 129, 0.3)' },
+              { offset: 1, color: 'rgba(16, 185, 129, 0.05)' },
             ],
           },
         },

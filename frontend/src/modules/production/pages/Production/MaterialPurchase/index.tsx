@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Card, Input, Select, Space, Form, InputNumber, Upload, message, Segmented, Tooltip, Tabs, Modal, Collapse } from 'antd';
+import { Button, Card, Input, Select, Space, Form, InputNumber, Upload, message as antdMessage, Segmented, Tooltip, Tabs, Modal, Collapse } from 'antd';
 import { PlusOutlined, DownloadOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { useModal } from '@/hooks';
@@ -39,7 +39,8 @@ import MaterialTable from './components/MaterialTable';
 import PurchaseModal from './components/PurchaseModal';
 
 const MaterialPurchase: React.FC = () => {
-  const [messageApi, contextHolder] = message.useMessage();
+  const [messageApi, contextHolder] = antdMessage.useMessage();
+  const message = messageApi;
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -496,7 +497,8 @@ const MaterialPurchase: React.FC = () => {
     if (!visible) return;
     if (dialogMode !== 'view') return;
     const no = String(currentPurchase?.orderNo || '').trim();
-    if (no) {
+    // 样衣采购单没有订单号（或订单号为"-"），按款号加载
+    if (no && no !== '-') {
       loadDetailByOrderNo(no);
     } else if (currentPurchase) {
       const styleNo = String(currentPurchase?.styleNo || '').trim();
@@ -672,11 +674,18 @@ const MaterialPurchase: React.FC = () => {
 
   const isOrderFrozenForRecord = (record?: Record<string, unknown> | null) => {
     if (!record) return false;
-    const orderNo = String(record?.orderNo || '').trim();
-    const orderId = String(record?.orderId || record?.id || '').trim();
     const status = String(record?.status || '').trim().toLowerCase();
     if (status === 'completed') return true;
-    // isFrozenById 是 Record<string, boolean>，不是函数
+
+    // 样衣采购单（无订单号）不检查订单冻结状态
+    const sourceType = String(record?.sourceType || '').trim();
+    const orderNo = String(record?.orderNo || '').trim();
+    if (sourceType === 'sample' || !orderNo || orderNo === '-') {
+      return false; // 样衣采购单只根据自身状态判断
+    }
+
+    // 订单采购单需要检查订单冻结状态
+    const orderId = String(record?.orderId || record?.id || '').trim();
     return orderFrozen.isFrozenById[orderNo] || orderFrozen.isFrozenById[orderId] || false;
   };
 
@@ -943,7 +952,10 @@ const MaterialPurchase: React.FC = () => {
     return sorted;
   }, [purchaseList, sortField, sortOrder]);
 
-  const detailFrozen = isOrderFrozenForRecord(detailOrder || currentPurchase);
+  // 样衣采购单（无订单号）不检查冻结状态
+  const orderNo = String(currentPurchase?.orderNo || '').trim();
+  const detailFrozen = (orderNo && orderNo !== '-') ? isOrderFrozenForRecord(detailOrder || currentPurchase) : false;
+  const normalizeStatus = (status?: MaterialPurchaseType['status'] | string) => String(status || '').trim().toLowerCase();
 
   const handleReceiveAll = async () => {
     const receiverName = String(user?.name || user?.username || '').trim() || window.prompt('请输入领取人姓名') || '';
@@ -951,7 +963,19 @@ const MaterialPurchase: React.FC = () => {
       message.error('未填写领取人');
       return;
     }
-    const targets = detailPurchases.filter((p) => p.status === 'pending' && String(p.id || '').trim());
+    const currentUserId = String(user?.id || '').trim();
+    const currentUserName = String(user?.name || user?.username || '').trim();
+    const targets = detailPurchases.filter((p) => {
+      const status = normalizeStatus(p.status);
+      if (status !== MATERIAL_PURCHASE_STATUS.PENDING) return false;
+      if (!String(p.id || '').trim()) return false;
+      const existingReceiverId = String(p.receiverId || '').trim();
+      const existingReceiverName = String(p.receiverName || '').trim();
+      if (!existingReceiverId && !existingReceiverName) return true;
+      if (currentUserId && existingReceiverId && currentUserId === existingReceiverId) return true;
+      if (currentUserName && existingReceiverName && currentUserName === existingReceiverName) return true;
+      return false;
+    });
     if (!targets.length) {
       message.info('没有可领取的采购任务');
       return;
@@ -959,16 +983,20 @@ const MaterialPurchase: React.FC = () => {
     try {
       setSubmitLoading(true);
       for (const t of targets) {
-        await api.post<{ code: number; message: string; data: boolean }>('/production/purchase/receive', {
+        const res = await api.post<{ code: number; message: string; data: boolean }>('/production/purchase/receive', {
           purchaseId: String(t.id),
           receiverId: String(user?.id || '').trim(),
           receiverName: String(receiverName).trim(),
         });
+        if (res?.code !== 200) {
+          message.error(res?.message || '领取失败');
+          break;
+        }
       }
       message.success('已领取该订单待采购任务');
       fetchMaterialPurchaseList();
       const no = String(currentPurchase?.orderNo || '').trim();
-      if (no) loadDetailByOrderNo(no);
+      if (no && no !== '-') loadDetailByOrderNo(no);
     } catch {
       message.error('领取失败');
     } finally {
@@ -977,11 +1005,12 @@ const MaterialPurchase: React.FC = () => {
   };
 
   const handleBatchReturn = async () => {
-    const targets = detailPurchases.filter((p) =>
-      (p.status === MATERIAL_PURCHASE_STATUS.RECEIVED || p.status === MATERIAL_PURCHASE_STATUS.PARTIAL || p.status === MATERIAL_PURCHASE_STATUS.COMPLETED)
+    const targets = detailPurchases.filter((p) => {
+      const status = normalizeStatus(p.status);
+      return (status === MATERIAL_PURCHASE_STATUS.RECEIVED || status === MATERIAL_PURCHASE_STATUS.PARTIAL || status === MATERIAL_PURCHASE_STATUS.COMPLETED)
       && String(p.id || '').trim()
       && Number(p.returnConfirmed || 0) !== 1
-    );
+    });
     if (!targets.length) {
       message.info('没有可回料确认的采购任务');
       return;
@@ -1017,6 +1046,8 @@ const MaterialPurchase: React.FC = () => {
   return (
     <Layout>
       {contextHolder}
+      <Form form={form} component={false} />
+      <Form form={materialDatabaseForm} component={false} />
       <div>
         <Card className="page-card">
           <Tabs

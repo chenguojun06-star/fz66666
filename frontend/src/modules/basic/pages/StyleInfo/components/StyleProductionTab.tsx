@@ -106,33 +106,19 @@ const StyleProductionTab: React.FC<Props> = ({
     }
   };
 
-  const tableData = Array.from({ length: Math.max(1, Number(productionReqRowCount) || 15) }).map((_, idx) => ({
-    key: idx + 1,
-    index: idx + 1,
-    value: productionReqRows[idx] || '',
-  }));
+  // 合并所有生产要求为单个文本
+  const allRequirements = productionReqRows.filter(r => r && r.trim()).join('\n');
 
-  const columns = [
-    {
-      title: '序号',
-      dataIndex: 'index',
-      key: 'index',
-      width: 80,
-      align: 'center' as const,
-    },
-    {
-      title: '生产要求',
-      dataIndex: 'value',
-      key: 'value',
-      render: (_: string, record: { index: number; value: string }) => (
-        <Input
-          value={record.value}
-          onChange={(e) => onProductionReqChange(record.index - 1, e.target.value)}
-          placeholder="请输入生产要求"
-        />
-      ),
-    },
-  ];
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const lines = e.target.value.split('\n');
+    lines.forEach((line, idx) => {
+      onProductionReqChange(idx, line);
+    });
+    // 清空后续行
+    for (let i = lines.length; i < productionReqRowCount; i++) {
+      onProductionReqChange(i, '');
+    }
+  };
 
   return (
     <div data-production-req>
@@ -189,13 +175,17 @@ const StyleProductionTab: React.FC<Props> = ({
           💡 提示：相关文件请在"文件管理"标签页统一上传
         </div>
       </div>
-      <Table
-        size="small"
-        bordered
-        pagination={false}
-        columns={columns}
-        dataSource={tableData}
-        style={{ marginTop: 8 }}
+      <Input.TextArea
+        value={allRequirements}
+        onChange={handleTextChange}
+        placeholder="请输入生产要求，每行一条&#10;例如：&#10;1. 裁剪前需松布和缩水，确认布号、正反面及染布，裁剪按照合同订单数量明细裁剪；&#10;2. 针织面料需松布24小时可裁剪，拉布经纬纱向要求经直纬平，注意避开布匹瑕疵和色差；"
+        rows={15}
+        style={{
+          marginTop: 8,
+          fontFamily: 'monospace',
+          fontSize: 14,
+          lineHeight: '1.8'
+        }}
       />
     </div>
   );

@@ -58,15 +58,19 @@ body {
 
 .ant-modal :where(.ant-input, .ant-input-affix-wrapper input, .ant-input-number-input, .ant-picker-input > input),
 .square-inputs :where(.ant-input, .ant-input-affix-wrapper input, .ant-input-number-input, .ant-picker-input > input) {
-  line-height: 30px;
-  height: 30px;
+  height: 32px;
+  line-height: 32px;
+  display: flex;
+  align-items: center;
 }
 
 .ant-modal :where(.ant-select-single .ant-select-selector .ant-select-selection-item,
 .ant-select-single .ant-select-selector .ant-select-selection-placeholder),
 .square-inputs :where(.ant-select-single .ant-select-selector .ant-select-selection-item,
 .ant-select-single .ant-select-selector .ant-select-selection-placeholder) {
-  line-height: 30px;
+  line-height: 32px;
+  display: flex;
+  align-items: center;
 }
 
 .ant-modal :where(.ant-input-affix-wrapper, .ant-input-number, .ant-picker, .ant-select-selector),
@@ -92,7 +96,8 @@ body {
 
 :where(.ant-input, .ant-input-affix-wrapper input, .ant-select-selector, .ant-input-number-input, .ant-picker-input > input) {
   font-size: 14px;
-  line-height: 38px;
+  height: 40px;
+  line-height: 40px;
   color: var(--color-text-primary);
 }
 
@@ -117,7 +122,9 @@ body {
 
 :where(.ant-select-single .ant-select-selector .ant-select-selection-item,
 .ant-select-single .ant-select-selector .ant-select-selection-placeholder) {
-  line-height: 38px;
+  line-height: 40px;
+  display: flex;
+  align-items: center;
 }
 
 :where(.ant-input-affix-wrapper, .ant-select-selector, .ant-input-number, .ant-picker) {
@@ -175,7 +182,10 @@ body {
 /* 搜索输入按钮高度统一 */
 .ant-input-search .ant-btn {
   height: 40px !important;
-  line-height: 38px !important;
+  line-height: 40px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .ant-input-search .ant-input,
@@ -183,32 +193,7 @@ body {
   border-radius: var(--radius-pill) !important;
 }
 
-/* 弹窗内输入框：长方形/正方形 + 随窗口响应 */
-.ant-modal :where(.ant-input, .ant-input-affix-wrapper, .ant-input-number, .ant-select-selector, .ant-picker) {
-  height: clamp(30px, 3.2vh, 40px);
-  border-radius: var(--radius-xs) !important;
-  padding: 0 10px;
-}
-
-.ant-modal :where(.ant-input, .ant-input-affix-wrapper input, .ant-input-number-input, .ant-picker-input > input) {
-  height: 100%;
-  line-height: calc(clamp(30px, 3.2vh, 40px) - 2px);
-}
-
-.ant-modal :where(.ant-select-single .ant-select-selector .ant-select-selection-item,
-.ant-select-single .ant-select-selector .ant-select-selection-placeholder) {
-  line-height: calc(clamp(30px, 3.2vh, 40px) - 2px);
-}
-
-.ant-modal :where(.ant-input-affix-wrapper, .ant-input-number, .ant-picker, .ant-select-selector) {
-  border-radius: var(--radius-xs) !important;
-  padding: 0 10px;
-}
-
-.ant-modal .ant-picker-range {
-  border-radius: var(--radius-xs) !important;
-  overflow: hidden;
-}
+/* ⚠️ 已删除重复定义 - 使用第52-82行的统一弹窗输入框样式（32px固定高度） */
 
 /* 工序/入库详情弹窗：统一小号输入与选择框 */
 .process-detail-modal :where(.ant-input, .ant-input-affix-wrapper, .ant-input-number, .ant-select-selector, .ant-picker) {

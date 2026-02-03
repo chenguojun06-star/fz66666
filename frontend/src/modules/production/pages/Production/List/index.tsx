@@ -38,6 +38,7 @@ import { useViewport } from '@/utils/useViewport';
 import { useModal } from '@/hooks';
 import LiquidProgressBar from '@/components/common/LiquidProgressBar';
 import ProcessDetailModal from '@/components/production/ProcessDetailModal';
+import { getProgressColorStatus } from '@/utils/progressColor';
 
 const { Option } = Select;
 
@@ -2112,28 +2113,10 @@ const ProductionList: React.FC = () => {
                   const progress = Number(record.productionProgress) || 0;
                   return Math.min(100, Math.max(0, progress));
                 },
-                getStatus: (record: ProductionOrder) => {
-                  // 优先检查交期状态
-                  if (record.plannedEndDate) {
-                    const now = new Date();
-                    const deadline = new Date(record.plannedEndDate);
-                    const diffDays = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-
-                    // 超期3天以上 - 深通红色 (danger)
-                    if (diffDays <= -4) return 'danger';
-                    // 超期1-3天 - 红色 (danger)
-                    if (diffDays < 0) return 'danger';
-                    // 当天交期(0天) - 微红色 (warning)
-                    if (diffDays === 0) return 'warning';
-                  }
-
-                  const status = record.status;
-                  if (status === 'delayed') return 'danger';
-                  if (status === 'production') return 'warning';
-                  return 'normal';
-                },
+                getStatus: (record: ProductionOrder) => getProgressColorStatus(record.plannedEndDate),
+                isCompleted: (record: ProductionOrder) => record.status === 'completed',
                 show: true,
-                type: 'liquid', // 使用液体波浪进度条
+                type: 'liquid',
               }}
               actions={(record: ProductionOrder) => [
                 {

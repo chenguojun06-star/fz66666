@@ -8,6 +8,7 @@ import { EyeOutlined, ScanOutlined, RollbackOutlined, EditOutlined } from '@ant-
 import { ProductionOrder } from '@/types/production';
 import { StyleCoverThumb } from '@/components/StyleAssets';
 import { formatDateTime } from '@/utils/datetime';
+import { getProgressColorStatus } from '@/utils/progressColor';
 
 interface OrderProgressCardProps {
   order: ProductionOrder;
@@ -79,8 +80,16 @@ const OrderProgressCard: React.FC<OrderProgressCardProps> = ({
             </div>
             <Progress
               percent={order.productionProgress}
-              status={order.productionProgress === 100 ? 'success' : 'active'}
-              strokeColor={order.productionProgress === 100 ? 'var(--success-color)' : '#1890ff'}
+              status={order.status === 'completed' ? 'success' : 'active'}
+              strokeColor={
+                order.status === 'completed'
+                  ? 'var(--success-color)'
+                  : getProgressColorStatus(order.plannedEndDate) === 'danger'
+                  ? '#ff4d4f'
+                  : getProgressColorStatus(order.plannedEndDate) === 'warning'
+                  ? '#faad14'
+                  : '#52c41a'
+              }
             />
           </div>
 

@@ -104,9 +104,19 @@
   overflow: hidden;
 }
 
+.mini-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
 /* 深色主题卡片 */
 @media (prefers-color-scheme: dark) {
   .mini-stat-card {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+}
+
 /* 图标 - 柔和配色 */
 .mini-stat-icon {
   width: 44px;
@@ -127,63 +137,35 @@
 }
 
 .mini-stat-icon--warehousing {
-  background: var(--primary-color);
+  background: #3b82f6; /* 蓝色 */
 }
 
 .mini-stat-icon--defective {
-  background: var(--warning-color);
+  background: #f59e0b; /* 橙色 */
 }
 
 .mini-stat-icon--defect-rate {
-  background: var(--error-color);
+  background: #ef4444; /* 红色 */
 }
 
 .mini-stat-icon--qualified {
-  background: var(--success-color);
+  background: #10b981; /* 绿色 */
 }
 
 .mini-stat-icon--repair {
-  background: var(--primary-color-light);
-}
-    border-color: rgba(255, 255, 255, 0.15);
-  }
-}
-
-.mini-stat-icon {
-  width: 42px;
-  height: 42px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  font-size: 18px;
-  color: white;
-  flex-shrink: 0;
-}
-
-.mini-stat-icon--warehousing {
-  background: var(--primary-color);
-}
-
-.mini-stat-icon--defective {
-  background: var(--warning-color);
-}
-
-.mini-stat-icon--defect-rate {
-  background: var(--error-color);
-}
-
-.mini-stat-icon--qualified {
-  background: var(--success-color);
-}
-
-.mini-stat-icon--repair {
-  background: var(--primary-color-light);
+  background: #8b5cf6; /* 紫色 */
 }
 
 .mini-stat-content {
   flex: 1;
-}3px;
+}
+
+.mini-stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+  line-height: 1.2;
+  margin-bottom: 3px;
   transition: color 0.3s ease;
 }
 
@@ -204,13 +186,6 @@
   .mini-stat-label {
     color: #9ca3af;
   }
-  margin-bottom: 2px;
-}
-
-.mini-stat-label {
-  font-size: 13px;
-  color: #6b7280;
-  font-weight: 500;
 }
 
 /* 响应式布局 */

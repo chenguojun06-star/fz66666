@@ -464,21 +464,8 @@ const DEPRECATED_ENDPOINTS = {
   // 前端使用 /page，后端使用 /list，自动转换
   // ============================================================
 
-  '/production/material/stock/page': (config: AxiosRequestConfig) => {
-    console.warn('[API迁移] /material/stock/page 已废弃，请使用 /material/stock/list');
-    return {
-      ...config,
-      url: config.url?.replace(/\/stock\/page$/, '/stock/list')
-    };
-  },
-
-  '/finance/finished-settlement/page': (config: AxiosRequestConfig) => {
-    console.warn('[API迁移] /finished-settlement/page 已废弃，请使用 /finished-settlement/list');
-    return {
-      ...config,
-      url: config.url?.replace(/\/page$/, '/list')
-    };
-  },
+  // ✅ /production/material/stock/page 已完成迁移
+  // ✅ /finance/finished-settlement/page 已完成迁移
 
   '/production/picking/page': (config: AxiosRequestConfig) => {
     console.warn('[API迁移] /picking/page 已废弃，请使用 /picking/list');
@@ -488,21 +475,7 @@ const DEPRECATED_ENDPOINTS = {
     };
   },
 
-  '/production/order/detail/:orderNo': (config: AxiosRequestConfig) => {
-    // 检查参数是否为订单号（PO/ORD开头）而非数字ID
-    const param = config.url?.match(/\/detail\/([^/?]+)/)?.[1];
-    if (param && /^(PO|ORD)\d+/.test(param)) {
-      // 订单号直接使用 /list?orderNo={orderNo} 查询（后端统一接口）
-      console.warn(`[API迁移] /detail/${param} 已自动转换为 /list?orderNo=${param}`);
-      return {
-        ...config,
-        url: config.url?.replace(/\/detail\/([^/?]+)/, '/list'),
-        params: { ...config.params, orderNo: param }
-      };
-    }
-    // 数字ID不转换（使用 /detail/:id）
-    return config;
-  },
+  // ✅ /production/order/detail/:orderNo 已完成迁移，所有调用已改为 /list
 };
 
 /**
