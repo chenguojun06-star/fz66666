@@ -10,7 +10,7 @@ import RowActions from '@/components/common/RowActions';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import api from '@/utils/api';
-import { paths } from '@/routeConfig';
+// import { paths } from '@/routeConfig'; // 未使用
 import { StyleInfo, StyleQueryParams } from '@/types/style';
 import { StyleAttachmentsButton } from '@/components/StyleAssets';
 import { toCategoryCn } from '@/utils/styleCategory';
@@ -274,9 +274,9 @@ const AttachmentThumb: React.FC<{ styleId?: string | number; cover?: string | nu
 };
 
 const DataCenter: React.FC = () => {
-  const { isMobile, modalWidth } = useViewport();
-  const navigate = useNavigate();
-  const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
+  const { isMobile: _isMobile, modalWidth: _modalWidth } = useViewport();
+  const _navigate = useNavigate();
+  const _modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
   const [stats, setStats] = useState<DataCenterStats>({
     styleCount: 0,
@@ -292,7 +292,7 @@ const DataCenter: React.FC = () => {
   const [styles, setStyles] = useState<StyleInfo[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+  const [_viewMode, _setViewMode] = useState<'list' | 'card'>('list');
 
   // 打印弹窗状态
   const [printModalVisible, setPrintModalVisible] = useState(false);

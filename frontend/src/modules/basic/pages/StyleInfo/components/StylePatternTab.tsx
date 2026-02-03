@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { App, Button, Input, Modal, Space, Tag } from 'antd';
+import { App, Button, Input, Space, Tag } from 'antd';
 import api from '@/utils/api';
 import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
 import { formatDateTime } from '@/utils/datetime';
@@ -28,7 +28,7 @@ const StylePatternTab: React.FC<Props> = ({
   const { message, modal } = App.useApp();
   const { user } = useAuth();
   const [saving, setSaving] = useState(false);
-  const [sectionKey, setSectionKey] = useState<'files'>('files');
+  const [_sectionKey, _setSectionKey] = useState<'files'>('files');
   const [patternFiles, setPatternFiles] = useState<StyleAttachment[]>([]);
   const [patternCheckResult, setPatternCheckResult] = useState<{ complete: boolean; missingItems: string[] } | null>(null);
 

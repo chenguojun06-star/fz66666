@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { App, Button, Card, Modal, Space } from 'antd';
+import { App, Button, Card, Modal } from 'antd';
 import { PlusOutlined, AppstoreOutlined, UnorderedListOutlined, ReloadOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import StylePrintModal from '@/components/common/StylePrintModal';
@@ -24,7 +24,7 @@ import '../StyleInfo/styles.css';
  * 独立列表页面，路由: /style-info
  */
 const StyleInfoListPage: React.FC = () => {
-  const { message, modal: antdModal } = App.useApp();
+  const { message, modal: _antdModal } = App.useApp();
   const navigate = useNavigate();
 
   // 使用现有Hooks
@@ -45,7 +45,7 @@ const StyleInfoListPage: React.FC = () => {
     loadDevelopmentStats
   } = useStyleStats();
 
-  const { handleDelete, handleToggleTop, handlePrint } = useStyleActions(fetchList);
+  const { handleDelete, handleToggleTop: _handleToggleTop, handlePrint: _handlePrint } = useStyleActions(fetchList);
 
   // 视图模式
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
@@ -62,7 +62,7 @@ const StyleInfoListPage: React.FC = () => {
 
   // 字典选项
   const [categoryOptions, setCategoryOptions] = useState<{ label: string; value: string }[]>([]);
-  const [seasonOptions, setSeasonOptions] = useState<{ label: string; value: string }[]>([]);
+  const [_seasonOptions, _setSeasonOptions] = useState<{ label: string; value: string }[]>([]);
 
   // 初始化加载
   useEffect(() => {

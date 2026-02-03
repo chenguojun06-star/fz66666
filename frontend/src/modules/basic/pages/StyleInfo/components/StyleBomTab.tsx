@@ -72,9 +72,9 @@ const StyleBomTab: React.FC<Props> = ({
   const [bomTemplateId, setBomTemplateId] = useState<string | undefined>(undefined);
   const [bomTemplates, setBomTemplates] = useState<TemplateLibrary[]>([]);
   const [importMode, setImportMode] = useState<'overwrite' | 'append'>('overwrite');
-  const [templateSourceStyleNo, setTemplateSourceStyleNo] = useState('');
+  const [_templateSourceStyleNo, _setTemplateSourceStyleNo] = useState('');
   const [templateLoading, setTemplateLoading] = useState(false);
-  const [syncLoading, setSyncLoading] = useState(false);
+  const [_syncLoading, _setSyncLoading] = useState(false);
   const [currentStyleNo, setCurrentStyleNo] = useState('');
 
   const [syncJobId, setSyncJobId] = useState('');
@@ -99,8 +99,8 @@ const StyleBomTab: React.FC<Props> = ({
 
   const isSupervisorOrAbove = isSupervisorOrAboveUser(user);
 
-  const [styleNoOptions, setStyleNoOptions] = useState<Array<{ value: string; label: string }>>([]);
-  const [styleNoLoading, setStyleNoLoading] = useState(false);
+  const [_styleNoOptions, _setStyleNoOptions] = useState<Array<{ value: string; label: string }>>([]);
+  const [_styleNoLoading, _setStyleNoLoading] = useState(false);
   const styleNoReqSeq = useRef(0);
   const styleNoTimerRef = useRef<number | undefined>(undefined);
 
@@ -132,7 +132,8 @@ const StyleBomTab: React.FC<Props> = ({
     }
   };
 
-  const scheduleFetchStyleNos = (keyword: string) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _scheduleFetchStyleNos = (keyword: string) => {
     if (styleNoTimerRef.current != null) {
       window.clearTimeout(styleNoTimerRef.current);
     }
@@ -242,7 +243,8 @@ const StyleBomTab: React.FC<Props> = ({
     return nextData;
   };
 
-  const syncToMaterialDatabase = async () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _syncToMaterialDatabase = async () => {
     if (locked) {
       message.error('已完成，无法操作');
       return;
@@ -414,7 +416,8 @@ const StyleBomTab: React.FC<Props> = ({
     }
   };
 
-  const openMaterialModal = () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _openMaterialModal = () => {
     if (locked) {
       message.error('已完成，无法操作');
       return;
