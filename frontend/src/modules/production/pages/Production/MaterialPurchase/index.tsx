@@ -826,7 +826,7 @@ const MaterialPurchase: React.FC = () => {
         if (!ok) return;
       }
       const values = (await returnConfirmForm.validateFields()) as { items?: Array<{ purchaseId?: string; returnQuantity?: number }> };
-      const confirmerName = String(user?.name || user?.username || '未命名').trim() || '未命名';
+      const confirmerName = String(user?.name || user?.username || '系统操作员').trim() || '系统操作员';
       const items = Array.isArray(values?.items) ? values.items : [];
       const confirmerId = String(user?.id || '').trim() || undefined;
 
@@ -1224,7 +1224,7 @@ const MaterialPurchase: React.FC = () => {
         >
           <Form form={returnConfirmForm} layout="vertical" preserve={false}>
             <div style={{ marginBottom: 12, color: 'var(--neutral-text)' }}>
-              确认人：{String(user?.name || user?.username || '未命名').trim() || '未命名'}
+              确认人：{String(user?.name || user?.username || '系统操作员').trim() || '系统操作员'}
             </div>
             <div style={{ border: '1px solid #f0f0f0' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { Alert, App, Button, Card, Divider, Input, InputNumber, Popconfirm, Select, Space, Spin, Table, Tabs, Tag, Timeline, Typography, DatePicker } from 'antd';
-import { SaveOutlined, TeamOutlined, ShopOutlined, FileTextOutlined, HistoryOutlined, UnorderedListOutlined, UserOutlined, DollarOutlined, ToolOutlined, DeleteOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { Alert, App, Button, Input, InputNumber, Popconfirm, Select, Space, Spin, Table, Tabs, Tag, Typography } from 'antd';
+import { SaveOutlined, FileTextOutlined, HistoryOutlined, UnorderedListOutlined, UserOutlined, DeleteOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import ResizableModal from './ResizableModal';
 import dayjs from 'dayjs';
@@ -633,6 +633,18 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
             if (nodeTypeKey === 'warehousing') return 'warehousing';
             return 'production';
           })();
+          
+          // 提取工序名称和单价（修复：定义在函数作用域内）
+          const fixedProcessName = String(
+            currentData.delegateProcessName || (matchedProcess as any)?.name || (matchedProcess as any)?.processName || nodeName || ''
+          ).trim();
+          const fixedUnitPrice = (() => {
+            if (typeof currentData.delegatePrice === 'number') return currentData.delegatePrice;
+            const picked = Number((matchedProcess as any)?.unitPrice);
+            if (Number.isFinite(picked)) return picked;
+            return Number(unitPrice) || 0;
+          })();
+          
           try {
             await productionScanApi.execute({
               orderId,

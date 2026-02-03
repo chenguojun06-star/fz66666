@@ -7,6 +7,7 @@
  * 🟢 基础权限：FINANCE_BASIC_DATA_ONLY - 只能查看基础数据
  */
 
+import React from 'react';
 import { useAppContext } from '@/utils/AppContext';
 
 /**

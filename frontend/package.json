@@ -55,6 +55,7 @@
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
     "husky": "^9.1.7",
+    "jscpd": "^4.0.8",
     "madge": "^8.0.0",
     "prettier": "^3.6.2",
     "terser": "^5.36.0",
