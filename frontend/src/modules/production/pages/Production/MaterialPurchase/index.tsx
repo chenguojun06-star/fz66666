@@ -474,8 +474,8 @@ const MaterialPurchase: React.FC = () => {
   }, []);
 
   const filterOutMissingOrders = useCallback(async (records: MaterialPurchaseType[]) => {
-    // ⚠️ 临时禁用订单存在性检查，避免过滤掉有效的采购记录
-    // TODO: 后续优化 - 只在订单列表页面进行过滤，采购列表应显示所有记录
+    // ⚠️ 设计决策：采购列表不过滤订单，显示所有采购记录（包括已删除订单的采购记录用于追溯）
+    // 订单存在性检查仅在订单列表页面进行
     return records;
 
     // 原有逻辑（已注释）

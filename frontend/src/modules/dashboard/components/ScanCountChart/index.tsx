@@ -42,11 +42,12 @@ const ScanCountChart: React.FC = () => {
         scanQuantities: mockQuantities,
       });
 
-      // TODO: 替换为真实API（从t_scan_record表聚合统计）
-      // const result = await api.get<ChartData>('/api/dashboard/scan-count-chart');
-      // if (result.success && result.data) {
-      //   setData(result.data);
-      // }
+      // 调用真实API（从t_scan_record表聚合统计）
+      const result = await fetch('/api/dashboard/scan-count-chart');
+      const response = await result.json();
+      if (response.code === 200 && response.data) {
+        setData(response.data);
+      }
     } catch (error) {
       console.error('Failed to load scan count chart:', error);
     } finally {

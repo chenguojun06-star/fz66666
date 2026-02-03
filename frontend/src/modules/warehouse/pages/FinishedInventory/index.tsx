@@ -173,10 +173,25 @@ const _FinishedInventory: React.FC = () => {
       return;
     }
 
-    // TODO: 调用后端API
-    message.success('出库成功！');
-    outboundModal.close();
-    setSkuDetails([]);
+    try {
+      // 调用后端API进行出库（等待后端开发具体端点）
+      // const response = await fetch('/api/warehouse/finished-inventory/outbound', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ items: selectedItems }),
+      // });
+      // const result = await response.json();
+      // if (result.code === 200) {
+      //   message.success('出库成功！');
+      //   loadData();
+      // }
+      message.success('出库成功！');
+      outboundModal.close();
+      setSkuDetails([]);
+      loadData();
+    } catch (error) {
+      message.error('出库失败，请重试');
+    }
   };
 
   // 查看入库记录

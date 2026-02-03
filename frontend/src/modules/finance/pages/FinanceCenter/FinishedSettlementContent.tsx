@@ -427,8 +427,12 @@ const FinishedSettlementContent: React.FC = () => {
   // 打开日志弹窗
   const openLogModal = async (orderId: string) => {
     try {
-      // TODO: 后端API开发中，暂时使用模拟数据
-      // const response = await api.get(`/finance/finished-settlement/${orderId}/logs`);
+      // 调用真实API获取日志（暂时使用模拟数据，等待后端API开发）
+      // const response = await fetch(`/api/finance/finished-settlement/${orderId}/logs`);
+      // const result = await response.json();
+      // if (result.code === 200) {
+      //   setOrderLogs(result.data);
+      // }
       const mockLogs = [
         { time: dayjs().subtract(1, 'day').format('YYYY-MM-DD HH:mm:ss'), operator: '张三', action: '创建对账单' },
         { time: dayjs().format('YYYY-MM-DD HH:mm:ss'), operator: '李四', action: '审批通过' },
