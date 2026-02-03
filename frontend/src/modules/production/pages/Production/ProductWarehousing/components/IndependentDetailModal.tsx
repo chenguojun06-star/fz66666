@@ -352,7 +352,7 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
                 pagination={false}
                 dataSource={popupOrderLineWarehousingRows}
                 sticky
-                scroll={{ x: 920, y: 260 }}
+                scroll={{ x: 920 }}
                 columns={[
                   { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 170, render: (v: unknown) => <span className="order-no-wrap">{String(v || '').trim() || '-'}</span> },
                   { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 140, ellipsis: true },

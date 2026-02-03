@@ -109,7 +109,7 @@ const PurchasePreviewView: React.FC<PurchasePreviewViewProps> = ({ previewList, 
         dataSource={previewList}
         rowKey={(_, index) => index || 0}
         pagination={false}
-        scroll={{ x: 'max-content', y: 420 }}
+        scroll={{ x: 'max-content' }}
         size={isMobile ? 'small' : 'middle'}
       />
       <div className="mt-sm" style={{ color: 'var(--neutral-text-disabled)' }}>

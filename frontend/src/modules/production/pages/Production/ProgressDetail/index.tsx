@@ -1385,7 +1385,9 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 current: queryParams.page,
                 pageSize: queryParams.pageSize,
                 total,
+                showTotal: (total) => `共 ${total} 条`,
                 showSizeChanger: true,
+                pageSizeOptions: ['10', '20', '50', '100'],
                 onChange: (page: number, pageSize: number) => setQueryParams((prev) => ({ ...prev, page, pageSize })),
               }}
               scroll={{ x: 1500 }}
@@ -1510,7 +1512,9 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 current: queryParams.page,
                 pageSize: queryParams.pageSize,
                 total,
+                showTotal: (total) => `共 ${total} 条`,
                 showSizeChanger: true,
+                pageSizeOptions: ['10', '20', '50', '100'],
                 onChange: (page: number, pageSize: number) => setQueryParams((prev) => ({ ...prev, page, pageSize })),
               }}
               scroll={{ x: 1500 }}

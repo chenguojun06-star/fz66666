@@ -1574,6 +1574,7 @@ const StyleBomTab: React.FC<Props> = ({
                       current: materialPage,
                       pageSize: 10,
                       total: materialTotal,
+                      showTotal: (total) => `共 ${total} 条`,
                       onChange: (p) => fetchMaterials(p, materialKeyword),
                       showSizeChanger: false,
                     }}

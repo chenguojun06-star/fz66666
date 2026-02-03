@@ -1475,6 +1475,7 @@ const CuttingManagement: React.FC = () => {
                   current: taskQuery.page,
                   pageSize: taskQuery.pageSize,
                   total: taskTotal,
+                  showTotal: (total) => `共 ${total} 条`,
                   showSizeChanger: true,
                   pageSizeOptions: ['10', '20', '50', '100', '200'],
                   onChange: (page, pageSize) => setTaskQuery(prev => ({ ...prev, page, pageSize })),
@@ -1605,7 +1606,7 @@ const CuttingManagement: React.FC = () => {
                         loading={entryPurchaseLoading}
                         pagination={false as Record<string, unknown>}
                         size="small"
-                        scroll={{ x: 'max-content', y: isMobile ? 220 : 260 }}
+                        scroll={{ x: 'max-content' }}
                       />
                     </Card>
                   </div>
@@ -1653,11 +1654,12 @@ const CuttingManagement: React.FC = () => {
                   },
                 }}
                 loading={listLoading}
-                scroll={{ x: 'max-content', y: isMobile ? 360 : 560 }}
+                scroll={{ x: 'max-content' }}
                 pagination={{
                   current: queryParams.page,
                   pageSize: queryParams.pageSize,
                   total,
+                  showTotal: (total) => `共 ${total} 条`,
                   showSizeChanger: true,
                   pageSizeOptions: ['10', '20', '50', '100', '200'],
                   onChange: (page, pageSize) => setQueryParams(prev => ({ ...prev, page, pageSize })),
@@ -2051,7 +2053,7 @@ const CuttingManagement: React.FC = () => {
                   loading={sheetPreviewPurchaseLoading}
                   pagination={false as Record<string, unknown>}
                   size="small"
-                  scroll={{ x: 'max-content', y: isMobile ? 180 : 200 }}
+                  scroll={{ x: 'max-content' }}
                 />
               </Card>
 

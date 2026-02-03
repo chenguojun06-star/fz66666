@@ -150,10 +150,11 @@ const LoginLogList: React.FC = () => {
             total,
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (t) => `共 ${t} 条记录`,
+            showTotal: (t) => `共 ${t} 条`,
+            pageSizeOptions: ['10', '20', '50', '100'],
             onChange: (page, pageSize) => setQueryParams((prev) => ({ ...prev, page, pageSize })),
           }}
-          scroll={{ x: 'max-content', y: isMobile ? 360 : 560 }}
+          scroll={{ x: 'max-content' }}
         />
       </Card>
     </Layout>

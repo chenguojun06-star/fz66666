@@ -102,7 +102,8 @@ const LogModal: React.FC<LogModalProps> = ({
         pagination={{
           pageSize: 50,
           showSizeChanger: true,
-          showTotal: (total) => `共 ${total} 条记录`,
+          showTotal: (total) => `共 ${total} 条`,
+          pageSizeOptions: ['10', '20', '50', '100'],
         }}
         scroll={{ y: 'calc(60vh - 200px)' }}
         size="small"

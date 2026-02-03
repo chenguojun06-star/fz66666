@@ -121,6 +121,9 @@ const MaterialPickingList: React.FC = () => {
             total,
             current,
             pageSize,
+            showTotal: (total) => `共 ${total} 条`,
+            showSizeChanger: true,
+            pageSizeOptions: ['10', '20', '50', '100'],
             onChange: (p, s) => {
               setCurrent(p);
               setPageSize(s);

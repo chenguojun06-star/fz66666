@@ -396,7 +396,7 @@ const WarehousingDetail: React.FC<WarehousingDetailProps> = ({ hook }) => {
                   rowKey={(r) => String((r as any)?.id || `${(r as any)?.cuttingBundleQrCode || ''}-${(r as any)?.size || ''}-${(r as any)?.createTime || ''}`)}
                   columns={warehousingDetailColumns}
                   dataSource={detailWarehousingItems}
-                  pagination={{ pageSize: 20, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], simple: true }}
+                  pagination={{ pageSize: 20, showTotal: (total) => `共 ${total} 条`, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], simple: true }}
                   scroll={{ x: 1520 }}
                 />
               </div>

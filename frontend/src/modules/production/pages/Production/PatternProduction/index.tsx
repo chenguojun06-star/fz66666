@@ -818,6 +818,8 @@ const PatternProduction: React.FC = () => {
                 total: dataSource.length,
                 pageSize: 10,
                 showTotal: (total) => `共 ${total} 条`,
+                showSizeChanger: true,
+                pageSizeOptions: ['10', '20', '50', '100'],
               }}
             />
           ) : (

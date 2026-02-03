@@ -1554,3 +1554,14 @@ body {
     margin: 0 auto;
   }
 }
+
+/* === 语义化颜色变量（2026-02-03 添加） === */
+/* 用于统一全站状态和业务颜色，避免硬编码 */
+:root {
+  /* 状态颜色 */
+  --color-success: #52c41a;      /* 成功/已完成/正常 */
+  --color-warning: #faad14;      /* 警告/剩余/临近交期 */
+  --color-error: #f5222d;        /* 错误/危险/延期 */
+  --color-info: #1890ff;         /* 信息/进行中 */
+  --color-processing: #1890ff;   /* 处理中（与 info 相同） */
+}

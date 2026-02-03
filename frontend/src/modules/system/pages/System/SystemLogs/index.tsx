@@ -315,13 +315,14 @@ const SystemLogs: React.FC = () => {
                       total: loginTotal,
                       showSizeChanger: true,
                       showQuickJumper: true,
-                      showTotal: (t) => `共 ${t} 条记录`,
+                      showTotal: (t) => `共 ${t} 条`,
+                      pageSizeOptions: ['10', '20', '50', '100'],
                       onChange: (page, pageSize) => {
                         try { if (typeof window !== 'undefined') localStorage.setItem('system-loginlog-pagination', JSON.stringify({ page, pageSize })); } catch {}
                         setLoginQueryParams((prev) => ({ ...prev, page, pageSize }));
                       },
                     }}
-                    scroll={{ x: 'max-content', y: isMobile ? 360 : 560 }}
+                    scroll={{ x: 'max-content' }}
                   />
                 </>
               ),
@@ -431,13 +432,14 @@ const SystemLogs: React.FC = () => {
                       total: operationTotal,
                       showSizeChanger: true,
                       showQuickJumper: true,
-                      showTotal: (t) => `共 ${t} 条记录`,
+                      showTotal: (t) => `共 ${t} 条`,
+                      pageSizeOptions: ['10', '20', '50', '100'],
                       onChange: (page, pageSize) => {
                         try { if (typeof window !== 'undefined') localStorage.setItem('system-operationlog-pagination', JSON.stringify({ page, pageSize })); } catch {}
                         setOperationQueryParams((prev) => ({ ...prev, page, pageSize }));
                       },
                     }}
-                    scroll={{ x: 1200, y: isMobile ? 360 : 560 }}
+                    scroll={{ x: 1200 }}
                   />
                 </>
               ),

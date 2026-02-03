@@ -823,7 +823,7 @@ const MaterialReconciliation: React.FC = () => {
             rowKey="id"
             loading={loading}
             allowFixedColumns
-            scroll={{ x: 'max-content', y: isMobile ? 360 : 560 }} // 启用横向滚动，避免列宽挤压
+            scroll={{ x: 'max-content' }} // 启用横向滚动，自适应高度
             rowSelection={{
               selectedRowKeys,
               onChange: (keys) => setSelectedRowKeys(keys),
@@ -835,9 +835,10 @@ const MaterialReconciliation: React.FC = () => {
               current: queryParams.page,
               pageSize: queryParams.pageSize,
               total: total,
+              showTotal: (total) => `共 ${total} 条`,
+              showSizeChanger: true,
+              pageSizeOptions: ['10', '20', '50', '100'],
               onChange: (page, pageSize) => setQueryParams({ ...queryParams, page, pageSize }),
-              showSizeChanger: true, // 允许用户调整每页条数
-              pageSizeOptions: ['10', '20', '50', '100'] // 提供多种分页选项
             }}
           />
         </Card>

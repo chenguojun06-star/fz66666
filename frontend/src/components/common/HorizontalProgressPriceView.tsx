@@ -5,6 +5,7 @@
 import React from 'react';
 import { Card, Typography, InputNumber } from 'antd';
 import LiquidProgressBar from './LiquidProgressBar';
+import { getProgressColorStatus } from '@/utils/progressColor';
 
 const { Text } = Typography;
 
@@ -43,6 +44,8 @@ export interface HorizontalProgressPriceViewProps {
   onPriceChange?: (nodeId: string, newPrice: number) => void;
   /** 是否冻结（订单已完成） */
   frozen?: boolean;
+  /** 订单交期（用于计算进度条颜色状态） */
+  plannedEndDate?: string | null;
 }
 
 /**
@@ -56,10 +59,14 @@ const clampPercent = (value: number) => {
 /**
  * 根据进度和交期计算状态
  */
-const getProgressStatus = (percent: number, frozen: boolean): 'normal' | 'warning' | 'danger' | undefined => {
+const getProgressStatus = (
+  percent: number,
+  frozen: boolean,
+  plannedEndDate?: string | null
+): 'normal' | 'warning' | 'danger' | undefined => {
   if (frozen || percent >= 100) return undefined; // 已完成不显示状态
-  // 这里可以根据交期计算，暂时简化处理
-  return 'normal';
+  // 根据订单交期计算颜色状态
+  return getProgressColorStatus(plannedEndDate);
 };
 
 /**
@@ -72,6 +79,7 @@ const HorizontalProgressPriceView: React.FC<HorizontalProgressPriceViewProps> = 
   canEdit = false,
   onPriceChange,
   frozen = false,
+  plannedEndDate,
 }) => {
   if (!Array.isArray(nodes) || nodes.length === 0) {
     return (
@@ -102,7 +110,7 @@ const HorizontalProgressPriceView: React.FC<HorizontalProgressPriceViewProps> = 
           const percent = clampPercent(stat.percent);
           const unitPrice = Number(node.unitPrice) || 0;
           const hasPrice = unitPrice > 0;
-          const status = getProgressStatus(percent, frozen);
+          const status = getProgressStatus(percent, frozen, plannedEndDate);
 
           return (
             <Card
@@ -151,9 +159,9 @@ const HorizontalProgressPriceView: React.FC<HorizontalProgressPriceViewProps> = 
                     fontWeight: 700,
                     color:
                       percent >= 100
-                        ? '#52c41a'
+                        ? 'var(--color-success)'
                         : percent > 0
-                        ? '#1890ff'
+                        ? 'var(--color-info)'
                         : 'rgba(15, 23, 42, 0.45)',
                     fontVariantNumeric: 'tabular-nums',
                   }}
@@ -191,7 +199,7 @@ const HorizontalProgressPriceView: React.FC<HorizontalProgressPriceViewProps> = 
                     strong
                     style={{
                       fontSize: "var(--font-size-lg)",
-                      color: '#52c41a',
+                      color: 'var(--color-success)',
                       fontVariantNumeric: 'tabular-nums',
                     }}
                   >
@@ -233,7 +241,7 @@ const HorizontalProgressPriceView: React.FC<HorizontalProgressPriceViewProps> = 
                     strong
                     style={{
                       fontSize: "var(--font-size-lg)",
-                      color: stat.remaining > 0 ? '#faad14' : 'rgba(15, 23, 42, 0.45)',
+                      color: stat.remaining > 0 ? 'var(--color-warning)' : 'rgba(15, 23, 42, 0.45)',
                       fontVariantNumeric: 'tabular-nums',
                     }}
                   >

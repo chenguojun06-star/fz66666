@@ -1,4 +1,5 @@
-const StyleSampleTab = () => null;
+import React from 'react';
+const StyleSampleTab: React.FC = () => {
 
   const bomDetailColumns = useMemo(() => {
     return [

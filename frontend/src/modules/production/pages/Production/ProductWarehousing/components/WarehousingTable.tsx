@@ -245,7 +245,7 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
       dataSource={dataSource as any[]}
       rowKey="id"
       loading={loading}
-      scroll={{ x: 'max-content', y: isMobile ? 360 : 560 }}
+      scroll={{ x: 'max-content' }}
       rowClassName={() => 'clickable-row'}
       onRow={(record: unknown) => {
         return {
@@ -264,6 +264,9 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
         current: queryParams.page,
         pageSize: queryParams.pageSize,
         total: total,
+        showTotal: (total) => `共 ${total} 条`,
+        showSizeChanger: true,
+        pageSizeOptions: ['10', '20', '50', '100'],
         onChange: (page, pageSize) => setQueryParams({ ...queryParams, page, pageSize })
       }}
     />

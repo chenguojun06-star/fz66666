@@ -412,10 +412,11 @@ const FactoryList: React.FC = () => {
             total,
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (t) => `共 ${t} 条记录`,
+            showTotal: (t) => `共 ${t} 条`,
+            pageSizeOptions: ['10', '20', '50', '100'],
             onChange: (page, pageSize) => setQueryParams((prev) => ({ ...prev, page, pageSize })),
           }}
-          scroll={{ x: 'max-content', y: isMobile ? 360 : 560 }}
+          scroll={{ x: 'max-content' }}
         />
       </Card>
 
@@ -518,7 +519,7 @@ const FactoryList: React.FC = () => {
           rowKey={(r) => String(r.id || `${r.bizType}-${r.bizId}-${r.createTime}`)}
           loading={logLoading}
           pagination={false}
-          scroll={{ x: 'max-content', y: isMobile ? 320 : 420 }}
+          scroll={{ x: 'max-content' }}
         />
       </ResizableModal>
     </Layout>

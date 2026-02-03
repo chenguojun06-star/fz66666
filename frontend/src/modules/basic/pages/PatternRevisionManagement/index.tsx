@@ -553,13 +553,14 @@ const PatternRevisionManagement: React.FC = () => {
             columns={columns}
             dataSource={data}
             loading={loading}
-            scroll={{ x: 'max-content', y: isMobile ? 400 : 600 }}
+            scroll={{ x: 'max-content' }}
             pagination={{
               current: page,
               pageSize,
               total,
               showSizeChanger: true,
               showTotal: (t) => `共 ${t} 条`,
+              pageSizeOptions: ['10', '20', '50', '100'],
               onChange: (p, ps) => {
                 setPage(p);
                 setPageSize(ps || 10);

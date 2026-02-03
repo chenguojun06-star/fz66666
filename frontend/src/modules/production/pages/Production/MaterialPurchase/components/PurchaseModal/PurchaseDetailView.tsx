@@ -136,7 +136,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                 dataSource={sec.data}
                 pagination={false}
                 size={isMobile ? 'small' : 'middle'}
-                scroll={{ x: 'max-content', y: 320 }}
+                scroll={{ x: 'max-content' }}
                 columns={[
                   {
                     title: '二维码',

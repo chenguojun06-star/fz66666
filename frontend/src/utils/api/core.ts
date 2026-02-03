@@ -2,6 +2,8 @@ import axios from 'axios';
 import type { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { setupLegacyApiAdapter } from './legacyApiAdapter';
 
+let __authRedirectTs = 0;
+
 export type ApiResult<T = any> = {
   code: number;
   data: T;
@@ -205,7 +207,13 @@ export const createApiClient = (): ApiClient => {
             } catch {
               // Ignore
             }
-            window.location.href = '/login';
+            {
+              const nowTs = Date.now();
+              if (nowTs - __authRedirectTs > 10000) {
+                __authRedirectTs = nowTs;
+                window.location.href = '/login';
+              }
+            }
             break;
           case 403:
             errorMessage = msg || '没有权限执行此操作';

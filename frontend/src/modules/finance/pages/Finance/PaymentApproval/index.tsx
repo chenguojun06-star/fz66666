@@ -743,6 +743,9 @@ const PaymentApproval: React.FC = () => {
               current: payrollQuery.page,
               pageSize: payrollQuery.pageSize,
               total: payrollTotal,
+              showTotal: (total) => `共 ${total} 条`,
+              showSizeChanger: true,
+              pageSizeOptions: ['10', '20', '50', '100'],
               onChange: (page, pageSize) => setPayrollQuery((prev) => ({ ...prev, page, pageSize })),
             }}
           />

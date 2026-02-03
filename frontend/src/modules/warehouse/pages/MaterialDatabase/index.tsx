@@ -512,11 +512,13 @@ const MaterialDatabasePage: React.FC = () => {
             dataSource={dataList}
             rowKey={(r) => String(r?.id || r?.materialCode || '')}
             loading={loading}
-            scroll={{ x: 'max-content', y: isMobile ? 360 : 560 }}
+            scroll={{ x: 'max-content' }}
             size={isMobile ? 'small' : 'middle'}
             pagination={{
               ...pagination,
               showTotal: (t) => `共 ${t} 条`,
+              showSizeChanger: true,
+              pageSizeOptions: ['10', '20', '50', '100'],
               size: isMobile ? 'small' : 'default',
             }}
           />

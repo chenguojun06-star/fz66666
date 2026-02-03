@@ -752,6 +752,7 @@ const PayrollOperatorSummary: React.FC = () => {
                                         dataSource={sortedRows as Record<string, unknown>}
                                         loading={loading}
                                         pagination={{
+                                            showTotal: (total) => `共 ${total} 条`,
                                             showSizeChanger: true,
                                             pageSizeOptions: ['10', '20', '50', '100'],
                                             defaultPageSize: 20,
@@ -795,6 +796,7 @@ const PayrollOperatorSummary: React.FC = () => {
                                         dataSource={summaryRows as Record<string, unknown>}
                                         loading={loading}
                                         pagination={{
+                                            showTotal: (total) => `共 ${total} 条`,
                                             showSizeChanger: true,
                                             pageSizeOptions: ['10', '20', '50', '100'],
                                             defaultPageSize: 20,

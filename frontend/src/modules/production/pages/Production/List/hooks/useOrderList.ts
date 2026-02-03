@@ -49,38 +49,39 @@ export const useOrderList = () => {
     fetchProductionList();
   }, [queryParams]);
 
-  // 实时同步：30秒自动轮询更新数据
-  useSync(
-    'production-orders',
-    async () => {
-      try {
-        const response = await api.get<PaginatedResponse<ProductionOrder>>(
-          '/production/order/list',
-          { params: queryParams }
-        );
-        if (isApiSuccess(response)) {
-          return response.data.records || [];
-        }
-        return [];
-      } catch (error) {
-        console.error('[实时同步] 获取生产订单列表失败', error);
-        return [];
-      }
-    },
-    (newData, oldData) => {
-      if (oldData !== null) {
-        setProductionList(newData);
-      }
-    },
-    {
-      interval: 30000,
-      enabled: !loading,
-      pauseOnHidden: true,
-      onError: (error) => {
-        console.error('[实时同步] 错误', error);
-      }
-    }
-  );
+  // 实时同步已禁用：避免频繁请求导致性能问题
+  // 用户可以通过手动刷新按钮更新数据
+  // useSync(
+  //   'production-orders',
+  //   async () => {
+  //     try {
+  //       const response = await api.get<PaginatedResponse<ProductionOrder>>(
+  //         '/production/order/list',
+  //         { params: queryParams }
+  //       );
+  //       if (isApiSuccess(response)) {
+  //         return response.data.records || [];
+  //       }
+  //       return [];
+  //     } catch (error) {
+  //       console.error('[实时同步] 获取生产订单列表失败', error);
+  //       return [];
+  //     }
+  //   },
+  //   (newData, oldData) => {
+  //     if (oldData !== null) {
+  //       setProductionList(newData);
+  //     }
+  //   },
+  //   {
+  //     interval: 30000,
+  //     enabled: !loading,
+  //     pauseOnHidden: true,
+  //     onError: (error) => {
+  //       console.error('[实时同步] 错误', error);
+  //     }
+  //   }
+  // );
 
   return {
     productionList,

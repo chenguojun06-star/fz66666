@@ -426,12 +426,13 @@ const MaterialPurchaseDetail: React.FC = () => {
             dataSource={purchaseList}
             rowKey="id"
             loading={loading}
-            scroll={{ x: 'max-content', y: isMobile ? 400 : 600 }}
+            scroll={{ x: 'max-content' }}
             size={isMobile ? 'small' : 'middle'}
             pagination={{
               defaultPageSize: 20,
               showSizeChanger: true,
               showTotal: (total) => `共 ${total} 条`,
+              pageSizeOptions: ['10', '20', '50', '100'],
             }}
           />
         </Card>

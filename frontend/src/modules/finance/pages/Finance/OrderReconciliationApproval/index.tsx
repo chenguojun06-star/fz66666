@@ -322,6 +322,7 @@ const OrderReconciliationApproval: React.FC = () => {
             showSizeChanger: true,
             showQuickJumper: true,
             showTotal: (total) => `共 ${total} 条`,
+            pageSizeOptions: ['10', '20', '50', '100'],
             onChange: (page, pageSize) => setQuery((prev) => ({ ...prev, page, pageSize })),
           }}
         />

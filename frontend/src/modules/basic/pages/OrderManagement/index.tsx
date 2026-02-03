@@ -1215,13 +1215,15 @@ const OrderManagement: React.FC = () => {
             loading={detailLoading}
             dataSource={detailRows}
             style={{ color: 'var(--neutral-text)' }}
-            scroll={{ x: 'max-content', y: isMobile ? 360 : 560 }}
+            scroll={{ x: 'max-content' }}
             size={isMobile ? 'small' : 'middle'}
             pagination={{
               current: detailQuery.page,
               pageSize: detailQuery.pageSize,
               total: detailTotal,
+              showTotal: (total) => `共 ${total} 条`,
               showSizeChanger: true,
+              pageSizeOptions: ['10', '20', '50', '100'],
               onChange: (page, pageSize) => setDetailQuery({ page, pageSize }),
             }}
             columns={[
@@ -1295,12 +1297,14 @@ const OrderManagement: React.FC = () => {
             columns={columns as Record<string, unknown>}
             dataSource={styles}
             loading={loading}
-            scroll={{ x: 'max-content', y: isMobile ? 360 : 560 }}
+            scroll={{ x: 'max-content' }}
             pagination={{
               current: queryParams.page,
               pageSize: queryParams.pageSize,
               total,
+              showTotal: (total) => `共 ${total} 条`,
               showSizeChanger: true,
+              pageSizeOptions: ['10', '20', '50', '100'],
               onChange: (page, pageSize) => setQueryParams(prev => ({ ...prev, page, pageSize })),
             }}
           />
@@ -1518,7 +1522,7 @@ const OrderManagement: React.FC = () => {
                       rowKey={(r) => r.id}
                       dataSource={orderLines}
                       pagination={false}
-                      scroll={{ x: 'max-content', y: isMobile ? 260 : 360 }}
+                      scroll={{ x: 'max-content' }}
                       size={isMobile ? 'small' : 'middle'}
                       columns={[
                         {
@@ -1614,7 +1618,7 @@ const OrderManagement: React.FC = () => {
                               loading={bomLoading}
                               dataSource={bomByType.fabric}
                               pagination={false}
-                              scroll={{ x: 'max-content', y: isMobile ? 260 : 360 }}
+                              scroll={{ x: 'max-content' }}
                               size={isMobile ? 'small' : 'middle'}
                               columns={bomColumns}
                             />
@@ -1629,7 +1633,7 @@ const OrderManagement: React.FC = () => {
                               loading={bomLoading}
                               dataSource={bomByType.lining}
                               pagination={false}
-                              scroll={{ x: 'max-content', y: isMobile ? 260 : 360 }}
+                              scroll={{ x: 'max-content' }}
                               size={isMobile ? 'small' : 'middle'}
                               columns={bomColumns}
                             />
@@ -1644,7 +1648,7 @@ const OrderManagement: React.FC = () => {
                               loading={bomLoading}
                               dataSource={bomByType.accessory}
                               pagination={false}
-                              scroll={{ x: 'max-content', y: isMobile ? 260 : 360 }}
+                              scroll={{ x: 'max-content' }}
                               size={isMobile ? 'small' : 'middle'}
                               columns={bomColumns}
                             />
@@ -1681,7 +1685,7 @@ const OrderManagement: React.FC = () => {
                               rowKey={(r) => String((r as Record<string, unknown>).key)}
                               dataSource={demandRowsByType.fabric as Record<string, unknown>}
                               pagination={false}
-                              scroll={{ x: 'max-content', y: isMobile ? 260 : 360 }}
+                              scroll={{ x: 'max-content' }}
                               size={isMobile ? 'small' : 'middle'}
                               columns={demandColumns}
                             />
@@ -1695,7 +1699,7 @@ const OrderManagement: React.FC = () => {
                               rowKey={(r) => String((r as Record<string, unknown>).key)}
                               dataSource={demandRowsByType.lining as Record<string, unknown>}
                               pagination={false}
-                              scroll={{ x: 'max-content', y: isMobile ? 260 : 360 }}
+                              scroll={{ x: 'max-content' }}
                               size={isMobile ? 'small' : 'middle'}
                               columns={demandColumns}
                             />
@@ -1709,7 +1713,7 @@ const OrderManagement: React.FC = () => {
                               rowKey={(r) => String((r as Record<string, unknown>).key)}
                               dataSource={demandRowsByType.accessory as Record<string, unknown>}
                               pagination={false}
-                              scroll={{ x: 'max-content', y: isMobile ? 260 : 360 }}
+                              scroll={{ x: 'max-content' }}
                               size={isMobile ? 'small' : 'middle'}
                               columns={demandColumns}
                             />

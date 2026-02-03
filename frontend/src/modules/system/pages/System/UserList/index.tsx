@@ -834,6 +834,9 @@ const UserList: React.FC = () => {
               current: queryParams.page,
               pageSize: queryParams.pageSize,
               total: total,
+              showTotal: (total) => `共 ${total} 条`,
+              showSizeChanger: true,
+              pageSizeOptions: ['10', '20', '50', '100'],
               onChange: (page, pageSize) => setQueryParams({ ...queryParams, page, pageSize })
             }}
           />
@@ -1068,7 +1071,7 @@ const UserList: React.FC = () => {
             rowKey={(r) => String(r.id || `${r.bizType}-${r.bizId}-${r.createTime}`)}
             loading={logLoading}
             pagination={false}
-            scroll={{ x: 'max-content', y: isMobile ? 320 : 420 }}
+            scroll={{ x: 'max-content' }}
           />
         </ResizableModal>
       </div>

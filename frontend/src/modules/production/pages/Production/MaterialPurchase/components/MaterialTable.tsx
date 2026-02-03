@@ -344,7 +344,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       dataSource={dataSource}
       rowKey="id"
       loading={loading}
-      scroll={{ x: 'max-content', y: isMobile ? 360 : 560 }}
+      scroll={{ x: 'max-content' }}
       size={isMobile ? 'small' : 'middle'}
       pagination={{
         current: queryParams.page,
@@ -353,6 +353,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
         onChange: (page, pageSize) => setQueryParams(prev => ({ ...prev, page, pageSize })),
         showTotal: (total) => `共 ${total} 条`,
         showSizeChanger: true,
+        pageSizeOptions: ['10', '20', '50', '100'],
         size: isMobile ? 'small' : 'default',
       }}
     />

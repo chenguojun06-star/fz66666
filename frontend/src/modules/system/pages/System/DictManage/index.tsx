@@ -398,6 +398,7 @@ const DictManage: React.FC = () => {
           showTotal: (total) => `共 ${total} 条`,
           showSizeChanger: true,
           showQuickJumper: true,
+          pageSizeOptions: ['10', '20', '50', '100'],
         }}
       />
 

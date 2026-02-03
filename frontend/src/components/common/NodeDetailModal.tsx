@@ -965,7 +965,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
           rowKey="id"
           dataSource={patternScanRecords}
           columns={patternScanColumns}
-          pagination={{ pageSize: 10, size: 'small', showSizeChanger: false }}
+          pagination={{ pageSize: 10, size: 'small', showTotal: (total) => `共 ${total} 条`, showSizeChanger: false }}
           scroll={{ y: 280 }}
           locale={{ emptyText: '暂无扫码记录' }}
         />
@@ -984,7 +984,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
         rowKey="id"
         dataSource={filteredScanRecords}
         columns={scanColumns}
-        pagination={{ pageSize: 10, size: 'small', showSizeChanger: false }}
+        pagination={{ pageSize: 10, size: 'small', showTotal: (total) => `共 ${total} 条`, showSizeChanger: false }}
         scroll={{ y: 280 }}
       />
     </div>
@@ -1006,7 +1006,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
           rowKey="id"
           dataSource={bundlesWithStatus}
           columns={bundleColumns}
-          pagination={{ pageSize: 10, size: 'small', showSizeChanger: false }}
+          pagination={{ pageSize: 10, size: 'small', showTotal: (total) => `共 ${total} 条`, showSizeChanger: false }}
           scroll={{ y: 280 }}
         />
       </div>

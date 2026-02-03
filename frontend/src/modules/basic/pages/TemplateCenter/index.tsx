@@ -1049,12 +1049,14 @@ const TemplateCenter: React.FC = () => {
           columns={columns}
           dataSource={data as TemplateLibraryRecord[]}
           loading={loading}
-          scroll={{ x: 'max-content', y: isMobile ? 360 : 560 }}
+          scroll={{ x: 'max-content' }}
           pagination={{
             current: page,
             pageSize,
             total,
+            showTotal: (total) => `共 ${total} 条`,
             showSizeChanger: true,
+            pageSizeOptions: ['10', '20', '50', '100'],
             onChange: (p, ps) => fetchList({ page: p, pageSize: ps }),
           }}
         />

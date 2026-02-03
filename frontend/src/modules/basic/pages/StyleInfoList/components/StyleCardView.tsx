@@ -138,7 +138,8 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
         onChange: onPageChange,
         showSizeChanger: true,
         showQuickJumper: true,
-        showTotal: (total) => `共 ${total} 条`
+        showTotal: (total) => `共 ${total} 条`,
+        pageSizeOptions: ['10', '20', '50', '100'],
       }}
     />
   );

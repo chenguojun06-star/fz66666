@@ -356,7 +356,6 @@ const OrderTable: React.FC<OrderTableProps> = ({
             }
           ]}
         />
-        </Space>
       ),
     },
   ];
@@ -375,7 +374,7 @@ const OrderTable: React.FC<OrderTableProps> = ({
       rowKey="id"
       loading={loading}
       pagination={pagination}
-      scroll={{ x: 'max-content', y: 'calc(100vh - 360px)' }}
+      scroll={{ x: 'max-content' }}
       size="small"
       onRow={(record) => ({
         onClick: () => onRowClick?.(record),

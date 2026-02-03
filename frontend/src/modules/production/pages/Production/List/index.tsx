@@ -2052,6 +2052,9 @@ const ProductionList: React.FC = () => {
                 current: queryParams.page,
                 pageSize: queryParams.pageSize,
                 total: total,
+                showTotal: (total) => `共 ${total} 条`,
+                showSizeChanger: true,
+                pageSizeOptions: ['10', '20', '50', '100'],
                 onChange: (page, pageSize) => setQueryParams({ ...queryParams, page, pageSize }),
               }}
             />
