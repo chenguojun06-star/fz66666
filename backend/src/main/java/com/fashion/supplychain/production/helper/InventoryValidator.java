@@ -19,9 +19,9 @@ import java.util.List;
  * 1. 验证扫码数量不超出订单数量
  * 2. 计算已完成数量
  * 3. 防止超额扫码
- * 
+ *
  * 提取自 ScanRecordOrchestrator（减少约300行代码）
- * 
+ *
  * @author GitHub Copilot
  * @date 2026-02-03
  */
@@ -34,7 +34,7 @@ public class InventoryValidator {
 
     /**
      * 验证扫码数量不超出订单数量
-     * 
+     *
      * @param order 生产订单
      * @param scanType 扫码类型
      * @param progressStage 工序阶段
@@ -42,8 +42,8 @@ public class InventoryValidator {
      * @param bundle 裁剪菲号（可选）
      * @throws IllegalArgumentException 如果超出订单数量
      */
-    public void validateNotExceedOrderQuantity(ProductionOrder order, String scanType, 
-                                               String progressStage, int incomingQty, 
+    public void validateNotExceedOrderQuantity(ProductionOrder order, String scanType,
+                                               String progressStage, int incomingQty,
                                                CuttingBundle bundle) {
         if (order == null || !hasText(order.getId())) {
             return;
@@ -59,7 +59,7 @@ public class InventoryValidator {
 
         // 计算该工序已完成数量
         int completedQty = calculateCompletedQuantity(order.getId(), scanType, progressStage, bundle);
-        
+
         // 计算总数量
         int totalQty = completedQty + incomingQty;
 
@@ -67,19 +67,19 @@ public class InventoryValidator {
             String msg = String.format(
                     "扫码数量超出订单数量限制！订单数量=%d，已完成=%d，本次扫码=%d，总计=%d",
                     orderQty, completedQty, incomingQty, totalQty);
-            log.warn("库存验证失败: orderId={}, scanType={}, stage={}, {}", 
+            log.warn("库存验证失败: orderId={}, scanType={}, stage={}, {}",
                     order.getId(), scanType, progressStage, msg);
             throw new IllegalArgumentException(msg);
         }
 
-        log.debug("库存验证通过: orderId={}, scanType={}, stage={}, 订单数量={}, 已完成={}, 本次扫码={}", 
+        log.debug("库存验证通过: orderId={}, scanType={}, stage={}, 订单数量={}, 已完成={}, 本次扫码={}",
                 order.getId(), scanType, progressStage, orderQty, completedQty, incomingQty);
     }
 
     /**
      * 计算指定工序的已完成数量
      */
-    private int calculateCompletedQuantity(String orderId, String scanType, 
+    private int calculateCompletedQuantity(String orderId, String scanType,
                                           String progressStage, CuttingBundle bundle) {
         try {
             LambdaQueryWrapper<ScanRecord> wrapper = new LambdaQueryWrapper<ScanRecord>()
@@ -107,7 +107,7 @@ public class InventoryValidator {
             }
 
             List<ScanRecord> records = scanRecordService.list(wrapper);
-            
+
             if (records == null || records.isEmpty()) {
                 return 0;
             }
@@ -122,7 +122,7 @@ public class InventoryValidator {
 
             return total;
         } catch (Exception e) {
-            log.error("计算已完成数量失败: orderId={}, scanType={}, stage={}", 
+            log.error("计算已完成数量失败: orderId={}, scanType={}, stage={}",
                     orderId, scanType, progressStage, e);
             return 0; // 计算失败时返回0，不拦截扫码
         }
@@ -131,7 +131,7 @@ public class InventoryValidator {
     /**
      * 批量验证多个工序的数量
      */
-    public void validateMultipleStages(ProductionOrder order, int incomingQty, 
+    public void validateMultipleStages(ProductionOrder order, int incomingQty,
                                        String... stages) {
         for (String stage : stages) {
             validateNotExceedOrderQuantity(order, "production", stage, incomingQty, null);

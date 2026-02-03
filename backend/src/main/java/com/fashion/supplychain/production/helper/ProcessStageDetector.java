@@ -22,9 +22,9 @@ import java.util.Map;
  * 1. 自动识别当前工序阶段
  * 2. 判断工序是否可跳过
  * 3. 标准化工序名称
- * 
+ *
  * 提取自 ScanRecordOrchestrator（减少约400行代码）
- * 
+ *
  * @author GitHub Copilot
  * @date 2026-02-03
  */
@@ -106,7 +106,7 @@ public class ProcessStageDetector {
         int progress = order.getProductionProgress() == null ? 0 : order.getProductionProgress();
         if (progress < 0) progress = 0;
         if (progress > 100) progress = 100;
-        
+
         int idx = -1;
         try {
             idx = scanRecordDomainService.getNodeIndexFromProgress(nodes.size(), progress);
@@ -203,26 +203,26 @@ public class ProcessStageDetector {
         // 统计各工序已完成数量（按菲号去重）
         LinkedHashMap<String, Map<String, Integer>> doneByStageBundle = new LinkedHashMap<>();
         LinkedHashMap<String, Long> done = new LinkedHashMap<>();
-        
+
         if (records != null) {
             for (ScanRecord r : records) {
                 if (r == null) continue;
-                
+
                 String pn = r.getProgressStage() == null ? "" : r.getProgressStage().trim();
                 if (!hasText(pn)) {
                     pn = r.getProcessName() == null ? "" : r.getProcessName().trim();
                 }
                 if (!hasText(pn)) continue;
                 if (isAutoSkippableStageName(order, pn)) continue;
-                
+
                 String pc = r.getProcessCode() == null ? "" : r.getProcessCode().trim();
                 if ("quality_warehousing".equals(pc) || templateLibraryService.isProgressQualityStageName(pn)) {
                     continue;
                 }
-                
+
                 int q = r.getQuantity() == null ? 0 : r.getQuantity();
                 if (q <= 0) continue;
-                
+
                 String bid = r.getCuttingBundleId() == null ? null : r.getCuttingBundleId().trim();
                 if (hasText(bid)) {
                     Map<String, Integer> byBundle = doneByStageBundle.computeIfAbsent(pn,
@@ -242,7 +242,7 @@ public class ProcessStageDetector {
                 if (e == null) continue;
                 String k = e.getKey();
                 if (!hasText(k)) continue;
-                
+
                 long sum = 0L;
                 Map<String, Integer> byBundle = e.getValue();
                 if (byBundle != null) {
@@ -264,7 +264,7 @@ public class ProcessStageDetector {
             if (!hasText(pn)) continue;
             if (isAutoSkippableStageName(order, pn)) continue;
             if (templateLibraryService.isProgressQualityStageName(pn)) continue;
-            
+
             lastCandidate = pn;
             long v = done.getOrDefault(pn, 0L);
             if (v < orderQty) {

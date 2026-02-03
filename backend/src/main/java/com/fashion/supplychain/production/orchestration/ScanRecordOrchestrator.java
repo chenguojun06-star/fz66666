@@ -49,13 +49,13 @@ import org.springframework.transaction.annotation.Transactional;
  * 1. 扫码业务编排（生产、质检、入库）
  * 2. 协调辅助类完成复杂逻辑
  * 3. 事务管理
- * 
+ *
  * 重构记录：2026-02-03
  * - 提取 ProcessStageDetector（工序识别）
  * - 提取 DuplicateScanPreventer（防重复）
  * - 提取 InventoryValidator（库存验证）
  * - 从 1892 行优化到 ~1200 行
- * 
+ *
  * @author GitHub Copilot
  */
 @Service
@@ -1191,6 +1191,8 @@ public class ScanRecordOrchestrator {
             return null;
         }
 
+        String[] FIXED_PRODUCTION_NODES = {"采购", "裁剪", "车缝", "大烫", "质检", "二次工艺", "包装", "入库"};
+
         try {
             Map<String, BigDecimal> prices = templateLibraryService.resolveProcessUnitPrices(sn);
             if (prices == null || prices.isEmpty()) {
@@ -1263,7 +1265,7 @@ public class ScanRecordOrchestrator {
     }
 
     // ========== findByRequestId 已迁移到 DuplicateScanPreventer ==========
-    
+
     // ========== resolveAutoProcessName 已迁移到 ProcessStageDetector ==========
 
     private String resolveColor(Map<String, Object> params, CuttingBundle bundle, ProductionOrder order) {
@@ -1643,5 +1645,22 @@ public class ScanRecordOrchestrator {
         } catch (Exception e) {
             log.warn("Failed to check pattern complete for styleId={}: {}", styleId, e.getMessage());
         }
+    }
+
+    /**
+     * 标准化固定生产节点名称
+     */
+    private String normalizeFixedProductionNodeName(String name) {
+        if (!hasText(name)) {
+            return null;
+        }
+        String n = name.trim();
+        String[] FIXED_PRODUCTION_NODES = {"采购", "裁剪", "车缝", "大烫", "质检", "二次工艺", "包装", "入库"};
+        for (String node : FIXED_PRODUCTION_NODES) {
+            if (node.equals(n)) {
+                return node;
+            }
+        }
+        return n;
     }
 }

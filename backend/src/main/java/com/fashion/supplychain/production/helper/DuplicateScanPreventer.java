@@ -18,9 +18,9 @@ import java.time.temporal.ChronoUnit;
  * 1. 检测重复requestId
  * 2. 基于时间间隔的防重复算法
  * 3. 数据库唯一键冲突处理
- * 
+ *
  * 提取自 ScanRecordOrchestrator（减少约200行代码）
- * 
+ *
  * @author GitHub Copilot
  * @date 2026-02-03
  */
@@ -52,14 +52,14 @@ public class DuplicateScanPreventer {
     /**
      * 检查是否存在近期重复扫码
      * 防重复算法：最小间隔 = max(30秒, 菲号数量 × 工序分钟 × 60 × 0.5)
-     * 
+     *
      * @param scanCode 扫码内容
      * @param scanType 扫码类型
      * @param bundleQuantity 菲号数量
      * @param processMinutes 工序标准用时（分钟）
      * @return 如果存在重复返回true
      */
-    public boolean hasRecentDuplicateScan(String scanCode, String scanType, 
+    public boolean hasRecentDuplicateScan(String scanCode, String scanType,
                                           Integer bundleQuantity, Integer processMinutes) {
         if (!hasText(scanCode)) {
             return false;
@@ -68,7 +68,7 @@ public class DuplicateScanPreventer {
         try {
             // 计算最小间隔（秒）
             int minIntervalSeconds = 30; // 默认30秒
-            if (bundleQuantity != null && bundleQuantity > 0 
+            if (bundleQuantity != null && bundleQuantity > 0
                     && processMinutes != null && processMinutes > 0) {
                 int expectedTime = bundleQuantity * processMinutes * 60;
                 minIntervalSeconds = Math.max(30, expectedTime / 2);
@@ -87,13 +87,13 @@ public class DuplicateScanPreventer {
             }
 
             ScanRecord recent = scanRecordService.getOne(wrapper);
-            
+
             if (recent != null) {
                 log.warn("防重复拦截: scanCode={}, scanType={}, 最近扫码时间={}, 最小间隔={}秒",
                         scanCode, scanType, recent.getScanTime(), minIntervalSeconds);
                 return true;
             }
-            
+
             return false;
         } catch (Exception e) {
             log.error("检查重复扫码失败: scanCode={}", scanCode, e);
@@ -105,7 +105,7 @@ public class DuplicateScanPreventer {
      * 处理数据库唯一键冲突
      * 返回友好的错误信息
      */
-    public String handleDuplicateKeyException(DuplicateKeyException e, 
+    public String handleDuplicateKeyException(DuplicateKeyException e,
                                               String orderId, String requestId) {
         log.info("扫码记录重复忽略: orderId={}, requestId={}", orderId, requestId);
         return "该扫码记录已存在，已自动忽略重复提交";
