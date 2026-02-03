@@ -1,5 +1,6 @@
 package com.fashion.supplychain.production.executor;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.production.entity.*;
 import com.fashion.supplychain.production.helper.InventoryValidator;
 import com.fashion.supplychain.production.service.*;
@@ -72,9 +73,24 @@ class QualityScanExecutorTest {
         // Given: 质检领取场景
         baseParams.put("qualityStage", "receive");
         baseParams.put("qualityResult", "qualified");
+        baseParams.put("quantity", "50");
 
-        // TODO: Mock scanRecordService.save() 返回成功
-        // TODO: Mock skuService 解析SKU
+        // Mock 菲号查询
+        CuttingBundle mockBundle = new CuttingBundle();
+        mockBundle.setId("bundle-001");
+        mockBundle.setProductionOrderId("order-001");
+        mockBundle.setQuantity(50);
+        when(cuttingBundleService.getByQrCode("TEST-BUNDLE-001")).thenReturn(mockBundle);
+
+        // Mock 查询不存在历史记录（首次领取）
+        when(scanRecordService.getOne(any(LambdaQueryWrapper.class))).thenReturn(null);
+
+        // Mock save成功
+        when(scanRecordService.saveScanRecord(any(ScanRecord.class))).thenReturn(true);
+
+        // Mock 库存验证（不抛异常）
+        doNothing().when(inventoryValidator).validateNotExceedOrderQuantity(
+                any(ProductionOrder.class), anyString(), anyString(), anyInt(), any(CuttingBundle.class));
 
         // When: 执行质检领取
         Map<String, Object> result = executor.execute(
@@ -89,10 +105,17 @@ class QualityScanExecutorTest {
 
         // Then: 验证结果
         assertNotNull(result, "返回结果不应为null");
-        assertEquals("success", result.get("status"), "状态应为success");
-        
-        // TODO: 验证 scanRecordService.save() 被调用1次
-        // verify(scanRecordService, times(1)).save(any(ScanRecord.class));
+        assertTrue((Boolean) result.get("success"), "success应为true");
+        assertEquals("领取成功", result.get("message"));
+
+        // Then: 验证 Mock 调用
+        verify(cuttingBundleService, times(1)).getByQrCode("TEST-BUNDLE-001");
+        verify(scanRecordService, times(1)).getOne(any(LambdaQueryWrapper.class));
+        verify(scanRecordService, times(1)).saveScanRecord(argThat(record ->
+                "quality".equals(record.getScanType()) &&
+                "quality_receive".equals(record.getProcessCode()) &&
+                "operator-001".equals(record.getOperatorId())
+        ));
     }
 
     @Test
@@ -102,7 +125,7 @@ class QualityScanExecutorTest {
         baseParams.put("qualityResult", "qualified");
 
         // TODO: Mock findQualityStageRecord() 返回领取记录（operatorId=other-001）
-        
+
         // When & Then: 应抛出异常
         // assertThrows(RuntimeException.class, () -> {
         //     executor.execute(baseParams, "req-002", "operator-001", "张三", mockOrder, colorResolver, sizeResolver);
@@ -114,11 +137,30 @@ class QualityScanExecutorTest {
         // Given: 质检确认，有次品
         baseParams.put("qualityStage", "confirm");
         baseParams.put("qualityResult", "unqualified");
+        baseParams.put("quantity", "50");  // 添加必须参数
         baseParams.put("unqualifiedQuantity", "5");
         baseParams.put("defectType", "色差");
         baseParams.put("handleMethod", "返修");
 
-        // TODO: Mock productWarehousingService.save() 成功
+        // Mock 菲号查询
+        CuttingBundle mockBundle = new CuttingBundle();
+        mockBundle.setId("bundle-001");
+        mockBundle.setProductionOrderId("order-001");
+        when(cuttingBundleService.getByQrCode("TEST-BUNDLE-001")).thenReturn(mockBundle);
+
+        // Mock 领取记录
+        ScanRecord receiveRecord = new ScanRecord();
+        receiveRecord.setId("receive-001");
+        ScanRecord inspectRecord = new ScanRecord();
+        inspectRecord.setId("inspect-001");
+        when(scanRecordService.getOne(any(LambdaQueryWrapper.class)))
+            .thenReturn(receiveRecord, inspectRecord, null);
+
+        // Mock 入库保存
+        when(productWarehousingService.saveWarehousingAndUpdateOrder(any(ProductWarehousing.class))).thenReturn(true);
+        when(productWarehousingService.list(any(LambdaQueryWrapper.class))).thenReturn(java.util.Collections.emptyList());
+        doNothing().when(inventoryValidator).validateNotExceedOrderQuantity(
+                any(ProductionOrder.class), anyString(), anyString(), anyInt(), any(CuttingBundle.class));
 
         // When: 执行确认
         Map<String, Object> result = executor.execute(
@@ -141,7 +183,28 @@ class QualityScanExecutorTest {
         // Given: 质检确认，全部合格
         baseParams.put("qualityStage", "confirm");
         baseParams.put("qualityResult", "qualified");
+        baseParams.put("quantity", "100");  // 添加必须参数
         baseParams.put("qualifiedQuantity", "100");
+
+        // Mock 菲号查询
+        CuttingBundle mockBundle = new CuttingBundle();
+        mockBundle.setId("bundle-001");
+        mockBundle.setProductionOrderId("order-001");
+        when(cuttingBundleService.getByQrCode("TEST-BUNDLE-001")).thenReturn(mockBundle);
+
+        // Mock 领取和验收记录
+        ScanRecord receiveRecord = new ScanRecord();
+        receiveRecord.setId("receive-001");
+        ScanRecord inspectRecord = new ScanRecord();
+        inspectRecord.setId("inspect-001");
+        when(scanRecordService.getOne(any(LambdaQueryWrapper.class)))
+            .thenReturn(receiveRecord, inspectRecord, null);
+
+        // Mock 入库保存
+        when(productWarehousingService.saveWarehousingAndUpdateOrder(any(ProductWarehousing.class))).thenReturn(true);
+        when(productWarehousingService.list(any(LambdaQueryWrapper.class))).thenReturn(java.util.Collections.emptyList());
+        doNothing().when(inventoryValidator).validateNotExceedOrderQuantity(
+                any(ProductionOrder.class), anyString(), anyString(), anyInt(), any(CuttingBundle.class));
 
         // When: 执行确认
         Map<String, Object> result = executor.execute(

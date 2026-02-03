@@ -29,9 +29,9 @@ import java.util.Map;
  * 2. 质检验收（inspect）
  * 3. 质检确认（confirm）- 入库
  * 4. 返修处理
- * 
+ *
  * 提取自 ScanRecordOrchestrator（减少约300行代码）
- * 
+ *
  * @author GitHub Copilot
  * @date 2026-02-03
  */
@@ -58,7 +58,7 @@ public class QualityScanExecutor {
      * 执行质检扫码
      */
     public Map<String, Object> execute(Map<String, Object> params, String requestId, String operatorId,
-                                       String operatorName, ProductionOrder order, 
+                                       String operatorName, ProductionOrder order,
                                        java.util.function.Function<String, String> colorResolver,
                                        java.util.function.Function<String, String> sizeResolver) {
         Integer qty = NumberUtils.toInt(params.get("quantity"));
@@ -88,10 +88,10 @@ public class QualityScanExecutor {
         inventoryValidator.validateNotExceedOrderQuantity(order, "quality", "质检", qty, bundle);
 
         String qualityStage = parseQualityStageFromParams(params);
-        
+
         // 领取或验收阶段
         if (!"confirm".equals(qualityStage)) {
-            return handleReceiveOrInspect(params, requestId, operatorId, operatorName, order, bundle, qty, 
+            return handleReceiveOrInspect(params, requestId, operatorId, operatorName, order, bundle, qty,
                                          qualityStage, colorResolver, sizeResolver);
         }
 
@@ -102,7 +102,7 @@ public class QualityScanExecutor {
     /**
      * 处理领取或验收阶段
      */
-    private Map<String, Object> handleReceiveOrInspect(Map<String, Object> params, String requestId, 
+    private Map<String, Object> handleReceiveOrInspect(Map<String, Object> params, String requestId,
                                                        String operatorId, String operatorName,
                                                        ProductionOrder order, CuttingBundle bundle, int qty,
                                                        String qualityStage,
@@ -123,7 +123,7 @@ public class QualityScanExecutor {
         }
 
         // 创建新记录
-        ScanRecord sr = buildQualityRecord(params, requestId, operatorId, operatorName, order, bundle, 
+        ScanRecord sr = buildQualityRecord(params, requestId, operatorId, operatorName, order, bundle,
                                           qty, stageCode, stageName, colorResolver, sizeResolver);
         scanRecordService.saveScanRecord(sr);
 
@@ -174,7 +174,7 @@ public class QualityScanExecutor {
         }
 
         // 创建入库记录
-        ProductWarehousing w = buildWarehousingRecord(params, order, bundle, receivedStage, qty, 
+        ProductWarehousing w = buildWarehousingRecord(params, order, bundle, receivedStage, qty,
                                                       isUnqualified, isRepaired);
         boolean ok = productWarehousingService.saveWarehousingAndUpdateOrder(w);
         if (!ok) {
@@ -268,7 +268,7 @@ public class QualityScanExecutor {
                                                     String qualityStage, ProductionOrder order, CuttingBundle bundle) {
         String existingOperatorId = existed.getOperatorId() == null ? null : existed.getOperatorId().trim();
         String existingOperatorName = existed.getOperatorName() == null ? null : existed.getOperatorName().trim();
-        
+
         boolean isSameOperator = false;
         if (hasText(operatorId) && hasText(existingOperatorId)) {
             isSameOperator = operatorId.equals(existingOperatorId);
@@ -301,7 +301,7 @@ public class QualityScanExecutor {
 
         String receivedOperatorId = received.getOperatorId() == null ? null : received.getOperatorId().trim();
         String receivedOperatorName = received.getOperatorName() == null ? null : received.getOperatorName().trim();
-        
+
         boolean isSameOperator = false;
         if (hasText(operatorId) && hasText(receivedOperatorId)) {
             isSameOperator = operatorId.equals(receivedOperatorId);
@@ -334,9 +334,9 @@ public class QualityScanExecutor {
             if (existingList != null) {
                 for (ProductWarehousing w : existingList) {
                     if (w == null) continue;
-                    
-                    int totalQty = w.getWarehousingQuantity() == null 
-                            ? (w.getQualifiedQuantity() == null ? 0 : w.getQualifiedQuantity()) 
+
+                    int totalQty = w.getWarehousingQuantity() == null
+                            ? (w.getQualifiedQuantity() == null ? 0 : w.getQualifiedQuantity())
                               + (w.getUnqualifiedQuantity() == null ? 0 : w.getUnqualifiedQuantity())
                             : w.getWarehousingQuantity();
                     if (totalQty <= 0) continue;
@@ -415,26 +415,26 @@ public class QualityScanExecutor {
         w.setWarehousingType("quality_scan");
         w.setCuttingBundleQrCode(bundle.getQrCode());
         w.setWarehousingQuantity(qty);
-        
+
         if (receivedStage != null) {
             w.setReceiverId(TextUtils.safeText(receivedStage.getOperatorId()));
             w.setReceiverName(TextUtils.safeText(receivedStage.getOperatorName()));
             w.setReceivedTime(receivedStage.getScanTime());
         }
-        
+
         w.setInspectionStatus("inspected");
 
         if (isUnqualified) {
             String defectCategory = TextUtils.safeText(params.get("defectCategory"));
             String defectRemark = TextUtils.safeText(params.get("defectRemark"));
-            
+
             if (!hasText(defectCategory)) {
                 throw new IllegalArgumentException("请选择次品类别");
             }
             if (!hasText(defectRemark)) {
                 throw new IllegalArgumentException("请选择次品处理方式");
             }
-            
+
             String dr = defectRemark.trim();
             if (!("返修".equals(dr) || "报废".equals(dr))) {
                 throw new IllegalArgumentException("次品处理方式只能选择：返修/报废");
@@ -444,7 +444,7 @@ public class QualityScanExecutor {
             w.setUnqualifiedQuantity(qty);
             w.setDefectCategory(defectCategory);
             w.setDefectRemark(dr);
-            
+
             String unqualifiedImageUrls = TextUtils.safeText(params.get("unqualifiedImageUrls"));
             if (hasText(unqualifiedImageUrls)) {
                 w.setUnqualifiedImageUrls(unqualifiedImageUrls);

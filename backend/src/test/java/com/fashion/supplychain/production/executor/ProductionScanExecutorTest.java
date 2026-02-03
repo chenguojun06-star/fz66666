@@ -73,7 +73,7 @@ class ProductionScanExecutorTest {
         // Mock 菲号
         mockBundle = new CuttingBundle();
         mockBundle.setId("bundle-001");
-        mockBundle.setOrderId("order-001");
+        mockBundle.setProductionOrderId("order-001");
         mockBundle.setQuantity(50);
 
         // Mock 订单
@@ -85,6 +85,13 @@ class ProductionScanExecutorTest {
         // 解析器
         colorResolver = (unused) -> "红色";
         sizeResolver = (unused) -> "XL";
+
+        // 通用 Mock（所有测试共享）
+        when(cuttingBundleService.getByQrCode(anyString())).thenReturn(mockBundle);
+        when(scanRecordService.saveScanRecord(any(ScanRecord.class))).thenReturn(true);
+        when(productionOrderService.getById(anyString())).thenReturn(mockOrder);
+        doNothing().when(inventoryValidator).validateNotExceedOrderQuantity(
+                any(ProductionOrder.class), anyString(), anyString(), anyInt(), any(CuttingBundle.class));
     }
 
     @Test
@@ -116,7 +123,7 @@ class ProductionScanExecutorTest {
     void testExecute_AutoProcessDetection_Success() {
         // Given: 自动工序识别
         baseParams.remove("processName");
-        
+
         // TODO: Mock processStageDetector.resolveAutoProcessName() 返回"车缝"
 
         // When: 执行扫码
@@ -167,7 +174,7 @@ class ProductionScanExecutorTest {
     void testExecute_UnitPriceResolution_Success() {
         // Given: 需要解析单价
         baseParams.put("processName", "车缝");
-        mockOrder.setProcessTemplateId("template-001");
+        // mockOrder.setStyleId("style-001"); // 已在setUp()中设置
 
         // TODO: Mock templateLibraryService.getById() 返回模板
 

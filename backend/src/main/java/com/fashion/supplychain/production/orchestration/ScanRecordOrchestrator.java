@@ -299,19 +299,19 @@ public class ScanRecordOrchestrator {
         // 解析基础参数
         String scanCode = TextUtils.safeText(params.get("scanCode"));
         final CuttingBundle bundle = cuttingBundleService.getByQrCode(scanCode);
-        
+
         String orderId = TextUtils.safeText(params.get("orderId"));
         String orderNo = TextUtils.safeText(params.get("orderNo"));
         if (!hasText(orderId) && bundle != null && hasText(bundle.getProductionOrderId())) {
             orderId = bundle.getProductionOrderId().trim();
         }
-        
+
         ProductionOrder order = resolveOrder(orderId, orderNo);
         if (order == null && !hasText(orderId) && !hasText(orderNo) && hasText(scanCode)) {
             order = resolveOrder(null, scanCode);
         }
         final ProductionOrder finalOrder = order;
-        
+
         // 委托给Executor执行
         return qualityScanExecutor.execute(
                 params, requestId, operatorId, operatorName, finalOrder,
@@ -488,8 +488,8 @@ public class ScanRecordOrchestrator {
             String operatorName, String scanType, Integer quantity, boolean autoProcess) {
         // 委托给Executor执行
         return productionScanExecutor.execute(
-                params, requestId, operatorId, operatorName, scanType, 
-                quantity != null ? quantity : NumberUtils.toInt(params.get("quantity")), 
+                params, requestId, operatorId, operatorName, scanType,
+                quantity != null ? quantity : NumberUtils.toInt(params.get("quantity")),
                 autoProcess,
                 (unused) -> resolveColor(params, null, null),
                 (unused) -> resolveSize(params, null, null)

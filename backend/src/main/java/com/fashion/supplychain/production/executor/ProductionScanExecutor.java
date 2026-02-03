@@ -32,9 +32,9 @@ import java.util.Map;
  * 4. 版型文件检查
  * 5. 单价解析
  * 6. 面料清单附加
- * 
+ *
  * 提取自 ScanRecordOrchestrator（减少约200行代码）
- * 
+ *
  * @author GitHub Copilot
  * @date 2026-02-03
  */
@@ -114,7 +114,7 @@ public class ProductionScanExecutor {
         progressStage = normalizeFixedProductionNodeName(progressStage);
 
         // 判断是否裁剪
-        boolean isCutting = "cutting".equalsIgnoreCase(scanType) || 
+        boolean isCutting = "cutting".equalsIgnoreCase(scanType) ||
                             "裁剪".equals(progressStage.trim());
 
         // 裁剪前检查版型文件
@@ -132,8 +132,8 @@ public class ProductionScanExecutor {
             unitPrice = BigDecimal.ZERO;
         }
 
-        String processCode = hasText(TextUtils.safeText(params.get("processCode"))) 
-                             ? TextUtils.safeText(params.get("processCode")) 
+        String processCode = hasText(TextUtils.safeText(params.get("processCode")))
+                             ? TextUtils.safeText(params.get("processCode"))
                              : progressStage;
 
         String color = colorResolver.apply(null);
@@ -141,10 +141,10 @@ public class ProductionScanExecutor {
 
         // 尝试更新已有记录
         Map<String, Object> updateResult = tryUpdateExistingBundleScanRecord(
-                requestId, scanCode, bundle, order, scanType, progressStage, processCode, 
-                quantity, unitPrice, operatorId, operatorName, color, size, 
+                requestId, scanCode, bundle, order, scanType, progressStage, processCode,
+                quantity, unitPrice, operatorId, operatorName, color, size,
                 TextUtils.safeText(params.get("remark")), isCutting);
-        
+
         if (updateResult != null) {
             // 附加面料清单（采购阶段）
             if ("采购".equals(progressStage.trim())) {
@@ -158,8 +158,8 @@ public class ProductionScanExecutor {
         }
 
         // 创建新扫码记录
-        ScanRecord sr = buildProductionRecord(requestId, scanCode, bundle, order, scanType, progressStage, 
-                                             processCode, quantity, unitPrice, operatorId, operatorName, 
+        ScanRecord sr = buildProductionRecord(requestId, scanCode, bundle, order, scanType, progressStage,
+                                             processCode, quantity, unitPrice, operatorId, operatorName,
                                              color, size, TextUtils.safeText(params.get("remark")));
 
         try {
@@ -230,7 +230,7 @@ public class ProductionScanExecutor {
                     .gt(ScanRecord::getQuantity, 0)
                     .eq(ScanRecord::getProgressStage, progressStage)
                     .last("limit 1"));
-            
+
             if (existing == null || !hasText(existing.getId())) {
                 return null;
             }
@@ -244,7 +244,7 @@ public class ProductionScanExecutor {
             } else if (hasText(operatorName) && hasText(existingOperatorName)) {
                 isSameOperator = operatorName.equals(existingOperatorName);
             }
-            
+
             if (!isSameOperator) {
                 String otherName = hasText(existingOperatorName) ? existingOperatorName : "他人";
                 throw new IllegalStateException("该菲号「" + progressStage + "」环节已被「" + otherName + "」领取，无法重复操作");
@@ -282,7 +282,7 @@ public class ProductionScanExecutor {
             if (skuService != null) {
                 skuService.attachProcessUnitPrice(patch);
             }
-            
+
             validateScanRecordForSave(patch);
             scanRecordService.updateById(patch);
 
@@ -318,13 +318,13 @@ public class ProductionScanExecutor {
             returned.setCuttingBundleNo(bundle.getBundleNo());
             returned.setCuttingBundleQrCode(bundle.getQrCode());
             result.put("scanRecord", returned);
-            
+
             if (includeBundle) {
                 result.put("cuttingBundle", bundle);
             }
             return result;
         } catch (Exception e) {
-            log.warn("尝试更新已有扫码记录失败: orderId={}, requestId={}, scanCode={}", 
+            log.warn("尝试更新已有扫码记录失败: orderId={}, requestId={}, scanCode={}",
                     order.getId(), requestId, scanCode, e);
             return null;
         }
@@ -428,7 +428,7 @@ public class ProductionScanExecutor {
         if (result == null || order == null || !hasText(order.getId())) {
             return;
         }
-        
+
         try {
             if (materialPurchaseService != null) {
                 List<MaterialPurchase> list = materialPurchaseService.list(
@@ -529,7 +529,7 @@ public class ProductionScanExecutor {
         ensureMaxLen("颜色", sr.getColor(), 50);
         ensureMaxLen("尺码", sr.getSize(), 50);
         ensureMaxLen("requestId", sr.getRequestId(), 64);
-        
+
         String st = hasText(sr.getScanType()) ? sr.getScanType().trim().toLowerCase() : "";
         if (("production".equals(st) || "quality".equals(st) || "warehouse".equals(st)) && skuService != null) {
             if (!skuService.validateSKU(sr)) {

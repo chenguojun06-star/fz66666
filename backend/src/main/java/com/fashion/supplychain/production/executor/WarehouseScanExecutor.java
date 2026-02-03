@@ -25,9 +25,9 @@ import java.util.Map;
  * 2. 次品阻止入库
  * 3. 重复扫码处理
  * 4. 进度重新计算
- * 
+ *
  * 提取自 ScanRecordOrchestrator（减少约140行代码）
- * 
+ *
  * @author GitHub Copilot
  * @date 2026-02-03
  */
@@ -112,7 +112,7 @@ public class WarehouseScanExecutor {
                 throw new IllegalStateException("入库失败");
             }
         } catch (DuplicateKeyException dke) {
-            log.info("仓库扫码重复: orderId={}, bundle={}, warehouse={}", order.getId(), 
+            log.info("仓库扫码重复: orderId={}, bundle={}, warehouse={}", order.getId(),
                     bundle.getBundleNo(), warehouse, dke);
             // 忽略重复扫码，视为成功
         }
@@ -155,9 +155,9 @@ public class WarehouseScanExecutor {
         if (!hasText(orderId) || !hasText(bundleId)) {
             return false;
         }
-        
+
         try {
-            java.util.List<ProductWarehousing> warehousingList = 
+            java.util.List<ProductWarehousing> warehousingList =
                     productWarehousingService.lambdaQuery()
                             .select(ProductWarehousing::getId, ProductWarehousing::getQualityStatus,
                                     ProductWarehousing::getDefectRemark,

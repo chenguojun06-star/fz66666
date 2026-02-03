@@ -66,12 +66,12 @@ class WarehouseScanExecutorTest {
         mockOrder = new ProductionOrder();
         mockOrder.setId("order-001");
         mockOrder.setOrderNo("PO-2024-001");
-        mockOrder.setQuantity(100);
+        mockOrder.setOrderQuantity(100);
 
         // Mock 菲号
         mockBundle = new CuttingBundle();
         mockBundle.setId("bundle-001");
-        mockBundle.setOrderId("order-001");
+        mockBundle.setProductionOrderId("order-001");
         mockBundle.setQuantity(50);
 
         // 解析器
@@ -83,9 +83,19 @@ class WarehouseScanExecutorTest {
     void testExecute_WarehouseScan_Success() {
         // Given: 正常入库场景
         baseParams.put("warehouse", "仓库A");
+        baseParams.put("quantity", "50");  // 添加必须参数
 
-        // TODO: Mock scanRecordService.save() 成功
-        // TODO: Mock productionOrderService.recomputeProgressFromRecords()
+        // Mock 菲号查询
+        when(cuttingBundleService.getByQrCode("BUNDLE-001")).thenReturn(mockBundle);
+
+        // Mock 菲号状态检查（不是次品）
+        mockBundle.setStatus("qualified");
+
+        // Mock save成功
+        when(scanRecordService.saveScanRecord(any(ScanRecord.class))).thenReturn(true);
+        doNothing().when(productionOrderService).recomputeProgressFromRecords(anyString());
+        doNothing().when(inventoryValidator).validateNotExceedOrderQuantity(
+                any(ProductionOrder.class), anyString(), anyString(), anyInt(), any(CuttingBundle.class));
 
         // When: 执行仓库入库
         Map<String, Object> result = executor.execute(
@@ -100,9 +110,10 @@ class WarehouseScanExecutorTest {
 
         // Then: 验证成功
         assertNotNull(result);
-        assertEquals("success", result.get("status"));
+        assertTrue((Boolean) result.get("success"));
 
-        // TODO: verify(scanRecordService, times(1)).save(any(ScanRecord.class));
+        verify(scanRecordService, times(1)).saveScanRecord(any(ScanRecord.class));
+        verify(productionOrderService, times(1)).recomputeProgressFromRecords("order-001");
     }
 
     @Test
