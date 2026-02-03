@@ -768,7 +768,7 @@ const RoleList: React.FC = () => {
                       }
                       setCheckedPermIds(next);
                     }}
-                    style={{ fontSize: 12 }}
+                    style={{ fontSize: "var(--font-size-xs)" }}
                   >
                     {module.moduleName}
                   </Checkbox>
@@ -787,7 +787,7 @@ const RoleList: React.FC = () => {
                         }
                         setCheckedPermIds(next);
                       }}
-                      style={{ fontSize: 12 }}
+                      style={{ fontSize: "var(--font-size-xs)" }}
                     >
                       {perm.name}
                     </Checkbox>

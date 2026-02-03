@@ -448,7 +448,7 @@ export const StyleAttachmentsButton: React.FC<{
               background: '#fffbe6',
               border: '1px solid #ffe58f',
               borderRadius: 4,
-              fontSize: 13,
+              fontSize: "var(--font-size-sm)",
               color: '#ad6800'
             }}>
               ⚠️ 当前只有{patternTypeInfo.hasPattern ? '原始纸样' : '放码纸样'}，
@@ -462,7 +462,7 @@ export const StyleAttachmentsButton: React.FC<{
               background: '#fff2f0',
               border: '1px solid #ffccc7',
               borderRadius: 4,
-              fontSize: 13,
+              fontSize: "var(--font-size-sm)",
               color: '#a8071a'
             }}>
               ⚠️ 暂无纸样附件，请先上传原始纸样和放码纸样

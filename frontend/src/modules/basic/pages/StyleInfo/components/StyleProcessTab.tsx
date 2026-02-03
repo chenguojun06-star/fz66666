@@ -679,7 +679,7 @@ const StyleProcessTab: React.FC<Props> = ({
             <span>{size}码</span>
             {editableMode && (
               <DeleteOutlined
-                style={{ color: 'var(--error-color)', cursor: 'pointer', fontSize: 12 }}
+                style={{ color: 'var(--error-color)', cursor: 'pointer', fontSize: "var(--font-size-xs)" }}
                 onClick={(e) => {
                   e.stopPropagation();
                   Modal.confirm({
@@ -884,7 +884,7 @@ const StyleProcessTab: React.FC<Props> = ({
                     添加
                   </Button>
                 </div>
-                <div style={{ marginTop: 8, fontSize: 12, color: 'var(--neutral-text-disabled)' }}>
+                <div style={{ marginTop: 8, fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)' }}>
                   当前: {sizes.join(', ')}
                 </div>
               </div>

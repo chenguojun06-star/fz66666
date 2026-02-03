@@ -57,14 +57,14 @@ const OrderProgressCard: React.FC<OrderProgressCardProps> = ({
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
             <div>
-              <span style={{ fontSize: 16, fontWeight: 600, marginRight: 12 }}>
+              <span style={{ fontSize: "var(--font-size-lg)", fontWeight: 600, marginRight: 12 }}>
                 {order.orderNo}
               </span>
               <Tag color={color}>{text}</Tag>
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, fontSize: 13 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, fontSize: "var(--font-size-sm)" }}>
             <div><span style={{ color: 'var(--neutral-text-secondary)' }}>款号：</span>{order.styleNo}</div>
             <div><span style={{ color: 'var(--neutral-text-secondary)' }}>款名：</span>{order.styleName || '-'}</div>
             <div><span style={{ color: 'var(--neutral-text-secondary)' }}>工厂：</span>{order.factoryName || '-'}</div>
@@ -75,8 +75,8 @@ const OrderProgressCard: React.FC<OrderProgressCardProps> = ({
 
           <div style={{ marginTop: 12 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-              <span style={{ fontSize: 12, color: 'var(--neutral-text-secondary)' }}>生产进度</span>
-              <span style={{ fontSize: 12, fontWeight: 600 }}>{order.productionProgress}%</span>
+              <span style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-secondary)' }}>生产进度</span>
+              <span style={{ fontSize: "var(--font-size-xs)", fontWeight: 600 }}>{order.productionProgress}%</span>
             </div>
             <Progress
               percent={order.productionProgress}
@@ -93,7 +93,7 @@ const OrderProgressCard: React.FC<OrderProgressCardProps> = ({
             />
           </div>
 
-          <div style={{ marginTop: 8, fontSize: 12, color: 'var(--neutral-text-disabled)' }}>
+          <div style={{ marginTop: 8, fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)' }}>
             创建时间：{formatDateTime(order.createTime)}
           </div>
         </div>

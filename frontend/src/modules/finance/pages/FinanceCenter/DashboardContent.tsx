@@ -450,10 +450,10 @@ const DashboardContent: React.FC = () => {
     lineStyle: { lineWidth: 2 },
     point: { size: 3, shape: 'circle' },
     legend: { position: 'top-right' as const },
-    xAxis: { label: { style: { fill: '#8c8c8c', fontSize: 11 } } },
+    xAxis: { label: { style: { fill: '#8c8c8c', fontSize: "var(--font-size-xs)" } } },
     yAxis: {
       label: {
-        style: { fill: '#8c8c8c', fontSize: 11 },
+        style: { fill: '#8c8c8c', fontSize: "var(--font-size-xs)" },
         formatter: (v: string) => {
           const num = Number(v);
           if (num >= 10000) return `${(num / 10000).toFixed(0)}万`;

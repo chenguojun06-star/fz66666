@@ -544,10 +544,10 @@ const TemplateCenter: React.FC = () => {
       return (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           <div style={{ border: '1px solid #d9d9d9', padding: 8, borderRadius: 4 }}>
-            <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>进度节点</div>
+            <div style={{ fontSize: "var(--font-size-sm)", fontWeight: 500, marginBottom: 8 }}>进度节点</div>
             <div style={{ maxHeight: 480, overflow: 'auto' }}>
               {nodes.map((n, idx) => (
-                <div key={idx} style={{ padding: '6px 8px', borderBottom: '1px solid #f0f0f0', fontSize: 13 }}>
+                <div key={idx} style={{ padding: '6px 8px', borderBottom: '1px solid #f0f0f0', fontSize: "var(--font-size-sm)" }}>
                   {String(n?.name || '-')}
                 </div>
               ))}
@@ -555,10 +555,10 @@ const TemplateCenter: React.FC = () => {
             </div>
           </div>
           <div style={{ border: '1px solid #d9d9d9', padding: 8, borderRadius: 4 }}>
-            <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>单价工序库</div>
+            <div style={{ fontSize: "var(--font-size-sm)", fontWeight: 500, marginBottom: 8 }}>单价工序库</div>
             <div style={{ maxHeight: 480, overflow: 'auto' }}>
               {nodes.filter((n) => n?.unitPrice != null && n.unitPrice !== 0).map((n, idx) => (
-                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderBottom: '1px solid #f0f0f0', fontSize: 13 }}>
+                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderBottom: '1px solid #f0f0f0', fontSize: "var(--font-size-sm)" }}>
                   <span>{String(n?.name || '-')}</span>
                   <span style={{ fontWeight: 500 }}>¥ {Number(n?.unitPrice || 0).toFixed(2)}</span>
                 </div>
@@ -596,30 +596,30 @@ const TemplateCenter: React.FC = () => {
       return (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           <div style={{ border: '1px solid #d9d9d9', padding: 8, borderRadius: 4 }}>
-            <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>
+            <div style={{ fontSize: "var(--font-size-sm)", fontWeight: 500, marginBottom: 8 }}>
               {t === 'process_price' ? '工序节点' : '工艺节点'}
             </div>
             <div style={{ maxHeight: 480, overflow: 'auto' }}>
               {steps.map((s, idx) => (
-                <div key={idx} style={{ padding: '6px 8px', borderBottom: '1px solid #f0f0f0', fontSize: 13 }}>
+                <div key={idx} style={{ padding: '6px 8px', borderBottom: '1px solid #f0f0f0', fontSize: "var(--font-size-sm)" }}>
                   <div>{String(s?.processName || '-')}</div>
-                  {s?.processCode && <div style={{ fontSize: 11, color: 'var(--neutral-text-disabled)', marginTop: 2 }}>编码: {s.processCode}</div>}
-                  {t === 'process' && s?.machineType && <div style={{ fontSize: 11, color: 'var(--neutral-text-disabled)', marginTop: 2 }}>机器: {s.machineType}</div>}
-                  {t === 'process' && s?.standardTime && <div style={{ fontSize: 11, color: 'var(--neutral-text-disabled)', marginTop: 2 }}>工时: {s.standardTime}秒</div>}
+                  {s?.processCode && <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)', marginTop: 2 }}>编码: {s.processCode}</div>}
+                  {t === 'process' && s?.machineType && <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)', marginTop: 2 }}>机器: {s.machineType}</div>}
+                  {t === 'process' && s?.standardTime && <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)', marginTop: 2 }}>工时: {s.standardTime}秒</div>}
                 </div>
               ))}
               {steps.length === 0 && <div style={{ padding: 12, textAlign: 'center', color: 'var(--neutral-text-disabled)' }}>暂无数据</div>}
             </div>
           </div>
           <div style={{ border: '1px solid #d9d9d9', padding: 8, borderRadius: 4 }}>
-            <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>
+            <div style={{ fontSize: "var(--font-size-sm)", fontWeight: 500, marginBottom: 8 }}>
               {t === 'process_price' ? '单价工序库' : '工价工序库'}
             </div>
             <div style={{ maxHeight: 480, overflow: 'auto' }}>
               {steps.filter((s) => getPriceValue(s) > 0).map((s, idx) => {
                 const price = getPriceValue(s);
                 return (
-                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderBottom: '1px solid #f0f0f0', fontSize: 13 }}>
+                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderBottom: '1px solid #f0f0f0', fontSize: "var(--font-size-sm)" }}>
                     <span>{String(s?.processName || '-')}</span>
                     <span style={{ fontWeight: 500 }}>¥ {price.toFixed(2)}</span>
                   </div>
@@ -1336,14 +1336,14 @@ const TemplateCenter: React.FC = () => {
                             显示多码单价
                           </Checkbox>
                           {showSizePrices && (
-                            <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 12 }}>
+                            <span style={{ color: 'var(--neutral-text-secondary)', fontSize: "var(--font-size-xs)" }}>
                               (各尺码单价不同时使用，默认使用工价)
                             </span>
                           )}
                         </div>
                         {showSizePrices && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                            <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 13 }}>尺码：</span>
+                            <span style={{ color: 'var(--neutral-text-secondary)', fontSize: "var(--font-size-sm)" }}>尺码：</span>
                             {templateSizes.map((s) => (
                               <Tag
                                 key={s}
@@ -1430,25 +1430,25 @@ const TemplateCenter: React.FC = () => {
                           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: showSizePrices ? 650 + templateSizes.length * 60 : 650 }}>
                             <thead>
                               <tr style={{ height: 32 }}>
-                                <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#f9fafb', width: 40, fontSize: 12 }}>排序</th>
-                                <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#f9fafb', width: 55, fontSize: 12 }}>工序编号</th>
-                                <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#f9fafb', width: 80, fontSize: 12 }}>工序名称</th>
-                                <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#f9fafb', width: 70, fontSize: 12 }}>进度节点</th>
-                                <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#f9fafb', width: 70, fontSize: 12 }}>机器类型</th>
-                                <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#f9fafb', width: 55, fontSize: 12 }}>工时(秒)</th>
-                                <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#f9fafb', width: 60, fontSize: 12 }}>工价(元)</th>
+                                <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#f9fafb', width: 40, fontSize: "var(--font-size-xs)" }}>排序</th>
+                                <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#f9fafb', width: 55, fontSize: "var(--font-size-xs)" }}>工序编号</th>
+                                <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#f9fafb', width: 80, fontSize: "var(--font-size-xs)" }}>工序名称</th>
+                                <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#f9fafb', width: 70, fontSize: "var(--font-size-xs)" }}>进度节点</th>
+                                <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#f9fafb', width: 70, fontSize: "var(--font-size-xs)" }}>机器类型</th>
+                                <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#f9fafb', width: 55, fontSize: "var(--font-size-xs)" }}>工时(秒)</th>
+                                <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#f9fafb', width: 60, fontSize: "var(--font-size-xs)" }}>工价(元)</th>
                                 {showSizePrices && templateSizes.map((size) => (
-                                  <th key={size} style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#e6f7ff', width: 55, fontSize: 12 }}>
+                                  <th key={size} style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#e6f7ff', width: 55, fontSize: "var(--font-size-xs)" }}>
                                     {size}码
                                   </th>
                                 ))}
-                                <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#f9fafb', width: 36, fontSize: 12 }}>操作</th>
+                                <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#f9fafb', width: 36, fontSize: "var(--font-size-xs)" }}>操作</th>
                               </tr>
                             </thead>
                             <tbody>
                               {editTableData.steps.map((item: ProcessStepRow, idx: number) => (
                                 <tr key={idx} style={{ height: 32 }}>
-                                  <td style={{ border: '1px solid #e5e7eb', padding: '2px 4px', textAlign: 'center', color: 'var(--neutral-text-disabled)', fontSize: 12 }}>
+                                  <td style={{ border: '1px solid #e5e7eb', padding: '2px 4px', textAlign: 'center', color: 'var(--neutral-text-disabled)', fontSize: "var(--font-size-xs)" }}>
                                     {idx + 1}
                                   </td>
                                   <td style={{ border: '1px solid #e5e7eb', padding: '2px 4px' }}>
@@ -1460,7 +1460,7 @@ const TemplateCenter: React.FC = () => {
                                         newData.steps[idx] = { ...newData.steps[idx], processCode: e.target.value };
                                         setEditTableData(newData);
                                       }}
-                                      style={{ border: 'none', fontSize: 12 }}
+                                      style={{ border: 'none', fontSize: "var(--font-size-xs)" }}
                                     />
                                   </td>
                                   <td style={{ border: '1px solid #e5e7eb', padding: '2px 4px' }}>
@@ -1472,7 +1472,7 @@ const TemplateCenter: React.FC = () => {
                                         newData.steps[idx] = { ...newData.steps[idx], processName: e.target.value };
                                         setEditTableData(newData);
                                       }}
-                                      style={{ border: 'none', fontSize: 12 }}
+                                      style={{ border: 'none', fontSize: "var(--font-size-xs)" }}
                                     />
                                   </td>
                                   <td style={{ border: '1px solid #e5e7eb', padding: '2px 4px' }}>
@@ -1487,7 +1487,7 @@ const TemplateCenter: React.FC = () => {
                                         newData.steps[idx] = { ...newData.steps[idx], progressStage: value || '' };
                                         setEditTableData(newData);
                                       }}
-                                      style={{ width: '100%', fontSize: 12 }}
+                                      style={{ width: '100%', fontSize: "var(--font-size-xs)" }}
                                       bordered={false}
                                     />
                                   </td>
@@ -1500,7 +1500,7 @@ const TemplateCenter: React.FC = () => {
                                         newData.steps[idx] = { ...newData.steps[idx], machineType: e.target.value };
                                         setEditTableData(newData);
                                       }}
-                                      style={{ border: 'none', fontSize: 12 }}
+                                      style={{ border: 'none', fontSize: "var(--font-size-xs)" }}
                                     />
                                   </td>
                                   <td style={{ border: '1px solid #e5e7eb', padding: '2px 4px' }}>
@@ -1513,7 +1513,7 @@ const TemplateCenter: React.FC = () => {
                                         newData.steps[idx] = { ...newData.steps[idx], standardTime: val || 0 };
                                         setEditTableData(newData);
                                       }}
-                                      style={{ width: '100%', fontSize: 12 }}
+                                      style={{ width: '100%', fontSize: "var(--font-size-xs)" }}
                                     />
                                   </td>
                                   <td style={{ border: '1px solid #e5e7eb', padding: '2px 4px' }}>
@@ -1527,7 +1527,7 @@ const TemplateCenter: React.FC = () => {
                                         newData.steps[idx] = { ...newData.steps[idx], unitPrice: val || 0 };
                                         setEditTableData(newData);
                                       }}
-                                      style={{ width: '100%', fontSize: 12 }}
+                                      style={{ width: '100%', fontSize: "var(--font-size-xs)" }}
                                     />
                                   </td>
                                   {showSizePrices && templateSizes.map((size) => (
@@ -1548,7 +1548,7 @@ const TemplateCenter: React.FC = () => {
                                           };
                                           setEditTableData(newData);
                                         }}
-                                        style={{ width: '100%', fontSize: 12 }}
+                                        style={{ width: '100%', fontSize: "var(--font-size-xs)" }}
                                       />
                                     </td>
                                   ))}
@@ -1557,7 +1557,7 @@ const TemplateCenter: React.FC = () => {
                                       type="link"
                                       danger
                                       size="small"
-                                      icon={<DeleteOutlined style={{ fontSize: 12 }} />}
+                                      icon={<DeleteOutlined style={{ fontSize: "var(--font-size-xs)" }} />}
                                       onClick={() => {
                                         const kept = editTableData.steps.filter((_: ProcessStepRow, i: number) => i !== idx);
                                         const newData = { ...editTableData, steps: normalizeProcessSteps(kept) };

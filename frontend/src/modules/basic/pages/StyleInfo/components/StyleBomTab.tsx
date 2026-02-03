@@ -1248,12 +1248,12 @@ const StyleBomTab: React.FC<Props> = ({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <Tag color={config.color}>{config.text}</Tag>
             {status === 'insufficient' || status === 'none' ? (
-              <span style={{ fontSize: 12, color: 'var(--error-color)' }}>
+              <span style={{ fontSize: "var(--font-size-xs)", color: 'var(--error-color)' }}>
                 需采购: {record.requiredPurchase || 0}
               </span>
             ) : null}
             {status === 'sufficient' && record.availableStock !== undefined ? (
-              <span style={{ fontSize: 12, color: 'var(--success-color)' }}>
+              <span style={{ fontSize: "var(--font-size-xs)", color: 'var(--success-color)' }}>
                 可用: {record.availableStock}
               </span>
             ) : null}

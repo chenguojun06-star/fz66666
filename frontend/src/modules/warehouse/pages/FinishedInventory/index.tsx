@@ -230,10 +230,10 @@ const _FinishedInventory: React.FC = () => {
       render: (_, record) => (
         <Space orientation="vertical" size={8} style={{ width: '100%' }}>
           <Space size={8} align="center">
-            <strong style={{ fontSize: 16, fontWeight: 700, color: 'var(--neutral-text)' }}>{record.styleNo}</strong>
+            <strong style={{ fontSize: "var(--font-size-lg)", fontWeight: 700, color: 'var(--neutral-text)' }}>{record.styleNo}</strong>
             <Tag color="blue" style={{ fontWeight: 600 }}>{record.orderNo}</Tag>
           </Space>
-          <div style={{ fontSize: 15, color: 'var(--neutral-text)', fontWeight: 600, lineHeight: 1.4 }}>
+          <div style={{ fontSize: "var(--font-size-md)", color: 'var(--neutral-text)', fontWeight: 600, lineHeight: 1.4 }}>
             {record.styleName}
           </div>
           {record.qualityInspectionNo && (
@@ -244,7 +244,7 @@ const _FinishedInventory: React.FC = () => {
               paddingTop: 4,
               borderTop: '1px solid #f0f0f0'
             }}>
-              <div style={{ fontSize: 13, color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
+              <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
                 <span style={{ color: 'var(--neutral-text-disabled)' }}>质检入库号:</span>{' '}
                 <span style={{ color: 'var(--primary-color)', fontWeight: 600 }}>{record.qualityInspectionNo}</span>
               </div>
@@ -259,7 +259,7 @@ const _FinishedInventory: React.FC = () => {
       render: (_, record) => (
         <Space orientation="vertical" size={8} style={{ width: '100%' }}>
           <div>
-            <div style={{ fontSize: 13, color: 'var(--neutral-text-disabled)', marginBottom: 4, fontWeight: 500 }}>颜色</div>
+            <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-disabled)', marginBottom: 4, fontWeight: 500 }}>颜色</div>
             <Space size={[4, 4]} wrap>
               {record.colors && record.colors.length > 0 ? (
                 record.colors.map((color, index) => (
@@ -277,7 +277,7 @@ const _FinishedInventory: React.FC = () => {
             </Space>
           </div>
           <div>
-            <div style={{ fontSize: 13, color: 'var(--neutral-text-disabled)', marginBottom: 4, fontWeight: 500 }}>尺码</div>
+            <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-disabled)', marginBottom: 4, fontWeight: 500 }}>尺码</div>
             <Space size={[4, 4]} wrap>
               {record.sizes && record.sizes.length > 0 ? (
                 record.sizes.map((size, index) => (
@@ -308,25 +308,25 @@ const _FinishedInventory: React.FC = () => {
           width: '100%'
         }}>
           <div>
-            <div style={{ fontSize: 13, color: 'var(--neutral-text-disabled)', marginBottom: 4, fontWeight: 500 }}>可用</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--success-color)' }}>
+            <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-disabled)', marginBottom: 4, fontWeight: 500 }}>可用</div>
+            <div style={{ fontSize: "var(--font-size-lg)", fontWeight: 700, color: 'var(--success-color)' }}>
               {record.availableQty.toLocaleString()}
             </div>
-            <div style={{ fontSize: 12, color: 'var(--neutral-text-disabled)', marginTop: 2 }}>件</div>
+            <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)', marginTop: 2 }}>件</div>
           </div>
           <div>
-            <div style={{ fontSize: 13, color: 'var(--neutral-text-disabled)', marginBottom: 4, fontWeight: 500 }}>锁定</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--warning-color)' }}>
+            <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-disabled)', marginBottom: 4, fontWeight: 500 }}>锁定</div>
+            <div style={{ fontSize: "var(--font-size-lg)", fontWeight: 700, color: 'var(--warning-color)' }}>
               {record.lockedQty.toLocaleString()}
             </div>
-            <div style={{ fontSize: 12, color: 'var(--neutral-text-disabled)', marginTop: 2 }}>件</div>
+            <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)', marginTop: 2 }}>件</div>
           </div>
           <div>
-            <div style={{ fontSize: 13, color: 'var(--neutral-text-disabled)', marginBottom: 4, fontWeight: 500 }}>次品</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: record.defectQty > 0 ? '#ff4d4f' : 'var(--success-color)' }}>
+            <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-disabled)', marginBottom: 4, fontWeight: 500 }}>次品</div>
+            <div style={{ fontSize: "var(--font-size-lg)", fontWeight: 700, color: record.defectQty > 0 ? '#ff4d4f' : 'var(--success-color)' }}>
               {record.defectQty.toLocaleString()}
             </div>
-            <div style={{ fontSize: 12, color: 'var(--neutral-text-disabled)', marginTop: 2 }}>件</div>
+            <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)', marginTop: 2 }}>件</div>
           </div>
         </div>
       ),
@@ -336,17 +336,17 @@ const _FinishedInventory: React.FC = () => {
       width: 180,
       render: (_, record) => (
         <Space orientation="vertical" size={6} style={{ width: '100%' }}>
-          <div style={{ fontSize: 13, color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
+          <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
             <span style={{ color: 'var(--neutral-text-disabled)' }}>入库时间:</span>{' '}
             <span style={{ fontWeight: 600 }}>{record.lastInboundDate}</span>
           </div>
           {record.lastInboundBy && (
-            <div style={{ fontSize: 13, color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
+            <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
               <span style={{ color: 'var(--neutral-text-disabled)' }}>操作人:</span>{' '}
               <span style={{ color: 'var(--primary-color)', fontWeight: 600 }}>{record.lastInboundBy}</span>
             </div>
           )}
-          <div style={{ fontSize: 13, color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
+          <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
             <span style={{ color: 'var(--neutral-text-disabled)' }}>库位:</span>{' '}
             <span style={{ fontWeight: 600 }}>{record.warehouseLocation}</span>
           </div>
@@ -544,20 +544,20 @@ const _FinishedInventory: React.FC = () => {
               <Card size="small" style={{ background: '#f5f5f5' }}>
                 <Row gutter={24}>
                   <Col span={6}>
-                    <div style={{ fontSize: 13, color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>订单号</div>
-                    <div style={{ fontSize: 14, fontWeight: 600 }}>{outboundModal.data.orderNo}</div>
+                    <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>订单号</div>
+                    <div style={{ fontSize: "var(--font-size-base)", fontWeight: 600 }}>{outboundModal.data.orderNo}</div>
                   </Col>
                   <Col span={6}>
-                    <div style={{ fontSize: 13, color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>款号</div>
-                    <div style={{ fontSize: 14, fontWeight: 600 }}>{outboundModal.data.styleNo}</div>
+                    <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>款号</div>
+                    <div style={{ fontSize: "var(--font-size-base)", fontWeight: 600 }}>{outboundModal.data.styleNo}</div>
                   </Col>
                   <Col span={6}>
-                    <div style={{ fontSize: 13, color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>款式名称</div>
-                    <div style={{ fontSize: 14, fontWeight: 600 }}>{outboundModal.data.styleName}</div>
+                    <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>款式名称</div>
+                    <div style={{ fontSize: "var(--font-size-base)", fontWeight: 600 }}>{outboundModal.data.styleName}</div>
                   </Col>
                   <Col span={6}>
-                    <div style={{ fontSize: 13, color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>质检号</div>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--primary-color)' }}>
+                    <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>质检号</div>
+                    <div style={{ fontSize: "var(--font-size-base)", fontWeight: 600, color: 'var(--primary-color)' }}>
                       {outboundModal.data.qualityInspectionNo || '-'}
                     </div>
                   </Col>
@@ -567,7 +567,7 @@ const _FinishedInventory: React.FC = () => {
               {/* SKU明细表格 */}
               <div>
                 <div style={{
-                  fontSize: 14,
+                  fontSize: "var(--font-size-base)",
                   fontWeight: 600,
                   marginBottom: 12,
                   color: 'var(--neutral-text)'
@@ -596,7 +596,7 @@ const _FinishedInventory: React.FC = () => {
                           </Table.Summary.Cell>
                           <Table.Summary.Cell index={2} colSpan={2} />
                           <Table.Summary.Cell index={3} align="center">
-                            <strong style={{ color: 'var(--primary-color)', fontSize: 15 }}>
+                            <strong style={{ color: 'var(--primary-color)', fontSize: "var(--font-size-md)" }}>
                               {totalOutbound} 件
                             </strong>
                           </Table.Summary.Cell>
@@ -613,7 +613,7 @@ const _FinishedInventory: React.FC = () => {
                 border: '1px solid #91d5ff',
                 borderRadius: 4,
                 padding: '8px 12px',
-                fontSize: 13,
+                fontSize: "var(--font-size-sm)",
                 color: 'var(--primary-color)'
               }}>
                 💡 提示：请在"出库数量"列输入需要出库的数量，系统将自动汇总。出库数量不能超过可用库存。
@@ -646,7 +646,7 @@ const _FinishedInventory: React.FC = () => {
                 <Space size={40}>
                   <div>
                     <span style={{ color: 'var(--neutral-text-disabled)', marginRight: 8 }}>款号:</span>
-                    <strong style={{ fontSize: 16 }}>{inboundHistoryModal.data.styleNo}</strong>
+                    <strong style={{ fontSize: "var(--font-size-lg)" }}>{inboundHistoryModal.data.styleNo}</strong>
                   </div>
                   <div>
                     <span style={{ color: 'var(--neutral-text-disabled)', marginRight: 8 }}>订单号:</span>
@@ -658,7 +658,7 @@ const _FinishedInventory: React.FC = () => {
                   </div>
                   <div>
                     <span style={{ color: 'var(--neutral-text-disabled)', marginRight: 8 }}>当前库存:</span>
-                    <strong style={{ color: 'var(--success-color)', fontSize: 16 }}>
+                    <strong style={{ color: 'var(--success-color)', fontSize: "var(--font-size-lg)" }}>
                       {inboundHistoryModal.data.quantity} 件
                     </strong>
                   </div>
@@ -714,13 +714,13 @@ const _FinishedInventory: React.FC = () => {
                 <Space size={40}>
                   <div>
                     <span style={{ color: 'var(--primary-color)' }}>总入库次数:</span>
-                    <strong style={{ marginLeft: 8, fontSize: 16, color: 'var(--primary-color)' }}>
+                    <strong style={{ marginLeft: 8, fontSize: "var(--font-size-lg)", color: 'var(--primary-color)' }}>
                       {inboundHistory.length} 次
                     </strong>
                   </div>
                   <div>
                     <span style={{ color: 'var(--primary-color)' }}>累计入库数量:</span>
-                    <strong style={{ marginLeft: 8, fontSize: 16, color: 'var(--success-color)' }}>
+                    <strong style={{ marginLeft: 8, fontSize: "var(--font-size-lg)", color: 'var(--success-color)' }}>
                       {inboundHistory.reduce((sum, item) => sum + item.quantity, 0)} 件
                     </strong>
                   </div>

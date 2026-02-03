@@ -122,7 +122,7 @@ const StyleProductionTab: React.FC<Props> = ({
 
   return (
     <div data-production-req>
-      <div style={{ marginBottom: 8, color: 'var(--neutral-text-secondary)', fontSize: 12 }}>
+      <div style={{ marginBottom: 8, color: 'var(--neutral-text-secondary)', fontSize: "var(--font-size-xs)" }}>
         款号：<span style={{ color: 'var(--neutral-text)', fontWeight: 500 }}>{styleNo || '-'}</span>
       </div>
       {/* 状态栏 */}
@@ -171,7 +171,7 @@ const StyleProductionTab: React.FC<Props> = ({
             保存
           </Button>
         </Space>
-        <div style={{ marginTop: 8, color: 'var(--neutral-text-secondary)', fontSize: 12 }}>
+        <div style={{ marginTop: 8, color: 'var(--neutral-text-secondary)', fontSize: "var(--font-size-xs)" }}>
           💡 提示：相关文件请在"文件管理"标签页统一上传
         </div>
       </div>
@@ -183,7 +183,7 @@ const StyleProductionTab: React.FC<Props> = ({
         style={{
           marginTop: 8,
           fontFamily: 'monospace',
-          fontSize: 14,
+          fontSize: "var(--font-size-base)",
           lineHeight: '1.8'
         }}
       />

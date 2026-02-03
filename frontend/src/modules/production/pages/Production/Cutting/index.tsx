@@ -1920,7 +1920,7 @@ const CuttingManagement: React.FC = () => {
                           return (
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
                               <div style={{
-                                fontSize: 14,
+                                fontSize: "var(--font-size-base)",
                                 fontWeight: 600,
                                 color: 'var(--neutral-text)',
                                 marginBottom: 6
@@ -1941,7 +1941,7 @@ const CuttingManagement: React.FC = () => {
                                     <tr>
                                       <td style={{
                                         padding: '8px 12px',
-                                        fontSize: 14,
+                                        fontSize: "var(--font-size-base)",
                                         color: 'var(--neutral-text)',
                                         fontWeight: 600,
                                         borderRight: '1px solid var(--table-border-color)',
@@ -1954,7 +1954,7 @@ const CuttingManagement: React.FC = () => {
                                       {sizeArray.map((size: string, idx: number) => (
                                         <td key={idx} style={{
                                           padding: '8px 14px',
-                                          fontSize: 15,
+                                          fontSize: "var(--font-size-md)",
                                           color: 'var(--neutral-text)',
                                           fontWeight: 700,
                                           textAlign: 'center',
@@ -1967,7 +1967,7 @@ const CuttingManagement: React.FC = () => {
                                       ))}
                                       <td style={{
                                         padding: '8px 14px',
-                                        fontSize: 14,
+                                        fontSize: "var(--font-size-base)",
                                         color: 'var(--neutral-text)',
                                         fontWeight: 700,
                                         textAlign: 'center',
@@ -1983,7 +1983,7 @@ const CuttingManagement: React.FC = () => {
                                     <tr>
                                       <td style={{
                                         padding: '8px 12px',
-                                        fontSize: 14,
+                                        fontSize: "var(--font-size-base)",
                                         color: 'var(--neutral-text)',
                                         fontWeight: 600,
                                         borderRight: '1px solid var(--table-border-color)',
@@ -1996,7 +1996,7 @@ const CuttingManagement: React.FC = () => {
                                         return (
                                           <td key={idx} style={{
                                             padding: '8px 14px',
-                                            fontSize: 15,
+                                            fontSize: "var(--font-size-md)",
                                             color: 'var(--neutral-text)',
                                             fontWeight: 700,
                                             textAlign: 'center',

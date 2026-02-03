@@ -476,7 +476,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
               size="small"
               type={expanded ? 'default' : 'primary'}
               onClick={() => setExpanded(!expanded)}
-              style={{ fontSize: 12, flexShrink: 0 }}
+              style={{ fontSize: "var(--font-size-xs)", flexShrink: 0 }}
             >
               {expanded ? '▲ 收起预览' : '▼ 展开预览'}
             </Button>
@@ -525,10 +525,10 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
 
                 {/* 基本信息 */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>
+                  <div style={{ fontSize: "var(--font-size-xxl)", fontWeight: 600, marginBottom: 8 }}>
                     {styleNo} - {styleName}
                   </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: 14 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: "var(--font-size-base)" }}>
                     {color && <div><span style={{ color: '#666' }}>颜色：</span><strong>{color}</strong></div>}
                     {quantity !== undefined && (
                       <div>
@@ -552,7 +552,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
               </div>
 
               {/* 打印时间 */}
-              <div style={{ textAlign: 'right', marginTop: 8, color: '#999', fontSize: 12 }}>
+              <div style={{ textAlign: 'right', marginTop: 8, color: '#999', fontSize: "var(--font-size-xs)" }}>
                 打印时间：{formatDateTime(new Date())}
               </div>
             </div>
@@ -581,7 +581,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
             return (
               <div className="print-section">
                 <div className="print-section-title">📊 码数明细</div>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: "var(--font-size-sm)" }}>
                   <thead>
                     <tr style={{ background: '#fafafa' }}>
                       <th style={{ border: '1px solid #d9d9d9', padding: '6px 8px', textAlign: 'left', width: 60 }}>颜色</th>
@@ -662,7 +662,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
             return (
               <div className="print-section">
                 <div className="print-section-title">📏 尺寸表</div>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: "var(--font-size-xs)" }}>
                   <thead>
                     <tr style={{ background: '#fafafa' }}>
                       <th style={{ border: '1px solid #d9d9d9', padding: '6px 8px', textAlign: 'left' }}>部位(cm)</th>
@@ -758,7 +758,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
             return (
               <div className="print-section">
                 <div className="print-section-title">📋 生产要求</div>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: "var(--font-size-xs)" }}>
                   <thead>
                     <tr style={{ background: '#fafafa' }}>
                       <th style={{ border: '1px solid #d9d9d9', padding: '6px 8px', width: 60, textAlign: 'center' }}>序号</th>
@@ -827,7 +827,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
             border: '1px dashed #d9d9d9'
           }}>
             <div style={{ fontSize: 48, marginBottom: 12 }}>👆</div>
-            <div style={{ fontSize: 14 }}>点击"展开预览"按钮查看打印内容</div>
+            <div style={{ fontSize: "var(--font-size-base)" }}>点击"展开预览"按钮查看打印内容</div>
           </div>
         )}
       </Spin>

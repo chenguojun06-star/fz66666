@@ -304,7 +304,7 @@ const UserApproval: React.FC = () => {
             <p>
               批准用户"<strong>{currentUser?.name || currentUser?.username}</strong>"
             </p>
-            <p style={{ color: 'var(--neutral-text-disabled)', fontSize: 12, marginBottom: 16 }}>
+            <p style={{ color: 'var(--neutral-text-disabled)', fontSize: "var(--font-size-xs)", marginBottom: 16 }}>
               批准后该用户可以正常登录系统
             </p>
             <div>
@@ -354,7 +354,7 @@ const UserApproval: React.FC = () => {
             <p>
               确定拒绝用户"<strong>{currentUser?.name || currentUser?.username}</strong>"吗？
             </p>
-            <p style={{ color: 'var(--neutral-text-disabled)', fontSize: 12 }}>拒绝后该用户将无法登录系统</p>
+            <p style={{ color: 'var(--neutral-text-disabled)', fontSize: "var(--font-size-xs)" }}>拒绝后该用户将无法登录系统</p>
           </div>
           <TextArea
             placeholder="请输入拒绝原因"

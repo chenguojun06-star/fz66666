@@ -443,7 +443,7 @@ const PatternProduction: React.FC = () => {
           {coverImage ? (
             <img src={coverImage} alt="样板图" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
-            <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 12 }}>无图</span>
+            <span style={{ color: 'var(--neutral-text-disabled)', fontSize: "var(--font-size-xs)" }}>无图</span>
           )}
         </div>
       ),
@@ -623,7 +623,7 @@ const PatternProduction: React.FC = () => {
                   }
                 />
                 <div style={{
-                  fontSize: 14,
+                  fontSize: "var(--font-size-base)",
                   fontWeight: 700,
                   color: 'var(--neutral-text)',
                   letterSpacing: '0.3px',
@@ -633,13 +633,13 @@ const PatternProduction: React.FC = () => {
                 }}>
                   <span>{node.name}</span>
                   <span style={{
-                    fontSize: 13,
+                    fontSize: "var(--font-size-sm)",
                     fontWeight: 600,
                     color: percent >= 100 ? '#059669' : 'var(--neutral-text-secondary)',
                   }}>({completedQty}/{record.quantity})</span>
                 </div>
                 <div style={{
-                  fontSize: 12,
+                  fontSize: "var(--font-size-xs)",
                   fontWeight: 500,
                   color: 'var(--neutral-text-secondary)',
                   whiteSpace: 'nowrap',
@@ -912,7 +912,7 @@ const PatternProduction: React.FC = () => {
                 <div><strong>颜色:</strong> {progressModal.data.color}</div>
                 <div><strong>状态:</strong> {renderStatus(progressModal.data.status)}</div>
               </div>
-              <div style={{ fontSize: 12, color: 'var(--neutral-text-disabled)' }}>
+              <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)' }}>
                 当所有工序进度达到 100% 时，系统将自动标记为已完成
               </div>
             </div>
@@ -982,16 +982,16 @@ const PatternProduction: React.FC = () => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                     <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
                       <Tag color="blue">{log.action}</Tag>
-                      <span style={{ fontSize: 13, color: 'var(--neutral-text-secondary)' }}>
+                      <span style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)' }}>
                         <UserOutlined style={{ marginRight: 4 }} />
                         {log.operator}
                       </span>
                     </div>
-                    <span style={{ fontSize: 12, color: 'var(--neutral-text-disabled)' }}>
+                    <span style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)' }}>
                       {log.time}
                     </span>
                   </div>
-                  <div style={{ fontSize: 13, color: 'var(--neutral-text)', paddingLeft: 8 }}>
+                  <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text)', paddingLeft: 8 }}>
                     {log.detail}
                   </div>
                 </div>
@@ -1018,7 +1018,7 @@ const PatternProduction: React.FC = () => {
           size="lg"
         >
           {detailModal.data && (
-            <div style={{ fontSize: 12 }}>
+            <div style={{ fontSize: "var(--font-size-xs)" }}>
               {/* 顶部：图片 + 二维码 + 基本信息 */}
               <div style={{
                 display: 'flex',
@@ -1058,7 +1058,7 @@ const PatternProduction: React.FC = () => {
 
                 {/* 基本信息 - 紧凑排列 */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6, color: 'var(--neutral-text)' }}>
+                  <div style={{ fontSize: "var(--font-size-md)", fontWeight: 600, marginBottom: 6, color: 'var(--neutral-text)' }}>
                     {detailModal.data.styleNo}
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', color: 'var(--neutral-text-secondary)' }}>
@@ -1116,7 +1116,7 @@ const PatternProduction: React.FC = () => {
                           borderRadius: 4,
                           border: `1px solid ${percent >= 100 ? '#86efac' : '#e5e7eb'}`,
                         }}>
-                          <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 4 }}>{node.name}</div>
+                          <div style={{ fontSize: "var(--font-size-xs)", fontWeight: 600, marginBottom: 4 }}>{node.name}</div>
                           <LiquidProgressLottie
                             progress={percent}
                             size={45}
@@ -1124,7 +1124,7 @@ const PatternProduction: React.FC = () => {
                             color2="var(--success-light)"
                           />
                           <div style={{
-                            fontSize: 13,
+                            fontSize: "var(--font-size-sm)",
                             fontWeight: 700,
                             marginTop: 4,
                             color: percent >= 100 ? '#059669' : 'var(--neutral-text-secondary)',

@@ -310,7 +310,7 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
 
   return (
     <div style={{ padding: '0 4px' }}>
-      <div style={{ marginBottom: 8, color: 'var(--neutral-text-secondary)', fontSize: 12 }}>
+      <div style={{ marginBottom: 8, color: 'var(--neutral-text-secondary)', fontSize: "var(--font-size-xs)" }}>
         款号：<span style={{ color: 'var(--neutral-text)', fontWeight: 500 }}>{styleNo || '-'}</span>
       </div>
       {/* 状态栏 */}

@@ -321,7 +321,7 @@ const WarehouseDashboard: React.FC = () => {
           style={{ marginTop: 16 }}
           extra={
             <Space size="middle">
-              <span style={{ fontSize: 13, color: 'var(--neutral-text-secondary)' }}>物料类型：</span>
+              <span style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)' }}>物料类型：</span>
               <Select
                 value={materialType}
                 onChange={setMaterialType}
@@ -333,7 +333,7 @@ const WarehouseDashboard: React.FC = () => {
                   { label: '👔 成品', value: 'finished' },
                 ]}
               />
-              <span style={{ fontSize: 13, color: 'var(--neutral-text-secondary)' }}>时间范围：</span>
+              <span style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)' }}>时间范围：</span>
               <Radio.Group
                 value={timeRange}
                 onChange={(e) => setTimeRange(e.target.value)}

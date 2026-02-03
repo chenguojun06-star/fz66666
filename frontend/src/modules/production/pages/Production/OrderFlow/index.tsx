@@ -499,7 +499,7 @@ const OrderFlow: React.FC = () => {
                                   description={
                                     <div>
                                       <p>工序数量: <strong>{workflowNodes.length}</strong> 个 |
-                                         工序总单价: <strong style={{ color: 'var(--primary-color)', fontSize: 16 }}>¥{totalPrice.toFixed(2)}</strong>
+                                         工序总单价: <strong style={{ color: 'var(--primary-color)', fontSize: "var(--font-size-lg)" }}>¥{totalPrice.toFixed(2)}</strong>
                                       </p>
                                       <p style={{ marginTop: 8, color: 'var(--warning-color)' }}>
                                         💡 提示：单价修改需要到"单价维护"模块中修改，修改后点击"刷新数据"按钮可更新单价
@@ -759,7 +759,7 @@ const OrderFlow: React.FC = () => {
                                     <strong>合计：</strong>
                                   </Table.Summary.Cell>
                                   <Table.Summary.Cell index={1} align="right">
-                                    <strong style={{ color: 'var(--primary-color)', fontSize: 16 }}>¥{totalAmount.toFixed(2)}</strong>
+                                    <strong style={{ color: 'var(--primary-color)', fontSize: "var(--font-size-lg)" }}>¥{totalAmount.toFixed(2)}</strong>
                                   </Table.Summary.Cell>
                                   <Table.Summary.Cell index={2} colSpan={3} />
                                 </Table.Summary.Row>

@@ -63,8 +63,8 @@ const CuttingBundleTable: React.FC<CuttingBundleTableProps> = ({
         const processName = record.currentProcessName || '-';
         return (
           <div>
-            <div style={{ fontSize: 12 }}>{processName}</div>
-            <div style={{ fontSize: 11, color: 'var(--neutral-text-disabled)' }}>
+            <div style={{ fontSize: "var(--font-size-xs)" }}>{processName}</div>
+            <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)' }}>
               进度: {progress}%
             </div>
           </div>
@@ -93,7 +93,7 @@ const CuttingBundleTable: React.FC<CuttingBundleTableProps> = ({
       width: 150,
       ellipsis: true,
       render: (val: any) => (
-        <span style={{ fontSize: 11, color: 'var(--neutral-text-disabled)', fontFamily: 'monospace' }}>
+        <span style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)', fontFamily: 'monospace' }}>
           {val || '-'}
         </span>
       ),

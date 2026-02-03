@@ -1162,7 +1162,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         // 空数据提示
         if (!ns || ns.length === 0) {
           return (
-            <div style={{ color: 'var(--neutral-text-disabled)', fontSize: 14, padding: '20px 0' }}>
+            <div style={{ color: 'var(--neutral-text-disabled)', fontSize: "var(--font-size-base)", padding: '20px 0' }}>
               暂无工序进度数据
             </div>
           );

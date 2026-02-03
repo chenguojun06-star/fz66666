@@ -1965,7 +1965,7 @@ const ProductionList: React.FC = () => {
                 label: (
                   <Dropdown menu={columnSettingsMenu} trigger={['click']} placement="bottomRight">
                     <span onClick={(e) => e.stopPropagation()}>
-                      <SettingOutlined style={{ fontSize: 14 }} />
+                      <SettingOutlined style={{ fontSize: "var(--font-size-base)" }} />
                     </span>
                   </Dropdown>
                 ),

@@ -88,7 +88,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
         <Col xs={24} lg={18}>
           {/* 款号信息区域 */}
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 12, paddingLeft: 4, borderLeft: '3px solid #2D7FF9' }}>
+            <div style={{ fontSize: "var(--font-size-base)", fontWeight: 600, color: '#374151', marginBottom: 12, paddingLeft: 4, borderLeft: '3px solid #2D7FF9' }}>
               &nbsp;款号信息
             </div>
             <Row gutter={[16, 0]}>
@@ -117,7 +117,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
 
           {/* 客户信息区域 */}
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 12, paddingLeft: 4, borderLeft: '3px solid #52C41A' }}>
+            <div style={{ fontSize: "var(--font-size-base)", fontWeight: 600, color: '#374151', marginBottom: 12, paddingLeft: 4, borderLeft: '3px solid #52C41A' }}>
               &nbsp;客户信息
             </div>
             <Row gutter={[12, 0]}>
@@ -146,7 +146,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
 
           {/* 版次信息区域 */}
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 12, paddingLeft: 4, borderLeft: '3px solid #FAAD14' }}>
+            <div style={{ fontSize: "var(--font-size-base)", fontWeight: 600, color: '#374151', marginBottom: 12, paddingLeft: 4, borderLeft: '3px solid #FAAD14' }}>
               &nbsp;版次信息
             </div>
             <Row gutter={[12, 0]}>
@@ -184,7 +184,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
 
           {/* 时间信息区域 */}
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 12, paddingLeft: 4, borderLeft: '3px solid #8B5CF6' }}>
+            <div style={{ fontSize: "var(--font-size-base)", fontWeight: 600, color: '#374151', marginBottom: 12, paddingLeft: 4, borderLeft: '3px solid #8B5CF6' }}>
               &nbsp;时间信息
             </div>
             <Row gutter={[12, 0]}>

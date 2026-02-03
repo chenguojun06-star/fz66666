@@ -798,7 +798,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
           border: '1px solid var(--color-border)',
           borderRadius: 6,
           marginBottom: 6,
-          fontSize: 12,
+          fontSize: "var(--font-size-xs)",
           color: 'var(--color-text-secondary)'
         }}>
           订单：{orderInfoLine}
@@ -812,7 +812,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
           background: 'var(--color-bg-base)',
           border: '1px solid var(--color-border)',
           borderRadius: 6,
-          fontSize: 12,
+          fontSize: "var(--font-size-xs)",
           color: 'var(--color-text-secondary)',
           fontWeight: 600,
           width: '100%',
@@ -891,7 +891,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
           </Button>
         </div>
 
-        <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 4 }}>委派历史</div>
+        <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--color-text-secondary)', marginBottom: 4 }}>委派历史</div>
         {currentNodeData.history && currentNodeData.history.length > 0 ? (
           <div style={{ border: '1px solid var(--color-border)', borderRadius: 6, padding: '10px' }}>
             {currentNodeData.history.slice().reverse().map((h, idx) => (

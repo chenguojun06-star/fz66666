@@ -102,7 +102,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
 
   return (
     <div style={{ padding: '0 8px' }}>
-      <div style={{ marginBottom: 8, color: 'var(--neutral-text-secondary)', fontSize: 12 }}>
+      <div style={{ marginBottom: 8, color: 'var(--neutral-text-secondary)', fontSize: "var(--font-size-xs)" }}>
         款号：<span style={{ color: 'var(--neutral-text)', fontWeight: 500 }}>{styleNo || '-'}</span>
       </div>
       <Tabs
@@ -135,7 +135,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
                         ]}
                       >
                         <List.Item.Meta
-                          avatar={<FileOutlined style={{ fontSize: 24, color: 'var(--primary-color)' }} />}
+                          avatar={<FileOutlined style={{ fontSize: "var(--font-size-xxl)", color: 'var(--primary-color)' }} />}
                           title={
                             <Space>
                               {item.fileName}
@@ -182,7 +182,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
 
                       return (
                         <div style={{ padding: '8px' }}>
-                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: "var(--font-size-base)" }}>
                             <thead>
                               <tr style={{ background: '#fafafa' }}>
                                 <th style={{ border: '1px solid #d9d9d9', padding: '8px', width: 60, textAlign: 'center' }}>序号</th>

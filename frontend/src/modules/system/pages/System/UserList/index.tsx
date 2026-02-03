@@ -1009,7 +1009,7 @@ const UserList: React.FC = () => {
                                       }
                                       setPermCheckedIds(next);
                                     }}
-                                    style={{ fontSize: 12 }}
+                                    style={{ fontSize: "var(--font-size-xs)" }}
                                   >
                                     {module.moduleName}
                                   </Checkbox>
@@ -1028,7 +1028,7 @@ const UserList: React.FC = () => {
                                         }
                                         setPermCheckedIds(next);
                                       }}
-                                      style={{ fontSize: 12 }}
+                                      style={{ fontSize: "var(--font-size-xs)" }}
                                     >
                                       {perm.name}
                                     </Checkbox>

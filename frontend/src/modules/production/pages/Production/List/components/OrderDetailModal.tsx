@@ -104,10 +104,10 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
         {/* 右侧：订单信息 */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>
+            <div style={{ fontSize: "var(--font-size-xl)", fontWeight: 700, marginBottom: 8 }}>
               {order.orderNo}
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, fontSize: 13 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, fontSize: "var(--font-size-sm)" }}>
               <div><span style={{ color: 'var(--neutral-text-secondary)' }}>款号：</span>{order.styleNo}</div>
               <div><span style={{ color: 'var(--neutral-text-secondary)' }}>款名：</span>{order.styleName}</div>
               <div><span style={{ color: 'var(--neutral-text-secondary)' }}>加工厂：</span>{order.factoryName || '-'}</div>
@@ -127,7 +127,7 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
               padding: 8,
               background: '#f5f5f5',
               borderRadius: 4,
-              fontSize: 12,
+              fontSize: "var(--font-size-xs)",
               marginTop: 8
             }}>
               <div style={{ color: 'var(--neutral-text-secondary)', marginBottom: 4 }}>备注：</div>
@@ -140,7 +140,7 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
       {/* SKU表格 */}
       {skuRows.length > 0 && (
         <div>
-          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>SKU明细</div>
+          <div style={{ fontSize: "var(--font-size-base)", fontWeight: 600, marginBottom: 8 }}>SKU明细</div>
           <Table
             dataSource={skuRows}
             rowKey="key"

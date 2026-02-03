@@ -139,7 +139,7 @@ const HorizontalProgressPriceView: React.FC<HorizontalProgressPriceViewProps> = 
                 <Text
                   strong
                   style={{
-                    fontSize: 15,
+                    fontSize: "var(--font-size-md)",
                     color: frozen ? 'rgba(15, 23, 42, 0.6)' : 'rgba(15, 23, 42, 0.88)',
                   }}
                 >
@@ -147,7 +147,7 @@ const HorizontalProgressPriceView: React.FC<HorizontalProgressPriceViewProps> = 
                 </Text>
                 <Text
                   style={{
-                    fontSize: 18,
+                    fontSize: "var(--font-size-xl)",
                     fontWeight: 700,
                     color:
                       percent >= 100
@@ -184,13 +184,13 @@ const HorizontalProgressPriceView: React.FC<HorizontalProgressPriceViewProps> = 
                 }}
               >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <Text type="secondary" style={{ fontSize: 12 }}>
+                  <Text type="secondary" style={{ fontSize: "var(--font-size-xs)" }}>
                     已完成
                   </Text>
                   <Text
                     strong
                     style={{
-                      fontSize: 16,
+                      fontSize: "var(--font-size-lg)",
                       color: '#52c41a',
                       fontVariantNumeric: 'tabular-nums',
                     }}
@@ -205,13 +205,13 @@ const HorizontalProgressPriceView: React.FC<HorizontalProgressPriceViewProps> = 
                   }}
                 />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <Text type="secondary" style={{ fontSize: 12 }}>
+                  <Text type="secondary" style={{ fontSize: "var(--font-size-xs)" }}>
                     总数量
                   </Text>
                   <Text
                     strong
                     style={{
-                      fontSize: 16,
+                      fontSize: "var(--font-size-lg)",
                       color: 'rgba(15, 23, 42, 0.65)',
                       fontVariantNumeric: 'tabular-nums',
                     }}
@@ -226,13 +226,13 @@ const HorizontalProgressPriceView: React.FC<HorizontalProgressPriceViewProps> = 
                   }}
                 />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <Text type="secondary" style={{ fontSize: 12 }}>
+                  <Text type="secondary" style={{ fontSize: "var(--font-size-xs)" }}>
                     剩余
                   </Text>
                   <Text
                     strong
                     style={{
-                      fontSize: 16,
+                      fontSize: "var(--font-size-lg)",
                       color: stat.remaining > 0 ? '#faad14' : 'rgba(15, 23, 42, 0.45)',
                       fontVariantNumeric: 'tabular-nums',
                     }}
@@ -257,7 +257,7 @@ const HorizontalProgressPriceView: React.FC<HorizontalProgressPriceViewProps> = 
                 >
                   <Text
                     style={{
-                      fontSize: 13,
+                      fontSize: "var(--font-size-sm)",
                       color: 'rgba(15, 23, 42, 0.65)',
                       minWidth: 60,
                     }}
@@ -282,7 +282,7 @@ const HorizontalProgressPriceView: React.FC<HorizontalProgressPriceViewProps> = 
                     }}
                     styles={{
                       input: {
-                        fontSize: 14,
+                        fontSize: "var(--font-size-base)",
                         fontWeight: 600,
                         color: '#1890ff',
                       },
@@ -302,13 +302,13 @@ const HorizontalProgressPriceView: React.FC<HorizontalProgressPriceViewProps> = 
                     borderTop: '1px dashed rgba(15, 23, 42, 0.08)',
                   }}
                 >
-                  <Text type="secondary" style={{ fontSize: 12 }}>
+                  <Text type="secondary" style={{ fontSize: "var(--font-size-xs)" }}>
                     预估总价
                   </Text>
                   <Text
                     strong
                     style={{
-                      fontSize: 15,
+                      fontSize: "var(--font-size-md)",
                       color: '#f5222d',
                       fontVariantNumeric: 'tabular-nums',
                     }}
@@ -346,13 +346,13 @@ const HorizontalProgressPriceView: React.FC<HorizontalProgressPriceViewProps> = 
         >
           {/* 总工序数 */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <Text type="secondary" style={{ fontSize: 13 }}>
+            <Text type="secondary" style={{ fontSize: "var(--font-size-sm)" }}>
               总工序数
             </Text>
             <Text
               strong
               style={{
-                fontSize: 24,
+                fontSize: "var(--font-size-xxl)",
                 color: '#1890ff',
                 fontVariantNumeric: 'tabular-nums',
               }}
@@ -363,13 +363,13 @@ const HorizontalProgressPriceView: React.FC<HorizontalProgressPriceViewProps> = 
 
           {/* 已完成工序 */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <Text type="secondary" style={{ fontSize: 13 }}>
+            <Text type="secondary" style={{ fontSize: "var(--font-size-sm)" }}>
               已完成工序
             </Text>
             <Text
               strong
               style={{
-                fontSize: 24,
+                fontSize: "var(--font-size-xxl)",
                 color: '#52c41a',
                 fontVariantNumeric: 'tabular-nums',
               }}
@@ -384,13 +384,13 @@ const HorizontalProgressPriceView: React.FC<HorizontalProgressPriceViewProps> = 
           {/* 总单价 */}
           {nodes.some((n) => (Number(n.unitPrice) || 0) > 0) && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <Text type="secondary" style={{ fontSize: 13 }}>
+              <Text type="secondary" style={{ fontSize: "var(--font-size-sm)" }}>
                 工序总单价
               </Text>
               <Text
                 strong
                 style={{
-                  fontSize: 24,
+                  fontSize: "var(--font-size-xxl)",
                   color: '#f5222d',
                   fontVariantNumeric: 'tabular-nums',
                 }}
@@ -406,13 +406,13 @@ const HorizontalProgressPriceView: React.FC<HorizontalProgressPriceViewProps> = 
           {/* 预估总成本 */}
           {nodes.some((n) => (Number(n.unitPrice) || 0) > 0) && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <Text type="secondary" style={{ fontSize: 13 }}>
+              <Text type="secondary" style={{ fontSize: "var(--font-size-sm)" }}>
                 预估总成本（{totalQty}件）
               </Text>
               <Text
                 strong
                 style={{
-                  fontSize: 24,
+                  fontSize: "var(--font-size-xxl)",
                   color: '#ff4d4f',
                   fontVariantNumeric: 'tabular-nums',
                 }}

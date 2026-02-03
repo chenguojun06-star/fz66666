@@ -182,7 +182,7 @@ const OrderTable: React.FC<OrderTableProps> = ({
           }}
         >
           <LiquidProgressBar percent={rate || 0} width="100%" height={12} />
-          <span style={{ fontSize: 12, color: 'var(--neutral-text-secondary)', minWidth: 40 }}>
+          <span style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-secondary)', minWidth: 40 }}>
             {rate || 0}%
           </span>
         </div>
@@ -209,7 +209,7 @@ const OrderTable: React.FC<OrderTableProps> = ({
           }}
         >
           <LiquidProgressBar percent={rate || 0} width="100%" height={12} />
-          <span style={{ fontSize: 12, color: 'var(--neutral-text-secondary)', minWidth: 40 }}>
+          <span style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-secondary)', minWidth: 40 }}>
             {rate || 0}%
           </span>
         </div>
@@ -236,7 +236,7 @@ const OrderTable: React.FC<OrderTableProps> = ({
           }}
         >
           <LiquidProgressBar percent={rate || 0} width="100%" height={12} />
-          <span style={{ fontSize: 12, color: 'var(--neutral-text-secondary)', minWidth: 40 }}>
+          <span style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-secondary)', minWidth: 40 }}>
             {rate || 0}%
           </span>
         </div>
@@ -293,10 +293,10 @@ const OrderTable: React.FC<OrderTableProps> = ({
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <span style={{ fontSize: 14, fontWeight: 600 }}>
+              <span style={{ fontSize: "var(--font-size-base)", fontWeight: 600 }}>
                 {qualified}/{total}
               </span>
-              <span style={{ fontSize: 11, color: 'var(--neutral-text-disabled)' }}>
+              <span style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)' }}>
                 {qualified > 0 ? '已入库' : '未入库'}
               </span>
             </div>

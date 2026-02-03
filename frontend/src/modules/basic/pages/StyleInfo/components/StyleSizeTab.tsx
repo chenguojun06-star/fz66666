@@ -770,7 +770,7 @@ const StyleSizeTab: React.FC<Props> = ({
             </>
           )}
         </Space>
-        <div style={{ marginTop: 8, color: 'var(--neutral-text-secondary)', fontSize: 12 }}>
+        <div style={{ marginTop: 8, color: 'var(--neutral-text-secondary)', fontSize: "var(--font-size-xs)" }}>
           💡 提示：相关文件请在"文件管理"标签页统一上传
         </div>
       </div>

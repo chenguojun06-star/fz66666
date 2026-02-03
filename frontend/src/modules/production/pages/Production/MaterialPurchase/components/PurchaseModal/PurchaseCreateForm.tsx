@@ -104,7 +104,7 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
   const uploadButton = (
     <div>
       {uploadLoading ? <LoadingOutlined /> : <PlusOutlined />}
-      <div style={{ marginTop: 8, fontSize: 12 }}>上传图片</div>
+      <div style={{ marginTop: 8, fontSize: "var(--font-size-xs)" }}>上传图片</div>
     </div>
   );
 
@@ -272,7 +272,7 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
                   <Tag color={stockInfo.quantity < stockInfo.safetyStock ? 'red' : 'green'}>
                     {stockInfo.quantity} {form.getFieldValue('unit') || ''}
                   </Tag>
-                  <span style={{ fontSize: 12, color: 'var(--neutral-text-disabled)' }}>
+                  <span style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)' }}>
                     位置: {stockInfo.location}
                   </span>
                   {stockInfo.quantity < stockInfo.safetyStock && (

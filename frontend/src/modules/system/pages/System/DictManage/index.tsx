@@ -378,7 +378,7 @@ const DictManage: React.FC = () => {
               <Tag
                 key={type.value}
                 color={selectedType === type.value ? 'blue' : 'default'}
-                style={{ cursor: 'pointer', fontSize: 14, padding: '4px 12px' }}
+                style={{ cursor: 'pointer', fontSize: "var(--font-size-base)", padding: '4px 12px' }}
                 onClick={() => setSelectedType(type.value)}
               >
                 {type.label} ({type.description})

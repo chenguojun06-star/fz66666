@@ -127,7 +127,7 @@ const LiquidProgressLottie: React.FC<LiquidProgressLottieProps> = ({
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          fontSize: 11,
+          fontSize: "var(--font-size-xs)",
           fontWeight: 600,
           pointerEvents: 'none',
           zIndex: 2,
@@ -145,7 +145,7 @@ const LiquidProgressLottie: React.FC<LiquidProgressLottieProps> = ({
             style={{
               color: '#1f2937',
               fontWeight: 700,
-              fontSize: 12,
+              fontSize: "var(--font-size-xs)",
               textShadow: '0 1px 2px rgba(255,255,255,0.8)',
             }}
           >

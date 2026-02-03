@@ -128,7 +128,7 @@ export const useOrderActions = (onSuccess?: () => void) => {
           <div style={{ marginBottom: 12, fontWeight: 600 }}>报废原因</div>
           <textarea
             placeholder="请输入报废原因"
-            style={{ width: '100%', minHeight: 80, padding: 8, fontSize: 14 }}
+            style={{ width: '100%', minHeight: 80, padding: 8, fontSize: "var(--font-size-base)" }}
             maxLength={200}
             onChange={(e) => {
               remark = String(e?.target?.value || '');

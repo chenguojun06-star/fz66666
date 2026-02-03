@@ -67,7 +67,7 @@ const DashboardLineChart: React.FC<DashboardLineChartProps> = ({
       itemName: {
         style: {
           fill: '#666',
-          fontSize: 14,
+          fontSize: "var(--font-size-base)",
         },
       },
     } : false,
@@ -76,13 +76,13 @@ const DashboardLineChart: React.FC<DashboardLineChartProps> = ({
         autoRotate: false,
         style: {
           fill: '#666',
-          fontSize: 12,
+          fontSize: "var(--font-size-xs)",
         },
       },
       title: xAxisLabel ? {
         text: xAxisLabel,
         style: {
-          fontSize: 13,
+          fontSize: "var(--font-size-sm)",
           fill: '#666',
         },
       } : undefined,
@@ -98,13 +98,13 @@ const DashboardLineChart: React.FC<DashboardLineChartProps> = ({
         },
         style: {
           fill: '#666',
-          fontSize: 12,
+          fontSize: "var(--font-size-xs)",
         },
       },
       title: yAxisLabel ? {
         text: yAxisLabel,
         style: {
-          fontSize: 13,
+          fontSize: "var(--font-size-sm)",
           fill: '#666',
         },
       } : undefined,

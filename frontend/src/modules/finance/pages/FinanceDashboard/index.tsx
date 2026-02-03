@@ -227,12 +227,12 @@ const FinanceDashboard: React.FC = () => {
     label: undefined,
     xAxis: {
       label: {
-        style: { fill: '#8c8c8c', fontSize: 12 },
+        style: { fill: '#8c8c8c', fontSize: "var(--font-size-xs)" },
       },
     },
     yAxis: {
       label: {
-        style: { fill: '#8c8c8c', fontSize: 12 },
+        style: { fill: '#8c8c8c', fontSize: "var(--font-size-xs)" },
         formatter: (v: string) => `${Number(v).toLocaleString()}`,
       },
     },

@@ -442,10 +442,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                           }}
                         >
                           <div style={{ fontWeight: 500, marginBottom: 4 }}>{event.title}</div>
-                          <div style={{ fontSize: 12, color: '#666' }}>
+                          <div style={{ fontSize: "var(--font-size-xs)", color: '#666' }}>
                             订单号: {event.orderNo}
                           </div>
-                          <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>
+                          <div style={{ fontSize: "var(--font-size-xs)", color: '#999', marginTop: 4 }}>
                             {event.time}
                           </div>
                         </div>
@@ -459,7 +459,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <Badge count={urgentEvents.length} offset={[-2, 2]} size="small">
                 <Button
                   type="text"
-                  icon={<BellOutlined style={{ fontSize: 18 }} />}
+                  icon={<BellOutlined style={{ fontSize: "var(--font-size-xl)" }} />}
                   style={{ marginRight: 12 }}
                 />
               </Badge>

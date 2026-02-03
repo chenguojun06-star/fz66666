@@ -187,7 +187,7 @@ const DeliveryAlert: React.FC = () => {
       <div className="delivery-alert-header">
         <h3 className="delivery-alert-title">
           <ClockCircleOutlined /> 交期预警
-          {useMockData && <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--warning-color)' }}>(演示数据)</span>}
+          {useMockData && <span style={{ marginLeft: 8, fontSize: "var(--font-size-xs)", color: 'var(--warning-color)' }}>(演示数据)</span>}
         </h3>
         <div className="delivery-alert-stats">
           <span className="delivery-stat delivery-stat--urgent">

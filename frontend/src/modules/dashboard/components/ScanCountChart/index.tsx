@@ -62,7 +62,7 @@ const ScanCountChart: React.FC = () => {
       borderWidth: 1,
       textStyle: {
         color: 'var(--neutral-text)',
-        fontSize: 13,
+        fontSize: "var(--font-size-sm)",
       },
       formatter: (params: any) => {
         const date = params[0].axisValue;
@@ -85,7 +85,7 @@ const ScanCountChart: React.FC = () => {
       data: ['扫菲次数', '扫菲数量'],
       top: 5,
       textStyle: {
-        fontSize: 13,
+        fontSize: "var(--font-size-sm)",
         color: 'var(--neutral-text-secondary)',
       },
     },
@@ -107,7 +107,7 @@ const ScanCountChart: React.FC = () => {
       },
       axisLabel: {
         color: 'var(--neutral-text-secondary)',
-        fontSize: 12,
+        fontSize: "var(--font-size-xs)",
       },
     },
     yAxis: {
@@ -120,7 +120,7 @@ const ScanCountChart: React.FC = () => {
       },
       axisLabel: {
         color: 'var(--neutral-text-secondary)',
-        fontSize: 12,
+        fontSize: "var(--font-size-xs)",
         formatter: (value: number) => value.toLocaleString(),
       },
       splitLine: {

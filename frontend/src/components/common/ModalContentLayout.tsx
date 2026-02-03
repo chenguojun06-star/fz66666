@@ -106,7 +106,7 @@ export const ModalPrimaryField: React.FC<PrimaryFieldProps> = ({
 }) => {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1.2, minWidth: 0, ...style }}>
-      <span style={{ fontSize: 14, color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap', lineHeight: 1.2 }}>{label}</span>
+      <span style={{ fontSize: "var(--font-size-base)", color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap', lineHeight: 1.2 }}>{label}</span>
       <span
         style={{
           fontSize: valueSize,

@@ -1409,7 +1409,7 @@ const OrderManagement: React.FC = () => {
                                 <Tooltip
                                   color={tooltipTheme.background}
                                   title={
-                                    <div style={{ fontSize: 13, color: tooltipTheme.text }}>
+                                    <div style={{ fontSize: "var(--font-size-sm)", color: tooltipTheme.text }}>
                                       <div style={{ marginBottom: 8, fontWeight: 600, color: tooltipTheme.text }}>📋 加工方式说明</div>
                                       <div style={{ marginBottom: 6 }}>
                                         <span style={{ color: 'var(--primary-color-light)' }}>● 本厂生产：</span>
@@ -1419,7 +1419,7 @@ const OrderManagement: React.FC = () => {
                                         <span style={{ color: 'var(--error-color-light)' }}>● 加工厂生产：</span>
                                         选择其他加工厂，订单完成后数据流向<strong>订单结算</strong>（按工厂扫码结算加工费）
                                       </div>
-                                      <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${tooltipTheme.divider}`, fontSize: 12, opacity: 0.9 }}>
+                                      <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${tooltipTheme.divider}`, fontSize: "var(--font-size-xs)", opacity: 0.9 }}>
                                         💡 所有数据最终在"订单结算数据看板"统一查看
                                       </div>
                                     </div>
