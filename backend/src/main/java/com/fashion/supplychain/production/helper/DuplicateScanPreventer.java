@@ -1,0 +1,133 @@
+package com.fashion.supplychain.production.helper;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.production.entity.ScanRecord;
+import com.fashion.supplychain.production.service.ScanRecordService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+
+/**
+ * 防重复扫码检测器
+ * 职责：
+ * 1. 检测重复requestId
+ * 2. 基于时间间隔的防重复算法
+ * 3. 数据库唯一键冲突处理
+ * 
+ * 提取自 ScanRecordOrchestrator（减少约200行代码）
+ * 
+ * @author GitHub Copilot
+ * @date 2026-02-03
+ */
+@Component
+@Slf4j
+public class DuplicateScanPreventer {
+
+    @Autowired
+    private ScanRecordService scanRecordService;
+
+    /**
+     * 根据requestId查找扫码记录
+     * 用于防止重复提交
+     */
+    public ScanRecord findByRequestId(String requestId) {
+        if (!hasText(requestId)) {
+            return null;
+        }
+        try {
+            return scanRecordService.getOne(new LambdaQueryWrapper<ScanRecord>()
+                    .eq(ScanRecord::getRequestId, requestId)
+                    .last("limit 1"));
+        } catch (Exception e) {
+            log.warn("Failed to query scan record by requestId: {}", requestId, e);
+            return null;
+        }
+    }
+
+    /**
+     * 检查是否存在近期重复扫码
+     * 防重复算法：最小间隔 = max(30秒, 菲号数量 × 工序分钟 × 60 × 0.5)
+     * 
+     * @param scanCode 扫码内容
+     * @param scanType 扫码类型
+     * @param bundleQuantity 菲号数量
+     * @param processMinutes 工序标准用时（分钟）
+     * @return 如果存在重复返回true
+     */
+    public boolean hasRecentDuplicateScan(String scanCode, String scanType, 
+                                          Integer bundleQuantity, Integer processMinutes) {
+        if (!hasText(scanCode)) {
+            return false;
+        }
+
+        try {
+            // 计算最小间隔（秒）
+            int minIntervalSeconds = 30; // 默认30秒
+            if (bundleQuantity != null && bundleQuantity > 0 
+                    && processMinutes != null && processMinutes > 0) {
+                int expectedTime = bundleQuantity * processMinutes * 60;
+                minIntervalSeconds = Math.max(30, expectedTime / 2);
+            }
+
+            LocalDateTime cutoffTime = LocalDateTime.now().minus(minIntervalSeconds, ChronoUnit.SECONDS);
+
+            LambdaQueryWrapper<ScanRecord> wrapper = new LambdaQueryWrapper<ScanRecord>()
+                    .eq(ScanRecord::getScanCode, scanCode)
+                    .eq(ScanRecord::getScanResult, "success")
+                    .ge(ScanRecord::getScanTime, cutoffTime)
+                    .last("limit 1");
+
+            if (hasText(scanType)) {
+                wrapper.eq(ScanRecord::getScanType, scanType);
+            }
+
+            ScanRecord recent = scanRecordService.getOne(wrapper);
+            
+            if (recent != null) {
+                log.warn("防重复拦截: scanCode={}, scanType={}, 最近扫码时间={}, 最小间隔={}秒",
+                        scanCode, scanType, recent.getScanTime(), minIntervalSeconds);
+                return true;
+            }
+            
+            return false;
+        } catch (Exception e) {
+            log.error("检查重复扫码失败: scanCode={}", scanCode, e);
+            return false; // 检查失败时不拦截
+        }
+    }
+
+    /**
+     * 处理数据库唯一键冲突
+     * 返回友好的错误信息
+     */
+    public String handleDuplicateKeyException(DuplicateKeyException e, 
+                                              String orderId, String requestId) {
+        log.info("扫码记录重复忽略: orderId={}, requestId={}", orderId, requestId);
+        return "该扫码记录已存在，已自动忽略重复提交";
+    }
+
+    /**
+     * 验证requestId格式
+     */
+    public void validateRequestId(String requestId) {
+        if (hasText(requestId) && requestId.length() > 64) {
+            throw new IllegalArgumentException("requestId过长（最多64字符）");
+        }
+    }
+
+    /**
+     * 生成默认requestId
+     */
+    public String generateRequestId() {
+        return java.util.UUID.randomUUID().toString().replace("-", "");
+    }
+
+    private boolean hasText(String str) {
+        return StringUtils.hasText(str);
+    }
+}
