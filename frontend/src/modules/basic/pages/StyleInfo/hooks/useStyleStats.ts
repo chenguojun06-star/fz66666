@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import api from '@/utils/api';
 import type { PatternDevelopmentStats } from '@/types/production';
 

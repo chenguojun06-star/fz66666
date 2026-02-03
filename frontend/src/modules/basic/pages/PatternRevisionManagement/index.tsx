@@ -494,7 +494,7 @@ const PatternRevisionManagement: React.FC = () => {
 
   return (
     <Layout>
-      {contextHolder}
+      {/* contextHolder 已注释，不再需要 */}
       <Card>
         <Space direction="vertical" style={{ width: '100%' }} size="large">
           {/* 标题 */}
