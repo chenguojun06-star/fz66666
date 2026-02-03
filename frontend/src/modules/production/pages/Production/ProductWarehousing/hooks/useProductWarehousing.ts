@@ -259,38 +259,38 @@ export const useProductWarehousing = () => {
     return orderFrozen.isFrozenById[orderId] || false;
   };
 
-  // Sync logic - 已禁用：避免频繁请求导致性能问题
-  // useSync(
-  //   'product-warehousing-list',
-  //   async () => {
-  //     try {
-  //       const response = await api.get<{ code: number; data: { records: WarehousingType[]; total: number } }>('/production/warehousing/list', { params: queryParams });
-  //       if (response.code === 200) {
-  //         return {
-  //           records: response.data.records || [],
-  //           total: response.data.total || 0
-  //         };
-  //       }
-  //       return null;
-  //     } catch (error) {
-  //       return null;
-  //     }
-  //   },
-  //   (newData, oldData) => {
-  //     if (oldData !== null && newData) {
-  //       setWarehousingList(newData.records);
-  //       setTotal(newData.total);
-  //     }
-  //   },
-  //   {
-  //     interval: 30000,
-  //     enabled: !loading && !isEntryPage && !visible && !warehousingModalOpen && !independentDetailOpen,
-  //     pauseOnHidden: true,
-  //     onError: (error) => {
-  //       console.error('[实时同步] 质检入库数据同步错误', error);
-  //     }
-  //   }
-  // );
+  // Sync logic
+  useSync(
+    'product-warehousing-list',
+    async () => {
+      try {
+        const response = await api.get<{ code: number; data: { records: WarehousingType[]; total: number } }>('/production/warehousing/list', { params: queryParams });
+        if (response.code === 200) {
+          return {
+            records: response.data.records || [],
+            total: response.data.total || 0
+          };
+        }
+        return null;
+      } catch (error) {
+        return null;
+      }
+    },
+    (newData, oldData) => {
+      if (oldData !== null && newData) {
+        setWarehousingList(newData.records);
+        setTotal(newData.total);
+      }
+    },
+    {
+      interval: 30000,
+      enabled: !loading && !isEntryPage && !visible && !warehousingModalOpen && !independentDetailOpen,
+      pauseOnHidden: true,
+      onError: (error) => {
+        console.error('[实时同步] 质检入库数据同步错误', error);
+      }
+    }
+  );
 
   // Effects
   useEffect(() => {
