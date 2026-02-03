@@ -1,6 +1,6 @@
 {
   "statistics": {
-    "detectionDate": "2026-02-03T14:17:09.411Z",
+    "detectionDate": "2026-02-03T14:20:30.810Z",
     "formats": {
       "typescript": {
         "sources": {
@@ -1617,14 +1617,14 @@
             "newClones": 0
           },
           "src/modules/finance/pages/Finance/PayrollOperatorSummary/index.tsx": {
-            "lines": 447,
-            "tokens": 4131,
+            "lines": 775,
+            "tokens": 8140,
             "sources": 1,
-            "clones": 3,
-            "duplicatedLines": 244,
-            "duplicatedTokens": 2197,
-            "percentage": 54.59,
-            "percentageTokens": 53.18,
+            "clones": 1,
+            "duplicatedLines": 48,
+            "duplicatedTokens": 607,
+            "percentage": 6.19,
+            "percentageTokens": 7.46,
             "newDuplicatedLines": 0,
             "newClones": 0
           },
@@ -2602,14 +2602,14 @@
           }
         },
         "total": {
-          "lines": 20456,
-          "tokens": 194153,
+          "lines": 20784,
+          "tokens": 198162,
           "sources": 136,
-          "clones": 40,
-          "duplicatedLines": 937,
-          "duplicatedTokens": 10438,
-          "percentage": 4.58,
-          "percentageTokens": 5.38,
+          "clones": 39,
+          "duplicatedLines": 839,
+          "duplicatedTokens": 9643,
+          "percentage": 4.04,
+          "percentageTokens": 4.87,
           "newDuplicatedLines": 0,
           "newClones": 0
         }
@@ -3277,14 +3277,14 @@
             "newClones": 0
           },
           "src/modules/finance/pages/Finance/PayrollOperatorSummary/index.tsx": {
-            "lines": 841,
-            "tokens": 8568,
+            "lines": 809,
+            "tokens": 8462,
             "sources": 1,
             "clones": 3,
             "duplicatedLines": 26,
             "duplicatedTokens": 258,
-            "percentage": 3.09,
-            "percentageTokens": 3.01,
+            "percentage": 3.21,
+            "percentageTokens": 3.05,
             "newDuplicatedLines": 0,
             "newClones": 0
           },
@@ -4370,8 +4370,8 @@
           }
         },
         "total": {
-          "lines": 40771,
-          "tokens": 383031,
+          "lines": 40739,
+          "tokens": 382925,
           "sources": 146,
           "clones": 92,
           "duplicatedLines": 1291,
@@ -4472,14 +4472,14 @@
       }
     },
     "total": {
-      "lines": 72700,
-      "tokens": 682286,
+      "lines": 72996,
+      "tokens": 686189,
       "sources": 367,
-      "clones": 144,
-      "duplicatedLines": 2341,
-      "duplicatedTokens": 27594,
-      "percentage": 3.22,
-      "percentageTokens": 4.04,
+      "clones": 143,
+      "duplicatedLines": 2243,
+      "duplicatedTokens": 26799,
+      "percentage": 3.07,
+      "percentageTokens": 3.91,
       "newDuplicatedLines": 0,
       "newClones": 0
     }
@@ -6323,58 +6323,22 @@
     },
     {
       "format": "javascript",
-      "lines": 99,
-      "fragment": "={sortField}\n                fieldName=\"totalAmount\"\n                sortOrder={sortOrder}\n                onSort={handleSort}\n            />,\n            dataIndex: 'totalAmount',\n            key: 'totalAmount',\n            width: 140,\n            align: 'right' as const,\n            render: (v: unknown) => toMoneyText(v),\n        },\n        {\n            title: <SortableColumnTitle\n                title=\"扫码次数\"\n                sortField={sortField}\n                fieldName=\"recordCount\"\n                sortOrder={sortOrder}\n                onSort={handleSort}\n            />,\n            dataIndex: 'recordCount',\n            key: 'recordCount',\n            width: 120,\n            align: 'right' as const,\n            render: (v: unknown) => toNumberOrZero(v) || 0,\n        },\n        {\n            title: <SortableColumnTitle\n                title=\"订单数\"\n                sortField={sortField}\n                fieldName=\"orderCount\"\n                sortOrder={sortOrder}\n                onSort={handleSort}\n            />,\n            dataIndex: 'orderCount',\n            key: 'orderCount',\n            width: 100,\n            align: 'right' as const,\n            render: (v: unknown) => toNumberOrZero(v) || 0,\n        },\n        {\n            title: '备注',\n            dataIndex: 'remark',\n            key: 'remark',\n            width: 200,\n            ellipsis: true,\n            render: (v: unknown) => String(v || '').trim() || '-',\n        },\n        {\n            title: <SortableColumnTitle\n                title=\"审核时间\"\n                sortField={sortField}\n                fieldName=\"approvalTime\"\n                sortOrder={sortOrder}\n                onSort={handleSort}\n                align=\"left\"\n            />,\n            dataIndex: 'approvalTime',\n            key: 'approvalTime',\n            width: 160,\n            ellipsis: true,\n            render: (v: unknown) => v ? dayjs(v as string).format('YYYY-MM-DD HH:mm:ss') : '-',\n        },\n        {\n            title: <SortableColumnTitle\n                title=\"付款时间\"\n                sortField={sortField}\n                fieldName=\"paymentTime\"\n                sortOrder={sortOrder}\n                onSort={handleSort}\n                align=\"left\"\n            />,\n            dataIndex: 'paymentTime',\n            key: 'paymentTime',\n            width: 160,\n            ellipsis: true,\n            render: (v: unknown) => v ? dayjs(v as string).format('YYYY-MM-DD HH:mm:ss') : '-',\n        },\n        {\n            title: '操作',\n            key: 'action',\n            width: 150,\n            fixed: 'right' as const,\n            render: (_: unknown, record: Record<string, unknown>) => {\n                const approved = Boolean(record.approvalTime);\n                const actions = [\n                    {\n                        label: approved ? '已审核' : '审核',\n                        disabled: approved,\n                        onClick: () => handleApprove(String(record.operatorName))\n                    }\n                ];\n                if (approved) {\n                    actions.push({\n                        label: '退回',\n                        danger: true,\n                        onClick: () => openRejectModal(String(record.operatorName))\n                    });\n                }\n                return <RowActions actions={actions",
-      "tokens": 0,
-      "firstFile": {
-        "name": "src/modules/finance/pages/Finance/PayrollOperatorSummary/index.tsx",
-        "start": 399,
-        "end": 497,
-        "startLoc": {
-          "line": 399,
-          "column": 10,
-          "position": 4500
-        },
-        "endLoc": {
-          "line": 497,
-          "column": 8,
-          "position": 5295
-        }
-      },
-      "secondFile": {
-        "name": "src/modules/finance/pages/Finance/PayrollOperatorSummary/index.tsx",
-        "start": 385,
-        "end": 449,
-        "startLoc": {
-          "line": 385,
-          "column": 10,
-          "position": 4398
-        },
-        "endLoc": {
-          "line": 449,
-          "column": 10,
-          "position": 4877
-        }
-      }
-    },
-    {
-      "format": "javascript",
       "lines": 49,
       "fragment": "{{ color: 'var(--neutral-text-secondary)' }}>行数 {rows.length}</span>\n                                            <span style={{ color: 'var(--neutral-text-secondary)' }}>数量合计 {totalQuantity}</span>\n                                            <span style={{ color: 'var(--neutral-text-secondary)' }}>金额合计 {totalAmount.toFixed(2)}</span>\n                                            {dateRange?.[0] && dateRange?.[1] && (\n                                                <span style={{ color: 'var(--neutral-text-secondary)' }}>\n                                                    统计周期：{dayjs(dateRange[0]).format('YYYY-MM-DD')} ~ {dayjs(dateRange[1]).format('YYYY-MM-DD')}\n                                                </span>\n                                            )}\n                                        </Space>\n                                    </Card>\n\n                                    <ResizableTable\n                                        storageKey=\"finance-payroll-operator-detail\"\n                                        rowKey={(r: Record<string, unknown>) =>\n                                            [\n                                                String(r?.orderNo || ''),\n                                                String(r?.styleNo || ''),\n                                                String(r?.operatorId || r?.operatorName || ''),\n                                                String(r?.processName || ''),\n                                                String(r?.scanType || ''),\n                                            ].join('|')\n                                        }\n                                        columns={columns}\n                                        dataSource={sortedRows as Record<string, unknown>}\n                                        loading={loading}\n                                        pagination={{\n                                            showTotal: (total) => `共 ${total} 条`,\n                                            showSizeChanger: true,\n                                            pageSizeOptions: ['10', '20', '50', '100'],\n                                            defaultPageSize: 20,\n                                        }}\n                                        scroll={{ x: 1400 }}\n                                    />\n                                </>\n                            ),\n                        },\n                        {\n                            key: 'summary',\n                            label: '工资汇总',\n                            children: (\n                                <>\n                                    <Card size=\"small\" className=\"mb-sm\">\n                                        <Space wrap>\n                                            <span style={{ color: 'var(--neutral-text-secondary)' }}>人员数 {summaryRows.length}</span>\n                                            <span style={{ color: 'var(--neutral-text-secondary)' }}>总数量 {summaryRows.reduce((sum, r) => sum + toNumberOrZero(r.totalQuantity), 0)}</span>\n                                            <span style={{ color: 'var(--neutral-text-secondary)' }}>总金额 {summaryRows.reduce((sum, r) => sum + toNumberOrZero(r.totalAmount), 0).toFixed(2)}</span>\n                                            <Button\n                                                type=\"primary\"\n                                                onClick={handleBatchApprove",
       "tokens": 0,
       "firstFile": {
         "name": "src/modules/finance/pages/Finance/PayrollOperatorSummary/index.tsx",
-        "start": 729,
-        "end": 777,
+        "start": 697,
+        "end": 745,
         "startLoc": {
-          "line": 729,
+          "line": 697,
           "column": 2,
-          "position": 7463
+          "position": 7357
         },
         "endLoc": {
-          "line": 777,
+          "line": 745,
           "column": 19,
-          "position": 8070
+          "position": 7964
         }
       },
       "secondFile": {
@@ -6400,32 +6364,32 @@
       "tokens": 0,
       "firstFile": {
         "name": "src/modules/finance/pages/Finance/PayrollOperatorSummary/index.tsx",
-        "start": 796,
-        "end": 804,
+        "start": 764,
+        "end": 772,
         "startLoc": {
-          "line": 796,
+          "line": 764,
           "column": 2,
-          "position": 8249
+          "position": 8143
         },
         "endLoc": {
-          "line": 804,
+          "line": 772,
           "column": 5,
-          "position": 8335
+          "position": 8229
         }
       },
       "secondFile": {
         "name": "src/modules/finance/pages/Finance/PayrollOperatorSummary/index.tsx",
-        "start": 752,
-        "end": 760,
+        "start": 720,
+        "end": 728,
         "startLoc": {
-          "line": 752,
+          "line": 720,
           "column": 2,
-          "position": 7764
+          "position": 7658
         },
         "endLoc": {
-          "line": 760,
+          "line": 728,
           "column": 5,
-          "position": 7850
+          "position": 7744
         }
       }
     },
@@ -6631,17 +6595,17 @@
       },
       "secondFile": {
         "name": "src/modules/finance/pages/Finance/PayrollOperatorSummary/index.tsx",
-        "start": 299,
-        "end": 309,
+        "start": 347,
+        "end": 357,
         "startLoc": {
-          "line": 299,
+          "line": 347,
           "column": 2,
-          "position": 3603
+          "position": 3952
         },
         "endLoc": {
-          "line": 309,
+          "line": 357,
           "column": 8,
-          "position": 3689
+          "position": 4038
         }
       }
     },
