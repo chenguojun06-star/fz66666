@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, Col, Input, Row, Space, Statistic, message, Form, Tabs, Select, DatePicker, Upload } from 'antd';
-import { DownloadOutlined, PrinterOutlined, AppstoreOutlined, UnorderedListOutlined, EditOutlined, EyeOutlined, FileTextOutlined, UploadOutlined } from '@ant-design/icons';
+import { Button, Card, Col, Input, Row, Space, Statistic, message, Form, Select, DatePicker, Upload } from 'antd';
+import { DownloadOutlined, PrinterOutlined, EditOutlined, EyeOutlined, FileTextOutlined, UploadOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
-import UniversalCardView from '@/components/common/UniversalCardView';
+// import UniversalCardView from '@/components/common/UniversalCardView'; // 未使用
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';

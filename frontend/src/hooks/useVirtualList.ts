@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 
-interface VirtualListOptions<T> {
+interface VirtualListOptions<_T> {
   itemHeight: number;
   overscan?: number;
   containerHeight: number;

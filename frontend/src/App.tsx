@@ -205,7 +205,7 @@ const AppRoutes: React.FC = () => {
   const backgroundLocation = (location.state as Record<string, unknown>)?.backgroundLocation;
 
   React.useEffect(() => {
-    const w = window as any;
+    const _w = window as any;
     (window as any).__appAuthLogoutNavigate = () => navigate(paths.login, { replace: true });
   }, [navigate]);
 

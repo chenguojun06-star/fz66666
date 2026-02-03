@@ -200,7 +200,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   unitPrice,
   processList = [],
   isPatternProduction = false,
-  extraData,
+  _extraData,
   onSaved,
 }) => {
   const { message } = App.useApp();

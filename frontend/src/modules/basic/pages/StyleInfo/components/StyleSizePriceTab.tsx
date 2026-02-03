@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { App, Button, Input, InputNumber, Space, Table, Tag } from 'antd';
-import { SaveOutlined, EditOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import { SaveOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
 import api, { toNumberSafe } from '@/utils/api';
 
 interface Props {
