@@ -803,29 +803,33 @@ const _MaterialInventory: React.FC = () => {
           vertical
           actions={[
             {
+              key: 'instruction',
               label: '采购指令',
               icon: <WarningOutlined />,
               onClick: () => openInstructionFromRecord(record)
             },
             {
+              key: 'inbound',
               label: '入库',
-              type: 'primary',
+              primary: true,
               icon: <InboxOutlined />,
               onClick: () => handleInbound(record)
             },
             {
+              key: 'outbound',
               label: '出库',
               icon: <ExportOutlined />,
               onClick: () => handleOutbound(record)
             },
             {
+              key: 'print',
               label: '打印出库单',
               icon: <PrinterOutlined />,
               onClick: () => handlePrintOutbound(record)
             },
             {
+              key: 'detail',
               label: '详情',
-              tooltip: '查看最近出入库记录',
               onClick: () => handleViewDetail(record)
             }
           ]}

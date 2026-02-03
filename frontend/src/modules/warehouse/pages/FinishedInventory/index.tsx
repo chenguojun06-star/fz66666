@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Table, Button, Space, Tag, Select, Image, Statistic, Row, Col, Form, InputNumber, Checkbox, App } from 'antd';
 import { PlusOutlined, DownloadOutlined, ExportOutlined, HistoryOutlined } from '@ant-design/icons';
-import type { ColumnsType } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
 import Layout from '@/components/Layout';
 import StandardModal from '@/components/common/StandardModal';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
@@ -120,8 +120,13 @@ const _FinishedInventory: React.FC = () => {
     },
   ];
 
-  useEffect(() => {
+  // 加载数据
+  const loadData = () => {
     setDataSource(getMockData());
+  };
+
+  useEffect(() => {
+    loadData();
   }, []);
 
   // 打开出库模态框，加载该款式的所有SKU明细
@@ -376,12 +381,14 @@ const _FinishedInventory: React.FC = () => {
         <RowActions
           actions={[
             {
+              key: 'outbound',
               label: '出库',
               icon: <ExportOutlined />,
-              type: 'primary',
+              primary: true,
               onClick: () => handleOutbound(record)
             },
             {
+              key: 'history',
               label: '入库记录',
               icon: <HistoryOutlined />,
               onClick: () => handleViewInboundHistory(record)

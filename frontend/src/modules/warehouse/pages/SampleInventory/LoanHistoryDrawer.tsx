@@ -118,6 +118,7 @@ const LoanHistoryDrawer: React.FC<LoanHistoryDrawerProps> = ({ visible, stock, o
           <RowActions
             actions={[
               {
+                key: 'return',
                 label: '归还',
                 onClick: () => handleReturnClick(record)
               }
