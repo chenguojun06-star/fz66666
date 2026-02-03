@@ -32,3 +32,5 @@ backend/logs/
 *.tmp
 *.swp
 .DS_Store
+backups/*.tar.gz
+backups/*.zip
