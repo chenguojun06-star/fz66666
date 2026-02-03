@@ -264,7 +264,7 @@
 .sidebar-menu.ant-menu .ant-menu-submenu-title {
   color: var(--sidebar-text);
   margin: 4px 10px;
-  border-radius: 12px;
+  border-radius: 20px;
   height: 42px;
   line-height: 42px;
   transition: all 0.2s;
@@ -355,7 +355,7 @@
 .sidebar-collapse-btn.ant-btn {
   width: 36px;
   height: 36px;
-  border-radius: 12px;
+  border-radius: 20px;
   color: var(--sidebar-text);
 }
 

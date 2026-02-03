@@ -417,7 +417,7 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
                         alt=""
                         width={84}
                         height={84}
-                        style={{ objectFit: 'cover', borderRadius: 10, cursor: 'pointer' }}
+                        style={{ objectFit: 'cover', cursor: 'pointer' }}
                         onClick={() => openPreview(url, '图片预览')}
                       />
                     ))}

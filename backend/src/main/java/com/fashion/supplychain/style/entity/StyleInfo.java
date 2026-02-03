@@ -240,6 +240,9 @@ public class StyleInfo {
     private LocalDateTime maintenanceTime;
 
     @TableField(exist = false)
+    private String maintenanceMan;
+
+    @TableField(exist = false)
     private String maintenanceRemark;
 
     @TableField(exist = false)

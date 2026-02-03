@@ -261,7 +261,7 @@ const AttachmentThumb: React.FC<{ styleId?: string | number; cover?: string | nu
   }, [styleId, cover]);
 
   return (
-    <div style={{ width: 56, height: 56, borderRadius: 6, overflow: 'hidden', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ width: 56, height: 56, overflow: 'hidden', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       {loading ? (
         <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 'var(--font-size-sm)' }}>...</span>
       ) : url ? (
@@ -843,7 +843,6 @@ const DataCenter: React.FC = () => {
                 <div style={{
                   width: '100%',
                   aspectRatio: '1',
-                  borderRadius: 8,
                   overflow: 'hidden',
                   background: '#f5f5f5',
                   display: 'flex',
@@ -871,7 +870,6 @@ const DataCenter: React.FC = () => {
                   <div style={{
                     background: '#fafafa',
                     padding: 12,
-                    borderRadius: 6,
                     maxHeight: 200,
                     overflow: 'auto',
                     whiteSpace: 'pre-wrap',

@@ -219,7 +219,7 @@ const _FinishedInventory: React.FC = () => {
           alt="成品"
           width={60}
           height={80}
-          style={{ objectFit: 'cover', borderRadius: 4 }}
+          style={{ objectFit: 'cover' }}
         />
       ),
     },
@@ -611,7 +611,6 @@ const _FinishedInventory: React.FC = () => {
               <div style={{
                 background: '#e6f7ff',
                 border: '1px solid #91d5ff',
-                borderRadius: 4,
                 padding: '8px 12px',
                 fontSize: "var(--font-size-sm)",
                 color: 'var(--primary-color)'

@@ -162,7 +162,6 @@ const SystemLogs: React.FC = () => {
           <div style={{
             backgroundColor: '#f5f5f5',
             padding: 12,
-            borderRadius: 4,
             fontFamily: 'monospace',
             fontSize: 12
           }}>
@@ -239,69 +238,70 @@ const SystemLogs: React.FC = () => {
   // ==================== 渲染 ====================
   return (
     <Layout>
-      <Card className="page-card">
-        <div className="page-header">
-          <h2 className="page-title">系统日志</h2>
-        </div>
+      <div className="system-logs-page">
+        <Card className="page-card">
+          <div className="page-header">
+            <h2 className="page-title">系统日志</h2>
+          </div>
 
-        <Tabs
-          activeKey={activeTab}
-          onChange={(key) => setActiveTab(key as 'login' | 'operation')}
-          items={[
-            {
-              key: 'login',
-              label: '登录日志',
-              children: (
-                <>
-                  <Card size="small" className="filter-card mb-sm">
-                    <Space wrap>
-                      <Input
-                        placeholder="用户名"
-                        style={{ width: 200 }}
-                        allowClear
-                        value={String(loginQueryParams?.username || '')}
-                        onChange={(e) => setLoginQueryParams((prev) => ({ ...prev, username: e.target.value, page: 1 }))}
-                      />
-                      <Select
-                        placeholder="登录状态"
-                        style={{ width: 140 }}
-                        allowClear
-                        value={String(loginQueryParams?.loginStatus || '') || undefined}
-                        options={[
-                          { value: 'SUCCESS', label: '成功' },
-                          { value: 'FAILED', label: '失败' },
-                        ]}
-                        onChange={(value) => setLoginQueryParams((prev) => ({ ...prev, loginStatus: value, page: 1 }))}
-                      />
-                      <UnifiedDatePicker
-                        placeholder="开始日期"
-                        value={loginQueryParams.startDate ? dayjs(String(loginQueryParams.startDate)) : null}
-                        onChange={(d) => setLoginQueryParams((prev) => ({ ...prev, startDate: d ? d.format('YYYY-MM-DD') : '', page: 1 }))}
-                      />
-                      <UnifiedDatePicker
-                        placeholder="结束日期"
-                        value={loginQueryParams.endDate ? dayjs(String(loginQueryParams.endDate)) : null}
-                        onChange={(d) => setLoginQueryParams((prev) => ({ ...prev, endDate: d ? d.format('YYYY-MM-DD') : '', page: 1 }))}
-                      />
-                      <Button type="primary" onClick={fetchLoginLogs}>
-                        查询
-                      </Button>
-                      <Button
-                        onClick={() =>
-                          setLoginQueryParams({
-                            page: 1,
-                            pageSize: loginQueryParams.pageSize,
-                            username: '',
-                            loginStatus: '',
-                            startDate: '',
-                            endDate: '',
-                          })
-                        }
-                      >
-                        重置
-                      </Button>
-                    </Space>
-                  </Card>
+          <Tabs
+            activeKey={activeTab}
+            onChange={(key) => setActiveTab(key as 'login' | 'operation')}
+            items={[
+              {
+                key: 'login',
+                label: '登录日志',
+                children: (
+                  <>
+                    <Card size="small" className="filter-card mb-sm">
+                      <Space wrap size={12}>
+                        <Input
+                          placeholder="用户名"
+                          style={{ width: 200 }}
+                          allowClear
+                          value={String(loginQueryParams?.username || '')}
+                          onChange={(e) => setLoginQueryParams((prev) => ({ ...prev, username: e.target.value, page: 1 }))}
+                        />
+                        <Select
+                          placeholder="登录状态"
+                          style={{ width: 140 }}
+                          allowClear
+                          value={String(loginQueryParams?.loginStatus || '') || undefined}
+                          options={[
+                            { value: 'SUCCESS', label: '成功' },
+                            { value: 'FAILED', label: '失败' },
+                          ]}
+                          onChange={(value) => setLoginQueryParams((prev) => ({ ...prev, loginStatus: value, page: 1 }))}
+                        />
+                        <UnifiedDatePicker
+                          placeholder="开始日期"
+                          value={loginQueryParams.startDate ? dayjs(String(loginQueryParams.startDate)) : null}
+                          onChange={(d) => setLoginQueryParams((prev) => ({ ...prev, startDate: d ? d.format('YYYY-MM-DD') : '', page: 1 }))}
+                        />
+                        <UnifiedDatePicker
+                          placeholder="结束日期"
+                          value={loginQueryParams.endDate ? dayjs(String(loginQueryParams.endDate)) : null}
+                          onChange={(d) => setLoginQueryParams((prev) => ({ ...prev, endDate: d ? d.format('YYYY-MM-DD') : '', page: 1 }))}
+                        />
+                        <Button type="primary" onClick={fetchLoginLogs}>
+                          查询
+                        </Button>
+                        <Button
+                          onClick={() =>
+                            setLoginQueryParams({
+                              page: 1,
+                              pageSize: loginQueryParams.pageSize,
+                              username: '',
+                              loginStatus: '',
+                              startDate: '',
+                              endDate: '',
+                            })
+                          }
+                        >
+                          重置
+                        </Button>
+                      </Space>
+                    </Card>
 
                   <ResizableTable<LoginLog>
                     storageKey="system-loginlog-table"
@@ -333,7 +333,7 @@ const SystemLogs: React.FC = () => {
               children: (
                 <>
                   <Card size="small" className="filter-card mb-sm">
-                    <Space wrap>
+                    <Space wrap size={12}>
                       <Select
                         placeholder="模块"
                         style={{ width: 140 }}
@@ -447,6 +447,7 @@ const SystemLogs: React.FC = () => {
           ]}
         />
       </Card>
+      </div>
     </Layout>
   );
 };

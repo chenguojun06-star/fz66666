@@ -11,6 +11,7 @@ import type { UploadFile } from 'antd';
 import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, UploadOutlined, FileSearchOutlined } from '@ant-design/icons';
 import { formatDateTime } from '@/utils/datetime';
 import { useViewport } from '@/utils/useViewport';
+import { useLocation } from 'react-router-dom';
 
 type DialogMode = 'create' | 'view' | 'edit';
 
@@ -18,6 +19,7 @@ const FactoryList: React.FC = () => {
   const { message, modal } = App.useApp();
   const [form] = Form.useForm();
   const { isMobile, modalWidth } = useViewport();
+  const location = useLocation();
 
   // ===== 使用 useModal 管理弹窗 =====
   const factoryModal = useModal<FactoryType>();
@@ -98,6 +100,20 @@ const FactoryList: React.FC = () => {
   useEffect(() => {
     fetchFactories();
   }, [queryParams]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const factoryName = (params.get('factoryName') || '').trim();
+    const factoryCode = (params.get('factoryCode') || '').trim();
+    if (factoryName || factoryCode) {
+      setQueryParams((prev) => ({
+        ...prev,
+        page: 1,
+        factoryName: factoryName || prev.factoryName,
+        factoryCode: factoryCode || prev.factoryCode,
+      }));
+    }
+  }, [location.search]);
 
   const openDialog = (mode: DialogMode, factory?: FactoryType) => {
     setDialogMode(mode);
@@ -361,43 +377,45 @@ const FactoryList: React.FC = () => {
       <Card className="page-card">
         <div className="page-header">
           <h2 className="page-title">供应商管理</h2>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => openDialog('create')}>
-            新增加工厂
-          </Button>
         </div>
 
         <Card size="small" className="filter-card mb-sm">
-          <Space wrap>
-            <Input
-              placeholder="供应商编码"
-              style={{ width: 180 }}
-              allowClear
-              value={String((queryParams as Record<string, unknown>)?.factoryCode || '')}
-              onChange={(e) => setQueryParams((prev) => ({ ...prev, factoryCode: e.target.value, page: 1 }))}
-            />
-            <Input
-              placeholder="供应商名称"
-              style={{ width: 220 }}
-              allowClear
-              value={String((queryParams as Record<string, unknown>)?.factoryName || '')}
-              onChange={(e) => setQueryParams((prev) => ({ ...prev, factoryName: e.target.value, page: 1 }))}
-            />
-            <Select
-              placeholder="状态"
-              style={{ width: 140 }}
-              allowClear
-              value={String((queryParams as Record<string, unknown>)?.status || '') || undefined}
-              options={[
-                { value: 'active', label: '启用' },
-                { value: 'inactive', label: '停用' },
-              ]}
-              onChange={(value) => setQueryParams((prev) => ({ ...prev, status: value, page: 1 }))}
-            />
-            <Button type="primary" onClick={() => setQueryParams((prev) => ({ ...prev, page: 1 }))}>
-              查询
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: 16 }}>
+            <Space wrap size={12}>
+              <Input
+                placeholder="供应商编码"
+                style={{ width: 180 }}
+                allowClear
+                value={String((queryParams as Record<string, unknown>)?.factoryCode || '')}
+                onChange={(e) => setQueryParams((prev) => ({ ...prev, factoryCode: e.target.value, page: 1 }))}
+              />
+              <Input
+                placeholder="供应商名称"
+                style={{ width: 220 }}
+                allowClear
+                value={String((queryParams as Record<string, unknown>)?.factoryName || '')}
+                onChange={(e) => setQueryParams((prev) => ({ ...prev, factoryName: e.target.value, page: 1 }))}
+              />
+              <Select
+                placeholder="状态"
+                style={{ width: 140 }}
+                allowClear
+                value={String((queryParams as Record<string, unknown>)?.status || '') || undefined}
+                options={[
+                  { value: 'active', label: '启用' },
+                  { value: 'inactive', label: '停用' },
+                ]}
+                onChange={(value) => setQueryParams((prev) => ({ ...prev, status: value, page: 1 }))}
+              />
+              <Button type="primary" onClick={() => setQueryParams((prev) => ({ ...prev, page: 1 }))}>
+                查询
+              </Button>
+              <Button onClick={() => setQueryParams({ page: 1, pageSize: queryParams.pageSize })}>重置</Button>
+            </Space>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => openDialog('create')}>
+              新增加工厂
             </Button>
-            <Button onClick={() => setQueryParams({ page: 1, pageSize: queryParams.pageSize })}>重置</Button>
-          </Space>
+          </div>
         </Card>
 
         <ResizableTable<FactoryType>

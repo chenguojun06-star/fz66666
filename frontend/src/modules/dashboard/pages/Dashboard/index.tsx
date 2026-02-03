@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { App, Button, Card, Checkbox, Modal, Space } from 'antd';
+import { App, AutoComplete, Button, Card, Checkbox, Modal } from 'antd';
 import {
   AccountBookOutlined,
   ApartmentOutlined,
   FileTextOutlined,
   InboxOutlined,
+  ReloadOutlined,
   SettingOutlined,
   ShoppingCartOutlined,
   TagsOutlined,
@@ -12,14 +13,12 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
-import api, { ApiResult } from '@/utils/api';
-import errorHandler from '@/utils/errorHandler';
+import api from '@/utils/api';
+import { errorHandler } from '@/utils/errorHandling';
 import { useSync } from '@/utils/syncManager';
 import MiniDataDashboard from '../../components/MiniDataDashboard';
 import TopStats from '../../components/TopStats';
-import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
-import type { Dayjs } from 'dayjs';
 import OrderCuttingChart from '../../components/OrderCuttingChart';
 import ScanCountChart from '../../components/ScanCountChart';
 import OverdueOrderTable from '../../components/OverdueOrderTable';
@@ -72,8 +71,8 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { message } = App.useApp();
   const [searchKeyword, setSearchKeyword] = useState('');
-  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [searchOptions, setSearchOptions] = useState<Array<{ value: string; label: React.ReactNode }>>([]);
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [quickEntries, setQuickEntries] = useState<QuickEntryConfig[]>(() => {
     // 从localStorage加载用户配置
@@ -137,25 +136,95 @@ const Dashboard: React.FC = () => {
     message.success('已重置为默认设置');
   };
 
-  // 盲收搜索功能 - 直接跳转到成品入库页面
-  const handleSearch = async () => {
+  // 智能搜索 - 模糊搜索款式/订单/工厂，点击跳转
+  useEffect(() => {
     const keyword = searchKeyword.trim();
-    if (!keyword) {
-      message.warning('请输入订单号或扫码');
+    if (!keyword || keyword.length < 2) {
+      setSearchOptions([]);
       return;
     }
 
-    setSearchLoading(true);
-    try {
-      // 直接跳转到成品入库页面，带上搜索关键词
-      // 支持订单号、菲号、SKU等多种格式
-      navigate(`/production/warehousing?search=${encodeURIComponent(keyword)}`);
-      message.success('已跳转到成品入库页面');
-    } catch (error: unknown) {
-      errorHandler.handleError(error, '跳转失败');
-    } finally {
-      setSearchLoading(false);
+    const timer = setTimeout(async () => {
+      setSearchLoading(true);
+      try {
+        const [styleRes, orderRes, factoryRes] = await Promise.all([
+          api.get('/style/info/list', { params: { keyword, page: 1, pageSize: 5 } }),
+          api.get('/production/order/list', { params: { keyword, page: 1, pageSize: 5 } }),
+          api.get('/system/factory/list', { params: { factoryName: keyword, page: 1, pageSize: 5 } }),
+        ]);
+
+        const options: Array<{ value: string; label: React.ReactNode }> = [];
+
+        const styleRecords = styleRes?.data?.records || [];
+        styleRecords.forEach((item: any) => {
+          options.push({
+            value: `style:${item.styleNo}`,
+            label: (
+              <div>
+                <div>款式：{item.styleNo}</div>
+                <div style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)' }}>{item.styleName || '未命名'}</div>
+              </div>
+            ),
+          });
+        });
+
+        const orderRecords = orderRes?.data?.records || [];
+        orderRecords.forEach((item: any) => {
+          options.push({
+            value: `order:${item.orderNo}`,
+            label: (
+              <div>
+                <div>订单：{item.orderNo}</div>
+                <div style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)' }}>
+                  款号：{item.styleNo} | 工厂：{item.factoryName || '未指定'}
+                </div>
+              </div>
+            ),
+          });
+        });
+
+        const factoryRecords = factoryRes?.data?.records || [];
+        factoryRecords.forEach((item: any) => {
+          options.push({
+            value: `factory:${item.factoryName}`,
+            label: (
+              <div>
+                <div>工厂：{item.factoryName}</div>
+                <div style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)' }}>{item.contactPerson || '未填写联系人'}</div>
+              </div>
+            ),
+          });
+        });
+
+        setSearchOptions(options);
+      } catch (error: unknown) {
+        console.error('搜索失败:', error);
+        setSearchOptions([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchKeyword]);
+
+  const handleSearchChange = (value: string) => {
+    setSearchKeyword(value);
+  };
+
+  const handleSearchSelect = (value: string) => {
+    if (value.startsWith('style:')) {
+      const styleNo = value.replace('style:', '');
+      navigate(`/style-info?styleNo=${encodeURIComponent(styleNo)}`);
+    } else if (value.startsWith('order:')) {
+      const orderNo = value.replace('order:', '');
+      navigate(`/production?orderNo=${encodeURIComponent(orderNo)}`);
+    } else if (value.startsWith('factory:')) {
+      const factoryName = value.replace('factory:', '');
+      navigate(`/system/factory?factoryName=${encodeURIComponent(factoryName)}`);
     }
+    setSearchKeyword('');
+    setSearchOptions([]);
   };
 
   const resetDashboardData = () => {
@@ -210,6 +279,11 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     fetchDashboard();
+    // 给body添加class标识首页
+    document.body.classList.add('dashboard-page');
+    return () => {
+      document.body.classList.remove('dashboard-page');
+    };
   }, [fetchDashboard]);
 
   // 实时同步：60秒自动轮询更新统计数据
@@ -254,33 +328,36 @@ const Dashboard: React.FC = () => {
 
   return (
     <Layout>
-      <Card className="page-card">
-        <div className="page-header">
-          <h2 className="page-title">仪表盘</h2>
-        </div>
+      <div className="dashboard-container">
+        <Card className="page-card">
+          <div className="page-header">
+            <h2 className="page-title">仪表盘</h2>
+          </div>
 
-        {/* 智能搜索入口 */}
-        <Card size="small" className="filter-card mb-sm">
-          <StandardToolbar
-            left={(
-              <StandardSearchBar
-                searchValue={searchKeyword}
-                onSearchChange={setSearchKeyword}
-                searchPlaceholder="输入订单号、款号、工厂名"
-                dateValue={dateRange}
-                onDateChange={setDateRange}
-                statusValue=""
-                onStatusChange={() => {}}
-                statusOptions={[]}
+        {/* 智能搜索 */}
+        <StandardToolbar
+          left={(
+            <div className="dashboard-search-inline" style={{ width: 420 }}>
+              <AutoComplete
+                value={searchKeyword}
+                options={searchOptions}
+                onChange={handleSearchChange}
+                onSelect={handleSearchSelect}
+                placeholder="搜索订单号/款号/工厂名"
+                allowClear
+                notFoundContent={searchLoading ? '搜索中...' : null}
               />
-            )}
-            right={(
-              <Button type="primary" loading={searchLoading} onClick={handleSearch}>
-                搜索
-              </Button>
-            )}
-          />
-        </Card>
+            </div>
+          )}
+          right={(
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={() => fetchDashboard()}
+            >
+              刷新
+            </Button>
+          )}
+        />
 
         {/* 顶部4个统计看板 */}
         <TopStats />
@@ -396,6 +473,7 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       </Modal>
+      </div>
     </Layout>
   );
 };

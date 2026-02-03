@@ -399,12 +399,11 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                     {totalCost > 0 ? ((materialCost / totalCost) * 100).toFixed(1) : '0.0'}%
                   </span>
                 </div>
-                <div style={{ height: 6, background: '#f0f0f0', borderRadius: 3 }}>
+                <div style={{ height: 6, background: '#f0f0f0' }}>
                   <div style={{
                     width: `${totalCost > 0 ? (materialCost / totalCost) * 100 : 0}%`,
                     height: '100%',
                     background: 'var(--primary-color)',
-                    borderRadius: 3,
                     transition: 'width 0.3s ease'
                   }} />
                 </div>
@@ -416,12 +415,11 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                     {totalCost > 0 ? ((processCost / totalCost) * 100).toFixed(1) : '0.0'}%
                   </span>
                 </div>
-                <div style={{ height: 6, background: '#f0f0f0', borderRadius: 3 }}>
+                <div style={{ height: 6, background: '#f0f0f0' }}>
                   <div style={{
                     width: `${totalCost > 0 ? (processCost / totalCost) * 100 : 0}%`,
                     height: '100%',
                     background: 'var(--success-color)',
-                    borderRadius: 3,
                     transition: 'width 0.3s ease'
                   }} />
                 </div>
@@ -433,12 +431,11 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                     {totalPrice > 0 ? ((profit / totalPrice) * 100).toFixed(1) : '0.0'}%
                   </span>
                 </div>
-                <div style={{ height: 6, background: '#f0f0f0', borderRadius: 3 }}>
+                <div style={{ height: 6, background: '#f0f0f0' }}>
                   <div style={{
                     width: `${totalPrice > 0 ? (profit / totalPrice) * 100 : 0}%`,
                     height: '100%',
                     background: 'var(--warning-color)',
-                    borderRadius: 3,
                     transition: 'width 0.3s ease'
                   }} />
                 </div>

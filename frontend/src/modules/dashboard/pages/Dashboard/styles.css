@@ -10,7 +10,7 @@
 }
 
 /* 页面标题优化 */
-.page-header {
+.dashboard-container .page-header {
   position: relative;
   z-index: 1;
   margin-bottom: 24px;
@@ -28,15 +28,9 @@
   }
 }
 
-.page-title {
-  font-size: 32px;
-  font-weight: 700;
-  color: #1a1a1a;
-  margin: 0;
-}
 
-/* 搜索框玻璃拟态效果 */
-.filter-card {
+/* 搜索框玻璃拟态效果 - 仅限仪表盘页面 */
+.dashboard-page .filter-card {
   background: rgba(255, 255, 255, 0.85) !important;
   backdrop-filter: blur(20px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
@@ -49,21 +43,60 @@
   animation: slideInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s backwards;
 }
 
-/* 搜索框输入框样式 */
-.filter-card .ant-input-affix-wrapper {
+/* 搜索框输入框样式 - 仅限仪表盘页面 */
+.dashboard-page .filter-card .ant-input-affix-wrapper {
   border-radius: 999px 0 0 999px !important;
   border-color: #e5e7eb !important;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.filter-card .ant-input-affix-wrapper:focus,
-.filter-card .ant-input-affix-wrapper-focused {
+.dashboard-page .filter-card .ant-input-affix-wrapper:focus,
+.dashboard-page .filter-card .ant-input-affix-wrapper-focused {
   border-color: #2D7FF9 !important;
   box-shadow: 0 0 0 2px rgba(45, 127, 249, 0.1) !important;
 }
 
-/* 搜索按钮增强（胶囊形右半边 - 镂空设计） */
-.filter-card .ant-btn-primary {
+/* 仪表盘搜索条横向对齐优化 */
+.dashboard-search-inline .standard-search-bar {
+  width: auto;
+  margin-bottom: 0;
+}
+
+.dashboard-search-inline .standard-search-row {
+  width: auto;
+  column-gap: 0;
+  row-gap: 0;
+}
+
+.dashboard-search-inline .ant-input-affix-wrapper {
+  height: 40px;
+  display: flex;
+  align-items: center;
+}
+
+.dashboard-search-inline .ant-input {
+  height: 38px;
+}
+
+/* AutoComplete 搜索框胶囊形 */
+.dashboard-search-inline .ant-select {
+  width: 100%;
+}
+
+.dashboard-search-inline .ant-select-selector {
+  height: 40px !important;
+  border-radius: 999px !important;
+  align-items: center !important;
+  border-color: var(--neutral-border) !important;
+  background: var(--neutral-white) !important;
+}
+
+.dashboard-search-inline .ant-select-selection-search-input {
+  height: 38px !important;
+}
+
+/* 搜索按钮增强（胶囊形右半边 - 镂空设计）- 仅限仪表盘页面 */
+.dashboard-page .filter-card .ant-btn-primary {
   height: 40px !important;
   font-weight: 600 !important;
   border-radius: 0 999px 999px 0 !important;
@@ -75,7 +108,7 @@
   padding: 0 32px !important;
 }
 
-.filter-card .ant-btn-primary:hover {
+.dashboard-page .filter-card .ant-btn-primary:hover {
   transform: translateY(-2px) !important;
   background: #f0f9ff !important;
   border-color: #1890ff !important;
@@ -83,15 +116,15 @@
   box-shadow: 0 4px 12px rgba(24, 144, 255, 0.25) !important;
 }
 
-/* 深色主题搜索按钮 */
-[data-theme="dark"] .filter-card .ant-btn-primary {
+/* 深色主题搜索按钮 - 仅限仪表盘页面 */
+[data-theme="dark"] .dashboard-page .filter-card .ant-btn-primary {
   background: rgba(26, 32, 39, 0.8) !important;
   border-color: #69b1ff !important;
   color: #69b1ff !important;
   box-shadow: 0 2px 8px rgba(105, 177, 255, 0.15) !important;
 }
 
-[data-theme="dark"] .filter-card .ant-btn-primary:hover {
+[data-theme="dark"] .dashboard-page .filter-card .ant-btn-primary:hover {
   background: rgba(64, 169, 255, 0.1) !important;
   border-color: #91d5ff !important;
   color: #91d5ff !important;
@@ -725,7 +758,7 @@
   color: var(--neutral-text);
 }
 
-:root[data-theme="dark"] .filter-card {
+:root[data-theme="dark"] .dashboard-page .filter-card {
   background: rgba(26, 29, 36, 0.85) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),

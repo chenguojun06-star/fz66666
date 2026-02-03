@@ -425,7 +425,7 @@ const WarehousingDetail: React.FC<WarehousingDetailProps> = ({ hook }) => {
                           alt=""
                           width={84}
                           height={84}
-                          style={{ objectFit: 'cover', borderRadius: 10, cursor: 'pointer' }}
+                          style={{ objectFit: 'cover', cursor: 'pointer' }}
                           onClick={() => {
                             setPreviewUrl(url);
                             setPreviewTitle('图片预览');

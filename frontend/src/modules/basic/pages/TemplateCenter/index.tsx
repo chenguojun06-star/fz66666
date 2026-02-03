@@ -1,14 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { App, Button, Card, Checkbox, Form, Input, InputNumber, Select, Space, Table, Tag, Tooltip, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, RollbackOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, PlusOutlined, RollbackOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
-import StandardSearchBar from '@/components/common/StandardSearchBar';
-import StandardToolbar from '@/components/common/StandardToolbar';
 import api from '@/utils/api';
 import { isAdminUser as isAdminUserFn, useAuth } from '@/utils/AuthContext';
 import { useViewport } from '@/utils/useViewport';
@@ -525,7 +523,7 @@ const TemplateCenter: React.FC = () => {
 
     if (!obj || typeof obj !== 'object') {
       return (
-        <pre style={{ margin: 0, maxHeight: '60vh', overflow: 'auto', background: '#0b1020', color: '#e6edf3', padding: 12, borderRadius: 6 }}>
+        <pre style={{ margin: 0, maxHeight: '60vh', overflow: 'auto', background: '#0b1020', color: '#e6edf3', padding: 12 }}>
           {viewContent || ''}
         </pre>
       );
@@ -543,7 +541,7 @@ const TemplateCenter: React.FC = () => {
       });
       return (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          <div style={{ border: '1px solid #d9d9d9', padding: 8, borderRadius: 4 }}>
+          <div style={{ border: '1px solid #d9d9d9', padding: 8 }}>
             <div style={{ fontSize: "var(--font-size-sm)", fontWeight: 500, marginBottom: 8 }}>进度节点</div>
             <div style={{ maxHeight: 480, overflow: 'auto' }}>
               {nodes.map((n, idx) => (
@@ -554,7 +552,7 @@ const TemplateCenter: React.FC = () => {
               {nodes.length === 0 && <div style={{ padding: 12, textAlign: 'center', color: 'var(--neutral-text-disabled)' }}>暂无数据</div>}
             </div>
           </div>
-          <div style={{ border: '1px solid #d9d9d9', padding: 8, borderRadius: 4 }}>
+          <div style={{ border: '1px solid #d9d9d9', padding: 8 }}>
             <div style={{ fontSize: "var(--font-size-sm)", fontWeight: 500, marginBottom: 8 }}>单价工序库</div>
             <div style={{ maxHeight: 480, overflow: 'auto' }}>
               {nodes.filter((n) => n?.unitPrice != null && n.unitPrice !== 0).map((n, idx) => (
@@ -595,7 +593,7 @@ const TemplateCenter: React.FC = () => {
       };
       return (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          <div style={{ border: '1px solid #d9d9d9', padding: 8, borderRadius: 4 }}>
+          <div style={{ border: '1px solid #d9d9d9', padding: 8 }}>
             <div style={{ fontSize: "var(--font-size-sm)", fontWeight: 500, marginBottom: 8 }}>
               {t === 'process_price' ? '工序节点' : '工艺节点'}
             </div>
@@ -611,7 +609,7 @@ const TemplateCenter: React.FC = () => {
               {steps.length === 0 && <div style={{ padding: 12, textAlign: 'center', color: 'var(--neutral-text-disabled)' }}>暂无数据</div>}
             </div>
           </div>
-          <div style={{ border: '1px solid #d9d9d9', padding: 8, borderRadius: 4 }}>
+          <div style={{ border: '1px solid #d9d9d9', padding: 8 }}>
             <div style={{ fontSize: "var(--font-size-sm)", fontWeight: 500, marginBottom: 8 }}>
               {t === 'process_price' ? '单价工序库' : '工价工序库'}
             </div>
@@ -743,7 +741,7 @@ const TemplateCenter: React.FC = () => {
     }
 
     return (
-      <pre style={{ margin: 0, maxHeight: '60vh', overflow: 'auto', background: '#0b1020', color: '#e6edf3', padding: 12, borderRadius: 6 }}>
+      <pre style={{ margin: 0, maxHeight: '60vh', overflow: 'auto', background: '#0b1020', color: '#e6edf3', padding: 12 }}>
         {viewContent || ''}
       </pre>
     );
@@ -956,14 +954,6 @@ const TemplateCenter: React.FC = () => {
         return (
           <RowActions
             actions={[
-              {
-                key: 'view',
-                label: '查看',
-                title: '查看',
-                icon: <EyeOutlined />,
-                onClick: () => openView(row),
-                primary: true,
-              },
               { ...primaryAction, primary: true },
               {
                 key: 'delete',
@@ -986,22 +976,29 @@ const TemplateCenter: React.FC = () => {
         className="page-card"
         title="单价维护"
       >
-        <StandardToolbar
-          left={(
-            <Space wrap>
-              <StandardSearchBar
-                searchValue={keyword}
-                onSearchChange={(value) => {
-                  setKeyword(value);
-                  queryForm.setFieldsValue({ keyword: value });
+        <Card size="small" className="filter-card mb-sm">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: 16 }}>
+            <Space wrap size={12}>
+              <Input
+                value={keyword}
+                onChange={(e) => {
+                  setKeyword(e.target.value);
+                  queryForm.setFieldsValue({ keyword: e.target.value });
                 }}
-                searchPlaceholder="名称/关键字"
-                statusValue={templateType}
-                onStatusChange={(value) => {
-                  setTemplateType(value);
+                placeholder="名称/关键字"
+                allowClear
+                style={{ width: 200 }}
+              />
+              <Select
+                value={templateType || undefined}
+                onChange={(value) => {
+                  setTemplateType(value || '');
                   queryForm.setFieldsValue({ templateType: value });
                 }}
-                statusOptions={templateTypeOptions.map((opt) => ({ label: opt.label, value: opt.value }))}
+                options={templateTypeOptions.map((opt) => ({ label: opt.label, value: opt.value }))}
+                placeholder="全部类型"
+                allowClear
+                style={{ width: 140 }}
               />
               <Select
                 allowClear
@@ -1020,10 +1017,6 @@ const TemplateCenter: React.FC = () => {
                   if (open && !styleNoOptions.length) fetchStyleNoOptions('');
                 }}
               />
-            </Space>
-          )}
-          right={(
-            <>
               <Button type="primary" onClick={() => fetchList({ page: 1 })}>
                 查询
               </Button>
@@ -1038,9 +1031,9 @@ const TemplateCenter: React.FC = () => {
               >
                 重置
               </Button>
-            </>
-          )}
-        />
+            </Space>
+          </div>
+        </Card>
 
         <div style={{ height: 12 }} />
 
@@ -1329,7 +1322,7 @@ const TemplateCenter: React.FC = () => {
                   if (type === 'process' && isProcessTableData(editTableData)) {
                     // 多码单价管理组件
                     const SizePriceManager = () => (
-                      <div style={{ marginBottom: 12, padding: 12, background: '#f9f9f9', borderRadius: 4 }}>
+                      <div style={{ marginBottom: 12, padding: 12, background: '#f9f9f9' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
                           <Checkbox
                             checked={showSizePrices}

@@ -39,7 +39,6 @@
   gap: 10px;
   margin-top: 12px;
   padding: 12px;
-  border-radius: 10px;
   background: #f6f7fb;
 }
 
@@ -96,14 +95,6 @@
   width: max-content;
   border-collapse: separate;
   border-spacing: 0;
-}
-
-.order-flow-summary {
-  border-radius: 12px;
-}
-
-.order-flow-detail.ant-card {
-  border-radius: 12px;
 }
 
 .order-flow-detail > .ant-card-body {
@@ -199,7 +190,6 @@
 
 .order-flow-module {
   border: 1px solid #f0f0f0;
-  border-radius: 12px;
   background: #fff;
   overflow: hidden;
 }
@@ -279,7 +269,6 @@
 
 .order-flow-metric {
   background: #f6f7fb;
-  border-radius: 10px;
   padding: 10px 12px;
   min-width: 120px;
 }
@@ -377,7 +366,6 @@
   min-width: 320px;
   background: #fafafa;
   border: 1px solid #f0f0f0;
-  border-radius: 12px;
   padding: 10px;
   scroll-snap-align: start;
 }
@@ -400,7 +388,6 @@
 .order-flow-h-dot {
   width: 10px;
   height: 10px;
-  border-radius: 999px;
   flex: 0 0 auto;
 }
 
@@ -441,7 +428,6 @@
 .order-flow-h-event {
   background: #fff;
   border: 1px solid #f0f0f0;
-  border-radius: 12px;
   padding: 10px;
 }
 
@@ -482,7 +468,6 @@
 
 .order-flow-h-empty {
   padding: 10px;
-  border-radius: 12px;
   background: #fff;
   border: 1px dashed #d9d9d9;
   color: rgba(0, 0, 0, 0.45);
@@ -579,7 +564,6 @@
   width: 160px;
   height: 160px;
   object-fit: cover;
-  border-radius: 8px;
   display: block;
   background: #f5f5f5;
 }
@@ -684,7 +668,6 @@
 
 .wh-detail-box {
   border: 1px solid #d9d9d9;
-  border-radius: 10px;
   background: #fff;
   padding: 10px;
 }
@@ -738,7 +721,6 @@
 .cutting-entry-back-btn {
   min-width: 92px;
   height: 34px;
-  border-radius: 10px;
   font-weight: 700;
 }
 
@@ -760,7 +742,6 @@
   gap: 10px;
   padding: 12px;
   border: 1px solid #f0f0f0;
-  border-radius: 12px;
   background: #fff;
 }
 
@@ -791,7 +772,6 @@
   gap: 8px;
   margin-top: 2px;
   padding: 10px 12px;
-  border-radius: 12px;
   background: #f6f7fb;
 }
 
@@ -831,7 +811,6 @@
 
 .cutting-entry-footer {
   border: 1px solid #f0f0f0;
-  border-radius: 12px;
   background: #fff;
   padding: 12px;
 }

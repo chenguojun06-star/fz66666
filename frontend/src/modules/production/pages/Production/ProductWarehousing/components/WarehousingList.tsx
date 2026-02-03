@@ -56,17 +56,17 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
         <Card className="page-card">
           <div className="page-header">
             <h2 className="page-title">质检入库</h2>
-            <Space wrap>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => openDialog()}>
-                新增质检
-              </Button>
-            </Space>
           </div>
 
           <SearchForm
             queryParams={queryParams}
             setQueryParams={setQueryParams}
             onSearch={fetchWarehousingList}
+            extra={(
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => openDialog()}>
+                新增质检
+              </Button>
+            )}
           />
 
           <WarehousingTable

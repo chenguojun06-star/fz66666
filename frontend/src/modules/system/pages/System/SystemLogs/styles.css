@@ -1,26 +1,21 @@
-.filter-card {
+.system-logs-page .filter-card {
   background-color: #fafafa;
   margin-bottom: 16px;
 }
 
-.mb-sm {
+.system-logs-page .mb-sm {
   margin-bottom: 16px;
 }
 
-.page-card {
+.system-logs-page .page-card {
   min-height: calc(100vh - 64px - 32px);
 }
 
-.page-header {
+.system-logs-page .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
 }
 
-.page-title {
-  font-size: 20px;
-  font-weight: 600;
-  margin: 0;
-  color: var(--primary-text-color);
-}
+

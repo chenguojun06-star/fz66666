@@ -12,7 +12,7 @@ import type { CuttingBundle, ProductionOrder, ProductWarehousing } from '@/types
 import StylePatternSimpleTab from './components/StylePatternSimpleTab';
 import StyleQuotationTab from '@/modules/basic/pages/StyleInfo/components/StyleQuotationTab';
 import StyleSecondaryProcessTab from '@/modules/basic/pages/StyleInfo/components/StyleSecondaryProcessTab';
-import './styles.css';
+import '../../../styles.css';
 
 type FlowStage = {
   processName: string;
@@ -115,7 +115,7 @@ const OrderFlow: React.FC = () => {
     const stages = data?.stages || [];
     const materialPurchases = data?.materialPurchases || [];
     const order = data?.order;
-    
+
     // 如果有物料采购记录，添加采购节点
     if (materialPurchases.length > 0 || (order?.materialArrivalRate !== undefined && order?.materialArrivalRate !== null)) {
       const purchaseStage: FlowStage = {
@@ -145,7 +145,7 @@ const OrderFlow: React.FC = () => {
 
         purchaseStage.startTime = firstPurchase?.createTime;
         purchaseStage.startOperatorName = firstPurchase?.creatorName || firstPurchase?.receiverName || '未记录';
-        
+
         if (purchaseStage.status === 'completed') {
           purchaseStage.completeTime = lastPurchase?.updateTime || lastPurchase?.createTime;
           purchaseStage.completeOperatorName = lastPurchase?.updaterName || lastPurchase?.receiverName || '未记录';

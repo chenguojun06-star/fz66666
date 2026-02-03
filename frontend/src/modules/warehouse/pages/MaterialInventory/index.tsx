@@ -593,7 +593,7 @@ const _MaterialInventory: React.FC = () => {
           alt="物料"
           width={70}
           height={70}
-          style={{ objectFit: 'cover', borderRadius: 4 }}
+          style={{ objectFit: 'cover' }}
           fallback="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAiIGhlaWdodD0iNzAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjcwIiBoZWlnaHQ9IjcwIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSI+54mp5paZPC90ZXh0Pjwvc3ZnPg=="
         />
       ),
@@ -767,14 +767,14 @@ const _MaterialInventory: React.FC = () => {
       width: 200,
       render: (_, record) => (
         <Space orientation="vertical" size={6} style={{ width: '100%' }}>
-          <div style={{ padding: '4px 8px', background: '#f0f9ff', borderRadius: 4 }}>
+          <div style={{ padding: '4px 8px', background: '#f0f9ff' }}>
             <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--primary-color)', marginBottom: 2 }}>📥 最后入库</div>
             <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-secondary)' }}>{record.lastInboundDate}</div>
             {record.lastInboundBy && (
               <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)' }}>操作人: {record.lastInboundBy}</div>
             )}
           </div>
-          <div style={{ padding: '4px 8px', background: '#fff7e6', borderRadius: 4 }}>
+          <div style={{ padding: '4px 8px', background: '#fff7e6' }}>
             <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--warning-color-dark)', marginBottom: 2 }}>📤 最后出库</div>
             <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-secondary)' }}>{record.lastOutboundDate}</div>
             {record.lastOutboundBy && (
@@ -1342,7 +1342,6 @@ const _MaterialInventory: React.FC = () => {
             <div style={{
               background: '#e6f7ff',
               border: '1px solid #91d5ff',
-              borderRadius: 4,
               padding: '8px 12px',
               fontSize: "var(--font-size-sm)",
               color: 'var(--primary-color)'

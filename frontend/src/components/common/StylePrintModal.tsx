@@ -444,7 +444,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
           marginBottom: 16,
           padding: '12px 16px',
           background: '#f0f2f5',
-          borderRadius: 6,
+          borderRadius: 12,
           border: '1px solid #d9d9d9'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
@@ -485,7 +485,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
 
         {/* 内容预览区域 - 可展开/收起 */}
         {expanded && (
-          <div className="style-print-content" id="style-print-content" style={{ background: '#fff', padding: 20, border: '1px solid #d9d9d9', borderRadius: 6 }}>
+          <div className="style-print-content" id="style-print-content" style={{ background: '#fff', padding: 20, border: '1px solid #d9d9d9', borderRadius: 12 }}>
             {/* 预览样式 */}
             <style>{`
               .print-section { margin-bottom: 24px; }
@@ -507,18 +507,21 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
                 padding: 16,
                 borderBottom: '2px solid #d9d9d9',
                 background: '#fafafa',
-                borderRadius: 4,
+                borderRadius: 8,
               }}>
                 {/* 封面图 */}
                 {cover && (
-                  <div style={{ flexShrink: 0 }}>
-                    <Image
+                  <div style={{ flexShrink: 0, width: 120, height: 120 }}>
+                    <img
                       src={cover}
                       alt={styleNo}
-                      width={120}
-                      height={120}
-                      style={{ objectFit: 'cover', borderRadius: 4 }}
-                      preview={false}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        borderRadius: 8,
+                        border: '1px solid #e8e8e8'
+                      }}
                     />
                   </div>
                 )}
@@ -547,7 +550,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
 
                 {/* 二维码 */}
                 <div style={{ flexShrink: 0, textAlign: 'center' }}>
-                  <QRCode value={qrValue} size={160} />
+                  <QRCode value={qrValue} size={160} type="svg" />
                 </div>
               </div>
 
@@ -823,7 +826,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
             padding: '40px 20px',
             color: '#999',
             background: '#fafafa',
-            borderRadius: 6,
+            borderRadius: 12,
             border: '1px dashed #d9d9d9'
           }}>
             <div style={{ fontSize: 48, marginBottom: 12 }}>👆</div>

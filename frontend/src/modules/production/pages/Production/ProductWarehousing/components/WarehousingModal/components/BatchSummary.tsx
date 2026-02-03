@@ -24,7 +24,7 @@ const BatchSummary: React.FC<BatchSummaryProps> = ({ summary, hasBlocked, select
         <div
             style={{
                 border: '1px solid rgba(0,0,0,0.06)',
-                borderRadius: 8,
+
                 padding: '8px 10px',
                 background: 'rgba(0,0,0,0.02)',
             }}

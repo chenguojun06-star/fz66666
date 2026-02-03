@@ -200,7 +200,6 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
           width: 400,
           height: 400,
           border: '1px solid #e8e8e8',
-          borderRadius: 8,
           background: '#fafafa',
           display: 'flex',
           alignItems: 'center',
@@ -247,7 +246,6 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
                 width: '100%',
                 aspectRatio: '1',
                 border: img && currentIndex === idx ? '2px solid #1890ff' : '1px solid #e8e8e8',
-                borderRadius: 4,
                 overflow: 'hidden',
                 cursor: img ? 'pointer' : 'default',
                 background: '#fafafa',
@@ -339,7 +337,6 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
                         color: 'var(--neutral-white)',
                         fontSize: 10,
                         padding: '2px 6px',
-                        borderRadius: 2,
                       }}
                     >
                       主图

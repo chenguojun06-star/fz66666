@@ -81,7 +81,10 @@ public class PatternProductionController {
     public Result<Map<String, Object>> list(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) String keyword) {
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
 
         LambdaQueryWrapper<PatternProduction> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(PatternProduction::getDeleteFlag, 0);
@@ -90,6 +93,17 @@ public class PatternProductionController {
             wrapper.and(w -> w.like(PatternProduction::getStyleNo, keyword)
                     .or().like(PatternProduction::getColor, keyword)
                     .or().like(PatternProduction::getPatternMaker, keyword));
+        }
+
+        if (StringUtils.hasText(status)) {
+            wrapper.eq(PatternProduction::getStatus, status);
+        }
+
+        if (StringUtils.hasText(startDate)) {
+             wrapper.ge(PatternProduction::getCreateTime, startDate + " 00:00:00");
+        }
+        if (StringUtils.hasText(endDate)) {
+             wrapper.le(PatternProduction::getCreateTime, endDate + " 23:59:59");
         }
 
         wrapper.orderByDesc(PatternProduction::getCreateTime);

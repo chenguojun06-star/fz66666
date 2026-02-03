@@ -796,7 +796,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
         <div style={{
           padding: '8px 10px',
           border: '1px solid var(--color-border)',
-          borderRadius: 6,
+          borderRadius: 12,
           marginBottom: 6,
           fontSize: "var(--font-size-xs)",
           color: 'var(--color-text-secondary)'
@@ -811,7 +811,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
           padding: '6px 8px',
           background: 'var(--color-bg-base)',
           border: '1px solid var(--color-border)',
-          borderRadius: 6,
+          borderRadius: 12,
           fontSize: "var(--font-size-xs)",
           color: 'var(--color-text-secondary)',
           fontWeight: 600,
@@ -893,7 +893,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
 
         <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--color-text-secondary)', marginBottom: 4 }}>委派历史</div>
         {currentNodeData.history && currentNodeData.history.length > 0 ? (
-          <div style={{ border: '1px solid var(--color-border)', borderRadius: 6, padding: '10px' }}>
+          <div style={{ border: '1px solid var(--color-border)', borderRadius: 12, padding: '10px' }}>
             {currentNodeData.history.slice().reverse().map((h, idx) => (
               <div key={`${h.time}-${idx}`} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '6px 0', borderBottom: idx === currentNodeData.history.length - 1 ? 'none' : '1px solid var(--color-border)' }}>
                 <div style={{ color: 'var(--color-text-primary)' }}>{h.operatorName || '-'}</div>
@@ -903,7 +903,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
             ))}
           </div>
         ) : (
-          <div style={{ border: '1px solid var(--color-border)', borderRadius: 6, padding: '24px', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+          <div style={{ border: '1px solid var(--color-border)', borderRadius: 12, padding: '24px', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
             暂无委派记录
           </div>
         )}

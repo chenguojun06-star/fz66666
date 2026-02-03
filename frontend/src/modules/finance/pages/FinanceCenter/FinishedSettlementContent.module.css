@@ -62,7 +62,7 @@
 .modalNote {
   background: var(--color-bg-gray, #f5f5f5);
   padding: 12px;
-  border-radius: 4px;
+  border-radius: 8px;
 }
 
 .modalNoteTitle {

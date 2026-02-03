@@ -2,7 +2,7 @@
 
 .order-ranking-grid {
   margin-bottom: 12px;
-  border-radius: 6px;
+  border-radius: 12px;
 }
 
 .order-ranking-grid .ant-card-body {
@@ -78,7 +78,7 @@
   gap: 6px;
   padding: 6px 8px;
   background: var(--table-row-hover-bg, #fafafa);
-  border-radius: 6px;
+  border-radius: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
   min-width: 0;

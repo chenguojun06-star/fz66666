@@ -120,7 +120,6 @@ const FinishedSettlementContent: React.FC = () => {
           <span
             style={{
               padding: '2px 8px',
-              borderRadius: '4px',
               fontSize: '12px',
               backgroundColor: `${statusInfo.color}15`,
               color: statusInfo.color,

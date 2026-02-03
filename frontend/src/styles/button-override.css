@@ -8,7 +8,7 @@
 .ant-btn:not(.ant-btn-icon-only) {
   height: 40px !important;
   padding: 0 24px !important;
-  border-radius: var(--radius-pill) !important;
+  border-radius: 999px !important;
   font-size: 14px !important;
   line-height: 38px !important;
   font-weight: 500 !important;
@@ -19,7 +19,7 @@
   padding: 0 8px !important;
   font-size: 12px !important;
   line-height: 22px !important;
-  border-radius: var(--radius-pill) !important;
+  border-radius: 999px !important;
 }
 
 .ant-btn.ant-btn-lg:not(.ant-btn-icon-only) {
@@ -27,6 +27,7 @@
   padding: 0 24px !important;
   font-size: 14px !important;
   line-height: 38px !important;
+  border-radius: 999px !important;
 }
 
 /* 主按钮 - 镂空胶囊形（白底+彩色边框） */
@@ -146,7 +147,6 @@
   border: 2px solid !important;
   border-color: #40a9ff !important;
   color: #40a9ff !important;
-  border-radius: 0 999px 999px 0 !important;
   box-shadow: 0 2px 8px rgba(64, 169, 255, 0.15) !important;
 }
 
@@ -159,7 +159,7 @@
 
 /* Space.Compact 中的按钮 */
 .ant-space-compact .ant-btn-primary {
-  border-radius: 0 999px 999px 0 !important;
+  /* 统一为方形，不再使用圆角 */
 }
 
 .ant-space-compact .ant-btn:first-child:not(:last-child) {

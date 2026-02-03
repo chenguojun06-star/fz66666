@@ -178,7 +178,6 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
                 marginBottom: 16,
                 padding: 16,
                 background: '#f9fafb',
-                borderRadius: 8,
               }}
             >
               <div style={{ fontWeight: 600, marginBottom: 8 }}>

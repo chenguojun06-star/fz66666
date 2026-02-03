@@ -178,7 +178,7 @@ const BatchSelectionPanel: React.FC<BatchSelectionPanelProps> = ({
                                                 overflowY: 'auto',
                                                 paddingRight: 8,
                                                 border: '1px solid rgba(0,0,0,0.06)',
-                                                borderRadius: 8,
+
                                                 padding: 8,
                                             }}
                                         >

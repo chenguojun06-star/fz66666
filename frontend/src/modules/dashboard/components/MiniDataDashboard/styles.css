@@ -52,9 +52,9 @@
 .time-range-btn {
   padding: 6px 16px;
   border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  background: rgba(255, 255, 255, 0.15);
-  color: rgba(255, 255, 255, 0.85);
+  border: 1px solid var(--neutral-border);
+  background: var(--neutral-white);
+  color: var(--neutral-text);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -63,17 +63,36 @@
 }
 
 .time-range-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
-  border-color: rgba(255, 255, 255, 0.5);
+  background: var(--neutral-bg);
+  border-color: var(--neutral-border-dark);
   transform: translateY(-1px);
 }
 
 .time-range-btn.active {
-  background: var(--neutral-white);
-  color: var(--neutral-text);
-  border-color: var(--neutral-white);
+  background: var(--primary-color);
+  color: var(--neutral-white);
+  border-color: var(--primary-color);
   font-weight: 600;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+@media (prefers-color-scheme: dark) {
+  .time-range-btn {
+    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  .time-range-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.5);
+  }
+
+  .time-range-btn.active {
+    background: var(--neutral-white);
+    color: var(--neutral-text);
+    border-color: var(--neutral-white);
+  }
 }
 
 .mini-dashboard-loading {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button, Card, Input, Select, Space, Tag, Form, App, Dropdown, Checkbox, Alert, InputNumber } from 'antd';
-import { DownloadOutlined, DeleteOutlined, CheckCircleOutlined, EditOutlined, SettingOutlined, AppstoreOutlined, UnorderedListOutlined, PrinterOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import { DownloadOutlined, DeleteOutlined, CheckCircleOutlined, EditOutlined, SettingOutlined, AppstoreOutlined, UnorderedListOutlined, PrinterOutlined, CloseCircleOutlined, ReloadOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
@@ -21,7 +21,7 @@ import { productionOrderApi, productionScanApi } from '@/services/production/pro
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
 import type { Dayjs } from 'dayjs';
-import './styles.css';
+import '../../../styles.css';
 import dayjs from 'dayjs';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
@@ -581,7 +581,7 @@ const ProductionList: React.FC = () => {
         ...prev,
         page: 1,
         styleNo: styleNo || prev.styleNo,
-        orderNo: orderNo || prev.orderNo,
+        keyword: orderNo || prev.keyword,  // URL参数orderNo映射到keyword进行模糊搜索
       }));
     }
   }, [location.search]);
@@ -1175,7 +1175,6 @@ const ProductionList: React.FC = () => {
               gap: '4px',
               cursor: 'pointer',
               padding: '4px',
-              borderRadius: '4px',
               transition: 'background 0.2s'
             }}
             onClick={(e) => {
@@ -1216,7 +1215,6 @@ const ProductionList: React.FC = () => {
               gap: '4px',
               cursor: 'pointer',
               padding: '4px',
-              borderRadius: '4px',
               transition: 'background 0.2s'
             }}
             onClick={(e) => {
@@ -1275,7 +1273,6 @@ const ProductionList: React.FC = () => {
               gap: '4px',
               cursor: 'pointer',
               padding: '4px',
-              borderRadius: '4px',
               transition: 'background 0.2s'
             }}
             onClick={(e) => {
@@ -1316,7 +1313,6 @@ const ProductionList: React.FC = () => {
               gap: '4px',
               cursor: 'pointer',
               padding: '4px',
-              borderRadius: '4px',
               transition: 'background 0.2s'
             }}
             onClick={(e) => {
@@ -1357,7 +1353,6 @@ const ProductionList: React.FC = () => {
               gap: '4px',
               cursor: 'pointer',
               padding: '4px',
-              borderRadius: '4px',
               transition: 'background 0.2s'
             }}
             onClick={(e) => {
@@ -2002,8 +1997,8 @@ const ProductionList: React.FC = () => {
             <StandardToolbar
               left={(
                 <StandardSearchBar
-                  searchValue={queryParams.orderNo || ''}
-                  onSearchChange={(value) => setQueryParams({ ...queryParams, orderNo: value, page: 1 })}
+                  searchValue={queryParams.keyword || ''}
+                  onSearchChange={(value) => setQueryParams({ ...queryParams, keyword: value, page: 1 })}
                   searchPlaceholder="搜索订单号/款号/加工厂"
                   dateValue={dateRange}
                   onDateChange={setDateRange}
@@ -2017,8 +2012,15 @@ const ProductionList: React.FC = () => {
                   ]}
                 />
               )}
+
               right={(
                 <>
+                  <Button
+                    icon={<ReloadOutlined />}
+                    onClick={() => fetchProductionList()}
+                  >
+                    刷新
+                  </Button>
                   <Button
                     icon={viewMode === 'list' ? <AppstoreOutlined /> : <UnorderedListOutlined />}
                     onClick={() => setViewMode(viewMode === 'list' ? 'card' : 'list')}
@@ -2205,7 +2207,6 @@ const ProductionList: React.FC = () => {
               {/* 工序节点委派表格 */}
               <div style={{
                 border: '1px solid #e5e7eb',
-                borderRadius: '6px',
                 overflow: 'hidden'
               }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -2291,7 +2292,6 @@ const ProductionList: React.FC = () => {
                                 color: stageStatusMap[node.key].completed ? 'var(--success-color)' : 'var(--warning-color)',
                                 background: stageStatusMap[node.key].completed ? '#d1fae5' : '#fef3c7',
                                 padding: '2px 6px',
-                                borderRadius: '3px',
                                 whiteSpace: 'nowrap'
                               }}>
                                 {stageStatusMap[node.key].completed ? '✓ 完成' : `${stageStatusMap[node.key].completionRate}%`}

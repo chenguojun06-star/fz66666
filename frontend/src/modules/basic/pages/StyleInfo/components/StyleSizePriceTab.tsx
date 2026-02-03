@@ -375,7 +375,7 @@ const StyleSizePriceTab: React.FC<Props> = ({ styleId, readOnly }) => {
           marginBottom: '16px',
           background: '#fff7e6',
           border: '1px solid #ffd591',
-          borderRadius: '4px',
+
           color: 'var(--warning-color-dark)',
           display: 'flex',
           justifyContent: 'space-between',
@@ -396,7 +396,7 @@ const StyleSizePriceTab: React.FC<Props> = ({ styleId, readOnly }) => {
             padding: '12px',
             marginBottom: '16px',
             background: '#f0f7ff',
-            borderRadius: '4px',
+
             fontSize: '13px',
             color: 'var(--neutral-text-secondary)',
             display: 'flex',
@@ -424,7 +424,7 @@ const StyleSizePriceTab: React.FC<Props> = ({ styleId, readOnly }) => {
             marginBottom: 16,
             padding: '12px',
             background: '#fafafa',
-            borderRadius: '4px',
+
             border: '1px solid #d9d9d9'
           }}>
             <div style={{ marginBottom: 8, fontWeight: 600, fontSize: '13px' }}>尺码管理</div>

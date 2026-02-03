@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { App, Button, Card, DatePicker, Form, Grid, Input, InputNumber, Modal, Select, Space, Tag, Tooltip, Typography } from 'antd';
 import { UnifiedRangePicker } from '@/components/common/UnifiedDatePicker';
-import { DeleteOutlined, EyeOutlined, RollbackOutlined, ScanOutlined, EditOutlined, AppstoreOutlined, UnorderedListOutlined, PrinterOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EyeOutlined, RollbackOutlined, ScanOutlined, EditOutlined, AppstoreOutlined, UnorderedListOutlined, PrinterOutlined, CloseCircleOutlined, ReloadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useLocation } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -1205,7 +1205,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     flex: 1,
                     cursor: 'pointer',
                     padding: 4,
-                    borderRadius: 8,
                     transition: 'background 0.2s',
                   }}
                   onClick={() => openNodeDetail(
@@ -1456,14 +1455,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         <Card className="page-card">
           <div className="page-header">
             <h2 className="page-title">生产进度</h2>
-            <Space>
-              <Button
-                icon={viewMode === 'list' ? <AppstoreOutlined /> : <UnorderedListOutlined />}
-                onClick={() => setViewMode(viewMode === 'list' ? 'card' : 'list')}
-              >
-                {viewMode === 'list' ? '卡片视图' : '列表视图'}
-              </Button>
-            </Space>
           </div>
 
           <Card size="small" className="filter-card mb-sm">
@@ -1490,14 +1481,20 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 />
               )}
               right={(
-                <Button
-                  onClick={() => {
-                    setQueryParams({ page: 1, pageSize: queryParams.pageSize, keyword: '' });
-                    setDateRange(null);
-                  }}
-                >
-                  重置
-                </Button>
+                <Space>
+                  <Button
+                    icon={<ReloadOutlined />}
+                    onClick={() => fetchOrders()}
+                  >
+                    刷新
+                  </Button>
+                  <Button
+                    icon={viewMode === 'list' ? <AppstoreOutlined /> : <UnorderedListOutlined />}
+                    onClick={() => setViewMode(viewMode === 'list' ? 'card' : 'list')}
+                  >
+                    {viewMode === 'list' ? '卡片视图' : '列表视图'}
+                  </Button>
+                </Space>
               )}
             />
           </Card>

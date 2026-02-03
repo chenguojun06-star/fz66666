@@ -28,6 +28,7 @@ export const useStyleList = (): UseStyleListReturn => {
 
   const fetchList = useCallback(async (params?: StyleQueryParams) => {
     const finalParams = params || queryParams;
+    console.log('Fetching Style List with params:', finalParams);
     setLoading(true);
     try {
       const response = await api.get('/style/info/list', { params: finalParams });

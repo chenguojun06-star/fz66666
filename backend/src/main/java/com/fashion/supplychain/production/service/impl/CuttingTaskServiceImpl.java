@@ -52,52 +52,40 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
         String styleNo = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(params, "styleNo"));
         String status = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(params, "status"));
 
-        IPage<CuttingTask> pageResult = baseMapper.selectPage(pageInfo,
-                new LambdaQueryWrapper<CuttingTask>()
-                        .like(StringUtils.hasText(orderNo), CuttingTask::getProductionOrderNo, orderNo)
-                        .like(StringUtils.hasText(styleNo), CuttingTask::getStyleNo, styleNo)
-                        .eq(StringUtils.hasText(status), CuttingTask::getStatus, status)
-                        .orderByDesc(CuttingTask::getCreateTime));
+        // 先查询未删除的生产订单ID列表（用于过滤裁剪任务）
+        List<ProductionOrder> allOrders = productionOrderService.list(
+                new LambdaQueryWrapper<ProductionOrder>()
+                        .select(ProductionOrder::getId)
+                        .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
+        );
+        List<String> validOrderIds = allOrders.stream()
+                .map(ProductionOrder::getId)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toList());
+
+        // 在查询时就过滤掉已删除订单的任务，确保 total 准确
+        LambdaQueryWrapper<CuttingTask> queryWrapper = new LambdaQueryWrapper<CuttingTask>()
+                .like(StringUtils.hasText(orderNo), CuttingTask::getProductionOrderNo, orderNo)
+                .like(StringUtils.hasText(styleNo), CuttingTask::getStyleNo, styleNo)
+                .eq(StringUtils.hasText(status), CuttingTask::getStatus, status)
+                .orderByDesc(CuttingTask::getCreateTime);
+
+        // 只查询有效订单的任务（或者没有关联订单的任务）
+        if (!validOrderIds.isEmpty()) {
+            queryWrapper.and(w -> w.in(CuttingTask::getProductionOrderId, validOrderIds)
+                    .or().isNull(CuttingTask::getProductionOrderId));
+        } else {
+            queryWrapper.isNull(CuttingTask::getProductionOrderId);
+        }
+
+        IPage<CuttingTask> pageResult = baseMapper.selectPage(pageInfo, queryWrapper);
 
         List<CuttingTask> records = pageResult.getRecords();
         if (records == null || records.isEmpty()) {
             return pageResult;
         }
 
-        List<String> orderIds = records.stream()
-                .map(CuttingTask::getProductionOrderId)
-                .filter(StringUtils::hasText)
-                .map(String::trim)
-                .filter(StringUtils::hasText)
-                .distinct()
-                .collect(Collectors.toList());
-        if (!orderIds.isEmpty()) {
-            List<ProductionOrder> orders = productionOrderService.listByIds(orderIds);
-            Map<String, ProductionOrder> orderMap = (orders == null ? java.util.Collections.<ProductionOrder>emptyList()
-                    : orders)
-                    .stream()
-                    .filter(o -> o != null && StringUtils.hasText(o.getId()))
-                    .collect(Collectors.toMap(o -> o.getId().trim(), o -> o, (a, b) -> a));
-            records = records.stream()
-                    .filter(t -> {
-                        String oid = StringUtils.hasText(t.getProductionOrderId())
-                                ? t.getProductionOrderId().trim()
-                                : null;
-                        if (!StringUtils.hasText(oid)) {
-                            return true;
-                        }
-                        ProductionOrder order = orderMap.get(oid);
-                        return order != null && (order.getDeleteFlag() == null || order.getDeleteFlag() == 0);
-                    })
-                    .collect(Collectors.toList());
-            pageResult.setRecords(records);
-            pageResult.setTotal(records.size());
-        }
-
-        if (records.isEmpty()) {
-            return pageResult;
-        }
-
+        // 收集订单ID和订单号用于后续查询
         List<String> orderIdsFiltered = records.stream()
                 .map(CuttingTask::getProductionOrderId)
                 .filter(StringUtils::hasText)

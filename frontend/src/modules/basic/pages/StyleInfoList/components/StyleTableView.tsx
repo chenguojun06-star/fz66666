@@ -46,8 +46,35 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
   const toCategoryCn = (value: unknown) => {
     const code = String(value || '').trim().toUpperCase();
     if (!code) return '-';
-    const found = categoryOptions.find(opt => opt.value === code);
-    return found ? found.label : code;
+    // 优先使用传入的选项
+    if (categoryOptions && categoryOptions.length > 0) {
+      const found = categoryOptions.find(opt => opt.value === code);
+      if (found) return found.label;
+    }
+    // 默认映射
+    const map: Record<string, string> = {
+      WOMAN: '女装',
+      WOMEN: '女装',
+      MAN: '男装',
+      MEN: '男装',
+      KID: '童装',
+      KIDS: '童装',
+    };
+    return map[code] || code;
+  };
+
+  const toSeasonCn = (value: unknown) => {
+    const code = String(value || '').trim().toUpperCase();
+    if (!code) return '-';
+    const map: Record<string, string> = {
+      SPRING: '春季',
+      SUMMER: '夏季',
+      AUTUMN: '秋季',
+      WINTER: '冬季',
+      SPRING_SUMMER: '春夏',
+      AUTUMN_WINTER: '秋冬',
+    };
+    return map[code] || code;
   };
 
   const isStageDoneRow = (record: StyleInfo) => {
@@ -96,7 +123,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
       dataIndex: 'season',
       key: 'season',
       width: 80,
-      render: (value: unknown) => String(value || '-'),
+      render: (value: unknown) => toSeasonCn(value),
     },
     {
       title: '单价',
@@ -204,6 +231,13 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
       key: 'completedTime',
       width: 170,
       render: (value: unknown) => formatDateTime(value),
+    },
+    {
+      title: '维护人',
+      dataIndex: 'maintenanceMan',
+      key: 'maintenanceMan',
+      width: 100,
+      render: (val: string) => val || '-',
     },
     {
       title: '维护时间',

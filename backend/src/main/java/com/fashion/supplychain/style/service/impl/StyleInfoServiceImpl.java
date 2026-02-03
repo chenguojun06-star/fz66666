@@ -59,6 +59,7 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
         String styleName = (String) params.getOrDefault("styleName", "");
         String category = (String) params.getOrDefault("category", "");
         String keyword = (String) params.getOrDefault("keyword", "");
+        String progressNode = (String) params.getOrDefault("progressNode", "");
 
         boolean onlyCompleted = false;
         Object onlyCompletedRaw = params.get("onlyCompleted");
@@ -68,20 +69,49 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
         }
 
         // 使用条件构造器进行查询
-        IPage<StyleInfo> resultPage = baseMapper.selectPage(pageInfo,
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<StyleInfo> wrapper =
             new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<StyleInfo>()
                 .like(StringUtils.hasText(styleNo), StyleInfo::getStyleNo, styleNo)
                 .like(StringUtils.hasText(styleName), StyleInfo::getStyleName, styleName)
                 .eq(StringUtils.hasText(category), StyleInfo::getCategory, category)
-                .and(StringUtils.hasText(keyword), wrapper -> wrapper
+                .and(StringUtils.hasText(keyword), w -> w
                     .like(StyleInfo::getStyleNo, keyword)
                     .or()
                     .like(StyleInfo::getStyleName, keyword)
                     .or()
                     .like(StyleInfo::getCategory, keyword))
                 .eq(onlyCompleted, StyleInfo::getSampleStatus, "COMPLETED")
-                .eq(StyleInfo::getStatus, "ENABLED")
-                .orderByDesc(StyleInfo::getCreateTime));
+                .eq(StyleInfo::getStatus, "ENABLED");
+
+        if (StringUtils.hasText(progressNode)) {
+            String node = progressNode.trim();
+            switch (node) {
+                case "样衣完成" -> wrapper.and(w -> w.eq(StyleInfo::getSampleStatus, "COMPLETED").or().eq(StyleInfo::getSampleStatus, "Completed"));
+                case "样衣制作中" -> wrapper.and(w -> w.eq(StyleInfo::getSampleStatus, "IN_PROGRESS").or().eq(StyleInfo::getSampleStatus, "In_Progress"));
+                case "纸样完成" -> wrapper
+                    .and(w -> w.eq(StyleInfo::getPatternStatus, "COMPLETED").or().eq(StyleInfo::getPatternStatus, "Completed"))
+                    .and(w -> w.isNull(StyleInfo::getSampleStatus)
+                        .or()
+                        .notIn(StyleInfo::getSampleStatus, "COMPLETED", "Completed", "IN_PROGRESS", "In_Progress"));
+                case "纸样开发中" -> wrapper
+                    .and(w -> w.eq(StyleInfo::getPatternStatus, "IN_PROGRESS").or().eq(StyleInfo::getPatternStatus, "In_Progress"))
+                    .and(w -> w.isNull(StyleInfo::getSampleStatus)
+                        .or()
+                        .notIn(StyleInfo::getSampleStatus, "COMPLETED", "Completed", "IN_PROGRESS", "In_Progress"));
+                case "未开始" -> wrapper
+                    .and(w -> w.isNull(StyleInfo::getSampleStatus)
+                        .or()
+                        .notIn(StyleInfo::getSampleStatus, "COMPLETED", "Completed", "IN_PROGRESS", "In_Progress"))
+                    .and(w -> w.isNull(StyleInfo::getPatternStatus)
+                        .or()
+                        .notIn(StyleInfo::getPatternStatus, "COMPLETED", "Completed", "IN_PROGRESS", "In_Progress"));
+                default -> {
+                }
+            }
+        }
+
+        IPage<StyleInfo> resultPage = baseMapper.selectPage(pageInfo,
+            wrapper.orderByDesc(StyleInfo::getCreateTime));
 
         fillQuotationPriceFields(resultPage.getRecords());
         fillProgressFields(resultPage.getRecords());
@@ -333,6 +363,7 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
 
             StyleOperationLog m = style.getId() != null ? latestMaintenance.get(style.getId()) : null;
             style.setMaintenanceTime(m != null ? m.getCreateTime() : null);
+            style.setMaintenanceMan(m != null ? m.getOperator() : null);
             style.setMaintenanceRemark(m != null ? m.getRemark() : null);
 
             String patternStatus = StringUtils.hasText(style.getPatternStatus()) ? style.getPatternStatus().trim() : "";

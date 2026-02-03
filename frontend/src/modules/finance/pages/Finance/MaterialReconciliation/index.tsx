@@ -11,7 +11,7 @@ import RowActions from '@/components/common/RowActions';
 import MaterialReconModalContent from '@/components/Finance/MaterialReconModalContent';
 import { MaterialReconciliation as MaterialReconType, MaterialReconQueryParams } from '@/types/finance';
 import materialReconciliationApi from '@/services/finance/materialReconciliationApi';
-import errorHandler from '@/utils/errorHandler';
+import { errorHandler } from '@/utils/errorHandling';
 import { formatDateTime } from '@/utils/datetime';
 import { unwrapApiData } from '@/utils/api';
 import { getMaterialReconStatusConfig, materialReconStatusTransitions } from '@/constants/finance';
@@ -437,7 +437,7 @@ const MaterialReconciliation: React.FC = () => {
    */
   const MaterialThumb: React.FC = () => {
     return (
-      <div style={{ width: 48, height: 48, borderRadius: 6, overflow: 'hidden', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ width: 48, height: 48, overflow: 'hidden', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-sm)' }}>无图</span>
       </div>
     );

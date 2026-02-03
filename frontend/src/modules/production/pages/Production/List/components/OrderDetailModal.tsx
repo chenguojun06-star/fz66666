@@ -126,7 +126,6 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
             <div style={{
               padding: 8,
               background: '#f5f5f5',
-              borderRadius: 4,
               fontSize: "var(--font-size-xs)",
               marginTop: 8
             }}>

@@ -13,7 +13,7 @@ import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
 import { useSync } from '@/utils/syncManager';
 import { useViewport } from '@/utils/useViewport';
 import * as XLSX from 'xlsx';
-import './styles.css';
+import '../../../styles.css';
 import { safePrint } from '@/utils/safePrint';
 
 // New Imports
@@ -1226,7 +1226,7 @@ const MaterialPurchase: React.FC = () => {
             <div style={{ marginBottom: 12, color: 'var(--neutral-text)' }}>
               确认人：{String(user?.name || user?.username || '未命名').trim() || '未命名'}
             </div>
-            <div style={{ border: '1px solid #f0f0f0', borderRadius: 6 }}>
+            <div style={{ border: '1px solid #f0f0f0' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>

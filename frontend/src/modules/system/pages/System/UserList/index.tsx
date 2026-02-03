@@ -800,28 +800,40 @@ const UserList: React.FC = () => {
 
           {/* 筛选区 */}
           <Card size="small" className="filter-card mb-sm">
-            <StandardToolbar
-              left={(
-                <StandardSearchBar
-                  searchValue={queryParams.username || ''}
-                  onSearchChange={(value) => setQueryParams({ ...queryParams, username: value, page: 1 })}
-                  searchPlaceholder="搜索用户名/姓名"
-                  dateValue={dateRange}
-                  onDateChange={setDateRange}
-                  statusValue={queryParams.status || ''}
-                  onStatusChange={(value) => setQueryParams({ ...queryParams, status: value, page: 1 })}
-                  statusOptions={[
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: 16 }}>
+              <Space wrap size={12}>
+                <Input
+                  value={queryParams.username || ''}
+                  onChange={(e) => setQueryParams({ ...queryParams, username: e.target.value, page: 1 })}
+                  placeholder="搜索用户名/姓名"
+                  allowClear
+                  style={{ width: 220 }}
+                />
+                <Select
+                  value={queryParams.status || ''}
+                  onChange={(value) => setQueryParams({ ...queryParams, status: value, page: 1 })}
+                  options={[
                     { label: '启用', value: 'active' },
                     { label: '停用', value: 'inactive' },
                   ]}
+                  placeholder="状态"
+                  allowClear
+                  style={{ width: 140 }}
                 />
-              )}
-              right={(
-                <Button type="primary" icon={<PlusOutlined />} onClick={() => openDialog()}>
-                  新增人员
+                <Button type="primary" onClick={() => fetchData()}>
+                  查询
                 </Button>
-              )}
-            />
+                <Button onClick={() => {
+                  setQueryParams({ page: 1, pageSize: queryParams.pageSize });
+                  setDateRange(null);
+                }}>
+                  重置
+                </Button>
+              </Space>
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => openDialog()}>
+                新增用户
+              </Button>
+            </div>
           </Card>
 
           {/* 表格区 */}

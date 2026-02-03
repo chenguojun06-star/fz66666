@@ -1,7 +1,7 @@
 /* 交期预警卡片 */
 .delivery-alert-card {
   margin-bottom: 24px;
-  border-radius: 12px;
+  border-radius: 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
@@ -29,7 +29,7 @@
 .delivery-section-compact {
   flex: 1;
   padding: 12px;
-  border-radius: 8px;
+  border-radius: 12px;
   background: #fafafa;
 }
 
@@ -76,7 +76,7 @@
   align-items: center;
   gap: 12px;
   background: #fff;
-  border-radius: 6px;
+  border-radius: 12px;
   padding: 10px 12px;
   cursor: pointer;
   transition: all 0.3s ease;

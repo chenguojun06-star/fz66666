@@ -610,7 +610,7 @@ public class StyleInfoOrchestrator {
             log.setBizType("style");
             log.setAction(action);
             UserContext ctx = UserContext.get();
-            log.setOperator(ctx != null ? ctx.getUsername() : null);
+            log.setOperator(ctx != null && StringUtils.hasText(ctx.getUsername()) ? ctx.getUsername() : "系统管理员");
             log.setRemark(remark);
             log.setCreateTime(LocalDateTime.now());
             styleOperationLogService.save(log);
@@ -626,7 +626,7 @@ public class StyleInfoOrchestrator {
             log.setBizType("pattern");
             log.setAction(action);
             UserContext ctx = UserContext.get();
-            log.setOperator(ctx != null ? ctx.getUsername() : null);
+            log.setOperator(ctx != null && StringUtils.hasText(ctx.getUsername()) ? ctx.getUsername() : "系统管理员");
             log.setRemark(remark);
             log.setCreateTime(LocalDateTime.now());
             styleOperationLogService.save(log);
@@ -642,7 +642,7 @@ public class StyleInfoOrchestrator {
             log.setBizType("sample");
             log.setAction(action);
             UserContext ctx = UserContext.get();
-            log.setOperator(ctx != null ? ctx.getUsername() : null);
+            log.setOperator(ctx != null && StringUtils.hasText(ctx.getUsername()) ? ctx.getUsername() : "系统管理员");
             log.setRemark(remark);
             log.setCreateTime(LocalDateTime.now());
             styleOperationLogService.save(log);
@@ -658,7 +658,7 @@ public class StyleInfoOrchestrator {
             log.setBizType("maintenance");
             log.setAction(action);
             UserContext ctx = UserContext.get();
-            log.setOperator(ctx != null ? ctx.getUsername() : null);
+            log.setOperator(ctx != null && StringUtils.hasText(ctx.getUsername()) ? ctx.getUsername() : "系统管理员");
             String r = remark == null ? null : remark.trim();
             log.setRemark(r != null && !r.isEmpty() ? r : null);
             log.setCreateTime(LocalDateTime.now());

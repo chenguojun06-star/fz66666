@@ -79,6 +79,8 @@ public class SecurityConfig implements WebMvcConfigurer {
                         .antMatchers("/api/production/order/detail/**").permitAll()
                         .antMatchers("/api/production/cutting-bundle/by-no").permitAll()
                         .antMatchers("/api/production/cutting/summary").permitAll()
+                        .antMatchers("/api/production/purchase/receive").permitAll()
+                        .antMatchers("/api/production/material/receive").permitAll()
                         .antMatchers("/api/production/order/node-operations/**").authenticated()
                         .antMatchers("/actuator/health", "/actuator/health/**", "/actuator/info", "/actuator/info/**")
                         .permitAll()

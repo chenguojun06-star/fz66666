@@ -1,5 +1,5 @@
 import React from 'react';
-import { DatePicker, Input, Select, Space } from 'antd';
+import { Button, DatePicker, Input, Select, Space } from 'antd';
 import type { Dayjs } from 'dayjs';
 import './StandardSearchBar.css';
 
@@ -18,6 +18,10 @@ export interface StandardSearchBarProps {
   statusOptions?: StandardSearchOption[];
   showDate?: boolean;
   showStatus?: boolean;
+  showSearchButton?: boolean;
+  onSearch?: () => void;
+  showResetButton?: boolean;
+  onReset?: () => void;
 }
 
 const StandardSearchBar: React.FC<StandardSearchBarProps> = ({
@@ -31,6 +35,10 @@ const StandardSearchBar: React.FC<StandardSearchBarProps> = ({
   statusOptions = [],
   showDate = true,
   showStatus = true,
+  showSearchButton = false,
+  onSearch,
+  showResetButton = false,
+  onReset,
 }) => {
   return (
     <div className="standard-search-bar">
@@ -41,6 +49,8 @@ const StandardSearchBar: React.FC<StandardSearchBarProps> = ({
           placeholder={searchPlaceholder}
           className="standard-search-input"
           allowClear
+          // If search button is shown, maybe we want onPressEnter to trigger search?
+          onPressEnter={onSearch}
         />
         {showDate ? (
           <RangePicker
@@ -59,9 +69,20 @@ const StandardSearchBar: React.FC<StandardSearchBarProps> = ({
             allowClear
           />
         ) : null}
+        {showSearchButton && (
+          <Button type="primary" onClick={onSearch}>
+            查询
+          </Button>
+        )}
+        {showResetButton && (
+          <Button onClick={onReset}>
+             重置
+          </Button>
+        )}
       </Space>
     </div>
   );
 };
 
 export default StandardSearchBar;
+

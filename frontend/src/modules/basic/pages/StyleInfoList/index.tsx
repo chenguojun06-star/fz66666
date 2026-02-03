@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { App, Button, Card, Modal, Space } from 'antd';
-import { PlusOutlined, AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
+import { PlusOutlined, AppstoreOutlined, UnorderedListOutlined, ReloadOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import api from '@/utils/api';
@@ -74,14 +74,14 @@ const StyleInfoListPage: React.FC = () => {
   // queryParams 变化时重新加载
   useEffect(() => {
     fetchList();
-  }, [queryParams.page, queryParams.pageSize, queryParams.styleNo, queryParams.styleName]);
+  }, [queryParams.page, queryParams.pageSize, queryParams.styleNo, queryParams.styleName, queryParams.progressNode]);
 
   // 加载品类选项（硬编码，不依赖API）
   const loadCategoryOptions = () => {
     setCategoryOptions([
-      { label: '女装', value: '女装' },
-      { label: '男装', value: '男装' },
-      { label: '童装', value: '童装' }
+      { label: '女装', value: 'WOMAN' },
+      { label: '男装', value: 'MAN' },
+      { label: '童装', value: 'KIDS' }
     ]);
   };
 
@@ -173,21 +173,6 @@ const StyleInfoListPage: React.FC = () => {
         {/* 页面头部 */}
         <div className="page-header">
           <h2 className="page-title">样衣开发</h2>
-          <Space>
-            <Button
-              icon={viewMode === 'list' ? <AppstoreOutlined /> : <UnorderedListOutlined />}
-              onClick={() => setViewMode(viewMode === 'list' ? 'card' : 'list')}
-            >
-              {viewMode === 'list' ? '卡片视图' : '列表视图'}
-            </Button>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => navigate('/style-info/new')}
-            >
-              新建
-            </Button>
-          </Space>
         </div>
 
         {/* 开发费用统计看板 */}
@@ -204,6 +189,30 @@ const StyleInfoListPage: React.FC = () => {
           onQueryChange={setQueryParams}
           onSearch={fetchList}
           loading={loading}
+          extra={(
+            <>
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={fetchList}
+                loading={loading}
+              >
+                刷新
+              </Button>
+              <Button
+                icon={viewMode === 'list' ? <AppstoreOutlined /> : <UnorderedListOutlined />}
+                onClick={() => setViewMode(viewMode === 'list' ? 'card' : 'list')}
+              >
+                {viewMode === 'list' ? '卡片视图' : '列表视图'}
+              </Button>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => navigate('/style-info/new')}
+              >
+                新建
+              </Button>
+            </>
+          )}
         />
 
         {/* 列表/卡片视图 */}
@@ -270,7 +279,7 @@ const StyleInfoListPage: React.FC = () => {
               minHeight: 100,
               padding: 8,
               border: '1px solid #d9d9d9',
-              borderRadius: 4,
+
               resize: 'vertical',
             }}
           />

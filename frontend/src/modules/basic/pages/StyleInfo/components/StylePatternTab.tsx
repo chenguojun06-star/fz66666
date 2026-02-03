@@ -147,7 +147,7 @@ const StylePatternTab: React.FC<Props> = ({
         marginBottom: 16,
         padding: '12px 16px',
         background: '#f5f5f5',
-        borderRadius: 4,
+
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -176,7 +176,7 @@ const StylePatternTab: React.FC<Props> = ({
               backgroundColor: '#fffbe6',
               border: '1px solid #ffe58f',
               padding: '2px 8px',
-              borderRadius: '4px',
+
               display: 'inline-flex',
               alignItems: 'center',
               gap: '4px'

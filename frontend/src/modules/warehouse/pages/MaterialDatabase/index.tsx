@@ -283,7 +283,6 @@ const MaterialDatabasePage: React.FC = () => {
             style={{
               width: 40,
               height: 40,
-              borderRadius: 4,
               objectFit: 'cover'
             }}
           />

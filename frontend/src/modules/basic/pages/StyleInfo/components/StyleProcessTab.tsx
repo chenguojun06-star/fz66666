@@ -749,7 +749,7 @@ const StyleProcessTab: React.FC<Props> = ({
           marginBottom: 12,
           padding: '10px 16px',
           background: 'var(--primary-color)',
-          borderRadius: 4,
+
           color: 'var(--neutral-white)',
           fontSize: '15px',
           fontWeight: 600,
@@ -762,7 +762,7 @@ const StyleProcessTab: React.FC<Props> = ({
         marginBottom: 16,
         padding: '12px 16px',
         background: '#f5f5f5',
-        borderRadius: 4,
+
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',

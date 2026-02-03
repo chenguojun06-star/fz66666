@@ -7,7 +7,7 @@
 .tutorial-page-header {
   background: #ffffff;
   padding: 32px 24px;
-  border-radius: 12px;
+  border-radius: 20px;
   margin-bottom: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   border: 1px solid #e5e7eb;
@@ -39,7 +39,7 @@
 
 .tutorial-card {
   transition: all 0.3s ease;
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
 }
 
@@ -63,7 +63,7 @@
 }
 
 .tutorial-card .ant-alert {
-  border-radius: 6px;
+  border-radius: 12px;
   margin-top: 8px;
 }
 

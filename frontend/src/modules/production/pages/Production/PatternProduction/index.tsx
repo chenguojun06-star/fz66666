@@ -10,7 +10,6 @@ import StandardModal from '@/components/common/StandardModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import LiquidProgressLottie from '@/components/common/LiquidProgressLottie';
-import NodeDetailModal from '@/components/common/NodeDetailModal';
 import UniversalCardView from '@/components/common/UniversalCardView';
 import QRCodeBox from '@/components/common/QRCodeBox';
 import StylePrintModal from '@/components/common/StylePrintModal';
@@ -105,7 +104,6 @@ const PatternProduction: React.FC = () => {
 
   // ===== 使用 useModal 管理弹窗状态 =====
   const progressModal = useModal<PatternProductionRecord>();
-  const detailModal = useModal<PatternProductionRecord>();
   const attachmentModal = useModal<PatternProductionRecord>();
   const attachmentWrapperRef = React.useRef<HTMLDivElement>(null);
   const [operationLogs, setOperationLogs] = useState<Array<{
@@ -117,36 +115,6 @@ const PatternProduction: React.FC = () => {
   }>>([]);
   const [form] = Form.useForm();
 
-  // 节点详情弹窗状态
-  const [nodeDetailVisible, setNodeDetailVisible] = useState(false);
-  const [nodeDetailRecord, setNodeDetailRecord] = useState<PatternProductionRecord | null>(null);
-  const [nodeDetailType, setNodeDetailType] = useState<string>('');
-  const [nodeDetailName, setNodeDetailName] = useState<string>('');
-  const [nodeDetailStats, setNodeDetailStats] = useState<{ done: number; total: number; percent: number; remaining: number } | undefined>(undefined);
-  const [nodeDetailUnitPrice, setNodeDetailUnitPrice] = useState<number | undefined>(undefined);
-  const [nodeDetailProcessList, setNodeDetailProcessList] = useState<{ id?: string; processCode?: string; code?: string; name: string; unitPrice?: number }[]>([]);
-  const [nodeDetailExtraData, setNodeDetailExtraData] = useState<any>(undefined);
-
-  // 打开节点详情弹窗
-  const openNodeDetail = useCallback((
-    record: PatternProductionRecord,
-    nodeType: string,
-    nodeName: string,
-    stats: { done: number; total: number; percent: number; remaining: number },
-    unitPrice?: number,
-    processList?: { id?: string; processCode?: string; code?: string; name: string; unitPrice?: number }[],
-    extraData?: any
-  ) => {
-    setNodeDetailRecord(record);
-    setNodeDetailType(nodeType);
-    setNodeDetailName(nodeName);
-    setNodeDetailStats(stats);
-    setNodeDetailUnitPrice(unitPrice);
-    setNodeDetailProcessList(processList || []);
-    setNodeDetailExtraData(extraData);
-    setNodeDetailVisible(true);
-  }, []);
-
   // 当 attachmentModal 打开时，程序化触发附件按钮点击
   useEffect(() => {
     if (attachmentModal.visible && attachmentWrapperRef.current) {
@@ -157,6 +125,19 @@ const PatternProduction: React.FC = () => {
       }
     }
   }, [attachmentModal.visible]);
+
+  // 当进度弹窗打开时，填充表单数据
+  // 解决 warning: Instance created by useForm is not connected to any Form element
+  useEffect(() => {
+    if (progressModal.visible && progressModal.data) {
+      // 延迟一点以确保 Form 已渲染（如果是 destroyOnClose=true）
+      // 使用 requestAnimationFrame 或 setTimeout
+      const timer = setTimeout(() => {
+        form.setFieldsValue(progressModal.data!.progressNodes);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [progressModal.visible, progressModal.data, form]);
 
   // 记录操作日志
   const addOperationLog = (action: string, detail: string) => {
@@ -180,7 +161,7 @@ const PatternProduction: React.FC = () => {
   // 数据加载
   useEffect(() => {
     loadData();
-  }, [searchText]); // 搜索文本变化时重新加载
+  }, [searchText, statusValue, dateRange]);
 
   const loadData = async () => {
     setLoading(true);
@@ -190,6 +171,9 @@ const PatternProduction: React.FC = () => {
           page: 1,
           pageSize: 100,
           keyword: searchText || undefined,
+          status: statusValue || undefined,
+          startDate: dateRange?.[0]?.format('YYYY-MM-DD'),
+          endDate: dateRange?.[1]?.format('YYYY-MM-DD'),
         }
       });
 
@@ -197,6 +181,15 @@ const PatternProduction: React.FC = () => {
 
       // 转换后端数据格式为前端格式
       const formattedData: PatternProductionRecord[] = records.map((item: any) => {
+        const statusRaw = String(item.status || 'PENDING').toUpperCase();
+        // 归一化状态值
+        let normalizedStatus: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' = 'PENDING';
+        if (statusRaw === 'COMPLETED' || statusRaw === 'DONE' || Boolean(item.completeTime)) {
+          normalizedStatus = 'COMPLETED';
+        } else if (statusRaw === 'IN_PROGRESS' || statusRaw === 'DOING') {
+          normalizedStatus = 'IN_PROGRESS';
+        }
+
         const baseProgressNodes = item.progressNodes ? JSON.parse(item.progressNodes) : {
           cutting: 0,
           sewing: 0,
@@ -206,7 +199,7 @@ const PatternProduction: React.FC = () => {
           packaging: 0,
         };
 
-        const completedFlag = String(item.status || '').toUpperCase() === 'COMPLETED' || Boolean(item.completeTime);
+        const completedFlag = normalizedStatus === 'COMPLETED';
         const progressNodes = completedFlag
           ? {
             ...baseProgressNodes,
@@ -254,6 +247,7 @@ const PatternProduction: React.FC = () => {
           processDetails: item.processDetails || {},
           // 采购进度信息
           procurementProgress,
+          status: normalizedStatus,
         };
       });
 
@@ -281,13 +275,8 @@ const PatternProduction: React.FC = () => {
 
   // 打开进度更新对话框
   const handleOpenProgress = (record: PatternProductionRecord) => {
-    form.setFieldsValue(record.progressNodes);
+    // form.setFieldsValue(record.progressNodes); // 改为在 useEffect 中处理
     progressModal.open(record);
-  };
-
-  // 打开查看详情
-  const handleOpenDetail = (record: PatternProductionRecord) => {
-    detailModal.open(record);
   };
 
   // 打印模态框
@@ -406,12 +395,13 @@ const PatternProduction: React.FC = () => {
 
   // 渲染状态标签
   const renderStatus = (status: string) => {
-    const statusMap = {
+    const normalized = String(status || 'PENDING').toUpperCase();
+    const statusMap: Record<string, { text: string; color: string; icon: React.ReactNode }> = {
       PENDING: { text: '待领取', color: 'default', icon: <ClockCircleOutlined /> },
       IN_PROGRESS: { text: '进行中', color: 'processing', icon: <SyncOutlined spin /> },
       COMPLETED: { text: '已完成', color: 'success', icon: <CheckCircleOutlined /> },
     };
-    const config = statusMap[status as keyof typeof statusMap] || statusMap.PENDING;
+    const config = statusMap[normalized] || statusMap.PENDING;
     return <Tag icon={config.icon} color={config.color}>{config.text}</Tag>;
   };
 
@@ -433,7 +423,7 @@ const PatternProduction: React.FC = () => {
         <div style={{
           width: 60,
           height: 60,
-          borderRadius: 4,
+
           overflow: 'hidden',
           background: '#f5f5f5',
           display: 'flex',
@@ -554,51 +544,11 @@ const PatternProduction: React.FC = () => {
                   alignItems: 'center',
                   gap: 6,
                   flex: 1,
-                  cursor: 'pointer',
+                  cursor: 'default',
                   padding: 4,
-                  borderRadius: 8,
+
                   transition: 'background 0.2s',
                 }}
-                onClick={() => {
-                  // 获取该节点下的工序明细列表
-                  const processDetails = record.processDetails || {};
-                  const nodeProcessList = (processDetails[node.name] || []).map((item: any) => ({
-                    ...item,
-                    id: String(item?.id || item?.processCode || item?.code || '').trim() || undefined,
-                    processCode: String(item?.processCode || item?.code || item?.id || '').trim() || undefined,
-                    name: String(item?.name || item?.processName || '').trim(),
-                  }));
-
-                  // 传递额外数据：时间信息 + 采购进度（如果是采购节点）
-                  const extraData: any = {
-                    // 时间节点信息
-                    releaseTime: record.releaseTime,
-                    deliveryTime: record.deliveryTime,
-                    receiveTime: record.receiveTime,
-                    completeTime: record.completeTime,
-                    // 人员信息
-                    patternMaker: record.patternMaker,
-                    receiver: record.receiver,
-                  };
-
-                  // 如果是采购节点，添加采购进度信息
-                  if (node.name === '采购' && record.procurementProgress) {
-                    extraData.procurementProgress = record.procurementProgress;
-                  }
-
-                  openNodeDetail(
-                    record,
-                    node.id,
-                    node.name,
-                    { done: completedQty, total: record.quantity, percent, remaining },
-                    node.unitPrice,
-                    nodeProcessList, // 传递该节点下的工序明细
-                    extraData
-                  );
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(59, 130, 246, 0.08)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-                title={`点击查看 ${node.name} 详情`}
               >
                 <LiquidProgressLottie
                   progress={percent}
@@ -621,33 +571,8 @@ const PatternProduction: React.FC = () => {
                       ? '#fbbf24'
                       : '#95de64'
                   }
+                  nodeName={node.name}
                 />
-                <div style={{
-                  fontSize: "var(--font-size-base)",
-                  fontWeight: 700,
-                  color: 'var(--neutral-text)',
-                  letterSpacing: '0.3px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                }}>
-                  <span>{node.name}</span>
-                  <span style={{
-                    fontSize: "var(--font-size-sm)",
-                    fontWeight: 600,
-                    color: percent >= 100 ? '#059669' : 'var(--neutral-text-secondary)',
-                  }}>({completedQty}/{record.quantity})</span>
-                </div>
-                <div style={{
-                  fontSize: "var(--font-size-xs)",
-                  fontWeight: 500,
-                  color: 'var(--neutral-text-secondary)',
-                  whiteSpace: 'nowrap',
-                }}>
-                  {node.unitPrice > 0 && (
-                    <span style={{ color: 'var(--warning-color)' }}>¥{node.unitPrice}</span>
-                  )}
-                </div>
               </div>
             );
           })}
@@ -672,20 +597,6 @@ const PatternProduction: React.FC = () => {
       dataIndex: 'completeTime',
       key: 'completeTime',
       width: 140,
-    },
-    {
-      title: '维护人',
-      dataIndex: 'maintainer',
-      key: 'maintainer',
-      width: 100,
-      render: (text: string) => text || '-',
-    },
-    {
-      title: '维护时间',
-      dataIndex: 'maintainTime',
-      key: 'maintainTime',
-      width: 140,
-      render: (text: string) => text || '-',
     },
     {
       title: '操作',
@@ -715,12 +626,6 @@ const PatternProduction: React.FC = () => {
             onClick: () => handleOpenProgress(record),
           },
           {
-            key: 'print',
-            icon: <PrinterOutlined />,
-            label: '打印',
-            onClick: () => handlePrint(record),
-          },
-          {
             key: 'divider1',
             type: 'divider',
           },
@@ -743,9 +648,9 @@ const PatternProduction: React.FC = () => {
           <RowActions
             actions={[
               {
-                key: 'view',
-                label: '查看',
-                onClick: () => handleOpenDetail(record)
+                key: 'print',
+                label: '打印',
+                onClick: () => handlePrint(record),
               },
               ...(menuItems.length > 0
                 ? [
@@ -784,7 +689,12 @@ const PatternProduction: React.FC = () => {
                   onDateChange={setDateRange}
                   statusValue={statusValue}
                   onStatusChange={setStatusValue}
-                  statusOptions={[]}
+                  statusOptions={[
+                    { label: '全部', value: '' },
+                    { label: '待领取', value: 'PENDING' },
+                    { label: '进行中', value: 'IN_PROGRESS' },
+                    { label: '已完成', value: 'COMPLETED' },
+                  ]}
                 />
               )}
               right={(
@@ -794,9 +704,6 @@ const PatternProduction: React.FC = () => {
                     onClick={() => setViewMode(viewMode === 'list' ? 'card' : 'list')}
                   >
                     {viewMode === 'list' ? '卡片视图' : '列表视图'}
-                  </Button>
-                  <Button type="primary" icon={<PlusOutlined />}>
-                    新增样板
                   </Button>
                 </>
               )}
@@ -977,7 +884,7 @@ const PatternProduction: React.FC = () => {
                     padding: '12px 16px',
                     marginBottom: 8,
                     background: index % 2 === 0 ? '#fafafa' : '#fff',
-                    borderRadius: 4,
+
                     border: '1px solid #f0f0f0',
                   }}
                 >
@@ -1001,170 +908,6 @@ const PatternProduction: React.FC = () => {
             </div>
           )}
         </StandardModal>
-
-        {/* 查看详情弹窗 */}
-        <StandardModal
-          title={
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <EyeOutlined style={{ color: 'var(--primary-color)' }} />
-              <span>样板详情</span>
-            </div>
-          }
-          open={detailModal.visible}
-          onCancel={detailModal.close}
-          footer={[
-            <Button key="close" onClick={detailModal.close}>
-              关闭
-            </Button>
-          ]}
-          size="lg"
-        >
-          {detailModal.data && (
-            <div style={{ fontSize: "var(--font-size-xs)" }}>
-              {/* 顶部：图片 + 二维码 + 基本信息 */}
-              <div style={{
-                display: 'flex',
-                gap: 12,
-                padding: 12,
-                background: '#f8f9fa',
-                borderRadius: 6,
-                marginBottom: 12,
-              }}>
-                {/* 封面图 */}
-                {detailModal.data.coverImage && (
-                  <img
-                    src={detailModal.data.coverImage}
-                    alt={detailModal.data.styleNo}
-                    style={{
-                      width: 80,
-                      height: 80,
-                      objectFit: 'cover',
-                      borderRadius: 4,
-                      border: '1px solid #e5e7eb',
-                    }}
-                  />
-                )}
-
-                {/* 二维码 */}
-                <QRCodeBox
-                  value={{
-                    type: 'pattern',
-                    id: detailModal.data.id,
-                    styleNo: detailModal.data.styleNo,
-                    color: detailModal.data.color,
-                  }}
-                  label="📱 扫码查看全流程"
-                  variant="primary"
-                  size={80}
-                />
-
-                {/* 基本信息 - 紧凑排列 */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: "var(--font-size-md)", fontWeight: 600, marginBottom: 6, color: 'var(--neutral-text)' }}>
-                    {detailModal.data.styleNo}
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', color: 'var(--neutral-text-secondary)' }}>
-                    <span><b>颜色:</b> {detailModal.data.color || '-'}</span>
-                    <span><b>数量:</b> {detailModal.data.quantity}</span>
-                    <span><b>状态:</b> {renderStatus(detailModal.data.status)}</span>
-                  </div>
-                  {/* 人员信息 */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', color: 'var(--neutral-text-secondary)', marginTop: 4 }}>
-                    <span><b>设计师:</b> {detailModal.data.designer || '-'}</span>
-                    <span><b>纸样师:</b> {detailModal.data.patternDeveloper || '-'}</span>
-                    <span><b>车板师:</b> {detailModal.data.plateWorker || '-'}</span>
-                    <span><b>跟单员:</b> {detailModal.data.merchandiser || '-'}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* 时间节点 - 紧凑横向排列 */}
-              <div style={{
-                display: 'flex',
-                gap: 8,
-                marginBottom: 12,
-                padding: '8px 12px',
-                background: '#fff',
-                borderRadius: 6,
-                border: '1px solid #f0f0f0',
-              }}>
-                <span style={{ fontWeight: 600, color: 'var(--neutral-text)' }}>⏰</span>
-                <span><b>下板:</b> {detailModal.data.releaseTime}</span>
-                <span style={{ color: 'var(--neutral-border)' }}>|</span>
-                <span><b>交板:</b> {detailModal.data.deliveryTime}</span>
-                <span style={{ color: 'var(--neutral-border)' }}>|</span>
-                <span><b>领取:</b> {detailModal.data.receiveTime}</span>
-                <span style={{ color: 'var(--neutral-border)' }}>|</span>
-                <span><b>完成:</b> {detailModal.data.completeTime}</span>
-              </div>
-
-              {/* 工序进度 - 紧凑展示 */}
-              <div style={{
-                padding: 10,
-                background: '#fff',
-                borderRadius: 6,
-                border: '1px solid #f0f0f0',
-              }}>
-                <div style={{ marginBottom: 8, fontWeight: 600, color: 'var(--neutral-text)' }}>📊 工序进度</div>
-                <Row gutter={[8, 8]}>
-                  {DEFAULT_NODES.map((node) => {
-                    const percent = detailModal.data.progressNodes[node.id] || 0;
-                    return (
-                      <Col span={8} key={node.id}>
-                        <div style={{
-                          textAlign: 'center',
-                          padding: 8,
-                          background: percent >= 100 ? '#f0fdf4' : '#fafafa',
-                          borderRadius: 4,
-                          border: `1px solid ${percent >= 100 ? '#86efac' : '#e5e7eb'}`,
-                        }}>
-                          <div style={{ fontSize: "var(--font-size-xs)", fontWeight: 600, marginBottom: 4 }}>{node.name}</div>
-                          <LiquidProgressLottie
-                            progress={percent}
-                            size={45}
-                            color1="var(--success-color)"
-                            color2="var(--success-light)"
-                          />
-                          <div style={{
-                            fontSize: "var(--font-size-sm)",
-                            fontWeight: 700,
-                            marginTop: 4,
-                            color: percent >= 100 ? '#059669' : 'var(--neutral-text-secondary)',
-                          }}>
-                            {percent}%
-                          </div>
-                        </div>
-                      </Col>
-                    );
-                  })}
-                </Row>
-              </div>
-            </div>
-          )}
-        </StandardModal>
-
-        {/* 节点详情弹窗 - 水晶球生产节点看板 */}
-        <NodeDetailModal
-          visible={nodeDetailVisible}
-          onClose={() => {
-            setNodeDetailVisible(false);
-            setNodeDetailRecord(null);
-            setNodeDetailExtraData(undefined);
-          }}
-          orderId={nodeDetailRecord?.id}
-          orderNo={nodeDetailRecord?.styleNo}
-          nodeType={nodeDetailType}
-          nodeName={nodeDetailName}
-          stats={nodeDetailStats}
-          unitPrice={nodeDetailUnitPrice}
-          processList={nodeDetailProcessList}
-          isPatternProduction={true}
-          extraData={nodeDetailExtraData}
-          onSaved={() => {
-            // 刷新数据
-            void loadData();
-          }}
-        />
 
         {/* 附件管理弹窗 */}
         {attachmentModal.data && (

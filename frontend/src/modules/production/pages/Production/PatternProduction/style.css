@@ -338,7 +338,6 @@
 
 /* 卡片视图样式 */
 .pattern-card {
-  border-radius: 8px;
   transition: all 0.3s ease;
   overflow: hidden;
 }
@@ -436,7 +435,6 @@
   min-width: 10%;
   max-width: 100%;
   margin: 8px 0;
-  border-radius: 2px;
   transition: width 0.5s ease;
   position: relative;
   display: flex;

@@ -34,7 +34,7 @@ import {
   ModalSideLayout,
   ModalVerticalStack,
 } from '@/components/common/ModalContentLayout';
-import './styles.css';
+import '../../../styles.css';
 
 const { Option } = Select;
 
@@ -1225,12 +1225,7 @@ const CuttingManagement: React.FC = () => {
             </div>
           ) : (
             <div className="page-header">
-              <Space>
-                <h2 className="page-title" style={{ margin: 0 }}>裁剪管理</h2>
-              </Space>
-              <Button type="primary" icon={<PlusOutlined />} onClick={openCreateTask}>
-                新建裁剪任务
-              </Button>
+              <h2 className="page-title" style={{ margin: 0 }}>裁剪管理</h2>
             </div>
           )}
 
@@ -1251,13 +1246,19 @@ const CuttingManagement: React.FC = () => {
                       { label: '已领取', value: 'received' },
                       { label: '已完成', value: 'bundled' },
                     ]}
+                    showSearchButton
+                    onSearch={() => fetchTasks()}
+                    showResetButton
+                    onReset={() => {
+                      setTaskQuery({ page: 1, pageSize: 10, status: '', orderNo: '', styleNo: '' });
+                      setTaskDateRange(null);
+                    }}
                   />
                 )}
                 right={(
-                  <>
-                    <Button type="primary" onClick={fetchTasks}>查询</Button>
-                    <Button onClick={() => setTaskQuery({ page: 1, pageSize: 10, status: '', orderNo: '', styleNo: '' })}>重置</Button>
-                  </>
+                  <Button type="primary" icon={<PlusOutlined />} onClick={openCreateTask}>
+                    新建裁剪任务
+                  </Button>
                 )}
               />
 
@@ -1932,7 +1933,6 @@ const CuttingManagement: React.FC = () => {
                               <div style={{
                                 padding: 6,
                                 background: 'var(--neutral-white)',
-                                borderRadius: 6,
                                 border: '2px solid var(--table-border-color)',
                                 boxShadow: 'var(--shadow-sm)',
                                 flexShrink: 0

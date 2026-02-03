@@ -5,8 +5,8 @@ import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import RowActions from '@/components/common/RowActions';
 import Layout from '@/components/Layout';
 import api from '@/utils/api';
-import errorHandler from '@/utils/errorHandler';
-import './styles.css';
+import { errorHandler } from '@/utils/errorHandling';
+import '../../../styles.css';
 
 const { TextArea } = Input;
 

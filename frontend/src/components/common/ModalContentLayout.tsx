@@ -24,7 +24,7 @@ export const ModalHeaderCard: React.FC<HeaderCardProps> = ({ children, isMobile 
         gap: isMobile ? 10 : 12,
         padding: isMobile ? 8 : 10,
         background: 'var(--color-bg-gray)',
-        borderRadius: 8,
+        borderRadius: 12,
         marginBottom: 10,
         ...style,
       }}
@@ -179,7 +179,7 @@ export const ModalFieldGrid: React.FC<FieldGridProps> = ({
       style={{
         padding: 6,
         background: 'var(--neutral-white)',
-        borderRadius: 4,
+        borderRadius: 8,
         border: '1px solid var(--table-border-color)',
         ...style,
       }}
@@ -211,7 +211,7 @@ export const ModalInfoCard: React.FC<InfoCardProps> = ({ children, padding = 6, 
       style={{
         padding: Math.max(4, padding - 2),
         background: 'var(--neutral-white)',
-        borderRadius: 6,
+        borderRadius: 12,
         border: '2px solid var(--table-border-color)',
         boxShadow: 'var(--shadow-sm)',
         ...style,

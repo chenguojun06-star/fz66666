@@ -7,6 +7,13 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* 强制锁定根元素字体大小，防止浏览器自动缩放或rem计算异常 */
+html {
+  font-size: 14px;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 /* 优化所有文本元素的渲染 */
 body,
 button,
@@ -48,238 +55,45 @@ body {
   padding-bottom: 0;
 }
 
-/* 弹窗与基础信息区：小号正方形输入，文字居中 */
-.ant-modal :where(.ant-input, .ant-input-affix-wrapper, .ant-input-number, .ant-select-selector, .ant-picker),
-.square-inputs :where(.ant-input, .ant-input-affix-wrapper, .ant-input-number, .ant-select-selector, .ant-picker) {
-  height: 32px;
-  border-radius: 0 !important;
-  padding: 0 8px;
-}
-
-.ant-modal :where(.ant-input, .ant-input-affix-wrapper input, .ant-input-number-input, .ant-picker-input > input),
-.square-inputs :where(.ant-input, .ant-input-affix-wrapper input, .ant-input-number-input, .ant-picker-input > input) {
-  height: 32px;
-  line-height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-}
-
-.ant-modal :where(.ant-select-single .ant-select-selector .ant-select-selection-item,
-.ant-select-single .ant-select-selector .ant-select-selection-placeholder),
-.square-inputs :where(.ant-select-single .ant-select-selector .ant-select-selection-item,
-.ant-select-single .ant-select-selector .ant-select-selection-placeholder) {
-  line-height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-}
-
-.ant-modal :where(.ant-input-affix-wrapper, .ant-input-number, .ant-picker, .ant-select-selector),
-.square-inputs :where(.ant-input-affix-wrapper, .ant-input-number, .ant-picker, .ant-select-selector) {
-  border-radius: 0 !important;
-  padding: 0 8px;
-}
-
-.ant-modal .ant-picker-range,
-.square-inputs .ant-picker-range {
-  border-radius: 0 !important;
-  overflow: hidden;
-}
-
-/* 全站输入/选择/日期统一高度与正方形（排除登录和仪表盘） */
-:where(.ant-input, .ant-input-affix-wrapper, .ant-input-number, .ant-select-selector, .ant-picker):not([class*="login"]):not([class*="dashboard"]) {
-  height: 40px;
-  border-radius: 0 !important;
-  border-color: color-mix(in srgb, var(--color-border) 55%, var(--color-text-primary) 45%);
-  background: var(--color-bg-base);
-  transition: all var(--duration-base) var(--ease-smooth);
-}
-
-:where(.ant-input, .ant-input-affix-wrapper input, .ant-select-selector, .ant-input-number-input, .ant-picker-input > input):not([class*="login"]):not([class*="dashboard"]) {
-  font-size: 14px;
-  height: 40px;
-  line-height: 40px;
-  color: var(--color-text-primary);
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-:where(.ant-input::placeholder, .ant-input-affix-wrapper input::placeholder, .ant-input-number-input::placeholder, .ant-picker-input > input::placeholder) {
-  color: color-mix(in srgb, var(--color-text-secondary) 30%, var(--color-text-primary) 70%);
-}
-
-/* 统一筛选区：隐藏行内表单标签，仅保留占位提示 */
-.ant-form-inline .ant-form-item-label {
-  display: none;
-}
-
-.ant-form-inline .ant-form-item {
-  margin-bottom: 0;
-}
-
-.ant-form-inline .ant-form-item-control,
-.ant-form-inline .ant-form-item-control-input {
-  min-height: 40px;
-  align-items: center;
-}
-
-:where(.ant-select-single .ant-select-selector .ant-select-selection-item,
-.ant-select-single .ant-select-selector .ant-select-selection-placeholder):not([class*="login"]):not([class*="dashboard"]) {
-  line-height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-}
-
-:where(.ant-input-affix-wrapper, .ant-select-selector, .ant-input-number, .ant-picker):not([class*="login"]):not([class*="dashboard"]) {
-  padding: 0 14px;
+/* ============================================
+   全局输入框 - 统一方形 32px
+   ============================================ */
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-input-number,
+.ant-select-selector,
+.ant-picker {
+  height: 32px !important;
   border-radius: 0 !important;
 }
 
-/* 强制范围日期选择器正方形 */
-.ant-picker-range:not([class*="login"]):not([class*="dashboard"]) {
-  border-radius: 0 !important;
-  overflow: hidden;
-}
+/* ============================================
+   按钮 - 统一胶囊形
+   ============================================ */
+/* 按钮样式已迁移到 button-override.css，这里不再重复定义 */
 
-.ant-picker-range .ant-picker-input > input {
-  height: 38px;
-  text-align: center;
-}
-
-/* 文本居中（输入/选择/日期） - 加强居中效果 */
-:where(.ant-input, .ant-input-affix-wrapper input, .ant-input-number-input, .ant-picker-input > input):not([class*="login"]):not([class*="dashboard"]) {
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-:where(.ant-select-single .ant-select-selector .ant-select-selection-item,
-.ant-select-single .ant-select-selector .ant-select-selection-placeholder):not([class*="login"]):not([class*="dashboard"]) {
-  text-align: center;
-  justify-content: center;
-}
-
-/* 分段控件保持胶囊形 */
-.ant-segmented,
-.ant-segmented-item {
-  border-radius: var(--radius-pill);
-}
-
-.ant-input-affix-wrapper input,
-.ant-input-number-input,
-.ant-picker-input > input {
-  height: 38px;
-}
-
-:where(.ant-input:focus, .ant-input-focused, .ant-input-affix-wrapper-focused, .ant-input-number-focused, .ant-picker-focused, .ant-select-focused .ant-select-selector) {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 15%, transparent);
-}
-
-:where(.ant-input:hover, .ant-input-affix-wrapper:hover, .ant-input-number:hover, .ant-picker:hover, .ant-select-selector:hover) {
-  border-color: var(--color-primary-light);
-}
-
-/* Textarea 正方形样式，文字居中 */
-.ant-input-textarea,
-.ant-input-textarea textarea:not([class*="login"]):not([class*="dashboard"]) {
-  border-radius: 0 !important;
-}
-
-.ant-input-textarea textarea {
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* 搜索输入按钮高度统一 */
-.ant-input-search .ant-btn {
+/* ============================================
+   首页例外 - 40px 胶囊形
+   ============================================ */
+.dashboard-page .ant-input,
+.dashboard-page .ant-input-affix-wrapper,
+.dashboard-page .ant-input-number,
+.dashboard-page .ant-select-selector,
+.dashboard-page .ant-picker {
   height: 40px !important;
-  line-height: 40px !important;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-pill) !important; /* 按钮保持胶囊形 */
+  border-radius: 20px !important;
 }
 
-.ant-input-search .ant-input:not([class*="login"]):not([class*="dashboard"]) {
-  border-radius: 0 !important; /* 搜索输入框正方形 */
-}正方形输入与选择框，文字居中 */
-.process-detail-modal :where(.ant-input, .ant-input-affix-wrapper, .ant-input-number, .ant-select-selector, .ant-picker) {
-  height: 28px;
-  border-radius: 0 !important;
-  padding: 0 8px;
-}
-
-.process-detail-modal :where(.ant-input, .ant-input-affix-wrapper input, .ant-input-number-input, .ant-picker-input > input) {
-  height: 100%;
-  line-height: 26px;
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.process-detail-modal :where(.ant-select-single .ant-select-selector .ant-select-selection-item,
-.ant-select-single .ant-select-selector .ant-select-selection-placeholder) {
-  line-height: 26px;
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.process-detail-modal .ant-picker-range {
-  border-radius:正方形，文字居中 */
-.progress-detail-scan-modal :where(.ant-input, .ant-input-affix-wrapper, .ant-input-number, .ant-select-selector, .ant-picker),
-.node-detail-modal :where(.ant-input, .ant-input-affix-wrapper, .ant-input-number, .ant-select-selector, .ant-picker) {
-  height: 28px;
-  border-radius: 0 !important;
-  padding: 0 8px;
-}
-
-.progress-detail-scan-modal :where(.ant-input, .ant-input-affix-wrapper input, .ant-input-number-input, .ant-picker-input > input),
-.node-detail-modal :where(.ant-input, .ant-input-affix-wrapper input, .ant-input-number-input, .ant-picker-input > input) {
-  height: 100%;
-  line-height: 26px;
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.progress-detail-scan-modal :where(.ant-select-single .ant-select-selector .ant-select-selection-item,
-.ant-select-single .ant-select-selector .ant-select-selection-placeholder),
-.node-detail-modal :where(.ant-select-single .ant-select-selector .ant-select-selection-item,
-.ant-select-single .ant-select-selector .ant-select-selection-placeholder) {
-  line-height: 26px;
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.progress-detail-scan-modal .ant-picker-range,
-.node-detail-modal .ant-picker-range {
-  border-radius: 0lector .ant-select-selection-placeholder),
-.node-detail-modal :where(.ant-select-single .ant-select-selector .ant-select-selection-item,
-.ant-select-single .ant-select-selector .ant-select-selection-placeholder) {
-  line-height: 26px;
-}
-
-.progress-detail-scan-modal .ant-picker-range,
-.node-detail-modal .ant-picker-range {
-  border-radius: var(--radius-xs) !important;
-  overflow: hidden;
+/* ============================================
+   登录页例外 - 38px 中等圆角
+   ============================================ */
+.login-page .ant-input,
+.login-page .ant-input-affix-wrapper,
+.login-page .ant-input-number,
+.login-page .ant-select-selector,
+.login-page .ant-picker {
+  height: 38px !important;
+  border-radius: 8px !important;
 }
 
 /* 生产进度详情弹窗风格对齐“我的订单” */
@@ -288,7 +102,6 @@ body {
   background: var(--color-bg-base);
   border: 1px solid var(--color-border);
   box-shadow: none;
-  border-radius: 6px;
 }
 
 .node-detail-modal .ant-card-head,
@@ -301,18 +114,12 @@ body {
 .progress-detail-scan-modal .ant-alert {
   background: var(--color-bg-base);
   border: 1px solid var(--color-border);
-  border-radius: 6px;
   box-shadow: none;
 }
 
 .node-detail-modal .ant-tabs-nav,
 .progress-detail-scan-modal .ant-tabs-nav {
   margin: 0 0 12px 0;
-}
-
-.node-detail-modal .ant-tag,
-.progress-detail-scan-modal .ant-tag {
-  border-radius: 4px;
 }
 
 /* 颜色规范 */
@@ -395,7 +202,7 @@ body {
 
   /* 边框 */
   --border-width: 1px;
-  --border-radius: 4px;
+  --border-radius: 8px;
   /* 阴影 */
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
@@ -818,7 +625,6 @@ body {
   width: 34px;
   height: 34px;
   padding: 0;
-  border-radius: 999px;
 }
 
 /* 表单样式 */
@@ -838,7 +644,6 @@ body {
   width: 100%;
   padding: 8px 12px;
   border: var(--border-width) solid var(--neutral-dark);
-  border-radius: var(--border-radius);
   font-size: var(--font-size-base);
   color: var(--neutral-text);
   transition: border-color 0.3s ease;
@@ -856,7 +661,6 @@ body {
   border-spacing: 0;
   background-color: var(--neutral-white);
   border: 1px solid var(--neutral-dark);
-  border-radius: 10px;
   overflow: hidden;
 }
 
@@ -939,7 +743,6 @@ body {
 
 .page-card.ant-card {
   border: 1px solid var(--neutral-medium);
-  border-radius: 12px;
   box-shadow: none;
 }
 
@@ -947,14 +750,19 @@ body {
   padding: 16px;
 }
 
+/* 筛选卡片 - 透明背景 */
+.filter-card,
 .filter-card.ant-card {
-  border: none;
-  box-shadow: none;
-  background: transparent;
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
 }
 
 .filter-card > .ant-card-body {
   padding: 12px 12px 8px;
+  background: transparent !important;
+  background-color: transparent !important;
 }
 
 .section-title {
@@ -1175,7 +983,6 @@ body {
 
 .ant-table-wrapper .ant-table-container {
   border: 1px solid var(--table-border-color);
-  border-radius: 10px;
 }
 
 /* 表格边框 - 使用淡淡的颜色 */
@@ -1266,7 +1073,6 @@ body {
   width: 28px;
   height: 28px;
   padding: 0;
-  border-radius: 6px;
   border: none;
   background: transparent;
   color: var(--primary-color);
@@ -1286,7 +1092,6 @@ body {
   transform: translate(-50%, -50%);
   width: 24px;
   height: 24px;
-  border-radius: 5px;
   border: 1px solid rgba(45, 127, 249, 0.18);
   background: rgba(45, 127, 249, 0.08);
   transition: all 0.2s ease;
@@ -1297,7 +1102,6 @@ body {
   height: 28px !important;
   line-height: 26px !important;
   padding: 0 8px !important;
-  border-radius: 6px !important;
   font-size: 14px !important;
 }
 
@@ -1307,7 +1111,6 @@ body {
   height: 24px !important;
   line-height: 22px !important;
   padding: 0 8px !important;
-  border-radius: var(--radius-pill) !important;
   font-size: 12px !important;
 }
 
@@ -1407,7 +1210,6 @@ body {
 
 .modal-detail-cover {
   width: 100%;
-  border-radius: 10px;
   overflow: hidden;
   background: #f5f5f5;
   border: 1px solid rgba(0, 0, 0, 0.08);

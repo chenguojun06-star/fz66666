@@ -39,7 +39,6 @@ const StyleActionButtons: React.FC<StyleActionButtonsProps> = ({
   onUnlock
 }) => {
   const primaryButtonStyle: React.CSSProperties = {
-    borderRadius: 6,
     paddingInline: 12,
   };
 

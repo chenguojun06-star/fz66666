@@ -34,6 +34,7 @@ export interface StyleInfo {
   sampleCompletedTime?: string;
 
   maintenanceTime?: string;
+  maintenanceMan?: string;
   maintenanceRemark?: string;
 
   orderCount?: number;
@@ -142,6 +143,7 @@ export interface StyleQueryParams {
   category?: string;
   keyword?: string;
   onlyCompleted?: boolean | number;
+  progressNode?: string;
   page: number;
   pageSize: number;
 }

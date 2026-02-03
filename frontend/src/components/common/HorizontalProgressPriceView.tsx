@@ -123,7 +123,7 @@ const HorizontalProgressPriceView: React.FC<HorizontalProgressPriceViewProps> = 
                 border: percent >= 100
                   ? '1px solid rgba(34, 197, 94, 0.3)'
                   : '1px solid rgba(15, 23, 42, 0.08)',
-                borderRadius: 12,
+                borderRadius: 20,
                 boxShadow: '0 2px 8px rgba(15, 23, 42, 0.06)',
               }}
               styles={{
@@ -187,7 +187,7 @@ const HorizontalProgressPriceView: React.FC<HorizontalProgressPriceViewProps> = 
                   gap: 16,
                   padding: '8px 12px',
                   background: 'rgba(15, 23, 42, 0.03)',
-                  borderRadius: 8,
+                  borderRadius: 12,
                   border: '1px solid rgba(15, 23, 42, 0.06)',
                 }}
               >
@@ -259,7 +259,7 @@ const HorizontalProgressPriceView: React.FC<HorizontalProgressPriceViewProps> = 
                     gap: 8,
                     padding: '8px 12px',
                     background: 'linear-gradient(135deg, rgba(24, 144, 255, 0.05), rgba(24, 144, 255, 0.02))',
-                    borderRadius: 8,
+                    borderRadius: 12,
                     border: '1px solid rgba(24, 144, 255, 0.15)',
                   }}
                 >
@@ -337,7 +337,7 @@ const HorizontalProgressPriceView: React.FC<HorizontalProgressPriceViewProps> = 
           marginTop: 16,
           background: 'linear-gradient(135deg, rgba(24, 144, 255, 0.08), rgba(24, 144, 255, 0.04))',
           border: '1px solid rgba(24, 144, 255, 0.2)',
-          borderRadius: 12,
+          borderRadius: 20,
         }}
         styles={{
           body: {

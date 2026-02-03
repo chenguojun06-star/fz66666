@@ -77,7 +77,7 @@ const SampleInventory: React.FC = () => {
           alt="样衣"
           width={60}
           height={80}
-          style={{ objectFit: 'cover', borderRadius: 4 }}
+          style={{ objectFit: 'cover' }}
         />
       ),
     },

@@ -1252,17 +1252,6 @@ const OrderManagement: React.FC = () => {
       <Card className="page-card">
         <div className="page-header">
           <h2 className="page-title">下单管理</h2>
-          <Space size={12}>
-            <Button
-              icon={viewMode === 'table' ? <AppstoreOutlined /> : <UnorderedListOutlined />}
-              onClick={() => setViewMode(viewMode === 'table' ? 'card' : 'table')}
-            >
-              {viewMode === 'table' ? '卡片视图' : '列表视图'}
-            </Button>
-            <Button type="primary" onClick={() => fetchStyles()}>
-              刷新
-            </Button>
-          </Space>
         </div>
 
         {/* 下单排行数据看板 */}
@@ -1287,6 +1276,19 @@ const OrderManagement: React.FC = () => {
                 showDate={false}
                 showStatus={false}
               />
+            )}
+            right={(
+              <Space size={12}>
+                <Button
+                  icon={viewMode === 'table' ? <AppstoreOutlined /> : <UnorderedListOutlined />}
+                  onClick={() => setViewMode(viewMode === 'table' ? 'card' : 'table')}
+                >
+                  {viewMode === 'table' ? '卡片视图' : '列表视图'}
+                </Button>
+                <Button type="primary" onClick={() => fetchStyles()}>
+                  刷新
+                </Button>
+              </Space>
             )}
           />
         </Card>
@@ -1372,7 +1374,7 @@ const OrderManagement: React.FC = () => {
                         styleNo={selectedStyle?.styleNo}
                         src={selectedStyle?.cover || null}
                         size={isMobile ? 160 : isTablet ? 200 : 240}
-                        borderRadius={8}
+                        
                       />
                       <div>
                         <StyleAttachmentsButton
@@ -1481,7 +1483,7 @@ const OrderManagement: React.FC = () => {
                         </Col>
                       </Row>
 
-                      <div style={{ border: '1px solid var(--table-border-color)', borderRadius: 10, padding: 12 }}>
+                      <div style={{ border: '1px solid var(--table-border-color)', padding: 12 }}>
                         <div style={{ fontWeight: 600, marginBottom: 10 }}>信息</div>
                         <div style={{ display: 'grid', gridTemplateColumns: '72px 1fr', rowGap: 8, columnGap: 8, color: 'var(--neutral-text-light)' }}>
                           <div>款号</div>

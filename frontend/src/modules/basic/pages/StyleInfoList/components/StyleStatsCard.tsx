@@ -23,7 +23,7 @@ const StyleStatsCard: React.FC<StyleStatsCardProps> = ({
     <Card
       size="small"
       className="development-stats-card mb-sm"
-      style={{ background: '#f8f9fa', borderRadius: 8, border: '1px solid #e9ecef' }}
+      style={{ background: '#f8f9fa', border: '1px solid #e9ecef' }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <span style={{ fontSize: "var(--font-size-base)", fontWeight: 600, color: 'var(--neutral-text)' }}>📊 开发费用统计</span>

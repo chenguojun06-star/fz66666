@@ -1,6 +1,6 @@
 /* 通用卡片视图样式 */
 .universal-card {
-  border-radius: 8px;
+  border-radius: 12px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
   cursor: default;

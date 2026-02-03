@@ -1370,7 +1370,6 @@ const StyleBomTab: React.FC<Props> = ({
         marginBottom: 16,
         padding: '12px 16px',
         background: '#f5f5f5',
-        borderRadius: 4,
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
