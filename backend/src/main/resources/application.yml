@@ -71,9 +71,13 @@ logging:
     file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [requestId:%X{requestId:-}] %logger{36} - %msg%n"
   file:
     name: ./logs/fashion-supplychain.log
-    max-size: 100MB
-    max-history: 7
-    total-size-cap: 1GB
+    max-size: 500MB      # 单文件最大500MB（优化：原100MB）
+    max-history: 30      # 保留30天日志（优化：原7天）
+    total-size-cap: 5GB  # 总容量5GB（优化：原1GB）
+  logback:
+    rollingpolicy:
+      clean-history-on-start: false
+      file-name-pattern: ./logs/fashion-supplychain.log.%d{yyyy-MM-dd}.%i.gz
 
 management:
   endpoints:

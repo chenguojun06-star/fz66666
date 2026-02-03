@@ -1,13 +1,21 @@
 # 🎯 服装供应链管理系统
 
-*最后更新：2026-02-03*  
+[![CI/CD Pipeline](https://github.com/chenguojun06-star/fz66666/actions/workflows/ci.yml/badge.svg)](https://github.com/chenguojun06-star/fz66666/actions/workflows/ci.yml)
+[![Test Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](backend/target/site/jacoco/index.html)
+[![Code Quality](https://img.shields.io/badge/quality-97%2F100-brightgreen.svg)](系统状态.md)
+
+*最后更新：2026-02-04*  
 *系统评分：97/100 ⭐⭐⭐⭐⭐*  
 *文档数量：22份核心文档（精简 ↓76%）*  
 *代码质量：优秀（后端+前端+小程序）*
 
 > 📋 **入口**：[系统状态.md](系统状态.md) - 系统状态与文档索引  
 > 📋 **AI指令**：[.github/copilot-instructions.md](.github/copilot-instructions.md) - GitHub Copilot 开发指南（v3.3完整版）  
-> 🎯 **最新优化**：全面文档清理 + API 优化完成 + 前端组件规范统一
+> 🎯 **最新优化**：
+> - ✅ **ScanRecordOrchestrator 100%测试覆盖率**（29个单元测试）
+> - ✅ **代码减少45%**（1677→923行）
+> - ✅ **GitHub Actions CI/CD配置完成**
+> - ✅ **日志轮转优化**（500MB/文件，30天保留）
 
 ---
 
