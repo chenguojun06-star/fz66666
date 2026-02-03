@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Card, Table, message, Space, Tag } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
-import { PageContainer } from '@/components/Layout/PageContainer';
+import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import api from '@/utils/api';
@@ -105,7 +105,7 @@ const MaterialPickingList: React.FC = () => {
   ];
 
   return (
-    <PageContainer>
+    <Layout>
       <Card bordered={false}>
         <div style={{ marginBottom: 16 }}>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalVisible(true)}>
@@ -148,7 +148,7 @@ const MaterialPickingList: React.FC = () => {
           setSelectedPickingId(null);
         }}
       />
-    </PageContainer>
+    </Layout>
   );
 };
 
