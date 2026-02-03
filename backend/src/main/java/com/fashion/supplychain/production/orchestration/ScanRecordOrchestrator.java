@@ -6,17 +6,13 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.util.NumberUtils;
 import com.fashion.supplychain.common.util.TextUtils;
 import com.fashion.supplychain.production.entity.CuttingBundle;
-import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.helper.DuplicateScanPreventer;
 import com.fashion.supplychain.production.helper.InventoryValidator;
-import com.fashion.supplychain.production.helper.ProcessStageDetector;
 import com.fashion.supplychain.production.service.CuttingBundleService;
-import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
-import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.SKUService;
 import com.fashion.supplychain.production.service.ScanRecordService;
@@ -29,15 +25,11 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -75,9 +67,6 @@ public class ScanRecordOrchestrator {
     private CuttingBundleService cuttingBundleService;
 
     @Autowired
-    private MaterialPurchaseService materialPurchaseService;
-
-    @Autowired
     private ProductWarehousingService productWarehousingService;
 
     @Autowired
@@ -87,18 +76,12 @@ public class ScanRecordOrchestrator {
     private TemplateLibraryService templateLibraryService;
 
     @Autowired
-    private ProductionOrderScanRecordDomainService scanRecordDomainService;
-
-    @Autowired
     private SKUService skuService;
 
     @Autowired
     private com.fashion.supplychain.style.service.StyleAttachmentService styleAttachmentService;
 
     // ========== 新增：辅助类注入 ==========
-    @Autowired
-    private ProcessStageDetector processStageDetector;
-
     @Autowired
     private DuplicateScanPreventer duplicateScanPreventer;
 
