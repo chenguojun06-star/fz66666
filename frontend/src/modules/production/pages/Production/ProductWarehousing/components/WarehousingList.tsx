@@ -7,7 +7,7 @@ import WarehousingTable from './WarehousingTable';
 import WarehousingModal from './WarehousingModal';
 import SimpleWarehousingModal from './SimpleWarehousingModal';
 import IndependentDetailModal from './IndependentDetailModal';
-import ResizableModal from '@/components/common/ResizableModal';
+import ImagePreviewModal from '@/components/common/ImagePreviewModal';
 import { useProductWarehousing } from '../hooks/useProductWarehousing';
 
 interface WarehousingListProps {
@@ -121,55 +121,16 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
         }}
       />
 
-      {/* Image Preview Modal */}
-      <ResizableModal
+      <ImagePreviewModal
         open={previewOpen}
+        imageUrl={previewUrl}
         title={previewTitle}
-        footer={
-          <div className="modal-footer-actions">
-            <Button
-              onClick={() => {
-                setPreviewOpen(false);
-                setPreviewUrl('');
-                setPreviewTitle('');
-              }}
-            >
-              关闭
-            </Button>
-          </div>
-        }
-        onCancel={() => {
+        onClose={() => {
           setPreviewOpen(false);
           setPreviewUrl('');
           setPreviewTitle('');
         }}
-        width={600}
-        minWidth={600}
-        minHeight={600}
-        initialHeight={600}
-      >
-        {previewUrl ? (
-          <div
-            style={{
-              width: '100%',
-              height: '100%',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}
-          >
-            <img
-              src={previewUrl}
-              alt=""
-              style={{
-                maxWidth: '100%',
-                maxHeight: '100%',
-                objectFit: 'contain',
-              }}
-            />
-          </div>
-        ) : null}
-      </ResizableModal>
+      />
     </Layout>
   );
 };

@@ -11,7 +11,7 @@ import { useProductWarehousing } from '../hooks/useProductWarehousing';
 import { ProductWarehousing as WarehousingType, ProductionOrder } from '@/types/production';
 import { OrderLine, CuttingBundleRow } from '../types';
 import { getQualityStatusConfig, getDefectCategoryLabel, getDefectRemarkLabel, parseUrlsValue, toUploadFileList } from '../utils';
-import ResizableModal from '@/components/common/ResizableModal';
+import ImagePreviewModal from '@/components/common/ImagePreviewModal';
 
 interface WarehousingDetailProps {
   hook: ReturnType<typeof useProductWarehousing>;
@@ -444,54 +444,16 @@ const WarehousingDetail: React.FC<WarehousingDetailProps> = ({ hook }) => {
         </Card>
       </div>
 
-      <ResizableModal
+      <ImagePreviewModal
         open={previewOpen}
+        imageUrl={previewUrl}
         title={previewTitle}
-        footer={
-          <div className="modal-footer-actions">
-            <Button
-              onClick={() => {
-                setPreviewOpen(false);
-                setPreviewUrl('');
-                setPreviewTitle('');
-              }}
-            >
-              关闭
-            </Button>
-          </div>
-        }
-        onCancel={() => {
+        onClose={() => {
           setPreviewOpen(false);
           setPreviewUrl('');
           setPreviewTitle('');
         }}
-        width={600}
-        minWidth={600}
-        minHeight={600}
-        initialHeight={600}
-      >
-        {previewUrl ? (
-          <div
-            style={{
-              width: '100%',
-              height: '100%',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}
-          >
-            <img
-              src={previewUrl}
-              alt=""
-              style={{
-                maxWidth: '100%',
-                maxHeight: '100%',
-                objectFit: 'contain',
-              }}
-            />
-          </div>
-        ) : null}
-      </ResizableModal>
+      />
     </Layout>
   );
 };
