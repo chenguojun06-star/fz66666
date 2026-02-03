@@ -92,22 +92,22 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
               &nbsp;款号信息
             </div>
             <Row gutter={[16, 0]}>
-              <Col xs={24} md={4}>
+              <Col xs={24} md={6}>
                 <Form.Item name="styleNo" label="款号" rules={[{ required: true, message: '请输入款号' }]}>
                   <Input placeholder="请输入款号" disabled={editLocked || Boolean(currentStyle?.id)} />
                 </Form.Item>
               </Col>
-              <Col xs={24} md={4}>
+              <Col xs={24} md={6}>
                 <Form.Item name="styleName" label="款名" rules={[{ required: true, message: '请输入款名' }]}>
                   <Input placeholder="请输入款名" disabled={editLocked} />
                 </Form.Item>
               </Col>
-              <Col xs={24} md={4}>
+              <Col xs={24} md={6}>
                 <Form.Item name="category" label="品类" rules={[{ required: true, message: '请选择品类' }]}>
                   <Select placeholder="请选择品类" options={categoryOptions} disabled={isFieldLocked(currentStyle?.category)} />
                 </Form.Item>
               </Col>
-              <Col xs={24} md={3}>
+              <Col xs={24} md={6}>
                 <Form.Item name="season" label="季节">
                   <Select placeholder="请选择季节" options={seasonOptions} disabled={isFieldLocked(currentStyle?.season)} />
                 </Form.Item>
@@ -121,22 +121,22 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
               &nbsp;客户信息
             </div>
             <Row gutter={[12, 0]}>
-              <Col xs={24} md={4}>
+              <Col xs={24} md={6}>
                 <Form.Item name="customer" label="客户">
                   <Input placeholder="请选择客户" disabled={isFieldLocked((currentStyle as any)?.customer)} />
                 </Form.Item>
               </Col>
-              <Col xs={24} md={4}>
+              <Col xs={24} md={6}>
                 <Form.Item name="orderType" label="跟单员">
                   <Input placeholder="请输入跟单员" disabled={isFieldLocked((currentStyle as any)?.orderType)} />
                 </Form.Item>
               </Col>
-              <Col xs={24} md={4}>
+              <Col xs={24} md={6}>
                 <Form.Item name="sampleNo" label="设计师">
                   <Input placeholder="请输入设计师" disabled={editLocked} />
                 </Form.Item>
               </Col>
-              <Col xs={24} md={3}>
+              <Col xs={24} md={6}>
                 <Form.Item name="price" label="打板价">
                   <InputNumber style={{ width: '100%' }} min={0} prefix="¥" precision={2} disabled />
                 </Form.Item>
@@ -150,7 +150,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
               &nbsp;版次信息
             </div>
             <Row gutter={[12, 0]}>
-              <Col xs={24} md={4}>
+              <Col xs={24} md={6}>
                 <Form.Item name="plateType" label="板类">
                   <Select placeholder="请选择板类" disabled={isFieldLocked((currentStyle as any)?.plateType)}>
                     <Select.Option value="首单">首单</Select.Option>
@@ -164,17 +164,17 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
                   </Select>
                 </Form.Item>
               </Col>
-              <Col xs={24} md={4}>
+              <Col xs={24} md={6}>
                 <Form.Item name="sampleSupplier" label="纸样师">
                   <Input placeholder="请输入纸样师" disabled={isFieldLocked((currentStyle as any)?.sampleSupplier)} />
                 </Form.Item>
               </Col>
-              <Col xs={24} md={4}>
+              <Col xs={24} md={6}>
                 <Form.Item name="patternNo" label="纸样号">
                   <Input placeholder="请输入纸样号" disabled={isFieldLocked((currentStyle as any)?.patternNo)} />
                 </Form.Item>
               </Col>
-              <Col xs={24} md={3}>
+              <Col xs={24} md={6}>
                 <Form.Item name="plateWorker" label="车板师">
                   <Input placeholder="请输入车板师" disabled={isFieldLocked((currentStyle as any)?.plateWorker)} />
                 </Form.Item>
@@ -188,7 +188,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
               &nbsp;时间信息
             </div>
             <Row gutter={[12, 0]}>
-              <Col xs={24} md={4}>
+              <Col xs={24} md={6}>
                 <Form.Item name="createTime" label="下板时间">
                   <UnifiedDatePicker
                     disabled={editLocked}
@@ -200,7 +200,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
                   />
                 </Form.Item>
               </Col>
-              <Col xs={24} md={4}>
+              <Col xs={24} md={6}>
                 <Form.Item name="deliveryDate" label="交板日期">
                   <UnifiedDatePicker
                     disabled={isFieldLocked((currentStyle as any)?.deliveryDate)}
@@ -212,12 +212,12 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
                   />
                 </Form.Item>
               </Col>
-              <Col xs={24} md={4}>
+              <Col xs={24} md={6}>
                 <Form.Item name="cycle" label="样衣周期[天]">
                   <InputNumber style={{ width: '100%' }} min={0} disabled={isFieldLocked(currentStyle?.cycle)} />
                 </Form.Item>
               </Col>
-              <Col xs={24} md={3}>
+              <Col xs={24} md={6}>
                 <Form.Item name="remark" label="备注">
                   <Input.TextArea rows={1} placeholder="请输入备注" disabled={isFieldLocked((currentStyle as any)?.remark)} />
                 </Form.Item>

@@ -22,7 +22,7 @@ export const useOrderSync = ({
   // 问题：每30秒轮询会触发 fetchOrders + fetchOrderDetail + fetchScanHistory
   // 如果 fetchScanHistory 内部有多个请求，会导致请求爆炸
   // 临时禁用，需要用户手动刷新获取最新数据
-  
+
   // useEffect(() => {
   //   let cancelled = false;
   //   const run = async () => {
