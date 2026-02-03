@@ -106,7 +106,7 @@ const StyleBomTab: React.FC<Props> = ({
 
   const fetchStyleNoOptions = async (keyword?: string) => {
     const seq = (styleNoReqSeq.current += 1);
-    setStyleNoLoading(true);
+    _setStyleNoLoading(true);
     try {
       const res = await api.get<{ code: number; data: { records: unknown[]; total: number } }>('/style/info/list', {
         params: {
@@ -123,16 +123,15 @@ const StyleBomTab: React.FC<Props> = ({
         .map((r) => String(r?.styleNo || '').trim())
         .filter(Boolean)
         .map((sn) => ({ value: sn, label: sn }));
-      setStyleNoOptions(next);
+      _setStyleNoOptions(next);
     } catch {
     // Intentionally empty
       // 忽略错误
     } finally {
-      if (seq === styleNoReqSeq.current) setStyleNoLoading(false);
+      if (seq === styleNoReqSeq.current) _setStyleNoLoading(false);
     }
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _scheduleFetchStyleNos = (keyword: string) => {
     if (styleNoTimerRef.current != null) {
       window.clearTimeout(styleNoTimerRef.current);
@@ -243,7 +242,6 @@ const StyleBomTab: React.FC<Props> = ({
     return nextData;
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _syncToMaterialDatabase = async () => {
     if (locked) {
       message.error('已完成，无法操作');
@@ -254,7 +252,7 @@ const StyleBomTab: React.FC<Props> = ({
       return;
     }
     try {
-      setSyncLoading(true);
+      _setSyncLoading(true);
       const sid = encodeURIComponent(String(styleId));
       const res = await api.post<{ code: number; data: unknown }>(`/style/bom/${sid}/sync-material-database/async`);
       const result = res as Record<string, unknown>;
@@ -274,7 +272,7 @@ const StyleBomTab: React.FC<Props> = ({
     } catch (error: unknown) {
       message.error(`同步失败（${error?.message || '请求失败'}）`);
     } finally {
-      setSyncLoading(false);
+      _setSyncLoading(false);
     }
   };
 
@@ -416,7 +414,6 @@ const StyleBomTab: React.FC<Props> = ({
     }
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _openMaterialModal = () => {
     if (locked) {
       message.error('已完成，无法操作');

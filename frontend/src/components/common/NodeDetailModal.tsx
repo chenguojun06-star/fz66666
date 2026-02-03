@@ -425,7 +425,6 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   }, [bundles, filteredScanRecords]);
 
   // 未使用的变量，保留供将来使用
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _cuttingTotalQty = useMemo(() => {
     return bundles.reduce((sum, b) => sum + (b.quantity || 0), 0);
   }, [bundles]);
@@ -564,7 +563,6 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   };
 
   // 更新委派单价
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _handlePriceChange = (value: number | null) => {
     setNodeOperations(prev => ({
       ...prev,
@@ -725,7 +723,6 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   };
 
   // 进度百分比颜色
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _getProgressColor = (percent: number) => {
     if (percent >= 100) return '#52c41a';
     if (percent >= 50) return '#1890ff';
@@ -989,7 +986,6 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
     );
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _renderScanRecordsTab = () => (
     <div style={{ padding: '4px 0' }}>
       <div style={{ marginBottom: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
