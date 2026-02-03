@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Col, Row, Statistic, StatisticProps } from 'antd';
+import { Card, Col, Row, Statistic } from 'antd';
 
 /**
  * 统计卡片配置

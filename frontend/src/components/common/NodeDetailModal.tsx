@@ -11,7 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import OperationHistoryTable, { OperationHistoryRow } from '@/components/common/OperationHistoryTable';
 import { getScanTypeFromNodeKey, matchRecordToStage } from '@/utils/productionStage';
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 const formatDelegationTime = (value?: string) => (value ? dayjs(value).format('MM/DD HH:mm') : '-');
 
@@ -174,16 +174,16 @@ interface NodeDetailModalProps {
 }
 
 /** 节点是否支持委派工厂 */
-const canDelegateFactory = (nodeType: NodeType): boolean => {
-  // 采购节点不支持委派（采购由物料采购单管理）
-  if (nodeType === 'procurement') return false;
-  return ['sewing', 'secondaryProcess'].includes(nodeType);
-};
+// const canDelegateFactory = (nodeType: NodeType): boolean => {
+//   // 采购节点不支持委派（采购由物料采购单管理）
+//   if (nodeType === 'procurement') return false;
+//   return ['sewing', 'secondaryProcess'].includes(nodeType);
+// };
 
 /** 二次工艺类型选项 */
-const secondaryProcessTypes = [
-  '绣花', '印花', '烫钻', '钉珠', '压褶', '洗水', '染色', '其他'
-];
+// const secondaryProcessTypes = [
+//   '绣花', '印花', '烫钻', '钉珠', '压褶', '洗水', '染色', '其他'
+// ];
 
 /**
  * 节点详情弹窗组件

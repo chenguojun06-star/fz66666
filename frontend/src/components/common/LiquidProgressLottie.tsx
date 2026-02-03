@@ -28,26 +28,26 @@ const LiquidProgressLottie: React.FC<LiquidProgressLottieProps> = ({
   const borderRadius = '50%'; // 圆形
 
   // 根据颜色判断状态，计算脉冲线颜色
-  const getPulseColor = () => {
-    // 已完成：灰色
-    if (progress >= 100) {
-      return 'rgba(156, 163, 175, 0.8)'; // 灰色
-    }
+  // const getPulseColor = () => {
+  //   // 已完成：灰色
+  //   if (progress >= 100) {
+  //     return 'rgba(156, 163, 175, 0.8)'; // 灰色
+  //   }
 
-    // 根据主色判断状态
-    if (color1.includes('ef4444') || color1.includes('ff4d4f')) {
-      // 延期：亮红色
-      return 'rgba(255, 80, 80, 1)';
-    } else if (color1.includes('f59e0b') || color1.includes('faad14')) {
-      // 快延期：亮黄色
-      return 'rgba(255, 220, 50, 1)';
-    } else {
-      // 正常：亮绿色
-      return 'rgba(0, 255, 100, 1)';
-    }
-  };
+  //   // 根据主色判断状态
+  //   if (color1.includes('ef4444') || color1.includes('ff4d4f')) {
+  //     // 延期：亮红色
+  //     return 'rgba(255, 80, 80, 1)';
+  //   } else if (color1.includes('f59e0b') || color1.includes('faad14')) {
+  //     // 快延期：亮黄色
+  //     return 'rgba(255, 220, 50, 1)';
+  //   } else {
+  //     // 正常：亮绿色
+  //     return 'rgba(0, 255, 100, 1)';
+  //   }
+  // };
 
-  const pulseColor = getPulseColor();
+  // const pulseColor = getPulseColor(); // 未使用，已注释
 
   return (
     <div

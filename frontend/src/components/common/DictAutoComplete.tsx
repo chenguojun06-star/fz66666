@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { AutoComplete, AutoCompleteProps } from 'antd';
 import { useAutoCollectDict } from '@/hooks/useAutoCollectDict';
 import api from '@/utils/api';
