@@ -162,7 +162,7 @@ const Dashboard: React.FC = () => {
             label: (
               <div>
                 <div>款式：{item.styleNo}</div>
-                <div style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)' }}>{item.styleName || '未命名'}</div>
+                <div style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)' }}>{item.styleName || '款式名未填写'}</div>
               </div>
             ),
           });

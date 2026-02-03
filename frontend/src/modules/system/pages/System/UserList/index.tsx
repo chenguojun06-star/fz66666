@@ -904,7 +904,7 @@ const UserList: React.FC = () => {
                             <Select placeholder="请选择角色" loading={roleOptionsLoading}>
                               {roleOptions.map((r) => (
                                 <Option key={String(r.id)} value={String(r.id)}>
-                                  {r.roleName || '未命名角色'}
+                                  {r.roleName || '系统角色'}
                                 </Option>
                               ))}
                             </Select>

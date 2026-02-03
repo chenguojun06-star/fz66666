@@ -351,7 +351,7 @@ const ProductionList: React.FC = () => {
   };
 
   // 列设置下拉菜单(已删除,改用工序展开功能)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   const _columnSettingsMenu = {
     items: [
       {
@@ -773,7 +773,7 @@ const ProductionList: React.FC = () => {
   }, [productionList, sortField, sortOrder]);
 
   // 工序列函数(已改用工序汇总+点击展开)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   const _stageColumns = (
     prefix: string,
     titles: { start: string; end: string; operator: string; rate: string },

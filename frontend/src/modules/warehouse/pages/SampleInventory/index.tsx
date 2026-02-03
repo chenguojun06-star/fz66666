@@ -62,7 +62,7 @@ const SampleInventory: React.FC = () => {
 
   useEffect(() => {
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [pagination.pagination.current, pagination.pagination.pageSize, searchText, sampleType]);
 
   const columns: ColumnsType<SampleStock> = [
