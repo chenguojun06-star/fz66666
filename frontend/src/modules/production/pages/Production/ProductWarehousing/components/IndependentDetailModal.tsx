@@ -4,6 +4,7 @@ import ResizableModal from '@/components/common/ResizableModal';
 import { ProductionOrderHeader, StyleCoverThumb } from '@/components/StyleAssets';
 import api, { fetchProductionOrderDetail, parseProductionOrderLines, toNumberSafe } from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
+import { useModal } from '@/hooks/useModal';
 import { ProductWarehousing as WarehousingType, ProductionOrder } from '@/types/production';
 import { CuttingBundleRow, OrderLine } from '../types';
 import { getQualityStatusConfig, getDefectCategoryLabel, getDefectRemarkLabel, parseUrlsValue } from '../utils';
@@ -25,8 +26,10 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
 }) => {
   const whNo = String(propWarehousingNo || '').trim();
 
-  const [popupEntryWarehousing, setPopupEntryWarehousing] = useState<WarehousingType | null>(null);
-  const [popupEntryLoading, setPopupEntryLoading] = useState(false);
+  // 使用 useModal 管理主入库数据
+  const entryModal = useModal<WarehousingType>();
+  
+  // 其他数据容器保持 useState（非模态状态）
   const [popupBundles, setPopupBundles] = useState<CuttingBundleRow[]>([]);
   const [popupOrderDetailLoading, setPopupOrderDetailLoading] = useState(false);
   const [popupOrderDetail, setPopupOrderDetail] = useState<ProductionOrder | null>(null);
@@ -47,8 +50,8 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
   }, [popupBundles]);
 
   const popupOrderLineWarehousingRows = useMemo(() => {
-    const orderNo = String((popupOrderDetail as any)?.orderNo || (popupEntryWarehousing as any)?.orderNo || '').trim();
-    const styleNo = String((popupOrderDetail as any)?.styleNo || (popupEntryWarehousing as any)?.styleNo || '').trim();
+    const orderNo = String((popupOrderDetail as any)?.orderNo || (entryModal.data as any)?.orderNo || '').trim();
+    const styleNo = String((popupOrderDetail as any)?.styleNo || (entryModal.data as any)?.styleNo || '').trim();
     const lines = parseProductionOrderLines(popupOrderDetail) as OrderLine[];
     if (!lines.length) return [] as Array<{
       key: string;
@@ -105,7 +108,7 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
         if (byColor !== 0) return byColor;
         return a.size.localeCompare(b.size, 'zh-Hans-CN', { numeric: true });
       });
-  }, [popupBundleByQr, popupEntryWarehousing, popupOrderDetail, popupOrderWarehousingRecords]);
+  }, [popupBundleByQr, entryModal.data, popupOrderDetail, popupOrderWarehousingRecords]);
 
   const fetchPopupBundlesByOrderNo = useCallback(async (orderNo: string) => {
     const on = String(orderNo || '').trim();
@@ -129,8 +132,7 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
 
   useEffect(() => {
     if (!open) {
-      setPopupEntryWarehousing(null);
-      setPopupEntryLoading(false);
+      entryModal.close();
       setPopupBundles([]);
       setPopupOrderDetailLoading(false);
       setPopupOrderDetail(null);
@@ -141,14 +143,14 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
 
     let cancelled = false;
     const run = async () => {
-      setPopupEntryLoading(true);
+      entryModal.setLoading(true);
       setPopupOrderDetailLoading(false);
       try {
         const stateSummary = summary;
         if (stateSummary && String((stateSummary as any)?.warehousingNo || '').trim() === whNo) {
-          setPopupEntryWarehousing(stateSummary);
+          entryModal.open(stateSummary);
         } else {
-          setPopupEntryWarehousing(null);
+          entryModal.close();
         }
 
         const res = await api.get<{ code: number; data: { records: WarehousingType[]; total: number } }>('/production/warehousing/list', {
@@ -196,7 +198,7 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
             : (String(base?.qualityStatus || '').trim() === 'unqualified' ? 'unqualified' : 'qualified'),
         } as WarehousingType;
 
-        setPopupEntryWarehousing(merged);
+        entryModal.open(merged);
 
         const resolvedOrderNo = String((merged as any)?.orderNo || '').trim() || String((records as any)?.[0]?.orderNo || '').trim();
         if (resolvedOrderNo) {
@@ -240,14 +242,14 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
       } catch (e: unknown) {
         if (!cancelled) {
           message.error((e as Error)?.message || '获取质检入库详情失败');
-          setPopupEntryWarehousing(null);
+          entryModal.close();
           setPopupBundles([]);
           setPopupOrderDetail(null);
           setPopupOrderWarehousingRecords([]);
         }
       } finally {
         if (!cancelled) {
-          setPopupEntryLoading(false);
+          entryModal.setLoading(false);
         }
       }
     };
@@ -280,16 +282,16 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
       }}
     >
       <div style={{ flex: 1, minHeight: 0 }}>
-        <Card size="small" className="order-flow-detail" style={{ marginTop: 0, height: '100%' }} loading={popupEntryLoading}>
+        <Card size="small" className="order-flow-detail" style={{ marginTop: 0, height: '100%' }} loading={entryModal.loading}>
           <div style={{ marginBottom: 12 }}>
             <ProductionOrderHeader
-              order={popupOrderDetail || (popupEntryWarehousing as any)}
-              orderNo={String((popupOrderDetail as any)?.orderNo || (popupEntryWarehousing as any)?.orderNo || '').trim()}
-              styleNo={String((popupOrderDetail as any)?.styleNo || (popupEntryWarehousing as any)?.styleNo || '').trim()}
-              styleName={String((popupOrderDetail as any)?.styleName || (popupEntryWarehousing as any)?.styleName || '').trim()}
-              styleId={(popupOrderDetail as any)?.styleId || (popupEntryWarehousing as any)?.styleId}
-              styleCover={(popupOrderDetail as any)?.styleCover || (popupEntryWarehousing as any)?.styleCover || null}
-              color={String((popupOrderDetail as any)?.color || (popupEntryWarehousing as any)?.color || '').trim()}
+              order={popupOrderDetail || (entryModal.data as any)}
+              orderNo={String((popupOrderDetail as any)?.orderNo || (entryModal.data as any)?.orderNo || '').trim()}
+              styleNo={String((popupOrderDetail as any)?.styleNo || (entryModal.data as any)?.styleNo || '').trim()}
+              styleName={String((popupOrderDetail as any)?.styleName || (entryModal.data as any)?.styleName || '').trim()}
+              styleId={(popupOrderDetail as any)?.styleId || (entryModal.data as any)?.styleId}
+              styleCover={(popupOrderDetail as any)?.styleCover || (entryModal.data as any)?.styleCover || null}
+              color={String((popupOrderDetail as any)?.color || (entryModal.data as any)?.color || '').trim()}
               totalQuantity={toNumberSafe((popupOrderDetail as any)?.orderQuantity)}
               coverSize={160}
               qrSize={120}
@@ -300,27 +302,27 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
             <div className="order-flow-summary-top">
               <div className="order-flow-summary-left">
                 <StyleCoverThumb
-                  styleId={(popupEntryWarehousing as any)?.styleId}
-                  styleNo={(popupEntryWarehousing as any)?.styleNo}
-                  src={(popupOrderDetail as any)?.styleCover || (popupEntryWarehousing as any)?.styleCover || null}
+                  styleId={(entryModal.data as any)?.styleId}
+                  styleNo={(entryModal.data as any)?.styleNo}
+                  src={(popupOrderDetail as any)?.styleCover || (entryModal.data as any)?.styleCover || null}
                   size={84}
                   borderRadius={12}
                 />
                 <div className="order-flow-summary-meta">
                   <div className="order-flow-summary-title-row">
-                    <div className="order-flow-summary-title">{String((popupEntryWarehousing as any)?.warehousingNo || whNo || '').trim() || '-'}</div>
+                    <div className="order-flow-summary-title">{String((entryModal.data as any)?.warehousingNo || whNo || '').trim() || '-'}</div>
                     {(() => {
-                      const s = String((popupEntryWarehousing as any)?.qualityStatus || '').trim();
+                      const s = String((entryModal.data as any)?.qualityStatus || '').trim();
                       if (!s) return null;
                       const { text, color } = getQualityStatusConfig(s as any);
                       return <Tag color={color}>{text}</Tag>;
                     })()}
                   </div>
                   <div className="order-flow-summary-sub">
-                    <span>订单号：{String((popupEntryWarehousing as any)?.orderNo || '').trim() || '-'}</span>
-                    <span>仓库：{String((popupEntryWarehousing as any)?.warehouse || '').trim() || '-'}</span>
-                    <span>质检时间：{String((popupEntryWarehousing as any)?.createTime || '').trim() ? formatDateTime((popupEntryWarehousing as any)?.createTime) : '-'}</span>
-                    <span>完成时间：{String((popupEntryWarehousing as any)?.warehousingEndTime || '').trim() ? formatDateTime((popupEntryWarehousing as any)?.warehousingEndTime) : '-'}</span>
+                    <span>订单号：{String((entryModal.data as any)?.orderNo || '').trim() || '-'}</span>
+                    <span>仓库：{String((entryModal.data as any)?.warehouse || '').trim() || '-'}</span>
+                    <span>质检时间：{String((entryModal.data as any)?.createTime || '').trim() ? formatDateTime((entryModal.data as any)?.createTime) : '-'}</span>
+                    <span>完成时间：{String((entryModal.data as any)?.warehousingEndTime || '').trim() ? formatDateTime((entryModal.data as any)?.warehousingEndTime) : '-'}</span>
                   </div>
                 </div>
               </div>
@@ -328,15 +330,15 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
               <div className="order-flow-metrics">
                 <div className="order-flow-metric">
                   <div className="order-flow-metric-label">质检数量</div>
-                  <div className="order-flow-metric-value">{toNumberSafe((popupEntryWarehousing as any)?.warehousingQuantity)}</div>
+                  <div className="order-flow-metric-value">{toNumberSafe((entryModal.data as any)?.warehousingQuantity)}</div>
                 </div>
                 <div className="order-flow-metric">
                   <div className="order-flow-metric-label">合格数量</div>
-                  <div className="order-flow-metric-value">{toNumberSafe((popupEntryWarehousing as any)?.qualifiedQuantity)}</div>
+                  <div className="order-flow-metric-value">{toNumberSafe((entryModal.data as any)?.qualifiedQuantity)}</div>
                 </div>
                 <div className="order-flow-metric">
                   <div className="order-flow-metric-label">不合格数量</div>
-                  <div className="order-flow-metric-value">{toNumberSafe((popupEntryWarehousing as any)?.unqualifiedQuantity)}</div>
+                  <div className="order-flow-metric-value">{toNumberSafe((entryModal.data as any)?.unqualifiedQuantity)}</div>
                 </div>
               </div>
             </div>
@@ -394,19 +396,19 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
             <div style={{ padding: 12 }}>
               <div className="order-flow-field" style={{ marginBottom: 10 }}>
                 <div className="order-flow-field-label">次品类别</div>
-                <div className="order-flow-field-value">{getDefectCategoryLabel((popupEntryWarehousing as any)?.defectCategory)}</div>
+                <div className="order-flow-field-value">{getDefectCategoryLabel((entryModal.data as any)?.defectCategory)}</div>
               </div>
               <div className="order-flow-field" style={{ marginBottom: 10 }}>
                 <div className="order-flow-field-label">处理方式</div>
-                <div className="order-flow-field-value">{getDefectRemarkLabel((popupEntryWarehousing as any)?.defectRemark)}</div>
+                <div className="order-flow-field-value">{getDefectRemarkLabel((entryModal.data as any)?.defectRemark)}</div>
               </div>
               <div className="order-flow-field" style={{ marginBottom: 10 }}>
                 <div className="order-flow-field-label">返修备注</div>
-                <div className="order-flow-field-value">{String((popupEntryWarehousing as any)?.repairRemark || '').trim() || '-'}</div>
+                <div className="order-flow-field-value">{String((entryModal.data as any)?.repairRemark || '').trim() || '-'}</div>
               </div>
 
               {(() => {
-                const urls = parseUrlsValue((popupEntryWarehousing as any)?.unqualifiedImageUrls);
+                const urls = parseUrlsValue((entryModal.data as any)?.unqualifiedImageUrls);
                 if (!urls.length) return <div style={{ color: 'rgba(0,0,0,0.45)' }}>-</div>;
                 return (
                   <Space wrap size={10}>
