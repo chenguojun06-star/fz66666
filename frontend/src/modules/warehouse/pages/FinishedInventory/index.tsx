@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, Table, Button, Space, Tag, Select, Image, Statistic, Row, Col, Form, InputNumber, Checkbox, App } from 'antd';
 import { PlusOutlined, DownloadOutlined, ExportOutlined, HistoryOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -7,6 +7,7 @@ import StandardModal from '@/components/common/StandardModal';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import RowActions from '@/components/common/RowActions';
+import { StatsGrid } from '@/components/common/StatsGrid';
 import { useModal, useTablePagination } from '@/hooks';
 import type { Dayjs } from 'dayjs';
 
@@ -47,7 +48,7 @@ interface FinishedInventory {
 
 const _FinishedInventory: React.FC = () => {
   const { message, modal } = App.useApp();
-  const [dataSource, setDataSource] = useState<FinishedInventory[]>([]);
+  const [rawDataSource, setRawDataSource] = useState<FinishedInventory[]>([]);
   const [searchText, setSearchText] = useState('');
   const [statusValue, setStatusValue] = useState('');
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
@@ -122,12 +123,39 @@ const _FinishedInventory: React.FC = () => {
 
   // 加载数据
   const loadData = () => {
-    setDataSource(getMockData());
+    setRawDataSource(getMockData());
   };
 
   useEffect(() => {
     loadData();
   }, []);
+
+  // 前端筛选逻辑
+  const dataSource = useMemo(() => {
+    let filtered = [...rawDataSource];
+
+    // 搜索筛选
+    if (searchText) {
+      const lowerSearch = searchText.toLowerCase();
+      filtered = filtered.filter(item =>
+        item.orderNo?.toLowerCase().includes(lowerSearch) ||
+        item.styleNo?.toLowerCase().includes(lowerSearch) ||
+        item.sku?.toLowerCase().includes(lowerSearch)
+      );
+    }
+
+    // 状态筛选
+    if (statusValue === 'available') {
+      // 可用库存：有可用数量
+      filtered = filtered.filter(item => item.availableQty > 0);
+    } else if (statusValue === 'defect') {
+      // 次品库存：有次品数量
+      filtered = filtered.filter(item => item.defectQty > 0);
+    }
+    // statusValue === '' 或其他值：显示全部
+
+    return filtered;
+  }, [rawDataSource, searchText, statusValue]);
 
   // 打开出库模态框，加载该款式的所有SKU明细
   const handleOutbound = (record: FinishedInventory) => {
@@ -486,17 +514,28 @@ const _FinishedInventory: React.FC = () => {
   return (
     <Layout>
       <div style={{ padding: '16px 24px' }}>
-        <Row gutter={16} style={{ marginBottom: 16 }}>
-          <Col span={8}>
-            <Card><Statistic title="成品总数" value={1750} suffix="件" /></Card>
-          </Col>
-          <Col span={8}>
-            <Card><Statistic title="可用库存" value={1650} suffix="件" styles={{ value: { color: 'var(--success-color-dark)' } }} /></Card>
-          </Col>
-          <Col span={8}>
-            <Card><Statistic title="次品数量" value={35} suffix="件" styles={{ value: { color: 'var(--error-color)' } }} /></Card>
-          </Col>
-        </Row>
+        <StatsGrid
+          items={[
+            { key: 'total', title: '成品总数', value: 1750, suffix: '件' },
+            {
+              key: 'available',
+              title: '可用库存',
+              value: 1650,
+              suffix: '件',
+              valueStyle: { color: 'var(--success-color-dark)' }
+            },
+            {
+              key: 'defective',
+              title: '次品数量',
+              value: 35,
+              suffix: '件',
+              valueStyle: { color: 'var(--error-color)' }
+            },
+          ]}
+          columns={3}
+          gutter={16}
+          style={{ marginBottom: 16 }}
+        />
 
         <Card>
           <div style={{ marginBottom: 16 }}>
@@ -514,6 +553,7 @@ const _FinishedInventory: React.FC = () => {
                 statusValue={statusValue}
                 onStatusChange={setStatusValue}
                 statusOptions={[
+                  { label: '全部', value: '' },
                   { label: '可用库存', value: 'available' },
                   { label: '次品库存', value: 'defect' },
                 ]}

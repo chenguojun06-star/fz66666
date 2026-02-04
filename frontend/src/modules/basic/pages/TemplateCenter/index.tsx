@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { App, Button, Card, Checkbox, Form, Input, InputNumber, Select, Space, Table, Tag, Tooltip, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { DeleteOutlined, EditOutlined, PlusOutlined, RollbackOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined, RollbackOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -50,6 +50,7 @@ const MAIN_PROGRESS_STAGE_OPTIONS = [
   { value: '裁剪', label: '裁剪' },
   { value: '车缝', label: '车缝' },
   { value: '二次工艺', label: '二次工艺' },
+  { value: '尾部', label: '尾部' }, // 包含整烫、包装、质检、后整、剪线
   { value: '入库', label: '入库' },
 ];
 
@@ -1017,21 +1018,10 @@ const TemplateCenter: React.FC = () => {
                   if (open && !styleNoOptions.length) fetchStyleNoOptions('');
                 }}
               />
-              <Button type="primary" onClick={() => fetchList({ page: 1 })}>
-                查询
-              </Button>
-              <Button
-                onClick={() => {
-                  setTemplateType('');
-                  setKeyword('');
-                  setSourceStyleNo('');
-                  queryForm.resetFields();
-                  fetchList({ page: 1 });
-                }}
-              >
-                重置
-              </Button>
             </Space>
+            <Button type="primary" icon={<ReloadOutlined />} onClick={() => fetchList({ page: 1 })}>
+              刷新
+            </Button>
           </div>
         </Card>
 
@@ -1182,140 +1172,157 @@ const TemplateCenter: React.FC = () => {
                   const type = editingRow?.templateType;
                   // 尺寸表模板
                   if (type === 'size' && isSizeTableData(editTableData)) {
+                    const sizeColumns = React.useMemo(() => {
+                      const baseColumn = {
+                        title: '部位',
+                        dataIndex: 'partName',
+                        width: 100,
+                        render: (text: string, _: SizeTablePart, index: number) => (
+                          <Input
+                            size="small"
+                            value={text}
+                            onChange={(e) => {
+                              const newData = { ...editTableData, parts: [...editTableData.parts] };
+                              const part = newData.parts[index];
+                              if (!part) return;
+                              newData.parts[index] = { ...part, partName: e.target.value };
+                              setEditTableData(newData);
+                            }}
+                            style={{ border: 'none' }}
+                          />
+                        ),
+                      };
+                      const dynamicColumns = editTableData.sizes.map((size: string, sIdx: number) => ({
+                        title: (
+                          <Input
+                            size="small"
+                            value={size}
+                            onChange={(e) => {
+                              const newData = { ...editTableData };
+                              newData.sizes[sIdx] = e.target.value;
+                              setEditTableData(newData);
+                            }}
+                            style={{ border: 'none', background: 'transparent', textAlign: 'center' }}
+                          />
+                        ),
+                        dataIndex: ['values', size],
+                        width: 80,
+                        render: (_: string, record: SizeTablePart, pIdx: number) => (
+                          <Input
+                            size="small"
+                            value={record.values?.[size] || ''}
+                            onChange={(e) => {
+                              const newData = { ...editTableData, parts: [...editTableData.parts] };
+                              const part = newData.parts[pIdx];
+                              if (!part) return;
+                              const values = { ...(part.values || {}) } as Record<string, string>;
+                              values[size] = e.target.value;
+                              newData.parts[pIdx] = { ...part, values };
+                              setEditTableData(newData);
+                            }}
+                            style={{ border: 'none' }}
+                          />
+                        ),
+                      }));
+                      return [baseColumn, ...dynamicColumns];
+                    }, [editTableData]);
                     return (
-                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead>
-                          <tr>
-                            <th style={{ border: '1px solid #ccc', padding: 4, background: '#f5f5f5' }}>部位</th>
-                            {editTableData.sizes.map((size: string, idx: number) => (
-                              <th key={idx} style={{ border: '1px solid #ccc', padding: 4, background: '#f5f5f5' }}>
-                                <Input
-                                  size="small"
-                                  value={size}
-                                  onChange={(e) => {
-                                    const newData = { ...editTableData };
-                                    newData.sizes[idx] = e.target.value;
-                                    setEditTableData(newData);
-                                  }}
-                                  style={{ border: 'none', background: 'transparent', textAlign: 'center' }}
-                                />
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {editTableData.parts.map((part: SizeTablePart, pIdx: number) => (
-                            <tr key={pIdx}>
-                              <td style={{ border: '1px solid #ccc', padding: 4 }}>
-                                <Input
-                                  size="small"
-                                  value={part.partName}
-                                  onChange={(e) => {
-                                    const newData = { ...editTableData, parts: [...editTableData.parts] };
-                                    const part = newData.parts[pIdx];
-                                    if (!part) return;
-                                    newData.parts[pIdx] = { ...part, partName: e.target.value };
-                                    setEditTableData(newData);
-                                  }}
-                                  style={{ border: 'none' }}
-                                />
-                              </td>
-                              {editTableData.sizes.map((size: string, sIdx: number) => (
-                                <td key={sIdx} style={{ border: '1px solid #ccc', padding: 4 }}>
-                                  <Input
-                                    size="small"
-                                    value={part.values?.[size] || ''}
-                                    onChange={(e) => {
-                                      const newData = { ...editTableData, parts: [...editTableData.parts] };
-                                      const part = newData.parts[pIdx];
-                                      if (!part) return;
-                                      const values = { ...(part.values || {}) } as Record<string, string>;
-                                      values[size] = e.target.value;
-                                      newData.parts[pIdx] = { ...part, values };
-                                      setEditTableData(newData);
-                                    }}
-                                    style={{ border: 'none' }}
-                                  />
-                                </td>
-                              ))}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                      <Table
+                        dataSource={editTableData.parts}
+                        columns={sizeColumns}
+                        pagination={false}
+                        size="small"
+                        variant="bordered"
+                        rowKey={(record, index) => `size-${index}`}
+                      />
                     );
                   }
                   // BOM表模板
                   if (type === 'bom' && (isBomTableData(editTableData) || isBomTableContainer(editTableData))) {
                     const bomRows = isBomTableContainer(editTableData) ? editTableData.rows : editTableData;
+                    const bomColumns = [
+                      {
+                        title: '物料名称',
+                        dataIndex: 'materialName',
+                        width: 150,
+                        render: (text: string, _: BomTableRow, idx: number) => (
+                          <Input
+                            size="small"
+                            value={text || ''}
+                            onChange={(e) => {
+                              const newRows = [...bomRows];
+                              newRows[idx] = { ...newRows[idx], materialName: e.target.value };
+                              const newData = isBomTableContainer(editTableData) ? { rows: newRows } : newRows;
+                              setEditTableData(newData);
+                            }}
+                            style={{ border: 'none' }}
+                          />
+                        ),
+                      },
+                      {
+                        title: '规格',
+                        dataIndex: 'spec',
+                        width: 120,
+                        render: (text: string, _: BomTableRow, idx: number) => (
+                          <Input
+                            size="small"
+                            value={text || ''}
+                            onChange={(e) => {
+                              const newRows = [...bomRows];
+                              newRows[idx] = { ...newRows[idx], spec: e.target.value };
+                              const newData = isBomTableContainer(editTableData) ? { rows: newRows } : newRows;
+                              setEditTableData(newData);
+                            }}
+                            style={{ border: 'none' }}
+                          />
+                        ),
+                      },
+                      {
+                        title: '用量',
+                        dataIndex: 'quantity',
+                        width: 100,
+                        render: (text: string, _: BomTableRow, idx: number) => (
+                          <Input
+                            size="small"
+                            value={text || ''}
+                            onChange={(e) => {
+                              const newRows = [...bomRows];
+                              newRows[idx] = { ...newRows[idx], quantity: e.target.value };
+                              const newData = isBomTableContainer(editTableData) ? { rows: newRows } : newRows;
+                              setEditTableData(newData);
+                            }}
+                            style={{ border: 'none' }}
+                          />
+                        ),
+                      },
+                      {
+                        title: '单位',
+                        dataIndex: 'unit',
+                        width: 80,
+                        render: (text: string, _: BomTableRow, idx: number) => (
+                          <Input
+                            size="small"
+                            value={text || ''}
+                            onChange={(e) => {
+                              const newRows = [...bomRows];
+                              newRows[idx] = { ...newRows[idx], unit: e.target.value };
+                              const newData = isBomTableContainer(editTableData) ? { rows: newRows } : newRows;
+                              setEditTableData(newData);
+                            }}
+                            style={{ border: 'none' }}
+                          />
+                        ),
+                      },
+                    ];
                     return (
-                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead>
-                          <tr>
-                            <th style={{ border: '1px solid #ccc', padding: 4, background: '#f5f5f5' }}>物料名称</th>
-                            <th style={{ border: '1px solid #ccc', padding: 4, background: '#f5f5f5' }}>规格</th>
-                            <th style={{ border: '1px solid #ccc', padding: 4, background: '#f5f5f5' }}>用量</th>
-                            <th style={{ border: '1px solid #ccc', padding: 4, background: '#f5f5f5' }}>单位</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {bomRows.map((item: BomTableRow, idx: number) => (
-                            <tr key={idx}>
-                              <td style={{ border: '1px solid #ccc', padding: 4 }}>
-                                <Input
-                                  size="small"
-                                  value={item.materialName || ''}
-                                  onChange={(e) => {
-                                    const newRows = [...bomRows];
-                                    newRows[idx] = { ...newRows[idx], materialName: e.target.value };
-                                    const newData = isBomTableContainer(editTableData) ? { rows: newRows } : newRows;
-                                    setEditTableData(newData);
-                                  }}
-                                  style={{ border: 'none' }}
-                                />
-                              </td>
-                              <td style={{ border: '1px solid #ccc', padding: 4 }}>
-                                <Input
-                                  size="small"
-                                  value={item.spec || ''}
-                                  onChange={(e) => {
-                                    const newRows = [...bomRows];
-                                    newRows[idx] = { ...newRows[idx], spec: e.target.value };
-                                    const newData = isBomTableContainer(editTableData) ? { rows: newRows } : newRows;
-                                    setEditTableData(newData);
-                                  }}
-                                  style={{ border: 'none' }}
-                                />
-                              </td>
-                              <td style={{ border: '1px solid #ccc', padding: 4 }}>
-                                <Input
-                                  size="small"
-                                  value={item.quantity || ''}
-                                  onChange={(e) => {
-                                    const newRows = [...bomRows];
-                                    newRows[idx] = { ...newRows[idx], quantity: e.target.value };
-                                    const newData = isBomTableContainer(editTableData) ? { rows: newRows } : newRows;
-                                    setEditTableData(newData);
-                                  }}
-                                  style={{ border: 'none' }}
-                                />
-                              </td>
-                              <td style={{ border: '1px solid #ccc', padding: 4 }}>
-                                <Input
-                                  size="small"
-                                  value={item.unit || ''}
-                                  onChange={(e) => {
-                                    const newRows = [...bomRows];
-                                    newRows[idx] = { ...newRows[idx], unit: e.target.value };
-                                    const newData = isBomTableContainer(editTableData) ? { rows: newRows } : newRows;
-                                    setEditTableData(newData);
-                                  }}
-                                  style={{ border: 'none' }}
-                                />
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                      <Table
+                        dataSource={bomRows}
+                        columns={bomColumns}
+                        pagination={false}
+                        size="small"
+                        variant="bordered"
+                        rowKey={(record, index) => `bom-${index}`}
+                      />
                     );
                   }
                   // 工序进度单价模板（合并后的综合模板）
@@ -1418,234 +1425,288 @@ const TemplateCenter: React.FC = () => {
                       </div>
                     );
 
+                    // 构建工序列配置（不使用useMemo，避免Hooks规则违反）
+                    const baseColumns = [
+                      {
+                        title: '排序',
+                        width: 40,
+                        render: (_: unknown, __: ProcessStepRow, idx: number) => (
+                          <span style={{ color: 'var(--neutral-text-disabled)', fontSize: "var(--font-size-xs)" }}>
+                            {idx + 1}
+                          </span>
+                        ),
+                      },
+                        {
+                          title: '工序编号',
+                          dataIndex: 'processCode',
+                          width: 55,
+                          render: (text: string, _: ProcessStepRow, idx: number) => (
+                            <Input
+                              size="small"
+                              value={text || ''}
+                              onChange={(e) => {
+                                const newData = { ...editTableData, steps: [...editTableData.steps] };
+                                newData.steps[idx] = { ...newData.steps[idx], processCode: e.target.value };
+                                setEditTableData(newData);
+                              }}
+                              style={{ border: 'none', fontSize: "var(--font-size-xs)" }}
+                            />
+                          ),
+                        },
+                        {
+                          title: '工序名称',
+                          dataIndex: 'processName',
+                          width: 80,
+                          render: (text: string, _: ProcessStepRow, idx: number) => (
+                            <Input
+                              size="small"
+                              value={text || ''}
+                              onChange={(e) => {
+                                const newData = { ...editTableData, steps: [...editTableData.steps] };
+                                newData.steps[idx] = { ...newData.steps[idx], processName: e.target.value };
+                                setEditTableData(newData);
+                              }}
+                              style={{ border: 'none', fontSize: "var(--font-size-xs)" }}
+                            />
+                          ),
+                        },
+                        {
+                          title: '进度节点',
+                          dataIndex: 'progressStage',
+                          width: 70,
+                          render: (value: string, _: ProcessStepRow, idx: number) => (
+                            <Select
+                              size="small"
+                              value={value || undefined}
+                              options={MAIN_PROGRESS_STAGE_OPTIONS}
+                              placeholder="选择父节点"
+                              allowClear
+                              onChange={(val) => {
+                                const newData = { ...editTableData, steps: [...editTableData.steps] };
+                                newData.steps[idx] = { ...newData.steps[idx], progressStage: val || '' };
+                                setEditTableData(newData);
+                              }}
+                              style={{ width: '100%', fontSize: "var(--font-size-xs)" }}
+                              variant="borderless"
+                            />
+                          ),
+                        },
+                        {
+                          title: '机器类型',
+                          dataIndex: 'machineType',
+                          width: 70,
+                          render: (text: string, _: ProcessStepRow, idx: number) => (
+                            <Input
+                              size="small"
+                              value={text || ''}
+                              onChange={(e) => {
+                                const newData = { ...editTableData, steps: [...editTableData.steps] };
+                                newData.steps[idx] = { ...newData.steps[idx], machineType: e.target.value };
+                                setEditTableData(newData);
+                              }}
+                              style={{ border: 'none', fontSize: "var(--font-size-xs)" }}
+                            />
+                          ),
+                        },
+                        {
+                          title: '工时(秒)',
+                          dataIndex: 'standardTime',
+                          width: 55,
+                          render: (value: number, _: ProcessStepRow, idx: number) => (
+                            <InputNumber
+                              size="small"
+                              value={value || 0}
+                              min={0}
+                              onChange={(val) => {
+                                const newData = { ...editTableData, steps: [...editTableData.steps] };
+                                newData.steps[idx] = { ...newData.steps[idx], standardTime: val || 0 };
+                                setEditTableData(newData);
+                              }}
+                              style={{ width: '100%', fontSize: "var(--font-size-xs)" }}
+                            />
+                          ),
+                        },
+                        {
+                          title: '工价(元)',
+                          dataIndex: 'unitPrice',
+                          width: 60,
+                          render: (_: unknown, item: ProcessStepRow, idx: number) => (
+                            <InputNumber
+                              size="small"
+                              value={item.unitPrice ?? item.price ?? 0}
+                              min={0}
+                              precision={2}
+                              onChange={(val) => {
+                                const newData = { ...editTableData, steps: [...editTableData.steps] };
+                                newData.steps[idx] = { ...newData.steps[idx], unitPrice: val || 0 };
+                                setEditTableData(newData);
+                              }}
+                              style={{ width: '100%', fontSize: "var(--font-size-xs)" }}
+                            />
+                          ),
+                        },
+                      ];
+
+                      const sizeColumns = showSizePrices ? templateSizes.map((size) => ({
+                        title: `${size}码`,
+                        width: 55,
+                        render: (_: unknown, item: ProcessStepRow, idx: number) => (
+                          <div style={{ background: '#fafafa' }}>
+                            <InputNumber
+                              size="small"
+                              value={item.sizePrices?.[size] ?? item.unitPrice ?? item.price ?? 0}
+                              min={0}
+                              precision={2}
+                              onChange={(val) => {
+                                const newData = { ...editTableData, steps: [...editTableData.steps] };
+                                newData.steps[idx] = {
+                                  ...newData.steps[idx],
+                                  sizePrices: {
+                                    ...(newData.steps[idx].sizePrices || {}),
+                                    [size]: val || 0,
+                                  },
+                                };
+                                setEditTableData(newData);
+                              }}
+                              style={{ width: '100%', fontSize: "var(--font-size-xs)" }}
+                            />
+                          </div>
+                        ),
+                      })) : [];
+
+                    const actionColumn = {
+                      title: '操作',
+                      width: 36,
+                      render: (_: unknown, __: ProcessStepRow, idx: number) => (
+                        <Button
+                          type="link"
+                          danger
+                          size="small"
+                          icon={<DeleteOutlined style={{ fontSize: "var(--font-size-xs)" }} />}
+                          onClick={() => {
+                            const kept = editTableData.steps.filter((_s: ProcessStepRow, i: number) => i !== idx);
+                            const newData = { ...editTableData, steps: normalizeProcessSteps(kept) };
+                            setEditTableData(newData);
+                          }}
+                          style={{ padding: 0 }}
+                        />
+                      ),
+                    };
+
+                    const processColumns = [...baseColumns, ...sizeColumns, actionColumn];
+
                     return (
                       <div>
                         <SizePriceManager />
-                        <div style={{ overflowX: 'auto' }}>
-                          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: showSizePrices ? 650 + templateSizes.length * 60 : 650 }}>
-                            <thead>
-                              <tr style={{ height: 32 }}>
-                                <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#f9fafb', width: 40, fontSize: "var(--font-size-xs)" }}>排序</th>
-                                <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#f9fafb', width: 55, fontSize: "var(--font-size-xs)" }}>工序编号</th>
-                                <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#f9fafb', width: 80, fontSize: "var(--font-size-xs)" }}>工序名称</th>
-                                <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#f9fafb', width: 70, fontSize: "var(--font-size-xs)" }}>进度节点</th>
-                                <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#f9fafb', width: 70, fontSize: "var(--font-size-xs)" }}>机器类型</th>
-                                <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#f9fafb', width: 55, fontSize: "var(--font-size-xs)" }}>工时(秒)</th>
-                                <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#f9fafb', width: 60, fontSize: "var(--font-size-xs)" }}>工价(元)</th>
-                                {showSizePrices && templateSizes.map((size) => (
-                                  <th key={size} style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#e6f7ff', width: 55, fontSize: "var(--font-size-xs)" }}>
-                                    {size}码
-                                  </th>
-                                ))}
-                                <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', background: '#f9fafb', width: 36, fontSize: "var(--font-size-xs)" }}>操作</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {editTableData.steps.map((item: ProcessStepRow, idx: number) => (
-                                <tr key={idx} style={{ height: 32 }}>
-                                  <td style={{ border: '1px solid #e5e7eb', padding: '2px 4px', textAlign: 'center', color: 'var(--neutral-text-disabled)', fontSize: "var(--font-size-xs)" }}>
-                                    {idx + 1}
-                                  </td>
-                                  <td style={{ border: '1px solid #e5e7eb', padding: '2px 4px' }}>
-                                    <Input
-                                      size="small"
-                                      value={item.processCode || ''}
-                                      onChange={(e) => {
-                                        const newData = { ...editTableData, steps: [...editTableData.steps] };
-                                        newData.steps[idx] = { ...newData.steps[idx], processCode: e.target.value };
-                                        setEditTableData(newData);
-                                      }}
-                                      style={{ border: 'none', fontSize: "var(--font-size-xs)" }}
-                                    />
-                                  </td>
-                                  <td style={{ border: '1px solid #e5e7eb', padding: '2px 4px' }}>
-                                    <Input
-                                      size="small"
-                                      value={item.processName || ''}
-                                      onChange={(e) => {
-                                        const newData = { ...editTableData, steps: [...editTableData.steps] };
-                                        newData.steps[idx] = { ...newData.steps[idx], processName: e.target.value };
-                                        setEditTableData(newData);
-                                      }}
-                                      style={{ border: 'none', fontSize: "var(--font-size-xs)" }}
-                                    />
-                                  </td>
-                                  <td style={{ border: '1px solid #e5e7eb', padding: '2px 4px' }}>
-                                    <Select
-                                      size="small"
-                                      value={item.progressStage || undefined}
-                                      options={MAIN_PROGRESS_STAGE_OPTIONS}
-                                      placeholder="选择父节点"
-                                      allowClear
-                                      onChange={(value) => {
-                                        const newData = { ...editTableData, steps: [...editTableData.steps] };
-                                        newData.steps[idx] = { ...newData.steps[idx], progressStage: value || '' };
-                                        setEditTableData(newData);
-                                      }}
-                                      style={{ width: '100%', fontSize: "var(--font-size-xs)" }}
-                                      bordered={false}
-                                    />
-                                  </td>
-                                  <td style={{ border: '1px solid #e5e7eb', padding: '2px 4px' }}>
-                                    <Input
-                                      size="small"
-                                      value={item.machineType || ''}
-                                      onChange={(e) => {
-                                        const newData = { ...editTableData, steps: [...editTableData.steps] };
-                                        newData.steps[idx] = { ...newData.steps[idx], machineType: e.target.value };
-                                        setEditTableData(newData);
-                                      }}
-                                      style={{ border: 'none', fontSize: "var(--font-size-xs)" }}
-                                    />
-                                  </td>
-                                  <td style={{ border: '1px solid #e5e7eb', padding: '2px 4px' }}>
-                                    <InputNumber
-                                      size="small"
-                                      value={item.standardTime || 0}
-                                      min={0}
-                                      onChange={(val) => {
-                                        const newData = { ...editTableData, steps: [...editTableData.steps] };
-                                        newData.steps[idx] = { ...newData.steps[idx], standardTime: val || 0 };
-                                        setEditTableData(newData);
-                                      }}
-                                      style={{ width: '100%', fontSize: "var(--font-size-xs)" }}
-                                    />
-                                  </td>
-                                  <td style={{ border: '1px solid #e5e7eb', padding: '2px 4px' }}>
-                                    <InputNumber
-                                      size="small"
-                                      value={item.unitPrice ?? item.price ?? 0}
-                                      min={0}
-                                      precision={2}
-                                      onChange={(val) => {
-                                        const newData = { ...editTableData, steps: [...editTableData.steps] };
-                                        newData.steps[idx] = { ...newData.steps[idx], unitPrice: val || 0 };
-                                        setEditTableData(newData);
-                                      }}
-                                      style={{ width: '100%', fontSize: "var(--font-size-xs)" }}
-                                    />
-                                  </td>
-                                  {showSizePrices && templateSizes.map((size) => (
-                                    <td key={size} style={{ border: '1px solid #e5e7eb', padding: '2px 4px', background: '#fafafa' }}>
-                                      <InputNumber
-                                        size="small"
-                                        value={item.sizePrices?.[size] ?? item.unitPrice ?? item.price ?? 0}
-                                        min={0}
-                                        precision={2}
-                                        onChange={(val) => {
-                                          const newData = { ...editTableData, steps: [...editTableData.steps] };
-                                          newData.steps[idx] = {
-                                            ...newData.steps[idx],
-                                            sizePrices: {
-                                              ...(newData.steps[idx].sizePrices || {}),
-                                              [size]: val || 0,
-                                            },
-                                          };
-                                          setEditTableData(newData);
-                                        }}
-                                        style={{ width: '100%', fontSize: "var(--font-size-xs)" }}
-                                      />
-                                    </td>
-                                  ))}
-                                  <td style={{ border: '1px solid #e5e7eb', padding: '2px 4px', textAlign: 'center' }}>
-                                    <Button
-                                      type="link"
-                                      danger
-                                      size="small"
-                                      icon={<DeleteOutlined style={{ fontSize: "var(--font-size-xs)" }} />}
-                                      onClick={() => {
-                                        const kept = editTableData.steps.filter((_: ProcessStepRow, i: number) => i !== idx);
-                                        const newData = { ...editTableData, steps: normalizeProcessSteps(kept) };
-                                        setEditTableData(newData);
-                                      }}
-                                      style={{ padding: 0 }}
-                                    />
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                        <Button
-                          type="dashed"
-                          icon={<PlusOutlined />}
+                        <Table
+                          dataSource={editTableData.steps}
+                          columns={processColumns}
+                          pagination={false}
                           size="small"
-                          style={{ width: '100%', marginTop: 8 }}
-                          onClick={() => {
-                            const newRow: ProcessStepRow = {
-                              processCode: '',
-                              processName: '',
-                              progressStage: '',
-                              machineType: '',
-                              standardTime: 0,
-                              unitPrice: 0,
-                              sizePrices: templateSizes.reduce((acc, size) => ({ ...acc, [size]: 0 }), {}),
-                            };
-                            const newData = { ...editTableData, steps: normalizeProcessSteps([...editTableData.steps, newRow]) };
-                            setEditTableData(newData);
-                          }}
-                        >
-                          添加工序
-                        </Button>
+                          variant="bordered"
+                          scroll={{ x: showSizePrices ? 650 + templateSizes.length * 60 : 650 }}
+                          rowKey={(record, index) => `process-${index}`}
+                          footer={() => (
+                            <Button
+                              type="dashed"
+                              icon={<PlusOutlined />}
+                              size="small"
+                              style={{ width: '100%' }}
+                              onClick={() => {
+                                // 计算下一个序号：找出当前最大序号 + 1
+                                const maxCode = editTableData.steps.reduce((max, step) => {
+                                  const code = Number.parseInt(String(step.processCode ?? '').trim() || '0', 10);
+                                  return Number.isFinite(code) && code > max ? code : max;
+                                }, 0);
+                                const nextCode = String(maxCode + 1).padStart(2, '0');
+
+                                const newRow: ProcessStepRow = {
+                                  processCode: nextCode,
+                                  processName: '',
+                                  progressStage: '',
+                                  machineType: '',
+                                  standardTime: 0,
+                                  unitPrice: 0,
+                                  sizePrices: templateSizes.reduce((acc, size) => ({ ...acc, [size]: 0 }), {}),
+                                };
+                                // 直接添加到末尾，不调用 normalizeProcessSteps
+                                const newData = { ...editTableData, steps: [...editTableData.steps, newRow] };
+                                setEditTableData(newData);
+                              }}
+                            >
+                              添加工序
+                            </Button>
+                          )}
+                        />
                       </div>
                     );
                   }
                   // 工序单价模板（旧格式，兼容）
                   if (type === 'process_price' && isProcessPriceTableData(editTableData)) {
+                    const processPriceColumns = [
+                      {
+                        title: '工序编号',
+                        dataIndex: 'processCode',
+                        width: 100,
+                        render: (text: string, _: ProcessPriceRow, idx: number) => (
+                          <Input
+                            size="small"
+                            value={text || ''}
+                            onChange={(e) => {
+                              const newData = { ...editTableData, steps: [...editTableData.steps] };
+                              newData.steps[idx] = { ...newData.steps[idx], processCode: e.target.value };
+                              setEditTableData(newData);
+                            }}
+                            style={{ border: 'none' }}
+                          />
+                        ),
+                      },
+                      {
+                        title: '工序名称',
+                        dataIndex: 'processName',
+                        width: 150,
+                        render: (text: string, _: ProcessPriceRow, idx: number) => (
+                          <Input
+                            size="small"
+                            value={text || ''}
+                            onChange={(e) => {
+                              const newData = { ...editTableData, steps: [...editTableData.steps] };
+                              newData.steps[idx] = { ...newData.steps[idx], processName: e.target.value };
+                              setEditTableData(newData);
+                            }}
+                            style={{ border: 'none' }}
+                          />
+                        ),
+                      },
+                      {
+                        title: '单价(元)',
+                        dataIndex: 'unitPrice',
+                        width: 100,
+                        render: (value: number, _: ProcessPriceRow, idx: number) => (
+                          <InputNumber
+                            size="small"
+                            value={value || 0}
+                            min={0}
+                            precision={2}
+                            onChange={(val) => {
+                              const newData = { ...editTableData, steps: [...editTableData.steps] };
+                              newData.steps[idx] = { ...newData.steps[idx], unitPrice: val || 0 };
+                              setEditTableData(newData);
+                            }}
+                            style={{ width: '100%' }}
+                          />
+                        ),
+                      },
+                    ];
                     return (
-                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead>
-                          <tr>
-                            <th style={{ border: '1px solid #ccc', padding: 4, background: '#f5f5f5' }}>工序编号</th>
-                            <th style={{ border: '1px solid #ccc', padding: 4, background: '#f5f5f5' }}>工序名称</th>
-                            <th style={{ border: '1px solid #ccc', padding: 4, background: '#f5f5f5' }}>单价(元)</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {editTableData.steps.map((item: ProcessPriceRow, idx: number) => (
-                            <tr key={idx}>
-                              <td style={{ border: '1px solid #ccc', padding: 4 }}>
-                                <Input
-                                  size="small"
-                                  value={item.processCode || ''}
-                                  onChange={(e) => {
-                                    const newData = { ...editTableData, steps: [...editTableData.steps] };
-                                    newData.steps[idx] = { ...newData.steps[idx], processCode: e.target.value };
-                                    setEditTableData(newData);
-                                  }}
-                                  style={{ border: 'none' }}
-                                />
-                              </td>
-                              <td style={{ border: '1px solid #ccc', padding: 4 }}>
-                                <Input
-                                  size="small"
-                                  value={item.processName || ''}
-                                  onChange={(e) => {
-                                    const newData = { ...editTableData, steps: [...editTableData.steps] };
-                                    newData.steps[idx] = { ...newData.steps[idx], processName: e.target.value };
-                                    setEditTableData(newData);
-                                  }}
-                                  style={{ border: 'none' }}
-                                />
-                              </td>
-                              <td style={{ border: '1px solid #ccc', padding: 4 }}>
-                                <InputNumber
-                                  size="small"
-                                  value={item.unitPrice || 0}
-                                  min={0}
-                                  precision={2}
-                                  onChange={(val) => {
-                                    const newData = { ...editTableData, steps: [...editTableData.steps] };
-                                    newData.steps[idx] = { ...newData.steps[idx], unitPrice: val || 0 };
-                                    setEditTableData(newData);
-                                  }}
-                                  style={{ width: '100%' }}
-                                />
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                      <Table
+                        dataSource={editTableData.steps}
+                        columns={processPriceColumns}
+                        pagination={false}
+                        size="small"
+                        variant="bordered"
+                        rowKey={(record, index) => `price-${index}`}
+                      />
                     );
                   }
                   // 其他类型暂时显示JSON

@@ -10,6 +10,8 @@ import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.common.constant.MaterialConstants;
+import com.fashion.supplychain.style.entity.StyleBom;
+import com.fashion.supplychain.style.service.StyleBomService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -45,6 +47,9 @@ public class MaterialPurchaseOrchestrator {
 
     @Autowired
     private MaterialReconciliationOrchestrator materialReconciliationOrchestrator;
+
+    @Autowired
+    private StyleBomService styleBomService;
 
     public IPage<MaterialPurchase> list(Map<String, Object> params) {
         return materialPurchaseService.queryPage(params);
@@ -666,12 +671,52 @@ public class MaterialPurchaseOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     private boolean saveAndSync(MaterialPurchase materialPurchase) {
+        // 如果单价为0或null，尝试从BOM填充单价
+        fillUnitPriceFromBom(materialPurchase);
+
         boolean ok = materialPurchaseService.savePurchaseAndUpdateOrder(materialPurchase);
         if (!ok) {
             return false;
         }
         syncAfterPurchaseChanged(materialPurchase);
         return true;
+    }
+
+    /**
+     * 从BOM资料填充单价
+     */
+    private void fillUnitPriceFromBom(MaterialPurchase purchase) {
+        if (purchase == null) {
+            return;
+        }
+
+        // 如果已有单价且大于0，不覆盖
+        if (purchase.getUnitPrice() != null && purchase.getUnitPrice().compareTo(java.math.BigDecimal.ZERO) > 0) {
+            return;
+        }
+
+        // 必须有款式ID和物料编码才能查询BOM
+        if (!StringUtils.hasText(purchase.getStyleId()) || !StringUtils.hasText(purchase.getMaterialCode())) {
+            return;
+        }
+
+        try {
+            Long styleId = Long.valueOf(purchase.getStyleId().trim());
+            String materialCode = purchase.getMaterialCode().trim();
+
+            // 从BOM查询单价
+            StyleBom bom = styleBomService.lambdaQuery()
+                .eq(StyleBom::getStyleId, styleId)
+                .eq(StyleBom::getMaterialCode, materialCode)
+                .one();
+
+            if (bom != null && bom.getUnitPrice() != null && bom.getUnitPrice().compareTo(java.math.BigDecimal.ZERO) > 0) {
+                purchase.setUnitPrice(bom.getUnitPrice());
+                log.info("从BOM填充单价: materialCode={}, unitPrice={}", materialCode, bom.getUnitPrice());
+            }
+        } catch (Exception e) {
+            log.warn("从BOM填充单价失败: styleId={}, materialCode={}", purchase.getStyleId(), purchase.getMaterialCode(), e);
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)

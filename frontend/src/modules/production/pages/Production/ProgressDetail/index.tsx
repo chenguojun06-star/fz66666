@@ -16,14 +16,16 @@ import NodeDetailModal from '@/components/common/NodeDetailModal';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import { ProductionOrderHeader, StyleCoverThumb } from '@/components/StyleAssets';
-import { generateRequestId, isDuplicateScanMessage, isOrderFrozenByStatus, parseProductionOrderLines } from '@/utils/api';
+import api, { generateRequestId, isDuplicateScanMessage, isOrderFrozenByStatus, parseProductionOrderLines, isApiSuccess } from '@/utils/api';
 import { isSupervisorOrAboveUser as isSupervisorOrAboveUserFn, useAuth } from '@/utils/AuthContext';
 import { useViewport } from '@/utils/useViewport';
 import { formatDateTime, formatDateTimeCompact } from '@/utils/datetime';
 import { getProgressColorStatus } from '@/utils/progressColor';
 import { CuttingBundle, ProductionOrder, ProductionQueryParams, ScanRecord } from '@/types/production';
 import type { StyleProcess, TemplateLibrary } from '@/types/style';
-import { productionCuttingApi, productionOrderApi, productionScanApi, productionWarehousingApi } from '@/services/production/productionApi';
+import StatsCards from '@/components/common/StatsCards';
+import type { StatCard } from '@/components/common/StatsCards';
+import { productionCuttingApi, productionOrderApi, productionScanApi, productionWarehousingApi, type ProductionOrderListParams } from '@/services/production/productionApi';
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 
 import {
@@ -103,10 +105,19 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const [queryParams, setQueryParams] = useState<ProductionQueryParams>({ page: 1, pageSize: 10, keyword: '' });
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+  const [showDelayedOnly, setShowDelayedOnly] = useState(false); // 是否只显示延期订单
 
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [orders, setOrders] = useState<ProductionOrder[]>([]);
+
+  // 全局统计数据（从API获取，不受分页影响）
+  const [globalStats, setGlobalStats] = useState<{
+    totalOrders: number;
+    totalQuantity: number;
+    delayedOrders: number;
+    delayedQuantity: number;
+  }>({ totalOrders: 0, totalQuantity: 0, delayedOrders: 0, delayedQuantity: 0 });
 
   // ===== 详情弹窗相关状态已删除 =====
   // detailOpen 已移除，activeOrder和scanHistory保留用于快速编辑和进度统计
@@ -195,6 +206,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const [orderSortOrder, setOrderSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const statusOptions = useMemo(() => ([
+    { label: '全部', value: '' },
     { label: '待生产', value: 'pending' },
     { label: '生产中', value: 'production' },
     { label: '已完成', value: 'completed' },
@@ -205,6 +217,17 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const handleOrderSort = (field: string, order: 'asc' | 'desc') => {
     setOrderSortField(field);
     setOrderSortOrder(order);
+  };
+
+  // 处理统计卡片点击
+  const handleStatClick = (type: 'all' | 'delayed') => {
+    if (type === 'all') {
+      setShowDelayedOnly(false);
+      setQueryParams({ ...queryParams, status: '', page: 1 });
+    } else if (type === 'delayed') {
+      setShowDelayedOnly(true);
+      setQueryParams({ ...queryParams, page: 1 });
+    }
   };
 
   // 打开节点详情弹窗
@@ -243,23 +266,25 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       setLoading(true);
     }
     try {
-      const params: unknown = { ...queryParamsRef.current };
       const currentDateRange = dateRangeRef.current;
-      if (currentDateRange?.[0] && currentDateRange?.[1]) {
-        params.startDate = currentDateRange[0].startOf('day').toISOString();
-        params.endDate = currentDateRange[1].endOf('day').toISOString();
-      }
+      const params: ProductionOrderListParams = {
+        ...queryParamsRef.current,
+        ...(currentDateRange?.[0] && currentDateRange?.[1] ? {
+          startDate: currentDateRange[0].startOf('day').toISOString(),
+          endDate: currentDateRange[1].endOf('day').toISOString(),
+        } : {}),
+      };
       const response = await productionOrderApi.list(params);
-      const result = response as Record<string, unknown>;
+      const result = response as { code: number; message?: string; data: { records: ProductionOrder[]; total: number } };
       if (result.code === 200) {
-        const records = (result.data.records || []) as ProductionOrder[];
+        const records = result.data.records || [];
         setOrders(records);
         setTotal(result.data.total || 0);
 
         const styleNos = Array.from(
           new Set(
             records
-              .map((r) => String((r as Record<string, unknown>)?.styleNo || '').trim())
+              .map((r) => String(r.styleNo || '').trim())
               .filter((sn) => sn)
               .filter((sn) => !progressNodesByStyleNoRef.current[sn])
           )
@@ -309,6 +334,37 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       }
     }
   }, []);
+
+  // 获取全局统计数据（根据当前筛选条件）
+  const fetchGlobalStats = useCallback(async (params?: typeof queryParams) => {
+    try {
+      // 只传递筛选参数，不传分页参数
+      const filterParams = params ? {
+        keyword: params.keyword,
+        factoryName: params.factoryName,
+        status: params.status,
+        orderNo: params.orderNo,
+        styleNo: params.styleNo,
+      } : {};
+      
+      const response = await api.get<{
+        totalOrders: number;
+        totalQuantity: number;
+        delayedOrders: number;
+        delayedQuantity: number;
+      }>('/production/order/stats', { params: filterParams });
+      if (isApiSuccess(response)) {
+        setGlobalStats(response.data);
+      }
+    } catch (error) {
+      console.error('获取全局统计数据失败', error);
+    }
+  }, []);
+
+  // 筛选条件变化时更新统计数据
+  useEffect(() => {
+    fetchGlobalStats(queryParams);
+  }, [fetchGlobalStats, queryParams]);
 
   const closeScanConfirm = (silent?: boolean) => {
     closeScanConfirmState();
@@ -1082,6 +1138,22 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       render: (v: unknown) => <span className="order-no-wrap">{String(v || '').trim() || '-'}</span>,
     },
     {
+      title: '跟单员',
+      dataIndex: 'createdByName',
+      key: 'createdByName',
+      width: 100,
+      ellipsis: true,
+      render: (v: unknown) => v || '-',
+    },
+    {
+      title: '工厂',
+      dataIndex: 'factoryName',
+      key: 'factoryName',
+      width: 120,
+      ellipsis: true,
+      render: (v: unknown) => v || '-',
+    },
+    {
       title: '最终报价单价',
       key: 'quotationUnitPrice',
       width: 120,
@@ -1334,6 +1406,14 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   // ===== 自动打开详情弹窗的逻辑已删除 =====
   // autoOpenDetailOnceRef 和 useEffect 已移除（详情弹窗功能）
 
+  // 根据showDelayedOnly过滤订单
+  const displayOrders = useMemo(() => {
+    if (!showDelayedOnly) {
+      return orders;
+    }
+    return orders.filter(order => getProgressColorStatus(order.plannedEndDate) === 'danger');
+  }, [orders, showDelayedOnly]);
+
   const pageContent = (
     <div className="production-progress-detail-page">
       {embedded ? (
@@ -1379,7 +1459,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               rowKey={(r: ProductionOrder) => String(r.id || r.orderNo)}
               loading={loading}
               columns={columns}
-              dataSource={orders}
+              dataSource={displayOrders}
               pagination={{
                 current: queryParams.page,
                 pageSize: queryParams.pageSize,
@@ -1393,7 +1473,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             />
           ) : (
             <UniversalCardView
-              dataSource={orders}
+              dataSource={displayOrders}
               loading={loading}
               columns={6}
               coverField="styleCover"
@@ -1457,6 +1537,27 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             <h2 className="page-title">生产进度</h2>
           </div>
 
+          {/* 数据概览卡片 - 使用全局统计数据（不受分页影响） */}
+          <StatsCards stats={[
+            {
+              label: '订单个数',
+              value: globalStats.totalOrders,
+              color: '#2D7FF9',
+              onClick: () => handleStatClick('all')
+            },
+            {
+              label: '总数量',
+              value: globalStats.totalQuantity,
+              color: '#52c41a'
+            },
+            {
+              label: '延期订单',
+              value: `${globalStats.delayedOrders}单/${globalStats.delayedQuantity.toLocaleString()}件`,
+              color: '#ff4d4f',
+              onClick: () => handleStatClick('delayed')
+            }
+          ]} />
+
           <Card size="small" className="filter-card mb-sm">
             <StandardToolbar
               left={(
@@ -1504,7 +1605,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               rowKey={(r: ProductionOrder) => String(r.id || r.orderNo)}
               loading={loading}
               columns={columns}
-              dataSource={orders}
+              dataSource={displayOrders}
               pagination={{
                 current: queryParams.page,
                 pageSize: queryParams.pageSize,
@@ -1518,7 +1619,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             />
           ) : (
             <UniversalCardView
-              dataSource={orders}
+              dataSource={displayOrders}
               loading={loading}
               columns={6}
               coverField="styleCover"

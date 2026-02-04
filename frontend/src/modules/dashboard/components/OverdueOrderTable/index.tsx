@@ -6,12 +6,13 @@ import api from '@/utils/api';
 import './styles.css';
 
 interface OverdueOrder {
-  id: number;
+  id: string;  // 修复：后端返回的是字符串类型的UUID
   orderNo: string;
   styleNo: string;
   quantity: number;
   deliveryDate: string;
   overdueDays: number;
+  factoryName?: string;  // 工厂名称
 }
 
 const OverdueOrderTable: React.FC = () => {
@@ -27,30 +28,24 @@ const OverdueOrderTable: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      // 暂时使用虚拟数据
-      const mockData: OverdueOrder[] = Array.from({ length: 25 }, (_, i) => {
-        const date = new Date();
-        date.setDate(date.getDate() - (30 - i));
-        return {
-          id: i + 1,
-          orderNo: `PO2026${String(date.getMonth() + 1).padStart(2, '0')}${String(i + 1).padStart(3, '0')}`,
-          styleNo: `ST${String(Math.floor(Math.random() * 100) + 1).padStart(3, '0')}`,
-          quantity: Math.floor(Math.random() * 800) + 200,
-          deliveryDate: date.toISOString().split('T')[0],
-          overdueDays: Math.floor(Math.random() * 20) + 1,
-        };
-      });
+      // 调用真实API获取延期订单列表
+      const result = await api.get('/dashboard/overdue-orders');
 
-      setDataSource(mockData);
+      // 后端返回格式：{ code: 200, data: [...], message: "...", requestId: "..." }
+      // 需要取 result.data 中的数组
+      const orders = result?.data || result;
 
-      // 演示数据：用于展示逾期订单列表
-      // 生产环境可替换为真实API：
-      // const result = await api.get<OverdueOrder[]>('/api/dashboard/overdue-orders');
-      // if (result.success && result.data) {
-      //   setDataSource(result.data);
-      // }
+      if (Array.isArray(orders)) {
+        setDataSource(orders);
+      } else if (Array.isArray(result)) {
+        setDataSource(result);
+      } else {
+        setDataSource([]);
+      }
     } catch (error) {
       console.error('Failed to load overdue orders:', error);
+      // 错误时显示空列表
+      setDataSource([]);
     } finally {
       setLoading(false);
     }
@@ -162,6 +157,14 @@ const OverdueOrderTable: React.FC = () => {
       render: (value: number) => (
         <span className="overdue-days">{value} 天</span>
       ),
+    },
+    {
+      title: '工厂',
+      dataIndex: 'factoryName',
+      key: 'factoryName',
+      width: '15%',
+      ellipsis: true,
+      render: (value: string) => value || '-',
     },
   ];
 

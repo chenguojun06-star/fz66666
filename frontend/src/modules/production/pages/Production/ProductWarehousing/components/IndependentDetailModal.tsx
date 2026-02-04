@@ -28,7 +28,7 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
 
   // 使用 useModal 管理主入库数据
   const entryModal = useModal<WarehousingType>();
-  
+
   // 其他数据容器保持 useState（非模态状态）
   const [popupBundles, setPopupBundles] = useState<CuttingBundleRow[]>([]);
   const [popupOrderDetailLoading, setPopupOrderDetailLoading] = useState(false);

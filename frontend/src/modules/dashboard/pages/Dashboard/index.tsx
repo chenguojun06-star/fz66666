@@ -251,6 +251,25 @@ const Dashboard: React.FC = () => {
     return iconMap[type] || <FileTextOutlined />;
   };
 
+  // 格式化活动时间显示
+  const formatActivityTime = (timeStr: string) => {
+    if (!timeStr) return '';
+
+    // 如果已经包含日期（格式：YYYY-MM-DD HH:mm 或 MM-DD HH:mm），直接返回
+    if (timeStr.includes('-')) {
+      return timeStr;
+    }
+
+    // 如果只有时间（HH:mm:ss 或 HH:mm），添加今天的日期
+    const now = new Date();
+    const today = `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+    // 去掉秒数（如果有）
+    const timePart = timeStr.split(':').slice(0, 2).join(':');
+
+    return `${today} ${timePart}`;
+  };
+
   const fetchDashboard = useCallback(async () => {
     try {
       const response = await api.get<{ code: number; data: unknown }>('/dashboard');
@@ -311,7 +330,6 @@ const Dashboard: React.FC = () => {
           paymentApprovalCount: newData.paymentApprovalCount ?? 0,
         });
         setRecentActivities(newData.recentActivities ?? []);
-        // // console.log('[实时同步] 仪表盘数据已更新');
       }
     },
     {
@@ -394,7 +412,7 @@ const Dashboard: React.FC = () => {
                   <li key={activity.id} className="activity-item">
                     <span className={`activity-icon activity-icon--${activity.type}`}>{getActivityIcon(activity.type)}</span>
                     <span className="activity-content">{activity.content}</span>
-                    <span className="activity-time">{activity.time}</span>
+                    <span className="activity-time">{formatActivityTime(activity.time)}</span>
                   </li>
                 ))}
               </ul>

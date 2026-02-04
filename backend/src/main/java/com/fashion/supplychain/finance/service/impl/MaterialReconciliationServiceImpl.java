@@ -52,6 +52,7 @@ public class MaterialReconciliationServiceImpl
         String supplierName = (String) params.getOrDefault("supplierName", "");
         String materialCode = (String) params.getOrDefault("materialCode", "");
         String status = (String) params.getOrDefault("status", "");
+        String sourceType = (String) params.getOrDefault("sourceType", ""); // 采购来源筛选
 
         // 使用条件构造器进行查询
         IPage<MaterialReconciliation> pageResult = baseMapper.selectPage(pageInfo,
@@ -61,15 +62,13 @@ public class MaterialReconciliationServiceImpl
                         .like(StringUtils.hasText(supplierName), MaterialReconciliation::getSupplierName, supplierName)
                         .like(StringUtils.hasText(materialCode), MaterialReconciliation::getMaterialCode, materialCode)
                         .eq(StringUtils.hasText(status), MaterialReconciliation::getStatus, status)
+                        .eq(StringUtils.hasText(sourceType), MaterialReconciliation::getSourceType, sourceType)
                         .eq(MaterialReconciliation::getDeleteFlag, 0)
                         .orderByDesc(MaterialReconciliation::getCreateTime));
 
-        // 自动修复单价
-        if (pageResult != null && pageResult.getRecords() != null) {
-            for (MaterialReconciliation r : pageResult.getRecords()) {
-                autoFixAmountsIfNeeded(r);
-            }
-        }
+        // 物料对账的单价应该从采购单获取，不使用款式报价
+        // 款式报价的 total_price 是整件衣服的报价，不是单个物料的单价
+        // 单价填充逻辑已在 MaterialReconciliationOrchestrator.fillMaterialImageUrl 中处理
 
         return pageResult;
     }
@@ -77,20 +76,7 @@ public class MaterialReconciliationServiceImpl
     @Override
     public MaterialReconciliation getById(Serializable id) {
         MaterialReconciliation r = super.getById(id);
-        if (r != null) {
-            autoFixAmountsIfNeeded(r);
-        }
+        // 物料对账不使用款式报价的单价
         return r;
-    }
-
-    private void autoFixAmountsIfNeeded(MaterialReconciliation r) {
-        if (r == null) {
-            return;
-        }
-        // 优先从款号报价中获取单价
-        BigDecimal computedUp = resolveTotalUnitPriceFromStyleQuotation(r.getStyleNo(), r.getStyleId());
-        if (computedUp.compareTo(BigDecimal.ZERO) > 0) {
-            autoFixAmounts(r, computedUp);
-        }
     }
 }

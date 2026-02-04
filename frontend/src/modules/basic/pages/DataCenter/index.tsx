@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Card, Col, Input, Row, Space, Statistic, message, Form, Select, DatePicker, Upload } from 'antd';
 import { DownloadOutlined, PrinterOutlined, EditOutlined, EyeOutlined, FileTextOutlined, UploadOutlined } from '@ant-design/icons';
+import { StatsGrid } from '@/components/common/StatsGrid';
 import Layout from '@/components/Layout';
 // import UniversalCardView from '@/components/common/UniversalCardView'; // 未使用
 import ResizableTable from '@/components/common/ResizableTable';
@@ -614,23 +615,15 @@ const DataCenter: React.FC = () => {
           <h2 className="page-title">资料中心</h2>
         </div>
 
-        <Row gutter={16}>
-          <Col span={8}>
-            <Card>
-              <Statistic title="款号总数" value={stats.styleCount} />
-            </Card>
-          </Col>
-          <Col span={8}>
-            <Card>
-              <Statistic title="物料总数" value={stats.materialCount} />
-            </Card>
-          </Col>
-          <Col span={8}>
-            <Card>
-              <Statistic title="生产订单" value={stats.productionCount} />
-            </Card>
-          </Col>
-        </Row>
+        <StatsGrid
+          items={[
+            { key: 'styleCount', title: '款号总数', value: stats.styleCount },
+            { key: 'materialCount', title: '物料总数', value: stats.materialCount },
+            { key: 'productionCount', title: '生产订单', value: stats.productionCount },
+          ]}
+          columns={3}
+          gutter={16}
+        />
 
         <Card size="small" className="filter-card mt-sm mb-sm">
           <StandardToolbar

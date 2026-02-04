@@ -108,11 +108,23 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
 
         Page<MaterialPurchase> pageInfo = new Page<>(page, pageSize);
         LambdaQueryWrapper<MaterialPurchase> wrapper = new LambdaQueryWrapper<MaterialPurchase>()
-                .eq(MaterialPurchase::getDeleteFlag, 0)
-                .like(StringUtils.hasText(purchaseNo), MaterialPurchase::getPurchaseNo, purchaseNo)
-                .like(StringUtils.hasText(materialCode), MaterialPurchase::getMaterialCode, materialCode)
-                .like(StringUtils.hasText(materialName), MaterialPurchase::getMaterialName, materialName)
-                .like(StringUtils.hasText(orderNo), MaterialPurchase::getOrderNo, orderNo)
+                .eq(MaterialPurchase::getDeleteFlag, 0);
+
+        // orderNo作为通用搜索关键词，支持订单号/采购单号/物料编码/物料名称的or查询
+        if (StringUtils.hasText(orderNo)) {
+            String keyword = orderNo.trim();
+            wrapper.and(w -> w
+                .like(MaterialPurchase::getOrderNo, keyword)
+                .or().like(MaterialPurchase::getPurchaseNo, keyword)
+                .or().like(MaterialPurchase::getMaterialCode, keyword)
+                .or().like(MaterialPurchase::getMaterialName, keyword)
+            );
+        }
+
+        // 独立搜索字段（用于高级筛选）
+        wrapper.like(StringUtils.hasText(purchaseNo) && !StringUtils.hasText(orderNo), MaterialPurchase::getPurchaseNo, purchaseNo)
+                .like(StringUtils.hasText(materialCode) && !StringUtils.hasText(orderNo), MaterialPurchase::getMaterialCode, materialCode)
+                .like(StringUtils.hasText(materialName) && !StringUtils.hasText(orderNo), MaterialPurchase::getMaterialName, materialName)
                 .like(StringUtils.hasText(styleNo), MaterialPurchase::getStyleNo, styleNo)
                 .eq(StringUtils.hasText(status), MaterialPurchase::getStatus, status)
                 .eq(StringUtils.hasText(sourceType), MaterialPurchase::getSourceType, sourceType)
@@ -707,13 +719,14 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         }
 
         String status = existed.getStatus() == null ? "" : existed.getStatus().trim();
-        if (MaterialConstants.STATUS_COMPLETED.equals(status) || MaterialConstants.STATUS_CANCELLED.equals(status)) {
+        String normalizedStatus = status.toLowerCase(); // 统一转换为小写进行比较
+        if (MaterialConstants.STATUS_COMPLETED.equals(normalizedStatus) || MaterialConstants.STATUS_CANCELLED.equals(normalizedStatus)) {
             return false;
         }
 
         String rid = StringUtils.hasText(receiverId) ? receiverId.trim() : null;
         String rname = StringUtils.hasText(receiverName) ? receiverName.trim() : null;
-        boolean pending = MaterialConstants.STATUS_PENDING.equals(status) || !StringUtils.hasText(status);
+        boolean pending = MaterialConstants.STATUS_PENDING.equals(normalizedStatus) || !StringUtils.hasText(normalizedStatus);
         if (!pending) {
             return isSameReceiver(existed, rid, rname);
         }
@@ -730,6 +743,8 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
                 .eq(MaterialPurchase::getId, purchaseId)
                 .eq(MaterialPurchase::getDeleteFlag, 0)
                 .and(w -> w.eq(MaterialPurchase::getStatus, MaterialConstants.STATUS_PENDING)
+                        .or()
+                        .eq(MaterialPurchase::getStatus, "PENDING") // 兼容历史大写数据
                         .or()
                         .isNull(MaterialPurchase::getStatus)
                         .or()
@@ -994,11 +1009,10 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
                 continue;
             }
 
+            // 采购数量 = BOM用量 × 订单数量（损耗率仅作参考，不参与计算）
             BigDecimal usage = bom.getUsageAmount() == null ? BigDecimal.ZERO : bom.getUsageAmount();
-            BigDecimal lossRate = bom.getLossRate() == null ? BigDecimal.ZERO : bom.getLossRate();
-            BigDecimal multiplier = BigDecimal.ONE
-                    .add(lossRate.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP));
-            BigDecimal required = usage.multiply(multiplier).multiply(BigDecimal.valueOf(matchedQty));
+            BigDecimal required = usage.multiply(BigDecimal.valueOf(matchedQty));
+            // 向上取整（保留完整数值，如2.5米→3米）
             int requiredInt = required.setScale(0, RoundingMode.CEILING).intValue();
 
             if (requiredInt <= 0) {

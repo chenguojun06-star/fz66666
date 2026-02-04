@@ -97,7 +97,7 @@
 
 /* 搜索按钮增强（胶囊形右半边 - 镂空设计）- 仅限仪表盘页面 */
 .dashboard-page .filter-card .ant-btn-primary {
-  height: 40px !important;
+  height: 32px !important;
   font-weight: 600 !important;
   border-radius: 0 999px 999px 0 !important;
   background: #ffffff !important;

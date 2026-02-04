@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import React, { useCallback } from 'react';
 import type { CuttingBundle, ProductionOrder } from '@/types/production';
 import type { ProgressNode } from '../types';
 import { getCurrentWorkflowNodeForOrder, isCuttingStageKey } from '../utils';

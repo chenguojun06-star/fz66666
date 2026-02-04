@@ -26,7 +26,7 @@
 
 .style-filter-group .ant-input-affix-wrapper,
 .style-filter-group .ant-input {
-  height: 40px;
+  height: 32px;
 }
 
 .style-filter-group .ant-input-affix-wrapper,
@@ -36,7 +36,7 @@
 }
 
 .style-filter-group .ant-btn {
-  height: 40px;
+  height: 32px;
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
 }
@@ -47,10 +47,10 @@
 }
 
 .style-filter-date {
-  height: 40px;
+  height: 32px;
 }
 
 .style-filter-status {
-  height: 40px;
+  height: 32px;
   width: 200px;
 }

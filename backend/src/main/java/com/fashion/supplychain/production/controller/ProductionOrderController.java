@@ -78,6 +78,25 @@ public class ProductionOrderController {
     }
 
     /**
+     * 获取全局订单统计数据（用于顶部统计卡片）
+     * 返回符合筛选条件的订单统计，支持按工厂、关键词、状态筛选
+     * - totalOrders: 总订单数
+     * - totalQuantity: 总数量
+     * - delayedOrders: 延期订单数
+     * - delayedQuantity: 延期订单数量
+     * 
+     * @param params 查询参数（keyword, status, factoryName等，与list接口参数一致）
+     * @return 统计数据
+     * @since 2026-02-05 初始版本
+     * @since 2026-02-06 增加筛选参数支持
+     */
+    @GetMapping("/stats")
+    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_VIEW')")
+    public Result<?> getStats(@RequestParam(required = false) Map<String, Object> params) {
+        return Result.success(productionOrderOrchestrator.getGlobalStats(params));
+    }
+
+    /**
      * 根据ID查询生产订单详情
      * 推荐使用：GET /list?id={id} （统一查询接口）
      */

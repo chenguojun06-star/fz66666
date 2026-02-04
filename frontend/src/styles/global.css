@@ -58,7 +58,6 @@ body {
 /* ============================================
    全局输入框 - 统一方形 32px
    ============================================ */
-.ant-input,
 .ant-input-affix-wrapper,
 .ant-input-number,
 .ant-select-selector,
@@ -66,6 +65,8 @@ body {
   height: 32px !important;
   border-radius: 0 !important;
 }
+
+/* 不要覆盖 ant-input 的默认样式，让 Ant Design 自己处理 */
 
 /* ============================================
    按钮 - 统一胶囊形
@@ -554,78 +555,7 @@ body {
 .text-neutral-light { color: var(--neutral-text-light); }
 .text-neutral-lighter { color: var(--neutral-text-lighter); }
 
-.ant-btn {
-  border-radius: var(--glass-radius);
-  font-weight: 600;
-}
-
-.ant-btn:not(.ant-btn-link):not(.ant-btn-text):not(.ant-btn-ghost):not(:disabled) {
-  background-color: rgba(255, 255, 255, 0.02);
-  border: var(--glass-border-width) solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
-  color: var(--glass-text);
-}
-
-@supports ((-webkit-backdrop-filter: blur(12px)) or (backdrop-filter: blur(12px))) {
-  .ant-btn:not(.ant-btn-link):not(.ant-btn-text):not(.ant-btn-ghost):not(:disabled) {
-    -webkit-backdrop-filter: blur(12px) saturate(160%);
-    backdrop-filter: blur(12px) saturate(160%);
-  }
-}
-
-.ant-btn:not(.ant-btn-link):not(.ant-btn-text):not(.ant-btn-ghost):not(:disabled):hover {
-  background-color: rgba(255, 255, 255, 0.06);
-  box-shadow: var(--glass-shadow-hover);
-}
-
-.ant-btn:not(.ant-btn-link):not(.ant-btn-text):not(.ant-btn-ghost):not(:disabled):active {
-  background-color: rgba(255, 255, 255, 0.1);
-  box-shadow: var(--glass-shadow);
-  transform: translateY(0.5px);
-}
-
-.ant-btn-primary:not(.ant-btn-dangerous):not(:disabled) {
-  background-color: rgba(45, 127, 249, 0.04) !important;
-  border: var(--glass-border-width) solid var(--glass-border-strong) !important;
-  color: var(--primary-color) !important;
-}
-
-.ant-btn-primary:not(.ant-btn-dangerous):not(:disabled):hover {
-  background-color: rgba(45, 127, 249, 0.08) !important;
-}
-
-.ant-btn-dangerous.ant-btn-primary:not(:disabled) {
-  background-color: rgba(245, 34, 45, 0.04) !important;
-  border: var(--glass-border-width) solid var(--glass-border-danger) !important;
-}
-
-.ant-btn-dangerous.ant-btn-primary:not(:disabled):hover {
-  background-color: rgba(245, 34, 45, 0.08) !important;
-}
-
-.ant-btn-default:not(.ant-btn-dangerous):not(.ant-btn-background-ghost):not(:disabled) {
-  background-color: rgba(255, 255, 255, 0.02);
-  border: var(--glass-border-width) solid var(--glass-border);
-  color: var(--glass-text);
-}
-
-.ant-btn-default:not(.ant-btn-dangerous):not(.ant-btn-background-ghost):not(:disabled):hover {
-  background-color: rgba(255, 255, 255, 0.06);
-}
-
-.ant-btn:disabled,
-.ant-btn-disabled {
-  background: rgba(255, 255, 255, 0.04) !important;
-  border-color: rgba(17, 24, 39, 0.08) !important;
-  box-shadow: none !important;
-  cursor: not-allowed;
-}
-
-.ant-btn-icon-only:not(.ant-btn-link):not(.ant-btn-text):not(.ant-btn-ghost) {
-  width: 34px;
-  height: 34px;
-  padding: 0;
-}
+/* 按钮样式已统一在 button-override.css 中定义，此处不再重复 */
 
 /* 表单样式 */
 .form-item {
@@ -1211,8 +1141,8 @@ body {
 .modal-detail-cover {
   width: 100%;
   overflow: hidden;
-  background: #f5f5f5;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1367,7 +1297,7 @@ body {
   }
 
   body {
-    background: #fff;
+    background: var(--body-bg, #fff);
   }
 
   body * {

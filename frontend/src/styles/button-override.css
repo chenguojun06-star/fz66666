@@ -6,11 +6,11 @@
 
 /* 按钮基础高度与胶囊统一 */
 .ant-btn:not(.ant-btn-icon-only) {
-  height: 40px !important;
-  padding: 0 24px !important;
+  height: 32px !important;
+  padding: 0 16px !important;
   border-radius: 999px !important;
   font-size: 14px !important;
-  line-height: 38px !important;
+  line-height: 30px !important;
   font-weight: 500 !important;
 }
 
@@ -23,10 +23,10 @@
 }
 
 .ant-btn.ant-btn-lg:not(.ant-btn-icon-only) {
-  height: 40px !important;
-  padding: 0 24px !important;
+  height: 36px !important;
+  padding: 0 20px !important;
   font-size: 14px !important;
-  line-height: 38px !important;
+  line-height: 34px !important;
   border-radius: 999px !important;
 }
 

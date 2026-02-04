@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Card, Input, Select, Space, Form, InputNumber, Upload, message as antdMessage, Segmented, Tooltip, Tabs, Modal, Collapse } from 'antd';
+import { Button, Card, Input, Select, Space, Form, InputNumber, Upload, message as antdMessage, Segmented, Tooltip, Tabs, Modal, Collapse, Table } from 'antd';
 import { PlusOutlined, DownloadOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { useModal } from '@/hooks';
@@ -563,7 +563,7 @@ const MaterialPurchase: React.FC = () => {
     } else if (activeTabKey === 'materialDatabase') {
       fetchMaterialDatabaseList();
     }
-  }, [activeTabKey, fetchMaterialDatabaseList, fetchMaterialPurchaseList]);
+  }, [activeTabKey, fetchMaterialDatabaseList, fetchMaterialPurchaseList, queryParams, materialDatabaseQueryParams]);
 
   // 实时同步
   useSync(
@@ -1059,7 +1059,18 @@ const MaterialPurchase: React.FC = () => {
                 children: (
                   <div>
                     <div className="page-header">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                        <Select
+                          value={queryParams.sourceType || ''}
+                          onChange={(value) => setQueryParams(prev => ({ ...prev, sourceType: value as 'order' | 'sample' | '', page: 1 }))}
+                          options={[
+                            { label: '全部', value: '' },
+                            { label: '订单', value: 'order' },
+                            { label: '样衣', value: 'sample' },
+                          ]}
+                          style={{ width: 120 }}
+                          placeholder="订单类型"
+                        />
                         <Segmented
                           value={queryParams.materialType || ''}
                           options={[
@@ -1080,58 +1091,6 @@ const MaterialPurchase: React.FC = () => {
                           <QuestionCircleOutlined style={{ color: 'var(--neutral-text-disabled)', cursor: 'pointer' }} />
                         </Tooltip>
                       </div>
-                      <Space wrap>
-                        <Button
-                          icon={<DownloadOutlined />}
-                          onClick={handleExport}
-                          disabled={loading || !purchaseList || purchaseList.length === 0}
-                        >
-                          导出
-                        </Button>
-                        <Button type="default" onClick={async () => {
-                          const targetOrderNo = (queryParams.orderNo || '').trim() || window.prompt('请输入订单号以生成采购单');
-                          if (!targetOrderNo) return;
-                          try {
-                            const orderRes = await api.get<{ code: number; message?: string; data: { records: ProductionOrder[]; total: number } }>('/production/order/list', {
-                              params: { page: 1, pageSize: 1, orderNo: targetOrderNo }
-                            });
-                            const records = orderRes?.data?.records || [];
-                            if (orderRes.code !== 200 || !records.length) {
-                              message.error(orderRes?.message || '未找到该订单');
-                              return;
-                            }
-                            const order = records[0];
-                            if (!order?.id) {
-                              message.error('订单数据缺少ID');
-                              return;
-                            }
-                            if (String(order?.status || '').trim().toLowerCase() === 'completed') {
-                              message.error('订单已完成，无法生成采购单');
-                              return;
-                            }
-                            setPreviewOrderId(String(order.id));
-                            setQueryParams(prev => ({ ...prev, orderNo: String(order.orderNo || targetOrderNo), page: 1 }));
-                            const previewRes = await api.get<{ code: number; message?: string; data: MaterialPurchaseType[] }>('/production/purchase/demand/preview', {
-                              params: { orderId: order.id }
-                            });
-                            if (previewRes.code === 200) {
-                              const preview = previewRes.data || [];
-                              setPreviewList(preview as MaterialPurchaseType[]);
-                              openDialog('preview');
-                              message.success(`已生成 ${preview.length} 条采购单预览，确认后保存生成`);
-                            } else {
-                              message.error(previewRes.message || '生成采购单预览失败');
-                            }
-                          } catch (e: unknown) {
-                            message.error((e as Error)?.message || '生成采购单失败');
-                          }
-                        }}>
-                          从订单生成采购单
-                        </Button>
-                        <Button type="primary" icon={<PlusOutlined />} onClick={() => openDialog('create')}>
-                          新增采购单
-                        </Button>
-                      </Space>
                     </div>
 
                     <MaterialSearchForm
@@ -1143,6 +1102,10 @@ const MaterialPurchase: React.FC = () => {
                         const orderNo = (params.get('orderNo') || '').trim();
                         setQueryParams({ page: 1, pageSize: 10, orderNo, materialType: '' });
                       }}
+                      onExport={handleExport}
+                      onAdd={() => openDialog('create')}
+                      loading={loading}
+                      hasData={purchaseList && purchaseList.length > 0}
                     />
 
                     <MaterialTable
@@ -1226,65 +1189,87 @@ const MaterialPurchase: React.FC = () => {
             <div style={{ marginBottom: 12, color: 'var(--neutral-text)' }}>
               确认人：{String(user?.name || user?.username || '系统操作员').trim() || '系统操作员'}
             </div>
-            <div style={{ border: '1px solid #f0f0f0' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: 'left', padding: '8px 10px', borderBottom: '1px solid #f0f0f0' }}>物料</th>
-                    <th style={{ textAlign: 'right', padding: '8px 10px', borderBottom: '1px solid #f0f0f0', width: 100 }}>采购数</th>
-                    <th style={{ textAlign: 'right', padding: '8px 10px', borderBottom: '1px solid #f0f0f0', width: 100 }}>到货数</th>
-                    <th style={{ textAlign: 'right', padding: '8px 10px', borderBottom: '1px solid #f0f0f0', width: 180 }}>实际回料数</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(returnConfirmModal.data || []).map((t, idx) => {
-                    const purchaseQty = Number(t?.purchaseQuantity || 0) || 0;
-                    const arrivedQty = Number(t?.arrivedQuantity || 0) || 0;
-                    const max = arrivedQty > 0 ? arrivedQty : purchaseQty;
+            <Table
+              dataSource={(returnConfirmModal.data || []).map((t, idx) => ({
+                key: String(t?.id || idx),
+                id: t?.id,
+                materialName: t?.materialName,
+                materialCode: t?.materialCode,
+                purchaseQuantity: Number(t?.purchaseQuantity || 0) || 0,
+                arrivedQuantity: Number(t?.arrivedQuantity || 0) || 0,
+                returnQuantity: t?.returnQuantity,
+                index: idx,
+              }))}
+              columns={[
+                {
+                  title: '物料',
+                  dataIndex: 'materialName',
+                  key: 'materialName',
+                  render: (_, record) => (
+                    <>
+                      <div style={{ fontWeight: 600, color: 'var(--neutral-text)' }}>{String(record.materialName || '-')}</div>
+                      <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--neutral-text-disabled)' }}>{String(record.materialCode || '')}</div>
+                      <Form.Item name={['items', record.index, 'purchaseId']} initialValue={String(record.id || '')} hidden>
+                        <Input />
+                      </Form.Item>
+                      <Form.Item name={['items', record.index, 'purchaseQuantity']} initialValue={record.purchaseQuantity} hidden>
+                        <Input />
+                      </Form.Item>
+                      <Form.Item name={['items', record.index, 'arrivedQuantity']} initialValue={record.arrivedQuantity} hidden>
+                        <Input />
+                      </Form.Item>
+                    </>
+                  ),
+                },
+                {
+                  title: '采购数',
+                  dataIndex: 'purchaseQuantity',
+                  key: 'purchaseQuantity',
+                  width: 100,
+                  align: 'right' as const,
+                },
+                {
+                  title: '到货数',
+                  dataIndex: 'arrivedQuantity',
+                  key: 'arrivedQuantity',
+                  width: 100,
+                  align: 'right' as const,
+                },
+                {
+                  title: '实际回料数',
+                  key: 'returnQuantity',
+                  width: 180,
+                  align: 'right' as const,
+                  render: (_, record) => {
+                    const max = record.arrivedQuantity > 0 ? record.arrivedQuantity : record.purchaseQuantity;
                     return (
-                      <tr key={String(t?.id || idx)}>
-                        <td style={{ padding: '8px 10px', borderBottom: '1px solid #f5f5f5' }}>
-                          <div style={{ fontWeight: 600, color: 'var(--neutral-text)' }}>{String(t?.materialName || '-')}</div>
-                          <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--neutral-text-disabled)' }}>{String(t?.materialCode || '')}</div>
-                          <Form.Item name={['items', idx, 'purchaseId']} initialValue={String(t?.id || '')} hidden>
-                            <Input />
-                          </Form.Item>
-                          <Form.Item name={['items', idx, 'purchaseQuantity']} initialValue={purchaseQty} hidden>
-                            <Input />
-                          </Form.Item>
-                          <Form.Item name={['items', idx, 'arrivedQuantity']} initialValue={arrivedQty} hidden>
-                            <Input />
-                          </Form.Item>
-                        </td>
-                        <td style={{ padding: '8px 10px', borderBottom: '1px solid #f5f5f5', textAlign: 'right' }}>{purchaseQty}</td>
-                        <td style={{ padding: '8px 10px', borderBottom: '1px solid #f5f5f5', textAlign: 'right' }}>{arrivedQty}</td>
-                        <td style={{ padding: '8px 10px', borderBottom: '1px solid #f5f5f5', textAlign: 'right' }}>
-                          <Form.Item
-                            name={['items', idx, 'returnQuantity']}
-                            initialValue={Number(t?.returnQuantity || 0) || (max || 0)}
-                            style={{ margin: 0, display: 'inline-block' }}
-                            rules={[
-                              { required: true, message: '请输入实际回料数量' },
-                              {
-                                validator: async (_, v) => {
-                                  const n = Number(v);
-                                  if (!Number.isFinite(n)) throw new Error('请输入数字');
-                                  if (n < 0) throw new Error('不能小于0');
-                                  if (!Number.isInteger(n)) throw new Error('请输入整数');
-                                  if (n > max) throw new Error(`不能大于${max}`);
-                                },
-                              },
-                            ]}
-                          >
-                            <InputNumber min={0} precision={0} step={1} style={{ width: 140 }} />
-                          </Form.Item>
-                        </td>
-                      </tr>
+                      <Form.Item
+                        name={['items', record.index, 'returnQuantity']}
+                        initialValue={Number(record.returnQuantity || 0) || (max || 0)}
+                        style={{ margin: 0 }}
+                        rules={[
+                          { required: true, message: '请输入实际回料数量' },
+                          {
+                            validator: async (_, v) => {
+                              const n = Number(v);
+                              if (!Number.isFinite(n)) throw new Error('请输入数字');
+                              if (n < 0) throw new Error('不能小于0');
+                              if (!Number.isInteger(n)) throw new Error('请输入整数');
+                              if (n > max) throw new Error(`不能大于${max}`);
+                            },
+                          },
+                        ]}
+                      >
+                        <InputNumber min={0} precision={0} step={1} style={{ width: 140 }} />
+                      </Form.Item>
                     );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                  },
+                },
+              ]}
+              pagination={false}
+              size="small"
+              bordered
+            />
           </Form>
         </ResizableModal>
 

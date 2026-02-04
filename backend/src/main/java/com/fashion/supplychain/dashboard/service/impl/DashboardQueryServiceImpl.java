@@ -18,6 +18,7 @@ import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleInfoService;
+import lombok.extern.slf4j.Slf4j;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import java.time.LocalDateTime;
@@ -25,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 public class DashboardQueryServiceImpl implements DashboardQueryService {
 
@@ -188,7 +190,10 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
     @Override
     public List<ScanRecord> listRecentScans(int limit) {
         int lim = Math.max(1, limit);
+        // 仅显示真实扫码操作，排除系统自动创建的记录
         return scanRecordService.lambdaQuery()
+                .ne(ScanRecord::getOperatorName, "system")
+                .isNotNull(ScanRecord::getOperatorId)
                 .orderByDesc(ScanRecord::getScanTime)
                 .page(new Page<>(1, lim))
                 .getRecords();
@@ -333,17 +338,38 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
     }
 
     @Override
+    public long sumOrderQuantityBetween(LocalDateTime start, LocalDateTime end) {
+        // 统计订单数量总和：时间范围内所有订单的orderQuantity之和
+        List<ProductionOrder> orders = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .ge(start != null, ProductionOrder::getCreateTime, start)
+                .le(end != null, ProductionOrder::getCreateTime, end)
+                .select(ProductionOrder::getOrderQuantity)
+                .list();
+        return orders.stream()
+                .mapToLong(o -> o.getOrderQuantity() != null ? o.getOrderQuantity() : 0L)
+                .sum();
+    }
+
+    @Override
     public long sumCuttingQuantityBetween(LocalDateTime start, LocalDateTime end) {
-        // 统计裁剪数量：从 CuttingTask 表统计 orderQuantity
+        // 统计裁剪数量：仅统计已完成（bundled）的裁剪任务
         List<CuttingTask> tasks = cuttingTaskService.lambdaQuery()
-                .ge(start != null, CuttingTask::getCreateTime, start)
-                .le(end != null, CuttingTask::getCreateTime, end)
+                .eq(CuttingTask::getStatus, "bundled")  // 仅统计已完成的任务
+                .ge(start != null, CuttingTask::getBundledTime, start)  // 使用完成时间
+                .le(end != null, CuttingTask::getBundledTime, end)
+                .isNotNull(CuttingTask::getBundledTime)
                 .isNotNull(CuttingTask::getOrderQuantity)
                 .list();
 
-        return tasks.stream()
+        long total = tasks.stream()
                 .mapToInt(CuttingTask::getOrderQuantity)
                 .sum();
+
+        log.info("裁剪数量统计 - 开始时间: {}, 结束时间: {}, 已完成任务数: {}, 总数量: {}",
+                start, end, tasks.size(), total);
+
+        return total;
     }
 
     @Override
@@ -378,38 +404,90 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
             dailyQuantities.merge(date, quantity, Integer::sum);
         }
 
-        return new java.util.ArrayList<>(dailyQuantities.values());
+        // 生成完整的30天数据列表
+        List<Integer> result = new java.util.ArrayList<>();
+        for (int i = 0; i < 30; i++) {
+            String date = start.plusDays(i).toLocalDate().toString();
+            result.add(dailyQuantities.getOrDefault(date, 0));
+        }
+        return result;
     }
 
     @Override
     public List<Integer> getDailyCuttingQuantities(LocalDateTime start, LocalDateTime end) {
-        // 获取每天的裁剪总数量：从 CuttingTask 表统计
+        // 获取每天的裁剪总数量：只统计已完成（status='bundled'）的裁剪任务
+        // 使用完成时间（bundledTime）而不是创建时间
+        log.info("查询裁剪数量: start={}, end={}", start, end);
+
         List<CuttingTask> tasks = cuttingTaskService.lambdaQuery()
-                .ge(start != null, CuttingTask::getCreateTime, start)
-                .le(end != null, CuttingTask::getCreateTime, end)
+                .eq(CuttingTask::getStatus, "bundled")  // 只统计已完成的裁剪任务
+                .ge(start != null, CuttingTask::getBundledTime, start)
+                .le(end != null, CuttingTask::getBundledTime, end)
+                .isNotNull(CuttingTask::getBundledTime)  // 必须有完成时间
                 .isNotNull(CuttingTask::getOrderQuantity)
-                .orderByAsc(CuttingTask::getCreateTime)
+                .orderByAsc(CuttingTask::getBundledTime)
                 .list();
 
-        // 按日期分组统计数量
+        log.info("查询到{}条已完成的裁剪任务", tasks.size());
+        if (!tasks.isEmpty()) {
+            log.info("前3条数据: {}", tasks.stream().limit(3).map(t ->
+                String.format("[%s: %d件, bundled=%s]", t.getProductionOrderNo(), t.getOrderQuantity(), t.getBundledTime())
+            ).toList());
+        }
+
+        // 按日期分组统计数量（使用完成日期）
         Map<String, Integer> dailyQuantities = new java.util.HashMap<>();
         for (CuttingTask task : tasks) {
-            String date = task.getCreateTime().toLocalDate().toString();
+            String date = task.getBundledTime().toLocalDate().toString();
             int quantity = task.getOrderQuantity();
             dailyQuantities.merge(date, quantity, Integer::sum);
         }
 
-        return new java.util.ArrayList<>(dailyQuantities.values());
+        log.info("按日期分组后: {}", dailyQuantities);
+
+        // 生成完整的30天数据列表
+        List<Integer> result = new java.util.ArrayList<>();
+        for (int i = 0; i < 30; i++) {
+            String date = start.plusDays(i).toLocalDate().toString();
+            result.add(dailyQuantities.getOrDefault(date, 0));
+        }
+
+        log.info("最终30天裁剪数量: {}", result);
+        return result;
     }
 
     @Override
     public List<Integer> getDailyScanCounts(LocalDateTime start, LocalDateTime end) {
-        // 获取每天的扫菲次数
+        // 获取每天的扫菲次数：只统计真实的扫码操作（排除系统自动创建的记录）
+        // 判断标准：operator_name != 'system' 且 operator_id 不为空
+        log.info("查询扫菲次数: start={}, end={}", start, end);
+
         List<ScanRecord> scans = scanRecordService.lambdaQuery()
                 .ge(start != null, ScanRecord::getScanTime, start)
                 .le(end != null, ScanRecord::getScanTime, end)
+                .isNotNull(ScanRecord::getOperatorName)     // 必须有操作人名称
+                .ne(ScanRecord::getOperatorName, "system")  // 排除系统自动创建的记录
+                .isNotNull(ScanRecord::getOperatorId)       // 必须有真实操作人ID
+                .ne(ScanRecord::getOperatorId, "")          // 操作人ID不能为空字符串
+                .isNotNull(ScanRecord::getScanTime)         // 必须有扫码时间
                 .orderByAsc(ScanRecord::getScanTime)
                 .list();
+
+        log.info("查询到{}条真实扫码记录", scans.size());
+        if (!scans.isEmpty()) {
+            log.info("前3条: {}", scans.stream().limit(3).map(s ->
+                String.format("[订单=%s, 类型=%s, 操作人=%s, 操作人ID=%s]",
+                    s.getOrderNo(), s.getScanType(), s.getOperatorName(), s.getOperatorId())
+            ).toList());
+
+            // 调试：打印所有记录的operator信息
+            long systemCount = scans.stream().filter(s -> "system".equals(s.getOperatorName())).count();
+            long nullNameCount = scans.stream().filter(s -> s.getOperatorName() == null).count();
+            long nullIdCount = scans.stream().filter(s -> s.getOperatorId() == null).count();
+            long emptyIdCount = scans.stream().filter(s -> "".equals(s.getOperatorId())).count();
+            log.warn("过滤结果异常 - system: {}, nullName: {}, nullId: {}, emptyId: {}",
+                systemCount, nullNameCount, nullIdCount, emptyIdCount);
+        }
 
         // 按日期分组统计次数
         Map<String, Integer> dailyCounts = new java.util.HashMap<>();
@@ -418,7 +496,57 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
             dailyCounts.merge(date, 1, Integer::sum);
         }
 
-        return new java.util.ArrayList<>(dailyCounts.values());
+        log.info("按日期分组扫菲次数: {}", dailyCounts);
+
+        // 生成完整的30天数据列表
+        List<Integer> result = new java.util.ArrayList<>();
+        for (int i = 0; i < 30; i++) {
+            String date = start.plusDays(i).toLocalDate().toString();
+            result.add(dailyCounts.getOrDefault(date, 0));
+        }
+
+        log.info("最终30天扫菲次数: {}", result);
+        return result;
+    }
+
+    @Override
+    public List<Integer> getDailyScanQuantities(LocalDateTime start, LocalDateTime end) {
+        // 获取每天的扫菲数量：只统计真实的扫码操作（排除系统自动创建的记录）
+        // 判断标准：operator_name != 'system' 且 operator_id 不为空
+        log.info("查询扫菲数量: start={}, end={}", start, end);
+
+        List<ScanRecord> scans = scanRecordService.lambdaQuery()
+                .ge(start != null, ScanRecord::getScanTime, start)
+                .le(end != null, ScanRecord::getScanTime, end)
+                .isNotNull(ScanRecord::getOperatorName)     // 必须有操作人名称
+                .ne(ScanRecord::getOperatorName, "system")  // 排除系统自动创建的记录
+                .isNotNull(ScanRecord::getOperatorId)       // 必须有真实操作人ID
+                .ne(ScanRecord::getOperatorId, "")          // 操作人ID不能为空字符串
+                .isNotNull(ScanRecord::getScanTime)         // 必须有扫码时间
+                .orderByAsc(ScanRecord::getScanTime)
+                .list();
+
+        log.info("查询到{}条真实扫码记录", scans.size());
+
+        // 按日期分组统计数量
+        Map<String, Integer> dailyQuantities = new java.util.HashMap<>();
+        for (ScanRecord scan : scans) {
+            String date = scan.getScanTime().toLocalDate().toString();
+            Integer quantity = scan.getQuantity() != null ? scan.getQuantity() : 0;
+            dailyQuantities.merge(date, quantity, Integer::sum);
+        }
+
+        log.info("按日期分组扫菲数量: {}", dailyQuantities);
+
+        // 生成完整的30天数据列表
+        List<Integer> result = new java.util.ArrayList<>();
+        for (int i = 0; i < 30; i++) {
+            String date = start.plusDays(i).toLocalDate().toString();
+            result.add(dailyQuantities.getOrDefault(date, 0));
+        }
+
+        log.info("最终30天扫菲数量: {}", result);
+        return result;
     }
 
     @Override

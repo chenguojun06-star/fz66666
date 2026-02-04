@@ -18,7 +18,7 @@ import java.time.format.DateTimeFormatter;
  * 物料对账同步服务实现类
  *
  * 核心逻辑：入库 → 对账的数据流转
- * 
+ *
  * 注意：本Service只处理单模块内的CRUD操作，跨模块协调请使用MaterialReconciliationSyncOrchestrator
  *
  * @author Fashion Supply Chain System
@@ -33,7 +33,7 @@ public class MaterialReconciliationSyncServiceImpl implements MaterialReconcilia
 
     /**
      * 创建物料对账记录（单模块操作）
-     * 
+     *
      * 注意：此方法只在本模块内创建记录，不处理跨模块数据查询
      * 完整的同步逻辑（含跨模块查询）请使用 MaterialReconciliationSyncOrchestrator.syncFromInbound()
      *
@@ -52,13 +52,7 @@ public class MaterialReconciliationSyncServiceImpl implements MaterialReconcilia
             reconciliation.setReconciliationNo(generateReconciliationNo());
         }
 
-        // 默认值设置
-        if (reconciliation.getDeductionAmount() == null) {
-            reconciliation.setDeductionAmount(BigDecimal.ZERO);
-        }
-        if (reconciliation.getPaidAmount() == null) {
-            reconciliation.setPaidAmount(BigDecimal.ZERO);
-        }
+        // 默认状态设置
         if (reconciliation.getStatus() == null) {
             reconciliation.setStatus("pending");
         }
@@ -66,16 +60,16 @@ public class MaterialReconciliationSyncServiceImpl implements MaterialReconcilia
         // 保存对账记录
         materialReconciliationService.save(reconciliation);
 
-        log.info("物料对账记录创建成功: reconciliationNo={}, materialCode={}, quantity={}, amount={}",
+        log.info("物料对账记录创建成功: reconciliationNo={}, materialCode={}, quantity={}",
                 reconciliation.getReconciliationNo(), reconciliation.getMaterialCode(),
-                reconciliation.getQuantity(), reconciliation.getTotalAmount());
+                reconciliation.getQuantity());
 
         return reconciliation.getId();
     }
 
     /**
      * 检查入库记录是否已同步
-     * 
+     *
      * 注意：此方法需要在Orchestrator中调用，因为需要查询入库记录信息
      *
      * @param purchaseId 采购单ID
@@ -91,11 +85,11 @@ public class MaterialReconciliationSyncServiceImpl implements MaterialReconcilia
 
         LambdaQueryWrapper<MaterialReconciliation> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(MaterialReconciliation::getPurchaseId, purchaseId);
-        
+
         if (materialCode != null && !materialCode.trim().isEmpty()) {
             wrapper.eq(MaterialReconciliation::getMaterialCode, materialCode);
         }
-        
+
         if (inboundNo != null && !inboundNo.trim().isEmpty()) {
             wrapper.like(MaterialReconciliation::getRemark, inboundNo);
         }

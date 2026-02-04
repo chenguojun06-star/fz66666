@@ -96,14 +96,6 @@ public class MaterialReconciliationSyncOrchestrator {
 
         // 数量和金额（使用入库数量）
         reconciliation.setQuantity(inbound.getInboundQuantity());
-        reconciliation.setUnitPrice(purchase.getUnitPrice() != null ? purchase.getUnitPrice() : BigDecimal.ZERO);
-
-        BigDecimal totalAmount = reconciliation.getUnitPrice()
-                .multiply(BigDecimal.valueOf(inbound.getInboundQuantity()));
-        reconciliation.setTotalAmount(totalAmount);
-        reconciliation.setDeductionAmount(BigDecimal.ZERO);
-        reconciliation.setFinalAmount(totalAmount);
-        reconciliation.setPaidAmount(BigDecimal.ZERO);
 
         // 对账周期（使用入库时间）
         LocalDateTime inboundTime = inbound.getInboundTime();

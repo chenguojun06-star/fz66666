@@ -248,6 +248,7 @@ const RoleList: React.FC = () => {
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
+      const currentRole = roleModal.data;
       const payload: Role = {
         ...(currentRole || ({} as Record<string, unknown>)),
         ...values,

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Button, Col, Row, Space, Tag, message, Tooltip } from 'antd';
+import { Button, Col, Row, Space, Tag, message, Tooltip, Table } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
 import QRCodeBox from './common/QRCodeBox';
 import api, { parseProductionOrderLines, sortSizeNames, toNumberSafe, ProductionOrderLine } from '../utils/api';
 import { StyleAttachment } from '../types/style';
@@ -209,30 +210,42 @@ export const ProductionOrderHeader: React.FC<{
 
             <div className="purchase-detail-size-block">
               <div className="purchase-detail-size-table-wrap">
-                <table className="purchase-detail-size-table">
-                  <tbody>
-                    <tr>
-                      <th className="purchase-detail-size-th">码数</th>
-                      {computedSizeItems.length
-                        ? computedSizeItems.map((x) => (
-                          <td key={x.size} className="purchase-detail-size-td">{x.size}</td>
-                        ))
-                        : <td className="purchase-detail-size-td">-</td>
-                      }
-                      <td className="purchase-detail-size-total-cell" />
-                    </tr>
-                    <tr>
-                      <th className="purchase-detail-size-th">数量</th>
-                      {computedSizeItems.length
-                        ? computedSizeItems.map((x) => (
-                          <td key={x.size} className="purchase-detail-size-td">{toNumberSafe(x.quantity)}</td>
-                        ))
-                        : <td className="purchase-detail-size-td">-</td>
-                      }
-                      <td className="purchase-detail-size-total-cell">总下单数：{toNumberSafe(computedTotal)}</td>
-                    </tr>
-                  </tbody>
-                </table>
+                <Table
+                  dataSource={computedSizeItems.length ? computedSizeItems : [{ size: '-', quantity: 0 }]}
+                  columns={
+                    [
+                      { title: '码数', dataIndex: 'size', key: 'size', align: 'center' },
+                    ] as ColumnsType<OrderHeaderSizeItem>
+                  }
+                  size="small"
+                  pagination={false}
+                  showHeader={true}
+                  bordered
+                  rowKey="size"
+                  summary={() => (
+                    <Table.Summary fixed>
+                      <Table.Summary.Row>
+                        <Table.Summary.Cell index={0} align="center">
+                          <strong>数量</strong>
+                        </Table.Summary.Cell>
+                        {computedSizeItems.length ? (
+                          computedSizeItems.map((x, idx) => (
+                            <Table.Summary.Cell key={x.size} index={idx + 1} align="center">
+                              {toNumberSafe(x.quantity)}
+                            </Table.Summary.Cell>
+                          ))
+                        ) : (
+                          <Table.Summary.Cell index={1} align="center">-</Table.Summary.Cell>
+                        )}
+                      </Table.Summary.Row>
+                      <Table.Summary.Row>
+                        <Table.Summary.Cell index={0} colSpan={computedSizeItems.length + 1} align="right">
+                          <strong>总下单数：{toNumberSafe(computedTotal)}</strong>
+                        </Table.Summary.Cell>
+                      </Table.Summary.Row>
+                    </Table.Summary>
+                  )}
+                />
               </div>
             </div>
           </div>
@@ -447,7 +460,7 @@ export const StyleAttachmentsButton: React.FC<{
               padding: '8px 12px',
               background: '#fffbe6',
               border: '1px solid #ffe58f',
-              
+
               fontSize: "var(--font-size-sm)",
               color: '#ad6800'
             }}>
@@ -461,7 +474,7 @@ export const StyleAttachmentsButton: React.FC<{
               padding: '8px 12px',
               background: '#fff2f0',
               border: '1px solid #ffccc7',
-              
+
               fontSize: "var(--font-size-sm)",
               color: '#a8071a'
             }}>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Tabs, Spin, message, List, Button, Space, Tag } from 'antd';
+import { Card, Tabs, Spin, message, List, Button, Space, Tag, Table } from 'antd';
 import { DownloadOutlined, FileOutlined, ReloadOutlined } from '@ant-design/icons';
 import type { StyleAttachment } from '@/types/style';
 import StyleSizeTab from '@/modules/basic/pages/StyleInfo/components/StyleSizeTab';
@@ -181,24 +181,31 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
                         .filter(l => Boolean(l));
 
                       return (
-                        <div style={{ padding: '8px' }}>
-                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: "var(--font-size-base)" }}>
-                            <thead>
-                              <tr style={{ background: '#fafafa' }}>
-                                <th style={{ border: '1px solid #d9d9d9', padding: '8px', width: 60, textAlign: 'center' }}>序号</th>
-                                <th style={{ border: '1px solid #d9d9d9', padding: '8px', textAlign: 'center' }}>生产要求</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {lines.map((line, idx) => (
-                                <tr key={idx}>
-                                  <td style={{ border: '1px solid #d9d9d9', padding: '8px', textAlign: 'center' }}>{idx + 1}</td>
-                                  <td style={{ border: '1px solid #d9d9d9', padding: '8px', whiteSpace: 'pre-wrap' }}>{line}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
+                        <Table
+                          size="small"
+                          pagination={false}
+                          dataSource={lines.map((line, idx) => ({
+                            key: idx,
+                            index: idx + 1,
+                            content: line
+                          }))}
+                          columns={[
+                            {
+                              title: '序号',
+                              dataIndex: 'index',
+                              width: 60,
+                              align: 'center'
+                            },
+                            {
+                              title: '生产要求',
+                              dataIndex: 'content',
+                              render: (text: string) => (
+                                <span style={{ whiteSpace: 'pre-wrap' }}>{text}</span>
+                              )
+                            }
+                          ]}
+                          style={{ fontSize: 'var(--font-size-base)' }}
+                        />
                       );
                     })()
                   ) : (

@@ -40,4 +40,9 @@ public class OverdueOrderDto {
      * 延期天数
      */
     private Integer overdueDays;
+
+    /**
+     * 工厂名称
+     */
+    private String factoryName;
 }

@@ -1,3 +1,4 @@
+import React from 'react';
 import { productionScanApi } from '@/services/production/productionApi';
 import type { ProductionOrder, ScanRecord } from '@/types/production';
 import type { ProgressNode } from '../types';

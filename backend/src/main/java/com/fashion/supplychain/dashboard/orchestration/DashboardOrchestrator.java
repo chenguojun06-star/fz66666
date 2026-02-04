@@ -27,8 +27,10 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 public class DashboardOrchestrator {
 
@@ -376,12 +378,12 @@ public class DashboardOrchestrator {
         sampleStats.setYear((int) dashboardQueryService.countSampleStylesBetween(yearStart, endTime));
         response.setSampleDevelopment(sampleStats);
 
-        // 2. 大货下单数量
+        // 2. 大货下单数量（改为统计订单数量总和，与图表一致）
         TopStatsResponse.TimeRangeStats bulkOrderStats = new TopStatsResponse.TimeRangeStats();
-        bulkOrderStats.setDay((int) dashboardQueryService.countProductionOrdersBetween(dayStart, endTime));
-        bulkOrderStats.setWeek((int) dashboardQueryService.countProductionOrdersBetween(weekStart, endTime));
-        bulkOrderStats.setMonth((int) dashboardQueryService.countProductionOrdersBetween(monthStart, endTime));
-        bulkOrderStats.setYear((int) dashboardQueryService.countProductionOrdersBetween(yearStart, endTime));
+        bulkOrderStats.setDay((int) dashboardQueryService.sumOrderQuantityBetween(dayStart, endTime));
+        bulkOrderStats.setWeek((int) dashboardQueryService.sumOrderQuantityBetween(weekStart, endTime));
+        bulkOrderStats.setMonth((int) dashboardQueryService.sumOrderQuantityBetween(monthStart, endTime));
+        bulkOrderStats.setYear((int) dashboardQueryService.sumOrderQuantityBetween(yearStart, endTime));
         response.setBulkOrder(bulkOrderStats);
 
         // 3. 裁剪数量
@@ -429,25 +431,24 @@ public class DashboardOrchestrator {
      * 获取订单与裁剪数量折线图数据（最近30天）
      */
     public OrderCuttingChartResponse getOrderCuttingChart() {
-        LocalDateTime endTime = LocalDateTime.now();
-        LocalDateTime startTime = endTime.minusDays(30);
+        // 统计最近30天：从29天前0点到今天23:59:59
+        LocalDate today = LocalDate.now();
+        LocalDateTime startTime = LocalDateTime.of(today.minusDays(29), LocalTime.MIN);
+        LocalDateTime endTime = LocalDateTime.of(today, LocalTime.MAX);
 
         List<Integer> orderQuantities = dashboardQueryService.getDailyOrderQuantities(startTime, endTime);
         List<Integer> cuttingQuantities = dashboardQueryService.getDailyCuttingQuantities(startTime, endTime);
+
+        log.info("Order quantities size: {}, first 5: {}", orderQuantities.size(),
+            orderQuantities.size() > 0 ? orderQuantities.subList(0, Math.min(5, orderQuantities.size())) : "empty");
+        log.info("Cutting quantities size: {}, first 5: {}", cuttingQuantities.size(),
+            cuttingQuantities.size() > 0 ? cuttingQuantities.subList(0, Math.min(5, cuttingQuantities.size())) : "empty");
 
         // 生成日期列表
         List<String> dates = new ArrayList<>();
         DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("MM-dd");
         for (int i = 0; i < 30; i++) {
             dates.add(startTime.plusDays(i).format(dateFormatter));
-        }
-
-        // 确保数据长度一致
-        while (orderQuantities.size() < 30) {
-            orderQuantities.add(0);
-        }
-        while (cuttingQuantities.size() < 30) {
-            cuttingQuantities.add(0);
         }
 
         return new OrderCuttingChartResponse(dates, orderQuantities, cuttingQuantities);
@@ -457,10 +458,13 @@ public class DashboardOrchestrator {
      * 获取扫菲次数折线图数据（最近30天）
      */
     public ScanCountChartResponse getScanCountChart() {
-        LocalDateTime endTime = LocalDateTime.now();
-        LocalDateTime startTime = endTime.minusDays(30);
+        // 统计最近30天：从29天前0点到今天23:59:59
+        LocalDate today = LocalDate.now();
+        LocalDateTime startTime = LocalDateTime.of(today.minusDays(29), LocalTime.MIN);
+        LocalDateTime endTime = LocalDateTime.of(today, LocalTime.MAX);
 
         List<Integer> scanCounts = dashboardQueryService.getDailyScanCounts(startTime, endTime);
+        List<Integer> scanQuantities = dashboardQueryService.getDailyScanQuantities(startTime, endTime);
 
         // 生成日期列表
         List<String> dates = new ArrayList<>();
@@ -469,12 +473,7 @@ public class DashboardOrchestrator {
             dates.add(startTime.plusDays(i).format(dateFormatter));
         }
 
-        // 确保数据长度一致
-        while (scanCounts.size() < 30) {
-            scanCounts.add(0);
-        }
-
-        return new ScanCountChartResponse(dates, scanCounts);
+        return new ScanCountChartResponse(dates, scanCounts, scanQuantities);
     }
 
     /**
@@ -500,6 +499,9 @@ public class DashboardOrchestrator {
                 dto.setDeliveryDate("");
                 dto.setOverdueDays(0);
             }
+
+            // 设置工厂名称
+            dto.setFactoryName(order.getFactoryName());
 
             result.add(dto);
         }

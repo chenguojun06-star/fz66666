@@ -776,3 +776,235 @@
   color: rgba(240, 242, 245, 0.72) !important;
 }
 
+/* ========== Dashboard 页面硬编码颜色覆盖 ========== */
+:root[data-theme="dark"] .page-card {
+  background: var(--body-bg) !important;
+}
+
+:root[data-theme="dark"] .dashboard-page .filter-card {
+  background: rgba(26, 29, 36, 0.6) !important;
+}
+
+/* 统计卡片背景 */
+:root[data-theme="dark"] .mini-stat-card {
+  background: rgba(26, 29, 36, 0.6) !important;
+}
+
+/* ========== 模态框和弹窗覆盖 ========== */
+:root[data-theme="dark"] .modal-detail-cover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+:root[data-theme="dark"] .modal-detail-label {
+  color: rgba(255, 255, 255, 0.55) !important;
+}
+
+/* ========== 生产模块样式覆盖 ========== */
+:root[data-theme="dark"] .cutting-qr-label {
+  background: rgba(26, 29, 36, 0.8) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+:root[data-theme="dark"] .progress-node {
+  background: rgba(26, 29, 36, 0.6) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* ========== 系统教程页面覆盖 ========== */
+:root[data-theme="dark"] .tutorial-container {
+  background: var(--body-bg) !important;
+}
+
+:root[data-theme="dark"] .tutorial-card {
+  background: rgba(26, 29, 36, 0.6) !important;
+}
+
+/* ========== 登录页面覆盖 ========== */
+:root[data-theme="dark"] .login-container {
+  background: var(--body-bg) !important;
+}
+
+:root[data-theme="dark"] .login-card {
+  background: rgba(26, 29, 36, 0.8) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* ========== Drawer 抽屉组件 ========== */
+:root[data-theme="dark"] .ant-drawer-content-wrapper {
+  background: #1a1d24 !important;
+}
+
+:root[data-theme="dark"] .ant-drawer-content {
+  background: #1a1d24 !important;
+}
+
+:root[data-theme="dark"] .ant-drawer-header {
+  background: #1a1d24 !important;
+  border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+:root[data-theme="dark"] .ant-drawer-title {
+  color: #ffffff !important;
+}
+
+:root[data-theme="dark"] .ant-drawer-body {
+  background: #1a1d24 !important;
+  color: #f5f5f5 !important;
+}
+
+:root[data-theme="dark"] .ant-drawer-footer {
+  background: #1a1d24 !important;
+  border-top-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* ========== Pagination 分页 ========== */
+:root[data-theme="dark"] .ant-pagination-item {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+:root[data-theme="dark"] .ant-pagination-item a {
+  color: #ffffff !important;
+}
+
+:root[data-theme="dark"] .ant-pagination-item-active {
+  background: #6ba3ff !important;
+  border-color: #6ba3ff !important;
+}
+
+:root[data-theme="dark"] .ant-pagination-item-active a {
+  color: #ffffff !important;
+}
+
+:root[data-theme="dark"] .ant-pagination-prev .ant-pagination-item-link,
+:root[data-theme="dark"] .ant-pagination-next .ant-pagination-item-link {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+}
+
+/* ========== DatePicker 日期选择器 ========== */
+:root[data-theme="dark"] .ant-picker-panel-container {
+  background: #1a1d24 !important;
+}
+
+:root[data-theme="dark"] .ant-picker-panel {
+  background: #1a1d24 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+:root[data-theme="dark"] .ant-picker-header {
+  color: #ffffff !important;
+  border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+:root[data-theme="dark"] .ant-picker-content th {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+:root[data-theme="dark"] .ant-picker-cell {
+  color: #f5f5f5 !important;
+}
+
+:root[data-theme="dark"] .ant-picker-cell:hover:not(.ant-picker-cell-selected):not(.ant-picker-cell-disabled) .ant-picker-cell-inner {
+  background: rgba(107, 163, 255, 0.15) !important;
+}
+
+:root[data-theme="dark"] .ant-picker-cell-selected .ant-picker-cell-inner {
+  background: #6ba3ff !important;
+  color: #ffffff !important;
+}
+
+:root[data-theme="dark"] .ant-picker-cell-today .ant-picker-cell-inner::before {
+  border-color: #6ba3ff !important;
+}
+
+/* ========== Upload 上传组件 ========== */
+:root[data-theme="dark"] .ant-upload-list-item {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+:root[data-theme="dark"] .ant-upload-list-item-name {
+  color: #f5f5f5 !important;
+}
+
+:root[data-theme="dark"] .ant-upload-drag {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+:root[data-theme="dark"] .ant-upload-drag:hover {
+  border-color: #6ba3ff !important;
+}
+
+/* ========== Spin 加载中 ========== */
+:root[data-theme="dark"] .ant-spin-text {
+  color: #f5f5f5 !important;
+}
+
+/* ========== Radio/Checkbox 单选/多选 ========== */
+:root[data-theme="dark"] .ant-radio-wrapper,
+:root[data-theme="dark"] .ant-checkbox-wrapper {
+  color: #f5f5f5 !important;
+}
+
+:root[data-theme="dark"] .ant-radio-inner {
+  background: #1a1d24 !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+:root[data-theme="dark"] .ant-checkbox-inner {
+  background: #1a1d24 !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+:root[data-theme="dark"] .ant-radio-checked .ant-radio-inner {
+  border-color: #6ba3ff !important;
+  background: #6ba3ff !important;
+}
+
+:root[data-theme="dark"] .ant-checkbox-checked .ant-checkbox-inner {
+  background: #6ba3ff !important;
+  border-color: #6ba3ff !important;
+}
+
+/* ========== Switch 开关 ========== */
+:root[data-theme="dark"] .ant-switch {
+  background: rgba(255, 255, 255, 0.25) !important;
+}
+
+:root[data-theme="dark"] .ant-switch-checked {
+  background: #6ba3ff !important;
+}
+
+/* ========== Slider 滑动输入条 ========== */
+:root[data-theme="dark"] .ant-slider-rail {
+  background: rgba(255, 255, 255, 0.15) !important;
+}
+
+:root[data-theme="dark"] .ant-slider-track {
+  background: #6ba3ff !important;
+}
+
+:root[data-theme="dark"] .ant-slider-handle {
+  border-color: #6ba3ff !important;
+  background: #ffffff !important;
+}
+
+/* ========== InputNumber 数字输入框 ========== */
+:root[data-theme="dark"] .ant-input-number {
+  background: #1a1d24 !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+}
+
+:root[data-theme="dark"] .ant-input-number-handler {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+:root[data-theme="dark"] .ant-input-number-handler:hover {
+  color: #6ba3ff !important;
+}

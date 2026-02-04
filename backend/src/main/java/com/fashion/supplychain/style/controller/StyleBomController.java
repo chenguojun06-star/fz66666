@@ -2,6 +2,7 @@ package com.fashion.supplychain.style.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.constant.MaterialConstants;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.style.entity.StyleBom;
@@ -16,6 +17,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -169,20 +171,35 @@ public class StyleBomController {
                     purchase.setSpecifications(bom.getSpecification());
                     purchase.setUnit(bom.getUnit());
 
-                    // 采购数量 = 用量（样衣阶段默认数量为1）
+                    // 采购数量 = BOM用量（样衣阶段，损耗率仅作参考，不参与计算）
                     BigDecimal usageAmount = bom.getUsageAmount() != null ? bom.getUsageAmount() : BigDecimal.ZERO;
-                    int purchaseQty = usageAmount.intValue();
+
+                    // 转换为整数（向上取整保留完整数值）
+                    int purchaseQty = usageAmount.setScale(0, RoundingMode.CEILING).intValue();
+
                     if (purchaseQty <= 0) {
-                        purchaseQty = 1; // 最小采购数量为1
+                        log.warn("BOM配置用量为0或未设置，跳过该物料: styleId={}, materialName={}", styleId, bom.getMaterialName());
+                        continue; // 跳过用量为0的物料
                     }
+
                     purchase.setPurchaseQuantity(purchaseQty);
                     purchase.setArrivedQuantity(0);
 
                     // 供应商和价格
-                    purchase.setSupplierName(bom.getSupplier());
-                    purchase.setUnitPrice(bom.getUnitPrice());
-                    BigDecimal totalAmount = bom.getUnitPrice() != null
-                            ? bom.getUnitPrice().multiply(BigDecimal.valueOf(purchaseQty))
+                    String supplier = bom.getSupplier();
+                    if (supplier == null || supplier.trim().isEmpty()) {
+                        log.warn("BOM配置缺少供应商信息: styleId={}, materialName={}", styleId, bom.getMaterialName());
+                    }
+                    purchase.setSupplierName(supplier != null ? supplier.trim() : "");
+
+                    // 从BOM获取单价
+                    BigDecimal bomUnitPrice = bom.getUnitPrice();
+                    log.info("BOM单价读取: styleId={}, materialCode={}, materialName={}, bomUnitPrice={}",
+                            styleId, bom.getMaterialCode(), bom.getMaterialName(), bomUnitPrice);
+
+                    purchase.setUnitPrice(bomUnitPrice);
+                    BigDecimal totalAmount = bomUnitPrice != null
+                            ? bomUnitPrice.multiply(BigDecimal.valueOf(purchaseQty))
                             : BigDecimal.ZERO;
                     purchase.setTotalAmount(totalAmount);
 
@@ -196,7 +213,7 @@ public class StyleBomController {
                     purchase.setSourceType("sample");
 
                     // 状态
-                    purchase.setStatus("PENDING");
+                    purchase.setStatus(MaterialConstants.STATUS_PENDING);
                     purchase.setDeleteFlag(0);
                     purchase.setCreateTime(LocalDateTime.now());
                     purchase.setUpdateTime(LocalDateTime.now());

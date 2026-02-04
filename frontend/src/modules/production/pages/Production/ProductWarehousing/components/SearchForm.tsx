@@ -40,6 +40,7 @@ const SearchForm: React.FC<SearchFormProps> = ({ queryParams, setQueryParams, on
             statusValue={queryParams.warehouse || ''}
             onStatusChange={handleStatusChange}
             statusOptions={[
+              { label: '全部', value: '' },
               { label: 'A仓', value: 'A仓' },
               { label: 'B仓', value: 'B仓' },
             ]}

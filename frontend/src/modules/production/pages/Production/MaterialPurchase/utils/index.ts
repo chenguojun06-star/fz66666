@@ -43,14 +43,30 @@ export const escapeHtml = (v: unknown) => {
 };
 
 export const getStatusConfig = (status: MaterialPurchaseType['status']) => {
-  const statusMap: Record<MaterialPurchaseType['status'], { text: string; color: string }> = {
+  // 处理空状态或未定义
+  if (!status || String(status).trim() === '') {
+    return { text: '待采购', color: 'default' };
+  }
+
+  // 标准化状态值为小写（兼容后端可能返回的大写值）
+  const normalizedStatus = String(status).toLowerCase().trim();
+
+  const statusMap: Record<string, { text: string; color: string }> = {
     [MATERIAL_PURCHASE_STATUS.PENDING]: { text: '待采购', color: 'default' },
     [MATERIAL_PURCHASE_STATUS.RECEIVED]: { text: '已领取', color: 'warning' },
     [MATERIAL_PURCHASE_STATUS.PARTIAL]: { text: '部分到货', color: 'warning' },
     [MATERIAL_PURCHASE_STATUS.COMPLETED]: { text: '全部到货', color: 'default' },
     [MATERIAL_PURCHASE_STATUS.CANCELLED]: { text: '已取消', color: 'error' }
   };
-  return statusMap[status] || { text: '未知', color: 'default' };
+
+  // 检查是否有匹配的状态
+  if (statusMap[normalizedStatus]) {
+    return statusMap[normalizedStatus];
+  }
+
+  // 对于未识别的状态，记录日志并返回待采购
+  console.warn(`[MaterialPurchase] 未识别的状态值: "${status}"（已转换为小写: "${normalizedStatus}"），默认显示为待采购`);
+  return { text: '待采购', color: 'default' };
 };
 
 export const getOrderQtyTotal = (lines: Array<{ color: string; size: string; quantity: number }>) => {

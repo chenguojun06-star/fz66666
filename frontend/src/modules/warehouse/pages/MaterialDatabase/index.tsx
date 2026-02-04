@@ -84,7 +84,7 @@ const MaterialDatabasePage: React.FC = () => {
   // 当分页或筛选条件变化时重新获取列表
   useEffect(() => {
     fetchList();
-     
+
   }, [
     pagination.current,
     pagination.pageSize,
@@ -476,6 +476,7 @@ const MaterialDatabasePage: React.FC = () => {
                   statusValue={statusValue}
                   onStatusChange={setStatusValue}
                   statusOptions={[
+                    { label: '全部', value: '' },
                     { label: '面料', value: 'fabric' },
                     { label: '面料A', value: 'fabricA' },
                     { label: '面料B', value: 'fabricB' },

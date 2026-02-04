@@ -104,6 +104,17 @@ public class ProductionOrderOrchestrator {
         return productionOrderQueryService.queryPage(params);
     }
 
+    /**
+     * 获取全局订单统计数据（用于顶部统计卡片）
+     * 返回符合筛选条件的订单统计，支持按工厂、关键词、状态筛选
+     * 
+     * @param params 查询参数（keyword, status, factoryName等）
+     * @return 统计数据DTO
+     */
+    public com.fashion.supplychain.production.dto.ProductionOrderStatsDTO getGlobalStats(java.util.Map<String, Object> params) {
+        return productionOrderQueryService.getGlobalStats(params);
+    }
+
     public ProductionOrder getDetailById(String id) {
         String oid = StringUtils.hasText(id) ? id.trim() : null;
         if (!StringUtils.hasText(oid)) {
@@ -117,20 +128,13 @@ public class ProductionOrderOrchestrator {
     }
 
     public ProductionOrder getDetailByOrderNo(String orderNo) {
-        String on = StringUtils.hasText(orderNo) ? orderNo.trim() : null;
-        if (!StringUtils.hasText(on)) {
-            throw new IllegalArgumentException("订单号不能为空");
-        }
-        ProductionOrder order = productionOrderService.getOne(
-            new LambdaQueryWrapper<ProductionOrder>()
-                .eq(ProductionOrder::getOrderNo, on)
-                .eq(ProductionOrder::getDeleteFlag, 0)
-                .last("limit 1")
-        );
+        // 委托给QueryService，它会调用fillFlowStageFields填充二次工艺等所有进度数据
+        ProductionOrder order = productionOrderQueryService.getDetailByOrderNo(orderNo);
         if (order == null) {
             throw new NoSuchElementException("生产订单不存在");
         }
 
+        // 仅处理SKU生成逻辑
         if (StringUtils.hasText(order.getOrderDetails())) {
             try {
                 List<Map<String, Object>> items = resolveOrderLines(order.getOrderDetails());
@@ -803,6 +807,16 @@ public class ProductionOrderOrchestrator {
         newOrder.setStyleNo(style.getStyleNo());
         newOrder.setStyleName(style.getStyleName());
         newOrder.setRemarks(StringUtils.hasText(remark) ? remark.trim() : null);
+
+        // 记录创建人信息
+        String currentUserId = UserContext.userId();
+        String currentUsername = UserContext.username();
+        if (StringUtils.hasText(currentUserId)) {
+            newOrder.setCreatedById(currentUserId);
+        }
+        if (StringUtils.hasText(currentUsername)) {
+            newOrder.setCreatedByName(currentUsername);
+        }
 
         // 设置初始状态
         newOrder.setProductionProgress(0);

@@ -30,6 +30,24 @@ public class MaterialReconciliation implements com.fashion.supplychain.finance.s
 
     private String materialName;
 
+    /**
+     * 物料图片URL（不映射到数据库，由业务层填充）
+     */
+    @TableField(exist = false)
+    private String materialImageUrl;
+
+    /**
+     * 采购员姓名（不映射到数据库，由业务层填充）
+     */
+    @TableField(exist = false)
+    private String purchaserName;
+
+    /**
+     * 单位（不映射到数据库，由业务层填充）
+     */
+    @TableField(exist = false)
+    private String unit;
+
     private String purchaseId;
 
     private String purchaseNo;

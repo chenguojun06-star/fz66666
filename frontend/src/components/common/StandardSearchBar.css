@@ -18,12 +18,3 @@
 .standard-search-status {
   width: 120px;
 }
-
-.standard-search-bar .ant-picker {
-  padding: 0 14px;
-}
-
-.standard-search-bar .ant-select-selector {
-  padding: 0 12px !important;
-  align-items: center;
-}

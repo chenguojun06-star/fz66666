@@ -940,6 +940,11 @@ public class ProductionOrderQueryService {
                         orderOperator = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(flow, "orderOperatorName"));
                     }
                 }
+                // 如果workflow中没有操作人或操作人是system，使用数据库的创建人
+                if ((!StringUtils.hasText(orderOperator) || "system".equalsIgnoreCase(orderOperator))
+                        && StringUtils.hasText(o.getCreatedByName())) {
+                    orderOperator = o.getCreatedByName();
+                }
 
                 LocalDateTime procurementStart = null;
                 LocalDateTime procurementEnd = null;
@@ -1394,7 +1399,13 @@ public class ProductionOrderQueryService {
 
             o.setOrderStartTime(orderStart);
             o.setOrderEndTime(orderEnd);
-            o.setOrderOperatorName(orderOperator);
+            // 如果没有操作人或操作人是system，使用数据库的创建人
+            String finalOrderOperator = orderOperator;
+            if ((!StringUtils.hasText(finalOrderOperator) || "system".equalsIgnoreCase(finalOrderOperator))
+                    && StringUtils.hasText(o.getCreatedByName())) {
+                finalOrderOperator = o.getCreatedByName();
+            }
+            o.setOrderOperatorName(finalOrderOperator);
             o.setOrderCompletionRate(orderRate);
 
             // 采购完成率：优先使用物料到货率
@@ -1732,6 +1743,81 @@ public class ProductionOrderQueryService {
             CuttingTask task = cuttingTaskMap.get(oidTrimmed);
             o.setCuttingTask(task);
         }
+    }
+
+    /**
+     * 获取全局订单统计数据（用于顶部统计卡片）
+     * 支持按工厂、关键词、状态等条件筛选，默认返回全部订单统计
+     * 
+     * @param params 筛选参数（keyword, factoryName, status等）
+     * @return 统计数据DTO
+     */
+    public com.fashion.supplychain.production.dto.ProductionOrderStatsDTO getGlobalStats(java.util.Map<String, Object> params) {
+        com.fashion.supplychain.production.dto.ProductionOrderStatsDTO stats = 
+            new com.fashion.supplychain.production.dto.ProductionOrderStatsDTO();
+        
+        // 安全处理空参数
+        java.util.Map<String, Object> safeParams = params == null ? new java.util.HashMap<>() : params;
+        
+        // 提取筛选参数（与queryPage保持一致）
+        String keyword = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "keyword"));
+        String status = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "status"));
+        String factoryName = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "factoryName"));
+        String orderNo = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "orderNo"));
+        String styleNo = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "styleNo"));
+        
+        // 构建基础查询条件
+        QueryWrapper<ProductionOrder> wrapper = new QueryWrapper<>();
+        wrapper.eq("delete_flag", 0);
+        
+        // 应用筛选条件（与queryPage保持一致）
+        wrapper.eq(StringUtils.hasText(orderNo), "order_no", orderNo)
+            .eq(StringUtils.hasText(styleNo), "style_no", styleNo)
+            .like(StringUtils.hasText(factoryName), "factory_name", factoryName)
+            .and(StringUtils.hasText(keyword), w -> w
+                .like("order_no", keyword).or()
+                .like("style_no", keyword).or()
+                .like("factory_name", keyword))
+            .eq(StringUtils.hasText(status), "status", status);
+        
+        // ✅ 应用操作人权限过滤 - 工人只看自己创建的订单
+        DataPermissionHelper.applyOperatorFilter(wrapper, "created_by_id", "created_by_name");
+        
+        // 查询所有订单（只查询需要的字段以提高性能）
+        wrapper.select("id", "order_no", "order_quantity", "planned_end_date");
+        List<ProductionOrder> allOrders = productionOrderMapper.selectList(wrapper);
+        
+        if (allOrders == null || allOrders.isEmpty()) {
+            stats.setTotalOrders(0);
+            stats.setTotalQuantity(0);
+            stats.setDelayedOrders(0);
+            stats.setDelayedQuantity(0);
+            return stats;
+        }
+        
+        // 计算总订单数
+        stats.setTotalOrders(allOrders.size());
+        
+        // 计算总数量
+        long totalQty = allOrders.stream()
+            .mapToLong(o -> o.getOrderQuantity() != null ? o.getOrderQuantity() : 0)
+            .sum();
+        stats.setTotalQuantity(totalQty);
+        
+        // 计算延期订单（plannedEndDate < 当前时间）
+        LocalDateTime now = LocalDateTime.now();
+        List<ProductionOrder> delayedOrders = allOrders.stream()
+            .filter(o -> o.getPlannedEndDate() != null && o.getPlannedEndDate().isBefore(now))
+            .collect(Collectors.toList());
+        
+        stats.setDelayedOrders(delayedOrders.size());
+        
+        long delayedQty = delayedOrders.stream()
+            .mapToLong(o -> o.getOrderQuantity() != null ? o.getOrderQuantity() : 0)
+            .sum();
+        stats.setDelayedQuantity(delayedQty);
+        
+        return stats;
     }
 
 }

@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 
 /**
- * 扫菲次数折线图响应
+ * 扫菲次数和数量折线图响应
  */
 @Data
 @NoArgsConstructor
@@ -22,4 +22,9 @@ public class ScanCountChartResponse {
      * 扫菲次数列表
      */
     private List<Integer> scanCounts;
+
+    /**
+     * 扫菲数量列表
+     */
+    private List<Integer> scanQuantities;
 }

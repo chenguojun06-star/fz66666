@@ -25,31 +25,42 @@ const ScanCountChart: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      // 暂时使用虚拟数据
+      // 调用真实API（从t_scan_record表聚合统计）
+      const result = await api.get('/dashboard/scan-count-chart');
+      // axios拦截器返回的是完整的Result对象：{ code: 200, data: {...} }
+      if (result && result.code === 200 && result.data) {
+        setData({
+          dates: result.data.dates || [],
+          scanCounts: result.data.scanCounts || [],
+          scanQuantities: result.data.scanQuantities || [],
+        });
+      } else {
+        // API失败时使用空数据
+        console.warn('API returned no data structure, using empty data');
+        const mockDates = Array.from({ length: 30 }, (_, i) => {
+          const date = new Date();
+          date.setDate(date.getDate() - 29 + i);
+          return `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        });
+        setData({
+          dates: mockDates,
+          scanCounts: Array(30).fill(0),
+          scanQuantities: Array(30).fill(0),
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load scan count chart:', error);
+      // API调用失败时使用空数据
       const mockDates = Array.from({ length: 30 }, (_, i) => {
         const date = new Date();
         date.setDate(date.getDate() - 29 + i);
         return `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
       });
-
-      // 演示数据：生成近30天的随机扫码统计（实际应调用真实API）
-      const mockCounts = Array.from({ length: 30 }, () => Math.floor(Math.random() * 50) + 80);
-      const mockQuantities = Array.from({ length: 30 }, () => Math.floor(Math.random() * 3000) + 5000);
-
       setData({
         dates: mockDates,
-        scanCounts: mockCounts,
-        scanQuantities: mockQuantities,
+        scanCounts: Array(30).fill(0),
+        scanQuantities: Array(30).fill(0),
       });
-
-      // 调用真实API（从t_scan_record表聚合统计）
-      const result = await fetch('/api/dashboard/scan-count-chart');
-      const response = await result.json();
-      if (response.code === 200 && response.data) {
-        setData(response.data);
-      }
-    } catch (error) {
-      console.error('Failed to load scan count chart:', error);
     } finally {
       setLoading(false);
     }
@@ -58,24 +69,26 @@ const ScanCountChart: React.FC = () => {
   const option = {
     tooltip: {
       trigger: 'axis',
-      backgroundColor: 'rgba(255, 255, 255, 0.95)',
-      borderColor: '#ddd',
+      confine: true,
+      backgroundColor: '#fff',
+      borderColor: '#e5e7eb',
       borderWidth: 1,
       textStyle: {
-        color: 'var(--neutral-text)',
-        fontSize: "var(--font-size-sm)",
+        color: '#333',
       },
       formatter: (params: any) => {
+        if (!params || params.length === 0) return '';
         const date = params[0].axisValue;
-        let html = `<div style="padding: 4px 0; font-weight: 600;">${date}</div>`;
+        let html = `<div style="padding: 4px 0; font-weight: 600; color: #333;">${date}</div>`;
         params.forEach((item: any) => {
+          const value = item.value !== undefined && item.value !== null ? item.value : 0;
           html += `
             <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 2px 0;">
               <span style="display: flex; align-items: center; gap: 8px;">
                 <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: ${item.color};"></span>
-                <span>${item.seriesName}</span>
+                <span style="color: #333;">${item.seriesName}</span>
               </span>
-              <span style="font-weight: 600;">${item.value.toLocaleString()}</span>
+              <span style="font-weight: 600; color: #333;">${value.toLocaleString()}</span>
             </div>
           `;
         });
@@ -164,10 +177,10 @@ const ScanCountChart: React.FC = () => {
         data: data.scanQuantities,
         lineStyle: {
           width: 3,
-          color: '#10b981', // 绿色
+          color: '#f97316', // 橙色
         },
         itemStyle: {
-          color: '#10b981',
+          color: '#f97316',
         },
         areaStyle: {
           color: {
@@ -177,8 +190,8 @@ const ScanCountChart: React.FC = () => {
             x2: 0,
             y2: 1,
             colorStops: [
-              { offset: 0, color: 'rgba(16, 185, 129, 0.3)' },
-              { offset: 1, color: 'rgba(16, 185, 129, 0.05)' },
+              { offset: 0, color: 'rgba(249, 115, 22, 0.3)' },
+              { offset: 1, color: 'rgba(249, 115, 22, 0.05)' },
             ],
           },
         },

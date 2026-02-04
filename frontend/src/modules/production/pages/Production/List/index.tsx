@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Button, Card, Input, Select, Space, Tag, Form, App, Dropdown, Checkbox, Alert, InputNumber } from 'antd';
+import { Button, Card, Input, Select, Space, Tag, Form, App, Dropdown, Checkbox, Alert, InputNumber, Table } from 'antd';
 import { DownloadOutlined, DeleteOutlined, CheckCircleOutlined, EditOutlined, SettingOutlined, AppstoreOutlined, UnorderedListOutlined, PrinterOutlined, CloseCircleOutlined, ReloadOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
@@ -39,6 +39,8 @@ import { useModal } from '@/hooks';
 import LiquidProgressBar from '@/components/common/LiquidProgressBar';
 import ProcessDetailModal from '@/components/production/ProcessDetailModal';
 import { getProgressColorStatus } from '@/utils/progressColor';
+import StatsCards from '@/components/common/StatsCards';
+import type { StatCard } from '@/components/common/StatsCards';
 
 const { Option } = Select;
 
@@ -84,6 +86,15 @@ const ProductionList: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+  const [showDelayedOnly, setShowDelayedOnly] = useState(false); // 是否只显示延期订单
+
+  // 全局统计数据（从API获取，不受分页影响）
+  const [globalStats, setGlobalStats] = useState<{
+    totalOrders: number;
+    totalQuantity: number;
+    delayedOrders: number;
+    delayedQuantity: number;
+  }>({ totalOrders: 0, totalQuantity: 0, delayedOrders: 0, delayedQuantity: 0 });
 
   // 快速编辑和日志状态
   const [quickEditSaving, setQuickEditSaving] = useState(false);
@@ -351,7 +362,7 @@ const ProductionList: React.FC = () => {
   };
 
   // 列设置下拉菜单(已删除,改用工序展开功能)
-   
+
   const _columnSettingsMenu = {
     items: [
       {
@@ -427,11 +438,42 @@ const ProductionList: React.FC = () => {
     }
   };
 
+  // 获取全局统计数据（根据当前筛选条件）
+  const fetchGlobalStats = async (params?: typeof queryParams) => {
+    try {
+      // 只传递筛选参数，不传分页参数
+      const filterParams = params ? {
+        keyword: params.keyword,
+        factoryName: params.factoryName,
+        status: params.status,
+        orderNo: params.orderNo,
+        styleNo: params.styleNo,
+      } : {};
+      
+      const response = await api.get<{
+        totalOrders: number;
+        totalQuantity: number;
+        delayedOrders: number;
+        delayedQuantity: number;
+      }>('/production/order/stats', { params: filterParams });
+      if (isApiSuccess(response)) {
+        setGlobalStats(response.data);
+      }
+    } catch (error) {
+      console.error('获取全局统计数据失败', error);
+    }
+  };
+
   // 页面加载时获取生产订单列表
   useEffect(() => {
     setSelectedRowKeys([]);
     setSelectedRows([]);
     fetchProductionList();
+  }, [queryParams]);
+
+  // 筛选条件变化时更新统计数据
+  useEffect(() => {
+    fetchGlobalStats(queryParams);
   }, [queryParams]);
 
   // 实时同步：30秒自动轮询更新数据
@@ -755,8 +797,18 @@ const ProductionList: React.FC = () => {
 
   // 添加排序逻辑
   const sortedProductionList = useMemo(() => {
-    const sorted = [...productionList];
-    sorted.sort((a: any, b: any) => {
+    let filtered = [...productionList];
+
+    // 延期订单过滤
+    if (showDelayedOnly) {
+      filtered = filtered.filter(order => {
+        const status = getProgressColorStatus(order.plannedEndDate);
+        return status === 'danger';
+      });
+    }
+
+    // 排序
+    filtered.sort((a: any, b: any) => {
       const aVal = a[sortField];
       const bVal = b[sortField];
 
@@ -769,11 +821,11 @@ const ProductionList: React.FC = () => {
 
       return 0;
     });
-    return sorted;
-  }, [productionList, sortField, sortOrder]);
+    return filtered;
+  }, [productionList, sortField, sortOrder, showDelayedOnly]);
 
   // 工序列函数(已改用工序汇总+点击展开)
-   
+
   const _stageColumns = (
     prefix: string,
     titles: { start: string; end: string; operator: string; rate: string },
@@ -1164,15 +1216,16 @@ const ProductionList: React.FC = () => {
       title: '采购',
       dataIndex: 'procurementCompletionRate',
       key: 'procurementSummary',
-      width: 100,
+      width: 110,
       align: 'center' as const,
       render: (rate: number, record: ProductionOrder) => {
+        const total = record.orderQuantity || 0;
+        const completed = Math.round((rate || 0) * total / 100);
+        const colorStatus = getProgressColorStatus(record.plannedEndDate);
+
         return (
           <div
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
               cursor: 'pointer',
               padding: '4px',
               transition: 'background 0.2s'
@@ -1188,14 +1241,15 @@ const ProductionList: React.FC = () => {
               e.currentTarget.style.background = 'transparent';
             }}
           >
+            <div style={{ fontSize: '11px', color: '#666', marginBottom: '2px', textAlign: 'center' }}>
+              {completed}/{total}
+            </div>
             <LiquidProgressBar
               percent={rate || 0}
               width="100%"
-              height={12}
+              height={16}
+              status={colorStatus}
             />
-            <span style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)', minWidth: '40px' }}>
-              {rate || 0}%
-            </span>
           </div>
         );
       },
@@ -1204,15 +1258,16 @@ const ProductionList: React.FC = () => {
       title: '裁剪',
       dataIndex: 'cuttingCompletionRate',
       key: 'cuttingSummary',
-      width: 100,
+      width: 110,
       align: 'center' as const,
       render: (rate: number, record: ProductionOrder) => {
+        const total = record.orderQuantity || 0;
+        const completed = Math.round((rate || 0) * total / 100);
+        const colorStatus = getProgressColorStatus(record.plannedEndDate);
+
         return (
           <div
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
               cursor: 'pointer',
               padding: '4px',
               transition: 'background 0.2s'
@@ -1228,14 +1283,15 @@ const ProductionList: React.FC = () => {
               e.currentTarget.style.background = 'transparent';
             }}
           >
+            <div style={{ fontSize: '11px', color: '#666', marginBottom: '2px', textAlign: 'center' }}>
+              {completed}/{total}
+            </div>
             <LiquidProgressBar
               percent={rate || 0}
               width="100%"
-              height={12}
+              height={16}
+              status={colorStatus}
             />
-            <span style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)', minWidth: '40px' }}>
-              {rate || 0}%
-            </span>
           </div>
         );
       },
@@ -1244,33 +1300,50 @@ const ProductionList: React.FC = () => {
       title: '二次工艺',
       dataIndex: 'secondaryProcessRate',
       key: 'secondaryProcessSummary',
-      width: 110,
+      width: 90,
       align: 'center' as const,
       render: (rate: number, record: ProductionOrder) => {
-        // 智能检测是否有二次工艺配置
-        const hasSecondaryProcess = (() => {
+        // 检测当前订单是否有二次工艺数据（扫码记录或工序配置）
+        const hasSecondaryProcessData = (() => {
+          // 方式1: 检查是否有扫码记录生成的时间数据
+          if (record.secondaryProcessStartTime || record.secondaryProcessEndTime) {
+            return true;
+          }
+
+          // 方式2: 检查工序配置中是否有二次工艺
           const nodes = record.progressNodeUnitPrices;
           if (!Array.isArray(nodes) || nodes.length === 0) return false;
-          // 检查是否有包含"二次工艺"或"工艺"关键词的节点
           return nodes.some((n: any) => {
             const name = String(n.name || n.processName || '').trim();
             return name.includes('二次工艺') || name.includes('二次') || (name.includes('工艺') && !name.includes('车'));
           });
         })();
 
-        // 如果没有二次工艺配置，显示占位符
-        if (!hasSecondaryProcess) {
+        // 没有二次工艺数据：显示灰色占位，不可点击
+        if (!hasSecondaryProcessData) {
           return (
-            <span style={{ color: 'var(--neutral-text-disabled)', fontSize: '12px' }}>-</span>
+            <div style={{ padding: '4px', opacity: 0.4 }}>
+              <div style={{ fontSize: '11px', color: '#999', marginBottom: '2px', textAlign: 'center' }}>-</div>
+              <div
+                style={{
+                  width: '100%',
+                  height: '16px',
+                  background: '#e8e8e8',
+                  borderRadius: '8px'
+                }}
+              />
+            </div>
           );
         }
+
+        // 有二次工艺数据：显示彩色进度条，可点击查看详情
+        const total = record.orderQuantity || 0;
+        const completed = Math.round((rate || 0) * total / 100);
+        const colorStatus = getProgressColorStatus(record.plannedEndDate);
 
         return (
           <div
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
               cursor: 'pointer',
               padding: '4px',
               transition: 'background 0.2s'
@@ -1286,14 +1359,15 @@ const ProductionList: React.FC = () => {
               e.currentTarget.style.background = 'transparent';
             }}
           >
+            <div style={{ fontSize: '11px', color: '#666', marginBottom: '2px', textAlign: 'center' }}>
+              {completed}/{total}
+            </div>
             <LiquidProgressBar
               percent={rate || 0}
               width="100%"
-              height={12}
+              height={16}
+              status={colorStatus}
             />
-            <span style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)', minWidth: '40px' }}>
-              {rate || 0}%
-            </span>
           </div>
         );
       },
@@ -1302,15 +1376,16 @@ const ProductionList: React.FC = () => {
       title: '车缝',
       dataIndex: 'carSewingCompletionRate',
       key: 'carSewingSummary',
-      width: 100,
+      width: 110,
       align: 'center' as const,
       render: (rate: number, record: ProductionOrder) => {
+        const total = record.orderQuantity || 0;
+        const completed = Math.round((rate || 0) * total / 100);
+        const colorStatus = getProgressColorStatus(record.plannedEndDate);
+
         return (
           <div
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
               cursor: 'pointer',
               padding: '4px',
               transition: 'background 0.2s'
@@ -1326,14 +1401,15 @@ const ProductionList: React.FC = () => {
               e.currentTarget.style.background = 'transparent';
             }}
           >
+            <div style={{ fontSize: '11px', color: '#666', marginBottom: '2px', textAlign: 'center' }}>
+              {completed}/{total}
+            </div>
             <LiquidProgressBar
               percent={rate || 0}
               width="100%"
-              height={12}
+              height={16}
+              status={colorStatus}
             />
-            <span style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)', minWidth: '40px' }}>
-              {rate || 0}%
-            </span>
           </div>
         );
       },
@@ -1342,15 +1418,16 @@ const ProductionList: React.FC = () => {
       title: '尾部',
       dataIndex: 'tailProcessRate',
       key: 'tailProcessSummary',
-      width: 100,
+      width: 110,
       align: 'center' as const,
       render: (rate: number, record: ProductionOrder) => {
+        const total = record.orderQuantity || 0;
+        const completed = Math.round((rate || 0) * total / 100);
+        const colorStatus = getProgressColorStatus(record.plannedEndDate);
+
         return (
           <div
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
               cursor: 'pointer',
               padding: '4px',
               transition: 'background 0.2s'
@@ -1366,14 +1443,15 @@ const ProductionList: React.FC = () => {
               e.currentTarget.style.background = 'transparent';
             }}
           >
+            <div style={{ fontSize: '11px', color: '#666', marginBottom: '2px', textAlign: 'center' }}>
+              {completed}/{total}
+            </div>
             <LiquidProgressBar
               percent={rate || 0}
               width="100%"
-              height={12}
+              height={16}
+              status={colorStatus}
             />
-            <span style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)', minWidth: '40px' }}>
-              {rate || 0}%
-            </span>
           </div>
         );
       },
@@ -1983,6 +2061,26 @@ const ProductionList: React.FC = () => {
     return visibleColumns[col.key as string] !== false;
   });
 
+  // 统计数据现在从 globalStats（API获取）获取，不再从 productionList 计算
+  // 保留 useMemo 用于点击延期订单筛选时的本地过滤逻辑
+  const localDelayedList = useMemo(() => {
+    return productionList.filter(order => {
+      const status = getProgressColorStatus(order.plannedEndDate);
+      return status === 'danger'; // 延期订单
+    });
+  }, [productionList]);
+
+  // 点击统计卡片筛选
+  const handleStatClick = (type: 'all' | 'delayed') => {
+    if (type === 'all') {
+      setShowDelayedOnly(false);
+      setQueryParams({ ...queryParams, status: '', page: 1 });
+    } else if (type === 'delayed') {
+      setShowDelayedOnly(true);
+      setQueryParams({ ...queryParams, page: 1 });
+    }
+  };
+
   return (
     <Layout>
       <div className="production-list-page">
@@ -1991,6 +2089,27 @@ const ProductionList: React.FC = () => {
           <div className="page-header">
             <h2 className="page-title">我的订单</h2>
           </div>
+
+          {/* 数据概览卡片 - 使用全局统计数据（不受分页影响） */}
+          <StatsCards stats={[
+            {
+              label: '订单个数',
+              value: globalStats.totalOrders,
+              color: '#2D7FF9',
+              onClick: () => handleStatClick('all')
+            },
+            {
+              label: '总数量',
+              value: globalStats.totalQuantity,
+              color: '#52c41a'
+            },
+            {
+              label: '延期订单',
+              value: `${globalStats.delayedOrders}单/${globalStats.delayedQuantity.toLocaleString()}件`,
+              color: '#ff4d4f',
+              onClick: () => handleStatClick('delayed')
+            }
+          ]} />
 
           {/* 筛选区 */}
           <Card size="small" className="filter-card mb-sm">
@@ -2005,6 +2124,7 @@ const ProductionList: React.FC = () => {
                   statusValue={queryParams.status || ''}
                   onStatusChange={(value) => setQueryParams({ ...queryParams, status: value, page: 1 })}
                   statusOptions={[
+                    { label: '全部', value: '' },
                     { label: '待生产', value: 'pending' },
                     { label: '生产中', value: 'production' },
                     { label: '已完成', value: 'completed' },
@@ -2205,100 +2325,79 @@ const ProductionList: React.FC = () => {
               />
 
               {/* 工序节点委派表格 */}
-              <div style={{
-                border: '1px solid #e5e7eb',
-                overflow: 'hidden'
-              }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ background: '#f9fafb' }}>
-                      <th colSpan={7} style={{
-                        padding: '8px 12px',
-                        textAlign: 'left',
-                        fontSize: '12px',
-                        color: 'var(--neutral-text-secondary)',
-                        borderBottom: '1px solid #e5e7eb'
-                      }}>
-                        <span style={{ fontWeight: 600, color: 'var(--neutral-text)' }}>订单：</span>
-                        <span style={{ marginRight: '16px' }}>{processDetailRecord?.orderNo || '-'}</span>
-                        <span style={{ fontWeight: 600, color: 'var(--neutral-text)' }}>款号：</span>
-                        <span style={{ marginRight: '16px' }}>{processDetailRecord?.styleNo || '-'}</span>
-                        <span style={{ fontWeight: 600, color: 'var(--neutral-text)' }}>数量：</span>
-                        <span>{processDetailRecord?.orderQuantity || 0} 件</span>
-                      </th>
-                    </tr>
-                    <tr style={{ background: '#f9fafb' }}>
-                      <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '13px', color: 'var(--neutral-text)', fontWeight: 600, width: '90px' }}>
-                        生产节点
-                      </th>
-                      <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '13px', color: 'var(--neutral-text)', fontWeight: 600, width: '90px' }}>
-                        当前状态
-                      </th>
-                      <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '13px', color: 'var(--neutral-text)', fontWeight: 600, width: '140px' }}>
-                        工序名称
-                      </th>
-                      <th style={{ padding: '8px 12px', textAlign: 'right', fontSize: '13px', color: 'var(--neutral-text)', fontWeight: 600, width: '90px' }}>
-                        数量
-                      </th>
-                      <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '13px', color: 'var(--neutral-text)', fontWeight: 600 }}>
-                        执行工厂
-                      </th>
-                      <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '13px', color: 'var(--neutral-text)', fontWeight: 600, width: '110px' }}>
-                        委派单价
-                      </th>
-                      <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '13px', color: 'var(--neutral-text)', fontWeight: 600, width: '90px' }}>
-                        委派人
-                      </th>
-                      <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '13px', color: 'var(--neutral-text)', fontWeight: 600, width: '110px' }}>
-                        委派时间
-                      </th>
-                      <th style={{ padding: '8px 12px', textAlign: 'center', fontSize: '13px', color: 'var(--neutral-text)', fontWeight: 600, width: '90px' }}>
-                        操作
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(() => {
-                      const stageColorMap: Record<string, string> = {
-                        procurement: '#1e40af',
-                        cutting: '#92400e',
-                        carSewing: '#065f46',
-                        secondaryProcess: '#5b21b6',
-                        tailProcess: '#9d174d',
-                        warehousing: '#374151',
-                      };
+              {(() => {
+                const stageColorMap: Record<string, string> = {
+                  procurement: '#1e40af',
+                  cutting: '#92400e',
+                  carSewing: '#065f46',
+                  secondaryProcess: '#5b21b6',
+                  tailProcess: '#9d174d',
+                  warehousing: '#374151',
+                };
 
-                      const stageStatusMap: Record<string, any> = {
-                        cutting: processStatus?.cutting,
-                        carSewing: processStatus?.sewing,
-                        tailProcess: processStatus?.finishing,
-                        warehousing: processStatus?.warehousing,
-                      };
+                const stageStatusMap: Record<string, any> = {
+                  cutting: processStatus?.cutting,
+                  carSewing: processStatus?.sewing,
+                  tailProcess: processStatus?.finishing,
+                  warehousing: processStatus?.warehousing,
+                };
 
-                      const stagesToShow = mainStages.filter(s => activeStageKeys.includes(s.key));
+                const stagesToShow = mainStages.filter(s => activeStageKeys.includes(s.key));
 
-                      return stagesToShow.map((node) => (
-                        <tr key={node.key} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                          <td style={{ padding: '6px 12px' }}>
-                            <span style={{ fontSize: '13px', fontWeight: 600, color: node.color }}>
-                              {node.name}
+                return (
+                  <div style={{ border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+                    <div style={{
+                      background: '#f9fafb',
+                      padding: '8px 12px',
+                      fontSize: '12px',
+                      color: 'var(--neutral-text-secondary)',
+                      borderBottom: '1px solid #e5e7eb'
+                    }}>
+                      <span style={{ fontWeight: 600, color: 'var(--neutral-text)' }}>订单：</span>
+                      <span style={{ marginRight: '16px' }}>{processDetailRecord?.orderNo || '-'}</span>
+                      <span style={{ fontWeight: 600, color: 'var(--neutral-text)' }}>款号：</span>
+                      <span style={{ marginRight: '16px' }}>{processDetailRecord?.styleNo || '-'}</span>
+                      <span style={{ fontWeight: 600, color: 'var(--neutral-text)' }}>数量：</span>
+                      <span>{processDetailRecord?.orderQuantity || 0} 件</span>
+                    </div>
+                    <Table
+                      dataSource={stagesToShow}
+                      columns={[
+                        {
+                          title: '生产节点',
+                          dataIndex: 'name',
+                          width: 90,
+                          render: (text: string, record) => (
+                            <span style={{ fontSize: '13px', fontWeight: 600, color: record.color }}>
+                              {text}
                             </span>
-                          </td>
-                          <td style={{ padding: '6px 12px' }}>
-                            {stageStatusMap[node.key] && (
+                          ),
+                        },
+                        {
+                          title: '当前状态',
+                          key: 'status',
+                          width: 90,
+                          render: (_, record) => {
+                            const status = stageStatusMap[record.key];
+                            return status ? (
                               <span style={{
                                 fontSize: '11px',
                                 fontWeight: 600,
-                                color: stageStatusMap[node.key].completed ? 'var(--success-color)' : 'var(--warning-color)',
-                                background: stageStatusMap[node.key].completed ? '#d1fae5' : '#fef3c7',
+                                color: status.completed ? 'var(--success-color)' : 'var(--warning-color)',
+                                background: status.completed ? '#d1fae5' : '#fef3c7',
                                 padding: '2px 6px',
                                 whiteSpace: 'nowrap'
                               }}>
-                                {stageStatusMap[node.key].completed ? '✓ 完成' : `${stageStatusMap[node.key].completionRate}%`}
+                                {status.completed ? '✓ 完成' : `${status.completionRate}%`}
                               </span>
-                            )}
-                          </td>
-                          <td style={{ padding: '6px 12px' }}>
+                            ) : null;
+                          },
+                        },
+                        {
+                          title: '工序名称',
+                          key: 'processName',
+                          width: 140,
+                          render: (_, record) => (
                             <Select
                               placeholder="选择工序"
                               size="small"
@@ -2306,39 +2405,49 @@ const ProductionList: React.FC = () => {
                               allowClear
                               showSearch
                               optionFilterProp="children"
-                              value={delegationData[node.key]?.processName}
+                              value={delegationData[record.key]?.processName}
                               onChange={(value) => {
                                 setDelegationData(prev => ({
                                   ...prev,
-                                  [node.key]: { ...prev[node.key], processName: value }
+                                  [record.key]: { ...prev[record.key], processName: value }
                                 }));
                               }}
-                              disabled={childProcessesByStage[node.key]?.length === 0}
+                              disabled={childProcessesByStage[record.key]?.length === 0}
                             >
-                              {(childProcessesByStage[node.key] || []).map((proc, idx) => (
+                              {(childProcessesByStage[record.key] || []).map((proc, idx) => (
                                 <Select.Option key={idx} value={proc.name}>
                                   {proc.name} (¥{proc.unitPrice.toFixed(2)})
                                 </Select.Option>
                               ))}
                             </Select>
-                          </td>
-                          <td style={{ padding: '6px 12px', textAlign: 'right' }}>
+                          ),
+                        },
+                        {
+                          title: '数量',
+                          key: 'quantity',
+                          width: 90,
+                          align: 'right',
+                          render: (_, record) => (
                             <InputNumber
                               placeholder="数量"
                               size="small"
                               min={0}
                               step={1}
                               style={{ width: '85px' }}
-                              value={delegationData[node.key]?.quantity}
+                              value={delegationData[record.key]?.quantity}
                               onChange={(value) => {
                                 setDelegationData(prev => ({
                                   ...prev,
-                                  [node.key]: { ...prev[node.key], quantity: value || undefined }
+                                  [record.key]: { ...prev[record.key], quantity: value || undefined }
                                 }));
                               }}
                             />
-                          </td>
-                          <td style={{ padding: '6px 12px' }}>
+                          ),
+                        },
+                        {
+                          title: '执行工厂',
+                          key: 'factoryId',
+                          render: (_, record) => (
                             <Select
                               placeholder="选择工厂"
                               size="small"
@@ -2347,11 +2456,11 @@ const ProductionList: React.FC = () => {
                               allowClear
                               showSearch
                               optionFilterProp="children"
-                              value={delegationData[node.key]?.factoryId}
+                              value={delegationData[record.key]?.factoryId}
                               onChange={(value) => {
                                 setDelegationData(prev => ({
                                   ...prev,
-                                  [node.key]: { ...prev[node.key], factoryId: value }
+                                  [record.key]: { ...prev[record.key], factoryId: value }
                                 }));
                               }}
                             >
@@ -2361,68 +2470,97 @@ const ProductionList: React.FC = () => {
                                 </Select.Option>
                               ))}
                             </Select>
-                          </td>
-                        <td style={{ padding: '6px 12px' }}>
-                          <InputNumber
-                            placeholder="单价"
-                            size="small"
-                            min={0}
-                            step={0.01}
-                            precision={2}
-                            prefix="¥"
-                            style={{ width: '100px' }}
-                            value={delegationData[node.key]?.unitPrice}
-                            onChange={(value) => {
-                              setDelegationData(prev => ({
-                                ...prev,
-                                [node.key]: { ...prev[node.key], unitPrice: value || undefined }
-                              }));
-                            }}
-                          />
-                        </td>
-                        <td style={{ padding: '6px 12px', fontSize: '12px', color: 'var(--neutral-text)' }}>
-                          {stageStatusMap[node.key]?.operatorName ? (
-                            <a
-                              style={{ cursor: 'pointer', color: 'var(--primary-color)', fontWeight: 500 }}
-                              onClick={() => {
-                                if (processDetailRecord?.orderNo) {
-                                  navigate(`/finance/payroll-operator-summary?orderNo=${processDetailRecord.orderNo}&processName=${node.name}`);
-                                }
+                          ),
+                        },
+                        {
+                          title: '委派单价',
+                          key: 'unitPrice',
+                          width: 110,
+                          render: (_, record) => (
+                            <InputNumber
+                              placeholder="单价"
+                              size="small"
+                              min={0}
+                              step={0.01}
+                              precision={2}
+                              prefix="¥"
+                              style={{ width: '100px' }}
+                              value={delegationData[record.key]?.unitPrice}
+                              onChange={(value) => {
+                                setDelegationData(prev => ({
+                                  ...prev,
+                                  [record.key]: { ...prev[record.key], unitPrice: value || undefined }
+                                }));
                               }}
+                            />
+                          ),
+                        },
+                        {
+                          title: '委派人',
+                          key: 'operatorName',
+                          width: 90,
+                          render: (_, record) => {
+                            const status = stageStatusMap[record.key];
+                            return status?.operatorName ? (
+                              <a
+                                style={{ cursor: 'pointer', color: 'var(--primary-color)', fontWeight: 500 }}
+                                onClick={() => {
+                                  if (processDetailRecord?.orderNo) {
+                                    navigate(`/finance/payroll-operator-summary?orderNo=${processDetailRecord.orderNo}&processName=${record.name}`);
+                                  }
+                                }}
+                              >
+                                {status.operatorName}
+                              </a>
+                            ) : (
+                              <span style={{ color: 'var(--neutral-text-disabled)' }}>-</span>
+                            );
+                          },
+                        },
+                        {
+                          title: '委派时间',
+                          key: 'completedTime',
+                          width: 110,
+                          render: (_, record) => {
+                            const status = stageStatusMap[record.key];
+                            return status?.completedTime ? (
+                              <span style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)' }}>
+                                {new Date(status.completedTime).toLocaleString('zh-CN', {
+                                  month: '2-digit',
+                                  day: '2-digit',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </span>
+                            ) : (
+                              <span style={{ color: 'var(--neutral-text-disabled)' }}>-</span>
+                            );
+                          },
+                        },
+                        {
+                          title: '操作',
+                          key: 'action',
+                          width: 90,
+                          align: 'center',
+                          render: (_, record) => (
+                            <Button
+                              type="primary"
+                              size="small"
+                              onClick={() => processDetailRecord && saveDelegation(record.key, processDetailRecord.id)}
                             >
-                              {stageStatusMap[node.key].operatorName}
-                            </a>
-                          ) : (
-                            <span style={{ color: 'var(--neutral-text-disabled)' }}>-</span>
-                          )}
-                        </td>
-                        <td style={{ padding: '6px 12px', fontSize: '12px', color: 'var(--neutral-text-secondary)' }}>
-                          {stageStatusMap[node.key]?.completedTime ? (
-                            new Date(stageStatusMap[node.key].completedTime).toLocaleString('zh-CN', {
-                              month: '2-digit',
-                              day: '2-digit',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })
-                          ) : (
-                            <span style={{ color: 'var(--neutral-text-disabled)' }}>-</span>
-                          )}
-                        </td>
-                        <td style={{ padding: '6px 12px', textAlign: 'center' }}>
-                          <Button
-                            type="primary"
-                            size="small"
-                            onClick={() => processDetailRecord && saveDelegation(node.key, processDetailRecord.id)}
-                          >
-                            保存
-                          </Button>
-                        </td>
-                      </tr>
-                      ));
-                    })()}
-                  </tbody>
-                </table>
-              </div>
+                              保存
+                            </Button>
+                          ),
+                        },
+                      ]}
+                      pagination={false}
+                      size="small"
+                      bordered
+                      rowKey="key"
+                    />
+                  </div>
+                );
+              })()}
 
               {/* 委派历史记录 */}
               <div style={{ marginTop: '16px' }}>

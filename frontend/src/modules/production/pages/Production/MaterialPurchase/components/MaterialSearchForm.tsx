@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Card } from 'antd';
+import { Button, Card, Space } from 'antd';
+import { DownloadOutlined, PlusOutlined } from '@ant-design/icons';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import { MaterialQueryParams } from '@/types/production';
 import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
@@ -10,6 +11,10 @@ interface MaterialSearchFormProps {
   setQueryParams: React.Dispatch<React.SetStateAction<MaterialQueryParams>>;
   onSearch: () => void;
   onReset: () => void;
+  onExport: () => void;
+  onAdd: () => void;
+  loading?: boolean;
+  hasData?: boolean;
 }
 
 const MaterialSearchForm: React.FC<MaterialSearchFormProps> = ({
@@ -17,6 +22,10 @@ const MaterialSearchForm: React.FC<MaterialSearchFormProps> = ({
   setQueryParams,
   onSearch,
   onReset,
+  onExport,
+  onAdd,
+  loading = false,
+  hasData = false,
 }) => {
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
 
@@ -36,22 +45,39 @@ const MaterialSearchForm: React.FC<MaterialSearchFormProps> = ({
 
   return (
     <Card size="small" className="filter-card mb-sm">
-      <StandardSearchBar
-        searchValue={queryParams.orderNo || ''}
-        onSearchChange={handleSearchChange}
-        searchPlaceholder="搜索订单号/采购单号/物料"
-        dateValue={dateRange}
-        onDateChange={setDateRange}
-        statusValue={queryParams.status || ''}
-        onStatusChange={handleStatusChange}
-        statusOptions={[
-          { label: '待采购', value: MATERIAL_PURCHASE_STATUS.PENDING },
-          { label: '已领取', value: MATERIAL_PURCHASE_STATUS.RECEIVED },
-          { label: '部分到货', value: MATERIAL_PURCHASE_STATUS.PARTIAL },
-          { label: '全部到货', value: MATERIAL_PURCHASE_STATUS.COMPLETED },
-          { label: '已取消', value: MATERIAL_PURCHASE_STATUS.CANCELLED },
-        ]}
-      />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <div style={{ flex: 1 }}>
+          <StandardSearchBar
+            searchValue={queryParams.orderNo || ''}
+            onSearchChange={handleSearchChange}
+            searchPlaceholder="搜索订单号/采购单号/物料"
+            dateValue={dateRange}
+            onDateChange={setDateRange}
+            statusValue={queryParams.status || ''}
+            onStatusChange={handleStatusChange}
+            statusOptions={[
+              { label: '全部', value: '' },
+              { label: '待采购', value: MATERIAL_PURCHASE_STATUS.PENDING },
+              { label: '已领取', value: MATERIAL_PURCHASE_STATUS.RECEIVED },
+              { label: '部分到货', value: MATERIAL_PURCHASE_STATUS.PARTIAL },
+              { label: '全部到货', value: MATERIAL_PURCHASE_STATUS.COMPLETED },
+              { label: '已取消', value: MATERIAL_PURCHASE_STATUS.CANCELLED },
+            ]}
+          />
+        </div>
+        <Space wrap>
+          <Button
+            icon={<DownloadOutlined />}
+            onClick={onExport}
+            disabled={loading || !hasData}
+          >
+            导出
+          </Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={onAdd}>
+            新增采购单
+          </Button>
+        </Space>
+      </div>
     </Card>
   );
 };

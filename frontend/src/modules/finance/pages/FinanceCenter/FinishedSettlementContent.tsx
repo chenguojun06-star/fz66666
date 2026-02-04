@@ -509,6 +509,7 @@ const FinishedSettlementContent: React.FC = () => {
                 handleSearch();
               }}
               statusOptions={[
+                { label: '全部', value: '' },
                 { label: '待确认', value: 'PENDING' },
                 { label: '已确认', value: 'CONFIRMED' },
                 { label: '生产中', value: 'IN_PRODUCTION' },

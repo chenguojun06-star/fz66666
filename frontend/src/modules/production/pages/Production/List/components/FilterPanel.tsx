@@ -75,6 +75,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
           statusValue={localParams.status || ''}
           onStatusChange={(value) => updateParams({ status: value })}
           statusOptions={[
+            { label: '全部', value: '' },
             { label: '待生产', value: 'pending' },
             { label: '生产中', value: 'production' },
             { label: '已完成', value: 'completed' },

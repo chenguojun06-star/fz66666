@@ -10,6 +10,23 @@ import { formatDateTime } from '@/utils/datetime';
 import { MATERIAL_PURCHASE_STATUS, MATERIAL_TYPES } from '@/constants/business';
 import { getStatusConfig, buildColorSummary, getOrderQtyTotal } from '../../utils';
 
+// 已回料确认行的样式
+const confirmedRowStyle = `
+  .row-confirmed-disabled {
+    background-color: #f5f5f5 !important;
+    color: #999 !important;
+  }
+  .row-confirmed-disabled:hover {
+    background-color: #e8e8e8 !important;
+  }
+  .row-confirmed-disabled .ant-tag {
+    opacity: 0.6;
+  }
+  .row-confirmed-disabled .ant-btn-link {
+    color: #999 !important;
+  }
+`;
+
 interface PurchaseDetailViewProps {
   currentPurchase: MaterialPurchaseType | null;
   detailOrder: ProductionOrder | null;
@@ -55,6 +72,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
 
   return (
     <div className="purchase-detail-view">
+      <style>{confirmedRowStyle}</style>
       <ProductionOrderHeader
         orderNo={currentPurchase?.orderNo}
         styleNo={currentPurchase?.styleNo}
@@ -137,6 +155,11 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                 pagination={false}
                 size={isMobile ? 'small' : 'middle'}
                 scroll={{ x: 'max-content' }}
+                rowClassName={(record: MaterialPurchaseType) => {
+                  // 已回料确认的行显示为灰色
+                  const isConfirmed = Number(record?.returnConfirmed || 0) === 1;
+                  return isConfirmed ? 'row-confirmed-disabled' : '';
+                }}
                 columns={[
                   {
                     title: '二维码',

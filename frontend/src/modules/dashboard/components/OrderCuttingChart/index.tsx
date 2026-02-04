@@ -25,30 +25,42 @@ const OrderCuttingChart: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      // 暂时使用虚拟数据
+      // 调用真实API（从t_production_order和t_cutting_record表聚合统计）
+      const result = await api.get('/dashboard/order-cutting-chart');
+      // axios拦截器返回的是完整的Result对象：{ code: 200, data: {...} }
+      if (result && result.code === 200 && result.data) {
+        setData({
+          dates: result.data.dates || [],
+          orderQuantities: result.data.orderQuantities || [],
+          cuttingQuantities: result.data.cuttingQuantities || [],
+        });
+      } else {
+        // API失败时使用空数据
+        console.warn('API returned no data structure, using empty data');
+        const mockDates = Array.from({ length: 30 }, (_, i) => {
+          const date = new Date();
+          date.setDate(date.getDate() - 29 + i);
+          return `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        });
+        setData({
+          dates: mockDates,
+          orderQuantities: Array(30).fill(0),
+          cuttingQuantities: Array(30).fill(0),
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load order cutting chart:', error);
+      // API调用失败时使用空数据
       const mockDates = Array.from({ length: 30 }, (_, i) => {
         const date = new Date();
         date.setDate(date.getDate() - 29 + i);
         return `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
       });
-
-      const mockOrderQuantities = Array.from({ length: 30 }, () => Math.floor(Math.random() * 2000) + 3000);
-      const mockCuttingQuantities = Array.from({ length: 30 }, () => Math.floor(Math.random() * 1800) + 2500);
-
       setData({
         dates: mockDates,
-        orderQuantities: mockOrderQuantities,
-        cuttingQuantities: mockCuttingQuantities,
+        orderQuantities: Array(30).fill(0),
+        cuttingQuantities: Array(30).fill(0),
       });
-
-      // 演示数据：用于展示图表效果
-      // 生产环境可替换为真实API：
-      // const result = await api.get<ChartData>('/api/dashboard/order-cutting-chart');
-      // if (result.success && result.data) {
-      //   setData(result.data);
-      // }
-    } catch (error) {
-      console.error('Failed to load order cutting chart:', error);
     } finally {
       setLoading(false);
     }
@@ -57,24 +69,26 @@ const OrderCuttingChart: React.FC = () => {
   const option = {
     tooltip: {
       trigger: 'axis',
-      backgroundColor: 'rgba(255, 255, 255, 0.95)',
-      borderColor: '#ddd',
+      confine: true,
+      backgroundColor: '#fff',
+      borderColor: '#e5e7eb',
       borderWidth: 1,
       textStyle: {
-        color: 'var(--neutral-text)',
-        fontSize: "var(--font-size-sm)",
+        color: '#333',
       },
       formatter: (params: any) => {
+        if (!params || params.length === 0) return '';
         const date = params[0].axisValue;
-        let html = `<div style="padding: 4px 0; font-weight: 600;">${date}</div>`;
+        let html = `<div style="padding: 4px 0; font-weight: 600; color: #333;">${date}</div>`;
         params.forEach((item: any) => {
+          const value = item.value !== undefined && item.value !== null ? item.value : 0;
           html += `
             <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 2px 0;">
               <span style="display: flex; align-items: center; gap: 8px;">
                 <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: ${item.color};"></span>
-                <span>${item.seriesName}</span>
+                <span style="color: #333;">${item.seriesName}</span>
               </span>
-              <span style="font-weight: 600;">${item.value.toLocaleString()}</span>
+              <span style="font-weight: 600; color: #333;">${value.toLocaleString()}</span>
             </div>
           `;
         });

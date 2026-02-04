@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, DatePicker, Tooltip, Spin, Space, Statistic, Select } from 'antd';
 import { InfoCircleOutlined, CaretUpOutlined, CaretDownOutlined } from '@ant-design/icons';
 import { Line } from '@ant-design/charts';
+import { StatsGrid } from '@/components/common/StatsGrid';
 import api from '@/utils/api';
 import dayjs from 'dayjs';
 import styles from './index.module.css';
@@ -585,43 +586,35 @@ const DashboardContent: React.FC = () => {
 
       {/* 图表区域 */}
       <Card className={styles.chartCard} size="small">
-        {/* 图表上方汇总统计 - 7列布局 */}
+        {/* 图表上方汇总统计 - 使用通用StatsGrid组件 */}
         <div className={styles.chartSummary}>
-          <Row gutter={16}>
-            <Col flex="1">
-              <Statistic title="总金额" value={statData.totalAmount} prefix="¥" precision={2} />
-            </Col>
-            <Col flex="1">
-              <Statistic title="订单数量" value={statData.orderCount} suffix="单" />
-            </Col>
-            <Col flex="1">
-              <Statistic title="入库数量" value={statData.warehousedCount} suffix="件" />
-            </Col>
-            <Col flex="1">
-              <Statistic title="面辅料总价" value={statData.materialCost} prefix="¥" precision={2} />
-            </Col>
-            <Col flex="1">
-              <Statistic title="生产总价" value={statData.productionCost} prefix="¥" precision={2} />
-            </Col>
-            <Col flex="1">
-              <Statistic
-                title="利润率"
-                value={statData.profitRate}
-                precision={1}
-                suffix="%"
-                className={statData.profitRate >= 0 ? styles.profitPositive : styles.profitNegative}
-              />
-            </Col>
-            <Col flex="1">
-              <Statistic
-                title="利润"
-                value={statData.totalProfit}
-                prefix="¥"
-                precision={2}
-                className={statData.totalProfit >= 0 ? styles.profitPositive : styles.profitNegative}
-              />
-            </Col>
-          </Row>
+          <StatsGrid
+            items={[
+              { key: 'totalAmount', title: '总金额', value: statData.totalAmount, prefix: '¥', precision: 2 },
+              { key: 'orderCount', title: '订单数量', value: statData.orderCount, suffix: '单' },
+              { key: 'warehousedCount', title: '入库数量', value: statData.warehousedCount, suffix: '件' },
+              { key: 'materialCost', title: '面辅料总价', value: statData.materialCost, prefix: '¥', precision: 2 },
+              { key: 'productionCost', title: '生产总价', value: statData.productionCost, prefix: '¥', precision: 2 },
+              {
+                key: 'profitRate',
+                title: '利润率',
+                value: statData.profitRate,
+                precision: 1,
+                suffix: '%',
+                valueStyle: statData.profitRate >= 0 ? { color: '#52c41a' } : { color: '#f5222d' }
+              },
+              {
+                key: 'totalProfit',
+                title: '利润',
+                value: statData.totalProfit,
+                prefix: '¥',
+                precision: 2,
+                valueStyle: statData.totalProfit >= 0 ? { color: '#52c41a' } : { color: '#f5222d' }
+              },
+            ]}
+            columns={7}
+            gutter={16}
+          />
         </div>
 
         <div className={styles.chartHeader}>

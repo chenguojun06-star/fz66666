@@ -75,11 +75,14 @@ const MaterialReconciliation: React.FC = () => {
   };
 
   const buildMaterialReconCsv = (rows: MaterialReconType[]) => {
-    const header = ['对账单号', '供应商', '物料编码', '物料名称', '采购单号', '采购类型', '订单号', '款号', '数量', '单价(元)', '总金额(元)', '对账日期', '预计到货', '实际到货', '入库日期', '库区', '状态'];
+    const header = ['对账单号', '供应商', '物料编码', '物料名称', '采购单号', '采购类型', '订单号', '款号', '实到数量', '单位', '采购单价', '采购汇总', '采购完成', '采购员', '入库日期', '库区', '状态'];
     const lines = [header.map(escapeCsvCell).join(',')];
     for (const r of rows) {
       const st = getMaterialReconStatusConfig((r as Record<string, unknown>)?.status);
-      const sourceTypeText = (r as Record<string, unknown>)?.sourceType === 'sample' ? '样衣采购' : (r as Record<string, unknown>)?.sourceType === 'order' ? '批量订单' : '未知';
+      const sourceTypeText = (r as Record<string, unknown>)?.sourceType === 'sample' ? '样衣采购' : (r as Record<string, unknown>)?.sourceType === 'order' ? '批量采购' : '未知';
+      const quantity = Number((r as Record<string, unknown>)?.quantity ?? 0) || 0;
+      const unitPrice = Number((r as Record<string, unknown>)?.unitPrice ?? 0) || 0;
+      const totalAmount = quantity * unitPrice;
       const row = [
         String((r as Record<string, unknown>)?.reconciliationNo || '').trim(),
         String((r as Record<string, unknown>)?.supplierName || '').trim(),
@@ -89,12 +92,12 @@ const MaterialReconciliation: React.FC = () => {
         sourceTypeText,
         String((r as Record<string, unknown>)?.orderNo || '').trim(),
         String((r as Record<string, unknown>)?.styleNo || '').trim(),
-        String(Number((r as Record<string, unknown>)?.quantity ?? 0) || 0),
-        (r as Record<string, unknown>)?.unitPrice == null ? '' : String(Number((r as Record<string, unknown>)?.unitPrice || 0).toFixed(2)),
-        (r as Record<string, unknown>)?.totalAmount == null ? '' : String(Number((r as Record<string, unknown>)?.totalAmount || 0).toFixed(2)),
+        String(quantity),
+        String((r as Record<string, unknown>)?.unit || '').trim(),
+        unitPrice.toFixed(2),
+        totalAmount.toFixed(2),
         String(formatDateTime((r as Record<string, unknown>)?.reconciliationDate) || ''),
-        String(formatDateTime((r as Record<string, unknown>)?.expectedArrivalDate) || ''),
-        String(formatDateTime((r as Record<string, unknown>)?.actualArrivalDate) || ''),
+        String((r as Record<string, unknown>)?.purchaserName || '').trim(),
         String(formatDateTime((r as Record<string, unknown>)?.inboundDate) || ''),
         String((r as Record<string, unknown>)?.warehouseLocation || '').trim(),
         String(st?.text || ''),
@@ -435,10 +438,14 @@ const MaterialReconciliation: React.FC = () => {
    * 物料缩略图组件
    * 用于表格中显示物料图片，无图片时显示默认占位符
    */
-  const MaterialThumb: React.FC = () => {
+  const MaterialThumb: React.FC<{ imageUrl?: string }> = ({ imageUrl }) => {
     return (
-      <div style={{ width: 48, height: 48, overflow: 'hidden', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-sm)' }}>无图</span>
+      <div style={{ width: 48, height: 48, overflow: 'hidden', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 4 }}>
+        {imageUrl ? (
+          <img src={imageUrl} alt="物料" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+          <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-sm)' }}>无图</span>
+        )}
       </div>
     );
   };
@@ -452,7 +459,7 @@ const MaterialReconciliation: React.FC = () => {
       title: '图片',
       key: 'cover',
       width: 72,
-      render: () => <MaterialThumb />,
+      render: (_: any, record: MaterialReconType) => <MaterialThumb imageUrl={record.materialImageUrl} />,
     },
     {
       title: '对账单号',
@@ -496,7 +503,7 @@ const MaterialReconciliation: React.FC = () => {
       width: 100,
       render: (value: string) => {
         if (value === 'sample') return <Tag color="purple">样衣采购</Tag>;
-        if (value === 'order') return <Tag color="blue">批量订单</Tag>;
+        if (value === 'order') return <Tag color="blue">批量采购</Tag>;
         return <Tag color="default">未知</Tag>;
       },
     },
@@ -513,109 +520,53 @@ const MaterialReconciliation: React.FC = () => {
       width: 110,
     },
     {
-      title: '数量',
+      title: '实到数量',
       dataIndex: 'quantity',
       key: 'quantity',
-      width: 80,
+      width: 100,
       align: 'right' as const,
-    },
-    {
-      title: '生产完成数',
-      dataIndex: 'productionCompletedQuantity',
-      key: 'productionCompletedQuantity',
-      width: 110,
-      align: 'right' as const,
-      render: (v: unknown) => {
-        // 将值转换为数字，非数字显示为'-'
-        const n = typeof v === 'number' ? v : Number(v);
-        return Number.isFinite(n) ? n : '-';
+      render: (value: number, record: any) => {
+        const unit = record?.unit || '';
+        return `${value || 0}${unit ? ' ' + unit : ''}`;
       },
     },
     {
-      title: '单价(元)',
+      title: '采购单价',
       dataIndex: 'unitPrice',
       key: 'unitPrice',
-      width: 100,
+      width: 110,
       align: 'right' as const,
-      render: (value: number) => value?.toFixed(2) || '0.00',
-    },
-    {
-      title: '总金额(元)',
-      dataIndex: 'totalAmount',
-      key: 'totalAmount',
-      width: 120,
-      align: 'right' as const,
-      render: (value: number) => value?.toFixed(2) || '0.00',
-    },
-    {
-      title: '已付金额(元)',
-      dataIndex: 'paidAmount',
-      key: 'paidAmount',
-      width: 120,
-      align: 'right' as const,
-      render: (value: number) => value?.toFixed(2) || '0.00',
-    },
-    {
-      title: '未付金额(元)',
-      key: 'unpaidAmount',
-      width: 120,
-      align: 'right' as const,
-      render: (_: any, record: any) => {
-        const total = Number(record?.totalAmount || 0);
-        const paid = Number(record?.paidAmount || 0);
-        const unpaid = Math.max(0, total - paid);
-        return unpaid.toFixed(2);
+      render: (value: number, record: any) => {
+        const unit = record?.unit || '';
+        const price = value?.toFixed(2) || '0.00';
+        return `¥${price}${unit ? '/' + unit : ''}`;
       },
     },
     {
-      title: '付款进度',
-      key: 'paymentProgress',
-      width: 100,
+      title: '采购汇总',
+      key: 'purchaseTotal',
+      width: 120,
       align: 'right' as const,
       render: (_: any, record: any) => {
-        const total = Number(record?.totalAmount || 0);
-        const paid = Number(record?.paidAmount || 0);
-        if (total <= 0) return '-';
-        const percent = Math.round((paid / total) * 100);
-        return `${percent}%`;
+        const quantity = Number(record?.quantity || 0);
+        const unitPrice = Number(record?.unitPrice || 0);
+        const total = quantity * unitPrice;
+        return <span style={{ color: total > 0 ? 'var(--primary-color)' : undefined }}>¥{total.toFixed(2)}</span>;
       },
     },
     {
-      title: '扣款项(元)',
-      dataIndex: 'deductionAmount',
-      key: 'deductionAmount',
-      width: 120,
-      align: 'right' as const,
-      render: (value: number) => value?.toFixed(2) || '0.00',
-    },
-    {
-      title: '最终金额(元)',
-      dataIndex: 'finalAmount',
-      key: 'finalAmount',
-      width: 120,
-      align: 'right' as const,
-      render: (value: number) => <span className="final-amount">{value?.toFixed(2) || '0.00'}</span>,
-    },
-    {
-      title: '对账日期',
+      title: '采购完成',
       dataIndex: 'reconciliationDate',
       key: 'reconciliationDate',
       width: 120,
       render: (value: unknown) => formatDateTime(value),
     },
     {
-      title: '预计到货',
-      dataIndex: 'expectedArrivalDate',
-      key: 'expectedArrivalDate',
-      width: 110,
-      render: (value: unknown) => formatDateTime(value) || '-',
-    },
-    {
-      title: '实际到货',
-      dataIndex: 'actualArrivalDate',
-      key: 'actualArrivalDate',
-      width: 110,
-      render: (value: unknown) => formatDateTime(value) || '-',
+      title: '采购员',
+      dataIndex: 'purchaserName',
+      key: 'purchaserName',
+      width: 100,
+      render: (value: string) => value || '-',
     },
     {
       title: '入库日期',
@@ -739,22 +690,36 @@ const MaterialReconciliation: React.FC = () => {
           <Card size="small" className="filter-card mb-sm">
             <StandardToolbar
               left={(
-                <StandardSearchBar
-                  searchValue={queryParams.reconciliationNo || ''}
-                  onSearchChange={(value) => setQueryParams({ ...queryParams, reconciliationNo: value, page: 1 })}
-                  searchPlaceholder="搜索对账单号/供应商/物料"
-                  dateValue={dateRange}
-                  onDateChange={setDateRange}
-                  statusValue={queryParams.status || ''}
-                  onStatusChange={(value) => setQueryParams({ ...queryParams, status: value, page: 1 })}
-                  statusOptions={[
-                    { label: '待审核', value: 'pending' },
-                    { label: '已验证', value: 'verified' },
-                    { label: '已批准', value: 'approved' },
-                    { label: '已付款', value: 'paid' },
-                    { label: '已拒绝', value: 'rejected' },
-                  ]}
-                />
+                <>
+                  <StandardSearchBar
+                    searchValue={queryParams.reconciliationNo || ''}
+                    onSearchChange={(value) => setQueryParams({ ...queryParams, reconciliationNo: value, page: 1 })}
+                    searchPlaceholder="搜索对账单号/供应商/物料"
+                    dateValue={dateRange}
+                    onDateChange={setDateRange}
+                    statusValue={queryParams.status || ''}
+                    onStatusChange={(value) => setQueryParams({ ...queryParams, status: value, page: 1 })}
+                    statusOptions={[
+                      { label: '全部', value: '' },
+                      { label: '待审核', value: 'pending' },
+                      { label: '已验证', value: 'verified' },
+                      { label: '已批准', value: 'approved' },
+                      { label: '已付款', value: 'paid' },
+                      { label: '已拒绝', value: 'rejected' },
+                    ]}
+                  />
+                  <Select
+                    placeholder="采购来源"
+                    style={{ width: 120, marginLeft: 8 }}
+                    value={queryParams.sourceType || ''}
+                    onChange={(value) => setQueryParams({ ...queryParams, sourceType: value, page: 1 })}
+                    allowClear
+                  >
+                    <Option value="">全部</Option>
+                    <Option value="sample">样衣采购</Option>
+                    <Option value="order">批量采购</Option>
+                  </Select>
+                </>
               )}
               right={(
                 <Dropdown

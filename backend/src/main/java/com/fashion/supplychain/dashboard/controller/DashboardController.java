@@ -3,6 +3,7 @@ package com.fashion.supplychain.dashboard.controller;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.dashboard.orchestration.DashboardOrchestrator;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -92,6 +93,7 @@ public class DashboardController {
      * 获取延期订单列表
      */
     @GetMapping("/overdue-orders")
+    @PreAuthorize("hasAuthority('MENU_DASHBOARD')")
     public Result<?> overdueOrders() {
         return Result.success(dashboardOrchestrator.getOverdueOrders());
     }

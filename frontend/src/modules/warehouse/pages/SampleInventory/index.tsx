@@ -62,7 +62,7 @@ const SampleInventory: React.FC = () => {
 
   useEffect(() => {
     loadData();
-     
+
   }, [pagination.pagination.current, pagination.pagination.pageSize, searchText, sampleType]);
 
   const columns: ColumnsType<SampleStock> = [
@@ -180,10 +180,13 @@ const SampleInventory: React.FC = () => {
                   onDateChange={setDateRange}
                   statusValue={sampleType || ''}
                   onStatusChange={(value) => setSampleType(value || undefined)}
-                  statusOptions={Object.entries(SampleTypeMap).map(([key, label]) => ({
-                    label,
-                    value: key,
-                  }))}
+                  statusOptions={[
+                    { label: '全部', value: '' },
+                    ...Object.entries(SampleTypeMap).map(([key, label]) => ({
+                      label,
+                      value: key,
+                    }))
+                  ]}
                 />
               )}
               right={(

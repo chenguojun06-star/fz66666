@@ -18,7 +18,7 @@ interface VirtualListResult<T> {
 /**
  * 虚拟列表Hook
  * 用于优化大数据量列表的渲染性能
- * 
+ *
  * @example
  * const { virtualItems, totalHeight, offsetY, onScroll } = useVirtualList(
  *   largeDataArray,
@@ -30,31 +30,31 @@ export function useVirtualList<T>(
   options: VirtualListOptions<T>
 ): VirtualListResult<T> {
   const { itemHeight, overscan = 5, containerHeight } = options;
-  
+
   const [scrollTop, setScrollTop] = useState(0);
   const scrollTopRef = useRef(scrollTop);
   scrollTopRef.current = scrollTop;
-  
+
   // 计算总高度
   const totalHeight = useMemo(() => {
     return items.length * itemHeight;
   }, [items.length, itemHeight]);
-  
+
   // 计算可见范围
   const { virtualItems, startIndex, endIndex, offsetY } = useMemo(() => {
     const start = Math.floor(scrollTop / itemHeight);
     const visibleCount = Math.ceil(containerHeight / itemHeight);
-    
+
     // 添加overscan缓冲
     const startIndex = Math.max(0, start - overscan);
     const endIndex = Math.min(
       items.length - 1,
       start + visibleCount + overscan
     );
-    
+
     const virtualItems = items.slice(startIndex, endIndex + 1);
     const offsetY = startIndex * itemHeight;
-    
+
     return {
       virtualItems,
       startIndex,
@@ -62,12 +62,12 @@ export function useVirtualList<T>(
       offsetY
     };
   }, [items, scrollTop, itemHeight, containerHeight, overscan]);
-  
+
   // 滚动处理
   const onScroll = useCallback((newScrollTop: number) => {
     setScrollTop(newScrollTop);
   }, []);
-  
+
   return {
     virtualItems,
     startIndex,
@@ -89,18 +89,18 @@ export function usePagedVirtualList<T>(
   }
 ) {
   const { pageSize, loadMore, ...virtualOptions } = options;
-  
+
   const [items, setItems] = useState<T[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
-  
+
   const virtualList = useVirtualList(items, virtualOptions);
-  
+
   // 加载数据
   const loadData = useCallback(async (targetPage: number) => {
     if (loading || !hasMore) return;
-    
+
     setLoading(true);
     try {
       const newItems = await loadMore(targetPage);
@@ -113,12 +113,12 @@ export function usePagedVirtualList<T>(
       setLoading(false);
     }
   }, [loading, hasMore, loadMore, pageSize]);
-  
+
   // 初始加载
   useEffect(() => {
     loadData(1);
   }, []);
-  
+
   // 检查是否需要加载更多
   useEffect(() => {
     const { endIndex } = virtualList;
@@ -126,7 +126,7 @@ export function usePagedVirtualList<T>(
       loadData(page + 1);
     }
   }, [virtualList.endIndex, items.length, hasMore, loading, page, loadData]);
-  
+
   return {
     ...virtualList,
     items,

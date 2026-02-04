@@ -63,6 +63,8 @@ public interface DashboardQueryService {
 
     long countProductionOrdersBetween(LocalDateTime start, LocalDateTime end);
 
+    long sumOrderQuantityBetween(LocalDateTime start, LocalDateTime end);
+
     long sumCuttingQuantityBetween(LocalDateTime start, LocalDateTime end);
 
     long sumWarehousingQuantityBetween(LocalDateTime start, LocalDateTime end);
@@ -82,6 +84,11 @@ public interface DashboardQueryService {
      * 获取指定日期范围内每天的扫菲次数
      */
     List<Integer> getDailyScanCounts(LocalDateTime start, LocalDateTime end);
+
+    /**
+     * 获取指定日期范围内每天的扫菲数量
+     */
+    List<Integer> getDailyScanQuantities(LocalDateTime start, LocalDateTime end);
 
     /**
      * 获取延期订单列表

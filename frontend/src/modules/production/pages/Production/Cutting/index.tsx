@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Card, Form, Input, InputNumber, Select, Space, Tag } from 'antd';
+import { App, Button, Card, Form, Input, InputNumber, Select, Space, Tag, Table } from 'antd';
 import { EyeOutlined, LoginOutlined, PlusOutlined, RollbackOutlined, EditOutlined, AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import UniversalCardView from '@/components/common/UniversalCardView';
@@ -1242,6 +1242,7 @@ const CuttingManagement: React.FC = () => {
                     statusValue={taskQuery.status || ''}
                     onStatusChange={(value) => setTaskQuery(prev => ({ ...prev, status: value, page: 1 }))}
                     statusOptions={[
+                      { label: '全部', value: '' },
                       { label: '待领取', value: 'pending' },
                       { label: '已领取', value: 'received' },
                       { label: '已完成', value: 'bundled' },
@@ -1926,7 +1927,7 @@ const CuttingManagement: React.FC = () => {
                                 fontSize: "var(--font-size-base)",
                                 fontWeight: 600,
                                 color: 'var(--neutral-text)',
-                                marginBottom: 6
+                              marginBottom: 6
                               }}>
                                 下单数量
                               </div>
@@ -1937,81 +1938,53 @@ const CuttingManagement: React.FC = () => {
                                 boxShadow: 'var(--shadow-sm)',
                                 flexShrink: 0
                               }}>
-                                <table style={{ borderCollapse: 'collapse' }}>
-                                  <tbody>
-                                    {/* 第一行：码数 */}
-                                    <tr>
-                                      <td style={{
-                                        padding: '8px 12px',
-                                        fontSize: "var(--font-size-base)",
-                                        color: 'var(--neutral-text)',
-                                        fontWeight: 600,
-                                        borderRight: '1px solid var(--table-border-color)',
-                                        borderBottom: '1px solid var(--table-border-color)',
-                                        width: '60px',
-                                        background: 'var(--color-bg-gray)'
-                                      }}>
-                                        码数
-                                      </td>
-                                      {sizeArray.map((size: string, idx: number) => (
-                                        <td key={idx} style={{
-                                          padding: '8px 14px',
-                                          fontSize: "var(--font-size-md)",
-                                          color: 'var(--neutral-text)',
+                                <Table
+                                  dataSource={[
+                                    { key: 'size', type: '码数', ...sizeArray.reduce((acc, size) => ({ ...acc, [size]: size }), {}), total: `总下单数：${totalQty}` },
+                                    { key: 'qty', type: '数量', ...sizeArray.reduce((acc, size) => ({ ...acc, [size]: sizeQuantityMap[size] || 0 }), {}), total: '' }
+                                  ]}
+                                  columns={[
+                                    {
+                                      title: '',
+                                      dataIndex: 'type',
+                                      key: 'type',
+                                      width: 60,
+                                      className: 'cutting-size-table-header-cell',
+                                      render: (text: string) => <div style={{ fontWeight: 600, fontSize: "var(--font-size-base)", color: 'var(--neutral-text)' }}>{text}</div>
+                                    },
+                                    ...sizeArray.map((size: string) => ({
+                                      title: size,
+                                      dataIndex: size,
+                                      key: size,
+                                      width: 50,
+                                      align: 'center' as const,
+                                      className: 'cutting-size-table-cell',
+                                      render: (value: string | number, record: { key: string }) => (
+                                        <div style={{
+                                          fontSize: record.key === 'size' ? "var(--font-size-md)" : "var(--font-size-md)",
                                           fontWeight: 700,
-                                          textAlign: 'center',
-                                          borderRight: idx < sizeArray.length - 1 ? '1px solid var(--table-border-color)' : 'none',
-                                          borderBottom: '1px solid var(--table-border-color)',
-                                          minWidth: '50px'
+                                          color: 'var(--neutral-text)'
                                         }}>
-                                          {size}
-                                        </td>
-                                      ))}
-                                      <td style={{
-                                        padding: '8px 14px',
-                                        fontSize: "var(--font-size-base)",
-                                        color: 'var(--neutral-text)',
-                                        fontWeight: 700,
-                                        textAlign: 'center',
-                                        borderLeft: '1px solid var(--table-border-color)',
-                                        borderBottom: '1px solid var(--table-border-color)',
-                                        background: 'var(--color-bg-light)',
-                                        whiteSpace: 'nowrap'
-                                      }} rowSpan={2}>
-                                        总下单数：{totalQty}
-                                      </td>
-                                    </tr>
-                                    {/* 第二行：数量 */}
-                                    <tr>
-                                      <td style={{
-                                        padding: '8px 12px',
-                                        fontSize: "var(--font-size-base)",
-                                        color: 'var(--neutral-text)',
-                                        fontWeight: 600,
-                                        borderRight: '1px solid var(--table-border-color)',
-                                        background: 'var(--color-bg-gray)'
-                                      }}>
-                                        数量
-                                      </td>
-                                      {sizeArray.map((size: string, idx: number) => {
-                                        const qty = sizeQuantityMap[size] || 0;
-                                        return (
-                                          <td key={idx} style={{
-                                            padding: '8px 14px',
-                                            fontSize: "var(--font-size-md)",
-                                            color: 'var(--neutral-text)',
-                                            fontWeight: 700,
-                                            textAlign: 'center',
-                                            borderRight: idx < sizeArray.length - 1 ? '1px solid var(--table-border-color)' : 'none',
-                                            minWidth: '50px'
-                                          }}>
-                                            {qty}
-                                          </td>
-                                        );
-                                      })}
-                                    </tr>
-                                  </tbody>
-                                </table>
+                                          {value}
+                                        </div>
+                                      )
+                                    })),
+                                    {
+                                      title: '',
+                                      dataIndex: 'total',
+                                      key: 'total',
+                                      className: 'cutting-size-table-total-cell',
+                                      render: (text: string, record: { key: string }) => record.key === 'size' ? (
+                                        <div style={{ fontWeight: 700, fontSize: "var(--font-size-base)", color: 'var(--neutral-text)', whiteSpace: 'nowrap' }}>{text}</div>
+                                      ) : null
+                                    }
+                                  ]}
+                                  pagination={false}
+                                  size="small"
+                                  bordered
+                                  showHeader={false}
+                                  rowClassName={(record) => record.key === 'qty' ? 'cutting-size-table-qty-row' : ''}
+                                />
                               </div>
                             </div>
                           );

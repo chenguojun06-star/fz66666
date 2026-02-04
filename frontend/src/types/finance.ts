@@ -8,8 +8,11 @@ export interface MaterialReconciliation {
   materialId: string;
   materialCode: string;
   materialName: string;
+  materialImageUrl?: string; // 物料图片URL
+  unit?: string; // 单位
   purchaseId: string;
   purchaseNo: string;
+  purchaserName?: string; // 采购员姓名
   sourceType?: 'order' | 'sample'; // 采购类型: order=批量订单, sample=样衣开发
   orderId?: string;
   orderNo?: string;
@@ -87,6 +90,7 @@ export interface MaterialReconQueryParams {
   supplierName?: string;
   materialCode?: string;
   status?: string;
+  sourceType?: string; // 采购来源筛选: order=批采, sample=样衣
   startDate?: string;
   endDate?: string;
   page: number;

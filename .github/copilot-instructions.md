@@ -2,11 +2,78 @@
 
 > **核心目标**：让 AI 立即理解三端协同架构、关键约束与业务流程，避免破坏既有设计。
 > **系统评分**：97/100 | **代码质量**：优秀 | **架构**：非标准分层设计（37个编排器）
-> **最后更新**：2026-02-04
+> **测试覆盖率**：核心编排器 100% | 代码优化 -45%（1677→923行）
+> **最后更新**：2026-02-04 | **AI指令版本**：v3.3
 
 ---
 
-## 🛠️ 技术栈（版本敏感）
+## � 快速上手（新开发者必读 5分钟）
+
+### 第一步：理解项目架构
+这是一个**三端协同的服装供应链管理系统**：
+- **PC端**：React + TypeScript + Ant Design（管理后台）
+- **小程序**：微信原生框架（工厂扫码生产）
+- **后端**：Spring Boot + MyBatis-Plus（业务编排层）
+
+**核心业务流程**：款式设计 → 生产订单 → 裁剪分菲 → 工序扫码 → 质检入库 → 财务结算
+
+### 第二步：启动开发环境
+```bash
+# ⚠️ 强制要求：使用脚本启动（避免403错误）
+./dev-public.sh
+
+# 自动完成：
+# 1. 启动MySQL（端口3308，非标准3306）
+# 2. 加载环境变量（.run/backend.env）
+# 3. 启动后端（端口8088）
+# 4. 启动前端（端口5173）
+```
+
+**首次启动前准备**：
+```bash
+# 创建环境变量文件（如果不存在）
+cat > .run/backend.env << 'EOF'
+APP_AUTH_JWT_SECRET=ThisIsA_LocalJwtSecret_OnlyForDev_0123456789
+SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3308/fashion_supplychain
+SPRING_DATASOURCE_USERNAME=root
+SPRING_DATASOURCE_PASSWORD=changeme
+WECHAT_MINI_PROGRAM_MOCK_ENABLED=true
+EOF
+```
+
+### 第三步：理解架构约束（代码审查必查）
+**禁止破坏的架构模式**：
+```
+Controller → Orchestrator → Service → Mapper
+    ↓             ↓            ↓          ↓
+  路由端点      业务编排    单领域CRUD   数据访问
+  
+❌ 禁止：Controller直接调用多个Service
+❌ 禁止：Service之间互相调用
+✅ 正确：复杂业务逻辑必须在Orchestrator层编排
+```
+
+### 第四步：核心文档入口
+- **系统概览**：[系统状态.md](../系统状态.md) - 从这里开始了解系统
+- **完整开发规范**：[开发指南.md](../开发指南.md) - 4255行最重要文档
+- **设计系统**：[设计系统完整规范-2026.md](../设计系统完整规范-2026.md) - 强制执行的设计规范
+- **业务流程**：[业务流程说明.md](../业务流程说明.md) - 理解业务逻辑
+- **测试脚本**：[快速测试指南.md](../快速测试指南.md) - 40+测试脚本
+
+### 第五步：运行测试验证环境
+```bash
+# 系统健康检查
+./check-system-status.sh
+
+# 测试核心业务流程
+./test-production-order-creator-tracking.sh  # 订单创建
+./test-material-inbound.sh                   # 面料入库
+./test-stock-check.sh                        # 库存检查
+```
+
+---
+
+## �🛠️ 技术栈（版本敏感）
 
 ### 后端
 - **Java 21** + **Spring Boot 2.7.18** + **MyBatis-Plus 3.5.7**
@@ -311,7 +378,122 @@ export const useMyStore = create<MyState>()((set, get) => ({
 
 ---
 
-## �
+## 🎣 React Hooks 最佳实践
+
+### 自定义 Hook 模式（推荐）
+项目中大量使用自定义 Hook 来封装复杂业务逻辑，参考：`frontend/src/modules/production/pages/Production/ProgressDetail/hooks/useProgressData.ts`
+
+```typescript
+// ✅ 推荐模式：数据管理 Hook
+export const useProgressData = () => {
+  // 状态管理
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<DataType[]>([]);
+  
+  // 使用 useRef 避免依赖变化导致重复请求
+  const queryParamsRef = useRef(queryParams);
+  useEffect(() => {
+    queryParamsRef.current = queryParams;
+  }, [queryParams]);
+  
+  // 使用 useCallback 缓存函数
+  const fetchData = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent === true;
+    if (!silent) setLoading(true);
+    try {
+      const result = await api.getData(queryParamsRef.current);
+      setData(result);
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  }, []); // 空依赖，通过 ref 访问最新参数
+  
+  return { loading, data, fetchData };
+};
+```
+
+**Hook 设计原则**：
+- ✅ **单一职责**：一个 Hook 只负责一个数据域（订单、扫码、库存等）
+- ✅ **Ref 优化**：使用 `useRef` + `useEffect` 避免依赖链导致的重复请求
+- ✅ **Silent 模式**：支持静默刷新（后台轮询不显示 loading）
+- ✅ **类型安全**：完整的 TypeScript 类型定义
+
+### Hook 文件组织
+```
+modules/production/
+├── pages/
+│   └── Production/
+│       ├── ProgressDetail/
+│       │   ├── hooks/           # 页面级 Hook
+│       │   │   ├── useProgressData.ts
+│       │   │   └── useProgressNodes.ts
+│       │   └── index.tsx
+└── hooks/                       # 模块级共享 Hook
+    └── useProductionCommon.ts
+```
+
+---
+
+## 🧪 测试策略与覆盖率
+
+### 测试优先级（性价比优化）
+项目采用**务实测试策略**，避免过度测试：
+
+**P0 核心测试**（必须 100% 覆盖）：
+- ✅ **Orchestrator 编排器**：业务逻辑核心，测试投资回报最高
+- ✅ **关键算法**：扫码防重复、库存计算、工序识别
+- 示例：`ScanRecordOrchestrator` - 29个单元测试，覆盖率 100%
+
+**P1 集成测试**（通过测试脚本覆盖）：
+- ✅ **端到端业务流程**：订单创建→扫码→结算（40+ 测试脚本）
+- ✅ **Executor 辅助方法**：通过集成测试验证，无需单独单元测试
+- 示例：`test-production-order-creator-tracking.sh`
+
+**P2 无需测试**：
+- ❌ **Entity Getter/Setter**：无业务逻辑，测试无价值
+- ❌ **简单 CRUD Service**：无复杂逻辑，集成测试已覆盖
+
+### 测试文件组织
+```
+backend/src/test/java/com/fashion/supplychain/
+├── production/
+│   ├── orchestration/
+│   │   └── ScanRecordOrchestratorTest.java  # 29个测试，100%覆盖
+│   ├── service/
+│   │   └── executor/
+│   │       ├── QualityScanExecutorTest.java    # 13个测试
+│   │       ├── WarehouseScanExecutorTest.java  # 10个测试
+│   │       └── ProductionScanExecutorTest.java # 13个测试
+```
+
+### 测试运行与报告
+```bash
+# 运行所有测试
+cd backend && mvn test
+
+# 仅运行核心Executor测试（快速反馈）
+mvn clean test -Dtest="QualityScanExecutorTest,WarehouseScanExecutorTest,ProductionScanExecutorTest"
+
+# 生成覆盖率报告（Jacoco）
+mvn clean test jacoco:report
+
+# 查看报告
+open target/site/jacoco/index.html
+```
+
+**覆盖率目标**：
+- Orchestrator：**100%**（强制）
+- Service：**70%+**（推荐）
+- Entity：**不要求**（Getter/Setter 无价值）
+
+**最新成果**（2026-02-03/04）：
+- ✅ `ScanRecordOrchestrator`：100%覆盖率（29个单元测试）
+- ✅ 代码优化：1677行 → 923行（-45%）
+- ✅ 测试框架：3个Executor完整测试结构（36个测试用例）
+- ✅ CI/CD：GitHub Actions自动测试配置完成
+
+---
+
 ## 📋 关键开发模式与约束
 
 ### 权限控制模式（强制）
@@ -581,12 +763,55 @@ SKU = styleNo + color + size
 
 ## ⚠️ 常见陷阱与注意事项
 
-1. **403 错误**：未使用 `./dev-public.sh` 启动，缺少环境变量
-2. **数据库连接失败**：检查端口是否为 3308（非标准 3306）
-3. **弹窗尺寸不统一**：必须使用三级尺寸（60vw/40vw/30vw），禁止自定义
-4. **Service 互调**：必须通过 Orchestrator，否则无法进行事务管理
-5. **扫码重复提交**：理解防重复算法，不要随意修改时间间隔
-6. **跨端验证不一致**：修改 validationRules 时必须同步 PC 端和小程序
+1. **403 错误**：未使用 `./dev-public.sh` 启动，缺少 `.run/backend.env` 环境变量
+2. **数据库连接失败**：检查端口是否为 3308（非标准 3306），容器名 `fashion-mysql-simple`
+3. **使用废弃 API**：检查 `@Deprecated` 标记，所有新代码必须使用 `POST /list` 和 `stage-action` 模式
+4. **弹窗尺寸不统一**：必须使用三级尺寸（60vw/40vw/30vw），禁止自定义
+5. **Service 互调**：必须通过 Orchestrator，否则无法进行事务管理
+6. **扫码重复提交**：理解防重复算法，不要随意修改时间间隔
+7. **跨端验证不一致**：修改 validationRules 时必须同步 PC 端和小程序
+8. **权限注解缺失**：所有 Controller 方法必须添加 `@PreAuthorize`（部分 TODO 标记除外）
+
+---
+
+## 🔄 CI/CD 与日志管理
+
+### GitHub Actions 自动化
+项目已配置 `.github/workflows/ci.yml`：
+- ✅ **自动测试**：push 到 main/develop 分支时自动运行单元测试
+- ✅ **多环境支持**：MySQL 8.0 服务容器（端口 3308）
+- ✅ **覆盖率报告**：自动生成 Jacoco 覆盖率报告
+- ✅ **前端构建**：检查 TypeScript 编译和 ESLint 规则
+
+**测试选择器**：
+```bash
+# 仅运行核心 Executor 测试（快速反馈）
+mvn clean test -Dtest="QualityScanExecutorTest,WarehouseScanExecutorTest,ProductionScanExecutorTest"
+```
+
+### 日志轮转配置
+项目采用 Logback 日志轮转（`backend/src/main/resources/logback-spring.xml`）：
+- **单文件限制**：500MB
+- **保留期限**：30天
+- **总大小限制**：10GB
+- **日志路径**：`logs/fashion-supplychain.log`
+
+**日志清理脚本**：
+```bash
+./clean-dev-logs.sh      # 清理开发环境日志
+./clean-system.sh        # 系统全面清理（日志+缓存）
+```
+
+---
+
+## 📚 关键文档入口
+
+- **[系统状态.md](系统状态.md)** - 系统概览与文档索引（从这里开始）
+- **[开发指南.md](开发指南.md)** - 完整开发规范与最佳实践
+- **[快速测试指南.md](快速测试指南.md)** - 业务流程测试脚本
+- **[设计系统完整规范-2026.md](设计系统完整规范-2026.md)** - 前端设计规范 v3.0
+- **[docs/小程序开发完整指南.md](docs/小程序开发完整指南.md)** - 小程序 ESLint、调试、业务优化
+- **[deployment/数据库配置.md](deployment/数据库配置.md)** - 数据库备份、恢复、数据卷管理
 
 ---
 
