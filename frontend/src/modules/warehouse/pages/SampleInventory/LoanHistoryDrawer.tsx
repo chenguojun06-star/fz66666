@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Drawer, Table, Button, Tag, Space, Popconfirm, message, Input, Modal } from 'antd';
+import { Table, Tag, Input, Modal, App } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
 import { SampleLoan, SampleStock } from './types';
 import api from '@/utils/api';
@@ -13,6 +14,7 @@ interface LoanHistoryDrawerProps {
 }
 
 const LoanHistoryDrawer: React.FC<LoanHistoryDrawerProps> = ({ visible, stock, onClose, onRefresh }) => {
+  const { message: msgApi } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<SampleLoan[]>([]);
   const [returnModalVisible, setReturnModalVisible] = useState(false);
@@ -54,12 +56,12 @@ const LoanHistoryDrawer: React.FC<LoanHistoryDrawerProps> = ({ visible, stock, o
         remark: returnRemark
       });
       if (res.code === 200) {
-        message.success('归还成功');
+        msgApi.success('归还成功');
         setReturnModalVisible(false);
         loadData(); // 刷新记录
         onRefresh(); // 刷新父页面库存
       } else {
-        message.error(res.message || '归还失败');
+        msgApi.error(res.message || '归还失败');
       }
     } catch (error) {
       console.error(error);
@@ -131,11 +133,13 @@ const LoanHistoryDrawer: React.FC<LoanHistoryDrawerProps> = ({ visible, stock, o
 
   return (
     <>
-      <Drawer
+      <ResizableModal
         title={`借还记录 - ${stock?.styleNo} (${stock?.color}/${stock?.size})`}
-        size="large"
-        onClose={onClose}
         open={visible}
+        onCancel={onClose}
+        footer={null}
+        width="40vw"
+        initialHeight={typeof window !== 'undefined' ? Math.round(window.innerHeight * 0.5) : 400}
       >
         <Table
           columns={columns}
@@ -143,8 +147,9 @@ const LoanHistoryDrawer: React.FC<LoanHistoryDrawerProps> = ({ visible, stock, o
           rowKey="id"
           loading={loading}
           pagination={false}
+          size="small"
         />
-      </Drawer>
+      </ResizableModal>
 
       <Modal
         title="确认归还"

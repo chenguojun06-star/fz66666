@@ -1,9 +1,18 @@
 /**
- * 默认API地址
- * 开发环境：http://192.168.2.248:8088
- * 生产环境：请修改为实际域名，如 https://api.your-domain.com
+ * 默认API地址配置
+ *
+ * 回退策略（按优先级）：
+ * 1. Storage 中保存的地址（api_base_url）
+ * 2. DEFAULT_BASE_URL（当前局域网IP，支持内网访问）
+ * 3. FALLBACK_BASE_URL（localhost:8088，本机备选）
+ *
+ * 使用说明：
+ * - 默认使用局域网 IP，支持内网多设备访问
+ * - 如需修改地址，在登录页手动输入
+ * - 生产环境请修改为实际域名，如 https://api.your-domain.com
  */
-const DEFAULT_BASE_URL = 'http://192.168.2.248:8088';
+const DEFAULT_BASE_URL = 'http://192.168.1.13:8088';  // 当前机器局域网 IP（内网可访问）
+const FALLBACK_BASE_URL = 'http://localhost:8088';     // 回退地址（仅本机）
 
 /**
  * 是否启用调试日志（生产环境请设为 false）
@@ -33,14 +42,29 @@ function replaceLoopback(url) {
 function getBaseUrl() {
   try {
     if (typeof wx !== 'undefined' && wx.getStorageSync) {
-      const v = replaceLoopback(wx.getStorageSync('api_base_url'));
-      if (v) {
-        return v;
+      const stored = wx.getStorageSync('api_base_url');
+      if (stored) {
+        const v = normalizeBaseUrl(stored);
+        // 自动清理已过期的旧 IP 地址缓存
+        // 如果 Storage 中的地址不是当前 DEFAULT_BASE_URL 且不是 FALLBACK，
+        // 且是一个内网 IP 地址，则认为已过期，用 DEFAULT_BASE_URL 替换
+        if (v && v !== DEFAULT_BASE_URL && v !== FALLBACK_BASE_URL) {
+          const isOldLanIp = /^https?:\/\/192\.168\.\d+\.\d+:\d+/i.test(v);
+          if (isOldLanIp) {
+            // 旧的内网 IP 已过期，自动更新为当前地址
+            try { wx.setStorageSync('api_base_url', DEFAULT_BASE_URL); } catch (_) { /* ignore */ }
+            return DEFAULT_BASE_URL;
+          }
+        }
+        if (v) {
+          return v;
+        }
       }
     }
   } catch (e) {
     null;
   }
+  // 优先使用局域网 IP（支持内网访问），如连接失败请在登录页手动输入 localhost:8088
   return DEFAULT_BASE_URL;
 }
 
@@ -58,4 +82,4 @@ function setBaseUrl(url) {
 
 const baseUrl = getBaseUrl();
 
-export { DEFAULT_BASE_URL, DEBUG_MODE, getBaseUrl, setBaseUrl, normalizeBaseUrl, baseUrl };
+export { DEFAULT_BASE_URL, FALLBACK_BASE_URL, DEBUG_MODE, getBaseUrl, setBaseUrl, normalizeBaseUrl, baseUrl };

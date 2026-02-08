@@ -26,8 +26,8 @@ public class FinishedInventoryController {
      * @param params 查询参数
      * @return 分页结果
      */
+    @PreAuthorize("hasAuthority('MENU_WAREHOUSE')")
     @PostMapping("/list")
-    // @PreAuthorize("hasAuthority('MENU_WAREHOUSE')") // TODO: 临时移除权限检查，用于测试
     public Result<IPage<FinishedInventoryDTO>> list(@RequestBody Map<String, Object> params) {
         IPage<FinishedInventoryDTO> page = finishedInventoryOrchestrator.getFinishedInventoryPage(params);
         return Result.success(page);
@@ -36,8 +36,8 @@ public class FinishedInventoryController {
     /**
      * 兼容GET方式的查询（适配标准列表组件）
      */
+    @PreAuthorize("hasAuthority('MENU_WAREHOUSE')")
     @GetMapping("/list")
-    // @PreAuthorize("hasAuthority('MENU_WAREHOUSE')") // TODO: 临时移除权限检查，用于测试
     public Result<IPage<FinishedInventoryDTO>> listGet(@RequestParam Map<String, Object> params) {
         IPage<FinishedInventoryDTO> page = finishedInventoryOrchestrator.getFinishedInventoryPage(params);
         return Result.success(page);

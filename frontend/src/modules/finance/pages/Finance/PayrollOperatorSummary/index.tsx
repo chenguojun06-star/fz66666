@@ -8,6 +8,7 @@ import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import api, { unwrapApiData } from '@/utils/api';
+import { payrollApi } from '@/services/finance/payrollApi';
 import type { PayrollOperatorProcessSummaryRow } from '@/types/finance';
 import dayjs from 'dayjs';
 
@@ -355,32 +356,98 @@ const PayrollOperatorSummary: React.FC = () => {
     };
 
     // 单条审核
-    const handleApprove = (operatorName: string) => {
-        const now = dayjs().format('YYYY-MM-DD HH:mm:ss');
-        setRows(prev => prev.map(row => {
-            if ((row as Record<string, unknown>).operatorName === operatorName) {
-                return { ...row, approvalTime: now } as PayrollOperatorProcessSummaryRow;
+    const handleApprove = async (operatorName: string) => {
+        try {
+            const result = await payrollApi.approve({
+                operatorNames: [operatorName],
+                approvalTime: dayjs().format('YYYY-MM-DD HH:mm:ss'),
+            });
+
+            if (result && result.success) {
+                const now = dayjs().format('YYYY-MM-DD HH:mm:ss');
+                setRows(prev => prev.map(row => {
+                    if ((row as Record<string, unknown>).operatorName === operatorName) {
+                        return { ...row, approvalTime: now } as PayrollOperatorProcessSummaryRow;
+                    }
+                    return row;
+                }));
+                message.success(result.message || `已审核 ${operatorName} 的工资`);
+            } else {
+                message.error(result?.message || '审核失败');
             }
-            return row;
-        }));
-        message.success(`已审核 ${operatorName} 的工资`);
+        } catch (error: any) {
+            console.error('工资审核失败:', error);
+            message.error(error?.message || '审核失败，请稍后重试');
+        }
     };
 
     // 批量审核
-    const handleBatchApprove = () => {
+    const handleBatchApprove = async () => {
         if (selectedRowKeys.length === 0) {
             message.warning('请选择要审核的人员');
             return;
         }
-        const now = dayjs().format('YYYY-MM-DD HH:mm:ss');
-        setRows(prev => prev.map(row => {
-            if (selectedRowKeys.includes((row as Record<string, unknown>).operatorName as string)) {
-                return { ...row, approvalTime: now } as PayrollOperatorProcessSummaryRow;
+
+        try {
+            const result = await payrollApi.approve({
+                operatorNames: selectedRowKeys as string[],
+                approvalTime: dayjs().format('YYYY-MM-DD HH:mm:ss'),
+            });
+
+            if (result && result.success) {
+                const now = dayjs().format('YYYY-MM-DD HH:mm:ss');
+                setRows(prev => prev.map(row => {
+                    if (selectedRowKeys.includes((row as Record<string, unknown>).operatorName as string)) {
+                        return { ...row, approvalTime: now } as PayrollOperatorProcessSummaryRow;
+                    }
+                    return row;
+                }));
+                message.success(result.message || `已批量审核 ${selectedRowKeys.length} 人`);
+                setSelectedRowKeys([]);
+            } else {
+                message.error(result?.message || '批量审核失败');
             }
-            return row;
-        }));
-        message.success(`已批量审核 ${selectedRowKeys.length} 人`);
-        setSelectedRowKeys([]);
+        } catch (error: any) {
+            console.error('批量审核失败:', error);
+            message.error(error?.message || '批量审核失败，请稍后重试');
+        }
+    };
+
+    // 退回操作
+    const handleRejectSubmit = async () => {
+        if (!rejectReason.trim()) {
+            message.warning('请填写退回原因');
+            return;
+        }
+
+        try {
+            const result = await payrollApi.reject({
+                operatorName: rejectOperator,
+                rejectReason: rejectReason.trim(),
+            });
+
+            if (result && result.success) {
+                setRows(prev => prev.map(row => {
+                    if ((row as Record<string, unknown>).operatorName === rejectOperator) {
+                        return {
+                            ...row,
+                            approvalTime: null,
+                            remark: `【退回】${rejectReason}`
+                        } as PayrollOperatorProcessSummaryRow;
+                    }
+                    return row;
+                }));
+                message.success(result.message || `已退回 ${rejectOperator} 的工资审核`);
+                setRejectVisible(false);
+                setRejectOperator('');
+                setRejectReason('');
+            } else {
+                message.error(result?.message || '退回失败');
+            }
+        } catch (error: any) {
+            console.error('退回操作失败:', error);
+            message.error(error?.message || '退回失败，请稍后重试');
+        }
     };
 
     // 打开退回弹窗
@@ -674,7 +741,6 @@ const PayrollOperatorSummary: React.FC = () => {
                             重置
                         </Button>
                         <Button
-                            icon={<DownloadOutlined />}
                             onClick={exportToExcel}
                             disabled={loading || rows.length === 0}
                         >

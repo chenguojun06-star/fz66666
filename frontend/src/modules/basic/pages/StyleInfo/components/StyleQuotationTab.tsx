@@ -358,7 +358,6 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                     <Col span={12}>
                       <Button
                         type="default"
-                        icon={<EditOutlined />}
                         onClick={handleUnlock}
                         size="middle"
                         block

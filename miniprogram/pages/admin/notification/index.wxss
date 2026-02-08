@@ -8,7 +8,7 @@
   display: flex;
   align-items: center;
   padding: 30rpx 20rpx;
-  background: #fff;
+  background: var(--color-bg-card);
   border-radius: 16rpx;
   margin-bottom: 20rpx;
   box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
@@ -23,11 +23,11 @@
   flex: 1;
   font-size: 32rpx;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--color-text-primary);
 }
 
 .notification-count {
-  background: #ff4d4f;
+  background: var(--color-error);
   color: #fff;
   padding: 4rpx 16rpx;
   border-radius: 24rpx;
@@ -39,7 +39,7 @@
 .empty {
   text-align: center;
   padding: 100rpx 20rpx;
-  color: #999;
+  color: var(--color-text-disabled);
   font-size: 28rpx;
 }
 
@@ -49,7 +49,7 @@
 }
 
 .empty-text {
-  color: #999;
+  color: var(--color-text-disabled);
   font-size: 28rpx;
 }
 
@@ -58,7 +58,7 @@
 }
 
 .user-card {
-  background: #fff;
+  background: var(--color-bg-card);
   border-radius: 16rpx;
   margin-bottom: 20rpx;
   padding: 24rpx;
@@ -90,17 +90,17 @@
 .user-name {
   font-size: 32rpx;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--color-text-primary);
   margin-bottom: 8rpx;
 }
 
 .user-meta {
   font-size: 24rpx;
-  color: #999;
+  color: var(--color-text-disabled);
 }
 
 .user-badge {
-  background: #1890ff;
+  background: var(--color-primary);
   color: #fff;
   padding: 6rpx 16rpx;
   border-radius: 6rpx;
@@ -121,13 +121,13 @@
 
 .detail-label {
   width: 140rpx;
-  color: #666;
+  color: var(--color-text-secondary);
   font-size: 26rpx;
 }
 
 .detail-value {
   flex: 1;
-  color: #1a1a1a;
+  color: var(--color-text-primary);
   font-size: 26rpx;
 }
 
@@ -148,25 +148,25 @@
 }
 
 .reject-btn {
-  background: #fff;
-  color: #ff4d4f;
-  border: 2rpx solid #ff4d4f;
+  background: var(--color-bg-card);
+  color: var(--color-error);
+  border: 2rpx solid var(--color-error);
 }
 
 .approve-btn {
-  background: #52c41a;
+  background: var(--color-success);
   color: #fff;
 }
 
 .load-more {
   text-align: center;
   padding: 30rpx;
-  color: #1890ff;
+  color: var(--color-primary);
   font-size: 28rpx;
 }
 
 .load-more.disabled {
-  color: #999;
+  color: var(--color-text-disabled);
 }
 
 /* 弹窗样式 */
@@ -199,7 +199,7 @@
   position: relative;
   width: 90%;
   max-width: 90vw;
-  background: #fff;
+  background: var(--color-bg-card);
   border-radius: 32rpx;
   overflow: hidden;
 }
@@ -215,12 +215,12 @@
 .modal-title {
   font-size: 32rpx;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--color-text-primary);
 }
 
 .modal-close {
   font-size: 36rpx;
-  color: #999;
+  color: var(--color-text-disabled);
   width: 48rpx;
   height: 48rpx;
   display: flex;
@@ -234,23 +234,23 @@
 
 .modal-text {
   font-size: 28rpx;
-  color: #1a1a1a;
+  color: var(--color-text-primary);
   margin-bottom: 12rpx;
 }
 
 .highlight {
-  color: #1890ff;
+  color: var(--color-primary);
   font-weight: 600;
 }
 
 .modal-hint {
   font-size: 24rpx;
-  color: #999;
+  color: var(--color-text-disabled);
   margin-bottom: 24rpx;
 }
 
 .modal-hint.danger {
-  color: #ff4d4f;
+  color: var(--color-error);
 }
 
 .form-item {
@@ -259,26 +259,26 @@
 
 .form-label {
   font-size: 26rpx;
-  color: #666;
+  color: var(--color-text-secondary);
   margin-bottom: 12rpx;
 }
 
 .required {
-  color: #ff4d4f;
+  color: var(--color-error);
 }
 
 .picker {
-  background: #f5f5f5;
+  background: var(--color-bg-gray);
   padding: 20rpx;
   border-radius: 8rpx;
   font-size: 28rpx;
-  color: #1a1a1a;
+  color: var(--color-text-primary);
 }
 
 .textarea {
   width: 100%;
   min-height: 160rpx;
-  background: #f5f5f5;
+  background: var(--color-bg-gray);
   padding: 20rpx;
   border-radius: 8rpx;
   font-size: 28rpx;
@@ -302,7 +302,7 @@
 }
 
 .modal-btn.cancel {
-  color: #6b7280;
+  color: var(--color-text-secondary);
   background: rgba(255, 255, 255, 0.6);
   border: 1rpx solid var(--color-border);
 }
@@ -313,7 +313,7 @@
 }
 
 .modal-btn.confirm {
-  color: #1f2937;
+  color: var(--color-text-primary);
   background: linear-gradient(135deg, rgba(224, 242, 254, 0.9) 0%, rgba(224, 242, 254, 0.7) 100%);
   border: 1rpx solid rgba(147, 197, 253, 0.5);
   box-shadow: 0 8rpx 24rpx rgba(59, 130, 246, 0.15);
@@ -325,7 +325,7 @@
 }
 
 .modal-btn.danger {
-  background: linear-gradient(135deg, #ff4d4f 0%, #e03e40 100%);
+  background: linear-gradient(135deg, var(--color-error) 0%, var(--color-error) 100%);
   color: #fff;
   box-shadow: 0 8rpx 24rpx rgba(255, 77, 79, 0.25);
 }

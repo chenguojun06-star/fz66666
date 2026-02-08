@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Button, Space, Input, message, Row, Col, Modal, Form, InputNumber, Tag, Dropdown } from 'antd';
 import type { MenuProps } from 'antd';
-import { PlusOutlined, AppstoreOutlined, UnorderedListOutlined, EyeOutlined, CheckCircleOutlined, ClockCircleOutlined, SyncOutlined, UserOutlined, PrinterOutlined } from '@ant-design/icons';
+import { AppstoreOutlined, UnorderedListOutlined, CheckCircleOutlined, ClockCircleOutlined, SyncOutlined, UserOutlined, PrinterOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import Layout from '@/components/Layout';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
@@ -239,7 +239,6 @@ const PatternProduction: React.FC = () => {
           completeTime: formatDateTime(item.completeTime) || '-',
           coverImage: item.coverImage,
           patternMaker: item.patternMaker || '-',
-          status: item.status || 'PENDING',
           progressNodes,
           // 工序单价汇总从后端获取（从样板开发的工艺配置汇总）
           processUnitPrices: item.processUnitPrices || {},
@@ -276,6 +275,10 @@ const PatternProduction: React.FC = () => {
   // 打开进度更新对话框
   const handleOpenProgress = (record: PatternProductionRecord) => {
     // form.setFieldsValue(record.progressNodes); // 改为在 useEffect 中处理
+    progressModal.open(record);
+  };
+
+  const handleOpenDetail = (record: PatternProductionRecord) => {
     progressModal.open(record);
   };
 
@@ -509,75 +512,75 @@ const PatternProduction: React.FC = () => {
         });
 
         return (
-        <div style={{
-          display: 'flex',
-          gap: 0,
-          alignItems: 'center',
-          justifyContent: 'space-evenly',
-          padding: '12px 8px',
-          width: '100%',
-        }}>
-          {nodesWithPrices.map((node) => {
-            // 采购节点使用 procurementProgress 数据，其他节点使用 progressNodes
-            let percent: number;
-            let completedQty: number;
-            let remaining: number;
+          <div style={{
+            display: 'flex',
+            gap: 0,
+            alignItems: 'center',
+            justifyContent: 'space-evenly',
+            padding: '12px 8px',
+            width: '100%',
+          }}>
+            {nodesWithPrices.map((node) => {
+              // 采购节点使用 procurementProgress 数据，其他节点使用 progressNodes
+              let percent: number;
+              let completedQty: number;
+              let remaining: number;
 
-            if (node.name === '采购' && record.procurementProgress) {
-              // 采购进度使用实际采购单完成数据
-              percent = record.procurementProgress.percent || 0;
-              completedQty = record.procurementProgress.completed || 0;
-              remaining = record.procurementProgress.total - completedQty;
-            } else {
-              // 其他节点使用原有逻辑
-              percent = progressNodes[node.id] || 0;
-              completedQty = percent >= 100 ? record.quantity : Math.floor(record.quantity * percent / 100);
-              remaining = record.quantity - completedQty;
-            }
+              if (node.name === '采购' && record.procurementProgress) {
+                // 采购进度使用实际采购单完成数据
+                percent = record.procurementProgress.percent || 0;
+                completedQty = record.procurementProgress.completed || 0;
+                remaining = record.procurementProgress.total - completedQty;
+              } else {
+                // 其他节点使用原有逻辑
+                percent = progressNodes[node.id] || 0;
+                completedQty = percent >= 100 ? record.quantity : Math.floor(record.quantity * percent / 100);
+                remaining = record.quantity - completedQty;
+              }
 
-            return (
-              <div
-                key={node.id}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 6,
-                  flex: 1,
-                  cursor: 'default',
-                  padding: 4,
+              return (
+                <div
+                  key={node.id}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 6,
+                    flex: 1,
+                    cursor: 'default',
+                    padding: 4,
 
-                  transition: 'background 0.2s',
-                }}
-              >
-                <LiquidProgressLottie
-                  progress={percent}
-                  size={60}
-                  color1={
-                    percent >= 100
-                      ? '#9ca3af'
-                      : getDeliveryStatus(record.deliveryTime) === 'danger'
-                      ? '#ef4444'
-                      : getDeliveryStatus(record.deliveryTime) === 'warning'
-                      ? '#f59e0b'
-                      : 'var(--success-color)'
-                  }
-                  color2={
-                    percent >= 100
-                      ? '#d1d5db'
-                      : getDeliveryStatus(record.deliveryTime) === 'danger'
-                      ? '#fca5a5'
-                      : getDeliveryStatus(record.deliveryTime) === 'warning'
-                      ? '#fbbf24'
-                      : '#95de64'
-                  }
-                  nodeName={node.name}
-                />
-              </div>
-            );
-          })}
-        </div>
-      );
+                    transition: 'background 0.2s',
+                  }}
+                >
+                  <LiquidProgressLottie
+                    progress={percent}
+                    size={60}
+                    color1={
+                      percent >= 100
+                        ? '#9ca3af'
+                        : getDeliveryStatus(record.deliveryTime) === 'danger'
+                          ? '#ef4444'
+                          : getDeliveryStatus(record.deliveryTime) === 'warning'
+                            ? '#f59e0b'
+                            : 'var(--success-color)'
+                    }
+                    color2={
+                      percent >= 100
+                        ? '#d1d5db'
+                        : getDeliveryStatus(record.deliveryTime) === 'danger'
+                          ? '#fca5a5'
+                          : getDeliveryStatus(record.deliveryTime) === 'warning'
+                            ? '#fbbf24'
+                            : '#95de64'
+                    }
+                    nodeName={node.name}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        );
       },
     },
     {
@@ -615,13 +618,11 @@ const PatternProduction: React.FC = () => {
         const menuItems: MenuProps['items'] = [
           record.status === 'PENDING' && {
             key: 'receive',
-            icon: <UserOutlined />,
             label: '领取',
             onClick: () => handleReceive(record),
           },
           record.status === 'IN_PROGRESS' && !isCompleted && {
             key: 'progress',
-            icon: <SyncOutlined />,
             label: '进度',
             onClick: () => handleOpenProgress(record),
           },
@@ -654,12 +655,12 @@ const PatternProduction: React.FC = () => {
               },
               ...(menuItems.length > 0
                 ? [
-                    {
-                      key: 'more',
-                      label: '更多',
-                      children: menuItems
-                    }
-                  ]
+                  {
+                    key: 'more',
+                    label: '更多',
+                    children: menuItems
+                  }
+                ]
                 : [])
             ]}
           />
@@ -759,19 +760,16 @@ const PatternProduction: React.FC = () => {
                 return [
                   {
                     key: 'view',
-                    icon: <EyeOutlined />,
                     label: '查看',
                     onClick: () => handleOpenDetail(record),
                   },
                   record.status === 'PENDING' && {
                     key: 'receive',
-                    icon: <UserOutlined />,
                     label: '领取',
                     onClick: () => handleReceive(record),
                   },
                   record.status === 'IN_PROGRESS' && !isCompleted && {
                     key: 'progress',
-                    icon: <SyncOutlined />,
                     label: '进度',
                     onClick: () => handleOpenProgress(record),
                   },

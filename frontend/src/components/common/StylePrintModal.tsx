@@ -432,7 +432,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
       footer={
         <Space>
           <Button onClick={onClose}>取消</Button>
-          <Button type="primary" icon={<PrinterOutlined />} onClick={handlePrint}>
+          <Button type="primary" onClick={handlePrint}>
             打印
           </Button>
         </Space>

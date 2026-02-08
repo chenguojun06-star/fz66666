@@ -70,7 +70,7 @@
 /* 筛选器 */
 .filter-bar {
   margin: 24rpx;
-  background: #ffffff;
+  background: var(--color-bg-card);
   border-radius: var(--border-radius-lg);
   padding: 8rpx;
   box-shadow: var(--shadow-sm);
@@ -108,7 +108,7 @@
 .date-picker {
   flex: 1;
   padding: 20rpx;
-  background: #ffffff;
+  background: var(--color-bg-card);
   border-radius: var(--border-radius-md);
   text-align: center;
   font-size: 28rpx;
@@ -177,7 +177,7 @@
 
 /* 工序记录卡片 */
 .record-item {
-  background: #ffffff;
+  background: var(--color-bg-card);
   border-radius: var(--border-radius-lg);
   padding: 24rpx;
   margin-bottom: 16rpx;

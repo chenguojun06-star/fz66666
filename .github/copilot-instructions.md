@@ -3,7 +3,7 @@
 > **核心目标**：让 AI 立即理解三端协同架构、关键约束与业务流程，避免破坏既有设计。
 > **系统评分**：97/100 | **代码质量**：优秀 | **架构**：非标准分层设计（37个编排器）
 > **测试覆盖率**：核心编排器 100% | 代码优化 -45%（1677→923行）
-> **最后更新**：2026-02-04 | **AI指令版本**：v3.3
+> **最后更新**：2026-02-05 | **AI指令版本**：v3.4
 
 ---
 
@@ -242,6 +242,30 @@ cd frontend && npm run dev
 - `APP_AUTH_JWT_SECRET` - JWT 签名密钥
 - `SPRING_DATASOURCE_URL` - 数据库连接：`jdbc:mysql://localhost:3308/template_library`
 - `WECHAT_MINI_PROGRAM_MOCK_ENABLED=true` - 开发环境启用 Mock（跳过微信登录验证）
+
+### 内网访问配置（⚠️ 禁止修改）
+**固定配置**（永远不要改动）：
+- **内网 IP**：`192.168.2.248`（固定）
+- **访问地址**：`http://192.168.2.248:5173/`
+- **配置文件**：`frontend/vite.config.ts`
+  - `server.host: '0.0.0.0'`（监听所有网络接口）
+  - `server.hmr.host: '192.168.2.248'`（HMR 固定内网 IP）
+  - `server.port: 5173`（开发端口）
+- **启动脚本**：`dev-public.sh` 使用 `--host 0.0.0.0` 参数
+
+**为什么不能修改**：
+- ❌ 修改 `hmr.host` 会导致动态模块导入失败
+- ❌ 修改 `host` 会导致内网无法访问
+- ❌ 修改端口会导致代理配置失效
+- ✅ 此配置已测试验证，支持 localhost 和内网同时访问
+
+**故障排查**：
+```bash
+# 如果遇到 "Failed to fetch dynamically imported module" 错误
+# 1. 检查 vite.config.ts 中 hmr.host 是否为 192.168.2.248
+# 2. 检查 dev-public.sh 启动命令是否包含 --host 0.0.0.0
+# 3. 重启开发服务器：killall node && ./dev-public.sh
+```
 
 ### 数据库管理（非标准端口）
 - 端口：**3308**（非标准 3306，避免冲突）
@@ -763,14 +787,15 @@ SKU = styleNo + color + size
 
 ## ⚠️ 常见陷阱与注意事项
 
-1. **403 错误**：未使用 `./dev-public.sh` 启动，缺少 `.run/backend.env` 环境变量
-2. **数据库连接失败**：检查端口是否为 3308（非标准 3306），容器名 `fashion-mysql-simple`
-3. **使用废弃 API**：检查 `@Deprecated` 标记，所有新代码必须使用 `POST /list` 和 `stage-action` 模式
-4. **弹窗尺寸不统一**：必须使用三级尺寸（60vw/40vw/30vw），禁止自定义
-5. **Service 互调**：必须通过 Orchestrator，否则无法进行事务管理
-6. **扫码重复提交**：理解防重复算法，不要随意修改时间间隔
-7. **跨端验证不一致**：修改 validationRules 时必须同步 PC 端和小程序
-8. **权限注解缺失**：所有 Controller 方法必须添加 `@PreAuthorize`（部分 TODO 标记除外）
+1. **【禁止】修改内网配置**：`vite.config.ts` 中 `hmr.host='192.168.2.248'` 和 `dev-public.sh` 中 `--host 0.0.0.0` 是固定配置，修改会导致动态模块导入失败和 API 代理异常
+2. **403 错误**：未使用 `./dev-public.sh` 启动，缺少 `.run/backend.env` 环境变量
+3. **数据库连接失败**：检查端口是否为 3308（非标准 3306），容器名 `fashion-mysql-simple`
+4. **使用废弃 API**：检查 `@Deprecated` 标记，所有新代码必须使用 `POST /list` 和 `stage-action` 模式
+5. **弹窗尺寸不统一**：必须使用三级尺寸（60vw/40vw/30vw），禁止自定义
+6. **Service 互调**：必须通过 Orchestrator，否则无法进行事务管理
+7. **扫码重复提交**：理解防重复算法，不要随意修改时间间隔
+8. **跨端验证不一致**：修改 validationRules 时必须同步 PC 端和小程序
+9. **权限注解缺失**：所有 Controller 方法必须添加 `@PreAuthorize`（部分 TODO 标记除外）
 
 ---
 
@@ -817,6 +842,362 @@ mvn clean test -Dtest="QualityScanExecutorTest,WarehouseScanExecutorTest,Product
 
 > **修改代码前必读**：优先参考现有实现（同模块 Controller/Orchestrator/组件），确保对齐既有模式，避免引入不一致性。
 
+---
 
+## 🎯 关键开发决策（架构 DNA）
 
+### 为什么选择 Orchestrator 模式？
+**背景**：服装供应链业务复杂度极高，单个订单涉及 8+ 工序，5+ 服务交互
+- ❌ **传统分层**：Controller → Service → Mapper（适合简单CRUD）
+- ✅ **当前架构**：Controller → **Orchestrator** → Service → Mapper
+  - Orchestrator 层：跨服务编排、事务管理、业务协调
+  - Service 层：单表操作，禁止互调
+  - **收益**：事务一致性 100%、业务逻辑清晰、易测试
+
+### 为什么数据库用 3308 端口？
+**原因**：开发团队多人协作，避免与本地 MySQL 3306 冲突
+- 修改端口需同步更新：`dev-public.sh` + `.run/backend.env` + `deployment/db-manager.sh`
+
+### 为什么内网 IP 固定为 192.168.2.248？
+**原因**：Vite HMR（热模块替换）需要固定主机地址才能正常工作
+- ✅ **固定配置**：`vite.config.ts` 中 `hmr.host='192.168.2.248'`
+- ✅ **启动命令**：`dev-public.sh` 中 `--host 0.0.0.0`
+- ❌ **禁止修改**：修改 HMR host 会导致动态模块导入失败（React Router lazy loading）
+- ❌ **禁止修改**：修改监听 host 会导致内网无法访问
+- **访问方式**：
+  - 本地：`http://localhost:5173/`（API 代理生效）
+  - 内网：`http://192.168.2.248:5173/`（支持团队协作）
+
+### 为什么小程序不用 TypeScript？
+**决策**：微信开发者工具 2020 年版本对 TS 支持差，编译耗时长
+- 采用 ESLint + JSDoc 替代（代码质量 95/100）
+- 验证规则跨端同步：`validationRules.ts` ↔ `validationRules.js`
+
+### 为什么弹窗只能用 3 个尺寸？
+**设计原则**：响应式一致性 > 自由度
+- 60vw/40vw/30vw 覆盖 90% 场景
+- 自定义尺寸会破坏跨页面视觉一致性
+- 参考：[设计系统完整规范-2026.md](../设计系统完整规范-2026.md)
+
+---
+
+## 🚨 禁止模式与反例（避坑指南）
+
+### 反例 1：Controller 直调多 Service（❌ 严重错误）
+```java
+// ❌ 错误：破坏事务一致性
+@RestController
+public class OrderController {
+    @PostMapping("/create")
+    public Result<Order> create() {
+        Order order = orderService.create();      // 服务1
+        styleService.deductStock();               // 服务2 - 跨服务调用
+        financeService.createCost();              // 服务3 - 跨服务调用
+        return Result.success(order);
+    }
+}
+// 问题：服务2失败时，服务1已提交，无法回滚
+
+// ✅ 正确：通过 Orchestrator 编排
+@Service
+public class OrderOrchestrator {
+    @Transactional(rollbackFor = Exception.class)  // 统一事务
+    public Order createOrder() {
+        Order order = orderService.create();
+        styleService.deductStock();
+        financeService.createCost();
+        return order;  // 任何失败都会回滚
+    }
+}
+```
+
+### 反例 2：硬编码颜色（❌ 设计违规）
+```tsx
+// ❌ 错误：破坏主题一致性（项目中有 610 处待修复）
+<Button style={{ background: '#2D7FF9' }}>保存</Button>
+
+// ✅ 正确：使用 CSS 变量
+<Button style={{ background: 'var(--primary-color)' }}>保存</Button>
+```
+
+### 反例 3：跨端验证不一致（❌ 数据污染）
+```javascript
+// ❌ 错误：只改 PC 端，小程序未同步
+// frontend/src/utils/validationRules.ts
+export const orderNoPattern = /^PO\d{11}$/;  // 修改了格式
+
+// miniprogram/utils/validationRules.js
+const orderNoPattern = /^PO\d{10}$/;  // 忘记修改
+
+// 结果：PC 端创建的订单，小程序扫码失败
+```
+
+### 反例 4：使用已废弃 API（❌ 技术债）
+```java
+// ❌ 错误：使用旧 API（项目已标记 58 个废弃端点）
+GET /api/production/orders/by-order-no/{orderNo}
+
+// ✅ 正确：使用新 API
+POST /api/production/orders/list
+{ "filters": { "orderNo": "PO20260201001" } }
+```
+
+---
+
+## 📊 数据流与集成点
+
+### 三端数据流图
+```
+[PC端 React]  ←─────────────→  [后端 Spring Boot]  ←─────────────→  [小程序 WeChat]
+     │                               │                                    │
+     │ API: /api/*                  │ MySQL 3308                         │ API: /api/wechat/*
+     │ Auth: JWT                     │ Redis Cache                        │ Auth: wx.login()
+     │                               │                                    │
+     └──────────── WebSocket ────────┴──────────── EventBus ─────────────┘
+                    (实时同步)                        (跨页面通知)
+```
+
+### 关键集成点
+1. **扫码流程**：小程序扫码 → 后端工序识别 → PC端实时更新
+   - 防重复：基于 `orderId + processCode + quantity + timestamp` 去重
+   - 最小间隔：`max(30s, 菲号数量 × 工序分钟 × 60 × 0.5)`
+   - 实现：`miniprogram/pages/scan/services/StageDetector.js#L610`
+
+2. **库存同步**：采购入库 → 自动更新库存 → 触发预警
+   - 表：`t_material_stock`（面辅料）、`t_sample_stock`（样衣）
+   - 预警阈值：`safety_stock` 字段
+   - 实现：`backend/.../MaterialStockService.java`
+
+3. **财务结算**：扫码记录 → 工资计算 → 对账单生成
+   - 聚合规则：按订单+工序+员工分组
+   - 审批流程：`POST /{id}/stage-action?action=approve`
+   - 实现：`backend/.../ReconciliationOrchestrator.java`
+
+---
+
+## 🔍 调试技巧与常见问题
+
+### 问题 1：403 错误（最常见）
+**原因**：未加载环境变量 `APP_AUTH_JWT_SECRET`
+```bash
+# ❌ 错误启动方式
+cd backend && mvn spring-boot:run  # 缺少环境变量
+
+# ✅ 正确启动方式
+./dev-public.sh  # 自动加载 .run/backend.env
+
+# 快速修复
+./fix-403-errors.sh
+```
+
+### 问题 2：扫码无响应
+**排查步骤**：
+```bash
+# 1. 检查后端日志
+tail -f backend/logs/fashion-supplychain.log | grep "scan/execute"
+
+# 2. 验证数据库连接
+docker exec fashion-mysql-simple mysql -uroot -pchangeme fashion_supplychain -e "SELECT COUNT(*) FROM t_scan_record;"
+
+# 3. 检查防重复逻辑
+# 查看 miniprogram/pages/scan/index.js#recentScanExpires Map
+```
+
+### 问题 3：前端 API 404 / 动态模块导入失败
+**原因**：使用内网 IP 会导致 Vite 代理失效 + 动态导入（lazy loading）失败
+```bash
+# ❌ 错误访问（会导致两类问题）
+http://192.168.2.248:5173
+# 问题1：API 代理不生效 → 后端请求 404
+# 问题2：动态导入失败 → "Failed to fetch dynamically imported module"
+
+# ✅ 正确访问
+http://localhost:5173  # 代理生效 + 模块加载正常
+
+# Vite 配置位置
+frontend/vite.config.ts → server.proxy['/api']
+```
+
+**典型错误信息**：
+```
+TypeError: Failed to fetch dynamically imported module: 
+http://192.168.2.248:5173/src/modules/basic/pages/OrderManagement/index.tsx
+```
+
+**快速修复**：
+```bash
+# 1. 关闭当前浏览器标签
+# 2. 使用 localhost 重新访问
+open http://localhost:5173
+
+# 3. 如果问题依然存在，清理缓存
+cd frontend
+rm -rf node_modules/.vite
+npm run dev
+```
+
+### 问题 4：数据库连接失败
+```bash
+# 检查 Docker 容器
+docker ps | grep fashion-mysql-simple
+
+# 如果容器未运行
+./deployment/db-manager.sh start
+
+# 测试连接（注意端口 3308）
+mysql -h127.0.0.1 -P3308 -uroot -pchangeme fashion_supplychain
+```
+
+---
+
+## 🛠️ 快速命令参考（复制即用）
+
+### 日常开发
+```bash
+# 启动开发环境（必须用脚本）
+./dev-public.sh
+
+# 查看后端日志
+tail -f backend/logs/fashion-supplychain.log
+
+# 清理日志和缓存
+./clean-system.sh
+
+# 系统健康检查
+./check-system-status.sh
+```
+
+### 测试验证
+```bash
+# 测试订单创建
+./test-production-order-creator-tracking.sh
+
+# 测试扫码流程
+./test-material-inbound.sh
+
+# 测试财务结算
+./test-finished-settlement-approve.sh
+
+# 运行所有测试（后端）
+cd backend && mvn clean test
+
+# 运行核心测试（快速）
+mvn test -Dtest="*OrchestratorTest"
+```
+
+### 数据库操作
+```bash
+# 备份数据库
+docker exec fashion-mysql-simple mysqldump -uroot -pchangeme fashion_supplychain > backup_$(date +%Y%m%d).sql
+
+# 恢复数据库
+docker exec -i fashion-mysql-simple mysql -uroot -pchangeme fashion_supplychain < backup.sql
+
+# 查看表结构
+docker exec fashion-mysql-simple mysql -uroot -pchangeme fashion_supplychain -e "SHOW TABLES;"
+
+# 执行 SQL 脚本
+docker exec -i fashion-mysql-simple mysql -uroot -pchangeme fashion_supplychain < scripts/your-script.sql
+```
+
+### 代码检查
+```bash
+# 检查设计规范违规
+./fix-design-violations.sh
+
+# 检查未使用的 imports
+cd frontend && npm run lint
+
+# 检查小程序代码
+./miniprogram-check.sh
+
+# 代码质量审计
+./full-code-audit.sh
+```
+
+---
+
+## 📖 文档速查表
+
+### 新手入门（按顺序阅读）
+1. [系统状态.md](../系统状态.md) - 5分钟了解系统（必读）
+2. [开发指南.md](../开发指南.md) - 完整架构和规范（必读）
+3. [业务流程说明.md](../业务流程说明.md) - 理解业务逻辑
+4. [快速测试指南.md](../快速测试指南.md) - 验证环境
+
+### 开发规范（写代码前查阅）
+- [设计系统完整规范-2026.md](../设计系统完整规范-2026.md) - UI/UX 强制规范
+- [docs/useModal使用指南.md](../docs/useModal使用指南.md) - Modal 状态管理
+- [docs/ModalContentLayout使用指南.md](../docs/ModalContentLayout使用指南.md) - Modal 布局规范
+
+### 专题指南（特定功能）
+- [INVENTORY_SYSTEM_GUIDE.md](../INVENTORY_SYSTEM_GUIDE.md) - 进销存操作
+- [docs/小程序开发完整指南.md](../docs/小程序开发完整指南.md) - 小程序开发
+- [deployment/数据库配置.md](../deployment/数据库配置.md) - 数据库管理
+
+### 测试脚本索引（40+ 脚本）
+```bash
+ls -1 test-*.sh           # 列出所有测试脚本
+./test-dashboard-all.sh   # 仪表板全量测试
+./test-stock-check.sh     # 库存检查测试
+```
+
+---
+
+## 🎓 学习路径建议
+
+### Day 1：环境搭建（1-2小时）
+1. 阅读 [系统状态.md](../系统状态.md)（10分钟）
+2. 运行 `./dev-public.sh` 启动环境（20分钟）
+3. 运行 `./check-system-status.sh` 验证（5分钟）
+4. 运行 `./test-production-order-creator-tracking.sh` 测试（10分钟）
+
+### Day 2：理解架构（2-3小时）
+1. 阅读 [开发指南.md](../开发指南.md) 1-3章（1小时）
+2. 查看 `backend/.../orchestration/` 目录，理解 Orchestrator 模式（30分钟）
+3. 查看 `frontend/src/modules/` 目录，理解模块化架构（30分钟）
+4. 阅读 [业务流程说明.md](../业务流程说明.md)（30分钟）
+
+### Day 3：动手实践（3-4小时）
+1. 修改一个简单的 Service（如添加字段）（1小时）
+2. 添加一个 API 端点（30分钟）
+3. 创建一个 Modal 组件（使用 useModal + ModalContentLayout）（1小时）
+4. 编写单元测试（30分钟）
+
+### Week 2+：深入专题
+- 小程序开发：[docs/小程序开发完整指南.md](../docs/小程序开发完整指南.md)
+- 进销存系统：[INVENTORY_SYSTEM_GUIDE.md](../INVENTORY_SYSTEM_GUIDE.md)
+- 设计系统：[设计系统完整规范-2026.md](../设计系统完整规范-2026.md)
+
+---
+
+## 💡 AI 使用建议
+
+### 向 AI 提问的最佳实践
+```
+✅ 好问题：
+"如何在 ProductionOrderOrchestrator 中添加一个新的状态流转？"
+"ResizableModal 应该使用 60vw 还是 40vw 尺寸？"
+"扫码防重复算法的时间间隔是如何计算的？"
+
+❌ 差问题：
+"怎么写一个订单管理功能？"（太宽泛）
+"为什么代码报错？"（缺少上下文）
+"帮我优化这段代码"（没有明确目标）
+```
+
+### 让 AI 生成代码时
+1. **指定架构层**：明确是 Controller/Orchestrator/Service
+2. **引用现有代码**：`参考 ProductionOrderOrchestrator 的模式`
+3. **说明约束**：`必须使用 @PreAuthorize 权限注解`
+4. **要求测试**：`需要包含单元测试`
+
+### AI 代码审查重点
+- [ ] 是否遵循 Orchestrator 模式？
+- [ ] 是否添加了权限注解？
+- [ ] 是否使用了标准组件（ResizableModal/ModalContentLayout）？
+- [ ] 是否更新了跨端验证规则？
+- [ ] 是否编写了测试？
+
+---
 

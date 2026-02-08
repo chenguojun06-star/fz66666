@@ -86,14 +86,25 @@ export default defineConfig({
     }
   },
   server: {
-    host: true,
-    port: 5173,
-    allowedHosts: true,
+    // ⚠️⚠️⚠️ 【禁止修改】内网访问固定配置 ⚠️⚠️⚠️
+    // 内网 IP: 192.168.1.13
+    // 访问地址: http://192.168.1.13:5173/
+    // 修改此配置会导致动态模块导入失败和 API 代理异常
+    // ================================================
+    host: '0.0.0.0',  // 【固定】监听所有网络接口
+    port: 5173,       // 【固定】开发端口
+    strictPort: false,
+    hmr: {
+      protocol: 'ws',
+      host: '192.168.1.13',  // 【固定】HMR 必须使用此内网 IP（已更新为当前机器IP）
+      port: 5173,
+      clientPort: 5173
+    },
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8088',  // ⚠️ 后端实际运行在8088端口
+        target: 'http://localhost:8088',  // 【固定】后端地址
         changeOrigin: true,
-        rewrite: (path) => path  // 保持路径不变
+        rewrite: (path) => path
       }
     }
   },

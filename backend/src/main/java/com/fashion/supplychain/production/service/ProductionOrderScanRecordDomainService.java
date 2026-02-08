@@ -323,6 +323,18 @@ public class ProductionOrderScanRecordDomainService {
             scanTime = LocalDateTime.now();
         }
 
+        // 优先从当前登录上下文获取操作人，回退到订单创建人
+        String operatorId = null;
+        String operatorName = "system";
+        UserContext ctx = UserContext.get();
+        if (ctx != null && StringUtils.hasText(ctx.getUserId())) {
+            operatorId = ctx.getUserId();
+            operatorName = StringUtils.hasText(ctx.getUsername()) ? ctx.getUsername().trim() : "system";
+        } else if (StringUtils.hasText(order.getCreatedByName())) {
+            operatorId = order.getCreatedById() != null ? String.valueOf(order.getCreatedById()) : null;
+            operatorName = order.getCreatedByName().trim();
+        }
+
         upsertStageScanRecord(
                 REQUEST_PREFIX_ORDER_CREATED + oid,
                 oid,
@@ -334,8 +346,8 @@ public class ProductionOrderScanRecordDomainService {
                 orderQty,
                 STAGE_ORDER_CREATED,
                 scanTime,
-                null,
-                "system");
+                operatorId,
+                operatorName);
     }
 
     public void insertAdvanceRecord(ProductionOrder order, int toProgress, LocalDateTime now) {

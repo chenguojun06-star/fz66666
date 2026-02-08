@@ -1,5 +1,6 @@
 import { getToken, clearToken } from './utils/storage';
 import * as reminderManager from './utils/reminderManager';
+import { DEBUG_MODE } from './config';
 const { eventBus } = require('./utils/eventBus');
 
 let redirectingToLogin = false;
@@ -12,6 +13,11 @@ App({
   },
 
   onLaunch() {
+    // 生产环境禁用 console.log 输出（保留 warn/error）
+    if (!DEBUG_MODE) {
+      console.log = () => {};
+    }
+
     // 清理过期提醒（超过7天）
     try {
       reminderManager.cleanupExpiredReminders();
@@ -140,7 +146,23 @@ App({
       const page = await fetchPage({ page: nextPage, pageSize });
       const records = page && Array.isArray(page.records) ? page.records : [];
       const prev = Array.isArray(state.list) ? state.list : [];
-      const mergedRaw = reset ? records : prev.concat(records);
+
+      // 合并数据并去重（基于 id 字段）
+      let mergedRaw;
+      if (reset) {
+        mergedRaw = records;
+      } else {
+        // 去重：使用 Map 保留最新的数据
+        const idMap = new Map();
+        prev.forEach(item => {
+          if (item && item.id) idMap.set(item.id, item);
+        });
+        records.forEach(item => {
+          if (item && item.id) idMap.set(item.id, item);
+        });
+        mergedRaw = Array.from(idMap.values());
+      }
+
       const merged = typeof mapRecord === 'function' ? mergedRaw.map(mapRecord) : mergedRaw;
 
       if (pageCtx && typeof pageCtx.setData === 'function') {
@@ -204,5 +226,19 @@ App({
     }
 
     this.toast(raw);
+  },
+
+  /**
+   * 全局错误捕获 - 捕获页面脚本错误
+   */
+  onError(msg) {
+    console.error('[App] 全局错误:', msg);
+  },
+
+  /**
+   * 全局未处理 Promise 拒绝捕获
+   */
+  onUnhandledRejection(res) {
+    console.error('[App] 未处理的Promise拒绝:', res.reason);
   },
 });

@@ -5,6 +5,7 @@ import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.system.entity.LoginLog;
 import com.fashion.supplychain.system.service.LoginLogService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,6 +23,7 @@ public class LoginLogController {
     /**
      * 查询登录日志列表
      */
+    @PreAuthorize("hasAuthority('MENU_SYSTEM_LOGIN_LOG_VIEW')")
     @GetMapping("/list")
     public Result<?> getLoginLogList(
             @RequestParam(defaultValue = "1") Long page,
@@ -38,6 +40,7 @@ public class LoginLogController {
     /**
      * 查询操作日志列表
      */
+    @PreAuthorize("hasAuthority('MENU_SYSTEM_LOGIN_LOG_VIEW')")
     @GetMapping("/operations")
     public Result<?> getOperationLogs(
             @RequestParam(required = false) String bizType,
@@ -51,6 +54,7 @@ public class LoginLogController {
     /**
      * 记录操作日志
      */
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/operation")
     public Result<?> recordOperation(
             @RequestParam String bizType,

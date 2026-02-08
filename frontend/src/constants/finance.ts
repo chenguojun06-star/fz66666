@@ -9,24 +9,22 @@
  */
 export const getMaterialReconStatusConfig = (status: any) => {
   const statusMap: Record<string, { text: string; color: string }> = {
-    pending: { text: '待审核', color: 'default' },
-    verified: { text: '已验证', color: 'success' },
-    approved: { text: '已批准', color: 'success' },
+    pending: { text: '待审批', color: 'default' },
+    approved: { text: '已审批', color: 'success' },
     paid: { text: '已付款', color: 'success' },
-    rejected: { text: '已拒绝', color: 'error' },
+    rejected: { text: '已驳回', color: 'error' },
   };
   const key = String(status || '').trim();
   return statusMap[key] || { text: '未知', color: 'default' };
 };
 
 /**
- * 物料对账状态流转规则
+ * 物料对账状态流转规则（简化版）
  * 定义每个状态允许转换的目标状态
  */
 export const materialReconStatusTransitions: Record<string, string[]> = {
-  pending: ['verified', 'rejected'],      // 待审核 → 已验证/已拒绝
-  verified: ['approved', 'rejected'],     // 已验证 → 已批准/已拒绝
-  approved: ['paid', 'rejected'],         // 已批准 → 已付款/已拒绝
-  rejected: ['pending'],                  // 已拒绝 → 待审核
+  pending: ['approved', 'rejected'],      // 待审批 → 已审批/已驳回
+  approved: ['paid', 'rejected'],         // 已审批 → 已付款/已驳回
+  rejected: ['pending'],                  // 已驳回 → 待审批
   paid: []                                // 已付款 → 无（已完成）
 };

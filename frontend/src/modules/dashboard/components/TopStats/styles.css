@@ -52,20 +52,9 @@
   gap: 12px;
 }
 
-.stat-icon-circle {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  border: 2px solid;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  background: transparent;
-}
-
 .stat-icon {
-  font-size: 24px;
+  font-size: 28px;
+  flex-shrink: 0;
 }
 
 .stat-label {
@@ -128,12 +117,12 @@
 
 /* 深色主题覆盖规则 */
 :root[data-theme="dark"] .top-stat-item {
-  background: rgba(26, 29, 36, 0.4);
+  background: transparent;
   border-width: 2px;
 }
 
 :root[data-theme="dark"] .top-stat-item:hover {
-  background: rgba(26, 29, 36, 0.6);
+  background: transparent;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 

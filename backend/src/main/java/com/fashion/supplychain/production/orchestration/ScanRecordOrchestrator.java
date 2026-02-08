@@ -819,6 +819,19 @@ public class ScanRecordOrchestrator {
             String orderId = received.getOrderId();
             String bundleId = received.getCuttingBundleId();
 
+            // 0. 检查订单是否已关闭/完成（排除已关闭/已完成/已取消/已归档订单）
+            if (hasText(orderId)) {
+                ProductionOrder order = productionOrderService.getById(orderId);
+                if (order == null || order.getDeleteFlag() == 1) {
+                    continue; // 订单不存在或已删除，跳过
+                }
+                String orderStatus = order.getStatus();
+                if ("closed".equals(orderStatus) || "completed".equals(orderStatus)
+                        || "cancelled".equals(orderStatus) || "archived".equals(orderStatus)) {
+                    continue; // 订单已关闭/完成，跳过
+                }
+            }
+
             // 1. 检查是否已有质检确认记录
             ScanRecord confirmed = findQualityStageRecord(orderId, bundleId, "quality_confirm");
             if (confirmed != null && hasText(confirmed.getId())) {

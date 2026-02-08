@@ -5,13 +5,19 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fashion.supplychain.common.ParamUtils;
+import com.fashion.supplychain.production.dto.MaterialBatchDetailDto;
+import com.fashion.supplychain.production.entity.MaterialInbound;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.MaterialStock;
+import com.fashion.supplychain.production.mapper.MaterialInboundMapper;
 import com.fashion.supplychain.production.mapper.MaterialStockMapper;
 import com.fashion.supplychain.production.service.MaterialStockService;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -20,6 +26,9 @@ import org.springframework.util.StringUtils;
 @Slf4j
 public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, MaterialStock>
         implements MaterialStockService {
+
+    @Autowired
+    private MaterialInboundMapper materialInboundMapper;
 
     @Override
     public IPage<MaterialStock> queryPage(Map<String, Object> params) {
@@ -91,7 +100,7 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
         if (!StringUtils.hasText(color)) {
             query.and(w -> w.isNull(MaterialStock::getColor).or().eq(MaterialStock::getColor, ""));
         }
-        
+
         MaterialStock stock = this.getOne(query, false);
         if (stock != null) {
             int rows = baseMapper.decreaseStockWithCheck(stock.getId(), quantity);
@@ -177,5 +186,98 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
         return this.list(new LambdaQueryWrapper<MaterialStock>()
                 .eq(MaterialStock::getDeleteFlag, 0)
                 .in(MaterialStock::getMaterialId, materialIds));
+    }
+
+    @Override
+    public List<MaterialBatchDetailDto> getBatchDetails(String materialCode, String color, String size) {
+        if (!StringUtils.hasText(materialCode)) {
+            return java.util.Collections.emptyList();
+        }
+
+        // 1. 查询该物料的所有入库记录，按入库时间升序（FIFO）
+        LambdaQueryWrapper<MaterialInbound> query = new LambdaQueryWrapper<MaterialInbound>()
+                .eq(MaterialInbound::getMaterialCode, materialCode)
+                .eq(MaterialInbound::getDeleteFlag, 0);
+
+        // 如果指定了颜色，则只查询该颜色的批次
+        if (StringUtils.hasText(color)) {
+            query.eq(MaterialInbound::getColor, color);
+        }
+
+        // 如果指定了尺码，则只查询该尺码的批次
+        if (StringUtils.hasText(size)) {
+            query.eq(MaterialInbound::getSize, size);
+        }
+
+        // 按入库时间升序排列（先进先出）
+        query.orderByAsc(MaterialInbound::getInboundTime);
+
+        List<MaterialInbound> inboundList = materialInboundMapper.selectList(query);
+
+        // 2. 查询当前库存，用于计算可用数量
+        MaterialStock currentStock = this.getOne(new LambdaQueryWrapper<MaterialStock>()
+                .eq(MaterialStock::getDeleteFlag, 0)
+                .eq(MaterialStock::getMaterialCode, materialCode)
+                .eq(StringUtils.hasText(color), MaterialStock::getColor, color)
+                .eq(StringUtils.hasText(size), MaterialStock::getSize, size));
+
+        // 3. 转换为批次明细DTO
+        List<MaterialBatchDetailDto> batchDetails = inboundList.stream()
+                .map(inbound -> {
+                    MaterialBatchDetailDto dto = new MaterialBatchDetailDto();
+                    dto.setBatchNo(inbound.getInboundNo());
+                    dto.setWarehouseLocation(inbound.getWarehouseLocation());
+                    dto.setColor(inbound.getColor());
+                    dto.setSize(inbound.getSize());
+                    dto.setInboundDate(inbound.getInboundTime());
+
+                    // 简化逻辑：假设每个批次的可用数量 = 入库数量
+                    // 实际应该 = 入库数量 - 已出库数量，需要关联出库记录表
+                    // 这里先返回入库数量，后续可以优化
+                    dto.setAvailableQty(inbound.getInboundQuantity());
+                    dto.setLockedQty(0); // 默认无锁定
+                    dto.setOutboundQty(0); // 暂无出库记录统计
+
+                    // 过期日期暂不实现，后续可扩展
+                    dto.setExpiryDate(null);
+
+                    return dto;
+                })
+                .collect(Collectors.toList());
+
+        // 4. 如果批次数量超过当前库存，需要按比例分配
+        if (currentStock != null && !batchDetails.isEmpty()) {
+            int totalBatchQty = batchDetails.stream()
+                    .mapToInt(MaterialBatchDetailDto::getAvailableQty)
+                    .sum();
+
+            int currentQty = currentStock.getQuantity() != null ? currentStock.getQuantity() : 0;
+            int lockedQty = currentStock.getLockedQuantity() != null ? currentStock.getLockedQuantity() : 0;
+
+            // 如果批次总数大于当前库存，说明有出库记录，需要调整可用数量
+            if (totalBatchQty > currentQty) {
+                // 简单策略：按FIFO顺序扣减已出库数量
+                int remainingQty = currentQty;
+                for (MaterialBatchDetailDto dto : batchDetails) {
+                    if (remainingQty <= 0) {
+                        dto.setAvailableQty(0);
+                    } else if (remainingQty >= dto.getAvailableQty()) {
+                        // 该批次全部可用
+                        remainingQty -= dto.getAvailableQty();
+                    } else {
+                        // 该批次部分可用
+                        dto.setAvailableQty(remainingQty);
+                        remainingQty = 0;
+                    }
+                }
+            }
+
+            // 设置锁定数量（简化：仅在第一个批次显示）
+            if (!batchDetails.isEmpty() && lockedQty > 0) {
+                batchDetails.get(0).setLockedQty(lockedQty);
+            }
+        }
+
+        return batchDetails;
     }
 }

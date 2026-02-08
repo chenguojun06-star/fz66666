@@ -7,6 +7,7 @@ import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.template.entity.TemplateLibrary;
 import com.fashion.supplychain.template.entity.TemplateOperationLog;
+import com.fashion.supplychain.template.event.TemplatePriceChangedEvent;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
 import com.fashion.supplychain.template.service.TemplateOperationLogService;
 import java.math.BigDecimal;
@@ -17,6 +18,7 @@ import java.util.NoSuchElementException;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -39,6 +41,9 @@ public class TemplateLibraryOrchestrator {
 
     @Autowired
     private com.fashion.supplychain.production.orchestration.ProductionOrderOrchestrator productionOrderOrchestrator;
+
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
 
     public IPage<TemplateLibrary> list(Map<String, Object> params) {
         return templateLibraryService.queryPage(params);
@@ -190,6 +195,23 @@ public class TemplateLibraryOrchestrator {
                 throw new IllegalStateException("保存失败");
             }
         }
+
+        // 发布价格变更事件（如果是工序模板）
+        if ("process".equalsIgnoreCase(type)) {
+            String ssn = String.valueOf(tpl.getSourceStyleNo() == null ? "" : tpl.getSourceStyleNo()).trim();
+            try {
+                eventPublisher.publishEvent(new TemplatePriceChangedEvent(
+                    this,
+                    StringUtils.hasText(ssn) ? ssn : null,
+                    type,
+                    UserContext.username()
+                ));
+                log.info("[价格变更事件] 已发布工序模板价格变更事件 - styleNo: {}, operator: {}", ssn, UserContext.username());
+            } catch (Exception e) {
+                log.warn("[价格变更事件] 发布失败 - styleNo: {}", ssn, e);
+            }
+        }
+
         return true;
     }
 
@@ -250,6 +272,21 @@ public class TemplateLibraryOrchestrator {
                 productionOrderOrchestrator.recomputeProgressByStyleNo(ssn);
             } catch (Exception e) {
                 log.warn("Failed to recompute progress by styleNo: styleNo={}, templateId={}", ssn, current.getId(), e);
+            }
+        }
+
+        // 发布价格变更事件（如果是工序模板且内容变更）
+        if ("process".equalsIgnoreCase(type) && contentChanged) {
+            try {
+                eventPublisher.publishEvent(new TemplatePriceChangedEvent(
+                    this,
+                    StringUtils.hasText(ssn) ? ssn : null,
+                    type,
+                    UserContext.username()
+                ));
+                log.info("[价格变更事件] 已发布工序模板价格变更事件 - styleNo: {}, operator: {}", ssn, UserContext.username());
+            } catch (Exception e) {
+                log.warn("[价格变更事件] 发布失败 - styleNo: {}", ssn, e);
             }
         }
 

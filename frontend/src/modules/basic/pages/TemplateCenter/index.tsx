@@ -100,6 +100,65 @@ const TemplateCenter: React.FC = () => {
   const [editSaving, setEditSaving] = useState(false);
   const [editingRow, setEditingRow] = useState<TemplateLibrary | null>(null);
   const [editTableData, setEditTableData] = useState<unknown>(null);
+
+  const sizeColumns = useMemo(() => {
+    if (!editTableData) return null;
+    if (editingRow?.templateType !== 'size') return null;
+    if (!isSizeTableData(editTableData)) return null;
+    const sizeTable = editTableData as any;
+    const baseColumn = {
+      title: '部位',
+      dataIndex: 'partName',
+      width: 100,
+      render: (text: string, _: SizeTablePart, index: number) => (
+        <Input
+          size="small"
+          value={text}
+          onChange={(e) => {
+            const newData = { ...sizeTable, parts: [...sizeTable.parts] };
+            const part = newData.parts[index];
+            if (!part) return;
+            newData.parts[index] = { ...part, partName: e.target.value };
+            setEditTableData(newData);
+          }}
+          style={{ border: 'none' }}
+        />
+      ),
+    };
+    const dynamicColumns = sizeTable.sizes.map((size: string, sIdx: number) => ({
+      title: (
+        <Input
+          size="small"
+          value={size}
+          onChange={(e) => {
+            const newData = { ...sizeTable };
+            newData.sizes[sIdx] = e.target.value;
+            setEditTableData(newData);
+          }}
+          style={{ border: 'none', background: 'transparent', textAlign: 'center' }}
+        />
+      ),
+      dataIndex: ['values', size],
+      width: 80,
+      render: (_: string, record: SizeTablePart, pIdx: number) => (
+        <Input
+          size="small"
+          value={record.values?.[size] || ''}
+          onChange={(e) => {
+            const newData = { ...sizeTable, parts: [...sizeTable.parts] };
+            const part = newData.parts[pIdx];
+            if (!part) return;
+            const values = { ...(part.values || {}) } as Record<string, string>;
+            values[size] = e.target.value;
+            newData.parts[pIdx] = { ...part, values };
+            setEditTableData(newData);
+          }}
+          style={{ border: 'none' }}
+        />
+      ),
+    }));
+    return [baseColumn, ...dynamicColumns];
+  }, [editTableData, editingRow?.templateType]);
   const [activeRow, setActiveRow] = useState<TemplateLibrary | null>(null);
   const [viewContent, setViewContent] = useState<string>('');
   const [viewObj, setViewObj] = useState<unknown>(null);
@@ -238,6 +297,37 @@ const TemplateCenter: React.FC = () => {
       } else {
         message.error('模板内容无效');
         return;
+      }
+
+      // 如果是工序单价模板，显示自动同步提醒
+      if (templateType === 'process') {
+        const confirmed = await new Promise<boolean>((resolve) => {
+          modal.confirm({
+            title: '工序单价自动同步提醒',
+            content: (
+              <div>
+                <p style={{ marginBottom: 12 }}>保存工序单价后，系统将自动执行以下操作：</p>
+                <ul style={{ paddingLeft: 20, marginBottom: 12 }}>
+                  <li>✅ 自动同步所有未完成订单的工序单价</li>
+                  <li>✅ 自动更新工序跟踪表中的单价</li>
+                  <li>✅ 后续扫码将自动使用最新单价</li>
+                </ul>
+                <p style={{ marginTop: 8, fontSize: 13, color: '#8c8c8c' }}>
+                  提示：自动同步过程通常需要 1-3 秒完成
+                </p>
+              </div>
+            ),
+            okText: '确认保存',
+            cancelText: '取消',
+            width: 480,
+            onOk: () => resolve(true),
+            onCancel: () => resolve(false),
+          });
+        });
+
+        if (!confirmed) {
+          return; // 用户取消保存
+        }
       }
 
       setEditSaving(true);
@@ -941,14 +1031,12 @@ const TemplateCenter: React.FC = () => {
               key: 'rollback',
               label: '退回',
               title: '退回',
-              icon: <RollbackOutlined />,
               onClick: () => handleRollback(row),
             }
           : {
               key: 'edit',
               label: '编辑',
               title: '编辑',
-              icon: <EditOutlined />,
               onClick: () => openEdit(row),
             };
 
@@ -960,7 +1048,6 @@ const TemplateCenter: React.FC = () => {
                 key: 'delete',
                 label: '删除',
                 title: '删除',
-                icon: <DeleteOutlined />,
                 danger: true,
                 onClick: () => handleDelete(row),
               },
@@ -978,51 +1065,59 @@ const TemplateCenter: React.FC = () => {
         title="单价维护"
       >
         <Card size="small" className="filter-card mb-sm">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: 16 }}>
-            <Space wrap size={12}>
-              <Input
-                value={keyword}
-                onChange={(e) => {
-                  setKeyword(e.target.value);
-                  queryForm.setFieldsValue({ keyword: e.target.value });
-                }}
-                placeholder="名称/关键字"
-                allowClear
-                style={{ width: 200 }}
-              />
-              <Select
-                value={templateType || undefined}
-                onChange={(value) => {
-                  setTemplateType(value || '');
-                  queryForm.setFieldsValue({ templateType: value });
-                }}
-                options={templateTypeOptions.map((opt) => ({ label: opt.label, value: opt.value }))}
-                placeholder="全部类型"
-                allowClear
-                style={{ width: 140 }}
-              />
-              <Select
-                allowClear
-                showSearch={{ filterOption: false, onSearch: scheduleFetchStyleNos }}
-                loading={styleNoLoading}
-                style={{ width: 200 }}
-                placeholder="搜索/选择款号"
-                options={styleNoOptions}
-                value={sourceStyleNo || undefined}
-                onChange={(value) => {
-                  const v = String(value || '').trim();
-                  setSourceStyleNo(v);
-                  queryForm.setFieldsValue({ sourceStyleNo: v || undefined });
-                }}
-                onOpenChange={(open) => {
-                  if (open && !styleNoOptions.length) fetchStyleNoOptions('');
-                }}
-              />
-            </Space>
-            <Button type="primary" icon={<ReloadOutlined />} onClick={() => fetchList({ page: 1 })}>
-              刷新
-            </Button>
-          </div>
+          <Form form={queryForm}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: 16 }}>
+              <Space wrap size={12}>
+                <Form.Item name="keyword" noStyle>
+                  <Input
+                    value={keyword}
+                    onChange={(e) => {
+                      setKeyword(e.target.value);
+                      queryForm.setFieldsValue({ keyword: e.target.value });
+                    }}
+                    placeholder="名称/关键字"
+                    allowClear
+                    style={{ width: 200 }}
+                  />
+                </Form.Item>
+                <Form.Item name="templateType" noStyle>
+                  <Select
+                    value={templateType || undefined}
+                    onChange={(value) => {
+                      setTemplateType(value || '');
+                      queryForm.setFieldsValue({ templateType: value });
+                    }}
+                    options={templateTypeOptions.map((opt) => ({ label: opt.label, value: opt.value }))}
+                    placeholder="全部类型"
+                    allowClear
+                    style={{ width: 140 }}
+                  />
+                </Form.Item>
+                <Form.Item name="sourceStyleNo" noStyle>
+                  <Select
+                    allowClear
+                    showSearch={{ filterOption: false, onSearch: scheduleFetchStyleNos }}
+                    loading={styleNoLoading}
+                    style={{ width: 200 }}
+                    placeholder="搜索/选择款号"
+                    options={styleNoOptions}
+                    value={sourceStyleNo || undefined}
+                    onChange={(value) => {
+                      const v = String(value || '').trim();
+                      setSourceStyleNo(v);
+                      queryForm.setFieldsValue({ sourceStyleNo: v || undefined });
+                    }}
+                    onOpenChange={(open) => {
+                      if (open && !styleNoOptions.length) fetchStyleNoOptions('');
+                    }}
+                  />
+                </Form.Item>
+              </Space>
+              <Button type="primary" onClick={() => fetchList({ page: 1 })}>
+                刷新
+              </Button>
+            </div>
+          </Form>
         </Card>
 
         <div style={{ height: 12 }} />
@@ -1171,61 +1266,7 @@ const TemplateCenter: React.FC = () => {
                 {(() => {
                   const type = editingRow?.templateType;
                   // 尺寸表模板
-                  if (type === 'size' && isSizeTableData(editTableData)) {
-                    const sizeColumns = React.useMemo(() => {
-                      const baseColumn = {
-                        title: '部位',
-                        dataIndex: 'partName',
-                        width: 100,
-                        render: (text: string, _: SizeTablePart, index: number) => (
-                          <Input
-                            size="small"
-                            value={text}
-                            onChange={(e) => {
-                              const newData = { ...editTableData, parts: [...editTableData.parts] };
-                              const part = newData.parts[index];
-                              if (!part) return;
-                              newData.parts[index] = { ...part, partName: e.target.value };
-                              setEditTableData(newData);
-                            }}
-                            style={{ border: 'none' }}
-                          />
-                        ),
-                      };
-                      const dynamicColumns = editTableData.sizes.map((size: string, sIdx: number) => ({
-                        title: (
-                          <Input
-                            size="small"
-                            value={size}
-                            onChange={(e) => {
-                              const newData = { ...editTableData };
-                              newData.sizes[sIdx] = e.target.value;
-                              setEditTableData(newData);
-                            }}
-                            style={{ border: 'none', background: 'transparent', textAlign: 'center' }}
-                          />
-                        ),
-                        dataIndex: ['values', size],
-                        width: 80,
-                        render: (_: string, record: SizeTablePart, pIdx: number) => (
-                          <Input
-                            size="small"
-                            value={record.values?.[size] || ''}
-                            onChange={(e) => {
-                              const newData = { ...editTableData, parts: [...editTableData.parts] };
-                              const part = newData.parts[pIdx];
-                              if (!part) return;
-                              const values = { ...(part.values || {}) } as Record<string, string>;
-                              values[size] = e.target.value;
-                              newData.parts[pIdx] = { ...part, values };
-                              setEditTableData(newData);
-                            }}
-                            style={{ border: 'none' }}
-                          />
-                        ),
-                      }));
-                      return [baseColumn, ...dynamicColumns];
-                    }, [editTableData]);
+                  if (type === 'size' && isSizeTableData(editTableData) && sizeColumns) {
                     return (
                       <Table
                         dataSource={editTableData.parts}
@@ -1233,7 +1274,7 @@ const TemplateCenter: React.FC = () => {
                         pagination={false}
                         size="small"
                         variant="bordered"
-                        rowKey={(record, index) => `size-${index}`}
+                        rowKey={(record) => record.size || `size-${Math.random()}`}
                       />
                     );
                   }
@@ -1321,7 +1362,7 @@ const TemplateCenter: React.FC = () => {
                         pagination={false}
                         size="small"
                         variant="bordered"
-                        rowKey={(record, index) => `bom-${index}`}
+                        rowKey={(record) => record.materialCode || record.id || `bom-${Math.random()}`}
                       />
                     );
                   }
@@ -1605,11 +1646,10 @@ const TemplateCenter: React.FC = () => {
                           size="small"
                           variant="bordered"
                           scroll={{ x: showSizePrices ? 650 + templateSizes.length * 60 : 650 }}
-                          rowKey={(record, index) => `process-${index}`}
+                          rowKey={(record) => record.processCode || record.id || `process-${Math.random()}`}
                           footer={() => (
                             <Button
                               type="dashed"
-                              icon={<PlusOutlined />}
                               size="small"
                               style={{ width: '100%' }}
                               onClick={() => {
@@ -1705,7 +1745,7 @@ const TemplateCenter: React.FC = () => {
                         pagination={false}
                         size="small"
                         variant="bordered"
-                        rowKey={(record, index) => `price-${index}`}
+                        rowKey={(record) => record.processCode || record.id || `price-${Math.random()}`}
                       />
                     );
                   }

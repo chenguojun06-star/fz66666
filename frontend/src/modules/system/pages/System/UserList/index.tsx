@@ -1,10 +1,8 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Alert, App, Button, Card, Checkbox, Empty, Input, Select, Space, Spin, Tabs, Tag, Form, Row, Col } from 'antd';
 import type { MenuProps } from 'antd';
-import { PlusOutlined, EditOutlined, CheckOutlined, CloseOutlined, SettingOutlined, FileSearchOutlined } from '@ant-design/icons';
+import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
-import StandardSearchBar from '@/components/common/StandardSearchBar';
-import StandardToolbar from '@/components/common/StandardToolbar';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
@@ -15,7 +13,6 @@ import { useSync } from '@/utils/syncManager';
 import { useViewport } from '@/utils/useViewport';
 import { useModal } from '@/hooks';
 import './styles.css';
-import type { Dayjs } from 'dayjs';
 
 const { Option } = Select;
 
@@ -42,7 +39,6 @@ const UserList: React.FC = () => {
 
   const [roleOptions, setRoleOptions] = useState<Role[]>([]);
   const [roleOptionsLoading, setRoleOptionsLoading] = useState(false);
-  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
 
   const [permTree, setPermTree] = useState<any[]>([]);
   const [permCheckedIds, setPermCheckedIds] = useState<Set<number>>(new Set());
@@ -100,7 +96,7 @@ const UserList: React.FC = () => {
         setRoleOptions([]);
       }
     } catch {
-    // Intentionally empty
+      // Intentionally empty
       // 忽略错误
       setRoleOptions([]);
     } finally {
@@ -307,7 +303,7 @@ const UserList: React.FC = () => {
       const idList: number[] = (idsResult.code === 200 && Array.isArray(idsResult.data)) ? idsResult.data : [];
       setPermCheckedIds(new Set(idList));
     } catch {
-    // Intentionally empty
+      // Intentionally empty
       // 忽略错误
       message.error('加载权限失败');
       setPermTree([]);
@@ -340,8 +336,8 @@ const UserList: React.FC = () => {
           message.error(result.message || '权限保存失败');
         }
       } catch {
-    // Intentionally empty
-      // 忽略错误
+        // Intentionally empty
+        // 忽略错误
         message.error('权限保存失败');
       } finally {
         setPermSaving(false);
@@ -719,7 +715,6 @@ const UserList: React.FC = () => {
                 key: 'edit',
                 label: '编辑',
                 title: '编辑',
-                icon: <EditOutlined />,
                 onClick: () => openDialog(record, 'base'),
                 primary: true,
               },
@@ -727,7 +722,6 @@ const UserList: React.FC = () => {
                 key: 'perm',
                 label: '权限',
                 title: '权限',
-                icon: <SettingOutlined />,
                 onClick: () => openDialog(record, 'perm'),
                 primary: true,
               },
@@ -741,7 +735,6 @@ const UserList: React.FC = () => {
                 key: 'log',
                 label: '日志',
                 title: '日志',
-                icon: <FileSearchOutlined />,
                 onClick: () => openLogModal('user', String(record.id || ''), `人员 ${record.name || record.username} 操作日志`),
               },
               {
@@ -780,7 +773,7 @@ const UserList: React.FC = () => {
           {/* 待审批用户提醒 */}
           {pendingUserCount > 0 && (
             <Alert
-              message={`有 ${pendingUserCount} 个新用户待审批`}
+              title={`有 ${pendingUserCount} 个新用户待审批`}
               description="点击前往审批页面，为新用户分配角色和权限"
               type="info"
               showIcon
@@ -820,17 +813,16 @@ const UserList: React.FC = () => {
                   allowClear
                   style={{ width: 140 }}
                 />
-                <Button type="primary" onClick={() => fetchData()}>
+                <Button type="primary" onClick={() => getUserList()}>
                   查询
                 </Button>
                 <Button onClick={() => {
                   setQueryParams({ page: 1, pageSize: queryParams.pageSize });
-                  setDateRange(null);
                 }}>
                   重置
                 </Button>
               </Space>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => openDialog()}>
+              <Button type="primary" onClick={() => openDialog()}>
                 新增用户
               </Button>
             </div>

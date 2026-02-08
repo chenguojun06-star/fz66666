@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Alert, App, Button, Input, InputNumber, Popconfirm, Select, Space, Spin, Table, Tabs, Tag, Typography } from 'antd';
-import { SaveOutlined, FileTextOutlined, HistoryOutlined, UnorderedListOutlined, UserOutlined, DeleteOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { FileTextOutlined, HistoryOutlined, UnorderedListOutlined, UserOutlined, ClockCircleOutlined, WalletOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import ResizableModal from './ResizableModal';
 import dayjs from 'dayjs';
@@ -10,6 +10,8 @@ import { useAuth } from '@/utils/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import OperationHistoryTable, { OperationHistoryRow } from '@/components/common/OperationHistoryTable';
 import { getScanTypeFromNodeKey, matchRecordToStage } from '@/utils/productionStage';
+import ProcessTrackingTable from '@/components/production/ProcessTrackingTable';
+import { getProductionProcessTracking } from '@/utils/api/production';
 
 const { Text } = Typography;
 
@@ -200,7 +202,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   unitPrice,
   processList = [],
   isPatternProduction = false,
-  _extraData,
+  extraData: _extraData,
   onSaved,
 }) => {
   const { message } = App.useApp();
@@ -221,6 +223,9 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   const [activeTab, setActiveTab] = useState('settings');
   // 管理员解锁状态（允许在进度>=80%时仍然编辑）
   const [adminUnlocked, setAdminUnlocked] = useState(false);
+  // 工序跟踪（工资结算）数据
+  const [processTrackingRecords, setProcessTrackingRecords] = useState<any[]>([]);
+  const [trackingLoading, setTrackingLoading] = useState(false);
 
   // 判断是否超过80%，超过则禁止修改（除非管理员解锁）
   const isHighProgress = (nodeStats?.percent || 0) >= 80;
@@ -377,6 +382,30 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
     }
   }, [orderId]);
 
+  // 加载工序跟踪数据（工资结算依据）
+  const loadProcessTrackingData = useCallback(async () => {
+    if (!orderId) {
+      console.warn('NodeDetailModal: 无订单ID，跳过加载工序跟踪数据');
+      return;
+    }
+
+    setTrackingLoading(true);
+    try {
+      // orderId是UUID字符串，不能转Number
+      const response = await getProductionProcessTracking(orderId);
+      // API返回的是 {code: 200, data: [...]} 结构，需要提取data字段
+      const data = (response as any)?.data || [];
+      const records = Array.isArray(data) ? data : [];
+      console.log(`NodeDetailModal: 订单 ${orderNo} (ID: ${orderId}) 加载工序跟踪记录 ${records.length} 条`, records);
+      setProcessTrackingRecords(records);
+    } catch (error) {
+      console.error('NodeDetailModal: 加载工序跟踪数据失败:', error);
+      setProcessTrackingRecords([]);
+    } finally {
+      setTrackingLoading(false);
+    }
+  }, [orderId, orderNo]);
+
   // 弹窗打开时加载数据
   useEffect(() => {
     if (visible && orderId) {
@@ -386,6 +415,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
       if (!isPatternProduction) {
         loadScanRecords();
         loadBundles();
+        loadProcessTrackingData(); // 加载工序跟踪数据
       } else {
         // 样板生产时清空这些数据，加载样板扫码记录
         setScanRecords([]);
@@ -427,6 +457,24 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   // 未使用的变量，保留供将来使用
   const _cuttingTotalQty = useMemo(() => {
     return bundles.reduce((sum, b) => sum + (b.quantity || 0), 0);
+  }, [bundles]);
+
+  // 裁剪数量按尺码汇总（用于显示）
+  const cuttingSizeItems = useMemo(() => {
+    const sizes = ['S', 'M', 'L', 'XL', 'XXL'];
+    const sizeMap: Record<string, number> = {};
+    sizes.forEach(s => { sizeMap[s] = 0; });
+
+    bundles.forEach(b => {
+      const size = (b.size || '').toUpperCase().trim();
+      if (Object.prototype.hasOwnProperty.call(sizeMap, size)) {
+        sizeMap[size] += (b.quantity || 0);
+      }
+    });
+
+    return sizes
+      .map(size => ({ size, quantity: sizeMap[size] }))
+      .filter(item => item.quantity > 0); // 只显示有数量的尺码
   }, [bundles]);
 
   // 汇总操作员数据
@@ -628,10 +676,11 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
         // PC手动操作同步为扫码记录（确保PC/手机数据互通）
         const qty = currentData.assigneeQuantity;
         if (!isPatternProduction && typeof qty === 'number' && qty > 0) {
+          const nodeKey = String(nodeTypeKey);
           const scanType = (() => {
-            if (nodeTypeKey === 'cutting') return 'cutting';
-            if (nodeTypeKey === 'procurement') return 'procurement';
-            if (nodeTypeKey === 'warehousing') return 'warehousing';
+            if (nodeKey === 'cutting') return 'cutting';
+            if (nodeKey === 'procurement') return 'procurement';
+            if (nodeKey === 'warehousing') return 'warehousing';
             return 'production';
           })();
 
@@ -803,7 +852,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
         <Alert
           type="info"
           showIcon
-          message="可以为不同的生产节点指定执行工厂"
+          title="可以为不同的生产节点指定执行工厂"
           style={{ marginBottom: 10 }}
         />
         <div style={{
@@ -816,6 +865,39 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
         }}>
           订单：{orderInfoLine}
         </div>
+
+        {/* 裁剪数量展示（仅有裁剪数据时显示） */}
+        {cuttingSizeItems.length > 0 && (
+          <div style={{
+            padding: '8px 10px',
+            border: '1px solid #b7eb8f',
+            background: '#f6ffed',
+            borderRadius: 12,
+            marginBottom: 6,
+            fontSize: "var(--font-size-sm)",
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            flexWrap: 'wrap'
+          }}>
+            <span style={{ color: '#595959', fontWeight: 600 }}>裁剪数量：</span>
+            {cuttingSizeItems.map(item => (
+              <span key={item.size} style={{
+                color: '#52c41a',
+                fontWeight: 600,
+                padding: '2px 8px',
+                background: '#fff',
+                borderRadius: 4,
+                border: '1px solid #b7eb8f'
+              }}>
+                {item.size}: {item.quantity}
+              </span>
+            ))}
+            <span style={{ color: '#52c41a', fontWeight: 700, marginLeft: 4 }}>
+              总计: {cuttingSizeItems.reduce((sum, item) => sum + item.quantity, 0)}
+            </span>
+          </div>
+        )}
 
         <div style={{
           display: 'grid',
@@ -1120,7 +1202,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
                 cancelText="取消"
                 okButtonProps={{ danger: true }}
               >
-                <Button danger icon={<DeleteOutlined />} loading={saving}>
+                <Button danger loading={saving}>
                   清空设置
                 </Button>
               </Popconfirm>
@@ -1128,7 +1210,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
           </div>
           <Space>
             <Button onClick={onClose}>取消</Button>
-            <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSave}>
+            <Button type="primary" loading={saving} onClick={handleSave}>
               保存
             </Button>
           </Space>
@@ -1167,6 +1249,19 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
                 key: 'operators',
                 label: <span><UserOutlined /> 操作员 ({operatorSummary.length})</span>,
                 children: renderOperatorsTab(),
+              },
+              // 工序跟踪（工资结算）- 所有大货生产都显示（不受 unitPrice 限制）
+              !isPatternProduction && {
+                key: 'processTracking',
+                label: <span><WalletOutlined /> 工序跟踪（工资结算） ({processTrackingRecords.length})</span>,
+                children: (
+                  <ProcessTrackingTable
+                    records={processTrackingRecords}
+                    loading={trackingLoading}
+                    nodeType={nodeType}
+                    nodeName={nodeName}
+                  />
+                ),
               },
               {
                 key: 'history',

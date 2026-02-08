@@ -287,6 +287,17 @@ public class ProductionOrderFinanceOrchestrationService {
             throw new IllegalStateException("完成失败");
         }
 
+        // 自动关单时创建对账单（与手动关单保持一致）
+        try {
+            ProductionOrder updatedOrder = productionOrderService.getById(oid);
+            if (updatedOrder != null) {
+                orderReconciliationHelper.createShipmentReconciliationOnClose(updatedOrder);
+            }
+        } catch (Exception e) {
+            log.error("自动关单创建对账单失败: orderId={}", oid, e);
+            // 不阻断关单流程
+        }
+
         return true;
     }
 
@@ -301,7 +312,16 @@ public class ProductionOrderFinanceOrchestrationService {
             throw new NoSuchElementException("生产订单不存在");
         }
         int qty = productWarehousingService.sumQualifiedByOrderId(oid);
-        return qty > 0;
+        if (qty > 0) {
+            // 有合格入库记录时，确保出货对账单存在并更新利润
+            try {
+                ensureShipmentReconciliationForOrder(oid);
+            } catch (Exception e) {
+                log.warn("ensureFinanceRecordsForOrder: 确保出货对账单时异常 orderId={}", oid, e);
+            }
+            return true;
+        }
+        return false;
     }
 
     @Transactional(rollbackFor = Exception.class)

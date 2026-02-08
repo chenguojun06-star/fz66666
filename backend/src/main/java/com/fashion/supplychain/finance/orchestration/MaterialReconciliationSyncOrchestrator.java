@@ -94,8 +94,16 @@ public class MaterialReconciliationSyncOrchestrator {
         reconciliation.setStyleNo(purchase.getStyleNo());
         reconciliation.setStyleName(purchase.getStyleName());
 
-        // 数量和金额（使用入库数量）
+        // 数量和金额（使用入库数量和采购单价）
         reconciliation.setQuantity(inbound.getInboundQuantity());
+        reconciliation.setUnitPrice(purchase.getUnitPrice());
+
+        // 计算总金额和最终金额
+        if (purchase.getUnitPrice() != null && inbound.getInboundQuantity() != null) {
+            java.math.BigDecimal totalAmount = purchase.getUnitPrice().multiply(new java.math.BigDecimal(inbound.getInboundQuantity()));
+            reconciliation.setTotalAmount(totalAmount);
+            reconciliation.setFinalAmount(totalAmount); // 初始无扣款，最终金额=总金额
+        }
 
         // 对账周期（使用入库时间）
         LocalDateTime inboundTime = inbound.getInboundTime();

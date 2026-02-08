@@ -286,19 +286,16 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
             {
               key: 'view',
               label: '查看',
-              icon: <EyeOutlined />,
               onClick: () => handleView(record)
             },
             {
               key: 'edit',
               label: '编辑',
-              icon: <EditOutlined />,
               onClick: () => handleEdit(record)
             },
             {
               key: 'delete',
               label: '删除',
-              icon: <DeleteOutlined />,
               danger: true,
               onClick: () => handleDelete(record)
             }
@@ -339,7 +336,6 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
         <div style={{ marginBottom: 16, display: 'flex', gap: 12 }}>
           <Button
             type="primary"
-            icon={<PlusOutlined />}
             onClick={handleAdd}
           >
             新建工艺

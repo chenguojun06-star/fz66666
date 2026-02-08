@@ -34,3 +34,7 @@ backend/logs/
 .DS_Store
 backups/*.tar.gz
 backups/*.zip
+
+# 超大压缩文件（不提交到Git）
+project_source_code.zip
+*.zip

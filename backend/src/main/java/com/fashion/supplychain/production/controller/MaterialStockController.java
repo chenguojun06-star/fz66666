@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.production.dto.MaterialBatchDetailDto;
 import com.fashion.supplychain.production.dto.MaterialStockAlertDto;
 import com.fashion.supplychain.production.entity.MaterialStock;
 import com.fashion.supplychain.production.orchestration.MaterialStockOrchestrator;
@@ -36,5 +37,21 @@ public class MaterialStockController {
     @GetMapping("/alerts")
     public Result<java.util.List<MaterialStockAlertDto>> getAlerts(@RequestParam Map<String, Object> params) {
         return Result.success(materialStockOrchestrator.listAlerts(params));
+    }
+
+    /**
+     * 查询物料批次明细（用于出库时按批次FIFO）
+     *
+     * @param materialCode 物料编码（必填）
+     * @param color 颜色（可选）
+     * @param size 尺码（可选）
+     * @return 批次明细列表，按入库时间升序排列
+     */
+    @GetMapping("/batches")
+    public Result<java.util.List<MaterialBatchDetailDto>> getBatchDetails(
+            @RequestParam String materialCode,
+            @RequestParam(required = false) String color,
+            @RequestParam(required = false) String size) {
+        return Result.success(materialStockService.getBatchDetails(materialCode, color, size));
     }
 }

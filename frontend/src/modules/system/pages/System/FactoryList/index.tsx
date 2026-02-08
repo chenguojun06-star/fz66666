@@ -339,7 +339,6 @@ const FactoryList: React.FC = () => {
               key: 'view',
               label: '查看',
               title: '查看',
-              icon: <EyeOutlined />,
               onClick: () => openDialog('view', factory),
               primary: true,
             },
@@ -347,7 +346,6 @@ const FactoryList: React.FC = () => {
               key: 'edit',
               label: '编辑',
               title: '编辑',
-              icon: <EditOutlined />,
               onClick: () => openDialog('edit', factory),
               primary: true,
             },
@@ -355,14 +353,12 @@ const FactoryList: React.FC = () => {
               key: 'log',
               label: '日志',
               title: '日志',
-              icon: <FileSearchOutlined />,
               onClick: () => openLogModal('factory', String(factory.id || ''), `供应商 ${factory.factoryName} 操作日志`),
             },
             {
               key: 'delete',
               label: '删除',
               title: '删除',
-              icon: <DeleteOutlined />,
               danger: true,
               onClick: () => handleDelete(factory.id),
             },
@@ -412,7 +408,7 @@ const FactoryList: React.FC = () => {
               </Button>
               <Button onClick={() => setQueryParams({ page: 1, pageSize: queryParams.pageSize })}>重置</Button>
             </Space>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => openDialog('create')}>
+            <Button type="primary" onClick={() => openDialog('create')}>
               新增加工厂
             </Button>
           </div>

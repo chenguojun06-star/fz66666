@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Button, Card, Input, Select, Space, Tag, Form, App, Dropdown, Checkbox, Alert, InputNumber, Table } from 'antd';
-import { DownloadOutlined, DeleteOutlined, CheckCircleOutlined, EditOutlined, SettingOutlined, AppstoreOutlined, UnorderedListOutlined, PrinterOutlined, CloseCircleOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Button, Card, Input, Select, Space, Tag, Form, App, Dropdown, Checkbox, Alert, InputNumber, Table, Modal } from 'antd';
+import { DownloadOutlined, DeleteOutlined, CheckCircleOutlined, EditOutlined, SettingOutlined, AppstoreOutlined, UnorderedListOutlined, PrinterOutlined, CloseCircleOutlined, ReloadOutlined, SwapOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
@@ -124,6 +124,22 @@ const ProductionList: React.FC = () => {
     unitPrice?: number
   }>>({});
 
+  // ===== 转单弹窗状态 =====
+  const [transferModalVisible, setTransferModalVisible] = useState(false);
+  const [transferRecord, setTransferRecord] = useState<ProductionOrder | null>(null);
+  const [transferUserId, setTransferUserId] = useState<string | undefined>(undefined);
+  const [transferMessage, setTransferMessage] = useState('');
+  const [transferUsers, setTransferUsers] = useState<{ id: string; name: string; username: string }[]>([]);
+  const [transferSearching, setTransferSearching] = useState(false);
+  const [transferSubmitting, setTransferSubmitting] = useState(false);
+  // 转单 - 菲号与工序选择
+  const [transferBundles, setTransferBundles] = useState<any[]>([]);
+  const [transferBundlesLoading, setTransferBundlesLoading] = useState(false);
+  const [transferSelectedBundleIds, setTransferSelectedBundleIds] = useState<string[]>([]);
+  const [transferProcesses, setTransferProcesses] = useState<any[]>([]);
+  const [transferProcessesLoading, setTransferProcessesLoading] = useState(false);
+  const [transferSelectedProcessCodes, setTransferSelectedProcessCodes] = useState<string[]>([]);
+
   const mainStages = useMemo(() => ([
     { key: 'procurement', name: '采购', keywords: ['采购', '物料', '备料'] },
     { key: 'cutting', name: '裁剪', keywords: ['裁剪', '裁床', '开裁'] },
@@ -235,37 +251,37 @@ const ProductionList: React.FC = () => {
     attachments: true,         // 附件
     factoryName: true,         // 加工厂
     orderQuantity: true,       // 订单数量
-    orderOperatorName: false,  // 下单人
+    orderOperatorName: true,   // 下单人
     createTime: false,         // 下单时间
     remarks: false,            // 备注
     expectedShipDate: true,    // 预计出货
     procurementStartTime: false,
     procurementEndTime: false,
-    procurementOperatorName: false,
+    procurementOperatorName: true,
     procurementCompletionRate: false,
     cuttingStartTime: false,
     cuttingEndTime: false,
-    cuttingOperatorName: false,
+    cuttingOperatorName: true,
     cuttingCompletionRate: false,
     carSewingStartTime: false,
     carSewingEndTime: false,
-    carSewingOperatorName: false,
+    carSewingOperatorName: true,
     carSewingCompletionRate: false,
     ironingStartTime: false,
     ironingEndTime: false,
-    ironingOperatorName: false,
+    ironingOperatorName: true,
     ironingCompletionRate: false,
     packagingStartTime: false,
     packagingEndTime: false,
-    packagingOperatorName: false,
+    packagingOperatorName: true,
     packagingCompletionRate: false,
     qualityStartTime: false,
     qualityEndTime: false,
-    qualityOperatorName: false,
+    qualityOperatorName: true,
     qualityCompletionRate: false,
     warehousingStartTime: false,
     warehousingEndTime: false,
-    warehousingOperatorName: false,
+    warehousingOperatorName: true,
     warehousingCompletionRate: false,
     cuttingQuantity: false,    // 裁剪数量
     cuttingBundleCount: false, // 扎数
@@ -361,47 +377,6 @@ const ProductionList: React.FC = () => {
     localStorage.removeItem('production-list-visible-columns');
   };
 
-  // 列设置下拉菜单(已删除,改用工序展开功能)
-
-  const _columnSettingsMenu = {
-    items: [
-      {
-        key: 'column-settings-title',
-        label: <div style={{ fontWeight: 600, color: 'var(--neutral-text-secondary)', padding: '0 4px' }}>选择要显示的列</div>,
-        disabled: true,
-      },
-      { type: 'divider' as const },
-      ...columnOptions.map(opt => ({
-        key: opt.key,
-        label: (
-          <div onClick={(e) => e.stopPropagation()}>
-            <Checkbox
-              checked={visibleColumns[opt.key] === true}
-              onChange={() => toggleColumnVisible(opt.key)}
-            >
-              {opt.label}
-            </Checkbox>
-          </div>
-        ),
-      })),
-      { type: 'divider' as const },
-      {
-        key: 'reset-columns',
-        label: (
-          <div
-            style={{ color: 'var(--primary-color)', textAlign: 'center', cursor: 'pointer' }}
-            onClick={(e) => {
-              e.stopPropagation();
-              resetColumnSettings();
-            }}
-          >
-            重置为默认
-          </div>
-        ),
-      },
-    ],
-  };
-
   const { user } = useAuth();
   const isSupervisorOrAbove = useMemo(() => isSupervisorOrAboveUser(user), [user]);
   const navigate = useNavigate();
@@ -449,7 +424,7 @@ const ProductionList: React.FC = () => {
         orderNo: params.orderNo,
         styleNo: params.styleNo,
       } : {};
-      
+
       const response = await api.get<{
         totalOrders: number;
         totalQuantity: number;
@@ -780,6 +755,123 @@ const ProductionList: React.FC = () => {
     });
   };
 
+  // ===== 转单功能 =====
+  const searchTransferUsers = async (keyword: string) => {
+    if (!keyword || keyword.length < 1) {
+      setTransferUsers([]);
+      return;
+    }
+    setTransferSearching(true);
+    try {
+      const result = await api.get('/production/order/transfer/search-users', {
+        params: { keyword }
+      }) as any;
+      if (result?.code === 200 && Array.isArray(result.data)) {
+        setTransferUsers(result.data.map((u: any) => ({
+          id: String(u.id),
+          name: u.name || u.realName || u.username,
+          username: u.username || '',
+        })));
+      }
+    } catch {
+      // ignore
+    } finally {
+      setTransferSearching(false);
+    }
+  };
+
+  const handleTransferOrder = (order: ProductionOrder) => {
+    setTransferRecord(order);
+    setTransferUserId(undefined);
+    setTransferMessage('');
+    setTransferUsers([]);
+    setTransferSelectedBundleIds([]);
+    setTransferSelectedProcessCodes([]);
+    setTransferBundles([]);
+    setTransferProcesses([]);
+    setTransferModalVisible(true);
+
+    // 加载菲号列表（从裁剪菲号表获取）
+    setTransferBundlesLoading(true);
+    api.post('/production/cutting/list', { 
+      orderId: (order as any).id,
+      page: 1, 
+      pageSize: 999 
+    })
+      .then((res: any) => {
+        const records = res?.data?.records || res?.records || res?.data || [];
+        console.log('[转单] 菲号数据:', records);
+        setTransferBundles(records);
+      })
+      .catch((err) => {
+        console.error('[转单] 加载菲号失败:', err);
+        setTransferBundles([]);
+      })
+      .finally(() => setTransferBundlesLoading(false));
+
+    // 加载工序列表（优先使用订单的工序配置，包含单价）
+    const orderProcesses = (order as any).progressNodeUnitPrices || [];
+    if (Array.isArray(orderProcesses) && orderProcesses.length > 0) {
+      // 使用订单已配置的工序和单价
+      const processes = orderProcesses.map((p: any) => ({
+        processCode: p.processCode || p.code || p.id,
+        processName: p.name || p.processName || '',
+        unitPrice: Number(p.unitPrice || p.price || 0),
+        progressStage: p.progressStage || p.stage || '',
+      }));
+      console.log('[转单] 使用订单工序配置:', processes);
+      setTransferProcesses(processes);
+    } else {
+      // 兜底：从款式工序列表获取（可能没有单价）
+      if ((order as any).styleId) {
+        setTransferProcessesLoading(true);
+        api.get('/style/process/list', { params: { styleId: (order as any).styleId } })
+          .then((res: any) => {
+            const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+            const processes = list.map((p: any) => ({
+              processCode: p.processCode || p.code || p.id,
+              processName: p.processName || p.name || '',
+              unitPrice: Number(p.unitPrice || p.price || 0),
+              progressStage: p.progressStage || p.stage || '',
+            }));
+            console.log('[转单] 使用款式工序配置:', processes);
+            setTransferProcesses(processes);
+          })
+          .catch(() => setTransferProcesses([]))
+          .finally(() => setTransferProcessesLoading(false));
+      }
+    }
+  };
+
+  const submitTransfer = async () => {
+    if (!transferUserId) {
+      message.warning('请选择转单目标人员');
+      return;
+    }
+    if (!transferRecord) return;
+    setTransferSubmitting(true);
+    try {
+      const result = await api.post('/production/order/transfer/create', {
+        orderId: (transferRecord as any).id,
+        toUserId: transferUserId,
+        message: transferMessage.trim() || '',
+        bundleIds: transferSelectedBundleIds.length > 0 ? transferSelectedBundleIds.join(',') : null,
+        processCodes: transferSelectedProcessCodes.length > 0 ? transferSelectedProcessCodes.join(',') : null,
+      }) as any;
+      if (result?.code === 200) {
+        message.success('转单申请已发送');
+        setTransferModalVisible(false);
+        setTransferRecord(null);
+      } else {
+        message.error(result?.message || '转单失败');
+      }
+    } catch (error: any) {
+      message.error(error?.message || '转单失败');
+    } finally {
+      setTransferSubmitting(false);
+    }
+  };
+
   // 表格列定义
   const renderStageTime = (value: unknown) => {
     return value ? formatDateTime(value) : '-';
@@ -799,11 +891,11 @@ const ProductionList: React.FC = () => {
   const sortedProductionList = useMemo(() => {
     let filtered = [...productionList];
 
-    // 延期订单过滤
+    // 延期订单过滤（排除已关单的订单）
     if (showDelayedOnly) {
       filtered = filtered.filter(order => {
         const status = getProgressColorStatus(order.plannedEndDate);
-        return status === 'danger';
+        return status === 'danger' && !isOrderFrozenByStatus(order);
       });
     }
 
@@ -1620,320 +1712,10 @@ const ProductionList: React.FC = () => {
       title: '操作',
       key: 'action',
       fixed: 'right' as const,
-      width: 110,
+      width: 140,
       render: (_: any, record: ProductionOrder) => {
         const frozen = isOrderFrozenByStatusOrStock(record);
         const completed = isOrderFrozenByStatus(record);
-
-        // 列设置下拉菜单
-        const columnSettingsMenu = {
-          items: [
-            { type: 'divider' as const },
-            {
-              key: 'column-settings-title',
-              label: <div style={{ fontWeight: 600, color: 'var(--neutral-text-secondary)', padding: '0 4px' }}>显示列</div>,
-              disabled: true,
-            },
-            { type: 'divider' as const },
-            {
-              key: 'styleCover',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.styleCover !== false} onChange={() => toggleColumnVisible('styleCover')}>
-                    图片
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'styleNo',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.styleNo !== false} onChange={() => toggleColumnVisible('styleNo')}>
-                    款号
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'styleName',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.styleName !== false} onChange={() => toggleColumnVisible('styleName')}>
-                    款名
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'category',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.category !== false} onChange={() => toggleColumnVisible('category')}>
-                    品类
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'companyName',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.companyName !== false} onChange={() => toggleColumnVisible('companyName')}>
-                    公司
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'attachments',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.attachments !== false} onChange={() => toggleColumnVisible('attachments')}>
-                    附件
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'factoryName',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.factoryName !== false} onChange={() => toggleColumnVisible('factoryName')}>
-                    加工厂
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'merchandiser',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.merchandiser !== false} onChange={() => toggleColumnVisible('merchandiser')}>
-                    跟单员
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'patternMaker',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.patternMaker !== false} onChange={() => toggleColumnVisible('patternMaker')}>
-                    纸样师
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'orderQuantity',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.orderQuantity !== false} onChange={() => toggleColumnVisible('orderQuantity')}>
-                    订单数量
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'orderOperatorName',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.orderOperatorName !== false} onChange={() => toggleColumnVisible('orderOperatorName')}>
-                    下单人
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'createTime',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.createTime !== false} onChange={() => toggleColumnVisible('createTime')}>
-                    下单时间
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'remarks',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.remarks !== false} onChange={() => toggleColumnVisible('remarks')}>
-                    备注
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'expectedShipDate',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.expectedShipDate !== false} onChange={() => toggleColumnVisible('expectedShipDate')}>
-                    预计出货
-                  </Checkbox>
-                </div>
-              ),
-            },
-            { type: 'divider' as const },
-            {
-              key: 'process-summary-title',
-              label: <div style={{ fontWeight: 600, color: 'var(--neutral-text-secondary)', padding: '0 4px' }}>工序汇总</div>,
-              disabled: true,
-            },
-            { type: 'divider' as const },
-            {
-              key: 'procurementSummary',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.procurementSummary !== false} onChange={() => toggleColumnVisible('procurementSummary')}>
-                    采购
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'cuttingSummary',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.cuttingSummary !== false} onChange={() => toggleColumnVisible('cuttingSummary')}>
-                    裁剪
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'secondaryProcessSummary',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.secondaryProcessSummary !== false} onChange={() => toggleColumnVisible('secondaryProcessSummary')}>
-                    二次工艺
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'carSewingSummary',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.carSewingSummary !== false} onChange={() => toggleColumnVisible('carSewingSummary')}>
-                    车缝
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'tailProcessSummary',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.tailProcessSummary !== false} onChange={() => toggleColumnVisible('tailProcessSummary')}>
-                    尾部
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'cuttingQuantity',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.cuttingQuantity !== false} onChange={() => toggleColumnVisible('cuttingQuantity')}>
-                    裁剪数量
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'cuttingBundleCount',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.cuttingBundleCount !== false} onChange={() => toggleColumnVisible('cuttingBundleCount')}>
-                    扎数
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'completedQuantity',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.completedQuantity !== false} onChange={() => toggleColumnVisible('completedQuantity')}>
-                    完成数量
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'warehousingQualifiedQuantity',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.warehousingQualifiedQuantity !== false} onChange={() => toggleColumnVisible('warehousingQualifiedQuantity')}>
-                    合格入库
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'unqualifiedQuantity',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.unqualifiedQuantity !== false} onChange={() => toggleColumnVisible('unqualifiedQuantity')}>
-                    次品数
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'repairQuantity',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.repairQuantity !== false} onChange={() => toggleColumnVisible('repairQuantity')}>
-                    返修数
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'inStockQuantity',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.inStockQuantity !== false} onChange={() => toggleColumnVisible('inStockQuantity')}>
-                    库存
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'productionProgress',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.productionProgress !== false} onChange={() => toggleColumnVisible('productionProgress')}>
-                    生产进度
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'status',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.status !== false} onChange={() => toggleColumnVisible('status')}>
-                    状态
-                  </Checkbox>
-                </div>
-              ),
-            },
-            {
-              key: 'plannedEndDate',
-              label: (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={visibleColumns.plannedEndDate !== false} onChange={() => toggleColumnVisible('plannedEndDate')}>
-                    订单交期
-                  </Checkbox>
-                </div>
-              ),
-            },
-          ],
-        };
 
         return (
           <RowActions
@@ -1942,20 +1724,19 @@ const ProductionList: React.FC = () => {
             actions={[
               {
                 key: 'print',
-                label: '',
-                title: '打印生产制单',
-                icon: <PrinterOutlined />,
+                label: '打印',
+                title: frozen ? '打印（订单已关单）' : '打印生产制单',
+                disabled: frozen,
                 onClick: () => {
                   setPrintingRecord(record);
                   setPrintModalVisible(true);
                 },
-                iconOnly: true,
               },
               {
                 key: 'process',
                 label: '工序',
-                title: '查看工序详情',
-                icon: <UnorderedListOutlined />,
+                title: frozen ? '工序（订单已关单）' : '查看工序详情',
+                disabled: frozen,
                 children: [
                   {
                     key: 'all',
@@ -2008,8 +1789,8 @@ const ProductionList: React.FC = () => {
               {
                 key: 'quickEdit',
                 label: '编辑',
-                title: '快速编辑备注和预计出货',
-                icon: <EditOutlined />,
+                title: frozen ? '编辑（订单已关单）' : '快速编辑备注和预计出货',
+                disabled: frozen,
                 onClick: () => {
                   quickEditModal.open(record);
                 },
@@ -2026,7 +1807,6 @@ const ProductionList: React.FC = () => {
                   {
                     key: 'scrap',
                     label: completed ? '报废(已完成)' : '报废',
-                    icon: <DeleteOutlined />,
                     danger: true,
                     disabled: completed,
                     onClick: () => handleScrapOrder(record),
@@ -2034,19 +1814,12 @@ const ProductionList: React.FC = () => {
                 ]
                 : []),
               {
-                key: 'columnSettings',
-                label: (
-                  <Dropdown menu={columnSettingsMenu} trigger={['click']} placement="bottomRight">
-                    <span onClick={(e) => e.stopPropagation()}>
-                      <SettingOutlined style={{ fontSize: "var(--font-size-base)" }} />
-                    </span>
-                  </Dropdown>
-                ),
-                title: '列设置',
-                icon: <SettingOutlined />,
-                onClick: (e) => {
-                  e?.stopPropagation?.();
-                },
+                key: 'transfer',
+                label: '转单',
+                icon: <SwapOutlined />,
+                title: frozen ? '转单（订单已关单）' : '转给其他人员处理',
+                disabled: frozen,
+                onClick: () => handleTransferOrder(record),
               },
             ]}
           />
@@ -2066,7 +1839,7 @@ const ProductionList: React.FC = () => {
   const localDelayedList = useMemo(() => {
     return productionList.filter(order => {
       const status = getProgressColorStatus(order.plannedEndDate);
-      return status === 'danger'; // 延期订单
+      return status === 'danger' && !isOrderFrozenByStatus(order); // 延期订单（排除已关单）
     });
   }, [productionList]);
 
@@ -2136,18 +1909,61 @@ const ProductionList: React.FC = () => {
               right={(
                 <>
                   <Button
-                    icon={<ReloadOutlined />}
                     onClick={() => fetchProductionList()}
                   >
                     刷新
                   </Button>
+                  <Dropdown
+                    menu={{
+                      items: [
+                        {
+                          key: 'column-settings-title',
+                          label: <div style={{ fontWeight: 600, color: 'var(--neutral-text-secondary)', padding: '0 4px' }}>选择要显示的列</div>,
+                          disabled: true,
+                        },
+                        { type: 'divider' as const },
+                        ...columnOptions.map(opt => ({
+                          key: opt.key,
+                          label: (
+                            <div onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                checked={visibleColumns[opt.key] === true}
+                                onChange={() => toggleColumnVisible(opt.key)}
+                              >
+                                {opt.label}
+                              </Checkbox>
+                            </div>
+                          ),
+                        })),
+                        { type: 'divider' as const },
+                        {
+                          key: 'reset-columns',
+                          label: (
+                            <div
+                              style={{ color: 'var(--primary-color)', textAlign: 'center', cursor: 'pointer' }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                resetColumnSettings();
+                              }}
+                            >
+                              重置为默认
+                            </div>
+                          ),
+                        },
+                      ],
+                    }}
+                    trigger={['click']}
+                    placement="bottomRight"
+                  >
+                    <Button icon={<SettingOutlined />}>列设置</Button>
+                  </Dropdown>
                   <Button
                     icon={viewMode === 'list' ? <AppstoreOutlined /> : <UnorderedListOutlined />}
                     onClick={() => setViewMode(viewMode === 'list' ? 'card' : 'list')}
                   >
                     {viewMode === 'list' ? '卡片视图' : '列表视图'}
                   </Button>
-                  <Button icon={<DownloadOutlined />} onClick={exportSelected} disabled={!selectedRowKeys.length}>
+                  <Button onClick={exportSelected} disabled={!selectedRowKeys.length}>
                     导出
                   </Button>
                 </>
@@ -2246,7 +2062,6 @@ const ProductionList: React.FC = () => {
               actions={(record: ProductionOrder) => [
                 {
                   key: 'print',
-                  icon: <PrinterOutlined />,
                   label: '打印',
                   onClick: () => {
                     setPrintingRecord(record);
@@ -2255,7 +2070,6 @@ const ProductionList: React.FC = () => {
                 },
                 {
                   key: 'close',
-                  icon: <CloseCircleOutlined />,
                   label: '关单',
                   onClick: () => {
                     handleCloseOrder(record);
@@ -2267,7 +2081,6 @@ const ProductionList: React.FC = () => {
                 },
                 {
                   key: 'edit',
-                  icon: <EditOutlined />,
                   label: '编辑',
                   onClick: () => {
                     quickEditModal.open(record);
@@ -2317,7 +2130,7 @@ const ProductionList: React.FC = () => {
             <div style={{ padding: '8px 0' }}>
               {/* 说明文字 - 精简版 */}
               <Alert
-                message="可以为不同的生产节点指定执行工厂"
+                title="可以为不同的生产节点指定执行工厂"
                 type="info"
                 showIcon
                 closable
@@ -2590,7 +2403,7 @@ const ProductionList: React.FC = () => {
                 paddingBottom: '6px',
                 borderBottom: '1px solid #e5e7eb'
               }}>
-                操作历史（扫码/委派/同步）
+                操作记录（扫码/委派/同步）
               </div>
               <OperationHistoryTable rows={buildHistoryRowsForList({
                 records: Array.isArray(processDetailScanRecords) ? processDetailScanRecords : [],
@@ -2604,6 +2417,152 @@ const ProductionList: React.FC = () => {
           )}
         />
 
+
+        {/* 转单弹窗 */}
+        <Modal
+          title={`转单 - ${safeString((transferRecord as any)?.orderNo)}`}
+          open={transferModalVisible}
+          onCancel={() => {
+            setTransferModalVisible(false);
+            setTransferRecord(null);
+          }}
+          onOk={submitTransfer}
+          confirmLoading={transferSubmitting}
+          okText="确认转单"
+          cancelText="取消"
+          width="60vw"
+          destroyOnHidden
+        >
+          <div style={{ padding: '8px 0' }}>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ marginBottom: 6, fontWeight: 500 }}>转给谁：</div>
+              <Select
+                showSearch
+                placeholder="输入姓名搜索系统用户"
+                value={transferUserId}
+                onChange={(val) => setTransferUserId(val)}
+                onSearch={searchTransferUsers}
+                filterOption={false}
+                loading={transferSearching}
+                notFoundContent={transferSearching ? '搜索中...' : '输入姓名搜索'}
+                style={{ width: '100%' }}
+                allowClear
+              >
+                {transferUsers.map(u => (
+                  <Option key={u.id} value={u.id}>
+                    {u.name}{u.username ? ` (${u.username})` : ''}
+                  </Option>
+                ))}
+              </Select>
+            </div>
+
+            {/* 菲号选择表格 */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ marginBottom: 6, fontWeight: 500 }}>
+                选择菲号（可选）：
+                {transferSelectedBundleIds.length > 0 && (
+                  <span style={{ fontWeight: 400, color: '#999', marginLeft: 8 }}>
+                    已选 {transferSelectedBundleIds.length} 个
+                  </span>
+                )}
+              </div>
+              <Table
+                size="small"
+                loading={transferBundlesLoading}
+                dataSource={transferBundles}
+                rowKey="id"
+                pagination={false}
+                scroll={{ y: 200 }}
+                rowSelection={{
+                  selectedRowKeys: transferSelectedBundleIds,
+                  onChange: (keys) => setTransferSelectedBundleIds(keys as string[]),
+                }}
+                columns={[
+                  { 
+                    title: '菲号', 
+                    dataIndex: 'bundleNo', 
+                    width: 80,
+                    render: (val: any) => val || '-'
+                  },
+                  { title: '颜色', dataIndex: 'color', width: 100 },
+                  { title: '尺码', dataIndex: 'size', width: 80 },
+                  { title: '数量', dataIndex: 'quantity', width: 70 },
+                  { 
+                    title: '状态', 
+                    dataIndex: 'status', 
+                    width: 90, 
+                    render: (v: string) => {
+                      const statusMap: Record<string, string> = {
+                        'created': '已创建',
+                        'qualified': '已质检',
+                        'in_progress': '生产中',
+                      };
+                      return statusMap[v] || v || '-';
+                    }
+                  },
+                ]}
+                locale={{ emptyText: transferBundlesLoading ? '加载中...' : '暂无菲号数据' }}
+              />
+            </div>
+
+            {/* 工序选择 */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ marginBottom: 6, fontWeight: 500 }}>
+                选择工序（可选）：
+                {transferSelectedProcessCodes.length > 0 && (
+                  <span style={{ fontWeight: 400, color: '#999', marginLeft: 8 }}>
+                    已选 {transferSelectedProcessCodes.length} 个工序
+                  </span>
+                )}
+              </div>
+              <Select
+                mode="multiple"
+                placeholder="选择要转移的工序"
+                value={transferSelectedProcessCodes}
+                onChange={(vals) => setTransferSelectedProcessCodes(vals)}
+                loading={transferProcessesLoading}
+                style={{ width: '100%' }}
+                allowClear
+                optionFilterProp="label"
+                maxTagCount="responsive"
+              >
+                {transferProcesses.map((p: any) => {
+                  const price = Number(p.unitPrice || 0);
+                  const priceText = price > 0 ? ` - ¥${price.toFixed(2)}/件` : '';
+                  const label = `${p.processName}${priceText}${p.progressStage ? ` (${p.progressStage})` : ''}`;
+                  return (
+                    <Option key={p.processCode || p.id} value={p.processCode || p.id} label={label}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>{p.processName}</span>
+                        <span style={{ color: '#999', fontSize: '12px' }}>
+                          {p.progressStage && `${p.progressStage} | `}
+                          {price > 0 ? `¥${price.toFixed(2)}` : '未配置单价'}
+                        </span>
+                      </div>
+                    </Option>
+                  );
+                })}
+              </Select>
+              {transferProcesses.length === 0 && !transferProcessesLoading && (
+                <div style={{ color: '#999', fontSize: '12px', marginTop: 4 }}>
+                  该订单暂无工序配置
+                </div>
+              )}
+            </div>
+
+            <div>
+              <div style={{ marginBottom: 6, fontWeight: 500 }}>备注（可选）：</div>
+              <Input.TextArea
+                placeholder="请输入转单备注"
+                value={transferMessage}
+                onChange={(e) => setTransferMessage(e.target.value)}
+                autoSize={{ minRows: 2, maxRows: 4 }}
+                maxLength={200}
+                showCount
+              />
+            </div>
+          </div>
+        </Modal>
 
         {/* 打印预览弹窗 - 使用通用打印组件 */}
         <StylePrintModal

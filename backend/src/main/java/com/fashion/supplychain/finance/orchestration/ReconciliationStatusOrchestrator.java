@@ -321,9 +321,6 @@ public class ReconciliationStatusOrchestrator {
             return "pending".equals(to);
         }
         if ("pending".equals(from)) {
-            return "verified".equals(to) || "rejected".equals(to);
-        }
-        if ("verified".equals(from)) {
             return "approved".equals(to) || "rejected".equals(to);
         }
         if ("approved".equals(from)) {
@@ -345,14 +342,11 @@ public class ReconciliationStatusOrchestrator {
         if ("pending".equals(status)) {
             return 0;
         }
-        if ("verified".equals(status)) {
+        if ("approved".equals(status)) {
             return 1;
         }
-        if ("approved".equals(status)) {
-            return 2;
-        }
         if ("paid".equals(status)) {
-            return 3;
+            return 2;
         }
         if ("rejected".equals(status)) {
             return 99;
@@ -361,11 +355,8 @@ public class ReconciliationStatusOrchestrator {
     }
 
     private String previousStatus(String status) {
-        if ("verified".equals(status)) {
-            return "pending";
-        }
         if ("approved".equals(status)) {
-            return "verified";
+            return "pending";
         }
         if ("paid".equals(status)) {
             return "approved";

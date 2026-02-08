@@ -18,6 +18,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -60,7 +62,7 @@ public class CuttingTaskOrchestrator {
         return StringUtils.hasText(s) ? s : null;
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public CuttingTask createCustom(Map<String, Object> body) {
         String styleNo = getTrimmedText(body, "styleNo");
         String receiverId = getTrimmedText(body, "receiverId");
@@ -346,6 +348,7 @@ public class CuttingTaskOrchestrator {
 
     /**
      * 获取当前用户的裁剪任务（已领取，待生成菲号）
+     * 注意：排除已关闭/已完成/已取消/已归档的订单
      */
     public List<CuttingTask> getMyTasks() {
         com.fashion.supplychain.common.UserContext ctx = com.fashion.supplychain.common.UserContext.get();
@@ -355,11 +358,39 @@ public class CuttingTaskOrchestrator {
         }
 
         // 查询当前用户已领取的裁剪任务（status = received）
-        LambdaQueryWrapper<CuttingTask> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(CuttingTask::getReceiverId, userId)
-               .eq(CuttingTask::getStatus, "received")
-               .orderByDesc(CuttingTask::getReceivedTime);
+        List<CuttingTask> tasks = cuttingTaskService.lambdaQuery()
+                .eq(CuttingTask::getReceiverId, userId)
+                .eq(CuttingTask::getStatus, "received")
+                .orderByDesc(CuttingTask::getReceivedTime)
+                .list();
 
-        return cuttingTaskService.list(wrapper);
+        // 过滤掉已关闭/已完成订单对应的任务
+        if (tasks.isEmpty()) {
+            return tasks;
+        }
+
+        Set<String> orderIds = tasks.stream()
+                .map(CuttingTask::getProductionOrderId)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+
+        if (orderIds.isEmpty()) {
+            return tasks;
+        }
+
+        // 查询有效订单（排除已关闭/已完成/已取消/已归档）
+        Set<String> validOrderIds = productionOrderService.lambdaQuery()
+                .in(ProductionOrder::getId, orderIds)
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived")
+                .list()
+                .stream()
+                .map(ProductionOrder::getId)
+                .collect(Collectors.toSet());
+
+        // 只返回有效订单的任务
+        return tasks.stream()
+                .filter(task -> validOrderIds.contains(task.getProductionOrderId()))
+                .collect(Collectors.toList());
     }
 }

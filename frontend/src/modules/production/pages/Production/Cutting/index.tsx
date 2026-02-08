@@ -113,15 +113,12 @@ const CuttingManagement: React.FC = () => {
   const [printBundles, setPrintBundles] = useState<CuttingBundleRow[]>([]);
   const [printUnlocked, setPrintUnlocked] = useState(false);
 
-  const [printConfig, setPrintConfig] = useState({
-    pageSize: 'A4' as CuttingPrintPageSize,
-    orientation: 'portrait' as CuttingPrintOrientation,
-    mode: 'grid' as CuttingPrintMode,
-    marginMm: 8,
-    cols: 3,
-    labelW: 48,
-    labelH: 32,
-    gap: 2,
+  // 菲号打印配置：固定两种纸张规格
+  const [printConfig, setPrintConfig] = useState<{
+    paperSize: '7x4' | '10x5';
+    qrSize: number;
+  }>({
+    paperSize: '7x4',  // 默认 7cm x 4cm
     qrSize: 84,
   });
 
@@ -169,16 +166,6 @@ const CuttingManagement: React.FC = () => {
     }
   };
 
-  // Sheet Preview states (previously from useSheetPreview hook)
-  const [sheetPreviewOpen, setSheetPreviewOpen] = useState(false);
-  const [sheetPreviewLoading, setSheetPreviewLoading] = useState(false);
-  const [sheetPreviewTask, setSheetPreviewTask] = useState<CuttingTask | null>(null);
-  const [sheetPreviewBundles, setSheetPreviewBundles] = useState<CuttingBundleRow[]>([]);
-  const [sheetPreviewPurchaseLoading, setSheetPreviewPurchaseLoading] = useState(false);
-  const [sheetPreviewPurchases, setSheetPreviewPurchases] = useState<MaterialPurchase[]>([]);
-  const [sheetPreviewOrderDetail, setSheetPreviewOrderDetail] = useState<any>(null);
-  const sheetPreviewTableWrapRef = useRef<HTMLDivElement>(null);
-  const sheetPreviewTableScrollY = useResizableModalTableScrollY(sheetPreviewTableWrapRef);
 
   const [entryPurchaseLoading, setEntryPurchaseLoading] = useState(false);
   const [entryPurchases, setEntryPurchases] = useState<MaterialPurchase[]>([]);
@@ -240,63 +227,6 @@ const CuttingManagement: React.FC = () => {
       return [] as MaterialPurchase[];
     }
   }
-
-  // Sheet Preview Functions
-  const openSheetPreview = async (task: CuttingTask) => {
-    setSheetPreviewTask(task);
-    setSheetPreviewOpen(true);
-    setSheetPreviewLoading(true);
-    setSheetPreviewPurchaseLoading(true);
-
-    try {
-      const orderNo = task.productionOrderNo;
-      if (orderNo) {
-        // Fetch bundles
-        const bundles = await fetchAllBundlesByOrderNo(orderNo);
-        setSheetPreviewBundles(bundles);
-
-        // Fetch order detail
-        const detail = await fetchProductionOrderDetail(orderNo);
-        setSheetPreviewOrderDetail(detail);
-
-        // Fetch purchases
-        const purchases = await fetchSortedPurchasesByOrderNo(orderNo);
-        setSheetPreviewPurchases(purchases);
-      }
-    } catch (err) {
-      message.error('加载数据失败');
-    } finally {
-      setSheetPreviewLoading(false);
-      setSheetPreviewPurchaseLoading(false);
-    }
-  };
-
-  const downloadSheetCsv = () => {
-    if (!sheetPreviewTask || !sheetPreviewBundles.length) return;
-
-    const csv = [
-      ['订单号', '款号', '颜色', '尺码', '数量', '扎号', '二维码'],
-      ...sheetPreviewBundles.map(b => [
-        b.productionOrderNo || '',
-        b.styleNo || '',
-        b.color || '',
-        b.size || '',
-        b.quantity || '',
-        b.bundleNo || '',
-        b.qrCode || ''
-      ])
-    ].map(row => row.join(',')).join('\n');
-
-    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `裁剪单_${sheetPreviewTask.productionOrderNo}_${Date.now()}.csv`;
-    link.click();
-  };
-
-  const triggerSheetPrint = () => {
-    safePrint();
-  };
 
   const fetchStyleInfoOptions = async (keyword?: string) => {
     setCreateStyleLoading(true);
@@ -452,29 +382,168 @@ const CuttingManagement: React.FC = () => {
       return;
     }
 
-    try {
-      const id = 'cutting-dynamic-print-page-style';
-      let el = document.getElementById(id) as HTMLStyleElement | null;
-      if (!el) {
-        el = document.createElement('style');
-        el.id = id;
-        document.head.appendChild(el);
+    // 使用 iframe 打印，完全隔离打印内容，解决主页面CSS干扰问题
+    const labelW = printConfig.paperSize === '7x4' ? 70 : 100;
+    const labelH = printConfig.paperSize === '7x4' ? 40 : 50;
+    const pageSize = printConfig.paperSize === '7x4' ? '70mm 40mm' : '100mm 50mm';
+    const qrSize = printConfig.qrSize;
+
+    // 使用在线API生成二维码（稳定可靠）
+    const getQRUrl = (code: string) => {
+      if (!code) return '';
+      return `https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${encodeURIComponent(code)}`;
+    };
+
+    const labelsHtml = printBundles.map((b) => `
+      <div class="print-page">
+        <div class="label">
+          <div class="qr">
+            <img src="${getQRUrl(b.qrCode || '')}" width="${qrSize}" height="${qrSize}" />
+          </div>
+          <div class="text">
+            <div>订单：${String(b.productionOrderNo || '').trim() || '-'}</div>
+            <div>款号：${String(b.styleNo || '').trim() || '-'}</div>
+            <div>颜色：${String(b.color || '').trim() || '-'}</div>
+            <div>码数：${String(b.size || '').trim() || '-'}</div>
+            <div>数量：${Number(b.quantity || 0)}</div>
+            <div>扎号：${Number(b.bundleNo || 0) || '-'}</div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+
+    // 计算打印时QR码尺寸（与预览保持一致比例）
+    const printQrSize = Math.min(labelH - 8, qrSize * 0.28); // mm为单位，与预览比例一致
+
+    const printHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>菲号标签打印</title>
+        <style>
+          @page {
+            size: ${pageSize};
+            margin: 0;
+          }
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          html, body {
+            width: ${labelW}mm;
+            height: ${labelH}mm;
+            font-family: Arial, "Microsoft YaHei", sans-serif;
+          }
+          .print-page {
+            width: ${labelW}mm;
+            height: ${labelH}mm;
+            padding: 2mm;
+            page-break-after: always;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+          }
+          .print-page:last-child {
+            page-break-after: auto;
+          }
+          .label {
+            width: ${labelW - 4}mm;
+            height: ${labelH - 4}mm;
+            border: 1px solid #000;
+            display: flex;
+            flex-direction: row;
+            padding: 1.5mm;
+            gap: 1.5mm;
+            background: white;
+          }
+          .qr {
+            flex: 0 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .qr img {
+            width: ${printQrSize}mm;
+            height: ${printQrSize}mm;
+          }
+          .text {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            font-size: ${labelH > 45 ? '9pt' : '7pt'};
+            font-weight: normal;
+            line-height: 1.3;
+            color: #000;
+          }
+          .text > div {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+        </style>
+      </head>
+      <body>
+        ${labelsHtml}
+      </body>
+      </html>
+    `;
+
+    // 创建隐藏的 iframe 进行打印
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:0;height:0;border:none;';
+    document.body.appendChild(iframe);
+
+    const iframeDoc = iframe.contentWindow?.document;
+    if (iframeDoc) {
+      iframeDoc.open();
+      iframeDoc.write(printHtml);
+      iframeDoc.close();
+
+      // 等待图片加载完成后打印
+      const images = iframeDoc.querySelectorAll('img');
+      let loadedCount = 0;
+      const totalImages = images.length;
+
+      const doPrint = () => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        // 打印完成后移除 iframe
+        setTimeout(() => {
+          try { document.body.removeChild(iframe); } catch {}
+        }, 1000);
+      };
+
+      const onImageLoad = () => {
+        loadedCount++;
+        if (loadedCount >= totalImages) {
+          setTimeout(doPrint, 100);
+        }
+      };
+
+      if (totalImages === 0) {
+        setTimeout(doPrint, 100);
+      } else {
+        images.forEach(img => {
+          if (img.complete) {
+            onImageLoad();
+          } else {
+            img.onload = onImageLoad;
+            img.onerror = onImageLoad; // 即使加载失败也继续打印
+          }
+        });
+        // 超时保护：5秒后强制打印
+        setTimeout(() => {
+          if (loadedCount < totalImages) {
+            doPrint();
+          }
+        }, 5000);
       }
-      const margin = `${Number(printConfig.marginMm) || 0}mm`;
-      const size =
-        printConfig.mode === 'single'
-          ? `${Number(printConfig.labelW) || 48}mm ${Number(printConfig.labelH) || 32}mm`
-          : `${printConfig.pageSize} ${printConfig.orientation}`;
-      el.textContent = `@media print { @page { size: ${size}; margin: ${margin}; } }`;
-    } catch {
-      // Intentionally empty
-      // 忽略错误
     }
 
     setPrintPreviewOpen(false);
-    setTimeout(() => {
-      window.print();
-    }, 240);
   };
 
   const isAdmin = useMemo(() => isSupervisorOrAboveUser(user), [user]);
@@ -1186,30 +1255,6 @@ const CuttingManagement: React.FC = () => {
         value ? <QRCodeCanvas value={value} size={42} /> : null
       ),
     },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
-      width: 100,
-      render: (status: string) => {
-        const s = String(status || '').trim();
-        const map: Record<string, string> = {
-          pending: '待领取',
-          received: '已领取',
-          bundled: '已完成',
-          qualified: '合格',
-          unqualified: '不合格',
-        };
-        const colorMap: Record<string, string> = {
-          pending: 'default',
-          received: 'success',
-          bundled: 'default',
-          qualified: 'default',
-          unqualified: 'error',
-        };
-        return <Tag color={colorMap[s] || 'default'}>{s ? (map[s] || '未知') : '已生成'}</Tag>;
-      },
-    },
   ];
 
   return (
@@ -1257,7 +1302,7 @@ const CuttingManagement: React.FC = () => {
                   />
                 )}
                 right={(
-                  <Button type="primary" icon={<PlusOutlined />} onClick={openCreateTask}>
+                  <Button type="primary" onClick={openCreateTask}>
                     新建裁剪任务
                   </Button>
                 )}
@@ -1315,6 +1360,14 @@ const CuttingManagement: React.FC = () => {
                       />
                     )
                   },
+                  { title: '下单人', dataIndex: 'orderCreatorName', key: 'orderCreatorName', width: 110, render: (v: unknown) => String(v || '').trim() || '-' },
+                  {
+                    title: '下单时间',
+                    dataIndex: 'orderTime',
+                    key: 'orderTime',
+                    width: 170,
+                    render: (v: unknown) => (String(v ?? '').trim() ? (formatDateTime(v) || '-') : '-')
+                  },
                   { title: '数量', dataIndex: 'orderQuantity', key: 'orderQuantity', width: 90, align: 'right' as const },
                   {
                     title: '裁剪数',
@@ -1331,21 +1384,6 @@ const CuttingManagement: React.FC = () => {
                     width: 80,
                     align: 'right' as const,
                     render: (v: unknown) => Number(v ?? 0) || 0,
-                  },
-                  {
-                    title: '状态',
-                    dataIndex: 'status',
-                    key: 'status',
-                    width: 120,
-                    render: (value: string) => {
-                      const map: unknown = {
-                        pending: { text: '待领取', color: 'blue' },
-                        received: { text: '已领取', color: 'gold' },
-                        bundled: { text: '已完成', color: 'green' },
-                      };
-                      const cfg = map[value] || { text: value || '-', color: 'default' };
-                      return <Tag color={cfg.color}>{cfg.text}</Tag>;
-                    }
                   },
                   { title: '裁剪员', dataIndex: 'receiverName', key: 'receiverName', width: 110, render: (v: unknown) => String(v || '').trim() || '-' },
                   {
@@ -1405,18 +1443,10 @@ const CuttingManagement: React.FC = () => {
                         <RowActions
                           actions={[
                             {
-                              key: 'sheet',
-                              label: '裁剪单',
-                              title: '裁剪单',
-                              icon: <EyeOutlined />,
-                              onClick: () => openSheetPreview(record),
-                              primary: true,
-                            },
-                            {
                               key: 'edit',
                               label: '编辑',
-                              title: '编辑',
-                              icon: <EditOutlined />,
+                              title: frozen ? '编辑（订单已关单）' : '编辑',
+                              disabled: frozen,
                               onClick: () => {
                                 setQuickEditRecord(record);
                                 setQuickEditVisible(true);
@@ -1429,7 +1459,6 @@ const CuttingManagement: React.FC = () => {
                                   key: 'receive',
                                   label: '领取',
                                   title: '领取任务',
-                                  icon: <LoginOutlined />,
                                   disabled: frozen || receiveTaskLoading,
                                   onClick: () => handleReceiveTask(record),
                                   primary: true,
@@ -1443,7 +1472,6 @@ const CuttingManagement: React.FC = () => {
                                   key: 'entry',
                                   label: isReceived ? '生成菲号' : '查看',
                                   title: isReceived ? '进入填写数量生成菲号' : '查看详情',
-                                  icon: <LoginOutlined />,
                                   disabled: frozen,
                                   onClick: () => goToEntry(record),
                                   primary: isReceived,
@@ -1456,7 +1484,6 @@ const CuttingManagement: React.FC = () => {
                                   key: 'rollback',
                                   label: '退回',
                                   title: '退回',
-                                  icon: <RollbackOutlined />,
                                   disabled: frozen || rollbackTaskLoading,
                                   danger: true,
                                   onClick: () => handleRollbackTask(record),
@@ -1682,426 +1709,132 @@ const CuttingManagement: React.FC = () => {
                     关闭
                   </Button>,
                   <Button key="print" type="primary" onClick={triggerPrint} disabled={!printBundles.length}>
-                    打印
+                    下载/打印
                   </Button>,
                 ]}
                 autoFontSize={false}
                 initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
                 scaleWithViewport
               >
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 12, alignItems: 'center' }}>
-                  <span style={{ fontWeight: 600 }}>模式</span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginBottom: 16, alignItems: 'center' }}>
+                  <span style={{ fontWeight: 600, fontSize: 'var(--font-size-base)' }}>打印纸规格</span>
                   <Select
-                    value={printConfig.mode}
-                    style={{ width: 130 }}
+                    value={printConfig.paperSize}
+                    style={{ width: 150 }}
                     options={[
-                      { label: '多张排版', value: 'grid' },
-                      { label: '每张一页', value: 'single' },
+                      { label: '7cm × 4cm', value: '7x4' },
+                      { label: '10cm × 5cm', value: '10x5' },
                     ]}
-                    onChange={(v) => setPrintConfig((p) => ({ ...p, mode: v as Record<string, unknown> }))}
+                    onChange={(v) => setPrintConfig((p) => ({ ...p, paperSize: v as '7x4' | '10x5' }))}
                   />
-                  <span style={{ fontWeight: 600 }}>纸张</span>
-                  <Select
-                    value={printConfig.pageSize}
-                    style={{ width: 110 }}
-                    options={[
-                      { label: 'A4', value: 'A4' },
-                      { label: 'A5', value: 'A5' },
-                    ]}
-                    onChange={(v) =>
-                      setPrintConfig((p) => ({
-                        ...p,
-                        pageSize: v as Record<string, unknown>,
-                        cols: v === 'A5' ? Math.min(p.cols, 2) : p.cols,
-                      }))
-                    }
-                    disabled={printConfig.mode === 'single'}
-                  />
-                  <span style={{ fontWeight: 600 }}>方向</span>
-                  <Select
-                    value={printConfig.orientation}
+                  <span style={{ fontWeight: 600, fontSize: 'var(--font-size-base)', marginLeft: 16 }}>二维码大小</span>
+                  <InputNumber 
+                    min={60} 
+                    max={150} 
+                    value={printConfig.qrSize} 
+                    onChange={(v) => setPrintConfig((p) => ({ ...p, qrSize: Math.max(60, Number(v) || 84) }))} 
+                    addonAfter="px"
                     style={{ width: 120 }}
-                    options={[
-                      { label: '纵向', value: 'portrait' },
-                      { label: '横向', value: 'landscape' },
-                    ]}
-                    onChange={(v) =>
-                      setPrintConfig((p) => ({
-                        ...p,
-                        orientation: v as Record<string, unknown>,
-                        cols: v === 'landscape' ? Math.max(p.cols, 4) : p.cols,
-                      }))
-                    }
-                    disabled={printConfig.mode === 'single'}
                   />
-                  <span style={{ fontWeight: 600 }}>边距(mm)</span>
-                  <InputNumber min={0} value={printConfig.marginMm} onChange={(v) => setPrintConfig((p) => ({ ...p, marginMm: Number(v) || 0 }))} />
-                  <span style={{ fontWeight: 600 }}>列数</span>
-                  <InputNumber min={1} max={10} value={printConfig.cols} onChange={(v) => setPrintConfig((p) => ({ ...p, cols: Math.max(1, Number(v) || 1) }))} />
-                  <span style={{ fontWeight: 600 }}>标签宽(mm)</span>
-                  <InputNumber min={20} max={120} value={printConfig.labelW} onChange={(v) => setPrintConfig((p) => ({ ...p, labelW: Math.max(20, Number(v) || 48) }))} />
-                  <span style={{ fontWeight: 600 }}>标签高(mm)</span>
-                  <InputNumber min={20} max={120} value={printConfig.labelH} onChange={(v) => setPrintConfig((p) => ({ ...p, labelH: Math.max(20, Number(v) || 32) }))} />
-                  <span style={{ fontWeight: 600 }}>间距(mm)</span>
-                  <InputNumber min={0} max={10} value={printConfig.gap} onChange={(v) => setPrintConfig((p) => ({ ...p, gap: Math.max(0, Number(v) || 0) }))} />
-                  <span style={{ fontWeight: 600 }}>二维码(px)</span>
-                  <InputNumber min={48} max={180} value={printConfig.qrSize} onChange={(v) => setPrintConfig((p) => ({ ...p, qrSize: Math.max(48, Number(v) || 84) }))} />
+                  <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 'var(--font-size-sm)', marginLeft: 16 }}>💡 每页打印一张菲号标签</span>
                 </div>
 
-                <div className="cutting-qr-print-grid cutting-qr-print-grid--screen">
-                  {printBundles.map((b, idx) => (
-                    <div className="cutting-qr-label" key={b.id || `${b.qrCode || ''}-${idx}`}
-                      style={{ background: 'var(--neutral-white)' }}
-                    >
-                      <div className="cutting-qr-label-qr">
-                        {b.qrCode ? <QRCodeCanvas value={b.qrCode} size={printConfig.qrSize} includeMargin /> : null}
+                {/* 预览区域 - 单张滚动显示，模拟真实打印效果 */}
+                <div 
+                  style={{
+                    padding: '12px 16px',
+                    background: 'var(--primary-color)',
+                    color: '#fff',
+                    marginBottom: '8px',
+                    borderRadius: '4px',
+                    textAlign: 'center',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                  }}
+                >
+                  共 {printBundles.length} 张菲号标签，实际尺寸：{printConfig.paperSize === '7x4' ? '7cm × 4cm' : '10cm × 5cm'}（一页一张，居中显示）
+                </div>
+                <div 
+                  style={{
+                    padding: '10px 16px',
+                    background: '#d4edda',
+                    color: '#155724',
+                    marginBottom: '16px',
+                    borderRadius: '4px',
+                    border: '1px solid #28a745',
+                    fontSize: '13px',
+                    lineHeight: '1.6',
+                  }}
+                >
+                  <div style={{ fontWeight: 600, marginBottom: '4px' }}>✅ 使用说明：</div>
+                  <div>• 点击"下载/打印"后直接选择打印机或"另存为PDF"即可</div>
+                  <div>• 标签已按固定尺寸设置，无需手动调整纸张大小</div>
+                  <div>• 每张标签独占一页，居中显示，方便裁剪</div>
+                  <div>• 建议使用专用标签打印机或A4纸打印后裁剪</div>
+                </div>
+                <div 
+                  style={{
+                    maxHeight: 'calc(85vh - 310px)',
+                    overflowY: 'auto',
+                    padding: '16px',
+                    background: '#f5f5f5',
+                  }}
+                >
+                  {printBundles.map((b, idx) => {
+                    const paperRatio = printConfig.paperSize === '7x4' ? (70 / 40) : (100 / 50);
+                    const previewWidth = 280; // 预览宽度固定280px
+                    const previewHeight = previewWidth / paperRatio;
+                    
+                    return (
+                      <div 
+                        key={b.id || `${b.qrCode || ''}-${idx}`}
+                        style={{
+                          width: `${previewWidth}px`,
+                          height: `${previewHeight}px`,
+                          margin: '0 auto 16px',
+                          background: 'var(--neutral-white)',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                          display: 'flex',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          padding: '8px',
+                        }}
+                      >
+                        <div style={{ 
+                          width: '100%', 
+                          height: '100%', 
+                          border: '1px solid #000', 
+                          padding: '6px',
+                          display: 'flex',
+                          gap: '6px',
+                        }}>
+                          <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center' }}>
+                            {b.qrCode ? <QRCodeCanvas value={b.qrCode} size={Math.min(previewHeight - 20, printConfig.qrSize)} includeMargin /> : null}
+                          </div>
+                          <div style={{ 
+                            flex: '1 1 auto', 
+                            fontSize: '11px', 
+                            lineHeight: '1.3',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'space-around',
+                          }}>
+                            <div>{`订单：${String(b.productionOrderNo || '').trim() || '-'}`}</div>
+                            <div>{`款号：${String(b.styleNo || '').trim() || '-'}`}</div>
+                            <div>{`颜色：${String(b.color || '').trim() || '-'}`}</div>
+                            <div>{`码数：${String(b.size || '').trim() || '-'}`}</div>
+                            <div>{`数量：${Number(b.quantity || 0)}`}</div>
+                            <div>{`扎号：${Number(b.bundleNo || 0) || '-'}`}</div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="cutting-qr-label-text">
-                        <div>{`订单：${String(b.productionOrderNo || '').trim() || '-'}`}</div>
-                        <div>{`款号：${String(b.styleNo || '').trim() || '-'}`}</div>
-                        <div>{`颜色：${String(b.color || '').trim() || '-'}`}</div>
-                        <div>{`码数：${String(b.size || '').trim() || '-'}`}</div>
-                        <div>{`数量：${Number(b.quantity || 0)}`}</div>
-                        <div>{`扎号：${Number(b.bundleNo || 0) || '-'}`}</div>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </ResizableModal>
 
             </>
           ) : null}
-
-          <ResizableModal
-            open={sheetPreviewOpen}
-            title={`裁剪单（${String(sheetPreviewTask?.productionOrderNo || '').trim() || '-'}）`}
-            width={modalWidth}
-            centered
-            onCancel={() => setSheetPreviewOpen(false)}
-            footer={[
-              <Button key="close" onClick={() => setSheetPreviewOpen(false)}>
-                关闭
-              </Button>,
-              <Button key="download" onClick={downloadSheetCsv} disabled={sheetPreviewLoading || !sheetPreviewBundles.length}>
-                下载
-              </Button>,
-              <Button key="print" type="primary" onClick={triggerSheetPrint} disabled={sheetPreviewLoading || !sheetPreviewBundles.length}>
-                打印
-              </Button>,
-            ]}
-            autoFontSize={false}
-            initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
-            scaleWithViewport
-          >
-            <div style={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0, gap: 12 }}>
-              <ModalHeaderCard isMobile={isMobile}>
-                <ModalSideLayout
-                  left={
-                    <ModalVerticalStack gap={12}>
-                      {/* 款式图片 */}
-                      {sheetPreviewOrderDetail?.styleCover ? (
-                        <StyleCoverThumb
-                          src={sheetPreviewOrderDetail.styleCover}
-                          size={120}
-                          style={{ marginBottom: 8 }}
-                        />
-                      ) : null}
-
-                      {/* 订单二维码 */}
-                      {sheetPreviewTask?.productionOrderNo && (
-                        <QRCodeBox
-                          value={{
-                            type: 'order',
-                            orderNo: sheetPreviewTask.productionOrderNo
-                          }}
-                          label="📱 订单扫码"
-                          variant="primary"
-                          size={120}
-                        />
-                      )}
-
-                      {/* 裁剪单二维码 */}
-                      {sheetPreviewTask?.qrCode && (
-                        <QRCodeBox
-                          value={sheetPreviewTask.qrCode}
-                          label="裁剪单"
-                          variant="default"
-                          size={100}
-                        />
-                      )}
-                    </ModalVerticalStack>
-                  }
-                  right={
-                    <>
-                      {/* 上半部分：订单信息（左）+ 尺码表格（右） */}
-                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24, marginBottom: 12 }}>
-                        {/* 左侧：订单信息 */}
-                        <div style={{ flex: '0 0 auto', maxWidth: '50%' }}>
-                          <ModalPrimaryField
-                            label="订单号"
-                            value={String(sheetPreviewTask?.productionOrderNo || '').trim() || '-'}
-                          />
-                          <ModalFieldRow gap={24} style={{ marginTop: 8 }}>
-                            <ModalField label="款号" value={String(sheetPreviewTask?.styleNo || '').trim() || '-'} />
-                            <ModalField label="款名" value={String(sheetPreviewTask?.styleName || '').trim() || '-'} />
-                          </ModalFieldRow>
-                          <ModalFieldRow gap={24} style={{ marginTop: 8 }}>
-                            <ModalField label="颜色" value={String(sheetPreviewTask?.color || sheetPreviewOrderDetail?.color || '').trim() || '-'} />
-                          </ModalFieldRow>
-                        </div>
-
-                        {/* 右侧：下单数量尺码表格 */}
-                        {(() => {
-                          // 如果弹窗未打开或还在加载，不显示尺码表格
-                          if (!sheetPreviewOpen || sheetPreviewLoading) {
-                            return null;
-                          }
-
-                          // 如果没有 task 数据，也不显示
-                          if (!sheetPreviewTask) {
-                            return null;
-                          }
-
-                          // 优先使用订单详情的 SKU 数据
-                          const orderDetail = sheetPreviewOrderDetail;
-                          let sizeArray: string[] = [];
-                          let sizeQuantityMap: Record<string, number> = {};
-                          let totalQty = Number(sheetPreviewTask?.orderQuantity ?? 0) || 0;
-
-                          if (orderDetail) {
-                            // 从订单详情获取 SKU
-                            const lines = parseProductionOrderLines(orderDetail);
-                            if (lines && lines.length > 0) {
-                              sizeArray = lines.map((l: any) => l.size).filter(Boolean);
-                              lines.forEach((l: any) => {
-                                if (l.size) {
-                                  sizeQuantityMap[l.size] = l.quantity || 0;
-                                }
-                              });
-                              totalQty = lines.reduce((sum: number, l: any) => sum + (l.quantity || 0), 0);
-                            }
-                          }
-
-                          // 如果订单详情没有SKU，尝试从 bundles 统计
-                          if (!sizeArray.length && sheetPreviewBundles.length > 0) {
-                            const sizeMap = new Map<string, number>();
-                            sheetPreviewBundles.forEach(bundle => {
-                              const size = String(bundle.size || '').trim();
-                              const qty = Number(bundle.quantity) || 0;
-                              if (size) {
-                                sizeMap.set(size, (sizeMap.get(size) || 0) + qty);
-                              }
-                            });
-                            sizeArray = Array.from(sizeMap.keys()).sort(compareSizeAsc);
-                            sizeArray.forEach(size => {
-                              sizeQuantityMap[size] = sizeMap.get(size) || 0;
-                            });
-                            totalQty = Array.from(sizeMap.values()).reduce((sum, qty) => sum + qty, 0);
-                          }
-
-                          // 如果都没有，尝试从 task 提取（这种情况很少，仅限单SKU订单）
-                          if (!sizeArray.length && sheetPreviewTask) {
-                            const taskSize = String(sheetPreviewTask.size || '').trim();
-                            const taskQty = Number(sheetPreviewTask.orderQuantity) || 0;
-                            if (taskSize && taskQty > 0) {
-                              sizeArray = [taskSize];
-                              sizeQuantityMap[taskSize] = taskQty;
-                              totalQty = taskQty;
-                            }
-                          }
-
-                          // 最终检查
-                          if (!sizeArray.length) {
-                            console.warn('❌ 无法显示尺码表格：所有数据源都无法提供SKU信息', {
-                              hasOrderDetail: !!orderDetail,
-                              bundlesCount: sheetPreviewBundles.length,
-                              hasTask: !!sheetPreviewTask,
-                              taskSize: sheetPreviewTask?.size
-                            });
-                            return null;
-                          }
-
-                          return (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                              <div style={{
-                                fontSize: "var(--font-size-base)",
-                                fontWeight: 600,
-                                color: 'var(--neutral-text)',
-                              marginBottom: 6
-                              }}>
-                                下单数量
-                              </div>
-                              <div style={{
-                                padding: 6,
-                                background: 'var(--neutral-white)',
-                                border: '2px solid var(--table-border-color)',
-                                boxShadow: 'var(--shadow-sm)',
-                                flexShrink: 0
-                              }}>
-                                <Table
-                                  dataSource={[
-                                    { key: 'size', type: '码数', ...sizeArray.reduce((acc, size) => ({ ...acc, [size]: size }), {}), total: `总下单数：${totalQty}` },
-                                    { key: 'qty', type: '数量', ...sizeArray.reduce((acc, size) => ({ ...acc, [size]: sizeQuantityMap[size] || 0 }), {}), total: '' }
-                                  ]}
-                                  columns={[
-                                    {
-                                      title: '',
-                                      dataIndex: 'type',
-                                      key: 'type',
-                                      width: 60,
-                                      className: 'cutting-size-table-header-cell',
-                                      render: (text: string) => <div style={{ fontWeight: 600, fontSize: "var(--font-size-base)", color: 'var(--neutral-text)' }}>{text}</div>
-                                    },
-                                    ...sizeArray.map((size: string) => ({
-                                      title: size,
-                                      dataIndex: size,
-                                      key: size,
-                                      width: 50,
-                                      align: 'center' as const,
-                                      className: 'cutting-size-table-cell',
-                                      render: (value: string | number, record: { key: string }) => (
-                                        <div style={{
-                                          fontSize: record.key === 'size' ? "var(--font-size-md)" : "var(--font-size-md)",
-                                          fontWeight: 700,
-                                          color: 'var(--neutral-text)'
-                                        }}>
-                                          {value}
-                                        </div>
-                                      )
-                                    })),
-                                    {
-                                      title: '',
-                                      dataIndex: 'total',
-                                      key: 'total',
-                                      className: 'cutting-size-table-total-cell',
-                                      render: (text: string, record: { key: string }) => record.key === 'size' ? (
-                                        <div style={{ fontWeight: 700, fontSize: "var(--font-size-base)", color: 'var(--neutral-text)', whiteSpace: 'nowrap' }}>{text}</div>
-                                      ) : null
-                                    }
-                                  ]}
-                                  pagination={false}
-                                  size="small"
-                                  bordered
-                                  showHeader={false}
-                                  rowClassName={(record) => record.key === 'qty' ? 'cutting-size-table-qty-row' : ''}
-                                />
-                              </div>
-                            </div>
-                          );
-                        })()}
-                      </div>
-
-                      <ModalFieldGrid columns={2}>
-                        <ModalField
-                          label="裁剪数"
-                          value={(() => {
-                            const tv = Number((sheetPreviewTask as Record<string, unknown>)?.cuttingQuantity);
-                            if (Number.isFinite(tv) && tv > 0) return tv;
-                            const sum = sheetPreviewBundles.reduce((s, x) => s + (Number((x as Record<string, unknown>)?.quantity) || 0), 0);
-                            return Number(sum) || 0;
-                          })()}
-                          valueColor="#0891b2"
-                        />
-                        <ModalField
-                          label="扎数"
-                          value={(() => {
-                            const tv = Number((sheetPreviewTask as Record<string, unknown>)?.cuttingBundleCount);
-                            if (Number.isFinite(tv) && tv > 0) return tv;
-                            return Number(sheetPreviewBundles.length) || 0;
-                          })()}
-                          valueColor="#7c3aed"
-                        />
-                      </ModalFieldGrid>
-                    </>
-                  }
-                />
-              </ModalHeaderCard>
-
-              <Card size="small" title="面辅料采购明细" loading={sheetPreviewPurchaseLoading}>
-                <ResizableTable<MaterialPurchase>
-                  storageKey="cutting-sheet-preview-purchase-table"
-                  columns={purchaseColumns}
-                  dataSource={sheetPreviewPurchases}
-                  rowKey={(r) => String(r?.id ?? `${(r as Record<string, unknown>)?.materialType || ''}-${(r as Record<string, unknown>)?.materialCode || ''}-${(r as Record<string, unknown>)?.supplierName || ''}`)}
-                  loading={sheetPreviewPurchaseLoading}
-                  pagination={false as Record<string, unknown>}
-                  size="small"
-                  scroll={{ x: 'max-content' }}
-                />
-              </Card>
-
-              <div ref={sheetPreviewTableWrapRef} style={{ flex: '1 1 auto', minHeight: 0 }}>
-                <ResizableTable<CuttingBundleRow>
-                  storageKey="cutting-sheet-preview-table"
-                  columns={[
-                    { title: 'SKU', dataIndex: 'skuNo', key: 'skuNo', width: 150, ellipsis: true },
-                    { title: '颜色', dataIndex: 'color', key: 'color', width: 120 },
-                    { title: '尺码', dataIndex: 'size', key: 'size', width: 90 },
-                    { title: '扎号', dataIndex: 'bundleNo', key: 'bundleNo', width: 90 },
-                    { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 100, align: 'right' as const },
-                    { title: '二维码内容', dataIndex: 'qrCode', key: 'qrCode', ellipsis: true },
-                  ] as Record<string, unknown>}
-                  dataSource={sheetPreviewBundles}
-                  rowKey={(row) => row.id || `${row.productionOrderNo}-${row.bundleNo}-${row.color}-${row.size}`}
-                  loading={sheetPreviewLoading}
-                  pagination={false as Record<string, unknown>}
-                  scroll={{ x: 'max-content', y: sheetPreviewTableScrollY }}
-                />
-              </div>
-            </div>
-          </ResizableModal>
-
-          <div
-            className="cutting-qr-print-area"
-            style={
-              {
-                ['--cutting-print-cols' as Record<string, unknown>]: String(printConfig.cols),
-                ['--cutting-label-w' as Record<string, unknown>]: String(printConfig.labelW),
-                ['--cutting-label-h' as Record<string, unknown>]: String(printConfig.labelH),
-                ['--cutting-label-gap' as Record<string, unknown>]: String(printConfig.gap),
-              } as Record<string, unknown>
-            }
-          >
-            {printConfig.mode === 'single' ? (
-              <div className="cutting-qr-print-single">
-                {printBundles.map((b, idx) => (
-                  <div className="cutting-qr-print-page" key={b.id || `${b.qrCode || ''}-${idx}`}>
-                    <div className="cutting-qr-label">
-                      <div className="cutting-qr-label-qr">
-                        {b.qrCode ? <QRCodeCanvas value={b.qrCode} size={printConfig.qrSize} includeMargin /> : null}
-                      </div>
-                      <div className="cutting-qr-label-text">
-                        <div>{`订单：${String(b.productionOrderNo || '').trim() || '-'}`}</div>
-                        <div>{`款号：${String(b.styleNo || '').trim() || '-'}`}</div>
-                        <div>{`颜色：${String(b.color || '').trim() || '-'}`}</div>
-                        <div>{`码数：${String(b.size || '').trim() || '-'}`}</div>
-                        <div>{`数量：${Number(b.quantity || 0)}`}</div>
-                        <div>{`扎号：${Number(b.bundleNo || 0) || '-'}`}</div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="cutting-qr-print-grid">
-                {printBundles.map((b, idx) => (
-                  <div className="cutting-qr-label" key={b.id || `${b.qrCode || ''}-${idx}`}>
-                    <div className="cutting-qr-label-qr">
-                      {b.qrCode ? <QRCodeCanvas value={b.qrCode} size={printConfig.qrSize} includeMargin /> : null}
-                    </div>
-                    <div className="cutting-qr-label-text">
-                      <div>{`订单：${String(b.productionOrderNo || '').trim() || '-'}`}</div>
-                      <div>{`款号：${String(b.styleNo || '').trim() || '-'}`}</div>
-                      <div>{`颜色：${String(b.color || '').trim() || '-'}`}</div>
-                      <div>{`码数：${String(b.size || '').trim() || '-'}`}</div>
-                      <div>{`数量：${Number(b.quantity || 0)}`}</div>
-                      <div>{`扎号：${Number(b.bundleNo || 0) || '-'}`}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
 
           <ResizableModal
             open={createTaskOpen}

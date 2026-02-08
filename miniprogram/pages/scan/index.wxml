@@ -201,6 +201,63 @@
     </view>
   </view>
 
+  <!-- 🆕 扫码结果确认弹窗（2026-02-06 混合模式） -->
+  <view wx:if="{{scanResultConfirm.visible}}" class="modal scan-result-modal">
+    <view class="modal-box">
+      <view class="modal-head">
+        扫码识别结果
+      </view>
+      <view class="modal-body">
+        <view class="scan-result-info">
+          <view class="result-item">
+            <text class="item-label">订单号</text>
+            <text class="item-value highlight">{{scanResultConfirm.orderNo}}</text>
+          </view>
+          <view wx:if="{{scanResultConfirm.bundleNo}}" class="result-item">
+            <text class="item-label">菲号</text>
+            <text class="item-value">{{scanResultConfirm.bundleNo}}</text>
+          </view>
+          <view wx:if="{{scanResultConfirm.styleNo}}" class="result-item">
+            <text class="item-label">款号</text>
+            <text class="item-value">{{scanResultConfirm.styleNo}}</text>
+          </view>
+          <view class="result-item">
+            <text class="item-label">数量</text>
+            <text class="item-value">{{scanResultConfirm.quantity}} 件</text>
+          </view>
+
+          <!-- 工序选择器 -->
+          <view class="result-item process-selector">
+            <text class="item-label">识别工序</text>
+            <picker
+              class="process-picker"
+              mode="selector"
+              range="{{scanResultConfirm.processOptions}}"
+              range-key="label"
+              value="{{scanResultConfirm.processIndex}}"
+              bindchange="onProcessPickerChange">
+              <view class="picker-display">
+                <text class="picker-value">{{scanResultConfirm.processOptions[scanResultConfirm.processIndex].label}}</text>
+                <text class="picker-arrow">▼</text>
+              </view>
+            </picker>
+          </view>
+
+          <view class="result-hint">
+            <text class="hint-icon">💡</text>
+            <text class="hint-text">确认工序无误后，点击"领取记录"提交</text>
+          </view>
+        </view>
+      </view>
+      <view class="modal-foot">
+        <view class="modal-btn cancel" bindtap="closeScanResultConfirm">取消</view>
+        <view class="modal-btn ok {{scanResultConfirm.loading ? 'loading' : ''}}" bindtap="onConfirmScanResult">
+          {{scanResultConfirm.loading ? '提交中...' : '领取记录'}}
+        </view>
+      </view>
+    </view>
+  </view>
+
   <!-- 确认弹窗 -->
   <view wx:if="{{scanConfirm.visible}}" class="modal">
     <view class="modal-box {{scanConfirm.detail.isProcurement ? 'wide' : ''}}">

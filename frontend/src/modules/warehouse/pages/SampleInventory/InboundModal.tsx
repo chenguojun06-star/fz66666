@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Modal, Form, Input, InputNumber, Select, message, InputRef } from 'antd';
-import { SampleStock, SampleTypeMap } from './types';
+import { SampleTypeMap } from './types';
 import api from '@/utils/api';
 
 interface InboundModalProps {
@@ -14,7 +14,7 @@ const { Option } = Select;
 const InboundModal: React.FC<InboundModalProps> = ({ visible, onCancel, onSuccess }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = React.useState(false);
-  
+
   // Refs for focus management (better for scanner)
   const styleNoRef = useRef<InputRef>(null);
   const colorRef = useRef<InputRef>(null);
@@ -32,7 +32,7 @@ const InboundModal: React.FC<InboundModalProps> = ({ visible, onCancel, onSucces
     try {
       const values = await form.validateFields();
       setLoading(true);
-      
+
       const res = await api.post('/stock/sample/inbound', values);
       if (res.code === 200) {
         message.success('入库成功');
@@ -62,9 +62,9 @@ const InboundModal: React.FC<InboundModalProps> = ({ visible, onCancel, onSucces
           rules={[{ required: true, message: '请输入款号' }]}
           help="光标在此处时，使用扫码枪可直接录入"
         >
-          <Input 
-            ref={styleNoRef} 
-            placeholder="请输入款号 / 扫码" 
+          <Input
+            ref={styleNoRef}
+            placeholder="请输入款号 / 扫码"
             onPressEnter={(e) => {
               e.preventDefault();
               colorRef.current?.focus();
@@ -94,12 +94,12 @@ const InboundModal: React.FC<InboundModalProps> = ({ visible, onCancel, onSucces
           label="颜色"
           rules={[{ required: true, message: '请输入颜色' }]}
         >
-          <Input 
+          <Input
             ref={colorRef}
-            placeholder="请输入颜色" 
+            placeholder="请输入颜色"
             onPressEnter={(e) => {
-               e.preventDefault();
-               sizeRef.current?.focus();
+              e.preventDefault();
+              sizeRef.current?.focus();
             }}
           />
         </Form.Item>
@@ -108,9 +108,9 @@ const InboundModal: React.FC<InboundModalProps> = ({ visible, onCancel, onSucces
           label="尺码"
           rules={[{ required: true, message: '请输入尺码' }]}
         >
-          <Input 
+          <Input
             ref={sizeRef}
-            placeholder="请输入尺码" 
+            placeholder="请输入尺码"
           />
         </Form.Item>
         <Form.Item

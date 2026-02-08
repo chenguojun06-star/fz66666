@@ -10,6 +10,10 @@ export interface ProductionOrder {
   size?: string;
   factoryId: string;
   factoryName: string;
+  merchandiser?: string; // 跟单员（选填，可选择系统用户）
+  company?: string; // 公司/客户（选填）
+  productCategory?: string; // 品类（选填）
+  patternMaker?: string; // 纸样师（选填，可选择系统用户）
   orderQuantity: number;
   completedQuantity: number;
   cuttingQuantity?: number;
@@ -171,6 +175,8 @@ export interface CuttingTask {
   bundledTime?: string;
   createTime?: string;
   updateTime?: string;
+  orderCreatorName?: string;
+  orderTime?: string;
 }
 
 export interface MaterialPurchase extends Record<string, unknown> {

@@ -6,6 +6,7 @@ import com.fashion.supplychain.production.dto.ProductionOrderDTO;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.mapper.ProductionOrderDtoConverter;
 import com.fashion.supplychain.production.orchestration.ProductionOrderOrchestrator;
+import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -38,6 +39,9 @@ public class ProductionOrderController {
     @Autowired
     private ProductionOrderDtoConverter productionOrderDtoConverter;
 
+    @Autowired
+    private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
+
     /**
      * 【新版统一查询】分页查询生产订单列表
      * 支持参数：
@@ -65,10 +69,21 @@ public class ProductionOrderController {
             String orderNo = params.get("orderNo").toString();
             // 如果看起来是完整订单号（如PO开头），尝试精确匹配
             if (orderNo.startsWith("PO") && orderNo.length() >= 10) {
-                ProductionOrder detail = productionOrderOrchestrator.getDetailByOrderNo(orderNo);
-                if (detail != null) {
-                    // 返回分页格式以保持前端兼容
-                    return Result.success(detail);
+                try {
+                    ProductionOrder detail = productionOrderOrchestrator.getDetailByOrderNo(orderNo);
+                    if (detail != null) {
+                        // 返回分页格式以保持前端兼容
+                        // 创建伪分页对象，包装单个订单为records数组
+                        java.util.Map<String, Object> pageResult = new java.util.HashMap<>();
+                        pageResult.put("records", java.util.Collections.singletonList(detail));
+                        pageResult.put("total", 1L);
+                        pageResult.put("size", 1L);
+                        pageResult.put("current", 1L);
+                        pageResult.put("pages", 1L);
+                        return Result.success(pageResult);
+                    }
+                } catch (java.util.NoSuchElementException e) {
+                    // 订单不存在，继续走分页查询（可能是模糊匹配或其他查询方式）
                 }
             }
         }
@@ -84,7 +99,7 @@ public class ProductionOrderController {
      * - totalQuantity: 总数量
      * - delayedOrders: 延期订单数
      * - delayedQuantity: 延期订单数量
-     * 
+     *
      * @param params 查询参数（keyword, status, factoryName等，与list接口参数一致）
      * @return 统计数据
      * @since 2026-02-05 初始版本
@@ -234,12 +249,28 @@ public class ProductionOrderController {
         }
 
         // 更新工序数据（progressWorkflowJson）
+        boolean workflowUpdated = false;
         if (payload.containsKey("progressWorkflowJson")) {
             String progressWorkflowJson = (String) payload.get("progressWorkflowJson");
             order.setProgressWorkflowJson(progressWorkflowJson);
+            workflowUpdated = true;
         }
 
         boolean success = productionOrderService.updateById(order);
+
+        // 工序数据变更时，同步更新工序跟踪表中的单价（解决单价不同步问题）
+        if (success && workflowUpdated) {
+            try {
+                int synced = processTrackingOrchestrator.syncUnitPrices(id);
+                if (synced > 0) {
+                    return Result.success("更新成功，已同步" + synced + "条工序跟踪记录的单价");
+                }
+            } catch (Exception e) {
+                // 同步失败不影响主流程，记录日志
+                org.slf4j.LoggerFactory.getLogger(getClass()).warn("同步工序跟踪单价失败: {}", e.getMessage());
+            }
+        }
+
         return success ? Result.success("更新成功") : Result.fail("更新失败");
     }
 

@@ -3,8 +3,13 @@ package com.fashion.supplychain.style.orchestration;
 import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.production.entity.MaterialDatabase;
+import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.orchestration.MaterialDatabaseOrchestrator;
 import com.fashion.supplychain.production.service.MaterialDatabaseService;
+import com.fashion.supplychain.production.service.MaterialPurchaseService;
+import com.fashion.supplychain.common.constant.MaterialConstants;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import java.math.RoundingMode;
 import com.fashion.supplychain.style.service.StyleBomService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.template.orchestration.TemplateLibraryOrchestrator;
@@ -57,6 +62,9 @@ public class StyleBomOrchestrator {
 
     @Autowired
     private MaterialDatabaseOrchestrator materialDatabaseOrchestrator;
+
+    @Autowired
+    private MaterialPurchaseService materialPurchaseService;
 
     public List<StyleBom> listByStyleId(Long styleId) {
         if (styleId == null) {
@@ -478,5 +486,105 @@ public class StyleBomOrchestrator {
 
         BigDecimal qty = usageAmount.multiply(BigDecimal.ONE.add(lossRate.movePointLeft(2)));
         styleBom.setTotalPrice(qty.multiply(unitPrice));
+    }
+
+    /**
+     * 根据BOM配置生成物料采购记录（样衣开发阶段）
+     *
+     * @param styleId 款式ID
+     * @return 生成的采购记录数量
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public int generatePurchase(Long styleId) {
+        if (styleId == null || styleId <= 0) {
+            throw new IllegalArgumentException("款式ID不能为空");
+        }
+
+        // 查询款式信息
+        StyleInfo styleInfo = styleInfoService.getById(styleId);
+        if (styleInfo == null) {
+            throw new NoSuchElementException("款式不存在");
+        }
+
+        // 查询BOM配置
+        List<StyleBom> bomList = listByStyleId(styleId);
+        if (bomList == null || bomList.isEmpty()) {
+            throw new IllegalStateException("该款式尚未配置BOM");
+        }
+
+        // 检查是否已经生成过采购记录（样衣类型）
+        LambdaQueryWrapper<MaterialPurchase> existsWrapper = new LambdaQueryWrapper<>();
+        existsWrapper.eq(MaterialPurchase::getStyleId, String.valueOf(styleId))
+                .eq(MaterialPurchase::getSourceType, "sample")
+                .eq(MaterialPurchase::getDeleteFlag, 0);
+        long existsCount = materialPurchaseService.count(existsWrapper);
+
+        if (existsCount > 0) {
+            throw new IllegalStateException("该款式已生成过样衣采购记录，请勿重复生成");
+        }
+
+        // 为每个BOM项创建采购记录
+        int createdCount = 0;
+        for (StyleBom bom : bomList) {
+            try {
+                MaterialPurchase purchase = new MaterialPurchase();
+
+                String purchaseNo = "MP" + System.currentTimeMillis() % 100000000;
+                purchase.setPurchaseNo(purchaseNo);
+
+                purchase.setMaterialCode(bom.getMaterialCode());
+                purchase.setMaterialName(bom.getMaterialName());
+                purchase.setMaterialType(bom.getMaterialType());
+                purchase.setSpecifications(bom.getSpecification());
+                purchase.setUnit(bom.getUnit());
+
+                BigDecimal usageAmount = bom.getUsageAmount() != null ? bom.getUsageAmount() : BigDecimal.ZERO;
+                int purchaseQty = usageAmount.setScale(0, RoundingMode.CEILING).intValue();
+
+                if (purchaseQty <= 0) {
+                    log.warn("BOM配置用量为0或未设置，跳过该物料: styleId={}, materialName={}", styleId, bom.getMaterialName());
+                    continue;
+                }
+
+                purchase.setPurchaseQuantity(purchaseQty);
+                purchase.setArrivedQuantity(0);
+
+                String supplier = bom.getSupplier();
+                if (supplier == null || supplier.trim().isEmpty()) {
+                    log.warn("BOM配置缺少供应商信息: styleId={}, materialName={}", styleId, bom.getMaterialName());
+                }
+                purchase.setSupplierName(supplier != null ? supplier.trim() : "");
+
+                BigDecimal bomUnitPrice = bom.getUnitPrice();
+                log.info("BOM单价读取: styleId={}, materialCode={}, materialName={}, bomUnitPrice={}",
+                        styleId, bom.getMaterialCode(), bom.getMaterialName(), bomUnitPrice);
+
+                purchase.setUnitPrice(bomUnitPrice);
+                BigDecimal totalAmount = bomUnitPrice != null
+                        ? bomUnitPrice.multiply(BigDecimal.valueOf(purchaseQty))
+                        : BigDecimal.ZERO;
+                purchase.setTotalAmount(totalAmount);
+
+                purchase.setStyleId(String.valueOf(styleId));
+                purchase.setStyleNo(styleInfo.getStyleNo());
+                purchase.setStyleName(styleInfo.getStyleName());
+                purchase.setStyleCover(styleInfo.getCover());
+
+                purchase.setSourceType("sample");
+                purchase.setStatus(MaterialConstants.STATUS_PENDING);
+                purchase.setDeleteFlag(0);
+                purchase.setCreateTime(LocalDateTime.now());
+                purchase.setUpdateTime(LocalDateTime.now());
+
+                materialPurchaseService.save(purchase);
+                createdCount++;
+
+            } catch (Exception e) {
+                log.error("Failed to create material purchase for bom: bomId={}", bom.getId(), e);
+            }
+        }
+
+        log.info("Generated {} material purchase records for styleId={}", createdCount, styleId);
+        return createdCount;
     }
 }

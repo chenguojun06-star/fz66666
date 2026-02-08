@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Card, Input, Select, Space, Tag, Form, Row, Col, InputNumber, Upload, message, Modal } from 'antd';
+import { Button, Card, Input, Select, Tag, Form, Row, Col, InputNumber, Upload, message, Modal } from 'antd';
 import type { MenuProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { PlusOutlined, EditOutlined, UploadOutlined } from '@ant-design/icons';
+import { UploadOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
 import Layout from '@/components/Layout';
 import StandardModal from '@/components/common/StandardModal';
@@ -323,6 +323,13 @@ const MaterialDatabasePage: React.FC = () => {
       },
     },
     {
+      title: '颜色',
+      dataIndex: 'color',
+      key: 'color',
+      width: 100,
+      ellipsis: true,
+    },
+    {
       title: '规格',
       dataIndex: 'specifications',
       key: 'specifications',
@@ -432,7 +439,6 @@ const MaterialDatabasePage: React.FC = () => {
                 key: 'edit',
                 label: '编辑',
                 title: isCompleted ? '已完成，需先退回后编辑' : '编辑',
-                icon: <EditOutlined />,
                 disabled: isCompleted,
                 onClick: () => openDialog('edit', record),
                 primary: true,
@@ -499,7 +505,7 @@ const MaterialDatabasePage: React.FC = () => {
                 />
               )}
               right={(
-                <Button type="primary" icon={<PlusOutlined />} onClick={() => openDialog('create')}>
+                <Button type="primary" onClick={() => openDialog('create')}>
                   新增面辅料
                 </Button>
               )}
@@ -540,8 +546,8 @@ const MaterialDatabasePage: React.FC = () => {
           ]}
         >
           <Form form={form} layout="vertical" size={isMobile ? 'small' : 'middle'}>
-            <Row gutter={[16, 12]}>
-              <Col xs={24} sm={12} lg={6}>
+            <Row gutter={[12, 8]}>
+              <Col xs={24} sm={8} md={6} lg={4} xl={4}>
                 <Form.Item
                   name="image"
                   label="物料图片"
@@ -570,7 +576,7 @@ const MaterialDatabasePage: React.FC = () => {
                   </Upload>
                 </Form.Item>
               </Col>
-              <Col xs={24} sm={12} lg={6}>
+              <Col xs={24} sm={8} md={6} lg={5} xl={4}>
                 <Form.Item
                   name="materialCode"
                   label="面料编号"
@@ -579,7 +585,7 @@ const MaterialDatabasePage: React.FC = () => {
                   <Input placeholder="请输入面料编号" />
                 </Form.Item>
               </Col>
-              <Col xs={24} sm={12} lg={6}>
+              <Col xs={24} sm={8} md={6} lg={5} xl={4}>
                 <Form.Item
                   name="materialName"
                   label="面料名称"
@@ -588,15 +594,12 @@ const MaterialDatabasePage: React.FC = () => {
                   <Input placeholder="请输入面料名称" />
                 </Form.Item>
               </Col>
-              <Col xs={24} sm={12} lg={6}>
+              <Col xs={24} sm={8} md={6} lg={5} xl={4}>
                 <Form.Item name="styleNo" label="款号">
                   <Input placeholder="请输入款号" />
                 </Form.Item>
               </Col>
-            </Row>
-
-            <Row gutter={[16, 12]}>
-              <Col xs={24} sm={12} lg={6}>
+              <Col xs={24} sm={8} md={6} lg={5} xl={4}>
                 <Form.Item
                   name="materialType"
                   label="物料类型"
@@ -624,12 +627,20 @@ const MaterialDatabasePage: React.FC = () => {
                   </Select>
                 </Form.Item>
               </Col>
-              <Col xs={24} sm={12} lg={6}>
+            </Row>
+
+            <Row gutter={[12, 8]}>
+              <Col xs={24} sm={8} md={6} lg={5} xl={4}>
+                <Form.Item name="color" label="颜色">
+                  <Input placeholder="请输入颜色" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={8} md={6} lg={5} xl={4}>
                 <Form.Item name="specifications" label="规格">
                   <Input placeholder="请输入规格" />
                 </Form.Item>
               </Col>
-              <Col xs={24} sm={12} lg={6}>
+              <Col xs={24} sm={8} md={6} lg={5} xl={4}>
                 <Form.Item
                   name="unit"
                   label="单位"
@@ -638,7 +649,7 @@ const MaterialDatabasePage: React.FC = () => {
                   <Input placeholder="请输入单位" />
                 </Form.Item>
               </Col>
-              <Col xs={24} sm={12} lg={6}>
+              <Col xs={24} sm={8} md={6} lg={5} xl={4}>
                 <Form.Item
                   name="supplierName"
                   label="供应商"
@@ -647,10 +658,7 @@ const MaterialDatabasePage: React.FC = () => {
                   <Input placeholder="请输入供应商" />
                 </Form.Item>
               </Col>
-            </Row>
-
-            <Row gutter={[16, 12]}>
-              <Col xs={24} sm={12} lg={6}>
+              <Col xs={24} sm={8} md={6} lg={4} xl={4}>
                 <Form.Item name="unitPrice" label="单价(元)">
                   <InputNumber
                     placeholder="请输入单价"
@@ -661,33 +669,64 @@ const MaterialDatabasePage: React.FC = () => {
                   />
                 </Form.Item>
               </Col>
-              <Col xs={24} sm={12} lg={6}>
+            </Row>
+
+            {/* 面料属性（仅面料类型显示） */}
+            <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => prevValues.materialType !== currentValues.materialType}>
+              {({ getFieldValue }) => {
+                const materialType = getFieldValue('materialType');
+                const isFabric = materialType && String(materialType).toLowerCase().includes('fabric');
+                if (!isFabric) return null;
+                return (
+                  <Row gutter={[12, 8]}>
+                    <Col xs={24}>
+                      <div style={{
+                        fontSize: 'var(--font-size-sm)',
+                        fontWeight: 600,
+                        marginTop: 4,
+                        marginBottom: 8,
+                        color: 'var(--primary-color)'
+                      }}>
+                        🧵 面料属性
+                      </div>
+                    </Col>
+                    <Col xs={24} sm={8} md={6} lg={5} xl={4}>
+                      <Form.Item name="fabricWidth" label="幅宽">
+                        <Input placeholder="如：150cm" />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={24} sm={8} md={6} lg={5} xl={4}>
+                      <Form.Item name="fabricWeight" label="克重">
+                        <Input placeholder="如：200g/m²" />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={24} sm={8} md={6} lg={5} xl={4}>
+                      <Form.Item name="fabricComposition" label="成分">
+                        <Input placeholder="如：100%棉" />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                );
+              }}
+            </Form.Item>
+
+            <Row gutter={[12, 8]}>
+              <Col xs={24} sm={12} md={8} lg={6} xl={5}>
                 <Form.Item name="description" label="描述">
-                  <Input.TextArea placeholder="请输入描述" autoSize={{ minRows: 1, maxRows: 3 }} />
+                  <Input placeholder="请输入描述" />
                 </Form.Item>
               </Col>
-              <Col xs={24} sm={12} lg={6}>
+              <Col xs={24} sm={12} md={8} lg={6} xl={5}>
                 <Form.Item name="createTime" label="创建时间">
                   <Input type="datetime-local" placeholder="系统自动生成" disabled />
                 </Form.Item>
               </Col>
-              <Col xs={24} sm={12} lg={6}>
+              <Col xs={24} sm={12} md={8} lg={6} xl={5}>
                 <Form.Item name="completedTime" label="完成时间">
                   <Input type="datetime-local" placeholder="完成后自动生成" disabled />
                 </Form.Item>
               </Col>
-            </Row>
-
-            <Row gutter={[16, 12]}>
-              <Col xs={24} lg={12}>
-                <Form.Item name="remark" label="备注">
-                  <Input.TextArea
-                    placeholder="请输入备注"
-                    autoSize={{ minRows: 3, maxRows: 6 }}
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} lg={12}>
+              <Col xs={24} sm={12} md={8} lg={6} xl={5}>
                 <Form.Item name="status" label="状态">
                   <Select
                     placeholder="请选择状态"
@@ -706,6 +745,17 @@ const MaterialDatabasePage: React.FC = () => {
                     <Option value="pending">待完成</Option>
                     <Option value="completed">已完成</Option>
                   </Select>
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Row gutter={[12, 8]}>
+              <Col xs={24}>
+                <Form.Item name="remark" label="备注">
+                  <Input.TextArea
+                    placeholder="请输入备注"
+                    autoSize={{ minRows: 2, maxRows: 4 }}
+                  />
                 </Form.Item>
               </Col>
             </Row>

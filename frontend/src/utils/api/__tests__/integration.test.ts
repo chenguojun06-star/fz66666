@@ -50,10 +50,10 @@ describe('Legacy API Adapter Integration', () => {
 
   describe('生产订单查询场景', () => {
     it('应该能通过旧端点查询订单', async () => {
-      const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => { });
 
       // 使用废弃端点
-      const result = await apiClient.get('/production/order/by-order-no/PO20260122001');
+      await apiClient.get('/production/order/by-order-no/PO20260122001');
 
       // 验证警告
       expect(consoleWarn).toHaveBeenCalledWith(
@@ -67,10 +67,10 @@ describe('Legacy API Adapter Integration', () => {
     });
 
     it('应该能通过新端点查询订单（无警告）', async () => {
-      const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => { });
 
       // 使用新端点
-      const result = await apiClient.get('/production/order/list', {
+      await apiClient.get('/production/order/list', {
         params: { orderNo: 'PO20260122001' }
       });
 
@@ -83,10 +83,10 @@ describe('Legacy API Adapter Integration', () => {
 
   describe('款式状态机场景', () => {
     it('应该能通过旧端点启动纸样阶段', async () => {
-      const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => { });
 
       // 使用废弃端点
-      const result = await apiClient.post('/style/info/123/pattern/start');
+      await apiClient.post('/style/info/123/pattern/start');
 
       // 验证警告
       expect(consoleWarn).toHaveBeenCalledWith(
@@ -100,10 +100,10 @@ describe('Legacy API Adapter Integration', () => {
     });
 
     it('应该能通过新端点启动纸样阶段（无警告）', async () => {
-      const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => { });
 
       // 使用新端点
-      const result = await apiClient.post('/style/info/123/stage-action', null, {
+      await apiClient.post('/style/info/123/stage-action', null, {
         params: { stage: 'pattern', action: 'start' }
       });
 
@@ -116,7 +116,7 @@ describe('Legacy API Adapter Integration', () => {
 
   describe('混合使用场景', () => {
     it('应该能混合使用新旧端点', async () => {
-      const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => { });
 
       // 1. 使用废弃端点查询订单（应该警告）
       await apiClient.get('/production/order/by-order-no/PO123');
@@ -136,7 +136,7 @@ describe('Legacy API Adapter Integration', () => {
 
   describe('错误处理', () => {
     it('应该正确处理废弃端点的错误响应', async () => {
-      const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => { });
 
       // Mock 错误响应
       vi.spyOn(apiClient, 'get').mockRejectedValueOnce({

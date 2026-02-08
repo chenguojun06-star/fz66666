@@ -10,8 +10,6 @@ import com.fashion.supplychain.production.service.helper.MaterialPurchaseHelper;
 import com.fashion.supplychain.production.service.MaterialStockService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import com.fashion.supplychain.production.service.ProductionOrderService;
-import org.springframework.beans.factory.ObjectProvider;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -19,26 +17,12 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.Set;
-import com.fashion.supplychain.production.entity.ProductionOrder;
-import com.fashion.supplychain.style.entity.StyleBom;
-import com.fashion.supplychain.style.service.StyleBomService;
-import com.fashion.supplychain.style.entity.StyleAttachment;
-import com.fashion.supplychain.style.entity.StyleInfo;
-import com.fashion.supplychain.style.service.StyleAttachmentService;
-import com.fashion.supplychain.style.service.StyleInfoService;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.util.StringUtils;
-import java.util.NoSuchElementException;
-import java.util.concurrent.ThreadLocalRandom;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
@@ -47,28 +31,10 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         implements MaterialPurchaseService {
 
     @Autowired
-    private ObjectProvider<ProductionOrderService> productionOrderServiceProvider;
-
-    @Autowired
-    private StyleBomService styleBomService;
-
-    @Autowired
-    private StyleInfoService styleInfoService;
-
-    @Autowired
-    private StyleAttachmentService styleAttachmentService;
-
-    @Autowired
     private MaterialStockService materialStockService;
 
     @Autowired
-    private ObjectMapper objectMapper;
-
-    private static class OrderLine {
-        public String color;
-        public String size;
-        public Integer quantity;
-    }
+    private MaterialPurchaseServiceHelper serviceHelper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -165,7 +131,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
                 }
                 String beforeStatus = record.getStatus();
 
-                ensureSnapshot(record);
+                serviceHelper.ensureSnapshot(record);
 
                 if (record.getReturnConfirmed() != null && record.getReturnConfirmed() == 1) {
                     Integer beforeArrivedQuantity = record.getArrivedQuantity();
@@ -244,7 +210,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
                 materialPurchase.getArrivedQuantity() == null ? 0 : materialPurchase.getArrivedQuantity());
 
         if (!StringUtils.hasText(materialPurchase.getPurchaseNo())) {
-            materialPurchase.setPurchaseNo(nextPurchaseNo());
+            materialPurchase.setPurchaseNo(serviceHelper.nextPurchaseNo());
         }
 
         if (!StringUtils.hasText(materialPurchase.getStatus())) {
@@ -275,7 +241,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
             materialPurchase.setUnit("-");
         }
 
-        ensureSnapshot(materialPurchase);
+        serviceHelper.ensureSnapshot(materialPurchase);
 
         // 保存物料采购记录
         boolean saved = this.save(materialPurchase);
@@ -330,7 +296,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
             materialPurchase.setActualArrivalDate(materialPurchase.getUpdateTime());
         }
 
-        ensureSnapshot(materialPurchase);
+        serviceHelper.ensureSnapshot(materialPurchase);
 
         // 更新物料采购记录
         boolean updated = this.updateById(materialPurchase);
@@ -352,120 +318,6 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         }
 
         return updated;
-    }
-
-    private void ensureSnapshot(MaterialPurchase materialPurchase) {
-        if (materialPurchase == null) {
-            return;
-        }
-
-        if (StringUtils.hasText(materialPurchase.getOrderId())) {
-            ProductionOrderService productionOrderService = productionOrderServiceProvider.getIfAvailable();
-            if (productionOrderService == null) {
-                return;
-            }
-            ProductionOrder order = productionOrderService.getDetailById(materialPurchase.getOrderId());
-            if (order != null) {
-                if (!StringUtils.hasText(materialPurchase.getOrderNo())) {
-                    materialPurchase.setOrderNo(order.getOrderNo());
-                }
-                if (!StringUtils.hasText(materialPurchase.getStyleId())) {
-                    materialPurchase.setStyleId(order.getStyleId());
-                }
-                if (!StringUtils.hasText(materialPurchase.getStyleNo())) {
-                    materialPurchase.setStyleNo(order.getStyleNo());
-                }
-                if (!StringUtils.hasText(materialPurchase.getStyleName())) {
-                    materialPurchase.setStyleName(order.getStyleName());
-                }
-            }
-        }
-
-        if (StringUtils.hasText(materialPurchase.getStyleId())
-                && (!StringUtils.hasText(materialPurchase.getStyleNo())
-                        || !StringUtils.hasText(materialPurchase.getStyleName())
-                        || !StringUtils.hasText(materialPurchase.getStyleCover()))) {
-            Long styleId = tryParseLong(materialPurchase.getStyleId());
-            if (styleId != null) {
-                StyleInfo info = styleInfoService.getById(styleId);
-                if (info != null) {
-                    if (!StringUtils.hasText(materialPurchase.getStyleNo())) {
-                        materialPurchase.setStyleNo(info.getStyleNo());
-                    }
-                    if (!StringUtils.hasText(materialPurchase.getStyleName())) {
-                        materialPurchase.setStyleName(info.getStyleName());
-                    }
-                    if (!StringUtils.hasText(materialPurchase.getStyleCover())
-                            && StringUtils.hasText(info.getCover())) {
-                        materialPurchase.setStyleCover(info.getCover());
-                    }
-                }
-            }
-        }
-
-        if (!StringUtils.hasText(materialPurchase.getStyleCover())
-                && StringUtils.hasText(materialPurchase.getStyleId())) {
-            String cover = resolveStyleCoverByStyleId(materialPurchase.getStyleId());
-            if (StringUtils.hasText(cover)) {
-                materialPurchase.setStyleCover(cover);
-            }
-        }
-
-        if (!StringUtils.hasText(materialPurchase.getMaterialId())) {
-            String mid = resolveMaterialId(materialPurchase);
-            if (StringUtils.hasText(mid)) {
-                materialPurchase.setMaterialId(mid);
-            }
-        }
-    }
-
-    private Long tryParseLong(String raw) {
-        if (!StringUtils.hasText(raw)) {
-            return null;
-        }
-        try {
-            return Long.valueOf(raw.trim());
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private String resolveStyleCoverByStyleId(String styleId) {
-        Long id = tryParseLong(styleId);
-        if (id == null) {
-            return null;
-        }
-
-        try {
-            StyleInfo info = styleInfoService.getById(id);
-            if (info != null && StringUtils.hasText(info.getCover())) {
-                return info.getCover();
-            }
-        } catch (Exception e) {
-            log.warn("Failed to query style info for cover resolve: styleId={}", id, e);
-        }
-
-        try {
-            List<StyleAttachment> attachments = styleAttachmentService.listByStyleId(String.valueOf(id));
-            if (attachments == null || attachments.isEmpty()) {
-                return null;
-            }
-            for (StyleAttachment a : attachments) {
-                if (a == null) {
-                    continue;
-                }
-                if (!StringUtils.hasText(a.getFileUrl())) {
-                    continue;
-                }
-                if (MaterialPurchaseHelper.looksLikeImage(a)) {
-                    return a.getFileUrl();
-                }
-            }
-        } catch (Exception e) {
-            log.warn("Failed to query style attachments for cover resolve: styleId={}", id, e);
-        }
-
-        return null;
     }
 
     @Override
@@ -673,7 +525,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
 
     @Override
     public List<MaterialPurchase> previewDemandByOrderId(String orderId) {
-        return buildDemandItems(orderId);
+        return serviceHelper.buildDemandItems(orderId, this);
     }
 
     @Override
@@ -698,7 +550,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
                     .eq(MaterialPurchase::getDeleteFlag, 0));
         }
 
-        List<MaterialPurchase> items = buildDemandItems(orderId);
+        List<MaterialPurchase> items = serviceHelper.buildDemandItems(orderId, this);
         for (MaterialPurchase item : items) {
             savePurchaseAndUpdateOrder(item);
         }
@@ -719,7 +571,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         }
 
         String status = existed.getStatus() == null ? "" : existed.getStatus().trim();
-        String normalizedStatus = status.toLowerCase(); // 统一转换为小写进行比较
+        String normalizedStatus = status.toLowerCase();
         if (MaterialConstants.STATUS_COMPLETED.equals(normalizedStatus) || MaterialConstants.STATUS_CANCELLED.equals(normalizedStatus)) {
             return false;
         }
@@ -728,7 +580,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         String rname = StringUtils.hasText(receiverName) ? receiverName.trim() : null;
         boolean pending = MaterialConstants.STATUS_PENDING.equals(normalizedStatus) || !StringUtils.hasText(normalizedStatus);
         if (!pending) {
-            return isSameReceiver(existed, rid, rname);
+            return serviceHelper.isSameReceiver(existed, rid, rname);
         }
 
         String who = StringUtils.hasText(receiverName) ? receiverName.trim()
@@ -744,7 +596,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
                 .eq(MaterialPurchase::getDeleteFlag, 0)
                 .and(w -> w.eq(MaterialPurchase::getStatus, MaterialConstants.STATUS_PENDING)
                         .or()
-                        .eq(MaterialPurchase::getStatus, "PENDING") // 兼容历史大写数据
+                        .eq(MaterialPurchase::getStatus, "PENDING")
                         .or()
                         .isNull(MaterialPurchase::getStatus)
                         .or()
@@ -764,24 +616,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         if (latest == null) {
             return false;
         }
-        return isSameReceiver(latest, rid, rname);
-    }
-
-    private boolean isSameReceiver(MaterialPurchase purchase, String receiverId, String receiverName) {
-        if (purchase == null) {
-            return false;
-        }
-        String existingId = purchase.getReceiverId() == null ? null : purchase.getReceiverId().trim();
-        String existingName = purchase.getReceiverName() == null ? null : purchase.getReceiverName().trim();
-        if (StringUtils.hasText(receiverId) && StringUtils.hasText(existingId)) {
-            if (receiverId.trim().equals(existingId)) {
-                return true;
-            }
-        }
-        if (StringUtils.hasText(receiverName) && StringUtils.hasText(existingName)) {
-            return receiverName.trim().equals(existingName);
-        }
-        return false;
+        return serviceHelper.isSameReceiver(latest, rid, rname);
     }
 
     @Override
@@ -890,199 +725,5 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         patch.setRemark(remark);
         patch.setUpdateTime(LocalDateTime.now());
         return this.updateById(patch);
-    }
-
-    private List<OrderLine> parseOrderLines(ProductionOrder order) {
-        if (order == null) {
-            return List.of();
-        }
-
-        String raw = order.getOrderDetails();
-        if (!StringUtils.hasText(raw)) {
-            OrderLine line = new OrderLine();
-            line.color = StringUtils.hasText(order.getColor()) ? order.getColor() : "";
-            line.size = StringUtils.hasText(order.getSize()) ? order.getSize() : "";
-            line.quantity = order.getOrderQuantity() == null ? 0 : order.getOrderQuantity();
-            return List.of(line);
-        }
-
-        try {
-            List<OrderLine> lines = objectMapper.readValue(raw, new TypeReference<List<OrderLine>>() {
-            });
-            if (lines == null) {
-                return List.of();
-            }
-            List<OrderLine> cleaned = new ArrayList<>();
-            for (OrderLine l : lines) {
-                if (l == null) {
-                    continue;
-                }
-                OrderLine next = new OrderLine();
-                next.color = l.color == null ? "" : l.color.trim();
-                next.size = l.size == null ? "" : l.size.trim();
-                next.quantity = l.quantity == null ? 0 : l.quantity;
-                cleaned.add(next);
-            }
-            return cleaned;
-        } catch (Exception e) {
-            OrderLine line = new OrderLine();
-            line.color = StringUtils.hasText(order.getColor()) ? order.getColor() : "";
-            line.size = StringUtils.hasText(order.getSize()) ? order.getSize() : "";
-            line.quantity = order.getOrderQuantity() == null ? 0 : order.getOrderQuantity();
-            return List.of(line);
-        }
-    }
-
-    private List<MaterialPurchase> buildDemandItems(String orderId) {
-        ProductionOrderService productionOrderService = productionOrderServiceProvider.getIfAvailable();
-        if (productionOrderService == null) {
-            throw new IllegalStateException("生产订单服务不可用");
-        }
-        ProductionOrder order = productionOrderService.getDetailById(orderId);
-        if (order == null) {
-            throw new NoSuchElementException("生产订单不存在");
-        }
-        if (!StringUtils.hasText(order.getStyleId())) {
-            throw new IllegalArgumentException("生产订单缺少styleId");
-        }
-
-        Long styleId;
-        try {
-            styleId = Long.valueOf(order.getStyleId());
-        } catch (Exception e) {
-            throw new IllegalArgumentException("styleId格式错误");
-        }
-
-        List<StyleBom> bomList = styleBomService.listByStyleId(styleId);
-        if (bomList == null) {
-            bomList = List.of();
-        }
-
-        List<OrderLine> lines = parseOrderLines(order);
-
-        Set<String> orderColorSet = new HashSet<>();
-        Set<String> orderSizeSet = new HashSet<>();
-        for (OrderLine l : lines) {
-            if (l == null) {
-                continue;
-            }
-            String lc = MaterialPurchaseHelper.normalizeMatchKey(l.color);
-            String ls = MaterialPurchaseHelper.normalizeMatchKey(l.size);
-            if (StringUtils.hasText(lc)) {
-                orderColorSet.add(lc);
-            }
-            if (StringUtils.hasText(ls)) {
-                orderSizeSet.add(ls);
-            }
-        }
-
-        Map<String, MaterialPurchase> grouped = new HashMap<>();
-        for (StyleBom bom : bomList) {
-            if (bom == null) {
-                continue;
-            }
-            String bomColor = bom.getColor() == null ? "" : bom.getColor().trim();
-            String bomSize = bom.getSize() == null ? "" : bom.getSize().trim();
-
-            List<String> bomColorOpts = MaterialPurchaseHelper.splitOptions(bomColor);
-            Set<String> bomColorSet = bomColorOpts.isEmpty() ? null : new HashSet<>(bomColorOpts);
-            List<String> bomSizeOpts = MaterialPurchaseHelper.splitOptions(bomSize);
-            Set<String> bomSizeSet = bomSizeOpts.isEmpty() ? null : new HashSet<>(bomSizeOpts);
-
-            bomColorSet = MaterialPurchaseHelper.intersectOrNull(bomColorSet, orderColorSet);
-            bomSizeSet = MaterialPurchaseHelper.intersectOrNull(bomSizeSet, orderSizeSet);
-
-            int matchedQty = 0;
-            for (OrderLine l : lines) {
-                if (l == null) {
-                    continue;
-                }
-                String lc = MaterialPurchaseHelper.normalizeMatchKey(l.color);
-                String ls = MaterialPurchaseHelper.normalizeMatchKey(l.size);
-                boolean colorOk = bomColorSet == null || bomColorSet.contains(lc);
-                boolean sizeOk = bomSizeSet == null || bomSizeSet.contains(ls);
-                if (colorOk && sizeOk) {
-                    matchedQty += l.quantity == null ? 0 : l.quantity;
-                }
-            }
-            if (matchedQty <= 0) {
-                continue;
-            }
-
-            // 采购数量 = BOM用量 × 订单数量（损耗率仅作参考，不参与计算）
-            BigDecimal usage = bom.getUsageAmount() == null ? BigDecimal.ZERO : bom.getUsageAmount();
-            BigDecimal required = usage.multiply(BigDecimal.valueOf(matchedQty));
-            // 向上取整（保留完整数值，如2.5米→3米）
-            int requiredInt = required.setScale(0, RoundingMode.CEILING).intValue();
-
-            if (requiredInt <= 0) {
-                continue;
-            }
-
-            String key = String.join("|",
-                    StringUtils.hasText(bom.getMaterialCode()) ? bom.getMaterialCode() : "",
-                    StringUtils.hasText(bom.getMaterialName()) ? bom.getMaterialName() : "",
-                    StringUtils.hasText(bom.getSpecification()) ? bom.getSpecification() : "",
-                    StringUtils.hasText(bom.getUnit()) ? bom.getUnit() : "",
-                    bomColor,
-                    bomSize,
-                    StringUtils.hasText(bom.getSupplier()) ? bom.getSupplier() : "");
-
-            MaterialPurchase agg = grouped.get(key);
-            if (agg == null) {
-                MaterialPurchase mp = new MaterialPurchase();
-                mp.setPurchaseNo(nextPurchaseNo());
-                mp.setMaterialCode(bom.getMaterialCode());
-                mp.setMaterialName(bom.getMaterialName());
-                mp.setMaterialType(MaterialPurchaseHelper.normalizeMaterialType(bom.getMaterialType()));
-                mp.setSpecifications(bom.getSpecification());
-                mp.setUnit(bom.getUnit());
-                mp.setPurchaseQuantity(requiredInt);
-                mp.setArrivedQuantity(0);
-                mp.setSupplierName(bom.getSupplier());
-                mp.setSupplierId("");
-                mp.setUnitPrice(bom.getUnitPrice() == null ? BigDecimal.ZERO : bom.getUnitPrice());
-                mp.setTotalAmount(BigDecimal.ZERO);
-                mp.setOrderId(order.getId());
-                mp.setOrderNo(order.getOrderNo());
-                mp.setStyleId(order.getStyleId());
-                mp.setStyleNo(order.getStyleNo());
-                mp.setStyleName(order.getStyleName());
-                mp.setMaterialId(resolveMaterialId(mp));
-                mp.setStyleCover(resolveStyleCoverByStyleId(order.getStyleId()));
-                // 设置颜色和尺码信息（从BOM同步到采购单）
-                mp.setColor(StringUtils.hasText(bomColor) ? bomColor : null);
-                mp.setSize(StringUtils.hasText(bomSize) ? bomSize : null);
-                mp.setStatus(MaterialConstants.STATUS_PENDING);
-                LocalDateTime now = LocalDateTime.now();
-                mp.setCreateTime(now);
-                mp.setUpdateTime(now);
-                mp.setDeleteFlag(0);
-                grouped.put(key, mp);
-            } else {
-                int nextQty = (agg.getPurchaseQuantity() == null ? 0 : agg.getPurchaseQuantity()) + requiredInt;
-                agg.setPurchaseQuantity(nextQty);
-                agg.setTotalAmount(BigDecimal.ZERO);
-            }
-        }
-
-        return new ArrayList<>(grouped.values());
-    }
-
-    private String nextPurchaseNo() {
-        LocalDateTime now = LocalDateTime.now();
-        String ts = now.format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
-        for (int i = 0; i < 6; i++) {
-            int rand = (int) (ThreadLocalRandom.current().nextDouble() * 900) + 100;
-            String candidate = MaterialConstants.PURCHASE_NO_PREFIX + ts + rand;
-            long cnt = this
-                    .count(new LambdaQueryWrapper<MaterialPurchase>().eq(MaterialPurchase::getPurchaseNo, candidate));
-            if (cnt == 0) {
-                return candidate;
-            }
-        }
-        String nano = String.valueOf(System.nanoTime());
-        String suffix = nano.length() > 6 ? nano.substring(nano.length() - 6) : nano;
-        return MaterialConstants.PURCHASE_NO_PREFIX + ts + suffix;
     }
 }

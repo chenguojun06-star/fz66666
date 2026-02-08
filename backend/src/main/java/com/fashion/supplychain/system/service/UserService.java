@@ -8,7 +8,7 @@ import com.fashion.supplychain.system.entity.User;
  * 用户服务接口
  */
 public interface UserService extends IService<User> {
-    
+
     /**
      * 分页查询用户列表
      * @param page 当前页码
@@ -20,21 +20,21 @@ public interface UserService extends IService<User> {
      * @return 分页结果
      */
     Page<User> getUserPage(Long page, Long pageSize, String username, String name, String roleName, String status);
-    
+
     /**
      * 新增用户
      * @param user 用户信息
      * @return 是否成功
      */
     boolean saveUser(User user);
-    
+
     /**
      * 更新用户
      * @param user 用户信息
      * @return 是否成功
      */
     boolean updateUser(User user);
-    
+
     /**
      * 切换用户状态
      * @param id 用户ID
@@ -42,14 +42,14 @@ public interface UserService extends IService<User> {
      * @return 是否成功
      */
     boolean toggleUserStatus(Long id, String status);
-    
+
     /**
      * 删除用户
      * @param id 用户ID
      * @return 是否成功
      */
     boolean deleteUser(Long id);
-    
+
     /**
      * 用户登录
      * @param username 用户名
@@ -57,4 +57,18 @@ public interface UserService extends IService<User> {
      * @return 用户信息
      */
     User login(String username, String password);
+
+    /**
+     * 根据姓名查找用户（精确匹配，用于验证人员字段）
+     * @param name 用户姓名
+     * @return 用户信息，不存在则返回null
+     */
+    User findByName(String name);
+
+    /**
+     * 验证用户是否存在（根据姓名）
+     * @param name 用户姓名
+     * @return 是否存在
+     */
+    boolean existsByName(String name);
 }

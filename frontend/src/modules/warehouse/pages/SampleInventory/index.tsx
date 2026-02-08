@@ -8,11 +8,6 @@ import {
   Tooltip,
   Image,
 } from 'antd';
-import {
-  PlusOutlined,
-  HistoryOutlined,
-  ExportOutlined,
-} from '@ant-design/icons';
 import RowActions from '@/components/common/RowActions';
 import type { ColumnsType } from 'antd/es/table';
 import Layout from '@/components/Layout';
@@ -23,7 +18,7 @@ import { useModal, useTablePagination } from '@/hooks';
 import { SampleStock, SampleTypeMap } from './types';
 import InboundModal from './InboundModal';
 import LoanModal from './LoanModal';
-import LoanHistoryDrawer from './LoanHistoryDrawer';
+import LoanHistoryModal from './LoanHistoryModal';
 import type { Dayjs } from 'dayjs';
 
 const SampleInventory: React.FC = () => {
@@ -149,14 +144,12 @@ const SampleInventory: React.FC = () => {
             {
               key: 'loan',
               label: '借出',
-              icon: <ExportOutlined />,
               disabled: record.quantity - record.loanedQuantity <= 0,
               onClick: () => loanModal.open(record)
             },
             {
               key: 'history',
               label: '记录',
-              icon: <HistoryOutlined />,
               onClick: () => historyDrawer.open(record)
             }
           ]}
@@ -190,7 +183,7 @@ const SampleInventory: React.FC = () => {
                 />
               )}
               right={(
-                <Button type="primary" icon={<PlusOutlined />} onClick={() => inboundModal.open()}>
+                <Button type="primary" onClick={() => inboundModal.open()}>
                   样衣入库
                 </Button>
               )}
@@ -231,7 +224,7 @@ const SampleInventory: React.FC = () => {
           }}
         />
 
-        <LoanHistoryDrawer
+        <LoanHistoryModal
           visible={historyDrawer.visible}
           stock={historyDrawer.data}
           onClose={historyDrawer.close}

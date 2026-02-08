@@ -231,7 +231,7 @@ Page({
     }
 
     this.setData({ 'globalSearch.loading': true });
-    wx.showLoading({ title: '搜索中...' });
+    wx.showLoading({ title: '搜索中...', mask: true });
 
     try {
       // 并行搜索所有模块

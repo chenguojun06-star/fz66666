@@ -1,5 +1,5 @@
 import React from 'react';
-import { EyeOutlined, DeleteOutlined } from '@ant-design/icons';
+import { EyeOutlined } from '@ant-design/icons';
 import UniversalCardView from '@/components/common/UniversalCardView';
 import { StyleInfo } from '@/types/style';
 import { useNavigate } from 'react-router-dom';
@@ -119,13 +119,11 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
       actions={(record) => [
         {
           key: 'view',
-          icon: <EyeOutlined />,
           label: '查看详情',
           onClick: () => navigate(`/style-info/${record.id}`),
         },
         {
           key: 'delete',
-          icon: <DeleteOutlined />,
           label: '删除',
           onClick: () => onDelete(record.id!),
           danger: true,

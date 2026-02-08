@@ -67,7 +67,7 @@ export const StyleCoverThumb: React.FC<{
       }
     })();
     return () => { mounted = false; };
-  }, [styleId, styleNo, src]);
+  }, [styleId, styleNo]);
 
   return (
     <div style={{ width: size, height: size, borderRadius, overflow: 'hidden', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -87,6 +87,11 @@ type OrderHeaderSizeItem = {
   quantity: number;
 };
 
+type OrderHeaderCuttingSizeItem = {
+  size: string;
+  quantity: number;
+};
+
 type OrderHeaderField = {
   label: string;
   value: React.ReactNode;
@@ -96,6 +101,7 @@ export const ProductionOrderHeader: React.FC<{
   order?: any | null;
   orderLines?: ProductionOrderLine[];
   sizeItems?: OrderHeaderSizeItem[];
+  cuttingSizeItems?: OrderHeaderCuttingSizeItem[]; // 新增：裁剪数量明细
   totalQuantity?: number;
   color?: string;
   orderNo?: string;
@@ -112,6 +118,7 @@ export const ProductionOrderHeader: React.FC<{
   order,
   orderLines,
   sizeItems,
+  cuttingSizeItems, // 新增参数
   totalQuantity,
   color,
   orderNo,
@@ -210,42 +217,78 @@ export const ProductionOrderHeader: React.FC<{
 
             <div className="purchase-detail-size-block">
               <div className="purchase-detail-size-table-wrap">
-                <Table
-                  dataSource={computedSizeItems.length ? computedSizeItems : [{ size: '-', quantity: 0 }]}
-                  columns={
-                    [
-                      { title: '码数', dataIndex: 'size', key: 'size', align: 'center' },
-                    ] as ColumnsType<OrderHeaderSizeItem>
-                  }
-                  size="small"
-                  pagination={false}
-                  showHeader={true}
-                  bordered
-                  rowKey="size"
-                  summary={() => (
-                    <Table.Summary fixed>
-                      <Table.Summary.Row>
-                        <Table.Summary.Cell index={0} align="center">
-                          <strong>数量</strong>
-                        </Table.Summary.Cell>
-                        {computedSizeItems.length ? (
-                          computedSizeItems.map((x, idx) => (
-                            <Table.Summary.Cell key={x.size} index={idx + 1} align="center">
-                              {toNumberSafe(x.quantity)}
-                            </Table.Summary.Cell>
-                          ))
-                        ) : (
-                          <Table.Summary.Cell index={1} align="center">-</Table.Summary.Cell>
-                        )}
-                      </Table.Summary.Row>
-                      <Table.Summary.Row>
-                        <Table.Summary.Cell index={0} colSpan={computedSizeItems.length + 1} align="right">
-                          <strong>总下单数：{toNumberSafe(computedTotal)}</strong>
-                        </Table.Summary.Cell>
-                      </Table.Summary.Row>
-                    </Table.Summary>
-                  )}
-                />
+                {(() => {
+                  const sizeArray = computedSizeItems.length
+                    ? computedSizeItems.map((x) => String(x.size || '').trim()).filter(Boolean)
+                    : ['-'];
+                  const sizeQuantityMap = computedSizeItems.reduce<Record<string, number>>((acc, item) => {
+                    const key = String(item.size || '').trim();
+                    if (key) acc[key] = toNumberSafe(item.quantity);
+                    return acc;
+                  }, {});
+
+                  // 计算裁剪数量（如果有传入裁剪数据）
+                  const cuttingQuantityMap = (cuttingSizeItems || []).reduce<Record<string, number>>((acc, item) => {
+                    const key = String(item.size || '').trim();
+                    if (key) acc[key] = toNumberSafe(item.quantity);
+                    return acc;
+                  }, {});
+                  const hasCuttingData = cuttingSizeItems && cuttingSizeItems.length > 0;
+                  const cuttingTotalQty = hasCuttingData
+                    ? cuttingSizeItems.reduce((sum, item) => sum + toNumberSafe(item.quantity), 0)
+                    : 0;
+
+                  const totalText = `总下单数：${toNumberSafe(computedTotal)}`;
+                  return (
+                    <Table
+                      dataSource={[
+                        { key: 'size', type: '码数', ...sizeArray.reduce((acc, s) => ({ ...acc, [s]: s }), {}), total: totalText } as any,
+                        { key: 'qty', type: '数量', ...sizeArray.reduce((acc, s) => ({ ...acc, [s]: sizeQuantityMap[s] || 0 }), {}), total: '' } as any,
+                        ...(hasCuttingData ? [
+                          { key: 'cutting', type: '裁剪数量', ...sizeArray.reduce((acc, s) => ({ ...acc, [s]: cuttingQuantityMap[s] || 0 }), {}), total: `${cuttingTotalQty}` } as any
+                        ] : [])
+                      ]}
+                      columns={[
+                        {
+                          title: '',
+                          dataIndex: 'type',
+                          key: 'type',
+                          width: 150,
+                          align: 'center',
+                          render: (text: string) => (
+                            <div style={{ fontWeight: 600, fontSize: 'var(--font-size-base)', color: 'var(--neutral-text)' }}>{text}</div>
+                          )
+                        },
+                        ...sizeArray.map((size) => ({
+                          title: size,
+                          dataIndex: size,
+                          key: size,
+                          width: 100,
+                          align: 'center' as const,
+                          render: (value: string | number) => (
+                            <div style={{ fontSize: 'var(--font-size-md)', fontWeight: 700, color: 'var(--neutral-text)' }}>
+                              {value}
+                            </div>
+                          )
+                        })),
+                        {
+                          title: '',
+                          dataIndex: 'total',
+                          key: 'total',
+                          align: 'right',
+                          render: (text: string, record: { key: string }) => record.key === 'size' ? (
+                            <div style={{ fontWeight: 700, fontSize: 'var(--font-size-base)', color: 'var(--neutral-text)', whiteSpace: 'nowrap' }}>{text}</div>
+                          ) : null
+                        }
+                      ] as ColumnsType<OrderHeaderSizeItem>}
+                      size="small"
+                      pagination={false}
+                      showHeader={false}
+                      bordered
+                      rowKey="key"
+                    />
+                  );
+                })()}
               </div>
             </div>
           </div>

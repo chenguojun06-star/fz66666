@@ -67,7 +67,7 @@ public class CacheAspect {
 
         // 存入缓存
         redisService.set(cacheKey, result, cacheable.expire(), cacheable.unit());
-        log.debug("[CacheAspect] 缓存已设置: {}, 过期时间: {} {}", 
+        log.debug("[CacheAspect] 缓存已设置: {}, 过期时间: {} {}",
                 cacheKey, cacheable.expire(), cacheable.unit());
 
         return result;
@@ -104,17 +104,20 @@ public class CacheAspect {
     private String parseSpelExpression(String expression, Method method, Object[] args) {
         try {
             EvaluationContext context = new StandardEvaluationContext();
-            String[] paramNames = discoverer.getParameterNames(method);
-            
+            String[] paramNames = null;
+            if (method != null) {
+                paramNames = discoverer.getParameterNames(method);
+            }
+
             if (paramNames != null) {
                 for (int i = 0; i < paramNames.length; i++) {
                     context.setVariable(paramNames[i], args[i]);
                 }
             }
-            
+
             // 设置args变量
             context.setVariable("args", args);
-            
+
             return parser.parseExpression(expression).getValue(context, String.class);
         } catch (Exception e) {
             log.warn("[CacheAspect] SpEL解析失败: {}, 使用原始表达式", expression);
@@ -129,15 +132,15 @@ public class CacheAspect {
         try {
             EvaluationContext context = new StandardEvaluationContext();
             String[] paramNames = discoverer.getParameterNames(method);
-            
+
             if (paramNames != null) {
                 for (int i = 0; i < paramNames.length; i++) {
                     context.setVariable(paramNames[i], args[i]);
                 }
             }
-            
+
             context.setVariable("args", args);
-            
+
             Boolean result = parser.parseExpression(condition).getValue(context, Boolean.class);
             return result != null && result;
         } catch (Exception e) {

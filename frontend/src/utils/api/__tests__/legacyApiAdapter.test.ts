@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import axios, { AxiosRequestConfig } from 'axios';
+import type { AxiosRequestConfig } from 'axios';
 import { setupLegacyApiAdapter, getDeprecatedEndpoints, isDeprecatedEndpoint } from '../legacyApiAdapter';
 
 describe('Legacy API Adapter', () => {
@@ -27,8 +27,8 @@ describe('Legacy API Adapter', () => {
     };
 
     // 模拟 console.warn
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
-    vi.spyOn(console, 'info').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => { });
+    vi.spyOn(console, 'info').mockImplementation(() => { });
   });
 
   describe('setupLegacyApiAdapter', () => {

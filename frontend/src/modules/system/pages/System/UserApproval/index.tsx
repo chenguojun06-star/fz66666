@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, Button, Card, Empty, Input, message, Modal, Select, Space } from 'antd';
-import { CheckOutlined, CloseOutlined, ReloadOutlined, UserOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
@@ -212,7 +211,6 @@ const UserApproval: React.FC = () => {
               key: 'approve',
               label: '批准',
               title: '批准',
-              icon: <CheckOutlined />,
               onClick: () => handleApprove(record),
               primary: true,
             },
@@ -220,7 +218,6 @@ const UserApproval: React.FC = () => {
               key: 'reject',
               label: '拒绝',
               title: '拒绝',
-              icon: <CloseOutlined />,
               onClick: () => handleReject(record),
               danger: true,
             },
@@ -241,7 +238,6 @@ const UserApproval: React.FC = () => {
             </div>
             <Space>
               <Button
-                icon={<ReloadOutlined />}
                 onClick={fetchPendingUsers}
                 loading={loading}
               >
@@ -261,7 +257,6 @@ const UserApproval: React.FC = () => {
                 title={`当前有 ${total} 个用户待审批`}
                 type="info"
                 showIcon
-                icon={<UserOutlined />}
                 style={{ marginBottom: 16 }}
               />
               <ResizableTable

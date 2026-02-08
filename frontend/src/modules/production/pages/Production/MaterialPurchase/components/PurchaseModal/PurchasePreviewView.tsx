@@ -107,7 +107,7 @@ const PurchasePreviewView: React.FC<PurchasePreviewViewProps> = ({ previewList, 
           },
         ]}
         dataSource={previewList}
-        rowKey={(_, index) => index || 0}
+        rowKey={(record) => record.materialCode || record.id || `material-${Math.random()}`}
         pagination={false}
         scroll={{ x: 'max-content' }}
         size={isMobile ? 'small' : 'middle'}

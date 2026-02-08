@@ -65,6 +65,8 @@ public class SecurityConfig implements WebMvcConfigurer {
                         .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .antMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .antMatchers("/api/system/user/login").permitAll()
+                        .antMatchers("/api/auth/login").permitAll()
+                        .antMatchers("/api/auth/user-info").permitAll()
                         .antMatchers("/api/auth/register").permitAll()
                         .antMatchers("/api/common/download/**").permitAll()
                         .antMatchers(HttpMethod.GET, "/api/production/warehousing/list").permitAll()

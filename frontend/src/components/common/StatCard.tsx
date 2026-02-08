@@ -21,7 +21,7 @@ interface StatCardProps {
   className?: string;
   /** 自定义样式 */
   style?: React.CSSProperties;
-  /** 数值样式 */
+  /** 数值样式（使用styles.content代替） */
   valueStyle?: React.CSSProperties;
   /** 前缀文本 */
   prefix?: React.ReactNode;
@@ -76,7 +76,7 @@ export const StatCard: React.FC<StatCardProps> = ({
         suffix={suffix}
         precision={precision}
         loading={loading}
-        valueStyle={valueStyle}
+        styles={valueStyle ? { value: valueStyle } : undefined}
         formatter={formatter}
       />
     </Card>

@@ -219,7 +219,6 @@ class PerformanceMonitor {
    */
   static clear(): void {
     this.metrics.clear();
-    console.log('✅ 性能统计已清空');
   }
 
   /**
@@ -227,7 +226,6 @@ class PerformanceMonitor {
    */
   static setEnabled(enabled: boolean): void {
     this.enabled = enabled;
-    console.log(`性能监控已${enabled ? '启用' : '禁用'}`);
   }
 
   /**
@@ -250,18 +248,10 @@ if (perfMetaEnv?.DEV) {
   // 定时输出报告（每2分钟）
   setInterval(() => {
     if (PerformanceMonitor.getReport().length > 0) {
-      console.log('📊 自动性能报告（每2分钟）');
       PerformanceMonitor.printReport();
     }
   }, 120000);
 
-  console.log(
-    '🔧 性能监控工具已启用\n' +
-      '使用方法:\n' +
-      '  performanceMonitor.printReport()  - 查看报告\n' +
-      '  performanceMonitor.clear()        - 清空数据\n' +
-      '  performanceMonitor.exportData()   - 导出JSON'
-  );
 }
 
 export default PerformanceMonitor;

@@ -102,7 +102,6 @@ const OrderProgressCard: React.FC<OrderProgressCardProps> = ({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, justifyContent: 'center' }}>
           <Button
             size="small"
-            icon={<EyeOutlined />}
             onClick={(e) => {
               e.stopPropagation();
               onViewDetail(order);
@@ -113,7 +112,6 @@ const OrderProgressCard: React.FC<OrderProgressCardProps> = ({
           {onScan && (
             <Button
               size="small"
-              icon={<ScanOutlined />}
               onClick={(e) => {
                 e.stopPropagation();
                 onScan(order);
@@ -125,7 +123,6 @@ const OrderProgressCard: React.FC<OrderProgressCardProps> = ({
           {onRollback && (
             <Button
               size="small"
-              icon={<RollbackOutlined />}
               onClick={(e) => {
                 e.stopPropagation();
                 onRollback(order);
@@ -137,7 +134,6 @@ const OrderProgressCard: React.FC<OrderProgressCardProps> = ({
           {onQuickEdit && (
             <Button
               size="small"
-              icon={<EditOutlined />}
               onClick={(e) => {
                 e.stopPropagation();
                 onQuickEdit(order);

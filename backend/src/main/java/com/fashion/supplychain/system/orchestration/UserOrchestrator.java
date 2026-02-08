@@ -7,10 +7,12 @@ import com.fashion.supplychain.auth.TokenSubject;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.util.TextUtils;
 import com.fashion.supplychain.system.entity.LoginLog;
+import com.fashion.supplychain.system.entity.Role;
 import com.fashion.supplychain.system.entity.User;
 import com.fashion.supplychain.system.service.LoginLogService;
 import com.fashion.supplychain.system.service.PermissionService;
 import com.fashion.supplychain.system.service.RolePermissionService;
+import com.fashion.supplychain.system.service.RoleService;
 import com.fashion.supplychain.system.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -41,6 +43,9 @@ public class UserOrchestrator {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private RoleService roleService;
 
     @Autowired
     private RolePermissionService rolePermissionService;
@@ -75,6 +80,19 @@ public class UserOrchestrator {
         if (!UserContext.isTopAdmin()) {
             throw new AccessDeniedException("无权限操作");
         }
+        // 在 Orchestrator 层处理角色同步逻辑（避免 Service 互调）
+        if (user.getRoleId() != null) {
+            Role role = roleService.getById(user.getRoleId());
+            if (role != null) {
+                user.setRoleName(role.getRoleName());
+                String dataScope = role.getDataScope();
+                if ("all".equals(dataScope)) {
+                    user.setPermissionRange("all");
+                } else {
+                    user.setPermissionRange("self");
+                }
+            }
+        }
         boolean success = userService.saveUser(user);
         if (!success) {
             throw new IllegalStateException("新增失败");
@@ -90,6 +108,19 @@ public class UserOrchestrator {
         String remark = TextUtils.safeText(user == null ? null : user.getOperationRemark());
         if (!StringUtils.hasText(remark)) {
             throw new IllegalArgumentException("操作原因不能为空");
+        }
+        // 在 Orchestrator 层处理角色同步逻辑（避免 Service 互调）
+        if (user.getRoleId() != null) {
+            Role role = roleService.getById(user.getRoleId());
+            if (role != null) {
+                user.setRoleName(role.getRoleName());
+                String dataScope = role.getDataScope();
+                if ("all".equals(dataScope)) {
+                    user.setPermissionRange("all");
+                } else {
+                    user.setPermissionRange("self");
+                }
+            }
         }
         boolean success = userService.updateUser(user);
         if (!success) {

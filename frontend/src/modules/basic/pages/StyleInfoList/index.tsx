@@ -192,7 +192,6 @@ const StyleInfoListPage: React.FC = () => {
           extra={(
             <>
               <Button
-                icon={<ReloadOutlined />}
                 onClick={fetchList}
                 loading={loading}
               >
@@ -206,7 +205,6 @@ const StyleInfoListPage: React.FC = () => {
               </Button>
               <Button
                 type="primary"
-                icon={<PlusOutlined />}
                 onClick={() => navigate('/style-info/new')}
               >
                 新建

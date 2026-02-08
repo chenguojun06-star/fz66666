@@ -63,7 +63,7 @@
   width: 85%;
   max-width: 640rpx;
   height: 100vh;
-  background: #fff;
+  background: var(--color-bg-card);
   box-shadow: -8rpx 0 32rpx rgba(0, 0, 0, 0.1);
   z-index: 1001;
   transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -90,7 +90,7 @@
 .panel-title {
   font-size: 32rpx;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--color-text-primary);
 }
 
 .panel-header-actions {
@@ -211,13 +211,13 @@
   justify-content: space-between;
   padding: 24rpx 16rpx;
   margin: 8rpx 0;
-  background: #f9fafb;
+  background: var(--color-bg-light);
   border-radius: 16rpx;
   transition: all 0.2s;
 }
 
 .task-item:active {
-  background: #f3f4f6;
+  background: var(--color-bg-gray);
   transform: scale(0.98);
 }
 
@@ -239,7 +239,7 @@
 .task-title {
   font-size: 28rpx;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--color-text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -312,7 +312,7 @@
 
 .approve-btn {
   background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-  color: #16a34a;
+  color: var(--color-success);
   border: 1rpx solid rgba(22, 163, 74, 0.2);
 }
 
@@ -322,7 +322,7 @@
 
 .reject-btn {
   background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-  color: #dc2626;
+  color: var(--color-error);
   border: 1rpx solid rgba(220, 38, 38, 0.2);
 }
 
@@ -346,7 +346,7 @@
 
 .empty-text {
   font-size: 30rpx;
-  color: #374151;
+  color: var(--color-text-secondary);
   font-weight: 500;
 }
 
@@ -361,7 +361,7 @@
   padding: 20rpx 24rpx;
   padding-bottom: calc(env(safe-area-inset-bottom) + 20rpx);
   border-top: 1rpx solid var(--color-border-light);
-  background: #fff;
+  background: var(--color-bg-card);
 }
 
 .refresh-btn {

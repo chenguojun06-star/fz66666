@@ -1,6 +1,6 @@
 import React from 'react';
 import { Tag } from 'antd';
-import { EyeOutlined, PrinterOutlined } from '@ant-design/icons';
+import { PrinterOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
@@ -295,7 +295,6 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
           });
           items.push({
             key: 'print',
-            icon: <PrinterOutlined />,
             label: '打印',
             onClick: () => onPrint(record),
           });
@@ -317,7 +316,6 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                 key: 'detail',
                 label: '详情',
                 title: '详情',
-                icon: <EyeOutlined />,
                 onClick: () => navigate(`/style-info/${record.id}`),
                 primary: true,
               },

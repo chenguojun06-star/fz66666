@@ -339,24 +339,8 @@ class StageDetector {
         isLegacyConfig: sewingProcessList.length === 1 && sewingProcessList[0] === '车缝',
       });
 
-      // === 步骤4：从订单获取工序时间配置 ===
-      const processTimeConfig = this._extractProcessTimeConfig(orderDetail);
-
-      // === 步骤5：防重复扫码检查 ===
-      if (scanCount > 0) {
-        const duplicateCheck = this._checkDuplicate(
-          scanHistory[0],
-          accurateQuantity,
-          processTimeConfig
-        );
-
-        // duplicateCheck 为 null 表示不重复，为对象表示重复
-        if (duplicateCheck && duplicateCheck.isDuplicate) {
-          return duplicateCheck;
-        }
-      }
-
-      // === 步骤6：根据扫码次数判断当前工序 ===
+      // === 步骤4：根据扫码次数判断当前工序 ===
+      // ⚠️ 2026-02-06：已移除前端时间限制，防重复由后端 ProductionScanExecutor.tryUpdateExistingBundleScanRecord() 处理
       const processResult = this._determineCurrentProcess(
         scanCount,
         sewingProcessList,
@@ -543,92 +527,6 @@ class StageDetector {
 
     // 如果没有配置，使用默认
     return sewingProcesses.length > 0 ? sewingProcesses : [...this.defaultSewingProcesses];
-  }
-
-  /**
-   * 从订单工艺模板中提取工序时间配置
-   * @private
-   * @param {Object} orderDetail - 订单详情
-   * @returns {Object} 时间配置对象 { '做领': 5, '上领': 3 } 单位：分钟
-   */
-  _extractProcessTimeConfig(orderDetail) {
-    const config = {};
-
-    if (!orderDetail || !orderDetail.progressNodeUnitPrices) {
-      return config;
-    }
-
-    const nodes = orderDetail.progressNodeUnitPrices;
-    if (!Array.isArray(nodes)) {
-      return config;
-    }
-
-    // 提取每个工序的预计时间
-    nodes.forEach(node => {
-      const name = node.name || '';
-      const minutes = node.estimatedMinutes || 0;
-      if (name && minutes > 0) {
-        config[name] = minutes;
-      }
-    });
-
-    return config;
-  }
-
-  /**
-   * 检查是否为重复扫码
-   *
-   * 判断逻辑：
-   * - 距离上次扫码时间 < 预期时间的50%，视为重复
-   * - 预期时间 = 菲号数量 × 工序分钟 × 60秒
-   * - 最小间隔30秒（保底）
-   *
-   * @private
-   * @param {Object} lastRecord - 最后一条扫码记录
-   * @param {number} bundleQuantity - 菲号数量
-   * @param {Object} processTimeConfig - 工序时间配置
-   * @returns {Object|null} 重复检查结果，null表示不重复
-   */
-  _checkDuplicate(lastRecord, bundleQuantity, processTimeConfig) {
-    const lastScanTime = lastRecord.scanTime || lastRecord.createTime;
-    const lastProcessName = lastRecord.processName || '';
-    const currentTime = Date.now();
-
-    // 计算时间差（秒）
-    let timeDiff = 999999;
-    if (lastScanTime) {
-      const lastTime = new Date(lastScanTime).getTime();
-      timeDiff = (currentTime - lastTime) / 1000;
-    }
-
-    // 从配置获取该工序的预计时间，默认1分钟/件
-    const configMinutesPerPiece = processTimeConfig[lastProcessName] || 1;
-    const secondsPerPiece = configMinutesPerPiece * 60;
-    const expectedTime = bundleQuantity * secondsPerPiece;
-
-    // 最小间隔 = max(30秒, 预期时间的50%)
-    const minIntervalTime = Math.max(30, expectedTime * 0.5);
-
-    // 判断是否重复
-    if (timeDiff < minIntervalTime) {
-      const minutesAgo = Math.floor(timeDiff / 60);
-      const secondsAgo = Math.floor(timeDiff % 60);
-      const timeText = minutesAgo > 0 ? `${minutesAgo}分${secondsAgo}秒前` : `${secondsAgo}秒前`;
-
-      const expectedMinutes = Math.floor(expectedTime / 60);
-
-      return {
-        processName: lastProcessName,
-        progressStage: '车缝',
-        scanType: 'production',
-        hint: `⚠️ ${bundleQuantity}件预计需${expectedMinutes}分钟，${timeText}已扫过`,
-        isDuplicate: true, // 标记为重复
-        quantity: bundleQuantity,
-      };
-    }
-
-    // 不重复
-    return null;
   }
 
   /**

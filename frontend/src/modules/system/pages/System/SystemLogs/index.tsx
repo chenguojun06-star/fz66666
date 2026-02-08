@@ -4,7 +4,6 @@ import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
 import { formatDateTimeSecond } from '@/utils/datetime';
-import { useViewport } from '@/utils/useViewport';
 import api from '@/utils/api';
 import dayjs from 'dayjs';
 
@@ -15,7 +14,6 @@ import './styles.css';
 
 const SystemLogs: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'login' | 'operation'>('login');
-  const { isMobile } = useViewport();
   const { modal } = App.useApp();
 
   // ==================== 登录日志 ====================
@@ -232,6 +230,17 @@ const SystemLogs: React.FC = () => {
         };
         return <Tag color={colorMap[v] || 'default'}>{v}</Tag>;
       }
+    },
+    {
+      title: '详情',
+      key: 'details',
+      width: 90,
+      resizable: true,
+      render: (_: unknown, record: OperationLog) => (
+        <Button type="link" onClick={() => handleViewDetails(record)}>
+          查看
+        </Button>
+      )
     },
   ];
 

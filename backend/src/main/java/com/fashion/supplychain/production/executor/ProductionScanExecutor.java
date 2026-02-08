@@ -73,6 +73,9 @@ public class ProductionScanExecutor {
     @Autowired
     private StyleAttachmentService styleAttachmentService;
 
+    @Autowired
+    private com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
+
     /**
      * 执行生产扫码（裁剪或生产工序）
      */
@@ -165,6 +168,20 @@ public class ProductionScanExecutor {
         try {
             validateScanRecordForSave(sr);
             scanRecordService.saveScanRecord(sr);
+
+            // ✅ 扫码成功后，更新工序跟踪记录（用于工资结算）
+            try {
+                processTrackingOrchestrator.updateScanRecord(
+                    bundle.getId(),           // String类型ID，不需要转换
+                    processCode,
+                    operatorId,
+                    operatorName,
+                    sr.getId()               // String类型ID，不需要转换
+                );
+                log.info("工序跟踪记录更新成功: bundleId={}, processCode={}", bundle.getId(), processCode);
+            } catch (Exception e) {
+                log.warn("工序跟踪记录更新失败: bundleId={}, processCode={}", bundle.getId(), processCode, e);
+            }
         } catch (DuplicateKeyException dke) {
             log.info("生产扫码记录重复: requestId={}, scanCode={}", requestId, scanCode, dke);
             // 重试更新

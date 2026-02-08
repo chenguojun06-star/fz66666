@@ -44,9 +44,9 @@ const ValidationRules = {
   orderNo: {
     name: '订单号',
     required: true,
-    minLength: 3,
+    minLength: 5,
     maxLength: 50,
-    message: '订单号长度 3-50 位',
+    message: '订单号长度 5-50 位',
   },
   styleNo: {
     name: '款号',
@@ -58,16 +58,16 @@ const ValidationRules = {
   styleName: {
     name: '款号名称',
     required: true,
-    minLength: 1,
+    minLength: 2,
     maxLength: 100,
-    message: '款号名称长度 1-100 位',
+    message: '款号名称长度 2-100 位',
   },
   factoryName: {
     name: '工厂名称',
     required: true,
-    minLength: 1,
+    minLength: 2,
     maxLength: 100,
-    message: '工厂名称长度 1-100 位',
+    message: '工厂名称长度 2-100 位',
   },
 
   // 数量相关

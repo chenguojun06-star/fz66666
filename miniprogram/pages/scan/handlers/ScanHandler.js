@@ -460,23 +460,31 @@ class ScanHandler {
         manualScanType
       );
 
-      // === 步骤5：准备扫码数据 ===
+      // === 步骤5：准备扫码数据（不提交，等待用户确认）===
       const scanData = this._prepareScanData(parsedData, stageResult, orderDetail, manualWarehouse);
 
-      // === 步骤6：提交并构建结果 ===
-      const finalResult = await this._submitAndBuildResult(
-        scanMode,
-        parsedData,
-        stageResult,
-        scanData
-      );
-
-      // === 步骤7：触发成功回调 ===
-      if (this.options.onSuccess) {
-        this.options.onSuccess(finalResult);
-      }
-
-      return finalResult;
+      // ⚠️ 2026-02-06 改进：不自动提交，返回识别结果让用户确认
+      // 用户可以切换工序，点击"领取记录"后才提交
+      return {
+        success: true,
+        needConfirmProcess: true, // 新增标记：需要用户确认工序
+        message: '已识别工序，请确认后领取',
+        data: {
+          scanMode,
+          orderNo: parsedData.orderNo,
+          bundleNo: parsedData.bundleNo,
+          quantity: stageResult.quantity || parsedData.quantity,
+          processName: stageResult.processName,
+          progressStage: stageResult.progressStage,
+          scanType: stageResult.scanType,
+          qualityStage: stageResult.qualityStage,
+          // 保存完整数据用于后续提交
+          scanData: scanData,
+          orderDetail: orderDetail,
+          stageResult: stageResult,
+          parsedData: parsedData,
+        },
+      };
     } catch (e) {
       // 入库工序特殊处理：重新抛出让页面捕获
       if (e.needWarehousing) {

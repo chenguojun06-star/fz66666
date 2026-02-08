@@ -1,4 +1,4 @@
-import { request } from './request';
+import { request, uploadFile } from './request';
 
 function pickMessage(resp, fallback) {
   const msg = resp && resp.message !== null ? String(resp.message) : '';
@@ -257,6 +257,23 @@ const wechat = {
   },
 };
 
+const common = {
+  /**
+   * 上传图片文件
+   * @param {string} filePath - 文件临时路径
+   * @param {Object} formData - 额外的表单数据（可选）
+   * @returns {Promise<string>} - 上传成功后的图片URL
+   */
+  uploadImage(filePath, formData = {}) {
+    return uploadFile({
+      filePath,
+      name: 'file',
+      formData,
+      url: '/api/common/upload/image',
+    });
+  },
+};
+
 const api = {
   dashboard,
   production,
@@ -266,8 +283,9 @@ const api = {
   style,
   orderManagement,
   wechat,
+  common,
 };
 
-export { dashboard, production, system, stock, material, style, orderManagement, wechat };
+export { dashboard, production, system, stock, material, style, orderManagement, wechat, common };
 
 export default api;

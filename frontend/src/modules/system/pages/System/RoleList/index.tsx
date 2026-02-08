@@ -2,7 +2,6 @@ import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { Alert, App, Button, Card, Checkbox, Form, Input, Select, Space, Tag } from 'antd';
 import type { ButtonProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { DeleteOutlined, EditOutlined, SafetyOutlined, FileSearchOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
@@ -511,7 +510,6 @@ const RoleList: React.FC = () => {
               key: 'edit',
               label: '编辑',
               title: '编辑',
-              icon: <EditOutlined />,
               onClick: () => openDialog(role),
               primary: true,
             },
@@ -519,7 +517,6 @@ const RoleList: React.FC = () => {
               key: 'perm',
               label: '权限授权',
               title: '权限授权',
-              icon: <SafetyOutlined />,
               onClick: () => openPermDialog(role),
               primary: true,
             },
@@ -527,14 +524,12 @@ const RoleList: React.FC = () => {
               key: 'log',
               label: '日志',
               title: '日志',
-              icon: <FileSearchOutlined />,
               onClick: () => openLogModal('role', String(role.id || ''), `角色 ${role.roleName} 操作日志`),
             },
             {
               key: 'delete',
               label: '删除',
               title: '删除',
-              icon: <DeleteOutlined />,
               danger: true,
               onClick: () => handleDelete(role.id),
             },

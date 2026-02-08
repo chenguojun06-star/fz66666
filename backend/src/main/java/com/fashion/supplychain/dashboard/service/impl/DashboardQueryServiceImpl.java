@@ -68,8 +68,10 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
 
     @Override
     public long countProductionOrders() {
+        // 统计生产中订单：排除已关闭、已完成、已取消、已归档的订单
         return productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
+                .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived")
                 .count();
     }
 
@@ -223,12 +225,11 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
 
     @Override
     public long countOverdueOrders() {
-        // 计算延期订单：计划结束日期已过但状态不是已完成的订单
+        // 计算延期订单：计划结束日期已过且处于生产中的订单（排除已关闭/已完成/已取消/已归档）
         LocalDateTime now = LocalDateTime.now();
         return productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
-                .ne(ProductionOrder::getStatus, "completed")
-                .ne(ProductionOrder::getStatus, "cancelled")
+                .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived")
                 .isNotNull(ProductionOrder::getPlannedEndDate)
                 .lt(ProductionOrder::getPlannedEndDate, now)
                 .count();
@@ -244,13 +245,12 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
 
     @Override
     public List<ProductionOrder> listOverdueOrders(int limit) {
-        // 获取延期订单列表
+        // 获取延期订单列表（仅包含生产中订单）
         int lim = Math.max(1, limit);
         LocalDateTime now = LocalDateTime.now();
         return productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
-                .ne(ProductionOrder::getStatus, "completed")
-                .ne(ProductionOrder::getStatus, "cancelled")
+                .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived")
                 .isNotNull(ProductionOrder::getPlannedEndDate)
                 .lt(ProductionOrder::getPlannedEndDate, now)
                 .orderBy(true, true, ProductionOrder::getPlannedEndDate)
@@ -329,9 +329,10 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
 
     @Override
     public long countProductionOrdersBetween(LocalDateTime start, LocalDateTime end) {
-        // 统计大货下单数量：在时间范围内创建的生产订单
+        // 统计大货下单数量：在时间范围内创建的生产订单（排除已关闭/完成订单）
         return productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
+                .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived")
                 .ge(start != null, ProductionOrder::getCreateTime, start)
                 .le(end != null, ProductionOrder::getCreateTime, end)
                 .count();
@@ -339,9 +340,10 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
 
     @Override
     public long sumOrderQuantityBetween(LocalDateTime start, LocalDateTime end) {
-        // 统计订单数量总和：时间范围内所有订单的orderQuantity之和
+        // 统计订单数量总和：时间范围内所有生产中订单的orderQuantity之和
         List<ProductionOrder> orders = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
+                .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived")
                 .ge(start != null, ProductionOrder::getCreateTime, start)
                 .le(end != null, ProductionOrder::getCreateTime, end)
                 .select(ProductionOrder::getOrderQuantity)
@@ -551,13 +553,12 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
 
     @Override
     public List<ProductionOrder> listAllOverdueOrders() {
-        // 获取所有延期订单：交货日期 < 今天 且 未完成
+        // 获取所有延期订单：交货日期 < 今天 且 生产中（排除已关闭/已完成/已取消/已归档）
         LocalDateTime now = LocalDateTime.now();
         return productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .lt(ProductionOrder::getPlannedEndDate, now)
-                .ne(ProductionOrder::getStatus, "completed")
-                .ne(ProductionOrder::getStatus, "cancelled")
+                .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived")
                 .orderByAsc(ProductionOrder::getPlannedEndDate)
                 .list();
     }

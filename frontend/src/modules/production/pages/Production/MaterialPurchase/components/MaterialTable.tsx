@@ -1,6 +1,6 @@
 import React from 'react';
 import { Tag } from 'antd';
-import { EyeOutlined, EditOutlined } from '@ant-design/icons';
+import { EyeOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useNavigate } from 'react-router-dom';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -155,6 +155,13 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       dataIndex: 'materialCode',
       key: 'materialCode',
       width: 120,
+      ellipsis: true,
+    },
+    {
+      title: '颜色',
+      dataIndex: 'color',
+      key: 'color',
+      width: 90,
       ellipsis: true,
     },
     {
@@ -320,14 +327,12 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
               {
                 key: 'view',
                 label: '查看',
-                icon: <EyeOutlined />,
                 onClick: () => onView(record),
                 primary: true,
               },
               {
                 key: 'quickEdit',
                 label: '编辑',
-                icon: <EditOutlined />,
                 disabled: frozen,
                 onClick: () => onEdit(record),
               },

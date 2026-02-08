@@ -4,7 +4,7 @@ import { compareSizeAsc } from '@/utils/api';
 import type { CuttingBundle, ScanRecord } from '@/types/production';
 import { getRecordStageName } from '../utils';
 
-type BundleMeta = { operatorId: string; operatorIds: string[]; receiveTime?: string; completeTime?: string };
+type BundleMeta = { operatorId: string; operatorIds: string[]; operatorName: string; operatorNames: string[]; receiveTime?: string; completeTime?: string };
 
 type UseScanBundlesParams = {
   scanOpen: boolean;
@@ -118,14 +118,21 @@ export const useScanBundles = ({
       });
 
       const operatorIds: string[] = [];
-      const seen = new Set<string>();
+      const operatorNames: string[] = [];
+      const seenIds = new Set<string>();
+      const seenNames = new Set<string>();
       for (const r of sorted) {
         const record = r as unknown as Record<string, unknown>;
         const id = String(record?.operatorId || '').trim();
-        if (!id) continue;
-        if (seen.has(id)) continue;
-        seen.add(id);
-        operatorIds.push(id);
+        const name = String(record?.operatorName || '').trim();
+        if (id && !seenIds.has(id)) {
+          seenIds.add(id);
+          operatorIds.push(id);
+        }
+        if (name && !seenNames.has(name)) {
+          seenNames.add(name);
+          operatorNames.push(name);
+        }
       }
 
       const firstRecord = sorted[0] as unknown as Record<string, unknown>;
@@ -147,9 +154,12 @@ export const useScanBundles = ({
 
       const lastRecord = sorted[sorted.length - 1] as unknown as Record<string, unknown>;
       const lastOperatorId = String(lastRecord?.operatorId || '').trim();
+      const lastOperatorName = String(lastRecord?.operatorName || '').trim();
       meta[qr] = {
         operatorId: lastOperatorId || '-',
         operatorIds,
+        operatorName: lastOperatorName || '-',
+        operatorNames,
         receiveTime,
         completeTime,
       };

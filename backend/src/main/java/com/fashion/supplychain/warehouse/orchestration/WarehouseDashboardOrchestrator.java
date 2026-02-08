@@ -4,9 +4,13 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.production.entity.MaterialDatabase;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
+import com.fashion.supplychain.production.entity.MaterialStock;
 import com.fashion.supplychain.production.mapper.MaterialDatabaseMapper;
 import com.fashion.supplychain.production.mapper.MaterialPurchaseMapper;
 import com.fashion.supplychain.production.mapper.ProductWarehousingMapper;
+import com.fashion.supplychain.production.mapper.MaterialStockMapper;
+import com.fashion.supplychain.production.mapper.ProductOutstockMapper;
+import com.fashion.supplychain.production.entity.ProductOutstock;
 import com.fashion.supplychain.warehouse.dto.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +39,12 @@ public class WarehouseDashboardOrchestrator {
     @Autowired
     private ProductWarehousingMapper productWarehousingMapper;
 
+    @Autowired
+    private MaterialStockMapper materialStockMapper;
+
+    @Autowired
+    private ProductOutstockMapper productOutstockMapper;
+
     /**
      * 获取仓库统计数据
      */
@@ -49,11 +59,36 @@ public class WarehouseDashboardOrchestrator {
         Integer finishedCount = productWarehousingMapper.selectTotalQuantity();
         stats.setFinishedCount(finishedCount != null ? finishedCount : 0);
 
-        // 3. 低库存预警数（暂时模拟，待实现库存表）
-        stats.setLowStockCount(8);
+        // 3. 低库存预警数（从面辅料库存表查询：库存量 < 安全库存）
+        try {
+            Long lowStockCount = materialStockMapper.selectCount(
+                new QueryWrapper<MaterialStock>()
+                    .apply("(delete_flag IS NULL OR delete_flag = 0)")
+                    .apply("quantity < COALESCE(safety_stock, 100)")
+            );
+            stats.setLowStockCount(lowStockCount != null ? lowStockCount.intValue() : 0);
+        } catch (Exception e) {
+            log.warn("查询低库存预警数失败: {}", e.getMessage());
+            stats.setLowStockCount(0);
+        }
 
-        // 4. 库存总值（模拟）
-        stats.setTotalValue(new BigDecimal("1289500.00"));
+        // 4. 库存总值（从面辅料库存表汇总）
+        try {
+            List<Map<String, Object>> totalValueRows = materialStockMapper.selectMaps(
+                new QueryWrapper<MaterialStock>()
+                    .select("COALESCE(SUM(total_value), 0) as sumValue")
+                    .apply("(delete_flag IS NULL OR delete_flag = 0)")
+            );
+            if (totalValueRows != null && !totalValueRows.isEmpty()) {
+                Object sv = totalValueRows.get(0).get("sumValue");
+                stats.setTotalValue(sv != null ? new BigDecimal(sv.toString()) : BigDecimal.ZERO);
+            } else {
+                stats.setTotalValue(BigDecimal.ZERO);
+            }
+        } catch (Exception e) {
+            log.warn("查询库存总值失败: {}", e.getMessage());
+            stats.setTotalValue(BigDecimal.ZERO);
+        }
 
         // 5. 今日入库次数（物料采购到货 + 质检入库）
         LocalDate today = LocalDate.now();
@@ -62,35 +97,51 @@ public class WarehouseDashboardOrchestrator {
         stats.setTodayInbound((materialInbound != null ? materialInbound : 0) +
                              (productInbound != null ? productInbound : 0));
 
-        // 6. 今日出库次数（暂时返回0，待完善出库记录表）
-        stats.setTodayOutbound(0);
+        // 6. 今日出库次数（从出库记录表查询）
+        try {
+            Long outstockCount = productOutstockMapper.selectCount(
+                new QueryWrapper<ProductOutstock>()
+                    .apply("DATE(create_time) = {0}", today)
+                    .apply("(delete_flag IS NULL OR delete_flag = 0)")
+            );
+            stats.setTodayOutbound(outstockCount != null ? outstockCount.intValue() : 0);
+        } catch (Exception e) {
+            log.warn("查询今日出库次数失败: {}", e.getMessage());
+            stats.setTodayOutbound(0);
+        }
 
         return stats;
     }
 
     /**
-     * 获取低库存预警列表（模拟数据，待实现库存表）
+     * 获取低库存预警列表（从面辅料库存表查询真实数据）
      */
     public List<LowStockItemDTO> getLowStockItems() {
         List<LowStockItemDTO> result = new ArrayList<>();
 
-        // 模拟数据
-        String[] codes = {"F001", "F003", "A002", "A005"};
-        String[] names = {"纯棉面料", "涤纶面料", "拉链5#", "纽扣12mm"};
-        int[] availables = {800, 450, 180, 3500};
-        int[] safeties = {1000, 800, 500, 5000};
-        String[] units = {"米", "米", "条", "颗"};
-
-        for (int i = 0; i < codes.length; i++) {
-            LowStockItemDTO dto = new LowStockItemDTO();
-            dto.setId(String.valueOf(i + 1));
-            dto.setMaterialCode(codes[i]);
-            dto.setMaterialName(names[i]);
-            dto.setAvailableQty(availables[i]);
-            dto.setSafetyStock(safeties[i]);
-            dto.setUnit(units[i]);
-            dto.setShortage(safeties[i] - availables[i]);
-            result.add(dto);
+        try {
+            List<MaterialStock> lowStocks = materialStockMapper.selectList(
+                new QueryWrapper<MaterialStock>()
+                    .apply("(delete_flag IS NULL OR delete_flag = 0)")
+                    .apply("quantity < COALESCE(safety_stock, 100)")
+                    .orderByAsc("quantity")
+                    .last("LIMIT 20")
+            );
+            if (lowStocks != null) {
+                for (MaterialStock stock : lowStocks) {
+                    LowStockItemDTO dto = new LowStockItemDTO();
+                    dto.setId(stock.getId());
+                    dto.setMaterialCode(stock.getMaterialCode());
+                    dto.setMaterialName(stock.getMaterialName());
+                    dto.setAvailableQty(stock.getQuantity() != null ? stock.getQuantity() : 0);
+                    dto.setSafetyStock(stock.getSafetyStock() != null ? stock.getSafetyStock() : 100);
+                    dto.setUnit(stock.getUnit());
+                    dto.setShortage(dto.getSafetyStock() - dto.getAvailableQty());
+                    result.add(dto);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("查询低库存预警列表失败: {}", e.getMessage());
         }
 
         return result;
@@ -167,13 +218,26 @@ public class WarehouseDashboardOrchestrator {
         List<TrendDataPointDTO> data = new ArrayList<>();
         LocalDate today = LocalDate.now();
 
-        // 从数据库查询今日每小时的出入库数据
-        List<Map<String, Object>> inboundList = productWarehousingMapper.selectTodayInboundByHour(today);
         Map<Integer, Integer> inboundByHour = new HashMap<>();
-        for (Map<String, Object> row : inboundList) {
-            Integer hour = ((Number) row.get("hour")).intValue();
-            Integer count = ((Number) row.get("count")).intValue();
-            inboundByHour.put(hour, count);
+
+        // 根据类型查询不同的数据源
+        if ("finished".equals(type)) {
+            // 成品入库
+            List<Map<String, Object>> inboundList = productWarehousingMapper.selectTodayInboundByHour(today);
+            for (Map<String, Object> row : inboundList) {
+                Integer hour = ((Number) row.get("hour")).intValue();
+                Integer count = ((Number) row.get("count")).intValue();
+                inboundByHour.put(hour, count);
+            }
+        } else {
+            // 物料入库（面料或辅料）- 注意：数据库中material_type存的是中文
+            String materialType = "fabric".equals(type) ? "面料" : "辅料";
+            List<Map<String, Object>> inboundList = materialPurchaseMapper.selectTodayInboundByHourAndType(today, materialType);
+            for (Map<String, Object> row : inboundList) {
+                Integer hour = ((Number) row.get("hour")).intValue();
+                Integer count = ((Number) row.get("count")).intValue();
+                inboundByHour.put(hour, count);
+            }
         }
 
         Map<Integer, Integer> outboundByHour = new HashMap<>(); // TODO: 待实现出库表
@@ -204,15 +268,28 @@ public class WarehouseDashboardOrchestrator {
         List<TrendDataPointDTO> data = new ArrayList<>();
         String[] weekDays = {"周一", "周二", "周三", "周四", "周五", "周六", "周日"};
         LocalDate today = LocalDate.now();
+        LocalDate startDate = today.minusDays(6);
 
-        // 查询最近7天的数据
-        List<Map<String, Object>> inboundList = productWarehousingMapper.selectLast7DaysInbound(today);
         Map<LocalDate, Integer> inboundByDate = new HashMap<>();
-        for (Map<String, Object> row : inboundList) {
-            LocalDate date = LocalDate.parse(row.get("date").toString());
-            Integer count = ((Number) row.get("count")).intValue();
-            inboundByDate.put(date, count);
+
+        // 根据类型查询不同的数据源
+        if ("finished".equals(type)) {
+            List<Map<String, Object>> inboundList = productWarehousingMapper.selectLast7DaysInbound(today);
+            for (Map<String, Object> row : inboundList) {
+                LocalDate date = LocalDate.parse(row.get("date").toString());
+                Integer count = ((Number) row.get("count")).intValue();
+                inboundByDate.put(date, count);
+            }
+        } else {
+            String materialType = "fabric".equals(type) ? "面料" : "辅料";
+            List<Map<String, Object>> inboundList = materialPurchaseMapper.selectLast7DaysInboundByType(startDate, today, materialType);
+            for (Map<String, Object> row : inboundList) {
+                LocalDate date = LocalDate.parse(row.get("date").toString());
+                Integer count = ((Number) row.get("count")).intValue();
+                inboundByDate.put(date, count);
+            }
         }
+
         Map<LocalDate, Integer> outboundByDate = new HashMap<>(); // TODO: 待实现
 
         for (int i = 6; i >= 0; i--) {
@@ -243,15 +320,28 @@ public class WarehouseDashboardOrchestrator {
     private List<TrendDataPointDTO> generateMonthTrend(String type) {
         List<TrendDataPointDTO> data = new ArrayList<>();
         LocalDate today = LocalDate.now();
+        LocalDate startDate = today.minusDays(29);
 
-        // 查询最近30天的数据
-        List<Map<String, Object>> inboundList = productWarehousingMapper.selectLast30DaysInbound(today);
         Map<Integer, Integer> inboundByDay = new HashMap<>();
-        for (Map<String, Object> row : inboundList) {
-            Integer day = ((Number) row.get("day")).intValue();
-            Integer count = ((Number) row.get("count")).intValue();
-            inboundByDay.put(day, count);
+
+        // 根据类型查询不同的数据源
+        if ("finished".equals(type)) {
+            List<Map<String, Object>> inboundList = productWarehousingMapper.selectLast30DaysInbound(today);
+            for (Map<String, Object> row : inboundList) {
+                Integer day = ((Number) row.get("day")).intValue();
+                Integer count = ((Number) row.get("count")).intValue();
+                inboundByDay.put(day, count);
+            }
+        } else {
+            String materialType = "fabric".equals(type) ? "面料" : "辅料";
+            List<Map<String, Object>> inboundList = materialPurchaseMapper.selectLast30DaysInboundByType(startDate, today, materialType);
+            for (Map<String, Object> row : inboundList) {
+                Integer day = ((Number) row.get("day")).intValue();
+                Integer count = ((Number) row.get("count")).intValue();
+                inboundByDay.put(day, count);
+            }
         }
+
         Map<Integer, Integer> outboundByDay = new HashMap<>(); // TODO: 待实现
 
         for (int day = 1; day <= 30; day++) {
@@ -280,14 +370,26 @@ public class WarehouseDashboardOrchestrator {
         List<TrendDataPointDTO> data = new ArrayList<>();
         int currentYear = LocalDate.now().getYear();
 
-        // 查询今年12个月的数据
-        List<Map<String, Object>> inboundList = productWarehousingMapper.selectYearInboundByMonth(currentYear);
         Map<Integer, Integer> inboundByMonth = new HashMap<>();
-        for (Map<String, Object> row : inboundList) {
-            Integer month = ((Number) row.get("month")).intValue();
-            Integer count = ((Number) row.get("count")).intValue();
-            inboundByMonth.put(month, count);
+
+        // 根据类型查询不同的数据源
+        if ("finished".equals(type)) {
+            List<Map<String, Object>> inboundList = productWarehousingMapper.selectYearInboundByMonth(currentYear);
+            for (Map<String, Object> row : inboundList) {
+                Integer month = ((Number) row.get("month")).intValue();
+                Integer count = ((Number) row.get("count")).intValue();
+                inboundByMonth.put(month, count);
+            }
+        } else {
+            String materialType = "fabric".equals(type) ? "面料" : "辅料";
+            List<Map<String, Object>> inboundList = materialPurchaseMapper.selectYearInboundByMonthAndType(currentYear, materialType);
+            for (Map<String, Object> row : inboundList) {
+                Integer month = ((Number) row.get("month")).intValue();
+                Integer count = ((Number) row.get("count")).intValue();
+                inboundByMonth.put(month, count);
+            }
         }
+
         Map<Integer, Integer> outboundByMonth = new HashMap<>(); // TODO: 待实现
 
         for (int month = 1; month <= 12; month++) {
@@ -310,22 +412,22 @@ public class WarehouseDashboardOrchestrator {
     }
 
     /**
-     * 格式化时间为 HH:mm
+     * 格式化时间为 MM-dd HH:mm
      */
     private String formatTime(LocalDateTime dateTime) {
         if (dateTime == null) {
-            return LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm"));
+            return LocalDateTime.now().format(DateTimeFormatter.ofPattern("MM-dd HH:mm"));
         }
-        return dateTime.format(DateTimeFormatter.ofPattern("HH:mm"));
+        return dateTime.format(DateTimeFormatter.ofPattern("MM-dd HH:mm"));
     }
 
     /**
-     * 格式化日期为 HH:mm
+     * 格式化日期为 MM-dd HH:mm
      */
     private String formatTime(LocalDate date) {
         if (date == null) {
-            return "00:00";
+            return LocalDate.now().format(DateTimeFormatter.ofPattern("MM-dd")) + " 00:00";
         }
-        return "10:00"; // 默认时间
+        return date.format(DateTimeFormatter.ofPattern("MM-dd")) + " 10:00"; // 默认时间
     }
 }

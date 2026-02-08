@@ -49,7 +49,8 @@
   >
     <block wx:if="{{list.length > 0}}">
       <view class="list-item" wx:for="{{list}}" wx:key="id">
-        <image class="item-img" src="{{item.imageUrl || '/assets/images/default-style.png'}}" mode="aspectFill" />
+        <image wx:if="{{item.imageUrl}}" class="item-img" src="{{item.imageUrl}}" mode="aspectFill" />
+        <view wx:else class="item-img-placeholder">暂无图片</view>
         <view class="item-content">
           <view class="item-header">
             <text class="item-title">{{item.styleNo}}</text>

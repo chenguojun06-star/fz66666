@@ -1291,37 +1291,95 @@ body {
 }
 
 @media print {
-  @page {
-    size: A4;
-    margin: 8mm;
-  }
-
   body {
-    background: var(--body-bg, #fff);
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
-  body * {
-    visibility: hidden;
+  /* 隐藏body下的其他子元素（#root等），但保留打印区域 */
+  body > *:not(.cutting-qr-print-area) {
+    display: none !important;
   }
 
-  .cutting-qr-print-area,
-  .cutting-qr-print-area * {
-    visibility: visible;
-  }
-
+  /* 显示打印区域 */
   .cutting-qr-print-area {
-    display: flex;
-    justify-content: center;
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    display: block !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
-  .cutting-qr-print-grid {
-    margin: 0 auto;
+  /* 确保打印容器正常流动布局，支持分页 */
+  .cutting-qr-print-single {
+    display: block !important;
+  }
+
+  /* 菲号打印：固定尺寸标签，一页一张，居中显示 */
+  .cutting-qr-print-page {
+    width: 100%;
+    display: flex !important;
+    justify-content: center;
+    align-items: center;
+    padding: 20mm 0 !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 最后一页不需要分页 */
+  .cutting-qr-print-page:last-child {
+    page-break-after: auto !important;
+    break-after: auto !important;
+  }
+
+  .cutting-qr-print-single .cutting-qr-label {
+    /* 根据CSS变量设置固定的物理尺寸 */
+    width: calc(var(--cutting-label-w, 70) * 1mm) !important;
+    height: calc(var(--cutting-label-h, 40) * 1mm) !important;
+    padding: 3mm !important;
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 3mm !important;
+    border: 2px solid #000 !important;
+    box-sizing: border-box !important;
+    background: white !important;
+  }
+
+  .cutting-qr-print-single .cutting-qr-label-qr {
+    flex: 0 0 auto !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .cutting-qr-print-single .cutting-qr-label-qr canvas {
+    display: block !important;
+    visibility: visible !important;
+  }
+
+  .cutting-qr-print-single .cutting-qr-label-text {
+    flex: 1 1 auto !important;
+    font-size: 9pt !important;
+    line-height: 1.4 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-evenly !important;
+    font-weight: 600 !important;
+    color: #000 !important;
+  }
+
+  .cutting-qr-print-single .cutting-qr-label-text > div {
+    margin: 0 !important;
+    padding: 0 !important;
+    word-break: break-all !important;
+    overflow-wrap: anywhere !important;
+    color: #000 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }
 

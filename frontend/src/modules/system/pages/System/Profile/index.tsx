@@ -210,7 +210,7 @@ const Profile: React.FC = () => {
                                 {(initialName || 'U').slice(0, 1).toUpperCase()}
                             </Avatar>
                             <Upload showUploadList={false} beforeUpload={uploadAvatar}>
-                                <Button icon={<UploadOutlined />} loading={avatarUploading} disabled={avatarUploading}>
+                                <Button loading={avatarUploading} disabled={avatarUploading}>
                                     上传头像
                                 </Button>
                             </Upload>

@@ -18,10 +18,8 @@ import {
 } from 'antd';
 import {
   BookOutlined,
-  PlayCircleOutlined,
   QuestionCircleOutlined,
   RocketOutlined,
-  CheckCircleOutlined,
   FileTextOutlined,
   VideoCameraOutlined,
   BulbOutlined,
@@ -1136,7 +1134,7 @@ const SystemTutorial: React.FC = () => {
                     <FileTextOutlined />
                     <span>{tutorial.title}</span>
                     {getDifficultyTag(tutorial.difficulty)}
-                    <Tag icon={<PlayCircleOutlined />}>{tutorial.duration}</Tag>
+                    <Tag>{tutorial.duration}</Tag>
                   </Space>
                 }
                 extra={
@@ -1181,7 +1179,6 @@ const SystemTutorial: React.FC = () => {
                                     }
                                     type="success"
                                     showIcon
-                                    icon={<BulbOutlined />}
                                     style={{ marginTop: 12 }}
                                   />
                                 )}
@@ -1233,7 +1230,6 @@ const SystemTutorial: React.FC = () => {
                           }
                           type="warning"
                           showIcon
-                          icon={<PlayCircleOutlined />}
                         />
                       ),
                     }] : []),
@@ -1261,10 +1257,10 @@ const SystemTutorial: React.FC = () => {
             发现问题或有改进建议？点击「意见反馈」告诉我们
           </Paragraph>
           <Space>
-            <Button type="primary" icon={<FileTextOutlined />}>
+            <Button type="primary">
               下载用户手册
             </Button>
-            <Button icon={<CheckCircleOutlined />}>意见反馈</Button>
+            <Button>意见反馈</Button>
           </Space>
         </Space>
       </Card>

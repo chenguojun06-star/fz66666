@@ -28,21 +28,18 @@ interface StatCardProps {
   label: string;
   dataKey: keyof TopStatsData;
   color: string;
-  bgGradient: string;
   data: TimeRangeStats | null;
   loading: boolean;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ icon, label, dataKey, color, bgGradient, data, loading }) => {
+const StatCard: React.FC<StatCardProps> = ({ icon, label, dataKey, color, data, loading }) => {
   return (
     <div className="top-stat-item" style={{ borderColor: color }}>
       <Spin spinning={loading}>
         <div className="stat-card-content">
           {/* 头部：图标和标签 */}
           <div className="stat-header">
-            <div className="stat-icon-circle" style={{ borderColor: color }}>
-              <span className="stat-icon" style={{ color }}>{icon}</span>
-            </div>
+            <span className="stat-icon" style={{ color }}>{icon}</span>
             <div className="stat-label" style={{ color }}>{label}</div>
           </div>
 
@@ -115,28 +112,24 @@ const TopStats: React.FC = () => {
       icon: <TagsOutlined />,
       label: '样衣开发',
       color: '#8b5cf6', // 紫色
-      bgGradient: '#8b5cf6',
     },
     {
       key: 'bulkOrder' as keyof TopStatsData,
       icon: <ShoppingCartOutlined />,
       label: '大货下单',
       color: '#3b82f6', // 蓝色
-      bgGradient: '#3b82f6',
     },
     {
       key: 'cutting' as keyof TopStatsData,
       icon: <ScissorOutlined />,
       label: '裁剪数量',
       color: '#f59e0b', // 橙色
-      bgGradient: '#f59e0b',
     },
     {
       key: 'warehousing' as keyof TopStatsData,
       icon: <InboxOutlined />,
       label: '出入库数量',
       color: '#10b981', // 绿色
-      bgGradient: '#10b981',
     },
   ];
 
@@ -150,7 +143,6 @@ const TopStats: React.FC = () => {
             icon={config.icon}
             label={config.label}
             color={config.color}
-            bgGradient={config.bgGradient}
             data={statsData?.[config.key] || null}
             loading={loading}
           />

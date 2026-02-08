@@ -40,7 +40,7 @@ export const useAutoCollectDict = (options: AutoCollectOptions) => {
 
     try {
       // 调用后端 API 检查
-      const response = await api.get('/api/system/dict/list', {
+      const response = await api.get('/system/dict/list', {
         params: {
           dictType,
           dictLabel: trimmedWord,
@@ -84,7 +84,7 @@ export const useAutoCollectDict = (options: AutoCollectOptions) => {
       const maxSortOrder = await getMaxSortOrder(dictType);
 
       // 调用后端 API 添加新词汇
-      await api.post('/api/system/dict', {
+      await api.post('/system/dict', {
         dictType,
         dictCode,
         dictLabel: trimmedWord,
@@ -170,7 +170,7 @@ function generateDictCode(label: string, dictType: string): string {
  */
 async function getMaxSortOrder(dictType: string): Promise<number> {
   try {
-    const response = await api.get('/api/system/dict/list', {
+    const response = await api.get('/system/dict/list', {
       params: {
         dictType,
         pageSize: 1,

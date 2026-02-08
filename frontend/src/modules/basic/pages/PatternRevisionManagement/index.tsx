@@ -431,7 +431,6 @@ const PatternRevisionManagement: React.FC = () => {
         // 查看
         actions.push({
           label: '查看',
-          icon: <EyeOutlined />,
           onClick: () => handleView(record),
         });
 
@@ -439,7 +438,6 @@ const PatternRevisionManagement: React.FC = () => {
         if (record.status === 'DRAFT') {
           actions.push({
             label: '编辑',
-            icon: <EditOutlined />,
             onClick: () => handleEdit(record),
           });
         }
@@ -448,7 +446,6 @@ const PatternRevisionManagement: React.FC = () => {
         if (record.status === 'DRAFT') {
           actions.push({
             label: '提交',
-            icon: <SendOutlined />,
             onClick: () => handleSubmit(record),
           });
         }
@@ -457,12 +454,10 @@ const PatternRevisionManagement: React.FC = () => {
         if (record.status === 'SUBMITTED') {
           actions.push({
             label: '通过',
-            icon: <CheckOutlined />,
             onClick: () => handleApprove(record),
           });
           actions.push({
             label: '拒绝',
-            icon: <CloseOutlined />,
             onClick: () => handleReject(record),
             danger: true,
           });
@@ -472,7 +467,6 @@ const PatternRevisionManagement: React.FC = () => {
         if (record.status === 'APPROVED') {
           actions.push({
             label: '完成',
-            icon: <CheckOutlined />,
             onClick: () => handleComplete(record),
           });
         }
@@ -481,7 +475,6 @@ const PatternRevisionManagement: React.FC = () => {
         if (record.status === 'DRAFT') {
           actions.push({
             label: '删除',
-            icon: <DeleteOutlined />,
             onClick: () => handleDelete(record),
             danger: true,
           });
@@ -496,11 +489,11 @@ const PatternRevisionManagement: React.FC = () => {
     <Layout>
       {/* contextHolder 已注释，不再需要 */}
       <Card>
-        <Space direction="vertical" style={{ width: '100%' }} size="large">
+        <Space orientation="vertical" style={{ width: '100%' }} size="large">
           {/* 标题 */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h2 style={{ margin: 0 }}>纸样修改记录</h2>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+            <Button type="primary" onClick={handleCreate}>
               新增修改记录
             </Button>
           </div>

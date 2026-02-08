@@ -1,6 +1,5 @@
 package com.fashion.supplychain.production.orchestration;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderQueryService;
@@ -10,32 +9,17 @@ import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.style.entity.StyleInfo;
-import com.fashion.supplychain.style.entity.StyleSize;
-import com.fashion.supplychain.style.orchestration.StyleAttachmentOrchestrator;
 import com.fashion.supplychain.style.service.StyleInfoService;
-import com.fashion.supplychain.style.service.StyleSizeService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.math.BigDecimal;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.text.Collator;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Locale;
-import javax.imageio.ImageIO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,14 +32,11 @@ public class ProductionOrderOrchestrator {
     public static final String CLOSE_SOURCE_MY_ORDERS = "myOrders";
     public static final String CLOSE_SOURCE_PRODUCTION_PROGRESS = "productionProgress";
 
-    // 尺码排序解析用正则预编译：避免在比较过程中重复编译，降低开销
+    // 尺码排序解析用正则预编译
     private static final java.util.regex.Pattern PATTERN_NUMERIC_SIZE = java.util.regex.Pattern
             .compile("^\\d+(\\.\\d+)?$");
-
     private static final java.util.regex.Pattern PATTERN_NUM_XL = java.util.regex.Pattern.compile("^(\\d+)XL$");
-
     private static final java.util.regex.Pattern PATTERN_XS = java.util.regex.Pattern.compile("^(X{0,4})S$");
-
     private static final java.util.regex.Pattern PATTERN_XL = java.util.regex.Pattern.compile("^(X{1,4})L$");
 
     @Autowired
@@ -92,13 +73,10 @@ public class ProductionOrderOrchestrator {
     private StyleInfoService styleInfoService;
 
     @Autowired
-    private StyleSizeService styleSizeService;
+    private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
 
     @Autowired
-    private StyleAttachmentOrchestrator styleAttachmentOrchestrator;
-
-    @Value("${fashion.upload-path}")
-    private String uploadPath;
+    private ProductionOrderOrchestratorHelper helper;
 
     public IPage<ProductionOrder> queryPage(Map<String, Object> params) {
         return productionOrderQueryService.queryPage(params);
@@ -107,7 +85,7 @@ public class ProductionOrderOrchestrator {
     /**
      * 获取全局订单统计数据（用于顶部统计卡片）
      * 返回符合筛选条件的订单统计，支持按工厂、关键词、状态筛选
-     * 
+     *
      * @param params 查询参数（keyword, status, factoryName等）
      * @return 统计数据DTO
      */
@@ -137,7 +115,7 @@ public class ProductionOrderOrchestrator {
         // 仅处理SKU生成逻辑
         if (StringUtils.hasText(order.getOrderDetails())) {
             try {
-                List<Map<String, Object>> items = resolveOrderLines(order.getOrderDetails());
+                List<Map<String, Object>> items = helper.resolveOrderLines(order.getOrderDetails());
                 if (items != null && !items.isEmpty()) {
                     String styleNo = StringUtils.hasText(order.getStyleNo()) ? order.getStyleNo().trim() : "";
                     String orderNoFinal = StringUtils.hasText(order.getOrderNo()) ? order.getOrderNo().trim() : "";
@@ -150,14 +128,14 @@ public class ProductionOrderOrchestrator {
                         if (!StringUtils.hasText(color) || !StringUtils.hasText(size)) {
                             continue;
                         }
-                        String skuNo = buildSkuNo(orderNoFinal, styleNo, color, size);
+                        String skuNo = helper.buildSkuNo(orderNoFinal, styleNo, color, size);
                         item.put("skuNo", skuNo);
                         item.put("skuKey", skuNo);
                     }
                 }
                 order.setItems(items);
             } catch (Exception e) {
-                System.err.println("解析订单明细失败: " + e.getMessage());
+                log.warn("解析订单明细失败: {}", e.getMessage());
             }
         }
 
@@ -180,21 +158,25 @@ public class ProductionOrderOrchestrator {
             if (existed == null || existed.getDeleteFlag() == null || existed.getDeleteFlag() != 0) {
                 throw new NoSuchElementException("生产订单不存在");
             }
-            String st = safeText(existed.getStatus()).toLowerCase();
+            String st = helper.safeText(existed.getStatus()).toLowerCase();
             if ("completed".equals(st)) {
                 throw new IllegalStateException("订单已完成，无法编辑");
             }
-            String remark = productionOrder.getOperationRemark();
-            remarkForLog = StringUtils.hasText(remark) ? remark.trim() : "";
+            String operRemark = productionOrder.getOperationRemark();
+            remarkForLog = StringUtils.hasText(operRemark) ? operRemark.trim() : "";
             if (!StringUtils.hasText(remarkForLog)) {
                 throw new IllegalStateException("请填写操作备注");
             }
         }
-        validateUnitPriceSources(productionOrder);
+
+        // ✅ 验证人员字段（跟单员、纸样师）是否为系统中的真实用户
+        helper.validatePersonnelFields(productionOrder);
+
+        helper.validateUnitPriceSources(productionOrder);
 
         // 创建订单时检查纸样是否齐全（只警告，不阻止）
         if (isCreate && productionOrder != null && StringUtils.hasText(productionOrder.getStyleId())) {
-            checkPatternCompleteWarning(productionOrder.getStyleId());
+            helper.checkPatternCompleteWarning(productionOrder.getStyleId());
         }
 
         boolean ok = productionOrderService.saveOrUpdateOrder(productionOrder);
@@ -233,94 +215,6 @@ public class ProductionOrderOrchestrator {
         }
 
         return true;
-    }
-
-    private void validateUnitPriceSources(ProductionOrder productionOrder) {
-        if (productionOrder == null) {
-            throw new IllegalArgumentException("参数错误");
-        }
-        String details = safeText(productionOrder.getOrderDetails());
-        if (!StringUtils.hasText(details)) {
-            throw new IllegalStateException("订单明细缺少物料价格来源信息");
-        }
-        List<Map<String, Object>> lines = resolveOrderLines(details);
-        if (lines == null || lines.isEmpty()) {
-            throw new IllegalStateException("订单明细缺少物料价格来源信息");
-        }
-        for (Map<String, Object> r : lines) {
-            if (r == null || r.isEmpty()) {
-                continue;
-            }
-            String source = pickFirstText(r, "materialPriceSource", "material_price_source", "materialPrice来源", "物料价格来源");
-            String acquiredAt = pickFirstText(r, "materialPriceAcquiredAt", "material_price_acquired_at", "materialPriceTime", "物料价格获取时间");
-            String version = pickFirstText(r, "materialPriceVersion", "material_price_version", "materialPriceVer", "物料价格版本");
-            if (!StringUtils.hasText(source) || !"物料采购系统".equals(source.trim())) {
-                throw new IllegalStateException("物料价格来源必须为物料采购系统");
-            }
-            if (!StringUtils.hasText(acquiredAt)) {
-                throw new IllegalStateException("物料价格获取时间不能为空");
-            }
-            if (!StringUtils.hasText(version)) {
-                throw new IllegalStateException("物料价格版本不能为空");
-            }
-        }
-    }
-
-    private List<Map<String, Object>> resolveOrderLines(String details) {
-        if (!StringUtils.hasText(details)) {
-            return List.of();
-        }
-        try {
-            List<Map<String, Object>> list = objectMapper.readValue(details,
-                    new TypeReference<List<Map<String, Object>>>() {
-                    });
-            if (list != null) {
-                return list;
-            }
-        } catch (Exception ignore) {
-        }
-        try {
-            Map<String, Object> obj = objectMapper.readValue(details, new TypeReference<Map<String, Object>>() {
-            });
-            Object lines = obj == null ? null
-                    : (obj.get("lines") != null ? obj.get("lines")
-                            : (obj.get("items") != null ? obj.get("items")
-                                    : (obj.get("details") != null ? obj.get("details") : obj.get("list"))));
-            if (lines instanceof List) {
-                @SuppressWarnings("unchecked")
-                List<Map<String, Object>> cast = (List<Map<String, Object>>) lines;
-                return cast;
-            }
-        } catch (Exception ignore) {
-        }
-        return List.of();
-    }
-
-    private String buildSkuNo(String orderNo, String styleNo, String color, String size) {
-        String on = StringUtils.hasText(orderNo) ? orderNo.trim() : "";
-        String sn = StringUtils.hasText(styleNo) ? styleNo.trim() : "";
-        String c = StringUtils.hasText(color) ? color.trim() : "";
-        String s = StringUtils.hasText(size) ? size.trim() : "";
-        return String.format("%s:%s:%s:%s", on, sn, c, s);
-    }
-
-    private String pickFirstText(Map<String, Object> row, String... keys) {
-        if (row == null || keys == null) {
-            return "";
-        }
-        for (String k : keys) {
-            if (!StringUtils.hasText(k)) {
-                continue;
-            }
-            if (row.containsKey(k)) {
-                return safeText(row.get(k));
-            }
-        }
-        return "";
-    }
-
-    private String safeText(Object v) {
-        return v == null ? "" : String.valueOf(v);
     }
 
     // PDF自动生成功能已移除
@@ -378,7 +272,7 @@ public class ProductionOrderOrchestrator {
         if (existed == null || existed.getDeleteFlag() == null || existed.getDeleteFlag() != 0) {
             throw new NoSuchElementException("生产订单不存在");
         }
-        String st = safeText(existed.getStatus()).toLowerCase();
+        String st = helper.safeText(existed.getStatus()).toLowerCase();
         if ("completed".equals(st)) {
             throw new IllegalStateException("订单已完成，无法报废");
         }
@@ -433,18 +327,6 @@ public class ProductionOrderOrchestrator {
             throw new AccessDeniedException("仅允许在我的订单或生产进度完成");
         }
         return financeOrchestrationService.closeOrder(id);
-    }
-
-    private boolean isProcurementCompleted(ProductionOrder order) {
-        if (order == null) {
-            return false;
-        }
-        Integer manual = order.getProcurementManuallyCompleted();
-        boolean manualDone = manual != null && manual == 1;
-        boolean endTimeDone = order.getProcurementEndTime() != null;
-        Integer rate = order.getProcurementCompletionRate();
-        boolean rateDone = rate != null && rate >= 100;
-        return manualDone || endTimeDone || rateDone;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -502,7 +384,7 @@ public class ProductionOrderOrchestrator {
             throw new IllegalArgumentException("workflowJson不能为空");
         }
 
-        String normalized = normalizeProgressWorkflowJson(text);
+        String normalized = helper.normalizeProgressWorkflowJson(text);
         if (!StringUtils.hasText(normalized)) {
             throw new IllegalStateException("流程内容为空或不合法");
         }
@@ -528,6 +410,17 @@ public class ProductionOrderOrchestrator {
                 .update();
         if (!ok) {
             throw new IllegalStateException("保存失败");
+        }
+
+        // 同步工序单价到工序跟踪表（修复单价不同步问题）
+        try {
+            int synced = processTrackingOrchestrator.syncUnitPrices(oid);
+            if (synced > 0) {
+                log.info("锁定进度工作流时已同步{}条工序跟踪记录的单价", synced);
+            }
+        } catch (Exception e) {
+            // 同步失败不影响主流程，记录日志
+            log.warn("同步工序跟踪单价失败: {}", e.getMessage());
         }
 
         return getDetailById(oid);
@@ -573,96 +466,6 @@ public class ProductionOrderOrchestrator {
         }
 
         return getDetailById(oid);
-    }
-
-    private String normalizeProgressWorkflowJson(String raw) {
-        String text = StringUtils.hasText(raw) ? raw.trim() : null;
-        if (!StringUtils.hasText(text)) {
-            return null;
-        }
-
-        try {
-            com.fasterxml.jackson.databind.JsonNode root = objectMapper.readTree(text);
-            com.fasterxml.jackson.databind.JsonNode arr = root == null ? null : root.get("nodes");
-            if (arr == null || !arr.isArray()) {
-                return null;
-            }
-
-            List<Map<String, Object>> outNodes = new ArrayList<>();
-            LinkedHashSet<String> seen = new LinkedHashSet<>();
-            for (com.fasterxml.jackson.databind.JsonNode n : arr) {
-                if (n == null) {
-                    continue;
-                }
-                String name = n.hasNonNull("name") ? n.get("name").asText("") : "";
-                name = StringUtils.hasText(name) ? name.trim() : "";
-                if (!StringUtils.hasText(name)) {
-                    continue;
-                }
-                String id = n.hasNonNull("id") ? n.get("id").asText("") : "";
-                id = StringUtils.hasText(id) ? id.trim() : name;
-
-                String idLower = id.trim().toLowerCase();
-                if ("shipment".equals(idLower) || "出货".equals(name) || "发货".equals(name) || "发运".equals(name)) {
-                    continue;
-                }
-
-                if (!seen.add(name)) {
-                    continue;
-                }
-
-                java.math.BigDecimal unitPrice = java.math.BigDecimal.ZERO;
-                if (n.hasNonNull("unitPrice")) {
-                    com.fasterxml.jackson.databind.JsonNode v = n.get("unitPrice");
-                    if (v != null) {
-                        if (v.isNumber()) {
-                            unitPrice = v.decimalValue();
-                        } else {
-                            try {
-                                unitPrice = new java.math.BigDecimal(v.asText("0").trim());
-                            } catch (Exception ignore) {
-                                unitPrice = java.math.BigDecimal.ZERO;
-                            }
-                        }
-                    }
-                }
-                if (unitPrice == null || unitPrice.compareTo(java.math.BigDecimal.ZERO) < 0) {
-                    unitPrice = java.math.BigDecimal.ZERO;
-                }
-
-                outNodes.add(Map.of(
-                        "id", id,
-                        "name", name,
-                        "unitPrice", unitPrice));
-            }
-
-            if (outNodes.isEmpty()) {
-                return null;
-            }
-
-            return objectMapper.writeValueAsString(Map.of("nodes", outNodes));
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    /**
-     * 检查纸样是否齐全（只记录警告，不阻止流程）
-     */
-    private void checkPatternCompleteWarning(String styleId) {
-        if (!StringUtils.hasText(styleId)) {
-            return;
-        }
-        try {
-            boolean complete = styleAttachmentOrchestrator != null
-                    && styleAttachmentOrchestrator.checkPatternComplete(styleId) != null
-                    && Boolean.TRUE.equals(styleAttachmentOrchestrator.checkPatternComplete(styleId).get("complete"));
-            if (!complete) {
-                log.warn("Pattern files not complete for styleId={}, order creation continues with warning", styleId);
-            }
-        } catch (Exception e) {
-            log.warn("Failed to check pattern complete for styleId={}: {}", styleId, e.getMessage());
-        }
     }
 
     /**
@@ -779,7 +582,7 @@ public class ProductionOrderOrchestrator {
      * @param remark 备注
      * @return 创建的订单信息
      */
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> createOrderFromStyle(String styleId, String priceType, String remark) {
         // 1. 验证参数
         if (!StringUtils.hasText(styleId)) {
@@ -807,6 +610,16 @@ public class ProductionOrderOrchestrator {
         newOrder.setStyleNo(style.getStyleNo());
         newOrder.setStyleName(style.getStyleName());
         newOrder.setRemarks(StringUtils.hasText(remark) ? remark.trim() : null);
+
+        // 从样衣同步跟单员和纸样师信息
+        String merchandiserFromStyle = style.getOrderType(); // 跟单员存储在orderType字段
+        if (StringUtils.hasText(merchandiserFromStyle)) {
+            newOrder.setMerchandiser(merchandiserFromStyle.trim());
+        }
+        String patternMakerFromStyle = style.getSampleSupplier(); // 纸样师存储在sampleSupplier字段
+        if (StringUtils.hasText(patternMakerFromStyle)) {
+            newOrder.setPatternMaker(patternMakerFromStyle.trim());
+        }
 
         // 记录创建人信息
         String currentUserId = UserContext.userId();
@@ -874,50 +687,7 @@ public class ProductionOrderOrchestrator {
      * @return 采购状态信息：completed(是否完成)、completionRate(完成率)、operatorName(操作人)、completedTime(完成时间)
      */
     public Map<String, Object> getProcurementStatus(String orderId) {
-        Map<String, Object> status = new LinkedHashMap<>();
-
-        // 获取订单信息（包含物料到货率等）
-        ProductionOrder order = productionOrderQueryService.getDetailById(orderId);
-        if (order == null) {
-            throw new NoSuchElementException("订单不存在: " + orderId);
-        }
-
-        // 获取物料到货率和人工确认状态
-        Integer materialArrivalRate = order.getMaterialArrivalRate();
-        Integer manuallyCompleted = order.getProcurementManuallyCompleted();
-        boolean isManuallyConfirmed = (manuallyCompleted != null && manuallyCompleted == 1);
-
-        // 判断采购是否完成
-        boolean procurementComplete = false;
-        String operatorName = null;
-        LocalDateTime completedTime = null;
-
-        if (materialArrivalRate != null && materialArrivalRate >= 100) {
-            // 物料到货率=100%：自动认为采购完成
-            procurementComplete = true;
-            // 从采购单中获取最后一次收货的操作人和时间
-            operatorName = order.getProcurementOperatorName();
-            completedTime = order.getProcurementEndTime();
-        } else if (materialArrivalRate != null && materialArrivalRate >= 50 && isManuallyConfirmed) {
-            // 物料到货率≥50%且已人工确认：可以进入下一步
-            procurementComplete = true;
-            // 使用人工确认的操作人和时间
-            operatorName = order.getProcurementConfirmedByName();
-            completedTime = order.getProcurementConfirmedAt();
-        }
-
-        // 组装返回数据
-        status.put("completed", procurementComplete);
-        status.put("completionRate", materialArrivalRate != null ? materialArrivalRate : 0);
-        status.put("operatorName", operatorName);
-        status.put("completedTime", completedTime);
-        status.put("manuallyConfirmed", isManuallyConfirmed);
-        status.put("procurementStartTime", order.getProcurementStartTime());
-
-        log.info("Retrieved procurement status for order: orderId={}, completed={}, rate={}%, operator={}",
-                 orderId, procurementComplete, materialArrivalRate, operatorName);
-
-        return status;
+        return helper.getProcurementStatus(orderId);
     }
 
     /**
@@ -928,72 +698,7 @@ public class ProductionOrderOrchestrator {
      * @return 工序状态Map，key为工序阶段（cutting/sewing/finishing/quality/warehousing），value为状态详情
      */
     public Map<String, Map<String, Object>> getAllProcessStatus(String orderId) {
-        Map<String, Map<String, Object>> allStatus = new LinkedHashMap<>();
-
-        // 获取订单详细信息
-        ProductionOrder order = productionOrderQueryService.getDetailById(orderId);
-        if (order == null) {
-            throw new NoSuchElementException("订单不存在: " + orderId);
-        }
-
-        Integer orderQty = order.getOrderQuantity() != null ? order.getOrderQuantity() : 0;
-        Integer cuttingQty = order.getCuttingQuantity() != null ? order.getCuttingQuantity() : 0;
-        Integer warehousingQty = order.getWarehousingQualifiedQuantity() != null ? order.getWarehousingQualifiedQuantity() : 0;
-
-        // 1. 裁剪工序状态
-        Map<String, Object> cuttingStatus = new LinkedHashMap<>();
-        cuttingStatus.put("completed", order.getCuttingEndTime() != null);
-        cuttingStatus.put("completionRate", order.getCuttingCompletionRate() != null ? order.getCuttingCompletionRate() : 0);
-        cuttingStatus.put("completedQuantity", cuttingQty);
-        cuttingStatus.put("remainingQuantity", orderQty - cuttingQty);
-        cuttingStatus.put("operatorName", order.getCuttingOperatorName());
-        cuttingStatus.put("startTime", order.getCuttingStartTime());
-        cuttingStatus.put("completedTime", order.getCuttingEndTime());
-        cuttingStatus.put("bundleCount", order.getCuttingBundleCount());
-        allStatus.put("cutting", cuttingStatus);
-
-        // 2. 车缝工序状态
-        Map<String, Object> sewingStatus = new LinkedHashMap<>();
-        sewingStatus.put("completed", order.getSewingEndTime() != null);
-        sewingStatus.put("completionRate", order.getSewingCompletionRate() != null ? order.getSewingCompletionRate() : 0);
-        // 车缝的完成数量等于入库数量（因为是按入库数量计算的）
-        sewingStatus.put("completedQuantity", warehousingQty);
-        sewingStatus.put("remainingQuantity", cuttingQty - warehousingQty);
-        sewingStatus.put("operatorName", order.getSewingOperatorName());
-        sewingStatus.put("startTime", order.getSewingStartTime());
-        sewingStatus.put("completedTime", order.getSewingEndTime());
-        allStatus.put("sewing", sewingStatus);
-
-        // 3. 尾部工序状态（与车缝类似）
-        Map<String, Object> finishingStatus = new LinkedHashMap<>();
-        finishingStatus.put("completed", order.getQualityEndTime() != null);
-        finishingStatus.put("completionRate", order.getQualityCompletionRate() != null ? order.getQualityCompletionRate() : 0);
-        finishingStatus.put("completedQuantity", warehousingQty);
-        finishingStatus.put("remainingQuantity", cuttingQty - warehousingQty);
-        finishingStatus.put("operatorName", order.getQualityOperatorName());
-        finishingStatus.put("startTime", order.getQualityStartTime());
-        finishingStatus.put("completedTime", order.getQualityEndTime());
-        allStatus.put("finishing", finishingStatus);
-
-        // 4. 入库工序状态
-        Map<String, Object> warehousingStatus = new LinkedHashMap<>();
-        warehousingStatus.put("completed", order.getWarehousingEndTime() != null);
-        warehousingStatus.put("completionRate", order.getWarehousingCompletionRate() != null ? order.getWarehousingCompletionRate() : 0);
-        warehousingStatus.put("completedQuantity", warehousingQty);
-        warehousingStatus.put("remainingQuantity", cuttingQty - warehousingQty);
-        warehousingStatus.put("operatorName", order.getWarehousingOperatorName());
-        warehousingStatus.put("startTime", order.getWarehousingStartTime());
-        warehousingStatus.put("completedTime", order.getWarehousingEndTime());
-        allStatus.put("warehousing", warehousingStatus);
-
-        log.info("Retrieved all process status for order: orderId={}, cutting={}%, sewing={}%, finishing={}%, warehousing={}%",
-                 orderId,
-                 cuttingStatus.get("completionRate"),
-                 sewingStatus.get("completionRate"),
-                 finishingStatus.get("completionRate"),
-                 warehousingStatus.get("completionRate"));
-
-        return allStatus;
+        return helper.getAllProcessStatus(orderId);
     }
 
     /**
@@ -1004,13 +709,17 @@ public class ProductionOrderOrchestrator {
      * @param factoryId 工厂ID
      * @param unitPrice 单价（可选）
      */
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void delegateProcess(String orderId, String processNode, String factoryId, Double unitPrice) {
         // 验证订单是否存在
         ProductionOrder order = productionOrderService.getById(orderId);
         if (order == null) {
             throw new RuntimeException("订单不存在: " + orderId);
         }
+
+        // 获取当前登录用户
+        UserContext ctx = UserContext.get();
+        String operatorName = ctx != null && StringUtils.hasText(ctx.getUsername()) ? ctx.getUsername() : "系统";
 
         // 构建委派记录
         String delegationRecord = String.format(
@@ -1019,21 +728,29 @@ public class ProductionOrderOrchestrator {
             factoryId,
             unitPrice != null ? unitPrice : 0.0,
             new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date()),
-            "当前用户" // TODO: 从SecurityContext获取当前登录用户
+            operatorName
         );
 
-        // 保存到订单的nodeOperations字段（JSON格式）
+        // 使用Jackson安全操作JSON
         String currentOperations = order.getNodeOperations();
-        if (currentOperations == null || currentOperations.isEmpty()) {
-            currentOperations = "{}";
+        try {
+            @SuppressWarnings("unchecked")
+            java.util.Map<String, Object> opsMap = (currentOperations != null && !currentOperations.isBlank())
+                    ? objectMapper.readValue(currentOperations, java.util.Map.class)
+                    : new java.util.LinkedHashMap<>();
+            opsMap.put(processNode, delegationRecord);
+            order.setNodeOperations(objectMapper.writeValueAsString(opsMap));
+        } catch (Exception e) {
+            log.warn("解析nodeOperations失败，使用新Map: {}", e.getMessage());
+            java.util.Map<String, Object> opsMap = new java.util.LinkedHashMap<>();
+            opsMap.put(processNode, delegationRecord);
+            try {
+                order.setNodeOperations(objectMapper.writeValueAsString(opsMap));
+            } catch (Exception ex) {
+                order.setNodeOperations("{\"" + processNode + "\":\"" + delegationRecord.replace("\"", "\\\"") + "\"}");
+            }
         }
 
-        // 简单追加记录（实际应该用JSON解析和更新）
-        // TODO: 使用Jackson或Gson进行JSON操作
-        String updatedOperations = currentOperations.replaceFirst("}",
-            String.format("\"%s\":\"%s\"}", processNode, delegationRecord));
-
-        order.setNodeOperations(updatedOperations);
         productionOrderService.updateById(order);
 
         log.info("工序委派成功 - 订单:{}, 工序:{}, 工厂:{}, 单价:{}",
@@ -1044,17 +761,6 @@ public class ProductionOrderOrchestrator {
      * 获取工序节点的中文名称
      */
     private String getProcessNodeName(String processNode) {
-        switch (processNode) {
-            case "cutting":
-                return "裁剪";
-            case "sewing":
-                return "车缝";
-            case "finishing":
-                return "尾部";
-            case "warehousing":
-                return "入库";
-            default:
-                return processNode;
-        }
+        return helper.getProcessNodeName(processNode);
     }
 }

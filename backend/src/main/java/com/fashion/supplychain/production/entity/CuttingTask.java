@@ -57,6 +57,20 @@ public class CuttingTask {
     @TableField(exist = false)
     private Integer cuttingBundleCount;
 
+    // ==================== 订单关联字段（非数据库字段）====================
+
+    /**
+     * 下单人姓名（来自关联的生产订单）
+     */
+    @TableField(exist = false)
+    private String orderCreatorName;
+
+    /**
+     * 下单时间（来自关联的生产订单）
+     */
+    @TableField(exist = false)
+    private LocalDateTime orderTime;
+
     // ==================== 操作人字段（自动填充）====================
 
     @TableField(fill = FieldFill.INSERT)

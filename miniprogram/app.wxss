@@ -8,9 +8,9 @@
 @import './styles/design-tokens.wxss';
 
 page {
-  background: #f7f8fa;
-  color: #1f2937;
-  font-size: 14px; /* 统一基础字体为14px */
+  background: var(--color-bg-page);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base); /* 统一基础字体为14px */
   line-height: 1.5;
   font-family:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
@@ -30,7 +30,7 @@ wx-vconsole,
 }
 
 .card {
-  background: #ffffff;
+  background: var(--color-bg-card);
   border-radius: var(--radius-xl);
   padding: 12px;
   border: 1px solid var(--color-border);
@@ -39,25 +39,25 @@ wx-vconsole,
 
 /* 一级标题 - 页面主标题 */
 .title {
-  font-size: 18px;
+  font-size: var(--font-size-xl);
   font-weight: 600;
   margin-bottom: 10px;
-  color: #111827;
+  color: var(--color-text-primary);
 }
 
 /* 二级标题 - 区块标题 */
 .section-title {
   margin-top: 10px;
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   font-weight: 600;
-  color: #1f2937;
+  color: var(--color-text-primary);
 }
 
 /* 三级标题 - 小标题 */
 .sub-title {
-  font-size: 14px;
+  font-size: var(--font-size-base);
   font-weight: 500;
-  color: #1f2937;
+  color: var(--color-text-primary);
 }
 
 .field {
@@ -66,7 +66,7 @@ wx-vconsole,
 
 /* 标签文字 */
 .label {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
   margin-bottom: 6px;
 }
@@ -75,8 +75,8 @@ wx-vconsole,
   border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
   padding: 8px 12px;
-  background: #ffffff;
-  font-size: 14px; /* 统一为正文字体14px */
+  background: var(--color-bg-card);
+  font-size: var(--font-size-base); /* 统一为正文字体14px */
 }
 
 .row {
@@ -95,12 +95,12 @@ wx-vconsole,
 /* 主要按钮 */
 .btn-primary {
   background: var(--gradient-primary-alpha);
-  color: #1f2937;
+  color: var(--color-text-primary);
   border: 1px solid rgba(147, 197, 253, 0.5);
   border-radius: var(--radius-full);
   padding: 10px 18px;
   text-align: center;
-  font-size: 14px; /* 统一为按钮字体14px */
+  font-size: var(--font-size-base); /* 统一为按钮字体14px */
   min-height: 36px;
   display: flex;
   align-items: center;
@@ -126,7 +126,7 @@ wx-vconsole,
   border-radius: var(--radius-full);
   padding: 10px 18px;
   text-align: center;
-  font-size: 14px; /* 统一为按钮字体14px */
+  font-size: var(--font-size-base); /* 统一为按钮字体14px */
   min-height: 36px;
   display: flex;
   align-items: center;
@@ -151,15 +151,15 @@ wx-vconsole,
 /* 提示文字 */
 .hint {
   margin-top: 8px;
-  font-size: 11px; /* 保持备注文字11px */
-  color: #8b8b94;
+  font-size: var(--font-size-xs); /* 保持备注文字11px */
+  color: var(--color-text-disabled);
 }
 
 /* 结果文字 */
 .result {
   margin-top: 10px;
-  font-size: 14px; /* 统一为正文字体14px */
-  color: #374151;
+  font-size: var(--font-size-base); /* 统一为正文字体14px */
+  color: var(--color-text-secondary);
   line-height: 1.6;
 }
 
@@ -168,19 +168,19 @@ wx-vconsole,
   display: inline-block;
   padding: 2px 8px;
   border-radius: var(--radius-full);
-  font-size: 11px; /* 保持标签文字11px */
+  font-size: var(--font-size-xs); /* 保持标签文字11px */
   background: rgba(16, 185, 129, 0.12);
   color: var(--color-success);
 }
 
 .tag-ok {
   background: rgba(52, 199, 89, 0.12);
-  color: #16a34a;
+  color: var(--color-success);
 }
 
 .tag-bad {
   background: rgba(255, 59, 48, 0.12);
-  color: #dc2626;
+  color: var(--color-error);
 }
 
 /* 列表项 */
@@ -191,7 +191,7 @@ wx-vconsole,
   padding: 12px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  background: #ffffff;
+  background: var(--color-bg-card);
   margin-top: 10px;
 }
 
@@ -223,7 +223,7 @@ wx-vconsole,
 }
 
 .progress-text {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
   min-width: 36px;
   text-align: right;
@@ -240,7 +240,7 @@ wx-vconsole,
   gap: 4px;
   margin-bottom: 8px;
   padding: 3px 6px;
-  background: #ffffff;
+  background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
   box-shadow: 0 2px 8px rgba(59, 130, 246, 0.06);
@@ -257,21 +257,21 @@ wx-vconsole,
 }
 
 .global-search .search-icon {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   margin-right: 4px;
 }
 
 .global-search .search-input {
   flex: 1;
-  font-size: 11px;
-  color: #1f2937;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-primary);
 }
 
 .global-search .search-btn {
   padding: 3px 18px;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 500;
-  color: #1f2937;
+  color: var(--color-text-primary);
   background: rgba(224, 242, 254, 0.8);
   border: 1px solid rgba(224, 242, 254, 0.9);
   border-radius: var(--radius-full);
@@ -281,7 +281,7 @@ wx-vconsole,
 
 .global-search .clear-btn {
   padding: 3px 18px;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
   background: rgba(224, 242, 254, 0.3);
   border: 1px solid var(--color-border);
@@ -292,7 +292,7 @@ wx-vconsole,
 /* ============ 全局搜索结果 ============ */
 .global-results {
   margin-bottom: 12px;
-  background: #ffffff;
+  background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   overflow: hidden;
@@ -309,13 +309,13 @@ wx-vconsole,
 }
 
 .results-title {
-  font-size: 14px;
+  font-size: var(--font-size-base);
   font-weight: 600;
-  color: #1f2937;
+  color: var(--color-text-primary);
 }
 
 .close-results {
-  font-size: 18px;
+  font-size: var(--font-size-xl);
   color: var(--color-text-disabled);
   padding: 0 6px;
 }
@@ -346,7 +346,7 @@ wx-vconsole,
 }
 
 .empty-text {
-  font-size: 14px;
+  font-size: var(--font-size-base);
   color: var(--color-text-secondary);
 }
 
@@ -376,7 +376,7 @@ wx-vconsole,
 
 .loading-text {
   margin-top: 12px;
-  font-size: 14px;
+  font-size: var(--font-size-base);
   color: var(--color-text-secondary);
 }
 
@@ -397,7 +397,7 @@ wx-vconsole,
 .modal-wrap {
   width: auto;
   max-width: 90vw;
-  background: #fff;
+  background: var(--color-bg-card);
   border-radius: var(--radius-lg);
   overflow: hidden;
   box-shadow: var(--shadow-modal);
@@ -425,9 +425,9 @@ wx-vconsole,
 }
 
 .modal-title {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   font-weight: 600;
-  color: #1f2937;
+  color: var(--color-text-primary);
 }
 
 .modal-close {
@@ -438,7 +438,7 @@ wx-vconsole,
   justify-content: center;
   border-radius: var(--radius-full);
   background: rgba(0, 0, 0, 0.04);
-  font-size: 18px;
+  font-size: var(--font-size-xl);
   color: var(--color-text-secondary);
 }
 
@@ -465,7 +465,7 @@ wx-vconsole,
   flex: 1;
   height: 40px;
   border-radius: var(--radius-full);
-  font-size: 14px;
+  font-size: var(--font-size-base);
   border: none;
   font-weight: 500;
   display: flex;
@@ -486,7 +486,7 @@ wx-vconsole,
 
 .modal-btn.confirm {
   background: var(--gradient-primary-alpha);
-  color: #1f2937;
+  color: var(--color-text-primary);
   border: 1px solid rgba(147, 197, 253, 0.5);
   box-shadow: var(--shadow-lg);
 }
@@ -497,7 +497,7 @@ wx-vconsole,
 }
 
 .modal-btn.danger {
-  background: linear-gradient(135deg, #ff4d4f 0%, #e03e40 100%);
+  background: linear-gradient(135deg, var(--color-error) 0%, var(--color-error) 100%);
   color: #fff;
   box-shadow: 0 4px 12px rgba(255, 77, 79, 0.25);
 }

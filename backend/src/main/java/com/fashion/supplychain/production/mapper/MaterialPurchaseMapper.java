@@ -49,4 +49,72 @@ public interface MaterialPurchaseMapper extends BaseMapper<MaterialPurchase> {
             "WHERE DATE(actual_arrival_date) = #{today} AND delete_flag = 0 " +
             "ORDER BY actual_arrival_date DESC LIMIT 20")
     List<MaterialPurchase> selectTodayArrivals(@Param("today") LocalDate today);
+
+    /**
+     * 查询今日按小时统计的物料入库数（按类型）
+     */
+    @Select("SELECT " +
+            "  HOUR(actual_arrival_date) as hour, " +
+            "  COUNT(*) as count " +
+            "FROM t_material_purchase " +
+            "WHERE DATE(actual_arrival_date) = #{today} " +
+            "  AND delete_flag = 0 " +
+            "  AND material_type = #{materialType} " +
+            "GROUP BY HOUR(actual_arrival_date)")
+    List<Map<String, Object>> selectTodayInboundByHourAndType(
+        @Param("today") LocalDate today,
+        @Param("materialType") String materialType
+    );
+
+    /**
+     * 查询最近7天的物料入库数（按类型）
+     */
+    @Select("SELECT " +
+            "  DATE(actual_arrival_date) as date, " +
+            "  COUNT(*) as count " +
+            "FROM t_material_purchase " +
+            "WHERE actual_arrival_date >= #{startDate} " +
+            "  AND actual_arrival_date <= #{endDate} " +
+            "  AND delete_flag = 0 " +
+            "  AND material_type = #{materialType} " +
+            "GROUP BY DATE(actual_arrival_date)")
+    List<Map<String, Object>> selectLast7DaysInboundByType(
+        @Param("startDate") LocalDate startDate,
+        @Param("endDate") LocalDate endDate,
+        @Param("materialType") String materialType
+    );
+
+    /**
+     * 查询最近30天的物料入库数（按类型）
+     */
+    @Select("SELECT " +
+            "  DAY(actual_arrival_date) as day, " +
+            "  COUNT(*) as count " +
+            "FROM t_material_purchase " +
+            "WHERE actual_arrival_date >= #{startDate} " +
+            "  AND actual_arrival_date <= #{endDate} " +
+            "  AND delete_flag = 0 " +
+            "  AND material_type = #{materialType} " +
+            "GROUP BY DAY(actual_arrival_date)")
+    List<Map<String, Object>> selectLast30DaysInboundByType(
+        @Param("startDate") LocalDate startDate,
+        @Param("endDate") LocalDate endDate,
+        @Param("materialType") String materialType
+    );
+
+    /**
+     * 查询今年按月统计的物料入库数（按类型）
+     */
+    @Select("SELECT " +
+            "  MONTH(actual_arrival_date) as month, " +
+            "  COUNT(*) as count " +
+            "FROM t_material_purchase " +
+            "WHERE YEAR(actual_arrival_date) = #{year} " +
+            "  AND delete_flag = 0 " +
+            "  AND material_type = #{materialType} " +
+            "GROUP BY MONTH(actual_arrival_date)")
+    List<Map<String, Object>> selectYearInboundByMonthAndType(
+        @Param("year") Integer year,
+        @Param("materialType") String materialType
+    );
 }

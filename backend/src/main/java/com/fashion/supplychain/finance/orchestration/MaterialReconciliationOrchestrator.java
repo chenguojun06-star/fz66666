@@ -616,8 +616,8 @@ public class MaterialReconciliationOrchestrator {
     private String buildFinanceNo(String prefix, LocalDateTime now) {
         String p = StringUtils.hasText(prefix) ? prefix.trim() : "NO";
         LocalDateTime t = now == null ? LocalDateTime.now() : now;
-        String ts = t.format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
-        int rand = (int) (ThreadLocalRandom.current().nextDouble() * 900) + 100;
+        String ts = t.format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
+        int rand = ThreadLocalRandom.current().nextInt(1000, 10000);
         return p + ts + rand;
     }
 }

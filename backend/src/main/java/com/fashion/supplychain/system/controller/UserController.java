@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Set;
 import javax.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -39,6 +40,7 @@ public class UserController {
      * @param status   状态
      * @return 分页结果
      */
+    @PreAuthorize("hasAuthority('MENU_SYSTEM_USER_VIEW')")
     @GetMapping("/list")
     public Result<?> getUserList(
             @RequestParam(defaultValue = "1") Long page,
@@ -57,16 +59,19 @@ public class UserController {
      * @param id 用户ID
      * @return 用户信息
      */
+    @PreAuthorize("hasAuthority('MENU_SYSTEM_USER_VIEW')")
     @GetMapping("/{id}")
     public Result<?> getUserById(@PathVariable Long id) {
         return Result.success(userOrchestrator.getById(id));
     }
 
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/me")
     public Result<?> me() {
         return Result.success(userOrchestrator.me());
     }
 
+    @PreAuthorize("isAuthenticated()")
     @PutMapping("/me")
     public Result<?> updateMe(@RequestBody User user) {
         return Result.success(userOrchestrator.updateMe(user));
@@ -78,6 +83,7 @@ public class UserController {
      * @param user 用户信息
      * @return 操作结果
      */
+    @PreAuthorize("hasAuthority('MENU_SYSTEM_USER_MANAGE')")
     @PostMapping
     public Result<?> addUser(@RequestBody User user) {
         userOrchestrator.add(user);
@@ -90,6 +96,7 @@ public class UserController {
      * @param user 用户信息
      * @return 操作结果
      */
+    @PreAuthorize("hasAuthority('MENU_SYSTEM_USER_MANAGE')")
     @PutMapping
     public Result<?> updateUser(@RequestBody User user) {
         userOrchestrator.update(user);
@@ -102,6 +109,7 @@ public class UserController {
      * @param id 用户ID
      * @return 操作结果
      */
+    @PreAuthorize("hasAuthority('MENU_SYSTEM_USER_MANAGE')")
     @DeleteMapping("/{id}")
     public Result<?> deleteUser(@PathVariable Long id,
             @RequestParam(required = false) String remark) {
@@ -116,6 +124,7 @@ public class UserController {
      * @param status 状态
      * @return 操作结果
      */
+    @PreAuthorize("hasAuthority('MENU_SYSTEM_USER_MANAGE')")
     @PutMapping("/status")
     public Result<?> toggleStatus(@RequestParam Long id, @RequestParam String status,
             @RequestParam(required = false) String remark) {

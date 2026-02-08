@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
+import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -37,6 +38,10 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
 
     @Autowired
     private CuttingTaskService cuttingTaskService;
+
+    @Autowired
+    @Lazy
+    private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
 
     @Override
     public IPage<CuttingBundle> queryPage(Map<String, Object> params) {
@@ -114,6 +119,15 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
             String color = item.get("color") == null ? null : item.get("color").toString();
             String size = item.get("size") == null ? null : item.get("size").toString();
 
+            // ✅ 新增验证：禁止包含逗号分隔的多尺码（如 "S,M,L,XL,XXL"）
+            if (size != null && size.contains(",")) {
+                throw new IllegalArgumentException(
+                    "尺码字段不能包含逗号，请为每个尺码创建单独的菲号。" +
+                    "错误值：" + size + "。" +
+                    "正确做法：发送多个bundles项，每项包含单个尺码"
+                );
+            }
+
             Integer quantity = null;
             Object quantityObj = item.get("quantity");
             if (quantityObj != null) {
@@ -160,6 +174,14 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
         if (!result.isEmpty()) {
             this.saveBatch(result);
             cuttingTaskService.markBundledByOrderId(order.getId());
+
+            // ✅ 裁剪完成后生成工序跟踪记录（用于工资结算）
+            try {
+                processTrackingOrchestrator.initializeProcessTracking(order.getId());
+                log.info("工序跟踪记录初始化成功: orderId={}, bundleCount={}", order.getId(), result.size());
+            } catch (Exception e) {
+                log.warn("工序跟踪记录初始化失败: orderId={}", order.getId(), e);
+            }
 
             // 更新订单进度到下一阶段（车缝/缝制）
             try {

@@ -1284,7 +1284,6 @@ const StyleBomTab: React.FC<Props> = ({
                   key: 'delete',
                   label: '删除',
                   title: '删除',
-                  icon: <DeleteOutlined />,
                   danger: true,
                   onClick: () => {
                     Modal.confirm({
@@ -1311,7 +1310,6 @@ const StyleBomTab: React.FC<Props> = ({
                 key: 'save',
                 label: '保存',
                 title: '保存',
-                icon: <SaveOutlined />,
                 onClick: () => save(String(record.id!)),
                 primary: true,
               },
@@ -1319,7 +1317,6 @@ const StyleBomTab: React.FC<Props> = ({
                 key: 'cancel',
                 label: '取消',
                 title: '取消',
-                icon: <CloseOutlined />,
                 onClick: () => {
                   Modal.confirm({
                     title: '确定取消?',
@@ -1337,7 +1334,6 @@ const StyleBomTab: React.FC<Props> = ({
                 key: 'edit',
                 label: '编辑',
                 title: '编辑',
-                icon: <EditOutlined />,
                 disabled: editingKey !== '',
                 onClick: () => edit(record),
                 primary: true,
@@ -1346,7 +1342,6 @@ const StyleBomTab: React.FC<Props> = ({
                 key: 'delete',
                 label: '删除',
                 title: '删除',
-                icon: <DeleteOutlined />,
                 danger: true,
                 disabled: editingKey !== '',
                 onClick: () => {
@@ -1442,7 +1437,6 @@ const StyleBomTab: React.FC<Props> = ({
         <Space wrap>
           <Button
             onClick={handleAdd}
-            icon={<PlusOutlined />}
             disabled={locked || Boolean(editingKey) || loading || templateLoading}
           >
             添加物料
@@ -1525,7 +1519,7 @@ const StyleBomTab: React.FC<Props> = ({
         </div>
         <Table
           size="small"
-          rowKey={(r, index) => String((r as Record<string, unknown>)?.materialCode || (r as Record<string, unknown>)?.id || `detail-${index}`)}
+          rowKey={(r) => String((r as Record<string, unknown>)?.materialCode || (r as Record<string, unknown>)?.id || `detail-${Math.random()}`)}
           dataSource={Array.isArray(syncJob?.result?.details) ? syncJob.result.details : []}
           pagination={false}
           columns={[
@@ -1568,7 +1562,7 @@ const StyleBomTab: React.FC<Props> = ({
                     size="small"
                     loading={materialLoading}
                     dataSource={materialList}
-                    rowKey={(r, index) => String((r as Record<string, unknown>)?.id || (r as Record<string, unknown>)?.materialCode || `material-${index}`)}
+                    rowKey={(r) => String((r as Record<string, unknown>)?.id || (r as Record<string, unknown>)?.materialCode || `material-${Math.random()}`)}
                     pagination={{
                       current: materialPage,
                       pageSize: 10,
@@ -1622,7 +1616,6 @@ const StyleBomTab: React.FC<Props> = ({
                                 key: 'use',
                                 label: '选用',
                                 title: '选用',
-                                icon: <CheckOutlined />,
                                 onClick: async () => {
                                   await fillRowFromMaterial(materialTargetRowId, record);
                                   setMaterialModalOpen(false);

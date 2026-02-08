@@ -95,6 +95,7 @@ const OrderManagement: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   const [factories, setFactories] = useState<Factory[]>([]);
+  const [users, setUsers] = useState<Array<{ id: number; name: string; username: string }>>([]);
 
   // ===== 弹窗状态（保留原状，未迁移到 useModal）=====
   const [visible, setVisible] = useState(false);
@@ -176,9 +177,30 @@ const OrderManagement: React.FC = () => {
       }
 
       const orders = response?.data?.records || [];
+
+      // 获取每个订单的裁剪数据
+      const ordersWithCuttingData = await Promise.all(
+        orders.map(async (order) => {
+          try {
+            const flowRes = await api.get<{ code: number; data: { cuttingBundles?: Array<{ size?: string; quantity?: number }> } }>(
+              `/production/order/flow/${order.id}`
+            );
+            if (flowRes.code === 200) {
+              return {
+                ...order,
+                cuttingBundles: flowRes.data?.cuttingBundles || [],
+              };
+            }
+          } catch (e) {
+            console.warn(`获取订单${order.id}的裁剪数据失败:`, e);
+          }
+          return { ...order, cuttingBundles: [] };
+        })
+      );
+
       const rows: unknown[] = [];
 
-      const list = Array.isArray(orders) ? [...orders] : [];
+      const list = Array.isArray(ordersWithCuttingData) ? [...ordersWithCuttingData] : [];
       list.sort((a: any, b: any) => {
         const ta = dayjs(a?.createTime);
         const tb = dayjs(b?.createTime);
@@ -226,7 +248,24 @@ const OrderManagement: React.FC = () => {
         return sizeQty;
       };
 
-      const pickCompletedQty = (o: any, fallbackOrderQty: number) => {
+      const buildCuttingSizeQty = (cuttingBundles: Array<{ size?: string; quantity?: number }>) => {
+        const sizeQty: Record<string, number> = {};
+        detailSizes.forEach((s) => {
+          sizeQty[s] = 0;
+        });
+        for (const bundle of cuttingBundles) {
+          const sizeRaw = String(bundle?.size || '').trim();
+          if (!sizeRaw) continue;
+          const q = Number(bundle?.quantity || 0) || 0;
+          if (!q) continue;
+          const matched = detailSizes.find((s) => normalizeMatchKey(s) === normalizeMatchKey(sizeRaw));
+          if (!matched) continue;
+          sizeQty[matched] = (sizeQty[matched] || 0) + q;
+        }
+        return sizeQty;
+      };
+
+      const pickCompletedQty = (o: unknown, fallbackOrderQty: number) => {
         const candidates = [
           (o as Record<string, unknown>)?.completedQuantity,
           (o as Record<string, unknown>)?.completedQty,
@@ -265,6 +304,7 @@ const OrderManagement: React.FC = () => {
         const sumQty = effectiveLines.reduce((acc, l) => acc + (Number((l as Record<string, unknown>)?.quantity || 0) || 0), 0);
         const colors = joinUniq(effectiveLines.map((l) => (l as Record<string, unknown>)?.color)) || '-';
         const sizeQty = buildSizeQty(effectiveLines);
+        const cuttingSizeQty = buildCuttingSizeQty(o?.cuttingBundles || []);
         const completedQuantity = base?.completedQuantity != null ? (Number(base?.completedQuantity) || 0) : pickCompletedQty(o, sumQty);
 
         rows.push({
@@ -272,6 +312,7 @@ const OrderManagement: React.FC = () => {
           ...base,
           color: base.color ?? colors,
           sizeQty,
+          cuttingSizeQty,
           orderQuantity: sumQty,
           completedQuantity,
         });
@@ -834,6 +875,19 @@ const OrderManagement: React.FC = () => {
     }
   };
 
+  const fetchUsers = async () => {
+    try {
+      const response = await api.get<{ code: number; data: { records: Array<{ id: number; name: string; username: string }> } }>('/system/user/list', { params: { page: 1, pageSize: 1000, status: 'enabled' } });
+      if (response.code === 200) {
+        setUsers(response.data.records || []);
+      }
+    } catch {
+      // Intentionally empty
+      // 忽略错误
+      setUsers([]);
+    }
+  };
+
   useEffect(() => {
     fetchStyles();
   }, [queryParams]);
@@ -873,6 +927,7 @@ const OrderManagement: React.FC = () => {
 
   useEffect(() => {
     fetchFactories();
+    fetchUsers();
   }, []);
 
   const selectableColors = useMemo(() => splitOptions(selectedStyle?.color), [selectedStyle?.color]);
@@ -976,6 +1031,10 @@ const OrderManagement: React.FC = () => {
     form.setFieldsValue({
       orderNo: '',
       factoryId: undefined,
+      merchandiser: style.orderType || undefined, // 从样衣开发带入跟单员
+      company: style.customer || undefined, // 从样衣开发带入公司
+      productCategory: style.category || undefined, // 从样衣开发带入品类
+      patternMaker: style.sampleSupplier || undefined, // 从样衣开发带入纸样师
       orderQuantity: 1,
       plannedStartDate: plannedStartDate,
       plannedEndDate: plannedEndDate
@@ -1061,6 +1120,10 @@ const OrderManagement: React.FC = () => {
         size: sizeLabel,
         factoryId: values.factoryId,
         factoryName: factory?.factoryName || '',
+        merchandiser: values.merchandiser || undefined, // 跟单员（选填）
+        company: values.company || undefined, // 公司（选填）
+        productCategory: values.productCategory || undefined, // 品类（选填）
+        patternMaker: values.patternMaker || undefined, // 纸样师（选填）
         orderQuantity: computedQty,
         orderDetails,
         plannedStartDate: values.plannedStartDate ? values.plannedStartDate.format('YYYY-MM-DDTHH:mm:ss') : undefined,
@@ -1178,7 +1241,6 @@ const OrderManagement: React.FC = () => {
               key: 'print',
               label: '打印',
               title: '打印',
-              icon: <PrinterOutlined />,
               onClick: () => {
                 setPrintingRecord(record);
                 setPrintModalVisible(true);
@@ -1188,7 +1250,6 @@ const OrderManagement: React.FC = () => {
               key: 'create',
               label: '下单',
               title: '下单',
-              icon: <ShoppingCartOutlined />,
               onClick: () => openCreate(record),
               primary: true,
             },
@@ -1235,6 +1296,11 @@ const OrderManagement: React.FC = () => {
               { title: <span style={{ color: 'var(--neutral-text)' }}>L</span>, dataIndex: ['sizeQty', 'L'], key: 'size_L', width: 90, align: 'right', render: (v: unknown) => Number(v) || 0 },
               { title: <span style={{ color: 'var(--neutral-text)' }}>XL</span>, dataIndex: ['sizeQty', 'XL'], key: 'size_XL', width: 90, align: 'right', render: (v: unknown) => Number(v) || 0 },
               { title: <span style={{ color: 'var(--neutral-text)' }}>XXL</span>, dataIndex: ['sizeQty', 'XXL'], key: 'size_XXL', width: 90, align: 'right', render: (v: unknown) => Number(v) || 0 },
+              { title: <span style={{ color: 'var(--neutral-text)' }}>裁剪S</span>, dataIndex: ['cuttingSizeQty', 'S'], key: 'cutting_S', width: 90, align: 'right', render: (v: unknown) => <span style={{ color: '#52c41a' }}>{Number(v) || 0}</span> },
+              { title: <span style={{ color: 'var(--neutral-text)' }}>裁剪M</span>, dataIndex: ['cuttingSizeQty', 'M'], key: 'cutting_M', width: 90, align: 'right', render: (v: unknown) => <span style={{ color: '#52c41a' }}>{Number(v) || 0}</span> },
+              { title: <span style={{ color: 'var(--neutral-text)' }}>裁剪L</span>, dataIndex: ['cuttingSizeQty', 'L'], key: 'cutting_L', width: 90, align: 'right', render: (v: unknown) => <span style={{ color: '#52c41a' }}>{Number(v) || 0}</span> },
+              { title: <span style={{ color: 'var(--neutral-text)' }}>裁剪XL</span>, dataIndex: ['cuttingSizeQty', 'XL'], key: 'cutting_XL', width: 90, align: 'right', render: (v: unknown) => <span style={{ color: '#52c41a' }}>{Number(v) || 0}</span> },
+              { title: <span style={{ color: 'var(--neutral-text)' }}>裁剪XXL</span>, dataIndex: ['cuttingSizeQty', 'XXL'], key: 'cutting_XXL', width: 90, align: 'right', render: (v: unknown) => <span style={{ color: '#52c41a' }}>{Number(v) || 0}</span> },
               { title: <span style={{ color: 'var(--neutral-text)' }}>下单数</span>, dataIndex: 'orderQuantity', key: 'orderQuantity', width: 110, align: 'right', render: (v: unknown) => Number(v) || 0 },
               { title: <span style={{ color: 'var(--neutral-text)' }}>完成数</span>, dataIndex: 'completedQuantity', key: 'completedQuantity', width: 110, align: 'right', render: (v: unknown) => Number(v) || 0 },
               { title: <span style={{ color: 'var(--neutral-text)' }}>下单人</span>, dataIndex: 'orderOperatorName', key: 'orderOperatorName', width: 140 },
@@ -1331,7 +1397,6 @@ const OrderManagement: React.FC = () => {
             actions={(record) => [
               {
                 key: 'create',
-                icon: <ShoppingCartOutlined />,
                 label: '下单',
                 onClick: () => openCreate(record),
               },
@@ -1374,7 +1439,7 @@ const OrderManagement: React.FC = () => {
                         styleNo={selectedStyle?.styleNo}
                         src={selectedStyle?.cover || null}
                         size={isMobile ? 160 : isTablet ? 200 : 240}
-                        
+
                       />
                       <div>
                         <StyleAttachmentsButton
@@ -1446,6 +1511,44 @@ const OrderManagement: React.FC = () => {
                               options={factories.map(f => ({ value: f.id!, label: `${f.factoryName}（${f.factoryCode}）` }))}
                               showSearch
                               optionFilterProp="label"
+                            />
+                          </Form.Item>
+                        </Col>
+                      </Row>
+
+                      <Row gutter={16}>
+                        <Col xs={24} sm={12}>
+                          <Form.Item name="merchandiser" label="跟单员">
+                            <Select
+                              placeholder="请选择跟单员（选填）"
+                              allowClear
+                              showSearch
+                              optionFilterProp="label"
+                              options={users.map(u => ({ value: u.name, label: u.name }))}
+                            />
+                          </Form.Item>
+                        </Col>
+                        <Col xs={24} sm={12}>
+                          <Form.Item name="company" label="公司">
+                            <Input placeholder="请输入公司名称（选填）" allowClear />
+                          </Form.Item>
+                        </Col>
+                      </Row>
+
+                      <Row gutter={16}>
+                        <Col xs={24} sm={12}>
+                          <Form.Item name="productCategory" label="品类">
+                            <Input placeholder="请输入品类（选填）" allowClear />
+                          </Form.Item>
+                        </Col>
+                        <Col xs={24} sm={12}>
+                          <Form.Item name="patternMaker" label="纸样师">
+                            <Select
+                              placeholder="请选择纸样师（选填）"
+                              allowClear
+                              showSearch
+                              optionFilterProp="label"
+                              options={users.map(u => ({ value: u.name, label: u.name }))}
                             />
                           </Form.Item>
                         </Col>

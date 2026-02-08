@@ -101,17 +101,17 @@ const FinanceDashboard: React.FC = () => {
       if (response.code === 200 && response.data) {
         const data = response.data;
         setStatData({
-          totalAmount: data.totalAmount || 0,
-          totalAmountChange: data.totalAmountChange || 12,
-          totalAmountDayChange: data.totalAmountDayChange || -11,
-          dailyAmount: data.dailyAmount || 0,
-          warehousedCount: data.warehousedCount || 0,
-          warehousedDayCount: data.warehousedDayCount || 0,
-          orderCount: data.orderCount || 0,
-          completionRate: data.completionRate || 60,
-          profitRate: data.profitRate || 0,
-          profitRateChange: data.profitRateChange || 12,
-          profitRateDayChange: data.profitRateDayChange || -11,
+          totalAmount: data.totalAmount ?? 0,
+          totalAmountChange: data.totalAmountChange ?? 0,
+          totalAmountDayChange: data.totalAmountDayChange ?? 0,
+          dailyAmount: data.dailyAmount ?? 0,
+          warehousedCount: data.warehousedCount ?? 0,
+          warehousedDayCount: data.warehousedDayCount ?? 0,
+          orderCount: data.orderCount ?? 0,
+          completionRate: data.completionRate ?? 0,
+          profitRate: data.profitRate ?? 0,
+          profitRateChange: data.profitRateChange ?? 0,
+          profitRateDayChange: data.profitRateDayChange ?? 0,
         });
 
         // 趋势数据
@@ -131,22 +131,22 @@ const FinanceDashboard: React.FC = () => {
       }
     } catch (error) {
       console.error('加载财务汇总数据失败:', error);
-      // 使用模拟数据
+      // API失败时显示0值，不使用假数据
       setStatData({
-        totalAmount: 126560,
-        totalAmountChange: 12,
-        totalAmountDayChange: -11,
-        dailyAmount: 12423,
-        warehousedCount: 8846,
-        warehousedDayCount: 1234,
-        orderCount: 6560,
-        completionRate: 60,
-        profitRate: 78,
-        profitRateChange: 12,
-        profitRateDayChange: -11,
+        totalAmount: 0,
+        totalAmountChange: 0,
+        totalAmountDayChange: 0,
+        dailyAmount: 0,
+        warehousedCount: 0,
+        warehousedDayCount: 0,
+        orderCount: 0,
+        completionRate: 0,
+        profitRate: 0,
+        profitRateChange: 0,
+        profitRateDayChange: 0,
       });
-      setTrendData(generateMockTrendData());
-      setRankData(generateMockRankData());
+      setTrendData([]);
+      setRankData([]);
     }
   }, { manual: true });
 

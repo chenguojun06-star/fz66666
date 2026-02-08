@@ -82,19 +82,22 @@ Component({
       this.loadTasks();
 
       // 监听全局事件，当任务状态变化时刷新
+      // 保存 bound 函数引用，确保 off 时能精确匹配
+      this._boundLoadTasks = this.loadTasks.bind(this);
       const eventBus = getApp().globalData?.eventBus;
       if (eventBus) {
-        eventBus.on('taskStatusChanged', this.loadTasks.bind(this));
-        eventBus.on('refreshBellTasks', this.loadTasks.bind(this));
+        eventBus.on('taskStatusChanged', this._boundLoadTasks);
+        eventBus.on('refreshBellTasks', this._boundLoadTasks);
       }
     },
 
     detached() {
       const eventBus = getApp().globalData?.eventBus;
-      if (eventBus) {
-        eventBus.off('taskStatusChanged', this.loadTasks.bind(this));
-        eventBus.off('refreshBellTasks', this.loadTasks.bind(this));
+      if (eventBus && this._boundLoadTasks) {
+        eventBus.off('taskStatusChanged', this._boundLoadTasks);
+        eventBus.off('refreshBellTasks', this._boundLoadTasks);
       }
+      this._boundLoadTasks = null;
     },
   },
 
@@ -455,7 +458,7 @@ Component({
         return;
       }
 
-      wx.showLoading({ title: '处理中...' });
+      wx.showLoading({ title: '处理中...', mask: true });
 
       try {
         if (isApprove) {

@@ -10,17 +10,14 @@ import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.common.constant.MaterialConstants;
-import com.fashion.supplychain.style.entity.StyleBom;
-import com.fashion.supplychain.style.service.StyleBomService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,10 +46,17 @@ public class MaterialPurchaseOrchestrator {
     private MaterialReconciliationOrchestrator materialReconciliationOrchestrator;
 
     @Autowired
-    private StyleBomService styleBomService;
+    private MaterialPurchaseOrchestratorHelper helper;
 
     public IPage<MaterialPurchase> list(Map<String, Object> params) {
         return materialPurchaseService.queryPage(params);
+    }
+
+    /**
+     * 列表查询并补充下单数量字段（从订单或样板生产获取）
+     */
+    public Map<String, Object> listWithEnrichment(Map<String, Object> params) {
+        return helper.listWithEnrichment(params);
     }
 
     public MaterialPurchase getById(String id) {
@@ -106,7 +110,7 @@ public class MaterialPurchaseOrchestrator {
 
     public boolean updateArrivedQuantity(Map<String, Object> params) {
         String id = params == null ? null : (params.get("id") == null ? null : String.valueOf(params.get("id")));
-        Integer arrivedQuantity = coerceInt(params == null ? null : params.get("arrivedQuantity"));
+        Integer arrivedQuantity = helper.coerceInt(params == null ? null : params.get("arrivedQuantity"));
         String remark = params == null ? null
                 : (params.get("remark") == null ? null : String.valueOf(params.get("remark")));
         String key = id == null ? null : StringUtils.trimWhitespace(id);
@@ -138,7 +142,7 @@ public class MaterialPurchaseOrchestrator {
     }
 
     public MaterialPurchase createInstruction(Map<String, Object> params) {
-        Map<String, Object> safeParams = params == null ? new LinkedHashMap<>() : params;
+        Map<String, Object> safeParams = params == null ? new java.util.LinkedHashMap<>() : params;
         String materialId = ParamUtils.toTrimmedString(safeParams.get("materialId"));
         String materialCode = ParamUtils.toTrimmedString(safeParams.get("materialCode"));
         String materialName = ParamUtils.toTrimmedString(safeParams.get("materialName"));
@@ -150,7 +154,7 @@ public class MaterialPurchaseOrchestrator {
         String receiverId = ParamUtils.toTrimmedString(safeParams.get("receiverId"));
         String receiverName = ParamUtils.toTrimmedString(safeParams.get("receiverName"));
         String remark = ParamUtils.toTrimmedString(safeParams.get("remark"));
-        Integer qty = coerceInt(safeParams.get("purchaseQuantity"));
+        Integer qty = helper.coerceInt(safeParams.get("purchaseQuantity"));
 
         if (!StringUtils.hasText(materialCode) && !StringUtils.hasText(materialName)) {
             throw new IllegalArgumentException("物料信息不能为空");
@@ -198,8 +202,8 @@ public class MaterialPurchaseOrchestrator {
             throw new NoSuchElementException("生产订单不存在");
         }
 
-        List<String> orderIds = resolveTargetOrderIds(seed, false);
-        return buildBatchPreview(orderIds);
+        List<String> orderIds = helper.resolveTargetOrderIds(seed, false);
+        return helper.buildBatchPreview(orderIds);
     }
 
     public Object generateDemand(Map<String, Object> params) {
@@ -215,7 +219,7 @@ public class MaterialPurchaseOrchestrator {
             oid = orderId.trim();
         }
 
-        List<String> explicitOrderIds = coerceStringList(orderIdsRaw);
+        List<String> explicitOrderIds = helper.coerceStringList(orderIdsRaw);
 
         List<String> targetOrderIds;
 
@@ -242,221 +246,10 @@ public class MaterialPurchaseOrchestrator {
             if (!overwriteFlag && materialPurchaseService.existsActivePurchaseForOrder(oid)) {
                 throw new IllegalStateException("该订单已生成采购需求");
             }
-            targetOrderIds = resolveTargetOrderIds(seed, overwriteFlag);
+            targetOrderIds = helper.resolveTargetOrderIds(seed, overwriteFlag);
         }
 
-        return generateBatchDemand(targetOrderIds, overwriteFlag);
-    }
-
-    private List<String> resolveTargetOrderIds(ProductionOrder seed, boolean overwrite) {
-        List<ProductionOrder> matchedOrders = resolveSameDaySameStyleOrders(seed);
-
-        List<String> out = new ArrayList<>();
-        for (ProductionOrder o : matchedOrders) {
-            if (o == null || !StringUtils.hasText(o.getId())) {
-                continue;
-            }
-            String oid = o.getId().trim();
-            if (!StringUtils.hasText(oid)) {
-                continue;
-            }
-            if (!overwrite && materialPurchaseService.existsActivePurchaseForOrder(oid)) {
-                continue;
-            }
-            out.add(oid);
-        }
-        return out;
-    }
-
-    private List<MaterialPurchase> buildBatchPreview(List<String> orderIds) {
-        List<MaterialPurchase> out = new ArrayList<>();
-        if (orderIds == null || orderIds.isEmpty()) {
-            return out;
-        }
-
-        LinkedHashMap<String, String> purchaseNoByKey = new LinkedHashMap<>();
-        for (String idRaw : orderIds) {
-            String id = StringUtils.hasText(idRaw) ? idRaw.trim() : null;
-            if (!StringUtils.hasText(id)) {
-                continue;
-            }
-            List<MaterialPurchase> items = materialPurchaseService.previewDemandByOrderId(id);
-            if (items == null || items.isEmpty()) {
-                continue;
-            }
-            for (MaterialPurchase p : items) {
-                if (p == null) {
-                    continue;
-                }
-                String key = mergeKey(p);
-                String shared = purchaseNoByKey.get(key);
-                if (!StringUtils.hasText(shared)) {
-                    shared = p.getPurchaseNo();
-                    if (StringUtils.hasText(shared)) {
-                        purchaseNoByKey.put(key, shared);
-                    }
-                } else {
-                    p.setPurchaseNo(shared);
-                }
-                out.add(p);
-            }
-        }
-
-        return out;
-    }
-
-    private List<MaterialPurchase> generateBatchDemand(List<String> orderIds, boolean overwrite) {
-        List<MaterialPurchase> out = new ArrayList<>();
-        if (orderIds == null || orderIds.isEmpty()) {
-            return out;
-        }
-
-        if (overwrite) {
-            LocalDateTime now = LocalDateTime.now();
-            for (String idRaw : orderIds) {
-                String oid = StringUtils.hasText(idRaw) ? idRaw.trim() : null;
-                if (!StringUtils.hasText(oid)) {
-                    continue;
-                }
-                MaterialPurchase patch = new MaterialPurchase();
-                patch.setDeleteFlag(1);
-                patch.setUpdateTime(now);
-                materialPurchaseService.update(patch, new LambdaQueryWrapper<MaterialPurchase>()
-                        .eq(MaterialPurchase::getOrderId, oid)
-                        .eq(MaterialPurchase::getDeleteFlag, 0));
-            }
-        }
-
-        LinkedHashMap<String, String> purchaseNoByKey = new LinkedHashMap<>();
-
-        for (String idRaw : orderIds) {
-            String oid = StringUtils.hasText(idRaw) ? idRaw.trim() : null;
-            if (!StringUtils.hasText(oid)) {
-                continue;
-            }
-            List<MaterialPurchase> items = materialPurchaseService.previewDemandByOrderId(oid);
-            if (items == null || items.isEmpty()) {
-                continue;
-            }
-
-            for (MaterialPurchase p : items) {
-                if (p == null) {
-                    continue;
-                }
-
-                String key = mergeKey(p);
-                String shared = purchaseNoByKey.get(key);
-                if (!StringUtils.hasText(shared)) {
-                    shared = p.getPurchaseNo();
-                    if (StringUtils.hasText(shared)) {
-                        purchaseNoByKey.put(key, shared);
-                    }
-                } else {
-                    p.setPurchaseNo(shared);
-                }
-
-                boolean ok = materialPurchaseService.savePurchaseAndUpdateOrder(p);
-                if (ok) {
-                    out.add(p);
-                }
-            }
-        }
-
-        return out;
-    }
-
-    private List<ProductionOrder> resolveSameDaySameStyleOrders(ProductionOrder seed) {
-        if (seed == null || !StringUtils.hasText(seed.getId())) {
-            return List.of();
-        }
-
-        String seedId = seed.getId().trim();
-        String styleId = StringUtils.hasText(seed.getStyleId()) ? seed.getStyleId().trim() : null;
-        LocalDateTime createTime = seed.getCreateTime();
-        if (!StringUtils.hasText(styleId) || createTime == null) {
-            return List.of(seed);
-        }
-
-        LocalDate day = createTime.toLocalDate();
-        LocalDateTime start = day.atStartOfDay();
-        LocalDateTime nextStart = day.plusDays(1).atStartOfDay();
-
-        List<ProductionOrder> list = productionOrderService.list(new LambdaQueryWrapper<ProductionOrder>()
-                .eq(ProductionOrder::getDeleteFlag, 0)
-                .eq(ProductionOrder::getStyleId, styleId)
-                .ge(ProductionOrder::getCreateTime, start)
-                .lt(ProductionOrder::getCreateTime, nextStart)
-                .orderByAsc(ProductionOrder::getCreateTime)
-                .orderByAsc(ProductionOrder::getOrderNo));
-
-        if (list == null || list.isEmpty()) {
-            return List.of(seed);
-        }
-
-        LinkedHashMap<String, ProductionOrder> dedup = new LinkedHashMap<>();
-        for (ProductionOrder o : list) {
-            if (o == null || !StringUtils.hasText(o.getId())) {
-                continue;
-            }
-            String id = o.getId().trim();
-            if (!StringUtils.hasText(id)) {
-                continue;
-            }
-            dedup.put(id, o);
-        }
-
-        if (!dedup.containsKey(seedId)) {
-            dedup.put(seedId, seed);
-        }
-        return new ArrayList<>(dedup.values());
-    }
-
-    private String mergeKey(MaterialPurchase p) {
-        if (p == null)
-            return "";
-        return String.join("|",
-                safe(p.getMaterialType()),
-                safe(p.getMaterialCode()),
-                safe(p.getMaterialName()),
-                safe(p.getSpecifications()),
-                safe(p.getColor()),
-                safe(p.getUnit()),
-                safe(p.getSupplierName()));
-    }
-
-    private String safe(String v) {
-        return v == null ? "" : v.trim();
-    }
-
-    private List<String> coerceStringList(Object raw) {
-        if (raw == null) {
-            return List.of();
-        }
-        if (raw instanceof List<?> list) {
-            List<String> out = new ArrayList<>();
-            for (Object o : list) {
-                if (o == null) {
-                    continue;
-                }
-                String s = String.valueOf(o);
-                if (StringUtils.hasText(s)) {
-                    out.add(s.trim());
-                }
-            }
-            return out;
-        }
-        String s = String.valueOf(raw);
-        if (!StringUtils.hasText(s)) {
-            return List.of();
-        }
-        String[] parts = s.split("[,，\\s]+");
-        List<String> out = new ArrayList<>();
-        for (String p : parts) {
-            if (StringUtils.hasText(p)) {
-                out.add(p.trim());
-            }
-        }
-        return out;
+        return helper.generateBatchDemand(targetOrderIds, overwriteFlag);
     }
 
     public MaterialPurchase receive(Map<String, Object> body) {
@@ -488,8 +281,8 @@ public class MaterialPurchaseOrchestrator {
         // 检查是否已被领取
         String existingReceiverId = purchase.getReceiverId() == null ? "" : purchase.getReceiverId().trim();
         String existingReceiverName = purchase.getReceiverName() == null ? "" : purchase.getReceiverName().trim();
-        String rid = safe(receiverIdValue);
-        String rname = safe(receiverNameValue);
+        String rid = helper.safe(receiverIdValue);
+        String rname = helper.safe(receiverNameValue);
 
         boolean alreadyReceived = !MaterialConstants.STATUS_PENDING.equals(normalizedStatus) && StringUtils.hasText(normalizedStatus);
         if (alreadyReceived) {
@@ -514,8 +307,8 @@ public class MaterialPurchaseOrchestrator {
             // 再次检查最新状态
             MaterialPurchase latest = materialPurchaseService.getById(purchaseId);
             if (latest != null) {
-                String latestReceiverName = safe(latest.getReceiverName());
-                String latestReceiverId = safe(latest.getReceiverId());
+                String latestReceiverName = helper.safe(latest.getReceiverName());
+                String latestReceiverId = helper.safe(latest.getReceiverId());
                 boolean isSameNow = false;
                 if (!rid.isEmpty() && !latestReceiverId.isEmpty()) {
                     isSameNow = Objects.equals(rid, latestReceiverId);
@@ -546,7 +339,7 @@ public class MaterialPurchaseOrchestrator {
                 : (body.get("confirmerId") == null ? null : String.valueOf(body.get("confirmerId")));
         String confirmerName = body == null ? null
                 : (body.get("confirmerName") == null ? null : String.valueOf(body.get("confirmerName")));
-        Integer returnQuantity = coerceInt(body == null ? null : body.get("returnQuantity"));
+        Integer returnQuantity = helper.coerceInt(body == null ? null : body.get("returnQuantity"));
 
         if (!StringUtils.hasText(purchaseId)) {
             throw new IllegalArgumentException("参数错误");
@@ -643,8 +436,8 @@ public class MaterialPurchaseOrchestrator {
         try {
             MaterialPurchase current = materialPurchaseService.getById(purchaseId);
             if (current != null && StringUtils.hasText(current.getOrderId())) {
-                ensureOrderStatusProduction(current.getOrderId());
-                recomputeAndUpdateMaterialArrivalRate(current.getOrderId());
+                helper.ensureOrderStatusProduction(current.getOrderId());
+                helper.recomputeAndUpdateMaterialArrivalRate(current.getOrderId(), productionOrderOrchestrator);
             }
         } catch (Exception e) {
             log.warn("Failed to sync order state after return confirm reset: purchaseId={}", purchaseId, e);
@@ -672,7 +465,7 @@ public class MaterialPurchaseOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     private boolean saveAndSync(MaterialPurchase materialPurchase) {
         // 如果单价为0或null，尝试从BOM填充单价
-        fillUnitPriceFromBom(materialPurchase);
+        helper.fillUnitPriceFromBom(materialPurchase);
 
         boolean ok = materialPurchaseService.savePurchaseAndUpdateOrder(materialPurchase);
         if (!ok) {
@@ -680,43 +473,6 @@ public class MaterialPurchaseOrchestrator {
         }
         syncAfterPurchaseChanged(materialPurchase);
         return true;
-    }
-
-    /**
-     * 从BOM资料填充单价
-     */
-    private void fillUnitPriceFromBom(MaterialPurchase purchase) {
-        if (purchase == null) {
-            return;
-        }
-
-        // 如果已有单价且大于0，不覆盖
-        if (purchase.getUnitPrice() != null && purchase.getUnitPrice().compareTo(java.math.BigDecimal.ZERO) > 0) {
-            return;
-        }
-
-        // 必须有款式ID和物料编码才能查询BOM
-        if (!StringUtils.hasText(purchase.getStyleId()) || !StringUtils.hasText(purchase.getMaterialCode())) {
-            return;
-        }
-
-        try {
-            Long styleId = Long.valueOf(purchase.getStyleId().trim());
-            String materialCode = purchase.getMaterialCode().trim();
-
-            // 从BOM查询单价
-            StyleBom bom = styleBomService.lambdaQuery()
-                .eq(StyleBom::getStyleId, styleId)
-                .eq(StyleBom::getMaterialCode, materialCode)
-                .one();
-
-            if (bom != null && bom.getUnitPrice() != null && bom.getUnitPrice().compareTo(java.math.BigDecimal.ZERO) > 0) {
-                purchase.setUnitPrice(bom.getUnitPrice());
-                log.info("从BOM填充单价: materialCode={}, unitPrice={}", materialCode, bom.getUnitPrice());
-            }
-        } catch (Exception e) {
-            log.warn("从BOM填充单价失败: styleId={}, materialCode={}", purchase.getStyleId(), purchase.getMaterialCode(), e);
-        }
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -816,39 +572,9 @@ public class MaterialPurchaseOrchestrator {
 
         if (StringUtils.hasText(purchase.getOrderId())) {
             String oid = purchase.getOrderId().trim();
-            ensureOrderStatusProduction(oid);
-            recomputeAndUpdateMaterialArrivalRate(oid);
+            helper.ensureOrderStatusProduction(oid);
+            helper.recomputeAndUpdateMaterialArrivalRate(oid, productionOrderOrchestrator);
         }
-    }
-
-    private void ensureOrderStatusProduction(String orderId) {
-        if (!StringUtils.hasText(orderId)) {
-            return;
-        }
-        String oid = orderId.trim();
-        ProductionOrder order = productionOrderService.getById(oid);
-        if (order == null || (order.getDeleteFlag() != null && order.getDeleteFlag() != 0)) {
-            return;
-        }
-        String st = order.getStatus() == null ? "" : order.getStatus().trim();
-        if ("completed".equalsIgnoreCase(st) || "production".equalsIgnoreCase(st)) {
-            return;
-        }
-        ProductionOrder patch = new ProductionOrder();
-        patch.setId(oid);
-        patch.setStatus("production");
-        patch.setUpdateTime(LocalDateTime.now());
-        productionOrderService.updateById(patch);
-    }
-
-    private void recomputeAndUpdateMaterialArrivalRate(String orderId) {
-        if (!StringUtils.hasText(orderId)) {
-            return;
-        }
-        String oid = orderId.trim();
-        MaterialPurchaseService.ArrivalStats stats = materialPurchaseService.computeArrivalStatsByOrderId(oid);
-        int rate = stats == null ? 0 : stats.getArrivalRate();
-        productionOrderOrchestrator.updateMaterialArrivalRate(oid, rate);
     }
 
     /**
@@ -875,7 +601,7 @@ public class MaterialPurchaseOrchestrator {
 
             // 2. 尝试将 scanCode 转换为订单号格式
             // P020226012201 -> PO20260122001
-            String normalizedOrderNo = normalizeOrderNo(scanCode);
+            String normalizedOrderNo = helper.normalizeOrderNo(scanCode);
             if (StringUtils.hasText(normalizedOrderNo)) {
                 wrapper = new LambdaQueryWrapper<>();
                 wrapper.eq(MaterialPurchase::getOrderNo, normalizedOrderNo);
@@ -903,30 +629,6 @@ public class MaterialPurchaseOrchestrator {
         }
 
         return new ArrayList<>();
-    }
-
-    /**
-     * 将各种格式的订单号标准化为 PO 格式
-     * 例如: P020226012201 -> PO20260122001 (将 P0 替换为 PO)
-     */
-    private String normalizeOrderNo(String code) {
-        if (!StringUtils.hasText(code)) {
-            return null;
-        }
-
-        String trimmed = code.trim();
-
-        // 如果已经是 PO 开头，直接返回
-        if (trimmed.startsWith("PO")) {
-            return trimmed;
-        }
-
-        // P0 开头的转换为 PO
-        if (trimmed.startsWith("P0")) {
-            return "PO" + trimmed.substring(2);
-        }
-
-        return null;
     }
 
     public boolean delete(String id) {
@@ -962,7 +664,7 @@ public class MaterialPurchaseOrchestrator {
         }
 
         if (StringUtils.hasText(current.getOrderId())) {
-            recomputeAndUpdateMaterialArrivalRate(current.getOrderId().trim());
+            helper.recomputeAndUpdateMaterialArrivalRate(current.getOrderId().trim(), productionOrderOrchestrator);
         }
         return true;
     }
@@ -974,8 +676,8 @@ public class MaterialPurchaseOrchestrator {
             return new ArrayList<>();
         }
 
-        List<MaterialPurchase> allPurchases = materialPurchaseService.list();
-        return allPurchases.stream()
+        List<MaterialPurchase> myPurchases = materialPurchaseService.list()
+                .stream()
                 .filter(p -> p.getDeleteFlag() == null || p.getDeleteFlag() == 0)
                 .filter(p -> {
                     String status = p.getStatus();
@@ -986,23 +688,35 @@ public class MaterialPurchaseOrchestrator {
                 .filter(p -> p.getReturnConfirmed() == null || p.getReturnConfirmed() == 0)
                 .filter(p -> Objects.equals(p.getReceiverId(), userId))
                 .collect(Collectors.toList());
+
+        // 过滤掉已关闭/已完成订单对应的采购任务
+        if (myPurchases.isEmpty()) {
+            return myPurchases;
+        }
+
+        Set<String> orderIds = myPurchases.stream()
+                .map(MaterialPurchase::getOrderId)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+
+        if (orderIds.isEmpty()) {
+            return myPurchases;
+        }
+
+        // 查询有效订单（排除已关闭/已完成/已取消/已归档）
+        Set<String> validOrderIds = productionOrderService.lambdaQuery()
+                .in(ProductionOrder::getId, orderIds)
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived")
+                .list()
+                .stream()
+                .map(ProductionOrder::getId)
+                .collect(Collectors.toSet());
+
+        // 只返回有效订单的采购任务
+        return myPurchases.stream()
+                .filter(purchase -> validOrderIds.contains(purchase.getOrderId()))
+                .collect(Collectors.toList());
     }
 
-    private Integer coerceInt(Object v) {
-        if (v == null) {
-            return null;
-        }
-        if (v instanceof Number number) {
-            return number.intValue();
-        }
-        String s = String.valueOf(v).trim();
-        if (!StringUtils.hasText(s)) {
-            return null;
-        }
-        try {
-            return Integer.valueOf(s);
-        } catch (Exception e) {
-            return null;
-        }
-    }
 }

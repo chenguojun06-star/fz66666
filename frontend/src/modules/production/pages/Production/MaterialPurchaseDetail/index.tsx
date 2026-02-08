@@ -292,7 +292,6 @@ const MaterialPurchaseDetail: React.FC = () => {
         }}>
           <Space>
             <Button
-              icon={<ArrowLeftOutlined />}
               onClick={() => navigate(-1)}
             >
               返回
@@ -304,7 +303,6 @@ const MaterialPurchaseDetail: React.FC = () => {
 
           <Space>
             <Button
-              icon={<PrinterOutlined />}
               onClick={() => setPrintModalVisible(true)}
             >
               打印
@@ -312,7 +310,6 @@ const MaterialPurchaseDetail: React.FC = () => {
             {order && (
               <Button
                 type="primary"
-                icon={<CheckCircleOutlined />}
                 onClick={handleOpenConfirm}
                 disabled={materialArrivalRate < 50 || order.procurementManuallyCompleted === 1}
               >

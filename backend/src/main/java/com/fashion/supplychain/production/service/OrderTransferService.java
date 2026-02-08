@@ -17,9 +17,11 @@ public interface OrderTransferService extends IService<OrderTransfer> {
      * @param orderId 订单ID
      * @param toUserId 接收人ID
      * @param message 转移留言
+     * @param bundleIds 菲号ID列表（逗号分隔）
+     * @param processCodes 工序编码列表（逗号分隔）
      * @return 转移记录
      */
-    OrderTransfer createTransfer(String orderId, Long toUserId, String message);
+    OrderTransfer createTransfer(String orderId, Long toUserId, String message, String bundleIds, String processCodes);
 
     /**
      * 查询待处理的转移请求(分页)

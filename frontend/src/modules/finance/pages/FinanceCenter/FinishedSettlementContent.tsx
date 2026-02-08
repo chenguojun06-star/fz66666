@@ -292,19 +292,16 @@ const FinishedSettlementContent: React.FC = () => {
                 {
                   key: 'verify',
                   label: '审批核实',
-                  icon: <CheckCircleOutlined />,
                   onClick: () => handleVerify(record),
                 },
                 {
                   key: 'remark',
                   label: '编辑备注',
-                  icon: <EditOutlined />,
                   onClick: () => openRemarkModal(record),
                 },
                 {
                   key: 'log',
                   label: '查看日志',
-                  icon: <HistoryOutlined />,
                   onClick: () => openLogModal(record.orderId),
                 },
               ],
@@ -382,7 +379,7 @@ const FinishedSettlementContent: React.FC = () => {
     if (!currentRecord) return;
 
     try {
-      await api.post('/api/finance/finished-settlement/approve', {
+      await api.post('/finance/finished-settlement/approve', {
         id: currentRecord.orderId
       });
       message.success('审批核实成功');
@@ -424,20 +421,22 @@ const FinishedSettlementContent: React.FC = () => {
     }
   };
 
-  // 打开日志弹窗
+  // 打开日志弹窗 - 从后端获取操作日志
   const openLogModal = async (orderId: string) => {
     try {
-      // 调用真实API获取日志（暂时使用模拟数据，等待后端API开发）
-      // const response = await fetch(`/api/finance/finished-settlement/${orderId}/logs`);
-      // const result = await response.json();
-      // if (result.code === 200) {
-      //   setOrderLogs(result.data);
-      // }
-      const mockLogs = [
-        { time: dayjs().subtract(1, 'day').format('YYYY-MM-DD HH:mm:ss'), operator: '张三', action: '创建对账单' },
-        { time: dayjs().format('YYYY-MM-DD HH:mm:ss'), operator: '李四', action: '审批通过' },
-      ];
-      setOrderLogs(mockLogs);
+      const response = await api.get<{ code: number; data: Array<{ time?: string; createTime?: string; operator?: string; operatorName?: string; action?: string; operation?: string }> }>(
+        `/finance/shipment-reconciliation/${orderId}/logs`
+      );
+      if (response.code === 200 && Array.isArray(response.data) && response.data.length > 0) {
+        setOrderLogs(response.data.map(item => ({
+          time: item.time || item.createTime || '-',
+          operator: item.operator || item.operatorName || '-',
+          action: item.action || item.operation || '-',
+        })));
+      } else {
+        // 后端暂无日志数据
+        setOrderLogs([]);
+      }
       setLogModalVisible(true);
     } catch (error: unknown) {
       const errMsg = error instanceof Error ? error.message : '获取日志失败';
@@ -520,18 +519,17 @@ const FinishedSettlementContent: React.FC = () => {
           )}
           right={(
             <>
-              <Button onClick={handleReset} icon={<ReloadOutlined />}>
+              <Button onClick={handleReset}>
                 重置
               </Button>
               <Button
                 type="primary"
                 onClick={handleExportSelected}
-                icon={<FileExcelOutlined />}
                 disabled={selectedRowKeys.length === 0}
               >
                 导出选中 ({selectedRowKeys.length})
               </Button>
-              <Button onClick={handleExport} icon={<DownloadOutlined />}>
+              <Button onClick={handleExport}>
                 导出全部
               </Button>
             </>

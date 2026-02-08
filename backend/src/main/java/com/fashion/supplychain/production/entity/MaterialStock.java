@@ -44,6 +44,21 @@ public class MaterialStock {
     private String supplierName;
 
     /**
+     * 面料属性 - 幅宽 (仅面料，如: 150cm)
+     */
+    private String fabricWidth;
+
+    /**
+     * 面料属性 - 克重 (仅面料，如: 200g/m²)
+     */
+    private String fabricWeight;
+
+    /**
+     * 面料属性 - 成分 (仅面料，如: 100%棉)
+     */
+    private String fabricComposition;
+
+    /**
      * 当前库存数量
      */
     private Integer quantity;
@@ -57,6 +72,26 @@ public class MaterialStock {
      * 存放位置
      */
     private String location;
+
+    /**
+     * 单价（元）
+     */
+    private java.math.BigDecimal unitPrice;
+
+    /**
+     * 库存总值（元）= quantity * unitPrice
+     */
+    private java.math.BigDecimal totalValue;
+
+    /**
+     * 最后入库日期
+     */
+    private LocalDateTime lastInboundDate;
+
+    /**
+     * 最后出库日期
+     */
+    private LocalDateTime lastOutboundDate;
 
     /**
      * 安全库存 (默认100)

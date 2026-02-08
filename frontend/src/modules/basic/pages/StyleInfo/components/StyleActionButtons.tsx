@@ -65,7 +65,6 @@ const StyleActionButtons: React.FC<StyleActionButtonsProps> = ({
       {/* 保存信息 / 解锁编辑 */}
       <Button
         type="primary"
-        icon={<SaveOutlined />}
         loading={saving}
         onClick={handleSaveOrUnlock}
         style={primaryButtonStyle}
@@ -78,7 +77,6 @@ const StyleActionButtons: React.FC<StyleActionButtonsProps> = ({
       {!isNewPage && (
         <Button
           type="primary"
-          icon={<CheckCircleOutlined />}
           loading={completingSample}
           disabled={sampleCompleted}
           style={sampleButtonStyle}
@@ -93,7 +91,6 @@ const StyleActionButtons: React.FC<StyleActionButtonsProps> = ({
       {!isNewPage && (
         <Button
           type="primary"
-          icon={<SendOutlined />}
           loading={pushingToOrder}
           disabled={!hasProcessData || pushedToOrder}
           onClick={onPushToOrder}

@@ -108,7 +108,7 @@ const MaterialPickingList: React.FC = () => {
     <Layout>
       <Card bordered={false}>
         <div style={{ marginBottom: 16 }}>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalVisible(true)}>
+          <Button type="primary" onClick={() => setModalVisible(true)}>
             新建领料
           </Button>
         </div>

@@ -133,7 +133,7 @@ Page({
       return;
     }
 
-    wx.showLoading({ title: '处理中...' });
+    wx.showLoading({ title: '处理中...', mask: true });
 
     try {
       // 批准用户
@@ -170,7 +170,7 @@ Page({
       return;
     }
 
-    wx.showLoading({ title: '处理中...' });
+    wx.showLoading({ title: '处理中...', mask: true });
 
     try {
       await api.system.rejectUser(currentUser.id, { approvalRemark: rejectReason });

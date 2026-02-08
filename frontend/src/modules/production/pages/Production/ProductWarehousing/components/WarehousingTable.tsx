@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, Tag } from 'antd';
-import { EyeOutlined, InboxOutlined } from '@ant-design/icons';
+import { InboxOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import { StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
@@ -217,16 +217,15 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
               {
                 key: 'detail',
                 label: '详情',
-                title: '弹窗查看',
-                icon: <EyeOutlined />,
+                title: frozen ? '详情（订单已关单）' : '弹窗查看',
+                disabled: frozen,
                 onClick: () => onOpenIndependentDetail(record),
                 primary: true,
               },
               {
                 key: 'complete',
                 label: '入库',
-                title: '入库',
-                icon: <InboxOutlined />,
+                title: frozen ? '入库（订单已关单）' : '入库',
                 disabled: frozen || !orderId,
                 onClick: () => onWarehousing(record),
                 primary: true,

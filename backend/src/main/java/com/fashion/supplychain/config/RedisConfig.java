@@ -4,11 +4,10 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
 import org.springframework.cache.CacheManager;
-import org.springframework.cache.annotation.CachingConfigurerSupport;
-import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.interceptor.KeyGenerator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -26,8 +25,7 @@ import java.util.Map;
  * 配置Redis连接、序列化、缓存管理器
  */
 @Configuration
-@EnableCaching
-public class RedisConfig extends CachingConfigurerSupport {
+public class RedisConfig {
 
     /**
      * 配置RedisTemplate
@@ -64,6 +62,7 @@ public class RedisConfig extends CachingConfigurerSupport {
      * 配置缓存管理器
      */
     @Bean
+    @Primary
     public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
         // 默认缓存配置
         RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
@@ -90,9 +89,8 @@ public class RedisConfig extends CachingConfigurerSupport {
     /**
      * 自定义缓存key生成器
      */
-    @Bean
-    @Override
-    public KeyGenerator keyGenerator() {
+    @Bean("customKeyGenerator")
+    public KeyGenerator customKeyGenerator() {
         return (target, method, params) -> {
             StringBuilder sb = new StringBuilder();
             sb.append(target.getClass().getSimpleName()).append(":");

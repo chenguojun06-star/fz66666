@@ -81,6 +81,30 @@ public class ProductionOrder {
     private String factoryName;
 
     /**
+     * 跟单员（从样衣开发带入，可修改）
+     */
+    @TableField("merchandiser")
+    private String merchandiser;
+
+    /**
+     * 公司/客户（从样衣开发带入，可修改）
+     */
+    @TableField("company")
+    private String company;
+
+    /**
+     * 品类（从样衣开发带入，可修改）
+     */
+    @TableField("product_category")
+    private String productCategory;
+
+    /**
+     * 纸样师（从样衣开发带入，可修改）
+     */
+    @TableField("pattern_maker")
+    private String patternMaker;
+
+    /**
      * 订单数量
      */
     private Integer orderQuantity;

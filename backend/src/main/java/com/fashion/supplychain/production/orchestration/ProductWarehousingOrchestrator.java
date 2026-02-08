@@ -113,6 +113,7 @@ public class ProductWarehousingOrchestrator {
         w.setDefectRemark(defectRemark);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean save(ProductWarehousing productWarehousing) {
         if (productWarehousing == null) {
             throw new IllegalArgumentException("参数错误");
@@ -194,6 +195,7 @@ public class ProductWarehousingOrchestrator {
         return true;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean batchSave(Map<String, Object> body) {
         String orderId = body == null ? null : (String) body.get("orderId");
         String warehouse = body == null ? null : (String) body.get("warehouse");
@@ -267,6 +269,7 @@ public class ProductWarehousingOrchestrator {
         return true;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean update(ProductWarehousing productWarehousing) {
         if (productWarehousing == null || !StringUtils.hasText(productWarehousing.getId())) {
             throw new IllegalArgumentException("参数错误");
@@ -346,6 +349,7 @@ public class ProductWarehousingOrchestrator {
         }
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean delete(String id) {
         String key = StringUtils.hasText(id) ? id.trim() : null;
         if (!StringUtils.hasText(key)) {
@@ -614,6 +618,7 @@ public class ProductWarehousingOrchestrator {
         return resp;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean rollbackByBundle(Map<String, Object> body) {
         if (!UserContext.isSupervisorOrAbove()) {
             throw new AccessDeniedException("无权限回退");

@@ -304,4 +304,90 @@ function request(options) {
   });
 }
 
-export { request };
+/**
+ * 上传文件（图片）到服务器
+ * @param {Object} options - 上传选项
+ * @param {string} options.filePath - 文件临时路径
+ * @param {string} options.name - 文件对应的 key
+ * @param {Object} options.formData - 额外的表单数据
+ * @param {string} options.url - 上传接口地址（相对路径）
+ * @returns {Promise<string>} - 上传成功后的图片URL
+ */
+function uploadFile(options) {
+  return new Promise((resolve, reject) => {
+    const { filePath, name = 'file', formData = {}, url = '/api/common/upload' } = options || {};
+
+    if (!filePath) {
+      reject(createError('文件路径不能为空', { type: 'param' }));
+      return;
+    }
+
+    const token = getToken();
+    const baseUrl = getBaseUrl();
+
+    // 验证baseUrl
+    if (!baseUrl) {
+      reject(createError('未配置有效的 API 地址', { type: 'config' }));
+      return;
+    }
+
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+    wx.uploadFile({
+      url: `${baseUrl}${url}`,
+      filePath,
+      name,
+      formData,
+      header: headers,
+      timeout: 30000, // 上传超时设置为30秒
+      success(res) {
+        try {
+          const statusCode = res.statusCode || 0;
+
+          // 解析响应数据
+          let body;
+          try {
+            body = res.data ? JSON.parse(res.data) : {};
+          } catch (e) {
+            body = { message: res.data };
+          }
+
+          // 处理401未授权
+          if (statusCode === 401) {
+            clearToken();
+            triggerLoginRedirect();
+            reject(createError('未登录', { type: 'auth', statusCode }));
+            return;
+          }
+
+          // 处理业务成功
+          if (statusCode === 200 && body.code === 200) {
+            // 返回上传后的文件URL
+            const fileUrl = body.data?.url || body.data?.fileUrl || body.data;
+            if (fileUrl) {
+              resolve(fileUrl);
+            } else {
+              reject(createError('上传成功但未返回文件地址', { type: 'biz', body }));
+            }
+            return;
+          }
+
+          // 处理业务错误
+          const serverMessage = extractServerMessage(body);
+          reject(createError(serverMessage || '上传失败', { type: 'biz', statusCode, body }));
+        } catch (err) {
+          reject(createError('解析上传响应失败', { type: 'parse', raw: err }));
+        }
+      },
+      fail(err) {
+        const errMsg = (err && err.errMsg) || '上传失败';
+        const mappedMsg = errMsg.includes('timeout') ? '上传超时，请检查网络' :
+                         errMsg.includes('request:fail') ? '网络异常，请重试' :
+                         '上传失败';
+        reject(createError(mappedMsg, { type: 'network', raw: err }));
+      },
+    });
+  });
+}
+
+export { request, uploadFile };

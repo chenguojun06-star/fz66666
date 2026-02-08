@@ -302,6 +302,28 @@ const OrderFlow: React.FC = () => {
     [data?.warehousings],
   );
 
+  // 计算裁剪数量（按尺码聚合）
+  const cuttingSizeItems = useMemo(() => {
+    const cuttingBundles = (data?.cuttingBundles || []) as CuttingBundle[];
+    if (cuttingBundles.length === 0) return undefined;
+
+    // 按尺码聚合裁剪数量
+    const sizeMap = new Map<string, number>();
+    cuttingBundles.forEach(bundle => {
+      const size = String(bundle.size || '').trim();
+      const quantity = toNumberSafe(bundle.quantity);
+      if (size && quantity > 0) {
+        sizeMap.set(size, (sizeMap.get(size) || 0) + quantity);
+      }
+    });
+
+    // 转换为数组格式
+    return Array.from(sizeMap.entries()).map(([size, quantity]) => ({
+      size,
+      quantity,
+    }));
+  }, [data?.cuttingBundles]);
+
   return (
     <Layout>
       <div className="production-list-page">
@@ -312,7 +334,6 @@ const OrderFlow: React.FC = () => {
               {query.orderNo ? <Tag>订单号：{query.orderNo}</Tag> : null}
               {query.styleNo ? <Tag>款号：{query.styleNo}</Tag> : null}
               <Button
-                icon={<ReloadOutlined />}
                 onClick={fetchFlow}
                 loading={loading}
               >
@@ -334,6 +355,7 @@ const OrderFlow: React.FC = () => {
             <ProductionOrderHeader
               order={order}
               orderLines={orderLines}
+              cuttingSizeItems={cuttingSizeItems}
               orderNo={String((order as Record<string, unknown>)?.orderNo || query.orderNo || '').trim()}
               styleNo={String((order as Record<string, unknown>)?.styleNo || query.styleNo || '').trim()}
               styleName={String((order as Record<string, unknown>)?.styleName || '').trim()}
@@ -495,7 +517,7 @@ const OrderFlow: React.FC = () => {
                             return (
                               <Card>
                                 <Alert
-                                  message="工序单价信息"
+                                  title="工序单价信息"
                                   description={
                                     <div>
                                       <p>工序数量: <strong>{workflowNodes.length}</strong> 个 |
@@ -601,7 +623,7 @@ const OrderFlow: React.FC = () => {
                           // 没有任何数据
                           return (
                             <Alert
-                              message="暂无工序单价数据"
+                              title="暂无工序单价数据"
                               description="此订单尚未配置工序单价信息"
                               type="warning"
                               showIcon
@@ -619,7 +641,7 @@ const OrderFlow: React.FC = () => {
                         {data?.materialPurchases && data.materialPurchases.length > 0 ? (
                           <Table
                             dataSource={data.materialPurchases}
-                            rowKey={(record: any, index: number) => generateRowKey(record, index, 'id')}
+                            rowKey={(record: any) => record.id || record.processCode || `row-${Math.random()}`}
                             columns={[
                               {
                                 title: '序号',
@@ -768,7 +790,7 @@ const OrderFlow: React.FC = () => {
                           />
                         ) : (
                           <Alert
-                            message="暂无物料采购信息"
+                            title="暂无物料采购信息"
                             description="此订单尚未录入物料采购数据"
                             type="info"
                             showIcon
@@ -790,7 +812,7 @@ const OrderFlow: React.FC = () => {
                           />
                         ) : (
                           <Alert
-                            message="暂无二次工艺信息"
+                            title="暂无二次工艺信息"
                             description="此订单未关联款号，无法显示二次工艺详情"
                             type="info"
                             showIcon

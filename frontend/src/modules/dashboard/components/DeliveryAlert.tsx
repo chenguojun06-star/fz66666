@@ -24,73 +24,7 @@ interface DeliveryAlertData {
   warningOrders: DeliveryOrder[];  // 5-7天
 }
 
-// 虚拟数据（用于开发预览）
-const MOCK_DATA: DeliveryAlertData = {
-  urgentOrders: [
-    {
-      id: 'mock_urgent_1',
-      orderNo: 'PO20260130001',
-      styleNo: 'ST001',
-      styleName: '黑色卫衣',
-      factoryName: 'AA工厂',
-      orderQuantity: 500,
-      completedQuantity: 450,
-      productionProgress: 90,
-      plannedEndDate: '2026-01-30T00:00:00',
-      daysUntilDelivery: 3
-    },
-    {
-      id: 'mock_urgent_2',
-      orderNo: 'PO20260129001',
-      styleNo: 'ST002',
-      styleName: '蓝色牛仔裤',
-      factoryName: 'BB工厂',
-      orderQuantity: 800,
-      completedQuantity: 600,
-      productionProgress: 75,
-      plannedEndDate: '2026-01-29T00:00:00',
-      daysUntilDelivery: 2
-    },
-    {
-      id: 'mock_urgent_3',
-      orderNo: 'PO20260128001',
-      styleNo: 'ST003',
-      styleName: '白色T恤',
-      factoryName: 'CC工厂',
-      orderQuantity: 1000,
-      completedQuantity: 900,
-      productionProgress: 90,
-      plannedEndDate: '2026-01-28T00:00:00',
-      daysUntilDelivery: 1
-    }
-  ],
-  warningOrders: [
-    {
-      id: 'mock_warning_1',
-      orderNo: 'PO20260202001',
-      styleNo: 'ST004',
-      styleName: '红色卫衣',
-      factoryName: 'DD工厂',
-      orderQuantity: 600,
-      completedQuantity: 400,
-      productionProgress: 67,
-      plannedEndDate: '2026-02-02T00:00:00',
-      daysUntilDelivery: 6
-    },
-    {
-      id: 'mock_warning_2',
-      orderNo: 'PO20260201001',
-      styleNo: 'ST005',
-      styleName: '灰色外套',
-      factoryName: 'EE工厂',
-      orderQuantity: 400,
-      completedQuantity: 300,
-      productionProgress: 75,
-      plannedEndDate: '2026-02-01T00:00:00',
-      daysUntilDelivery: 5
-    }
-  ]
-};
+const EMPTY_DATA: DeliveryAlertData = { urgentOrders: [], warningOrders: [] };
 
 const DeliveryAlert: React.FC = () => {
   const navigate = useNavigate();
@@ -113,15 +47,15 @@ const DeliveryAlert: React.FC = () => {
         });
         setUseMockData(false);
       } else {
-        // API返回错误，使用虚拟数据
-        console.warn('交期预警API返回错误，使用虚拟数据');
-        setData(MOCK_DATA);
+        // API返回错误，显示空数据
+        console.warn('交期预警API返回错误');
+        setData(EMPTY_DATA);
         setUseMockData(true);
       }
     } catch (error) {
-      // 网络错误或后端未启动，使用虚拟数据
-      console.warn('交期预警API请求失败，使用虚拟数据:', error);
-      setData(MOCK_DATA);
+      // 网络错误或后端未启动，显示空数据
+      console.warn('交期预警API请求失败:', error);
+      setData(EMPTY_DATA);
       setUseMockData(true);
     } finally {
       setLoading(false);

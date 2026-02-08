@@ -3,12 +3,6 @@ import { Row, Col, Button, Radio, Space, Select, message } from 'antd';
 import {
   InboxOutlined,
   ExportOutlined,
-  WarningOutlined,
-  DollarOutlined,
-  BarChartOutlined,
-  UnorderedListOutlined,
-  SyncOutlined,
-  LineChartOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -62,27 +56,17 @@ const WarehouseDashboard: React.FC = () => {
   const [materialType, setMaterialType] = useState<MaterialType>('fabric');
   const [trendData, setTrendData] = useState<TrendDataPoint[]>([]);
   const [stats, setStats] = useState<WarehouseStats>({
-    totalValue: 1289500,
-    materialCount: 156,
-    finishedCount: 4520,
-    lowStockCount: 8,
-    todayInbound: 1200,
-    todayOutbound: 850,
+    totalValue: 0,
+    materialCount: 0,
+    finishedCount: 0,
+    lowStockCount: 0,
+    todayInbound: 0,
+    todayOutbound: 0,
   });
 
-  const [lowStockItems, setLowStockItems] = useState<LowStockItem[]>([
-    { id: '1', materialCode: 'F001', materialName: '纯棉面料', availableQty: 800, safetyStock: 1000, unit: '米' },
-    { id: '2', materialCode: 'F003', materialName: '涤纶面料', availableQty: 450, safetyStock: 800, unit: '米' },
-    { id: '3', materialCode: 'A002', materialName: '拉链5#', availableQty: 180, safetyStock: 500, unit: '条' },
-    { id: '4', materialCode: 'A005', materialName: '纽扣12mm', availableQty: 3500, safetyStock: 5000, unit: '颗' },
-  ]);
+  const [lowStockItems, setLowStockItems] = useState<LowStockItem[]>([]);
 
-  const [recentOps, setRecentOps] = useState<RecentOperation[]>([
-    { id: '1', type: 'inbound', materialName: '纯棉面料-白色', quantity: 500, operator: '张三', time: '10:30' },
-    { id: '2', type: 'outbound', materialName: '涤纶面料-黑色', quantity: 300, operator: '李四', time: '11:15' },
-    { id: '3', type: 'inbound', materialName: '拉链5#-银色', quantity: 200, operator: '王五', time: '14:20' },
-    { id: '4', type: 'outbound', materialName: '纽扣12mm-白色', quantity: 1000, operator: '赵六', time: '15:45' },
-  ]);
+  const [recentOps, setRecentOps] = useState<RecentOperation[]>([]);
 
   const lowStockColumns: ColumnsType<LowStockItem> = [
     {
@@ -183,14 +167,14 @@ const WarehouseDashboard: React.FC = () => {
         api.get('/warehouse/dashboard/recent-operations'),
       ]);
 
-      if (statsRes.data.code === 200) {
-        setStats(statsRes.data.data);
+      if (statsRes && statsRes.data) {
+        setStats(statsRes.data);
       }
-      if (lowStockRes.data.code === 200) {
-        setLowStockItems(lowStockRes.data.data);
+      if (lowStockRes && lowStockRes.data) {
+        setLowStockItems(lowStockRes.data);
       }
-      if (recentOpsRes.data.code === 200) {
-        setRecentOps(recentOpsRes.data.data);
+      if (recentOpsRes && recentOpsRes.data) {
+        setRecentOps(recentOpsRes.data);
       }
     } catch (error) {
       console.error('加载数据失败:', error);
@@ -206,16 +190,18 @@ const WarehouseDashboard: React.FC = () => {
       const res = await api.get('/warehouse/dashboard/trend', {
         params: { range: timeRange, type: materialType },
       });
-      if (res.data.code === 200) {
-        setTrendData(res.data.data);
+      if (res && res.data) {
+        setTrendData(res.data);
       }
     } catch (error) {
       console.error('加载趋势数据失败:', error);
+      message.error('加载趋势数据失败');
     }
   };
 
   useEffect(() => {
     loadData();
+    loadTrendData(); // 初始加载时也获取趋势数据
   }, []);
 
   useEffect(() => {
@@ -279,7 +265,6 @@ const WarehouseDashboard: React.FC = () => {
           <Col span={14}>
             <DashboardTable
               title="低库存预警"
-              icon={<WarningOutlined />}
               extra={
                 <Button
                   size="small"
@@ -300,9 +285,8 @@ const WarehouseDashboard: React.FC = () => {
           <Col span={10}>
             <DashboardTable
               title="今日出入库"
-              icon={<UnorderedListOutlined />}
               extra={
-                <Button size="small" type="link" icon={<SyncOutlined />}>
+                <Button size="small" type="link">
                   刷新
                 </Button>
               }
@@ -317,7 +301,6 @@ const WarehouseDashboard: React.FC = () => {
         {/* 出入库趋势分析 */}
         <DashboardCard
           title="出入库趋势分析"
-          icon={<LineChartOutlined />}
           style={{ marginTop: 16 }}
           extra={
             <Space size="middle">
@@ -362,54 +345,30 @@ const WarehouseDashboard: React.FC = () => {
         {/* 快捷操作区域 */}
         <DashboardCard
           title="快捷操作"
-          icon={<BarChartOutlined />}
           style={{ marginTop: 16 }}
         >
           <Row gutter={16}>
-            <Col span={6}>
+            <Col span={12}>
               <Button
                 type="primary"
-                icon={<InboxOutlined />}
                 block
                 size="large"
                 onClick={() => navigate('/warehouse/material')}
+                icon={<InboxOutlined />}
               >
                 物料库存
               </Button>
             </Col>
-            <Col span={6}>
+            <Col span={12}>
               <Button
                 type="primary"
-                icon={<InboxOutlined />}
                 block
                 size="large"
                 style={{ background: 'var(--success-color)', borderColor: 'var(--success-color)' }}
                 onClick={() => navigate('/warehouse/finished')}
+                icon={<ExportOutlined />}
               >
                 成品库存
-              </Button>
-            </Col>
-            <Col span={6}>
-              <Button
-                type="primary"
-                icon={<ExportOutlined />}
-                block
-                size="large"
-                style={{ background: '#722ed1', borderColor: '#722ed1' }}
-                onClick={() => navigate('/warehouse/sample')}
-              >
-                样衣管理
-              </Button>
-            </Col>
-            <Col span={6}>
-              <Button
-                type="default"
-                icon={<DollarOutlined />}
-                block
-                size="large"
-                onClick={() => navigate('/warehouse/dashboard')}
-              >
-                更多功能
               </Button>
             </Col>
           </Row>

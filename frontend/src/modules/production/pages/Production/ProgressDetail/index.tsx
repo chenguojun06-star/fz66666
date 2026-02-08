@@ -346,7 +346,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         orderNo: params.orderNo,
         styleNo: params.styleNo,
       } : {};
-      
+
       const response = await api.get<{
         totalOrders: number;
         totalQuantity: number;
@@ -605,7 +605,11 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     setNodes(stripped.length ? stripped : defaultNodes);
   };
 
-  const getProcessesByNode = (order: ProductionOrder | null) => getProcessesByNodeFromOrder(order);
+  const getProcessesByNode = (order: ProductionOrder | null) => {
+    const styleNo = String((order as Record<string, unknown>)?.styleNo || '').trim();
+    const templateNodes = styleNo ? progressNodesByStyleNo[styleNo] : undefined;
+    return getProcessesByNodeFromOrder(order, templateNodes);
+  };
 
   const fetchScanHistory = (order: ProductionOrder, options?: { silent?: boolean }) =>
     fetchScanHistoryHelper({ order, setScanHistory, message, options });
@@ -1139,6 +1143,14 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     },
     {
       title: '跟单员',
+      dataIndex: 'merchandiser',
+      key: 'merchandiser',
+      width: 100,
+      ellipsis: true,
+      render: (v: unknown) => v || '-',
+    },
+    {
+      title: '下单人',
       dataIndex: 'createdByName',
       key: 'createdByName',
       width: 100,
@@ -1253,16 +1265,21 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               const nodeName = node.name || '-';
               const nodeQty = totalQty;
               const completedQty = nodeDoneMap?.[nodeName] || 0;
-              const percent = nodeQty > 0 ? Math.round((completedQty / nodeQty) * 100) : 0;
+              // 修复：添加100%上限，避免超过100%的情况
+              const percent = nodeQty > 0
+                ? Math.min(100, Math.round((completedQty / nodeQty) * 100))
+                : 0;
               const remaining = nodeQty - completedQty;
               // 将节点名称映射到节点类型
               const nodeTypeMap: Record<string, string> = {
+                '采购': 'procurement', '物料': 'procurement', '备料': 'procurement',
                 '裁剪': 'cutting', '裁床': 'cutting', '剪裁': 'cutting', '开裁': 'cutting',
                 '缝制': 'sewing', '车缝': 'sewing', '缝纫': 'sewing', '车工': 'sewing',
                 '整烫': 'ironing', '熨烫': 'ironing', '大烫': 'ironing',
                 '质检': 'quality', '检验': 'quality', '品检': 'quality', '验货': 'quality',
                 '包装': 'packaging', '后整': 'packaging', '打包': 'packaging', '装箱': 'packaging',
                 '二次工艺': 'secondaryProcess', '绣花': 'secondaryProcess', '印花': 'secondaryProcess',
+                '入库': 'warehousing', '仓库': 'warehousing',
               };
               const nodeType = nodeTypeMap[nodeName] || nodeName.toLowerCase();
 
@@ -1340,7 +1357,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     {
       title: '操作',
       key: 'action',
-      width: 200,
+      fixed: 'right' as const,
+      width: 140,
       render: (_: any, record: ProductionOrder) => {
         const frozen = isOrderFrozenByStatus(record);
         return (
@@ -1350,16 +1368,16 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               {
                 key: 'print',
                 label: '打印',
-                title: '打印',
-                icon: <PrinterOutlined />,
+                title: frozen ? '打印（订单已关单）' : '打印',
+                disabled: frozen,
                 onClick: () => setPrintingRecord(record),
                 primary: true,
               },
               {
                 key: 'edit',
                 label: '编辑',
-                title: '编辑',
-                icon: <EditOutlined />,
+                title: frozen ? '编辑（订单已关单）' : '编辑',
+                disabled: frozen,
                 onClick: () => {
                   setQuickEditRecord(record);
                   setQuickEditVisible(true);
@@ -1369,7 +1387,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 key: 'register',
                 label: '登记',
                 title: frozen ? '登记（已完成）' : '登记',
-                icon: <ScanOutlined />,
                 disabled: frozen,
                 onClick: () => void openScan(record),
                 primary: true,
@@ -1379,7 +1396,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                   {
                     key: 'close',
                     label: '关单',
-                    icon: <DeleteOutlined />,
                     disabled: frozen,
                     onClick: () => handleCloseOrder(record),
                   },
@@ -1390,7 +1406,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                   {
                     key: 'reflow',
                     label: '回流',
-                    icon: <RollbackOutlined />,
+                    title: frozen ? '回流（订单已关单）' : '回流',
+                    disabled: frozen,
                     onClick: () => void openRollback(record),
                   },
                 ]
@@ -1406,12 +1423,12 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   // ===== 自动打开详情弹窗的逻辑已删除 =====
   // autoOpenDetailOnceRef 和 useEffect 已移除（详情弹窗功能）
 
-  // 根据showDelayedOnly过滤订单
+  // 根据showDelayedOnly过滤订单（排除已关单的订单）
   const displayOrders = useMemo(() => {
     if (!showDelayedOnly) {
       return orders;
     }
-    return orders.filter(order => getProgressColorStatus(order.plannedEndDate) === 'danger');
+    return orders.filter(order => getProgressColorStatus(order.plannedEndDate) === 'danger' && !isOrderFrozenByStatus(order));
   }, [orders, showDelayedOnly]);
 
   const pageContent = (
@@ -1469,7 +1486,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 pageSizeOptions: ['10', '20', '50', '100'],
                 onChange: (page: number, pageSize: number) => setQueryParams((prev) => ({ ...prev, page, pageSize })),
               }}
-              scroll={{ x: 1500 }}
+              scroll={{ x: 3000 }}
             />
           ) : (
             <UniversalCardView
@@ -1512,7 +1529,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 // 扫码记录查看功能已移除（原详情弹窗功能）
                 {
                   key: 'print',
-                  icon: <PrinterOutlined />,
                   label: '打印',
                   iconOnly: true,
                   onClick: () => setPrintingRecord(record),
@@ -1523,7 +1539,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 },
                 {
                   key: 'edit',
-                  icon: <EditOutlined />,
                   label: '编辑',
                   onClick: () => handleQuickEdit(record),
                 },
@@ -1584,7 +1599,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               right={(
                 <Space>
                   <Button
-                    icon={<ReloadOutlined />}
                     onClick={() => fetchOrders()}
                   >
                     刷新
@@ -1615,7 +1629,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 pageSizeOptions: ['10', '20', '50', '100'],
                 onChange: (page: number, pageSize: number) => setQueryParams((prev) => ({ ...prev, page, pageSize })),
               }}
-              scroll={{ x: 1500 }}
+              scroll={{ x: 3000 }}
             />
           ) : (
             <UniversalCardView
@@ -1657,13 +1671,11 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               actions={(record: ProductionOrder) => [
                 {
                   key: 'print',
-                  icon: <PrinterOutlined />,
                   label: '打印',
                   onClick: () => setPrintingRecord(record),
                 },
                 {
                   key: 'close',
-                  icon: <CloseCircleOutlined />,
                   label: '关单',
                   onClick: () => handleCloseOrder(record),
                 },
@@ -1673,7 +1685,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 },
                 {
                   key: 'edit',
-                  icon: <EditOutlined />,
                   label: '编辑',
                   onClick: () => handleQuickEdit(record),
                 },

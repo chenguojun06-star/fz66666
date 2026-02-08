@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Card, Input, Select, Space, Form, InputNumber, Upload, message as antdMessage, Segmented, Tooltip, Tabs, Modal, Collapse, Table } from 'antd';
-import { PlusOutlined, DownloadOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import { DownloadOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { useModal } from '@/hooks';
 import Layout from '@/components/Layout';
@@ -29,8 +29,10 @@ import {
   toDateTimeLocalValue,
   buildImageFileList,
   buildPurchaseSheetHtml,
-  buildSizePairs
+  buildSizePairs,
+  getStatusConfig
 } from './utils';
+import { formatDateTime } from '@/utils/datetime';
 import { MATERIAL_PURCHASE_STATUS, MATERIAL_TYPES, DEFAULT_PAGE_SIZE } from '@/constants/business';
 import { useLocation, useNavigate } from 'react-router-dom';
 
@@ -333,10 +335,31 @@ const MaterialPurchase: React.FC = () => {
       ]);
 
       const orderResult = orderRes;
-      const orderRecord = orderResult?.code === 200 ? (orderResult?.data?.records?.[0] || null) : null;
+
+      const orderRecords = orderResult?.code === 200
+        ? (
+          (Array.isArray(orderResult?.data?.records) && orderResult?.data?.records)
+          || (Array.isArray(orderResult?.data?.list) && orderResult?.data?.list)
+          || (Array.isArray(orderResult?.data?.items) && orderResult?.data?.items)
+          || (Array.isArray(orderResult?.data?.rows) && orderResult?.data?.rows)
+          || (Array.isArray(orderResult?.data) && orderResult?.data)
+          || []
+        )
+        : [];
+      const orderRecord = orderRecords[0] || null;
+
       setDetailOrder(orderRecord);
 
-      const records = purchaseRes?.code === 200 ? (purchaseRes?.data?.records || []) : [];
+      const records = purchaseRes?.code === 200
+        ? (
+          (Array.isArray(purchaseRes?.data?.records) && purchaseRes?.data?.records)
+          || (Array.isArray(purchaseRes?.data?.list) && purchaseRes?.data?.list)
+          || (Array.isArray(purchaseRes?.data?.items) && purchaseRes?.data?.items)
+          || (Array.isArray(purchaseRes?.data?.rows) && purchaseRes?.data?.rows)
+          || (Array.isArray(purchaseRes?.data) && purchaseRes?.data)
+          || []
+        )
+        : [];
       const sorted = [...records].sort((a: MaterialPurchaseType, b: MaterialPurchaseType) => {
         const ka = getMaterialTypeSortKey(a?.materialType);
         const kb = getMaterialTypeSortKey(b?.materialType);
@@ -347,6 +370,7 @@ const MaterialPurchase: React.FC = () => {
 
       // 解析订单行：优先从生产订单，否则从采购单中提取颜色和尺码
       const parsedLines = parseProductionOrderLines(orderRecord);
+
       if (parsedLines.length) {
         setDetailOrderLines(parsedLines);
       } else if (orderRecord) {

@@ -161,31 +161,23 @@ const MaterialReconciliation: React.FC = () => {
     exportFilteredCsv();
   };
 
-  const batchAudit = () => {
-    const ids = reconciliationList
-      .filter((r) => selectedRowKeys.includes(String(r.id)) && r.status === 'pending')
-      .map((r) => String(r.id || ''));
-    if (!ids.length) return;
-    if (ids.length !== selectedRowKeys.length) message.warning('仅可批量审核状态为“待审核”的对账单');
-    updateStatusBatch(ids.map((id) => ({ id, status: 'verified' })), '审核成功');
+  // 批量审核功能已删除（流程简化）
+
+  const batchApprove = async () => {
+    const picked = reconciliationList.filter((r) => selectedRowKeys.includes(String(r.id)));
+    const eligible = picked.filter((r) => r.status === 'pending');
+    if (!eligible.length) return;
+    if (eligible.length !== picked.length) message.warning('仅可批量审批状态为"待审批"的对账单');
+    const pairs = eligible.map((r) => ({ id: String(r.id || ''), status: 'approved' }));
+    await updateStatusBatch(pairs, '审批成功');
   };
 
-  const batchSubmit = async () => {
+  const batchReject = () => {
     const picked = reconciliationList.filter((r) => selectedRowKeys.includes(String(r.id)));
-    const eligible = picked.filter((r) => r.status === 'verified' || r.status === 'rejected');
+    const eligible = picked.filter((r) => r.status === 'approved' || r.status === 'paid');
     if (!eligible.length) return;
-    if (eligible.length !== picked.length) message.warning('仅可批量提交状态为“已验证/已拒绝”的对账单');
-    const pairs = eligible.map((r) => ({ id: String(r.id || ''), status: r.status === 'verified' ? 'approved' : 'pending' }));
-    await updateStatusBatch(pairs, '提交成功');
-    navigate('/finance/payment-approval', { state: { defaultTab: 'material' } });
-  };
-
-  const batchReturn = () => {
-    const picked = reconciliationList.filter((r) => selectedRowKeys.includes(String(r.id)));
-    const eligible = picked.filter((r) => r.status === 'verified' || r.status === 'approved' || r.status === 'paid');
-    if (!eligible.length) return;
-    if (eligible.length !== picked.length) message.warning('仅可批量退回状态为“已验证/已批准/已付款”的对账单');
-    openReturnModal(eligible.map((r) => String(r.id || '')));
+    if (eligible.length !== picked.length) message.warning('仅可批量驳回状态为"已审批/已付款"的对账单');
+    openRejectModal(eligible.map((r) => String(r.id || '')));
   };
 
   // 权限判断函数
@@ -195,12 +187,11 @@ const MaterialReconciliation: React.FC = () => {
 
     // 根据具体操作判断权限
     switch (action) {
-      case 'audit':
-      case 'submit':
-        // 审核和提交操作需要特定权限
+      case 'approve':
+        // 审批操作需要特定权限
         return permissions.includes('FINANCE_RECON_AUDIT') || permissions.includes('all');
-      case 'return':
-        return false;
+      case 'reject':
+        return false; // 驳回仅主管及以上
       default:
         return true;
     }
@@ -261,19 +252,20 @@ const MaterialReconciliation: React.FC = () => {
     }
   };
 
-  const openReturnModal = (ids: string[]) => {
+  const openRejectModal = (ids: string[]) => {
     const normalized = ids.map((id) => String(id || '').trim()).filter(Boolean);
     if (!normalized.length) return;
     let reasonValue = '';
     Modal.confirm({
-      title: normalized.length > 1 ? `批量退回（${normalized.length}条）` : '退回',
+      title: normalized.length > 1 ? `批量驳回（${normalized.length}条）` : '驳回',
       content: (
         <Form layout="vertical" onSubmitCapture={(e) => e.preventDefault()}>
-          <Form.Item label="退回原因">
+          <Form.Item label="驳回原因">
             <Input.TextArea
               rows={4}
               maxLength={200}
               showCount
+              placeholder="请输入驳回原因"
               onChange={(e) => {
                 reasonValue = e.target.value;
               }}
@@ -281,32 +273,33 @@ const MaterialReconciliation: React.FC = () => {
           </Form.Item>
         </Form>
       ),
-      okText: '确认退回',
+      okText: '确认驳回',
       cancelText: '取消',
       okButtonProps: { danger: true },
       onOk: async () => {
         const remark = String(reasonValue || '').trim();
         if (!remark) {
-          message.error('请输入退回原因');
-          return Promise.reject(new Error('请输入退回原因'));
+          message.error('请输入驳回原因');
+          return Promise.reject(new Error('请输入驳回原因'));
         }
         setApprovalSubmitting(true);
         try {
+          // 驳回操作：将状态改为 rejected
           const settled = await Promise.allSettled(
-            normalized.map((id) => materialReconciliationApi.returnMaterialReconciliation(id, remark)),
+            normalized.map((id) => materialReconciliationApi.updateMaterialReconciliationStatus(id, 'rejected')),
           );
           const okCount = settled.filter((r) => r.status === 'fulfilled' && (r.value as Record<string, unknown>)?.code === 200).length;
           const failed = normalized.length - okCount;
           if (okCount <= 0) {
-            message.error('退回失败');
+            message.error('驳回失败');
             return;
           }
-          if (failed) message.error(`部分退回失败（${failed}/${normalized.length}）`);
-          else message.success('退回成功');
+          if (failed) message.error(`部分驳回失败（${failed}/${normalized.length}）`);
+          else message.success('驳回成功');
           setSelectedRowKeys([]);
           fetchReconciliationList();
         } catch (e: unknown) {
-          errorHandler.handleApiError(e, '退回失败');
+          errorHandler.handleApiError(e, '驳回失败');
         } finally {
           setApprovalSubmitting(false);
         }
@@ -620,55 +613,47 @@ const MaterialReconciliation: React.FC = () => {
     {
       title: '操作',
       key: 'action',
-      width: 110,
+      width: 150,
       fixed: 'right' as const,
       render: (_: any, record: MaterialReconType) => {
         const id = String(record.id || '').trim();
         const status = String(record.status || '').trim();
-        const canAudit = Boolean(id) && status === 'pending' && canPerformAction('audit');
-        const canSubmit = Boolean(id) && (status === 'verified' || status === 'rejected') && canPerformAction('submit');
-        const canReturn = Boolean(id) && (status === 'verified' || status === 'approved' || status === 'paid') && canPerformAction('return');
+        const canApprove = Boolean(id) && status === 'pending' && canPerformAction('approve');
+        const canPay = Boolean(id) && status === 'approved';
+        const canReject = Boolean(id) && (status === 'approved' || status === 'paid') && canPerformAction('reject');
+        const canResubmit = Boolean(id) && status === 'rejected';
 
         return (
           <RowActions
             className="table-actions"
-            maxInline={0}
+            maxInline={1}
             actions={[
               {
-                key: 'audit',
-                label: '审核',
-                title: canAudit ? '审核' : '审核(不可用)',
-                icon: <CheckOutlined />,
-                disabled: !canAudit,
-                onClick: () => updateStatusBatch([{ id, status: 'verified' }], '审核成功'),
+                key: 'approve',
+                label: '审批',
+                disabled: !canApprove,
+                onClick: () => updateStatusBatch([{ id, status: 'approved' }], '审批成功'),
                 primary: true,
               },
               {
-                key: 'submit',
-                label: '提交',
-                title: canSubmit ? '提交' : '提交(不可用)',
-                icon: <SendOutlined />,
-                disabled: !canSubmit,
-                onClick: async () => {
-                  const targetStatus = status === 'verified' ? 'approved' : 'pending';
-                  await updateStatusBatch([{ id, status: targetStatus }], '提交成功');
-                  navigate('/finance/payment-approval', { state: { defaultTab: 'material', defaultStatus: targetStatus } });
-                },
+                key: 'pay',
+                label: '付款',
+                disabled: !canPay,
+                onClick: () => updateStatusBatch([{ id, status: 'paid' }], '付款成功'),
                 primary: true,
               },
               {
-                key: 'more',
-                label: '更多',
-                children: [
-                  {
-                    key: 'return',
-                    label: '退回',
-                    title: canReturn ? '退回' : '退回(不可用)',
-                    disabled: !canReturn,
-                    onClick: () => openReturnModal([id]),
-                    danger: true,
-                  },
-                ] as Record<string, unknown>,
+                key: 'resubmit',
+                label: '重新提交',
+                disabled: !canResubmit,
+                onClick: () => updateStatusBatch([{ id, status: 'pending' }], '已重新提交'),
+              },
+              {
+                key: 'reject',
+                label: '驳回',
+                disabled: !canReject,
+                onClick: () => openRejectModal([id]),
+                danger: true,
               },
             ]}
           />
@@ -701,11 +686,10 @@ const MaterialReconciliation: React.FC = () => {
                     onStatusChange={(value) => setQueryParams({ ...queryParams, status: value, page: 1 })}
                     statusOptions={[
                       { label: '全部', value: '' },
-                      { label: '待审核', value: 'pending' },
-                      { label: '已验证', value: 'verified' },
-                      { label: '已批准', value: 'approved' },
+                      { label: '待审批', value: 'pending' },
+                      { label: '已审批', value: 'approved' },
                       { label: '已付款', value: 'paid' },
-                      { label: '已拒绝', value: 'rejected' },
+                      { label: '已驳回', value: 'rejected' },
                     ]}
                   />
                   <Select
@@ -729,53 +713,39 @@ const MaterialReconciliation: React.FC = () => {
                       {
                         key: 'export',
                         label: exporting ? '导出中...' : '导出',
-                        icon: <DownloadOutlined />,
                         disabled: exporting,
                         onClick: exportCsv,
                       },
                       { type: 'divider' as const },
                       {
-                        key: 'batchAudit',
-                        label: approvalSubmitting ? '处理中...' : '批量审核',
-                        icon: <CheckOutlined />,
+                        key: 'batchApprove',
+                        label: approvalSubmitting ? '处理中...' : '批量审批',
                         disabled:
                           approvalSubmitting ||
                           !selectedRowKeys.length ||
                           !reconciliationList.some((r) => selectedRowKeys.includes(String(r.id)) && r.status === 'pending'),
-                        onClick: batchAudit,
+                        onClick: batchApprove,
                       },
                       {
-                        key: 'batchSubmit',
-                        label: approvalSubmitting ? '处理中...' : '批量提交',
-                        icon: <SendOutlined />,
+                        key: 'batchReject',
+                        label: approvalSubmitting ? '处理中...' : '批量驳回',
                         disabled:
                           approvalSubmitting ||
                           !selectedRowKeys.length ||
-                          !reconciliationList.some((r) => selectedRowKeys.includes(String(r.id)) && (r.status === 'verified' || r.status === 'rejected')),
-                        onClick: batchSubmit,
-                      },
-                      {
-                        key: 'batchReturn',
-                        label: approvalSubmitting ? '处理中...' : '批量退回',
-                        icon: <RollbackOutlined />,
-                        disabled:
-                          approvalSubmitting ||
-                          !selectedRowKeys.length ||
-                          !reconciliationList.some((r) => selectedRowKeys.includes(String(r.id)) && (r.status === 'verified' || r.status === 'approved' || r.status === 'paid')),
-                        onClick: batchReturn,
+                          !reconciliationList.some((r) => selectedRowKeys.includes(String(r.id)) && (r.status === 'approved' || r.status === 'paid')),
+                        onClick: batchReject,
                         danger: true,
                       },
                       { type: 'divider' as const },
                       {
                         key: 'create',
                         label: '新增物料对账',
-                        icon: <PlusOutlined />,
                         onClick: () => openDialog(),
                       },
                     ],
                   }}
                 >
-                  <Button icon={<MoreOutlined />}>操作</Button>
+                  <Button>操作</Button>
                 </Dropdown>
               )}
             />

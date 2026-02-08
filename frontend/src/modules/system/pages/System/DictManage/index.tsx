@@ -242,7 +242,7 @@ const DictManage: React.FC = () => {
       content: `确定要删除字典项"${record.dictLabel}"吗？`,
       onOk: async () => {
         try {
-          await api.delete(`/api/system/dict/${record.id}`);
+          await api.delete(`/system/dict/${record.id}`);
           message.success('删除成功');
           fetchData();
         } catch (error) {
@@ -258,10 +258,10 @@ const DictManage: React.FC = () => {
       const values = await form.validateFields();
 
       if (dictModal.data?.id) {
-        await api.put(`/api/system/dict/${dictModal.data.id}`, values);
+        await api.put(`/system/dict/${dictModal.data.id}`, values);
         message.success('更新成功');
       } else {
-        await api.post('/api/system/dict', values);
+        await api.post('/system/dict', values);
         message.success('新建成功');
       }
 
@@ -285,7 +285,7 @@ const DictManage: React.FC = () => {
         try {
           const localData = getLocalData(selectedType);
           for (const item of localData) {
-            await api.post('/api/system/dict', item);
+            await api.post('/system/dict', item);
           }
           message.success('导入成功');
           fetchData();
@@ -340,12 +340,10 @@ const DictManage: React.FC = () => {
           actions={[
             {
               label: '编辑',
-              icon: <EditOutlined />,
               onClick: () => handleEdit(record)
             },
             {
               label: '删除',
-              icon: <DeleteOutlined />,
               danger: true,
               onClick: () => handleDelete(record)
             }
@@ -361,7 +359,7 @@ const DictManage: React.FC = () => {
         title="字典管理"
         extra={
           <Space>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+            <Button type="primary" onClick={handleAdd}>
               新建字典项
             </Button>
             <Button onClick={handleImportPreset}>

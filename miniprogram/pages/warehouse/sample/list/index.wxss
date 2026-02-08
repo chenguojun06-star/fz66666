@@ -1,19 +1,19 @@
 .container {
   height: 100vh;
-  background-color: #f5f5f5;
+  background-color: var(--color-bg-gray);
   display: flex;
   flex-direction: column;
 }
 
 .search-bar {
   padding: 20rpx;
-  background-color: #fff;
+  background-color: var(--color-bg-card);
 }
 
 .search-input-wrap {
   display: flex;
   align-items: center;
-  background-color: #f5f5f5;
+  background-color: var(--color-bg-gray);
   border-radius: 36rpx;
   padding: 10rpx 20rpx;
 }
@@ -32,7 +32,7 @@
   display: flex;
   justify-content: space-around;
   padding: 30rpx 0;
-  background-color: #fff;
+  background-color: var(--color-bg-card);
   margin-bottom: 20rpx;
 }
 
@@ -53,9 +53,9 @@
   color: #fff;
 }
 
-.bg-blue { background-color: #1890ff; }
-.bg-orange { background-color: #fa8c16; }
-.bg-green { background-color: #52c41a; }
+.bg-blue { background-color: var(--color-primary); }
+.bg-orange { background-color: var(--color-warning); }
+.bg-green { background-color: var(--color-success); }
 
 .iconfont {
   font-size: 32rpx;
@@ -69,7 +69,7 @@
 }
 
 .list-item {
-  background-color: #fff;
+  background-color: var(--color-bg-card);
   border-radius: 12rpx;
   padding: 20rpx;
   margin-bottom: 20rpx;
@@ -82,6 +82,19 @@
   border-radius: 8rpx;
   background-color: #eee;
   margin-right: 20rpx;
+}
+
+.item-img-placeholder {
+  width: 120rpx;
+  height: 160rpx;
+  border-radius: 8rpx;
+  background-color: var(--color-bg-gray);
+  margin-right: 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  color: var(--color-text-disabled);
 }
 
 .item-content {
@@ -100,26 +113,26 @@
 .item-title {
   font-size: 30rpx;
   font-weight: bold;
-  color: #333;
+  color: var(--color-text-primary);
 }
 
 .item-tags .tag {
   font-size: 20rpx;
   background-color: #e6f7ff;
-  color: #1890ff;
+  color: var(--color-primary);
   padding: 4rpx 12rpx;
   border-radius: 4rpx;
 }
 
 .item-desc {
   font-size: 26rpx;
-  color: #666;
+  color: var(--color-text-secondary);
   margin-top: 8rpx;
 }
 
 .item-spec {
   font-size: 24rpx;
-  color: #999;
+  color: var(--color-text-disabled);
   margin-top: 8rpx;
 }
 
@@ -141,7 +154,7 @@
 
 .action-link {
   font-size: 24rpx;
-  color: #2D7FF9;
+  color: var(--color-primary);
   padding: 6rpx 16rpx;
   border: 1rpx solid #d6e8ff;
   border-radius: 20rpx;
@@ -153,7 +166,7 @@
 }
 
 .stock-info .label {
-  color: #999;
+  color: var(--color-text-disabled);
 }
 
 .stock-info .value {
@@ -162,15 +175,15 @@
   font-size: 28rpx;
 }
 
-.green { color: #52c41a; }
-.orange { color: #fa8c16; }
+.green { color: var(--color-success); }
+.orange { color: var(--color-warning); }
 
 .empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   padding-top: 100rpx;
-  color: #999;
+  color: var(--color-text-disabled);
   font-size: 28rpx;
 }
 
@@ -182,6 +195,6 @@
 .loading-more, .no-more {
   text-align: center;
   padding: 20rpx;
-  color: #999;
+  color: var(--color-text-disabled);
   font-size: 24rpx;
 }

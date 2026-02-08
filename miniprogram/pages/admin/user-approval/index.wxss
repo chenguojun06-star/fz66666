@@ -1,5 +1,5 @@
 page {
-  background: #f7f8fa;
+  background: var(--color-bg-page);
 }
 
 .container {
@@ -15,15 +15,15 @@ page {
 }
 
 .title {
-  font-size: 18px;
+  font-size: var(--font-size-xl);
   font-weight: 600;
-  color: #1f2937;
+  color: var(--color-text-primary);
 }
 
 .count {
-  font-size: 14px;
-  color: #6b7280;
-  background: #f3f4f6;
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-gray);
   padding: 4px 12px;
   border-radius: var(--radius-md);
 }
@@ -38,8 +38,8 @@ page {
 }
 
 .loading-text {
-  font-size: 14px;
-  color: #9ca3af;
+  font-size: var(--font-size-base);
+  color: var(--color-text-disabled);
 }
 
 .empty-icon {
@@ -50,8 +50,8 @@ page {
 }
 
 .empty-text {
-  font-size: 14px;
-  color: #9ca3af;
+  font-size: var(--font-size-base);
+  color: var(--color-text-disabled);
 }
 
 .user-list {
@@ -61,7 +61,7 @@ page {
 }
 
 .user-card {
-  background: #ffffff;
+  background: var(--color-bg-card);
   border-radius: var(--radius-sm);
   padding: 16px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -72,9 +72,9 @@ page {
 }
 
 .user-name {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   font-weight: 600;
-  color: #1f2937;
+  color: var(--color-text-primary);
   margin-bottom: 8px;
 }
 
@@ -86,7 +86,7 @@ page {
 
 .meta-item {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 
 .user-actions {
@@ -100,17 +100,17 @@ page {
   height: 36px;
   line-height: 36px;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: var(--font-size-base);
 }
 
 .btn-approve {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, #10b981 0%, var(--color-success) 100%);
   color: #ffffff;
   border: none;
 }
 
 .btn-reject {
-  background: #ffffff;
+  background: var(--color-bg-card);
   color: #ef4444;
   border: 1px solid #ef4444;
 }
@@ -118,6 +118,6 @@ page {
 .loading-more {
   text-align: center;
   padding: 20px;
-  font-size: 14px;
-  color: #9ca3af;
+  font-size: var(--font-size-base);
+  color: var(--color-text-disabled);
 }

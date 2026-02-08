@@ -22,7 +22,7 @@
   right: 40rpx;
   top: 50%;
   transform: translateY(-50%);
-  background: #ffffff;
+  background: var(--color-bg-card);
   border-radius: 20rpx;
   overflow: hidden;
   box-shadow: 0 10rpx 40rpx rgba(0, 0, 0, 0.2);
@@ -39,12 +39,12 @@
 .form-title {
   font-size: 36rpx;
   font-weight: 600;
-  color: #333;
+  color: var(--color-text-primary);
 }
 
 .close-btn {
   font-size: 60rpx;
-  color: #999;
+  color: var(--color-text-disabled);
   line-height: 1;
 }
 
@@ -72,12 +72,12 @@
 }
 
 .info-item .label {
-  color: #666;
+  color: var(--color-text-secondary);
   font-size: 28rpx;
 }
 
 .info-item .value {
-  color: #333;
+  color: var(--color-text-primary);
   font-size: 28rpx;
   font-weight: 500;
 }
@@ -88,7 +88,7 @@
 
 .form-label {
   font-size: 28rpx;
-  color: #333;
+  color: var(--color-text-primary);
   margin-bottom: 16rpx;
   font-weight: 500;
 }
@@ -124,8 +124,8 @@
 }
 
 .cancel-btn {
-  background: #f5f5f5;
-  color: #666;
+  background: var(--color-bg-gray);
+  color: var(--color-text-secondary);
 }
 
 .submit-btn {

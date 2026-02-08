@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { App, AutoComplete, Button, Card, Checkbox, Modal } from 'antd';
+import { App, AutoComplete, Button, Card, Checkbox, Modal, Space } from 'antd';
 import {
   AccountBookOutlined,
   ApartmentOutlined,
@@ -74,6 +74,9 @@ const Dashboard: React.FC = () => {
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchOptions, setSearchOptions] = useState<Array<{ value: string; label: React.ReactNode }>>([]);
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [retryCount, setRetryCount] = useState(0);
   const [quickEntries, setQuickEntries] = useState<QuickEntryConfig[]>(() => {
     // 从localStorage加载用户配置
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -272,7 +275,10 @@ const Dashboard: React.FC = () => {
 
   const fetchDashboard = useCallback(async () => {
     try {
-      const response = await api.get<{ code: number; data: unknown }>('/dashboard');
+      setHasError(false);
+      setErrorMessage('');
+
+      const response = await api.get<{ code: number; data: unknown; message?: string }>('/dashboard');
       if (response.code === 200) {
         const d = response.data || {};
         setStats({
@@ -286,15 +292,30 @@ const Dashboard: React.FC = () => {
           paymentApprovalCount: d.paymentApprovalCount ?? 0,
         });
         setRecentActivities(d.recentActivities ?? []);
+        setRetryCount(0); // 成功后重置重试计数
       } else {
-        errorHandler.handleError(new Error(response.message || '获取仪表盘数据失败'), '获取仪表盘数据失败');
-        resetDashboardData();
+        // API返回非200状态码
+        const errMsg = response.message || '获取仪表盘数据失败';
+        console.error('[Dashboard] API错误:', errMsg);
+        setHasError(true);
+        setErrorMessage(errMsg);
+        // 不要重置数据，保留上次的数据
       }
-    } catch (error) {
-      errorHandler.handleError(error, '获取仪表盘数据失败');
-      resetDashboardData();
+    } catch (error: any) {
+      // 网络错误或其他异常
+      console.error('[Dashboard] 获取数据失败:', error);
+      const errMsg = error?.message || '网络错误，无法加载数据';
+      setHasError(true);
+      setErrorMessage(errMsg);
+      // 不要重置数据，保留上次的数据
     }
   }, []);
+
+  // 手动重试
+  const handleRetry = useCallback(() => {
+    setRetryCount(prev => prev + 1);
+    fetchDashboard();
+  }, [fetchDashboard]);
 
   useEffect(() => {
     fetchDashboard();
@@ -352,6 +373,40 @@ const Dashboard: React.FC = () => {
             <h2 className="page-title">仪表盘</h2>
           </div>
 
+        {/* 错误提示 */}
+        {hasError && (
+          <div style={{
+            padding: '16px 24px',
+            marginBottom: '16px',
+            background: '#fff2e8',
+            border: '1px solid #ffbb96',
+            borderRadius: '4px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <WarningOutlined style={{ color: '#fa8c16', fontSize: '18px' }} />
+              <div>
+                <div style={{ fontWeight: 600, color: '#d4380d', marginBottom: '4px' }}>
+                  数据加载失败
+                </div>
+                <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)' }}>
+                  {errorMessage || '无法连接到服务器，请检查网络连接后重试'}
+                </div>
+              </div>
+            </div>
+            <Button
+              type="primary"
+              icon={<ReloadOutlined />}
+              onClick={handleRetry}
+              loading={retryCount > 0 && hasError}
+            >
+              重试 {retryCount > 0 ? `(${retryCount})` : ''}
+            </Button>
+          </div>
+        )}
+
         {/* 智能搜索 */}
         <StandardToolbar
           left={(
@@ -368,12 +423,21 @@ const Dashboard: React.FC = () => {
             </div>
           )}
           right={(
-            <Button
-              icon={<ReloadOutlined />}
-              onClick={() => fetchDashboard()}
-            >
-              刷新
-            </Button>
+            <Space>
+              <Button
+                icon={<SettingOutlined />}
+                onClick={() => setSettingsVisible(true)}
+              >
+                配置快捷入口
+              </Button>
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={handleRetry}
+                loading={retryCount > 0 && hasError}
+              >
+                刷新数据
+              </Button>
+            </Space>
           )}
         />
 
@@ -424,7 +488,6 @@ const Dashboard: React.FC = () => {
               <h3 className="card-title">快捷入口</h3>
               <Button
                 type="text"
-                icon={<SettingOutlined />}
                 onClick={() => setSettingsVisible(true)}
                 title="设置快捷入口"
                 style={{ color: 'var(--neutral-text-secondary)' }}

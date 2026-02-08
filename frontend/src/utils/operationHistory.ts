@@ -69,9 +69,14 @@ export const buildHistoryRowsForList = (args: BuildListHistoryArgs): OperationHi
         return ta - tb;
       });
       const first = sorted[0];
-      const operatorName = String(first?.operatorName || first?.actualOperatorName || '-').trim() || '-';
+      // 聚合所有唯一操作人名称
+      const uniqueOperators = new Set<string>();
+      for (const r of sorted) {
+        const name = String(r?.operatorName || r?.actualOperatorName || '').trim();
+        if (name) uniqueOperators.add(name);
+      }
+      const operatorName = uniqueOperators.size > 0 ? Array.from(uniqueOperators).join(', ') : '-';
       const totalQty = sorted
-        .filter((r) => String(r?.operatorName || r?.actualOperatorName || '').trim() === operatorName)
         .reduce((sum, r) => sum + (Number(r?.quantity) || 0), 0);
       rows.push({
         type: '扫码',

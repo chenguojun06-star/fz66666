@@ -53,7 +53,7 @@ public class OrderTransferServiceImpl extends ServiceImpl<OrderTransferMapper, O
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public OrderTransfer createTransfer(String orderId, Long toUserId, String message) {
+    public OrderTransfer createTransfer(String orderId, Long toUserId, String message, String bundleIds, String processCodes) {
         // 获取当前登录用户
         Long currentUserId = getCurrentUserId();
         if (currentUserId == null) {
@@ -93,6 +93,8 @@ public class OrderTransferServiceImpl extends ServiceImpl<OrderTransferMapper, O
         transfer.setToUserId(toUserId);
         transfer.setStatus("pending");
         transfer.setMessage(message);
+        transfer.setBundleIds(bundleIds);
+        transfer.setProcessCodes(processCodes);
         transfer.setCreatedTime(LocalDateTime.now());
         transfer.setUpdatedTime(LocalDateTime.now());
 
@@ -161,7 +163,7 @@ public class OrderTransferServiceImpl extends ServiceImpl<OrderTransferMapper, O
         if (updated) {
             // 待完善：可在此补充订单责任人变更逻辑
             // 例如：更新订单的负责人字段
-            log.info("接受订单转移: transferId={}, orderId={}, toUserId={}", 
+            log.info("接受订单转移: transferId={}, orderId={}, toUserId={}",
                     transferId, transfer.getOrderId(), currentUserId);
         }
 
@@ -199,7 +201,7 @@ public class OrderTransferServiceImpl extends ServiceImpl<OrderTransferMapper, O
         boolean updated = this.updateById(transfer);
 
         if (updated) {
-            log.info("拒绝订单转移: transferId={}, orderId={}, reason={}", 
+            log.info("拒绝订单转移: transferId={}, orderId={}, reason={}",
                     transferId, transfer.getOrderId(), rejectReason);
         }
 
@@ -241,11 +243,11 @@ public class OrderTransferServiceImpl extends ServiceImpl<OrderTransferMapper, O
 
         LambdaQueryWrapper<OrderTransfer> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(OrderTransfer::getToUserId, currentUserId);
-        
+
         if (StringUtils.hasText(status)) {
             queryWrapper.eq(OrderTransfer::getStatus, status);
         }
-        
+
         queryWrapper.orderByDesc(OrderTransfer::getCreatedTime);
 
         Page<OrderTransfer> pageResult = this.page(new Page<>(page, pageSize), queryWrapper);

@@ -725,7 +725,6 @@ const StyleProcessTab: React.FC<Props> = ({
                   key: 'delete',
                   label: '删除',
                   title: '删除',
-                  icon: <DeleteOutlined />,
                   danger: true,
                   onClick: () => {
                     Modal.confirm({
@@ -848,7 +847,7 @@ const StyleProcessTab: React.FC<Props> = ({
             导入模板
           </Button>
 
-          <Button onClick={handleAdd} disabled={Boolean(readOnly)} type="primary" icon={<PlusOutlined />}>
+          <Button onClick={handleAdd} disabled={Boolean(readOnly)} type="primary">
             添加工序
           </Button>
 
@@ -890,18 +889,18 @@ const StyleProcessTab: React.FC<Props> = ({
               </div>
             }
           >
-            <Button icon={<PlusOutlined />} disabled={!editMode || Boolean(readOnly)}>
+            <Button disabled={!editMode || Boolean(readOnly)}>
               添加码数
             </Button>
           </Popover>
 
           {!editMode || readOnly ? (
-            <Button type="primary" icon={<EditOutlined />} onClick={enterEdit} disabled={loading || saving || Boolean(readOnly)}>
+            <Button type="primary" onClick={enterEdit} disabled={loading || saving || Boolean(readOnly)}>
               编辑
             </Button>
           ) : (
             <>
-              <Button icon={<SaveOutlined />} type="primary" onClick={saveAll} loading={saving}>
+              <Button type="primary" onClick={saveAll} loading={saving}>
                 保存
               </Button>
               <Button

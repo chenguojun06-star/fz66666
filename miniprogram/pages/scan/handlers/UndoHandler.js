@@ -1,148 +1,110 @@
 /**
- * 撤销操作处理器
- * 处理扫码撤销相关的逻辑
+ * UndoHandler - 撤销功能处理器
+ * 从 scan/index.js 提取的撤销相关逻辑
+ *
+ * @module UndoHandler
  */
 
-import api from '../../../utils/api';
-import { showSuccess, showError } from '../../../utils/uiHelper';
+const { eventBus } = require('../../../utils/eventBus');
+const { toast } = require('../../../utils/uiHelper');
+const api = require('../../../utils/api');
 
-// 撤销计时器
+// 模块级变量（原全局 undoTimer）
 let undoTimer = null;
 
+const UNDO_COUNTDOWN_SECONDS = 10;
+const UNDO_TIMER_INTERVAL_MS = 1000;
+
 /**
- * 显示撤销提示
- * @param {Object} pageInstance - 页面实例
- * @param {Object} record - 扫码记录
+ * 启动撤销倒计时
  */
-function showUndoNotification(pageInstance, record) {
-  const UNDO_COUNTDOWN_SECONDS = 10;
+function startUndoTimer(page, record) {
+  // 清除旧定时器
+  if (undoTimer) {
+    clearInterval(undoTimer);
+    undoTimer = null;
+  }
 
-  // 清除之前的计时器
-  stopUndoTimer();
-
-  pageInstance.setData({
+  page.setData({
     undoVisible: true,
     undoCountdown: UNDO_COUNTDOWN_SECONDS,
     undoRecord: record,
   });
 
   undoTimer = setInterval(() => {
-    const currentCountdown = pageInstance.data.undoCountdown - 1;
-
-    if (currentCountdown <= 0) {
-      stopUndoTimer();
-      pageInstance.setData({
-        undoVisible: false,
-        undoRecord: null,
-      });
+    const next = page.data.undoCountdown - 1;
+    if (next <= 0) {
+      stopUndoTimer(page);
     } else {
-      pageInstance.setData({ undoCountdown: currentCountdown });
+      page.setData({ undoCountdown: next });
     }
-  }, 1000);
+  }, UNDO_TIMER_INTERVAL_MS);
 }
 
 /**
- * 停止撤销计时器
+ * 停止撤销倒计时
  */
-function stopUndoTimer() {
+function stopUndoTimer(page) {
   if (undoTimer) {
     clearInterval(undoTimer);
     undoTimer = null;
   }
-}
-
-/**
- * 执行撤销操作
- * @param {Object} pageInstance - 页面实例
- * @returns {Promise<boolean>}
- */
-async function executeUndo(pageInstance) {
-  const { undoRecord } = pageInstance.data;
-
-  if (!undoRecord || !undoRecord.id) {
-    showError('没有可撤销的记录');
-    return false;
-  }
-
-  wx.showLoading({ title: '撤销中...', mask: true });
-
-  try {
-    await api.production.executeScan({
-      action: 'delete',
-      recordId: undoRecord.id,
-    });
-
-    stopUndoTimer();
-
-    pageInstance.setData({
-      undoVisible: false,
-      undoRecord: null,
-    });
-
-    // 刷新数据
-    if (typeof pageInstance.loadMyPanel === 'function') {
-      pageInstance.loadMyPanel(true);
-    }
-
-    // 触发全局刷新事件
-    const eventBus = getApp().globalData.eventBus;
-    if (eventBus && typeof eventBus.emit === 'function') {
-      eventBus.emit('SCAN_UNDO', undoRecord);
-      eventBus.emit('DATA_REFRESH');
-    }
-
-    showSuccess('撤销成功');
-    return true;
-  } catch (error) {
-    console.error('[UndoHandler] 撤销失败:', error);
-    showError(error.message || '撤销失败');
-    return false;
-  } finally {
-    wx.hideLoading();
-  }
-}
-
-/**
- * 隐藏撤销提示
- * @param {Object} pageInstance - 页面实例
- */
-function hideUndoNotification(pageInstance) {
-  stopUndoTimer();
-  pageInstance.setData({
+  page.setData({
     undoVisible: false,
+    undoCountdown: 0,
     undoRecord: null,
   });
 }
 
 /**
- * 获取撤销处理器方法
- * @param {Object} pageInstance - 页面实例
- * @returns {Object}
+ * 执行撤销操作
  */
-export function createUndoHandler(pageInstance) {
-  return {
-    /**
-     * 显示撤销提示
-     */
-    showUndo: (record) => showUndoNotification(pageInstance, record),
+async function handleUndo(page) {
+  const record = page.data.undoRecord;
+  const recordId = record?.recordId || record?.data?.recordId || record?.data?.id;
 
-    /**
-     * 执行撤销
-     */
-    executeUndo: () => executeUndo(pageInstance),
+  if (!record || !recordId) {
+    toast.error('撤销失败：未找到扫码记录信息');
+    stopUndoTimer(page);
+    return;
+  }
 
-    /**
-     * 隐藏撤销提示
-     */
-    hideUndo: () => hideUndoNotification(pageInstance),
+  stopUndoTimer(page);
 
-    /**
-     * 停止计时器
-     */
-    stopTimer: stopUndoTimer,
-  };
+  wx.showLoading({ title: '正在撤销...', mask: true });
+
+  try {
+    await api.production.executeScan({
+      action: 'delete',
+      recordId: recordId,
+    });
+
+    toast.success('已撤销');
+
+    page.setData({
+      lastResult: {
+        ...page.data.lastResult,
+        statusText: '已撤销',
+        statusClass: 'warning',
+      },
+    });
+
+    // 刷新统计
+    page.loadMyPanel(true);
+
+    // 触发全局事件
+    if (eventBus && typeof eventBus.emit === 'function') {
+      eventBus.emit('DATA_REFRESH');
+    }
+  } catch (e) {
+    toast.error('撤销失败: ' + (e.message || '未知错误'));
+  } finally {
+    wx.hideLoading();
+  }
 }
 
-export default {
-  createUndoHandler,
+module.exports = {
+  startUndoTimer,
+  stopUndoTimer,
+  handleUndo,
 };

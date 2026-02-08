@@ -24,7 +24,7 @@ export interface DataCardConfig {
  * ```tsx
  * <DashboardCard
  *   title="订单趋势"
- *   icon={<LineChartOutlined />}
+ *
  *   extra={<Button size="small">查看详情</Button>}
  * >
  *   <Line data={chartData} />

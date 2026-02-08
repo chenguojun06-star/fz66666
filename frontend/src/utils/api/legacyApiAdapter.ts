@@ -8,7 +8,7 @@
  * @date 2026-02-01
  */
 
-import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
+import axios, { AxiosRequestConfig } from 'axios';
 
 /**
  * 废弃端点映射表

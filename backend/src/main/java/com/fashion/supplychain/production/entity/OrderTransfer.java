@@ -62,6 +62,18 @@ public class OrderTransfer {
     private String message;
 
     /**
+     * 菲号ID列表（逗号分隔）
+     */
+    @TableField("bundle_ids")
+    private String bundleIds;
+
+    /**
+     * 工序编码列表（逗号分隔）
+     */
+    @TableField("process_codes")
+    private String processCodes;
+
+    /**
      * 拒绝原因
      */
     @TableField("reject_reason")

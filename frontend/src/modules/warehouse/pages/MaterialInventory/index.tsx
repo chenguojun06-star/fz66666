@@ -11,18 +11,13 @@ import {
   Image,
   Row,
   Col,
-  Tooltip,
   Form,
   InputNumber,
 } from 'antd';
 import type { Dayjs } from 'dayjs';
 import {
-  PlusOutlined,
-  DownloadOutlined,
   WarningOutlined,
-  PrinterOutlined,
   ScanOutlined,
-  InboxOutlined,
   ExportOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -124,47 +119,49 @@ const _MaterialInventory: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-        const { current, pageSize } = pagination.pagination;
-        const res = await api.get('/production/material/stock/list', {
-            params: {
-                page: current,
-                pageSize: pageSize,
-                materialCode: searchText,
-                materialType: selectedType || undefined,
-                startDate: dateRange?.[0]?.format('YYYY-MM-DD'),
-                endDate: dateRange?.[1]?.format('YYYY-MM-DD'),
-            }
-        });
-
-        if (res?.data?.records) {
-            const list = res.data.records.map((item: any) => ({
-                ...item,
-                availableQty: item.quantity, // 暂用总库存代替可用
-                specification: item.specifications, // 字段映射
-                safetyStock: 100, // 默认值
-                inTransitQty: 0, // 暂无数据
-                unitPrice: 0, // 暂无数据
-                totalValue: 0,
-                warehouseLocation: '默认仓',
-                lastInboundDate: item.updateTime,
-                lastOutboundDate: '-',
-            }));
-            setDataSource(list);
-            pagination.setTotal(res.data.total);
-
-            // 简单统计
-            setStats({
-                totalValue: 0,
-                totalQty: list.reduce((sum: number, i: any) => sum + (i.quantity || 0), 0),
-                lowStockCount: list.filter((i: any) => (i.quantity || 0) < 100).length,
-                materialTypes: list.length
-            });
+      const { current, pageSize } = pagination.pagination;
+      const res = await api.get('/production/material/stock/list', {
+        params: {
+          page: current,
+          pageSize: pageSize,
+          materialCode: searchText,
+          materialType: selectedType || undefined,
+          startDate: dateRange?.[0]?.format('YYYY-MM-DD'),
+          endDate: dateRange?.[1]?.format('YYYY-MM-DD'),
         }
+      });
+
+      if (res?.data?.records) {
+        const list = res.data.records.map((item: any) => ({
+          ...item,
+          // 保留后端返回的真实数据，只做必要的字段映射和默认值处理
+          availableQty: item.quantity - (item.lockedQuantity || 0), // 可用 = 总量 - 锁定
+          specification: item.specifications, // 字段映射
+          safetyStock: item.safetyStock || 100, // 使用后端值或默认100
+          inTransitQty: 0, // 暂无在途数据
+          unitPrice: item.unitPrice || 0, // 使用后端返回的单价
+          totalValue: item.totalValue || (item.quantity || 0) * (item.unitPrice || 0), // 优先用后端计算值
+          warehouseLocation: item.location || '默认仓',
+          lastInboundDate: item.lastInboundDate || item.updateTime || '-',
+          lastOutboundDate: item.lastOutboundDate || '-',
+          // 保留供应商信息
+          supplierName: item.supplierName || '-',
+        }));
+        setDataSource(list);
+        pagination.setTotal(res.data.total);
+
+        // 简单统计（计算真实总值）
+        setStats({
+          totalValue: list.reduce((sum: number, i: any) => sum + (i.totalValue || 0), 0),
+          totalQty: list.reduce((sum: number, i: any) => sum + (i.quantity || 0), 0),
+          lowStockCount: list.filter((i: any) => (i.quantity || 0) < (i.safetyStock || 100)).length,
+          materialTypes: list.length
+        });
+      }
     } catch (e) {
-        console.error(e);
-        message.error('加载库存失败');
+      message.error('加载库存失败');
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
 
@@ -189,7 +186,6 @@ const _MaterialInventory: React.FC = () => {
         setAlertList([]);
       }
     } catch (e) {
-      console.error(e);
       setAlertList([]);
     } finally {
       setAlertLoading(false);
@@ -232,7 +228,7 @@ const _MaterialInventory: React.FC = () => {
         setReceiverOptions(supervisors);
       }
     } catch (e) {
-      console.error(e);
+      message.error('加载接收人失败');
     }
   };
 
@@ -416,13 +412,12 @@ const _MaterialInventory: React.FC = () => {
         message.error(response.data.message || '入库失败');
       }
     } catch (error: any) {
-      console.error('入库失败:', error);
       message.error(error.response?.data?.message || error.message || '入库操作失败，请重试');
     }
   };
 
   // 出库
-  const handleOutbound = (record: MaterialInventory) => {
+  const handleOutbound = async (record: MaterialInventory) => {
     outboundForm.setFieldsValue({
       materialCode: record.materialCode,
       materialName: record.materialName,
@@ -430,37 +425,36 @@ const _MaterialInventory: React.FC = () => {
     });
     outboundModal.open(record);
 
-    // 模拟批次明细数据（实际应从后端获取）
-    const mockBatchDetails: MaterialBatchDetail[] = [
-      {
-        batchNo: 'BATCH-20260101-001',
-        warehouseLocation: 'A-01-01',
-        color: record.color,
-        availableQty: 800,
-        lockedQty: 50,
-        inboundDate: '2026-01-01',
-        expiryDate: '2027-01-01',
-      },
-      {
-        batchNo: 'BATCH-20260115-002',
-        warehouseLocation: 'A-01-02',
-        color: record.color,
-        availableQty: 650,
-        lockedQty: 30,
-        inboundDate: '2026-01-15',
-        expiryDate: '2027-01-15',
-      },
-      {
-        batchNo: 'BATCH-20260120-003',
-        warehouseLocation: 'A-02-01',
-        color: record.color,
-        availableQty: 550,
-        lockedQty: 20,
-        inboundDate: '2026-01-20',
-        expiryDate: '2027-01-20',
-      },
-    ];
-    setBatchDetails(mockBatchDetails);
+    // 从后端获取批次明细数据
+    try {
+      const res = await api.get('/production/material/stock/batches', {
+        params: {
+          materialCode: record.materialCode,
+          color: record.color || undefined,
+          size: record.size || undefined,
+        },
+      });
+
+      if (res?.code === 200 && Array.isArray(res.data)) {
+        const batchList: MaterialBatchDetail[] = res.data.map((item: any) => ({
+          batchNo: item.batchNo || '',
+          warehouseLocation: item.warehouseLocation || '默认仓',
+          color: item.color || '',
+          availableQty: item.availableQty || 0,
+          lockedQty: item.lockedQty || 0,
+          inboundDate: item.inboundDate ? dayjs(item.inboundDate).format('YYYY-MM-DD') : '',
+          expiryDate: item.expiryDate ? dayjs(item.expiryDate).format('YYYY-MM-DD') : undefined,
+          outboundQty: 0,
+        }));
+        setBatchDetails(batchList);
+      } else {
+        message.warning('未找到该物料的批次记录');
+        setBatchDetails([]);
+      }
+    } catch (e) {
+      message.error('加载批次明细失败');
+      setBatchDetails([]);
+    }
   };
 
   // 批次数量变化
@@ -485,23 +479,12 @@ const _MaterialInventory: React.FC = () => {
       return;
     }
 
-    // console.log('物料出库数据:', {
-    //   materialCode: outboundModal.data?.materialCode,
-    //   materialName: outboundModal.data?.materialName,
-    //   batches: selectedBatches.map(item => ({
-    //     batchNo: item.batchNo,
-    //     warehouseLocation: item.warehouseLocation,
-    //     color: item.color,
-    //     outboundQty: item.outboundQty,
-    //   })),
-    // });
-
     message.success(`成功出库 ${selectedBatches.length} 个批次，共 ${selectedBatches.reduce((sum, item) => sum + (item.outboundQty || 0), 0)} ${outboundModal.data?.unit || '件'}`);
     outboundModal.close();
     setBatchDetails([]);
     outboundForm.resetFields();
   };
-// 打印出库单
+  // 打印出库单
   const handlePrintOutbound = (record: MaterialInventory) => {
     const printContent = `
       <!DOCTYPE html>
@@ -601,51 +584,30 @@ const _MaterialInventory: React.FC = () => {
     {
       title: '物料信息',
       key: 'materialInfo',
-      width: 260,
+      width: 280,
       fixed: 'left',
       render: (_, record) => (
-        <Space orientation="vertical" size={8} style={{ width: '100%' }}>
-          <Space size={8} align="center">
+        <Space orientation="vertical" size={4} style={{ width: '100%' }}>
+          <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)', lineHeight: '22px', height: '22px' }}>
+            <span style={{ color: 'var(--neutral-text-disabled)', width: '60px', textAlign: 'right', flexShrink: 0 }}>编号：</span>
+            <span style={{ fontWeight: 600, marginLeft: '8px' }}>{record.materialCode || '-'}</span>
+          </div>
+          <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)', lineHeight: '22px', height: '22px' }}>
+            <span style={{ color: 'var(--neutral-text-disabled)', width: '60px', textAlign: 'right', flexShrink: 0 }}>名称：</span>
+            <span style={{ fontWeight: 600, marginLeft: '8px' }}>{record.materialName || '-'}</span>
+          </div>
+          <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)', lineHeight: '22px', height: '22px', alignItems: 'center' }}>
+            <span style={{ color: 'var(--neutral-text-disabled)', width: '60px', textAlign: 'right', flexShrink: 0 }}>分类：</span>
             <Tag
               color={record.materialType === '面料' ? 'blue' : record.materialType === '辅料' ? 'green' : 'orange'}
-              style={{ fontWeight: 600, fontSize: "var(--font-size-sm)" }}
+              style={{ fontSize: 'var(--font-size-xs)', margin: '0 0 0 8px' }}
             >
               {record.materialType}
             </Tag>
-          </Space>
-          <div className="material-info-grid">
-            <div className="material-info-item">
-              <span className="material-info-label">物料编号</span>
-              <span className="material-info-value">{record.materialCode || '-'}</span>
-            </div>
-            <div className="material-info-item">
-              <span className="material-info-label">物料名称</span>
-              <span className="material-info-value">{record.materialName || '-'}</span>
-            </div>
-            <div className="material-info-item">
-              <span className="material-info-label">布行</span>
-              <span className="material-info-value">{record.supplierName || '-'}</span>
-            </div>
-            <div className="material-info-item">
-              <span className="material-info-label">规格</span>
-              <span className="material-info-value">{record.specification || '-'}</span>
-            </div>
-            <div className="material-info-item">
-              <span className="material-info-label">颜色</span>
-              <span className="material-info-value">{record.color || '-'}</span>
-            </div>
-            <div className="material-info-item">
-              <span className="material-info-label">尺码</span>
-              <span className="material-info-value">{record.size || '-'}</span>
-            </div>
-            <div className="material-info-item">
-              <span className="material-info-label">单位</span>
-              <span className="material-info-value">{record.unit || '-'}</span>
-            </div>
-            <div className="material-info-item">
-              <span className="material-info-label">库位</span>
-              <span className="material-info-value">{record.warehouseLocation || '-'}</span>
-            </div>
+          </div>
+          <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)', lineHeight: '22px', height: '22px' }}>
+            <span style={{ color: 'var(--neutral-text-disabled)', width: '60px', textAlign: 'right', flexShrink: 0 }}>颜色：</span>
+            <span style={{ fontWeight: 600, marginLeft: '8px' }}>{record.color || '-'}</span>
           </div>
         </Space>
       ),
@@ -653,34 +615,36 @@ const _MaterialInventory: React.FC = () => {
     {
       title: '面料属性',
       key: 'fabricProperties',
-      width: 260,
+      width: 200,
       render: (_, record) => {
         if (record.materialType !== '面料') {
-          return <div style={{ textAlign: 'center', color: 'var(--neutral-text-disabled)', fontSize: "var(--font-size-xs)" }}>-</div>;
+          return (
+            <div style={{ textAlign: 'center', color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-xs)' }}>
+              -
+            </div>
+          );
         }
+
         return (
-          <Space orientation="vertical" size={6} style={{ width: '100%' }}>
-            {record.fabricWidth && (
-              <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
-                <span style={{ color: 'var(--neutral-text-disabled)' }}>门幅:</span>{' '}
-                <span style={{ color: 'var(--primary-color)', fontWeight: 700, fontSize: "var(--font-size-base)" }}>{record.fabricWidth}</span>
-              </div>
-            )}
-            {record.fabricWeight && (
-              <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
-                <span style={{ color: 'var(--neutral-text-disabled)' }}>克重:</span>{' '}
-                <span style={{ color: 'var(--primary-color)', fontWeight: 700, fontSize: "var(--font-size-base)" }}>{record.fabricWeight}</span>
-              </div>
-            )}
-            {record.fabricComposition && (
-              <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
-                <span style={{ color: 'var(--neutral-text-disabled)' }}>成分:</span>{' '}
-                <span style={{ color: 'var(--primary-color)', fontWeight: 700, fontSize: "var(--font-size-base)" }}>{record.fabricComposition}</span>
-              </div>
-            )}
-            {!record.fabricWidth && !record.fabricWeight && !record.fabricComposition && (
-              <div style={{ textAlign: 'center', color: 'var(--neutral-text-disabled)', fontSize: "var(--font-size-xs)" }}>-</div>
-            )}
+          <Space orientation="vertical" size={4} style={{ width: '100%' }}>
+            <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)', lineHeight: '22px', height: '22px' }}>
+              <span style={{ color: 'var(--neutral-text-disabled)', width: '60px', textAlign: 'right', flexShrink: 0 }}>幅宽：</span>
+              <span style={{ fontWeight: 600, marginLeft: '8px' }}>{record.fabricWidth || '-'}</span>
+            </div>
+            <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)', lineHeight: '22px', height: '22px' }}>
+              <span style={{ color: 'var(--neutral-text-disabled)', width: '60px', textAlign: 'right', flexShrink: 0 }}>克重：</span>
+              <span style={{ fontWeight: 600, marginLeft: '8px' }}>{record.fabricWeight || '-'}</span>
+            </div>
+            <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)', lineHeight: '22px', height: '22px' }}>
+              <span style={{ color: 'var(--neutral-text-disabled)', width: '60px', textAlign: 'right', flexShrink: 0 }}>成分：</span>
+              <span style={{ fontWeight: 600, marginLeft: '8px' }} title={record.fabricComposition || '-'}>
+                {record.fabricComposition || '-'}
+              </span>
+            </div>
+            <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)', lineHeight: '22px', height: '22px' }}>
+              <span style={{ color: 'var(--neutral-text-disabled)', width: '60px', textAlign: 'right', flexShrink: 0 }}>单位：</span>
+              <span style={{ fontWeight: 600, marginLeft: '8px' }}>{record.unit || '-'}</span>
+            </div>
           </Space>
         );
       },
@@ -762,6 +726,16 @@ const _MaterialInventory: React.FC = () => {
       ),
     },
     {
+      title: '供应商',
+      key: 'supplier',
+      width: 150,
+      render: (_, record) => (
+        <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 500 }}>
+          {record.supplierName || '-'}
+        </div>
+      ),
+    },
+    {
       title: '出入库记录',
       key: 'records',
       width: 200,
@@ -805,26 +779,22 @@ const _MaterialInventory: React.FC = () => {
             {
               key: 'instruction',
               label: '采购指令',
-              icon: <WarningOutlined />,
               onClick: () => openInstructionFromRecord(record)
             },
             {
               key: 'inbound',
               label: '入库',
               primary: true,
-              icon: <InboxOutlined />,
               onClick: () => handleInbound(record)
             },
             {
               key: 'outbound',
               label: '出库',
-              icon: <ExportOutlined />,
               onClick: () => handleOutbound(record)
             },
             {
               key: 'print',
               label: '打印出库单',
-              icon: <PrinterOutlined />,
               onClick: () => handlePrintOutbound(record)
             },
             {
@@ -895,9 +865,9 @@ const _MaterialInventory: React.FC = () => {
             )}
             right={(
               <>
-                <Button icon={<WarningOutlined />} onClick={openInstructionEmpty}>发出采购需求</Button>
-                <Button icon={<DownloadOutlined />}>导出</Button>
-                <Button type="primary" icon={<PlusOutlined />} onClick={() => handleInbound()}>入库</Button>
+                <Button onClick={openInstructionEmpty}>发出采购需求</Button>
+                <Button>导出</Button>
+                <Button type="primary" onClick={() => handleInbound()}>入库</Button>
               </>
             )}
           />
@@ -942,42 +912,64 @@ const _MaterialInventory: React.FC = () => {
             </Form.Item>
           )}
           <Form.Item label="物料信息">
-            <div className="material-info-grid">
-              <div className="material-info-item">
-                <span className="material-info-label">物料编号</span>
-                <span className="material-info-value">{instructionTarget?.materialCode || '-'}</span>
+            <Space orientation="vertical" size={8} style={{ width: '100%' }}>
+              <div style={{ fontSize: 'var(--font-size-sm)' }}>
+                <span style={{ color: 'var(--neutral-text-disabled)' }}>物料编号：</span>
+                <span style={{ fontWeight: 600 }}>{instructionTarget?.materialCode || '-'}</span>
               </div>
-              <div className="material-info-item">
-                <span className="material-info-label">物料名称</span>
-                <span className="material-info-value">{instructionTarget?.materialName || '-'}</span>
+              <div style={{ fontSize: 'var(--font-size-sm)' }}>
+                <span style={{ color: 'var(--neutral-text-disabled)' }}>物料名称：</span>
+                <span style={{ fontWeight: 600 }}>{instructionTarget?.materialName || '-'}</span>
               </div>
-              <div className="material-info-item">
-                <span className="material-info-label">类型</span>
-                <span className="material-info-value">{instructionTarget?.materialType || '-'}</span>
+              <div style={{ fontSize: 'var(--font-size-sm)' }}>
+                <span style={{ color: 'var(--neutral-text-disabled)' }}>类型：</span>
+                <span style={{ fontWeight: 600 }}>{instructionTarget?.materialType || '-'}</span>
               </div>
-              <div className="material-info-item">
-                <span className="material-info-label">单位</span>
-                <span className="material-info-value">{instructionTarget?.unit || '-'}</span>
+              <div style={{ fontSize: 'var(--font-size-sm)' }}>
+                <span style={{ color: 'var(--neutral-text-disabled)' }}>供应商：</span>
+                <span style={{ fontWeight: 600 }}>{instructionTarget?.supplierName || '-'}</span>
               </div>
-              <div className="material-info-item">
-                <span className="material-info-label">颜色</span>
-                <span className="material-info-value">{instructionTarget?.color || '-'}</span>
+              <div style={{ fontSize: 'var(--font-size-sm)' }}>
+                <span style={{ color: 'var(--neutral-text-disabled)' }}>单位：</span>
+                <span style={{ fontWeight: 600 }}>{instructionTarget?.unit || '-'}</span>
               </div>
-              <div className="material-info-item">
-                <span className="material-info-label">尺码</span>
-                <span className="material-info-value">{instructionTarget?.size || '-'}</span>
+              <div style={{ fontSize: 'var(--font-size-sm)' }}>
+                <span style={{ color: 'var(--neutral-text-disabled)' }}>颜色：</span>
+                <span style={{ fontWeight: 600 }}>{instructionTarget?.color || '-'}</span>
               </div>
-              <div className="material-info-item">
-                <span className="material-info-label">单件用量</span>
-                <span className="material-info-value">{instructionTarget?.perPieceUsage ?? '-'}</span>
+            </Space>
+
+            {/* 面料属性（仅面料显示） */}
+            {instructionTarget?.materialType === '面料' && (
+              <div style={{ marginTop: 16 }}>
+                <div style={{
+                  fontSize: 'var(--font-size-sm)',
+                  fontWeight: 600,
+                  marginBottom: 8,
+                  color: 'var(--primary-color)'
+                }}>
+                  🧵 面料属性
+                </div>
+                <Space orientation="vertical" size={8} style={{ width: '100%' }}>
+                  <div style={{ fontSize: 'var(--font-size-sm)' }}>
+                    <span style={{ color: 'var(--neutral-text-disabled)' }}>幅宽：</span>
+                    <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{instructionTarget?.fabricWidth || '-'}</span>
+                  </div>
+                  <div style={{ fontSize: 'var(--font-size-sm)' }}>
+                    <span style={{ color: 'var(--neutral-text-disabled)' }}>克重：</span>
+                    <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{instructionTarget?.fabricWeight || '-'}</span>
+                  </div>
+                  <div style={{ fontSize: 'var(--font-size-sm)' }}>
+                    <span style={{ color: 'var(--neutral-text-disabled)' }}>成分：</span>
+                    <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{instructionTarget?.fabricComposition || '-'}</span>
+                  </div>
+                  <div style={{ fontSize: 'var(--font-size-sm)' }}>
+                    <span style={{ color: 'var(--neutral-text-disabled)' }}>单位：</span>
+                    <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{instructionTarget?.unit || '-'}</span>
+                  </div>
+                </Space>
               </div>
-              <div className="material-info-item">
-                <span className="material-info-label">最少/最大可产</span>
-                <span className="material-info-value">
-                  {instructionTarget?.minProductionQty ?? '-'} / {instructionTarget?.maxProductionQty ?? '-'}
-                </span>
-              </div>
-            </div>
+            )}
           </Form.Item>
           <Row gutter={12}>
             <Col span={12}>
@@ -1147,6 +1139,89 @@ const _MaterialInventory: React.FC = () => {
             <Input disabled />
           </Form.Item>
 
+          <Form.Item
+            label="物料类型"
+            name="materialType"
+          >
+            <Select disabled placeholder="请选择物料类型">
+              <Option value="面料">面料</Option>
+              <Option value="辅料">辅料</Option>
+              <Option value="配件">配件</Option>
+            </Select>
+          </Form.Item>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="颜色"
+                name="color"
+              >
+                <Input placeholder="如: 蓝色" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="规格"
+                name="specification"
+              >
+                <Input placeholder="如: 45cm×50m" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item
+            label="供应商"
+            name="supplierName"
+          >
+            <Input placeholder="请输入供应商名称" />
+          </Form.Item>
+
+          {/* 面料属性（仅面料显示） */}
+          <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => prevValues.materialType !== currentValues.materialType}>
+            {({ getFieldValue }) => {
+              const materialType = getFieldValue('materialType');
+              if (materialType !== '面料') return null;
+              return (
+                <>
+                  <div style={{
+                    fontSize: 'var(--font-size-base)',
+                    fontWeight: 600,
+                    margin: '16px 0 8px',
+                    color: 'var(--primary-color)'
+                  }}>
+                    🧵 面料属性
+                  </div>
+                  <Row gutter={16}>
+                    <Col span={8}>
+                      <Form.Item
+                        label="幅宽"
+                        name="fabricWidth"
+                      >
+                        <Input placeholder="如: 150cm" />
+                      </Form.Item>
+                    </Col>
+                    <Col span={8}>
+                      <Form.Item
+                        label="克重"
+                        name="fabricWeight"
+                      >
+                        <Input placeholder="如: 200g/m²" />
+                      </Form.Item>
+                    </Col>
+                    <Col span={8}>
+                      <Form.Item
+                        label="成分"
+                        name="fabricComposition"
+                      >
+                        <Input placeholder="如: 100%棉" />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                </>
+              );
+            }}
+          </Form.Item>
+
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
@@ -1211,24 +1286,64 @@ const _MaterialInventory: React.FC = () => {
           <Space orientation="vertical" style={{ width: '100%' }} size="large">
             {/* 基础信息卡片 */}
             <Card size="small" style={{ background: '#f5f5f5' }}>
-              <Row gutter={24}>
-                <Col span={6}>
-                  <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>面料编号</div>
-                  <div style={{ fontSize: "var(--font-size-base)", fontWeight: 600 }}>{outboundModal.data.materialCode}</div>
-                </Col>
-                <Col span={8}>
-                  <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>面料名称</div>
-                  <div style={{ fontSize: "var(--font-size-base)", fontWeight: 600 }}>{outboundModal.data.materialName}</div>
-                </Col>
-                <Col span={5}>
-                  <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>物料类型</div>
-                  <div><Tag color="blue">{outboundModal.data.materialType}</Tag></div>
-                </Col>
-                <Col span={5}>
-                  <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>颜色</div>
-                  <div style={{ fontSize: "var(--font-size-base)", fontWeight: 600 }}>{outboundModal.data.color || '-'}</div>
-                </Col>
-              </Row>
+              <Space orientation="vertical" size={8} style={{ width: '100%' }}>
+                <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)' }}>
+                  <span style={{ color: 'var(--neutral-text-disabled)', width: '80px', textAlign: 'right', flexShrink: 0 }}>物料编号：</span>
+                  <span style={{ fontWeight: 600, marginLeft: '8px' }}>{outboundModal.data.materialCode}</span>
+                </div>
+                <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)' }}>
+                  <span style={{ color: 'var(--neutral-text-disabled)', width: '80px', textAlign: 'right', flexShrink: 0 }}>物料名称：</span>
+                  <span style={{ fontWeight: 600, marginLeft: '8px' }}>{outboundModal.data.materialName}</span>
+                </div>
+                <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)', alignItems: 'center' }}>
+                  <span style={{ color: 'var(--neutral-text-disabled)', width: '80px', textAlign: 'right', flexShrink: 0 }}>物料类型：</span>
+                  <Tag color="blue" style={{ margin: '0 0 0 8px' }}>{outboundModal.data.materialType}</Tag>
+                </div>
+                <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)' }}>
+                  <span style={{ color: 'var(--neutral-text-disabled)', width: '80px', textAlign: 'right', flexShrink: 0 }}>颜色：</span>
+                  <span style={{ fontWeight: 600, marginLeft: '8px' }}>{outboundModal.data.color || '-'}</span>
+                </div>
+                <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)' }}>
+                  <span style={{ color: 'var(--neutral-text-disabled)', width: '80px', textAlign: 'right', flexShrink: 0 }}>规格：</span>
+                  <span style={{ fontWeight: 600, marginLeft: '8px' }}>{outboundModal.data.specification || '-'}</span>
+                </div>
+                <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)' }}>
+                  <span style={{ color: 'var(--neutral-text-disabled)', width: '80px', textAlign: 'right', flexShrink: 0 }}>供应商：</span>
+                  <span style={{ fontWeight: 600, marginLeft: '8px' }}>{outboundModal.data.supplierName || '-'}</span>
+                </div>
+              </Space>
+
+              {/* 面料属性（仅面料显示） */}
+              {outboundModal.data.materialType === '面料' && (
+                <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #e0e0e0' }}>
+                  <div style={{
+                    fontSize: 'var(--font-size-sm)',
+                    fontWeight: 600,
+                    marginBottom: 8,
+                    color: 'var(--primary-color)'
+                  }}>
+                    🧵 面料属性
+                  </div>
+                  <Space orientation="vertical" size={8} style={{ width: '100%' }}>
+                    <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)' }}>
+                      <span style={{ color: 'var(--neutral-text-disabled)', width: '80px', textAlign: 'right', flexShrink: 0 }}>幅宽：</span>
+                      <span style={{ fontWeight: 600, marginLeft: '8px', color: 'var(--primary-color)' }}>{outboundModal.data.fabricWidth || '-'}</span>
+                    </div>
+                    <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)' }}>
+                      <span style={{ color: 'var(--neutral-text-disabled)', width: '80px', textAlign: 'right', flexShrink: 0 }}>克重：</span>
+                      <span style={{ fontWeight: 600, marginLeft: '8px', color: 'var(--primary-color)' }}>{outboundModal.data.fabricWeight || '-'}</span>
+                    </div>
+                    <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)' }}>
+                      <span style={{ color: 'var(--neutral-text-disabled)', width: '80px', textAlign: 'right', flexShrink: 0 }}>成分：</span>
+                      <span style={{ fontWeight: 600, marginLeft: '8px', color: 'var(--primary-color)' }}>{outboundModal.data.fabricComposition || '-'}</span>
+                    </div>
+                    <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)' }}>
+                      <span style={{ color: 'var(--neutral-text-disabled)', width: '80px', textAlign: 'right', flexShrink: 0 }}>单位：</span>
+                      <span style={{ fontWeight: 600, marginLeft: '8px', color: 'var(--primary-color)' }}>{outboundModal.data.unit || '-'}</span>
+                    </div>
+                  </Space>
+                </div>
+              )}
             </Card>
 
             {/* 批次明细表格 */}

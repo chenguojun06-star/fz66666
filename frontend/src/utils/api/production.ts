@@ -73,7 +73,10 @@ export const parseProductionOrderLines = (
 
   const fallbackColor = String((order as Record<string, unknown>)?.color || '').trim();
   const fallbackSize = String((order as Record<string, unknown>)?.size || '').trim();
-  const fallbackQty = toNumberSafe((order as Record<string, unknown>)?.orderQuantity);
+  const fallbackQty = toNumberSafe(
+    (order as Record<string, unknown>)?.orderQuantity
+    ?? (order as Record<string, unknown>)?.quantity
+  );
   const fallbackWarehousedQty = toNumberSafe((order as Record<string, unknown>)?.warehousingQualifiedQuantity);
 
   if (!fallbackColor || !fallbackSize) return [];
@@ -106,24 +109,51 @@ export const isOrderFrozenByStatusOrStock = (source?: OrderFrozenSource | null):
   return Boolean(source?.hasStockOut);
 };
 
+const extractListRecords = (data: unknown): unknown[] => {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  if (typeof data === 'object') {
+    const payload = data as Record<string, unknown>;
+    const candidate = payload.records ?? payload.list ?? payload.items ?? payload.rows ?? payload.data;
+    if (Array.isArray(candidate)) return candidate;
+    // 如果是单个对象（有id和orderNo），可能是单条记录
+    if (payload.id && payload.orderNo) {
+      return [payload];
+    }
+  }
+  return [];
+};
+
 export const fetchProductionOrderDetail = async (
-  id?: string | null,
-  orderNo?: string | null
+  idOrOrderNo?: string | null,
+  _options?: { acceptAnyData?: boolean }
 ): Promise<unknown> => {
-  const key = String(id || '').trim() || String(orderNo || '').trim();
+  const key = String(idOrOrderNo || '').trim();
   if (!key) throw new Error('缺少订单ID或订单号');
+
+  // 判断是ID还是订单号：订单号通常以PO开头，ID是32位UUID
+  const isOrderNo = key.startsWith('PO') || key.length < 20;
+  const params = isOrderNo ? { orderNo: key } : { id: key };
 
   // 统一使用 /list 端点查询单个订单
   try {
-    const resp = await api.get<ApiResponse>('/production/order/list', {
-      params: { orderNo: key }
-    });
+    const resp = await api.get<ApiResponse>('/production/order/list', params);
     if (resp && resp.code === 200 && resp.data) {
-      const records = (resp.data as { records?: unknown[] })?.records || [];
-      if (records.length > 0) return records[0];
+      const records = extractListRecords(resp.data);
+
+      // 🔧 FIX: 从列表中找到匹配的订单（后端可能返回多条记录）
+      const matched = records.find((r: any) => {
+        const recordOrderNo = String(r.orderNo || '').trim();
+        const recordId = String(r.id || '').trim();
+        return recordOrderNo === key || recordId === key;
+      });
+
+      if (matched) {
+        return matched;
+      }
     }
-  } catch {
-    // Failed
+  } catch (err) {
+    console.error('[fetchProductionOrderDetail] 请求失败:', err);
   }
 
   throw new Error('未找到订单');
@@ -279,4 +309,25 @@ export const useProductionOrderFrozenCache = (
   }, [rule]);
 
   return { cacheRef, isFrozenById, isFrozen, ensureUnlocked };
+};
+
+/**
+ * 查询生产工序跟踪记录（用于工资结算）
+ *
+ * @param productionOrderId 生产订单ID
+ * @returns 工序跟踪记录列表
+ */
+export const getProductionProcessTracking = async (productionOrderId: string): Promise<ApiResponse> => {
+  return api.get(`/production/process-tracking/order/${productionOrderId}`);
+};
+
+/**
+ * 管理员重置扫码记录（允许重新扫码）
+ *
+ * @param trackingId 跟踪记录ID
+ * @param resetReason 重置原因
+ * @returns 重置结果
+ */
+export const resetProcessTrackingRecord = async (trackingId: number, resetReason?: string): Promise<ApiResponse> => {
+  return api.post(`/production/process-tracking/${trackingId}/reset`, { resetReason });
 };

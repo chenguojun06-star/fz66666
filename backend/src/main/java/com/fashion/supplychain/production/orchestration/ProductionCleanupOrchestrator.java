@@ -67,7 +67,7 @@ public class ProductionCleanupOrchestrator {
     /**
      * 清理错误创建的虚拟采购记录
      */
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void cleanupFakeProcurementRecords() {
         log.info("Starting cleanup of fake procurement records...");
         try {
@@ -83,7 +83,7 @@ public class ProductionCleanupOrchestrator {
      * 清理无效的孤儿数据（如：关联订单已删除的采购单）
      * 建议在系统启动时或定时执行
      */
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void cleanupOrphanData() {
         log.info("Starting orphan data cleanup...");
 
@@ -201,7 +201,7 @@ public class ProductionCleanupOrchestrator {
         return v == null ? "" : v.trim();
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> cleanupSince(LocalDateTime cutoff) {
         if (cutoff == null) {
             throw new IllegalArgumentException("参数错误");
@@ -314,7 +314,7 @@ public class ProductionCleanupOrchestrator {
         return data;
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> deleteFullLinkByOrderKey(String orderKey) {
         String key = StringUtils.hasText(orderKey) ? orderKey.trim() : null;
         if (!StringUtils.hasText(key)) {

@@ -381,20 +381,18 @@ export const resolveNodesForOrder = (
     const styleNo = String((order as Record<string, unknown>)?.styleNo || '').trim();
     const styleNodes = styleNo && progressNodesByStyleNo[styleNo] ? progressNodesByStyleNo[styleNo] : [];
     if (styleNodes.length > 0) {
-      const hasAnyPrice = orderNodes.some(n => (Number(n.unitPrice) || 0) > 0);
-      if (!hasAnyPrice) {
-        const priceMap = new Map<string, number>();
-        styleNodes.forEach(sn => {
-          const price = Number(sn.unitPrice) || 0;
-          if (price > 0) {
-            priceMap.set(sn.name, price);
-          }
-        });
-        return orderNodes.map(n => ({
-          ...n,
-          unitPrice: priceMap.get(n.name) ?? (Number(n.unitPrice) || 0)
-        }));
-      }
+      // 始终使用模板库的最新单价覆盖订单快照中的旧单价
+      const priceMap = new Map<string, number>();
+      styleNodes.forEach(sn => {
+        const price = Number(sn.unitPrice) || 0;
+        if (price > 0) {
+          priceMap.set(sn.name, price);
+        }
+      });
+      return orderNodes.map(n => ({
+        ...n,
+        unitPrice: priceMap.get(n.name) ?? (Number(n.unitPrice) || 0)
+      }));
     }
     return orderNodes;
   }
@@ -412,6 +410,22 @@ export const resolveNodesForListOrder = (
 ): ProgressNode[] => {
   const orderNodes = parseWorkflowNodesFromOrder(order);
   if (orderNodes.length) {
+    // 合并模板库最新单价到列表视图的节点
+    const sn = String((order as Record<string, unknown>)?.styleNo || '').trim();
+    const styleNodes = sn && progressNodesByStyleNo[sn] ? progressNodesByStyleNo[sn] : [];
+    if (styleNodes.length > 0) {
+      const priceMap = new Map<string, number>();
+      styleNodes.forEach(n => {
+        const price = Number(n.unitPrice) || 0;
+        if (price > 0) {
+          priceMap.set(n.name, price);
+        }
+      });
+      return orderNodes.map(n => ({
+        ...n,
+        unitPrice: priceMap.get(n.name) ?? (Number(n.unitPrice) || 0)
+      }));
+    }
     return orderNodes;
   }
   const sn = String((order as Record<string, unknown>)?.styleNo || '').trim();
@@ -423,9 +437,22 @@ export const resolveNodesForListOrder = (
 
 export const getProcessesByNodeFromOrder = (
   order: ProductionOrder | null,
+  templateNodes?: ProgressNode[],
 ): Record<string, { name: string; unitPrice?: number }[]> => {
   const raw = String((order as Record<string, unknown>)?.progressWorkflowJson ?? '').trim();
   if (!raw) return {};
+
+  // 构建模板单价映射，用于覆盖旧快照价格
+  const templatePriceMap = new Map<string, number>();
+  if (templateNodes?.length) {
+    templateNodes.forEach(n => {
+      const price = Number(n.unitPrice) || 0;
+      if (price > 0) {
+        templatePriceMap.set(n.name, price);
+      }
+    });
+  }
+
   try {
     const obj = JSON.parse(raw);
     const nodes = Array.isArray(obj?.nodes) ? obj.nodes : [];
@@ -434,7 +461,9 @@ export const getProcessesByNodeFromOrder = (
       for (const item of nodes) {
         const n = String(item?.name || item?.processName || '').trim();
         const stage = String(item?.progressStage || n).trim();
-        const price = Number(item?.unitPrice) || 0;
+        const storedPrice = Number(item?.unitPrice) || 0;
+        // 优先使用模板最新单价
+        const price = templatePriceMap.get(n) ?? storedPrice;
         if (!byNode[stage]) byNode[stage] = [];
         byNode[stage].push({ name: n, unitPrice: price });
       }
@@ -445,7 +474,11 @@ export const getProcessesByNodeFromOrder = (
     for (const k of Object.keys(processesByNode || {})) {
       const arr = Array.isArray(processesByNode[k]) ? processesByNode[k] : [];
       result[k] = arr
-        .map((p: any) => ({ name: String(p?.name || p?.processName || '').trim(), unitPrice: Number(p?.unitPrice) || 0 }))
+        .map((p: any) => {
+          const name = String(p?.name || p?.processName || '').trim();
+          const storedPrice = Number(p?.unitPrice) || 0;
+          return { name, unitPrice: templatePriceMap.get(name) ?? storedPrice };
+        })
         .filter((x) => x.name);
     }
     return result;

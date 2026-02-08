@@ -67,13 +67,12 @@ const MaterialSearchForm: React.FC<MaterialSearchFormProps> = ({
         </div>
         <Space wrap>
           <Button
-            icon={<DownloadOutlined />}
             onClick={onExport}
             disabled={loading || !hasData}
           >
             导出
           </Button>
-          <Button type="primary" icon={<PlusOutlined />} onClick={onAdd}>
+          <Button type="primary" onClick={onAdd}>
             新增采购单
           </Button>
         </Space>

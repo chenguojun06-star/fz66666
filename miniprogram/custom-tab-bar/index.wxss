@@ -37,13 +37,13 @@
 }
 
 .tab-text {
-  font-size: 14px;
+  font-size: var(--font-size-base);
   color: #8e8e93;
   line-height: 1.2;
   font-weight: 500;
 }
 
 .tab-item-active .tab-text {
-  color: #1e40af;
+  color: var(--color-primary);
   font-weight: 600;
 }

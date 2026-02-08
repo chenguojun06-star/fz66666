@@ -565,7 +565,6 @@ const StyleSizeTab: React.FC<Props> = ({
               size="small"
               type="text"
               danger
-              icon={<DeleteOutlined />}
               onClick={() => {
                 Modal.confirm({
                   title: `确定删除尺码“${sn}”？`,
@@ -628,7 +627,6 @@ const StyleSizeTab: React.FC<Props> = ({
                   key: 'delete',
                   label: '删除',
                   title: '删除',
-                  icon: <DeleteOutlined />,
                   danger: true,
                   onClick: () => {
                     Modal.confirm({
@@ -741,19 +739,19 @@ const StyleSizeTab: React.FC<Props> = ({
           >
             导入模板
           </Button>
-          <Button type="default" icon={<PlusOutlined />} onClick={handleAddPart} disabled={loading || saving}>
+          <Button type="default" onClick={handleAddPart} disabled={loading || saving}>
             新增部位
           </Button>
-          <Button type="default" icon={<PlusOutlined />} onClick={() => setAddSizeOpen(true)} disabled={loading || saving || Boolean(readOnly)}>
+          <Button type="default" onClick={() => setAddSizeOpen(true)} disabled={loading || saving || Boolean(readOnly)}>
             新增尺码
           </Button>
           {!editMode || readOnly ? (
-            <Button icon={<EditOutlined />} type="primary" onClick={enterEdit} disabled={loading || saving || Boolean(readOnly)}>
+            <Button type="primary" onClick={enterEdit} disabled={loading || saving || Boolean(readOnly)}>
               编辑
             </Button>
           ) : (
             <>
-              <Button icon={<SaveOutlined />} type="primary" onClick={saveAll} loading={saving}>
+              <Button type="primary" onClick={saveAll} loading={saving}>
                 保存
               </Button>
               <Button

@@ -107,7 +107,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
       </div>
       <Tabs
         tabBarExtraContent={
-          <Button size="small" icon={<ReloadOutlined />} onClick={handleRefresh}>
+          <Button size="small" onClick={handleRefresh}>
             更新
           </Button>
         }
@@ -127,7 +127,6 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
                             key="download"
                             type="link"
                             size="small"
-                            icon={<DownloadOutlined />}
                             onClick={() => handleDownload(item)}
                           >
                             下载

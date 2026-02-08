@@ -18,7 +18,7 @@ interface OrderReconciliationApprovalRecord {
   totalQuantity: number;
   totalAmount: number;
   reconciliationIds?: string;
-  status: 'pending' | 'verified' | 'approved' | 'paid' | 'rejected';
+  status: 'pending' | 'approved' | 'paid' | 'rejected';
   approvalTime?: string;
   approvalBy?: string;
   paymentTime?: string;
@@ -38,9 +38,20 @@ interface QueryParams {
   pageSize: number;
 }
 
-type ReconStatus = 'pending' | 'verified' | 'approved' | 'paid' | 'rejected';
+type ReconStatus = 'pending' | 'approved' | 'paid' | 'rejected';
 
 const { Option } = Select;
+
+// 审批金额阈值配置
+const APPROVAL_AMOUNT_LIMITS = {
+  NORMAL: 10000,      // 10000元以下：普通员工可审批
+  MANAGER: 50000,     // 10000-50000元：需要经理权限
+  DIRECTOR: 100000,   // 50000-100000元：需要总监权限
+  CEO: Infinity,      // 100000元以上：需要CEO权限
+};
+
+// 审批备注要求
+const REMARK_REQUIRED_AMOUNT = 10000; // 大于10000元时必须填写备注
 
 const toArray = <T,>(value: unknown): T[] => {
   if (Array.isArray(value)) return value as T[];
@@ -49,11 +60,10 @@ const toArray = <T,>(value: unknown): T[] => {
 
 const getStatusConfig = (status: ReconStatus | string | undefined) => {
   const statusMap: Record<string, { text: string; color: string }> = {
-    pending: { text: '待审核', color: 'default' },
-    verified: { text: '已核验', color: 'processing' },
-    approved: { text: '已批准', color: 'success' },
+    pending: { text: '待审批', color: 'default' },
+    approved: { text: '已审批', color: 'success' },
     paid: { text: '已付款', color: 'cyan' },
-    rejected: { text: '已拒绝', color: 'error' },
+    rejected: { text: '已驳回', color: 'error' },
   };
   return statusMap[String(status || '')] || { text: '未知', color: 'default' };
 };
@@ -107,39 +117,127 @@ const OrderReconciliationApproval: React.FC = () => {
     fetchList();
   }, [query]);
 
-  // 核验
-  const handleVerify = async (id: string) => {
-    try {
-      const res = await api.post<{ code: number; message: string }>('/finance/order-reconciliation-approval/verify', { id });
-      if (res.code === 200) {
-        message.success('核验成功');
-        fetchList();
-        if (detailRecord?.id === id) {
-          setDetailRecord((prev) => prev ? { ...prev, status: 'verified' } : prev);
-        }
-      } else {
-        message.error(res.message || '核验失败');
-      }
-    } catch (e: unknown) {
-      message.error((e as Error)?.message || '核验失败');
-    }
-  };
+  // 核验功能已删除（流程简化）
 
-  // 批准
+  // 审批 - 带金额校验和备注要求
   const handleApprove = async (id: string) => {
-    try {
-      const res = await api.post<{ code: number; message: string }>('/finance/order-reconciliation-approval/approve', { id });
-      if (res.code === 200) {
-        message.success('批准成功');
-        fetchList();
-        if (detailRecord?.id === id) {
-          setDetailRecord((prev) => prev ? { ...prev, status: 'approved' } : prev);
-        }
-      } else {
-        message.error(res.message || '批准失败');
+    // 查找对应的记录
+    const record = list.find((item) => item.id === id);
+    if (!record) {
+      message.error('未找到对应的记录');
+      return;
+    }
+
+    const amount = record.totalAmount || 0;
+
+    // 金额校验 - 检查用户权限
+    const userRole = user?.role || 'employee';
+
+    // 权限等级检查
+    const userMaxAmount = (() => {
+      switch (userRole) {
+        case 'ceo':
+        case 'admin':
+          return APPROVAL_AMOUNT_LIMITS.CEO;
+        case 'director':
+          return APPROVAL_AMOUNT_LIMITS.DIRECTOR;
+        case 'manager':
+          return APPROVAL_AMOUNT_LIMITS.MANAGER;
+        default:
+          return APPROVAL_AMOUNT_LIMITS.NORMAL;
       }
-    } catch (e: unknown) {
-      message.error((e as Error)?.message || '批准失败');
+    })();
+
+    if (amount > userMaxAmount) {
+      message.error(`审批金额 ¥${amount.toFixed(2)} 超出您的权限上限 ¥${userMaxAmount.toFixed(2)}，请联系上级审批`);
+      return;
+    }
+
+    // 大额审批需要备注
+    if (amount > REMARK_REQUIRED_AMOUNT) {
+      Modal.confirm({
+        title: '大额审批确认',
+        content: (
+          <div>
+            <p>审批金额：<strong style={{ color: '#ff4d4f', fontSize: '16px' }}>¥{amount.toFixed(2)}</strong></p>
+            <p>工厂名称：{record.factoryName}</p>
+            <p>订单数量：{record.orderCount} 个</p>
+            <p>生产数量：{record.totalQuantity} 件</p>
+            <div style={{ marginTop: 16 }}>
+              <div style={{ marginBottom: 8 }}>审批备注（必填）：</div>
+              <Input.TextArea
+                id="approval-remark"
+                placeholder="请输入审批备注（大额审批必须填写原因）"
+                rows={3}
+                maxLength={200}
+              />
+            </div>
+          </div>
+        ),
+        okText: '确认审批',
+        cancelText: '取消',
+        width: 500,
+        onOk: async () => {
+          const remarkInput = document.getElementById('approval-remark') as HTMLTextAreaElement;
+          const remark = remarkInput?.value?.trim();
+
+          if (!remark) {
+            message.error('大额审批必须填写备注');
+            return Promise.reject();
+          }
+
+          try {
+            const res = await api.post<{ code: number; message: string }>('/finance/order-reconciliation-approval/approve', {
+              id,
+              remark,
+            });
+            if (res.code === 200) {
+              message.success('审批成功');
+              fetchList();
+              if (detailRecord?.id === id) {
+                setDetailRecord((prev) => prev ? { ...prev, status: 'approved', remark } : prev);
+              }
+            } else {
+              message.error(res.message || '审批失败');
+            }
+          } catch (e: unknown) {
+            message.error((e as Error)?.message || '审批失败');
+            throw e;
+          }
+        },
+      });
+    } else {
+      // 小额审批直接确认
+      Modal.confirm({
+        title: '审批确认',
+        content: (
+          <div>
+            <p>审批金额：<strong>¥{amount.toFixed(2)}</strong></p>
+            <p>工厂名称：{record.factoryName}</p>
+            <p>订单数量：{record.orderCount} 个</p>
+            <p>生产数量：{record.totalQuantity} 件</p>
+          </div>
+        ),
+        okText: '确认审批',
+        cancelText: '取消',
+        onOk: async () => {
+          try {
+            const res = await api.post<{ code: number; message: string }>('/finance/order-reconciliation-approval/approve', { id });
+            if (res.code === 200) {
+              message.success('审批成功');
+              fetchList();
+              if (detailRecord?.id === id) {
+                setDetailRecord((prev) => prev ? { ...prev, status: 'approved' } : prev);
+              }
+            } else {
+              message.error(res.message || '审批失败');
+            }
+          } catch (e: unknown) {
+            message.error((e as Error)?.message || '审批失败');
+            throw e;
+          }
+        },
+      });
     }
   };
 
@@ -180,10 +278,10 @@ const OrderReconciliationApproval: React.FC = () => {
     setReturnModalOpen(true);
   };
 
-  // 退回
+  // 驳回
   const handleReturn = async () => {
     if (!returnId || !returnReason.trim()) {
-      message.error('请填写退回原因');
+      message.error('请填写驳回原因');
       return;
     }
     try {
@@ -192,17 +290,17 @@ const OrderReconciliationApproval: React.FC = () => {
         reason: returnReason,
       });
       if (res.code === 200) {
-        message.success('退回成功');
+        message.success('驳回成功');
         setReturnModalOpen(false);
         fetchList();
         if (detailRecord?.id === returnId) {
           setDetailRecord((prev) => prev ? { ...prev, status: 'pending' } : prev);
         }
       } else {
-        message.error(res.message || '退回失败');
+        message.error(res.message || '驳回失败');
       }
     } catch (e: unknown) {
-      message.error((e as Error)?.message || '退回失败');
+      message.error((e as Error)?.message || '驳回失败');
     }
   };
 
@@ -272,10 +370,9 @@ const OrderReconciliationApproval: React.FC = () => {
       render: (_: unknown, record: OrderReconciliationApprovalRecord) => (
         <RowActions
           actions={[
-            { label: '核验', onClick: () => handleVerify(record.id), hidden: record.status !== 'pending' },
-            { label: '批准', onClick: () => handleApprove(record.id), hidden: record.status !== 'verified' },
-            { label: '付款', onClick: () => openPaymentModal(record.id), hidden: record.status !== 'approved' },
-            { label: '退回', onClick: () => openReturnModal(record.id), hidden: record.status === 'paid' || record.status === 'pending' },
+            { label: '审批', onClick: () => handleApprove(record.id), hidden: record.status !== 'pending', primary: true },
+            { label: '付款', onClick: () => openPaymentModal(record.id), hidden: record.status !== 'approved', primary: true },
+            { label: '驳回', onClick: () => openReturnModal(record.id), hidden: record.status === 'paid' || record.status === 'pending', danger: true },
             { label: '详情', onClick: () => { setDetailRecord(record); setDetailOpen(true); } },
           ]}
         />
@@ -301,8 +398,7 @@ const OrderReconciliationApproval: React.FC = () => {
             onChange={(val) => setQuery((prev) => ({ ...prev, status: val, page: 1 }))}
           >
             <Option value="">全部</Option>
-            <Option value="pending">待审核</Option>
-            <Option value="verified">已核验</Option>
+            <Option value="pending">待审批</Option>
             <Option value="approved">已批准</Option>
             <Option value="paid">已付款</Option>
             <Option value="rejected">已拒绝</Option>
@@ -375,23 +471,18 @@ const OrderReconciliationApproval: React.FC = () => {
             <Card size="small" title="操作">
               <Space wrap>
                 {detailRecord.status === 'pending' && (
-                  <Button type="primary" icon={<CheckOutlined />} onClick={() => handleVerify(detailRecord.id)}>
-                    核验
-                  </Button>
-                )}
-                {detailRecord.status === 'verified' && (
-                  <Button type="primary" icon={<SafetyCertificateOutlined />} onClick={() => handleApprove(detailRecord.id)}>
-                    批准
+                  <Button type="primary" onClick={() => handleApprove(detailRecord.id)}>
+                    审批
                   </Button>
                 )}
                 {detailRecord.status === 'approved' && (
-                  <Button type="primary" icon={<DollarOutlined />} onClick={() => openPaymentModal(detailRecord.id)}>
+                  <Button type="primary" onClick={() => openPaymentModal(detailRecord.id)}>
                     付款
                   </Button>
                 )}
-                {detailRecord.status !== 'paid' && detailRecord.status !== 'pending' && (
-                  <Button icon={<RollbackOutlined />} onClick={() => openReturnModal(detailRecord.id)}>
-                    退回
+                {(detailRecord.status === 'approved' || detailRecord.status === 'paid') && (
+                  <Button danger onClick={() => openReturnModal(detailRecord.id)}>
+                    驳回
                   </Button>
                 )}
               </Space>
@@ -419,20 +510,20 @@ const OrderReconciliationApproval: React.FC = () => {
         </Form>
       </Modal>
 
-      {/* 退回弹窗 */}
+      {/* 驳回弹窗 */}
       <Modal
-        title="退回重审"
+        title="驳回重审"
         open={returnModalOpen}
         onCancel={() => setReturnModalOpen(false)}
         onOk={handleReturn}
       >
         <Form layout="vertical">
-          <Form.Item label="退回原因" required>
+          <Form.Item label="驳回原因" required>
             <Input.TextArea
               rows={4}
               value={returnReason}
               onChange={(e) => setReturnReason(e.target.value)}
-              placeholder="请填写退回原因"
+              placeholder="请填写驳回原因"
             />
           </Form.Item>
         </Form>

@@ -1,9 +1,19 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Tabs, Table } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import ResizableModal from '@/components/common/ResizableModal';
+import ProcessTrackingTable from '@/components/production/ProcessTrackingTable';
 import { ProductionOrder } from '@/types/production';
 import { formatDateTime } from '@/utils/datetime';
+import api from '@/utils/api';
+import { getProductionProcessTracking } from '@/utils/api/production';
+import { templateLibraryApi } from '@/services/template/templateLibraryApi';
+
+interface CuttingBundle {
+  id: string;
+  size: string;
+  quantity: number;
+}
 
 interface ProcessDetailModalProps {
   visible: boolean;
@@ -31,6 +41,134 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
   scanRecordContent,
 }) => {
   const navigate = useNavigate();
+  const [cuttingBundles, setCuttingBundles] = useState<CuttingBundle[]>([]);
+  const [processTrackingRecords, setProcessTrackingRecords] = useState<any[]>([]);
+  const [trackingLoading, setTrackingLoading] = useState(false);
+  const [templatePriceMap, setTemplatePriceMap] = useState<Map<string, number>>(new Map());
+
+  // 加载模板最新单价
+  useEffect(() => {
+    if (!visible || !record) return;
+    const styleNo = String((record as any)?.styleNo || '').trim();
+    if (!styleNo) return;
+    (async () => {
+      try {
+        const res = await templateLibraryApi.progressNodeUnitPrices(styleNo);
+        const r = res as Record<string, unknown>;
+        const rows = Array.isArray(r?.data) ? r.data : [];
+        const pm = new Map<string, number>();
+        rows.forEach((n: any) => {
+          const name = String(n?.name || '').trim();
+          const price = Number(n?.unitPrice);
+          if (name && Number.isFinite(price) && price > 0) {
+            pm.set(name, price);
+          }
+        });
+        setTemplatePriceMap(pm);
+      } catch {
+        // ignore
+      }
+    })();
+  }, [visible, record]);
+
+  // 加载裁剪数据
+  useEffect(() => {
+    if (visible && record?.id) {
+      loadCuttingData();
+      loadProcessTrackingData();
+    }
+  }, [visible, record?.id]);
+
+  const loadCuttingData = async () => {
+    if (!record?.id) return;
+
+    try {
+      const res = await api.get('/production/cutting/list', {
+        params: {
+          productionOrderId: record.id,
+          productionOrderNo: record.orderNo,
+          page: 1,
+          pageSize: 999,
+        },
+      });
+
+      let records = [];
+      if (res.code === 200 && res.data?.records) {
+        records = res.data.records;
+      } else if (Array.isArray(res.data)) {
+        records = res.data;
+      } else if (Array.isArray(res)) {
+        records = res;
+      }
+
+      const orderNo = record.orderNo || '';
+      const filtered = orderNo
+        ? records.filter((b: any) => {
+            const qrCode = String(b.qrCode || b.bundleNo || '').trim();
+            return qrCode.startsWith(orderNo);
+          })
+        : records;
+
+      setCuttingBundles(filtered || []);
+    } catch (error) {
+      console.error('加载裁剪数据失败:', error);
+      setCuttingBundles([]);
+    }
+  };
+
+  // 加载工序跟踪数据
+  const loadProcessTrackingData = async () => {
+    if (!record?.id) {
+      console.warn('订单ID为空，无法加载工序跟踪数据');
+      return;
+    }
+
+    console.log('开始加载工序跟踪数据，订单ID:', record.id, '订单号:', record.orderNo);
+    setTrackingLoading(true);
+    try {
+      const response = await getProductionProcessTracking(record.id);
+      // API返回的是 {code: 200, data: [...]} 结构，需要提取data字段
+      const data = (response as any)?.data || [];
+      const records = Array.isArray(data) ? data : [];
+      console.log(`工序跟踪数据加载成功，共 ${records.length} 条记录:`, records);
+      setProcessTrackingRecords(records);
+    } catch (error) {
+      console.error('加载工序跟踪数据失败:', error);
+      setProcessTrackingRecords([]);
+    } finally {
+      setTrackingLoading(false);
+    }
+  };
+
+  // 计算裁剪数量的尺码明细
+  const cuttingSizeItems = useMemo(() => {
+    if (cuttingBundles.length === 0) return [];
+
+    // 定义标准尺码顺序
+    const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '2XL', '3XL', '4XL', '5XL'];
+    const sizeMap: Record<string, number> = {};
+
+    // 聚合相同尺码的数量
+    cuttingBundles.forEach((bundle) => {
+      const size = (bundle.size || '').toUpperCase().trim();
+      if (size) {
+        sizeMap[size] = (sizeMap[size] || 0) + (bundle.quantity || 0);
+      }
+    });
+
+    // 转换为数组并排序
+    return Object.entries(sizeMap)
+      .filter(([_, qty]) => qty > 0)
+      .map(([size, quantity]) => ({ size, quantity }))
+      .sort((a, b) => {
+        const indexA = sizeOrder.indexOf(a.size);
+        const indexB = sizeOrder.indexOf(b.size);
+        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+        if (indexA !== -1) return -1;
+        if (indexB !== -1) return 1;
+        return a.size.localeCompare(b.size);
+      });
+  }, [cuttingBundles]);
 
   if (!record) return null;
 
@@ -254,15 +392,19 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
 
         const nodes = workflow?.nodes || [];
         if (nodes.length > 0 && nodes[0]?.name) {
-          workflowNodes = nodes.map((item: any, idx: number) => ({
-            id: item.id || `proc_${idx}`,
-            name: item.name || item.processName || '',
-            progressStage: item.progressStage || '',
-            machineType: item.machineType || '',
-            standardTime: item.standardTime || 0,
-            unitPrice: Number(item.unitPrice) || 0,
-            sortOrder: item.sortOrder ?? idx,
-          }));
+          workflowNodes = nodes.map((item: any, idx: number) => {
+            const name = String(item.name || item.processName || '').trim();
+            const storedPrice = Number(item.unitPrice) || 0;
+            return {
+              id: item.id || `proc_${idx}`,
+              name,
+              progressStage: item.progressStage || '',
+              machineType: item.machineType || '',
+              standardTime: item.standardTime || 0,
+              unitPrice: templatePriceMap.get(name) ?? storedPrice,
+              sortOrder: item.sortOrder ?? idx,
+            };
+          });
         } else {
           // 旧格式处理
           const processesByNode = workflow?.processesByNode || {};
@@ -273,13 +415,15 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
             const nodeId = node?.id || '';
             const nodeProcesses = processesByNode[nodeId] || [];
             for (const p of nodeProcesses) {
+              const pName = String(p.name || p.processName || '').trim();
+              const storedP = Number(p.unitPrice) || 0;
               allProcesses.push({
                 id: p.id || `proc_${sortIdx}`,
-                name: p.name || p.processName || '',
+                name: pName,
                 progressStage: p.progressStage || node?.progressStage || node?.name || '',
                 machineType: p.machineType || '',
                 standardTime: p.standardTime || 0,
-                unitPrice: Number(p.unitPrice) || 0,
+                unitPrice: templatePriceMap.get(pName) ?? storedP,
                 sortOrder: sortIdx,
               });
               sortIdx++;
@@ -291,15 +435,19 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
 
       // 从 progressNodeUnitPrices 读取
       if (workflowNodes.length === 0 && Array.isArray(record.progressNodeUnitPrices) && record.progressNodeUnitPrices.length > 0) {
-        workflowNodes = record.progressNodeUnitPrices.map((item: any, idx: number) => ({
-          id: item.id || item.processId || `node_${idx}`,
-          name: item.name || item.processName || '',
-          progressStage: item.progressStage || '',
-          machineType: item.machineType || '',
-          standardTime: item.standardTime || 0,
-          unitPrice: Number(item.unitPrice) || Number(item.price) || 0,
-          sortOrder: item.sortOrder ?? idx,
-        }));
+        workflowNodes = record.progressNodeUnitPrices.map((item: any, idx: number) => {
+          const itemName = String(item.name || item.processName || '').trim();
+          const storedItemPrice = Number(item.unitPrice) || Number(item.price) || 0;
+          return {
+            id: item.id || item.processId || `node_${idx}`,
+            name: itemName,
+            progressStage: item.progressStage || '',
+            machineType: item.machineType || '',
+            standardTime: item.standardTime || 0,
+            unitPrice: templatePriceMap.get(itemName) ?? storedItemPrice,
+            sortOrder: item.sortOrder ?? idx,
+          };
+        });
       }
     } catch (e) {
       console.error('解析工艺模板失败:', e);
@@ -449,6 +597,39 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
             </>
           )}
         </div>
+
+        {/* 裁剪数量尺码明细 */}
+        {cuttingSizeItems.length > 0 && (
+          <div style={{
+            padding: '8px 12px',
+            border: '1px solid #b7eb8f',
+            background: '#f6ffed',
+            borderRadius: 12,
+            marginBottom: 12,
+            fontSize: '13px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            flexWrap: 'wrap'
+          }}>
+            <span style={{ color: '#595959', fontWeight: 600 }}>裁剪数明细：</span>
+            {cuttingSizeItems.map((item) => (
+              <span key={item.size} style={{
+                color: '#52c41a',
+                fontWeight: 600,
+                padding: '2px 8px',
+                background: '#fff',
+                borderRadius: 4,
+                border: '1px solid #b7eb8f'
+              }}>
+                {item.size}: {item.quantity}
+              </span>
+            ))}
+            <span style={{ color: '#52c41a', fontWeight: 700, marginLeft: 4 }}>
+              总计: {cuttingSizeItems.reduce((sum, item) => sum + item.quantity, 0)}
+            </span>
+          </div>
+        )}
 
         {/* 按进度节点分组显示工序 */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -695,9 +876,22 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
           }] : []),
           ...(scanRecordContent ? [{
             key: 'scanRecords',
-            label: '操作历史',
+            label: '操作记录',
             children: scanRecordContent,
           }] : []),
+          {
+            key: 'processTracking',
+            label: '工序跟踪',
+            children: (
+              <div style={{ padding: '8px 0' }}>
+                <ProcessTrackingTable
+                  records={Array.isArray(processTrackingRecords) ? processTrackingRecords : []}
+                  loading={trackingLoading}
+                  processType={processType}
+                />
+              </div>
+            ),
+          },
         ]}
       />
     </ResizableModal>

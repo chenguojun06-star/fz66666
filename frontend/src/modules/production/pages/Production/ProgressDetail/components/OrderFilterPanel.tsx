@@ -59,7 +59,7 @@ const OrderFilterPanel: React.FC<OrderFilterPanelProps> = ({
           ]}
         />
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={handleReset}>
+          <Button onClick={handleReset}>
             重置
           </Button>
         </Space>

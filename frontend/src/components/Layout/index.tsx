@@ -397,7 +397,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                         type="text"
                         size="small"
                         className="recent-tab-close"
-                        icon={<CloseOutlined />}
                         aria-label={`关闭 ${p.title}`}
                         onClick={() => closeRecent(p.path)}
                       />

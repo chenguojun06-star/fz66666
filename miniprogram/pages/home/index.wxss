@@ -1,5 +1,5 @@
 page {
-  background: #f7f8fa;
+  background: var(--color-bg-page);
   padding-bottom: calc(60px + env(safe-area-inset-bottom));
 }
 
@@ -27,7 +27,7 @@ page {
 
 .result-type {
   padding: 2px 8px;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 500;
   color: #ffffff;
   background: var(--color-primary);
@@ -35,7 +35,7 @@ page {
 }
 
 .result-status {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 500;
 }
 
@@ -49,11 +49,11 @@ page {
 .result-order,
 .result-style {
   font-size: 13px;
-  color: #1f2937;
+  color: var(--color-text-primary);
 }
 
 .result-detail {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
   margin-top: 4px;
 }
@@ -64,7 +64,7 @@ page {
   flex-direction: column;
   align-items: center;
   padding: 40px 20px;
-  background: #ffffff;
+  background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   margin-bottom: 16px;
@@ -77,15 +77,15 @@ page {
 }
 
 .no-results-text {
-  font-size: 14px;
+  font-size: var(--font-size-base);
   color: var(--color-text-secondary);
   margin-bottom: 16px;
 }
 
 .no-results .close-btn {
   padding: 8px 24px;
-  font-size: 14px;
-  color: #1f2937;
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
   background: rgba(224, 242, 254, 0.8);
   border: 1px solid rgba(224, 242, 254, 0.9);
   border-radius: var(--radius-full);
@@ -139,7 +139,7 @@ page {
   right: -320px;
   width: 320px;
   height: 100vh;
-  background: #ffffff;
+  background: var(--color-bg-card);
   box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
   transition: right 0.3s ease;
   z-index: 1000;
@@ -160,21 +160,21 @@ page {
 }
 
 .reminder-panel-title {
-  font-size: 16px; /* 二级标题 */
+  font-size: var(--font-size-lg); /* 二级标题 */
   font-weight: 600;
-  color: #1f2937;
+  color: var(--color-text-primary);
 }
 
 .reminder-panel-close {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #f3f4f6;
+  background: var(--color-bg-gray);
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--color-text-secondary);
-  font-size: 18px; /* 一级标题/图标 */
+  font-size: var(--font-size-xl); /* 一级标题/图标 */
 }
 .reminder-panel-close:active {
   background: rgba(224, 242, 254, 0.8);
@@ -190,11 +190,11 @@ page {
   text-align: center;
   color: var(--color-text-disabled);
   padding: 40px 20px;
-  font-size: 14px; /* 正文字体 */
+  font-size: var(--font-size-base); /* 正文字体 */
 }
 
 .reminder-item {
-  background: #f9fafb;
+  background: var(--color-bg-light);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: 12px;
@@ -212,18 +212,18 @@ page {
 }
 
 .reminder-item-title {
-  font-size: 14px;
+  font-size: var(--font-size-base);
   font-weight: 600;
-  color: #1f2937;
+  color: var(--color-text-primary);
 }
 
 .reminder-item-time {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-disabled);
 }
 
 .reminder-item-desc {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
 }
 
@@ -239,10 +239,10 @@ page {
 }
 
 .title {
-  font-size: 16px; /* 二级标题 */
+  font-size: var(--font-size-lg); /* 二级标题 */
   font-weight: 600;
   margin-bottom: 10px;
-  color: #1f2937;
+  color: var(--color-text-primary);
 }
 
 .home-actions {
@@ -258,9 +258,9 @@ page {
 
 .home-section-title {
   margin-top: 10px;
-  font-size: 14px;
+  font-size: var(--font-size-base);
   font-weight: 600;
-  color: #1f2937;
+  color: var(--color-text-primary);
 }
 
 .home-filter {
@@ -268,7 +268,7 @@ page {
   padding: 10px 12px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  background: #ffffff;
+  background: var(--color-bg-card);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -287,7 +287,7 @@ page {
 }
 
 .filter-label {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
 }
 
@@ -295,18 +295,18 @@ page {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
   padding: 8px 12px;
-  font-size: 14px;
-  color: #111827;
-  background: #ffffff;
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+  background: var(--color-bg-card);
 }
 
 .filter-text {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
   padding: 8px 12px;
-  font-size: 14px;
-  color: #111827;
-  background: #ffffff;
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+  background: var(--color-bg-card);
 }
 
 .filter-actions {
@@ -322,7 +322,7 @@ page {
   gap: 16px;
   margin-bottom: 12px;
   padding: 6px 16px;
-  background: #ffffff;
+  background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
@@ -337,8 +337,8 @@ page {
   background: rgba(224, 242, 254, 0.3);
   border: 1px solid rgba(224, 242, 254, 0.5);
   border-radius: 20px;
-  font-size: 12px;
-  color: #1f2937;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
 }
 
 .home-stat-left {
@@ -348,7 +348,7 @@ page {
 }
 
 .home-stat-emoji {
-  font-size: 14px;
+  font-size: var(--font-size-base);
   opacity: 0.8;
 }
 
@@ -359,9 +359,9 @@ page {
 }
 
 .home-stat-value {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   font-weight: 600;
-  color: #1f2937;
+  color: var(--color-text-primary);
 }
 
 .home-stats {
@@ -375,7 +375,7 @@ page {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   padding: 10px 12px;
-  background: #ffffff;
+  background: var(--color-bg-card);
 }
 
 .home-stat-head {
@@ -386,7 +386,7 @@ page {
 
 /* Emoji图标样式 */
 .home-stat-emoji {
-  font-size: 20px;
+  font-size: var(--font-size-2xl);
   opacity: 0.8;
 }
 
@@ -422,13 +422,13 @@ page {
 }
 
 .home-stat-value {
-  font-size: 14px;
+  font-size: var(--font-size-base);
   font-weight: 600;
-  color: #111827;
+  color: var(--color-text-primary);
 }
 
 .home-stat-label {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
 }
 
@@ -442,11 +442,11 @@ page {
 .home-entry {
   border: 1px solid rgba(224, 242, 254, 0.9);
   background: rgba(224, 242, 254, 0.8);
-  color: #1f2937;
+  color: var(--color-text-primary);
   border-radius: var(--radius-full);
   padding: 3px 8px;
   text-align: center;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 500;
   min-height: 28px;
   display: flex;
@@ -464,7 +464,7 @@ page {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   margin-top: 10px;
-  background: #ffffff;
+  background: var(--color-bg-card);
 }
 
 .home-activity-row {
@@ -476,13 +476,13 @@ page {
 
 .home-activity-content {
   flex: 1;
-  font-size: 12px;
-  color: #374151;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
   line-height: 1.5;
 }
 
 .home-activity-time {
-  font-size: 12px;
-  color: #8b8b94;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-disabled);
   white-space: nowrap;
 }

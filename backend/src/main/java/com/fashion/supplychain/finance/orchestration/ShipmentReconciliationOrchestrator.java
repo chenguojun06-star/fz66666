@@ -92,9 +92,7 @@ public class ShipmentReconciliationOrchestrator {
             finalAmount = BigDecimal.ZERO;
         }
         BigDecimal profit = finalAmount.subtract(totalCost);
-        if (profit.compareTo(BigDecimal.ZERO) < 0) {
-            profit = BigDecimal.ZERO;
-        }
+        // 允许负利润（亏损订单），便于管理层发现问题订单
         shipment.setProfitAmount(profit);
         if (finalAmount.compareTo(BigDecimal.ZERO) > 0) {
             BigDecimal margin = profit

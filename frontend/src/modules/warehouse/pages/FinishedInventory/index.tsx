@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Card, Table, Button, Space, Tag, Select, Image, Statistic, Row, Col, Form, InputNumber, Checkbox, App } from 'antd';
-import { PlusOutlined, DownloadOutlined, ExportOutlined, HistoryOutlined } from '@ant-design/icons';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Card, Table, Button, Space, Tag, Image, Row, Col, InputNumber, App } from 'antd';
+import { PlusOutlined, DownloadOutlined, ExportOutlined, HistoryOutlined, ReloadOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import Layout from '@/components/Layout';
 import StandardModal from '@/components/common/StandardModal';
@@ -9,9 +9,9 @@ import StandardToolbar from '@/components/common/StandardToolbar';
 import RowActions from '@/components/common/RowActions';
 import { StatsGrid } from '@/components/common/StatsGrid';
 import { useModal, useTablePagination } from '@/hooks';
+import api from '@/utils/api';
 import type { Dayjs } from 'dayjs';
 
-const { Option } = Select;
 
 // SKU明细接口
 interface SKUDetail {
@@ -47,7 +47,7 @@ interface FinishedInventory {
 }
 
 const _FinishedInventory: React.FC = () => {
-  const { message, modal } = App.useApp();
+  const { message } = App.useApp();
   const [rawDataSource, setRawDataSource] = useState<FinishedInventory[]>([]);
   const [searchText, setSearchText] = useState('');
   const [statusValue, setStatusValue] = useState('');
@@ -61,70 +61,30 @@ const _FinishedInventory: React.FC = () => {
   const inboundHistoryModal = useModal<FinishedInventory>();
 
   const [skuDetails, setSkuDetails] = useState<SKUDetail[]>([]);
-  const [outboundForm] = Form.useForm();
   const [inboundHistory, setInboundHistory] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const getMockData = (): FinishedInventory[] => [
-    {
-      id: '1',
-      orderNo: 'PO20260120001',
-      styleNo: 'ST001',
-      styleName: '春季衬衫',
-      color: '白色',
-      size: 'L',
-      sku: 'ST001-白色-L',
-      availableQty: 500,
-      lockedQty: 50,
-      defectQty: 10,
-      warehouseLocation: 'C-01-01',
-      lastInboundDate: '2026-01-26',
-      qualityInspectionNo: 'QC20260126001',
-      lastInboundBy: '张三',
-      colors: ['白色', '黑色', '灰色'],
-      sizes: ['S', 'M', 'L', 'XL', 'XXL'],
-    },
-    {
-      id: '2',
-      orderNo: 'PO20260120001',
-      styleNo: 'ST001',
-      styleName: '春季衬衫',
-      color: '白色',
-      size: 'XL',
-      sku: 'ST001-白色-XL',
-      availableQty: 450,
-      lockedQty: 30,
-      defectQty: 5,
-      warehouseLocation: 'C-01-02',
-      lastInboundDate: '2026-01-26',
-      qualityInspectionNo: 'QC20260126001',
-      lastInboundBy: '张三',
-      colors: ['白色', '黑色', '灰色'],
-      sizes: ['S', 'M', 'L', 'XL', 'XXL'],
-    },
-    {
-      id: '3',
-      orderNo: 'PO20260122001',
-      styleNo: 'ST002',
-      styleName: '夏季连衣裙',
-      color: '黑色',
-      size: 'M',
-      sku: 'ST002-黑色-M',
-      availableQty: 800,
-      lockedQty: 100,
-      defectQty: 20,
-      warehouseLocation: 'C-02-01',
-      lastInboundDate: '2026-01-27',
-      qualityInspectionNo: 'QC20260127002',
-      lastInboundBy: '李四',
-      colors: ['黑色', '藏青色', '粉色'],
-      sizes: ['S', 'M', 'L', 'XL'],
-    },
-  ];
-
-  // 加载数据
-  const loadData = () => {
-    setRawDataSource(getMockData());
-  };
+  // 加载真实数据
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await api.post<{ code: number; data: { records: FinishedInventory[]; total: number } }>(
+        '/warehouse/finished-inventory/list',
+        { page: 1, pageSize: 500, orderNo: searchText || undefined }
+      );
+      if (res.code === 200 && res.data?.records) {
+        setRawDataSource(res.data.records);
+      } else {
+        setRawDataSource([]);
+      }
+    } catch (error) {
+      console.error('加载成品库存失败:', error);
+      message.error('加载成品库存数据失败');
+      setRawDataSource([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [searchText]);
 
   useEffect(() => {
     loadData();
@@ -157,30 +117,29 @@ const _FinishedInventory: React.FC = () => {
     return filtered;
   }, [rawDataSource, searchText, statusValue]);
 
-  // 打开出库模态框，加载该款式的所有SKU明细
+  // 打开出库模态框，从数据中筛选该款式的所有SKU明细
   const handleOutbound = (record: FinishedInventory) => {
-    // 模拟SKU明细数据（实际应从后端获取）
-    const mockSKUDetails: SKUDetail[] = [
-      // 白色系列
-      { color: '白色', size: 'S', sku: `${record.styleNo}-白色-S`, availableQty: 300, lockedQty: 20, defectQty: 5, warehouseLocation: 'C-01-01' },
-      { color: '白色', size: 'M', sku: `${record.styleNo}-白色-M`, availableQty: 400, lockedQty: 30, defectQty: 8, warehouseLocation: 'C-01-01' },
-      { color: '白色', size: 'L', sku: `${record.styleNo}-白色-L`, availableQty: 500, lockedQty: 50, defectQty: 10, warehouseLocation: 'C-01-01' },
-      { color: '白色', size: 'XL', sku: `${record.styleNo}-白色-XL`, availableQty: 450, lockedQty: 30, defectQty: 5, warehouseLocation: 'C-01-02' },
-      { color: '白色', size: 'XXL', sku: `${record.styleNo}-白色-XXL`, availableQty: 200, lockedQty: 15, defectQty: 3, warehouseLocation: 'C-01-02' },
-      // 黑色系列
-      { color: '黑色', size: 'S', sku: `${record.styleNo}-黑色-S`, availableQty: 280, lockedQty: 25, defectQty: 4, warehouseLocation: 'C-01-03' },
-      { color: '黑色', size: 'M', sku: `${record.styleNo}-黑色-M`, availableQty: 380, lockedQty: 28, defectQty: 6, warehouseLocation: 'C-01-03' },
-      { color: '黑色', size: 'L', sku: `${record.styleNo}-黑色-L`, availableQty: 420, lockedQty: 40, defectQty: 8, warehouseLocation: 'C-01-03' },
-      { color: '黑色', size: 'XL', sku: `${record.styleNo}-黑色-XL`, availableQty: 350, lockedQty: 22, defectQty: 5, warehouseLocation: 'C-01-04' },
-      { color: '黑色', size: 'XXL', sku: `${record.styleNo}-黑色-XXL`, availableQty: 180, lockedQty: 12, defectQty: 2, warehouseLocation: 'C-01-04' },
-      // 灰色系列
-      { color: '灰色', size: 'S', sku: `${record.styleNo}-灰色-S`, availableQty: 250, lockedQty: 18, defectQty: 3, warehouseLocation: 'C-01-05' },
-      { color: '灰色', size: 'M', sku: `${record.styleNo}-灰色-M`, availableQty: 350, lockedQty: 25, defectQty: 5, warehouseLocation: 'C-01-05' },
-      { color: '灰色', size: 'L', sku: `${record.styleNo}-灰色-L`, availableQty: 380, lockedQty: 35, defectQty: 7, warehouseLocation: 'C-01-05' },
-      { color: '灰色', size: 'XL', sku: `${record.styleNo}-灰色-XL`, availableQty: 320, lockedQty: 20, defectQty: 4, warehouseLocation: 'C-01-06' },
-      { color: '灰色', size: 'XXL', sku: `${record.styleNo}-灰色-XXL`, availableQty: 150, lockedQty: 10, defectQty: 2, warehouseLocation: 'C-01-06' },
-    ];
-    setSkuDetails(mockSKUDetails);
+    // 从已加载的数据中筛选同款号的所有SKU
+    const styleSKUs: SKUDetail[] = rawDataSource
+      .filter(item => item.styleNo === record.styleNo)
+      .map(item => ({
+        color: item.color || '',
+        size: item.size || '',
+        sku: item.sku || `${item.styleNo}-${item.color}-${item.size}`,
+        availableQty: item.availableQty ?? 0,
+        lockedQty: item.lockedQty ?? 0,
+        defectQty: item.defectQty ?? 0,
+        warehouseLocation: item.warehouseLocation || '-',
+      }));
+    setSkuDetails(styleSKUs.length > 0 ? styleSKUs : [{
+      color: record.color || '',
+      size: record.size || '',
+      sku: record.sku || `${record.styleNo}-${record.color}-${record.size}`,
+      availableQty: record.availableQty ?? 0,
+      lockedQty: record.lockedQty ?? 0,
+      defectQty: record.defectQty ?? 0,
+      warehouseLocation: record.warehouseLocation || '-',
+    }]);
     outboundModal.open(record);
   };
 
@@ -207,18 +166,15 @@ const _FinishedInventory: React.FC = () => {
     }
 
     try {
-      // 调用后端API进行出库（等待后端开发具体端点）
-      // const response = await fetch('/api/warehouse/finished-inventory/outbound', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ items: selectedItems }),
-      // });
-      // const result = await response.json();
-      // if (result.code === 200) {
-      //   message.success('出库成功！');
-      //   loadData();
-      // }
-      message.success('出库成功！');
+      // 调用后端API进行出库
+      const outboundItems = skuDetails
+        .filter(item => (item.outboundQty ?? 0) > 0)
+        .map(item => ({ sku: item.sku, quantity: item.outboundQty }));
+      if (outboundItems.length === 0) {
+        message.warning('请至少填写一个SKU的出库数量');
+        return;
+      }
+      message.warning('出库功能后端接口开发中，当前仅记录操作');
       outboundModal.close();
       setSkuDetails([]);
       loadData();
@@ -227,30 +183,31 @@ const _FinishedInventory: React.FC = () => {
     }
   };
 
-  // 查看入库记录
-  const handleViewInboundHistory = (record: FinishedInventory) => {
-    // 模拟入库记录数据
-    const mockHistory = [
-      {
-        id: '1',
-        inboundDate: '2026-01-26 10:30:00',
-        qualityInspectionNo: 'QC20260126001',
-        quantity: 500,
-        operator: '张三',
-        warehouseLocation: 'C-01-01',
-        remark: '首次入库',
-      },
-      {
-        id: '2',
-        inboundDate: '2026-01-25 14:20:00',
-        qualityInspectionNo: 'QC20260125002',
-        quantity: 300,
-        operator: '李四',
-        warehouseLocation: 'C-01-02',
-        remark: '补充入库',
-      },
-    ];
-    setInboundHistory(mockHistory);
+  // 查看入库记录 - 从后端获取真实数据
+  const handleViewInboundHistory = async (record: FinishedInventory) => {
+    try {
+      const res = await api.post('/warehouse/product-warehousing/list', {
+        page: 1, pageSize: 100,
+        styleNo: record.styleNo,
+        orderNo: record.orderNo,
+      });
+      if (res.code === 200 && res.data?.records?.length > 0) {
+        setInboundHistory(res.data.records.map((item: Record<string, unknown>, idx: number) => ({
+          id: String(item.id || idx),
+          inboundDate: item.createTime || item.inboundDate || '-',
+          qualityInspectionNo: item.qualityInspectionNo || '-',
+          quantity: item.quantity ?? 0,
+          operator: item.creatorName || item.operator || '-',
+          warehouseLocation: item.warehouseLocation || '-',
+          remark: item.remark || '',
+        })));
+      } else {
+        setInboundHistory([]);
+      }
+    } catch {
+      message.error('加载入库记录失败');
+      setInboundHistory([]);
+    }
     inboundHistoryModal.open(record);
   };
 
@@ -516,18 +473,18 @@ const _FinishedInventory: React.FC = () => {
       <div style={{ padding: '16px 24px' }}>
         <StatsGrid
           items={[
-            { key: 'total', title: '成品总数', value: 1750, suffix: '件' },
+            { key: 'total', title: '成品总数', value: rawDataSource.reduce((s, r) => s + (r.availableQty ?? 0) + (r.defectQty ?? 0), 0), suffix: '件' },
             {
               key: 'available',
               title: '可用库存',
-              value: 1650,
+              value: rawDataSource.reduce((s, r) => s + (r.availableQty ?? 0), 0),
               suffix: '件',
               valueStyle: { color: 'var(--success-color-dark)' }
             },
             {
               key: 'defective',
               title: '次品数量',
-              value: 35,
+              value: rawDataSource.reduce((s, r) => s + (r.defectQty ?? 0), 0),
               suffix: '件',
               valueStyle: { color: 'var(--error-color)' }
             },
@@ -576,6 +533,7 @@ const _FinishedInventory: React.FC = () => {
           <Table
             columns={columns}
             dataSource={dataSource}
+            loading={loading}
             rowKey="id"
             scroll={{ x: 1400 }}
             pagination={pagination.pagination}
@@ -720,7 +678,7 @@ const _FinishedInventory: React.FC = () => {
                   <div>
                     <span style={{ color: 'var(--neutral-text-disabled)', marginRight: 8 }}>当前库存:</span>
                     <strong style={{ color: 'var(--success-color)', fontSize: "var(--font-size-lg)" }}>
-                      {inboundHistoryModal.data.quantity} 件
+                      {inboundHistoryModal.data.availableQty} 件
                     </strong>
                   </div>
                 </Space>

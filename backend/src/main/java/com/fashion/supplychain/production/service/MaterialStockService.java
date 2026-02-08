@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.fashion.supplychain.production.dto.MaterialBatchDetailDto;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.MaterialStock;
 import java.util.Map;
@@ -19,7 +20,7 @@ public interface MaterialStockService extends IService<MaterialStock> {
      * 扣减库存 (生产领料/退货)
      */
     void decreaseStock(MaterialPurchase purchase, int quantity);
-    
+
     /**
      * 扣减库存 (通用)
      */
@@ -34,4 +35,13 @@ public interface MaterialStockService extends IService<MaterialStock> {
      * 根据物料ID列表批量获取库存
      */
     java.util.List<MaterialStock> getStocksByMaterialIds(java.util.List<String> materialIds);
+
+    /**
+     * 查询物料批次明细（用于出库时按批次FIFO）
+     * @param materialCode 物料编码
+     * @param color 颜色（可选）
+     * @param size 尺码（可选）
+     * @return 批次明细列表，按入库时间升序排列（先进先出）
+     */
+    java.util.List<MaterialBatchDetailDto> getBatchDetails(String materialCode, String color, String size);
 }

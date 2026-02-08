@@ -5,6 +5,7 @@ import com.fashion.supplychain.finance.orchestration.PayrollAggregationOrchestra
 import com.fashion.supplychain.finance.orchestration.PayrollAggregationOrchestrator.PayrollOperatorProcessSummaryDTO;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -51,6 +52,7 @@ public class PayrollApprovalController {
      * 获取工资审批付款列表
      * 数据来源：从扫码记录聚合的人员工资数据
      */
+    @PreAuthorize("hasAuthority('MENU_FINANCE_PAYROLL_APPROVAL_VIEW')")
     @GetMapping("/list")
     public Result<Map<String, Object>> list(
             @RequestParam(required = false) String operatorName,
@@ -139,6 +141,7 @@ public class PayrollApprovalController {
     /**
      * 更新审批状态
      */
+    @PreAuthorize("hasAuthority('MENU_FINANCE_PAYROLL_APPROVAL_MANAGE')")
     @PostMapping("/update-status")
     public Result<Void> updateStatus(@RequestBody Map<String, String> request) {
         String id = request.get("id");
@@ -198,6 +201,7 @@ public class PayrollApprovalController {
     /**
      * 退回（重审）
      */
+    @PreAuthorize("hasAuthority('MENU_FINANCE_PAYROLL_APPROVAL_MANAGE')")
     @PostMapping("/return")
     public Result<Void> returnToPrevious(@RequestBody Map<String, String> request) {
         String id = request.get("id");

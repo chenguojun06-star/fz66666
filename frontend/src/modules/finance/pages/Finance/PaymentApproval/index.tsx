@@ -19,7 +19,7 @@ interface PayrollApprovalRecord {
   totalAmount: number;
   recordCount: number;
   orderCount: number;
-  status: 'pending' | 'verified' | 'approved' | 'paid' | 'rejected';
+  status: 'pending' | 'approved' | 'paid' | 'rejected';
   approvalTime?: string;
   paymentTime?: string;
   remark?: string;
@@ -34,7 +34,7 @@ interface PayrollApprovalQueryParams {
   pageSize: number;
 }
 
-type ReconStatus = 'pending' | 'verified' | 'approved' | 'paid' | 'rejected';
+type ReconStatus = 'pending' | 'approved' | 'paid' | 'rejected';
 
 const { Option } = Select;
 
@@ -54,26 +54,23 @@ const toArray = <T,>(value: unknown): T[] => {
 
 const getStatusConfig = (status: ReconStatus | string | undefined) => {
   const statusMap: Record<string, { text: string; color: string }> = {
-    pending: { text: '待审核', color: 'default' },
-    verified: { text: '已验证', color: 'processing' },
-    approved: { text: '已批准', color: 'success' },
+    pending: { text: '待审批', color: 'default' },
+    approved: { text: '已审批', color: 'success' },
     paid: { text: '已付款', color: 'cyan' },
-    rejected: { text: '已拒绝', color: 'error' },
+    rejected: { text: '已驳回', color: 'error' },
   };
   return statusMap[String(status || '')] || { text: '未知', color: 'default' };
 };
 
 const canTransition = (from: ReconStatus, to: ReconStatus) => {
   if (from === to) return false;
-  if (from === 'pending') return to === 'verified' || to === 'rejected';
-  if (from === 'verified') return to === 'approved' || to === 'rejected';
+  if (from === 'pending') return to === 'approved' || to === 'rejected';
   if (from === 'approved') return to === 'paid' || to === 'rejected';
   return false;
 };
 
 const getActionIcon = (key: string) => {
   const k = String(key || '').trim();
-  if (k === 'verified') return <CheckOutlined />;
   if (k === 'approved') return <SafetyCertificateOutlined />;
   if (k === 'paid') return <DollarOutlined />;
   if (k === 'reReview') return <SafetyCertificateOutlined />;
@@ -287,15 +284,8 @@ const PaymentApproval: React.FC = () => {
   const buildActionItems = (status: ReconStatus, id: string) => {
     return [
       {
-        key: 'verified',
-        label: '验证',
-        icon: getActionIcon('verified'),
-        disabled: !id || !canTransition(status, 'verified'),
-        onClick: () => updateStatus(id, 'verified'),
-      },
-      {
         key: 'approved',
-        label: '批准',
+        label: '审批',
         icon: getActionIcon('approved'),
         disabled: !id || !canTransition(status, 'approved'),
         onClick: () => updateStatus(id, 'approved'),
@@ -319,14 +309,7 @@ const PaymentApproval: React.FC = () => {
         label: '驳回',
         icon: getActionIcon('rejected'),
         danger: true,
-        disabled: !id || !canTransition(status, 'rejected'),
-        onClick: () => updateStatus(id, 'rejected'),
-      },
-      {
-        key: 'return',
-        label: '退回',
-        icon: getActionIcon('return'),
-        disabled: !id || status === 'pending' || status === 'rejected' || status === 'paid',
+        disabled: !id || status === 'pending' || status === 'rejected',
         onClick: () => openReturnModal(id),
       },
     ];
@@ -380,8 +363,7 @@ const PaymentApproval: React.FC = () => {
   };
 
   const getBatchStatusLabel = (status: ReconStatus) => {
-    if (status === 'verified') return '验证';
-    if (status === 'approved') return '审核';
+    if (status === 'approved') return '审批';
     if (status === 'paid') return '付款';
     return status;
   };
@@ -392,7 +374,7 @@ const PaymentApproval: React.FC = () => {
       return;
     }
 
-    if (targetStatus !== 'verified' && targetStatus !== 'approved' && targetStatus !== 'paid') {
+    if (targetStatus !== 'approved' && targetStatus !== 'paid') {
       message.error('不支持的批量操作');
       return;
     }
@@ -660,11 +642,10 @@ const PaymentApproval: React.FC = () => {
             onChange={(v) => setPayrollQuery((prev) => ({ ...prev, status: v || undefined, page: 1 }))}
           >
             <Option value="">全部</Option>
-            <Option value="pending">待审核</Option>
-            <Option value="verified">已验证</Option>
-            <Option value="approved">已批准</Option>
+            <Option value="pending">待审批</Option>
+            <Option value="approved">已审批</Option>
             <Option value="paid">已付款</Option>
-            <Option value="rejected">已拒绝</Option>
+            <Option value="rejected">已驳回</Option>
           </Select>
         </Form.Item>
         <Form.Item className="filter-actions">
@@ -693,24 +674,14 @@ const PaymentApproval: React.FC = () => {
     <Space>
       <Tag color={selectedRowKeys.length ? 'blue' : 'default'}>已选 {selectedRowKeys.length} 条</Tag>
       <Button
-        icon={<CheckOutlined />}
-        onClick={() => batchUpdateStatus('verified')}
-        disabled={!selectedRowKeys.length}
-        loading={batchLoading === 'verified'}
-      >
-        一键验证
-      </Button>
-      <Button
-        icon={<SafetyCertificateOutlined />}
         onClick={() => batchUpdateStatus('approved')}
         disabled={!selectedRowKeys.length}
         loading={batchLoading === 'approved'}
       >
-        一键审核
+        一键审批
       </Button>
       <Button
         type="primary"
-        icon={<DollarOutlined />}
         onClick={() => batchUpdateStatus('paid')}
         disabled={!selectedRowKeys.length}
         loading={batchLoading === 'paid'}

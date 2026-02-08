@@ -1,5 +1,5 @@
 page {
-  background: #f7f8fa;
+  background: var(--color-bg-page);
   padding-bottom: calc(60px + env(safe-area-inset-bottom));
 }
 
@@ -18,7 +18,7 @@ page {
 
 .logout-btn {
   padding: 6px 12px;
-  background: #f3f4f6;
+  background: var(--color-bg-gray);
   border-radius: 16px;
 }
 
@@ -27,7 +27,7 @@ page {
 }
 
 .logout-text {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
 }
 
@@ -85,7 +85,7 @@ page {
   gap: 10px;
   margin-bottom: 16px;
   padding: 10px 14px;
-  background: #ffffff;
+  background: var(--color-bg-card);
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
@@ -99,9 +99,9 @@ page {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   font-weight: 600;
-  color: #1f2937;
+  color: var(--color-text-primary);
   border: 2px solid rgba(224, 242, 254, 0.9);
   flex-shrink: 0;
 }
@@ -109,12 +109,12 @@ page {
 .profile-name {
   font-size: 15px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--color-text-primary);
   flex-shrink: 0;
 }
 
 .profile-role {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
   padding: 2px 8px;
   background: rgba(224, 242, 254, 0.5);
@@ -127,7 +127,7 @@ page {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
   padding: 4px 16px;
   background: rgba(224, 242, 254, 0.5);
@@ -138,7 +138,7 @@ page {
 }
 
 .online-icon {
-  font-size: 14px;
+  font-size: var(--font-size-base);
 }
 
 .user-info-item {
@@ -149,8 +149,8 @@ page {
   background: rgba(224, 242, 254, 0.3);
   border: 1px solid rgba(224, 242, 254, 0.5);
   border-radius: var(--radius-full);
-  font-size: 12px;
-  color: #1f2937;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
 }
 
 .user-info-item:active {
@@ -162,7 +162,7 @@ page {
 }
 
 .user-info-icon {
-  font-size: 14px;
+  font-size: var(--font-size-base);
   opacity: 0.8;
 }
 
@@ -174,9 +174,9 @@ page {
 }
 
 .user-info-text {
-  font-size: 14px;
+  font-size: var(--font-size-base);
   font-weight: 500;
-  color: #1f2937;
+  color: var(--color-text-primary);
 }
 
 /* 功能导航行 */
@@ -186,7 +186,7 @@ page {
   gap: 8px;
   margin-bottom: 16px;
   padding: 8px 12px;
-  background: #ffffff;
+  background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
@@ -200,7 +200,7 @@ page {
 .system-info {
   margin-bottom: 16px;
   padding: 12px;
-  background: #ffffff;
+  background: var(--color-bg-card);
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-border);
 }
@@ -213,14 +213,14 @@ page {
 }
 
 .info-label {
-  font-size: 14px;
+  font-size: var(--font-size-base);
   color: var(--color-text-secondary);
 }
 
 .info-value {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   font-weight: 600;
-  color: #1f2937;
+  color: var(--color-text-primary);
 }
 
 .permissions-list {
@@ -232,10 +232,10 @@ page {
 
 .permission-item {
   padding: 4px 12px;
-  background: #f3f4f6;
+  background: var(--color-bg-gray);
   border-radius: 4px;
-  font-size: 12px;
-  color: #4b5563;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
   border: 1px solid var(--color-border);
 }
 
@@ -271,14 +271,14 @@ page {
 }
 
 .admin-card-label {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   font-weight: 600;
   color: #ffffff;
   margin-bottom: 4px;
 }
 
 .admin-card-desc {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: rgba(255, 255, 255, 0.85);
 }
 
@@ -286,7 +286,7 @@ page {
   padding: 2px 8px;
   background: var(--color-error);
   color: #ffffff;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   border-radius: 10px;
   margin-right: 8px;
@@ -295,7 +295,7 @@ page {
 }
 
 .admin-card-arrow {
-  font-size: 18px;
+  font-size: var(--font-size-xl);
   color: rgba(255, 255, 255, 0.9);
   position: relative;
   z-index: 1;
@@ -312,7 +312,7 @@ page {
   border-radius: var(--radius-full);
   padding: 10px 18px;
   text-align: center;
-  font-size: 14px;
+  font-size: var(--font-size-base);
   min-height: 36px;
   display: flex;
   align-items: center;
@@ -321,9 +321,9 @@ page {
 
 .section-title {
   margin-top: 10px;
-  font-size: 16px; /* 二级标题 */
+  font-size: var(--font-size-lg); /* 二级标题 */
   font-weight: 600;
-  color: #1f2937;
+  color: var(--color-text-primary);
 }
 
 .stat-grid {
@@ -337,7 +337,7 @@ page {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: 12px 8px;
-  background: #ffffff;
+  background: var(--color-bg-card);
   text-align: center;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
   transition: all 0.2s;
@@ -349,14 +349,14 @@ page {
 }
 
 .stat-value {
-  font-size: 20px; /* 正文字体 */
+  font-size: var(--font-size-2xl); /* 正文字体 */
   font-weight: 700;
   color: var(--color-primary);
   margin-bottom: 4px;
 }
 
 .stat-label {
-  font-size: 11px; /* 辅助字体 */
+  font-size: var(--font-size-xs); /* 辅助字体 */
   color: var(--color-text-secondary);
   font-weight: 500;
 }
@@ -371,7 +371,7 @@ page {
 .item-title {
   flex: 1;
   min-width: 0;
-  font-size: 14px; /* 正文字体 */
+  font-size: var(--font-size-base); /* 正文字体 */
   font-weight: 600;
 }
 
@@ -379,8 +379,8 @@ page {
   display: block;
   width: 100%;
   margin-top: 6px;
-  font-size: 12px; /* 辅助字体 */
-  color: #374151;
+  font-size: var(--font-size-sm); /* 辅助字体 */
+  color: var(--color-text-secondary);
   line-height: 1.5;
 }
 
@@ -389,8 +389,8 @@ page {
   align-items: center;
   gap: 8px;
   margin-top: 6px;
-  font-size: 12px;
-  color: #374151;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
   white-space: nowrap;
   overflow-x: auto;
 }
@@ -404,7 +404,7 @@ page {
   padding: 12px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  background: #ffffff;
+  background: var(--color-bg-card);
 }
 
 .salary-row {
@@ -415,12 +415,12 @@ page {
 }
 
 .salary-label {
-  font-size: 12px; /* 辅助字体 */
+  font-size: var(--font-size-sm); /* 辅助字体 */
   color: var(--color-text-secondary);
 }
 
 .salary-value {
-  font-size: 14px; /* 正文字体 */
+  font-size: var(--font-size-base); /* 正文字体 */
   font-weight: 600;
-  color: #111827;
+  color: var(--color-text-primary);
 }

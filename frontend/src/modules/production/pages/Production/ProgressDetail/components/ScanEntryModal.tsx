@@ -233,7 +233,9 @@ const ScanEntryModal: React.FC<ScanEntryModalProps> = ({
                         remaining,
                         completed,
                         operatorId: (meta as Record<string, unknown>)?.operatorId || '-',
+                        operatorName: (meta as Record<string, unknown>)?.operatorName || '-',
                         operatorIds: Array.isArray((meta as Record<string, unknown>)?.operatorIds) ? (meta as Record<string, unknown>).operatorIds : [],
+                        operatorNames: Array.isArray((meta as Record<string, unknown>)?.operatorNames) ? (meta as Record<string, unknown>).operatorNames : [],
                         receiveTime: (meta as Record<string, unknown>)?.receiveTime || '',
                         completeTime: (meta as Record<string, unknown>)?.completeTime || '',
                       } as Record<string, unknown>;
@@ -267,14 +269,14 @@ const ScanEntryModal: React.FC<ScanEntryModalProps> = ({
                           : <Tag style={{ marginInlineEnd: 0, paddingInline: 2, lineHeight: '16px', fontSize: 'var(--font-size-xs)' }}>未完成</Tag>),
                       },
                       {
-                        title: '生产人员ID',
-                        dataIndex: 'operatorId',
-                        key: 'operatorId',
+                        title: '生产人员',
+                        dataIndex: 'operatorName',
+                        key: 'operatorName',
                         width: 120,
                         render: (_: any, r: any) => {
-                          const ids = Array.isArray(r?.operatorIds) ? (r.operatorIds as string[]) : [];
-                          const title = ids.length ? ids.join(', ') : String(r?.operatorId || '-');
-                          const text = String(r?.operatorId || '-');
+                          const names = Array.isArray(r?.operatorNames) ? (r.operatorNames as string[]).filter(Boolean) : [];
+                          const title = names.length ? names.join(', ') : String(r?.operatorName || '-');
+                          const text = String(r?.operatorName || '-');
                           return (
                             <Tooltip title={title} placement="topLeft">
                               <span style={{ display: 'inline-block', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

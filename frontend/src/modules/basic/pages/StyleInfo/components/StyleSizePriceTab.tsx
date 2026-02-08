@@ -448,7 +448,7 @@ const StyleSizePriceTab: React.FC<Props> = ({ styleId, readOnly }) => {
                     onPressEnter={addSize}
                     style={{ width: 140 }}
                   />
-                  <Button type="primary" icon={<PlusOutlined />} onClick={addSize}>
+                  <Button type="primary" onClick={addSize}>
                     添加
                   </Button>
                 </Space.Compact>
@@ -470,7 +470,6 @@ const StyleSizePriceTab: React.FC<Props> = ({ styleId, readOnly }) => {
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
             {!editMode || readOnly ? (
               <Button
-                icon={<EditOutlined />}
                 onClick={() => setEditMode(true)}
                 disabled={loading || saving || readOnly || data.length === 0}
               >
@@ -478,7 +477,7 @@ const StyleSizePriceTab: React.FC<Props> = ({ styleId, readOnly }) => {
               </Button>
             ) : (
               <>
-                <Button icon={<SaveOutlined />} type="primary" onClick={saveAll} loading={saving} style={{ marginRight: 8 }}>
+                <Button type="primary" onClick={saveAll} loading={saving} style={{ marginRight: 8 }}>
                   保存
                 </Button>
                 <Button type="default" disabled={saving} onClick={() => { setEditMode(false); fetchData(); }}>

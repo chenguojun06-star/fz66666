@@ -80,7 +80,7 @@ interface DashboardTableProps<T = any> {
  * ```tsx
  * <DashboardTable
  *   title="待处理订单"
- *   icon={<UnorderedListOutlined />}
+ *
  *   columns={[
  *     { title: '订单号', dataIndex: 'orderNo', key: 'orderNo' },
  *     { title: '金额', dataIndex: 'amount', key: 'amount' },

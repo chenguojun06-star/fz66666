@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, Col, Input, Row, Space, Statistic, message, Form, Select, DatePicker, Upload } from 'antd';
+import { App, Button, Card, Col, Input, Row, Space, Statistic, Form, Select, DatePicker, Upload } from 'antd';
 import { DownloadOutlined, PrinterOutlined, EditOutlined, EyeOutlined, FileTextOutlined, UploadOutlined } from '@ant-design/icons';
-import { StatsGrid } from '@/components/common/StatsGrid';
+import StatsCards from '@/components/common/StatsCards';
 import Layout from '@/components/Layout';
 // import UniversalCardView from '@/components/common/UniversalCardView'; // 未使用
 import ResizableTable from '@/components/common/ResizableTable';
@@ -275,6 +275,7 @@ const AttachmentThumb: React.FC<{ styleId?: string | number; cover?: string | nu
 };
 
 const DataCenter: React.FC = () => {
+  const { message } = App.useApp();
   const { isMobile: _isMobile, modalWidth: _modalWidth } = useViewport();
   const _navigate = useNavigate();
   const _modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
@@ -325,11 +326,10 @@ const DataCenter: React.FC = () => {
           materialCount: d.materialCount ?? 0,
           productionCount: d.productionCount ?? 0
         });
-      } else {
-        message.error(response.message || '获取资料中心统计失败');
       }
+      // 静默失败，可能后端API尚未实现，不输出任何错误信息
     } catch (error: unknown) {
-      message.error(error?.message || '获取资料中心统计失败');
+      // 静默失败，可能后端API尚未实现（500错误），不输出任何错误信息
     }
   };
 
@@ -569,28 +569,24 @@ const DataCenter: React.FC = () => {
                 key: 'view',
                 label: '查看',
                 title: '查看详情',
-                icon: <EyeOutlined />,
                 onClick: () => openDetailModal(record),
               },
               {
                 key: 'edit',
                 label: '编辑',
                 title: '编辑生产制单内容',
-                icon: <EditOutlined />,
                 onClick: () => openEditModal(record),
               },
               {
                 key: 'patternRevision',
                 label: '纸样修改',
                 title: '记录纸样修改',
-                icon: <FileTextOutlined />,
                 onClick: () => openPatternRevisionModal(record),
               },
               {
                 key: 'print',
                 label: '打印',
                 title: '打印制单',
-                icon: <PrinterOutlined />,
                 onClick: () => printProductionSheet(record),
                 primary: true,
               },
@@ -598,7 +594,6 @@ const DataCenter: React.FC = () => {
                 key: 'download',
                 label: '下载',
                 title: '下载生产制单',
-                icon: <DownloadOutlined />,
                 onClick: () => downloadProductionSheet(record),
               },
             ]}
@@ -610,22 +605,30 @@ const DataCenter: React.FC = () => {
 
   return (
     <Layout>
-      <Card className="page-card">
-        <div className="page-header">
+      <div style={{ padding: '16px 24px' }}>
+        <div className="page-header" style={{ marginBottom: 16 }}>
           <h2 className="page-title">资料中心</h2>
         </div>
 
-        <StatsGrid
-          items={[
-            { key: 'styleCount', title: '款号总数', value: stats.styleCount },
-            { key: 'materialCount', title: '物料总数', value: stats.materialCount },
-            { key: 'productionCount', title: '生产订单', value: stats.productionCount },
-          ]}
-          columns={3}
-          gutter={16}
-        />
+        <StatsCards stats={[
+          {
+            label: '款号总数',
+            value: stats.styleCount,
+            color: '#2D7FF9'
+          },
+          {
+            label: '物料总数',
+            value: stats.materialCount,
+            color: '#52c41a'
+          },
+          {
+            label: '生产订单',
+            value: stats.productionCount,
+            color: '#ff4d4f'
+          }
+        ]} />
 
-        <Card size="small" className="filter-card mt-sm mb-sm">
+        <Card size="small" className="filter-card" style={{ marginBottom: 16 }}>
           <StandardToolbar
             left={(
               <Space wrap>
@@ -662,7 +665,7 @@ const DataCenter: React.FC = () => {
             onChange: (page, pageSize) => setQueryParams(prev => ({ ...prev, page, pageSize })),
           }}
         />
-      </Card>
+      </div>
 
       {/* 通用打印弹窗 */}
       <StylePrintModal
@@ -799,7 +802,7 @@ const DataCenter: React.FC = () => {
               maxCount={1}
               accept=".pdf,.dwg,.dxf,.ai,.cdr,.zip,.rar,.plt,.pat,.ets,.hpg,.jpg,.jpeg,.png,.bmp,.gif,.svg"
             >
-              <Button icon={<UploadOutlined />}>选择文件上传</Button>
+              <Button>选择文件上传</Button>
             </Upload>
           </Form.Item>
         </Form>

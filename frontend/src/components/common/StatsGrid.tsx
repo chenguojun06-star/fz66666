@@ -17,7 +17,7 @@ export interface StatItem {
   precision?: number;
   /** 点击事件 */
   onClick?: () => void;
-  /** 数值样式 */
+  /** 数值样式（将传递给Statistic的styles.value） */
   valueStyle?: React.CSSProperties;
   /** 前缀文本 */
   prefix?: React.ReactNode;

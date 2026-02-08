@@ -42,7 +42,7 @@ export const formValidationRules: Record<string, FormRule[]> = {
       validator: (_: unknown, value: unknown) => {
         if (!value) return Promise.resolve();
         const text = String(value ?? '');
-        if (!/^1\d{10}$/.test(text)) {
+        if (!/^1[3-9]\d{9}$/.test(text)) {
           return Promise.reject(new Error('请输入有效的手机号'));
         }
         return Promise.resolve();
@@ -162,7 +162,7 @@ export const formValidationRules: Record<string, FormRule[]> = {
   // ==================== 二维码相关 ====================
   qrCode: [
     { required: true, message: '请输入或扫描二维码' },
-    { min: 5, max: 200, message: '二维码格式不正确' }
+    { min: 5, max: 500, message: '二维码格式不正确' }
   ],
 
   // ==================== 常用组合规则 ====================

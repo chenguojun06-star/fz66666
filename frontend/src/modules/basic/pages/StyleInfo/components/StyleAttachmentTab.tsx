@@ -368,7 +368,6 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
             key: 'download',
             label: '下载',
             title: '下载',
-            icon: <DownloadOutlined />,
             onClick: triggerDownload,
             primary: true,
           },
@@ -378,7 +377,6 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
                 key: 'print',
                 label: '打印',
                 title: '打印',
-                icon: <PrinterOutlined />,
                 onClick: () => printByIframe(record.fileUrl),
                 primary: true,
               },
@@ -388,7 +386,6 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
             key: 'delete',
             label: '删除',
             title: '删除',
-            icon: <DeleteOutlined />,
             danger: true,
             disabled: Boolean(readOnly),
             onClick: readOnly
@@ -431,7 +428,7 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
             return uploadOne(file as File);
           }}
         >
-          <Button type="primary" disabled={Boolean(readOnly)} icon={<UploadOutlined />}>{uploadText || '上传附件'}</Button>
+          <Button type="primary" disabled={Boolean(readOnly)}>{uploadText || '上传附件'}</Button>
         </Upload>
         <span style={{ marginLeft: 16, color: 'var(--neutral-text-lighter)', fontSize: 'var(--font-size-sm)', lineHeight: 1.4 }}>
           {isPattern ? '仅支持dxf/plt/ets，单个文件不超过10MB，一次最多上传4个' : '支持设计稿、工艺单、PDF、纸样(dxf/plt/ets)等，单个文件不超过10MB，一次最多上传4个'}

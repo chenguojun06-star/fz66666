@@ -209,13 +209,11 @@ const OrderTransferPage: React.FC = () => {
                 {
                   label: '接受',
                   type: 'primary',
-                  icon: <CheckOutlined />,
                   onClick: () => handleAccept(record)
                 },
                 {
                   label: '拒绝',
                   danger: true,
-                  icon: <CloseOutlined />,
                   onClick: () => handleReject(record)
                 }
               ]}

@@ -5,6 +5,7 @@ import com.fashion.supplychain.system.entity.Role;
 import com.fashion.supplychain.system.orchestration.RoleOrchestrator;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -21,6 +22,7 @@ public class RoleController {
     @Autowired
     private RoleOrchestrator roleOrchestrator;
 
+    @PreAuthorize("hasAuthority('MENU_SYSTEM_ROLE_VIEW')")
     @GetMapping("/list")
     public Result<?> getRoleList(
             @RequestParam(defaultValue = "1") Long page,
@@ -32,23 +34,27 @@ public class RoleController {
         return Result.success(rolePage);
     }
 
+    @PreAuthorize("hasAuthority('MENU_SYSTEM_ROLE_VIEW')")
     @GetMapping("/{id}")
     public Result<?> getRoleById(@PathVariable Long id) {
         return Result.success(roleOrchestrator.getById(id));
     }
 
+    @PreAuthorize("hasAuthority('MENU_SYSTEM_ROLE_MANAGE')")
     @PostMapping
     public Result<?> addRole(@RequestBody Role role) {
         roleOrchestrator.add(role);
         return Result.successMessage("新增成功");
     }
 
+    @PreAuthorize("hasAuthority('MENU_SYSTEM_ROLE_MANAGE')")
     @PutMapping
     public Result<?> updateRole(@RequestBody Role role) {
         roleOrchestrator.update(role);
         return Result.successMessage("更新成功");
     }
 
+    @PreAuthorize("hasAuthority('MENU_SYSTEM_ROLE_MANAGE')")
     @DeleteMapping("/{id}")
     public Result<?> deleteRole(@PathVariable Long id,
             @RequestParam(required = false) String remark) {
@@ -56,11 +62,13 @@ public class RoleController {
         return Result.successMessage("删除成功");
     }
 
+    @PreAuthorize("hasAuthority('MENU_SYSTEM_ROLE_VIEW')")
     @GetMapping("/{id}/permission-ids")
     public Result<?> getRolePermissionIds(@PathVariable Long id) {
         return Result.success(roleOrchestrator.permissionIds(id));
     }
 
+    @PreAuthorize("hasAuthority('MENU_SYSTEM_ROLE_MANAGE')")
     @PutMapping("/{id}/permission-ids")
     public Result<?> updateRolePermissionIds(@PathVariable Long id,
             @RequestBody(required = false) Object body) {
