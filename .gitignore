@@ -59,3 +59,12 @@ archive-*.sh
 !clean-dev-logs.sh
 !clean-console-logs.sh
 !clean-old-data.sh
+
+# 临时测试和工具文件
+verify-*.sh
+nohup.out
+*.class
+backup_*.sql
+clear-cache*.html
+*_code_review_*.zip
+.cleanup-reminder.txt
