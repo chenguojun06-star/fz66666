@@ -99,8 +99,8 @@ const ScanCountChart: React.FC = () => {
       data: ['扫菲次数', '扫菲数量'],
       top: 5,
       textStyle: {
-        fontSize: "var(--font-size-sm)",
-        color: 'var(--neutral-text-secondary)',
+        fontSize: 13,
+        color: '#666',
       },
     },
     grid: {
@@ -116,12 +116,12 @@ const ScanCountChart: React.FC = () => {
       data: data.dates,
       axisLine: {
         lineStyle: {
-          color: 'var(--neutral-text-disabled)',
+          color: '#e5e7eb',
         },
       },
       axisLabel: {
-        color: 'var(--neutral-text-secondary)',
-        fontSize: "var(--font-size-xs)",
+        color: '#999',
+        fontSize: 12,
       },
     },
     yAxis: {
@@ -133,13 +133,13 @@ const ScanCountChart: React.FC = () => {
         show: false,
       },
       axisLabel: {
-        color: 'var(--neutral-text-secondary)',
-        fontSize: "var(--font-size-xs)",
+        color: '#999',
+        fontSize: 12,
         formatter: (value: number) => value.toLocaleString(),
       },
       splitLine: {
         lineStyle: {
-          color: 'var(--neutral-bg-light)',
+          color: '#f0f0f0',
         },
       },
     },
@@ -150,7 +150,7 @@ const ScanCountChart: React.FC = () => {
         smooth: true,
         data: data.scanCounts,
         lineStyle: {
-          width: 3,
+          width: 2,
           color: '#3b82f6', // 蓝色
         },
         itemStyle: {
@@ -176,7 +176,7 @@ const ScanCountChart: React.FC = () => {
         smooth: true,
         data: data.scanQuantities,
         lineStyle: {
-          width: 3,
+          width: 2,
           color: '#f97316', // 橙色
         },
         itemStyle: {

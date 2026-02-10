@@ -84,9 +84,17 @@ function normalizeStats(payload) {
     // 款式统计
     styleCount: pickNumber(data, ['styleCount', 'style_count', 'styleTotal']),
 
-    // 生产订单统计
+    // 生产订单统计（订单个数）
     productionCount,
     productionOrders: productionCount,
+
+    // 订单总件数
+    orderQuantityTotal: pickNumber(data, [
+      'orderQuantityTotal',
+      'order_quantity_total',
+      'totalOrderQuantity',
+      'total_order_quantity',
+    ]),
 
     // 待对账统计
     pendingReconciliationCount: pickNumber(data, [
@@ -97,12 +105,23 @@ function normalizeStats(payload) {
     // 付款审批统计
     paymentApprovalCount: pickNumber(data, ['paymentApprovalCount', 'payment_approval_count']),
 
-    // 今日扫码统计
+    // 今日扫码统计（生产件数）
     todayScanCount: pickNumber(data, ['todayScanCount', 'today_scan_count']),
 
-    // 入库统计
+    // 生产总件数
+    totalScanCount: pickNumber(data, ['totalScanCount', 'total_scan_count']),
+
+    // 入库统计（当天）
     warehousingOrderCount,
     warehousingToday: warehousingOrderCount,
+
+    // 入库统计（总数）
+    totalWarehousingCount: pickNumber(data, [
+      'totalWarehousingCount',
+      'total_warehousing_count',
+      'warehousingTotal',
+      'warehousing_total',
+    ]),
 
     // 不合格品统计
     unqualifiedQuantity,

@@ -42,6 +42,7 @@ interface FinishedInventory {
   lastInboundDate: string;
   qualityInspectionNo?: string;  // 质检入库号
   lastInboundBy?: string;         // 最后入库操作人
+  totalInboundQty?: number;        // 累计入库总量
   colors?: string[];               // 多颜色列表
   sizes?: string[];                // 多尺码列表
 }
@@ -186,11 +187,12 @@ const _FinishedInventory: React.FC = () => {
   // 查看入库记录 - 从后端获取真实数据
   const handleViewInboundHistory = async (record: FinishedInventory) => {
     try {
-      const res = await api.post('/warehouse/product-warehousing/list', {
-        page: 1, pageSize: 100,
-        styleNo: record.styleNo,
-        orderNo: record.orderNo,
-      });
+      const params = new URLSearchParams();
+      if (record.styleNo) params.append('styleNo', record.styleNo);
+      if (record.orderNo) params.append('orderNo', record.orderNo);
+      params.append('page', '1');
+      params.append('size', '100');
+      const res = await api.get(`/production/warehousing/list?${params.toString()}`);
       if (res.code === 200 && res.data?.records?.length > 0) {
         setInboundHistory(res.data.records.map((item: Record<string, unknown>, idx: number) => ({
           id: String(item.id || idx),
@@ -218,15 +220,21 @@ const _FinishedInventory: React.FC = () => {
       width: 90,
       fixed: 'left',
       align: 'center',
-      render: () => (
-        <Image
-          src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjYwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSI+5oiQ5ZOBPC90ZXh0Pjwvc3ZnPg=="
-          alt="成品"
-          width={60}
-          height={80}
-          style={{ objectFit: 'cover' }}
-        />
-      ),
+      render: (_, record) => {
+        const imgSrc = record.styleImage
+          ? (record.styleImage.startsWith('http') ? record.styleImage : `http://localhost:8088${record.styleImage}`)
+          : undefined;
+        return (
+          <Image
+            src={imgSrc}
+            alt={record.styleName || '成品'}
+            width={60}
+            height={80}
+            style={{ objectFit: 'cover', borderRadius: 4 }}
+            fallback="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjYwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSI+5oiQ5ZOBPC90ZXh0Pjwvc3ZnPg=="
+          />
+        );
+      },
     },
     {
       title: '成品信息',
@@ -338,22 +346,29 @@ const _FinishedInventory: React.FC = () => {
     },
     {
       title: '入库记录',
-      width: 180,
+      width: 220,
       render: (_, record) => (
-        <Space orientation="vertical" size={6} style={{ width: '100%' }}>
+        <Space direction="vertical" size={4} style={{ width: '100%' }}>
           <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
             <span style={{ color: 'var(--neutral-text-disabled)' }}>入库时间:</span>{' '}
-            <span style={{ fontWeight: 600 }}>{record.lastInboundDate}</span>
+            <span style={{ fontWeight: 600 }}>{record.lastInboundDate ? String(record.lastInboundDate).slice(0, 16).replace('T', ' ') : '-'}</span>
           </div>
-          {record.lastInboundBy && (
-            <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
-              <span style={{ color: 'var(--neutral-text-disabled)' }}>操作人:</span>{' '}
-              <span style={{ color: 'var(--primary-color)', fontWeight: 600 }}>{record.lastInboundBy}</span>
-            </div>
-          )}
+          <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
+            <span style={{ color: 'var(--neutral-text-disabled)' }}>入库号:</span>{' '}
+            <span style={{ color: 'var(--primary-color)', fontWeight: 600 }}>{record.qualityInspectionNo || '-'}</span>
+          </div>
+          <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
+            <span style={{ color: 'var(--neutral-text-disabled)' }}>操作人:</span>{' '}
+            <span style={{ fontWeight: 600 }}>{record.lastInboundBy || '-'}</span>
+          </div>
+          <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
+            <span style={{ color: 'var(--neutral-text-disabled)' }}>入库数量:</span>{' '}
+            <span style={{ color: 'var(--success-color)', fontWeight: 700 }}>{record.totalInboundQty ?? '-'}</span>
+            {record.totalInboundQty != null && <span style={{ color: 'var(--neutral-text-disabled)', marginLeft: 2 }}>件</span>}
+          </div>
           <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
             <span style={{ color: 'var(--neutral-text-disabled)' }}>库位:</span>{' '}
-            <span style={{ fontWeight: 600 }}>{record.warehouseLocation}</span>
+            <span style={{ fontWeight: 600 }}>{record.warehouseLocation || '-'}</span>
           </div>
         </Space>
       ),
@@ -479,14 +494,14 @@ const _FinishedInventory: React.FC = () => {
               title: '可用库存',
               value: rawDataSource.reduce((s, r) => s + (r.availableQty ?? 0), 0),
               suffix: '件',
-              valueStyle: { color: 'var(--success-color-dark)' }
+              styles: { value: { color: 'var(--success-color-dark)' } }
             },
             {
               key: 'defective',
               title: '次品数量',
               value: rawDataSource.reduce((s, r) => s + (r.defectQty ?? 0), 0),
               suffix: '件',
-              valueStyle: { color: 'var(--error-color)' }
+              styles: { value: { color: 'var(--error-color)' } }
             },
           ]}
           columns={3}
@@ -561,7 +576,7 @@ const _FinishedInventory: React.FC = () => {
           {outboundModal.data && (
             <Space orientation="vertical" style={{ width: '100%' }} size="large">
               {/* 基础信息卡片 */}
-              <Card size="small" style={{ background: '#f5f5f5' }}>
+              <Card size="small" style={{ background: 'var(--color-bg-subtle)' }}>
                 <Row gutter={24}>
                   <Col span={6}>
                     <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>订单号</div>

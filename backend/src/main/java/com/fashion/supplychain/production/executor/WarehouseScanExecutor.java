@@ -1,5 +1,6 @@
 package com.fashion.supplychain.production.executor;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.util.NumberUtils;
 import com.fashion.supplychain.common.util.TextUtils;
 import com.fashion.supplychain.production.entity.CuttingBundle;
@@ -92,6 +93,9 @@ public class WarehouseScanExecutor {
             throw new IllegalStateException("该菲号存在待返修次品，需返修完成后才能入库");
         }
 
+        // ★ 生产前置校验：该菲号必须有生产扫码记录才能入库
+        validateProductionPrerequisite(order.getId(), bundle.getId());
+
         // 验证数量不超过订单数量
         inventoryValidator.validateNotExceedOrderQuantity(order, "warehouse", "入库", qty, bundle);
 
@@ -105,6 +109,17 @@ public class WarehouseScanExecutor {
         w.setUnqualifiedQuantity(0);
         w.setQualityStatus("qualified");
         w.setCuttingBundleQrCode(bundle.getQrCode());
+        // 填充操作人信息
+        if (StringUtils.hasText(operatorId)) {
+            w.setWarehousingOperatorId(operatorId);
+            w.setReceiverId(operatorId);
+            w.setQualityOperatorId(operatorId);
+        }
+        if (StringUtils.hasText(operatorName)) {
+            w.setWarehousingOperatorName(operatorName);
+            w.setReceiverName(operatorName);
+            w.setQualityOperatorName(operatorName);
+        }
 
         try {
             boolean ok = productWarehousingService.saveWarehousingAndUpdateOrder(w);
@@ -261,5 +276,29 @@ public class WarehouseScanExecutor {
 
     private boolean hasText(String str) {
         return StringUtils.hasText(str);
+    }
+
+    /**
+     * 验证生产前置条件：该菲号必须有至少一条生产扫码记录才能入库
+     * 业务规则：生产工序完成后才能入库，PC端和小程序共用此校验
+     */
+    private void validateProductionPrerequisite(String orderId, String bundleId) {
+        if (!hasText(orderId) || !hasText(bundleId)) {
+            return;
+        }
+        try {
+            long productionCount = scanRecordService.count(new LambdaQueryWrapper<ScanRecord>()
+                    .eq(ScanRecord::getOrderId, orderId)
+                    .eq(ScanRecord::getCuttingBundleId, bundleId)
+                    .eq(ScanRecord::getScanType, "production")
+                    .eq(ScanRecord::getScanResult, "success"));
+            if (productionCount <= 0) {
+                throw new IllegalStateException("该菲号尚未完成生产扫码，不能入库。请先完成生产工序后再操作");
+            }
+        } catch (IllegalStateException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("检查生产前置条件失败: orderId={}, bundleId={}", orderId, bundleId, e);
+        }
     }
 }

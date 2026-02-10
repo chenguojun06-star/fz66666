@@ -182,9 +182,40 @@ public class ScanRecordController {
         return Result.success(scanRecordOrchestrator.getMyQualityTasks());
     }
 
+    /**
+     * 退回重扫 - 仅允许退回1小时内的扫码记录
+     * 小程序扫码历史中点击"退回重扫"调用此端点
+     * @param params { recordId: 扫码记录ID }
+     */
+    @PostMapping("/rescan")
+    public Result<?> rescan(@RequestBody Map<String, Object> params) {
+        return Result.success(scanRecordOrchestrator.rescan(params));
+    }
+
     @PostMapping("/delete-full-link/{orderId}")
     public Result<?> deleteFullLinkByOrderId(@PathVariable String orderId) {
         return Result.success(scanRecordOrchestrator.deleteFullLinkByOrderId(orderId));
+    }
+
+    /**
+     * 【新增】获取订单的工序配置（用于小程序扫码工序识别）
+     * 返回该订单对应款式的工序列表、单价、顺序
+     *
+     * @param orderNo 订单号
+     * @return 工序配置列表 [{processName: '采购', price: 0.00, sortOrder: 1, progressStage: '采购'}, ...]
+     * @since 2026-02-10
+     */
+    @GetMapping("/process-config/{orderNo}")
+    public Result<?> getProcessConfigByOrderNo(@PathVariable String orderNo) {
+        try {
+            List<Map<String, Object>> processConfig = skuService.getProcessUnitPrices(orderNo);
+            if (processConfig == null || processConfig.isEmpty()) {
+                return Result.fail("订单[" + orderNo + "]未配置工序单价模板");
+            }
+            return Result.success(processConfig);
+        } catch (Exception e) {
+            return Result.fail("获取工序配置失败: " + e.getMessage());
+        }
     }
 
     // ================= ✅ SKU相关端点（2026-02-01优化版本）=================

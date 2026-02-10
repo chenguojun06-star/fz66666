@@ -49,6 +49,7 @@ public class TopStatsResponse {
         private int week;   // 本周
         private int month;  // 本月
         private int year;   // 本年
+        private int total;  // 汇总（全部）
 
         public int getDay() {
             return day;
@@ -80,6 +81,14 @@ public class TopStatsResponse {
 
         public void setYear(int year) {
             this.year = year;
+        }
+
+        public int getTotal() {
+            return total;
+        }
+
+        public void setTotal(int total) {
+            this.total = total;
         }
     }
 }

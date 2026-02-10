@@ -1,45 +1,74 @@
-# 🎯 服装供应链管理系统
+# 🎯 云裳智链 - 服装供应链管理系统
 
 [![CI/CD Pipeline](https://github.com/chenguojun06-star/fz66666/actions/workflows/ci.yml/badge.svg)](https://github.com/chenguojun06-star/fz66666/actions/workflows/ci.yml)
 [![Test Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](backend/target/site/jacoco/index.html)
 [![Code Quality](https://img.shields.io/badge/quality-97%2F100-brightgreen.svg)](系统状态.md)
 
-*最后更新：2026-02-09*  
+*最后更新：2026-02-11*  
 *系统评分：97/100 ⭐⭐⭐⭐⭐*  
-*文档数量：24份核心文档（7根目录 + 13技术指南 + 3部署文档 + 1AI指令）*  
-*代码质量：优秀（后端+前端+小程序）*
+*技术栈：React 18 + TypeScript + Spring Boot 2.7 + MyBatis-Plus + 微信小程序*
 
 > 📋 **入口**：[系统状态.md](系统状态.md) - 系统状态与文档索引  
-> 📋 **AI指令**：[.github/copilot-instructions.md](.github/copilot-instructions.md) - GitHub Copilot 开发指南（v3.4完整版）  
-> 🎯 **最新优化**：
-> - ✅ **超大文件拆分完成**（4个文件降至1000行以下）
-> - ✅ **ScanRecordOrchestrator 100%测试覆盖率**（29个单元测试）
-> - ✅ **代码减少45%**（1677→923行）
-> - ✅ **GitHub Actions CI/CD配置完成**
-> - ✅ **日志轮转优化**（500MB/文件，30天保留）
+> 🤖 **AI指令**：[.github/copilot-instructions.md](.github/copilot-instructions.md) - GitHub Copilot 完整指南（v3.4）  
+> ✨ **今日更新**（2026-02-11）：
+> - ✅ **🎤 扫码语音功能新增** - 小姐姐温柔女声提示多种场景
+> - ✅ **小程序搜索完善** - 功能修复 + 结果跳转
+> - ✅ **Bug 修复** - 循环依赖解决 + 代码优化
+> - ✅ **代码清理** - 删除 12 个临时报告文件
+
+> - ✅ **Bug 修复** - 循环依赖解决 + 代码优化
+> - ✅ **代码清理** - 删除 12 个临时报告文件
+
+---
+
+## ✨ 2026-02-11 最新更新
+
+### 🎤 小程序扫码语音功能（新增）
+**✅ 已完成**：
+- 小姐姐温柔女声提示 🎵
+- 3 个语音文件自动生成：
+  - `扫码成功` (12.6 KB)
+  - `扫码失败，请重试` (24.6 KB)
+  - `已被领取` (12.0 KB)
+- 与震动反馈完美搭配：
+  - ✅ 成功：轻震（15ms）+ 语音
+  - ❌ 失败：长震（400ms）+ 语音
+
+**💻 实现**：`miniprogram/utils/voiceManager.js` + `miniprogram/assets/audio/*.mp3`  
+**📖 使用说明**：[扫码语音功能使用说明.md](扫码语音功能使用说明.md)
+
+### 📱 小程序搜索功能完善
+- ✅ 工作页搜索 4 个缺失函数补全
+- ✅ 搜索结果点击跳转到订单诶
+- ✅ 3 秒高亮动画 + 自动滚动定位
+
+### 🐛 代码质量改进
+- ✅ StageDetector.js 多余代码清理
+- ✅ overdueOrderLoader.js 循环依赖解决
+- ✅ voiceManager 云开发 API 优化
 
 ---
 
 ## 📖 快速导航
 
-### ⭐ 核心文档（7个）
+### ⭐ 核心文档（7 个）
 
 1. **[系统状态.md](系统状态.md)** - 📊 **从这里开始**！系统状态与文档索引
-2. **[开发指南.md](开发指南.md)** - 🔥 **最重要**！完整开发规范和最佳实践（4255行）
-3. **[设计系统完整规范-2026.md](设计系统完整规范-2026.md)** - 🎨 设计系统v3.0（强制执行）
+2. **[开发指南.md](开发指南.md)** - 🔥 **最重要**！完整开发规范和最佳实践（4255 行）
+3. **[设计系统完整规范-2026.md](设计系统完整规范-2026.md)** - 🎨 设计系统 v3.0（强制执行）
 4. **[业务流程说明.md](业务流程说明.md)** - 💼 完整业务流程说明
 5. **[快速测试指南.md](快速测试指南.md)** - 🧪 40+ 测试脚本说明
 6. **[INVENTORY_SYSTEM_GUIDE.md](INVENTORY_SYSTEM_GUIDE.md)** - 📦 进销存系统操作指南
-7. **[.github/copilot-instructions.md](.github/copilot-instructions.md)** - 🤖 AI开发指令（v3.4，598行）
+7. **[.github/copilot-instructions.md](.github/copilot-instructions.md)** - 🤖 AI 开发指令（v3.4）
 
-### 📚 技术文档（docs/ - 13个）
+### 📚 技术文档（docs/ - 13 个）
 
 **核心指南**：
-- **[扫码和SKU系统完整指南.md](docs/扫码和SKU系统完整指南.md)** - 扫码系统和SKU系统（41KB）
-- **[小程序开发完整指南.md](docs/小程序开发完整指南.md)** - 小程序 ESLint、调试、业务优化（32KB）
-- **[代码质量工具完整指南.md](docs/代码质量工具完整指南.md)** - 30+ 代码质量工具（27KB）
-- **[功能实现指南.md](docs/功能实现指南.md)** - 排序、工序、权限实现（43KB）
-- **[数据业务流关系图.md](docs/数据业务流关系图.md)** - 完整数据流图（74KB）
+- **[扫码和SKU系统完整指南.md](docs/扫码和SKU系统完整指南.md)** - 扫码系统和 SKU 系统
+- **[小程序开发完整指南.md](docs/小程序开发完整指南.md)** - 小程序 ESLint、调试、业务优化
+- **[代码质量工具完整指南.md](docs/代码质量工具完整指南.md)** - 30+ 代码质量工具
+- **[功能实现指南.md](docs/功能实现指南.md)** - 排序、工序、权限实现
+- **[数据业务流关系图.md](docs/数据业务流关系图.md)** - 完整数据流图
 
 **组件与配置**：
 - **[LiquidProgressBar使用指南.md](docs/LiquidProgressBar使用指南.md)** - 进度球组件

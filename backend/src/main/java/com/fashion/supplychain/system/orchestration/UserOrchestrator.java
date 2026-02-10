@@ -14,6 +14,7 @@ import com.fashion.supplychain.system.service.PermissionService;
 import com.fashion.supplychain.system.service.RolePermissionService;
 import com.fashion.supplychain.system.service.RoleService;
 import com.fashion.supplychain.system.service.UserService;
+import com.fashion.supplychain.service.RedisService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -58,6 +59,17 @@ public class UserOrchestrator {
 
     @Autowired
     private AuthTokenService authTokenService;
+
+    @Autowired
+    private RedisService redisService;
+
+    @Autowired
+    private PermissionCalculationEngine permissionEngine;
+
+    /** 权限缓存前缀（保留兼容，实际计算已委托给PermissionCalculationEngine） */
+    private static final String PERM_CACHE_PREFIX = "user:permissions:role:";
+    /** 权限缓存30分钟 */
+    private static final long PERM_CACHE_TTL_MINUTES = 30;
 
     public Page<User> list(Long page, Long pageSize, String username, String name, String roleName, String status) {
         Page<User> userPage = userService.getUserPage(page, pageSize, username, name, roleName, status);
@@ -198,6 +210,9 @@ public class UserOrchestrator {
         subject.setRoleName(user.getRoleName());
         // 设置数据权限范围，默认为 all
         subject.setPermissionRange(StringUtils.hasText(user.getPermissionRange()) ? user.getPermissionRange() : "all");
+        // 设置租户信息
+        subject.setTenantId(user.getTenantId());
+        subject.setTenantOwner(Boolean.TRUE.equals(user.getIsTenantOwner()));
 
         String token = authTokenService == null ? null : authTokenService.issueToken(subject, Duration.ofHours(12));
         if (!StringUtils.hasText(token)) {
@@ -261,10 +276,12 @@ public class UserOrchestrator {
         result.put("permissionRange", user.getPermissionRange());
         result.put("phone", user.getPhone());
         result.put("email", user.getEmail());
+        result.put("tenantId", user.getTenantId());
+        result.put("isTenantOwner", Boolean.TRUE.equals(user.getIsTenantOwner()));
 
         List<String> permissions;
         try {
-            permissions = getPermissionCodesByRoleId(user.getRoleId());
+            permissions = permissionEngine.calculatePermissions(user.getId(), user.getRoleId(), user.getTenantId());
         } catch (Exception e) {
             permissions = List.of();
         }
@@ -412,25 +429,23 @@ public class UserOrchestrator {
             }
             rid = current.getRoleId();
         }
-        return getPermissionCodesByRoleId(rid);
+        // 使用权限计算引擎（支持三级权限）
+        User user = resolveCurrentUser();
+        if (user != null) {
+            return permissionEngine.calculatePermissions(user.getId(), rid, user.getTenantId());
+        }
+        return permissionEngine.getRolePermissionCodes(rid);
     }
 
     /**
-     * 内部方法：根据角色ID获取权限代码列表（不做权限检查）
+     * 内部方法：根据角色ID获取权限代码列表（带Redis缓存）
+     * 保留兼容性，委托给PermissionCalculationEngine
      */
     private List<String> getPermissionCodesByRoleId(Long roleId) {
         if (roleId == null) {
             return List.of();
         }
-
-        List<Long> ids = rolePermissionService.getPermissionIdsByRoleId(roleId);
-        if (ids == null || ids.isEmpty()) {
-            return List.of();
-        }
-        return permissionService.listByIds(ids).stream()
-                .map(p -> p.getPermissionCode())
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+        return permissionEngine.getRolePermissionCodes(roleId);
     }
 
     private void sanitizeUser(User user) {

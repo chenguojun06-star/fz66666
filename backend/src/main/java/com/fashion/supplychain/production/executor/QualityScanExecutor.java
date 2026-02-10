@@ -87,6 +87,9 @@ public class QualityScanExecutor {
 
         inventoryValidator.validateNotExceedOrderQuantity(order, "quality", "质检", qty, bundle);
 
+        // ★ 生产前置校验：该菲号必须有至少一条生产扫码记录才能进行质检
+        validateProductionPrerequisite(order.getId(), bundle.getId());
+
         String qualityStage = parseQualityStageFromParams(params);
 
         // 领取或验收阶段
@@ -241,6 +244,32 @@ public class QualityScanExecutor {
     }
 
     /**
+     * 验证生产前置条件：该菲号必须有至少一条生产扫码记录
+     * 业务规则：生产工序（如车缝）完成后才能进入质检环节
+     * PC端和小程序共用此校验，确保业务逻辑一致
+     */
+    private void validateProductionPrerequisite(String orderId, String bundleId) {
+        if (!hasText(orderId) || !hasText(bundleId)) {
+            return;
+        }
+        try {
+            long productionCount = scanRecordService.count(new LambdaQueryWrapper<ScanRecord>()
+                    .eq(ScanRecord::getOrderId, orderId)
+                    .eq(ScanRecord::getCuttingBundleId, bundleId)
+                    .eq(ScanRecord::getScanType, "production")
+                    .eq(ScanRecord::getScanResult, "success"));
+            if (productionCount <= 0) {
+                throw new IllegalStateException("该菲号尚未完成生产扫码，不能进行质检。请先完成生产工序（如车缝）后再质检");
+            }
+        } catch (IllegalStateException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("检查生产前置条件失败: orderId={}, bundleId={}", orderId, bundleId, e);
+            // 查询异常时不阻断业务，仅记录日志
+        }
+    }
+
+    /**
      * 查找质检阶段记录
      */
     public ScanRecord findQualityStageRecord(String orderId, String bundleId, String processCode) {
@@ -385,7 +414,7 @@ public class QualityScanExecutor {
         sr.setSize(sizeResolver.apply(null));
         sr.setQuantity(qty);
         sr.setProcessCode(stageCode);
-        sr.setProgressStage("质检");
+        sr.setProgressStage(stageName);
         sr.setProcessName(stageName);
         sr.setOperatorId(operatorId);
         sr.setOperatorName(operatorName);
@@ -420,6 +449,19 @@ public class QualityScanExecutor {
             w.setReceiverId(TextUtils.safeText(receivedStage.getOperatorId()));
             w.setReceiverName(TextUtils.safeText(receivedStage.getOperatorName()));
             w.setReceivedTime(receivedStage.getScanTime());
+            // 同步填充质检人员信息
+            w.setQualityOperatorId(TextUtils.safeText(receivedStage.getOperatorId()));
+            w.setQualityOperatorName(TextUtils.safeText(receivedStage.getOperatorName()));
+        }
+
+        // 从参数中获取操作人信息（confirm阶段的操作人）
+        String operatorId = TextUtils.safeText(params.get("operatorId"));
+        String operatorName = TextUtils.safeText(params.get("operatorName"));
+        if (hasText(operatorId) && !hasText(w.getQualityOperatorId())) {
+            w.setQualityOperatorId(operatorId);
+        }
+        if (hasText(operatorName) && !hasText(w.getQualityOperatorName())) {
+            w.setQualityOperatorName(operatorName);
         }
 
         w.setInspectionStatus("inspected");

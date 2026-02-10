@@ -64,13 +64,38 @@
   animation: header-brand-flow 7.5s ease-in-out infinite;
 }
 
-/* 深色主题下的品牌标签 */
+/* 深色主题下的品牌标签 - 增强对比度 */
 :root[data-theme="dark"] .header-title.header-brand {
-  background: rgba(107, 163, 255, 0.15);
-  border: 1px solid rgba(107, 163, 255, 0.3);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  color: #6ba3ff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  background: rgba(107, 163, 255, 0.22);
+  border: 1px solid rgba(107, 163, 255, 0.45);
+  box-shadow: 0 2px 12px rgba(107, 163, 255, 0.25);
+  color: #c5d9ff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* 深色主题下的Header整体 */
+:root[data-theme="dark"] .layout-header {
+  background-color: var(--color-bg-card);
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+/* 深色主题下的Header文字 */
+:root[data-theme="dark"] .header-title {
+  color: var(--neutral-text);
+}
+
+/* 深色主题下的用户名 */
+:root[data-theme="dark"] .user-name {
+  color: var(--neutral-text-light);
+}
+
+/* 深色主题下的标签 */
+:root[data-theme="dark"] .recent-tab-label.ant-btn {
+  color: var(--neutral-text-lighter);
+}
+
+:root[data-theme="dark"] .recent-tab.active .recent-tab-label.ant-btn {
+  color: #c5d9ff;
 }
 
 .header-title.header-brand::after {
@@ -159,25 +184,27 @@
 }
 
 .recent-tab-label.ant-btn {
-  height: 28px;
-  padding: 0 10px;
+  height: 24px;
+  padding: 0 8px;
   border-radius: 999px;
   min-width: 0;
+  font-size: 12px;
 }
 
 .recent-tab-label.ant-btn > span {
   display: inline-block;
-  max-width: 120px;
+  max-width: 100px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .recent-tab-close.ant-btn {
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
   padding: 0;
   border-radius: 999px;
+  font-size: 10px;
 }
 
 .header-user {
@@ -190,6 +217,7 @@
   font-size: var(--font-size-base);
   color: var(--neutral-text);
   margin: 0;
+  font-weight: 500;
 }
 
 .user-trigger.ant-btn {
@@ -276,7 +304,7 @@
 }
 
 .sidebar-menu.ant-menu .ant-menu-sub .ant-menu-item {
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-sm);
 }
 
 .sidebar-menu.ant-menu .ant-menu-item:hover,

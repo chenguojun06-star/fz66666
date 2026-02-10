@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Profile;
 import com.fashion.supplychain.production.orchestration.ProductionCleanupOrchestrator;
 
 @SpringBootApplication
-@MapperScan("com.fashion.supplychain.*.mapper")
+@MapperScan("com.fashion.supplychain.**.mapper")
 public class FashionSupplychainApplication {
 
     public static void main(final String[] args) {

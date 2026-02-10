@@ -87,8 +87,8 @@ export default defineConfig({
   },
   server: {
     // ⚠️⚠️⚠️ 【禁止修改】内网访问固定配置 ⚠️⚠️⚠️
-    // 内网 IP: 192.168.1.13
-    // 访问地址: http://192.168.1.13:5173/
+    // 内网 IP: 192.168.1.2
+    // 访问地址: http://192.168.1.2:5173/
     // 修改此配置会导致动态模块导入失败和 API 代理异常
     // ================================================
     host: '0.0.0.0',  // 【固定】监听所有网络接口
@@ -96,9 +96,15 @@ export default defineConfig({
     strictPort: false,
     hmr: {
       protocol: 'ws',
-      host: '192.168.1.13',  // 【固定】HMR 必须使用此内网 IP（已更新为当前机器IP）
+      host: '192.168.1.2',  // 【固定】HMR 必须使用此内网 IP（已更新为当前机器IP）
       port: 5173,
       clientPort: 5173
+    },
+    watch: {
+      // 【重要】项目在外部磁盘 /Volumes/macoo2/ 上，macOS FSEvents 无法正常触发
+      // 必须使用轮询模式才能检测文件变化，实现 HMR 热更新
+      usePolling: true,
+      interval: 1000,  // 每秒检测一次文件变化
     },
     proxy: {
       '/api': {

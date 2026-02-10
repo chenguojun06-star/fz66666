@@ -2,6 +2,7 @@ package com.fashion.supplychain.stock.entity;
 
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.Version;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
@@ -91,4 +92,10 @@ public class SampleStock implements Serializable {
      * 删除标记
      */
     private Integer deleteFlag;
+
+    /**
+     * 乐观锁版本号（并发库存操作防覆盖）
+     */
+    @Version
+    private Integer version;
 }

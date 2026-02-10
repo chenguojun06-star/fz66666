@@ -131,25 +131,11 @@
   box-shadow: 0 4px 12px rgba(105, 177, 255, 0.25) !important;
 }
 
-/* 页面容器背景 */
 .page-card {
   background: #f8fafc;
   min-height: 100vh;
   position: relative;
   overflow: hidden;
-}
-
-/* 背景装饰图形 */
-.page-card::before,
-.page-card::after {
-  /* 禁用浮动装饰效果 */
-  display: none;
-}
-
-@keyframes floatBackground {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(30px, -30px) scale(1.05); }
-  66% { transform: translate(-20px, 20px) scale(0.95); }
 }
 
 /* 统计卡片网格 */
@@ -486,12 +472,14 @@
   padding: 14px 0;
   border-bottom: 1px solid rgba(0, 0, 0, 0.04);
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
 }
 
 .activity-item:hover {
   padding-left: 8px;
   background: rgba(45, 127, 249, 0.04);
   border-radius: 8px;
+  transform: translateX(4px);
 }
 
 .activity-item:last-child {
@@ -578,15 +566,7 @@
   overflow: hidden;
 }
 
-/* 卡片光晕效果 */
-.quick-entry-item::before {
-  /* 禁用光晕装饰效果 */
-  display: none;
-}
 
-.quick-entry-item:hover::before {
-  opacity: 1;
-}
 
 .quick-entry-item:hover {
   transform: translateY(-6px) scale(1.03);

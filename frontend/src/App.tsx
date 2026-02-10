@@ -16,6 +16,7 @@ import {
   OrderReconciliationApproval,
   PayrollOperatorSummary,
   FinanceCenter,
+  ExpenseReimbursement,
 } from './modules/finance';
 import {
   WarehouseDashboard,
@@ -25,7 +26,7 @@ import {
   SampleInventory,
 } from './modules/warehouse';
 import { Dashboard } from './modules/dashboard';
-import { UserList, UserApproval, RoleList, FactoryList, LoginLogList, SystemLogs, Profile, DictManage, Tutorial } from './modules/system';
+import { UserList, UserApproval, RoleList, FactoryList, LoginLogList, SystemLogs, Profile, DictManage, Tutorial, TenantManagement, AppStore } from './modules/system';
 import {
   ProductionList,
   CuttingManagement,
@@ -265,6 +266,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.orderReconciliationApproval} element={<Suspense fallback={<Spin />}><OrderReconciliationApproval /></Suspense>} />
           <Route path={paths.payrollOperatorSummary} element={<Suspense fallback={<Spin />}><PayrollOperatorSummary /></Suspense>} />
           <Route path={paths.financeCenter} element={<Suspense fallback={<Spin />}><FinanceCenter /></Suspense>} />
+          <Route path={paths.expenseReimbursement} element={<Suspense fallback={<Spin />}><ExpenseReimbursement /></Suspense>} />
 
           <Route path={paths.warehouseDashboard} element={<Suspense fallback={<Spin />}><WarehouseDashboard /></Suspense>} />
           <Route path={paths.materialInventory} element={<Suspense fallback={<Spin />}><MaterialInventory /></Suspense>} />
@@ -281,6 +283,8 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.loginLog} element={<Suspense fallback={<Spin />}><LoginLogList /></Suspense>} />
           <Route path={paths.systemLogs} element={<Suspense fallback={<Spin />}><SystemLogs /></Suspense>} />
           <Route path={paths.profile} element={<Suspense fallback={<Spin />}><Profile /></Suspense>} />
+          <Route path={paths.tenantManagement} element={<Suspense fallback={<Spin />}><TenantManagement /></Suspense>} />
+          <Route path={paths.appStore} element={<Suspense fallback={<Spin />}><AppStore /></Suspense>} />
           <Route path={paths.orderManagementList} element={<Suspense fallback={<Spin />}><OrderManagement /></Suspense>} />
           <Route path={paths.orderManagementDetail} element={<Suspense fallback={<Spin />}><OrderManagement /></Suspense>} />
           <Route path={paths.dataCenter} element={<Suspense fallback={<Spin />}><DataCenter /></Suspense>} />

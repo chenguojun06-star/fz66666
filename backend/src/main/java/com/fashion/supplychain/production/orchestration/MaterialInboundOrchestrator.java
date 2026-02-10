@@ -111,9 +111,9 @@ public class MaterialInboundOrchestrator {
         materialInboundService.save(inbound);
         log.info("入库记录已创建: {}", inboundNo);
 
-        // 4. 更新库存
-        materialStockService.increaseStock(purchase, arrivedQuantity);
-        log.info("库存已更新: materialCode={}, quantity=+{}", purchase.getMaterialCode(), arrivedQuantity);
+        // 4. 更新库存（带仓位同步）
+        materialStockService.increaseStock(purchase, arrivedQuantity, warehouseLocation);
+        log.info("库存已更新: materialCode={}, quantity=+{}, location={}", purchase.getMaterialCode(), arrivedQuantity, warehouseLocation);
 
         // 5. 更新采购单
         purchase.setArrivedQuantity(totalArrived);
@@ -217,7 +217,7 @@ public class MaterialInboundOrchestrator {
         materialInboundService.save(inbound);
         log.info("手动入库记录已创建: {}", inboundNo);
 
-        // 3. 更新库存（需要构造临时的 MaterialPurchase 对象）
+        // 3. 更新库存（需要构造临时的 MaterialPurchase 对象，带仓位+供应商）
         MaterialPurchase tempPurchase = new MaterialPurchase();
         tempPurchase.setMaterialCode(materialCode);
         tempPurchase.setMaterialName(materialName);
@@ -225,9 +225,10 @@ public class MaterialInboundOrchestrator {
         tempPurchase.setColor(color);
         tempPurchase.setSize(size);
         tempPurchase.setSpecifications(size);
+        tempPurchase.setSupplierName(supplierName);
 
-        materialStockService.increaseStock(tempPurchase, quantity);
-        log.info("库存已更新: materialCode={}, quantity=+{}", materialCode, quantity);
+        materialStockService.increaseStock(tempPurchase, quantity, warehouseLocation);
+        log.info("库存已更新: materialCode={}, quantity=+{}, location={}", materialCode, quantity, warehouseLocation);
 
         // 4. 返回结果
         Map<String, Object> result = new HashMap<>();

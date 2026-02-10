@@ -87,6 +87,33 @@ public class ProductionProcessTrackingOrchestrator {
             return 0;
         }
 
+        // 3.1 确保裁剪节点在工序列表中（裁剪是第一道工序，自动完成）
+        boolean hasCuttingNode = processNodes.stream()
+                .anyMatch(n -> "裁剪".equals(getStringValue(n, "name", ""))
+                        || "裁剪".equals(getStringValue(n, "progressStage", "")));
+        BigDecimal cuttingUnitPrice = BigDecimal.ZERO;
+        if (!hasCuttingNode) {
+            // 从模板库获取裁剪单价
+            try {
+                Map<String, BigDecimal> prices = templateLibraryService.resolveProcessUnitPrices(order.getStyleNo());
+                if (prices != null) {
+                    BigDecimal price = prices.get("裁剪");
+                    if (price != null && price.compareTo(BigDecimal.ZERO) > 0) {
+                        cuttingUnitPrice = price;
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("获取裁剪单价失败: styleNo={}", order.getStyleNo(), e);
+            }
+            Map<String, Object> cuttingNode = new HashMap<>();
+            cuttingNode.put("name", "裁剪");
+            cuttingNode.put("progressStage", "裁剪");
+            cuttingNode.put("unitPrice", cuttingUnitPrice);
+            cuttingNode.put("_isCuttingAutoNode", true); // 标记为自动添加的裁剪节点
+            processNodes.add(0, cuttingNode);
+            log.info("订单 {} 自动添加裁剪节点到工序跟踪（单价={}）", order.getOrderNo(), cuttingUnitPrice);
+        }
+
         // ✅ 删除该订单的老记录（允许重新初始化，避免重复）
         int deletedCount = trackingService.deleteByOrderId(productionOrderId);
         if (deletedCount > 0) {
@@ -127,8 +154,15 @@ public class ProductionProcessTrackingOrchestrator {
                 tracking.setProcessOrder(i + 1);
                 tracking.setUnitPrice(getBigDecimalValue(node, "unitPrice", BigDecimal.ZERO));
 
-                // 初始状态
-                tracking.setScanStatus("pending");
+                // 初始状态 - 裁剪节点自动标记为已完成
+                boolean isCuttingAutoNode = Boolean.TRUE.equals(node.get("_isCuttingAutoNode"));
+                if (isCuttingAutoNode) {
+                    tracking.setScanStatus("scanned");
+                    tracking.setScanTime(LocalDateTime.now());
+                    tracking.setOperatorName(currentUser);
+                } else {
+                    tracking.setScanStatus("pending");
+                }
                 tracking.setIsSettled(false);
                 tracking.setCreator(currentUser);
 

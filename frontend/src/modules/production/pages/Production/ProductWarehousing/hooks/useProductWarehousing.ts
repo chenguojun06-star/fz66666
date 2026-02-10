@@ -1,13 +1,10 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Form, message } from 'antd';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import api, { fetchProductionOrderDetail, useProductionOrderFrozenCache } from '@/utils/api';
-import { formatDateTime } from '@/utils/datetime';
+import { useLocation } from 'react-router-dom';
+import api, { useProductionOrderFrozenCache } from '@/utils/api';
 import { useSync } from '@/utils/syncManager';
-import { paths } from '@/routeConfig';
 import {
   ProductWarehousing as WarehousingType,
-  ProductionOrder,
   WarehousingQueryParams,
 } from '@/types/production';
 import type { UploadFile } from 'antd/es/upload/interface';
@@ -23,24 +20,36 @@ import {
   toUploadFileList,
 } from '../utils';
 
+// 质检入库统计数据类型
+export interface WarehousingStats {
+  totalCount: number;
+  totalOrders: number;
+  totalQuantity: number;
+  todayCount: number;
+  todayOrders: number;
+  todayQuantity: number;
+  pendingQcBundles: number;
+  pendingQcQuantity: number;
+  pendingWarehouseBundles: number;
+  pendingWarehouseQuantity: number;
+}
+
+const defaultStats: WarehousingStats = {
+  totalCount: 0,
+  totalOrders: 0,
+  totalQuantity: 0,
+  todayCount: 0,
+  todayOrders: 0,
+  todayQuantity: 0,
+  pendingQcBundles: 0,
+  pendingQcQuantity: 0,
+  pendingWarehouseBundles: 0,
+  pendingWarehouseQuantity: 0,
+};
+
 export const useProductWarehousing = () => {
   const location = useLocation();
-  const navigate = useNavigate();
-  const params = useParams();
   const [form] = Form.useForm();
-
-  // Route Params
-  const routeWarehousingNo = useMemo(() => {
-    const raw = String((params as any)?.warehousingNo || '').trim();
-    if (!raw) return '';
-    try {
-      return decodeURIComponent(raw);
-    } catch {
-      return raw;
-    }
-  }, [params]);
-
-  const isEntryPage = Boolean(routeWarehousingNo);
 
   // State
   const [loading, setLoading] = useState(false);
@@ -50,6 +59,9 @@ export const useProductWarehousing = () => {
     page: 1,
     pageSize: 10,
   });
+
+  // 统计卡片
+  const [warehousingStats, setWarehousingStats] = useState<WarehousingStats>(defaultStats);
 
   const [visible, setVisible] = useState(false); // New/Edit Modal
   const [currentWarehousing, setCurrentWarehousing] = useState<WarehousingType | null>(null);
@@ -61,6 +73,10 @@ export const useProductWarehousing = () => {
   const [warehousingModalWarehousingNo, setWarehousingModalWarehousingNo] = useState<string>('');
   const [warehousingModalOrderNo, setWarehousingModalOrderNo] = useState<string>('');
   const [warehousingModalWarehouse, setWarehousingModalWarehouse] = useState<string>('');
+  const [warehousingModalStyleNo, setWarehousingModalStyleNo] = useState<string>('');
+  const [warehousingModalColor, setWarehousingModalColor] = useState<string>('');
+  const [warehousingModalSize, setWarehousingModalSize] = useState<string>('');
+  const [warehousingModalQuantity, setWarehousingModalQuantity] = useState<number>(0);
 
   const [independentDetailOpen, setIndependentDetailOpen] = useState(false);
   const [independentDetailWarehousingNo, setIndependentDetailWarehousingNo] = useState<string>('');
@@ -70,16 +86,9 @@ export const useProductWarehousing = () => {
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [previewTitle, setPreviewTitle] = useState<string>('');
 
-  // Detail State (for Entry Page)
-  const [entryWarehousing, setEntryWarehousing] = useState<WarehousingType | null>(null);
-  const [entryLoading, setEntryLoading] = useState(false);
-  const [detailWarehousingItems, setDetailWarehousingItems] = useState<WarehousingType[]>([]);
-  const [detailLoading, setDetailLoading] = useState(false);
+  // Form/Data State
   const [bundles, setBundles] = useState<CuttingBundleRow[]>([]);
-  const [orderDetailLoading, setOrderDetailLoading] = useState(false);
-  const [orderDetail, setOrderDetail] = useState<ProductionOrder | null>(null);
-  const [orderWarehousingRecords, setOrderWarehousingRecords] = useState<any[]>([]);
-  const [unqualifiedFileList, setUnqualifiedFileList] = useState<UploadFile[]>([]); // For Detail View display? No, detail view uses inline image display. This might be for modal only.
+  const [unqualifiedFileList, setUnqualifiedFileList] = useState<UploadFile[]>([]);
 
   // Derived State
   const frozenOrderIds = useMemo(() => {
@@ -89,6 +98,17 @@ export const useProductWarehousing = () => {
   const orderFrozen = useProductionOrderFrozenCache(frozenOrderIds, { rule: 'statusOrStock', acceptAnyData: true });
 
   // Actions
+  const fetchWarehousingStats = useCallback(async () => {
+    try {
+      const res = await api.get<{ code: number; data: WarehousingStats }>('/production/warehousing/stats');
+      if (res.code === 200 && res.data) {
+        setWarehousingStats(res.data);
+      }
+    } catch {
+      // 静默失败
+    }
+  }, []);
+
   const fetchWarehousingList = async () => {
     setLoading(true);
     try {
@@ -148,6 +168,10 @@ export const useProductWarehousing = () => {
     setWarehousingModalWarehousingNo(whNo);
     setWarehousingModalOrderNo(on);
     setWarehousingModalWarehouse('');
+    setWarehousingModalStyleNo(String(record?.styleNo || '').trim());
+    setWarehousingModalColor(String(record?.color || '').trim());
+    setWarehousingModalSize(String(record?.size || '').trim());
+    setWarehousingModalQuantity(Number(record?.warehousingQuantity || 0));
     setWarehousingModalOpen(true);
   };
 
@@ -158,6 +182,10 @@ export const useProductWarehousing = () => {
     setWarehousingModalWarehousingNo('');
     setWarehousingModalOrderNo('');
     setWarehousingModalWarehouse('');
+    setWarehousingModalStyleNo('');
+    setWarehousingModalColor('');
+    setWarehousingModalSize('');
+    setWarehousingModalQuantity(0);
   };
 
   const submitWarehousing = async () => {
@@ -193,8 +221,7 @@ export const useProductWarehousing = () => {
         const qs = String((r as any)?.qualityStatus || '').trim().toLowerCase();
         const qualified = !qs || qs === 'qualified';
         const q = Number((r as any)?.qualifiedQuantity || 0) || 0;
-        const hasWarehouse = String((r as any)?.warehouse || '').trim();
-        return qualified && q > 0 && !hasWarehouse;
+        return qualified && q > 0;
       });
 
       if (!targets.length) {
@@ -240,17 +267,6 @@ export const useProductWarehousing = () => {
     setIndependentDetailSummary(null);
   };
 
-  const buildWarehousingDetailPath = (warehousingNo: string) => {
-    const whNo = String(warehousingNo || '').trim();
-    return paths.warehousingDetail.replace(':warehousingNo', encodeURIComponent(whNo));
-  };
-
-  const goToWarehousingDetail = (record: WarehousingType) => {
-    const whNo = String((record as any)?.warehousingNo || '').trim();
-    if (!whNo) return;
-    navigate(buildWarehousingDetailPath(whNo), { state: { warehousingSummary: record } });
-  };
-
   const ensureOrderUnlockedById = async (orderId: any) => {
     return await orderFrozen.ensureUnlocked(orderId, () => message.error('订单已完成，无法操作'));
   };
@@ -284,7 +300,7 @@ export const useProductWarehousing = () => {
     },
     {
       interval: 30000,
-      enabled: !loading && !isEntryPage && !visible && !warehousingModalOpen && !independentDetailOpen,
+      enabled: !loading && !visible && !warehousingModalOpen && !independentDetailOpen,
       pauseOnHidden: true,
       onError: (error) => {
         console.error('[实时同步] 质检入库数据同步错误', error);
@@ -294,9 +310,9 @@ export const useProductWarehousing = () => {
 
   // Effects
   useEffect(() => {
-    if (isEntryPage) return;
     fetchWarehousingList();
-  }, [isEntryPage, queryParams]);
+    fetchWarehousingStats();
+  }, [queryParams]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -326,6 +342,10 @@ export const useProductWarehousing = () => {
     submitLoading,
     setSubmitLoading,
 
+    // Stats
+    warehousingStats,
+    fetchWarehousingStats,
+
     // Modal State
     warehousingModalOpen,
     setWarehousingModalOpen,
@@ -339,6 +359,10 @@ export const useProductWarehousing = () => {
     setWarehousingModalOrderNo,
     warehousingModalWarehouse,
     setWarehousingModalWarehouse,
+    warehousingModalStyleNo,
+    warehousingModalColor,
+    warehousingModalSize,
+    warehousingModalQuantity,
 
     independentDetailOpen,
     setIndependentDetailOpen,
@@ -359,22 +383,6 @@ export const useProductWarehousing = () => {
     setBundles,
     unqualifiedFileList,
     setUnqualifiedFileList,
-    detailWarehousingItems,
-    setDetailWarehousingItems,
-    detailLoading,
-    setDetailLoading,
-
-    // Detail State
-    entryWarehousing,
-    setEntryWarehousing,
-    entryLoading,
-    setEntryLoading,
-    orderDetail,
-    setOrderDetail,
-    orderDetailLoading,
-    setOrderDetailLoading,
-    orderWarehousingRecords,
-    setOrderWarehousingRecords,
 
     // Actions
     fetchWarehousingList,
@@ -386,12 +394,7 @@ export const useProductWarehousing = () => {
     submitWarehousing,
     openIndependentDetailPopup,
     closeIndependentDetailPopup,
-    goToWarehousingDetail,
     ensureOrderUnlockedById,
     isOrderFrozenById,
-
-    // Utils
-    isEntryPage,
-    routeWarehousingNo,
   };
 };

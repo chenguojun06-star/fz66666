@@ -292,7 +292,7 @@ const HorizontalProgressPriceView: React.FC<HorizontalProgressPriceViewProps> = 
                       input: {
                         fontSize: "var(--font-size-base)",
                         fontWeight: 600,
-                        color: '#1890ff',
+                        color: 'var(--color-primary)',
                       },
                     }}
                   />
@@ -317,7 +317,7 @@ const HorizontalProgressPriceView: React.FC<HorizontalProgressPriceViewProps> = 
                     strong
                     style={{
                       fontSize: "var(--font-size-md)",
-                      color: '#f5222d',
+                      color: 'var(--color-danger)',
                       fontVariantNumeric: 'tabular-nums',
                     }}
                   >
@@ -361,7 +361,7 @@ const HorizontalProgressPriceView: React.FC<HorizontalProgressPriceViewProps> = 
               strong
               style={{
                 fontSize: "var(--font-size-xxl)",
-                color: '#1890ff',
+                color: 'var(--color-primary)',
                 fontVariantNumeric: 'tabular-nums',
               }}
             >
@@ -378,7 +378,7 @@ const HorizontalProgressPriceView: React.FC<HorizontalProgressPriceViewProps> = 
               strong
               style={{
                 fontSize: "var(--font-size-xxl)",
-                color: '#52c41a',
+                color: 'var(--color-success)',
                 fontVariantNumeric: 'tabular-nums',
               }}
             >
@@ -399,7 +399,7 @@ const HorizontalProgressPriceView: React.FC<HorizontalProgressPriceViewProps> = 
                 strong
                 style={{
                   fontSize: "var(--font-size-xxl)",
-                  color: '#f5222d',
+                  color: 'var(--color-danger)',
                   fontVariantNumeric: 'tabular-nums',
                 }}
               >
@@ -421,7 +421,7 @@ const HorizontalProgressPriceView: React.FC<HorizontalProgressPriceViewProps> = 
                 strong
                 style={{
                   fontSize: "var(--font-size-xxl)",
-                  color: '#ff4d4f',
+                  color: 'var(--color-danger)',
                   fontVariantNumeric: 'tabular-nums',
                 }}
               >

@@ -268,6 +268,13 @@ export interface ProductWarehousing {
   warehousingOperatorName?: string;
   warehousingStartTime?: string;
   warehousingEndTime?: string;
+  // 显示字段（后端查询时填充）
+  color?: string;
+  size?: string;
+  cuttingQuantity?: number;
+  qualityOperatorName?: string;
+  receiverName?: string;
+  receiverId?: string;
 }
 
 export interface ProductOutstock {

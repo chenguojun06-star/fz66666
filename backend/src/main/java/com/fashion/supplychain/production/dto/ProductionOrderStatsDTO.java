@@ -31,4 +31,14 @@ public class ProductionOrderStatsDTO {
      * 延期订单数量（延期订单的orderQuantity之和）
      */
     private long delayedQuantity;
+
+    /**
+     * 当天下单数（创建时间在今天的订单数）
+     */
+    private long todayOrders;
+
+    /**
+     * 当天下单数量（当天订单的orderQuantity之和）
+     */
+    private long todayQuantity;
 }

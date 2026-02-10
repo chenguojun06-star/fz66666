@@ -16,6 +16,7 @@ import { formatDateTime } from '@/utils/datetime';
 import { unwrapApiData } from '@/utils/api';
 import { getMaterialReconStatusConfig, materialReconStatusTransitions } from '@/constants/finance';
 import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
+import { canViewPrice } from '@/utils/sensitiveDataMask';
 import { useSync } from '@/utils/syncManager';
 import { useViewport } from '@/utils/useViewport';
 import { useModal } from '@/hooks';
@@ -94,8 +95,8 @@ const MaterialReconciliation: React.FC = () => {
         String((r as Record<string, unknown>)?.styleNo || '').trim(),
         String(quantity),
         String((r as Record<string, unknown>)?.unit || '').trim(),
-        unitPrice.toFixed(2),
-        totalAmount.toFixed(2),
+        canViewPrice(user) ? unitPrice.toFixed(2) : '***',
+        canViewPrice(user) ? totalAmount.toFixed(2) : '***',
         String(formatDateTime((r as Record<string, unknown>)?.reconciliationDate) || ''),
         String((r as Record<string, unknown>)?.purchaserName || '').trim(),
         String(formatDateTime((r as Record<string, unknown>)?.inboundDate) || ''),
@@ -360,7 +361,6 @@ const MaterialReconciliation: React.FC = () => {
       if (oldData !== null && newData) {
         setReconciliationList(newData.records);
         setTotal(newData.total);
-        // console.log('[实时同步] 物料对账数据已更新', {
         //   oldCount: oldData.records.length,
         //   newCount: newData.records.length,
         //   oldTotal: oldData.total,
@@ -530,6 +530,7 @@ const MaterialReconciliation: React.FC = () => {
       width: 110,
       align: 'right' as const,
       render: (value: number, record: any) => {
+        if (!canViewPrice(user)) return '***';
         const unit = record?.unit || '';
         const price = value?.toFixed(2) || '0.00';
         return `¥${price}${unit ? '/' + unit : ''}`;
@@ -541,6 +542,7 @@ const MaterialReconciliation: React.FC = () => {
       width: 120,
       align: 'right' as const,
       render: (_: any, record: any) => {
+        if (!canViewPrice(user)) return '***';
         const quantity = Number(record?.quantity || 0);
         const unitPrice = Number(record?.unitPrice || 0);
         const total = quantity * unitPrice;

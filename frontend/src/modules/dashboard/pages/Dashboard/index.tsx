@@ -14,7 +14,6 @@ import {
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import api from '@/utils/api';
-import { errorHandler } from '@/utils/errorHandling';
 import { useSync } from '@/utils/syncManager';
 import MiniDataDashboard from '../../components/MiniDataDashboard';
 import TopStats from '../../components/TopStats';
@@ -36,10 +35,10 @@ interface DashboardStats {
 }
 
 interface RecentActivity {
-  id: string;
-  type: string;
-  content: string;
-  time: string;
+  id: string;        // 实体ID，用于跳转
+  type: string;      // 类型: style/production/scan/material
+  content: string;   // 显示内容
+  time: string;      // 时间
 }
 
 interface QuickEntryConfig {
@@ -257,20 +256,42 @@ const Dashboard: React.FC = () => {
   // 格式化活动时间显示
   const formatActivityTime = (timeStr: string) => {
     if (!timeStr) return '';
-
-    // 如果已经包含日期（格式：YYYY-MM-DD HH:mm 或 MM-DD HH:mm），直接返回
-    if (timeStr.includes('-')) {
-      return timeStr;
-    }
-
-    // 如果只有时间（HH:mm:ss 或 HH:mm），添加今天的日期
+    if (timeStr.includes('-')) return timeStr;
     const now = new Date();
     const today = `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-
-    // 去掉秒数（如果有）
     const timePart = timeStr.split(':').slice(0, 2).join(':');
-
     return `${today} ${timePart}`;
+  };
+
+  // 处理活动点击，跳转到对应页面
+  const handleActivityClick = (activity: RecentActivity) => {
+    const { type, id, content } = activity;
+
+    switch (type) {
+      case 'style':
+        // 款式：跳转到样衣开发页面
+        navigate('/style-info');
+        break;
+      case 'production':
+        // 生产订单：从content中提取订单号跳转
+        const orderNoMatch = content.match(/订单\s+([A-Z0-9]+)/);
+        if (orderNoMatch && orderNoMatch[1]) {
+          navigate(`/production?orderNo=${encodeURIComponent(orderNoMatch[1])}`);
+        } else {
+          navigate('/production');
+        }
+        break;
+      case 'scan':
+        // 扫码记录：跳转到扫码记录页面
+        navigate('/production/scan-records');
+        break;
+      case 'material':
+        // 物料采购：跳转到物料管理页面
+        navigate('/production/material');
+        break;
+      default:
+        console.warn('未知的活动类型:', type);
+    }
   };
 
   const fetchDashboard = useCallback(async () => {
@@ -471,15 +492,28 @@ const Dashboard: React.FC = () => {
               <h3 className="card-title">最近动态</h3>
             </div>
             <div className="card-content">
-              <ul className="activity-list">
-                {recentActivities.map(activity => (
-                  <li key={activity.id} className="activity-item">
-                    <span className={`activity-icon activity-icon--${activity.type}`}>{getActivityIcon(activity.type)}</span>
-                    <span className="activity-content">{activity.content}</span>
-                    <span className="activity-time">{formatActivityTime(activity.time)}</span>
-                  </li>
-                ))}
-              </ul>
+              {recentActivities.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--neutral-text-secondary)' }}>
+                  暂无最近动态
+                </div>
+              ) : (
+                <ul className="activity-list">
+                  {recentActivities.map(activity => (
+                    <li
+                      key={activity.id}
+                      className="activity-item"
+                      onClick={() => handleActivityClick(activity)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <span className={`activity-icon activity-icon--${activity.type}`}>
+                        {getActivityIcon(activity.type)}
+                      </span>
+                      <span className="activity-content">{activity.content}</span>
+                      <span className="activity-time">{formatActivityTime(activity.time)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
 

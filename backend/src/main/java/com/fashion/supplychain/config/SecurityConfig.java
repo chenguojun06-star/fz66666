@@ -4,6 +4,7 @@ import com.fashion.supplychain.auth.AuthTokenService;
 import com.fashion.supplychain.auth.TokenAuthFilter;
 import com.fashion.supplychain.auth.TokenSubject;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.system.orchestration.PermissionCalculationEngine;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationRunner;
 import org.slf4j.MDC;
@@ -57,7 +58,8 @@ public class SecurityConfig implements WebMvcConfigurer {
     private List<String> trustedIpPrefixes;
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, AuthTokenService authTokenService) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, AuthTokenService authTokenService,
+                                            PermissionCalculationEngine permissionEngine) throws Exception {
         http
                 .cors().and()
                 .csrf().disable()
@@ -69,6 +71,7 @@ public class SecurityConfig implements WebMvcConfigurer {
                         .antMatchers("/api/auth/user-info").permitAll()
                         .antMatchers("/api/auth/register").permitAll()
                         .antMatchers("/api/common/download/**").permitAll()
+                        .antMatchers("/openapi/**").permitAll()  // 客户开放API（使用appKey+签名鉴权）
                         .antMatchers(HttpMethod.GET, "/api/production/warehousing/list").permitAll()
                         .antMatchers("/api/system/user/me*", "/api/system/user/me/**").authenticated()
                         .antMatchers("/api/system/user/permissions*", "/api/system/user/permissions/**").authenticated()
@@ -94,6 +97,16 @@ public class SecurityConfig implements WebMvcConfigurer {
                                 "ROLE_ADMIN",
                                 "ROLE_1")
                         .antMatchers("/api/system/serial/**").authenticated()
+                        .antMatchers("/api/system/tenant/my").authenticated()
+                        .antMatchers("/api/system/tenant/sub/**").authenticated()
+                        .antMatchers("/api/system/tenant/role-templates").authenticated()
+                        .antMatchers("/api/system/tenant/roles/**").authenticated()
+                        .antMatchers("/api/system/tenant/registration/**").permitAll()
+                        .antMatchers("/api/system/tenant/registrations/**").authenticated()
+                        .antMatchers("/api/system/tenant/**").hasAnyAuthority(
+                                "ROLE_admin",
+                                "ROLE_ADMIN",
+                                "ROLE_1")
                         .antMatchers("/api/system/**").hasAnyAuthority(
                                 "ROLE_admin",
                                 "ROLE_ADMIN",
@@ -101,7 +114,7 @@ public class SecurityConfig implements WebMvcConfigurer {
                         .antMatchers("/api/**").authenticated()
                         .anyRequest().permitAll());
 
-        http.addFilterBefore(new TokenAuthFilter(authTokenService), UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(new TokenAuthFilter(authTokenService, permissionEngine), UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(new RequestIdFilter(), TokenAuthFilter.class);
         http.addFilterAfter(new HeaderAuthFilter(), TokenAuthFilter.class);
 
@@ -218,6 +231,8 @@ public class SecurityConfig implements WebMvcConfigurer {
                 ctx.setUsername(subject.getUsername());
                 ctx.setRole(subject.getRoleName());
                 ctx.setPermissionRange(subject.getPermissionRange());
+                ctx.setTenantId(subject.getTenantId());
+                ctx.setTenantOwner(subject.isTenantOwner());
             } else {
                 // 回退：从SecurityContext获取基本信息
                 Authentication auth = SecurityContextHolder.getContext().getAuthentication();

@@ -8,6 +8,7 @@ import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
 import com.fashion.supplychain.common.ParamUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fashion.supplychain.integration.openapi.service.WebhookPushService;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -69,6 +70,9 @@ public class ProductionOrderFinanceOrchestrationService {
 
     @Autowired
     private OrderReconciliationHelper orderReconciliationHelper;
+
+    @Autowired(required = false)
+    private WebhookPushService webhookPushService;
 
     @Transactional(rollbackFor = Exception.class)
     public boolean completeProduction(String id, BigDecimal tolerancePercent) {
@@ -150,6 +154,18 @@ public class ProductionOrderFinanceOrchestrationService {
             throw new IllegalStateException("操作失败");
         }
 
+        // 异步推送订单状态变更给已对接客户
+        if (webhookPushService != null && order.getOrderNo() != null) {
+            try {
+                webhookPushService.pushOrderStatusChange(
+                    order.getOrderNo(), st, "completed",
+                    Map.of("completedQuantity", qualifiedSum, "orderQuantity", orderQty)
+                );
+            } catch (Exception e) {
+                log.warn("Webhook推送订单完成状态失败: orderNo={}", order.getOrderNo(), e);
+            }
+        }
+
         return true;
     }
 
@@ -188,7 +204,7 @@ public class ProductionOrderFinanceOrchestrationService {
                     .eq("production_order_id", oid);
             List<Map<String, Object>> rows = cuttingBundleMapper.selectMaps(qw);
             if (rows != null && !rows.isEmpty()) {
-                Object v = ParamUtils.getIgnoreCase(rows.getFirst(), "totalQuantity");
+                Object v = ParamUtils.getIgnoreCase(rows.get(0), "totalQuantity");
                 cuttingQty = ParamUtils.toIntSafe(v);
             }
         } catch (Exception e) {
@@ -257,7 +273,7 @@ public class ProductionOrderFinanceOrchestrationService {
                     .eq("production_order_id", oid);
             List<Map<String, Object>> rows = cuttingBundleMapper.selectMaps(qw);
             if (rows != null && !rows.isEmpty()) {
-                Object v = ParamUtils.getIgnoreCase(rows.getFirst(), "totalQuantity");
+                Object v = ParamUtils.getIgnoreCase(rows.get(0), "totalQuantity");
                 cuttingQty = ParamUtils.toIntSafe(v);
             }
         } catch (Exception e) {
@@ -584,7 +600,14 @@ public class ProductionOrderFinanceOrchestrationService {
             return null;
         }
         try {
-            return objectMapper.readValue(order.getOrderDetails(), new TypeReference<Map<String, Object>>() {
+            String json = order.getOrderDetails().trim();
+            if (json.startsWith("[")) {
+                // orderDetails 是数组格式（SKU列表），取第一个元素
+                java.util.List<Map<String, Object>> list = objectMapper.readValue(json,
+                    new TypeReference<java.util.List<Map<String, Object>>>() {});
+                return (list != null && !list.isEmpty()) ? list.get(0) : null;
+            }
+            return objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {
             });
         } catch (Exception e) {
             log.warn("Failed to parse production order orderDetails: orderId={}", order.getId(), e);

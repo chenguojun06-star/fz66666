@@ -13,7 +13,7 @@ function showQualityModal(page, detail) {
   page.setData({
     'qualityModal.show': true,
     'qualityModal.detail': detail,
-    'qualityModal.result': 'qualified',
+    'qualityModal.result': '', // 默认为空，强制用户选择
     'qualityModal.unqualifiedQuantity': '',
     'qualityModal.defectCategory': 0,
     'qualityModal.handleMethod': 0,
@@ -100,6 +100,16 @@ function onDeleteQualityImage(page, e) {
 function _buildQualityBasePayload(detail, qualityModal, userInfo, warehouse) {
   const totalQty = detail.quantity || 1;
   const bundleNoNum = detail.bundleNo ? parseInt(detail.bundleNo, 10) : null;
+
+  // 计算不合格数量（用户输入）和合格数量
+  let unqualifiedQty = 0;
+  if (qualityModal.result === 'unqualified') {
+    unqualifiedQty = parseInt(qualityModal.unqualifiedQuantity, 10) || 0;
+    if (unqualifiedQty > totalQty) unqualifiedQty = totalQty;
+    if (unqualifiedQty <= 0) unqualifiedQty = totalQty; // 选了不合格但没填数量，默认全部不合格
+  }
+  const qualifiedQty = totalQty - unqualifiedQty;
+
   return {
     orderNo: detail.orderNo,
     orderId: detail.orderId || '',
@@ -107,8 +117,8 @@ function _buildQualityBasePayload(detail, qualityModal, userInfo, warehouse) {
     cuttingBundleId: detail.bundleId || '',
     cuttingBundleNo: bundleNoNum && !isNaN(bundleNoNum) ? bundleNoNum : null,
     warehousingQuantity: totalQty,
-    qualifiedQuantity: totalQty,
-    unqualifiedQuantity: 0,
+    qualifiedQuantity: qualifiedQty,
+    unqualifiedQuantity: unqualifiedQty,
     qualityStatus: qualityModal.result,
     warehousingType: 'manual',
     warehouse: warehouse,
@@ -122,16 +132,17 @@ function _buildQualityBasePayload(detail, qualityModal, userInfo, warehouse) {
  * @private
  */
 function _handleUnqualifiedInfo(page, qualityModal, payload) {
-  const { defectCategories, handleMethods } = page.data;
-  const categoryMap = {
-    外观完整性: 'appearance_integrity',
-    尺寸精确度: 'size_accuracy',
-    工艺合规性: 'process_compliance',
-    功能有效性: 'functional_effectiveness',
-    其他: 'other',
-  };
-  const selectedCategory = defectCategories[qualityModal.defectCategory] || '其他';
-  payload.defectCategory = categoryMap[selectedCategory] || 'other';
+  const { handleMethods } = page.data;
+  // 缺陷分类映射（与PC端 DEFECT_CATEGORY_OPTIONS 完全一致）
+  const categoryValueMap = [
+    'appearance_integrity', // 外观完整性问题
+    'size_accuracy',       // 尺寸精度问题
+    'process_compliance',  // 工艺规范性问题
+    'functional_effectiveness', // 功能有效性问题
+    'other',               // 其他问题
+  ];
+  const categoryIndex = parseInt(qualityModal.defectCategory, 10) || 0;
+  payload.defectCategory = categoryValueMap[categoryIndex] || 'other';
   const selectedMethod = handleMethods[qualityModal.handleMethod] || '返修';
   payload.defectRemark = selectedMethod;
   if (qualityModal.images && qualityModal.images.length > 0) {
@@ -155,6 +166,10 @@ async function submitQualityResult(page) {
     toast.error('请先登录');
     return;
   }
+  if (!qualityModal.result) {
+    toast.error('请先选择质检结果（合格/不合格）');
+    return;
+  }
 
   const selectedWarehouse = warehouseOptions[qualityModal.warehouseIndex] || 'A仓';
   wx.showLoading({ title: '提交中...', mask: true });
@@ -170,7 +185,13 @@ async function submitQualityResult(page) {
     page.loadMyPanel(true);
   } catch (e) {
     console.error('[submitQualityResult] 提交失败:', e);
-    toast.error(e.message || '提交失败');
+    const errMsg = e?.errMsg || e?.message || '提交失败';
+    wx.showModal({
+      title: '提交失败',
+      content: errMsg,
+      showCancel: false,
+      confirmText: '知道了',
+    });
   } finally {
     wx.hideLoading();
   }

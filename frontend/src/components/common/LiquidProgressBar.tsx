@@ -146,7 +146,7 @@ const LiquidProgressBar: React.FC<LiquidProgressBarProps> = ({
           transform: 'translate(-50%, -50%)',
           fontSize: height > 16 ? 12 : 10,
           fontWeight: 700,
-          color: '#000',
+          color: 'var(--color-text-primary)',
           textShadow: '0 1px 2px rgba(255,255,255,0.8)',
           pointerEvents: 'none',
           zIndex: 10,

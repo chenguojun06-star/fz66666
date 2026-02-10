@@ -6,7 +6,11 @@ const { toast } = require('../../utils/uiHelper');
 
 let autoWechatTried = false;
 
-// 验证函数 (使用统一的规则库)
+/**
+ * 验证用户名（3-20位，仅允许字母数字下划线短横线）
+ * @param {string} username - 用户名
+ * @returns {string} 错误信息，空字符串表示验证通过
+ */
 function validateUsername(username) {
   return (
     validateByRule(username, {
@@ -14,17 +18,27 @@ function validateUsername(username) {
       required: true,
       minLength: 3,
       maxLength: 20,
-      pattern: /^[a-zA-Z0-9_\-]+$/,
+      pattern: /^[a-zA-Z0-9_-]+$/,
     }) || ''
   );
 }
 
+/**
+ * 验证密码（6-20位）
+ * @param {string} password - 密码
+ * @returns {string} 错误信息，空字符串表示验证通过
+ */
 function validatePassword(password) {
   return (
     validateByRule(password, { name: '密码', required: true, minLength: 6, maxLength: 20 }) || ''
   );
 }
 
+/**
+ * 验证 API 基地址格式（可选）
+ * @param {string} url - API 地址
+ * @returns {string} 错误信息，空字符串表示验证通过
+ */
 function validateApiBaseUrl(url) {
   const v = String(url || '').trim();
   if (!v) {
@@ -37,6 +51,10 @@ function validateApiBaseUrl(url) {
   return '';
 }
 
+/**
+ * 获取小程序 AppID
+ * @returns {string} AppID 或空字符串
+ */
 function resolveAppId() {
   try {
     if (wx && typeof wx.getAccountInfoSync === 'function') {
@@ -44,12 +62,16 @@ function resolveAppId() {
       const mp = info && info.miniProgram;
       return mp && mp.appId ? String(mp.appId) : '';
     }
-  } catch (e) {
-    null;
+  } catch (_e) {
+    // 忽略 AppID 获取失败
   }
   return '';
 }
 
+/**
+ * 获取微信登录 code
+ * @returns {Promise<string>} 登录 code
+ */
 async function resolveLoginCode() {
   const appId = resolveAppId();
   if (!appId || appId === 'touristappid') {
@@ -64,6 +86,10 @@ async function resolveLoginCode() {
   return loginRes && loginRes.code ? String(loginRes.code) : '';
 }
 
+/**
+ * 获取小程序环境版本（develop/trial/release）
+ * @returns {string} 环境版本
+ */
 function resolveEnvVersion() {
   try {
     if (wx && typeof wx.getAccountInfoSync === 'function') {
@@ -72,8 +98,8 @@ function resolveEnvVersion() {
       const v = mp && mp.envVersion ? String(mp.envVersion) : '';
       return v || 'develop';
     }
-  } catch (e) {
-    null;
+  } catch (_e) {
+    // 忽略环境版本获取失败
   }
   return 'develop';
 }

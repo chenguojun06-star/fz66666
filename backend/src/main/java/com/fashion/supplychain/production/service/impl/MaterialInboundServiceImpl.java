@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fashion.supplychain.common.lock.DistributedLockService;
 import com.fashion.supplychain.production.entity.MaterialInbound;
 import com.fashion.supplychain.production.mapper.MaterialInboundMapper;
 import com.fashion.supplychain.production.service.MaterialInboundService;
@@ -17,6 +18,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 面辅料入库记录 Service 实现类
@@ -31,6 +33,9 @@ public class MaterialInboundServiceImpl extends ServiceImpl<MaterialInboundMappe
 
     @Autowired
     private MaterialStockService materialStockService;
+
+    @Autowired(required = false)
+    private DistributedLockService distributedLockService;
 
     @Override
     public IPage<MaterialInbound> queryPage(Page<MaterialInbound> page, String materialCode, String purchaseId) {
@@ -50,7 +55,20 @@ public class MaterialInboundServiceImpl extends ServiceImpl<MaterialInboundMappe
     }
 
     @Override
-    public synchronized String generateInboundNo() {
+    public String generateInboundNo() {
+        // 优先使用分布式锁（支持多实例部署）；Redis 不可用时降级为单机 synchronized
+        if (distributedLockService != null) {
+            return distributedLockService.executeWithLockOrFallback(
+                    "inbound:generateNo", 5, TimeUnit.SECONDS,
+                    this::doGenerateInboundNo);
+        }
+        // 降级：单机 synchronized
+        synchronized (this) {
+            return doGenerateInboundNo();
+        }
+    }
+
+    private String doGenerateInboundNo() {
         LocalDate today = LocalDate.now();
         String datePrefix = today.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
 

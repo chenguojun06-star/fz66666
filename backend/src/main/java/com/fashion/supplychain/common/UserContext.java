@@ -14,6 +14,10 @@ public class UserContext {
     private String permissionRange;
     /** 所属团队/班组ID */
     private String teamId;
+    /** 所属租户ID（多租户隔离核心字段） */
+    private Long tenantId;
+    /** 是否为租户主账号 */
+    private boolean tenantOwner;
 
     public static void set(UserContext ctx) {
         HOLDER.set(ctx);
@@ -36,6 +40,32 @@ public class UserContext {
     public static String username() {
         UserContext ctx = get();
         return ctx == null ? null : ctx.getUsername();
+    }
+
+    /**
+     * 获取当前租户ID
+     */
+    public static Long tenantId() {
+        UserContext ctx = get();
+        return ctx == null ? null : ctx.getTenantId();
+    }
+
+    /**
+     * 判断当前用户是否为租户主账号
+     */
+    public static boolean isTenantOwner() {
+        UserContext ctx = get();
+        return ctx != null && ctx.isTenantOwner();
+    }
+
+    /**
+     * 判断是否为超级管理员（系统拥有者，无租户限制）
+     * 超级管理员 = tenantId 为 null 且 角色为 admin
+     */
+    public static boolean isSuperAdmin() {
+        UserContext ctx = get();
+        if (ctx == null) return false;
+        return ctx.getTenantId() == null && isTopAdmin();
     }
 
     /**
@@ -185,5 +215,21 @@ public class UserContext {
 
     public void setTeamId(String teamId) {
         this.teamId = teamId;
+    }
+
+    public Long getTenantId() {
+        return tenantId;
+    }
+
+    public void setTenantId(Long tenantId) {
+        this.tenantId = tenantId;
+    }
+
+    public boolean getTenantOwner() {
+        return tenantOwner;
+    }
+
+    public void setTenantOwner(boolean tenantOwner) {
+        this.tenantOwner = tenantOwner;
     }
 }

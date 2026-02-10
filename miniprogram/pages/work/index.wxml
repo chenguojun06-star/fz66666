@@ -70,9 +70,12 @@
     <view>
 
       <view wx:if="{{orders.list.length === 0 && !orders.loading}}" class="hint">暂无数据</view>
-        <view wx:for="{{orders.list}}" wx:key="id" class="list-item {{item.isClosed ? 'list-item-closed' : ''}}">
+        <view wx:for="{{orders.list}}" wx:key="id" class="list-item {{item.isClosed ? 'list-item-closed' : ''}} {{highlightOrderNo && item.orderNo === highlightOrderNo ? 'list-item-highlight' : ''}} {{item.remainDaysClass === 'days-overdue' ? 'list-item-overdue' : ''}}">
           <view class="item-head">
-            <view class="item-title {{item.isClosed ? 'item-title-closed' : ''}}">{{item.orderNo || '-'}}</view>
+            <view class="item-title {{item.isClosed ? 'item-title-closed' : ''}}">
+              {{item.orderNo || '-'}}
+              <text wx:if="{{item.remainDaysClass === 'days-overdue'}}" class="overdue-indicator">⏰延期</text>
+            </view>
             <view class="item-tags">
               <!-- 已完成显示"已完成"标签，否则显示当前工序 -->
               <text wx:if="{{item.isClosed}}" class="tag tag-completed">已完成</text>
@@ -105,6 +108,11 @@
               <view class="progress-fill" style="width: {{item.productionProgress || 0}}%"></view>
             </view>
             <text class="progress-text progress-percent">{{item.productionProgress || 0}}%</text>
+          </view>
+          <!-- 交期信息 -->
+          <view wx:if="{{item.deliveryDateStr}}" class="delivery-row">
+            <text class="delivery-label">交期：{{item.deliveryDateStr}}</text>
+            <text class="delivery-days {{item.remainDaysClass}}">{{item.remainDaysText}}</text>
           </view>
           <!-- 已完成订单不显示当前工序 -->
           <view wx:if="{{!item.isClosed && item.currentProcessName && item.currentProcessName !== '裁剪'}}" class="current-process">{{item.currentProcessName}}</view>

@@ -99,11 +99,14 @@ public class ProductionOrderController {
      * - totalQuantity: 总数量
      * - delayedOrders: 延期订单数
      * - delayedQuantity: 延期订单数量
+     * - todayOrders: 当天下单数
+     * - todayQuantity: 当天下单数量
      *
      * @param params 查询参数（keyword, status, factoryName等，与list接口参数一致）
      * @return 统计数据
      * @since 2026-02-05 初始版本
      * @since 2026-02-06 增加筛选参数支持
+     * @since 2026-02-09 增加当天下单统计
      */
     @GetMapping("/stats")
     @PreAuthorize("hasAuthority('PRODUCTION_ORDER_VIEW')")

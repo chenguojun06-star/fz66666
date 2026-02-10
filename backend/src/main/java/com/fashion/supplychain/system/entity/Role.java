@@ -13,24 +13,40 @@ import lombok.Data;
 @Data
 @TableName("t_role")
 public class Role {
-    
+
     @TableId(type = IdType.AUTO)
     private Long id;
-    
+
     private String roleName;
-    
+
     private String roleCode;
-    
+
     private String description;
-    
+
     private String status;
-    
+
     private String dataScope; // 数据权限范围: all-全部数据, self-仅本人数据
+
+    /** 所属租户(NULL=全局模板) */
+    private Long tenantId;
+
+    /** 是否为角色模板(1=模板,0=租户角色) */
+    private Boolean isTemplate;
+
+    /** 克隆来源模板ID */
+    private Long sourceTemplateId;
+
+    /** 排序权重 */
+    private Integer sortOrder;
 
     @TableField(exist = false)
     private String operationRemark;
-    
+
+    /** 权限数量（非持久化字段，用于列表展示） */
+    @TableField(exist = false)
+    private Integer permissionCount;
+
     private LocalDateTime createTime;
-    
+
     private LocalDateTime updateTime;
 }

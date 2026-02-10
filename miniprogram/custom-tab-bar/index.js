@@ -5,7 +5,7 @@ Component({
       { pagePath: '/pages/home/index', text: '首页' },
       { pagePath: '/pages/work/index', text: '生产' },
       { pagePath: '/pages/scan/index', text: '扫码' },
-      { pagePath: '/pages/admin/index', text: '个人' },
+      { pagePath: '/pages/admin/index', text: '我的' },
     ],
   },
 

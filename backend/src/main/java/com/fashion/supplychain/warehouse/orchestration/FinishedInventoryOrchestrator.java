@@ -6,7 +6,9 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.mapper.ProductWarehousingMapper;
 import com.fashion.supplychain.style.entity.ProductSku;
+import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.ProductSkuService;
+import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.warehouse.dto.FinishedInventoryDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,7 +19,7 @@ import java.util.stream.Collectors;
 
 /**
  * 成品库存编排层
- * 负责聚合SKU库存、入库记录等信息
+ * 负责聚合SKU库存、入库记录、款式信息
  */
 @Service
 @RequiredArgsConstructor
@@ -25,17 +27,10 @@ public class FinishedInventoryOrchestrator {
 
     private final ProductSkuService productSkuService;
     private final ProductWarehousingMapper productWarehousingMapper;
+    private final StyleInfoService styleInfoService;
 
     /**
      * 分页查询成品库存
-     *
-     * @param params 查询参数
-     *               - page: 页码
-     *               - pageSize: 每页数量
-     *               - orderNo: 订单号（模糊搜索）
-     *               - styleNo: 款号（模糊搜索）
-     *               - warehouseLocation: 库位（模糊搜索）
-     * @return 分页结果
      */
     public IPage<FinishedInventoryDTO> getFinishedInventoryPage(Map<String, Object> params) {
         // 解析分页参数
@@ -48,7 +43,7 @@ public class FinishedInventoryOrchestrator {
         // 查询SKU表（有库存的）
         Page<ProductSku> skuPage = new Page<>(page, pageSize);
         LambdaQueryWrapper<ProductSku> wrapper = new LambdaQueryWrapper<>();
-        wrapper.gt(ProductSku::getStockQuantity, 0); // 只查询有库存的SKU
+        wrapper.gt(ProductSku::getStockQuantity, 0);
 
         if (StringUtils.hasText(styleNo)) {
             wrapper.like(ProductSku::getStyleNo, styleNo.trim());
@@ -57,34 +52,63 @@ public class FinishedInventoryOrchestrator {
         wrapper.orderByDesc(ProductSku::getUpdateTime);
         IPage<ProductSku> skuPageResult = productSkuService.page(skuPage, wrapper);
 
-        // 转换为DTO
-        List<FinishedInventoryDTO> dtoList = new ArrayList<>();
+        // 收集 styleId 列表
         List<Long> styleIds = skuPageResult.getRecords().stream()
                 .map(ProductSku::getStyleId)
                 .filter(Objects::nonNull)
                 .distinct()
                 .collect(Collectors.toList());
 
-        // 批量查询入库记录（获取订单信息）
+        // 批量查询款式信息（获取 styleName, cover 图片）
+        Map<Long, StyleInfo> styleInfoMap = new HashMap<>();
+        if (!styleIds.isEmpty()) {
+            List<StyleInfo> styleInfoList = styleInfoService.listByIds(styleIds);
+            styleInfoMap = styleInfoList.stream()
+                    .collect(Collectors.toMap(StyleInfo::getId, s -> s, (a, b) -> a));
+        }
+
+        // 批量查询入库记录（按 styleId 分组，取最新一条）
+        // 注意：t_product_warehousing 没有 color/size 列，只能按 styleId 匹配
         Map<String, ProductWarehousing> warehousingMap = new HashMap<>();
         if (!styleIds.isEmpty()) {
             List<ProductWarehousing> warehousingList = productWarehousingMapper.selectList(
                     new LambdaQueryWrapper<ProductWarehousing>()
-                            .in(ProductWarehousing::getStyleId, styleIds.stream().map(String::valueOf).collect(Collectors.toList()))
+                            .in(ProductWarehousing::getStyleId,
+                                    styleIds.stream().map(String::valueOf).collect(Collectors.toList()))
+                            .eq(ProductWarehousing::getDeleteFlag, 0)
                             .orderByDesc(ProductWarehousing::getWarehousingEndTime)
             );
 
-            // 按 styleId + color + size 分组，取最新的一条
+            // 按 styleId 分组，取最新的一条
             warehousingMap = warehousingList.stream()
                     .collect(Collectors.toMap(
-                            w -> w.getStyleId() + "-" + w.getColor() + "-" + w.getSize(),
+                            ProductWarehousing::getStyleId,
                             w -> w,
-                            (existing, replacement) ->
-                                existing.getWarehousingEndTime() != null &&
-                                replacement.getWarehousingEndTime() != null &&
-                                existing.getWarehousingEndTime().isAfter(replacement.getWarehousingEndTime())
-                                ? existing : replacement
+                            (existing, replacement) -> {
+                                if (existing.getWarehousingEndTime() != null
+                                        && replacement.getWarehousingEndTime() != null) {
+                                    return existing.getWarehousingEndTime()
+                                            .isAfter(replacement.getWarehousingEndTime())
+                                            ? existing : replacement;
+                                }
+                                return existing.getWarehousingEndTime() != null ? existing : replacement;
+                            }
                     ));
+        }
+
+        // 统计每个 styleId 的总入库数量
+        Map<String, Integer> totalInboundQtyMap = new HashMap<>();
+        if (!styleIds.isEmpty()) {
+            List<ProductWarehousing> allWarehousing = productWarehousingMapper.selectList(
+                    new LambdaQueryWrapper<ProductWarehousing>()
+                            .in(ProductWarehousing::getStyleId,
+                                    styleIds.stream().map(String::valueOf).collect(Collectors.toList()))
+                            .eq(ProductWarehousing::getDeleteFlag, 0)
+            );
+            allWarehousing.forEach(w -> {
+                int qty = w.getQualifiedQuantity() != null ? w.getQualifiedQuantity() : 0;
+                totalInboundQtyMap.merge(w.getStyleId(), qty, Integer::sum);
+            });
         }
 
         // 按款号分组，获取颜色尺码列表
@@ -92,6 +116,7 @@ public class FinishedInventoryOrchestrator {
                 .collect(Collectors.groupingBy(ProductSku::getStyleNo));
 
         // 组装DTO
+        List<FinishedInventoryDTO> dtoList = new ArrayList<>();
         for (ProductSku sku : skuPageResult.getRecords()) {
             FinishedInventoryDTO dto = new FinishedInventoryDTO();
 
@@ -103,21 +128,44 @@ public class FinishedInventoryOrchestrator {
             dto.setColor(sku.getColor());
             dto.setSize(sku.getSize());
             dto.setAvailableQty(sku.getStockQuantity() != null ? sku.getStockQuantity() : 0);
-            dto.setLockedQty(0); // TODO: 如果有锁定库存功能，从相关表查询
-            dto.setDefectQty(0);  // TODO: 从次品表查询
+            dto.setLockedQty(0);
+            dto.setDefectQty(0);
 
-            // 从入库记录补充信息
-            String key = dto.getStyleId() + "-" + sku.getColor() + "-" + sku.getSize();
-            ProductWarehousing warehousing = warehousingMap.get(key);
+            // 从款式信息补充 styleName, styleImage
+            if (sku.getStyleId() != null) {
+                StyleInfo styleInfo = styleInfoMap.get(sku.getStyleId());
+                if (styleInfo != null) {
+                    dto.setStyleName(styleInfo.getStyleName());
+                    dto.setStyleImage(styleInfo.getCover());
+                    // 如果款式表有订单号也取出来
+                    if (StringUtils.hasText(styleInfo.getOrderNo())) {
+                        dto.setOrderNo(styleInfo.getOrderNo());
+                    }
+                }
+            }
+
+            // 从入库记录补充信息（按 styleId 匹配）
+            String styleIdStr = dto.getStyleId();
+            ProductWarehousing warehousing = warehousingMap.get(styleIdStr);
             if (warehousing != null) {
                 dto.setOrderId(warehousing.getOrderId());
-                dto.setOrderNo(warehousing.getOrderNo());
-                dto.setStyleName(warehousing.getStyleName());
+                // 优先使用入库记录的订单号
+                if (StringUtils.hasText(warehousing.getOrderNo())) {
+                    dto.setOrderNo(warehousing.getOrderNo());
+                }
+                // 如果款式信息没有名称，用入库记录的
+                if (!StringUtils.hasText(dto.getStyleName())) {
+                    dto.setStyleName(warehousing.getStyleName());
+                }
                 dto.setWarehouseLocation(warehousing.getWarehouse());
                 dto.setLastInboundDate(warehousing.getWarehousingEndTime());
                 dto.setQualityInspectionNo(warehousing.getWarehousingNo());
                 dto.setLastInboundBy(warehousing.getWarehousingOperatorName());
             }
+
+            // 入库总量
+            Integer totalInbound = totalInboundQtyMap.get(styleIdStr);
+            dto.setTotalInboundQty(totalInbound != null ? totalInbound : 0);
 
             // 获取该款式的所有颜色和尺码
             List<ProductSku> styleSKUs = styleSkuMap.get(sku.getStyleNo());

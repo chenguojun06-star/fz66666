@@ -22,6 +22,17 @@ public class ProductWarehousingController {
         return Result.success(page);
     }
 
+    /**
+     * 质检入库状态统计
+     * 返回：totalCount, totalOrders, totalQuantity, qualifiedCount, qualifiedQuantity,
+     *       unqualifiedCount, unqualifiedQuantity, todayCount, todayOrders, todayQuantity,
+     *       pendingQcOrders, pendingQcQuantity
+     */
+    @GetMapping("/stats")
+    public Result<?> stats(@RequestParam(required = false) Map<String, Object> params) {
+        return Result.success(productWarehousingOrchestrator.getStatusStats(params));
+    }
+
     @GetMapping("/{id}")
     public Result<ProductWarehousing> getById(@PathVariable String id) {
         return Result.success(productWarehousingOrchestrator.getById(id));

@@ -18,6 +18,15 @@ public class CuttingTaskController {
     private CuttingTaskService cuttingTaskService;
 
     /**
+     * 裁剪任务状态统计
+     * 返回各状态数量：totalCount, pendingCount, receivedCount, bundledCount, totalQuantity
+     */
+    @GetMapping("/stats")
+    public Result<?> stats(@RequestParam(required = false) Map<String, Object> params) {
+        return Result.success(cuttingTaskOrchestrator.getStatusStats(params));
+    }
+
+    /**
      * 【新版统一查询】分页查询裁剪任务列表
      * 支持参数：
      * - myTasks: true表示查询当前用户的裁剪任务

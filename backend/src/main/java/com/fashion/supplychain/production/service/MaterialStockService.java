@@ -17,6 +17,14 @@ public interface MaterialStockService extends IService<MaterialStock> {
     void increaseStock(MaterialPurchase purchase, int quantity);
 
     /**
+     * 增加库存 (采购入库 - 带仓位)
+     * @param purchase 采购单信息（含单价、供应商）
+     * @param quantity 入库数量
+     * @param warehouseLocation 入库仓位
+     */
+    void increaseStock(MaterialPurchase purchase, int quantity, String warehouseLocation);
+
+    /**
      * 扣减库存 (生产领料/退货)
      */
     void decreaseStock(MaterialPurchase purchase, int quantity);

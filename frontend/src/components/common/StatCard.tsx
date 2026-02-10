@@ -76,7 +76,7 @@ export const StatCard: React.FC<StatCardProps> = ({
         suffix={suffix}
         precision={precision}
         loading={loading}
-        styles={valueStyle ? { value: valueStyle } : undefined}
+        styles={valueStyle ? { content: valueStyle } : undefined}
         formatter={formatter}
       />
     </Card>

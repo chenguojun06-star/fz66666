@@ -63,12 +63,24 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void increaseStock(MaterialPurchase purchase, int quantity) {
+        increaseStock(purchase, quantity, null);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void increaseStock(MaterialPurchase purchase, int quantity, String warehouseLocation) {
         if (quantity == 0) {
             return;
         }
         MaterialStock stock = findOrCreateStock(purchase);
-        baseMapper.updateStockQuantity(stock.getId(), quantity);
-        log.info("Increased material stock: id={}, delta={}", stock.getId(), quantity);
+
+        // 使用增强的入库更新：同步单价、仓位、供应商、总值、入库日期
+        java.math.BigDecimal unitPrice = purchase.getUnitPrice();
+        String supplierName = purchase.getSupplierName();
+        baseMapper.updateStockOnInbound(stock.getId(), quantity, warehouseLocation, unitPrice, supplierName);
+
+        log.info("Increased material stock: id={}, delta={}, location={}, unitPrice={}, supplier={}",
+                stock.getId(), quantity, warehouseLocation, unitPrice, supplierName);
     }
 
     @Override
@@ -170,6 +182,14 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
         newStock.setQuantity(0);
         newStock.setLockedQuantity(0);
         newStock.setSafetyStock(100); // Default safety stock
+        // 同步采购单的单价、供应商信息
+        if (p.getUnitPrice() != null) {
+            newStock.setUnitPrice(p.getUnitPrice());
+        }
+        if (p.getSupplierName() != null) {
+            newStock.setSupplierName(p.getSupplierName());
+        }
+        newStock.setLastInboundDate(LocalDateTime.now());
         newStock.setCreateTime(LocalDateTime.now());
         newStock.setUpdateTime(LocalDateTime.now());
         newStock.setDeleteFlag(0);

@@ -1,0 +1,90 @@
+<view class="container">
+  <!-- 头部筛选区域 -->
+  <view class="filter-section">
+    <!-- 日期选择行 -->
+    <view class="date-row">
+      <picker mode="date" value="{{startDate}}" bindchange="onStartDateChange">
+        <view class="date-picker">
+          <text class="date-label">开始</text>
+          <text class="date-value">{{startDate}}</text>
+        </view>
+      </picker>
+      <text class="date-separator">—</text>
+      <picker mode="date" value="{{endDate}}" bindchange="onEndDateChange">
+        <view class="date-picker">
+          <view class="date-label">结束</view>
+          <view class="date-value">{{endDate}}</view>
+        </view>
+      </picker>
+    </view>
+
+    <!-- 搜索行 -->
+    <view class="search-row">
+      <view class="search-box search-box-full">
+        <text class="search-icon">🔍</text>
+        <input class="search-input" placeholder="订单号 / 款号" value="{{searchKeyword}}" bindinput="onKeywordInput" confirm-type="search" bindconfirm="onSearch" />
+      </view>
+      <view class="search-btn" bindtap="onSearch">搜索</view>
+      <view class="clear-btn" bindtap="onClearSearch" wx:if="{{searchKeyword}}">重置</view>
+    </view>
+  </view>
+
+  <!-- Tab 切换 -->
+  <view class="tab-row">
+    <view wx:for="{{tabs}}" wx:key="key" class="tab-item {{activeTab === index ? 'tab-active' : ''}}" data-index="{{index}}" bindtap="onTabChange">
+      <text>{{item.label}}</text>
+    </view>
+  </view>
+
+  <!-- 表格（表头+数据一体横向滚动） -->
+  <scroll-view scroll-x class="table-wrap" wx:if="{{records.length > 0}}">
+    <view class="table-inner">
+      <!-- 表头 -->
+      <view class="table-header">
+        <text class="th th-worker">员工</text>
+        <text class="th th-order">订单号</text>
+        <text class="th th-bundle">菲号</text>
+        <text class="th th-process">环节</text>
+        <text class="th th-price">单价</text>
+        <text class="th th-color">颜色</text>
+        <text class="th th-qty">数量</text>
+        <text class="th th-size">码数</text>
+        <text class="th th-time">时间</text>
+      </view>
+      <!-- 数据行 -->
+      <view wx:for="{{records}}" wx:key="id" class="table-row">
+        <text class="td td-worker">{{item.displayWorker}}</text>
+        <text class="td td-order">{{item.displayOrderNo}}</text>
+        <text class="td td-bundle">{{item.displayBundleNo}}</text>
+        <text class="td td-process">{{item.displayProcess}}</text>
+        <text class="td td-price">{{item.displayUnitPrice}}</text>
+        <text class="td td-color">{{item.displayColor}}</text>
+        <text class="td td-qty">{{item.displayQuantity}}</text>
+        <text class="td td-size">{{item.displaySize}}</text>
+        <text class="td td-time">{{item.displayTime}}</text>
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- 空状态 -->
+  <view wx:if="{{records.length === 0 && !loading}}" class="empty-state">
+    <text class="empty-icon">📋</text>
+    <text class="empty-text">暂无{{tabs[activeTab].label}}记录</text>
+    <text class="empty-hint" wx:if="{{activeTab === 0}}">今日尚未扫码，扫码后记录将显示在这里</text>
+  </view>
+
+  <!-- 加载状态 -->
+  <view wx:if="{{loading}}" class="loading-row">
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <!-- 加载更多 -->
+  <view wx:if="{{!loading && hasMore && records.length > 0}}" class="load-more" bindtap="onLoadMore">
+    <text>加载更多</text>
+  </view>
+
+  <!-- 加载状态 -->
+  <view wx:if="{{loading}}" class="loading-row">
+    <text class="loading-text">加载中...</text>
+  </view>
+</view>

@@ -563,7 +563,7 @@ const ResizableTable = <T extends AnyRecord>(props: ResizableTableProps<T>) => {
           ['操作', '操作列', '操作区', '操作按钮'].includes(titleText.trim());
 
         const baseWidth = maybeAction
-          ? actionColumnWidth
+          ? (parseWidthPx(colRecord.width) ?? actionColumnWidth)
           : clamp(widths[id] ?? parseWidthPx(colRecord.width) ?? defaultColumnWidth, minColumnWidth, maxColumnWidth);
 
         // 判断是否可调整列宽

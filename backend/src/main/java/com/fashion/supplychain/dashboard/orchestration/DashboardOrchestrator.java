@@ -122,6 +122,8 @@ public class DashboardOrchestrator {
         data.setProductionOrderCount(productionCount);  // 生产订单
         data.setOrderQuantityTotal(dashboardQueryService.sumTotalOrderQuantity());  // 订单数量总和
         data.setOverdueOrderCount(dashboardQueryService.countOverdueOrders());  // 延期订单
+        data.setTodayScanCount(dashboardQueryService.sumTodayScanQuantity());  // 当天生产件数
+        data.setTotalScanCount(dashboardQueryService.sumTotalScanQuantity());  // 生产总件数
         data.setTodayWarehousingCount(warehousingOrderCount);  // 当天入库
         data.setTotalWarehousingCount(dashboardQueryService.countTotalWarehousing());  // 入库总数
         data.setDefectiveQuantity(unqualifiedQuantity);  // 次品数量
@@ -369,6 +371,8 @@ public class DashboardOrchestrator {
         LocalDateTime weekStart = LocalDateTime.of(monday, LocalTime.MIN);
         LocalDateTime monthStart = LocalDateTime.of(today.withDayOfMonth(1), LocalTime.MIN);
         LocalDateTime yearStart = LocalDateTime.of(today.withDayOfYear(1), LocalTime.MIN);
+        // 汇总：全部数据（使用一个足够早的起始时间）
+        LocalDateTime totalStart = LocalDateTime.of(2000, 1, 1, 0, 0, 0);
 
         // 1. 样衣开发数量
         TopStatsResponse.TimeRangeStats sampleStats = new TopStatsResponse.TimeRangeStats();
@@ -376,6 +380,7 @@ public class DashboardOrchestrator {
         sampleStats.setWeek((int) dashboardQueryService.countSampleStylesBetween(weekStart, endTime));
         sampleStats.setMonth((int) dashboardQueryService.countSampleStylesBetween(monthStart, endTime));
         sampleStats.setYear((int) dashboardQueryService.countSampleStylesBetween(yearStart, endTime));
+        sampleStats.setTotal((int) dashboardQueryService.countSampleStylesBetween(totalStart, endTime));
         response.setSampleDevelopment(sampleStats);
 
         // 2. 大货下单数量（改为统计订单数量总和，与图表一致）
@@ -384,6 +389,7 @@ public class DashboardOrchestrator {
         bulkOrderStats.setWeek((int) dashboardQueryService.sumOrderQuantityBetween(weekStart, endTime));
         bulkOrderStats.setMonth((int) dashboardQueryService.sumOrderQuantityBetween(monthStart, endTime));
         bulkOrderStats.setYear((int) dashboardQueryService.sumOrderQuantityBetween(yearStart, endTime));
+        bulkOrderStats.setTotal((int) dashboardQueryService.sumOrderQuantityBetween(totalStart, endTime));
         response.setBulkOrder(bulkOrderStats);
 
         // 3. 裁剪数量
@@ -392,6 +398,7 @@ public class DashboardOrchestrator {
         cuttingStats.setWeek((int) dashboardQueryService.sumCuttingQuantityBetween(weekStart, endTime));
         cuttingStats.setMonth((int) dashboardQueryService.sumCuttingQuantityBetween(monthStart, endTime));
         cuttingStats.setYear((int) dashboardQueryService.sumCuttingQuantityBetween(yearStart, endTime));
+        cuttingStats.setTotal((int) dashboardQueryService.sumCuttingQuantityBetween(totalStart, endTime));
         response.setCutting(cuttingStats);
 
         // 4. 出入库数量
@@ -400,6 +407,7 @@ public class DashboardOrchestrator {
         warehousingStats.setWeek((int) dashboardQueryService.sumWarehousingQuantityBetween(weekStart, endTime));
         warehousingStats.setMonth((int) dashboardQueryService.sumWarehousingQuantityBetween(monthStart, endTime));
         warehousingStats.setYear((int) dashboardQueryService.sumWarehousingQuantityBetween(yearStart, endTime));
+        warehousingStats.setTotal((int) dashboardQueryService.sumWarehousingQuantityBetween(totalStart, endTime));
         response.setWarehousing(warehousingStats);
 
         return response;

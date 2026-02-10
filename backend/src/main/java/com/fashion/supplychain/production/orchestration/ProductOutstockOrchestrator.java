@@ -3,6 +3,7 @@ package com.fashion.supplychain.production.orchestration;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.production.entity.ProductOutstock;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.integration.openapi.service.WebhookPushService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.production.service.ProductOutstockService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -32,6 +33,9 @@ public class ProductOutstockOrchestrator {
     @Autowired
     private ProductionOrderScanRecordDomainService scanRecordDomainService;
 
+    @Autowired(required = false)
+    private WebhookPushService webhookPushService;
+
     public IPage<ProductOutstock> list(Map<String, Object> params) {
         return productOutstockService.queryPage(params);
     }
@@ -55,6 +59,24 @@ public class ProductOutstockOrchestrator {
         boolean ok = saveAndSync(outstock);
         if (!ok) {
             throw new IllegalStateException("保存失败");
+        }
+        // 异步推送物流信息给已对接客户
+        if (webhookPushService != null) {
+            try {
+                Map<String, Object> details = Map.of(
+                    "styleNo", outstock.getStyleNo() != null ? outstock.getStyleNo() : "",
+                    "outstockType", outstock.getOutstockType() != null ? outstock.getOutstockType() : ""
+                );
+                webhookPushService.pushLogisticsUpdate(
+                    outstock.getOrderNo(),
+                    outstock.getOutstockNo(),
+                    outstock.getOutstockQuantity() != null ? outstock.getOutstockQuantity() : 0,
+                    "",
+                    details
+                );
+            } catch (Exception e) {
+                log.warn("Webhook推送物流信息失败: orderNo={}", outstock.getOrderNo(), e);
+            }
         }
         return true;
     }

@@ -94,16 +94,22 @@ public class ProductWarehousing {
     // ==================== 颜色尺码字段（临时字段，查询时填充）====================
 
     /**
-     * 颜色（从ScanRecord填充）
+     * 颜色（从菲号CuttingBundle填充）
      */
     @TableField(exist = false)
     private String color;
 
     /**
-     * 尺码（从ScanRecord填充）
+     * 尺码（从菲号CuttingBundle填充）
      */
     @TableField(exist = false)
     private String size;
+
+    /**
+     * 裁剪数（从菲号CuttingBundle.quantity填充）
+     */
+    @TableField(exist = false)
+    private Integer cuttingQuantity;
 
     /**
      * 扫码内容/菲号（从ScanRecord填充）

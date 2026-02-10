@@ -151,44 +151,54 @@
 
     <!-- 聚合后的分组显示 -->
     <view wx:for="{{my.groupedHistory}}" wx:key="id" class="hist-group">
-      <!-- 分组头部：折叠显示 -->
+      <!-- 分组头部：紧凑卡片 -->
       <view class="hist-group-header" bindtap="toggleGroupExpand" data-group-id="{{item.id}}">
-        <view class="hgh-main">
-          <text class="hgh-order">{{item.orderNo}}</text>
-          <text class="hgh-style">款号: {{item.styleNo}}</text>
-          <text class="hgh-stage">{{item.stage}}</text>
+        <view class="hgh-top">
+          <view class="hgh-main">
+            <text class="hgh-order">{{item.orderNo}}</text>
+            <text class="hgh-style">{{item.styleNo}}</text>
+            <text class="hgh-stage">{{item.stage}}</text>
+          </view>
         </view>
-        <view class="hgh-summary">
-          <view class="hgh-left">
-            <text class="hgh-total">共{{item.totalQuantity}}件</text>
-            <text wx:if="{{item.qualifiedCount > 0}}" class="hgh-stat qualified">✓{{item.qualifiedCount}}</text>
-            <text wx:if="{{item.defectiveCount > 0}}" class="hgh-stat defective">✗{{item.defectiveCount}}</text>
-          </view>
-          <view class="hgh-right">
-            <text class="hgh-time">最新: {{utils.formatRelativeTime(item.latestTime)}}</text>
-          </view>
+        <view class="hgh-bottom">
+          <text class="hgh-time">{{utils.formatRelativeTime(item.latestTime)}}</text>
+          <text class="hgh-total">共{{item.totalQuantity}}件</text>
+          <text wx:if="{{item.deliveryDateStr}}" class="hgh-delivery-tag">{{item.deliveryDateStr}}</text>
+          <text wx:if="{{item.remainDaysText}}" class="delivery-days-tag {{item.remainDaysClass}}">{{item.remainDaysText}}</text>
+          <text class="hgh-expand-hint">{{item.expanded ? '收起' : '展开'}} ›</text>
         </view>
       </view>
 
-      <!-- 分组详情：展开显示 -->
+      <!-- 展开区域 -->
       <view wx:if="{{item.expanded}}" class="hist-group-details">
+        <!-- 逐条扫码记录 -->
         <view wx:for="{{item.items}}" wx:for-item="record" wx:for-index="recordIdx" wx:key="id" class="hist-detail-item">
           <view class="hdi-row">
             <text class="hdi-label">颜色:</text>
             <text class="hdi-value">{{record.color || '-'}}</text>
-            <text class="hdi-label">码数:</text>
-            <text class="hdi-value">{{record.size || '-'}}</text>
-          </view>
-          <view class="hdi-row">
-            <text class="hdi-label">数量:</text>
-            <text class="hdi-value">{{record.quantity || 0}}件</text>
             <text class="hdi-label">单价:</text>
             <text class="hdi-value">¥{{record.unitPrice || '-'}}</text>
+          </view>
+          <!-- 码数与数量上下对齐 -->
+          <view wx:if="{{record.sizeArr && record.sizeArr.length}}" class="hdi-size-grid">
+            <view class="hdi-size-row">
+              <text wx:for="{{record.sizeArr}}" wx:for-item="s" wx:key="*this" class="hdi-size-cell">{{s}}</text>
+            </view>
+            <view class="hdi-size-row">
+              <text wx:for="{{record.qtyArr}}" wx:for-item="q" wx:key="index" class="hdi-size-cell qty">{{q}}</text>
+            </view>
+          </view>
+          <view wx:else class="hdi-row">
+            <text class="hdi-label">码数:</text>
+            <text class="hdi-value">{{record.size || '-'}}</text>
+            <text class="hdi-label">数量:</text>
+            <text class="hdi-value">{{record.quantity || 0}}件</text>
           </view>
           <view class="hdi-row">
             <text class="hdi-time">{{record.createdAt || record.scanTime || record.time}}</text>
             <view wx:if="{{record.scanType === 'quality'}}" class="hdi-action" bindtap="onHandleQuality" data-group-id="{{item.id}}" data-record-idx="{{recordIdx}}">处理</view>
             <view wx:if="{{record.isProcurement && !record.procurementCompleted}}" class="hdi-action" bindtap="onHandleProcurement" data-group-id="{{item.id}}" data-record-idx="{{recordIdx}}">处理</view>
+            <view wx:if="{{record.scanResult === 'success' || record.scanResult === 'qualified'}}" class="hdi-action rescan-btn" catchtap="onRescanRecord" data-group-id="{{item.id}}" data-record-idx="{{recordIdx}}" data-record="{{record}}">退回重扫</view>
           </view>
         </view>
       </view>
@@ -198,6 +208,46 @@
       <text wx:if="{{my.loadingHistory}}">加载中...</text>
       <text wx:elif="{{my.history.hasMore}}">加载更多</text>
       <text wx:else class="no-more">— END —</text>
+    </view>
+  </view>
+
+  <!-- 退回重扫确认弹窗 -->
+  <view wx:if="{{rescanConfirm.visible}}" class="modal rescan-modal">
+    <view class="modal-box rescan-box">
+      <view class="modal-head rescan-head">
+        <text>退回重扫</text>
+        <view class="modal-close" catchtap="onCancelRescan">✕</view>
+      </view>
+      <view class="modal-body">
+        <view class="rescan-info">
+          <view class="rescan-row">
+            <text class="rescan-label">订单号</text>
+            <text class="rescan-value">{{rescanConfirm.orderNo || '-'}}</text>
+          </view>
+          <view class="rescan-row">
+            <text class="rescan-label">菲号</text>
+            <text class="rescan-value">{{rescanConfirm.bundleNo || '-'}}</text>
+          </view>
+          <view class="rescan-row">
+            <text class="rescan-label">数量</text>
+            <text class="rescan-value">{{rescanConfirm.quantity || 0}}件</text>
+          </view>
+          <view class="rescan-row">
+            <text class="rescan-label">扫码时间</text>
+            <text class="rescan-value">{{rescanConfirm.scanTime || '-'}}</text>
+          </view>
+        </view>
+        <view class="rescan-warning">
+          <text class="warning-icon">⚠️</text>
+          <text class="warning-text">仅允许退回1小时内的扫码记录，退回后可重新扫码</text>
+        </view>
+      </view>
+      <view class="modal-foot">
+        <view class="rescan-cancel" catchtap="onCancelRescan">取消</view>
+        <view class="rescan-confirm {{rescanConfirm.loading ? 'disabled' : ''}}" catchtap="onConfirmRescan">
+          {{rescanConfirm.loading ? '处理中...' : '确认退回'}}
+        </view>
+      </view>
     </view>
   </view>
 
@@ -456,6 +506,15 @@
         <view wx:if="{{scanConfirm.detail.progressStage === '裁剪' && scanConfirm.cuttingTaskReceived}}" class="qc-receive-tip" style="background: #f6ffed; border-color: #b7eb8f;">
           <text class="qc-tip-text" style="color: #52c41a;">✓ 任务已领取，可修改数量生成菲号</text>
         </view>
+
+        <!-- 数据调试信息（仅在debug模式下显示） -->
+        <view wx:if="{{debug}}" style="margin-top: 12px; padding: 8px; background: #f0f0f0; border-radius: 4px; font-size: 11px; color: #666;">
+          <text style="display: block;">调试信息:</text>
+          <text style="display: block;">isProcurement: {{scanConfirm.detail.isProcurement ? '是' : '否'}}</text>
+          <text style="display: block;">fromMyTasks: {{scanConfirm.fromMyTasks ? '是' : '否'}}</text>
+          <text style="display: block;">materialPurchases: {{scanConfirm.materialPurchases.length}}条</text>
+          <text style="display: block;">按钮条件: {{scanConfirm.detail.isProcurement && scanConfirm.fromMyTasks ? '满足' : '不满足'}}</text>
+        </view>
       </view>
       <view class="modal-btns">
         <view class="mbtn cancel" bindtap="onCancelScan">取消</view>
@@ -513,8 +572,75 @@
         <text class="qm-value">{{qualityModal.detail.quantity || 1}}</text>
       </view>
 
-      <!-- 选择仓库 -->
+      <!-- 质检结果选择（合格/不合格） -->
       <view class="qm-section">
+        <text class="qm-section-title">质检结果 <text style="color: #ef4444;">*</text></text>
+        <view class="qm-radio-group">
+          <view class="qm-radio {{qualityModal.result === 'qualified' ? 'active' : ''}}" bindtap="onSelectQualityResult" data-value="qualified">
+            <view class="qm-radio-icon">{{qualityModal.result === 'qualified' ? '✓' : ''}}</view>
+            <text>合格</text>
+          </view>
+          <view class="qm-radio {{qualityModal.result === 'unqualified' ? 'active' : ''}}" bindtap="onSelectQualityResult" data-value="unqualified">
+            <view class="qm-radio-icon">{{qualityModal.result === 'unqualified' ? '✓' : ''}}</view>
+            <text>不合格</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 不合格详情（仅不合格时显示） -->
+      <view wx:if="{{qualityModal.result === 'unqualified'}}" class="qm-defective">
+        <!-- 不合格数量 -->
+        <view class="qm-field">
+          <text class="qm-field-label">不合格数量</text>
+          <input class="qm-input" type="number" placeholder="请输入不合格数量" value="{{qualityModal.unqualifiedQuantity}}" bindinput="onDefectiveQuantityInput" />
+        </view>
+
+        <!-- 缺陷分类 -->
+        <view class="qm-field">
+          <text class="qm-field-label">缺陷分类 <text style="color: #ef4444;">*</text></text>
+          <picker mode="selector" range="{{defectCategories}}" value="{{qualityModal.defectCategory}}" bindchange="onDefectTypesChange">
+            <view class="qm-picker">
+              <text class="qm-picker-value">{{defectCategories[qualityModal.defectCategory] || '请选择缺陷分类'}}</text>
+              <text class="qm-picker-arrow">›</text>
+            </view>
+          </picker>
+        </view>
+
+        <!-- 处理方式 -->
+        <view class="qm-field">
+          <text class="qm-field-label">处理方式 <text style="color: #ef4444;">*</text></text>
+          <picker mode="selector" range="{{handleMethods}}" value="{{qualityModal.handleMethod}}" bindchange="onHandleMethodChange">
+            <view class="qm-picker">
+              <text class="qm-picker-value">{{handleMethods[qualityModal.handleMethod] || '请选择处理方式'}}</text>
+              <text class="qm-picker-arrow">›</text>
+            </view>
+          </picker>
+        </view>
+
+        <!-- 备注 -->
+        <view class="qm-field">
+          <text class="qm-field-label">备注</text>
+          <textarea class="qm-textarea" placeholder="请输入备注信息（选填）" value="{{qualityModal.remark}}" bindinput="onRemarkInput" maxlength="200" />
+        </view>
+
+        <!-- 照片上传 -->
+        <view class="qm-field">
+          <text class="qm-field-label">质检照片（选填，最多5张）</text>
+          <view class="qm-images">
+            <view wx:for="{{qualityModal.images}}" wx:key="index" class="qm-image-item">
+              <image class="qm-image" src="{{item}}" mode="aspectFill" />
+              <view class="qm-image-del" catchtap="onDeleteQualityImage" data-index="{{index}}">×</view>
+            </view>
+            <view wx:if="{{qualityModal.images.length < 5}}" class="qm-image-upload" bindtap="onUploadQualityImage">
+              <text class="qm-upload-icon">+</text>
+              <text style="font-size: 10px; color: #999;">上传</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 选择仓库（合格时才显示入库仓库选择） -->
+      <view wx:if="{{qualityModal.result === 'qualified'}}" class="qm-section">
         <text class="qm-section-title">入库仓库 <text style="color: #ef4444;">*</text></text>
         <picker mode="selector" range="{{warehouseOptions}}" value="{{qualityModal.warehouseIndex}}" bindchange="onWarehouseChange">
           <view class="qm-picker">
@@ -527,7 +653,9 @@
 
     <view class="modal-footer">
       <button class="modal-btn cancel" bindtap="closeQualityModal">取消</button>
-      <button class="modal-btn confirm" bindtap="submitQualityResult">确认提交</button>
+      <button class="modal-btn confirm" bindtap="submitQualityResult" disabled="{{!qualityModal.result}}">
+        {{qualityModal.result === 'qualified' ? '确认入库' : (qualityModal.result === 'unqualified' ? '提交不合格' : '请先选择结果')}}
+      </button>
     </view>
   </view>
 </view>

@@ -445,7 +445,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
           padding: '12px 16px',
           background: '#f0f2f5',
           borderRadius: 12,
-          border: '1px solid #d9d9d9'
+          border: '1px solid var(--color-border)'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
@@ -485,7 +485,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
 
         {/* 内容预览区域 - 可展开/收起 */}
         {expanded && (
-          <div className="style-print-content" id="style-print-content" style={{ background: '#fff', padding: 20, border: '1px solid #d9d9d9', borderRadius: 12 }}>
+          <div className="style-print-content" id="style-print-content" style={{ background: 'var(--color-bg-base)', padding: 20, border: '1px solid var(--color-border)', borderRadius: 12 }}>
             {/* 预览样式 */}
             <style>{`
               .print-section { margin-bottom: 24px; }
@@ -506,7 +506,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
                 gap: 24,
                 padding: 16,
                 borderBottom: '2px solid #d9d9d9',
-                background: '#fafafa',
+                background: 'var(--color-bg-container)',
                 borderRadius: 8,
               }}>
                 {/* 封面图 */}
@@ -532,18 +532,18 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
                     {styleNo} - {styleName}
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: "var(--font-size-base)" }}>
-                    {color && <div><span style={{ color: '#666' }}>颜色：</span><strong>{color}</strong></div>}
+                    {color && <div><span style={{ color: 'var(--color-text-secondary)' }}>颜色：</span><strong>{color}</strong></div>}
                     {quantity !== undefined && (
                       <div>
-                        <span style={{ color: '#666' }}>{getModeTitle()}数量：</span>
+                        <span style={{ color: 'var(--color-text-secondary)' }}>{getModeTitle()}数量：</span>
                         <strong>{quantity}</strong>
                       </div>
                     )}
-                    {category && <div><span style={{ color: '#666' }}>分类：</span><strong>{category}</strong></div>}
-                    {season && <div><span style={{ color: '#666' }}>季节：</span><strong>{season}</strong></div>}
+                    {category && <div><span style={{ color: 'var(--color-text-secondary)' }}>分类：</span><strong>{category}</strong></div>}
+                    {season && <div><span style={{ color: 'var(--color-text-secondary)' }}>季节：</span><strong>{season}</strong></div>}
                     {/* 额外信息 */}
                     {Object.entries(extraInfo).map(([key, value]) => (
-                      value && <div key={key}><span style={{ color: '#666' }}>{key}：</span><strong>{String(value)}</strong></div>
+                      value && <div key={key}><span style={{ color: 'var(--color-text-secondary)' }}>{key}：</span><strong>{String(value)}</strong></div>
                     ))}
                   </div>
                 </div>
@@ -555,7 +555,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
               </div>
 
               {/* 打印时间 */}
-              <div style={{ textAlign: 'right', marginTop: 8, color: '#999', fontSize: "var(--font-size-xs)" }}>
+              <div style={{ textAlign: 'right', marginTop: 8, color: 'var(--color-text-tertiary)', fontSize: "var(--font-size-xs)" }}>
                 打印时间：{formatDateTime(new Date())}
               </div>
             </div>
@@ -586,42 +586,42 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
                 <div className="print-section-title">📊 码数明细</div>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: "var(--font-size-sm)" }}>
                   <thead>
-                    <tr style={{ background: '#fafafa' }}>
-                      <th style={{ border: '1px solid #d9d9d9', padding: '6px 8px', textAlign: 'left', width: 60 }}>颜色</th>
+                    <tr style={{ background: 'var(--color-bg-container)' }}>
+                      <th style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'left', width: 60 }}>颜色</th>
                       {colors.map(color => (
-                        <th key={color} style={{ border: '1px solid #d9d9d9', padding: '6px 8px', textAlign: 'center' }}>{color}</th>
+                        <th key={color} style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center' }}>{color}</th>
                       ))}
-                      <th style={{ border: '1px solid #d9d9d9', padding: '6px 8px', textAlign: 'center', width: 80, background: '#e6f7ff' }}>合计</th>
+                      <th style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center', width: 80, background: '#e6f7ff' }}>合计</th>
                     </tr>
                   </thead>
                   <tbody>
                     {/* 尺码行 */}
                     <tr>
-                      <td style={{ border: '1px solid #d9d9d9', padding: '6px 8px', fontWeight: 600 }}>尺码</td>
+                      <td style={{ border: '1px solid var(--color-border)', padding: '6px 8px', fontWeight: 600 }}>尺码</td>
                       {colors.map(color => (
-                        <td key={color} style={{ border: '1px solid #d9d9d9', padding: '6px 8px', textAlign: 'center' }}>
+                        <td key={color} style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center' }}>
                           {sizes.join(' / ')}
                         </td>
                       ))}
-                      <td style={{ border: '1px solid #d9d9d9', padding: '6px 8px', textAlign: 'center', background: '#e6f7ff' }}>-</td>
+                      <td style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center', background: '#e6f7ff' }}>-</td>
                     </tr>
                     {/* 数量行 */}
                     <tr>
-                      <td style={{ border: '1px solid #d9d9d9', padding: '6px 8px', fontWeight: 600 }}>数量</td>
+                      <td style={{ border: '1px solid var(--color-border)', padding: '6px 8px', fontWeight: 600 }}>数量</td>
                       {colors.map(color => (
-                        <td key={color} style={{ border: '1px solid #d9d9d9', padding: '6px 8px', textAlign: 'center' }}>
+                        <td key={color} style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center' }}>
                           {sizes.map(size => dataMap[size]?.[color] || 0).join(' / ')}
                         </td>
                       ))}
-                      <td style={{ border: '1px solid #d9d9d9', padding: '6px 8px', textAlign: 'center', fontWeight: 600, background: '#e6f7ff' }}>{grandTotal}</td>
+                      <td style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center', fontWeight: 600, background: '#e6f7ff' }}>{grandTotal}</td>
                     </tr>
                     {/* 小计行 */}
-                    <tr style={{ background: '#fafafa' }}>
-                      <td style={{ border: '1px solid #d9d9d9', padding: '6px 8px', fontWeight: 600 }}>小计</td>
+                    <tr style={{ background: 'var(--color-bg-container)' }}>
+                      <td style={{ border: '1px solid var(--color-border)', padding: '6px 8px', fontWeight: 600 }}>小计</td>
                       {colors.map(color => (
-                        <td key={color} style={{ border: '1px solid #d9d9d9', padding: '6px 8px', textAlign: 'center', fontWeight: 600 }}>{colorTotals[color]}</td>
+                        <td key={color} style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center', fontWeight: 600 }}>{colorTotals[color]}</td>
                       ))}
-                      <td style={{ border: '1px solid #d9d9d9', padding: '6px 8px', textAlign: 'center', fontWeight: 700, background: '#e6f7ff', color: '#1890ff' }}>{grandTotal}</td>
+                      <td style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center', fontWeight: 700, background: '#e6f7ff', color: 'var(--color-primary)' }}>{grandTotal}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -667,26 +667,26 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
                 <div className="print-section-title">📏 尺寸表</div>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: "var(--font-size-xs)" }}>
                   <thead>
-                    <tr style={{ background: '#fafafa' }}>
-                      <th style={{ border: '1px solid #d9d9d9', padding: '6px 8px', textAlign: 'left' }}>部位(cm)</th>
-                      <th style={{ border: '1px solid #d9d9d9', padding: '6px 8px', textAlign: 'center' }}>度量方式</th>
+                    <tr style={{ background: 'var(--color-bg-container)' }}>
+                      <th style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'left' }}>部位(cm)</th>
+                      <th style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center' }}>度量方式</th>
                       {sortedSizeNames.map(size => (
-                        <th key={size} style={{ border: '1px solid #d9d9d9', padding: '6px 8px', textAlign: 'center' }}>{size}</th>
+                        <th key={size} style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center' }}>{size}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {partNames.map((part: string) => (
                       <tr key={part}>
-                        <td style={{ border: '1px solid #d9d9d9', padding: '6px 8px' }}>{part}</td>
-                        <td style={{ border: '1px solid #d9d9d9', padding: '6px 8px', textAlign: 'center' }}>{methodMap[part] || '平量'}</td>
+                        <td style={{ border: '1px solid var(--color-border)', padding: '6px 8px' }}>{part}</td>
+                        <td style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center' }}>{methodMap[part] || '平量'}</td>
                         {sortedSizeNames.map(size => {
                           const cell = dataMap[part]?.[size];
                           const value = cell?.standardValue != null
                             ? `${cell.standardValue}${cell.tolerance != null ? ` ±${cell.tolerance}` : ''}`
                             : '-';
                           return (
-                            <td key={size} style={{ border: '1px solid #d9d9d9', padding: '6px 8px', textAlign: 'center' }}>{value}</td>
+                            <td key={size} style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center' }}>{value}</td>
                           );
                         })}
                       </tr>
@@ -763,16 +763,16 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
                 <div className="print-section-title">📋 生产要求</div>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: "var(--font-size-xs)" }}>
                   <thead>
-                    <tr style={{ background: '#fafafa' }}>
-                      <th style={{ border: '1px solid #d9d9d9', padding: '6px 8px', width: 60, textAlign: 'center' }}>序号</th>
-                      <th style={{ border: '1px solid #d9d9d9', padding: '6px 8px', textAlign: 'center' }}>内容</th>
+                    <tr style={{ background: 'var(--color-bg-container)' }}>
+                      <th style={{ border: '1px solid var(--color-border)', padding: '6px 8px', width: 60, textAlign: 'center' }}>序号</th>
+                      <th style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center' }}>内容</th>
                     </tr>
                   </thead>
                   <tbody>
                     {fixedLines.map((line: string, idx: number) => (
                       <tr key={idx}>
-                        <td style={{ border: '1px solid #d9d9d9', padding: '6px 8px', textAlign: 'center' }}>{idx + 1}</td>
-                        <td style={{ border: '1px solid #d9d9d9', padding: '6px 8px', whiteSpace: 'pre-wrap' }}>{line}</td>
+                        <td style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center' }}>{idx + 1}</td>
+                        <td style={{ border: '1px solid var(--color-border)', padding: '6px 8px', whiteSpace: 'pre-wrap' }}>{line}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -812,7 +812,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
           {/* 无数据提示 */}
           {!loading && !options.basicInfo && data.sizes.length === 0 && data.bom.length === 0 &&
            data.process.length === 0 && data.attachments.length === 0 && (
-            <div style={{ textAlign: 'center', padding: 48, color: '#999' }}>
+            <div style={{ textAlign: 'center', padding: 48, color: 'var(--color-text-tertiary)' }}>
               暂无打印数据，请选择要打印的内容
             </div>
           )}
@@ -824,8 +824,8 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
           <div style={{
             textAlign: 'center',
             padding: '40px 20px',
-            color: '#999',
-            background: '#fafafa',
+            color: 'var(--color-text-tertiary)',
+            background: 'var(--color-bg-container)',
             borderRadius: 12,
             border: '1px dashed #d9d9d9'
           }}>

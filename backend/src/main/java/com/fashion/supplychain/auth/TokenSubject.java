@@ -12,6 +12,10 @@ public class TokenSubject {
     private String openid;
     /** 数据权限范围: all=全部, team=团队, own=仅自己 */
     private String permissionRange;
+    /** 所属租户ID（多租户隔离核心字段） */
+    private Long tenantId;
+    /** 是否为租户主账号 */
+    private boolean tenantOwner;
 
     public String getUserId() {
         return userId;
@@ -59,5 +63,21 @@ public class TokenSubject {
 
     public void setPermissionRange(String permissionRange) {
         this.permissionRange = permissionRange;
+    }
+
+    public Long getTenantId() {
+        return tenantId;
+    }
+
+    public void setTenantId(Long tenantId) {
+        this.tenantId = tenantId;
+    }
+
+    public boolean isTenantOwner() {
+        return tenantOwner;
+    }
+
+    public void setTenantOwner(boolean tenantOwner) {
+        this.tenantOwner = tenantOwner;
     }
 }

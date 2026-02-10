@@ -49,7 +49,7 @@ const Register: React.FC = () => {
       <Card className="login-card" variant="borderless">
         <div className="login-header">
           <Title level={2} className="login-title">
-            衣富ERP供应链生态
+            云裳智链
           </Title>
           <p style={{ textAlign: 'center', color: '#666', marginTop: 8 }}>用户注册</p>
         </div>

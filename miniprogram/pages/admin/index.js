@@ -271,4 +271,10 @@ Page({
       url: '/pages/admin/notification/index',
     });
   },
+
+  onGoToProductionDetail() {
+    wx.navigateTo({
+      url: '/pages/admin/production-detail/index',
+    });
+  },
 });

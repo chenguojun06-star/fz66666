@@ -4,14 +4,12 @@ import { App, Button, Card, Col, Input, Row, Space, Statistic, Form, Select, Dat
 import { DownloadOutlined, PrinterOutlined, EditOutlined, EyeOutlined, FileTextOutlined, UploadOutlined } from '@ant-design/icons';
 import StatsCards from '@/components/common/StatsCards';
 import Layout from '@/components/Layout';
-// import UniversalCardView from '@/components/common/UniversalCardView'; // 未使用
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import api from '@/utils/api';
-// import { paths } from '@/routeConfig'; // 未使用
 import { StyleInfo, StyleQueryParams } from '@/types/style';
 import { StyleAttachmentsButton } from '@/components/StyleAssets';
 import { toCategoryCn } from '@/utils/styleCategory';
@@ -262,7 +260,7 @@ const AttachmentThumb: React.FC<{ styleId?: string | number; cover?: string | nu
   }, [styleId, cover]);
 
   return (
-    <div style={{ width: 56, height: 56, overflow: 'hidden', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ width: 56, height: 56, overflow: 'hidden', background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       {loading ? (
         <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 'var(--font-size-sm)' }}>...</span>
       ) : url ? (
@@ -614,17 +612,17 @@ const DataCenter: React.FC = () => {
           {
             label: '款号总数',
             value: stats.styleCount,
-            color: '#2D7FF9'
+            color: 'var(--color-primary)'
           },
           {
             label: '物料总数',
             value: stats.materialCount,
-            color: '#52c41a'
+            color: 'var(--color-success)'
           },
           {
             label: '生产订单',
             value: stats.productionCount,
-            color: '#ff4d4f'
+            color: 'var(--color-danger)'
           }
         ]} />
 
@@ -740,8 +738,6 @@ const DataCenter: React.FC = () => {
             <Button type="primary" loading={patternRevisionSaving} onClick={handlePatternRevisionSave}>保存</Button>
           </Space>
         }
-        defaultWidth="40vw"
-        defaultHeight="50vh"
       >
         <Form form={patternRevisionForm} layout="vertical">
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
@@ -840,7 +836,7 @@ const DataCenter: React.FC = () => {
                   width: '100%',
                   aspectRatio: '1',
                   overflow: 'hidden',
-                  background: '#f5f5f5',
+                  background: 'var(--color-bg-subtle)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center'
@@ -864,7 +860,7 @@ const DataCenter: React.FC = () => {
                 <div style={{ marginTop: 16 }}>
                   <div style={{ fontWeight: 600, marginBottom: 8 }}>生产要求：</div>
                   <div style={{
-                    background: '#fafafa',
+                    background: 'var(--color-bg-container)',
                     padding: 12,
                     maxHeight: 200,
                     overflow: 'auto',

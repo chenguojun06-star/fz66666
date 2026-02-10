@@ -412,6 +412,43 @@ page {
   white-space: nowrap;
 }
 
+/* 交期信息 */
+.delivery-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+  padding: 0 2px;
+}
+
+.delivery-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.delivery-days {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.days-safe {
+  color: var(--color-success);
+}
+
+.days-warn {
+  color: var(--color-warning);
+}
+
+.days-urgent {
+  color: var(--color-error);
+}
+
+.days-overdue {
+  color: #dc2626;
+  font-weight: 700;
+}
+
 .item-actions {
   display: flex;
   justify-content: flex-end;
@@ -742,3 +779,37 @@ page {
 .mbtn.ok.off {
   opacity: 0.5;
 }
+
+/* 高亮显示从铃铛跳转的订单 */
+.list-item-highlight {
+  border: 2rpx solid var(--color-primary);
+  box-shadow: 0 4rpx 16rpx rgba(59, 130, 246, 0.2);
+  animation: highlight-pulse 2s ease-in-out;
+}
+
+@keyframes highlight-pulse {
+  0%, 100% {
+    box-shadow: 0 4rpx 16rpx rgba(59, 130, 246, 0.2);
+  }
+  50% {
+    box-shadow: 0 4rpx 24rpx rgba(59, 130, 246, 0.4);
+  }
+}
+
+/* 延期订单样式 */
+.list-item-overdue {
+  border-left: 4rpx solid #ef4444;
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.03) 0%, transparent 100%);
+}
+
+.overdue-indicator {
+  display: inline-block;
+  margin-left: 12rpx;
+  padding: 4rpx 12rpx;
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  color: #dc2626;
+  font-size: 22rpx;
+  font-weight: 600;
+  border-radius: 8rpx;
+}
+

@@ -175,18 +175,6 @@ interface NodeDetailModalProps {
   onSaved?: () => void;
 }
 
-/** 节点是否支持委派工厂 */
-// const canDelegateFactory = (nodeType: NodeType): boolean => {
-//   // 采购节点不支持委派（采购由物料采购单管理）
-//   if (nodeType === 'procurement') return false;
-//   return ['sewing', 'secondaryProcess'].includes(nodeType);
-// };
-
-/** 二次工艺类型选项 */
-// const secondaryProcessTypes = [
-//   '绣花', '印花', '烫钻', '钉珠', '压褶', '洗水', '染色', '其他'
-// ];
-
 /**
  * 节点详情弹窗组件
  * 点击进度球弹出，显示节点详情并支持委派、指定、备注等操作
@@ -871,7 +859,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
           <div style={{
             padding: '8px 10px',
             border: '1px solid #b7eb8f',
-            background: '#f6ffed',
+            background: 'rgba(34, 197, 94, 0.15)',
             borderRadius: 12,
             marginBottom: 6,
             fontSize: "var(--font-size-sm)",
@@ -883,17 +871,17 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
             <span style={{ color: '#595959', fontWeight: 600 }}>裁剪数量：</span>
             {cuttingSizeItems.map(item => (
               <span key={item.size} style={{
-                color: '#52c41a',
+                color: 'var(--color-success)',
                 fontWeight: 600,
                 padding: '2px 8px',
-                background: '#fff',
+                background: 'var(--color-bg-base)',
                 borderRadius: 4,
                 border: '1px solid #b7eb8f'
               }}>
                 {item.size}: {item.quantity}
               </span>
             ))}
-            <span style={{ color: '#52c41a', fontWeight: 700, marginLeft: 4 }}>
+            <span style={{ color: 'var(--color-success)', fontWeight: 700, marginLeft: 4 }}>
               总计: {cuttingSizeItems.reduce((sum, item) => sum + item.quantity, 0)}
             </span>
           </div>
@@ -1093,7 +1081,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
         <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Text type="secondary">共 {bundlesWithStatus.length} 个扎号</Text>
           <Text type="secondary">
-            已完成: <span style={{ color: '#52c41a' }}>{completedCount}</span> / {bundlesWithStatus.length}
+            已完成: <span style={{ color: 'var(--color-success)' }}>{completedCount}</span> / {bundlesWithStatus.length}
           </Text>
         </div>
         <Table
@@ -1137,7 +1125,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
         color: '#374151',
         marginBottom: '8px',
         paddingBottom: '6px',
-        borderBottom: '1px solid #e5e7eb'
+        borderBottom: '1px solid var(--color-border)'
       }}>
         生产扫码记录（记录所有操作人）
       </div>
@@ -1147,7 +1135,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
           if (!row.operatorName || row.operatorName === '-') return '-';
           return (
             <a
-              style={{ cursor: 'pointer', color: '#1890ff', fontWeight: 600 }}
+              style={{ cursor: 'pointer', color: 'var(--color-primary)', fontWeight: 600 }}
               onClick={() => {
                 const orderValue = orderSummary.orderNo || orderNo || '';
                 const processValue = String(row.processName || '').trim();

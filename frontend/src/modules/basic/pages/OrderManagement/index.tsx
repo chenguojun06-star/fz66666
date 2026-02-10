@@ -721,11 +721,9 @@ const OrderManagement: React.FC = () => {
     try {
       const res = await templateLibraryApi.progressNodeUnitPrices(sn);
       const result = res as Record<string, unknown>;
-      // console.log('[订单] 从模板加载工序:', { styleNo: sn, code: result.code, data: result.data });
       if (result.code !== 200) return;
       const rows = Array.isArray(result.data) ? result.data : [];
       const normalized = buildProgressNodesFromTemplate(rows);
-      // console.log('[订单] 解析后的工序节点:', normalized);
       if (normalized.length) {
         setProgressNodes(normalized);
       }
@@ -785,7 +783,6 @@ const OrderManagement: React.FC = () => {
         sortOrder: idx,
       }));
 
-    // console.log('[订单保存] progressWorkflowJson 工序列表:', ensuredProcesses.map(p => `${p.name}(${p.progressStage}): ¥${p.unitPrice}`));
 
     // 新格式：直接在 nodes 里保存所有工序的完整信息
     // processesByNode 作为兼容字段也保存一份（按 progressStage 分组）
@@ -914,7 +911,6 @@ const OrderManagement: React.FC = () => {
       if (oldData !== null && newData) {
         setStyles(newData.records);
         setTotal(newData.total);
-        // // console.log('[实时同步] 订单管理款式数据已更新', { oldCount: oldData.records.length, newCount: newData.records.length });
       }
     },
     {
@@ -1296,11 +1292,11 @@ const OrderManagement: React.FC = () => {
               { title: <span style={{ color: 'var(--neutral-text)' }}>L</span>, dataIndex: ['sizeQty', 'L'], key: 'size_L', width: 90, align: 'right', render: (v: unknown) => Number(v) || 0 },
               { title: <span style={{ color: 'var(--neutral-text)' }}>XL</span>, dataIndex: ['sizeQty', 'XL'], key: 'size_XL', width: 90, align: 'right', render: (v: unknown) => Number(v) || 0 },
               { title: <span style={{ color: 'var(--neutral-text)' }}>XXL</span>, dataIndex: ['sizeQty', 'XXL'], key: 'size_XXL', width: 90, align: 'right', render: (v: unknown) => Number(v) || 0 },
-              { title: <span style={{ color: 'var(--neutral-text)' }}>裁剪S</span>, dataIndex: ['cuttingSizeQty', 'S'], key: 'cutting_S', width: 90, align: 'right', render: (v: unknown) => <span style={{ color: '#52c41a' }}>{Number(v) || 0}</span> },
-              { title: <span style={{ color: 'var(--neutral-text)' }}>裁剪M</span>, dataIndex: ['cuttingSizeQty', 'M'], key: 'cutting_M', width: 90, align: 'right', render: (v: unknown) => <span style={{ color: '#52c41a' }}>{Number(v) || 0}</span> },
-              { title: <span style={{ color: 'var(--neutral-text)' }}>裁剪L</span>, dataIndex: ['cuttingSizeQty', 'L'], key: 'cutting_L', width: 90, align: 'right', render: (v: unknown) => <span style={{ color: '#52c41a' }}>{Number(v) || 0}</span> },
-              { title: <span style={{ color: 'var(--neutral-text)' }}>裁剪XL</span>, dataIndex: ['cuttingSizeQty', 'XL'], key: 'cutting_XL', width: 90, align: 'right', render: (v: unknown) => <span style={{ color: '#52c41a' }}>{Number(v) || 0}</span> },
-              { title: <span style={{ color: 'var(--neutral-text)' }}>裁剪XXL</span>, dataIndex: ['cuttingSizeQty', 'XXL'], key: 'cutting_XXL', width: 90, align: 'right', render: (v: unknown) => <span style={{ color: '#52c41a' }}>{Number(v) || 0}</span> },
+              { title: <span style={{ color: 'var(--neutral-text)' }}>裁剪S</span>, dataIndex: ['cuttingSizeQty', 'S'], key: 'cutting_S', width: 90, align: 'right', render: (v: unknown) => <span style={{ color: 'var(--color-success)' }}>{Number(v) || 0}</span> },
+              { title: <span style={{ color: 'var(--neutral-text)' }}>裁剪M</span>, dataIndex: ['cuttingSizeQty', 'M'], key: 'cutting_M', width: 90, align: 'right', render: (v: unknown) => <span style={{ color: 'var(--color-success)' }}>{Number(v) || 0}</span> },
+              { title: <span style={{ color: 'var(--neutral-text)' }}>裁剪L</span>, dataIndex: ['cuttingSizeQty', 'L'], key: 'cutting_L', width: 90, align: 'right', render: (v: unknown) => <span style={{ color: 'var(--color-success)' }}>{Number(v) || 0}</span> },
+              { title: <span style={{ color: 'var(--neutral-text)' }}>裁剪XL</span>, dataIndex: ['cuttingSizeQty', 'XL'], key: 'cutting_XL', width: 90, align: 'right', render: (v: unknown) => <span style={{ color: 'var(--color-success)' }}>{Number(v) || 0}</span> },
+              { title: <span style={{ color: 'var(--neutral-text)' }}>裁剪XXL</span>, dataIndex: ['cuttingSizeQty', 'XXL'], key: 'cutting_XXL', width: 90, align: 'right', render: (v: unknown) => <span style={{ color: 'var(--color-success)' }}>{Number(v) || 0}</span> },
               { title: <span style={{ color: 'var(--neutral-text)' }}>下单数</span>, dataIndex: 'orderQuantity', key: 'orderQuantity', width: 110, align: 'right', render: (v: unknown) => Number(v) || 0 },
               { title: <span style={{ color: 'var(--neutral-text)' }}>完成数</span>, dataIndex: 'completedQuantity', key: 'completedQuantity', width: 110, align: 'right', render: (v: unknown) => Number(v) || 0 },
               { title: <span style={{ color: 'var(--neutral-text)' }}>下单人</span>, dataIndex: 'orderOperatorName', key: 'orderOperatorName', width: 140 },

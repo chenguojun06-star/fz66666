@@ -66,6 +66,8 @@ public class ProductionOrderQueryService {
         String status = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "status"));
         String currentProcessName = ParamUtils
                 .toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "currentProcessName"));
+        String delayedOnly = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "delayedOnly"));
+        String todayOnly = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "todayOnly"));
 
         QueryWrapper<ProductionOrder> wrapper = new QueryWrapper<ProductionOrder>();
         wrapper.eq(StringUtils.hasText(orderNo), "order_no", orderNo)
@@ -79,6 +81,19 @@ public class ProductionOrderQueryService {
                 .like("factory_name", keyword))
                 .eq(StringUtils.hasText(status), "status", status)
                 .eq("delete_flag", 0);
+
+        // 延期订单筛选：plannedEndDate < 当前时间
+        if ("true".equalsIgnoreCase(delayedOnly)) {
+            wrapper.isNotNull("planned_end_date")
+                   .lt("planned_end_date", java.time.LocalDateTime.now());
+        }
+
+        // 当天下单筛选：createTime 在今天 00:00:00 ~ 23:59:59
+        if ("true".equalsIgnoreCase(todayOnly)) {
+            java.time.LocalDate today = java.time.LocalDate.now();
+            wrapper.ge("create_time", today.atStartOfDay())
+                   .le("create_time", today.atTime(23, 59, 59));
+        }
 
         // ✅ 应用操作人权限过滤 - 工人只看自己创建的订单
         DataPermissionHelper.applyOperatorFilter(wrapper, "created_by_id", "created_by_name");
@@ -227,7 +242,7 @@ public class ProductionOrderQueryService {
         DataPermissionHelper.applyOperatorFilter(wrapper, "created_by_id", "created_by_name");
 
         // 查询所有订单（只查询需要的字段以提高性能）
-        wrapper.select("id", "order_no", "order_quantity", "planned_end_date");
+        wrapper.select("id", "order_no", "order_quantity", "planned_end_date", "create_time");
         List<ProductionOrder> allOrders = productionOrderMapper.selectList(wrapper);
 
         if (allOrders == null || allOrders.isEmpty()) {
@@ -235,6 +250,8 @@ public class ProductionOrderQueryService {
             stats.setTotalQuantity(0);
             stats.setDelayedOrders(0);
             stats.setDelayedQuantity(0);
+            stats.setTodayOrders(0);
+            stats.setTodayQuantity(0);
             return stats;
         }
 
@@ -259,6 +276,22 @@ public class ProductionOrderQueryService {
             .mapToLong(o -> o.getOrderQuantity() != null ? o.getOrderQuantity() : 0)
             .sum();
         stats.setDelayedQuantity(delayedQty);
+
+        // 计算当天下单（createTime 在今天 00:00:00 ~ 23:59:59）
+        LocalDateTime todayStart = now.toLocalDate().atStartOfDay();
+        LocalDateTime todayEnd = now.toLocalDate().atTime(23, 59, 59);
+        List<ProductionOrder> todayOrders = allOrders.stream()
+            .filter(o -> o.getCreateTime() != null
+                && !o.getCreateTime().isBefore(todayStart)
+                && !o.getCreateTime().isAfter(todayEnd))
+            .collect(Collectors.toList());
+
+        stats.setTodayOrders(todayOrders.size());
+
+        long todayQty = todayOrders.stream()
+            .mapToLong(o -> o.getOrderQuantity() != null ? o.getOrderQuantity() : 0)
+            .sum();
+        stats.setTodayQuantity(todayQty);
 
         return stats;
     }

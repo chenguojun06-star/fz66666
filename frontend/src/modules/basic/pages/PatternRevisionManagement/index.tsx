@@ -25,7 +25,6 @@ import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
-// import patternRevisionService from '@/services/patternRevisionService'; // 未使用
 import api from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
 import { useViewport } from '@/utils/useViewport';
@@ -52,7 +51,6 @@ const PatternRevisionManagement: React.FC = () => {
   const { isMobile } = useViewport();
   const [form] = Form.useForm();
   const [queryForm] = Form.useForm();
-  // const [modal, contextHolder] = Modal.useModal(); // 未使用
 
   // 状态管理
   const [loading, setLoading] = useState(false);

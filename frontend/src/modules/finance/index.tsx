@@ -6,3 +6,4 @@ export const OrderReconciliationApproval = React.lazy(() => import('./pages/Fina
 export const PayrollOperatorSummary = React.lazy(() => import('./pages/Finance/PayrollOperatorSummary'));
 export const FinanceDashboard = React.lazy(() => import('./pages/FinanceDashboard'));
 export const FinanceCenter = React.lazy(() => import('./pages/FinanceCenter'));
+export const ExpenseReimbursement = React.lazy(() => import('./pages/Finance/ExpenseReimbursement'));

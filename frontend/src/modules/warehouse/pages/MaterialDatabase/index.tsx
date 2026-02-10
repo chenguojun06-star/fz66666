@@ -8,6 +8,8 @@ import Layout from '@/components/Layout';
 import StandardModal from '@/components/common/StandardModal';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
+import { useAuth } from '@/utils/AuthContext';
+import { renderMaskedNumber } from '@/utils/sensitiveDataMask';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import { MaterialDatabase, MaterialDatabaseQueryParams } from '@/types/production';
@@ -34,6 +36,7 @@ const toLocalDateTimeInputValue = (): string => {
 const MaterialDatabasePage: React.FC = () => {
   const [_messageApi, contextHolder] = message.useMessage();
   const { isMobile } = useViewport();
+  const { user } = useAuth();
 
   // ===== 使用 Hooks 优化状态管理 =====
   // Modal 状态管理（替代 visible, currentMaterial, mode）
@@ -355,10 +358,7 @@ const MaterialDatabasePage: React.FC = () => {
       key: 'unitPrice',
       width: 100,
       align: 'right' as const,
-      render: (value: unknown) => {
-        const n = Number(value);
-        return Number.isFinite(n) ? n.toFixed(2) : '-';
-      },
+      render: (value: unknown) => renderMaskedNumber(value, user),
     },
     {
       title: '备注',

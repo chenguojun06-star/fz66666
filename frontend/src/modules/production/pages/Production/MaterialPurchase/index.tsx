@@ -4,6 +4,7 @@ import { DownloadOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { useModal } from '@/hooks';
 import Layout from '@/components/Layout';
+import PageStatCards from '@/components/common/PageStatCards';
 import ResizableModal from '@/components/common/ResizableModal';
 import QuickEditModal from '@/components/common/QuickEditModal';
 import { MaterialPurchase as MaterialPurchaseType, MaterialQueryParams, MaterialDatabase, MaterialDatabaseQueryParams, ProductionOrder } from '@/types/production';
@@ -39,6 +40,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import MaterialSearchForm from './components/MaterialSearchForm';
 import MaterialTable from './components/MaterialTable';
 import PurchaseModal from './components/PurchaseModal';
+import SmartReceiveModal from './components/SmartReceiveModal';
 
 const MaterialPurchase: React.FC = () => {
   const [messageApi, contextHolder] = antdMessage.useMessage();
@@ -103,6 +105,22 @@ const MaterialPurchase: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [submitLoading, setSubmitLoading] = useState(false);
+
+  // 智能领取弹窗
+  const [smartReceiveOpen, setSmartReceiveOpen] = useState(false);
+  const [smartReceiveOrderNo, setSmartReceiveOrderNo] = useState('');
+
+  // 状态统计卡片
+  const [purchaseStats, setPurchaseStats] = useState<{
+    totalCount: number;
+    totalQuantity: number;
+    pendingCount: number;
+    receivedCount: number;
+    partialCount: number;
+    completedCount: number;
+    cancelledCount: number;
+  }>({ totalCount: 0, totalQuantity: 0, pendingCount: 0, receivedCount: 0, partialCount: 0, completedCount: 0, cancelledCount: 0 });
+  const [activeStatFilter, setActiveStatFilter] = useState<'all' | 'pending' | 'received' | 'partial' | 'completed'>('all');
 
   const returnConfirmModal = useModal<MaterialPurchaseType[]>();
   const [returnConfirmSubmitting, setReturnConfirmSubmitting] = useState(false);
@@ -501,20 +519,6 @@ const MaterialPurchase: React.FC = () => {
     // ⚠️ 设计决策：采购列表不过滤订单，显示所有采购记录（包括已删除订单的采购记录用于追溯）
     // 订单存在性检查仅在订单列表页面进行
     return records;
-
-    // 原有逻辑（已注释）
-    // const orderNos = Array.from(
-    //   new Set(records.map((r) => String(r.orderNo || '').trim()).filter(Boolean))
-    // );
-    // if (!orderNos.length) return records;
-    // await ensureOrderExistCache(orderNos);
-    // const cache = orderExistCacheRef.current;
-    // return records.filter((r) => {
-    //   const no = String(r.orderNo || '').trim();
-    //   if (!no) return true;
-    //   const exists = cache.get(no);
-    //   return exists !== false;
-    // });
   }, []);
 
   useEffect(() => {
@@ -580,6 +584,22 @@ const MaterialPurchase: React.FC = () => {
     }
   }, [materialDatabaseQueryParams]);
 
+  // 获取采购任务状态统计（不受分页影响）
+  const fetchPurchaseStats = useCallback(async () => {
+    try {
+      const filterParams: Record<string, string> = {};
+      if (queryParams.materialType) filterParams.materialType = queryParams.materialType;
+      if (queryParams.sourceType) filterParams.sourceType = queryParams.sourceType;
+      if (queryParams.orderNo) filterParams.orderNo = queryParams.orderNo;
+      const res = await api.get<{ code: number; data: typeof purchaseStats }>('/production/purchase/stats', { params: filterParams });
+      if (res.code === 200 && res.data) {
+        setPurchaseStats(res.data);
+      }
+    } catch (error) {
+      console.error('获取采购统计失败', error);
+    }
+  }, [queryParams.materialType, queryParams.sourceType, queryParams.orderNo]);
+
   // 页面加载时获取物料采购列表
   useEffect(() => {
     if (activeTabKey === 'purchase') {
@@ -588,6 +608,25 @@ const MaterialPurchase: React.FC = () => {
       fetchMaterialDatabaseList();
     }
   }, [activeTabKey, fetchMaterialDatabaseList, fetchMaterialPurchaseList, queryParams, materialDatabaseQueryParams]);
+
+  // 筛选条件变化时更新统计数据
+  useEffect(() => {
+    if (activeTabKey === 'purchase') {
+      fetchPurchaseStats();
+    }
+  }, [activeTabKey, fetchPurchaseStats]);
+
+  // 同步搜索栏 status dropdown → 统计卡片高亮
+  useEffect(() => {
+    const s = (queryParams.status || '').trim().toLowerCase();
+    if (!s || s === 'cancelled') {
+      setActiveStatFilter('all');
+    } else if (s === 'pending' || s === 'received' || s === 'partial' || s === 'completed') {
+      setActiveStatFilter(s);
+    } else {
+      setActiveStatFilter('all');
+    }
+  }, [queryParams.status]);
 
   // 实时同步
   useSync(
@@ -615,6 +654,8 @@ const MaterialPurchase: React.FC = () => {
       if (newData) {
         setPurchaseList(newData.records);
         setTotal(newData.total);
+        // 同步更新统计数据
+        fetchPurchaseStats();
       }
     },
     {
@@ -822,10 +863,123 @@ const MaterialPurchase: React.FC = () => {
       return;
     }
 
+    const receiverId = String(user?.id || '').trim();
+
     try {
+      // 1. 检查当天是否有同款面辅料的可合并采购任务
+      const mergeRes = await api.get<{
+        code: number;
+        data: {
+          currentId: string;
+          mergeableCount: number;
+          mergeableItems: Array<{
+            id: string;
+            purchaseNo: string;
+            materialName: string;
+            materialCode: string;
+            materialType: string;
+            specifications: string;
+            purchaseQuantity: number;
+            unit: string;
+            orderNo: string;
+            styleNo: string;
+            supplierName: string;
+          }>;
+        };
+      }>('/production/purchase/check-mergeable', { params: { purchaseId: id } });
+
+      const mergeableCount = mergeRes?.code === 200 ? (mergeRes.data?.mergeableCount || 0) : 0;
+      const mergeableItems = mergeRes?.code === 200 ? (mergeRes.data?.mergeableItems || []) : [];
+
+      if (mergeableCount > 0) {
+        // 2. 有可合并的任务，弹出确认提示
+        const materialInfo = String(record?.materialName || '').trim();
+        const mergeDetail = mergeableItems.map((item) => {
+          const orderLabel = item.orderNo ? `订单${item.orderNo}` : (item.styleNo ? `款号${item.styleNo}` : '');
+          return `${orderLabel} ${item.materialName || ''} ${item.purchaseQuantity || 0}${item.unit || ''}`;
+        }).join('\n');
+
+        Modal.confirm({
+          title: '发现当天同款面辅料采购任务',
+          content: (
+            <div>
+              <p style={{ marginBottom: 8 }}>
+                当天有 <strong>{mergeableCount}</strong> 条相同面辅料（<strong>{materialInfo}</strong>）的待采购任务，是否合并采购一键领取？
+              </p>
+              <div style={{ maxHeight: 200, overflow: 'auto', background: 'var(--color-bg-subtle)', padding: '8px 12px', borderRadius: 4, fontSize: 13 }}>
+                {mergeableItems.map((item, i) => (
+                  <div key={item.id} style={{ marginBottom: 4, borderBottom: i < mergeableItems.length - 1 ? '1px solid #e8e8e8' : 'none', paddingBottom: 4 }}>
+                    <span style={{ color: 'var(--color-text-secondary)' }}>{item.orderNo || item.styleNo || '-'}</span>
+                    {' '}
+                    <span>{item.materialName}</span>
+                    {' '}
+                    <span style={{ color: 'var(--color-primary)' }}>{item.purchaseQuantity}{item.unit || ''}</span>
+                    {item.supplierName ? <span style={{ color: 'var(--color-text-tertiary)', marginLeft: 8 }}>{item.supplierName}</span> : null}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ),
+          okText: '合并领取全部',
+          cancelText: '仅领取当前',
+          width: 480,
+          onOk: async () => {
+            // 合并领取：当前 + 所有可合并的
+            const allIds = [id, ...mergeableItems.map((item) => item.id)];
+            try {
+              setSubmitLoading(true);
+              const batchRes = await api.post<{
+                code: number;
+                message?: string;
+                data: { successCount: number; skipCount: number; failCount: number; failMessages: string[] };
+              }>('/production/purchase/batch-receive', {
+                purchaseIds: allIds,
+                receiverId,
+                receiverName: String(receiverName).trim(),
+              });
+              if (batchRes.code === 200) {
+                const { successCount, skipCount } = batchRes.data || {};
+                message.success(`已合并领取 ${successCount || 0} 条采购任务${skipCount ? `，跳过 ${skipCount} 条` : ''}`);
+                fetchMaterialPurchaseList();
+                const no = String(currentPurchase?.orderNo || record?.orderNo || '').trim();
+                if (no) loadDetailByOrderNo(no);
+              } else {
+                message.error(batchRes.message || '合并领取失败');
+              }
+            } catch (err: unknown) {
+              message.error((err as Error)?.message || '合并领取失败');
+            } finally {
+              setSubmitLoading(false);
+            }
+          },
+          onCancel: async () => {
+            // 仅领取当前一条
+            try {
+              const res = await api.post<{ code: number; message?: string; data: boolean }>('/production/purchase/receive', {
+                purchaseId: id,
+                receiverId,
+                receiverName: String(receiverName).trim(),
+              });
+              if (res.code === 200) {
+                message.success('已领取采购任务');
+                fetchMaterialPurchaseList();
+                const no = String(currentPurchase?.orderNo || record?.orderNo || '').trim();
+                if (no) loadDetailByOrderNo(no);
+              } else {
+                message.error(res.message || '领取失败');
+              }
+            } catch (err: unknown) {
+              message.error((err as Error)?.message || '领取失败');
+            }
+          },
+        });
+        return;
+      }
+
+      // 3. 没有可合并的任务，直接领取
       const res = await api.post<{ code: number; message?: string; data: boolean }>('/production/purchase/receive', {
         purchaseId: id,
-        receiverId: String(user?.id || '').trim(),
+        receiverId,
         receiverName: String(receiverName).trim(),
       });
       if (res.code === 200) {
@@ -961,6 +1115,16 @@ const MaterialPurchase: React.FC = () => {
     openReturnConfirm([record]);
   };
 
+  // 点击统计卡片筛选
+  const handleStatClick = (type: 'all' | 'pending' | 'received' | 'partial' | 'completed') => {
+    setActiveStatFilter(type);
+    if (type === 'all') {
+      setQueryParams(prev => ({ ...prev, status: '', page: 1 }));
+    } else {
+      setQueryParams(prev => ({ ...prev, status: type, page: 1 }));
+    }
+  };
+
   const sortedPurchaseList = useMemo(() => {
     const sorted = [...purchaseList];
     sorted.sort((a: any, b: any) => {
@@ -982,49 +1146,22 @@ const MaterialPurchase: React.FC = () => {
   const normalizeStatus = (status?: MaterialPurchaseType['status'] | string) => String(status || '').trim().toLowerCase();
 
   const handleReceiveAll = async () => {
-    const receiverName = String(user?.name || user?.username || '').trim() || window.prompt('请输入领取人姓名') || '';
-    if (!String(receiverName).trim()) {
-      message.error('未填写领取人');
+    const orderNo = String(currentPurchase?.orderNo || '').trim();
+    if (!orderNo || orderNo === '-') {
+      message.error('缺少订单号');
       return;
     }
-    const currentUserId = String(user?.id || '').trim();
-    const currentUserName = String(user?.name || user?.username || '').trim();
-    const targets = detailPurchases.filter((p) => {
-      const status = normalizeStatus(p.status);
-      if (status !== MATERIAL_PURCHASE_STATUS.PENDING) return false;
-      if (!String(p.id || '').trim()) return false;
-      const existingReceiverId = String(p.receiverId || '').trim();
-      const existingReceiverName = String(p.receiverName || '').trim();
-      if (!existingReceiverId && !existingReceiverName) return true;
-      if (currentUserId && existingReceiverId && currentUserId === existingReceiverId) return true;
-      if (currentUserName && existingReceiverName && currentUserName === existingReceiverName) return true;
-      return false;
-    });
-    if (!targets.length) {
-      message.info('没有可领取的采购任务');
-      return;
-    }
-    try {
-      setSubmitLoading(true);
-      for (const t of targets) {
-        const res = await api.post<{ code: number; message: string; data: boolean }>('/production/purchase/receive', {
-          purchaseId: String(t.id),
-          receiverId: String(user?.id || '').trim(),
-          receiverName: String(receiverName).trim(),
-        });
-        if (res?.code !== 200) {
-          message.error(res?.message || '领取失败');
-          break;
-        }
-      }
-      message.success('已领取该订单待采购任务');
-      fetchMaterialPurchaseList();
-      const no = String(currentPurchase?.orderNo || '').trim();
-      if (no && no !== '-') loadDetailByOrderNo(no);
-    } catch {
-      message.error('领取失败');
-    } finally {
-      setSubmitLoading(false);
+
+    // 打开智能领取弹窗（替代旧的 Modal.info 弹窗）
+    setSmartReceiveOrderNo(orderNo);
+    setSmartReceiveOpen(true);
+  };
+
+  const handleSmartReceiveSuccess = () => {
+    const orderNo = String(currentPurchase?.orderNo || '').trim();
+    fetchMaterialPurchaseList();
+    if (orderNo && orderNo !== '-') {
+      loadDetailByOrderNo(orderNo);
     }
   };
 
@@ -1116,6 +1253,51 @@ const MaterialPurchase: React.FC = () => {
                         </Tooltip>
                       </div>
                     </div>
+
+                    {/* 状态统计卡片 - 点击筛选 */}
+                    <PageStatCards
+                      activeKey={activeStatFilter}
+                      cards={[
+                        {
+                          key: 'all',
+                          items: [
+                            { label: '采购总数', value: purchaseStats.totalCount, unit: '条', color: 'var(--color-primary)' },
+                            { label: '总数量', value: purchaseStats.totalQuantity, color: 'var(--color-success)' },
+                          ],
+                          onClick: () => handleStatClick('all'),
+                          activeColor: 'var(--color-primary)',
+                          activeBg: 'rgba(45, 127, 249, 0.1)',
+                        },
+                        {
+                          key: 'pending',
+                          items: [{ label: '待采购', value: purchaseStats.pendingCount, unit: '条', color: 'var(--color-warning)' }],
+                          onClick: () => handleStatClick('pending'),
+                          activeColor: '#faad14',
+                          activeBg: '#fff7e6',
+                        },
+                        {
+                          key: 'received',
+                          items: [{ label: '已领取', value: purchaseStats.receivedCount, unit: '条', color: 'var(--color-primary)' }],
+                          onClick: () => handleStatClick('received'),
+                          activeColor: 'var(--color-primary)',
+                          activeBg: 'rgba(45, 127, 249, 0.1)',
+                        },
+                        {
+                          key: 'partial',
+                          items: [{ label: '部分到货', value: purchaseStats.partialCount, unit: '条', color: 'var(--color-warning)' }],
+                          onClick: () => handleStatClick('partial'),
+                          activeColor: '#fa8c16',
+                          activeBg: '#fff2e8',
+                        },
+                        {
+                          key: 'completed',
+                          items: [{ label: '全部到货', value: purchaseStats.completedCount, unit: '条', color: 'var(--color-success)' }],
+                          onClick: () => handleStatClick('completed'),
+                          activeColor: '#52c41a',
+                          activeBg: 'rgba(34, 197, 94, 0.15)',
+                        },
+                      ]}
+                    />
 
                     <MaterialSearchForm
                       queryParams={queryParams}
@@ -1336,6 +1518,17 @@ const MaterialPurchase: React.FC = () => {
           onCancel={() => {
             quickEditModal.close();
           }}
+        />
+
+        {/* 智能领取弹窗 */}
+        <SmartReceiveModal
+          open={smartReceiveOpen}
+          orderNo={smartReceiveOrderNo}
+          onCancel={() => setSmartReceiveOpen(false)}
+          onSuccess={handleSmartReceiveSuccess}
+          isSupervisorOrAbove={isSupervisorOrAbove}
+          userId={String(user?.id || '').trim()}
+          userName={String(user?.name || user?.username || '').trim()}
         />
       </div>
     </Layout>

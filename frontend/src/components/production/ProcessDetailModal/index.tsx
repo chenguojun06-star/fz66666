@@ -220,23 +220,23 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
           fontSize: '13px'
         }}>
           <div>
-            <span style={{ color: '#6b7280' }}>订单号：</span>
+            <span style={{ color: 'var(--color-text-secondary)' }}>订单号：</span>
             <span style={{ fontWeight: 600, color: '#111827' }}>{record.orderNo || '-'}</span>
           </div>
           <div>
-            <span style={{ color: '#6b7280' }}>款号：</span>
+            <span style={{ color: 'var(--color-text-secondary)' }}>款号：</span>
             <span style={{ fontWeight: 600, color: '#111827' }}>{record.styleNo || '-'}</span>
           </div>
           <div>
-            <span style={{ color: '#6b7280' }}>款名：</span>
+            <span style={{ color: 'var(--color-text-secondary)' }}>款名：</span>
             <span style={{ fontWeight: 600, color: '#111827' }}>{record.styleName || '-'}</span>
           </div>
         </div>
 
         {/* 入库操作信息 */}
         <div style={{
-          background: '#ffffff',
-          border: '1px solid #e5e7eb',
+          background: 'var(--color-bg-base)',
+          border: '1px solid var(--color-border)',
           borderRadius: '6px',
           padding: '12px',
           marginBottom: '12px',
@@ -246,16 +246,16 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
           fontSize: '13px'
         }}>
           <div>
-            <span style={{ color: '#6b7280' }}>入库单号：</span>
-            <span style={{ fontWeight: 600, color: '#1890ff' }}>
+            <span style={{ color: 'var(--color-text-secondary)' }}>入库单号：</span>
+            <span style={{ fontWeight: 600, color: 'var(--color-primary)' }}>
               {record.warehousingOrderNo || '-'}
             </span>
           </div>
           <div>
-            <span style={{ color: '#6b7280' }}>操作人：</span>
+            <span style={{ color: 'var(--color-text-secondary)' }}>操作人：</span>
             {record.warehousingOperatorName ? (
               <a
-                style={{ cursor: 'pointer', color: '#1890ff', fontWeight: 600 }}
+                style={{ cursor: 'pointer', color: 'var(--color-primary)', fontWeight: 600 }}
                 onClick={() => {
                   if (record?.orderNo) {
                     navigate(`/finance/payroll-operator-summary?orderNo=${record.orderNo}&processName=入库`);
@@ -269,13 +269,13 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
             )}
           </div>
           <div>
-            <span style={{ color: '#6b7280' }}>开始时间：</span>
+            <span style={{ color: 'var(--color-text-secondary)' }}>开始时间：</span>
             <span style={{ fontWeight: 500, color: '#111827' }}>
               {formatDateTime(record.warehousingStartTime)}
             </span>
           </div>
           <div>
-            <span style={{ color: '#6b7280' }}>完成时间：</span>
+            <span style={{ color: 'var(--color-text-secondary)' }}>完成时间：</span>
             <span style={{ fontWeight: 500, color: '#111827' }}>
               {formatDateTime(record.warehousingEndTime)}
             </span>
@@ -290,16 +290,16 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
           marginBottom: '8px'
         }}>
           {[
-            { label: '合格入库', value: qualifiedQty, color: '#059669', percent: qualifiedRate },
+            { label: '合格入库', value: qualifiedQty, color: 'var(--color-success)', percent: qualifiedRate },
             { label: '次品数', value: unqualifiedQty, color: '#dc2626' },
-            { label: '返修数', value: repairQty, color: '#f59e0b' },
-            { label: '库存', value: stockQty, color: '#3b82f6' },
+            { label: '返修数', value: repairQty, color: 'var(--color-warning)' },
+            { label: '库存', value: stockQty, color: 'var(--color-primary)' },
           ].map((item) => (
             <div
               key={item.label}
               style={{
-                background: '#ffffff',
-                border: '1px solid #e5e7eb',
+                background: 'var(--color-bg-base)',
+                border: '1px solid var(--color-border)',
                 borderRadius: '6px',
                 padding: '8px',
                 display: 'flex',
@@ -307,14 +307,14 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
                 gap: '4px',
               }}
             >
-              <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500 }}>
+              <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>
                 {item.label}
               </span>
               <span style={{ fontSize: '18px', fontWeight: 700, color: item.color }}>
                 {item.value}
               </span>
               {item.percent !== undefined && (
-                <span style={{ fontSize: '10px', color: '#9ca3af' }}>
+                <span style={{ fontSize: '10px', color: 'var(--color-text-tertiary)' }}>
                   占比 {item.percent}%
                 </span>
               )}
@@ -324,8 +324,8 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
 
         {/* 码数明细表格 */}
         <div style={{
-          background: '#ffffff',
-          border: '1px solid #e5e7eb',
+          background: 'var(--color-bg-base)',
+          border: '1px solid var(--color-border)',
           borderRadius: '6px',
           padding: '12px',
         }}>
@@ -364,12 +364,12 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
               if (pageData.length === 0) return null;
               const total = pageData.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
               return (
-                <Table.Summary.Row style={{ background: '#fafafa' }}>
+                <Table.Summary.Row style={{ background: 'var(--color-bg-container)' }}>
                   <Table.Summary.Cell index={0} colSpan={2}>
                     <span style={{ fontWeight: 600 }}>合计</span>
                   </Table.Summary.Cell>
                   <Table.Summary.Cell index={1} align="right">
-                    <span style={{ fontWeight: 700, color: '#059669' }}>{total} 件</span>
+                    <span style={{ fontWeight: 700, color: 'var(--color-success)' }}>{total} 件</span>
                   </Table.Summary.Cell>
                 </Table.Summary.Row>
               );
@@ -537,36 +537,36 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
           fontSize: '12px'
         }}>
           <div>
-            <span style={{ color: '#6b7280' }}>订单号：</span>
+            <span style={{ color: 'var(--color-text-secondary)' }}>订单号：</span>
             <span style={{ fontWeight: 600, color: '#111827' }}>{record.orderNo || '-'}</span>
           </div>
           <div>
-            <span style={{ color: '#6b7280' }}>款号：</span>
+            <span style={{ color: 'var(--color-text-secondary)' }}>款号：</span>
             <span style={{ fontWeight: 600, color: '#111827' }}>{record.styleNo || '-'}</span>
           </div>
           <div>
-            <span style={{ color: '#6b7280' }}>款名：</span>
+            <span style={{ color: 'var(--color-text-secondary)' }}>款名：</span>
             <span style={{ fontWeight: 600, color: '#111827' }}>{record.styleName || '-'}</span>
           </div>
           <div>
-            <span style={{ color: '#6b7280' }}>总工价：</span>
+            <span style={{ color: 'var(--color-text-secondary)' }}>总工价：</span>
             <span style={{ fontWeight: 700, color: '#dc2626' }}>¥{totalPrice.toFixed(2)}</span>
           </div>
           <div>
-            <span style={{ color: '#6b7280' }}>订单数量：</span>
+            <span style={{ color: 'var(--color-text-secondary)' }}>订单数量：</span>
             <span style={{ fontWeight: 600, color: '#111827' }}>{record.orderQuantity || 0} 件</span>
           </div>
           <div>
-            <span style={{ color: '#6b7280' }}>裁剪数量：</span>
-            <span style={{ fontWeight: 600, color: '#059669' }}>{cuttingQty} 件</span>
+            <span style={{ color: 'var(--color-text-secondary)' }}>裁剪数量：</span>
+            <span style={{ fontWeight: 600, color: 'var(--color-success)' }}>{cuttingQty} 件</span>
           </div>
           {operatorInfo && (
             <>
               <div>
-                <span style={{ color: '#6b7280' }}>{operatorInfo.processName}操作人：</span>
+                <span style={{ color: 'var(--color-text-secondary)' }}>{operatorInfo.processName}操作人：</span>
                 {operatorInfo.operatorName ? (
                   <a
-                    style={{ cursor: 'pointer', color: '#1890ff', fontWeight: 600 }}
+                    style={{ cursor: 'pointer', color: 'var(--color-primary)', fontWeight: 600 }}
                     onClick={() => {
                       if (record?.orderNo) {
                         navigate(`/finance/payroll-operator-summary?orderNo=${record.orderNo}&processName=${operatorInfo.processName}`);
@@ -576,11 +576,11 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
                     {operatorInfo.operatorName}
                   </a>
                 ) : (
-                  <span style={{ color: '#9ca3af' }}>-</span>
+                  <span style={{ color: 'var(--color-text-tertiary)' }}>-</span>
                 )}
               </div>
               <div>
-                <span style={{ color: '#6b7280' }}>{operatorInfo.processName}完成：</span>
+                <span style={{ color: 'var(--color-text-secondary)' }}>{operatorInfo.processName}完成：</span>
                 <span style={{ fontWeight: 500, color: '#111827' }}>
                   {operatorInfo.endTime ? (
                     new Date(operatorInfo.endTime).toLocaleString('zh-CN', {
@@ -590,7 +590,7 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
                       minute: '2-digit'
                     })
                   ) : (
-                    <span style={{ color: '#9ca3af' }}>-</span>
+                    <span style={{ color: 'var(--color-text-tertiary)' }}>-</span>
                   )}
                 </span>
               </div>
@@ -603,7 +603,7 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
           <div style={{
             padding: '8px 12px',
             border: '1px solid #b7eb8f',
-            background: '#f6ffed',
+            background: 'rgba(34, 197, 94, 0.15)',
             borderRadius: 12,
             marginBottom: 12,
             fontSize: '13px',
@@ -615,17 +615,17 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
             <span style={{ color: '#595959', fontWeight: 600 }}>裁剪数明细：</span>
             {cuttingSizeItems.map((item) => (
               <span key={item.size} style={{
-                color: '#52c41a',
+                color: 'var(--color-success)',
                 fontWeight: 600,
                 padding: '2px 8px',
-                background: '#fff',
+                background: 'var(--color-bg-base)',
                 borderRadius: 4,
                 border: '1px solid #b7eb8f'
               }}>
                 {item.size}: {item.quantity}
               </span>
             ))}
-            <span style={{ color: '#52c41a', fontWeight: 700, marginLeft: 4 }}>
+            <span style={{ color: 'var(--color-success)', fontWeight: 700, marginLeft: 4 }}>
               总计: {cuttingSizeItems.reduce((sum, item) => sum + item.quantity, 0)}
             </span>
           </div>
@@ -641,7 +641,7 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
 
             return (
               <div key={stage.key} style={{
-                border: '1px solid #e5e7eb',
+                border: '1px solid var(--color-border)',
                 borderRadius: '8px',
                 overflow: 'hidden'
               }}>
@@ -657,7 +657,7 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  borderBottom: '1px solid #e5e7eb'
+                  borderBottom: '1px solid var(--color-border)'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span style={{
@@ -672,7 +672,7 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
                     }}>
                       {stage.name}
                     </span>
-                    <span style={{ fontSize: '13px', color: '#6b7280' }}>
+                    <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>
                       ({processes.length}个工序)
                     </span>
 
@@ -684,17 +684,17 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
                             <span style={{
                               fontSize: '13px',
                               fontWeight: 600,
-                              color: '#059669',
-                              background: '#d1fae5',
+                              color: 'var(--color-success)',
+                              background: 'rgba(34, 197, 94, 0.15)',
                               padding: '2px 8px',
                               borderRadius: '4px'
                             }}>
                               ✓ 已完成
                             </span>
                             {procurementStatus.operatorName && (
-                              <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                              <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
                                 操作人: <a
-                                  style={{ cursor: 'pointer', color: '#1890ff', fontWeight: 600 }}
+                                  style={{ cursor: 'pointer', color: 'var(--color-primary)', fontWeight: 600 }}
                                   onClick={() => {
                                     if (record?.orderNo) {
                                       navigate(`/finance/payroll-operator-summary?orderNo=${record.orderNo}&processName=采购`);
@@ -706,7 +706,7 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
                               </span>
                             )}
                             {procurementStatus.completedTime && (
-                              <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                              <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
                                 完成时间: <span style={{ fontWeight: 600, color: '#374151' }}>
                                   {new Date(procurementStatus.completedTime).toLocaleString('zh-CN', {
                                     year: 'numeric',
@@ -723,8 +723,8 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
                           <span style={{
                             fontSize: '13px',
                             fontWeight: 600,
-                            color: '#f59e0b',
-                            background: '#fef3c7',
+                            color: 'var(--color-warning)',
+                            background: 'rgba(234, 179, 8, 0.15)',
                             padding: '2px 8px',
                             borderRadius: '4px'
                           }}>
@@ -747,12 +747,12 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
                         }}>
                           {processStatus.cutting.completed ? '✓ 已完成' : `进行中 (${processStatus.cutting.completionRate}%)`}
                         </span>
-                        <span style={{ fontSize: '12px', color: '#6b7280' }}>
-                          完成: <span style={{ fontWeight: 600, color: '#059669' }}>{processStatus.cutting.completedQuantity} 件</span>
+                        <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                          完成: <span style={{ fontWeight: 600, color: 'var(--color-success)' }}>{processStatus.cutting.completedQuantity} 件</span>
                         </span>
                         {!processStatus.cutting.completed && (
-                          <span style={{ fontSize: '12px', color: '#6b7280' }}>
-                            剩余: <span style={{ fontWeight: 600, color: '#f59e0b' }}>{processStatus.cutting.remainingQuantity} 件</span>
+                          <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                            剩余: <span style={{ fontWeight: 600, color: 'var(--color-warning)' }}>{processStatus.cutting.remainingQuantity} 件</span>
                           </span>
                         )}
                       </div>
@@ -780,7 +780,7 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
                       dataIndex: 'id',
                       key: 'id',
                       width: 100,
-                      render: (v: string) => <span style={{ fontSize: '12px', color: '#6b7280' }}>{v}</span>,
+                      render: (v: string) => <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>{v}</span>,
                     },
                     {
                       title: '工序名称',
@@ -815,7 +815,7 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
                       render: (_: any, record: any) => {
                         const total = (record.unitPrice || 0) * cuttingQty;
                         return (
-                          <span style={{ fontWeight: 700, color: '#059669' }}>
+                          <span style={{ fontWeight: 700, color: 'var(--color-success)' }}>
                             ¥{total.toFixed(2)}
                           </span>
                         );
@@ -825,7 +825,7 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
                   pagination={false}
                   size="small"
                   summary={() => (
-                    <Table.Summary.Row style={{ background: '#fafafa' }}>
+                    <Table.Summary.Row style={{ background: 'var(--color-bg-container)' }}>
                       <Table.Summary.Cell index={0} colSpan={4} align="right">
                         <span style={{ fontWeight: 600 }}>合计</span>
                       </Table.Summary.Cell>
@@ -835,7 +835,7 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
                         </span>
                       </Table.Summary.Cell>
                       <Table.Summary.Cell index={2} align="right">
-                        <span style={{ fontWeight: 700, color: '#059669' }}>
+                        <span style={{ fontWeight: 700, color: 'var(--color-success)' }}>
                           ¥{(stageTotal * cuttingQty).toFixed(2)}
                         </span>
                       </Table.Summary.Cell>

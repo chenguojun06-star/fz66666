@@ -7,6 +7,7 @@
     "pages/payroll/payroll",
     "pages/admin/index",
     "pages/admin/notification/index",
+    "pages/admin/production-detail/index",
     "pages/warehouse/sample/list/index",
     "pages/warehouse/sample/operation/index",
     "pages/warehouse/sample/loan-list/index",
@@ -38,7 +39,7 @@
       },
       {
         "pagePath": "pages/admin/index",
-        "text": "个人"
+        "text": "我的"
       }
     ]
   },

@@ -74,6 +74,11 @@ public class WeChatMiniProgramAuthOrchestrator {
         subject.setRoleId(user.getRoleId() == null ? null : String.valueOf(user.getRoleId()));
         subject.setRoleName(user.getRoleName());
         subject.setOpenid(openid);
+        // 设置数据权限范围
+        subject.setPermissionRange(StringUtils.hasText(user.getPermissionRange()) ? user.getPermissionRange() : "all");
+        // 设置租户信息
+        subject.setTenantId(user.getTenantId());
+        subject.setTenantOwner(Boolean.TRUE.equals(user.getIsTenantOwner()));
 
         String token = authTokenService.issueToken(subject, Duration.ofHours(12));
         if (!StringUtils.hasText(token)) {
@@ -101,6 +106,8 @@ public class WeChatMiniProgramAuthOrchestrator {
         m.put("roleName", user.getRoleName());
         m.put("roleCode", getRoleCode(user.getRoleId(), user.getRoleName()));
         m.put("status", user.getStatus());
+        m.put("tenantId", user.getTenantId());
+        m.put("isTenantOwner", Boolean.TRUE.equals(user.getIsTenantOwner()));
         return m;
     }
 

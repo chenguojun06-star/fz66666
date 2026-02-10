@@ -14,6 +14,9 @@ const OPERATION_LABELS = {
 
 /**
  * 显示样板确认弹窗
+ * @param {Object} page - 页面实例
+ * @param {Object} data - 样板扫码数据
+ * @returns {void}
  */
 function showPatternConfirmModal(page, data) {
   const patternDetail = data.patternDetail || {};
@@ -37,10 +40,21 @@ function showPatternConfirmModal(page, data) {
   });
 }
 
+/**
+ * 关闭样板确认弹窗
+ * @param {Object} page - 页面实例
+ * @returns {void}
+ */
 function closePatternConfirm(page) {
   page.setData({ 'patternConfirm.visible': false });
 }
 
+/**
+ * 样板操作类型切换
+ * @param {Object} page - 页面实例
+ * @param {Object} e - 事件对象
+ * @returns {void}
+ */
 function onPatternOperationChange(page, e) {
   const operationType = e.currentTarget.dataset.type;
   page.setData({
@@ -49,12 +63,20 @@ function onPatternOperationChange(page, e) {
   });
 }
 
+/**
+ * 样板备注输入
+ * @param {Object} page - 页面实例
+ * @param {Object} e - 事件对象
+ * @returns {void}
+ */
 function onPatternRemarkInput(page, e) {
   page.setData({ 'patternConfirm.remark': e.detail.value });
 }
 
 /**
  * 提交样板生产扫码
+ * @param {Object} page - 页面实例
+ * @returns {Promise<void>} 异步提交样板扫码
  */
 async function submitPatternScan(page) {
   const { patternConfirm } = page.data;

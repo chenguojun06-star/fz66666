@@ -105,4 +105,9 @@ public class FinishedInventoryDTO {
      * 该款式的所有尺码列表
      */
     private List<String> sizes;
+
+    /**
+     * 累计入库总数量
+     */
+    private Integer totalInboundQty;
 }

@@ -31,14 +31,14 @@
 }
 
 .tab-item-active {
-  background: linear-gradient(135deg, #e0f2fe 0%, #e0e7ff 100%);
+  background: var(--gradient-primary);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  border-color: #bfdbfe;
+  border-color: var(--color-border-blue);
 }
 
 .tab-text {
   font-size: var(--font-size-base);
-  color: #8e8e93;
+  color: var(--color-text-secondary);
   line-height: 1.2;
   font-weight: 500;
 }

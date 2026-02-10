@@ -2,6 +2,7 @@ import React from 'react';
 import { Button, Card, Space } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
+import PageStatCards from '@/components/common/PageStatCards';
 import SearchForm from './SearchForm';
 import WarehousingTable from './WarehousingTable';
 import WarehousingModal from './WarehousingModal';
@@ -40,7 +41,6 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
     independentDetailOpen,
     independentDetailWarehousingNo,
     independentDetailSummary,
-    goToWarehousingDetail,
     isOrderFrozenById,
     previewOpen,
     previewUrl,
@@ -48,6 +48,7 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
     setPreviewOpen,
     setPreviewUrl,
     setPreviewTitle,
+    warehousingStats,
   } = hook;
 
   return (
@@ -57,6 +58,34 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
           <div className="page-header">
             <h2 className="page-title">质检入库</h2>
           </div>
+
+          {/* 统计卡片 */}
+          <PageStatCards
+            cards={[
+              {
+                key: 'pendingQc',
+                items: { label: '待质检', value: warehousingStats.pendingQcBundles, unit: '个菲号', color: 'var(--color-warning)' },
+              },
+              {
+                key: 'pendingWarehouse',
+                items: { label: '待入库', value: warehousingStats.pendingWarehouseBundles, unit: '个菲号', color: 'var(--color-primary)' },
+              },
+              {
+                key: 'total',
+                items: [
+                  { label: '完成总数', value: warehousingStats.totalOrders, unit: '个订单', color: 'var(--color-primary)' },
+                  { label: '总数量', value: warehousingStats.totalQuantity, color: 'var(--color-success)' },
+                ],
+              },
+              {
+                key: 'today',
+                items: [
+                  { label: '今日完成', value: warehousingStats.todayOrders, unit: '个订单', color: 'var(--color-success)' },
+                  { label: '数量', value: warehousingStats.todayQuantity, color: 'var(--color-success)' },
+                ],
+              },
+            ]}
+          />
 
           <SearchForm
             queryParams={queryParams}
@@ -75,7 +104,6 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
             total={total}
             queryParams={queryParams}
             setQueryParams={setQueryParams}
-            onViewDetail={goToWarehousingDetail}
             onOpenIndependentDetail={openIndependentDetailPopup}
             onWarehousing={openWarehousingModal}
             isOrderFrozen={isOrderFrozenById}
@@ -103,6 +131,10 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
         orderNo={warehousingModalOrderNo}
         warehousingNo={warehousingModalWarehousingNo}
         warehouse={warehousingModalWarehouse}
+        styleNo={hook.warehousingModalStyleNo}
+        color={hook.warehousingModalColor}
+        size={hook.warehousingModalSize}
+        quantity={hook.warehousingModalQuantity}
         onClose={closeWarehousingModal}
         onSubmit={submitWarehousing}
         setWarehouse={setWarehousingModalWarehouse}

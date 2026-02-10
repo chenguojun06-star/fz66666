@@ -8,6 +8,7 @@ import com.fashion.supplychain.production.service.PatternProductionService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.service.StyleBomService;
+import com.fashion.supplychain.common.constant.MaterialConstants;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import lombok.extern.slf4j.Slf4j;
@@ -339,6 +340,112 @@ public class MaterialPurchaseOrchestratorHelper {
         if (trimmed.startsWith("PO")) return trimmed;
         if (trimmed.startsWith("P0")) return "PO" + trimmed.substring(2);
         return null;
+    }
+
+    /* ========== 同日同款面辅料合并采购查询 ========== */
+
+    /**
+     * 查找当天同款面辅料的可合并采购任务
+     * 匹配条件：同一天创建 + 相同物料编码(或物料名称+规格+类型) + 状态为pending
+     * 排除指定的采购任务ID列表
+     */
+    public List<MaterialPurchase> findMergeablePurchases(MaterialPurchase seed, List<String> excludeIds) {
+        if (seed == null) return List.of();
+
+        LocalDateTime createTime = seed.getCreateTime();
+        if (createTime == null) createTime = LocalDateTime.now();
+
+        LocalDate day = createTime.toLocalDate();
+        LocalDateTime dayStart = day.atStartOfDay();
+        LocalDateTime nextDayStart = day.plusDays(1).atStartOfDay();
+
+        String materialCode = safe(seed.getMaterialCode());
+        String materialName = safe(seed.getMaterialName());
+        String materialType = safe(seed.getMaterialType());
+        String specifications = safe(seed.getSpecifications());
+
+        // 查找同天创建的、状态为pending的采购任务
+        LambdaQueryWrapper<MaterialPurchase> wrapper = new LambdaQueryWrapper<MaterialPurchase>()
+                .eq(MaterialPurchase::getDeleteFlag, 0)
+                .eq(MaterialPurchase::getStatus, MaterialConstants.STATUS_PENDING)
+                .ge(MaterialPurchase::getCreateTime, dayStart)
+                .lt(MaterialPurchase::getCreateTime, nextDayStart);
+
+        // 按物料编码或（物料名称+规格+类型）匹配
+        if (StringUtils.hasText(materialCode)) {
+            wrapper.eq(MaterialPurchase::getMaterialCode, materialCode);
+        } else if (StringUtils.hasText(materialName)) {
+            wrapper.eq(MaterialPurchase::getMaterialName, materialName)
+                    .eq(MaterialPurchase::getMaterialType, materialType);
+            if (StringUtils.hasText(specifications)) {
+                wrapper.eq(MaterialPurchase::getSpecifications, specifications);
+            }
+        } else {
+            return List.of();
+        }
+
+        wrapper.orderByAsc(MaterialPurchase::getCreateTime);
+        List<MaterialPurchase> all = materialPurchaseService.list(wrapper);
+        if (all == null || all.isEmpty()) return List.of();
+
+        // 排除指定ID
+        Set<String> excludeSet = new HashSet<>();
+        if (excludeIds != null) {
+            for (String id : excludeIds) {
+                if (StringUtils.hasText(id)) excludeSet.add(id.trim());
+            }
+        }
+
+        return all.stream()
+                .filter(p -> p != null && StringUtils.hasText(p.getId()))
+                .filter(p -> !excludeSet.contains(p.getId().trim()))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 根据一条采购任务ID，查找当天所有可合并的同款面辅料采购任务
+     * 返回：该条记录本身 + 其他可合并的pending记录
+     */
+    public Map<String, Object> checkMergeableForReceive(String purchaseId) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("currentId", purchaseId);
+        result.put("mergeableItems", List.of());
+        result.put("mergeableCount", 0);
+
+        if (!StringUtils.hasText(purchaseId)) return result;
+
+        MaterialPurchase current = materialPurchaseService.getById(purchaseId.trim());
+        if (current == null || (current.getDeleteFlag() != null && current.getDeleteFlag() != 0)) {
+            return result;
+        }
+
+        List<MaterialPurchase> mergeable = findMergeablePurchases(current, List.of(purchaseId.trim()));
+        if (mergeable.isEmpty()) return result;
+
+        // 构建简要信息返回给前端
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (MaterialPurchase p : mergeable) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", p.getId());
+            item.put("purchaseNo", p.getPurchaseNo());
+            item.put("materialCode", p.getMaterialCode());
+            item.put("materialName", p.getMaterialName());
+            item.put("materialType", p.getMaterialType());
+            item.put("specifications", p.getSpecifications());
+            item.put("purchaseQuantity", p.getPurchaseQuantity());
+            item.put("unit", p.getUnit());
+            item.put("unitPrice", p.getUnitPrice());
+            item.put("orderNo", p.getOrderNo());
+            item.put("styleNo", p.getStyleNo());
+            item.put("styleName", p.getStyleName());
+            item.put("supplierName", p.getSupplierName());
+            item.put("createTime", p.getCreateTime());
+            items.add(item);
+        }
+
+        result.put("mergeableItems", items);
+        result.put("mergeableCount", items.size());
+        return result;
     }
 
     /* ========== 工具方法 ========== */

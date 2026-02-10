@@ -127,6 +127,64 @@
         </view>
       </view>
 
+      <!-- 延期订单 -->
+      <view wx:if="{{overdueOrders.length > 0}}" class="task-section">
+        <view class="section-title overdue">
+          <text class="section-icon">⏰</text>
+          <text>延期订单 ({{overdueOrders.length}})</text>
+        </view>
+        <!-- 延期订单统计卡片 -->
+        <view class="overdue-summary">
+          <view class="summary-item critical" wx:if="{{overdueSummary.criticalCount > 0}}">
+            <text class="summary-label">严重延期 (>7天)</text>
+            <text class="summary-value">{{overdueSummary.criticalCount}}</text>
+          </view>
+          <view class="summary-item urgent" wx:if="{{overdueSummary.urgentCount > 0}}">
+            <text class="summary-label">紧急延期 (4-7天)</text>
+            <text class="summary-value">{{overdueSummary.urgentCount}}</text>
+          </view>
+          <view class="summary-item warning" wx:if="{{overdueSummary.warningCount > 0}}">
+            <text class="summary-label">轻度延期 (1-3天)</text>
+            <text class="summary-value">{{overdueSummary.warningCount}}</text>
+          </view>
+        </view>
+        <!-- 延期订单列表 -->
+        <view
+          wx:for="{{overdueOrders}}"
+          wx:key="id"
+          class="task-item overdue-item {{item.overdueLevel}}"
+          bindtap="onTaskClick"
+          data-task="{{item}}"
+          data-type="overdue"
+        >
+          <view class="task-main">
+            <view class="task-header">
+              <view class="task-title">{{item.orderNo}}</view>
+              <view class="overdue-badge {{item.overdueLevel}}">{{item.overdueText}}</view>
+            </view>
+            <view class="task-desc">
+              <text>款号: {{item.styleNo}}</text>
+              <text class="task-desc-sep">·</text>
+              <text>{{item.factoryName}}</text>
+            </view>
+            <view class="task-meta">
+              <text>工序: {{item.currentProcessName}}</text>
+              <text class="task-desc-sep">·</text>
+              <text>完成: {{item.completedQuantity}}/{{item.orderQuantity}} ({{item.completionRate}}%)</text>
+            </view>
+            <view class="task-progress">
+              <view class="progress-bar">
+                <view class="progress-fill" style="width: {{item.completionRate}}%"></view>
+              </view>
+            </view>
+          </view>
+          <view class="task-action">
+            <text class="action-text">查看</text>
+            <text class="action-arrow">›</text>
+          </view>
+        </view>
+      </view>
+
       <!-- 超时提醒 -->
       <view wx:if="{{timeoutReminders.length > 0}}" class="task-section">
         <view class="section-title timeout">

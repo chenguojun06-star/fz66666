@@ -6,8 +6,11 @@ import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
 import com.fashion.supplychain.finance.helper.OrderReconciliationApprovalHelper;
 import com.fashion.supplychain.finance.service.MaterialReconciliationService;
 import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
+import com.fashion.supplychain.integration.openapi.service.WebhookPushService;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
@@ -32,6 +35,9 @@ public class ReconciliationStatusOrchestrator {
 
     @Autowired
     private OrderReconciliationApprovalHelper orderReconciliationApprovalHelper;
+
+    @Autowired(required = false)
+    private WebhookPushService webhookPushService;
 
     public String updateMaterialStatus(String id, String status) {
         return updateStatus(Scope.MATERIAL, id, status);
@@ -173,6 +179,19 @@ public class ReconciliationStatusOrchestrator {
                     } catch (Exception e) {
                         log.error("创建订单结算审批付款记录失败: reconciliationId={}, error={}", rid, e.getMessage(), e);
                         // 不影响主流程，仅记录错误
+                    }
+                    // 异步推送对账审批通过给已对接客户
+                    if (webhookPushService != null) {
+                        try {
+                            BigDecimal amount = sr.getFinalAmount() != null ? sr.getFinalAmount() : BigDecimal.ZERO;
+                            String orderNo = sr.getOrderNo() != null ? sr.getOrderNo() : "";
+                            webhookPushService.pushReconciliationCreated(
+                                orderNo, rid, amount,
+                                Map.of("status", "approved", "previousStatus", from)
+                            );
+                        } catch (Exception e) {
+                            log.warn("Webhook推送对账审批通过失败: reconciliationId={}", rid, e);
+                        }
                     }
                 }
 

@@ -5,7 +5,7 @@
   <view class="card">
     <view class="title-row">
       <view class="title-left-group">
-        <view class="title">个人</view>
+        <view class="title">我的</view>
         <view class="logout-btn" bindtap="onLogout">
           <text class="logout-text">退出</text>
         </view>
@@ -28,6 +28,9 @@
       <view class="user-info-item">
         <text class="user-info-label">工资信息</text>
         <text class="user-info-text">{{stats && stats.totalAmount != null ? stats.totalAmount : 0}}</text>
+      </view>
+      <view class="user-info-item" bindtap="onGoToProductionDetail">
+        <text class="user-info-label">📋 生产详情</text>
       </view>
       <view class="user-info-item {{loadingStats || loadingHistory ? 'disabled' : ''}}" bindtap="refreshAll">
         <text class="user-info-label">刷新</text>

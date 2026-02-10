@@ -81,6 +81,80 @@
   --font-size-xxl: 20px;     /* 数值强调 */
 }
 
+/* ========== 深色模式 Dark Mode ========== */
+/* OS 自动应用（macOS Big Sur 风格） */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* 文本颜色 - 深色模式 */
+    --color-text-primary: #f5f5f5;
+    --color-text-secondary: #a8a8a8;
+    --color-text-tertiary: #707070;
+
+    /* 背景颜色 - 深色模式 */
+    --color-bg-base: #1a1a1a;
+    --color-bg-container: #262626;
+    --color-bg-subtle: #303030;
+    --color-bg-page: #161616;
+    --color-bg-card: #1f1f1f;
+
+    /* 边框 - 深色模式 */
+    --color-border: #404040;
+    --color-border-light: #2a2a2a;
+
+    /* 主色调适配 - 深色模式下更亮 */
+    --color-primary: #5B9CFA;
+    --color-primary-light: #7CB3FB;
+    --color-primary-dark: #4A8BE9;
+
+    /* 功能色适配 - 深色模式下提高亮度 */
+    --color-success: #22c55e;
+    --color-warning: #eab308;
+    --color-danger: #ef4444;
+    --color-info: #06b6d4;
+
+    /* 玻璃拟态 - 深色模式 */
+    --glass-bg: rgba(26, 26, 26, 0.75);
+    --glass-border: rgba(255, 255, 255, 0.1);
+
+    /* 阴影系统 - 深色模式（更柔和） */
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.4);
+    --shadow-base: 0 4px 12px rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.6);
+    --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.7);
+    --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.8);
+  }
+}
+
+/* 用户手动切换深色模式 */
+html.dark-mode {
+  --color-text-primary: #f5f5f5;
+  --color-text-secondary: #a8a8a8;
+  --color-text-tertiary: #707070;
+  --color-bg-base: #1a1a1a;
+  --color-bg-container: #262626;
+  --color-bg-subtle: #303030;
+  --color-bg-page: #161616;
+  --color-bg-card: #1f1f1f;
+  --color-border: #404040;
+  --color-border-light: #2a2a2a;
+  --color-primary: #5B9CFA;
+  --color-primary-light: #7CB3FB;
+  --color-primary-dark: #4A8BE9;
+  --color-success: #22c55e;
+  --color-warning: #eab308;
+  --color-danger: #ef4444;
+  --color-info: #06b6d4;
+  --glass-bg: rgba(26, 26, 26, 0.75);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.4);
+  --shadow-base: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.7);
+  --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.8);
+}
+
 /* ========== 2. 按钮系统（胶囊形统一规范） ========== */
 .btn-pill {
   display: inline-flex;

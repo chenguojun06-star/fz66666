@@ -99,8 +99,8 @@ const OrderCuttingChart: React.FC = () => {
       data: ['下单数量', '裁剪数量'],
       top: 5,
       textStyle: {
-        fontSize: "var(--font-size-sm)",
-        color: 'var(--neutral-text-secondary)',
+        fontSize: 13,
+        color: '#666',
       },
     },
     grid: {
@@ -116,12 +116,12 @@ const OrderCuttingChart: React.FC = () => {
       data: data.dates,
       axisLine: {
         lineStyle: {
-          color: 'var(--neutral-border)',
+          color: '#e5e7eb',
         },
       },
       axisLabel: {
-        color: 'var(--neutral-text-secondary)',
-        fontSize: "var(--font-size-xs)",
+        color: '#999',
+        fontSize: 12,
       },
     },
     yAxis: {
@@ -133,13 +133,13 @@ const OrderCuttingChart: React.FC = () => {
         show: false,
       },
       axisLabel: {
-        color: 'var(--neutral-text-secondary)',
-        fontSize: "var(--font-size-xs)",
+        color: '#999',
+        fontSize: 12,
         formatter: (value: number) => value.toLocaleString(),
       },
       splitLine: {
         lineStyle: {
-          color: 'var(--neutral-border)',
+          color: '#f0f0f0',
         },
       },
     },
@@ -150,7 +150,7 @@ const OrderCuttingChart: React.FC = () => {
         smooth: true,
         data: data.orderQuantities,
         lineStyle: {
-          width: 3,
+          width: 2,
           color: '#6366f1', // 紫色
         },
         itemStyle: {
@@ -176,7 +176,7 @@ const OrderCuttingChart: React.FC = () => {
         smooth: true,
         data: data.cuttingQuantities,
         lineStyle: {
-          width: 3,
+          width: 2,
           color: '#f59e0b', // 橙色
         },
         itemStyle: {

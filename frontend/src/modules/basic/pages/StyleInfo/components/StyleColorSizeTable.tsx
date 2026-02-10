@@ -130,64 +130,64 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
         {/* 表格和快捷标签 */}
         <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
           {/* 左侧：表格 */}
-          <table style={{ borderCollapse: 'collapse', border: '1px solid #d9d9d9' }}>
+          <table style={{ borderCollapse: 'collapse', border: '1px solid var(--color-border)' }}>
             <tbody>
               {/* 码数行 */}
               <tr>
-                <td style={{ padding: '4px 8px', border: '1px solid #d9d9d9', background: '#fafafa', fontWeight: 500, whiteSpace: 'nowrap' }}>码数</td>
-                <td style={{ padding: '2px 4px', border: '1px solid #d9d9d9', whiteSpace: 'nowrap' }}>
+                <td style={{ padding: '4px 8px', border: '1px solid var(--color-border)', background: 'var(--color-bg-container)', fontWeight: 500, whiteSpace: 'nowrap' }}>码数</td>
+                <td style={{ padding: '2px 4px', border: '1px solid var(--color-border)', whiteSpace: 'nowrap' }}>
                   <DictAutoComplete dictType="size" size="small" value={size1} onChange={setSize1} style={{ width: '80px', textAlign: 'center' }} disabled={isFieldLocked(size1)} />
                 </td>
-                <td style={{ padding: '2px 4px', border: '1px solid #d9d9d9', whiteSpace: 'nowrap' }}>
+                <td style={{ padding: '2px 4px', border: '1px solid var(--color-border)', whiteSpace: 'nowrap' }}>
                   <DictAutoComplete dictType="size" size="small" value={size2} onChange={setSize2} style={{ width: '80px', textAlign: 'center' }} disabled={isFieldLocked(size2)} />
                 </td>
-                <td style={{ padding: '2px 4px', border: '1px solid #d9d9d9', whiteSpace: 'nowrap' }}>
+                <td style={{ padding: '2px 4px', border: '1px solid var(--color-border)', whiteSpace: 'nowrap' }}>
                   <DictAutoComplete dictType="size" size="small" value={size3} onChange={setSize3} style={{ width: '80px', textAlign: 'center' }} disabled={isFieldLocked(size3)} />
                 </td>
-                <td style={{ padding: '2px 4px', border: '1px solid #d9d9d9', whiteSpace: 'nowrap' }}>
+                <td style={{ padding: '2px 4px', border: '1px solid var(--color-border)', whiteSpace: 'nowrap' }}>
                   <DictAutoComplete dictType="size" size="small" value={size4} onChange={setSize4} style={{ width: '80px', textAlign: 'center' }} disabled={isFieldLocked(size4)} />
                 </td>
-                <td style={{ padding: '2px 4px', border: '1px solid #d9d9d9', whiteSpace: 'nowrap' }}>
+                <td style={{ padding: '2px 4px', border: '1px solid var(--color-border)', whiteSpace: 'nowrap' }}>
                   <DictAutoComplete dictType="size" size="small" value={size5} onChange={setSize5} style={{ width: '80px', textAlign: 'center' }} disabled={isFieldLocked(size5)} />
                 </td>
               </tr>
 
               {/* 颜色行 */}
               <tr>
-                <td style={{ padding: '4px 8px', border: '1px solid #d9d9d9', background: '#fafafa', fontWeight: 500, whiteSpace: 'nowrap', color: 'var(--error-color)' }}>颜色</td>
-                <td style={{ padding: '2px 4px', border: '1px solid #d9d9d9', whiteSpace: 'nowrap' }}>
+                <td style={{ padding: '4px 8px', border: '1px solid var(--color-border)', background: 'var(--color-bg-container)', fontWeight: 500, whiteSpace: 'nowrap', color: 'var(--error-color)' }}>颜色</td>
+                <td style={{ padding: '2px 4px', border: '1px solid var(--color-border)', whiteSpace: 'nowrap' }}>
                   <DictAutoComplete dictType="color" size="small" value={color1} onChange={setColor1} style={{ width: '80px', textAlign: 'center' }} disabled={isFieldLocked(color1)} />
                 </td>
-                <td style={{ padding: '2px 4px', border: '1px solid #d9d9d9', whiteSpace: 'nowrap' }}>
+                <td style={{ padding: '2px 4px', border: '1px solid var(--color-border)', whiteSpace: 'nowrap' }}>
                   <DictAutoComplete dictType="color" size="small" value={color2} onChange={setColor2} style={{ width: '80px', textAlign: 'center' }} disabled={isFieldLocked(color2)} />
                 </td>
-                <td style={{ padding: '2px 4px', border: '1px solid #d9d9d9', whiteSpace: 'nowrap' }}>
+                <td style={{ padding: '2px 4px', border: '1px solid var(--color-border)', whiteSpace: 'nowrap' }}>
                   <DictAutoComplete dictType="color" size="small" value={color3} onChange={setColor3} style={{ width: '80px', textAlign: 'center' }} disabled={isFieldLocked(color3)} />
                 </td>
-                <td style={{ padding: '2px 4px', border: '1px solid #d9d9d9', whiteSpace: 'nowrap' }}>
+                <td style={{ padding: '2px 4px', border: '1px solid var(--color-border)', whiteSpace: 'nowrap' }}>
                   <DictAutoComplete dictType="color" size="small" value={color4} onChange={setColor4} style={{ width: '80px', textAlign: 'center' }} disabled={isFieldLocked(color4)} />
                 </td>
-                <td style={{ padding: '2px 4px', border: '1px solid #d9d9d9', whiteSpace: 'nowrap' }}>
+                <td style={{ padding: '2px 4px', border: '1px solid var(--color-border)', whiteSpace: 'nowrap' }}>
                   <DictAutoComplete dictType="color" size="small" value={color5} onChange={setColor5} style={{ width: '80px', textAlign: 'center' }} disabled={isFieldLocked(color5)} />
                 </td>
               </tr>
 
               {/* 数量行 */}
               <tr>
-                <td style={{ padding: '4px 8px', border: '1px solid #d9d9d9', background: '#fafafa', fontWeight: 500, whiteSpace: 'nowrap', color: 'var(--error-color)' }}>数量</td>
-                <td style={{ padding: '2px 4px', border: '1px solid #d9d9d9', whiteSpace: 'nowrap' }}>
+                <td style={{ padding: '4px 8px', border: '1px solid var(--color-border)', background: 'var(--color-bg-container)', fontWeight: 500, whiteSpace: 'nowrap', color: 'var(--error-color)' }}>数量</td>
+                <td style={{ padding: '2px 4px', border: '1px solid var(--color-border)', whiteSpace: 'nowrap' }}>
                   <InputNumber size="small" value={qty1} onChange={(val) => setQty1(val || 0)} style={{ width: '80px' }} min={0} disabled={isFieldLocked(qty1)} />
                 </td>
-                <td style={{ padding: '2px 4px', border: '1px solid #d9d9d9', whiteSpace: 'nowrap' }}>
+                <td style={{ padding: '2px 4px', border: '1px solid var(--color-border)', whiteSpace: 'nowrap' }}>
                   <InputNumber size="small" value={qty2} onChange={(val) => setQty2(val || 0)} style={{ width: '80px' }} min={0} disabled={isFieldLocked(qty2)} />
                 </td>
-                <td style={{ padding: '2px 4px', border: '1px solid #d9d9d9', whiteSpace: 'nowrap' }}>
+                <td style={{ padding: '2px 4px', border: '1px solid var(--color-border)', whiteSpace: 'nowrap' }}>
                   <InputNumber size="small" value={qty3} onChange={(val) => setQty3(val || 0)} style={{ width: '80px' }} min={0} disabled={isFieldLocked(qty3)} />
                 </td>
-                <td style={{ padding: '2px 4px', border: '1px solid #d9d9d9', whiteSpace: 'nowrap' }}>
+                <td style={{ padding: '2px 4px', border: '1px solid var(--color-border)', whiteSpace: 'nowrap' }}>
                   <InputNumber size="small" value={qty4} onChange={(val) => setQty4(val || 0)} style={{ width: '80px' }} min={0} disabled={isFieldLocked(qty4)} />
                 </td>
-                <td style={{ padding: '2px 4px', border: '1px solid #d9d9d9', whiteSpace: 'nowrap' }}>
+                <td style={{ padding: '2px 4px', border: '1px solid var(--color-border)', whiteSpace: 'nowrap' }}>
                   <InputNumber size="small" value={qty5} onChange={(val) => setQty5(val || 0)} style={{ width: '80px' }} min={0} disabled={isFieldLocked(qty5)} />
                 </td>
               </tr>

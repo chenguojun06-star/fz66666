@@ -54,24 +54,24 @@ export interface QRCodeBoxProps {
 const variantStyles = {
   primary: {
     background: '#e6f7ff',
-    borderColor: '#1890ff',
+    borderColor: 'var(--color-primary)',
     boxShadow: '0 4px 12px rgba(24, 144, 255, 0.15)',
     labelColor: '#1890ff',
   },
   default: {
-    background: '#fafafa',
-    borderColor: '#d9d9d9',
+    background: 'var(--color-bg-container)',
+    borderColor: 'var(--color-border)',
     boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
     labelColor: '#595959',
   },
   success: {
-    background: '#f6ffed',
+    background: 'rgba(34, 197, 94, 0.15)',
     borderColor: '#52c41a',
     boxShadow: '0 4px 12px rgba(82, 196, 26, 0.15)',
     labelColor: '#52c41a',
   },
   warning: {
-    background: '#fffbe6',
+    background: 'rgba(234, 179, 8, 0.15)',
     borderColor: '#faad14',
     boxShadow: '0 4px 12px rgba(250, 173, 20, 0.15)',
     labelColor: '#faad14',

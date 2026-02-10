@@ -19,36 +19,48 @@
     <view wx:if="{{loading}}" class="hint">加载中...</view>
     <view wx:if="{{!loading && !statsLoaded}}" class="hint">暂无统计</view>
     <view class="home-section-title">数据概览</view>
-    <view class="home-stats-row">
-      <view class="home-stat-item">
-        <view class="home-stat-left">
-          <text class="home-stat-emoji">📋</text>
-          <text class="home-stat-label">生产</text>
+    <view class="home-stats-grid">
+      <view class="home-stat-card">
+        <text class="stat-card-emoji">📋</text>
+        <text class="stat-card-label">订单数量</text>
+        <view class="stat-card-dual">
+          <view class="stat-dual-row">
+            <text class="stat-dual-label">总数</text>
+            <text class="stat-dual-value">{{stats.productionOrders}}</text>
+          </view>
+          <view class="stat-dual-row">
+            <text class="stat-dual-label">件数</text>
+            <text class="stat-dual-value">{{stats.orderQuantityTotal}}</text>
+          </view>
         </view>
-        <text class="home-stat-value">{{stats.productionOrders}}</text>
       </view>
-      <view class="home-stat-item">
-        <view class="home-stat-left">
-          <text class="home-stat-emoji">📥</text>
-          <text class="home-stat-label">入库</text>
+      <view class="home-stat-card">
+        <text class="stat-card-emoji">⚙️</text>
+        <text class="stat-card-label">扫码数量</text>
+        <view class="stat-card-dual">
+          <view class="stat-dual-row">
+            <text class="stat-dual-label">日</text>
+            <text class="stat-dual-value">{{stats.todayScanCount}}</text>
+          </view>
+          <view class="stat-dual-row">
+            <text class="stat-dual-label">总</text>
+            <text class="stat-dual-value">{{stats.totalScanCount}}</text>
+          </view>
         </view>
-        <text class="home-stat-value">{{stats.warehousingToday}}</text>
       </view>
-    </view>
-    <view class="home-stats-row">
-      <view class="home-stat-item">
-        <view class="home-stat-left">
-          <text class="home-stat-emoji">🛒</text>
-          <text class="home-stat-label">采购</text>
+      <view class="home-stat-card">
+        <text class="stat-card-emoji">📥</text>
+        <text class="stat-card-label">入库数量</text>
+        <view class="stat-card-dual">
+          <view class="stat-dual-row">
+            <text class="stat-dual-label">日</text>
+            <text class="stat-dual-value">{{stats.warehousingToday}}</text>
+          </view>
+          <view class="stat-dual-row">
+            <text class="stat-dual-label">总</text>
+            <text class="stat-dual-value">{{stats.totalWarehousingCount}}</text>
+          </view>
         </view>
-        <text class="home-stat-value">{{stats.materialPurchase}}</text>
-      </view>
-      <view class="home-stat-item">
-        <view class="home-stat-left">
-          <text class="home-stat-emoji">⚠️</text>
-          <text class="home-stat-label">次品</text>
-        </view>
-        <text class="home-stat-value">{{stats.defectCount}}</text>
       </view>
     </view>
 
@@ -58,7 +70,7 @@
       <view class="home-entry" data-tab="warehousing" bindtap="goWork">入库</view>
       <view class="home-entry" data-tab="exceptions" bindtap="goWork">异常</view>
       <view class="home-entry" bindtap="goScan">扫码</view>
-      <view class="home-entry" bindtap="goAdmin">个人</view>
+      <view class="home-entry" bindtap="goAdmin">我的</view>
     </view>
 
     <view class="home-section-title">最近动态</view>

@@ -26,7 +26,12 @@
 
 const QRCodeParser = require('../services/QRCodeParser');
 const StageDetector = require('../services/StageDetector');
+const PatternScanProcessor = require('./PatternScanProcessor');
 
+/**
+ * 扫码业务编排器
+ * 编排整个扫码业务流程（解析 → 验证 → 检测工序 → 提交）
+ */
 class ScanHandler {
   /**
    * 构造函数
@@ -76,6 +81,8 @@ class ScanHandler {
    */
   /**
    * 解析手动输入参数
+   * @param {Object|number|null} input - 手动输入参数
+   * @returns {Object} 解析结果 { manualQuantity, manualScanType, manualWarehouse }
    */
   _parseManualInput(input) {
     let manualQuantity = null;
@@ -97,6 +104,8 @@ class ScanHandler {
 
   /**
    * 确定扫码模式
+   * @param {Object} parsedData - 解析后的二维码数据
+   * @returns {string} 扫码模式（bundle/order/sku/pattern）
    */
   _determineScanMode(parsedData) {
     if (parsedData.isPatternQR) {
@@ -113,16 +122,17 @@ class ScanHandler {
 
   /**
    * 处理采购模式扫码
+   * @param {Object} parsedData - 解析后的二维码数据
+   * @param {Object} orderDetail - 订单详情
+   * @returns {Promise<Object>} 扫码结果
    */
   async _handleProcurementMode(parsedData, orderDetail) {
-    // console.log('[ScanHandler] 检测到采购模式，查询面料采购单');
 
     try {
       const materialPurchases = await this.api.production.getMaterialPurchases({
         orderNo: parsedData.orderNo,
       });
 
-      // console.log('[ScanHandler] 发现面料采购单:', materialPurchases?.length || 0);
 
       return {
         success: true,
@@ -144,9 +154,11 @@ class ScanHandler {
 
   /**
    * 处理订单扫码（有SKU明细）
+   * @param {Object} parsedData - 解析后的二维码数据
+   * @param {Object} orderDetail - 订单详情
+   * @returns {Promise<Object>} 扫码结果
    */
   async _handleOrderWithItems(parsedData, orderDetail) {
-    // console.log('[ScanHandler] 发现订单明细:', orderDetail.items.length);
 
     // 预判工序
     let nextStage = '未知';
@@ -156,18 +168,15 @@ class ScanHandler {
         nextStage = stageRes.progressStage;
       }
     } catch (e) {
-      console.warn('[ScanHandler] 预判工序失败:', e);
     }
 
     // 补救措施：如果预判是采购工序，补查采购单
     let materialPurchases = [];
     if (nextStage === '采购') {
       try {
-        // console.log('[ScanHandler] 预判为采购工序，补查面料采购单');
         materialPurchases = await this.api.production.getMaterialPurchases({
           orderNo: parsedData.orderNo,
         });
-        // console.log('[ScanHandler] 补获面料采购单:', materialPurchases?.length || 0);
       } catch (e) {
         console.error('[ScanHandler] 补获采购单失败:', e);
       }
@@ -190,6 +199,9 @@ class ScanHandler {
   /**
    * 处理SKU模式的数量获取
    * @private
+   * @param {Object} parsedData - 解析后的数据
+   * @param {Object} orderDetail - 订单详情
+   * @returns {Promise<void>} 异步处理SKU数量
    */
   async _handleSKUQuantity(parsedData, orderDetail) {
     if (parsedData.quantity) {
@@ -199,30 +211,31 @@ class ScanHandler {
     // 尝试从订单明细中找到该SKU的数量
     if (orderDetail.items && orderDetail.items.length > 0) {
       const matchedItem = orderDetail.items.find(
-        item => item.color === parsedData.color && item.size === parsedData.size
+        item => item.color === parsedData.color && item.size === parsedData.size,
       );
 
       if (matchedItem) {
         const skuQty = matchedItem.quantity || matchedItem.num;
         if (skuQty > 0) {
           parsedData.quantity = Number(skuQty);
-          // console.log('[ScanHandler] 自动使用SKU数量:', parsedData.quantity);
         }
       }
     }
 
     // 如果还是没有数量，需要用户输入
     if (!parsedData.quantity) {
-      throw {
-        needInput: true,
-        message: `请输入 ${parsedData.color}/${parsedData.size} 的数量`,
-      };
+      const err = new Error(`请输入 ${parsedData.color}/${parsedData.size} 的数量`);
+      err.needInput = true;
+      throw err;
     }
   }
 
   /**
    * 处理订单模式的数量获取
    * @private
+   * @param {Object} parsedData - 解析后的数据
+   * @param {Object} orderDetail - 订单详情
+   * @returns {void}
    */
   _handleOrderQuantity(parsedData, orderDetail) {
     if (parsedData.quantity) {
@@ -236,25 +249,27 @@ class ScanHandler {
 
     if (orderQuantity && orderQuantity > 0) {
       parsedData.quantity = Number(orderQuantity);
-      // console.log('[ScanHandler] 自动使用订单数量:', parsedData.quantity);
     } else {
-      throw {
-        needInput: true,
-        message: '请输入数量',
-      };
+      const err = new Error('请输入数量');
+      err.needInput = true;
+      throw err;
     }
   }
 
   /**
    * 处理订单扫码逻辑（包含采购和SKU明细判断）
    * @private
+   * @param {string} scanMode - 扫码模式
+   * @param {Object} parsedData - 解析后的数据
+   * @param {Object} orderDetail - 订单详情
+   * @param {string} manualScanType - 手动指定的扫码类型
+   * @returns {Promise<Object|null>} 处理结果，或 null 继续后续流程
    */
   async _processOrderScan(scanMode, parsedData, orderDetail, manualScanType) {
     if (scanMode !== this.SCAN_MODE.ORDER) {
       return null;
     }
 
-    // console.log('[ScanHandler] 订单扫码, manualScanType:', manualScanType);
 
     // 采购模式特殊处理
     const isProcurementMode =
@@ -279,6 +294,11 @@ class ScanHandler {
   /**
    * 处理工序检测（包含手动工序覆盖）
    * @private
+   * @param {string} scanMode - 扫码模式
+   * @param {Object} parsedData - 解析后的数据
+   * @param {Object} orderDetail - 订单详情
+   * @param {string} manualScanType - 手动指定的扫码类型
+   * @returns {Promise<Object>} 工序检测结果
    */
   async _processStageDetection(scanMode, parsedData, orderDetail, manualScanType) {
     let stageResult = await this._detectStage(scanMode, parsedData, orderDetail);
@@ -339,6 +359,11 @@ class ScanHandler {
   /**
    * 提交扫码并构建结果
    * @private
+   * @param {string} scanMode - 扫码模式
+   * @param {Object} parsedData - 解析后的数据
+   * @param {Object} stageResult - 工序检测结果
+   * @param {Object} scanData - 扫码数据
+   * @returns {Promise<Object>} 提交结果
    */
   async _submitAndBuildResult(scanMode, parsedData, stageResult, scanData) {
     const submitResult = await this._submitScan(scanData);
@@ -364,147 +389,163 @@ class ScanHandler {
 
   /**
    * 主扫码处理函数
+   * @param {string} rawScanCode - 原始扫码结果
+   * @param {Object|number|null} input - 手动输入参数
+   * @returns {Promise<Object>} 扫码处理结果
    */
   async handleScan(rawScanCode, input = null) {
     const { manualQuantity, manualScanType, manualWarehouse } = this._parseManualInput(input);
 
-    console.log(
-      '[ScanHandler] 处理扫码:',
-      rawScanCode,
-      manualQuantity ? `数量:${manualQuantity}` : '',
-      'scanType:',
-      manualScanType
-    );
-
     try {
       // === 步骤1：解析二维码 ===
-      const parseResult = this.qrParser.parse(rawScanCode);
-
-      if (!parseResult.success) {
-        console.warn('[ScanHandler] 解析失败:', parseResult.message);
-        return this._errorResult(parseResult.message || '无法识别的二维码格式');
+      const parsed = this._parseAndValidateQR(rawScanCode, manualQuantity);
+      if (!parsed.success) {
+        return parsed;
       }
+      const { parsedData, scanMode } = parsed;
 
-      const parsedData = parseResult.data;
-
-      // 如果手动输入了数量,覆盖解析结果
-      if (manualQuantity && manualQuantity > 0) {
-        parsedData.quantity = manualQuantity;
-      }
-
-      const scanMode = this._determineScanMode(parsedData);
-
-      console.log('[ScanHandler] 解析成功:', {
-        scanMode,
-        orderNo: parsedData.orderNo,
-        bundleNo: parsedData.bundleNo,
-        quantity: parsedData.quantity,
-        isSku: parsedData.isSkuQR,
-        isPattern: parsedData.isPatternQR,
-      });
-
-      // === 步骤1.5：样板生产模式特殊处理 ===
+      // === 步骤1.5：样板特殊处理 ===
       if (scanMode === this.SCAN_MODE.PATTERN) {
         return await this._handlePatternScan(parsedData, manualScanType);
       }
 
-      // === 步骤2：获取订单详情 ===
-      const orderDetail = await this._getOrderDetail(parsedData.orderNo);
-      if (!orderDetail) {
-        return this._errorResult('订单不存在或已删除');
+      // === 步骤2-3：获取订单 + 处理模式特殊逻辑 ===
+      const modeResult = await this._resolveOrderAndMode(scanMode, parsedData, manualScanType);
+      if (modeResult.earlyReturn) {
+        return modeResult.earlyReturn;
       }
+      const { orderDetail } = modeResult;
 
-      // 🔍 调试：打印订单详情中的关键工序字段
-      console.log('[ScanHandler] 订单详情工序信息:', {
-        currentProcessName: orderDetail.currentProcessName,
-        currentProgress: orderDetail.currentProgress,
-        progressStage: orderDetail.progressStage,
-        productionProgress: orderDetail.productionProgress,
-        isOrderQR: parsedData.isOrderQR,
-      });
-
-      // === 步骤3：处理SKU/订单模式的特殊逻辑 ===
-      try {
-        // SKU 模式：获取数量
-        if (scanMode === this.SCAN_MODE.SKU) {
-          await this._handleSKUQuantity(parsedData, orderDetail);
-        }
-
-        // 订单模式：处理采购/明细/数量
-        const orderResult = await this._processOrderScan(
-          scanMode,
-          parsedData,
-          orderDetail,
-          manualScanType
-        );
-        if (orderResult) {
-          return orderResult;
-        }
-      } catch (e) {
-        if (e.needInput) {
-          return {
-            success: false,
-            message: e.message,
-            needInput: true,
-            data: parsedData,
-          };
-        }
-        throw e;
-      }
-
-      // === 步骤4：检测工序并验证 ===
-      const stageResult = await this._processStageDetection(
-        scanMode,
-        parsedData,
-        orderDetail,
-        manualScanType
-      );
+      // === 步骤4：检测工序 ===
+      const stageResult = await this._processStageDetection(scanMode, parsedData, orderDetail, manualScanType);
 
       // === 步骤5：准备扫码数据（不提交，等待用户确认）===
       const scanData = this._prepareScanData(parsedData, stageResult, orderDetail, manualWarehouse);
 
-      // ⚠️ 2026-02-06 改进：不自动提交，返回识别结果让用户确认
-      // 用户可以切换工序，点击"领取记录"后才提交
-      return {
-        success: true,
-        needConfirmProcess: true, // 新增标记：需要用户确认工序
-        message: '已识别工序，请确认后领取',
-        data: {
-          scanMode,
-          orderNo: parsedData.orderNo,
-          bundleNo: parsedData.bundleNo,
-          quantity: stageResult.quantity || parsedData.quantity,
-          processName: stageResult.processName,
-          progressStage: stageResult.progressStage,
-          scanType: stageResult.scanType,
-          qualityStage: stageResult.qualityStage,
-          // 保存完整数据用于后续提交
-          scanData: scanData,
-          orderDetail: orderDetail,
-          stageResult: stageResult,
-          parsedData: parsedData,
-        },
-      };
+      return this._buildConfirmResult({ scanMode, parsedData, stageResult, scanData, orderDetail });
     } catch (e) {
-      // 入库工序特殊处理：重新抛出让页面捕获
-      if (e.needWarehousing) {
-        throw e;
-      }
-
-      // 已入库完成：重新抛出让页面显示成功提示
-      if (e.isCompleted) {
-        throw e;
-      }
-
-      console.error('[ScanHandler] 扫码处理异常:', e);
-      const errorMsg = e.message || '扫码失败，请重试';
-
-      if (this.options.onError) {
-        this.options.onError(errorMsg);
-      }
-
-      return this._errorResult(errorMsg);
+      return this._handleScanError(e);
     }
+  }
+
+  /**
+   * 解析并验证二维码
+   * @private
+   * @param {string} rawScanCode - 原始扫码结果
+   * @param {number|null} manualQuantity - 手动数量
+   * @returns {Object} 解析结果 { success, parsedData, scanMode } 或错误结果
+   */
+  _parseAndValidateQR(rawScanCode, manualQuantity) {
+    const parseResult = this.qrParser.parse(rawScanCode);
+
+    if (!parseResult.success) {
+      return this._errorResult(parseResult.message || '无法识别的二维码格式');
+    }
+
+    const parsedData = parseResult.data;
+
+    if (manualQuantity && manualQuantity > 0) {
+      parsedData.quantity = manualQuantity;
+    }
+
+    const scanMode = this._determineScanMode(parsedData);
+
+    return { success: true, parsedData, scanMode };
+  }
+
+  /**
+   * 获取订单详情并处理各扫码模式的特殊逻辑
+   * @private
+   * @param {string} scanMode - 扫码模式
+   * @param {Object} parsedData - 解析后的数据
+   * @param {string} manualScanType - 手动扫码类型
+   * @returns {Promise<Object>} 结果 { orderDetail, earlyReturn? }
+   */
+  async _resolveOrderAndMode(scanMode, parsedData, manualScanType) {
+    const orderDetail = await this._getOrderDetail(parsedData.orderNo);
+    if (!orderDetail) {
+      return { earlyReturn: this._errorResult('订单不存在或已删除') };
+    }
+
+    try {
+      if (scanMode === this.SCAN_MODE.SKU) {
+        await this._handleSKUQuantity(parsedData, orderDetail);
+      }
+
+      const orderResult = await this._processOrderScan(scanMode, parsedData, orderDetail, manualScanType);
+      if (orderResult) {
+        return { earlyReturn: orderResult, orderDetail };
+      }
+    } catch (e) {
+      if (e.needInput) {
+        return {
+          earlyReturn: {
+            success: false,
+            message: e.message,
+            needInput: true,
+            data: parsedData,
+          },
+        };
+      }
+      throw e;
+    }
+
+    return { orderDetail };
+  }
+
+  /**
+   * 构建需要用户确认的返回结果
+   * @private
+   * @param {Object} params - 参数对象
+   * @param {string} params.scanMode - 扫码模式
+   * @param {Object} params.parsedData - 解析后的数据
+   * @param {Object} params.stageResult - 工序检测结果
+   * @param {Object} params.scanData - 扫码数据
+   * @param {Object} params.orderDetail - 订单详情
+   * @returns {Object} 确认结果
+   */
+  _buildConfirmResult({ scanMode, parsedData, stageResult, scanData, orderDetail }) {
+    return {
+      success: true,
+      needConfirmProcess: true,
+      message: '已识别工序，请确认后领取',
+      data: {
+        scanMode,
+        orderNo: parsedData.orderNo,
+        bundleNo: parsedData.bundleNo,
+        quantity: stageResult.quantity || parsedData.quantity,
+        processName: stageResult.processName,
+        progressStage: stageResult.progressStage,
+        scanType: stageResult.scanType,
+        qualityStage: stageResult.qualityStage,
+        scanData: scanData,
+        orderDetail: orderDetail,
+        stageResult: stageResult,
+        parsedData: parsedData,
+      },
+    };
+  }
+
+  /**
+   * 统一处理扫码异常
+   * @private
+   * @param {Error} e - 异常对象
+   * @returns {Object} 错误结果
+   */
+  _handleScanError(e) {
+    // 入库/已完成工序特殊处理：重新抛出让页面捕获
+    if (e.needWarehousing || e.isCompleted) {
+      throw e;
+    }
+
+    console.error('[ScanHandler] 扫码处理异常:', e);
+    const errorMsg = e.message || '扫码失败，请重试';
+
+    if (this.options.onError) {
+      this.options.onError(errorMsg);
+    }
+
+    return this._errorResult(errorMsg);
   }
 
   /**
@@ -538,11 +579,11 @@ class ScanHandler {
         parsedData.orderNo,
         parsedData.bundleNo,
         parsedData.quantity,
-        orderDetail
+        orderDetail,
       );
     } else {
-      // 订单模式：使用订单当前进度判断
-      return this.stageDetector.detectNextStage(orderDetail);
+      // 订单模式：使用订单当前进度判断（支持动态工序配置）
+      return await this.stageDetector.detectNextStage(orderDetail);
     }
   }
 
@@ -579,6 +620,7 @@ class ScanHandler {
    * @param {Object} parsedData - 解析后的数据
    * @param {Object} stageResult - 工序检测结果
    * @param {Object} orderDetail - 订单详情
+   * @param {string} warehouse - 仓库名称
    * @returns {Object} 扫码数据对象
    */
   _prepareScanData(parsedData, stageResult, orderDetail, warehouse) {
@@ -624,6 +666,12 @@ class ScanHandler {
     };
   }
 
+  /**
+   * 解析手动指定的工序类型
+   * @private
+   * @param {string} scanType - 扫码类型字符串
+   * @returns {Object|null} 工序信息或 null
+   */
   _resolveManualStage(scanType) {
     const st = String(scanType || '').trim();
     if (!st || st === 'auto') {
@@ -812,10 +860,9 @@ class ScanHandler {
    * - 今日扫码数量
    * - 最近扫码记录
    *
-   * @param {string} workerName - 工人姓名
    * @returns {Promise<Object>} 统计信息
    */
-  async getScanStatistics(_workerName) {
+  async getScanStatistics() {
     try {
       const today = new Date();
       const startTime = new Date(today.setHours(0, 0, 0, 0)).toISOString();
@@ -846,111 +893,17 @@ class ScanHandler {
     }
   }
 
-  // ==================== 样板生产扫码处理 ====================
+  // ==================== 样板生产扫码处理（委托 PatternScanProcessor） ====================
 
   /**
    * 处理样板生产扫码
-   * 样板生产二维码格式：{"type":"pattern","id":"xxx","styleNo":"ST001","color":"黑色"}
-   *
    * @private
-   * @param {Object} parsedData - 解析后的二维码数据
+   * @param {Object} parsedData - 解析后的数据
    * @param {string} manualScanType - 手动指定的操作类型
    * @returns {Promise<Object>} 处理结果
    */
   async _handlePatternScan(parsedData, manualScanType) {
-    const patternId = parsedData.patternId || parsedData.scanCode;
-
-    if (!patternId) {
-      return this._errorResult('无效的样板生产二维码');
-    }
-
-    /*
-    console.log('[ScanHandler] 样板生产扫码:', {
-      patternId,
-      styleNo: parsedData.styleNo,
-      color: parsedData.color,
-      manualScanType,
-    });
-    */
-
-    try {
-      // 获取样板生产详情（用于展示确认）
-      const patternDetail = await this._getPatternDetail(patternId);
-      if (!patternDetail) {
-        return this._errorResult('样板生产记录不存在');
-      }
-
-      // 确定操作类型
-      const operationType = this._determinePatternOperation(patternDetail, manualScanType);
-
-      // 返回需要确认的数据
-      return {
-        success: true,
-        needConfirm: true,
-        scanMode: this.SCAN_MODE.PATTERN,
-        data: {
-          ...parsedData,
-          patternId: patternId,
-          patternDetail: patternDetail,
-          operationType: operationType,
-          styleNo: patternDetail.styleNo || parsedData.styleNo,
-          color: patternDetail.color || parsedData.color,
-          quantity: patternDetail.quantity,
-          status: patternDetail.status,
-          designer: patternDetail.designer || parsedData.designer,
-          patternDeveloper: patternDetail.patternDeveloper || parsedData.patternDeveloper,
-        },
-        message: '请确认样板生产操作',
-      };
-    } catch (e) {
-      console.error('[ScanHandler] 样板生产扫码失败:', e);
-      return this._errorResult(e.message || '样板生产扫码失败');
-    }
-  }
-
-  /**
-   * 获取样板生产详情
-   * @private
-   */
-  async _getPatternDetail(patternId) {
-    try {
-      const res = await this.api.production.getPatternDetail(patternId);
-      return res || null;
-    } catch (e) {
-      console.error('[ScanHandler] 获取样板生产详情失败:', e);
-      return null;
-    }
-  }
-
-  /**
-   * 根据当前状态确定样板生产操作类型
-   * @private
-   */
-  _determinePatternOperation(patternDetail, manualScanType) {
-    // 如果手动指定了操作类型，优先使用
-    if (manualScanType) {
-      const typeMap = {
-        'receive': 'RECEIVE',
-        'plate': 'PLATE',
-        'followup': 'FOLLOW_UP',
-        'complete': 'COMPLETE',
-        'warehouse': 'WAREHOUSE_IN',
-      };
-      return typeMap[manualScanType] || manualScanType.toUpperCase();
-    }
-
-    // 根据当前状态自动判断
-    const status = patternDetail.status;
-    switch (status) {
-      case 'PENDING':
-        return 'RECEIVE';  // 待领取 → 领取
-      case 'IN_PROGRESS':
-        return 'PLATE';    // 制作中 → 车板
-      case 'COMPLETED':
-        return 'WAREHOUSE_IN'; // 已完成 → 入库
-      default:
-        return 'PLATE';
-    }
+    return PatternScanProcessor.handlePatternScan(this, parsedData, manualScanType);
   }
 
   /**
@@ -959,41 +912,7 @@ class ScanHandler {
    * @returns {Promise<Object>} 提交结果
    */
   async submitPatternScan(data) {
-    try {
-      const res = await this.api.production.submitPatternScan({
-        patternId: data.patternId,
-        operationType: data.operationType,
-        operatorRole: data.operatorRole || 'PLATE_WORKER',
-        remark: data.remark,
-      });
-
-      if (res) {
-        return {
-          success: true,
-          message: this._getPatternSuccessMessage(data.operationType),
-          data: res,
-        };
-      }
-      return this._errorResult('提交失败');
-    } catch (e) {
-      console.error('[ScanHandler] 提交样板扫码失败:', e);
-      return this._errorResult(e.message || '提交失败');
-    }
-  }
-
-  /**
-   * 获取样板操作成功消息
-   * @private
-   */
-  _getPatternSuccessMessage(operationType) {
-    const messages = {
-      'RECEIVE': '✅ 领取成功',
-      'PLATE': '✅ 车板扫码成功',
-      'FOLLOW_UP': '✅ 跟单扫码成功',
-      'COMPLETE': '✅ 完成确认成功',
-      'WAREHOUSE_IN': '✅ 样衣入库成功',
-    };
-    return messages[operationType] || '✅ 操作成功';
+    return PatternScanProcessor.submitPatternScan(this, data);
   }
 }
 

@@ -43,6 +43,15 @@ public class MaterialPurchaseController {
         return Result.success(materialPurchaseOrchestrator.listWithEnrichment(params));
     }
 
+    /**
+     * 获取采购任务状态统计（不受分页影响）
+     * 支持按 materialType / sourceType / orderNo 筛选
+     */
+    @GetMapping("/stats")
+    public Result<?> stats(@RequestParam Map<String, Object> params) {
+        return Result.success(materialPurchaseOrchestrator.getStatusStats(params));
+    }
+
     @GetMapping("/{id}")
     public Result<MaterialPurchase> getById(@PathVariable String id) {
         return Result.success(materialPurchaseOrchestrator.getById(id));
@@ -86,6 +95,34 @@ public class MaterialPurchaseController {
     @PostMapping("/receive")
     public Result<?> receive(@RequestBody Map<String, Object> body) {
         return Result.success(materialPurchaseOrchestrator.receive(body));
+    }
+
+    /**
+     * 检查当天是否有同款面辅料的可合并采购任务
+     * 在领取前调用，提示用户是否合并采购一键领取
+     */
+    @GetMapping("/check-mergeable")
+    public Result<?> checkMergeable(@RequestParam String purchaseId) {
+        return Result.success(materialPurchaseOrchestrator.checkMergeable(purchaseId));
+    }
+
+    /**
+     * 批量领取采购任务（合并采购一键领取）
+     * 参数：purchaseIds(数组), receiverId, receiverName
+     */
+    @PostMapping("/batch-receive")
+    public Result<?> batchReceive(@RequestBody Map<String, Object> body) {
+        return Result.success(materialPurchaseOrchestrator.batchReceive(body));
+    }
+
+    /**
+     * 智能一键领取全部（优先使用库存，不足时创建采购）
+     * 参数：orderNo(订单号), receiverId, receiverName
+     * 返回：{ outboundCount: 3, purchaseCount: 2, details: [...] }
+     */
+    @PostMapping("/smart-receive-all")
+    public Result<?> smartReceiveAll(@RequestBody Map<String, Object> body) {
+        return Result.success(materialPurchaseOrchestrator.smartReceiveAll(body));
     }
 
     /**
@@ -167,5 +204,34 @@ public class MaterialPurchaseController {
 
         materialPurchaseOrchestrator.update(purchase);
         return Result.success();
+    }
+
+    /**
+     * 智能领取预览（仅查询库存状态，不执行操作）
+     * 返回每个待采购物料的需求数量、仓库可用数量、已有出库记录
+     */
+    @GetMapping("/smart-receive-preview")
+    public Result<?> smartReceivePreview(@RequestParam String orderNo) {
+        return Result.success(materialPurchaseOrchestrator.previewSmartReceive(orderNo));
+    }
+
+    /**
+     * 仓库单项领取（从仓库出库指定物料指定数量）
+     * 参数：{ purchaseId, pickQty, receiverId, receiverName }
+     */
+    @PostMapping("/warehouse-pick")
+    public Result<?> warehousePick(@RequestBody Map<String, Object> body) {
+        return Result.success(materialPurchaseOrchestrator.warehousePickSingle(body));
+    }
+
+    /**
+     * 撤销出库单（主管以上权限）
+     * 回退库存，恢复采购任务状态
+     * 参数：{ pickingId, reason }
+     */
+    @PreAuthorize("hasAnyAuthority('MENU_MATERIAL_PURCHASE', 'ROLE_ADMIN', 'ROLE_SUPERVISOR')")
+    @PostMapping("/cancel-picking")
+    public Result<?> cancelPicking(@RequestBody Map<String, Object> body) {
+        return Result.success(materialPurchaseOrchestrator.cancelPicking(body));
     }
 }

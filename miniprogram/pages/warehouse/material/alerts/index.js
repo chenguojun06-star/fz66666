@@ -28,7 +28,6 @@ Page({
       mapped.sort((a, b) => this.getShortage(b) - this.getShortage(a));
       this.setData({ list: mapped });
     } catch (e) {
-      console.error('加载库存预警失败', e);
       wx.showToast({ title: '加载失败', icon: 'none' });
     } finally {
       this.setData({ loading: false });
@@ -98,7 +97,7 @@ Page({
           user = me;
         }
       } catch (e) {
-        console.error('获取用户信息失败', e);
+        // 获取用户信息失败静默处理
       }
     }
 

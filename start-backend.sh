@@ -5,6 +5,10 @@
 
 echo "🚀 启动后端服务..."
 
+# 固定 Java 17（Lombok 不兼容 Java 25）
+export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
+export PATH="$JAVA_HOME/bin:$PATH"
+
 # 进入后端目录
 cd "$(dirname "$0")/backend" || exit 1
 

@@ -63,6 +63,26 @@ function getUserRoleName() {
   return userInfo && userInfo.roleName ? userInfo.roleName : '';
 }
 
+// 获取用户租户ID
+function getUserTenantId() {
+  const userInfo = getUserInfo();
+  return userInfo && userInfo.tenantId ? String(userInfo.tenantId) : '';
+}
+
+// 判断是否为租户主账号
+function isTenantOwner() {
+  const userInfo = getUserInfo();
+  return userInfo && userInfo.isTenantOwner === true;
+}
+
+// 判断是否为超级管理员（无租户限制）
+function isSuperAdmin() {
+  const userInfo = getUserInfo();
+  if (!userInfo) return false;
+  const role = String(userInfo.roleCode || '').toLowerCase();
+  return !userInfo.tenantId && (role === 'admin' || role === '管理员');
+}
+
 function getStorageValue(key, fallback) {
   try {
     const v = wx.getStorageSync(key);
@@ -89,6 +109,9 @@ export {
   clearUserInfo,
   getUserRole,
   getUserRoleName,
+  getUserTenantId,
+  isTenantOwner,
+  isSuperAdmin,
   getStorageValue,
   setStorageValue,
 };

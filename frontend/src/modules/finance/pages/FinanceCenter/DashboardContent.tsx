@@ -601,7 +601,7 @@ const DashboardContent: React.FC = () => {
                 value: statData.profitRate,
                 precision: 1,
                 suffix: '%',
-                valueStyle: statData.profitRate >= 0 ? { color: '#52c41a' } : { color: '#f5222d' }
+                styles: { value: statData.profitRate >= 0 ? { color: 'var(--color-success)' } : { color: 'var(--color-danger)' } }
               },
               {
                 key: 'totalProfit',
@@ -609,7 +609,7 @@ const DashboardContent: React.FC = () => {
                 value: statData.totalProfit,
                 prefix: '¥',
                 precision: 2,
-                valueStyle: statData.totalProfit >= 0 ? { color: '#52c41a' } : { color: '#f5222d' }
+                styles: { value: statData.totalProfit >= 0 ? { color: 'var(--color-success)' } : { color: 'var(--color-danger)' } }
               },
             ]}
             columns={7}

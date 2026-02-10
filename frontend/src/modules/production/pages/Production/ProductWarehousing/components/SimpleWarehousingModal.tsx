@@ -10,6 +10,10 @@ interface SimpleWarehousingModalProps {
   orderNo: string;
   warehousingNo: string;
   warehouse: string;
+  styleNo?: string;
+  color?: string;
+  size?: string;
+  quantity?: number;
   onClose: () => void;
   onSubmit: () => void;
   setWarehouse: (val: string) => void;
@@ -22,6 +26,10 @@ const SimpleWarehousingModal: React.FC<SimpleWarehousingModalProps> = ({
   orderNo,
   warehousingNo,
   warehouse,
+  styleNo,
+  color,
+  size,
+  quantity,
   onClose,
   onSubmit,
   setWarehouse,
@@ -36,8 +44,8 @@ const SimpleWarehousingModal: React.FC<SimpleWarehousingModalProps> = ({
       okText="入库"
       cancelText="取消"
       confirmLoading={loading}
-      width={width}
-      initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
+      defaultWidth="30vw"
+      defaultHeight="40vh"
       autoFontSize={false}
       destroyOnHidden
     >
@@ -51,6 +59,26 @@ const SimpleWarehousingModal: React.FC<SimpleWarehousingModalProps> = ({
           <Col span={12}>
             <Form.Item label="质检入库号">
               <Input value={warehousingNo || '-'} disabled />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item label="款号">
+              <Input value={styleNo || '-'} disabled />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item label="颜色">
+              <Input value={color || '-'} disabled />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item label="尺码">
+              <Input value={size || '-'} disabled />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item label="数量">
+              <Input value={quantity?.toString() || '-'} disabled />
             </Form.Item>
           </Col>
           <Col span={24}>

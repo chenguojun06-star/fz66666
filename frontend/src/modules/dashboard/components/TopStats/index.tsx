@@ -14,6 +14,7 @@ interface TimeRangeStats {
   week: number;
   month: number;
   year: number;
+  total: number;
 }
 
 interface TopStatsData {
@@ -32,33 +33,35 @@ interface StatCardProps {
   loading: boolean;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ icon, label, dataKey, color, data, loading }) => {
+const StatCard: React.FC<StatCardProps> = ({ icon, label, color, data, loading }) => {
   return (
     <div className="top-stat-item" style={{ borderColor: color }}>
       <Spin spinning={loading}>
         <div className="stat-card-content">
-          {/* 头部：图标和标签 */}
+          {/* 头部：图标 + 标签 + 汇总数量 同一行 */}
           <div className="stat-header">
             <span className="stat-icon" style={{ color }}>{icon}</span>
-            <div className="stat-label" style={{ color }}>{label}</div>
+            <span className="stat-label" style={{ color }}>{label}</span>
+            <span className="stat-total" style={{ color }}>{data?.total?.toLocaleString() || 0}</span>
           </div>
 
-          {/* 数据展示：上下两行 */}
-          <div className="stat-data-container">
-            {/* 第1行：4个数量 */}
-            <div className="stat-values-row">
-              <div className="stat-value" style={{ color }}>{data?.day.toLocaleString() || 0}</div>
-              <div className="stat-value" style={{ color }}>{data?.week.toLocaleString() || 0}</div>
-              <div className="stat-value" style={{ color }}>{data?.month.toLocaleString() || 0}</div>
-              <div className="stat-value" style={{ color }}>{data?.year.toLocaleString() || 0}</div>
+          {/* 底部：日/周/月/年 文字与数量同一行 */}
+          <div className="stat-tags-row">
+            <div className="stat-tag" style={{ borderColor: `${color}33`, background: `${color}08` }}>
+              <span className="stat-tag-label" style={{ color: `${color}99` }}>日</span>
+              <span className="stat-tag-value" style={{ color }}>{data?.day?.toLocaleString() || 0}</span>
             </div>
-
-            {/* 第2行：4个时间标签 */}
-            <div className="stat-labels-row">
-              <div className="stat-time-label" style={{ color: `${color}99` }}>日</div>
-              <div className="stat-time-label" style={{ color: `${color}99` }}>周</div>
-              <div className="stat-time-label" style={{ color: `${color}99` }}>月</div>
-              <div className="stat-time-label" style={{ color: `${color}99` }}>年</div>
+            <div className="stat-tag" style={{ borderColor: `${color}33`, background: `${color}08` }}>
+              <span className="stat-tag-label" style={{ color: `${color}99` }}>周</span>
+              <span className="stat-tag-value" style={{ color }}>{data?.week?.toLocaleString() || 0}</span>
+            </div>
+            <div className="stat-tag" style={{ borderColor: `${color}33`, background: `${color}08` }}>
+              <span className="stat-tag-label" style={{ color: `${color}99` }}>月</span>
+              <span className="stat-tag-value" style={{ color }}>{data?.month?.toLocaleString() || 0}</span>
+            </div>
+            <div className="stat-tag" style={{ borderColor: `${color}33`, background: `${color}08` }}>
+              <span className="stat-tag-label" style={{ color: `${color}99` }}>年</span>
+              <span className="stat-tag-value" style={{ color }}>{data?.year?.toLocaleString() || 0}</span>
             </div>
           </div>
         </div>

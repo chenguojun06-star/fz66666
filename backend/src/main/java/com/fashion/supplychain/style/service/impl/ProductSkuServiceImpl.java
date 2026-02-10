@@ -87,7 +87,44 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
             this.updateById(sku);
             log.info("Updated stock for SKU {}: {} -> {}", skuCode, current, next);
         } else {
-            log.warn("SKU not found for stock update: {}", skuCode);
+            // SKU不存在时自动创建（入库场景）
+            if (quantity > 0) {
+                try {
+                    // skuCode 格式: styleNo-color-size
+                    String[] parts = skuCode.split("-", 3);
+                    if (parts.length >= 3) {
+                        String styleNo = parts[0];
+                        String color = parts[1];
+                        String size = parts[2];
+
+                        // 通过款号查找StyleInfo获取styleId
+                        StyleInfo style = styleInfoMapper.selectOne(
+                            new LambdaQueryWrapper<StyleInfo>()
+                                .eq(StyleInfo::getStyleNo, styleNo)
+                                .last("LIMIT 1"));
+
+                        ProductSku newSku = new ProductSku();
+                        newSku.setSkuCode(skuCode);
+                        newSku.setStyleId(style != null ? style.getId() : 0L);
+                        newSku.setStyleNo(styleNo);
+                        newSku.setColor(color);
+                        newSku.setSize(size);
+                        newSku.setStatus("ENABLED");
+                        newSku.setStockQuantity(quantity);
+                        if (style != null && style.getPrice() != null) {
+                            newSku.setSalesPrice(style.getPrice());
+                        }
+                        this.save(newSku);
+                        log.info("Auto-created SKU {} with stock {} (from warehousing)", skuCode, quantity);
+                    } else {
+                        log.warn("Invalid SKU code format for auto-create: {}", skuCode);
+                    }
+                } catch (Exception e) {
+                    log.warn("Failed to auto-create SKU {}: {}", skuCode, e.getMessage());
+                }
+            } else {
+                log.warn("SKU not found for stock update: {}", skuCode);
+            }
         }
     }
 

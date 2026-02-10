@@ -1,12 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { App, Button, Card, Form, Input, InputNumber, Select, Space, Tag, Table } from 'antd';
-import { EyeOutlined, LoginOutlined, PlusOutlined, RollbackOutlined, EditOutlined, AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
+import { EyeOutlined, PlusOutlined, EditOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
-import UniversalCardView from '@/components/common/UniversalCardView';
+import PageStatCards from '@/components/common/PageStatCards';
 import { useSync } from '@/utils/syncManager';
-import ResizableModal, {
-  useResizableModalTableScrollY,
-} from '@/components/common/ResizableModal';
+import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
@@ -15,6 +13,7 @@ import api, { compareSizeAsc, fetchProductionOrderDetail, parseProductionOrderLi
 import { QRCodeCanvas } from 'qrcode.react';
 import QRCodeBox from '@/components/common/QRCodeBox';
 import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
+import { canViewPrice } from '@/utils/sensitiveDataMask';
 import type { CuttingTask, MaterialPurchase } from '@/types/production';
 import { ProductionOrderHeader, StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
 import { formatDateTime } from '@/utils/datetime';
@@ -27,16 +26,8 @@ import StandardToolbar from '@/components/common/StandardToolbar';
 import type { Dayjs } from 'dayjs';
 import {
   ModalHeaderCard,
-  ModalField,
-  ModalPrimaryField,
-  ModalFieldRow,
-  ModalFieldGrid,
-  ModalSideLayout,
-  ModalVerticalStack,
 } from '@/components/common/ModalContentLayout';
 import '../../../styles.css';
-
-const { Option } = Select;
 
 interface CuttingBundleRow {
   id?: string;
@@ -62,10 +53,6 @@ interface StyleOption {
   styleNo: string;
   styleName?: string;
 }
-
-type CuttingPrintPageSize = 'A4' | 'A5';
-type CuttingPrintOrientation = 'portrait' | 'landscape';
-type CuttingPrintMode = 'grid' | 'single';
 
 const CuttingManagement: React.FC = () => {
   const { message, modal } = App.useApp();
@@ -140,6 +127,12 @@ const CuttingManagement: React.FC = () => {
   const [taskTotal, setTaskTotal] = useState(0);
   const [receiveTaskLoading, setReceiveTaskLoading] = useState(false);
   const [rollbackTaskLoading, setRollbackTaskLoading] = useState(false);
+
+  // 状态统计卡片
+  const [cuttingStats, setCuttingStats] = useState<{
+    totalCount: number; totalQuantity: number; pendingCount: number; receivedCount: number; bundledCount: number;
+  }>({ totalCount: 0, totalQuantity: 0, pendingCount: 0, receivedCount: 0, bundledCount: 0 });
+  const [activeStatFilter, setActiveStatFilter] = useState<'all' | 'pending' | 'received' | 'bundled'>('all');
 
   // 快速编辑状态
   const [quickEditVisible, setQuickEditVisible] = useState(false);
@@ -689,6 +682,31 @@ const CuttingManagement: React.FC = () => {
     }
   };
 
+  // 获取裁剪任务状态统计
+  const fetchCuttingStats = useCallback(async () => {
+    try {
+      const filterParams: Record<string, string> = {};
+      if (taskQuery.orderNo) filterParams.orderNo = taskQuery.orderNo;
+      if (taskQuery.styleNo) filterParams.styleNo = taskQuery.styleNo;
+      const res = await api.get<{ code: number; data: typeof cuttingStats }>('/production/cutting-task/stats', { params: filterParams });
+      if (res.code === 200 && res.data) {
+        setCuttingStats(res.data);
+      }
+    } catch (error) {
+      console.error('获取裁剪统计失败', error);
+    }
+  }, [taskQuery.orderNo, taskQuery.styleNo]);
+
+  // 点击统计卡片筛选
+  const handleStatClick = (type: 'all' | 'pending' | 'received' | 'bundled') => {
+    setActiveStatFilter(type);
+    if (type === 'all') {
+      setTaskQuery(prev => ({ ...prev, status: '', page: 1 }));
+    } else {
+      setTaskQuery(prev => ({ ...prev, status: type, page: 1 }));
+    }
+  };
+
   const fetchTasks = async () => {
     setTaskLoading(true);
     try {
@@ -737,7 +755,6 @@ const CuttingManagement: React.FC = () => {
       if (oldData !== null && newData) {
         setDataSource(newData.records);
         setTotal(newData.total);
-        // // console.log('[实时同步] 裁剪批次数据已更新', { oldCount: oldData.records.length, newCount: newData.records.length });
       }
     },
     {
@@ -752,6 +769,25 @@ const CuttingManagement: React.FC = () => {
     if (isEntryPage) return;
     fetchTasks();
   }, [isEntryPage, taskQuery]);
+
+  // 筛选条件变化时更新统计数据
+  useEffect(() => {
+    if (!isEntryPage) {
+      fetchCuttingStats();
+    }
+  }, [isEntryPage, fetchCuttingStats]);
+
+  // 同步搜索栏 status dropdown → 统计卡片高亮
+  useEffect(() => {
+    const s = (taskQuery.status || '').trim().toLowerCase();
+    if (!s) {
+      setActiveStatFilter('all');
+    } else if (s === 'pending' || s === 'received' || s === 'bundled') {
+      setActiveStatFilter(s);
+    } else {
+      setActiveStatFilter('all');
+    }
+  }, [taskQuery.status]);
 
   // 实时同步：裁剪任务列表（30秒轮询）
   useSync(
@@ -775,7 +811,7 @@ const CuttingManagement: React.FC = () => {
       if (oldData !== null && newData) {
         setTaskList(newData.records);
         setTaskTotal(newData.total);
-        // // console.log('[实时同步] 裁剪任务数据已更新', { oldCount: oldData.records.length, newCount: newData.records.length });
+        fetchCuttingStats();
       }
     },
     {
@@ -1149,6 +1185,7 @@ const CuttingManagement: React.FC = () => {
           width: 110,
           align: 'right' as const,
           render: (v: unknown) => {
+            if (!canViewPrice(user)) return '***';
             const n = Number(v);
             return Number.isFinite(n) ? n.toFixed(2) : '-';
           },
@@ -1160,6 +1197,7 @@ const CuttingManagement: React.FC = () => {
           width: 120,
           align: 'right' as const,
           render: (v: any, r: any) => {
+            if (!canViewPrice(user)) return '***';
             const raw = Number(v);
             if (Number.isFinite(raw)) return raw.toFixed(2);
             const qty = Number(r?.purchaseQuantity ?? 0) || 0;
@@ -1276,6 +1314,44 @@ const CuttingManagement: React.FC = () => {
 
           {isEntryPage ? null : (
             <Card size="small" title="裁剪任务" className="mb-sm">
+              {/* 状态统计卡片 - 点击筛选 */}
+              <PageStatCards
+                activeKey={activeStatFilter}
+                cards={[
+                  {
+                    key: 'all',
+                    items: [
+                      { label: '任务总数', value: cuttingStats.totalCount, unit: '条', color: 'var(--color-primary)' },
+                      { label: '总数量', value: cuttingStats.totalQuantity, color: 'var(--color-success)' },
+                    ],
+                    onClick: () => handleStatClick('all'),
+                    activeColor: 'var(--color-primary)',
+                    activeBg: 'rgba(45, 127, 249, 0.1)',
+                  },
+                  {
+                    key: 'pending',
+                    items: [{ label: '待领取', value: cuttingStats.pendingCount, unit: '条', color: 'var(--color-warning)' }],
+                    onClick: () => handleStatClick('pending'),
+                    activeColor: '#faad14',
+                    activeBg: '#fff7e6',
+                  },
+                  {
+                    key: 'received',
+                    items: [{ label: '已领取', value: cuttingStats.receivedCount, unit: '条', color: 'var(--color-primary)' }],
+                    onClick: () => handleStatClick('received'),
+                    activeColor: 'var(--color-primary)',
+                    activeBg: 'rgba(45, 127, 249, 0.1)',
+                  },
+                  {
+                    key: 'bundled',
+                    items: [{ label: '已完成', value: cuttingStats.bundledCount, unit: '条', color: 'var(--color-success)' }],
+                    onClick: () => handleStatClick('bundled'),
+                    activeColor: '#52c41a',
+                    activeBg: 'rgba(34, 197, 94, 0.15)',
+                  },
+                ]}
+              />
+
               <StandardToolbar
                 left={(
                   <StandardSearchBar
@@ -1728,11 +1804,11 @@ const CuttingManagement: React.FC = () => {
                     onChange={(v) => setPrintConfig((p) => ({ ...p, paperSize: v as '7x4' | '10x5' }))}
                   />
                   <span style={{ fontWeight: 600, fontSize: 'var(--font-size-base)', marginLeft: 16 }}>二维码大小</span>
-                  <InputNumber 
-                    min={60} 
-                    max={150} 
-                    value={printConfig.qrSize} 
-                    onChange={(v) => setPrintConfig((p) => ({ ...p, qrSize: Math.max(60, Number(v) || 84) }))} 
+                  <InputNumber
+                    min={60}
+                    max={150}
+                    value={printConfig.qrSize}
+                    onChange={(v) => setPrintConfig((p) => ({ ...p, qrSize: Math.max(60, Number(v) || 84) }))}
                     addonAfter="px"
                     style={{ width: 120 }}
                   />
@@ -1740,7 +1816,7 @@ const CuttingManagement: React.FC = () => {
                 </div>
 
                 {/* 预览区域 - 单张滚动显示，模拟真实打印效果 */}
-                <div 
+                <div
                   style={{
                     padding: '12px 16px',
                     background: 'var(--primary-color)',
@@ -1754,7 +1830,7 @@ const CuttingManagement: React.FC = () => {
                 >
                   共 {printBundles.length} 张菲号标签，实际尺寸：{printConfig.paperSize === '7x4' ? '7cm × 4cm' : '10cm × 5cm'}（一页一张，居中显示）
                 </div>
-                <div 
+                <div
                   style={{
                     padding: '10px 16px',
                     background: '#d4edda',
@@ -1772,21 +1848,21 @@ const CuttingManagement: React.FC = () => {
                   <div>• 每张标签独占一页，居中显示，方便裁剪</div>
                   <div>• 建议使用专用标签打印机或A4纸打印后裁剪</div>
                 </div>
-                <div 
+                <div
                   style={{
                     maxHeight: 'calc(85vh - 310px)',
                     overflowY: 'auto',
                     padding: '16px',
-                    background: '#f5f5f5',
+                    background: 'var(--color-bg-subtle)',
                   }}
                 >
                   {printBundles.map((b, idx) => {
                     const paperRatio = printConfig.paperSize === '7x4' ? (70 / 40) : (100 / 50);
                     const previewWidth = 280; // 预览宽度固定280px
                     const previewHeight = previewWidth / paperRatio;
-                    
+
                     return (
-                      <div 
+                      <div
                         key={b.id || `${b.qrCode || ''}-${idx}`}
                         style={{
                           width: `${previewWidth}px`,
@@ -1800,10 +1876,10 @@ const CuttingManagement: React.FC = () => {
                           padding: '8px',
                         }}
                       >
-                        <div style={{ 
-                          width: '100%', 
-                          height: '100%', 
-                          border: '1px solid #000', 
+                        <div style={{
+                          width: '100%',
+                          height: '100%',
+                          border: '1px solid #000',
                           padding: '6px',
                           display: 'flex',
                           gap: '6px',
@@ -1811,9 +1887,9 @@ const CuttingManagement: React.FC = () => {
                           <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center' }}>
                             {b.qrCode ? <QRCodeCanvas value={b.qrCode} size={Math.min(previewHeight - 20, printConfig.qrSize)} includeMargin /> : null}
                           </div>
-                          <div style={{ 
-                            flex: '1 1 auto', 
-                            fontSize: '11px', 
+                          <div style={{
+                            flex: '1 1 auto',
+                            fontSize: '11px',
                             lineHeight: '1.3',
                             display: 'flex',
                             flexDirection: 'column',

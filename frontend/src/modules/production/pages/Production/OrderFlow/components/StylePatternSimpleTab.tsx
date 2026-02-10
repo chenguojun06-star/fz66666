@@ -18,7 +18,6 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
 
   // 调试：打印styleId
   React.useEffect(() => {
-    // console.log('StylePatternSimpleTab - styleId:', styleId, 'styleNo:', styleNo);
   }, [styleId, styleNo]);
 
   const fetchAllPatternFiles = async () => {

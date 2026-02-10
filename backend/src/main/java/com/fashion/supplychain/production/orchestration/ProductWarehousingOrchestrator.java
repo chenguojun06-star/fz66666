@@ -10,6 +10,8 @@ import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.CuttingBundleService;
+import com.fashion.supplychain.production.service.CuttingTaskService;
+import com.fashion.supplychain.production.entity.CuttingTask;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
@@ -48,6 +50,9 @@ public class ProductWarehousingOrchestrator {
     private CuttingBundleService cuttingBundleService;
 
     @Autowired
+    private CuttingTaskService cuttingTaskService;
+
+    @Autowired
     private ScanRecordService scanRecordService;
 
     @Autowired
@@ -57,7 +62,212 @@ public class ProductWarehousingOrchestrator {
     private ProductSkuService productSkuService;
 
     public IPage<ProductWarehousing> list(Map<String, Object> params) {
-        return productWarehousingService.queryPage(params);
+        IPage<ProductWarehousing> page = productWarehousingService.queryPage(params);
+        // 填充缺失的显示字段（兼容旧数据）
+        if (page != null && page.getRecords() != null && !page.getRecords().isEmpty()) {
+            // 收集所有需要查询的菲号ID和二维码
+            List<String> bundleIds = new ArrayList<>();
+            List<String> bundleQrCodes = new ArrayList<>();
+            for (ProductWarehousing w : page.getRecords()) {
+                if (w == null) continue;
+                if (StringUtils.hasText(w.getCuttingBundleId())) {
+                    bundleIds.add(w.getCuttingBundleId().trim());
+                } else if (StringUtils.hasText(w.getCuttingBundleQrCode())) {
+                    bundleQrCodes.add(w.getCuttingBundleQrCode().trim());
+                }
+            }
+
+            // 批量查询菲号以获取颜色和尺码
+            Map<String, CuttingBundle> bundleByIdMap = new java.util.HashMap<>();
+            Map<String, CuttingBundle> bundleByQrMap = new java.util.HashMap<>();
+            if (!bundleIds.isEmpty()) {
+                try {
+                    List<CuttingBundle> bundles = cuttingBundleService.listByIds(bundleIds);
+                    if (bundles != null) {
+                        for (CuttingBundle b : bundles) {
+                            if (b != null && StringUtils.hasText(b.getId())) {
+                                bundleByIdMap.put(b.getId().trim(), b);
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    log.warn("批量查询菲号失败: {}", e.getMessage());
+                }
+            }
+            if (!bundleQrCodes.isEmpty()) {
+                try {
+                    List<CuttingBundle> bundles = cuttingBundleService.list(
+                        new LambdaQueryWrapper<CuttingBundle>()
+                            .in(CuttingBundle::getQrCode, bundleQrCodes));
+                    if (bundles != null) {
+                        for (CuttingBundle b : bundles) {
+                            if (b != null && StringUtils.hasText(b.getQrCode())) {
+                                bundleByQrMap.put(b.getQrCode().trim(), b);
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    log.warn("批量查询菲号(QrCode)失败: {}", e.getMessage());
+                }
+            }
+
+            for (ProductWarehousing w : page.getRecords()) {
+                if (w == null) continue;
+
+                // 填充颜色和尺码
+                CuttingBundle bundle = null;
+                if (StringUtils.hasText(w.getCuttingBundleId())) {
+                    bundle = bundleByIdMap.get(w.getCuttingBundleId().trim());
+                }
+                if (bundle == null && StringUtils.hasText(w.getCuttingBundleQrCode())) {
+                    bundle = bundleByQrMap.get(w.getCuttingBundleQrCode().trim());
+                }
+                if (bundle != null) {
+                    if (!StringUtils.hasText(w.getColor()) && StringUtils.hasText(bundle.getColor())) {
+                        w.setColor(bundle.getColor());
+                    }
+                    if (!StringUtils.hasText(w.getSize()) && StringUtils.hasText(bundle.getSize())) {
+                        w.setSize(bundle.getSize());
+                    }
+                    if (w.getCuttingQuantity() == null && bundle.getQuantity() != null) {
+                        w.setCuttingQuantity(bundle.getQuantity());
+                    }
+                }
+
+                // 质检人员：优先 qualityOperatorName，其次 receiverName，再次 warehousingOperatorName
+                if (!StringUtils.hasText(w.getQualityOperatorName())) {
+                    if (StringUtils.hasText(w.getReceiverName())) {
+                        w.setQualityOperatorName(w.getReceiverName());
+                    } else if (StringUtils.hasText(w.getWarehousingOperatorName())) {
+                        w.setQualityOperatorName(w.getWarehousingOperatorName());
+                    }
+                }
+            }
+        }
+        return page;
+    }
+
+    /**
+     * 获取质检入库统计数据
+     * - 全部：已质检入库的记录数和数量
+     * - 待质检：裁剪完成(bundled)但尚未有质检入库记录的订单数和裁剪数量
+     * - 今日完成：今天创建的质检入库记录的订单数和数量
+     * - 合格/不合格：按quality_status分组
+     */
+    public Map<String, Object> getStatusStats(Map<String, Object> params) {
+        // 1. 已质检入库的记录（排除已删除）
+        LambdaQueryWrapper<ProductWarehousing> baseWrapper = new LambdaQueryWrapper<ProductWarehousing>()
+                .and(w -> w.eq(ProductWarehousing::getDeleteFlag, 0).or().isNull(ProductWarehousing::getDeleteFlag));
+
+        List<ProductWarehousing> allRecords = productWarehousingService.list(baseWrapper);
+
+        long totalCount = allRecords.size();
+        long totalQuantity = allRecords.stream()
+                .mapToLong(r -> r.getWarehousingQuantity() != null ? r.getWarehousingQuantity() : 0)
+                .sum();
+        long totalOrders = allRecords.stream()
+                .map(r -> StringUtils.hasText(r.getOrderNo()) ? r.getOrderNo().trim() : "")
+                .filter(StringUtils::hasText)
+                .distinct()
+                .count();
+
+        // 合格/不合格统计
+        long qualifiedCount = allRecords.stream()
+                .filter(r -> !"unqualified".equalsIgnoreCase(
+                        r.getQualityStatus() != null ? r.getQualityStatus().trim() : ""))
+                .count();
+        long qualifiedQuantity = allRecords.stream()
+                .filter(r -> !"unqualified".equalsIgnoreCase(
+                        r.getQualityStatus() != null ? r.getQualityStatus().trim() : ""))
+                .mapToLong(r -> r.getQualifiedQuantity() != null ? r.getQualifiedQuantity() : (r.getWarehousingQuantity() != null ? r.getWarehousingQuantity() : 0))
+                .sum();
+        long unqualifiedCount = totalCount - qualifiedCount;
+        long unqualifiedQuantity = allRecords.stream()
+                .filter(r -> "unqualified".equalsIgnoreCase(
+                        r.getQualityStatus() != null ? r.getQualityStatus().trim() : ""))
+                .mapToLong(r -> r.getUnqualifiedQuantity() != null ? r.getUnqualifiedQuantity() : 0)
+                .sum();
+
+        // 2. 今日完成：今天创建的质检入库记录
+        java.time.LocalDate today = java.time.LocalDate.now();
+        LocalDateTime todayStart = today.atStartOfDay();
+        LocalDateTime todayEnd = today.plusDays(1).atStartOfDay();
+
+        long todayCount = allRecords.stream()
+                .filter(r -> r.getCreateTime() != null && !r.getCreateTime().isBefore(todayStart) && r.getCreateTime().isBefore(todayEnd))
+                .count();
+        long todayQuantity = allRecords.stream()
+                .filter(r -> r.getCreateTime() != null && !r.getCreateTime().isBefore(todayStart) && r.getCreateTime().isBefore(todayEnd))
+                .mapToLong(r -> r.getWarehousingQuantity() != null ? r.getWarehousingQuantity() : 0)
+                .sum();
+        long todayOrders = allRecords.stream()
+                .filter(r -> r.getCreateTime() != null && !r.getCreateTime().isBefore(todayStart) && r.getCreateTime().isBefore(todayEnd))
+                .map(r -> StringUtils.hasText(r.getOrderNo()) ? r.getOrderNo().trim() : "")
+                .filter(StringUtils::hasText)
+                .distinct()
+                .count();
+
+        // 3. 待质检/待入库：基于菲号维度的扫码流转统计
+        //    业务规则：裁剪→车缝(子工序全完成)→质检→包装→入库
+        //    待质检 = 有production扫码 但没有quality扫码的菲号
+        //    待入库 = 有quality扫码 但没有warehouse扫码的菲号
+        List<ScanRecord> allBundleScans = scanRecordService.list(
+                new LambdaQueryWrapper<ScanRecord>()
+                        .isNotNull(ScanRecord::getCuttingBundleId)
+                        .ne(ScanRecord::getCuttingBundleId, "")
+        );
+
+        // 按菲号分组，收集每个菲号经历的 scan_type 集合 + 数量
+        java.util.Map<String, java.util.Set<String>> bundleScanTypes = new java.util.HashMap<>();
+        java.util.Map<String, Integer> bundleQuantities = new java.util.HashMap<>();
+
+        for (ScanRecord scan : allBundleScans) {
+            String bundleId = scan.getCuttingBundleId().trim();
+            String scanType = scan.getScanType();
+            if (!StringUtils.hasText(scanType)) continue;
+            bundleScanTypes.computeIfAbsent(bundleId, k -> new java.util.HashSet<>()).add(scanType);
+            if (scan.getQuantity() != null && scan.getQuantity() > 0) {
+                bundleQuantities.merge(bundleId, scan.getQuantity(), Math::max);
+            }
+        }
+
+        long pendingQcBundles = 0;
+        long pendingQcQuantity = 0;
+        long pendingWarehouseBundles = 0;
+        long pendingWarehouseQuantity = 0;
+
+        for (java.util.Map.Entry<String, java.util.Set<String>> entry : bundleScanTypes.entrySet()) {
+            java.util.Set<String> types = entry.getValue();
+            int qty = bundleQuantities.getOrDefault(entry.getKey(), 0);
+
+            // 待质检：完成车缝(production) 但还没有质检(quality)扫码
+            if (types.contains("production") && !types.contains("quality")) {
+                pendingQcBundles++;
+                pendingQcQuantity += qty;
+            }
+            // 待入库：已质检(quality) 但还没有入库(warehouse)扫码
+            if (types.contains("quality") && !types.contains("warehouse")) {
+                pendingWarehouseBundles++;
+                pendingWarehouseQuantity += qty;
+            }
+        }
+
+        Map<String, Object> stats = new java.util.LinkedHashMap<>();
+        stats.put("totalCount", totalCount);
+        stats.put("totalOrders", totalOrders);
+        stats.put("totalQuantity", totalQuantity);
+        stats.put("qualifiedCount", qualifiedCount);
+        stats.put("qualifiedQuantity", qualifiedQuantity);
+        stats.put("unqualifiedCount", unqualifiedCount);
+        stats.put("unqualifiedQuantity", unqualifiedQuantity);
+        stats.put("todayCount", todayCount);
+        stats.put("todayOrders", todayOrders);
+        stats.put("todayQuantity", todayQuantity);
+        stats.put("pendingQcBundles", pendingQcBundles);
+        stats.put("pendingQcQuantity", pendingQcQuantity);
+        stats.put("pendingWarehouseBundles", pendingWarehouseBundles);
+        stats.put("pendingWarehouseQuantity", pendingWarehouseQuantity);
+        return stats;
     }
 
     public ProductWarehousing getById(String id) {
@@ -172,9 +382,27 @@ public class ProductWarehousingOrchestrator {
         }
 
         normalizeAndValidateDefectInfo(productWarehousing);
+
+        // ★ 生产前置校验：菲号必须有生产扫码记录才能入库
+        validateProductionPrerequisiteForWarehousing(
+                productWarehousing.getOrderId(), productWarehousing.getCuttingBundleId());
+
         boolean ok = productWarehousingService.saveWarehousingAndUpdateOrder(productWarehousing);
         if (!ok) {
             throw new IllegalStateException("保存失败");
+        }
+
+        // ★ 更新成品SKU库存（合格数量入库）
+        int qualifiedQty = productWarehousing.getQualifiedQuantity() != null ? productWarehousing.getQualifiedQuantity() : 0;
+        if (qualifiedQty > 0) {
+            CuttingBundle savBundle = null;
+            if (StringUtils.hasText(productWarehousing.getCuttingBundleId())) {
+                try { savBundle = cuttingBundleService.getById(productWarehousing.getCuttingBundleId()); } catch (Exception ignored) {}
+            }
+            if (savBundle == null && StringUtils.hasText(productWarehousing.getCuttingBundleQrCode())) {
+                try { savBundle = cuttingBundleService.getByQrCode(productWarehousing.getCuttingBundleQrCode()); } catch (Exception ignored) {}
+            }
+            updateSkuStock(productWarehousing, null, savBundle, qualifiedQty);
         }
 
         orderId = StringUtils.hasText(productWarehousing.getOrderId()) ? productWarehousing.getOrderId().trim()
@@ -242,9 +470,37 @@ public class ProductWarehousingOrchestrator {
             throw new IllegalArgumentException("入库明细不能为空");
         }
 
+        // ★ 生产前置校验：批量入库前，检查每个菲号是否都有生产扫码记录
+        for (ProductWarehousing w : list) {
+            // 通过二维码查找菲号ID
+            String bundleId = w.getCuttingBundleId();
+            if (!StringUtils.hasText(bundleId) && StringUtils.hasText(w.getCuttingBundleQrCode())) {
+                CuttingBundle b = cuttingBundleService.getByQrCode(w.getCuttingBundleQrCode());
+                if (b != null) {
+                    bundleId = b.getId();
+                }
+            }
+            validateProductionPrerequisiteForWarehousing(oid, bundleId);
+        }
+
         boolean ok = productWarehousingService.saveBatchWarehousingAndUpdateOrder(list);
         if (!ok) {
             throw new IllegalStateException("批量入库失败");
+        }
+
+        // ★ 批量更新成品SKU库存（合格数量入库）
+        for (ProductWarehousing batchItem : list) {
+            int batchQualified = batchItem.getQualifiedQuantity() != null ? batchItem.getQualifiedQuantity() : 0;
+            if (batchQualified > 0) {
+                CuttingBundle batchBundle = null;
+                if (StringUtils.hasText(batchItem.getCuttingBundleId())) {
+                    try { batchBundle = cuttingBundleService.getById(batchItem.getCuttingBundleId()); } catch (Exception ignored) {}
+                }
+                if (batchBundle == null && StringUtils.hasText(batchItem.getCuttingBundleQrCode())) {
+                    try { batchBundle = cuttingBundleService.getByQrCode(batchItem.getCuttingBundleQrCode()); } catch (Exception ignored) {}
+                }
+                updateSkuStock(batchItem, null, batchBundle, batchQualified);
+            }
         }
 
         try {
@@ -282,6 +538,24 @@ public class ProductWarehousingOrchestrator {
         boolean ok = productWarehousingService.updateWarehousingAndUpdateOrder(productWarehousing);
         if (!ok) {
             throw new IllegalStateException("保存失败");
+        }
+
+        // ★ 更新成品SKU库存：当仓库字段被设置时，补入库存（仅首次设仓库时增加）
+        String oldWarehouse = current.getWarehouse();
+        String newWarehouse = productWarehousing.getWarehouse();
+        boolean warehouseFirstSet = !StringUtils.hasText(oldWarehouse) && StringUtils.hasText(newWarehouse);
+        if (warehouseFirstSet) {
+            int updateQualified = current.getQualifiedQuantity() != null ? current.getQualifiedQuantity() : 0;
+            if (updateQualified > 0) {
+                CuttingBundle updateBundle = null;
+                if (StringUtils.hasText(current.getCuttingBundleId())) {
+                    try { updateBundle = cuttingBundleService.getById(current.getCuttingBundleId()); } catch (Exception ignored) {}
+                }
+                if (updateBundle == null && StringUtils.hasText(current.getCuttingBundleQrCode())) {
+                    try { updateBundle = cuttingBundleService.getByQrCode(current.getCuttingBundleQrCode()); } catch (Exception ignored) {}
+                }
+                updateSkuStock(current, null, updateBundle, updateQualified);
+            }
         }
 
         String orderId = StringUtils.hasText(current.getOrderId()) ? current.getOrderId().trim() : null;
@@ -879,6 +1153,31 @@ public class ProductWarehousingOrchestrator {
         }
 
         return true;
+    }
+
+    /**
+     * 验证生产前置条件：菲号必须有至少一条生产扫码记录才能入库
+     * 业务规则：生产工序完成后才能进行质检入库
+     * PC端直接入库和扫码入库共用此校验，确保业务逻辑一致
+     */
+    private void validateProductionPrerequisiteForWarehousing(String orderId, String bundleId) {
+        if (!StringUtils.hasText(orderId) || !StringUtils.hasText(bundleId)) {
+            return;
+        }
+        try {
+            long productionCount = scanRecordService.count(new LambdaQueryWrapper<ScanRecord>()
+                    .eq(ScanRecord::getOrderId, orderId)
+                    .eq(ScanRecord::getCuttingBundleId, bundleId)
+                    .eq(ScanRecord::getScanType, "production")
+                    .eq(ScanRecord::getScanResult, "success"));
+            if (productionCount <= 0) {
+                throw new IllegalStateException("该菲号尚未完成生产扫码，不能直接入库。请先完成生产工序后再操作");
+            }
+        } catch (IllegalStateException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("检查生产前置条件失败: orderId={}, bundleId={}", orderId, bundleId, e);
+        }
     }
 
     // 使用TextUtils.safeText()和NumberUtils.toInt()替代

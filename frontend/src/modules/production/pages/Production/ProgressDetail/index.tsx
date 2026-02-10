@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Card, DatePicker, Form, Grid, Input, InputNumber, Modal, Select, Space, Tag, Tooltip, Typography } from 'antd';
+import { App, Button, Card, Form, Grid, Input, InputNumber, Modal, Select, Space, Tag, Typography } from 'antd';
 import { UnifiedRangePicker } from '@/components/common/UnifiedDatePicker';
-import { DeleteOutlined, EyeOutlined, RollbackOutlined, ScanOutlined, EditOutlined, AppstoreOutlined, UnorderedListOutlined, PrinterOutlined, CloseCircleOutlined, ReloadOutlined } from '@ant-design/icons';
+import { AppstoreOutlined, UnorderedListOutlined, PrinterOutlined, ReloadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useLocation } from 'react-router-dom';
 import Layout from '@/components/Layout';
+import PageStatCards from '@/components/common/PageStatCards';
 import UniversalCardView from '@/components/common/UniversalCardView';
 import LiquidProgressLottie from '@/components/common/LiquidProgressLottie';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -23,8 +24,7 @@ import { formatDateTime, formatDateTimeCompact } from '@/utils/datetime';
 import { getProgressColorStatus } from '@/utils/progressColor';
 import { CuttingBundle, ProductionOrder, ProductionQueryParams, ScanRecord } from '@/types/production';
 import type { StyleProcess, TemplateLibrary } from '@/types/style';
-import StatsCards from '@/components/common/StatsCards';
-import type { StatCard } from '@/components/common/StatsCards';
+
 import { productionCuttingApi, productionOrderApi, productionScanApi, productionWarehousingApi, type ProductionOrderListParams } from '@/services/production/productionApi';
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 
@@ -106,6 +106,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
   const [showDelayedOnly, setShowDelayedOnly] = useState(false); // 是否只显示延期订单
+  const [activeStatFilter, setActiveStatFilter] = useState<'all' | 'delayed' | 'today'>('all'); // 当前激活的统计卡片筛选
 
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
@@ -117,7 +118,9 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     totalQuantity: number;
     delayedOrders: number;
     delayedQuantity: number;
-  }>({ totalOrders: 0, totalQuantity: 0, delayedOrders: 0, delayedQuantity: 0 });
+    todayOrders: number;
+    todayQuantity: number;
+  }>({ totalOrders: 0, totalQuantity: 0, delayedOrders: 0, delayedQuantity: 0, todayOrders: 0, todayQuantity: 0 });
 
   // ===== 详情弹窗相关状态已删除 =====
   // detailOpen 已移除，activeOrder和scanHistory保留用于快速编辑和进度统计
@@ -210,7 +213,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     { label: '待生产', value: 'pending' },
     { label: '生产中', value: 'production' },
     { label: '已完成', value: 'completed' },
-    { label: '已关闭', value: 'closed' },
+    { label: '已延期', value: 'delayed' },
     { label: '已取消', value: 'cancelled' },
   ]), []);
 
@@ -220,13 +223,17 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   };
 
   // 处理统计卡片点击
-  const handleStatClick = (type: 'all' | 'delayed') => {
+  const handleStatClick = (type: 'all' | 'delayed' | 'today') => {
+    setActiveStatFilter(type);
     if (type === 'all') {
       setShowDelayedOnly(false);
-      setQueryParams({ ...queryParams, status: '', page: 1 });
+      setQueryParams((prev) => ({ ...prev, status: '', delayedOnly: undefined, todayOnly: undefined, page: 1 } as any));
     } else if (type === 'delayed') {
       setShowDelayedOnly(true);
-      setQueryParams({ ...queryParams, page: 1 });
+      setQueryParams((prev) => ({ ...prev, status: '', delayedOnly: 'true', todayOnly: undefined, page: 1 } as any));
+    } else if (type === 'today') {
+      setShowDelayedOnly(false);
+      setQueryParams((prev) => ({ ...prev, status: '', delayedOnly: undefined, todayOnly: 'true', page: 1 } as any));
     }
   };
 
@@ -352,6 +359,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         totalQuantity: number;
         delayedOrders: number;
         delayedQuantity: number;
+        todayOrders: number;
+        todayQuantity: number;
       }>('/production/order/stats', { params: filterParams });
       if (isApiSuccess(response)) {
         setGlobalStats(response.data);
@@ -1310,7 +1319,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     }))
                   )}
                   onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(59, 130, 246, 0.08)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--color-bg-base)'; }}
                   title={`点击查看 ${nodeName} 详情`}
                 >
                   <LiquidProgressLottie
@@ -1423,13 +1432,10 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   // ===== 自动打开详情弹窗的逻辑已删除 =====
   // autoOpenDetailOnceRef 和 useEffect 已移除（详情弹窗功能）
 
-  // 根据showDelayedOnly过滤订单（排除已关单的订单）
+  // 根据API筛选结果显示订单（筛选已在后端完成）
   const displayOrders = useMemo(() => {
-    if (!showDelayedOnly) {
-      return orders;
-    }
-    return orders.filter(order => getProgressColorStatus(order.plannedEndDate) === 'danger' && !isOrderFrozenByStatus(order));
-  }, [orders, showDelayedOnly]);
+    return orders;
+  }, [orders]);
 
   const pageContent = (
     <div className="production-progress-detail-page">
@@ -1552,26 +1558,42 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             <h2 className="page-title">生产进度</h2>
           </div>
 
-          {/* 数据概览卡片 - 使用全局统计数据（不受分页影响） */}
-          <StatsCards stats={[
-            {
-              label: '订单个数',
-              value: globalStats.totalOrders,
-              color: '#2D7FF9',
-              onClick: () => handleStatClick('all')
-            },
-            {
-              label: '总数量',
-              value: globalStats.totalQuantity,
-              color: '#52c41a'
-            },
-            {
-              label: '延期订单',
-              value: `${globalStats.delayedOrders}单/${globalStats.delayedQuantity.toLocaleString()}件`,
-              color: '#ff4d4f',
-              onClick: () => handleStatClick('delayed')
-            }
-          ]} />
+          {/* 数据概览卡片 - 使用全局统计数据（不受分页影响，不受列设置控制） */}
+          <PageStatCards
+            activeKey={activeStatFilter}
+            cards={[
+              {
+                key: 'all',
+                items: [
+                  { label: '订单个数', value: globalStats.totalOrders, unit: '个', color: 'var(--color-primary)' },
+                  { label: '总数量', value: globalStats.totalQuantity, unit: '件', color: 'var(--color-success)' },
+                ],
+                onClick: () => handleStatClick('all'),
+                activeColor: 'var(--color-primary)',
+                activeBg: 'rgba(45, 127, 249, 0.1)',
+              },
+              {
+                key: 'delayed',
+                items: [
+                  { label: '延期订单', value: globalStats.delayedOrders, unit: '个', color: 'var(--color-danger)' },
+                  { label: '延期数量', value: globalStats.delayedQuantity, unit: '件', color: 'var(--color-danger)' },
+                ],
+                onClick: () => handleStatClick('delayed'),
+                activeColor: 'var(--color-danger)',
+                activeBg: 'rgba(239, 68, 68, 0.1)',
+              },
+              {
+                key: 'today',
+                items: [
+                  { label: '今日订单', value: globalStats.todayOrders, unit: '个', color: 'var(--color-primary)' },
+                  { label: '今日数量', value: globalStats.todayQuantity, unit: '件', color: 'var(--color-primary-light)' },
+                ],
+                onClick: () => handleStatClick('today'),
+                activeColor: 'var(--color-primary)',
+                activeBg: 'rgba(45, 127, 249, 0.1)',
+              },
+            ]}
+          />
 
           <Card size="small" className="filter-card mb-sm">
             <StandardToolbar

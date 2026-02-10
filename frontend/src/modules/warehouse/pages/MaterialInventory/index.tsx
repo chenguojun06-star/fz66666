@@ -25,6 +25,7 @@ import Layout from '@/components/Layout';
 import RowActions from '@/components/common/RowActions';
 import { useModal, useTablePagination } from '@/hooks';
 import { useAuth, isSupervisorOrAbove, isAdmin as isAdminUser } from '@/utils/AuthContext';
+import { canViewPrice } from '@/utils/sensitiveDataMask';
 import dayjs from 'dayjs';
 import api from '@/utils/api';
 import { safePrint } from '@/utils/safePrint';
@@ -709,7 +710,7 @@ const _MaterialInventory: React.FC = () => {
           <div>
             <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-disabled)', marginBottom: 4, fontWeight: 500 }}>单价</div>
             <div style={{ fontSize: "var(--font-size-lg)", fontWeight: 700, color: 'var(--neutral-text)' }}>
-              ¥{(record.unitPrice ?? 0).toFixed(2)}
+              {canViewPrice(user) ? `¥${(record.unitPrice ?? 0).toFixed(2)}` : '***'}
             </div>
             <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)', marginTop: 2 }}>/{record.unit}</div>
           </div>
@@ -719,7 +720,7 @@ const _MaterialInventory: React.FC = () => {
           }}>
             <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-disabled)', marginBottom: 4, fontWeight: 500 }}>库存总值</div>
             <div style={{ fontSize: "var(--font-size-xl)", fontWeight: 700, color: 'var(--primary-color)' }}>
-              ¥{(record.totalValue ?? 0).toLocaleString()}
+              {canViewPrice(user) ? `¥${(record.totalValue ?? 0).toLocaleString()}` : '***'}
             </div>
           </div>
         </Space>
@@ -748,7 +749,7 @@ const _MaterialInventory: React.FC = () => {
               <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)' }}>操作人: {record.lastInboundBy}</div>
             )}
           </div>
-          <div style={{ padding: '4px 8px', background: '#fff7e6' }}>
+          <div style={{ padding: '4px 8px', background: 'rgba(250, 140, 22, 0.1)' }}>
             <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--warning-color-dark)', marginBottom: 2 }}>📤 最后出库</div>
             <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-secondary)' }}>{record.lastOutboundDate}</div>
             {record.lastOutboundBy && (
@@ -1025,7 +1026,7 @@ const _MaterialInventory: React.FC = () => {
       >
         {detailModal.data && (
           <div>
-            <Card size="small" style={{ marginBottom: 16, background: '#f5f5f5' }}>
+            <Card size="small" style={{ marginBottom: 16, background: 'var(--color-bg-subtle)' }}>
               <Space orientation="vertical" size={8} style={{ width: '100%' }}>
                 <div>
                   <strong style={{ fontSize: "var(--font-size-lg)" }}>{detailModal.data.materialCode}</strong>
@@ -1285,7 +1286,7 @@ const _MaterialInventory: React.FC = () => {
         {outboundModal.data && (
           <Space orientation="vertical" style={{ width: '100%' }} size="large">
             {/* 基础信息卡片 */}
-            <Card size="small" style={{ background: '#f5f5f5' }}>
+            <Card size="small" style={{ background: 'var(--color-bg-subtle)' }}>
               <Space orientation="vertical" size={8} style={{ width: '100%' }}>
                 <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)' }}>
                   <span style={{ color: 'var(--neutral-text-disabled)', width: '80px', textAlign: 'right', flexShrink: 0 }}>物料编号：</span>

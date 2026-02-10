@@ -15,6 +15,10 @@ import com.fashion.supplychain.production.mapper.CuttingTaskMapper;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.production.service.SKUService;
+import com.fashion.supplychain.template.service.TemplateLibraryService;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -40,6 +44,12 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
 
     @Autowired
     private ProductionOrderService productionOrderService;
+
+    @Autowired
+    private TemplateLibraryService templateLibraryService;
+
+    @Autowired
+    private SKUService skuService;
 
     @Override
     public IPage<CuttingTask> queryPage(Map<String, Object> params) {
@@ -381,6 +391,9 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
                 return true;
             }
 
+            // 解析裁剪工序单价（从模板库获取）
+            BigDecimal cuttingUnitPrice = resolveCuttingUnitPrice(task.getStyleNo());
+
             if (existing == null) {
                 ScanRecord sr = new ScanRecord();
                 sr.setRequestId(requestId);
@@ -401,6 +414,14 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
                 sr.setScanTime(now);
                 sr.setCreateTime(now);
                 sr.setUpdateTime(now);
+                // 设置单价和金额
+                sr.setUnitPrice(cuttingUnitPrice);
+                sr.setProcessUnitPrice(cuttingUnitPrice);
+                sr.setScanCost(cuttingUnitPrice);
+                sr.setTotalAmount(computeCuttingTotalAmount(cuttingUnitPrice, finalQty));
+                if (skuService != null) {
+                    skuService.attachProcessUnitPrice(sr);
+                }
                 scanRecordMapper.insert(sr);
             } else {
                 ScanRecord patch = new ScanRecord();
@@ -412,6 +433,14 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
                 patch.setScanType("cutting");
                 patch.setScanTime(now);
                 patch.setUpdateTime(now);
+                // 更新单价和金额（如果之前缺失）
+                if (existing.getUnitPrice() == null || existing.getUnitPrice().compareTo(BigDecimal.ZERO) <= 0) {
+                    patch.setUnitPrice(cuttingUnitPrice);
+                    patch.setProcessUnitPrice(cuttingUnitPrice);
+                    patch.setScanCost(cuttingUnitPrice);
+                }
+                patch.setTotalAmount(computeCuttingTotalAmount(
+                        cuttingUnitPrice != null ? cuttingUnitPrice : BigDecimal.ZERO, finalQty));
                 scanRecordMapper.updateById(patch);
             }
         } catch (Exception e) {
@@ -516,5 +545,47 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
         } catch (Exception e) {
             log.warn("Failed to delete cutting data for order: {}", oid, e);
         }
+    }
+
+    /**
+     * 从模板库解析裁剪工序单价
+     */
+    private BigDecimal resolveCuttingUnitPrice(String styleNo) {
+        if (!StringUtils.hasText(styleNo)) {
+            return BigDecimal.ZERO;
+        }
+        try {
+            Map<String, BigDecimal> prices = templateLibraryService.resolveProcessUnitPrices(styleNo.trim());
+            if (prices == null || prices.isEmpty()) {
+                return BigDecimal.ZERO;
+            }
+            // 精确匹配"裁剪"
+            BigDecimal price = prices.get(CUTTING_PROCESS_NAME);
+            if (price != null && price.compareTo(BigDecimal.ZERO) > 0) {
+                return price;
+            }
+            // 模糊匹配裁剪相关
+            for (Map.Entry<String, BigDecimal> entry : prices.entrySet()) {
+                String key = entry.getKey();
+                if (key != null && (key.contains("裁剪") || key.contains("裁床") || key.contains("开裁"))) {
+                    BigDecimal v = entry.getValue();
+                    if (v != null && v.compareTo(BigDecimal.ZERO) > 0) {
+                        return v;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("解析裁剪单价失败: styleNo={}", styleNo, e);
+        }
+        return BigDecimal.ZERO;
+    }
+
+    /**
+     * 计算裁剪总金额
+     */
+    private BigDecimal computeCuttingTotalAmount(BigDecimal unitPrice, int quantity) {
+        BigDecimal up = unitPrice == null ? BigDecimal.ZERO : unitPrice;
+        int q = Math.max(0, quantity);
+        return up.multiply(BigDecimal.valueOf(q)).setScale(2, RoundingMode.HALF_UP);
     }
 }

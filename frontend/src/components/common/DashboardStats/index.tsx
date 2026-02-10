@@ -84,15 +84,20 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({
     <Row gutter={gutter} style={style} className={className}>
       {stats.map((stat, index) => (
         <Col span={span} key={index}>
-          <Card loading={loading || stat.loading}>
+          <Card
+            loading={loading || stat.loading}
+            bodyStyle={{ padding: '8px 12px' }}
+          >
             <Statistic
-              title={stat.title}
+              title={<span style={{ fontSize: '12px' }}>{stat.title}</span>}
               value={stat.value}
               precision={stat.precision}
               prefix={stat.prefix}
               suffix={stat.suffix}
               styles={{
                 value: {
+                  fontSize: '18px',
+                  lineHeight: '24px',
                   color: stat.valueColor,
                 },
               }}

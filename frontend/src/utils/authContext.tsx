@@ -14,6 +14,12 @@ export interface UserInfo {
   phone?: string;
   email?: string;
   avatarUrl?: string;
+  /** 租户ID（多租户隔离） */
+  tenantId?: string;
+  /** 租户名称 */
+  tenantName?: string;
+  /** 是否为租户主账号 */
+  isTenantOwner?: boolean;
 }
 
 /**
@@ -62,6 +68,10 @@ interface AuthContextType {
   isAdmin: boolean;
   /** 便捷方法：是否可查看所有数据 */
   canViewAll: boolean;
+  /** 便捷方法：是否超级管理员（无租户限制） */
+  isSuperAdmin: boolean;
+  /** 便捷方法：是否租户主账号 */
+  isTenantOwner: boolean;
 }
 
 // 创建上下文
@@ -78,6 +88,8 @@ const fallbackAuthContext: AuthContextType = {
   },
   isAdmin: false,
   canViewAll: false,
+  isSuperAdmin: false,
+  isTenantOwner: false,
 };
 
 // 上下文提供者组件
@@ -154,6 +166,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               phone: u.phone != null ? String(u.phone) : undefined,
               email: u.email != null ? String(u.email) : undefined,
               avatarUrl: u.avatarUrl != null ? String(u.avatarUrl) : u.avatar != null ? String(u.avatar) : u.headUrl != null ? String(u.headUrl) : undefined,
+              tenantId: u.tenantId != null ? String(u.tenantId) : undefined,
+              tenantName: u.tenantName != null ? String(u.tenantName) : undefined,
+              isTenantOwner: u.isTenantOwner === true,
             };
             localStorage.setItem(userStorageKey, JSON.stringify(next));
             setUser(next);
@@ -210,6 +225,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           phone: u.phone != null ? String(u.phone) : undefined,
           email: u.email != null ? String(u.email) : undefined,
           avatarUrl: u.avatarUrl != null ? String(u.avatarUrl) : u.avatar != null ? String(u.avatar) : u.headUrl != null ? String(u.headUrl) : undefined,
+          tenantId: u.tenantId != null ? String(u.tenantId) : undefined,
+          tenantName: u.tenantName != null ? String(u.tenantName) : undefined,
+          isTenantOwner: u.isTenantOwner === true,
         };
 
         localStorage.setItem(tokenStorageKey, token);
@@ -310,6 +328,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       logout,
       isAdmin: isAdmin(user),
       canViewAll: canViewAllData(user),
+      isSuperAdmin: isAdmin(user) && !user?.tenantId,
+      isTenantOwner: user?.isTenantOwner === true,
     }}>
       {children}
     </AuthContext.Provider>

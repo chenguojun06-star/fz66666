@@ -50,6 +50,56 @@ public class CuttingTaskOrchestrator {
         return cuttingTaskService.queryPage(params);
     }
 
+    /**
+     * 获取裁剪任务状态统计（各状态数量）
+     */
+    public Map<String, Object> getStatusStats(Map<String, Object> params) {
+        // 获取有效订单ID列表（排除已删除的订单）
+        List<ProductionOrder> allOrders = productionOrderService.list(
+                new LambdaQueryWrapper<ProductionOrder>()
+                        .select(ProductionOrder::getId)
+                        .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
+        );
+        List<String> validOrderIds = allOrders.stream()
+                .map(ProductionOrder::getId)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toList());
+
+        // 基础过滤条件
+        String orderNo = params != null ? getTrimmedText(params, "orderNo") : null;
+        String styleNo = params != null ? getTrimmedText(params, "styleNo") : null;
+
+        LambdaQueryWrapper<CuttingTask> baseWrapper = new LambdaQueryWrapper<CuttingTask>()
+                .like(StringUtils.hasText(orderNo), CuttingTask::getProductionOrderNo, orderNo)
+                .like(StringUtils.hasText(styleNo), CuttingTask::getStyleNo, styleNo);
+
+        // 只查有效订单的任务
+        if (!validOrderIds.isEmpty()) {
+            baseWrapper.and(w -> w.in(CuttingTask::getProductionOrderId, validOrderIds)
+                    .or().isNull(CuttingTask::getProductionOrderId));
+        } else {
+            baseWrapper.isNull(CuttingTask::getProductionOrderId);
+        }
+
+        List<CuttingTask> allTasks = cuttingTaskService.list(baseWrapper);
+
+        long totalCount = allTasks.size();
+        long pendingCount = allTasks.stream().filter(t -> "pending".equals(t.getStatus())).count();
+        long receivedCount = allTasks.stream().filter(t -> "received".equals(t.getStatus())).count();
+        long bundledCount = allTasks.stream().filter(t -> "bundled".equals(t.getStatus())).count();
+        long totalQuantity = allTasks.stream()
+                .mapToLong(t -> t.getOrderQuantity() != null ? t.getOrderQuantity() : 0)
+                .sum();
+
+        Map<String, Object> stats = new java.util.LinkedHashMap<>();
+        stats.put("totalCount", totalCount);
+        stats.put("totalQuantity", totalQuantity);
+        stats.put("pendingCount", pendingCount);
+        stats.put("receivedCount", receivedCount);
+        stats.put("bundledCount", bundledCount);
+        return stats;
+    }
+
     private String getTrimmedText(Map<String, Object> body, String key) {
         if (body == null || key == null) {
             return null;

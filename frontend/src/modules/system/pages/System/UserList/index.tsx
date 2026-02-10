@@ -203,7 +203,6 @@ const UserList: React.FC = () => {
       if (oldData !== null && newData) {
         setUserList(newData.records);
         setTotal(newData.total);
-        // console.log('[实时同步] 用户列表数据已更新', {
         //   oldCount: oldData.records.length,
         //   newCount: newData.records.length
         // });

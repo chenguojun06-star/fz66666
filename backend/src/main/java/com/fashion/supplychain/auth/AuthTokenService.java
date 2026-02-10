@@ -48,6 +48,8 @@ public class AuthTokenService {
         payload.put("roleName", subject.getRoleName());
         payload.put("openid", subject.getOpenid());
         payload.put("permRange", subject.getPermissionRange()); // 数据权限范围
+        payload.put("tenantId", subject.getTenantId()); // 租户ID
+        payload.put("tenantOwner", subject.isTenantOwner()); // 是否租户主账号
         payload.put("iat", new Date(nowMillis));
         payload.put("exp", new Date(nowMillis + safeTtl.toMillis()));
 
@@ -83,6 +85,8 @@ public class AuthTokenService {
         Object roleName = jwt.getPayload("roleName");
         Object openid = jwt.getPayload("openid");
         Object permRange = jwt.getPayload("permRange");
+        Object tenantIdObj = jwt.getPayload("tenantId");
+        Object tenantOwnerObj = jwt.getPayload("tenantOwner");
 
         TokenSubject subject = new TokenSubject();
         subject.setUserId(uid == null ? null : String.valueOf(uid));
@@ -91,6 +95,15 @@ public class AuthTokenService {
         subject.setRoleName(roleName == null ? null : String.valueOf(roleName));
         subject.setOpenid(openid == null ? null : String.valueOf(openid));
         subject.setPermissionRange(permRange == null ? "all" : String.valueOf(permRange));
+        // 解析租户信息
+        if (tenantIdObj != null) {
+            try {
+                subject.setTenantId(Long.valueOf(String.valueOf(tenantIdObj)));
+            } catch (NumberFormatException e) {
+                subject.setTenantId(null);
+            }
+        }
+        subject.setTenantOwner(Boolean.TRUE.equals(tenantOwnerObj));
         return subject;
     }
 

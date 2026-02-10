@@ -53,6 +53,7 @@ export const paths = {
   orderReconciliationApproval: '/finance/order-reconciliation-approval',
   payrollOperatorSummary: '/finance/payroll-operator-summary',
   financeCenter: '/finance/center',
+  expenseReimbursement: '/finance/expense-reimbursement',
 
   warehouseDashboard: '/warehouse/dashboard',
   materialInventory: '/warehouse/material',
@@ -69,6 +70,8 @@ export const paths = {
   systemLogs: '/system/logs',
   dict: '/system/dict',
   tutorial: '/system/tutorial',
+  tenantManagement: '/system/tenant',
+  appStore: '/system/app-store',
 } as const;
 
 export const permissionCodes = {
@@ -92,6 +95,7 @@ export const permissionCodes = {
   paymentApproval: 'MENU_PAYMENT_APPROVAL',
   orderReconciliationApproval: 'MENU_ORDER_RECON_APPROVAL',
   financeCenter: 'MENU_FINANCE_CENTER',
+  expenseReimbursement: 'MENU_EXPENSE_REIMBURSEMENT',
 
   warehouseDashboard: 'MENU_WAREHOUSE_DASHBOARD',
   materialInventory: 'MENU_MATERIAL_INVENTORY',
@@ -107,6 +111,8 @@ export const permissionCodes = {
   systemLogs: 'MENU_LOGIN_LOG', // 使用相同的权限码，兼容旧数据
   dict: 'MENU_DICT',
   tutorial: 'MENU_TUTORIAL',
+  tenantManagement: 'MENU_TENANT',
+  appStore: 'MENU_APP_STORE_VIEW',
 } as const;
 
 export type MenuItem = {
@@ -176,6 +182,7 @@ export const menuConfig: MenuSection[] = [
       { label: '订单审批', path: paths.orderReconciliationApproval, icon: React.createElement(AccountBookOutlined) },
       { label: '工资结算', path: paths.payrollOperatorSummary, icon: React.createElement(AccountBookOutlined) },
       { label: '订单结算', path: paths.financeCenter, icon: React.createElement(AccountBookOutlined) },
+      { label: '费用报销', path: paths.expenseReimbursement, icon: React.createElement(AccountBookOutlined) },
     ],
   },
   {
@@ -191,6 +198,18 @@ export const menuConfig: MenuSection[] = [
       { label: '系统日志', path: paths.systemLogs, icon: React.createElement(FileSearchOutlined) },
       { label: '系统教学', path: paths.tutorial, icon: React.createElement(BookOutlined) },
     ],
+  },
+  {
+    title: '应用商店',
+    key: 'appStore',
+    icon: React.createElement(ShoppingCartOutlined),
+    path: paths.appStore,
+  },
+  {
+    title: '客户应用管理',
+    key: 'tenant',
+    icon: React.createElement(SafetyCertificateOutlined),
+    path: paths.tenantManagement,
   },
 ];
 
@@ -220,6 +239,7 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.paymentApproval]: permissionCodes.paymentApproval,
   [paths.orderReconciliationApproval]: permissionCodes.orderReconciliationApproval,
   [paths.financeCenter]: permissionCodes.financeCenter,
+  [paths.expenseReimbursement]: permissionCodes.expenseReimbursement,
   [paths.user]: permissionCodes.user,
   [paths.userApproval]: permissionCodes.userApproval,
   [paths.role]: permissionCodes.role,
@@ -228,6 +248,8 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.systemLogs]: permissionCodes.systemLogs,
   [paths.dict]: permissionCodes.dict,
   [paths.tutorial]: permissionCodes.tutorial,
+  [paths.tenantManagement]: permissionCodes.tenantManagement,
+  [paths.appStore]: permissionCodes.appStore,
 };
 
 const normalizePath = (p: string) => String(p || '').split('?')[0];

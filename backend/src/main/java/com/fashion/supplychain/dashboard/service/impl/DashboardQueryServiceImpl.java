@@ -16,19 +16,28 @@ import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.ScanRecordService;
+import com.fashion.supplychain.service.RedisService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import lombok.extern.slf4j.Slf4j;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
 public class DashboardQueryServiceImpl implements DashboardQueryService {
+
+    /** 仪表盘缓存前缀 */
+    private static final String CACHE_PREFIX = "dashboard:";
+    /** 统计数据缓存5分钟（高频展示，低实时性要求） */
+    private static final long CACHE_TTL_MINUTES = 5;
 
     private final StyleInfoService styleInfoService;
     private final ProductionOrderService productionOrderService;
@@ -39,6 +48,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
     private final MaterialPurchaseService materialPurchaseService;
     private final ProductWarehousingService productWarehousingService;
     private final ProductWarehousingMapper productWarehousingMapper;
+    private final RedisService redisService;
 
     public DashboardQueryServiceImpl(
             StyleInfoService styleInfoService,
@@ -49,7 +59,8 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
             ScanRecordService scanRecordService,
             MaterialPurchaseService materialPurchaseService,
             ProductWarehousingService productWarehousingService,
-            ProductWarehousingMapper productWarehousingMapper) {
+            ProductWarehousingMapper productWarehousingMapper,
+            RedisService redisService) {
         this.styleInfoService = styleInfoService;
         this.productionOrderService = productionOrderService;
         this.cuttingTaskService = cuttingTaskService;
@@ -59,28 +70,61 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         this.materialPurchaseService = materialPurchaseService;
         this.productWarehousingService = productWarehousingService;
         this.productWarehousingMapper = productWarehousingMapper;
+        this.redisService = redisService;
+    }
+
+    /** 从缓存获取，命中则直接返回；未命中返回null */
+    @SuppressWarnings("unchecked")
+    private <T> T getFromCache(String key) {
+        try {
+            return redisService.get(CACHE_PREFIX + key);
+        } catch (Exception e) {
+            log.debug("Redis cache miss or error for key: {}", key);
+            return null;
+        }
+    }
+
+    /** 写入缓存 */
+    private void putToCache(String key, Object value) {
+        try {
+            redisService.set(CACHE_PREFIX + key, value, CACHE_TTL_MINUTES, TimeUnit.MINUTES);
+        } catch (Exception e) {
+            log.debug("Redis cache put error for key: {}", key);
+        }
     }
 
     @Override
     public long countEnabledStyles() {
-        return styleInfoService.lambdaQuery().eq(StyleInfo::getStatus, "ENABLED").count();
+        Number cached = getFromCache("enabledStyles");
+        if (cached != null) return cached.longValue();
+        long result = styleInfoService.lambdaQuery().eq(StyleInfo::getStatus, "ENABLED").count();
+        putToCache("enabledStyles", result);
+        return result;
     }
 
     @Override
     public long countProductionOrders() {
+        Number cached = getFromCache("productionOrders");
+        if (cached != null) return cached.longValue();
         // 统计生产中订单：排除已关闭、已完成、已取消、已归档的订单
-        return productionOrderService.lambdaQuery()
+        long result = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived")
                 .count();
+        putToCache("productionOrders", result);
+        return result;
     }
 
     @Override
     public long countPendingMaterialReconciliations() {
-        return materialReconciliationService.lambdaQuery()
+        Number cached = getFromCache("pendingMaterialRecon");
+        if (cached != null) return cached.longValue();
+        long result = materialReconciliationService.lambdaQuery()
                 .eq(MaterialReconciliation::getDeleteFlag, 0)
                 .eq(MaterialReconciliation::getStatus, "pending")
                 .count();
+        putToCache("pendingMaterialRecon", result);
+        return result;
     }
 
     @Override
@@ -128,7 +172,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
                 .ge(start != null, "create_time", start)
                 .le(end != null, "create_time", end);
         List<Map<String, Object>> rows = productWarehousingMapper.selectMaps(qw);
-        Map<String, Object> first = (rows == null || rows.isEmpty()) ? null : rows.getFirst();
+        Map<String, Object> first = (rows == null || rows.isEmpty()) ? null : rows.get(0);
         Object v = first == null ? null : (first.get("total") == null ? first.get("TOTAL") : first.get("total"));
         if (v == null) {
             return 0;
@@ -145,6 +189,9 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
 
     @Override
     public long countUrgentEvents() {
+        Number cached = getFromCache("urgentEvents");
+        if (cached != null) return cached.longValue();
+
         LocalDateTime now = LocalDateTime.now();
 
         // 1. 订单超期：已超过计划结束日期但未完成的订单
@@ -162,11 +209,9 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
                 .eq(MaterialPurchase::getStatus, "pending")
                 .count();
 
-        // 3. 未来可扩展：质检超期、对账超期等
-        // long overdueQualityCheck = ...;
-        // long overdueReconciliation = ...;
-
-        return delayedOrders + pendingPurchases;
+        long result = delayedOrders + pendingPurchases;
+        putToCache("urgentEvents", result);
+        return result;
     }
 
     @Override
@@ -213,26 +258,34 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
 
     @Override
     public long sumTotalOrderQuantity() {
-        // 计算所有生产订单的总数量
+        Number cached = getFromCache("totalOrderQuantity");
+        if (cached != null) return cached.longValue();
+        // 计算所有生产订单的总数量（包括已完成订单，与小程序和PC端保持一致）
         List<ProductionOrder> orders = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .select(ProductionOrder::getOrderQuantity)
                 .list();
-        return orders.stream()
+        long result = orders.stream()
                 .mapToLong(order -> order.getOrderQuantity() != null ? order.getOrderQuantity() : 0L)
                 .sum();
+        putToCache("totalOrderQuantity", result);
+        return result;
     }
 
     @Override
     public long countOverdueOrders() {
+        Number cached = getFromCache("overdueOrders");
+        if (cached != null) return cached.longValue();
         // 计算延期订单：计划结束日期已过且处于生产中的订单（排除已关闭/已完成/已取消/已归档）
         LocalDateTime now = LocalDateTime.now();
-        return productionOrderService.lambdaQuery()
+        long result = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived")
                 .isNotNull(ProductionOrder::getPlannedEndDate)
                 .lt(ProductionOrder::getPlannedEndDate, now)
                 .count();
+        putToCache("overdueOrders", result);
+        return result;
     }
 
     @Override
@@ -329,10 +382,9 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
 
     @Override
     public long countProductionOrdersBetween(LocalDateTime start, LocalDateTime end) {
-        // 统计大货下单数量：在时间范围内创建的生产订单（排除已关闭/完成订单）
+        // 统计大货下单数量：在时间范围内创建的所有生产订单（包括已完成订单）
         return productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
-                .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived")
                 .ge(start != null, ProductionOrder::getCreateTime, start)
                 .le(end != null, ProductionOrder::getCreateTime, end)
                 .count();
@@ -340,10 +392,9 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
 
     @Override
     public long sumOrderQuantityBetween(LocalDateTime start, LocalDateTime end) {
-        // 统计订单数量总和：时间范围内所有生产中订单的orderQuantity之和
+        // 统计订单数量总和：时间范围内所有订单的orderQuantity之和（包括已完成订单）
         List<ProductionOrder> orders = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
-                .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived")
                 .ge(start != null, ProductionOrder::getCreateTime, start)
                 .le(end != null, ProductionOrder::getCreateTime, end)
                 .select(ProductionOrder::getOrderQuantity)
@@ -561,5 +612,30 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
                 .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived")
                 .orderByAsc(ProductionOrder::getPlannedEndDate)
                 .list();
+    }
+
+    @Override
+    public long sumTodayScanQuantity() {
+        LocalDate today = LocalDate.now();
+        LocalDateTime startOfDay = LocalDateTime.of(today, LocalTime.MIN);
+        LocalDateTime endOfDay = LocalDateTime.of(today, LocalTime.MAX);
+        List<ScanRecord> scans = scanRecordService.lambdaQuery()
+                .ge(ScanRecord::getScanTime, startOfDay)
+                .le(ScanRecord::getScanTime, endOfDay)
+                .select(ScanRecord::getQuantity)
+                .list();
+        return scans.stream()
+                .mapToLong(s -> s.getQuantity() != null ? s.getQuantity() : 0L)
+                .sum();
+    }
+
+    @Override
+    public long sumTotalScanQuantity() {
+        List<ScanRecord> scans = scanRecordService.lambdaQuery()
+                .select(ScanRecord::getQuantity)
+                .list();
+        return scans.stream()
+                .mapToLong(s -> s.getQuantity() != null ? s.getQuantity() : 0L)
+                .sum();
     }
 }

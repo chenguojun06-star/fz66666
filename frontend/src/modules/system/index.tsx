@@ -9,3 +9,5 @@ export const SystemLogs = React.lazy(() => import('./pages/System/SystemLogs'));
 export const Profile = React.lazy(() => import('./pages/System/Profile'));
 export const DictManage = React.lazy(() => import('./pages/System/DictManage'));
 export const Tutorial = React.lazy(() => import('./pages/System/Tutorial'));
+export const TenantManagement = React.lazy(() => import('./pages/System/TenantManagement'));
+export const AppStore = React.lazy(() => import('./pages/AppStore'));

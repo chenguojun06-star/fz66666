@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { App, Button, Card, Checkbox, Form, Input, InputNumber, Select, Space, Table, Tag, Tooltip, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined, RollbackOutlined } from '@ant-design/icons';
+import { DeleteOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -72,7 +72,7 @@ const getErrorMessage = (err: unknown, fallback: string) => {
 const TemplateCenter: React.FC = () => {
   const { modal, message } = App.useApp();
   const { user } = useAuth();
-  const { modalWidth, isMobile } = useViewport();
+  const { modalWidth } = useViewport();
   const [queryForm] = Form.useForm();
   const [templateType, setTemplateType] = useState('');
   const [keyword, setKeyword] = useState('');
@@ -159,9 +159,9 @@ const TemplateCenter: React.FC = () => {
     }));
     return [baseColumn, ...dynamicColumns];
   }, [editTableData, editingRow?.templateType]);
-  const [activeRow, setActiveRow] = useState<TemplateLibrary | null>(null);
-  const [viewContent, setViewContent] = useState<string>('');
-  const [viewObj, setViewObj] = useState<unknown>(null);
+  const [activeRow, _setActiveRow] = useState<TemplateLibrary | null>(null);
+  const [viewContent, _setViewContent] = useState<string>('');
+  const [viewObj, _setViewObj] = useState<unknown>(null);
 
   // 多码单价相关状态
   const [showSizePrices, setShowSizePrices] = useState(false);
@@ -292,8 +292,6 @@ const TemplateCenter: React.FC = () => {
           delete finalData.sizes;
         }
         templateContent = JSON.stringify(finalData);
-        // console.log('[模板保存] 保存内容:', finalData);
-        // console.log('[模板保存] steps:', (finalData as any)?.steps);
       } else {
         message.error('模板内容无效');
         return;
@@ -569,44 +567,44 @@ const TemplateCenter: React.FC = () => {
     }
   };
 
-  const openView = async (row: TemplateLibrary) => {
-    setActiveRow(row);
-    setViewContent('');
-    setViewObj(null);
-    setViewOpen(true);
-    if (!row?.id) return;
-    try {
-      const res = await api.get<{ code: number; message: string; data: TemplateLibrary }>(`/template-library/${row.id}`);
-      if (res.code !== 200) {
-        message.error(res.message || '获取模板失败');
-        return;
-      }
-      const tpl: TemplateLibrary = res.data;
-      const content = tpl?.templateContent;
-
-      // templateContent 现在可能是对象（@JsonRawValue）或字符串
-      let obj: unknown = null;
-      if (typeof content === 'object' && content !== null) {
-        // 已经是对象，直接使用
-        obj = content;
-      } else {
-        // 是字符串，尝试解析
-        const raw = String(content ?? '');
-        try {
-          obj = JSON.parse(raw);
-        } catch {
-          // 解析失败，保留原始字符串
-          setViewContent(raw);
-          return;
-        }
-      }
-
-      setViewObj(obj);
-      setViewContent(JSON.stringify(obj, null, 2));
-    } catch (e: unknown) {
-      message.error(getErrorMessage(e, '获取模板失败'));
-    }
-  };
+  // const openView = async (row: TemplateLibrary) => {
+  //   setActiveRow(row);
+  //   setViewContent('');
+  //   setViewObj(null);
+  //   setViewOpen(true);
+  //   if (!row?.id) return;
+  //   try {
+  //     const res = await api.get<{ code: number; message: string; data: TemplateLibrary }>(`/template-library/${row.id}`);
+  //     if (res.code !== 200) {
+  //       message.error(res.message || '获取模板失败');
+  //       return;
+  //     }
+  //     const tpl: TemplateLibrary = res.data;
+  //     const content = tpl?.templateContent;
+  //
+  //     // templateContent 现在可能是对象（@JsonRawValue）或字符串
+  //     let obj: unknown = null;
+  //     if (typeof content === 'object' && content !== null) {
+  //       // 已经是对象，直接使用
+  //       obj = content;
+  //     } else {
+  //       // 是字符串，尝试解析
+  //       const raw = String(content ?? '');
+  //       try {
+  //         obj = JSON.parse(raw);
+  //       } catch {
+  //         // 解析失败，保留原始字符串
+  //         setViewContent(raw);
+  //         return;
+  //       }
+  //     }
+  //
+  //     setViewObj(obj);
+  //     setViewContent(JSON.stringify(obj, null, 2));
+  //   } catch (e: unknown) {
+  //     message.error(getErrorMessage(e, '获取模板失败'));
+  //   }
+  // };
 
   const renderVisualContent = () => {
     const t = String(activeRow?.templateType || '').trim().toLowerCase();
@@ -632,7 +630,7 @@ const TemplateCenter: React.FC = () => {
       });
       return (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          <div style={{ border: '1px solid #d9d9d9', padding: 8 }}>
+          <div style={{ border: '1px solid var(--color-border)', padding: 8 }}>
             <div style={{ fontSize: "var(--font-size-sm)", fontWeight: 500, marginBottom: 8 }}>进度节点</div>
             <div style={{ maxHeight: 480, overflow: 'auto' }}>
               {nodes.map((n, idx) => (
@@ -643,7 +641,7 @@ const TemplateCenter: React.FC = () => {
               {nodes.length === 0 && <div style={{ padding: 12, textAlign: 'center', color: 'var(--neutral-text-disabled)' }}>暂无数据</div>}
             </div>
           </div>
-          <div style={{ border: '1px solid #d9d9d9', padding: 8 }}>
+          <div style={{ border: '1px solid var(--color-border)', padding: 8 }}>
             <div style={{ fontSize: "var(--font-size-sm)", fontWeight: 500, marginBottom: 8 }}>单价工序库</div>
             <div style={{ maxHeight: 480, overflow: 'auto' }}>
               {nodes.filter((n) => n?.unitPrice != null && n.unitPrice !== 0).map((n, idx) => (
@@ -684,7 +682,7 @@ const TemplateCenter: React.FC = () => {
       };
       return (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          <div style={{ border: '1px solid #d9d9d9', padding: 8 }}>
+          <div style={{ border: '1px solid var(--color-border)', padding: 8 }}>
             <div style={{ fontSize: "var(--font-size-sm)", fontWeight: 500, marginBottom: 8 }}>
               {t === 'process_price' ? '工序节点' : '工艺节点'}
             </div>
@@ -700,7 +698,7 @@ const TemplateCenter: React.FC = () => {
               {steps.length === 0 && <div style={{ padding: 12, textAlign: 'center', color: 'var(--neutral-text-disabled)' }}>暂无数据</div>}
             </div>
           </div>
-          <div style={{ border: '1px solid #d9d9d9', padding: 8 }}>
+          <div style={{ border: '1px solid var(--color-border)', padding: 8 }}>
             <div style={{ fontSize: "var(--font-size-sm)", fontWeight: 500, marginBottom: 8 }}>
               {t === 'process_price' ? '单价工序库' : '工价工序库'}
             </div>
@@ -840,15 +838,39 @@ const TemplateCenter: React.FC = () => {
 
   const handleDelete = async (row: TemplateLibrary) => {
     if (!row?.id) return;
+
+    let deleteReason = '';
+
     modal.confirm({
       title: '确认删除该模板？',
-      content: `${row.templateName || ''}`,
+      content: (
+        <div>
+          <div style={{ marginBottom: '12px', color: 'var(--color-text-secondary)' }}>{row.templateName || ''}</div>
+          <div style={{ marginBottom: '8px' }}>
+            <span style={{ color: 'red' }}>*</span> 请输入删除原因：
+          </div>
+          <Input.TextArea
+            placeholder="请输入删除原因（必填）"
+            rows={3}
+            maxLength={200}
+            showCount
+            onChange={(e) => { deleteReason = e.target.value.trim(); }}
+            onPressEnter={(e) => e.stopPropagation()}
+          />
+        </div>
+      ),
       okText: '删除',
       okButtonProps: { danger: true },
       cancelText: '取消',
       onOk: async () => {
+        if (!deleteReason) {
+          message.warning('请输入删除原因');
+          return Promise.reject();
+        }
         try {
-          const res = await api.delete<{ code: number; message: string }>(`/template-library/${row.id}`);
+          const res = await api.delete<{ code: number; message: string }>(`/template-library/${row.id}`, {
+            params: { reason: deleteReason }
+          });
           if (res.code !== 200) {
             message.error(res.message || '删除失败');
             return;
@@ -1262,7 +1284,7 @@ const TemplateCenter: React.FC = () => {
           </div>
           <Form.Item label="模板内容">
             {editTableData ? (
-              <div style={{ maxHeight: 400, overflow: 'auto', border: '1px solid #d9d9d9', padding: 8 }}>
+              <div style={{ maxHeight: 400, overflow: 'auto', border: '1px solid var(--color-border)', padding: 8 }}>
                 {(() => {
                   const type = editingRow?.templateType;
                   // 尺寸表模板
@@ -1273,8 +1295,8 @@ const TemplateCenter: React.FC = () => {
                         columns={sizeColumns}
                         pagination={false}
                         size="small"
-                        variant="bordered"
-                        rowKey={(record) => record.size || `size-${Math.random()}`}
+                        bordered
+                        rowKey={(record) => (record as any).size || `size-${Math.random()}`}
                       />
                     );
                   }
@@ -1361,8 +1383,8 @@ const TemplateCenter: React.FC = () => {
                         columns={bomColumns}
                         pagination={false}
                         size="small"
-                        variant="bordered"
-                        rowKey={(record) => record.materialCode || record.id || `bom-${Math.random()}`}
+                        bordered
+                        rowKey={(record) => (record as any).materialCode || (record as any).id || `bom-${Math.random()}`}
                       />
                     );
                   }
@@ -1592,7 +1614,7 @@ const TemplateCenter: React.FC = () => {
                         title: `${size}码`,
                         width: 55,
                         render: (_: unknown, item: ProcessStepRow, idx: number) => (
-                          <div style={{ background: '#fafafa' }}>
+                          <div style={{ background: 'var(--color-bg-container)' }}>
                             <InputNumber
                               size="small"
                               value={item.sizePrices?.[size] ?? item.unitPrice ?? item.price ?? 0}
@@ -1644,9 +1666,9 @@ const TemplateCenter: React.FC = () => {
                           columns={processColumns}
                           pagination={false}
                           size="small"
-                          variant="bordered"
+                          bordered
                           scroll={{ x: showSizePrices ? 650 + templateSizes.length * 60 : 650 }}
-                          rowKey={(record) => record.processCode || record.id || `process-${Math.random()}`}
+                          rowKey={(record) => (record as any).processCode || (record as any).id || `process-${Math.random()}`}
                           footer={() => (
                             <Button
                               type="dashed"
@@ -1744,8 +1766,8 @@ const TemplateCenter: React.FC = () => {
                         columns={processPriceColumns}
                         pagination={false}
                         size="small"
-                        variant="bordered"
-                        rowKey={(record) => record.processCode || record.id || `price-${Math.random()}`}
+                        bordered
+                        rowKey={(record) => (record as any).processCode || (record as any).id || `price-${Math.random()}`}
                       />
                     );
                   }

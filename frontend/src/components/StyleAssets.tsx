@@ -70,9 +70,9 @@ export const StyleCoverThumb: React.FC<{
   }, [styleId, styleNo]);
 
   return (
-    <div style={{ width: size, height: size, borderRadius, overflow: 'hidden', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ width: size, height: size, borderRadius, overflow: 'hidden', background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       {loading ? (
-        <span style={{ color: '#999', fontSize: 'var(--font-size-sm)' }}>...</span>
+        <span style={{ color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-sm)' }}>...</span>
       ) : url ? (
         <img src={url} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       ) : (
@@ -435,7 +435,7 @@ export const StyleAttachmentsButton: React.FC<{
         if (!canDownload) {
           return (
             <Tooltip title="旧版本仅管理员可下载">
-              <span style={{ color: '#999', cursor: 'not-allowed' }}>{text}</span>
+              <span style={{ color: 'var(--color-text-tertiary)', cursor: 'not-allowed' }}>{text}</span>
             </Tooltip>
           );
         }
@@ -501,7 +501,7 @@ export const StyleAttachmentsButton: React.FC<{
             <div style={{
               marginBottom: 12,
               padding: '8px 12px',
-              background: '#fffbe6',
+              background: 'rgba(234, 179, 8, 0.15)',
               border: '1px solid #ffe58f',
 
               fontSize: "var(--font-size-sm)",
@@ -515,7 +515,7 @@ export const StyleAttachmentsButton: React.FC<{
             <div style={{
               marginBottom: 12,
               padding: '8px 12px',
-              background: '#fff2f0',
+              background: 'rgba(239, 68, 68, 0.1)',
               border: '1px solid #ffccc7',
 
               fontSize: "var(--font-size-sm)",

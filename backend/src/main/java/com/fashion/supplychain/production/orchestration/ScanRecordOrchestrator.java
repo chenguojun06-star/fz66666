@@ -291,6 +291,88 @@ public class ScanRecordOrchestrator {
     }
 
     /**
+     * 退回重扫 - 仅允许退回1小时内的、当前用户的、成功的扫码记录
+     * 小程序"退回重扫"功能调用此方法
+     *
+     * @param params { recordId: 扫码记录ID }
+     * @return { success: true, message: "退回成功" }
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> rescan(Map<String, Object> params) {
+        String recordId = TextUtils.safeText(params == null ? null : params.get("recordId"));
+        if (!hasText(recordId)) {
+            throw new IllegalArgumentException("记录ID不能为空");
+        }
+
+        // 查找扫码记录
+        ScanRecord target = scanRecordService.getById(recordId);
+        if (target == null) {
+            throw new IllegalStateException("未找到扫码记录");
+        }
+
+        // 校验是否属于当前用户
+        UserContext ctx = UserContext.get();
+        String currentUserId = ctx == null ? null : ctx.getUserId();
+        if (!hasText(currentUserId) || !currentUserId.equals(target.getOperatorId())) {
+            throw new AccessDeniedException("只能退回自己的扫码记录");
+        }
+
+        // 校验记录状态
+        if (!"success".equalsIgnoreCase(target.getScanResult()) && !"qualified".equalsIgnoreCase(target.getScanResult())) {
+            throw new IllegalStateException("只能退回成功的扫码记录");
+        }
+
+        // 校验1小时时间限制
+        LocalDateTime scanTime = target.getScanTime() != null ? target.getScanTime() : target.getCreateTime();
+        if (scanTime != null && scanTime.plusHours(1).isBefore(LocalDateTime.now())) {
+            throw new IllegalStateException("只能退回1小时内的扫码记录");
+        }
+
+        // 判断是否为入库类型扫码，需要同时回滚入库记录
+        String scanType = hasText(target.getScanType()) ? target.getScanType().trim().toLowerCase() : "";
+        boolean isWarehouseType = "warehouse".equals(scanType) || "quality".equals(scanType)
+                || "quality_warehousing".equalsIgnoreCase(target.getProcessCode());
+
+        if (isWarehouseType) {
+            // 回滚入库记录
+            String qr = hasText(target.getCuttingBundleQrCode()) ? target.getCuttingBundleQrCode()
+                    : target.getScanCode();
+            int qty = target.getQuantity() != null ? target.getQuantity() : 0;
+            if (hasText(qr) && qty > 0) {
+                try {
+                    Map<String, Object> body = new HashMap<>();
+                    body.put("orderId", target.getOrderId());
+                    body.put("cuttingBundleQrCode", qr);
+                    body.put("rollbackQuantity", qty);
+                    body.put("rollbackRemark", "退回重扫");
+                    productWarehousingOrchestrator.rollbackByBundle(body);
+                } catch (Exception e) {
+                    log.warn("[rescan] 入库回滚失败，继续撤销扫码记录: recordId={}, error={}", recordId, e.getMessage());
+                }
+            }
+        }
+
+        // 标记扫码记录为已撤销
+        ScanRecord patch = new ScanRecord();
+        patch.setId(target.getId());
+        patch.setScanResult("failure");
+        patch.setRemark("退回重扫");
+        patch.setUpdateTime(LocalDateTime.now());
+        scanRecordService.updateById(patch);
+
+        // 异步重算订单进度
+        String orderId = TextUtils.safeText(target.getOrderId());
+        if (hasText(orderId)) {
+            productionOrderService.recomputeProgressAsync(orderId);
+        }
+
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("success", true);
+        resp.put("message", "退回成功，可重新扫码");
+        return resp;
+    }
+
+    /**
      * 执行质检扫码（委托给QualityScanExecutor）
      * 已迁移逻辑：领取/验收/确认/返修流程
      */

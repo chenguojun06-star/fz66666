@@ -150,7 +150,7 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({ records, lo
         <div>
           <span style={{ fontSize: 12, fontWeight: 500 }}>{v || '-'}</span>
           {record.processCode && (
-            <span style={{ fontSize: 10, color: '#9ca3af', marginLeft: 4 }}>({record.processCode})</span>
+            <span style={{ fontSize: 10, color: 'var(--color-text-tertiary)', marginLeft: 4 }}>({record.processCode})</span>
           )}
         </div>
       ),
@@ -196,9 +196,9 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({ records, lo
       width: 90,
       render: (status: string) => {
         const sm: Record<string, { color: string; label: string }> = {
-          scanned: { color: '#52c41a', label: '已扫码' },
-          pending: { color: '#faad14', label: '待扫码' },
-          reset: { color: '#ff7875', label: '已重置' },
+          scanned: { color: 'var(--color-success)', label: '已扫码' },
+          pending: { color: 'var(--color-warning)', label: '待扫码' },
+          reset: { color: 'var(--color-danger)', label: '已重置' },
         };
         const cfg = sm[status] || { color: '#d9d9d9', label: status || '-' };
         return <Tag color={cfg.color} style={{ fontSize: 11, margin: 0 }}>{cfg.label}</Tag>;
@@ -210,7 +210,7 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({ records, lo
       key: 'scanTime',
       width: 140,
       render: (time: string) => (
-        <span style={{ fontSize: 11, color: '#6b7280' }}>{time ? formatDateTime(time) : '-'}</span>
+        <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{time ? formatDateTime(time) : '-'}</span>
       ),
     },
     {
@@ -227,7 +227,7 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({ records, lo
       width: 100,
       align: 'right' as const,
       render: (amount: number) => (
-        <span style={{ fontSize: 12, color: '#059669', fontWeight: 600 }}>
+        <span style={{ fontSize: 12, color: 'var(--color-success)', fontWeight: 600 }}>
           {amount ? `¥${Number(amount).toFixed(2)}` : '-'}
         </span>
       ),
@@ -238,21 +238,21 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({ records, lo
     <div style={{ fontSize: 12 }}>
       <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         {filterType && (
-          <span style={{ fontSize: 12, color: '#6b7280' }}>
+          <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
             当前筛选：<strong style={{ color: '#1f2937' }}>{nodeName || filterType}</strong>
           </span>
         )}
         <Space split={'·'}>
-          <span style={{ fontSize: 12, color: '#6b7280' }}>
+          <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
             菲号: <strong>{stats.bundles}</strong> 个
           </span>
-          <span style={{ fontSize: 12, color: '#6b7280' }}>
+          <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
             工序: <strong>{stats.total}</strong> 条
           </span>
-          <span style={{ fontSize: 12, color: '#52c41a' }}>
+          <span style={{ fontSize: 12, color: 'var(--color-success)' }}>
             已扫: <strong>{stats.scanned}</strong> 条
           </span>
-          <span style={{ fontSize: 12, color: '#059669' }}>
+          <span style={{ fontSize: 12, color: 'var(--color-success)' }}>
             金额: <strong>{`¥${stats.totalAmount.toFixed(2)}`}</strong>
           </span>
         </Space>

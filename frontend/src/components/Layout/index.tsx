@@ -370,7 +370,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <header className="layout-header">
         <div className="header-content">
           <div className="header-left">
-            <h1 className="header-title header-brand">衣富ERP供应链生态</h1>
+            <h1 className="header-title header-brand">云裳智链</h1>
             {recentPages.length ? (
               <div className="header-recents" role="tablist" aria-label="最近打开的页面" ref={recentsContainerRef}>
                 {recentPages.map((p) => {
@@ -397,6 +397,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                         type="text"
                         size="small"
                         className="recent-tab-close"
+                        icon={<CloseOutlined />}
                         aria-label={`关闭 ${p.title}`}
                         onClick={() => closeRecent(p.path)}
                       />

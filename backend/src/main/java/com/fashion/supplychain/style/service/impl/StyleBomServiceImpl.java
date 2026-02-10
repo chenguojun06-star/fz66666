@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fashion.supplychain.production.entity.MaterialStock;
 import com.fashion.supplychain.production.service.MaterialStockService;
+import com.fashion.supplychain.service.RedisService;
 import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.mapper.StyleBomMapper;
 import com.fashion.supplychain.style.service.StyleBomService;
@@ -17,6 +18,7 @@ import java.math.RoundingMode;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -25,9 +27,38 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
     @Autowired
     private MaterialStockService materialStockService;
 
+    @Autowired
+    private RedisService redisService;
+
+    /** BOM缓存前缀 */
+    private static final String BOM_CACHE_PREFIX = "style:bom:";
+    /** BOM列表缓存30分钟 */
+    private static final long BOM_CACHE_TTL_MINUTES = 30;
+
     @Override
     public List<StyleBom> listByStyleId(Long styleId) {
-        return list(new LambdaQueryWrapper<StyleBom>().eq(StyleBom::getStyleId, styleId));
+        // 尝试从Redis缓存获取
+        String cacheKey = BOM_CACHE_PREFIX + styleId;
+        try {
+            List<StyleBom> cached = redisService.get(cacheKey);
+            if (cached != null) {
+                log.debug("BOM缓存命中: styleId={}", styleId);
+                return cached;
+            }
+        } catch (Exception e) {
+            log.debug("BOM缓存读取失败: styleId={}", styleId);
+        }
+
+        List<StyleBom> result = list(new LambdaQueryWrapper<StyleBom>().eq(StyleBom::getStyleId, styleId));
+
+        // 写入缓存
+        try {
+            redisService.set(cacheKey, result, BOM_CACHE_TTL_MINUTES, TimeUnit.MINUTES);
+        } catch (Exception e) {
+            log.debug("BOM缓存写入失败: styleId={}", styleId);
+        }
+
+        return result;
     }
 
     @Override
@@ -50,8 +81,16 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
             throw new RuntimeException("生产数量必须大于0");
         }
 
+        Long styleId = bomList.get(0).getStyleId();
         log.info("开始保存BOM并检查库存: 款号ID={}, 生产数量={}, BOM条数={}",
-                bomList.get(0).getStyleId(), productionQty, bomList.size());
+                styleId, productionQty, bomList.size());
+
+        // 清除BOM缓存（数据变更时主动失效）
+        try {
+            redisService.delete(BOM_CACHE_PREFIX + styleId);
+        } catch (Exception e) {
+            log.debug("清除BOM缓存失败: styleId={}", styleId);
+        }
 
         // 遍历每个BOM项，检查库存
         for (StyleBom bom : bomList) {

@@ -94,4 +94,14 @@ public interface DashboardQueryService {
      * 获取延期订单列表
      */
     List<ProductionOrder> listAllOverdueOrders();
+
+    /**
+     * 当天生产扫码总件数
+     */
+    long sumTodayScanQuantity();
+
+    /**
+     * 历史生产扫码总件数
+     */
+    long sumTotalScanQuantity();
 }

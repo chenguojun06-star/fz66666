@@ -269,7 +269,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                         style={{
                           width: '100%',
                           fontSize: '16px',
-                          backgroundColor: '#f5f5f5',
+                          backgroundColor: 'var(--color-bg-subtle)',
                           cursor: 'not-allowed'
                         }}
                         prefix="¥"
@@ -287,7 +287,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                         style={{
                           width: '100%',
                           fontSize: '16px',
-                          backgroundColor: '#f5f5f5',
+                          backgroundColor: 'var(--color-bg-subtle)',
                           cursor: 'not-allowed'
                         }}
                         prefix="¥"
@@ -398,7 +398,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                     {totalCost > 0 ? ((materialCost / totalCost) * 100).toFixed(1) : '0.0'}%
                   </span>
                 </div>
-                <div style={{ height: 6, background: '#f0f0f0' }}>
+                <div style={{ height: 6, background: 'var(--color-bg-subtle)' }}>
                   <div style={{
                     width: `${totalCost > 0 ? (materialCost / totalCost) * 100 : 0}%`,
                     height: '100%',
@@ -414,7 +414,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                     {totalCost > 0 ? ((processCost / totalCost) * 100).toFixed(1) : '0.0'}%
                   </span>
                 </div>
-                <div style={{ height: 6, background: '#f0f0f0' }}>
+                <div style={{ height: 6, background: 'var(--color-bg-subtle)' }}>
                   <div style={{
                     width: `${totalCost > 0 ? (processCost / totalCost) * 100 : 0}%`,
                     height: '100%',
@@ -430,7 +430,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
                     {totalPrice > 0 ? ((profit / totalPrice) * 100).toFixed(1) : '0.0'}%
                   </span>
                 </div>
-                <div style={{ height: 6, background: '#f0f0f0' }}>
+                <div style={{ height: 6, background: 'var(--color-bg-subtle)' }}>
                   <div style={{
                     width: `${totalPrice > 0 ? (profit / totalPrice) * 100 : 0}%`,
                     height: '100%',
@@ -551,7 +551,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved }) => {
       {secondaryProcessList.length > 0 && (
         <Card
           size="small"
-          styles={{ body: { padding: '12px', background: '#f6ffed' } }}
+          styles={{ body: { padding: '12px', background: 'rgba(34, 197, 94, 0.15)' } }}
         >
           <Row justify="space-between" align="middle">
             <Col>

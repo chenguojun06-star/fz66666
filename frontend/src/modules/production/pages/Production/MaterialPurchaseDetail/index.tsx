@@ -14,6 +14,8 @@ import { getMaterialTypeCategory, getMaterialTypeLabel } from '@/utils/materialT
 import { ProductionOrderHeader } from '@/components/StyleAssets';
 import { useViewport } from '@/utils/useViewport';
 import ModalContentLayout from '@/components/common/ModalContentLayout';
+import { useAuth } from '@/utils/AuthContext';
+import { canViewPrice } from '@/utils/sensitiveDataMask';
 
 const { TextArea } = Input;
 
@@ -41,6 +43,7 @@ const MaterialPurchaseDetail: React.FC = () => {
   const { styleNo } = useParams<{ styleNo: string }>();
   const navigate = useNavigate();
   const { isMobile } = useViewport();
+  const { user } = useAuth();
 
   const [loading, setLoading] = useState(false);
   const [order, setOrder] = useState<unknown>(null);
@@ -245,7 +248,7 @@ const MaterialPurchaseDetail: React.FC = () => {
       key: 'unitPrice',
       width: 100,
       align: 'right',
-      render: (v: number) => Number.isFinite(Number(v)) ? `¥${Number(v).toFixed(2)}` : '-',
+      render: (v: number) => canViewPrice(user) ? (Number.isFinite(Number(v)) ? `¥${Number(v).toFixed(2)}` : '-') : '***',
     },
     {
       title: '总金额',
@@ -253,6 +256,7 @@ const MaterialPurchaseDetail: React.FC = () => {
       width: 110,
       align: 'right',
       render: (_: any, record: MaterialPurchaseType) => {
+        if (!canViewPrice(user)) return '***';
         const quantity = Number(record.purchaseQuantity) || 0;
         const price = Number(record.unitPrice) || 0;
         const total = quantity * price;

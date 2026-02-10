@@ -7,6 +7,7 @@ import {
   getQualityColor,
 } from '../../utils/orderStatusHelper';
 import { normalizeStats, normalizeActivities } from '../../utils/dataTransform';
+import { toast } from '../../utils/uiHelper';
 
 Page({
   data: {
@@ -26,11 +27,14 @@ Page({
       styleCount: 0,
       productionCount: 0,
       productionOrders: 0,
+      orderQuantityTotal: 0,
       pendingReconciliationCount: 0,
       paymentApprovalCount: 0,
       todayScanCount: 0,
+      totalScanCount: 0,
       warehousingOrderCount: 0,
       warehousingToday: 0,
+      totalWarehousingCount: 0,
       unqualifiedQuantity: 0,
       defectCount: 0,
       materialPurchase: 0,
@@ -91,7 +95,7 @@ Page({
       try {
         wx.setStorageSync('work_active_tab', tab);
       } catch (err) {
-        null;
+        // 存储失败静默处理
       }
     }
     wx.switchTab({ url: '/pages/work/index' });
@@ -123,7 +127,6 @@ Page({
       const activities = normalizeActivities(payload);
       this.setData({ stats, statsLoaded: true, activities });
     } catch (e) {
-      console.error('Dashboard error:', e);
       if (e && e.type === 'auth') {
         return;
       }
@@ -190,10 +193,10 @@ Page({
     if (type === '采购') {
       // 采购任务跳转到扫码页面，设置为采购模式
       try {
-        wx.setStorageSync('mp_scan_type_index', 2); // 采购是第3个选项，索引为2
+        wx.setStorageSync('mp_scan_type_index', 2);
         wx.setStorageSync('pending_order_hint', orderNo);
       } catch (e) {
-        console.error('存储失败', e);
+        // 存储失败静默处理
       }
       wx.switchTab({ url: '/pages/scan/index' });
     } else if (type === '裁剪' || type === '缝制' || type === '质检') {
@@ -202,7 +205,7 @@ Page({
         wx.setStorageSync('work_active_tab', 'orders_production');
         wx.setStorageSync('pending_order_hint', orderNo);
       } catch (e) {
-        console.error('存储失败', e);
+        // 存储失败静默处理
       }
       wx.switchTab({ url: '/pages/work/index' });
     } else {
@@ -210,7 +213,7 @@ Page({
       try {
         wx.setStorageSync('pending_order_hint', orderNo);
       } catch (e) {
-        console.error('存储失败', e);
+        // 存储失败静默处理
       }
       wx.switchTab({ url: '/pages/scan/index' });
     }
@@ -218,11 +221,112 @@ Page({
 
   // ============ 全局搜索功能 ============
 
+  /**
+   * 处理订单搜索结果
+   * @param {Array} orders - 订单列表
+   * @returns {Array} 格式化的结果列表
+   */
+  _processOrderResults(orders) {
+    return orders.map(item => {
+      const statusText = orderStatusText(item.status);
+      return {
+        id: `order_${item.id}`,
+        type: 'order',
+        typeText: item.status === 'production' ? '生产' : '订单',
+        orderNo: item.orderNo,
+        styleNo: item.styleNo,
+        factoryName: item.factoryName,
+        statusText,
+        statusColor: getStatusColor(item.status),
+        rawData: item,
+      };
+    });
+  },
+
+  /**
+   * 处理入库搜索结果
+   * @param {Array} warehousing - 入库单列表
+   * @returns {Array} 格式化的结果列表
+   */
+  _processWarehousingResults(warehousing) {
+    return warehousing.map(item => {
+      const qualityText = qualityStatusText(item.qualityStatus);
+      return {
+        id: `warehousing_${item.id}`,
+        type: 'warehousing',
+        typeText: '入库',
+        orderNo: item.orderNo,
+        styleNo: item.styleNo,
+        warehouse: item.warehouse,
+        qualityStatusText: qualityText,
+        statusText: qualityText,
+        statusColor: getQualityColor(item.qualityStatus),
+        rawData: item,
+      };
+    });
+  },
+
+  /**
+   * 处理异常搜索结果
+   * @param {Array} exceptions - 异常记录列表
+   * @returns {Array} 格式化的结果列表
+   */
+  _processExceptionResults(exceptions) {
+    return exceptions.map(item => ({
+      id: `exception_${item.id}`,
+      type: 'exception',
+      typeText: '异常',
+      orderNo: item.orderNo,
+      styleNo: item.styleNo,
+      statusText: '失败',
+      statusColor: 'var(--color-error)',
+      rawData: item,
+    }));
+  },
+
   onGlobalSearchInput(e) {
     const value = e && e.detail ? e.detail.value : '';
     this.setData({ 'globalSearch.keyword': value });
   },
 
+  /**
+   * 执行搜索请求
+   * @param {string} keyword - 搜索关键词
+   * @returns {Promise<Array>} 返回 [订单结果, 入库结果, 异常结果]
+   */
+  async _executeSearchRequests(keyword) {
+    return Promise.all([
+      api.production.listOrders({
+        page: 1,
+        pageSize: 50,
+        orderNo: keyword,
+        styleNo: keyword,
+        factoryName: keyword,
+      }).catch(() => ({ records: [] })),
+
+      api.production.listWarehousing({
+        page: 1,
+        pageSize: 50,
+        orderNo: keyword,
+        styleNo: keyword,
+        warehouse: keyword,
+      }).catch(() => ({ records: [] })),
+
+      api.production.listScans({
+        page: 1,
+        pageSize: 50,
+        orderNo: keyword,
+        styleNo: keyword,
+        scanType: 'orchestration',
+        scanResult: 'failure',
+      }).catch(() => ({ records: [] })),
+    ]);
+  },
+
+  /**
+   * 执行全局搜索
+   * @returns {Promise<void>} 无返回值
+   */
   async doGlobalSearch() {
     const keyword = String(this.data.globalSearch.keyword || '').trim();
     if (!keyword) {
@@ -234,94 +338,13 @@ Page({
     wx.showLoading({ title: '搜索中...', mask: true });
 
     try {
-      // 并行搜索所有模块
-      const [ordersRes, warehousingRes, exceptionsRes] = await Promise.all([
-        // 搜索订单（生产+订单）
-        api.production
-          .listOrders({
-            page: 1,
-            pageSize: 50,
-            orderNo: keyword,
-            styleNo: keyword,
-            factoryName: keyword,
-          })
-          .catch(() => ({ records: [] })),
+      const [ordersRes, warehousingRes, exceptionsRes] = await this._executeSearchRequests(keyword);
 
-        // 搜索入库
-        api.production
-          .listWarehousing({
-            page: 1,
-            pageSize: 50,
-            orderNo: keyword,
-            styleNo: keyword,
-            warehouse: keyword,
-          })
-          .catch(() => ({ records: [] })),
-
-        // 搜索异常（过滤掉采购记录，保持与其他页面一致）
-        api.production
-          .listScans({
-            page: 1,
-            pageSize: 50,
-            orderNo: keyword,
-            styleNo: keyword,
-            scanType: 'orchestration',
-            scanResult: 'failure',
-          })
-          .catch(() => ({ records: [] })),
-      ]);
-
-      const results = [];
-
-      // 处理订单数据
-      const orders = ordersRes.records || [];
-      orders.forEach(item => {
-        const statusText = orderStatusText(item.status);
-        results.push({
-          id: `order_${item.id}`,
-          type: 'order',
-          typeText: item.status === 'production' ? '生产' : '订单',
-          orderNo: item.orderNo,
-          styleNo: item.styleNo,
-          factoryName: item.factoryName,
-          statusText,
-          statusColor: getStatusColor(item.status),
-          rawData: item,
-        });
-      });
-
-      // 处理入库数据
-      const warehousing = warehousingRes.records || [];
-      warehousing.forEach(item => {
-        const qualityText = qualityStatusText(item.qualityStatus);
-        results.push({
-          id: `warehousing_${item.id}`,
-          type: 'warehousing',
-          typeText: '入库',
-          orderNo: item.orderNo,
-          styleNo: item.styleNo,
-          warehouse: item.warehouse,
-          qualityStatusText: qualityText,
-          statusText: qualityText,
-          statusColor: getQualityColor(item.qualityStatus),
-          rawData: item,
-        });
-      });
-
-      // 处理异常数据
-      const exceptions = exceptionsRes.records || [];
-      exceptions.forEach(item => {
-        results.push({
-          id: `exception_${item.id}`,
-          type: 'exception',
-          typeText: '异常',
-          orderNo: item.orderNo,
-          styleNo: item.styleNo,
-          statusText: '失败',
-          statusColor: 'var(--color-error)',
-          rawData: item,
-        });
-      });
+      const results = [
+        ...this._processOrderResults(ordersRes.records || []),
+        ...this._processWarehousingResults(warehousingRes.records || []),
+        ...this._processExceptionResults(exceptionsRes.records || []),
+      ];
 
       this.setData({
         'globalSearch.results': results,
@@ -335,7 +358,6 @@ Page({
         toast.info('未找到匹配的订单');
       }
     } catch (error) {
-      console.error('全局搜索失败:', error);
       this.setData({ 'globalSearch.loading': false });
       wx.hideLoading();
       toast.error('搜索失败，请重试');
@@ -372,29 +394,23 @@ Page({
       try {
         wx.setStorageSync('work_active_tab', targetTab);
       } catch (e) {
-        console.error('存储失败', e);
+        // 存储失败静默处理
       }
       wx.switchTab({ url: '/pages/work/index' });
     } else if (item.type === 'warehousing') {
       try {
         wx.setStorageSync('work_active_tab', 'warehousing');
       } catch (e) {
-        console.error('存储失败', e);
+        // 存储失败静默处理
       }
       wx.switchTab({ url: '/pages/work/index' });
     } else if (item.type === 'exception') {
       try {
         wx.setStorageSync('work_active_tab', 'exceptions');
       } catch (e) {
-        console.error('存储失败', e);
+        // 存储失败静默处理
       }
       wx.switchTab({ url: '/pages/work/index' });
     }
   },
-
-  // 以下方法已移至 utils/orderStatusHelper.js
-  // - orderStatusText
-  // - qualityStatusText
-  // - getStatusColor
-  // - getQualityColor
 });

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Button, Card, Input, Select, Space, Tag, Form, App, Dropdown, Checkbox, Alert, InputNumber, Table, Modal } from 'antd';
-import { DownloadOutlined, DeleteOutlined, CheckCircleOutlined, EditOutlined, SettingOutlined, AppstoreOutlined, UnorderedListOutlined, PrinterOutlined, CloseCircleOutlined, ReloadOutlined, SwapOutlined } from '@ant-design/icons';
+import { Button, Card, Input, Select, Tag, App, Dropdown, Checkbox, Alert, InputNumber, Table, Modal } from 'antd';
+import { SettingOutlined, AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
+import PageStatCards from '@/components/common/PageStatCards';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 
@@ -39,8 +40,8 @@ import { useModal } from '@/hooks';
 import LiquidProgressBar from '@/components/common/LiquidProgressBar';
 import ProcessDetailModal from '@/components/production/ProcessDetailModal';
 import { getProgressColorStatus } from '@/utils/progressColor';
-import StatsCards from '@/components/common/StatsCards';
-import type { StatCard } from '@/components/common/StatsCards';
+
+
 
 const { Option } = Select;
 
@@ -57,7 +58,6 @@ const ProductionList: React.FC = () => {
   // 状态管理
   const { isMobile } = useViewport();
   const quickEditModal = useModal<ProductionOrder>();
-  const logModal = useModal();
 
   // ===== 打印弹窗状态 =====
   const [printModalVisible, setPrintModalVisible] = useState(false);
@@ -87,6 +87,7 @@ const ProductionList: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
   const [showDelayedOnly, setShowDelayedOnly] = useState(false); // 是否只显示延期订单
+  const [activeStatFilter, setActiveStatFilter] = useState<'all' | 'delayed' | 'today'>('all'); // 当前激活的统计卡片筛选
 
   // 全局统计数据（从API获取，不受分页影响）
   const [globalStats, setGlobalStats] = useState<{
@@ -94,7 +95,9 @@ const ProductionList: React.FC = () => {
     totalQuantity: number;
     delayedOrders: number;
     delayedQuantity: number;
-  }>({ totalOrders: 0, totalQuantity: 0, delayedOrders: 0, delayedQuantity: 0 });
+    todayOrders: number;
+    todayQuantity: number;
+  }>({ totalOrders: 0, totalQuantity: 0, delayedOrders: 0, delayedQuantity: 0, todayOrders: 0, todayQuantity: 0 });
 
   // 快速编辑和日志状态
   const [quickEditSaving, setQuickEditSaving] = useState(false);
@@ -248,46 +251,28 @@ const ProductionList: React.FC = () => {
     styleCover: true,          // 图片
     styleNo: true,             // 款号
     styleName: true,           // 款名
+    category: false,           // 品类
+    companyName: false,        // 公司
     attachments: true,         // 附件
     factoryName: true,         // 加工厂
+    merchandiser: false,       // 跟单员
+    patternMaker: false,       // 版师
     orderQuantity: true,       // 订单数量
     orderOperatorName: true,   // 下单人
     createTime: false,         // 下单时间
     remarks: false,            // 备注
     expectedShipDate: true,    // 预计出货
-    procurementStartTime: false,
-    procurementEndTime: false,
-    procurementOperatorName: true,
-    procurementCompletionRate: false,
-    cuttingStartTime: false,
-    cuttingEndTime: false,
-    cuttingOperatorName: true,
-    cuttingCompletionRate: false,
-    carSewingStartTime: false,
-    carSewingEndTime: false,
-    carSewingOperatorName: true,
-    carSewingCompletionRate: false,
-    ironingStartTime: false,
-    ironingEndTime: false,
-    ironingOperatorName: true,
-    ironingCompletionRate: false,
-    packagingStartTime: false,
-    packagingEndTime: false,
-    packagingOperatorName: true,
-    packagingCompletionRate: false,
-    qualityStartTime: false,
-    qualityEndTime: false,
-    qualityOperatorName: true,
-    qualityCompletionRate: false,
-    warehousingStartTime: false,
-    warehousingEndTime: false,
-    warehousingOperatorName: true,
-    warehousingCompletionRate: false,
+    procurementSummary: true,  // 采购进度
+    cuttingSummary: true,      // 裁剪进度
+    secondaryProcessSummary: true, // 二次工艺进度
+    carSewingSummary: true,    // 车缝进度
+    tailProcessSummary: true,  // 尾部进度
     cuttingQuantity: false,    // 裁剪数量
     cuttingBundleCount: false, // 扎数
     completedQuantity: false,  // 完成数量
-    warehousingQualifiedQuantity: true,  // 入库数量
-    outstockQuantity: false,   // 出库数量
+    warehousingQualifiedQuantity: true,  // 入库
+    unqualifiedQuantity: false, // 次品数
+    repairQuantity: false,     // 返修数
     inStockQuantity: false,    // 库存
     productionProgress: true,  // 生产进度
     status: true,              // 状态
@@ -320,51 +305,33 @@ const ProductionList: React.FC = () => {
     }));
   };
 
-  // 列设置选项配置
+  // 列设置选项配置（与 allColumns 中的 key 一一对应）
   const columnOptions = [
     { key: 'styleCover', label: '图片' },
     { key: 'styleNo', label: '款号' },
     { key: 'styleName', label: '款名' },
+    { key: 'category', label: '品类' },
+    { key: 'companyName', label: '公司' },
     { key: 'attachments', label: '附件' },
     { key: 'factoryName', label: '加工厂' },
+    { key: 'merchandiser', label: '跟单员' },
+    { key: 'patternMaker', label: '版师' },
     { key: 'orderQuantity', label: '订单数量' },
     { key: 'orderOperatorName', label: '下单人' },
     { key: 'createTime', label: '下单时间' },
     { key: 'remarks', label: '备注' },
     { key: 'expectedShipDate', label: '预计出货' },
-    { key: 'procurementStartTime', label: '采购时间' },
-    { key: 'procurementEndTime', label: '采购完成' },
-    { key: 'procurementOperatorName', label: '采购员' },
-    { key: 'procurementCompletionRate', label: '采购完成率' },
-    { key: 'cuttingStartTime', label: '裁剪时间' },
-    { key: 'cuttingEndTime', label: '裁剪完成' },
-    { key: 'cuttingOperatorName', label: '裁剪员' },
-    { key: 'cuttingCompletionRate', label: '裁剪完成率' },
-    { key: 'carSewingStartTime', label: '车缝开始' },
-    { key: 'carSewingEndTime', label: '车缝完成' },
-    { key: 'carSewingOperatorName', label: '车缝员' },
-    { key: 'carSewingCompletionRate', label: '车缝完成率' },
-    { key: 'ironingStartTime', label: '大烫开始' },
-    { key: 'ironingEndTime', label: '大烫完成' },
-    { key: 'ironingOperatorName', label: '大烫员' },
-    { key: 'ironingCompletionRate', label: '大烫完成率' },
-    { key: 'packagingStartTime', label: '包装开始' },
-    { key: 'packagingEndTime', label: '包装完成' },
-    { key: 'packagingOperatorName', label: '包装员' },
-    { key: 'packagingCompletionRate', label: '包装完成率' },
-    { key: 'qualityStartTime', label: '质检时间' },
-    { key: 'qualityEndTime', label: '质检完成' },
-    { key: 'qualityOperatorName', label: '质检员' },
-    { key: 'qualityCompletionRate', label: '质检完成率' },
-    { key: 'warehousingStartTime', label: '入库时间' },
-    { key: 'warehousingEndTime', label: '入库完成' },
-    { key: 'warehousingOperatorName', label: '入库员' },
-    { key: 'warehousingCompletionRate', label: '入库完成率' },
+    { key: 'procurementSummary', label: '采购进度' },
+    { key: 'cuttingSummary', label: '裁剪进度' },
+    { key: 'secondaryProcessSummary', label: '二次工艺' },
+    { key: 'carSewingSummary', label: '车缝进度' },
+    { key: 'tailProcessSummary', label: '尾部进度' },
     { key: 'cuttingQuantity', label: '裁剪数量' },
     { key: 'cuttingBundleCount', label: '扎数' },
     { key: 'completedQuantity', label: '完成数量' },
-    { key: 'warehousingQualifiedQuantity', label: '入库数量' },
-    { key: 'outstockQuantity', label: '出库数量' },
+    { key: 'warehousingQualifiedQuantity', label: '入库' },
+    { key: 'unqualifiedQuantity', label: '次品数' },
+    { key: 'repairQuantity', label: '返修数' },
     { key: 'inStockQuantity', label: '库存' },
     { key: 'productionProgress', label: '生产进度' },
     { key: 'status', label: '状态' },
@@ -402,7 +369,7 @@ const ProductionList: React.FC = () => {
       } else {
         message.error(
           typeof response === 'object' && response !== null && 'message' in response
-            ? String(response.message) || '获取生产订单列表失败'
+            ? String((response as any).message) || '获取生产订单列表失败'
             : '获取生产订单列表失败'
         );
       }
@@ -430,6 +397,8 @@ const ProductionList: React.FC = () => {
         totalQuantity: number;
         delayedOrders: number;
         delayedQuantity: number;
+        todayOrders: number;
+        todayQuantity: number;
       }>('/production/order/stats', { params: filterParams });
       if (isApiSuccess(response)) {
         setGlobalStats(response.data);
@@ -473,10 +442,6 @@ const ProductionList: React.FC = () => {
       if (oldData !== null) {
         // 不是首次加载，说明数据有变化
         setProductionList(newData);
-        // console.log('[实时同步] 生产订单数据已更新', {
-        //   oldCount: oldData.length,
-        //   newCount: newData.length
-        // });
 
         // 可选：显示提示（不打扰用户的情况下）
         // message.info('订单数据已自动更新', 1);
@@ -484,7 +449,7 @@ const ProductionList: React.FC = () => {
     },
     {
       interval: 30000, // 30秒轮询
-      enabled: !loading && !quickEditModal.visible && !logModal.visible, // 加载中或弹窗打开时暂停同步
+      enabled: !loading && !quickEditModal.visible, // 加载中或弹窗打开时暂停同步
       pauseOnHidden: true, // 页面隐藏时暂停
       onError: (error) => {
         console.error('[实时同步] 错误', error);
@@ -550,27 +515,27 @@ const ProductionList: React.FC = () => {
         r.styleName,
         r.factoryName,
         r.orderQuantity,
-        (r as Record<string, unknown>).orderOperatorName || '',
-        formatDateTime((r as Record<string, unknown>).createTime),
-        formatDateTime((r as Record<string, unknown>).procurementStartTime),
-        formatDateTime((r as Record<string, unknown>).procurementEndTime),
-        (r as Record<string, unknown>).procurementOperatorName || '',
-        (r as Record<string, unknown>).procurementCompletionRate == null ? '' : `${(r as Record<string, unknown>).procurementCompletionRate}%`,
-        formatDateTime((r as Record<string, unknown>).cuttingStartTime),
-        formatDateTime((r as Record<string, unknown>).cuttingEndTime),
-        (r as Record<string, unknown>).cuttingOperatorName || '',
-        (r as Record<string, unknown>).cuttingCompletionRate == null ? '' : `${(r as Record<string, unknown>).cuttingCompletionRate}%`,
-        formatDateTime((r as Record<string, unknown>).sewingStartTime),
-        formatDateTime((r as Record<string, unknown>).sewingEndTime),
-        (r as Record<string, unknown>).sewingCompletionRate == null ? '' : `${(r as Record<string, unknown>).sewingCompletionRate}%`,
-        formatDateTime((r as Record<string, unknown>).qualityStartTime),
-        formatDateTime((r as Record<string, unknown>).qualityEndTime),
-        (r as Record<string, unknown>).qualityOperatorName || '',
-        (r as Record<string, unknown>).qualityCompletionRate == null ? '' : `${(r as Record<string, unknown>).qualityCompletionRate}%`,
-        formatDateTime((r as Record<string, unknown>).warehousingStartTime),
-        formatDateTime((r as Record<string, unknown>).warehousingEndTime),
-        (r as Record<string, unknown>).warehousingOperatorName || '',
-        (r as Record<string, unknown>).warehousingCompletionRate == null ? '' : `${(r as Record<string, unknown>).warehousingCompletionRate}%`,
+        (r as any).orderOperatorName || '',
+        formatDateTime((r as any).createTime),
+        formatDateTime((r as any).procurementStartTime),
+        formatDateTime((r as any).procurementEndTime),
+        (r as any).procurementOperatorName || '',
+        (r as any).procurementCompletionRate == null ? '' : `${(r as any).procurementCompletionRate}%`,
+        formatDateTime((r as any).cuttingStartTime),
+        formatDateTime((r as any).cuttingEndTime),
+        (r as any).cuttingOperatorName || '',
+        (r as any).cuttingCompletionRate == null ? '' : `${(r as any).cuttingCompletionRate}%`,
+        formatDateTime((r as any).sewingStartTime),
+        formatDateTime((r as any).sewingEndTime),
+        (r as any).sewingCompletionRate == null ? '' : `${(r as any).sewingCompletionRate}%`,
+        formatDateTime((r as any).qualityStartTime),
+        formatDateTime((r as any).qualityEndTime),
+        (r as any).qualityOperatorName || '',
+        (r as any).qualityCompletionRate == null ? '' : `${(r as any).qualityCompletionRate}%`,
+        formatDateTime((r as any).warehousingStartTime),
+        formatDateTime((r as any).warehousingEndTime),
+        (r as any).warehousingOperatorName || '',
+        (r as any).warehousingCompletionRate == null ? '' : `${(r as any).warehousingCompletionRate}%`,
         r.productionProgress == null ? '' : `${r.productionProgress}%`,
         getStatusConfig(r.status).text,
       ].map(formatCsvCell).join(',');
@@ -609,7 +574,8 @@ const ProductionList: React.FC = () => {
       pending: { text: '待生产', color: 'default' },
       production: { text: '生产中', color: 'success' },
       completed: { text: '已完成', color: 'default' },
-      delayed: { text: '已逾期', color: 'warning' },
+      delayed: { text: '已延期', color: 'warning' },
+      cancelled: { text: '已取消', color: 'default' },
     };
     const key = safeString(status, '');
     return statusMap[key] || { text: '未知', color: 'default' };
@@ -641,18 +607,18 @@ const ProductionList: React.FC = () => {
   };
 
   const handleCloseOrder = (order: ProductionOrder) => {
-    const orderId = safeString((order as Record<string, unknown>)?.id, '');
+    const orderId = safeString((order as any)?.id, '');
     if (!orderId) {
       message.error('订单ID为空，无法关单');
       return;
     }
 
-    const cuttingQty = Number((order as Record<string, unknown>)?.cuttingQuantity ?? 0) || 0;
+    const cuttingQty = Number((order as any)?.cuttingQuantity ?? 0) || 0;
     const minRequired = getCloseMinRequired(cuttingQty);
-    const orderQty = Number((order as Record<string, unknown>)?.orderQuantity ?? 0) || 0;
-    const warehousingQualified = Number((order as Record<string, unknown>)?.warehousingQualifiedQuantity ?? 0) || 0;
+    const orderQty = Number((order as any)?.orderQuantity ?? 0) || 0;
+    const warehousingQualified = Number((order as any)?.warehousingQualifiedQuantity ?? 0) || 0;
 
-    if ((order as Record<string, unknown>)?.status === 'completed') {
+    if ((order as any)?.status === 'completed') {
       message.info('该订单已完成，无需关单');
       return;
     }
@@ -668,7 +634,7 @@ const ProductionList: React.FC = () => {
     }
 
     modal.confirm({
-      title: `确认关单：${safeString((order as Record<string, unknown>)?.orderNo)}`,
+      title: `确认关单：${safeString((order as any)?.orderNo)}`,
       okText: '确认关单',
       cancelText: '取消',
       okButtonProps: { danger: true },
@@ -688,7 +654,7 @@ const ProductionList: React.FC = () => {
         );
         if (!isApiSuccess(result)) {
           const msg = typeof result === 'object' && result !== null && 'message' in result
-            ? String(result.message) || '关单失败'
+            ? String((result as any).message) || '关单失败'
             : '关单失败';
           throw new Error(msg);
         }
@@ -703,7 +669,7 @@ const ProductionList: React.FC = () => {
       message.error('无权限报废');
       return;
     }
-    const orderId = safeString((order as Record<string, unknown>)?.id, '');
+    const orderId = safeString((order as any)?.id, '');
     if (!orderId) {
       message.error('订单ID为空，无法报废');
       return;
@@ -715,7 +681,7 @@ const ProductionList: React.FC = () => {
 
     let remark = '';
     modal.confirm({
-      title: `确认报废：${safeString((order as Record<string, unknown>)?.orderNo)}`,
+      title: `确认报废：${safeString((order as any)?.orderNo)}`,
       okText: '确认报废',
       cancelText: '取消',
       okButtonProps: { danger: true },
@@ -745,7 +711,7 @@ const ProductionList: React.FC = () => {
         );
         if (!isApiSuccess(result)) {
           const msg = typeof result === 'object' && result !== null && 'message' in result
-            ? String(result.message) || '报废失败'
+            ? String((result as any).message) || '报废失败'
             : '报废失败';
           throw new Error(msg);
         }
@@ -793,14 +759,13 @@ const ProductionList: React.FC = () => {
 
     // 加载菲号列表（从裁剪菲号表获取）
     setTransferBundlesLoading(true);
-    api.post('/production/cutting/list', { 
+    api.post('/production/cutting/list', {
       orderId: (order as any).id,
-      page: 1, 
-      pageSize: 999 
+      page: 1,
+      pageSize: 999
     })
       .then((res: any) => {
         const records = res?.data?.records || res?.records || res?.data || [];
-        console.log('[转单] 菲号数据:', records);
         setTransferBundles(records);
       })
       .catch((err) => {
@@ -819,7 +784,6 @@ const ProductionList: React.FC = () => {
         unitPrice: Number(p.unitPrice || p.price || 0),
         progressStage: p.progressStage || p.stage || '',
       }));
-      console.log('[转单] 使用订单工序配置:', processes);
       setTransferProcesses(processes);
     } else {
       // 兜底：从款式工序列表获取（可能没有单价）
@@ -834,7 +798,6 @@ const ProductionList: React.FC = () => {
               unitPrice: Number(p.unitPrice || p.price || 0),
               progressStage: p.progressStage || p.stage || '',
             }));
-            console.log('[转单] 使用款式工序配置:', processes);
             setTransferProcesses(processes);
           })
           .catch(() => setTransferProcesses([]))
@@ -881,23 +844,15 @@ const ProductionList: React.FC = () => {
     return safeString(value);
   };
 
-  const renderStageRate = (value: unknown) => {
-    if (value === null || value === undefined || String(value).trim() === '') return '-';
-    const n = Number(value);
-    return Number.isFinite(n) ? `${n}%` : '-';
-  };
+  // const renderStageRate = (value: unknown) => {
+  //   if (value === null || value === undefined || String(value).trim() === '') return '-';
+  //   const n = Number(value);
+  //   return Number.isFinite(n) ? `${n}%` : '-';
+  // };
 
   // 添加排序逻辑
   const sortedProductionList = useMemo(() => {
     let filtered = [...productionList];
-
-    // 延期订单过滤（排除已关单的订单）
-    if (showDelayedOnly) {
-      filtered = filtered.filter(order => {
-        const status = getProgressColorStatus(order.plannedEndDate);
-        return status === 'danger' && !isOrderFrozenByStatus(order);
-      });
-    }
 
     // 排序
     filtered.sort((a: any, b: any) => {
@@ -914,71 +869,9 @@ const ProductionList: React.FC = () => {
       return 0;
     });
     return filtered;
-  }, [productionList, sortField, sortOrder, showDelayedOnly]);
+  }, [productionList, sortField, sortOrder, showDelayedOnly, activeStatFilter]);
 
-  // 工序列函数(已改用工序汇总+点击展开)
 
-  const _stageColumns = (
-    prefix: string,
-    titles: { start: string; end: string; operator: string; rate: string },
-    options?: { includeOperator?: boolean }
-  ) => {
-    const includeOperator = options?.includeOperator !== false;
-    return [
-      {
-        title: titles.start,
-        dataIndex: `${prefix}StartTime`,
-        key: `${prefix}StartTime`,
-        width: 170,
-        render: renderStageTime,
-      },
-      {
-        title: titles.end,
-        dataIndex: `${prefix}EndTime`,
-        key: `${prefix}EndTime`,
-        width: 170,
-        render: renderStageTime,
-      },
-      ...(includeOperator
-        ? [
-          {
-            title: titles.operator,
-            dataIndex: `${prefix}OperatorName`,
-            key: `${prefix}OperatorName`,
-            width: 120,
-            render: (value: unknown, record: ProductionOrder) => {
-              const operatorName = renderStageText(value);
-              if (!operatorName || operatorName === '-') return '-';
-              const orderNo = String((record as Record<string, unknown>)?.orderNo || '').trim();
-              const processName = titles.operator.replace('员', '');
-              return (
-                <a
-                  style={{ cursor: 'pointer', color: 'var(--primary-color)' }}
-                  onClick={() => {
-                    if (orderNo) {
-                      navigate(`/finance/payroll-operator-summary?orderNo=${orderNo}&processName=${processName}`);
-                    }
-                  }}
-                >
-                  {operatorName}
-                </a>
-              );
-            },
-          },
-        ]
-        : []),
-      {
-        title: titles.rate,
-        dataIndex: `${prefix}CompletionRate`,
-        key: `${prefix}CompletionRate`,
-        width: 110,
-        align: 'right' as const,
-        render: renderStageRate,
-      },
-    ];
-  };
-
-  // ===== scanTypeLabel 已删除（日志弹窗功能已移除）=====
 
   // 打开工序详情弹窗
   const openProcessDetail = async (record: ProductionOrder, type: string) => {
@@ -995,7 +888,6 @@ const ProductionList: React.FC = () => {
       const res = await api.get(`/production/order/process-status/${record.id}`);
       if (res.code === 200 && res.data) {
         setProcessStatus(res.data);
-        // console.log('[工序状态] 获取成功:', res.data);
       }
     } catch (error) {
       console.error('[工序状态] 获取失败:', error);
@@ -1008,7 +900,6 @@ const ProductionList: React.FC = () => {
         const res = await api.get(`/production/order/procurement-status/${record.id}`);
         if (res.code === 200 && res.data) {
           setProcurementStatus(res.data);
-          // console.log('[采购状态] 获取成功:', res.data);
         }
       } catch (error) {
         console.error('[采购状态] 获取失败:', error);
@@ -1060,7 +951,6 @@ const ProductionList: React.FC = () => {
       });
       if (res.code === 200 && res.data?.records) {
         setFactories(res.data.records);
-        // console.log('[工厂列表] 获取成功:', res.data.records.length, '个工厂');
       }
     } catch (error) {
       console.error('[工厂列表] 获取失败:', error);
@@ -1146,8 +1036,6 @@ const ProductionList: React.FC = () => {
         processesByNode,
       });
 
-      // console.log('[同步工序] 新的工序数据:', allProcesses.map(p => `${p.name}(${p.progressStage}): ¥${p.unitPrice}`));
-
       // 使用 quickEdit API 更新订单
       const updateRes = await productionOrderApi.quickEdit({
         id: record.id,
@@ -1185,8 +1073,8 @@ const ProductionList: React.FC = () => {
       width: 120,
       render: (v: any, record: ProductionOrder) => {
         const orderNo = safeString(v, '');
-        const styleNo = safeString((record as Record<string, unknown>)?.styleNo, '');
-        const orderId = safeString((record as Record<string, unknown>)?.id, '');
+        const styleNo = safeString((record as any)?.styleNo, '');
+        const orderId = safeString((record as any)?.id, '');
         return (
           <a
             className="order-no-wrap"
@@ -1298,7 +1186,7 @@ const ProductionList: React.FC = () => {
       render: (v: any) => v || '-',
     },
     {
-      title: <SortableColumnTitle title="预计出货" field="expectedShipDate" onSort={handleSort} currentField={sortField} order={sortOrder} />,
+      title: <SortableColumnTitle title="预计出货" sortField={sortField} fieldName="expectedShipDate" sortOrder={sortOrder} onSort={handleSort} />,
       dataIndex: 'expectedShipDate',
       key: 'expectedShipDate',
       width: 120,
@@ -1327,13 +1215,13 @@ const ProductionList: React.FC = () => {
               openProcessDetail(record, 'procurement');
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#f5f5f5';
+              e.currentTarget.style.background = 'var(--color-bg-container)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.background = 'var(--color-bg-base)';
             }}
           >
-            <div style={{ fontSize: '11px', color: '#666', marginBottom: '2px', textAlign: 'center' }}>
+            <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
               {completed}/{total}
             </div>
             <LiquidProgressBar
@@ -1369,13 +1257,13 @@ const ProductionList: React.FC = () => {
               openProcessDetail(record, 'cutting');
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#f5f5f5';
+              e.currentTarget.style.background = 'var(--color-bg-subtle)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.background = 'var(--color-bg-base)';
             }}
           >
-            <div style={{ fontSize: '11px', color: '#666', marginBottom: '2px', textAlign: 'center' }}>
+            <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
               {completed}/{total}
             </div>
             <LiquidProgressBar
@@ -1398,7 +1286,7 @@ const ProductionList: React.FC = () => {
         // 检测当前订单是否有二次工艺数据（扫码记录或工序配置）
         const hasSecondaryProcessData = (() => {
           // 方式1: 检查是否有扫码记录生成的时间数据
-          if (record.secondaryProcessStartTime || record.secondaryProcessEndTime) {
+          if ((record as any).secondaryProcessStartTime || (record as any).secondaryProcessEndTime) {
             return true;
           }
 
@@ -1415,12 +1303,12 @@ const ProductionList: React.FC = () => {
         if (!hasSecondaryProcessData) {
           return (
             <div style={{ padding: '4px', opacity: 0.4 }}>
-              <div style={{ fontSize: '11px', color: '#999', marginBottom: '2px', textAlign: 'center' }}>-</div>
+              <div style={{ fontSize: '11px', color: 'var(--color-text-tertiary)', marginBottom: '2px', textAlign: 'center' }}>-</div>
               <div
                 style={{
                   width: '100%',
                   height: '16px',
-                  background: '#e8e8e8',
+                  background: 'var(--color-border)',
                   borderRadius: '8px'
                 }}
               />
@@ -1445,13 +1333,13 @@ const ProductionList: React.FC = () => {
               openProcessDetail(record, 'secondaryProcess');
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#f5f5f5';
+              e.currentTarget.style.background = 'var(--color-bg-subtle)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.background = 'var(--color-bg-base)';
             }}
           >
-            <div style={{ fontSize: '11px', color: '#666', marginBottom: '2px', textAlign: 'center' }}>
+            <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
               {completed}/{total}
             </div>
             <LiquidProgressBar
@@ -1487,13 +1375,13 @@ const ProductionList: React.FC = () => {
               openProcessDetail(record, 'carSewing');
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#f5f5f5';
+              e.currentTarget.style.background = 'var(--color-bg-subtle)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.background = 'var(--color-bg-base)';
             }}
           >
-            <div style={{ fontSize: '11px', color: '#666', marginBottom: '2px', textAlign: 'center' }}>
+            <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
               {completed}/{total}
             </div>
             <LiquidProgressBar
@@ -1529,13 +1417,13 @@ const ProductionList: React.FC = () => {
               openProcessDetail(record, 'tailProcess');
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#f5f5f5';
+              e.currentTarget.style.background = 'var(--color-bg-subtle)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.background = 'var(--color-bg-base)';
             }}
           >
-            <div style={{ fontSize: '11px', color: '#666', marginBottom: '2px', textAlign: 'center' }}>
+            <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
               {completed}/{total}
             </div>
             <LiquidProgressBar
@@ -1584,9 +1472,9 @@ const ProductionList: React.FC = () => {
 
         // 颜色根据进度变化
         const getColor = () => {
-          if (rate === 100) return '#059669'; // 绿色
-          if (rate > 0) return '#3b82f6'; // 蓝色
-          return '#e5e7eb'; // 灰色
+          if (rate === 100) return 'var(--color-success)'; // 绿色
+          if (rate > 0) return 'var(--color-primary)'; // 蓝色
+          return 'var(--color-border)'; // 灰色
         };
 
         return (
@@ -1612,7 +1500,7 @@ const ProductionList: React.FC = () => {
                   cy="18"
                   r="16"
                   fill="none"
-                  stroke="#f3f4f6"
+                  stroke="var(--color-bg-subtle)"
                   strokeWidth="3"
                 />
                 {/* 进度圆环 */}
@@ -1798,7 +1686,6 @@ const ProductionList: React.FC = () => {
               {
                 key: 'close',
                 label: <span style={{ color: frozen ? undefined : 'var(--primary-color)' }}>{frozen ? '关单(已完成)' : '关单'}</span>,
-                icon: <CheckCircleOutlined style={{ color: frozen ? undefined : 'var(--primary-color)' }} />,
                 disabled: frozen,
                 onClick: () => handleCloseOrder(record),
               },
@@ -1816,7 +1703,6 @@ const ProductionList: React.FC = () => {
               {
                 key: 'transfer',
                 label: '转单',
-                icon: <SwapOutlined />,
                 title: frozen ? '转单（订单已关单）' : '转给其他人员处理',
                 disabled: frozen,
                 onClick: () => handleTransferOrder(record),
@@ -1836,21 +1722,25 @@ const ProductionList: React.FC = () => {
 
   // 统计数据现在从 globalStats（API获取）获取，不再从 productionList 计算
   // 保留 useMemo 用于点击延期订单筛选时的本地过滤逻辑
-  const localDelayedList = useMemo(() => {
-    return productionList.filter(order => {
-      const status = getProgressColorStatus(order.plannedEndDate);
-      return status === 'danger' && !isOrderFrozenByStatus(order); // 延期订单（排除已关单）
-    });
-  }, [productionList]);
+  // const localDelayedList = useMemo(() => {
+  //   return productionList.filter(order => {
+  //     const status = getProgressColorStatus(order.plannedEndDate);
+  //     return status === 'danger' && !isOrderFrozenByStatus(order); // 延期订单（排除已关单）
+  //   });
+  // }, [productionList]);
 
   // 点击统计卡片筛选
-  const handleStatClick = (type: 'all' | 'delayed') => {
+  const handleStatClick = (type: 'all' | 'delayed' | 'today') => {
+    setActiveStatFilter(type);
     if (type === 'all') {
       setShowDelayedOnly(false);
-      setQueryParams({ ...queryParams, status: '', page: 1 });
+      setQueryParams({ ...queryParams, status: '', delayedOnly: undefined, todayOnly: undefined, page: 1 } as any);
     } else if (type === 'delayed') {
       setShowDelayedOnly(true);
-      setQueryParams({ ...queryParams, page: 1 });
+      setQueryParams({ ...queryParams, status: '', delayedOnly: 'true', todayOnly: undefined, page: 1 } as any);
+    } else if (type === 'today') {
+      setShowDelayedOnly(false);
+      setQueryParams({ ...queryParams, status: '', delayedOnly: undefined, todayOnly: 'true', page: 1 } as any);
     }
   };
 
@@ -1863,26 +1753,42 @@ const ProductionList: React.FC = () => {
             <h2 className="page-title">我的订单</h2>
           </div>
 
-          {/* 数据概览卡片 - 使用全局统计数据（不受分页影响） */}
-          <StatsCards stats={[
-            {
-              label: '订单个数',
-              value: globalStats.totalOrders,
-              color: '#2D7FF9',
-              onClick: () => handleStatClick('all')
-            },
-            {
-              label: '总数量',
-              value: globalStats.totalQuantity,
-              color: '#52c41a'
-            },
-            {
-              label: '延期订单',
-              value: `${globalStats.delayedOrders}单/${globalStats.delayedQuantity.toLocaleString()}件`,
-              color: '#ff4d4f',
-              onClick: () => handleStatClick('delayed')
-            }
-          ]} />
+          {/* 数据概览卡片 - 使用全局统计数据（不受分页影响，不受列设置控制） */}
+          <PageStatCards
+            activeKey={activeStatFilter}
+            cards={[
+              {
+                key: 'all',
+                items: [
+                  { label: '订单个数', value: globalStats.totalOrders, unit: '个', color: 'var(--color-primary)' },
+                  { label: '总数量', value: globalStats.totalQuantity, unit: '件', color: 'var(--color-success)' },
+                ],
+                onClick: () => handleStatClick('all'),
+                activeColor: 'var(--color-primary)',
+                activeBg: 'rgba(45, 127, 249, 0.1)',
+              },
+              {
+                key: 'delayed',
+                items: [
+                  { label: '延期订单', value: globalStats.delayedOrders, unit: '个', color: 'var(--color-danger)' },
+                  { label: '延期数量', value: globalStats.delayedQuantity, unit: '件', color: 'var(--color-danger)' },
+                ],
+                onClick: () => handleStatClick('delayed'),
+                activeColor: 'var(--color-danger)',
+                activeBg: 'rgba(239, 68, 68, 0.1)',
+              },
+              {
+                key: 'today',
+                items: [
+                  { label: '今日订单', value: globalStats.todayOrders, unit: '个', color: 'var(--color-primary)' },
+                  { label: '今日数量', value: globalStats.todayQuantity, unit: '件', color: 'var(--color-primary-light)' },
+                ],
+                onClick: () => handleStatClick('today'),
+                activeColor: 'var(--color-primary)',
+                activeBg: 'rgba(45, 127, 249, 0.1)',
+              },
+            ]}
+          />
 
           {/* 筛选区 */}
           <Card size="small" className="filter-card mb-sm">
@@ -1901,7 +1807,8 @@ const ProductionList: React.FC = () => {
                     { label: '待生产', value: 'pending' },
                     { label: '生产中', value: 'production' },
                     { label: '已完成', value: 'completed' },
-                    { label: '已逾期', value: 'delayed' },
+                    { label: '已延期', value: 'delayed' },
+                    { label: '已取消', value: 'cancelled' },
                   ]}
                 />
               )}
@@ -1973,9 +1880,9 @@ const ProductionList: React.FC = () => {
 
           {/* 表格/卡片区 */}
           {viewMode === 'list' ? (
-            <ResizableTable<ProductionOrder>
+            <ResizableTable<any>
               storageKey="production-order-table"
-              columns={columns as Record<string, unknown>}
+              columns={columns as any}
               dataSource={sortedProductionList}
               rowKey="id"
               loading={loading}
@@ -2078,6 +1985,7 @@ const ProductionList: React.FC = () => {
                 {
                   key: 'divider1',
                   type: 'divider' as const,
+                  label: '',
                 },
                 {
                   key: 'edit',
@@ -2098,8 +2006,8 @@ const ProductionList: React.FC = () => {
           visible={quickEditModal.visible}
           loading={quickEditSaving}
           initialValues={{
-            remarks: quickEditModal.data?.remarks,
-            expectedShipDate: quickEditModal.data?.expectedShipDate,
+            remarks: (quickEditModal.data as any)?.remarks,
+            expectedShipDate: (quickEditModal.data as any)?.expectedShipDate,
           }}
           onSave={handleQuickEditSave}
           onCancel={() => {
@@ -2139,14 +2047,14 @@ const ProductionList: React.FC = () => {
 
               {/* 工序节点委派表格 */}
               {(() => {
-                const stageColorMap: Record<string, string> = {
-                  procurement: '#1e40af',
-                  cutting: '#92400e',
-                  carSewing: '#065f46',
-                  secondaryProcess: '#5b21b6',
-                  tailProcess: '#9d174d',
-                  warehousing: '#374151',
-                };
+                // const stageColorMap: Record<string, string> = {
+                //   procurement: '#1e40af',
+                //   cutting: '#92400e',
+                //   carSewing: '#065f46',
+                //   secondaryProcess: '#5b21b6',
+                //   tailProcess: '#9d174d',
+                //   warehousing: '#374151',
+                // };
 
                 const stageStatusMap: Record<string, any> = {
                   cutting: processStatus?.cutting,
@@ -2158,13 +2066,13 @@ const ProductionList: React.FC = () => {
                 const stagesToShow = mainStages.filter(s => activeStageKeys.includes(s.key));
 
                 return (
-                  <div style={{ border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+                  <div style={{ border: '1px solid var(--color-border)', overflow: 'hidden' }}>
                     <div style={{
-                      background: '#f9fafb',
+                      background: 'var(--color-bg-subtle)',
                       padding: '8px 12px',
                       fontSize: '12px',
                       color: 'var(--neutral-text-secondary)',
-                      borderBottom: '1px solid #e5e7eb'
+                      borderBottom: '1px solid var(--color-border)'
                     }}>
                       <span style={{ fontWeight: 600, color: 'var(--neutral-text)' }}>订单：</span>
                       <span style={{ marginRight: '16px' }}>{processDetailRecord?.orderNo || '-'}</span>
@@ -2181,7 +2089,7 @@ const ProductionList: React.FC = () => {
                           dataIndex: 'name',
                           width: 90,
                           render: (text: string, record) => (
-                            <span style={{ fontSize: '13px', fontWeight: 600, color: record.color }}>
+                            <span style={{ fontSize: '13px', fontWeight: 600, color: (record as any).color }}>
                               {text}
                             </span>
                           ),
@@ -2383,7 +2291,7 @@ const ProductionList: React.FC = () => {
                   color: 'var(--neutral-text)',
                   marginBottom: '8px',
                   paddingBottom: '6px',
-                  borderBottom: '1px solid #e5e7eb'
+                  borderBottom: '1px solid var(--color-border)'
                 }}>
                   委派历史
                 </div>
@@ -2401,7 +2309,7 @@ const ProductionList: React.FC = () => {
                 color: 'var(--neutral-text)',
                 marginBottom: '8px',
                 paddingBottom: '6px',
-                borderBottom: '1px solid #e5e7eb'
+                borderBottom: '1px solid var(--color-border)'
               }}>
                 操作记录（扫码/委派/同步）
               </div>
@@ -2461,7 +2369,7 @@ const ProductionList: React.FC = () => {
               <div style={{ marginBottom: 6, fontWeight: 500 }}>
                 选择菲号（可选）：
                 {transferSelectedBundleIds.length > 0 && (
-                  <span style={{ fontWeight: 400, color: '#999', marginLeft: 8 }}>
+                  <span style={{ fontWeight: 400, color: 'var(--color-text-tertiary)', marginLeft: 8 }}>
                     已选 {transferSelectedBundleIds.length} 个
                   </span>
                 )}
@@ -2478,19 +2386,19 @@ const ProductionList: React.FC = () => {
                   onChange: (keys) => setTransferSelectedBundleIds(keys as string[]),
                 }}
                 columns={[
-                  { 
-                    title: '菲号', 
-                    dataIndex: 'bundleNo', 
+                  {
+                    title: '菲号',
+                    dataIndex: 'bundleNo',
                     width: 80,
                     render: (val: any) => val || '-'
                   },
                   { title: '颜色', dataIndex: 'color', width: 100 },
                   { title: '尺码', dataIndex: 'size', width: 80 },
                   { title: '数量', dataIndex: 'quantity', width: 70 },
-                  { 
-                    title: '状态', 
-                    dataIndex: 'status', 
-                    width: 90, 
+                  {
+                    title: '状态',
+                    dataIndex: 'status',
+                    width: 90,
                     render: (v: string) => {
                       const statusMap: Record<string, string> = {
                         'created': '已创建',
@@ -2510,7 +2418,7 @@ const ProductionList: React.FC = () => {
               <div style={{ marginBottom: 6, fontWeight: 500 }}>
                 选择工序（可选）：
                 {transferSelectedProcessCodes.length > 0 && (
-                  <span style={{ fontWeight: 400, color: '#999', marginLeft: 8 }}>
+                  <span style={{ fontWeight: 400, color: 'var(--color-text-tertiary)', marginLeft: 8 }}>
                     已选 {transferSelectedProcessCodes.length} 个工序
                   </span>
                 )}
@@ -2534,7 +2442,7 @@ const ProductionList: React.FC = () => {
                     <Option key={p.processCode || p.id} value={p.processCode || p.id} label={label}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span>{p.processName}</span>
-                        <span style={{ color: '#999', fontSize: '12px' }}>
+                        <span style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>
                           {p.progressStage && `${p.progressStage} | `}
                           {price > 0 ? `¥${price.toFixed(2)}` : '未配置单价'}
                         </span>
@@ -2544,7 +2452,7 @@ const ProductionList: React.FC = () => {
                 })}
               </Select>
               {transferProcesses.length === 0 && !transferProcessesLoading && (
-                <div style={{ color: '#999', fontSize: '12px', marginTop: 4 }}>
+                <div style={{ color: 'var(--color-text-tertiary)', fontSize: '12px', marginTop: 4 }}>
                   该订单暂无工序配置
                 </div>
               )}
@@ -2577,7 +2485,7 @@ const ProductionList: React.FC = () => {
           cover={printingRecord?.styleCover}
           color={printingRecord?.color}
           quantity={printingRecord?.orderQuantity}
-          category={printingRecord?.category}
+          category={(printingRecord as any)?.category}
           mode="production"
           extraInfo={{
             '订单号': printingRecord?.orderNo,

@@ -377,6 +377,7 @@ public class SystemTableMigrator {
             ensurePermission("成品结算", "MENU_SHIPMENT_RECON", financeId, "财务管理", "menu", "/finance/shipment-reconciliation", null, 33);
             ensurePermission("审批付款", "MENU_PAYMENT_APPROVAL", financeId, "财务管理", "menu", "/finance/payment-approval", null, 34);
             ensurePermission("人员工序统计", "MENU_PAYROLL_OPERATOR_SUMMARY", financeId, "财务管理", "menu", "/finance/payroll-operator-summary", null, 35);
+            ensurePermission("费用报销", "MENU_EXPENSE_REIMBURSEMENT", financeId, "财务管理", "menu", "/finance/expense-reimbursement", null, 36);
         }
         if (systemId != null) {
             ensurePermission("人员管理", "MENU_USER", systemId, "系统设置", "menu", "/system/user", null, 41);

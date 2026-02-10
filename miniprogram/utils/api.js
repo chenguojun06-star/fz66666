@@ -84,6 +84,21 @@ const production = {
   executeScan(payload) {
     return ok('/api/production/scan/execute', 'POST', payload || {});
   },
+  /**
+   * 退回重扫 - 仅允许1小时内的扫码记录
+   * @param {Object} payload - { recordId: string }
+   */
+  rescan(payload) {
+    return ok('/api/production/scan/rescan', 'POST', payload || {});
+  },
+  /**
+   * 获取订单的工序配置（用于小程序扫码工序识别）
+   * @param {string} orderNo - 订单号
+   * @returns {Promise<Array>} 工序配置列表 [{processName, price, sortOrder, progressStage}, ...]
+   */
+  getProcessConfig(orderNo) {
+    return ok(`/api/production/scan/process-config/${encodeURIComponent(orderNo)}`, 'GET', {});
+  },
   repairStats(params) {
     return ok('/api/production/warehousing/repair-stats', 'GET', params || {});
   },

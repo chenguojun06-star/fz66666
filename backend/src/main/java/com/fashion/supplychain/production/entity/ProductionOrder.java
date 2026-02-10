@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.Version;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -454,4 +455,10 @@ public class ProductionOrder {
      */
     @TableField(exist = false)
     private List<Map<String, Object>> items;
+
+    /**
+     * 乐观锁版本号（并发状态更新防覆盖）
+     */
+    @Version
+    private Integer version;
 }

@@ -442,8 +442,21 @@ body {
 :root[data-theme="dark"] .ant-input-number-input,
 :root[data-theme="dark"] .ant-select-selector {
   color: #f0f2f5 !important;
-  background: #1a1d24 !important;
-  border-color: rgba(255, 255, 255, 0.15) !important;
+  background: #23272f !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+:root[data-theme="dark"] .ant-input:hover,
+:root[data-theme="dark"] .ant-input-number-input:hover,
+:root[data-theme="dark"] .ant-select-selector:hover {
+  border-color: rgba(107, 163, 255, 0.5) !important;
+}
+
+:root[data-theme="dark"] .ant-input:focus,
+:root[data-theme="dark"] .ant-input-number-input:focus,
+:root[data-theme="dark"] .ant-select-focused .ant-select-selector {
+  border-color: rgba(107, 163, 255, 0.7) !important;
+  box-shadow: 0 0 0 2px rgba(107, 163, 255, 0.15) !important;
 }
 
 :root[data-theme="dark"] .ant-input::placeholder,

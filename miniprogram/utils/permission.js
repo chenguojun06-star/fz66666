@@ -288,6 +288,135 @@ function hasFeaturePermission(feature) {
   return allowedRoles.includes(role);
 }
 
+// ==================================================
+// 数据隔离功能（2026-02-05 新增）
+// 用于小程序端按用户角色过滤数据，确保数据安全
+// ==================================================
+
+/**
+ * 获取当前用户的数据范围
+ * @returns {'all'|'team'|'own'} 数据范围
+ *   - all: 管理员/主管，可查看全部数据
+ *   - team: 组长/班长，可查看本组数据
+ *   - own: 普通员工，仅查看自己的数据
+ */
+function getDataScope() {
+  if (isAdminOrSupervisor()) {
+    return 'all';
+  }
+
+  const role = getCurrentRole();
+  const roleName = getUserRoleName() || '';
+
+  // 组长/班长级别可查看团队数据
+  if (
+    roleName.includes('组长') ||
+    roleName.includes('班长') ||
+    roleName.includes('leader') ||
+    role === 'team_leader'
+  ) {
+    return 'team';
+  }
+
+  return 'own';
+}
+
+/**
+ * 获取当前用户ID（从本地缓存读取）
+ * @returns {string|null}
+ */
+function getCurrentUserId() {
+  try {
+    const userInfo = wx.getStorageSync('userInfo');
+    return userInfo ? userInfo.id || userInfo.userId : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * 获取当前用户所属工厂ID
+ * @returns {string|null}
+ */
+function getCurrentFactoryId() {
+  try {
+    const userInfo = wx.getStorageSync('userInfo');
+    return userInfo ? userInfo.factoryId || userInfo.teamId : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * 按数据范围过滤列表数据
+ * 在小程序端进行二次过滤（主过滤由后端 DataPermissionInterceptor 完成）
+ *
+ * @param {Array} list - 数据列表
+ * @param {Object} options - 过滤选项
+ * @param {string} [options.creatorField='creatorId'] - 创建人ID字段名
+ * @param {string} [options.factoryField='factoryId'] - 工厂ID字段名
+ * @returns {Array} 过滤后的列表
+ *
+ * @example
+ * const orders = filterByDataScope(allOrders, { creatorField: 'createdById' });
+ */
+function filterByDataScope(list, options = {}) {
+  if (!Array.isArray(list) || list.length === 0) {
+    return list || [];
+  }
+
+  const scope = getDataScope();
+
+  // 管理员看全部
+  if (scope === 'all') {
+    return list;
+  }
+
+  const creatorField = options.creatorField || 'creatorId';
+  const factoryField = options.factoryField || 'factoryId';
+
+  const userId = getCurrentUserId();
+  const factoryId = getCurrentFactoryId();
+
+  if (scope === 'team' && factoryId) {
+    // 团队范围：按工厂/团队过滤
+    return list.filter(item => {
+      if (!item) return false;
+      return item[factoryField] === factoryId;
+    });
+  }
+
+  // own 范围：仅自己的数据
+  if (userId) {
+    return list.filter(item => {
+      if (!item) return false;
+      return item[creatorField] === userId;
+    });
+  }
+
+  return list;
+}
+
+/**
+ * 构建带数据范围的 API 请求参数
+ * 后端 @DataScope 注解会自动过滤，此方法用于辅助前端传参
+ *
+ * @param {Object} params - 原始请求参数
+ * @returns {Object} 增强后的参数（含 dataScope 信息）
+ */
+function buildScopedParams(params = {}) {
+  const scope = getDataScope();
+  const enhanced = { ...params };
+
+  if (scope !== 'all') {
+    enhanced._dataScope = scope;
+    enhanced._currentUserId = getCurrentUserId();
+    enhanced._currentFactoryId = getCurrentFactoryId();
+  }
+
+  return enhanced;
+}
+
 export {
   ROLES,
   WORK_NODES,
@@ -301,4 +430,10 @@ export {
   getRoleDisplayName,
   getRolePermissions,
   hasFeaturePermission,
+  // 数据隔离
+  getDataScope,
+  getCurrentUserId,
+  getCurrentFactoryId,
+  filterByDataScope,
+  buildScopedParams,
 };

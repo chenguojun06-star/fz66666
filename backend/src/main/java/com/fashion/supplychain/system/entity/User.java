@@ -31,6 +31,12 @@ public class User {
 
     private String permissionRange;
 
+    /** 所属租户ID（多租户隔离核心字段） */
+    private Long tenantId;
+
+    /** 是否为租户主账号 */
+    private Boolean isTenantOwner;
+
     private String status;
 
     private String approvalStatus; // 审批状态: pending, approved, rejected
@@ -38,6 +44,15 @@ public class User {
     private LocalDateTime approvalTime; // 审批时间
 
     private String approvalRemark; // 审批备注
+
+    /** 注册状态: PENDING=待审批, ACTIVE=已通过, REJECTED=已拒绝 */
+    private String registrationStatus;
+
+    /** 注册时填写的租户码 */
+    private String registrationTenantCode;
+
+    /** 拒绝原因 */
+    private String rejectReason;
 
     private String phone;
 

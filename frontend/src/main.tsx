@@ -8,8 +8,8 @@ import { AppProvider } from './utils/AppContext';
 import 'antd/dist/reset.css'; // 引入组件库样式
 import './styles/global.css';
 import './styles/design-system.css'; // 设计系统
-import './styles/button-override.css'; // 按钮统一样式
 import './styles/dark-theme-global.css'; // 深色主题全局覆盖
+import './styles/button-override.css'; // 按钮统一样式
 
 const themeStorageKey = 'app.theme';
 

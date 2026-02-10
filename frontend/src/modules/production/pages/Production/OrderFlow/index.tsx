@@ -89,10 +89,8 @@ const OrderFlow: React.FC = () => {
     setLoading(true);
     try {
       const res = await api.get<{ code: number; message: string; data: unknown }>(`/production/order/flow/${query.orderId}`);
-      // console.log('[订单全流程] API返回数据:', res);
       if (res.code === 200) {
         const flowData = res.data as OrderFlowResponse;
-        // console.log('[订单全流程] 工序单价数据:', flowData?.order?.progressNodeUnitPrices);
         setData(flowData || null);
       } else {
         message.error(res.message || '获取订单全流程失败');
@@ -463,7 +461,6 @@ const OrderFlow: React.FC = () => {
                                   sortOrder: item.sortOrder ?? idx,
                                   remark: item.remark || '',
                                 }));
-                                // console.log('[订单全流程] 从 progressWorkflowJson.nodes 解析:', workflowNodes.length, '个工序');
                               } else {
                                 // 旧格式：从 processesByNode 读取
                                 const processesByNode = workflow?.processesByNode || {};
@@ -488,7 +485,6 @@ const OrderFlow: React.FC = () => {
                                   }
                                 }
                                 workflowNodes = allProcesses;
-                                // console.log('[订单全流程] 从 progressWorkflowJson.processesByNode 解析:', workflowNodes.length, '个工序');
                               }
                             }
                           } catch (e) {
@@ -507,7 +503,6 @@ const OrderFlow: React.FC = () => {
                               sortOrder: item.sortOrder ?? idx,
                               remark: item.remark || '',
                             }));
-                            // console.log('[订单全流程] 从 progressNodeUnitPrices 解析:', workflowNodes.length, '个工序');
                           }
 
                           // 如果有工序数据，显示表格

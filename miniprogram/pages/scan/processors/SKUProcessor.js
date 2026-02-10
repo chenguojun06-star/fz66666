@@ -380,7 +380,6 @@ const SKUProcessor = {
             .filter(p => p.processName);
         }
       } catch (e) {
-        console.warn('[SKUProcessor] 解析progressWorkflowJson失败:', e);
       }
     }
 
@@ -405,7 +404,6 @@ const SKUProcessor = {
       return Number(found.unitPrice) || 0;
     }
 
-    console.warn(`[SKUProcessor] 未找到工序单价 - processName: ${processName}`);
     return 0;
   },
 

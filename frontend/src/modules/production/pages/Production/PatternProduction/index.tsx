@@ -428,7 +428,7 @@ const PatternProduction: React.FC = () => {
           height: 60,
 
           overflow: 'hidden',
-          background: '#f5f5f5',
+          background: 'var(--color-bg-subtle)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',

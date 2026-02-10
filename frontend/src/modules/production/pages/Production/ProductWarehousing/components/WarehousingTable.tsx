@@ -1,6 +1,5 @@
 import React from 'react';
 import { Button, Tag } from 'antd';
-import { InboxOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import { StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
@@ -14,7 +13,6 @@ interface WarehousingTableProps {
   total: number;
   queryParams: WarehousingQueryParams;
   setQueryParams: (params: WarehousingQueryParams) => void;
-  onViewDetail: (record: WarehousingType) => void;
   onOpenIndependentDetail: (record: WarehousingType) => void;
   onWarehousing: (record: WarehousingType) => void;
   isOrderFrozen: (orderId: string) => boolean;
@@ -27,7 +25,6 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
   total,
   queryParams,
   setQueryParams,
-  onViewDetail,
   onOpenIndependentDetail,
   onWarehousing,
   isOrderFrozen,
@@ -51,7 +48,7 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
         const text = String(v || '').trim();
         if (!text) return '-';
         return (
-          <Button type="link" size="small" style={{ padding: 0 }} onClick={() => onViewDetail(record)}>
+          <Button type="link" size="small" style={{ padding: 0 }} onClick={() => onOpenIndependentDetail(record)}>
             {text}
           </Button>
         );
@@ -92,39 +89,60 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
       )
     },
     {
-      title: '质检数量',
-      dataIndex: 'warehousingQuantity',
-      key: 'warehousingQuantity',
-      width: 100,
-      align: 'right' as const,
+      title: '菲号',
+      dataIndex: 'cuttingBundleQrCode',
+      key: 'cuttingBundleQrCode',
+      width: 200,
+      ellipsis: true,
+      render: (v: unknown) => {
+        const text = String(v || '').trim();
+        if (!text) return '-';
+        const core = text.split('|')[0] || text;
+        return <span title={text}>{core}</span>;
+      },
     },
     {
-      title: '合格数量',
-      dataIndex: 'qualifiedQuantity',
-      key: 'qualifiedQuantity',
-      width: 100,
+      title: '裁剪数',
+      dataIndex: 'cuttingQuantity',
+      key: 'cuttingQuantity',
+      width: 80,
       align: 'right' as const,
-    },
-    {
-      title: '不合格数量',
-      dataIndex: 'unqualifiedQuantity',
-      key: 'unqualifiedQuantity',
-      width: 100,
-      align: 'right' as const,
+      render: (v: unknown) => v ?? '-',
     },
     {
       title: '颜色',
       dataIndex: 'color',
       key: 'color',
-      width: 100,
+      width: 80,
       render: (v: unknown) => v || '-',
     },
     {
       title: '尺码',
       dataIndex: 'size',
       key: 'size',
-      width: 90,
+      width: 70,
       render: (v: unknown) => v || '-',
+    },
+    {
+      title: '质检数',
+      dataIndex: 'warehousingQuantity',
+      key: 'warehousingQuantity',
+      width: 80,
+      align: 'right' as const,
+    },
+    {
+      title: '合格数',
+      dataIndex: 'qualifiedQuantity',
+      key: 'qualifiedQuantity',
+      width: 80,
+      align: 'right' as const,
+    },
+    {
+      title: '不合格数',
+      dataIndex: 'unqualifiedQuantity',
+      key: 'unqualifiedQuantity',
+      width: 90,
+      align: 'right' as const,
     },
     {
       title: '仓库',
@@ -141,14 +159,6 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
         const { text, color } = getQualityStatusConfig(status);
         return <Tag color={color}>{text}</Tag>;
       },
-    },
-    {
-      title: '菲号',
-      dataIndex: 'scanCode',
-      key: 'scanCode',
-      width: 200,
-      ellipsis: true,
-      render: (v: unknown) => v || '-',
     },
     {
       title: '次品处理',
@@ -171,10 +181,13 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
     },
     {
       title: '质检人员',
-      dataIndex: 'qualityOperatorName',
       key: 'qualityOperatorName',
       width: 120,
-      render: (v: unknown) => v || '-',
+      render: (_: any, record: any) => {
+        // 优先使用 qualityOperatorName，其次 receiverName，再次 warehousingOperatorName
+        const name = String(record?.qualityOperatorName || record?.receiverName || record?.warehousingOperatorName || '').trim();
+        return name || '-';
+      },
     },
     {
       title: '质检时间',
@@ -183,26 +196,7 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
       width: 150,
       render: (value: unknown) => formatDateTime(value),
     },
-    {
-      title: '入库开始时间',
-      dataIndex: 'warehousingStartTime',
-      key: 'warehousingStartTime',
-      width: 150,
-      render: (value: unknown) => formatDateTime(value),
-    },
-    {
-      title: '入库完成时间',
-      dataIndex: 'warehousingEndTime',
-      key: 'warehousingEndTime',
-      width: 150,
-      render: (value: unknown) => formatDateTime(value),
-    },
-    {
-      title: '入库人员',
-      dataIndex: 'warehousingOperatorName',
-      key: 'warehousingOperatorName',
-      width: 120,
-    },
+
     {
       title: '操作',
       key: 'action',
@@ -210,6 +204,11 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
       render: (_: any, record: WarehousingType) => {
         const orderId = String((record as any)?.orderId || '').trim();
         const frozen = isOrderFrozen(orderId);
+
+        // 判断是否已入库：有仓库信息或有入库结束时间
+        const hasWarehouse = Boolean(record.warehouse?.trim());
+        const hasWarehousingEndTime = Boolean(record.warehousingEndTime?.trim());
+        const isWarehoused = hasWarehouse || hasWarehousingEndTime;
 
         return (
           <RowActions
@@ -225,8 +224,8 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
               {
                 key: 'complete',
                 label: '入库',
-                title: frozen ? '入库（订单已关单）' : '入库',
-                disabled: frozen || !orderId,
+                title: isWarehoused ? '已入库' : (frozen ? '入库（订单已关单）' : '入库'),
+                disabled: frozen || !orderId || isWarehoused,
                 onClick: () => onWarehousing(record),
                 primary: true,
               },
@@ -255,7 +254,7 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
               'a,button,input,textarea,select,option,[role="button"],[role="menuitem"],.ant-dropdown-trigger,.ant-btn'
             );
             if (interactive) return;
-            onViewDetail(record as WarehousingType);
+            onOpenIndependentDetail(record as WarehousingType);
           },
         };
       }}
