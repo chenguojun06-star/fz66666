@@ -39,7 +39,7 @@ jobs:
     - name: 运行后端测试
       working-directory: ./backend
       run: |
-        mvn clean test -Dtest="QualityScanExecutorTest,WarehouseScanExecutorTest,ProductionScanExecutorTest"
+        mvn clean test -Dtest="QualityScanExecutorTest,WarehouseScanExecutorTest,ProductionScanExecutorTest,ProductionOrderOrchestratorTest,MaterialReconciliationOrchestratorTest*,ProductWarehousingOrchestratorTest*"
       env:
         SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3308/fashion_supplychain
         SPRING_DATASOURCE_USERNAME: root
@@ -67,13 +67,13 @@ jobs:
     - name: 设置 Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '20'
+        node-version: '22'
         cache: 'npm'
         cache-dependency-path: frontend/package-lock.json
 
     - name: 安装依赖
       working-directory: ./frontend
-      run: npm ci
+      run: npm install
 
     - name: 运行构建
       working-directory: ./frontend
