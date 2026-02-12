@@ -108,7 +108,7 @@ class TemplateLibraryOrchestratorTest {
         when(templateLibraryService.save(any())).thenReturn(true);
 
         TemplateLibrary input = new TemplateLibrary();
-        input.setTemplateType("process_price");
+        input.setTemplateType("process");
         input.setTemplateKey("k");
         input.setTemplateName("n");
         input.setTemplateContent("{}");
@@ -116,6 +116,6 @@ class TemplateLibraryOrchestratorTest {
 
         TemplateLibrary created = templateLibraryOrchestrator.create(input);
 
-        assertEquals("process_price", created.getTemplateType());
+        assertEquals("process", created.getTemplateType());
     }
 }

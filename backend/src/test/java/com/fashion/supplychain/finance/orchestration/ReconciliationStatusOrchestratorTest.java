@@ -48,11 +48,11 @@ class ReconciliationStatusOrchestratorTest {
 
         MaterialReconciliation mr = new MaterialReconciliation();
         mr.setId("1");
-        mr.setStatus("approved");
+        mr.setStatus("paid");
         when(materialReconciliationService.getById("1")).thenReturn(mr);
 
         IllegalStateException ex = assertThrows(IllegalStateException.class,
-                () -> orchestrator.updateMaterialStatus("1", "verified"));
+                () -> orchestrator.updateMaterialStatus("1", "approved"));
         assertEquals("不允许回退状态，请使用退回操作", ex.getMessage());
         verify(materialReconciliationService, never()).updateById(any(MaterialReconciliation.class));
     }
@@ -82,14 +82,14 @@ class ReconciliationStatusOrchestratorTest {
         when(shipmentReconciliationService.getById("1")).thenReturn(sr);
         when(shipmentReconciliationService.updateById(any(ShipmentReconciliation.class))).thenReturn(true);
 
-        String msg = orchestrator.updateShipmentStatus("1", "verified");
+        String msg = orchestrator.updateShipmentStatus("1", "approved");
         assertEquals("状态更新成功", msg);
 
         ArgumentCaptor<ShipmentReconciliation> captor = ArgumentCaptor.forClass(ShipmentReconciliation.class);
         verify(shipmentReconciliationService).updateById(captor.capture());
         ShipmentReconciliation saved = captor.getValue();
-        assertEquals("verified", saved.getStatus());
-        assertNotNull(saved.getVerifiedAt());
+        assertEquals("approved", saved.getStatus());
+        assertNotNull(saved.getApprovedAt());
         assertTrue(saved.getRemark().contains("[STATUS]"));
     }
 
@@ -99,11 +99,11 @@ class ReconciliationStatusOrchestratorTest {
 
         ShipmentReconciliation sr = new ShipmentReconciliation();
         sr.setId("1");
-        sr.setStatus("approved");
+        sr.setStatus("paid");
         when(shipmentReconciliationService.getById("1")).thenReturn(sr);
 
         IllegalStateException ex = assertThrows(IllegalStateException.class,
-                () -> orchestrator.updateShipmentStatus("1", "verified"));
+                () -> orchestrator.updateShipmentStatus("1", "approved"));
         assertEquals("不允许回退状态，请使用退回操作", ex.getMessage());
         verify(shipmentReconciliationService, never()).updateById(any(ShipmentReconciliation.class));
     }
@@ -161,7 +161,7 @@ class ReconciliationStatusOrchestratorTest {
         verify(materialReconciliationService).updateById(captor.capture());
 
         MaterialReconciliation saved = captor.getValue();
-        assertEquals("verified", saved.getStatus());
+        assertEquals("pending", saved.getStatus());
         assertNotNull(saved.getUpdateTime());
         assertTrue(saved.getRemark().startsWith("old\n"));
         assertTrue(saved.getRemark().contains("[tom]"));
