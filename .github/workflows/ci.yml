@@ -42,15 +42,12 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '20'
-
-    - name: 启用 Corepack 并安装 npm@11
-      run: |
-        corepack enable
-        corepack prepare npm@11.7.0 --activate
+        cache: 'npm'
+        cache-dependency-path: 'frontend/package-lock.json'
 
     - name: 安装依赖
       working-directory: ./frontend
-      run: npm ci
+      run: npm install --legacy-peer-deps
 
     - name: 运行构建
       working-directory: ./frontend
