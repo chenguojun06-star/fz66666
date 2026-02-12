@@ -20,7 +20,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -33,6 +36,18 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
         implements TemplateLibraryService {
 
     private static final Pattern DECIMAL_PATTERN = Pattern.compile("[+-]?\\d+(\\.\\d+)?");
+
+    /** 进度模板本地缓存：styleNo → TemplateLibrary，10分钟过期，最多200条 */
+    private final Cache<String, TemplateLibrary> progressTemplateCache = Caffeine.newBuilder()
+            .expireAfterWrite(10, TimeUnit.MINUTES)
+            .maximumSize(200)
+            .build();
+
+    /** 工价模板本地缓存：styleNo → TemplateLibrary，10分钟过期，最多200条 */
+    private final Cache<String, TemplateLibrary> processPriceTemplateCache = Caffeine.newBuilder()
+            .expireAfterWrite(10, TimeUnit.MINUTES)
+            .maximumSize(200)
+            .build();
 
     private static final String STAGE_ORDER_CREATED = "下单";
     private static final String STAGE_PROCUREMENT = "采购";
@@ -169,6 +184,11 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
 
     private TemplateLibrary resolveProgressTemplate(String styleNo) {
         String sn = StringUtils.hasText(styleNo) ? styleNo.trim() : null;
+        String cacheKey = sn != null ? sn : "__default__";
+        TemplateLibrary cached = progressTemplateCache.getIfPresent(cacheKey);
+        if (cached != null) {
+            return cached;
+        }
         TemplateLibrary tpl = null;
         try {
             if (StringUtils.hasText(sn)) {
@@ -200,11 +220,19 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
             log.warn("resolveProgressTemplate failed: styleNo={}", sn, e);
         }
 
+        if (tpl != null) {
+            progressTemplateCache.put(cacheKey, tpl);
+        }
         return tpl;
     }
 
     private TemplateLibrary resolveProcessPriceTemplate(String styleNo) {
         String sn = StringUtils.hasText(styleNo) ? styleNo.trim() : null;
+        String cacheKey = sn != null ? sn : "__default__";
+        TemplateLibrary cached = processPriceTemplateCache.getIfPresent(cacheKey);
+        if (cached != null) {
+            return cached;
+        }
         TemplateLibrary tpl = null;
         try {
             if (StringUtils.hasText(sn)) {
@@ -236,6 +264,9 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
             log.warn("resolveProcessPriceTemplate failed: styleNo={}", sn, e);
         }
 
+        if (tpl != null) {
+            processPriceTemplateCache.put(cacheKey, tpl);
+        }
         return tpl;
     }
 
@@ -648,6 +679,9 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
             throw new IllegalArgumentException("模板参数不完整");
         }
 
+        // 写操作时清除相关缓存
+        invalidateTemplateCache(template.getTemplateType(), template.getSourceStyleNo());
+
         LocalDateTime now = LocalDateTime.now();
 
         TemplateLibrary existing = getOne(new LambdaQueryWrapper<TemplateLibrary>()
@@ -672,6 +706,27 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
             template.setCreateTime(now);
             template.setUpdateTime(now);
             return save(template);
+        }
+    }
+
+    /**
+     * 模板写操作后清除相关缓存
+     */
+    private void invalidateTemplateCache(String templateType, String sourceStyleNo) {
+        try {
+            if ("progress".equals(templateType)) {
+                if (StringUtils.hasText(sourceStyleNo)) {
+                    progressTemplateCache.invalidate(sourceStyleNo.trim());
+                }
+                progressTemplateCache.invalidate("__default__");
+            } else if ("process_price".equals(templateType)) {
+                if (StringUtils.hasText(sourceStyleNo)) {
+                    processPriceTemplateCache.invalidate(sourceStyleNo.trim());
+                }
+                processPriceTemplateCache.invalidate("__default__");
+            }
+        } catch (Exception e) {
+            log.warn("invalidateTemplateCache failed: type={}, styleNo={}", templateType, sourceStyleNo);
         }
     }
 

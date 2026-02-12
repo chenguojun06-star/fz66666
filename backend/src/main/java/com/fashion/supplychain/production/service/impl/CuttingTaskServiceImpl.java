@@ -16,6 +16,7 @@ import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.SKUService;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -394,6 +395,20 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
             // 解析裁剪工序单价（从模板库获取）
             BigDecimal cuttingUnitPrice = resolveCuttingUnitPrice(task.getStyleNo());
 
+            // 获取操作人信息（优先使用任务接收人，回退到当前登录用户）
+            String operatorId = task.getReceiverId();
+            String operatorName = task.getReceiverName();
+            if (!StringUtils.hasText(operatorName)) {
+                UserContext ctx = UserContext.get();
+                if (ctx != null && StringUtils.hasText(ctx.getUsername())) {
+                    operatorId = ctx.getUserId();
+                    operatorName = ctx.getUsername();
+                    log.warn("裁剪任务缺少接收人信息，使用当前登录用户：taskId={}, user={}", task.getId(), operatorName);
+                } else {
+                    throw new IllegalStateException("裁剪任务缺少接收人信息且无法获取当前登录用户，无法生成扫码记录：taskId=" + task.getId());
+                }
+            }
+
             if (existing == null) {
                 ScanRecord sr = new ScanRecord();
                 sr.setRequestId(requestId);
@@ -406,8 +421,8 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
                 sr.setQuantity(finalQty);
                 sr.setProgressStage(CUTTING_PROCESS_NAME);
                 sr.setProcessName(CUTTING_PROCESS_NAME);
-                sr.setOperatorId(task.getReceiverId());
-                sr.setOperatorName(StringUtils.hasText(task.getReceiverName()) ? task.getReceiverName() : "system");
+                sr.setOperatorId(operatorId);
+                sr.setOperatorName(operatorName);
                 sr.setScanType("cutting");
                 sr.setScanResult("success");
                 sr.setRemark("裁剪完成");
@@ -428,8 +443,8 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
                 patch.setId(existing.getId());
                 patch.setQuantity(finalQty);
                 patch.setProgressStage(CUTTING_PROCESS_NAME);
-                patch.setOperatorId(task.getReceiverId());
-                patch.setOperatorName(StringUtils.hasText(task.getReceiverName()) ? task.getReceiverName() : "system");
+                patch.setOperatorId(operatorId);
+                patch.setOperatorName(operatorName);
                 patch.setScanType("cutting");
                 patch.setScanTime(now);
                 patch.setUpdateTime(now);
@@ -495,6 +510,22 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
         if (!StringUtils.hasText(remark)) {
             return;
         }
+
+        // 确保操作人信息完整（优先使用传入参数，回退到当前登录用户）
+        String finalOperatorId = operatorId;
+        String finalOperatorName = operatorName;
+        if (!StringUtils.hasText(finalOperatorName)) {
+            UserContext ctx = UserContext.get();
+            if (ctx != null && StringUtils.hasText(ctx.getUsername())) {
+                finalOperatorId = ctx.getUserId();
+                finalOperatorName = ctx.getUsername();
+                log.warn("裁剪退回缺少操作人信息，使用当前登录用户：taskId={}, user={}", task.getId(), finalOperatorName);
+            } else {
+                log.error("裁剪退回无法获取操作人信息：taskId={}", task.getId());
+                throw new IllegalStateException("裁剪退回无法获取操作人信息，请确保已登录：taskId=" + task.getId());
+            }
+        }
+
         LocalDateTime now = LocalDateTime.now();
         ScanRecord sr = new ScanRecord();
         sr.setRequestId(
@@ -508,8 +539,8 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
         sr.setQuantity(0);
         sr.setProgressStage("裁剪退回");
         sr.setProcessName("裁剪退回");
-        sr.setOperatorId(operatorId);
-        sr.setOperatorName(StringUtils.hasText(operatorName) ? operatorName.trim() : "system");
+        sr.setOperatorId(finalOperatorId);
+        sr.setOperatorName(finalOperatorName.trim());
         sr.setScanType("cutting");
         sr.setScanResult("success");
         sr.setRemark("退回：" + remark.trim());
