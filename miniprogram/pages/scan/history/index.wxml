@@ -1,0 +1,69 @@
+<view class="container">
+  <!-- 头部筛选区域 -->
+  <view class="filter-section">
+    <view class="date-row">
+      <picker mode="date" value="{{startDate}}" bindchange="onStartDateChange">
+        <view class="date-picker">
+          <text class="date-label">开始</text>
+          <text class="date-value">{{startDate}}</text>
+        </view>
+      </picker>
+      <text class="date-separator">—</text>
+      <picker mode="date" value="{{endDate}}" bindchange="onEndDateChange">
+        <view class="date-picker">
+          <text class="date-label">结束</text>
+          <text class="date-value">{{endDate}}</text>
+        </view>
+      </picker>
+    </view>
+    <view class="search-row">
+      <view class="search-box">
+        <text class="search-icon">🔍</text>
+        <input class="search-input" placeholder="订单号 / 菲号 / 工序" value="{{searchKeyword}}" bindinput="onKeywordInput" confirm-type="search" bindconfirm="onSearch" />
+      </view>
+      <view class="search-btn" bindtap="onSearch">搜索</view>
+      <view class="clear-btn" wx:if="{{searchKeyword}}" bindtap="onClearSearch">重置</view>
+    </view>
+  </view>
+
+  <!-- 汇总卡片 -->
+  <view class="summary-card">
+    <view class="summary-item">
+      <text class="summary-num">{{summary.totalQuantity || 0}}</text>
+      <text class="summary-label">总数量</text>
+    </view>
+    <view class="summary-item">
+      <text class="summary-num">{{summary.recordCount || 0}}</text>
+      <text class="summary-label">记录数</text>
+    </view>
+    <view class="summary-item summary-hl summary-payable {{showOnlyPayable ? 'summary-payable-active' : ''}}" bindtap="onTogglePayableFilter">
+      <text class="summary-num">¥{{summary.totalWage || '0.00'}}</text>
+      <text class="summary-label">工资汇总（{{summary.payableRecordCount || 0}}条）</text>
+    </view>
+  </view>
+
+  <!-- 表格 -->
+  <view class="table-wrap" wx:if="{{displayRecords.length > 0}}">
+    <scan-record-table records="{{displayRecords}}" showAmount="{{true}}" />
+  </view>
+
+  <!-- 空状态 -->
+  <view wx:if="{{displayRecords.length === 0 && !loading}}" class="empty-state">
+    <text class="empty-icon">📋</text>
+    <text class="empty-text" wx:if="{{showOnlyPayable}}">暂无计薪记录</text>
+    <text class="empty-text" wx:else>暂无记录</text>
+    <text class="empty-hint" wx:if="{{showOnlyPayable}}">当前筛选仅显示有单价且有数量的记录</text>
+    <text class="empty-hint" wx:else>调整日期范围或搜索条件试试</text>
+  </view>
+
+  <!-- 加载状态 -->
+  <view wx:if="{{loading}}" class="loading-row">
+    <text class="loading-text">加载中...</text>
+  </view>
+  <view wx:if="{{!loading && hasMore && displayRecords.length > 0}}" class="load-more" bindtap="onLoadMore">
+    <text>加载更多</text>
+  </view>
+  <view wx:if="{{!loading && !hasMore && displayRecords.length > 0}}" class="load-more no-more-row">
+    <text class="no-more-text">— 已加载全部 —</text>
+  </view>
+</view>

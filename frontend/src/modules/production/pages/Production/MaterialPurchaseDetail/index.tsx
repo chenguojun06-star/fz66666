@@ -85,7 +85,7 @@ const MaterialPurchaseDetail: React.FC = () => {
         }
       } catch (orderError: unknown) {
         // 订单已删除或不存在，设置为null但继续加载采购列表
-        console.warn('[MaterialPurchaseDetail] 订单不存在或已删除:', styleNo, orderError);
+        // 订单不存在或已删除
         setOrder(null);
       }
 
@@ -364,9 +364,7 @@ const MaterialPurchaseDetail: React.FC = () => {
               styleId={headerStyleId}
               styleCover={headerStyleCover}
               color={headerColor}
-              qrCodeValue={headerQrValue}
               coverSize={160}
-              qrSize={120}
             />
             <Row gutter={[16, 12]} style={{ marginTop: 12 }}>
               <Col xs={24} sm={8} md={6}>
@@ -491,6 +489,8 @@ const MaterialPurchaseDetail: React.FC = () => {
           visible={printModalVisible}
           onClose={() => setPrintModalVisible(false)}
           styleId={(order as any)?.styleId}
+          orderId={(order as any)?.id}
+          orderNo={(order as any)?.orderNo}
           styleNo={(order as any)?.styleNo || styleNo}
           styleName={(order as any)?.styleName}
           cover={(order as any)?.styleCover}

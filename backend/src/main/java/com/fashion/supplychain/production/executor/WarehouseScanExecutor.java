@@ -28,9 +28,6 @@ import java.util.Map;
  * 4. 进度重新计算
  *
  * 提取自 ScanRecordOrchestrator（减少约140行代码）
- *
- * @author GitHub Copilot
- * @date 2026-02-03
  */
 @Component
 @Slf4j
@@ -90,7 +87,7 @@ public class WarehouseScanExecutor {
 
         // 检查是否有次品待返修
         if (isBundleBlockedForWarehousingStatus(order.getId(), bundle.getId())) {
-            throw new IllegalStateException("该菲号存在待返修次品，需返修完成后才能入库");
+            throw new IllegalStateException("温馨提示：该菲号存在待返修的产品，返修完成后才能入库哦～");
         }
 
         // ★ 生产前置校验：该菲号必须有生产扫码记录才能入库
@@ -287,13 +284,40 @@ public class WarehouseScanExecutor {
             return;
         }
         try {
+            // 1. 基础检查：至少有生产扫码记录
             long productionCount = scanRecordService.count(new LambdaQueryWrapper<ScanRecord>()
                     .eq(ScanRecord::getOrderId, orderId)
                     .eq(ScanRecord::getCuttingBundleId, bundleId)
                     .eq(ScanRecord::getScanType, "production")
                     .eq(ScanRecord::getScanResult, "success"));
             if (productionCount <= 0) {
-                throw new IllegalStateException("该菲号尚未完成生产扫码，不能入库。请先完成生产工序后再操作");
+                throw new IllegalStateException("温馨提示：该菲号还未完成生产扫码哦～请先完成生产工序后再入库");
+            }
+
+            // 2. 包装前置检查：包装工序必须有扫码记录归属人（与PC端保持一致）
+            //    包装同义词：包装、打包、入袋、后整、装箱、封箱、贴标
+            long packingCount = scanRecordService.count(new LambdaQueryWrapper<ScanRecord>()
+                    .eq(ScanRecord::getOrderId, orderId)
+                    .eq(ScanRecord::getCuttingBundleId, bundleId)
+                    .eq(ScanRecord::getScanType, "production")
+                    .eq(ScanRecord::getScanResult, "success")
+                    .isNotNull(ScanRecord::getOperatorId)
+                    .and(w -> w
+                            .eq(ScanRecord::getProcessCode, "包装")
+                            .or().eq(ScanRecord::getProcessCode, "打包")
+                            .or().eq(ScanRecord::getProcessCode, "入袋")
+                            .or().eq(ScanRecord::getProcessCode, "后整")
+                            .or().eq(ScanRecord::getProcessCode, "装箱")
+                            .or().eq(ScanRecord::getProcessCode, "封箱")
+                            .or().eq(ScanRecord::getProcessCode, "贴标")
+                            .or().eq(ScanRecord::getProcessCode, "packing")
+                            .or().eq(ScanRecord::getProcessName, "包装")
+                            .or().eq(ScanRecord::getProcessName, "打包")
+                            .or().eq(ScanRecord::getProcessName, "入袋")
+                            .or().eq(ScanRecord::getProcessName, "后整")
+                            .or().eq(ScanRecord::getProcessName, "装箱")));
+            if (packingCount <= 0) {
+                throw new IllegalStateException("温馨提示：该菲号还未完成包装工序哦～请先完成包装扫码后再入库");
             }
         } catch (IllegalStateException e) {
             throw e;

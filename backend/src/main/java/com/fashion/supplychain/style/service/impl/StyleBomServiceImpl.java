@@ -86,11 +86,7 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
                 styleId, productionQty, bomList.size());
 
         // 清除BOM缓存（数据变更时主动失效）
-        try {
-            redisService.delete(BOM_CACHE_PREFIX + styleId);
-        } catch (Exception e) {
-            log.debug("清除BOM缓存失败: styleId={}", styleId);
-        }
+        clearBomCache(styleId);
 
         // 遍历每个BOM项，检查库存
         for (StyleBom bom : bomList) {
@@ -140,6 +136,18 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
         }
 
         return bomList;
+    }
+
+    @Override
+    public void clearBomCache(Long styleId) {
+        if (styleId == null) {
+            return;
+        }
+        try {
+            redisService.delete(BOM_CACHE_PREFIX + styleId);
+        } catch (Exception e) {
+            log.debug("清除BOM缓存失败: styleId={}", styleId);
+        }
     }
 
     @Override

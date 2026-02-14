@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "当月记录",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "scan-record-table": "../../../components/scan-record-table"
+  }
+}

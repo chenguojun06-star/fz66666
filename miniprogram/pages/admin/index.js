@@ -6,6 +6,7 @@ import {
   isAdminOrSupervisor,
 } from '../../utils/permission';
 import { onDataRefresh } from '../../utils/eventBus';
+import { safeNavigate } from '../../utils/uiHelper';
 
 Page({
   data: {
@@ -256,25 +257,19 @@ Page({
     if (app && typeof app.logout === 'function') {
       app.logout();
     } else {
-      wx.reLaunch({ url: '/pages/login/index' });
+      safeNavigate({ url: '/pages/login/index' }, 'reLaunch').catch(() => {});
     }
   },
 
   onGoToUserApproval() {
-    wx.navigateTo({
+    safeNavigate({
       url: '/pages/admin/user-approval/index',
-    });
+    }).catch(() => {});
   },
 
   onGoToNotification() {
-    wx.navigateTo({
+    safeNavigate({
       url: '/pages/admin/notification/index',
-    });
-  },
-
-  onGoToProductionDetail() {
-    wx.navigateTo({
-      url: '/pages/admin/production-detail/index',
-    });
+    }).catch(() => {});
   },
 });

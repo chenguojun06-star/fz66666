@@ -9,9 +9,6 @@ package com.fashion.supplychain.common.exception;
  * - 数据状态不正确
  * - 权限不足
  * </p>
- *
- * @author 系统架构团队
- * @since 2024-01-01
  */
 public class BusinessException extends RuntimeException {
 

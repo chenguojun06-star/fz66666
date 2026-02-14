@@ -20,9 +20,6 @@ import java.time.format.DateTimeFormatter;
  * 核心逻辑：入库 → 对账的数据流转
  *
  * 注意：本Service只处理单模块内的CRUD操作，跨模块协调请使用MaterialReconciliationSyncOrchestrator
- *
- * @author Fashion Supply Chain System
- * @since 2026-01-31
  */
 @Slf4j
 @Service

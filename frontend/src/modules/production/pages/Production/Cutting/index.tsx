@@ -11,7 +11,6 @@ import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import QuickEditModal from '@/components/common/QuickEditModal';
 import api, { compareSizeAsc, fetchProductionOrderDetail, parseProductionOrderLines, useProductionOrderFrozenCache } from '@/utils/api';
 import { QRCodeCanvas } from 'qrcode.react';
-import QRCodeBox from '@/components/common/QRCodeBox';
 import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
 import { canViewPrice } from '@/utils/sensitiveDataMask';
 import type { CuttingTask, MaterialPurchase } from '@/types/production';
@@ -1606,16 +1605,7 @@ const CuttingManagement: React.FC = () => {
                       totalQuantity={entrySizeItems.length
                         ? entrySizeItems.reduce((s, x) => s + (Number(x.quantity || 0) || 0), 0)
                         : (Number(activeTask?.orderQuantity ?? 0) || 0)}
-                      qrCodeValue={activeTask?.productionOrderNo
-                        ? JSON.stringify({
-                          type: 'order',
-                          orderNo: activeTask.productionOrderNo,
-                          styleNo: activeTask.styleNo,
-                          styleName: activeTask.styleName,
-                        })
-                        : ''}
                       coverSize={160}
-                      qrSize={120}
                     />
                   </div>
 

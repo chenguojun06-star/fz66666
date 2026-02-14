@@ -9,9 +9,6 @@ import java.util.List;
 
 /**
  * 面辅料入库记录 Service 接口
- *
- * @author Fashion Supply Chain System
- * @since 2026-01-31
  */
 public interface MaterialInboundService extends IService<MaterialInbound> {
 

@@ -9,9 +9,6 @@ import java.util.List;
 
 /**
  * 生产工序跟踪记录 Mapper
- *
- * @author system
- * @since 2026-02-06
  */
 @Mapper
 public interface ProductionProcessTrackingMapper extends BaseMapper<ProductionProcessTracking> {

@@ -34,8 +34,23 @@ async function handlePatternScan(handler, parsedData, manualScanType) {
       return handler._errorResult('样板生产记录不存在');
     }
 
-    // 确定操作类型
-    const operationType = determinePatternOperation(patternDetail, manualScanType);
+    const [processConfig, scanRecords] = await Promise.all([
+      getPatternProcessConfig(handler, patternId),
+      getPatternScanRecords(handler, patternId),
+    ]);
+
+    const operationOptions = buildPatternOperationOptions({
+      patternDetail,
+      processConfig,
+      scanRecords,
+      manualScanType,
+    });
+
+    if (!operationOptions || operationOptions.length === 0) {
+      return handler._errorResult('该样衣没有可执行工序，请检查工序配置');
+    }
+
+    const selected = pickSelectedOperation(operationOptions, manualScanType);
 
     // 返回需要确认的数据
     return {
@@ -46,7 +61,9 @@ async function handlePatternScan(handler, parsedData, manualScanType) {
         ...parsedData,
         patternId: patternId,
         patternDetail: patternDetail,
-        operationType: operationType,
+        operationType: selected.value,
+        operationLabel: selected.label,
+        operationOptions,
         styleNo: patternDetail.styleNo || parsedData.styleNo,
         color: patternDetail.color || parsedData.color,
         quantity: patternDetail.quantity,
@@ -78,6 +95,103 @@ async function getPatternDetail(handler, patternId) {
   }
 }
 
+async function getPatternProcessConfig(handler, patternId) {
+  try {
+    const list = await handler.api.production.getPatternProcessConfig(patternId);
+    return Array.isArray(list) ? list : [];
+  } catch (e) {
+    console.error('[PatternScanProcessor] 获取样衣工序配置失败:', e);
+    return [];
+  }
+}
+
+async function getPatternScanRecords(handler, patternId) {
+  try {
+    const list = await handler.api.production.getPatternScanRecords(patternId);
+    return Array.isArray(list) ? list : [];
+  } catch (e) {
+    console.error('[PatternScanProcessor] 获取样衣扫码记录失败:', e);
+    return [];
+  }
+}
+
+function normalizeManualType(manualScanType) {
+  if (!manualScanType) return '';
+  const typeMap = {
+    receive: 'RECEIVE',
+    plate: 'PLATE',
+    followup: 'FOLLOW_UP',
+    complete: 'COMPLETE',
+    warehouse: 'WAREHOUSE_IN',
+    out: 'WAREHOUSE_OUT',
+    return: 'WAREHOUSE_RETURN',
+  };
+  return typeMap[manualScanType] || String(manualScanType || '').toUpperCase();
+}
+
+function buildPatternOperationOptions({ patternDetail, processConfig, scanRecords, manualScanType }) {
+  const status = String(patternDetail?.status || '').toUpperCase();
+  const scannedSet = new Set(
+    (scanRecords || [])
+      .map(item => String(item?.operationType || '').trim())
+      .filter(Boolean),
+  );
+
+  const options = [];
+
+  if (status === 'PENDING' && !scannedSet.has('RECEIVE')) {
+    options.push({ value: 'RECEIVE', label: '领取样衣', icon: '📥' });
+  }
+
+  const sortedConfig = (processConfig || [])
+    .slice()
+    .sort((a, b) => (Number(a?.sortOrder || 0) - Number(b?.sortOrder || 0)));
+
+  sortedConfig.forEach(item => {
+    const value = String(item?.operationType || item?.processName || '').trim();
+    if (!value) return;
+    if (scannedSet.has(value)) return;
+
+    const stage = String(item?.progressStage || '').trim();
+    const processName = String(item?.processName || value).trim();
+    const stageSuffix = stage && stage !== processName ? ` · ${stage}` : '';
+    options.push({
+      value,
+      label: `${processName}${stageSuffix}`,
+      icon: stage === '入库' || value === 'WAREHOUSE_IN' ? '📦' : '🧵',
+    });
+  });
+
+  if (scannedSet.has('WAREHOUSE_IN') && !scannedSet.has('WAREHOUSE_OUT')) {
+    options.push({ value: 'WAREHOUSE_OUT', label: '样衣出库', icon: '📤' });
+  }
+  if (scannedSet.has('WAREHOUSE_OUT') && !scannedSet.has('WAREHOUSE_RETURN')) {
+    options.push({ value: 'WAREHOUSE_RETURN', label: '样衣归还', icon: '↩️' });
+  }
+
+  if (options.length === 0) {
+    const fallbackType = determinePatternOperation(patternDetail, manualScanType);
+    options.push({
+      value: fallbackType,
+      label: getPatternSuccessMessage(fallbackType).replace('✅ ', ''),
+      icon: fallbackType === 'WAREHOUSE_IN'
+        ? '📦'
+        : (fallbackType === 'WAREHOUSE_OUT' ? '📤' : (fallbackType === 'WAREHOUSE_RETURN' ? '↩️' : '🧵')),
+    });
+  }
+
+  return options;
+}
+
+function pickSelectedOperation(operationOptions, manualScanType) {
+  const manual = normalizeManualType(manualScanType);
+  if (manual) {
+    const matched = operationOptions.find(item => item.value === manual);
+    if (matched) return matched;
+  }
+  return operationOptions[0];
+}
+
 /**
  * 根据当前状态确定样板生产操作类型
  * @param {Object} patternDetail - 样板详情
@@ -93,6 +207,8 @@ function determinePatternOperation(patternDetail, manualScanType) {
       'followup': 'FOLLOW_UP',
       'complete': 'COMPLETE',
       'warehouse': 'WAREHOUSE_IN',
+      'out': 'WAREHOUSE_OUT',
+      'return': 'WAREHOUSE_RETURN',
     };
     return typeMap[manualScanType] || manualScanType.toUpperCase();
   }
@@ -123,6 +239,8 @@ async function submitPatternScan(handler, data) {
       patternId: data.patternId,
       operationType: data.operationType,
       operatorRole: data.operatorRole || 'PLATE_WORKER',
+      quantity: data.quantity,
+      warehouseCode: data.warehouseCode,
       remark: data.remark,
     });
 
@@ -152,6 +270,8 @@ function getPatternSuccessMessage(operationType) {
     'FOLLOW_UP': '✅ 跟单扫码成功',
     'COMPLETE': '✅ 完成确认成功',
     'WAREHOUSE_IN': '✅ 样衣入库成功',
+    'WAREHOUSE_OUT': '✅ 样衣出库成功',
+    'WAREHOUSE_RETURN': '✅ 样衣归还成功',
   };
   return messages[operationType] || '✅ 操作成功';
 }
@@ -159,6 +279,8 @@ function getPatternSuccessMessage(operationType) {
 module.exports = {
   handlePatternScan,
   getPatternDetail,
+  getPatternProcessConfig,
+  getPatternScanRecords,
   determinePatternOperation,
   submitPatternScan,
   getPatternSuccessMessage,

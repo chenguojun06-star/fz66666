@@ -119,18 +119,15 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
   // 加载工序跟踪数据
   const loadProcessTrackingData = async () => {
     if (!record?.id) {
-      console.warn('订单ID为空，无法加载工序跟踪数据');
       return;
     }
 
-    console.log('开始加载工序跟踪数据，订单ID:', record.id, '订单号:', record.orderNo);
     setTrackingLoading(true);
     try {
       const response = await getProductionProcessTracking(record.id);
       // API返回的是 {code: 200, data: [...]} 结构，需要提取data字段
       const data = (response as any)?.data || [];
       const records = Array.isArray(data) ? data : [];
-      console.log(`工序跟踪数据加载成功，共 ${records.length} 条记录:`, records);
       setProcessTrackingRecords(records);
     } catch (error) {
       console.error('加载工序跟踪数据失败:', error);

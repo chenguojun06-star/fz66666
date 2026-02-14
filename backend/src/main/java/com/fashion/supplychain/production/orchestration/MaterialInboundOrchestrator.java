@@ -27,9 +27,6 @@ import java.util.Map;
  * 2. 生成入库记录
  * 3. 更新库存
  * 4. 关联采购单与入库单
- *
- * @author Fashion Supply Chain System
- * @since 2026-01-31
  */
 @Slf4j
 @Service

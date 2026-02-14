@@ -29,11 +29,15 @@ class StageDetector {
   constructor(api) {
     this.api = api;
 
-    // 订单工序配置缓存 - Map<orderNo, processConfig[]>
+    // 订单工序配置缓存 - Map<orderNo, { config: processConfig[], timestamp: number }>
     // processConfig 格式: [{processName, price, sortOrder, progressStage, scanType}, ...]
     this.processConfigCache = new Map();
 
+    // 缓存有效期：5分钟（PC端修改工序后，最多5分钟小程序就能同步）
+    this.CACHE_TTL = 5 * 60 * 1000;
+
     // scanType 推断规则（根据 progressStage 或 processName 推断扫码类型）
+    // 工序名称到 scanType 的映射规则
     this.scanTypeRules = {
       采购: 'procurement',
       裁剪: 'cutting',
@@ -54,9 +58,10 @@ class StageDetector {
       throw new Error('订单号为空，无法加载工序配置');
     }
 
-    // 检查缓存
-    if (this.processConfigCache.has(orderNo)) {
-      return this.processConfigCache.get(orderNo);
+    // 检查缓存（带过期时间，确保PC端修改后小程序能及时同步）
+    const cached = this.processConfigCache.get(orderNo);
+    if (cached && (Date.now() - cached.timestamp < this.CACHE_TTL)) {
+      return cached.config;
     }
 
     const config = await this.api.production.getProcessConfig(orderNo);
@@ -72,7 +77,7 @@ class StageDetector {
         scanType: this._inferScanType(p.processName, p.progressStage),
       }));
 
-    this.processConfigCache.set(orderNo, sorted);
+    this.processConfigCache.set(orderNo, { config: sorted, timestamp: Date.now() });
     return sorted;
   }
 
@@ -118,7 +123,15 @@ class StageDetector {
       return null;
     }
 
-    const orderNo = orderDetail.orderNo || orderDetail.order_no || '';
+    const orderNo = String(
+      orderDetail.orderNo ||
+      orderDetail.order_no ||
+      orderDetail.productionOrderNo ||
+      orderDetail.production_order_no ||
+      orderDetail.orderCode ||
+      orderDetail.order_code ||
+      ''
+    ).trim().replace(/[-_]/g, '');
     const currentProgress =
       orderDetail.currentProcessName ||
       orderDetail.currentProgress ||
@@ -157,26 +170,18 @@ class StageDetector {
       };
     }
 
-    // 已经是最后一个工序 → 已完成
-    if (currentIndex >= config.length - 1) {
-      const last = config[config.length - 1];
-      return {
-        processName: last.processName,
-        progressStage: last.progressStage || last.processName,
-        scanType: last.scanType,
-        hint: '所有工序已完成',
-        isCompleted: true,
-      };
-    }
-
-    // 返回下一个工序（附带单价）
-    const next = config[currentIndex + 1];
+    // ✅ 修复：后端 currentProcessName 语义 = "第一个尚未完成的工序"
+    // 因此应该返回当前工序本身（而非下一个）
+    const current = config[currentIndex];
     return {
-      processName: next.processName,
-      progressStage: next.progressStage || next.processName,
-      scanType: next.scanType,
-      unitPrice: Number(next.price || 0),
-      hint: next.processName,
+      processName: current.processName,
+      progressStage: current.progressStage || current.processName,
+      scanType: current.scanType,
+      unitPrice: Number(current.price || 0),
+      hint: currentIndex >= config.length - 1
+        ? `${current.processName}（最后一道工序）`
+        : `${current.processName} (${currentIndex + 1}/${config.length})`,
+      isCompleted: false,
     };
   }
 
@@ -197,6 +202,11 @@ class StageDetector {
    * @returns {Promise<Object|null>} 工序信息
    */
   async detectByBundle(orderNo, bundleNo, bundleQuantity, orderDetail) {
+    // 防护：订单号为空时不应调用菲号检测
+    if (!orderNo) {
+      throw new Error('订单号为空，无法进行菲号工序检测');
+    }
+
     // === 步骤1：获取菲号准确数量 ===
     const accurateQuantity = await this._getAccurateBundleQuantity(
       orderNo,
@@ -216,67 +226,51 @@ class StageDetector {
       throw new Error(`订单[${orderNo}]没有可扫码的工序配置`);
     }
 
-    // 分离：可计数工序（production + quality，被 _getScanHistory 统计）
-    //       和入库工序（warehouse，不被 _getScanHistory 统计）
-    const countableProcesses = bundleProcesses.filter(
-      p => p.scanType === 'production' || p.scanType === 'quality'
-    );
+    // 区分入库工序和计数工序
+    // 入库工序：scanType='warehouse' 的工序，需要等待其他工序完成后扫码
+    // 计数工序：其他所有菲号工序（包括 production 和 quality）
     const warehouseProcess = bundleProcesses.find(p => p.scanType === 'warehouse');
+    const countableProcesses = bundleProcesses.filter(p => p.scanType !== 'warehouse');
 
     // === 步骤3：查询该菲号的扫码历史（仅统计 production + quality） ===
     const scanHistory = await this._getScanHistory(orderNo, bundleNo);
-    const scanCount = scanHistory.length;
 
-    console.log(
-      `[StageDetector] 菲号[${bundleNo}] 已扫码${scanCount}次，` +
-        `可扫码工序${countableProcesses.length}个: ` +
-        countableProcesses.map(p => `${p.processName}(¥${p.price || 0})`).join(' → ')
+    // 🔧 改进：按已扫工序名精确过滤，而不是按扫码次数顺序匹配
+    const scannedProcessNames = new Set(
+      scanHistory.map(r => r.processName).filter(Boolean)
+    );
+    const remainingProcesses = countableProcesses.filter(
+      p => !scannedProcessNames.has(p.processName)
     );
 
-    // === 步骤4：根据扫码次数匹配下一个工序 ===
-    if (scanCount < countableProcesses.length) {
-      const nextProcess = countableProcesses[scanCount];
+    console.log(
+      `[StageDetector] 菲号[${bundleNo}] 已扫工序: [${[...scannedProcessNames].join(',')}]，` +
+        `剩余${remainingProcesses.length}/${countableProcesses.length}个: ` +
+        remainingProcesses.map(p => `${p.processName}(¥${p.price || 0})`).join(' → ')
+    );
+
+    // === 步骤4：根据已扫工序过滤，返回第一个未完成的工序 ===
+    if (remainingProcesses.length > 0) {
+      const nextProcess = remainingProcesses[0];
+      const doneCount = countableProcesses.length - remainingProcesses.length;
       return {
         processName: nextProcess.processName,
         progressStage: nextProcess.progressStage || nextProcess.processName,
         scanType: nextProcess.scanType,
-        qualityStage: nextProcess.scanType === 'quality' ? 'receive' : null,
         hint:
           countableProcesses.length > 1
-            ? `${nextProcess.processName} (第${scanCount + 1}/${countableProcesses.length}道工序)`
+            ? `${nextProcess.processName} (已完成${doneCount}/${countableProcesses.length}道工序)`
             : nextProcess.processName,
         isDuplicate: false,
         quantity: accurateQuantity,
         unitPrice: Number(nextProcess.price || 0),
+        // 🆕 携带已扫工序信息，供工序选择器过滤
+        scannedProcessNames: [...scannedProcessNames],
+        allBundleProcesses: countableProcesses,
       };
     }
 
-    // === 步骤5：所有可计数工序已完成，检查入库 ===
-    if (warehouseProcess) {
-      const isWarehoused = await this._checkBundleWarehoused(orderNo, bundleNo);
-      if (isWarehoused) {
-        return {
-          processName: warehouseProcess.processName,
-          progressStage: warehouseProcess.progressStage || warehouseProcess.processName,
-          scanType: warehouseProcess.scanType,
-          hint: '该菲号已入库完成',
-          isDuplicate: false,
-          quantity: accurateQuantity,
-          isCompleted: true,
-        };
-      }
-      return {
-        processName: warehouseProcess.processName,
-        progressStage: warehouseProcess.progressStage || warehouseProcess.processName,
-        scanType: warehouseProcess.scanType,
-        hint: warehouseProcess.processName,
-        isDuplicate: false,
-        quantity: accurateQuantity,
-        unitPrice: Number(warehouseProcess.price || 0),
-      };
-    }
-
-    // 没有入库工序，所有工序已完成
+    // === 步骤5：所有工序已完成 ===
     const lastProcess = countableProcesses[countableProcesses.length - 1];
     return {
       processName: lastProcess.processName,
@@ -286,6 +280,8 @@ class StageDetector {
       isDuplicate: false,
       quantity: accurateQuantity,
       isCompleted: true,
+      scannedProcessNames: [...scannedProcessNames],
+      allBundleProcesses: countableProcesses,
     };
   }
 
@@ -342,7 +338,9 @@ class StageDetector {
   }
 
   /**
-   * 查询菲号的扫码历史（按时间倒序）
+   * 查询菲号的扫码历史（所有用户，不仅当前用户）
+   *
+   * ❗ 必须查所有用户的记录：工人A扫了车缝，工人B再扫同一菲号时不应该再选车缝
    * @private
    * @param {string} orderNo - 订单号
    * @param {string} bundleNo - 菲号
@@ -350,9 +348,10 @@ class StageDetector {
    */
   async _getScanHistory(orderNo, bundleNo) {
     try {
-      const historyRes = await this.api.production.myScanHistory({
+      // ✅ 使用 listScans（不带 currentUser）查询所有用户的扫码记录
+      const historyRes = await this.api.production.listScans({
         page: 1,
-        pageSize: 100, // 获取所有记录
+        pageSize: 100,
         orderNo: orderNo,
         bundleNo: bundleNo,
       });
@@ -370,11 +369,10 @@ class StageDetector {
           requestId.startsWith('ORDER_CREATED:') ||
           requestId.startsWith('CUTTING_BUNDLED:') ||
           requestId.startsWith('ORDER_PROCUREMENT:') ||
+          requestId.startsWith('WAREHOUSING:') ||
           requestId.startsWith('SYSTEM:');
 
-        // 🔧 修复：统计 production 和 quality 类型的扫码记录
-        // production: 车缝、大烫、包装
-        // quality: 质检（领取、验收、确认）
+        // 统计 production 和 quality 类型的扫码记录
         const isValidScan = scanType === 'production' || scanType === 'quality';
 
         return !isSystemGenerated && isValidScan;

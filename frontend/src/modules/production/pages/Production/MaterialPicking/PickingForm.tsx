@@ -36,7 +36,7 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
   const handleOrderChange = async (orderId: string) => {
     const order = orders.find(o => o.id === orderId);
     if (!order) return;
-    
+
     form.setFieldsValue({
       orderNo: order.orderNo,
       styleId: order.styleId,
@@ -49,7 +49,7 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
       // Get BOM
       const bomRes: any = await api.get(`/style/bom/list?styleId=${order.styleId}`);
       const boms = bomRes.code === 200 ? bomRes.data : [];
-      
+
       // Get Stock
       const materialIds = boms.map((b: any) => b.materialId).filter(Boolean);
       let stocks: any[] = [];
@@ -59,7 +59,7 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
              stocks = stockRes.data;
          }
       }
-      
+
       const items = boms.map((bom: any) => {
           const matchedStock = stocks.filter((s: any) => s.materialId === bom.materialId);
           return {
@@ -68,13 +68,13 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
               key: bom.id,
           };
       });
-      
+
       setMaterials(items);
-      
+
     } catch (e) {
-        console.error(e);
+      // 加载失败时忽略错误
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
 
@@ -89,12 +89,12 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
           unit: item.unit,
           materialStockId: item.stockId,
       }));
-      
+
       if (items.length === 0) {
           message.error('请选择领料物品');
           return;
       }
-      
+
       const payload = {
           picking: {
               orderId: values.orderId,
@@ -105,7 +105,7 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
           },
           items,
       };
-      
+
       setLoading(true);
       try {
           const res: any = await api.post('/production/picking', payload);
@@ -125,17 +125,17 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
   const columns = [
       { title: '物料编码', dataIndex: 'materialCode' },
       { title: '物料名称', dataIndex: 'materialName' },
-      { title: '颜色', dataIndex: 'color' }, 
+      { title: '颜色', dataIndex: 'color' },
       { title: '规格', dataIndex: 'specification' },
       { title: '库存选择', width: 300, render: (r: any) => {
           if (!r.stocks || r.stocks.length === 0) return <span style={{color:'red'}}>无库存</span>;
-          
+
           const selected = selectedMaterials.find(m => m.key === r.key);
           const currentStockId = selected?.stockId;
 
           return (
-              <Select 
-                  style={{ width: '100%' }} 
+              <Select
+                  style={{ width: '100%' }}
                   placeholder="选择库存批次"
                   value={currentStockId}
                   onChange={(val) => {
@@ -162,10 +162,10 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
       { title: '领料数量', width: 120, render: (r: any) => {
           const selected = selectedMaterials.find(m => m.key === r.key);
           const maxQty = selected?.stock?.quantity || 999999;
-          
+
           return (
-              <InputNumber 
-                  min={0} 
+              <InputNumber
+                  min={0}
                   max={maxQty}
                   style={{ width: '100%' }}
                   value={selected?.pickQuantity}
@@ -178,7 +178,7 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
                           newSelected[idx] = { ...newSelected[idx], pickQuantity: v };
                           setSelectedMaterials(newSelected);
                       }
-                  }} 
+                  }}
               />
           );
       }},
@@ -197,12 +197,12 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
         <Form.Item name="styleNo" label="款号"><Input readOnly /></Form.Item>
         <Form.Item name="pickerName" label="领料人"><Input readOnly /></Form.Item>
         <Form.Item name="remark" label="备注"><Input.TextArea /></Form.Item>
-        
-        <Table 
-            dataSource={materials} 
-            columns={columns} 
-            rowKey="key" 
-            pagination={false} 
+
+        <Table
+            dataSource={materials}
+            columns={columns}
+            rowKey="key"
+            pagination={false}
             size="small"
             scroll={{ y: 300 }}
         />

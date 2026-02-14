@@ -22,9 +22,6 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * 面辅料入库记录 Service 实现类
- *
- * @author Fashion Supply Chain System
- * @since 2026-01-31
  */
 @Slf4j
 @Service

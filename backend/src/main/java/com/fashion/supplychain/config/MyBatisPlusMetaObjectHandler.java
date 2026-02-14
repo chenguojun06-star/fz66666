@@ -13,9 +13,6 @@ import java.time.LocalDateTime;
 /**
  * MyBatis Plus 元数据自动填充处理器
  * 自动填充创建人、更新人、时间等字段
- *
- * @author System
- * @date 2026-01-31
  */
 @Slf4j
 @Component

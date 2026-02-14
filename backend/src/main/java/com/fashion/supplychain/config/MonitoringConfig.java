@@ -15,19 +15,16 @@ import java.sql.Connection;
 
 /**
  * 监控配置
- * 
+ *
  * 提供以下监控能力：
  * 1. 应用指标监控（JVM、内存、线程等）
  * 2. 自定义健康检查
  * 3. 数据库连接池监控
- * 
+ *
  * 监控端点：
  * - /actuator/health - 健康检查
  * - /actuator/metrics - 应用指标
  * - /actuator/prometheus - Prometheus格式（需引入micrometer-registry-prometheus）
- * 
- * @author System
- * @since 2026-01-21
  */
 @Configuration
 public class MonitoringConfig {

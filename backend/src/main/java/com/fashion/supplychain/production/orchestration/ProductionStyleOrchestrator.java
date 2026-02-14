@@ -17,9 +17,6 @@ import java.util.NoSuchElementException;
  *
  * 职责：协调production模块与style模块之间的数据流转
  * 实现生产订单与款式资料的跨模块编排
- *
- * @author Fashion Supply Chain System
- * @since 2026-02-01
  */
 @Slf4j
 @Service

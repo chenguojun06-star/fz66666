@@ -231,30 +231,41 @@ export function useWarehousingData(options: UseWarehousingDataOptions): UseWareh
     return m;
   }, [bundles]);
 
-  // Derived: order line warehousing rows
+  // Derived: order line warehousing rows (与 InspectionDetail 保持一致的计算逻辑)
   const orderLineWarehousingRows = useMemo<OrderLineWarehousingRow[]>(() => {
     const orderNo = String(orderDetail?.orderNo || entryWarehousing?.orderNo || '').trim();
     const styleNo = String(orderDetail?.styleNo || entryWarehousing?.styleNo || '').trim();
     const lines = parseProductionOrderLines(orderDetail) as OrderLine[];
     if (!lines.length) return [];
 
+    // 统计已入库的合格数量（只计算已分配仓库的合格品）
     const warehousedByKey = new Map<string, number>();
+    // 统计不合格数量（包括所有不合格记录，无论是否已入库）
+    const unqualifiedByKey = new Map<string, number>();
+
     for (const r of Array.isArray(orderWarehousingRecords) ? orderWarehousingRecords : []) {
       if (!r) continue;
-      const qs = String(r.qualityStatus || '').trim().toLowerCase();
-      if (qs && qs !== 'qualified') continue;
-      const q = toNumberSafe(r.qualifiedQuantity);
-      if (q <= 0) continue;
-      if (!String(r.warehouse || '').trim()) continue;
-
       const qr = String(r.cuttingBundleQrCode || r.qrCode || '').trim();
       const b = qr ? bundleByQr.get(qr) : undefined;
       const color = String(b?.color || r.color || r.colour || '').trim();
       const size = String(b?.size || r.size || '').trim();
       if (!color || !size) continue;
-
       const k = `${color}@@${size}`;
-      warehousedByKey.set(k, (warehousedByKey.get(k) || 0) + q);
+
+      // 统计合格已入库
+      const qs = String(r.qualityStatus || '').trim().toLowerCase();
+      if ((!qs || qs === 'qualified') && String(r.warehouse || '').trim()) {
+        const q = toNumberSafe(r.qualifiedQuantity);
+        if (q > 0) {
+          warehousedByKey.set(k, (warehousedByKey.get(k) || 0) + q);
+        }
+      }
+
+      // 统计不合格数量（所有不合格记录）
+      const uq = toNumberSafe(r.unqualifiedQuantity);
+      if (uq > 0) {
+        unqualifiedByKey.set(k, (unqualifiedByKey.get(k) || 0) + uq);
+      }
     }
 
     return lines
@@ -263,7 +274,8 @@ export function useWarehousingData(options: UseWarehousingDataOptions): UseWareh
         const size = String(l?.size || '').trim();
         const quantity = Math.max(0, toNumberSafe(l?.quantity));
         const k = `${color}@@${size}`;
-        const warehousedQuantity = Math.max(0, toNumberSafe(warehousedByKey.get(k) || 0));
+        const wq = Math.max(0, toNumberSafe(warehousedByKey.get(k) || 0));
+        const uq = Math.max(0, toNumberSafe(unqualifiedByKey.get(k) || 0));
         return {
           key: `${idx}-${k}`,
           orderNo: orderNo || '-',
@@ -271,8 +283,9 @@ export function useWarehousingData(options: UseWarehousingDataOptions): UseWareh
           color: color || '-',
           size: size || '-',
           quantity,
-          warehousedQuantity,
-          unwarehousedQuantity: Math.max(0, quantity - warehousedQuantity),
+          warehousedQuantity: wq,
+          unqualifiedQuantity: uq,
+          unwarehousedQuantity: Math.max(0, quantity - wq - uq),
         };
       })
       .sort((a, b) => {

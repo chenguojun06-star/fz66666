@@ -611,6 +611,20 @@ public class MaterialPurchaseOrchestrator {
         }
         MaterialPurchase updated = materialPurchaseService.getById(purchaseId);
         if (updated != null) {
+            // 自动回料确认：更新到货数量时同步标记为已回料，避免PC端再次手动确认
+            if (arrivedQuantity != null && arrivedQuantity > 0
+                    && (updated.getReturnConfirmed() == null || updated.getReturnConfirmed() != 1)) {
+                UserContext ctx = UserContext.get();
+                String confirmerId = ctx != null ? ctx.getUserId() : null;
+                String confirmerName = ctx != null ? ctx.getUsername() : null;
+                if (confirmerName == null || confirmerName.trim().isEmpty()) {
+                    confirmerName = "系统自动";
+                }
+                materialPurchaseService.confirmReturnPurchase(
+                        purchaseId, confirmerId, confirmerName.trim(), arrivedQuantity);
+                // 重新获取最新状态
+                updated = materialPurchaseService.getById(purchaseId);
+            }
             syncAfterPurchaseChanged(updated);
         }
         return true;

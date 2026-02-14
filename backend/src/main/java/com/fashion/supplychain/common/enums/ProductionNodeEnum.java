@@ -15,9 +15,6 @@ import java.util.List;
  * - 入库
  * <p>
  * 每个父级环节下可以包含多个子环节，子环节没有限制
- *
- * @author 系统架构团队
- * @since 2024-01-01
  */
 public enum ProductionNodeEnum {
 

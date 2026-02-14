@@ -2,7 +2,6 @@ import React from 'react';
 import { Button, Card, Collapse, Space, Tag, message } from 'antd';
 import type { MenuProps } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
-import QRCodeBox from '@/components/common/QRCodeBox';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
 import { MaterialPurchase as MaterialPurchaseType, ProductionOrder } from '@/types/production';
 import { getMaterialTypeCategory, getMaterialTypeLabel } from '@/utils/materialType';
@@ -82,26 +81,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
         color={String(detailOrder?.color || currentPurchase?.color || '').trim() || buildColorSummary(detailOrderLines) || ''}
         sizeItems={detailSizePairs.map((x) => ({ size: x.size, quantity: x.quantity }))}
         totalQuantity={getOrderQtyTotal(detailOrderLines)}
-        qrCodeValue={
-          currentPurchase?.orderNo && currentPurchase.orderNo !== '-'
-            ? JSON.stringify({
-              type: 'order',
-              orderNo: currentPurchase.orderNo,
-              styleNo: currentPurchase.styleNo,
-              styleName: currentPurchase.styleName,
-              purchaseCount: detailPurchases.length,
-            })
-            : JSON.stringify({
-              type: 'sample',
-              styleNo: currentPurchase?.styleNo,
-              styleName: currentPurchase?.styleName,
-              color: String(detailOrder?.color || currentPurchase?.color || '').trim() || buildColorSummary(detailOrderLines) || '',
-              quantity: getOrderQtyTotal(detailOrderLines),
-              purchaseNo: currentPurchase?.purchaseNo,
-            })
-        }
         coverSize={160}
-        qrSize={120}
       />
 
       <Card
@@ -161,28 +141,6 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                   return isConfirmed ? 'row-confirmed-disabled' : '';
                 }}
                 columns={[
-                  {
-                    title: '二维码',
-                    key: 'qrcode',
-                    width: 100,
-                    align: 'center' as const,
-                    render: (_: any, record: any) => {
-                      const qrValue = {
-                        purchaseNo: record.purchaseNo,
-                        materialCode: record.materialCode,
-                        materialName: record.materialName,
-                        materialType: record.materialType,
-                        id: record.id
-                      };
-                      return (
-                        <QRCodeBox
-                          value={qrValue}
-                          size={60}
-                          variant="default"
-                        />
-                      );
-                    },
-                  },
                   {
                     title: '类型',
                     dataIndex: 'materialType',

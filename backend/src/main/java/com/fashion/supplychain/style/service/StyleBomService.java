@@ -34,4 +34,9 @@ public interface StyleBomService extends IService<StyleBom> {
      * @return 汇总信息（总物料数、库存充足数、需采购数、库存总值等）
      */
     Map<String, Object> getBomStockSummary(Long styleId, Integer productionQty);
+
+    /**
+     * 清理指定款号的BOM缓存
+     */
+    void clearBomCache(Long styleId);
 }

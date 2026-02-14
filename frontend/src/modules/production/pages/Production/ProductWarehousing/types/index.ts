@@ -50,6 +50,7 @@ export interface OrderLineWarehousingRow {
   size: string;
   quantity: number;
   warehousedQuantity: number;
+  unqualifiedQuantity?: number; // 不合格数量（次品、返修等）
   unwarehousedQuantity: number;
 }
 

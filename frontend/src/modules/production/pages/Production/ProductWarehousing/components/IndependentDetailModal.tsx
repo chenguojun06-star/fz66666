@@ -1,13 +1,16 @@
-import React from 'react';
-import { Card, Table, Tag, Space } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Card, Table, Tag, Space, Tabs, Typography } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import { ProductionOrderHeader, StyleCoverThumb } from '@/components/StyleAssets';
-import { toNumberSafe } from '@/utils/api';
+import api, { toNumberSafe } from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
 import { ProductWarehousing as WarehousingType } from '@/types/production';
 import { OrderLineWarehousingRow } from '../types';
 import { useWarehousingData } from '../hooks/useWarehousingData';
 import { getQualityStatusConfig, getDefectCategoryLabel, getDefectRemarkLabel } from '../utils';
+import StyleSizeTab from '@/modules/basic/pages/StyleInfo/components/StyleSizeTab';
+
+const { Title } = Typography;
 
 interface IndependentDetailModalProps {
   open: boolean;
@@ -45,6 +48,23 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
   const detailPopupWidth = typeof window !== 'undefined' ? window.innerWidth * 0.9 : 1000;
   const detailPopupInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
+  // Derive styleId/styleNo for production sheet and size chart tabs
+  const styleId = orderDetail?.styleId || entryWarehousing?.styleId;
+  const styleNo = String(orderDetail?.styleNo || entryWarehousing?.styleNo || '').trim();
+
+  // Fetch style description (生产制单) from style info API
+  const [styleDescription, setStyleDescription] = useState('');
+  useEffect(() => {
+    if (!styleId || !open) { setStyleDescription(''); return; }
+    let cancelled = false;
+    api.get<{ code: number; data: any }>(`/api/style/info/${styleId}`).then(res => {
+      if (!cancelled && res?.data) {
+        setStyleDescription(String(res.data.description || '').trim());
+      }
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [styleId, open]);
+
   // Cast ResizableModal to any to avoid prop type errors
   const ResizableModalAny = ResizableModal as any;
 
@@ -66,7 +86,15 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
         },
       }}
     >
-      <div style={{ flex: 1, minHeight: 0 }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        <Tabs
+          defaultActiveKey="inspection"
+          style={{ flex: 1, minHeight: 0 }}
+          items={[
+            {
+              key: 'inspection',
+              label: '质检信息',
+              children: (
         <Card size="small" className="order-flow-detail" style={{ marginTop: 0, height: '100%' }} loading={entryLoading}>
           <div style={{ marginBottom: 12 }}>
             <ProductionOrderHeader
@@ -79,7 +107,6 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
               color={String(orderDetail?.color || entryWarehousing?.color || '').trim()}
               totalQuantity={toNumberSafe(orderDetail?.orderQuantity)}
               coverSize={160}
-              qrSize={120}
             />
           </div>
           <div className="order-flow-section">
@@ -139,36 +166,58 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
                 pagination={false}
                 dataSource={orderLineWarehousingRows}
                 sticky
-                scroll={{ x: 920 }}
+                scroll={{ x: 1040 }}
+                style={{ fontSize: 12 }}
                 columns={[
-                  { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 170, render: (v: string) => <span className="order-no-wrap">{v || '-'}</span> },
-                  { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 140, ellipsis: true },
-                  { title: '颜色', dataIndex: 'color', key: 'color', width: 120, ellipsis: true },
-                  { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 90, align: 'right' as const },
-                  { title: '码数', dataIndex: 'size', key: 'size', width: 120, ellipsis: true },
-                  { title: '已入库数', dataIndex: 'warehousedQuantity', key: 'warehousedQuantity', width: 110, align: 'right' as const },
-                  { title: '未入库数', dataIndex: 'unwarehousedQuantity', key: 'unwarehousedQuantity', width: 110, align: 'right' as const },
+                  { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 160 },
+                  { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 130, ellipsis: true },
+                  { title: '颜色', dataIndex: 'color', key: 'color', width: 100 },
+                  { title: '尺码', dataIndex: 'size', key: 'size', width: 80 },
+                  { title: '下单数', dataIndex: 'quantity', key: 'quantity', width: 90, align: 'right' as const },
+                  {
+                    title: '已入库', dataIndex: 'warehousedQuantity', key: 'wh', width: 90, align: 'right' as const,
+                    render: (v: number) => <span style={{ color: v > 0 ? '#52c41a' : undefined }}>{v}</span>,
+                  },
+                  {
+                    title: '不合格数', dataIndex: 'unqualifiedQuantity', key: 'uq', width: 90, align: 'right' as const,
+                    render: (v: number) => v > 0 ? <span style={{ color: '#ff4d4f' }}>{v}</span> : <span>0</span>,
+                  },
+                  {
+                    title: '待处理', dataIndex: 'unwarehousedQuantity', key: 'unwh', width: 90, align: 'right' as const,
+                    render: (v: number) => <span style={{ color: v > 0 ? '#faad14' : '#52c41a' }}>{v}</span>,
+                  },
                 ]}
                 summary={(pageData) => {
                   const totals = pageData.reduce(
-                    (acc, r) => {
-                      acc.quantity += r.quantity;
-                      acc.warehousedQuantity += r.warehousedQuantity;
-                      acc.unwarehousedQuantity += r.unwarehousedQuantity;
-                      return acc;
-                    },
-                    { quantity: 0, warehousedQuantity: 0, unwarehousedQuantity: 0 }
+                    (acc, r) => ({
+                      quantity: acc.quantity + r.quantity,
+                      warehousedQuantity: acc.warehousedQuantity + r.warehousedQuantity,
+                      unqualifiedQuantity: acc.unqualifiedQuantity + (r.unqualifiedQuantity || 0),
+                      unwarehousedQuantity: acc.unwarehousedQuantity + r.unwarehousedQuantity,
+                    }),
+                    { quantity: 0, warehousedQuantity: 0, unqualifiedQuantity: 0, unwarehousedQuantity: 0 },
                   );
                   return (
                     <Table.Summary>
                       <Table.Summary.Row>
-                        <Table.Summary.Cell index={0}>汇总</Table.Summary.Cell>
+                        <Table.Summary.Cell index={0}><strong>合计</strong></Table.Summary.Cell>
                         <Table.Summary.Cell index={1} />
                         <Table.Summary.Cell index={2} />
-                        <Table.Summary.Cell index={3} align="right">{totals.quantity}</Table.Summary.Cell>
-                        <Table.Summary.Cell index={4} />
-                        <Table.Summary.Cell index={5} align="right">{totals.warehousedQuantity}</Table.Summary.Cell>
-                        <Table.Summary.Cell index={6} align="right">{totals.unwarehousedQuantity}</Table.Summary.Cell>
+                        <Table.Summary.Cell index={3} />
+                        <Table.Summary.Cell index={4} align="right"><strong>{totals.quantity}</strong></Table.Summary.Cell>
+                        <Table.Summary.Cell index={5} align="right">
+                          <strong style={{ color: '#52c41a' }}>{totals.warehousedQuantity}</strong>
+                        </Table.Summary.Cell>
+                        <Table.Summary.Cell index={6} align="right">
+                          <strong style={{ color: totals.unqualifiedQuantity > 0 ? '#ff4d4f' : undefined }}>
+                            {totals.unqualifiedQuantity}
+                          </strong>
+                        </Table.Summary.Cell>
+                        <Table.Summary.Cell index={7} align="right">
+                          <strong style={{ color: totals.unwarehousedQuantity > 0 ? '#faad14' : '#52c41a' }}>
+                            {totals.unwarehousedQuantity}
+                          </strong>
+                        </Table.Summary.Cell>
                       </Table.Summary.Row>
                     </Table.Summary>
                   );
@@ -212,6 +261,60 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
             </div>
           </div>
         </Card>
+              ),
+            },
+            {
+              key: 'production-sheet',
+              label: '生产制单',
+              children: (
+                <Card size="small" style={{ height: '100%' }}>
+                  {(() => {
+                    if (!styleDescription) {
+                      return (
+                        <div style={{ textAlign: 'center', padding: 40, color: 'rgba(0,0,0,0.45)' }}>
+                          暂无生产制单数据
+                        </div>
+                      );
+                    }
+                    const rawLines = styleDescription.split(/\r?\n/).map(s => s.replace(/^\d+[.、\s]+/, '').trim()).filter(Boolean);
+                    const fixedRows = Array.from({ length: Math.max(15, rawLines.length) }, (_, i) => ({
+                      key: i, seq: i + 1, content: rawLines[i] || '',
+                    }));
+                    return (
+                      <>
+                        <Title level={5} style={{ marginBottom: 12 }}>生产要求</Title>
+                        <Table
+                          size="small" rowKey="key" pagination={false}
+                          dataSource={fixedRows}
+                          style={{ fontSize: 12 }}
+                          columns={[
+                            { title: '序号', dataIndex: 'seq', key: 'seq', width: 60, align: 'center' as const },
+                            { title: '内容', dataIndex: 'content', key: 'content' },
+                          ]}
+                        />
+                      </>
+                    );
+                  })()}
+                </Card>
+              ),
+            },
+            {
+              key: 'size-chart',
+              label: '📏 尺寸表',
+              children: (
+                <Card size="small" style={{ height: '100%' }}>
+                  {styleId ? (
+                    <StyleSizeTab styleId={styleId} readOnly simpleView />
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: 40, color: 'rgba(0,0,0,0.45)' }}>
+                      暂无尺寸表数据
+                    </div>
+                  )}
+                </Card>
+              ),
+            },
+          ]}
+        />
       </div>
     </ResizableModalAny>
   );

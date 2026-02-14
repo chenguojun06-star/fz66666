@@ -12,6 +12,12 @@
         </view>
         <text class="menu-name">样衣库存</text>
       </view>
+      <view class="grid-item" bindtap="navTo" data-url="/pages/warehouse/finished/list/index">
+        <view class="icon-box bg-soft-indigo">
+          <text class="iconfont">📊</text>
+        </view>
+        <text class="menu-name">成品库存</text>
+      </view>
       <view class="grid-item" bindtap="navTo" data-url="/pages/warehouse/finished/outstock/index">
         <view class="icon-box bg-soft-slate">
           <text class="iconfont">📦</text>
@@ -80,10 +86,7 @@
               <!-- 已完成显示"已完成"标签，否则显示当前工序 -->
               <text wx:if="{{item.isClosed}}" class="tag tag-completed">已完成</text>
               <text wx:elif="{{item.currentProcessName}}" class="tag {{item.currentProcessName === '裁剪' ? 'tag-process' : ''}}">{{item.currentProcessName}}</text>
-              <!-- 只有在裁剪阶段且没有菲号时才显示生成菲号按钮 -->
-              <view wx:if="{{!item.isClosed && item.currentProcessName === '裁剪' && (!item.cuttingBundleCount || item.cuttingBundleCount === 0)}}" class="action-btn action-btn-inline" bindtap="onGenerateBundle" data-order="{{item}}">
-                <text>📋 生成菲号</text>
-              </view>
+
             </view>
           </view>
           <view class="item-sub item-sub-inline">
@@ -124,48 +127,4 @@
     </view>
   </view>
 
-  <!-- 生成菲号弹窗 -->
-  <view wx:if="{{bundleModal.visible}}" class="modal">
-    <view class="modal-box wide">
-      <view class="modal-head">
-        生成菲号
-      </view>
-      <view class="modal-body">
-        <view class="cf-list">
-          <view class="cf-item"><text class="cf-k">订单</text><text class="cf-v hl">{{bundleModal.orderNo}}</text></view>
-          <view class="cf-item"><text class="cf-k">款号</text><text class="cf-v">{{bundleModal.styleNo}}</text></view>
-        </view>
-
-        <view class="bundle-input-list">
-          <view wx:for="{{bundleModal.items}}" wx:key="index" class="bundle-input-item">
-            <view class="bii-row">
-              <text class="bii-label">颜色</text>
-              <input class="bii-input" placeholder="如：红色" value="{{item.color}}" bindinput="onBundleFieldInput" data-idx="{{index}}" data-field="color" />
-            </view>
-            <view class="bii-row">
-              <text class="bii-label">尺码</text>
-              <input class="bii-input" placeholder="如：L" value="{{item.size}}" bindinput="onBundleFieldInput" data-idx="{{index}}" data-field="size" />
-            </view>
-            <view class="bii-row">
-              <text class="bii-label">数量</text>
-              <input class="bii-input" type="digit" placeholder="如：20" value="{{item.quantity}}" bindinput="onBundleFieldInput" data-idx="{{index}}" data-field="quantity" />
-            </view>
-            <view wx:if="{{bundleModal.items.length > 1}}" class="bii-remove" bindtap="onRemoveBundleItem" data-idx="{{index}}">
-              <text>✕ 删除</text>
-            </view>
-          </view>
-        </view>
-
-        <view class="bundle-add-btn" bindtap="onAddBundleItem">
-          <text>+ 添加一行</text>
-        </view>
-      </view>
-      <view class="modal-btns">
-        <view class="mbtn cancel" bindtap="onCancelBundle">取消</view>
-        <view class="mbtn ok {{bundleModal.loading ? 'off' : ''}}" bindtap="onConfirmBundle">
-          {{bundleModal.loading ? '生成中...' : '确认生成'}}
-        </view>
-      </view>
-    </view>
-  </view>
 </view>

@@ -188,6 +188,11 @@ page {
   color: var(--color-success);
 }
 
+.bg-soft-indigo {
+  background-color: #ede9fe;
+  color: #6d28d9;
+}
+
 .menu-name {
   font-size: 24rpx;
   color: var(--color-text-primary);
@@ -545,30 +550,6 @@ page {
   white-space: nowrap;
 }
 
-/* 生成菲号按钮 */
-.item-actions {
-  margin-top: 8px;
-  display: flex;
-  gap: 8px;
-}
-
-.action-btn {
-  padding: 6px 12px;
-  background: var(--gradient-primary);
-  border: 1px solid rgba(147, 197, 253, 0.5);
-  border-radius: var(--radius-full);
-  font-size: var(--font-size-xs);
-  font-weight: 500;
-  color: var(--color-text-primary);
-  text-align: center;
-  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.15);
-}
-
-.action-btn:active {
-  opacity: 0.8;
-  transform: scale(0.98);
-}
-
 /* 生成菲号弹窗样式 */
 .modal {
   position: fixed;
@@ -664,81 +645,6 @@ page {
 .cf-v.hl {
   color: var(--color-text-secondary);
   font-weight: 500;
-}
-
-.bundle-input-list {
-  margin-top: 12px;
-}
-
-.bundle-input-item {
-  background: var(--color-bg-light);
-  border-radius: var(--radius-md);
-  padding: 12px;
-  margin-bottom: 10px;
-  border: 1px solid var(--color-border);
-  position: relative;
-}
-
-.bundle-input-item:last-child {
-  margin-bottom: 0;
-}
-
-.bii-row {
-  display: flex;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.bii-row:last-child {
-  margin-bottom: 0;
-}
-
-.bii-label {
-  width: 60px;
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  flex-shrink: 0;
-}
-
-.bii-input {
-  flex: 1;
-  background: var(--color-bg-card);
-  border: 1px solid #d1d5db;
-  border-radius: var(--radius-sm);
-  padding: 8px 12px;
-  font-size: 13px;
-  height: 36px;
-}
-
-.bii-remove {
-  margin-top: 8px;
-  padding: 6px;
-  text-align: center;
-  font-size: var(--font-size-xs);
-  color: var(--color-error);
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: var(--radius-sm);
-}
-
-.bii-remove:active {
-  background: #fee2e2;
-}
-
-.bundle-add-btn {
-  margin-top: 12px;
-  padding: 10px;
-  text-align: center;
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-  color: var(--color-primary);
-  background: #eff6ff;
-  border: 1px dashed #93c5fd;
-  border-radius: var(--radius-sm);
-}
-
-.bundle-add-btn:active {
-  background: #dbeafe;
 }
 
 .modal-btns {

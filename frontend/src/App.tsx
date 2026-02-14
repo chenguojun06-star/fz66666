@@ -33,6 +33,7 @@ import {
   MaterialPurchase,
   MaterialPurchaseDetail,
   ProductWarehousing,
+  InspectionDetail,
   OrderTransfer,
   OrderFlow,
   ProgressDetail,
@@ -248,6 +249,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.materialPurchase} element={<Suspense fallback={<Spin />}><MaterialPurchase /></Suspense>} />
           <Route path={paths.materialPurchaseDetail} element={<Suspense fallback={<Spin />}><MaterialPurchaseDetail /></Suspense>} />
           <Route path={paths.warehousing} element={<Suspense fallback={<Spin />}><ProductWarehousing /></Suspense>} />
+          <Route path={paths.warehousingInspect} element={<Suspense fallback={<Spin />}><InspectionDetail /></Suspense>} />
           <Route path={paths.materialPicking} element={<Suspense fallback={<Spin />}><MaterialPicking /></Suspense>} />
           <Route path={paths.warehousingDetail} element={<Suspense fallback={<Spin />}><ProductWarehousing /></Suspense>} />
           <Route path={paths.orderTransfer} element={<Suspense fallback={<Spin />}><OrderTransfer /></Suspense>} />

@@ -3,6 +3,7 @@ package com.fashion.supplychain.config;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.interceptor.KeyGenerator;
 import org.springframework.context.annotation.Bean;
@@ -37,6 +38,8 @@ public class RedisConfig {
 
         // 配置序列化器
         ObjectMapper objectMapper = new ObjectMapper();
+        // 注册 Java 8 时间模块，支持 LocalDateTime 等类型
+        objectMapper.registerModule(new JavaTimeModule());
         objectMapper.activateDefaultTyping(
                 LaissezFaireSubTypeValidator.instance,
                 ObjectMapper.DefaultTyping.NON_FINAL,
@@ -64,11 +67,21 @@ public class RedisConfig {
     @Bean
     @Primary
     public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
+        // 创建支持 Java 8 时间类型的 ObjectMapper
+        ObjectMapper cacheObjectMapper = new ObjectMapper();
+        cacheObjectMapper.registerModule(new JavaTimeModule());
+        cacheObjectMapper.activateDefaultTyping(
+                LaissezFaireSubTypeValidator.instance,
+                ObjectMapper.DefaultTyping.NON_FINAL,
+                JsonTypeInfo.As.PROPERTY
+        );
+        GenericJackson2JsonRedisSerializer cacheSerializer = new GenericJackson2JsonRedisSerializer(cacheObjectMapper);
+
         // 默认缓存配置
         RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(Duration.ofMinutes(30))  // 默认过期时间30分钟
                 .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
-                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer()))
+                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(cacheSerializer))
                 .disableCachingNullValues();  // 不缓存null值
 
         // 不同缓存的过期时间配置

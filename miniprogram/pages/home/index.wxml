@@ -20,46 +20,56 @@
     <view wx:if="{{!loading && !statsLoaded}}" class="hint">暂无统计</view>
     <view class="home-section-title">数据概览</view>
     <view class="home-stats-grid">
-      <view class="home-stat-card">
-        <text class="stat-card-emoji">📋</text>
-        <text class="stat-card-label">订单数量</text>
-        <view class="stat-card-dual">
-          <view class="stat-dual-row">
-            <text class="stat-dual-label">总数</text>
-            <text class="stat-dual-value">{{stats.productionOrders}}</text>
-          </view>
-          <view class="stat-dual-row">
-            <text class="stat-dual-label">件数</text>
-            <text class="stat-dual-value">{{stats.orderQuantityTotal}}</text>
-          </view>
+      <view class="home-stat-card stat-sample">
+        <view class="stat-head">
+          <text class="stat-card-emoji">🏷️</text>
+          <text class="stat-card-label">样衣开发</text>
+          <text class="stat-total">{{topStats.sampleDevelopment.total}}</text>
+        </view>
+        <view class="stat-tags-row">
+          <view class="stat-tag"><text class="tag-label">日</text><text class="tag-value">{{topStats.sampleDevelopment.day}}</text></view>
+          <view class="stat-tag"><text class="tag-label">周</text><text class="tag-value">{{topStats.sampleDevelopment.week}}</text></view>
+          <view class="stat-tag"><text class="tag-label">月</text><text class="tag-value">{{topStats.sampleDevelopment.month}}</text></view>
+          <view class="stat-tag"><text class="tag-label">年</text><text class="tag-value">{{topStats.sampleDevelopment.year}}</text></view>
         </view>
       </view>
-      <view class="home-stat-card">
-        <text class="stat-card-emoji">⚙️</text>
-        <text class="stat-card-label">扫码数量</text>
-        <view class="stat-card-dual">
-          <view class="stat-dual-row">
-            <text class="stat-dual-label">日</text>
-            <text class="stat-dual-value">{{stats.todayScanCount}}</text>
-          </view>
-          <view class="stat-dual-row">
-            <text class="stat-dual-label">总</text>
-            <text class="stat-dual-value">{{stats.totalScanCount}}</text>
-          </view>
+      <view class="home-stat-card stat-bulk">
+        <view class="stat-head">
+          <text class="stat-card-emoji">🛒</text>
+          <text class="stat-card-label">大货下单</text>
+          <text class="stat-total">{{topStats.bulkOrder.total}}</text>
+        </view>
+        <view class="stat-tags-row">
+          <view class="stat-tag"><text class="tag-label">日</text><text class="tag-value">{{topStats.bulkOrder.day}}</text></view>
+          <view class="stat-tag"><text class="tag-label">周</text><text class="tag-value">{{topStats.bulkOrder.week}}</text></view>
+          <view class="stat-tag"><text class="tag-label">月</text><text class="tag-value">{{topStats.bulkOrder.month}}</text></view>
+          <view class="stat-tag"><text class="tag-label">年</text><text class="tag-value">{{topStats.bulkOrder.year}}</text></view>
         </view>
       </view>
-      <view class="home-stat-card">
-        <text class="stat-card-emoji">📥</text>
-        <text class="stat-card-label">入库数量</text>
-        <view class="stat-card-dual">
-          <view class="stat-dual-row">
-            <text class="stat-dual-label">日</text>
-            <text class="stat-dual-value">{{stats.warehousingToday}}</text>
-          </view>
-          <view class="stat-dual-row">
-            <text class="stat-dual-label">总</text>
-            <text class="stat-dual-value">{{stats.totalWarehousingCount}}</text>
-          </view>
+      <view class="home-stat-card stat-cutting">
+        <view class="stat-head">
+          <text class="stat-card-emoji">✂️</text>
+          <text class="stat-card-label">裁剪数量</text>
+          <text class="stat-total">{{topStats.cutting.total}}</text>
+        </view>
+        <view class="stat-tags-row">
+          <view class="stat-tag"><text class="tag-label">日</text><text class="tag-value">{{topStats.cutting.day}}</text></view>
+          <view class="stat-tag"><text class="tag-label">周</text><text class="tag-value">{{topStats.cutting.week}}</text></view>
+          <view class="stat-tag"><text class="tag-label">月</text><text class="tag-value">{{topStats.cutting.month}}</text></view>
+          <view class="stat-tag"><text class="tag-label">年</text><text class="tag-value">{{topStats.cutting.year}}</text></view>
+        </view>
+      </view>
+      <view class="home-stat-card stat-warehousing">
+        <view class="stat-head">
+          <text class="stat-card-emoji">📦</text>
+          <text class="stat-card-label">出入库数量</text>
+          <text class="stat-total">{{topStats.warehousing.total}}</text>
+        </view>
+        <view class="stat-tags-row">
+          <view class="stat-tag"><text class="tag-label">日</text><text class="tag-value">{{topStats.warehousing.day}}</text></view>
+          <view class="stat-tag"><text class="tag-label">周</text><text class="tag-value">{{topStats.warehousing.week}}</text></view>
+          <view class="stat-tag"><text class="tag-label">月</text><text class="tag-value">{{topStats.warehousing.month}}</text></view>
+          <view class="stat-tag"><text class="tag-label">年</text><text class="tag-value">{{topStats.warehousing.year}}</text></view>
         </view>
       </view>
     </view>

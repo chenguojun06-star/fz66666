@@ -29,9 +29,6 @@ import java.util.stream.Collectors;
  * 1. SKU数据标准化和验证
  * 2. SKU扫码模式检测 (ORDER/BUNDLE/SKU)
  * 3. SKU进度追踪和统计
- *
- * @author GitHub Copilot
- * @date 2026-01-23
  */
 @Service
 @Slf4j
@@ -695,7 +692,7 @@ public class SKUServiceImpl implements SKUService {
                 }
             }
 
-            log.info("[SKUService] 获取工序单价配置完成 - orderNo: {}, 成功解析: {} 个", orderNo, result.size());
+            log.debug("[SKUService] 获取工序单价配置完成 - orderNo: {}, 成功解析: {} 个", orderNo, result.size());
             return result;
 
         } catch (Exception e) {
@@ -720,12 +717,12 @@ public class SKUServiceImpl implements SKUService {
                 return result;
             }
 
-            log.info("[SKUService] 查询工序单价 - orderNo: {}, processName: '{}'", orderNo, processName);
+            log.debug("[SKUService] 查询工序单价 - orderNo: {}, processName: '{}'", orderNo, processName);
 
             // 获取所有工序单价配置
             List<Map<String, Object>> prices = getProcessUnitPrices(orderNo);
 
-            log.info("[SKUService] 获取到 {} 个工序配置", prices.size());
+            log.debug("[SKUService] 获取到 {} 个工序配置", prices.size());
 
             // 【三层匹配机制】确保即使charset乱码也能匹配到单价
             for (Map<String, Object> priceInfo : prices) {
@@ -772,7 +769,7 @@ public class SKUServiceImpl implements SKUService {
                 }
             }
 
-            log.info("[SKUService] 查询工序单价完成 - orderNo: {}, processName: {}, found: {}, unitPrice: {}, matchBy: {}",
+            log.debug("[SKUService] 查询工序单价完成 - orderNo: {}, processName: {}, found: {}, unitPrice: {}, matchBy: {}",
                     orderNo, processName, result.get("found"), result.get("unitPrice"), result.getOrDefault("matchBy", "none"));
 
         } catch (Exception e) {
@@ -815,7 +812,7 @@ public class SKUServiceImpl implements SKUService {
             // 获取工序单价
             Map<String, Object> priceInfo = getUnitPriceByProcess(orderNo, processName);
 
-            log.info("[SKUService] 查询结果 - priceInfo: {}", priceInfo);
+            log.debug("[SKUService] 查询结果 - priceInfo: {}", priceInfo);
 
             // 解析单价
             Object unitPriceObj = priceInfo.get("unitPrice");
@@ -834,11 +831,11 @@ public class SKUServiceImpl implements SKUService {
             if (unitPrice.compareTo(java.math.BigDecimal.ZERO) <= 0
                     && StringUtils.hasText(scanRecord.getProgressStage())) {
                 String stageName = scanRecord.getProgressStage().trim();
-                log.info("[SKUService] 尝试用阶段名称查询 - stageName: '{}'", stageName);
+                log.debug("[SKUService] 尝试用阶段名称查询 - stageName: '{}'", stageName);
 
                 if (!stageName.equalsIgnoreCase(scanRecord.getProcessName().trim())) {
                     Map<String, Object> stagePriceInfo = getUnitPriceByProcess(orderNo, stageName);
-                    log.info("[SKUService] 阶段查询结果 - stagePriceInfo: {}", stagePriceInfo);
+                    log.debug("[SKUService] 阶段查询结果 - stagePriceInfo: {}", stagePriceInfo);
 
                     Object stageUnitPriceObj = stagePriceInfo.get("unitPrice");
                     if (stageUnitPriceObj != null) {

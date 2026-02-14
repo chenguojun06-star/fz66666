@@ -42,11 +42,17 @@ const LiquidProgressLottie: React.FC<LiquidProgressLottieProps> = ({
           width: '100%',
           height: '100%',
           borderRadius: borderRadius,
-          border: '2px solid #d1d1d1',
+          border: `2px solid ${color1}`,
           position: 'absolute',
           top: 0,
           left: 0,
           boxSizing: 'border-box',
+          boxShadow: progress > 0 && progress < 100
+            ? `0 0 6px ${color1}40, inset 0 0 3px ${color2}30`
+            : progress >= 100
+              ? `0 0 6px ${color1}50`
+              : 'none',
+          transition: 'border-color 0.3s, box-shadow 0.3s',
         }}
       />
 

@@ -10,9 +10,6 @@ import lombok.extern.slf4j.Slf4j;
  * 功能：
  * 1. 全系统所有环节自动记录操作人
  * 2. 支持外协工厂场景的手动填写
- *
- * @author System
- * @since 2026-02-05
  */
 @Component
 @Slf4j

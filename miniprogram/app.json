@@ -4,6 +4,8 @@
     "pages/home/index",
     "pages/work/index",
     "pages/scan/index",
+    "pages/scan/history/index",
+    "pages/scan/monthly/index",
     "pages/payroll/payroll",
     "pages/admin/index",
     "pages/admin/notification/index",
@@ -11,8 +13,10 @@
     "pages/warehouse/sample/list/index",
     "pages/warehouse/sample/operation/index",
     "pages/warehouse/sample/loan-list/index",
+    "pages/warehouse/finished/list/index",
     "pages/warehouse/finished/outstock/index",
     "pages/warehouse/material/alerts/index",
+    "pages/warehouse/material/detail-page/index",
     "pages/warehouse/order-ranking/index"
   ],
   "usingComponents": {
@@ -49,6 +53,7 @@
     "navigationBarTextStyle": "black",
     "backgroundTextStyle": "light"
   },
+  "lazyCodeLoading": "requiredComponents",
   "style": "v2",
   "sitemapLocation": "sitemap.json"
 }

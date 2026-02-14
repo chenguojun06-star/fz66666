@@ -7,6 +7,7 @@ import Layout from '@/components/Layout';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
 import api, { parseProductionOrderLines, toNumberSafe } from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
+import { getMaterialTypeLabel } from '@/utils/materialType';
 import { generateRowKey } from '@/utils/idGenerator';
 import type { CuttingBundle, ProductionOrder, ProductWarehousing } from '@/types/production';
 import StylePatternSimpleTab from './components/StylePatternSimpleTab';
@@ -362,7 +363,6 @@ const OrderFlow: React.FC = () => {
               color={String((order as Record<string, unknown>)?.color || '').trim()}
               totalQuantity={toNumberSafe((order as Record<string, unknown>)?.orderQuantity)}
               coverSize={160}
-              qrSize={120}
               extraFields={[
                 { label: '加工厂', value: (order as Record<string, unknown>)?.factoryName || '-' },
                 { label: '订单状态', value: orderStatusTag((order as Record<string, unknown>)?.status) },
@@ -650,14 +650,7 @@ const OrderFlow: React.FC = () => {
                                 dataIndex: 'materialType',
                                 key: 'materialType',
                                 width: 120,
-                                render: (v: any) => {
-                                  const typeMap: Record<string, string> = {
-                                    'fabric': '面料',
-                                    'accessory': '辅料',
-                                    'other': '其他'
-                                  };
-                                  return typeMap[v] || v || '-';
-                                }
+                                render: (v: any) => getMaterialTypeLabel(v)
                               },
                               {
                                 title: '物料名称',

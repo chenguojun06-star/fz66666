@@ -25,7 +25,8 @@ export const useWarehousingForm = (
   visible: boolean,
   currentWarehousing: WarehousingType | null,
   onCancel: () => void,
-  onSuccess: () => void
+  onSuccess: () => void,
+  defaultOrderNo?: string,
 ) => {
   const [form] = Form.useForm();
 
@@ -270,7 +271,18 @@ export const useWarehousingForm = (
       setUnqualifiedFileList(toUploadFileList(urls));
       loadWarehousingDetail(currentWarehousing);
     } else {
-      fetchOrderOptions();
+      fetchOrderOptions().then(() => {
+        // 如果有默认订单号（从质检详情页传入），自动选中
+        if (defaultOrderNo) {
+          // 延迟一帧等待orderOptions加载完成
+          setTimeout(() => {
+            const matchOrder = orderOptions.find((o: any) => String(o?.orderNo || '').trim() === defaultOrderNo);
+            if (matchOrder) {
+              form.setFieldsValue({ orderId: (matchOrder as any).id });
+            }
+          }, 500);
+        }
+      });
       form.resetFields();
       form.setFieldsValue({
         unqualifiedQuantity: 0,

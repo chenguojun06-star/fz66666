@@ -77,7 +77,7 @@ const IntegrationGuideTab: React.FC = () => {
                   <li>
                     点击左侧菜单 <Tag color="blue"><ShoppingCartOutlined /> 应用商店</Tag> 进入应用市场
                   </li>
-                  <li>浏览4款对接应用，选择您需要的模块</li>
+                  <li>浏览5款对接应用，选择您需要的模块</li>
                   <li>
                     点击 <Tag color="green">免费试用 7 天</Tag> 快速体验（<Text type="secondary">每个应用仅可试用一次</Text>）
                   </li>
@@ -142,7 +142,7 @@ const IntegrationGuideTab: React.FC = () => {
       </Card>
 
       {/* ==================== 第二部分：4大模块说明 ==================== */}
-      <Card title={<span><SwapOutlined style={{ marginRight: 8, color: 'var(--color-info)' }} />四大对接模块</span>} style={{ marginBottom: 24 }}>
+      <Card title={<span><SwapOutlined style={{ marginRight: 8, color: 'var(--color-info)' }} />五大对接模块</span>} style={{ marginBottom: 24 }}>
         <Row gutter={[16, 16]}>
           <Col xs={24} sm={12}>
             <FlowCard icon={<SendOutlined />} title="📦 下单对接 (ORDER_SYNC)" desc="客户ERP系统自动推送订单 → 本系统创建生产订单。支持查询订单状态和进度。" color="#1890ff" />
@@ -155,6 +155,9 @@ const IntegrationGuideTab: React.FC = () => {
           </Col>
           <Col xs={24} sm={12}>
             <FlowCard icon={<ThunderboltOutlined />} title="💰 付款对接 (PAYMENT_SYNC)" desc="对账审批通过 → 推送结算通知。客户可通过API确认付款，双向同步对账状态。" color="#fa8c16" />
+          </Col>
+          <Col xs={24} sm={12}>
+            <FlowCard icon={<LinkOutlined />} title="🧵 面辅料供应对接 (MATERIAL_SUPPLY)" desc="向供应商推送采购订单，查询供应商库存。接收供应商订单确认、价格更新、发货通知。" color="#13c2c2" />
           </Col>
         </Row>
 
@@ -182,6 +185,14 @@ const IntegrationGuideTab: React.FC = () => {
             <Text strong>客户支付系统</Text>
             <Text type="secondary">──确认付款──→</Text>
             <Text strong>本系统（更新对账状态）</Text>
+
+            <Text strong>本系统（采购下单）</Text>
+            <Text type="secondary">──推送订单──→</Text>
+            <Text strong>供应商系统（接收采购单）</Text>
+
+            <Text strong>供应商系统（确认/发货）</Text>
+            <Text type="secondary">──Webhook──→</Text>
+            <Text strong>本系统（更新采购状态）</Text>
 
             <Text strong>客户纸样/制单系统</Text>
             <Text type="secondary">←──Pull拉取──</Text>
@@ -380,6 +391,45 @@ const IntegrationGuideTab: React.FC = () => {
                     <tr><td style={{ padding: '8px 12px' }}><Tag color="orange">PUSH</Tag></td><td>Webhook回调</td><td>对账审批通过时自动推送</td></tr>
                   </tbody>
                 </table>
+              </div>
+            )
+          },
+          {
+            key: 'material',
+            label: <span>🧵 面辅料供应对接 — 2个主动端点 + 3个Webhook</span>,
+            children: (
+              <div>
+                <Title level={5} style={{ marginTop: 0, marginBottom: 8 }}>主动调用端点</Title>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <thead><tr style={{ background: 'var(--color-bg-container)' }}>
+                    <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #f0f0f0' }}>方法</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #f0f0f0' }}>路径</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #f0f0f0' }}>说明</th>
+                  </tr></thead>
+                  <tbody>
+                    <tr><td style={{ padding: '8px 12px' }}><Tag color="green">POST</Tag></td><td><code>/openapi/v1/material/purchase-order</code></td><td>向供应商推送采购订单</td></tr>
+                    <tr><td style={{ padding: '8px 12px' }}><Tag color="green">POST</Tag></td><td><code>/openapi/v1/material/inventory/query</code></td><td>查询供应商面辅料库存</td></tr>
+                  </tbody>
+                </table>
+                <Title level={5} style={{ marginTop: 16, marginBottom: 8 }}>Webhook回调端点（供应商回调）</Title>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <thead><tr style={{ background: 'var(--color-bg-container)' }}>
+                    <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #f0f0f0' }}>方法</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #f0f0f0' }}>路径</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #f0f0f0' }}>说明</th>
+                  </tr></thead>
+                  <tbody>
+                    <tr><td style={{ padding: '8px 12px' }}><Tag color="orange">PUSH</Tag></td><td><code>/openapi/v1/webhook/material/order-confirm</code></td><td>供应商确认采购订单</td></tr>
+                    <tr><td style={{ padding: '8px 12px' }}><Tag color="orange">PUSH</Tag></td><td><code>/openapi/v1/webhook/material/price-update</code></td><td>供应商更新面辅料价格</td></tr>
+                    <tr><td style={{ padding: '8px 12px' }}><Tag color="orange">PUSH</Tag></td><td><code>/openapi/v1/webhook/material/shipping-update</code></td><td>供应商更新发货物流信息</td></tr>
+                  </tbody>
+                </table>
+                <Alert
+                  type="info"
+                  showIcon
+                  style={{ marginTop: 12 }}
+                  title="主动端点需先在「应用管理」中配置供应商API地址（externalApiUrl）。Webhook端点由供应商系统调用，用于接收供应商的订单确认、价格变更和发货通知。"
+                />
               </div>
             )
           },
@@ -596,24 +646,30 @@ public class OpenApiClient {
           无需您轮询查询。这是<Text strong>实时</Text>获取数据变更的最高效方式。
         </Paragraph>
 
-        <Title level={5} style={{ marginTop: 16 }}>自动推送的3个场景</Title>
+        <Title level={5} style={{ marginTop: 16 }}>自动推送的4类场景</Title>
         <Row gutter={[12, 12]}>
-          <Col span={8}>
+          <Col xs={24} sm={12} md={6}>
             <Card size="small" style={{ background: 'rgba(45, 127, 249, 0.08)', borderColor: '#adc6ff' }}>
               <Text strong>🚚 成品出库</Text>
               <br /><Text type="secondary" style={{ fontSize: 12 }}>推送物流信息（出库单号、物流公司、运单号）</Text>
             </Card>
           </Col>
-          <Col span={8}>
+          <Col xs={24} sm={12} md={6}>
             <Card size="small" style={{ background: 'rgba(34, 197, 94, 0.15)', borderColor: '#b7eb8f' }}>
               <Text strong>✅ 生产完工</Text>
               <br /><Text type="secondary" style={{ fontSize: 12 }}>推送订单状态变更为已完成</Text>
             </Card>
           </Col>
-          <Col span={8}>
+          <Col xs={24} sm={12} md={6}>
             <Card size="small" style={{ background: 'rgba(250, 140, 22, 0.1)', borderColor: '#ffd591' }}>
               <Text strong>💰 对账审批</Text>
               <br /><Text type="secondary" style={{ fontSize: 12 }}>推送结算审批通过通知</Text>
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Card size="small" style={{ background: 'rgba(19, 194, 194, 0.1)', borderColor: '#87e8de' }}>
+              <Text strong>🧵 供应商回调</Text>
+              <br /><Text type="secondary" style={{ fontSize: 12 }}>接收供应商订单确认、价格更新、发货通知</Text>
             </Card>
           </Col>
         </Row>

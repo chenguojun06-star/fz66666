@@ -16,6 +16,18 @@ import { toast } from '../../../utils/uiHelper';
 const { eventBus } = require('../../../utils/eventBus');
 
 /**
+ * 将API返回值规范化为数组（兼容分页对象 { records: [...] } 和直接数组）
+ * @param {*} res - API返回值
+ * @returns {Array} 标准数组
+ * @private
+ */
+function _normalizeToArray(res) {
+  if (Array.isArray(res)) return res;
+  if (res && Array.isArray(res.records)) return res.records;
+  return [];
+}
+
+/**
  * 检查是否有待处理的采购任务（从铃铛点击过来）
  * @param {Object} ctx - Page 上下文
  * @returns {void}
@@ -86,7 +98,9 @@ async function _fetchProcurementData(orderNo, purchaseId, task) {
   if (orderNo) {
     try {
       const res = await api.production.getMaterialPurchases({ orderNo });
-      if (res && res.length > 0) { return res; }
+      // 兼容：API可能返回数组或分页对象 { records: [...] }
+      const list = _normalizeToArray(res);
+      if (list.length > 0) { return list; }
     } catch (_err) {
       // 方案1失败，继续方案2
     }
@@ -168,7 +182,7 @@ async function onHandleProcurement(ctx, e) {
       }
 
       const res = await api.production.getMaterialPurchases({ orderNo });
-      materialPurchases = res || [];
+      materialPurchases = _normalizeToArray(res);
     } else if (groupId && recordIdx !== undefined) {
       const group = ctx.data.my.groupedHistory.find(g => g.id === groupId);
       if (group && group.items[recordIdx]) {
@@ -177,7 +191,7 @@ async function onHandleProcurement(ctx, e) {
         styleNo = record.styleNo;
 
         const res = await api.production.getMaterialPurchases({ orderNo: targetOrderNo });
-        materialPurchases = res || [];
+        materialPurchases = _normalizeToArray(res);
       }
     }
 

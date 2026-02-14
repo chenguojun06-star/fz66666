@@ -132,9 +132,20 @@ function _addRecordToGroup(group, record) {
   const sizeStr = record.size || '';
   const sizeArr = sizeStr.includes(',') ? sizeStr.split(',').map(s => s.trim()).filter(Boolean) : (sizeStr ? [sizeStr] : []);
   const totalQty = record.quantity || 1;
-  // 将总数量平均分配到各尺码，余数分给最后一个
+
   let qtyArr = [];
-  if (sizeArr.length > 1) {
+
+  // ✅ 优先使用后端返回的裁剪详情数据（真实分布）
+  if (record.cuttingDetails && Array.isArray(record.cuttingDetails) && record.cuttingDetails.length > 0) {
+    // 使用cutting_bundle的真实数据
+    const detailsMap = {};
+    record.cuttingDetails.forEach(detail => {
+      detailsMap[detail.size] = detail.quantity;
+    });
+    qtyArr = sizeArr.map(size => detailsMap[size] || 0);
+  }
+  // ❌ 降级方案：平均分配（仅用于没有cuttingDetails的情况）
+  else if (sizeArr.length > 1) {
     const base = Math.floor(totalQty / sizeArr.length);
     const remainder = totalQty % sizeArr.length;
     qtyArr = sizeArr.map((_, i) => base + (i >= sizeArr.length - remainder ? 1 : 0));
@@ -278,7 +289,19 @@ function mergeGroupedHistory(existingGroups, newGroups) {
 // ==================== 页面方法 ====================
 
 /**
- * 加载我的扫码历史记录
+ * 获取今天日期字符串 YYYY-MM-DD
+ * @returns {string} 今天的日期
+ */
+function _getToday() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/**
+ * 加载我的扫码历史记录（仅当天）
  * @param {Object} page - 页面实例
  * @param {boolean} refresh - 是否刷新（重置分页）
  * @returns {Promise<void>} 异步加载并更新页面数据
@@ -299,7 +322,14 @@ async function loadMyHistory(page, refresh = false) {
   page.setData({ 'my.loadingHistory': true });
 
   try {
-    const res = await api.production.myScanHistory({ page: pageNum, pageSize });
+    // 只查询当天记录
+    const today = _getToday();
+    const res = await api.production.myScanHistory({
+      page: pageNum,
+      pageSize,
+      startTime: today + ' 00:00:00',
+      endTime: today + ' 23:59:59',
+    });
 
     const records = res.records || res || [];
     const total = res.total || 0;

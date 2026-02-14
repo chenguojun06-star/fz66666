@@ -1,15 +1,25 @@
 const api = require('../../../../utils/api');
 const { getUserInfo, setUserInfo } = require('../../../../utils/storage');
 
+function toInt(value) {
+  const n = Number(value);
+  if (Number.isNaN(n)) {
+    return 0;
+  }
+  return Math.max(0, Math.floor(n));
+}
+
 Page({
   data: {
     list: [],
     loading: false,
     days: 30,
+    onlyNeed: true,
     orderModal: {
       visible: false,
       submitting: false,
       quantity: 1,
+      shortage: 0,
       remark: '',
       item: null,
     },
@@ -23,8 +33,27 @@ Page({
     if (this.data.loading) return;
     this.setData({ loading: true });
     try {
-      const list = await api.material.listStockAlerts({ onlyNeed: 'true', days: this.data.days, limit: 100 });
-      const mapped = Array.isArray(list) ? list : [];
+      const list = await api.material.listStockAlerts({
+        onlyNeed: this.data.onlyNeed ? 'true' : 'false',
+        days: this.data.days,
+        limit: 100,
+      });
+      const mapped = (Array.isArray(list) ? list : []).map(item => {
+        const quantity = toInt(item && item.quantity);
+        const safetyStock = toInt(item && item.suggestedSafetyStock != null ? item.suggestedSafetyStock : item && item.safetyStock);
+        const shortage = Math.max(0, safetyStock - quantity);
+        return {
+          ...item,
+          quantity,
+          safetyStock,
+          shortage,
+          materialTypeText: item && item.materialType ? String(item.materialType) : '-',
+          specText: `${item && item.color ? item.color : '-'} / ${item && item.size ? item.size : '-'}`,
+          recentOutQuantity: toInt(item && item.recentOutQuantity),
+          dailyOutQuantity: toInt(item && item.dailyOutQuantity),
+          needReplenish: Boolean(item && item.needReplenish),
+        };
+      });
       mapped.sort((a, b) => this.getShortage(b) - this.getShortage(a));
       this.setData({ list: mapped });
     } catch (e) {
@@ -35,13 +64,31 @@ Page({
   },
 
   getShortage(item) {
-    const target = Number(item && (item.suggestedSafetyStock ?? item.safetyStock) || 0);
-    const current = Number(item && item.quantity || 0);
+    const target = toInt(item && (item.suggestedSafetyStock ?? item.safetyStock));
+    const current = toInt(item && item.quantity);
     const diff = target - current;
     return diff > 0 ? diff : 0;
   },
 
+  onChangeDays(e) {
+    const days = toInt(e && e.currentTarget && e.currentTarget.dataset ? e.currentTarget.dataset.days : 0);
+    if (!days || days === this.data.days) {
+      return;
+    }
+    this.setData({ days }, () => this.loadData());
+  },
+
+  onToggleNeedOnly() {
+    this.setData({ onlyNeed: !this.data.onlyNeed }, () => this.loadData());
+  },
+
   onItemTap(e) {
+    const item = e && e.currentTarget && e.currentTarget.dataset ? e.currentTarget.dataset.item : null;
+    if (!item) return;
+    this.goMaterialDetail(item);
+  },
+
+  onQuickOrderTap(e) {
     const item = e && e.currentTarget && e.currentTarget.dataset ? e.currentTarget.dataset.item : null;
     if (!item) return;
     const shortage = this.getShortage(item);
@@ -50,15 +97,50 @@ Page({
         visible: true,
         submitting: false,
         quantity: shortage > 0 ? shortage : 1,
+        shortage,
         remark: '',
         item,
       },
     });
   },
 
+  onViewDetailTap(e) {
+    const item = e && e.currentTarget && e.currentTarget.dataset ? e.currentTarget.dataset.item : null;
+    if (!item) return;
+    this.goMaterialDetail(item);
+  },
+
+  goMaterialDetail(item) {
+    const query = [
+      `materialCode=${encodeURIComponent(item.materialCode || '')}`,
+      `materialName=${encodeURIComponent(item.materialName || '')}`,
+      `color=${encodeURIComponent(item.color || '')}`,
+      `size=${encodeURIComponent(item.size || '')}`,
+      `unit=${encodeURIComponent(item.unit || '')}`,
+      `quantity=${encodeURIComponent(String(item.quantity || 0))}`,
+      `safetyStock=${encodeURIComponent(String(item.safetyStock || 0))}`,
+      `recentOutQuantity=${encodeURIComponent(String(item.recentOutQuantity || 0))}`,
+    ].join('&');
+    wx.navigateTo({
+      url: `/pages/warehouse/material/detail-page/index?${query}`,
+    });
+  },
+
   onQtyInput(e) {
-    const value = Number(e && e.detail && e.detail.value || 0);
+    const value = toInt(e && e.detail && e.detail.value);
     this.setData({ 'orderModal.quantity': value });
+  },
+
+  onQtyStep(e) {
+    const delta = Number(e && e.currentTarget && e.currentTarget.dataset ? e.currentTarget.dataset.delta : 0);
+    const current = toInt(this.data.orderModal.quantity);
+    const next = Math.max(1, current + delta);
+    this.setData({ 'orderModal.quantity': next });
+  },
+
+  onUseShortageQty() {
+    const shortage = toInt(this.data.orderModal.shortage);
+    this.setData({ 'orderModal.quantity': shortage > 0 ? shortage : 1 });
   },
 
   onRemarkInput(e) {
@@ -72,6 +154,7 @@ Page({
         visible: false,
         submitting: false,
         quantity: 1,
+        shortage: 0,
         remark: '',
         item: null,
       },

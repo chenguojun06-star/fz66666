@@ -91,7 +91,7 @@ const _FinishedInventory: React.FC = () => {
     loadData();
   }, []);
 
-  // 前端筛选逻辑
+  // 前端筛选 + 按订单+款号聚合逻辑
   const dataSource = useMemo(() => {
     let filtered = [...rawDataSource];
 
@@ -107,31 +107,69 @@ const _FinishedInventory: React.FC = () => {
 
     // 状态筛选
     if (statusValue === 'available') {
-      // 可用库存：有可用数量
       filtered = filtered.filter(item => item.availableQty > 0);
     } else if (statusValue === 'defect') {
-      // 次品库存：有次品数量
       filtered = filtered.filter(item => item.defectQty > 0);
     }
-    // statusValue === '' 或其他值：显示全部
 
-    return filtered;
+    // 按 订单号+款号 聚合为一行（同一订单的不同尺码合并）
+    const groupMap = new Map<string, FinishedInventory>();
+    for (const item of filtered) {
+      const key = `${item.orderNo || ''}_${item.styleNo || ''}`;
+      const existing = groupMap.get(key);
+      if (existing) {
+        // 累加库存数量
+        existing.availableQty = (existing.availableQty || 0) + (item.availableQty || 0);
+        existing.lockedQty = (existing.lockedQty || 0) + (item.lockedQty || 0);
+        existing.defectQty = (existing.defectQty || 0) + (item.defectQty || 0);
+        // 收集不重复的颜色和尺码
+        const colors = new Set(existing.colors || []);
+        if (item.color) colors.add(item.color);
+        existing.colors = Array.from(colors);
+        const sizes = new Set(existing.sizes || []);
+        if (item.size) sizes.add(item.size);
+        existing.sizes = Array.from(sizes);
+        // 保留最大的入库总量
+        if ((item.totalInboundQty ?? 0) > (existing.totalInboundQty ?? 0)) {
+          existing.totalInboundQty = item.totalInboundQty;
+        }
+      } else {
+        groupMap.set(key, {
+          ...item,
+          colors: item.colors?.length ? [...item.colors] : (item.color ? [item.color] : []),
+          sizes: item.sizes?.length ? [...item.sizes] : (item.size ? [item.size] : []),
+        });
+      }
+    }
+
+    return Array.from(groupMap.values());
   }, [rawDataSource, searchText, statusValue]);
 
   // 打开出库模态框，从数据中筛选该款式的所有SKU明细
   const handleOutbound = (record: FinishedInventory) => {
     // 从已加载的数据中筛选同款号的所有SKU
+    // 防御：若 size/color 含逗号（脏数据），拆分成独立行
     const styleSKUs: SKUDetail[] = rawDataSource
       .filter(item => item.styleNo === record.styleNo)
-      .map(item => ({
-        color: item.color || '',
-        size: item.size || '',
-        sku: item.sku || `${item.styleNo}-${item.color}-${item.size}`,
-        availableQty: item.availableQty ?? 0,
-        lockedQty: item.lockedQty ?? 0,
-        defectQty: item.defectQty ?? 0,
-        warehouseLocation: item.warehouseLocation || '-',
-      }));
+      .flatMap(item => {
+        const colors = (item.color || '').includes(',')
+          ? (item.color || '').split(',').map(c => c.trim()).filter(Boolean)
+          : [item.color || ''];
+        const sizes = (item.size || '').includes(',')
+          ? (item.size || '').split(',').map(s => s.trim()).filter(Boolean)
+          : [item.size || ''];
+        return colors.flatMap(color =>
+          sizes.map(size => ({
+            color,
+            size,
+            sku: `${item.styleNo}-${color}-${size}`,
+            availableQty: item.availableQty ?? 0,
+            lockedQty: item.lockedQty ?? 0,
+            defectQty: item.defectQty ?? 0,
+            warehouseLocation: item.warehouseLocation || '-',
+          }))
+        );
+      });
     setSkuDetails(styleSKUs.length > 0 ? styleSKUs : [{
       color: record.color || '',
       size: record.size || '',
@@ -196,11 +234,11 @@ const _FinishedInventory: React.FC = () => {
       if (res.code === 200 && res.data?.records?.length > 0) {
         setInboundHistory(res.data.records.map((item: Record<string, unknown>, idx: number) => ({
           id: String(item.id || idx),
-          inboundDate: item.createTime || item.inboundDate || '-',
-          qualityInspectionNo: item.qualityInspectionNo || '-',
-          quantity: item.quantity ?? 0,
-          operator: item.creatorName || item.operator || '-',
-          warehouseLocation: item.warehouseLocation || '-',
+          inboundDate: item.warehousingEndTime || item.createTime || '-',
+          qualityInspectionNo: item.warehousingNo || '-',
+          quantity: (item.qualifiedQuantity as number) ?? (item.warehousingQuantity as number) ?? 0,
+          operator: item.warehousingOperatorName || '-',
+          warehouseLocation: item.warehouse || '-',
           remark: item.remark || '',
         })));
       } else {
@@ -363,8 +401,8 @@ const _FinishedInventory: React.FC = () => {
           </div>
           <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
             <span style={{ color: 'var(--neutral-text-disabled)' }}>入库数量:</span>{' '}
-            <span style={{ color: 'var(--success-color)', fontWeight: 700 }}>{record.totalInboundQty ?? '-'}</span>
-            {record.totalInboundQty != null && <span style={{ color: 'var(--neutral-text-disabled)', marginLeft: 2 }}>件</span>}
+            <span style={{ color: 'var(--success-color)', fontWeight: 700 }}>{record.totalInboundQty ?? record.availableQty ?? '-'}</span>
+            {(record.totalInboundQty != null || record.availableQty != null) && <span style={{ color: 'var(--neutral-text-disabled)', marginLeft: 2 }}>件</span>}
           </div>
           <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
             <span style={{ color: 'var(--neutral-text-disabled)' }}>库位:</span>{' '}

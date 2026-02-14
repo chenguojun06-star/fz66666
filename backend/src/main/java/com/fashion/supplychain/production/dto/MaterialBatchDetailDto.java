@@ -8,9 +8,6 @@ import java.time.LocalDateTime;
 /**
  * 物料批次明细DTO
  * 用于出库时选择批次（FIFO先进先出）
- *
- * @author Fashion Supply Chain System
- * @since 2026-02-05
  */
 @Data
 public class MaterialBatchDetailDto {

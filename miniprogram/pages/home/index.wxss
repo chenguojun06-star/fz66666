@@ -315,7 +315,7 @@ page {
   justify-content: flex-end;
 }
 
-/* 数据概览 - 3个独立卡片，垂直排列，均匀分布 */
+/* 数据概览 - 对齐PC顶部4卡片（日/周/月/年+总） */
 .home-stats-grid {
   display: flex;
   flex-direction: column;
@@ -326,69 +326,83 @@ page {
 
 .home-stat-card {
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 8px;
   padding: 12px 16px;
   background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
+  border: 1.5px solid var(--color-border);
   border-radius: var(--radius-xl);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  min-height: 48px;
+}
+
+.stat-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .stat-card-emoji {
-  font-size: 22px;
-  opacity: 0.85;
+  font-size: 20px;
   flex-shrink: 0;
 }
 
 .stat-card-label {
   font-size: 14px;
-  color: var(--color-text-secondary);
-  font-weight: 500;
+  color: var(--color-text-primary);
+  font-weight: 600;
   flex-shrink: 0;
-  min-width: 64px;
 }
 
-.stat-card-value {
+.stat-total {
   font-size: 20px;
   font-weight: 700;
   color: var(--color-text-primary);
   line-height: 1;
   margin-left: auto;
-  padding-left: 12px;
 }
 
-/* 入库数量 - 今日/汇总横向显示，留足空间 */
-.stat-card-dual {
+.stat-tags-row {
   display: flex;
-  flex-direction: row;
+  gap: 6px;
+}
+
+.stat-tag {
+  flex: 1;
+  display: flex;
   align-items: center;
-  gap: 12px;
-  margin-left: auto;
-  padding-left: 12px;
-}
-
-.stat-dual-row {
-  display: flex;
-  align-items: baseline;
+  justify-content: center;
   gap: 4px;
-  white-space: nowrap;
+  padding: 4px 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-light);
 }
 
-.stat-dual-label {
-  font-size: 12px;
+.tag-label {
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
-  flex-shrink: 0;
 }
 
-.stat-dual-value {
-  font-size: 18px;
+.tag-value {
+  font-size: 12px;
   font-weight: 700;
   color: var(--color-text-primary);
-  min-width: 32px;
-  text-align: right;
+}
+
+.stat-sample {
+  border-color: var(--color-border);
+}
+
+.stat-bulk {
+  border-color: var(--color-primary);
+}
+
+.stat-cutting {
+  border-color: var(--color-warning, #f59e0b);
+}
+
+.stat-warehousing {
+  border-color: var(--color-success, #10b981);
 }
 
 /* 保留旧胶囊行样式以兼容 */

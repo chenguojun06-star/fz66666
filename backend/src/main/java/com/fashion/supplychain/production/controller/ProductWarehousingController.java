@@ -33,6 +33,24 @@ public class ProductWarehousingController {
         return Result.success(productWarehousingOrchestrator.getStatusStats(params));
     }
 
+    /**
+     * 查询各状态的待处理菲号列表
+     * @param status pendingQc(待质检) | pendingPackaging(待包装) | pendingWarehouse(待入库)
+     */
+    @GetMapping("/pending-bundles")
+    public Result<?> listPendingBundles(@RequestParam String status) {
+        return Result.success(productWarehousingOrchestrator.listPendingBundles(status));
+    }
+
+    /**
+     * 质检简报：返回订单关键信息、BOM、尺寸规格、质检注意事项
+     * 供质检详情页右侧面板使用
+     */
+    @GetMapping("/quality-briefing/{orderId}")
+    public Result<?> getQualityBriefing(@PathVariable String orderId) {
+        return Result.success(productWarehousingOrchestrator.getQualityBriefing(orderId));
+    }
+
     @GetMapping("/{id}")
     public Result<ProductWarehousing> getById(@PathVariable String id) {
         return Result.success(productWarehousingOrchestrator.getById(id));

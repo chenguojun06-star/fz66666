@@ -11,9 +11,6 @@ import java.time.LocalDateTime;
 /**
  * 生产工序跟踪记录
  * 用途：裁剪完成后自动生成（菲号×工序），作为工资结算依据
- *
- * @author system
- * @since 2026-02-06
  */
 @Data
 @TableName("t_production_process_tracking")

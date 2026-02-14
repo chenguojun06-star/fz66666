@@ -34,7 +34,8 @@ public class TenantAppOrchestrator {
         "QUALITY_FEEDBACK", "质检反馈",
         "LOGISTICS_SYNC", "物流对接",
         "PAYMENT_SYNC", "付款对接",
-        "MATERIAL_SUPPLY", "面辅料供应对接"
+        "MATERIAL_SUPPLY", "面辅料供应对接",
+        "DATA_IMPORT", "数据导入（开通即用）"
     );
 
     private static final Map<String, String> STATUS_NAMES = Map.of(

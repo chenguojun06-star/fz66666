@@ -6,9 +6,7 @@ import org.apache.ibatis.annotations.Mapper;
 
 /**
  * 纸样修改记录 Mapper
- *
- * @author system
- * @date 2026-01-31
+
  */
 @Mapper
 public interface PatternRevisionMapper extends BaseMapper<PatternRevision> {

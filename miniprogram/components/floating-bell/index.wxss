@@ -4,6 +4,7 @@
 .floating-bell-container {
   position: fixed;
   z-index: 999;
+  pointer-events: none;
 }
 
 /* 悬浮铃铛按钮 - 右上角透明背景 */
@@ -20,6 +21,7 @@
   justify-content: center;
   z-index: 1000;
   transition: all 0.2s ease;
+  pointer-events: auto;
 }
 
 .floating-bell:active {
@@ -70,6 +72,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  pointer-events: auto;
 }
 
 .task-panel.show {
@@ -394,6 +397,7 @@
   bottom: 0;
   background: rgba(0, 0, 0, 0.3);
   z-index: 1000;
+  pointer-events: auto;
 }
 
 /* 延期订单样式 */

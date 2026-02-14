@@ -325,14 +325,19 @@ public class ProductionOrderScanRecordDomainService {
 
         // 优先从当前登录上下文获取操作人，回退到订单创建人
         String operatorId = null;
-        String operatorName = "system";
+        String operatorName = null;
         UserContext ctx = UserContext.get();
         if (ctx != null && StringUtils.hasText(ctx.getUserId())) {
             operatorId = ctx.getUserId();
-            operatorName = StringUtils.hasText(ctx.getUsername()) ? ctx.getUsername().trim() : "system";
-        } else if (StringUtils.hasText(order.getCreatedByName())) {
+            operatorName = StringUtils.hasText(ctx.getUsername()) ? ctx.getUsername().trim() : null;
+        }
+        if (operatorName == null && StringUtils.hasText(order.getCreatedByName())) {
             operatorId = order.getCreatedById() != null ? String.valueOf(order.getCreatedById()) : null;
             operatorName = order.getCreatedByName().trim();
+        }
+        if (operatorName == null) {
+            log.warn("订单创建扫码记录无法获取操作人，使用系统默认值：orderId={}, orderNo={}", oid, order.getOrderNo());
+            operatorName = "system";
         }
 
         upsertStageScanRecord(

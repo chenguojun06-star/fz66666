@@ -7,7 +7,33 @@ import {
   getQualityColor,
 } from '../../utils/orderStatusHelper';
 import { normalizeStats, normalizeActivities } from '../../utils/dataTransform';
-import { toast } from '../../utils/uiHelper';
+import { toast, safeNavigate } from '../../utils/uiHelper';
+
+function toNumber(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function normalizeRangeStats(raw) {
+  const data = raw && typeof raw === 'object' ? raw : {};
+  return {
+    day: toNumber(data.day),
+    week: toNumber(data.week),
+    month: toNumber(data.month),
+    year: toNumber(data.year),
+    total: toNumber(data.total),
+  };
+}
+
+function normalizeTopStats(payload) {
+  const data = payload && typeof payload === 'object' ? payload : {};
+  return {
+    sampleDevelopment: normalizeRangeStats(data.sampleDevelopment),
+    bulkOrder: normalizeRangeStats(data.bulkOrder),
+    cutting: normalizeRangeStats(data.cutting),
+    warehousing: normalizeRangeStats(data.warehousing),
+  };
+}
 
 Page({
   data: {
@@ -39,6 +65,12 @@ Page({
       defectCount: 0,
       materialPurchase: 0,
       urgentEventCount: 0,
+    },
+    topStats: {
+      sampleDevelopment: { day: 0, week: 0, month: 0, year: 0, total: 0 },
+      bulkOrder: { day: 0, week: 0, month: 0, year: 0, total: 0 },
+      cutting: { day: 0, week: 0, month: 0, year: 0, total: 0 },
+      warehousing: { day: 0, week: 0, month: 0, year: 0, total: 0 },
     },
     activities: [],
   },
@@ -98,15 +130,15 @@ Page({
         // 存储失败静默处理
       }
     }
-    wx.switchTab({ url: '/pages/work/index' });
+    safeNavigate({ url: '/pages/work/index' }, 'switchTab').catch(() => {});
   },
 
   goScan() {
-    wx.switchTab({ url: '/pages/scan/index' });
+    safeNavigate({ url: '/pages/scan/index' }, 'switchTab').catch(() => {});
   },
 
   goAdmin() {
-    wx.switchTab({ url: '/pages/admin/index' });
+    safeNavigate({ url: '/pages/admin/index' }, 'switchTab').catch(() => {});
   },
 
   async loadStats() {
@@ -116,16 +148,21 @@ Page({
     this.setData({ loading: true });
     try {
       const params = this.buildDashboardParams();
-      const resp = await api.dashboard.get(params);
+      const [resp, topStatsResp] = await Promise.all([
+        api.dashboard.get(params),
+        api.dashboard.getTopStats({ range: 'week' }).catch(() => null),
+      ]);
 
       // 兼容处理：有些API返回直接是数据对象，有些包裹在data属性中
       // 根据日志观察，api.dashboard.get 返回的 resp 直接包含了 count 字段 (如 productionOrderCount)
       // 因此优先使用 resp 本身，如果 resp.data 存在且也是对象才考虑使用它
       const payload = (resp && resp.data) || resp;
+      const topStatsPayload = topStatsResp || {};
 
       const stats = normalizeStats(payload);
+      const topStats = normalizeTopStats(topStatsPayload);
       const activities = normalizeActivities(payload);
-      this.setData({ stats, statsLoaded: true, activities });
+      this.setData({ stats, topStats, statsLoaded: true, activities });
     } catch (e) {
       if (e && e.type === 'auth') {
         return;
@@ -137,6 +174,12 @@ Page({
     } finally {
       this.setData({ loading: false });
     }
+  },
+
+  getCardData(e) {
+    const key = e && e.currentTarget && e.currentTarget.dataset ? e.currentTarget.dataset.key : '';
+    const topStats = this.data.topStats || {};
+    return topStats[key] || { day: 0, week: 0, month: 0, year: 0, total: 0 };
   },
 
   loadReminders() {
@@ -198,7 +241,7 @@ Page({
       } catch (e) {
         // 存储失败静默处理
       }
-      wx.switchTab({ url: '/pages/scan/index' });
+      safeNavigate({ url: '/pages/scan/index' }, 'switchTab').catch(() => {});
     } else if (type === '裁剪' || type === '缝制' || type === '质检') {
       // 生产任务跳转到工作台的生产中标签页
       try {
@@ -207,7 +250,7 @@ Page({
       } catch (e) {
         // 存储失败静默处理
       }
-      wx.switchTab({ url: '/pages/work/index' });
+      safeNavigate({ url: '/pages/work/index' }, 'switchTab').catch(() => {});
     } else {
       // 其他任务默认跳转到扫码页面
       try {
@@ -215,7 +258,7 @@ Page({
       } catch (e) {
         // 存储失败静默处理
       }
-      wx.switchTab({ url: '/pages/scan/index' });
+      safeNavigate({ url: '/pages/scan/index' }, 'switchTab').catch(() => {});
     }
   },
 

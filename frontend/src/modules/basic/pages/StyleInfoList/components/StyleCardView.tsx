@@ -38,44 +38,10 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
       coverField="cover"
       titleField="styleNo"
       subtitleField="styleName"
-      fields={[
-        {
-          label: '码数',
-          key: 'sizeColorConfig',
-          render: (val) => {
-            // 从 sizeColorConfig JSON 中解析码数
-            if (!val) return '-';
-            try {
-              const config = JSON.parse(val);
-              const sizes = (config.sizes || []).filter((s: string) => s && s.trim());
-              return sizes.length > 0 ? sizes.join(', ') : '-';
-            } catch {
-              return '-';
-            }
-          }
-        },
-        {
-          label: '数量',
-          key: 'sampleQuantity',
-          render: (val) => {
-            const qty = Number(val) || 0;
-            return qty > 0 ? `${qty}件` : '-';
-          }
-        },
-        {
-          label: '交板日期',
-          key: 'deliveryDate',
-          render: (val: unknown) => {
-            return val ? dayjs(val as string).format('YYYY-MM-DD') : '-';
-          }
-        },
-        {
-          label: '创建时间',
-          key: 'createTime',
-          render: (val: unknown) => {
-            return val ? dayjs(val as string).format('YYYY-MM-DD') : '-';
-          }
-        },
+      fields={[]}
+      fieldGroups={[
+        [{ label: '码数', key: 'sizeColorConfig', render: (val) => { if (!val) return '-'; try { const config = JSON.parse(val); const sizes = (config.sizes || []).filter((s: string) => s && s.trim()); return sizes.length > 0 ? sizes.join(',') : '-'; } catch { return '-'; } } }, { label: '数量', key: 'sampleQuantity', render: (val) => { const qty = Number(val) || 0; return qty > 0 ? `${qty}件` : '-'; } }],
+        [{ label: '交板', key: 'deliveryDate', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '创建', key: 'createTime', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' }],
       ]}
       progressConfig={{
         show: true,

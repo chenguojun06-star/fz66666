@@ -3,16 +3,30 @@ const api = require('../../../../utils/api');
 Page({
   data: {
     keyword: '',
-    list: [],
+    list: [],  // 移除 allList，不再需要客户端缓存所有数据
     page: 1,
     pageSize: 10,
     hasMore: true,
     loading: false,
-    isRefreshing: false
+    isRefreshing: false,
+    filterType: 'all',  // 'all' | 'pending' | 具体样衣类型（如需支持）
+    totalQuantity: 0,
+    pendingReturnQuantity: 0
   },
 
   onLoad() {
     this.loadData(true);
+  },
+
+  /**
+   * ✅ 新增：页面显示时自动刷新数据
+   * 解决问题：入库/借出/归还操作后返回列表，数据自动更新
+   */
+  onShow() {
+    // 如果不是首次加载（page > 1表示已加载过数据），则刷新列表
+    if (this.data.page > 1 || this.data.list.length > 0) {
+      this.loadData(true);
+    }
   },
 
   onKeywordInput(e) {
@@ -56,21 +70,39 @@ Page({
     this.setData({ loading: true });
 
     try {
-      const { page, pageSize, keyword } = this.data;
+      const { page, pageSize, keyword, filterType } = this.data;
+
+      // ✅ 统一使用服务端过滤，与PC端一致
+      const sampleType = filterType === 'all' ? undefined : filterType;
+
       const data = await api.stock.listSamples({
         page,
         pageSize,
-        styleNo: keyword
+        styleNo: keyword,
+        sampleType: sampleType  // ✅ 新增：传递样衣类型参数
       });
+
       const records = (data && data.records) || [];
+      const total = data.total || 0;
+
+      // ✅ 直接使用服务端返回的数据，不再客户端过滤
+      const list = reset ? records : [...this.data.list, ...records];
+
+      // 计算汇总数据（从服务端返回的完整数据计算）
+      const totalQuantity = list.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+      const pendingReturnQuantity = list.reduce((sum, item) => sum + (Number(item.loanedQuantity) || 0), 0);
+
       this.setData({
-        list: reset ? records : [...this.data.list, ...records],
+        list: list,
+        totalQuantity,
+        pendingReturnQuantity,
         hasMore: records.length === pageSize,
         page: page + 1
       });
     } catch (error) {
-      console.error('加载列表失败', error);
-      wx.showToast({ title: '加载失败', icon: 'none' });
+      console.error('加载样衣列表失败', error);
+      const errMsg = (error && error.errMsg) || (error && error.message) || '加载失败';
+      wx.showToast({ title: errMsg, icon: 'none', duration: 3000 });
     } finally {
       this.setData({ loading: false, isRefreshing: false });
     }
@@ -85,10 +117,30 @@ Page({
     this.loadData();
   },
 
+  onFilterTap(e) {
+    const type = e.currentTarget.dataset.type;
+    if (!type || type === this.data.filterType) {
+      return;
+    }
+    // ✅ 切换筛选时重新从服务端加载数据
+    this.setData({
+      filterType: type
+    }, () => {
+      this.loadData(true);  // 重置并重新加载
+    });
+  },
+
   navToOperation(e) {
     const type = e.currentTarget.dataset.type;
     wx.navigateTo({
       url: `/pages/warehouse/sample/operation/index?type=${type}`
+    });
+  },
+  navToOperationByItem(e) {
+    const type = e.currentTarget.dataset.type;
+    const styleNo = e.currentTarget.dataset.styleno || '';
+    wx.navigateTo({
+      url: `/pages/warehouse/sample/operation/index?type=${type}&styleNo=${encodeURIComponent(styleNo)}`
     });
   },
   navToLoanList(e) {

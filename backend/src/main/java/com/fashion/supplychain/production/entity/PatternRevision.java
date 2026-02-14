@@ -14,9 +14,6 @@ import java.time.LocalDateTime;
  * - 不影响样板生产（PatternProduction）数据
  * - 支持完整的审批流程
  * - 记录修改前后对比
- *
- * @author system
- * @date 2026-01-31
  */
 @Data
 @TableName("t_pattern_revision")

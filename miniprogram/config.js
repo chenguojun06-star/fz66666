@@ -11,13 +11,13 @@
  * - 如需修改地址，在登录页手动输入
  * - 生产环境请修改为实际域名，如 https://api.your-domain.com
  */
-const DEFAULT_BASE_URL = 'http://192.168.1.2:8088';  // 当前机器局域网 IP（内网可访问）
+const DEFAULT_BASE_URL = 'http://192.168.1.17:8088';  // 当前机器局域网 IP（内网可访问）
 const FALLBACK_BASE_URL = 'http://localhost:8088';     // 回退地址（仅本机）
 
 /**
  * 是否启用调试日志（生产环境请设为 false）
  */
-const DEBUG_MODE = true;
+const DEBUG_MODE = false;
 
 /**
  * 规范化 API 基址（去空格、补协议、去末尾斜杠）

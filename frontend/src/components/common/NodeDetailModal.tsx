@@ -373,7 +373,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   // 加载工序跟踪数据（工资结算依据）
   const loadProcessTrackingData = useCallback(async () => {
     if (!orderId) {
-      console.warn('NodeDetailModal: 无订单ID，跳过加载工序跟踪数据');
+      // 无订单ID，跳过加载工序跟踪数据
       return;
     }
 
@@ -384,7 +384,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
       // API返回的是 {code: 200, data: [...]} 结构，需要提取data字段
       const data = (response as any)?.data || [];
       const records = Array.isArray(data) ? data : [];
-      console.log(`NodeDetailModal: 订单 ${orderNo} (ID: ${orderId}) 加载工序跟踪记录 ${records.length} 条`, records);
+      // 工序跟踪记录加载完成
       setProcessTrackingRecords(records);
     } catch (error) {
       console.error('NodeDetailModal: 加载工序跟踪数据失败:', error);

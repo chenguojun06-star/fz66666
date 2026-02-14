@@ -27,8 +27,13 @@ function showConfirmModal(ctx, data) {
     return;
   }
 
+  // 安全读取扫码类型（scanTypeOptions 可能未定义）
+  const scanTypeOptions = ctx.data.scanTypeOptions || [];
+  const scanTypeIndex = ctx.data.scanTypeIndex || 0;
+  const currentScanTypeValue = scanTypeOptions[scanTypeIndex]?.value || '';
+
   const isProcurement =
-    ctx.data.scanTypeOptions[ctx.data.scanTypeIndex].value === 'procurement' ||
+    currentScanTypeValue === 'procurement' ||
     data.progressStage === '采购';
 
   const { skuList, formItems, summary, materialPurchases } =
@@ -47,6 +52,7 @@ function showConfirmModal(ctx, data) {
       summary: summary,
       cuttingTasks: cuttingTasks,
       materialPurchases: materialPurchases,
+      bomFallback: data.bomFallback || false,
       fromMyTasks: data.fromMyTasks || false,
     },
   });
@@ -119,12 +125,36 @@ function _buildSizeDetails(skuList) {
  */
 function _buildCuttingTasks(data) {
   if (data.progressStage !== '裁剪' || !data.skuItems) return [];
-  return data.skuItems.map(item => ({
-    color: item.color,
-    size: item.size,
-    plannedQuantity: item.quantity || item.num || 0,
-    cuttingInput: item.quantity || item.num || 0,
-  }));
+  const result = [];
+  for (const item of data.skuItems) {
+    const totalQty = item.quantity || item.num || 0;
+    const sizeStr = String(item.size || '').trim();
+    const sizes = sizeStr.includes(',')
+      ? sizeStr.split(',').map(s => s.trim()).filter(Boolean)
+      : [sizeStr || '均码'];
+
+    if (sizes.length <= 1) {
+      result.push({
+        color: item.color,
+        size: sizes[0],
+        plannedQuantity: totalQty,
+        cuttingInput: totalQty || '',
+      });
+    } else {
+      const perSize = Math.floor(totalQty / sizes.length);
+      const remainder = totalQty % sizes.length;
+      for (let i = 0; i < sizes.length; i++) {
+        const qty = perSize + (i < remainder ? 1 : 0);
+        result.push({
+          color: item.color,
+          size: sizes[i],
+          plannedQuantity: qty,
+          cuttingInput: qty || '',
+        });
+      }
+    }
+  }
+  return result;
 }
 
 /**

@@ -5,9 +5,6 @@ package com.fashion.supplychain.common.constant;
  * <p>
  * 统一定义系统中使用的错误码，便于错误追踪和国际化处理
  * </p>
- *
- * @author 系统架构团队
- * @since 2024-01-01
  */
 public final class ErrorCodeConstants {
 

@@ -3,8 +3,11 @@ package com.fashion.supplychain.production.entity;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableField;
 import java.time.LocalDateTime;
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
 import lombok.Data;
 
 /**
@@ -156,6 +159,13 @@ public class ScanRecord {
      * 实际操作员名称（Phase 6新增）
      */
     private String actualOperatorName;
+
+    /**
+     * 裁剪详情（非数据库字段，仅用于API返回）
+     * 格式：[{"size": "S", "quantity": 10}, {"size": "M", "quantity": 10}, ...]
+     */
+    @TableField(exist = false)
+    private List<Map<String, Object>> cuttingDetails;
 
     /**
      * 创建时间

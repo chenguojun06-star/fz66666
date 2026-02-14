@@ -8,11 +8,11 @@ import com.fashion.supplychain.production.orchestration.PatternProductionOrchest
 import com.fashion.supplychain.production.service.PatternProductionService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -24,6 +24,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/production/pattern")
 @Slf4j
+@PreAuthorize("hasAnyAuthority('MENU_PRODUCTION', 'MENU_PROGRESS', 'ROLE_ADMIN', 'ROLE_1')")
 public class PatternProductionController {
 
     @Autowired
@@ -79,6 +80,22 @@ public class PatternProductionController {
     }
 
     /**
+     * 获取样衣动态工序配置（对齐大货动态工序）
+     */
+    @GetMapping("/{id}/process-config")
+    public Result<List<Map<String, Object>>> getProcessConfig(@PathVariable String id) {
+        try {
+            List<Map<String, Object>> config = patternProductionOrchestrator.getPatternProcessConfig(id);
+            return Result.success(config);
+        } catch (IllegalArgumentException e) {
+            return Result.fail(e.getMessage());
+        } catch (Exception e) {
+            log.error("获取样衣工序配置失败: id={}", id, e);
+            return Result.fail("获取工序配置失败");
+        }
+    }
+
+    /**
      * 统一的样板工作流操作端点（替代5个分散端点）
      */
     @PostMapping("/{id}/workflow-action")
@@ -93,7 +110,7 @@ public class PatternProductionController {
                     return Result.success(receiveMsg);
                 case "complete":
                     Map<String, Object> completeResult = patternProductionOrchestrator.submitScan(
-                            id, "COMPLETE", "PLATE_WORKER", null);
+                        id, "COMPLETE", "PLATE_WORKER", null, null, null);
                     return Result.success(completeResult);
                 case "warehouse-in":
                     String remark = request != null ? (String) request.get("remark") : null;
@@ -177,9 +194,17 @@ public class PatternProductionController {
             String operationType = (String) request.get("operationType");
             String operatorRole = (String) request.get("operatorRole");
             String remark = (String) request.get("remark");
+                String warehouseCode = request.get("warehouseCode") == null
+                    ? null
+                    : String.valueOf(request.get("warehouseCode"));
+            Integer quantity = null;
+            Object quantityObj = request.get("quantity");
+            if (quantityObj != null) {
+                quantity = Integer.parseInt(String.valueOf(quantityObj));
+            }
 
             Map<String, Object> result = patternProductionOrchestrator.submitScan(
-                    patternId, operationType, operatorRole, remark);
+                    patternId, operationType, operatorRole, remark, quantity, warehouseCode);
             return Result.success(result);
         } catch (IllegalArgumentException e) {
             return Result.fail(e.getMessage());
@@ -218,8 +243,8 @@ public class PatternProductionController {
      */
     @Deprecated
     @PostMapping("/{patternId}/receive")
-    public Result<Map<String, Object>> receivePattern(@PathVariable String patternId) {
-        return (Result) workflowAction(patternId, "receive", null);
+    public Result<?> receivePattern(@PathVariable String patternId) {
+        return workflowAction(patternId, "receive", null);
     }
 
     /**
@@ -228,8 +253,8 @@ public class PatternProductionController {
      */
     @Deprecated
     @PostMapping("/{patternId}/complete")
-    public Result<Map<String, Object>> completePattern(@PathVariable String patternId) {
-        return (Result) workflowAction(patternId, "complete", null);
+    public Result<?> completePattern(@PathVariable String patternId) {
+        return workflowAction(patternId, "complete", null);
     }
 
     /**
@@ -238,10 +263,10 @@ public class PatternProductionController {
      */
     @Deprecated
     @PostMapping("/{patternId}/warehouse-in")
-    public Result<Map<String, Object>> warehouseIn(
+    public Result<?> warehouseIn(
             @PathVariable String patternId,
             @RequestBody(required = false) Map<String, Object> request) {
-        return (Result) workflowAction(patternId, "warehouse-in", request);
+        return workflowAction(patternId, "warehouse-in", request);
     }
 
     /**

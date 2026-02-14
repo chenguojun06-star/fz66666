@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import type { ProductionOrder } from '@/types/production';
 
 type UseOrderSyncParams = {
@@ -10,6 +10,15 @@ type UseOrderSyncParams = {
   orderSyncingRef: React.MutableRefObject<boolean>;
 };
 
+/**
+ * 安全的订单自动同步 Hook
+ *
+ * 修复历史：原实现每30秒触发 fetchOrders + fetchOrderDetail + fetchScanHistory，
+ * 导致请求爆炸（10秒内400+个请求）。
+ *
+ * 新方案：仅静默刷新订单列表（1个请求/30秒），扫码历史由用户手动刷新。
+ * 这样手机端退回重扫后，PC端30秒内即可看到订单进度变化。
+ */
 export const useOrderSync = ({
   fetchOrders,
   fetchOrderDetail,
@@ -18,38 +27,36 @@ export const useOrderSync = ({
   setActiveOrder,
   orderSyncingRef,
 }: UseOrderSyncParams) => {
-  // 🚨 紧急禁用：自动同步失控，10秒内发送400+个请求
-  // 问题：每30秒轮询会触发 fetchOrders + fetchOrderDetail + fetchScanHistory
-  // 如果 fetchScanHistory 内部有多个请求，会导致请求爆炸
-  // 临时禁用，需要用户手动刷新获取最新数据
+  const fetchOrdersRef = useRef(fetchOrders);
+  const syncingRef = useRef(false);
 
-  // useEffect(() => {
-  //   let cancelled = false;
-  //   const run = async () => {
-  //     if (orderSyncingRef.current) return;
-  //     orderSyncingRef.current = true;
-  //     try {
-  //       await fetchOrders({ silent: true });
-  //       const current = activeOrderRef.current;
-  //       if (current?.id) {
-  //         const detail = await fetchOrderDetail(current.id);
-  //         if (!cancelled && detail) {
-  //           setActiveOrder(detail);
-  //         }
-  //         const base = detail || current;
-  //         if (base) {
-  //           await fetchScanHistory(base, { silent: true });
-  //         }
-  //       }
-  //     } finally {
-  //       orderSyncingRef.current = false;
-  //     }
-  //   };
-  //   void run();
-  //   const timer = window.setInterval(run, 30000);
-  //   return () => {
-  //     cancelled = true;
-  //     window.clearInterval(timer);
-  //   };
-  // }, [fetchOrders, fetchOrderDetail, fetchScanHistory, activeOrderRef, setActiveOrder, orderSyncingRef]);
+  useEffect(() => {
+    fetchOrdersRef.current = fetchOrders;
+  }, [fetchOrders]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const run = async () => {
+      // 防止并发刷新
+      if (syncingRef.current || orderSyncingRef.current) return;
+      syncingRef.current = true;
+      try {
+        // 仅静默刷新订单列表（1个请求），不触发 fetchOrderDetail 和 fetchScanHistory
+        await fetchOrdersRef.current({ silent: true });
+      } catch {
+        // 静默失败，不影响用户操作
+      } finally {
+        syncingRef.current = false;
+      }
+    };
+
+    // 30秒轮询，仅刷新订单列表
+    const timer = window.setInterval(run, 30000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [orderSyncingRef]);
 };

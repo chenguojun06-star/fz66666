@@ -166,7 +166,7 @@ public class StyleBomController {
         try {
             Map<String, Object> summary = styleBomService.getBomStockSummary(styleId, productionQty);
 
-            log.info("✅ BOM库存汇总查询成功: styleId={}, productionQty={}", styleId, productionQty);
+            log.debug("✅ BOM库存汇总查询成功: styleId={}, productionQty={}", styleId, productionQty);
 
             return Result.success(summary);
         } catch (Exception e) {

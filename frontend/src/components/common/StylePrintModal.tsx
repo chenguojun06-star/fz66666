@@ -8,7 +8,21 @@ import { Checkbox, Button, Space, Spin, Table, Tag, message, QRCode } from 'antd
 import { PrinterOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
+import { getMaterialTypeLabel } from '@/utils/materialType';
+import { toCategoryCn } from '@/utils/styleCategory';
 import StandardModal from '@/components/common/StandardModal';
+
+/** 季节英文→中文映射 */
+const toSeasonCn = (v: unknown): string => {
+  const raw = String(v ?? '').trim();
+  if (!raw) return '-';
+  const upper = raw.toUpperCase();
+  const map: Record<string, string> = {
+    SPRING: '春季', SUMMER: '夏季', AUTUMN: '秋季', FALL: '秋季', WINTER: '冬季',
+    SPRING_SUMMER: '春夏', AUTUMN_WINTER: '秋冬',
+  };
+  return map[upper] || raw;
+};
 
 // 打印选项类型
 export interface PrintOptions {
@@ -38,6 +52,8 @@ export interface StylePrintModalProps {
   styleId?: string | number;
   /** 订单ID（大货生产使用） */
   orderId?: string;
+  /** 订单号（大货生产使用，如 PO20260211001） */
+  orderNo?: string;
   /** 款号 */
   styleNo?: string;
   /** 款名 */
@@ -74,6 +90,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
   onClose,
   styleId,
   orderId,
+  orderNo,
   styleNo = '',
   styleName = '',
   cover,
@@ -88,6 +105,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
   const [options, setOptions] = useState<PrintOptions>(DEFAULT_PRINT_OPTIONS);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(false); // 展开/收起状态
+  const [resolvedCover, setResolvedCover] = useState<string | null>(cover || null);
   const [data, setData] = useState<PrintData>({
     sizes: [],
     bom: [],
@@ -95,6 +113,11 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
     attachments: [],
     productionSheet: null,
   });
+
+  // 当外部 cover 变化时同步
+  useEffect(() => {
+    setResolvedCover(cover || null);
+  }, [cover]);
 
   useEffect(() => {
     if (!visible || !styleId) return;
@@ -157,6 +180,27 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
 
         await Promise.all(promises);
         setData(newData);
+
+        // 如果没有外部传入的封面，从款式详情或附件中获取
+        if (!cover) {
+          const styleData = newData.productionSheet as any;
+          if (styleData?.cover) {
+            setResolvedCover(styleData.cover);
+          } else {
+            // 从附件中找图片类型作为封面
+            try {
+              const attachRes = await api.get<{ code: number; data: any[] }>('/style/attachment/list', { params: { styleId } });
+              if (attachRes.code === 200) {
+                const images = (attachRes.data || []).filter((f: any) => String(f.fileType || '').includes('image'));
+                if (images.length > 0) {
+                  setResolvedCover((images[0] as any)?.fileUrl || null);
+                }
+              }
+            } catch {
+              // ignore
+            }
+          }
+        }
       } catch (error) {
         console.error('加载打印数据失败:', error);
         message.error('加载打印数据失败');
@@ -194,7 +238,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
       styleNo ? `款号: ${styleNo}` : '',
       styleName ? `款名: ${styleName}` : '',
       color ? `颜色: ${color}` : '',
-      orderId ? `订单号: ${orderId}` : '',
+      (orderNo || orderId) ? `订单号: ${orderNo || orderId}` : '',
     ].filter(Boolean).join('  |  ');
 
     const printDate = new Date().toLocaleString('zh-CN');
@@ -416,12 +460,24 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
   };
 
   // 二维码内容
-  const qrValue = JSON.stringify({
-    type: mode === 'production' ? 'order' : 'style',
-    styleNo,
-    styleName,
-    orderId,
-  });
+  const isPatternPrint = extraInfo?.isPattern === true;
+  const qrValue = JSON.stringify(
+    isPatternPrint
+      ? {
+          type: 'pattern',
+          id: String(orderId || styleId || '').trim(),
+          styleNo,
+          styleName,
+          color,
+        }
+      : {
+          type: mode === 'production' ? 'order' : 'style',
+          styleNo,
+          styleName,
+          orderId,
+          orderNo: orderNo || '',
+        }
+  );
 
   return (
     <StandardModal
@@ -510,10 +566,10 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
                 borderRadius: 8,
               }}>
                 {/* 封面图 */}
-                {cover && (
+                {resolvedCover && (
                   <div style={{ flexShrink: 0, width: 120, height: 120 }}>
                     <img
-                      src={cover}
+                      src={resolvedCover}
                       alt={styleNo}
                       style={{
                         width: '100%',
@@ -539,12 +595,17 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
                         <strong>{quantity}</strong>
                       </div>
                     )}
-                    {category && <div><span style={{ color: 'var(--color-text-secondary)' }}>分类：</span><strong>{category}</strong></div>}
-                    {season && <div><span style={{ color: 'var(--color-text-secondary)' }}>季节：</span><strong>{season}</strong></div>}
+                    {category && <div><span style={{ color: 'var(--color-text-secondary)' }}>分类：</span><strong>{toCategoryCn(category)}</strong></div>}
+                    {season && <div><span style={{ color: 'var(--color-text-secondary)' }}>季节：</span><strong>{toSeasonCn(season)}</strong></div>}
                     {/* 额外信息 */}
-                    {Object.entries(extraInfo).map(([key, value]) => (
-                      value && <div key={key}><span style={{ color: 'var(--color-text-secondary)' }}>{key}：</span><strong>{String(value)}</strong></div>
-                    ))}
+                    {Object.entries(extraInfo).map(([key, value]) => {
+                      if (!value) return null;
+                      // 自动格式化 ISO 日期字符串（如 2026-02-21T10:02:36 → 2026-02-21 10:02）
+                      const display = typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(value)
+                        ? formatDateTime(value)
+                        : String(value);
+                      return <div key={key}><span style={{ color: 'var(--color-text-secondary)' }}>{key}：</span><strong>{display}</strong></div>;
+                    })}
                   </div>
                 </div>
 
@@ -709,7 +770,8 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
                 pagination={false}
                 bordered
                 columns={[
-                  { title: '物料类型', dataIndex: 'materialType', key: 'materialType', width: 100 },
+                  { title: '物料类型', dataIndex: 'materialType', key: 'materialType', width: 100,
+                    render: (v: unknown) => getMaterialTypeLabel(v) },
                   { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 150 },
                   { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 120 },
                   { title: '规格', dataIndex: 'specifications', key: 'specifications', width: 100 },
@@ -738,8 +800,8 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
                   { title: '序号', dataIndex: 'sortOrder', key: 'sortOrder', width: 60 },
                   { title: '工序名称', dataIndex: 'processName', key: 'processName', width: 150 },
                   { title: '工序编码', dataIndex: 'processCode', key: 'processCode', width: 100 },
-                  { title: '工时(分)', dataIndex: 'duration', key: 'duration', width: 80, align: 'right' as const },
-                  { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 80, align: 'right' as const,
+                  { title: '工时(秒)', dataIndex: 'standardTime', key: 'standardTime', width: 80, align: 'right' as const },
+                  { title: '单价', dataIndex: 'price', key: 'price', width: 80, align: 'right' as const,
                     render: (v: number) => v ? `¥${Number(v).toFixed(2)}` : '-' },
                   { title: '备注', dataIndex: 'remark', key: 'remark', ellipsis: true },
                 ]}

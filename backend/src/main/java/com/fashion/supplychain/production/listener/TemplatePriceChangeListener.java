@@ -13,9 +13,6 @@ import org.springframework.stereotype.Component;
 /**
  * 模板价格变更监听器
  * 当工序模板价格变更时，自动同步相关订单和工序跟踪表的单价
- *
- * @author System
- * @since 2026-02-08
  */
 @Slf4j
 @Component

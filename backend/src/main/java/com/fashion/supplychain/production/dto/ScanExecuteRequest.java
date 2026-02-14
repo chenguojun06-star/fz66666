@@ -4,9 +4,6 @@ import lombok.Data;
 
 /**
  * 扫码执行请求参数（支持外协模式）
- *
- * @author System
- * @since 2026-02-05
  */
 @Data
 public class ScanExecuteRequest {

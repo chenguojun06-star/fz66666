@@ -24,9 +24,6 @@ import java.util.Map;
  * 3. 标准化工序名称
  *
  * 提取自 ScanRecordOrchestrator（减少约400行代码）
- *
- * @author GitHub Copilot
- * @date 2026-02-03
  */
 @Component
 @Slf4j

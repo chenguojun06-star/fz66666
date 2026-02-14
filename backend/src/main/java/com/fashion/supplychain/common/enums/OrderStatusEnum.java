@@ -5,9 +5,6 @@ package com.fashion.supplychain.common.enums;
  * <p>
  * 定义生产订单的各种状态，用于状态流转控制
  * </p>
- *
- * @author 系统架构团队
- * @since 2024-01-01
  */
 public enum OrderStatusEnum {
 

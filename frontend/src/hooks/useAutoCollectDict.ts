@@ -59,7 +59,6 @@ export const useAutoCollectDict = (options: AutoCollectOptions) => {
       return exists;
     } catch (error) {
       // API 失败时返回 true，避免重复添加
-      console.warn('检查词汇是否存在失败:', error);
       return true;
     }
   };
@@ -99,7 +98,6 @@ export const useAutoCollectDict = (options: AutoCollectOptions) => {
         message.success(`已自动收录新词汇: ${trimmedWord}`);
       }
     } catch (error) {
-      console.warn('自动收录词汇失败:', error);
       // 静默失败，不影响用户操作
     }
   };

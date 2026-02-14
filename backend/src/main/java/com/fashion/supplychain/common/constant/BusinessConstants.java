@@ -9,9 +9,6 @@ package com.fashion.supplychain.common.constant;
  * - 数据来源
  * - 关闭来源
  * </p>
- *
- * @author 系统架构团队
- * @since 2024-01-01
  */
 public final class BusinessConstants {
 

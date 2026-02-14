@@ -8,6 +8,7 @@ import com.fashion.supplychain.production.helper.InventoryValidator;
 import com.fashion.supplychain.production.helper.ProcessStageDetector;
 import com.fashion.supplychain.production.service.*;
 import com.fashion.supplychain.style.entity.StyleInfo;
+import com.fashion.supplychain.style.entity.StyleAttachment;
 import com.fashion.supplychain.style.service.StyleAttachmentService;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
 import lombok.extern.slf4j.Slf4j;
@@ -34,9 +35,6 @@ import java.util.Map;
  * 6. 面料清单附加
  *
  * 提取自 ScanRecordOrchestrator（减少约200行代码）
- *
- * @author GitHub Copilot
- * @date 2026-02-03
  */
 @Component
 @Slf4j
@@ -370,8 +368,28 @@ public class ProductionScanExecutor {
         if (order == null || !hasText(order.getStyleId())) {
             return;
         }
-        // TODO: 实现版型文件检查逻辑
         log.debug("检查版型文件: styleId={}", order.getStyleId());
+
+        // 查询该款式的版型文件
+        List<StyleAttachment> patterns =
+            styleAttachmentService.lambdaQuery()
+                .eq(StyleAttachment::getStyleId, order.getStyleId())
+                .in(StyleAttachment::getBizType,
+                    "pattern", "pattern_grading", "pattern_final")
+                .eq(StyleAttachment::getStatus, "active")
+                .list();
+
+        // 如果没有版型文件，抛出异常阻止裁剪
+        if (patterns == null || patterns.isEmpty()) {
+            log.warn("裁剪前检查失败：款式 {} (ID:{}) 缺少版型文件",
+                order.getStyleNo(), order.getStyleId());
+            throw new IllegalStateException(
+                String.format("裁剪前必须上传版型文件，款式编号：%s", order.getStyleNo())
+            );
+        }
+
+        log.info("版型文件检查通过：款式 {} 共有 {} 个版型文件",
+            order.getStyleNo(), patterns.size());
     }
 
     /**

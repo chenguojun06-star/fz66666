@@ -16,9 +16,6 @@ import java.util.Map;
 
 /**
  * 面辅料入库记录 Controller
- *
- * @author Fashion Supply Chain System
- * @since 2026-01-31
  */
 @Slf4j
 @RestController

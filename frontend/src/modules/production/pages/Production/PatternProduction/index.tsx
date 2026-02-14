@@ -11,7 +11,6 @@ import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import LiquidProgressLottie from '@/components/common/LiquidProgressLottie';
 import UniversalCardView from '@/components/common/UniversalCardView';
-import QRCodeBox from '@/components/common/QRCodeBox';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import { StyleAttachmentsButton } from '@/components/StyleAssets';
 import api from '@/utils/api';
@@ -738,9 +737,9 @@ const PatternProduction: React.FC = () => {
               coverField="coverImage"
               titleField="styleNo"
               subtitleField="color"
-              fields={[
-                { label: '码数', key: 'sizes', render: (val: string[]) => val && val.length > 0 ? val.join(', ') : '-' },
-                { label: '数量', key: 'quantity', render: (val) => (val !== null && val !== undefined) ? `${val} 件` : '-' },
+              fields={[]}
+              fieldGroups={[
+                [{ label: '码数', key: 'sizes', render: (val: string[]) => val && val.length > 0 ? val.join(',') : '-' }, { label: '数量', key: 'quantity', render: (val) => (val !== null && val !== undefined) ? `${val}件` : '-' }],
               ]}
               progressConfig={{
                 calculate: calculateProgress,
@@ -925,17 +924,19 @@ const PatternProduction: React.FC = () => {
           visible={printModal.visible}
           onClose={printModal.close}
           styleId={printModal.data?.styleId}
+          orderId={printModal.data?.id}
+          orderNo={printModal.data?.orderNo}
           styleNo={printModal.data?.styleNo}
           color={printModal.data?.color}
           quantity={printModal.data?.quantity}
           mode="production"
           extraInfo={{
-            designer: printModal.data?.designer,
-            patternDeveloper: printModal.data?.patternDeveloper,
-            plateWorker: printModal.data?.plateWorker,
-            merchandiser: printModal.data?.merchandiser,
-            deliveryTime: printModal.data?.deliveryTime,
-            sizes: printModal.data?.sizes,
+            '设计师': printModal.data?.designer,
+            '纸样师': printModal.data?.patternDeveloper,
+            '车板工': printModal.data?.plateWorker,
+            '跟单员': printModal.data?.merchandiser,
+            '交货日期': printModal.data?.deliveryTime,
+            '尺码': printModal.data?.sizes,
             isPattern: true, // 标记为样板打印
           }}
         />

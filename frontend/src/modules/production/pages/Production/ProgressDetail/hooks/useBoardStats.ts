@@ -10,6 +10,7 @@ interface EnsureBoardStatsArgs {
   boardStatsByOrderRef: React.MutableRefObject<Record<string, Record<string, number>>>;
   boardStatsLoadingRef: React.MutableRefObject<Record<string, boolean>>;
   setBoardStatsByOrder: React.Dispatch<React.SetStateAction<Record<string, Record<string, number>>>>;
+  setBoardTimesByOrder?: React.Dispatch<React.SetStateAction<Record<string, Record<string, string>>>>;
 }
 
 export const ensureBoardStatsForOrder = async ({
@@ -18,6 +19,7 @@ export const ensureBoardStatsForOrder = async ({
   boardStatsByOrderRef,
   boardStatsLoadingRef,
   setBoardStatsByOrder,
+  setBoardTimesByOrder,
 }: EnsureBoardStatsArgs) => {
   const oid = String(order?.id || '').trim();
   if (!oid) return;
@@ -47,6 +49,8 @@ export const ensureBoardStatsForOrder = async ({
       stats[nodeName] = done;
     }
     const cuttingVal = Number((order as Record<string, unknown>)?.cuttingQuantity) || 0;
+    // 统一基准数量：优先使用裁剪数量（实际生产数量），回退到订单数量
+    const baseQty = cuttingVal || Number(order.orderQuantity) || 0;
     if (cuttingVal > 0) {
       for (const key of Object.keys(stats)) {
         if (key.includes('裁剪')) {
@@ -56,8 +60,7 @@ export const ensureBoardStatsForOrder = async ({
     }
     const procurementRate = Number((order as Record<string, unknown>)?.procurementCompletionRate) || 0;
     if (procurementRate > 0) {
-      const qty = Number(order.orderQuantity) || 0;
-      const doneQty = Math.floor(qty * procurementRate / 100);
+      const doneQty = Math.floor(baseQty * procurementRate / 100);
       for (const key of Object.keys(stats)) {
         if (key.includes('采购')) {
           stats[key] = Math.max(stats[key] || 0, doneQty);
@@ -66,8 +69,7 @@ export const ensureBoardStatsForOrder = async ({
     }
     const sewingRate = Number((order as Record<string, unknown>)?.sewingCompletionRate) || 0;
     if (sewingRate > 0) {
-      const qty = Number(order.orderQuantity) || 0;
-      const doneQty = Math.floor(qty * sewingRate / 100);
+      const doneQty = Math.floor(baseQty * sewingRate / 100);
       for (const key of Object.keys(stats)) {
         if (key.includes('缝') || key.includes('车缝') || key.includes('缝制')) {
           stats[key] = Math.max(stats[key] || 0, doneQty);
@@ -76,8 +78,7 @@ export const ensureBoardStatsForOrder = async ({
     }
     const ironingRate = Number((order as Record<string, unknown>)?.ironingCompletionRate) || 0;
     if (ironingRate > 0) {
-      const qty = Number(order.orderQuantity) || 0;
-      const doneQty = Math.floor(qty * ironingRate / 100);
+      const doneQty = Math.floor(baseQty * ironingRate / 100);
       for (const key of Object.keys(stats)) {
         if (key.includes('烫') || key.includes('整烫') || key.includes('熨烫')) {
           stats[key] = Math.max(stats[key] || 0, doneQty);
@@ -86,8 +87,7 @@ export const ensureBoardStatsForOrder = async ({
     }
     const qualityRate = Number((order as Record<string, unknown>)?.qualityCompletionRate) || 0;
     if (qualityRate > 0) {
-      const qty = Number(order.orderQuantity) || 0;
-      const doneQty = Math.floor(qty * qualityRate / 100);
+      const doneQty = Math.floor(baseQty * qualityRate / 100);
       for (const key of Object.keys(stats)) {
         if (key.includes('质检') || key.includes('检验') || key.includes('品检') || key.includes('验货')) {
           stats[key] = Math.max(stats[key] || 0, doneQty);
@@ -96,8 +96,7 @@ export const ensureBoardStatsForOrder = async ({
     }
     const packagingRate = Number((order as Record<string, unknown>)?.packagingCompletionRate) || 0;
     if (packagingRate > 0) {
-      const qty = Number(order.orderQuantity) || 0;
-      const doneQty = Math.floor(qty * packagingRate / 100);
+      const doneQty = Math.floor(baseQty * packagingRate / 100);
       for (const key of Object.keys(stats)) {
         if (key.includes('包装') || key.includes('后整') || key.includes('打包') || key.includes('装箱')) {
           stats[key] = Math.max(stats[key] || 0, doneQty);
@@ -107,8 +106,7 @@ export const ensureBoardStatsForOrder = async ({
     const tailRates = [ironingRate, qualityRate, packagingRate].filter((r) => r > 0);
     if (tailRates.length) {
       const tailRate = Math.min(...tailRates);
-      const qty = Number(order.orderQuantity) || 0;
-      const doneQty = Math.floor(qty * tailRate / 100);
+      const doneQty = Math.floor(baseQty * tailRate / 100);
       for (const key of Object.keys(stats)) {
         if (key.includes('尾部')) {
           stats[key] = Math.max(stats[key] || 0, doneQty);
@@ -117,8 +115,7 @@ export const ensureBoardStatsForOrder = async ({
     }
     const warehousingRate = Number((order as Record<string, unknown>)?.warehousingCompletionRate) || 0;
     if (warehousingRate > 0) {
-      const qty = Number(order.orderQuantity) || 0;
-      const doneQty = Math.floor(qty * warehousingRate / 100);
+      const doneQty = Math.floor(baseQty * warehousingRate / 100);
       for (const key of Object.keys(stats)) {
         if (key.includes('入库')) {
           stats[key] = Math.max(stats[key] || 0, doneQty);
@@ -130,6 +127,47 @@ export const ensureBoardStatsForOrder = async ({
       ...prev,
       [oid]: stats,
     }));
+
+    // 计算每个工序节点的最后完成时间（用于进度球下方显示）
+    if (setBoardTimesByOrder) {
+      const timeStats: Record<string, string> = {};
+      for (const n of nodes || []) {
+        const nodeName = String((n as Record<string, unknown>)?.name || '').trim();
+        if (!nodeName) continue;
+        const matchingRecords = valid
+          .filter((r) => stageNameMatches(nodeName, getRecordStageName(r)));
+        // 找到最大的 scanTime（即最后一次扫码时间 = 完成时间）
+        let maxTime = '';
+        for (const r of matchingRecords) {
+          const t = String((r as Record<string, unknown>)?.scanTime || '');
+          if (t && (!maxTime || t > maxTime)) {
+            maxTime = t;
+          }
+        }
+        if (maxTime) timeStats[nodeName] = maxTime;
+      }
+      // 补充订单级别的时间字段作为回退
+      const timeFieldMap: Record<string, string> = {
+        '采购': 'procurementEndTime', '物料': 'procurementEndTime', '备料': 'procurementEndTime',
+        '裁剪': 'cuttingEndTime', '裁床': 'cuttingEndTime', '剪裁': 'cuttingEndTime', '开裁': 'cuttingEndTime',
+        '缝制': 'sewingEndTime', '车缝': 'sewingEndTime', '缝纫': 'sewingEndTime', '车工': 'sewingEndTime',
+        '质检': 'qualityEndTime', '检验': 'qualityEndTime', '品检': 'qualityEndTime', '验货': 'qualityEndTime',
+        '入库': 'warehousingEndTime', '仓库': 'warehousingEndTime',
+      };
+      for (const key of Object.keys(stats)) {
+        if (!timeStats[key]) {
+          const field = timeFieldMap[key];
+          if (field) {
+            const val = String((order as Record<string, unknown>)?.[field] || '');
+            if (val) timeStats[key] = val;
+          }
+        }
+      }
+      setBoardTimesByOrder((prev) => ({
+        ...prev,
+        [oid]: timeStats,
+      }));
+    }
   } finally {
     boardStatsLoadingRef.current[oid] = false;
   }

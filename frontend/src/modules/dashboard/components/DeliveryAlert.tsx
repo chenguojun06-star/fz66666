@@ -48,13 +48,13 @@ const DeliveryAlert: React.FC = () => {
         setUseMockData(false);
       } else {
         // API返回错误，显示空数据
-        console.warn('交期预警API返回错误');
+        // 交期预警API返回错误
         setData(EMPTY_DATA);
         setUseMockData(true);
       }
     } catch (error) {
       // 网络错误或后端未启动，显示空数据
-      console.warn('交期预警API请求失败:', error);
+      // 交期预警API请求失败
       setData(EMPTY_DATA);
       setUseMockData(true);
     } finally {

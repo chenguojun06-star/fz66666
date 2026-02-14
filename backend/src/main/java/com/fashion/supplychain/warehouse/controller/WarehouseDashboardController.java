@@ -27,7 +27,7 @@ public class WarehouseDashboardController {
     @GetMapping("/stats")
     @PreAuthorize("hasAuthority('MENU_WAREHOUSE_DASHBOARD')")
     public Result<WarehouseStatsDTO> getStats() {
-        log.info("获取仓库统计数据");
+        log.debug("获取仓库统计数据");
         return Result.success(orchestrator.getWarehouseStats());
     }
 
@@ -37,7 +37,7 @@ public class WarehouseDashboardController {
     @GetMapping("/low-stock")
     @PreAuthorize("hasAuthority('MENU_WAREHOUSE_DASHBOARD')")
     public Result<List<LowStockItemDTO>> getLowStockItems() {
-        log.info("获取低库存预警列表");
+        log.debug("获取低库存预警列表");
         return Result.success(orchestrator.getLowStockItems());
     }
 
@@ -47,7 +47,7 @@ public class WarehouseDashboardController {
     @GetMapping("/recent-operations")
     @PreAuthorize("hasAuthority('MENU_WAREHOUSE_DASHBOARD')")
     public Result<List<RecentOperationDTO>> getRecentOperations() {
-        log.info("获取今日出入库操作记录");
+        log.debug("获取今日出入库操作记录");
         return Result.success(orchestrator.getRecentOperations());
     }
 
@@ -61,7 +61,7 @@ public class WarehouseDashboardController {
     public Result<List<TrendDataPointDTO>> getTrendData(
             @RequestParam(defaultValue = "day") String range,
             @RequestParam(defaultValue = "fabric") String type) {
-        log.info("获取趋势数据, range={}, type={}", range, type);
+        log.debug("获取趋势数据, range={}, type={}", range, type);
         return Result.success(orchestrator.getTrendData(range, type));
     }
 }

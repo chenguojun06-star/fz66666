@@ -6,9 +6,6 @@ import org.springframework.context.ApplicationEvent;
 /**
  * 模板价格变更事件
  * 当工序模板的单价更新时发布此事件
- *
- * @author System
- * @since 2026-02-08
  */
 @Getter
 public class TemplatePriceChangedEvent extends ApplicationEvent {

@@ -20,9 +20,6 @@ import java.time.temporal.ChronoUnit;
  * 3. 数据库唯一键冲突处理
  *
  * 提取自 ScanRecordOrchestrator（减少约200行代码）
- *
- * @author GitHub Copilot
- * @date 2026-02-03
  */
 @Component
 @Slf4j

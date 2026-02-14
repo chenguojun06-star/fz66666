@@ -470,7 +470,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
     public List<Integer> getDailyCuttingQuantities(LocalDateTime start, LocalDateTime end) {
         // 获取每天的裁剪总数量：只统计已完成（status='bundled'）的裁剪任务
         // 使用完成时间（bundledTime）而不是创建时间
-        log.info("查询裁剪数量: start={}, end={}", start, end);
+        log.debug("查询裁剪数量: start={}, end={}", start, end);
 
         List<CuttingTask> tasks = cuttingTaskService.lambdaQuery()
                 .eq(CuttingTask::getStatus, "bundled")  // 只统计已完成的裁剪任务
@@ -481,7 +481,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
                 .orderByAsc(CuttingTask::getBundledTime)
                 .list();
 
-        log.info("查询到{}条已完成的裁剪任务", tasks.size());
+        log.debug("查询到{}条已完成的裁剪任务", tasks.size());
         if (!tasks.isEmpty()) {
             log.info("前3条数据: {}", tasks.stream().limit(3).map(t ->
                 String.format("[%s: %d件, bundled=%s]", t.getProductionOrderNo(), t.getOrderQuantity(), t.getBundledTime())
@@ -513,7 +513,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
     public List<Integer> getDailyScanCounts(LocalDateTime start, LocalDateTime end) {
         // 获取每天的扫菲次数：只统计真实的扫码操作（排除系统自动创建的记录）
         // 判断标准：operator_name != 'system' 且 operator_id 不为空
-        log.info("查询扫菲次数: start={}, end={}", start, end);
+        log.debug("查询扫菲次数: start={}, end={}", start, end);
 
         List<ScanRecord> scans = scanRecordService.lambdaQuery()
                 .ge(start != null, ScanRecord::getScanTime, start)
@@ -566,7 +566,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
     public List<Integer> getDailyScanQuantities(LocalDateTime start, LocalDateTime end) {
         // 获取每天的扫菲数量：只统计真实的扫码操作（排除系统自动创建的记录）
         // 判断标准：operator_name != 'system' 且 operator_id 不为空
-        log.info("查询扫菲数量: start={}, end={}", start, end);
+        log.debug("查询扫菲数量: start={}, end={}", start, end);
 
         List<ScanRecord> scans = scanRecordService.lambdaQuery()
                 .ge(start != null, ScanRecord::getScanTime, start)
@@ -579,7 +579,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
                 .orderByAsc(ScanRecord::getScanTime)
                 .list();
 
-        log.info("查询到{}条真实扫码记录", scans.size());
+        log.debug("查询到{}条真实扫码记录", scans.size());
 
         // 按日期分组统计数量
         Map<String, Integer> dailyQuantities = new java.util.HashMap<>();

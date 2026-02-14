@@ -71,6 +71,16 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
   qty1, setQty1, qty2, setQty2, qty3, setQty3, qty4, setQty4, qty5, setQty5,
   commonSizes, setCommonSizes, commonColors, setCommonColors
 }) => {
+  const sectionTitleBaseStyle: React.CSSProperties = {
+    fontSize: 'var(--font-size-base)',
+    fontWeight: 600,
+    color: '#374151',
+    marginBottom: 12,
+    marginLeft: 72,
+    paddingLeft: 8,
+    lineHeight: '20px',
+  };
+
   return (
     <Row gutter={16} className="square-inputs">
         {/* 左侧：封面图上传 */}
@@ -88,8 +98,8 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
         <Col xs={24} lg={18}>
           {/* 款号信息区域 */}
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: "var(--font-size-base)", fontWeight: 600, color: '#374151', marginBottom: 12, paddingLeft: 4, borderLeft: '3px solid #2D7FF9' }}>
-              &nbsp;款号信息
+            <div style={{ ...sectionTitleBaseStyle, borderLeft: '3px solid #2D7FF9' }}>
+              款号信息
             </div>
             <Row gutter={[16, 0]}>
               <Col xs={24} md={6}>
@@ -117,10 +127,10 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
 
           {/* 客户信息区域 */}
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: "var(--font-size-base)", fontWeight: 600, color: '#374151', marginBottom: 12, paddingLeft: 4, borderLeft: '3px solid #52C41A' }}>
-              &nbsp;客户信息
+            <div style={{ ...sectionTitleBaseStyle, borderLeft: '3px solid #52C41A' }}>
+              客户信息
             </div>
-            <Row gutter={[12, 0]}>
+            <Row gutter={[16, 0]}>
               <Col xs={24} md={6}>
                 <Form.Item name="customer" label="客户">
                   <Input placeholder="请选择客户" disabled={isFieldLocked((currentStyle as any)?.customer)} />
@@ -146,10 +156,10 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
 
           {/* 版次信息区域 */}
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: "var(--font-size-base)", fontWeight: 600, color: '#374151', marginBottom: 12, paddingLeft: 4, borderLeft: '3px solid #FAAD14' }}>
-              &nbsp;版次信息
+            <div style={{ ...sectionTitleBaseStyle, borderLeft: '3px solid #FAAD14' }}>
+              版次信息
             </div>
-            <Row gutter={[12, 0]}>
+            <Row gutter={[16, 0]}>
               <Col xs={24} md={6}>
                 <Form.Item name="plateType" label="板类">
                   <Select placeholder="请选择板类" disabled={isFieldLocked((currentStyle as any)?.plateType)}>
@@ -184,10 +194,10 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
 
           {/* 时间信息区域 */}
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: "var(--font-size-base)", fontWeight: 600, color: '#374151', marginBottom: 12, paddingLeft: 4, borderLeft: '3px solid #8B5CF6' }}>
-              &nbsp;时间信息
+            <div style={{ ...sectionTitleBaseStyle, borderLeft: '3px solid #8B5CF6' }}>
+              时间信息
             </div>
-            <Row gutter={[12, 0]}>
+            <Row gutter={[16, 0]}>
               <Col xs={24} md={6}>
                 <Form.Item name="createTime" label="下板时间">
                   <UnifiedDatePicker

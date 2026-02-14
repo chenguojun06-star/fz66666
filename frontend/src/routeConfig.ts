@@ -45,6 +45,7 @@ export const paths = {
   orderFlow: '/production/order-flow',
   warehousing: '/production/warehousing',
   warehousingDetail: '/production/warehousing/detail/:warehousingNo',
+  warehousingInspect: '/production/warehousing/inspect/:orderId',
   orderTransfer: '/production/transfer',
   materialPicking: '/production/picking',
 

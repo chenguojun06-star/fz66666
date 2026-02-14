@@ -3,6 +3,7 @@
  * 从 floating-bell/index.js 提取，负责各类任务的点击跳转和审批操作
  */
 const api = require('../../utils/api');
+const { safeNavigate } = require('../../utils/uiHelper');
 
 /**
  * 处理裁剪任务 - 跳转扫码页
@@ -17,7 +18,7 @@ function handleCuttingTask(task) {
   } catch (e) {
     console.error('存储失败', e);
   }
-  wx.switchTab({ url: '/pages/scan/index' });
+  safeNavigate({ url: '/pages/scan/index' }, 'switchTab').catch(() => {});
 }
 
 /**
@@ -34,7 +35,7 @@ function handleProcurementTask(task) {
   } catch (e) {
     console.error('存储失败', e);
   }
-  wx.switchTab({ url: '/pages/scan/index' });
+  safeNavigate({ url: '/pages/scan/index' }, 'switchTab').catch(() => {});
 }
 
 /**
@@ -49,7 +50,7 @@ function handleQualityTask(task) {
   } catch (e) {
     console.error('存储失败', e);
   }
-  wx.switchTab({ url: '/pages/scan/index' });
+  safeNavigate({ url: '/pages/scan/index' }, 'switchTab').catch(() => {});
 }
 
 /**
@@ -58,7 +59,7 @@ function handleQualityTask(task) {
  * @returns {void} 无返回值
  */
 function handleApprovalTask(_task) { // eslint-disable-line no-unused-vars
-  wx.navigateTo({ url: '/pages/admin/notification/index' });
+  safeNavigate({ url: '/pages/admin/notification/index' }).catch(() => {});
 }
 
 /**
@@ -126,7 +127,7 @@ function handleReminderTask(task) {
   if (type === '采购') {
     wx.setStorageSync('mp_scan_type_index', 2);
   }
-  wx.switchTab({ url: '/pages/scan/index' });
+  safeNavigate({ url: '/pages/scan/index' }, 'switchTab').catch(() => {});
 }
 
 /**
@@ -135,7 +136,7 @@ function handleReminderTask(task) {
  * @returns {void} 无返回值
  */
 function handleUrgentEvent(_task) { // eslint-disable-line no-unused-vars
-  wx.switchTab({ url: '/pages/scan/index' });
+  safeNavigate({ url: '/pages/scan/index' }, 'switchTab').catch(() => {});
 }
 
 /**
@@ -155,7 +156,7 @@ function handleOverdueOrder(task) {
   }
 
   // 跳转到工作页面
-  wx.switchTab({ url: '/pages/work/index' });
+  safeNavigate({ url: '/pages/work/index' }, 'switchTab').catch(() => {});
 }
 
 /**

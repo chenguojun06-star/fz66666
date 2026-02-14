@@ -5,9 +5,6 @@ import lombok.Data;
 /**
  * 生产订单统计数据 DTO
  * 用于顶部统计卡片，返回全局统计（非分页数据）
- *
- * @author Copilot
- * @since 2026-02-05
  */
 @Data
 public class ProductionOrderStatsDTO {

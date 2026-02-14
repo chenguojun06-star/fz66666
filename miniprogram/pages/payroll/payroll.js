@@ -1,5 +1,5 @@
 // pages/payroll/payroll.js
-const request = require('../../utils/request');
+const { request } = require('../../utils/request');
 const { toast } = require('../../utils/uiHelper');
 
 // 日期格式化工具函数（重构版 - 消除重复代码）
@@ -167,10 +167,14 @@ Page({
     try {
       const { startDate, endDate } = this.data;
 
-      const res = await request.post('/finance/payroll-settlement/operator-summary', {
-        startTime: `${startDate} 00:00:00`,
-        endTime: `${endDate} 23:59:59`,
-        includeSettled: true,
+      const res = await request({
+        url: '/api/finance/payroll-settlement/operator-summary',
+        method: 'POST',
+        data: {
+          startTime: `${startDate} 00:00:00`,
+          endTime: `${endDate} 23:59:59`,
+          includeSettled: true,
+        },
       });
 
       if (res.code === 200 && Array.isArray(res.data)) {

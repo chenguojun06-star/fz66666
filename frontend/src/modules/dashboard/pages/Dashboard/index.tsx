@@ -290,7 +290,7 @@ const Dashboard: React.FC = () => {
         navigate('/production/material');
         break;
       default:
-        console.warn('未知的活动类型:', type);
+        // 未知的活动类型
     }
   };
 

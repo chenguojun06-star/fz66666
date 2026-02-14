@@ -15,9 +15,6 @@ import java.util.Map;
 
 /**
  * 生产工序跟踪 Controller
- *
- * @author system
- * @since 2026-02-06
  */
 @Slf4j
 @Tag(name = "生产工序跟踪", description = "工资结算依据，菲号×工序的扫码记录")

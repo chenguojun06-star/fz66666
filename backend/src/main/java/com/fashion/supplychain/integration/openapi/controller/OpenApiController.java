@@ -104,6 +104,30 @@ public class OpenApiController {
         }
     }
 
+    /**
+     * 客户批量上传订单（适合初始化导入）
+     */
+    @PostMapping("/order/upload")
+    public Result<Map<String, Object>> uploadOrders(
+            @RequestHeader("X-App-Key") String appKey,
+            @RequestHeader("X-Timestamp") String timestamp,
+            @RequestHeader("X-Signature") String signature,
+            @RequestBody String body,
+            HttpServletRequest request) {
+        long start = System.currentTimeMillis();
+        TenantApp app = null;
+        try {
+            app = tenantAppOrchestrator.authenticateByAppKey(appKey, signature, timestamp, body);
+            validateAppType(app, "ORDER_SYNC");
+            Map<String, Object> result = openApiOrchestrator.batchCreateExternalOrders(app, body);
+            logSuccess(app, "POST", "/openapi/v1/order/upload", body, result, start, request);
+            return Result.success(result);
+        } catch (Exception e) {
+            logError(app, "POST", "/openapi/v1/order/upload", body, e, start, request);
+            return Result.fail(e.getMessage());
+        }
+    }
+
     // ========== 质检反馈 (QUALITY_FEEDBACK) ==========
 
     /**
@@ -305,6 +329,30 @@ public class OpenApiController {
     }
 
     /**
+     * 客户批量上传采购记录（适合初始化导入）
+     */
+    @PostMapping("/material/purchase/upload")
+    public Result<Map<String, Object>> uploadMaterialPurchases(
+            @RequestHeader("X-App-Key") String appKey,
+            @RequestHeader("X-Timestamp") String timestamp,
+            @RequestHeader("X-Signature") String signature,
+            @RequestBody String body,
+            HttpServletRequest request) {
+        long start = System.currentTimeMillis();
+        TenantApp app = null;
+        try {
+            app = tenantAppOrchestrator.authenticateByAppKey(appKey, signature, timestamp, body);
+            validateAppType(app, "MATERIAL_SUPPLY");
+            Map<String, Object> result = openApiOrchestrator.batchCreateMaterialPurchases(app, body);
+            logSuccess(app, "POST", "/openapi/v1/material/purchase/upload", body, result, start, request);
+            return Result.success(result);
+        } catch (Exception e) {
+            logError(app, "POST", "/openapi/v1/material/purchase/upload", body, e, start, request);
+            return Result.fail(e.getMessage());
+        }
+    }
+
+    /**
      * 查询供应商库存
      * 业务场景：采购前查询供应商实时库存，避免下单无货
      */
@@ -404,6 +452,109 @@ public class OpenApiController {
         }
     }
 
+    // ========== 数据导入（开通即用） (DATA_IMPORT + 兼容各专用类型) ==========
+
+    /**
+     * 客户批量上传款式资料（适合初始化导入）
+     * 允许 DATA_IMPORT 或 ORDER_SYNC 类型的应用调用
+     */
+    @PostMapping("/style/upload")
+    public Result<Map<String, Object>> uploadStyles(
+            @RequestHeader("X-App-Key") String appKey,
+            @RequestHeader("X-Timestamp") String timestamp,
+            @RequestHeader("X-Signature") String signature,
+            @RequestBody String body,
+            HttpServletRequest request) {
+        long start = System.currentTimeMillis();
+        TenantApp app = null;
+        try {
+            app = tenantAppOrchestrator.authenticateByAppKey(appKey, signature, timestamp, body);
+            validateAppTypeMulti(app, "DATA_IMPORT", "ORDER_SYNC");
+            Map<String, Object> result = openApiOrchestrator.batchCreateStyles(app, body);
+            logSuccess(app, "POST", "/openapi/v1/style/upload", body, result, start, request);
+            return Result.success(result);
+        } catch (Exception e) {
+            logError(app, "POST", "/openapi/v1/style/upload", body, e, start, request);
+            return Result.fail(e.getMessage());
+        }
+    }
+
+    /**
+     * 客户批量上传工厂/供应商（适合初始化导入）
+     * 允许 DATA_IMPORT 类型的应用调用
+     */
+    @PostMapping("/factory/upload")
+    public Result<Map<String, Object>> uploadFactories(
+            @RequestHeader("X-App-Key") String appKey,
+            @RequestHeader("X-Timestamp") String timestamp,
+            @RequestHeader("X-Signature") String signature,
+            @RequestBody String body,
+            HttpServletRequest request) {
+        long start = System.currentTimeMillis();
+        TenantApp app = null;
+        try {
+            app = tenantAppOrchestrator.authenticateByAppKey(appKey, signature, timestamp, body);
+            validateAppTypeMulti(app, "DATA_IMPORT", "ORDER_SYNC");
+            Map<String, Object> result = openApiOrchestrator.batchCreateFactories(app, body);
+            logSuccess(app, "POST", "/openapi/v1/factory/upload", body, result, start, request);
+            return Result.success(result);
+        } catch (Exception e) {
+            logError(app, "POST", "/openapi/v1/factory/upload", body, e, start, request);
+            return Result.fail(e.getMessage());
+        }
+    }
+
+    /**
+     * 客户批量上传员工/工人（适合初始化导入）
+     * 允许 DATA_IMPORT 类型的应用调用
+     * 默认密码: 123456，客户可在系统内修改
+     */
+    @PostMapping("/employee/upload")
+    public Result<Map<String, Object>> uploadEmployees(
+            @RequestHeader("X-App-Key") String appKey,
+            @RequestHeader("X-Timestamp") String timestamp,
+            @RequestHeader("X-Signature") String signature,
+            @RequestBody String body,
+            HttpServletRequest request) {
+        long start = System.currentTimeMillis();
+        TenantApp app = null;
+        try {
+            app = tenantAppOrchestrator.authenticateByAppKey(appKey, signature, timestamp, body);
+            validateAppTypeMulti(app, "DATA_IMPORT");
+            Map<String, Object> result = openApiOrchestrator.batchCreateEmployees(app, body);
+            logSuccess(app, "POST", "/openapi/v1/employee/upload", body, result, start, request);
+            return Result.success(result);
+        } catch (Exception e) {
+            logError(app, "POST", "/openapi/v1/employee/upload", body, e, start, request);
+            return Result.fail(e.getMessage());
+        }
+    }
+
+    /**
+     * 客户批量上传款式工序（适合初始化导入）
+     * 允许 DATA_IMPORT 或 ORDER_SYNC 类型的应用调用
+     */
+    @PostMapping("/process/upload")
+    public Result<Map<String, Object>> uploadProcesses(
+            @RequestHeader("X-App-Key") String appKey,
+            @RequestHeader("X-Timestamp") String timestamp,
+            @RequestHeader("X-Signature") String signature,
+            @RequestBody String body,
+            HttpServletRequest request) {
+        long start = System.currentTimeMillis();
+        TenantApp app = null;
+        try {
+            app = tenantAppOrchestrator.authenticateByAppKey(appKey, signature, timestamp, body);
+            validateAppTypeMulti(app, "DATA_IMPORT", "ORDER_SYNC");
+            Map<String, Object> result = openApiOrchestrator.batchCreateStyleProcesses(app, body);
+            logSuccess(app, "POST", "/openapi/v1/process/upload", body, result, start, request);
+            return Result.success(result);
+        } catch (Exception e) {
+            logError(app, "POST", "/openapi/v1/process/upload", body, e, start, request);
+            return Result.fail(e.getMessage());
+        }
+    }
+
     // ========== 内部方法 ==========
 
     // ========== 数据拉取 (Pull from third-party) ==========
@@ -434,9 +585,22 @@ public class OpenApiController {
     }
 
     private void validateAppType(TenantApp app, String expectedType) {
-        if (!expectedType.equals(app.getAppType())) {
+        if (!expectedType.equals(app.getAppType()) && !"DATA_IMPORT".equals(app.getAppType())) {
             throw new IllegalArgumentException("当前应用类型(" + app.getAppType() + ")无权调用此接口");
         }
+    }
+
+    /**
+     * 验证应用类型（支持多个允许的类型）
+     * DATA_IMPORT 类型可以访问所有上传接口
+     */
+    private void validateAppTypeMulti(TenantApp app, String... allowedTypes) {
+        for (String type : allowedTypes) {
+            if (type.equals(app.getAppType())) {
+                return;
+            }
+        }
+        throw new IllegalArgumentException("当前应用类型(" + app.getAppType() + ")无权调用此接口，允许类型: " + String.join(", ", allowedTypes));
     }
 
     private void logSuccess(TenantApp app, String method, String path, String requestBody,

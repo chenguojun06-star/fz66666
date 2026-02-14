@@ -1,0 +1,4 @@
+styleNo,styleName,category,price,cycle,color,size,season,year,month,customer,plateType,description
+FZ2026001,春季连衣裙,连衣裙,88.5,15,"红色,蓝色","S,M,L,XL",春,2026,3,客户A,首单,2026春季新款
+FZ2026002,夏季T恤,T恤,45.0,10,"黑色,白色","M,L,XL",夏,2026,6,客户A,首单,2026夏季基础款
+FZ2026003,秋季风衣,外套,158.0,20,"卡其色,藏青","S,M,L",秋,2026,9,客户B,首单,2026秋季新款

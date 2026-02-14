@@ -1,0 +1,115 @@
+<view class="container">
+  <!-- 搜索栏 -->
+  <view class="search-bar">
+    <view class="search-input-wrap">
+      <icon type="search" size="14" color="#999" />
+      <input
+        class="search-input"
+        placeholder="搜索款号/款名"
+        value="{{keyword}}"
+        bindinput="onKeywordInput"
+        bindconfirm="onSearch"
+      />
+    </view>
+  </view>
+
+  <!-- 统计栏 -->
+  <view class="summary-filter-bar">
+    <view class="summary-pill summary-pill-active">
+      <text class="summary-label">成品总数</text>
+      <text class="summary-value">{{stats.totalQty}}</text>
+    </view>
+    <view class="summary-pill">
+      <text class="summary-label">可用库存</text>
+      <text class="summary-value green">{{stats.availableQty}}</text>
+    </view>
+    <view class="summary-pill">
+      <text class="summary-label">次品</text>
+      <text class="summary-value {{stats.defectQty > 0 ? 'red' : ''}}">{{stats.defectQty}}</text>
+    </view>
+  </view>
+
+  <!-- 列表内容 -->
+  <scroll-view
+    scroll-y
+    class="list-container"
+    bindscrolltolower="onLoadMore"
+    refresher-enabled
+    refresher-triggered="{{isRefreshing}}"
+    bindrefresherrefresh="onRefresh"
+  >
+    <block wx:if="{{list.length > 0}}">
+      <view class="list-item" wx:for="{{list}}" wx:key="id">
+        <!-- 图片 -->
+        <image
+          wx:if="{{item.imageUrl}}"
+          class="item-img"
+          src="{{item.imageUrl}}"
+          mode="aspectFill"
+        />
+        <view wx:else class="item-img-placeholder">
+          <text>暂无图片</text>
+        </view>
+
+        <!-- 信息区 -->
+        <view class="item-content">
+          <!-- 操作按钮 -->
+          <view class="item-op-row">
+            <view
+              class="item-op-btn item-op-btn-primary"
+              bindtap="navToOutstock"
+              data-styleno="{{item.styleNo}}"
+            >出库</view>
+          </view>
+
+          <!-- 款号 + 款名 -->
+          <view class="item-header">
+            <text class="item-title">{{item.styleNo}}</text>
+          </view>
+          <view class="item-desc">{{item.styleName || '未命名款式'}}</view>
+
+          <!-- 颜色 & 尺码 -->
+          <view class="item-tags-row">
+            <text class="tag tag-color" wx:for="{{item.colors}}" wx:key="*this" wx:for-item="c">{{c}}</text>
+          </view>
+          <view class="item-tags-row" wx:if="{{item.sizes.length > 0}}">
+            <text class="tag tag-size" wx:for="{{item.sizes}}" wx:key="*this" wx:for-item="s">{{s}}</text>
+          </view>
+
+          <!-- 库存状态 -->
+          <view class="item-stock">
+            <view class="stock-info">
+              <text class="label">可用</text>
+              <text class="value green">{{item.availableQty}}</text>
+              <text class="unit">件</text>
+            </view>
+            <view class="stock-info">
+              <text class="label">锁定</text>
+              <text class="value orange">{{item.lockedQty}}</text>
+              <text class="unit">件</text>
+            </view>
+            <view class="stock-info">
+              <text class="label">次品</text>
+              <text class="value red">{{item.defectQty}}</text>
+              <text class="unit">件</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </block>
+
+    <!-- 空状态 -->
+    <view wx:elif="{{!loading}}" class="empty-state">
+      <image src="/assets/icons/empty.svg" mode="widthFix" class="empty-img" />
+      <text>暂无成品库存数据</text>
+    </view>
+
+    <!-- 加载更多 -->
+    <view class="loading-more" wx:if="{{loading}}">
+      <text>加载中...</text>
+    </view>
+    <view class="no-more" wx:if="{{!hasMore && list.length > 0}}">
+      <text>没有更多了</text>
+    </view>
+  </scroll-view>
+</view>

@@ -2,7 +2,7 @@ const { getToken, setToken, setUserInfo } = require('../../utils/storage');
 const { DEFAULT_BASE_URL, setBaseUrl, normalizeBaseUrl } = require('../../config');
 const api = require('../../utils/api');
 const { validateByRule } = require('../../utils/validationRules');
-const { toast } = require('../../utils/uiHelper');
+const { toast, safeNavigate } = require('../../utils/uiHelper');
 
 let autoWechatTried = false;
 
@@ -119,7 +119,7 @@ async function executeLogin(params) {
       if (resp.data.user) {
         setUserInfo(resp.data.user);
       }
-      wx.switchTab({ url: '/pages/home/index' });
+      safeNavigate({ url: '/pages/home/index' }, 'switchTab').catch(() => {});
       return true;
     }
     toast.error((resp && resp.message) || '登录失败');
@@ -164,7 +164,7 @@ Page({
   onShow() {
     const token = getToken();
     if (token) {
-      wx.switchTab({ url: '/pages/home/index' });
+      safeNavigate({ url: '/pages/home/index' }, 'switchTab').catch(() => {});
       return;
     }
 

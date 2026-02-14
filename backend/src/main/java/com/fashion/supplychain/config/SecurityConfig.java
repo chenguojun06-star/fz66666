@@ -237,11 +237,15 @@ public class SecurityConfig implements WebMvcConfigurer {
                 // 回退：从SecurityContext获取基本信息
                 Authentication auth = SecurityContextHolder.getContext().getAuthentication();
                 if (auth != null && auth.isAuthenticated() && auth.getPrincipal() != null) {
-                    ctx.setUsername(String.valueOf(auth.getPrincipal()));
-                    ctx.setUserId(auth.getCredentials() == null ? null : String.valueOf(auth.getCredentials()));
-                    ctx.setRole(extractRole(auth));
-                    // 默认权限范围
-                    ctx.setPermissionRange("all");
+                    String principal = String.valueOf(auth.getPrincipal());
+                    // ✅ 过滤 Spring Security 默认的 anonymousUser（Header认证缺失时产生）
+                    if (principal != null && !"anonymousUser".equals(principal)) {
+                        ctx.setUsername(principal);
+                        ctx.setUserId(auth.getCredentials() == null ? null : String.valueOf(auth.getCredentials()));
+                        ctx.setRole(extractRole(auth));
+                        // 默认权限范围
+                        ctx.setPermissionRange("all");
+                    }
                 } else if (headerAuthEnabled && isLocalRequest(request)) {
                     ctx.setUserId(request.getHeader("X-User-Id"));
                     ctx.setUsername(decodeHeaderValue(request.getHeader("X-User-Name")));

@@ -5,9 +5,6 @@ import com.fashion.supplychain.production.entity.PatternRevision;
 
 /**
  * 纸样修改记录服务接口
- *
- * @author system
- * @date 2026-01-31
  */
 public interface PatternRevisionService extends IService<PatternRevision> {
 

@@ -45,6 +45,17 @@ log_info() {
     echo -e "${BLUE}ℹ️  $1${NC}"
 }
 
+extract_data_id() {
+  python3 -c 'import json,sys
+try:
+  obj=json.load(sys.stdin)
+  data=obj.get("data", {}) if isinstance(obj, dict) else {}
+  v=data.get("id", "") if isinstance(data, dict) else ""
+  print(v if v is not None else "")
+except Exception:
+  print("")'
+}
+
 # ============================================
 # 第一步：登录系统
 # ============================================
@@ -91,20 +102,20 @@ STYLE_DATA='{
 }'
 
 log_info "创建款式: ${STYLE_NO}"
-STYLE_RESP=$(curl -s -X POST "${BASE_URL}/api/style/style-info" \
+STYLE_RESP=$(curl -s -X POST "${BASE_URL}/api/style/info" \
   -H "Authorization: Bearer ${TOKEN}" \
   -H "Content-Type: application/json" \
   -d "${STYLE_DATA}")
 
-STYLE_ID=$(echo "${STYLE_RESP}" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+STYLE_ID=$(echo "${STYLE_RESP}" | extract_data_id)
 
 if [ -z "$STYLE_ID" ]; then
     log_error "款式创建失败"
     echo "响应: ${STYLE_RESP}"
     log_warning "将尝试继续后续测试"
+else
+  log_success "款式创建成功 (ID: ${STYLE_ID})"
 fi
-
-log_success "款式创建成功 (ID: ${STYLE_ID})"
 
 # ============================================
 # 第三步：创建样衣
@@ -132,7 +143,7 @@ SAMPLE_RESP=$(curl -s -X POST "${BASE_URL}/api/warehouse/sample" \
   -H "Content-Type: application/json" \
   -d "${SAMPLE_DATA}")
 
-SAMPLE_ID=$(echo "${SAMPLE_RESP}" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+SAMPLE_ID=$(echo "${SAMPLE_RESP}" | extract_data_id)
 
 if [ -z "$SAMPLE_ID" ]; then
     log_error "样衣创建失败"
@@ -173,6 +184,7 @@ if [ "$SAMPLE_STATUS" = "in_stock" ]; then
     log_success "样衣入库成功，状态: ${SAMPLE_STATUS}"
 else
     log_warning "样衣状态: ${SAMPLE_STATUS} (可能需要审批)"
+fi
 fi
 
 # ============================================
@@ -217,7 +229,7 @@ ORDER_RESP=$(curl -s -X POST "${BASE_URL}/api/production/order" \
   -H "Content-Type: application/json" \
   -d "${ORDER_DATA}")
 
-ORDER_ID=$(echo "${ORDER_RESP}" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+ORDER_ID=$(echo "${ORDER_RESP}" | extract_data_id)
 
 if [ -z "$ORDER_ID" ]; then
     log_error "订单创建失败"
@@ -281,7 +293,7 @@ CUTTING_RESP=$(curl -s -X POST "${BASE_URL}/api/production/cutting" \
   -H "Content-Type: application/json" \
   -d "${CUTTING_DATA}")
 
-CUTTING_ID=$(echo "${CUTTING_RESP}" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+CUTTING_ID=$(echo "${CUTTING_RESP}" | extract_data_id)
 
 if [ -z "$CUTTING_ID" ]; then
     log_error "裁剪单创建失败"
@@ -325,7 +337,7 @@ else
       -H "Content-Type: application/json" \
       -d "${SCAN_DATA}")
 
-    SCAN_ID=$(echo "${SCAN_RESP}" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+    SCAN_ID=$(echo "${SCAN_RESP}" | extract_data_id)
 
     if [ -n "$SCAN_ID" ]; then
         log_success "扫码记录创建成功 (ID: ${SCAN_ID})"
@@ -357,7 +369,7 @@ FINISHED_INBOUND_RESP=$(curl -s -X POST "${BASE_URL}/api/warehouse/finished-prod
   -H "Content-Type: application/json" \
   -d "${FINISHED_INBOUND_DATA}")
 
-INBOUND_ID=$(echo "${FINISHED_INBOUND_RESP}" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+INBOUND_ID=$(echo "${FINISHED_INBOUND_RESP}" | extract_data_id)
 
 if [ -n "$INBOUND_ID" ]; then
     log_success "成品入库成功 (ID: ${INBOUND_ID})"
@@ -386,7 +398,7 @@ RECONCILIATION_LIST=$(curl -s -X POST "${BASE_URL}/api/finance/reconciliation/li
     "pageSize": 10
   }')
 
-RECON_ID=$(echo "${RECONCILIATION_LIST}" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+RECON_ID=$(echo "${RECONCILIATION_LIST}" | extract_data_id)
 
 if [ -n "$RECON_ID" ]; then
     log_success "找到对账单 (ID: ${RECON_ID})"
@@ -418,6 +430,7 @@ if [ -n "$RECON_ID" ]; then
     fi
 else
     log_info "暂无对账单（可能需要扫码记录生成）"
+fi
 fi
 
 # ============================================
@@ -468,6 +481,7 @@ if [ -n "$FINISHED_QTY" ]; then
     log_success "成品库存: ${FINISHED_QTY} 件"
 else
     log_info "成品库存查询: 暂无数据"
+fi
 fi
 
 # ============================================

@@ -36,7 +36,7 @@ const OrderCuttingChart: React.FC = () => {
         });
       } else {
         // API失败时使用空数据
-        console.warn('API returned no data structure, using empty data');
+        // API returned no data structure, using empty data
         const mockDates = Array.from({ length: 30 }, (_, i) => {
           const date = new Date();
           date.setDate(date.getDate() - 29 + i);

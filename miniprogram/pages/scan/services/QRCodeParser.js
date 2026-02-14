@@ -246,17 +246,45 @@ class QRCodeParser {
    * @param {string} raw - 原始字符串
    * @returns {Object} 解析结果
    */
-  _buildParseResult({ code, qty, orderNo, styleNo, color, size, bundleNo }, raw) {
+  _buildParseResult({ code, qty, orderNo, orderId, styleNo, color, size, bundleNo }, raw) {
     const meta = code ? this._parseFeiNo(code) : null;
+
+    const scanCode = this._isPresent(code) ? String(code).trim() : raw;
+    let resolvedOrderNo = this._extractField(orderNo, meta, 'orderNo');
+    const resolvedOrderId = (orderId && this._isPresent(orderId)) ? String(orderId).trim() : '';
+    const resolvedStyleNo = this._extractField(styleNo, meta, 'styleNo');
+    const resolvedColor = this._extractField(color, meta, 'color');
+    const resolvedSize = this._extractField(size, meta, 'size');
+    const resolvedBundleNo = this._extractField(bundleNo, meta, 'bundleNo');
+
+    const cleanScanCode = String(scanCode || '').trim().replace(/[-_]/g, '');
+    const scanCodeLooksOrderNo = this.orderNoPattern.test(String(scanCode || '').trim())
+      || this.orderNoPattern.test(cleanScanCode);
+    if (!resolvedOrderNo && scanCodeLooksOrderNo) {
+      resolvedOrderNo = cleanScanCode;
+    }
+    if (resolvedOrderNo) {
+      resolvedOrderNo = String(resolvedOrderNo).replace(/[-_]/g, '');
+    }
+
+    const hasBundleMarker = !!resolvedBundleNo;
+    const hasSkuMarker = !!resolvedColor && !!resolvedSize;
+    const isOrderQR = (!!resolvedOrderNo || scanCodeLooksOrderNo) && !hasBundleMarker && !hasSkuMarker;
+    let resolvedQuantity = this._extractQuantity(qty, meta, this._isPresent(code) ? String(code) : '');
+    if (isOrderQR && !this._isPresent(qty)) {
+      resolvedQuantity = null;
+    }
+
     return {
-      scanCode: code !== null && String(code).trim() ? String(code).trim() : raw,
-      quantity: this._extractQuantity(qty, meta, raw),
-      orderNo: this._extractField(orderNo, meta, 'orderNo'),
-      styleNo: this._extractField(styleNo, meta, 'styleNo'),
-      color: this._extractField(color, meta, 'color'),
-      size: this._extractField(size, meta, 'size'),
-      bundleNo: this._extractField(bundleNo, meta, 'bundleNo'),
-      isOrderQR: false,
+      scanCode,
+      quantity: resolvedQuantity,
+      orderNo: resolvedOrderNo,
+      orderId: resolvedOrderId,
+      styleNo: resolvedStyleNo,
+      color: resolvedColor,
+      size: resolvedSize,
+      bundleNo: resolvedBundleNo,
+      isOrderQR,
     };
   }
 
@@ -413,25 +441,36 @@ class QRCodeParser {
    * @private
    */
   _handleOrderTypeJSON(obj) {
-    // 处理生产订单类型
-    if (obj.type === 'order' && obj.orderNo) {
-      return {
-        scanCode: obj.orderNo,
-        quantity: null,
-        orderNo: String(obj.orderNo).trim(),
-        styleNo: obj.styleNo ? String(obj.styleNo).trim() : '',
-        color: '',
-        size: '',
-        bundleNo: '',
-        isOrderQR: true,
-        qrType: 'order',
-      };
+    const qrType = String(obj.type || '').trim().toLowerCase();
+
+    // 处理生产订单类型（兼容 orderNo 和 orderId 两种字段）
+    if (qrType === 'order') {
+      const orderNo = obj.orderNo ? String(obj.orderNo).trim() : '';
+      const orderId = (obj.orderId || obj.id || '');
+      if (orderNo || orderId) {
+        return {
+          scanCode: orderNo || String(orderId),
+          quantity: null,
+          orderNo: orderNo ? orderNo.replace(/[-_]/g, '') : '',
+          orderId: orderId ? String(orderId).trim() : '',
+          styleNo: obj.styleNo ? String(obj.styleNo).trim() : '',
+          color: '',
+          size: '',
+          bundleNo: '',
+          isOrderQR: true,
+          qrType: 'order',
+        };
+      }
     }
 
     // 处理样板生产类型
-    if (obj.type === 'pattern' && obj.id) {
+    const patternId = obj.id || obj.patternId || obj.patternProductionId || obj.orderId;
+    const isPatternType = ['pattern', 'sample', 'pattern_production', 'patternproduction'].includes(qrType);
+    const isLegacyStylePattern = qrType === 'style' && !!patternId && (!obj.orderNo || obj.isPattern === true);
+
+    if ((isPatternType || isLegacyStylePattern) && patternId) {
       return {
-        scanCode: String(obj.id),
+        scanCode: String(patternId),
         quantity: obj.quantity ? parseInt(obj.quantity, 10) : null,
         orderNo: '',
         styleNo: obj.styleNo ? String(obj.styleNo).trim() : '',
@@ -441,7 +480,7 @@ class QRCodeParser {
         isOrderQR: false,
         isPatternQR: true,  // 标记为样板生产二维码
         qrType: 'pattern',
-        patternId: String(obj.id),
+        patternId: String(patternId),
         patternStatus: obj.status || '',
         designer: obj.designer || '',
         patternDeveloper: obj.patternDeveloper || '',
@@ -473,6 +512,7 @@ class QRCodeParser {
       code: this._getField(obj, 'scanCode', 'code', 'qr', 'value', 'data'),
       qty: this._getField(obj, 'quantity', 'qty', 'num', 'count'),
       orderNo: this._getField(obj, 'orderNo', 'po', 'order', 'productionOrderNo'),
+      orderId: this._getField(obj, 'orderId', 'id'),
       styleNo: this._getField(obj, 'styleNo', 'st', 'style', 'styleNumber'),
       color: obj.color,
       size: obj.size,
@@ -525,15 +565,34 @@ class QRCodeParser {
       return null;
     }
 
+    const urlType = String(params.type || params.qrType || '').trim().toLowerCase();
+    const urlPatternId = params.patternId || params.patternProductionId || params.id;
+    if ((urlType === 'pattern' || urlType === 'sample') && urlPatternId) {
+      return {
+        scanCode: String(urlPatternId).trim(),
+        quantity: params.quantity ? parseInt(params.quantity, 10) : null,
+        orderNo: '',
+        styleNo: params.styleNo ? String(params.styleNo).trim() : '',
+        color: params.color ? String(params.color).trim() : '',
+        size: params.size ? String(params.size).trim() : '',
+        bundleNo: '',
+        isOrderQR: false,
+        isPatternQR: true,
+        qrType: 'pattern',
+        patternId: String(urlPatternId).trim(),
+      };
+    }
+
     const code = params.scanCode || params.code || params.qr || params.value;
     const qty = params.quantity || params.qty || params.num || params.count;
     const orderNo = params.orderNo || params.po || params.order;
+    const orderId = params.orderId || params.id;
     const styleNo = params.styleNo || params.st || params.style;
     const color = params.color;
     const size = params.size;
     const bundleNo = params.bundleNo || params.cuttingBundleNo || params.bundle;
 
-    return this._buildParseResult({ code, qty, orderNo, styleNo, color, size, bundleNo }, raw);
+    return this._buildParseResult({ code, qty, orderNo, orderId, styleNo, color, size, bundleNo }, raw);
   }
 
   /**
@@ -545,7 +604,9 @@ class QRCodeParser {
    * @returns {Object|null} 解析结果
    */
   _parseOrderNo(raw) {
-    if (!this.orderNoPattern.test(raw)) {
+    // 先测试原始值，再测试移除分隔符后的值
+    const clean = raw.replace(/[-_]/g, '');
+    if (!this.orderNoPattern.test(raw) && !this.orderNoPattern.test(clean)) {
       return null;
     }
 
@@ -573,8 +634,18 @@ class QRCodeParser {
       return null;
     }
 
-    // 移除开头的?或#
-    const clean = s.replace(/^[?#]/, '');
+    // 兼容完整 URL、?query、#query 三种格式
+    let clean = s;
+    const qIdx = clean.indexOf('?');
+    if (qIdx >= 0) {
+      clean = clean.slice(qIdx + 1);
+    }
+    clean = clean.replace(/^[?#]/, '');
+    const hIdx = clean.indexOf('#');
+    if (hIdx >= 0) {
+      clean = clean.slice(0, hIdx);
+    }
+
     const pairs = clean.split('&');
 
     const out = {};
@@ -667,7 +738,7 @@ class QRCodeParser {
    * @returns {string} 字段值
    */
   _extractField(value, meta, field) {
-    if (value !== null && String(value).trim()) {
+    if (this._isPresent(value)) {
       const str = String(value).trim();
       // bundleNo特殊处理：可能是数字
       if (field === 'bundleNo') {
@@ -679,6 +750,24 @@ class QRCodeParser {
       return field === 'bundleNo' ? String(meta[field]) : meta[field];
     }
     return '';
+  }
+
+  /**
+   * 判断值是否为有效字段（排除 null/undefined/空串/"undefined"/"null"）
+   * @private
+   * @param {any} value - 待判断值
+   * @returns {boolean}
+   */
+  _isPresent(value) {
+    if (value === null || value === undefined) {
+      return false;
+    }
+    const str = String(value).trim();
+    if (!str) {
+      return false;
+    }
+    const lower = str.toLowerCase();
+    return lower !== 'undefined' && lower !== 'null';
   }
 
   /**

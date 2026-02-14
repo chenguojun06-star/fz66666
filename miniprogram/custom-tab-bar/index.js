@@ -1,3 +1,5 @@
+const { safeNavigate } = require('../utils/uiHelper');
+
 Component({
   data: {
     selected: 0,
@@ -28,7 +30,10 @@ Component({
       if (currentRoute === item.pagePath) {
         return;
       }
-      wx.switchTab({ url: item.pagePath });
+      // 使用安全导航防止快速点击导致路由错误
+      safeNavigate({ url: item.pagePath }, 'switchTab').catch(() => {
+        // 导航失败忽略（通常是重复点击）
+      });
     },
   },
 });

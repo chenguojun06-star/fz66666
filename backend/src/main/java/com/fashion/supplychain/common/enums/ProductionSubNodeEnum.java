@@ -8,9 +8,6 @@ import java.util.List;
  * <p>
  * 定义每个父级环节下的子环节，子环节可以根据实际业务灵活配置
  * </p>
- *
- * @author 系统架构团队
- * @since 2024-01-01
  */
 public enum ProductionSubNodeEnum {
 

@@ -5,12 +5,20 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
 import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
 import com.fashion.supplychain.integration.openapi.entity.TenantApp;
+import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ProductOutstockService;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.style.entity.StyleInfo;
+import com.fashion.supplychain.style.entity.StyleProcess;
 import com.fashion.supplychain.style.service.StyleInfoService;
+import com.fashion.supplychain.style.service.StyleProcessService;
+import com.fashion.supplychain.system.entity.Factory;
+import com.fashion.supplychain.system.entity.User;
+import com.fashion.supplychain.system.service.FactoryService;
+import com.fashion.supplychain.system.service.UserService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -50,10 +58,22 @@ public class OpenApiOrchestrator {
     private ProductOutstockService productOutstockService;
 
     @Autowired
+    private MaterialPurchaseService materialPurchaseService;
+
+    @Autowired
     private ShipmentReconciliationService shipmentReconciliationService;
 
     @Autowired
     private StyleInfoService styleInfoService;
+
+    @Autowired
+    private StyleProcessService styleProcessService;
+
+    @Autowired
+    private FactoryService factoryService;
+
+    @Autowired
+    private UserService userService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final RestTemplate restTemplate = new RestTemplate();
@@ -361,6 +381,78 @@ public class OpenApiOrchestrator {
             return result;
         } catch (Exception e) {
             throw new RuntimeException("查询订单列表失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 批量创建订单
+     * 请求体示例：
+     * {
+     *   "strict": false,
+     *   "orders": [
+     *     {
+     *       "styleNo": "FZ2024001",
+     *       "company": "客户A",
+     *       "quantity": 500,
+     *       "colors": ["黑色"],
+     *       "sizes": ["M"],
+     *       "expectedShipDate": "2026-03-15",
+     *       "remarks": "首批导入"
+     *     }
+     *   ]
+     * }
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> batchCreateExternalOrders(TenantApp app, String body) {
+        try {
+            Map<String, Object> request = objectMapper.readValue(body, new TypeReference<Map<String, Object>>() {});
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> orders = (List<Map<String, Object>>) request.get("orders");
+            boolean strict = request.get("strict") != null && Boolean.TRUE.equals(request.get("strict"));
+
+            if (orders == null || orders.isEmpty()) {
+                throw new IllegalArgumentException("缺少必填参数: orders");
+            }
+            if (orders.size() > 200) {
+                throw new IllegalArgumentException("单次最多上传 200 条订单");
+            }
+
+            List<Map<String, Object>> successRecords = new ArrayList<>();
+            List<Map<String, Object>> failedRecords = new ArrayList<>();
+
+            for (int index = 0; index < orders.size(); index++) {
+                Map<String, Object> orderItem = orders.get(index);
+                try {
+                    String singleBody = objectMapper.writeValueAsString(orderItem);
+                    Map<String, Object> created = createExternalOrder(app, singleBody);
+                    created.put("index", index + 1);
+                    successRecords.add(created);
+                } catch (Exception e) {
+                    Map<String, Object> fail = new LinkedHashMap<>();
+                    fail.put("index", index + 1);
+                    fail.put("styleNo", orderItem.get("styleNo"));
+                    fail.put("quantity", orderItem.get("quantity"));
+                    fail.put("error", e.getMessage());
+                    failedRecords.add(fail);
+                    if (strict) {
+                        throw new IllegalArgumentException("第 " + (index + 1) + " 条失败: " + e.getMessage());
+                    }
+                }
+            }
+
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("total", orders.size());
+            result.put("successCount", successRecords.size());
+            result.put("failedCount", failedRecords.size());
+            result.put("strict", strict);
+            result.put("successRecords", successRecords);
+            result.put("failedRecords", failedRecords);
+            result.put("message", failedRecords.isEmpty() ? "批量上传成功" : "批量上传完成，存在部分失败记录");
+            return result;
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("批量创建订单失败: " + e.getMessage(), e);
         }
     }
 
@@ -858,5 +950,715 @@ public class OpenApiOrchestrator {
         } catch (Exception e) {
             throw new RuntimeException("处理发货物流失败: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * 批量创建面辅料采购
+     * 请求体示例：
+     * {
+     *   "strict": false,
+     *   "materialPurchases": [
+     *     {
+     *       "orderNo": "PO202602140001",
+     *       "materialCode": "MAT001",
+     *       "materialName": "面料A",
+     *       "materialType": "FABRIC",
+     *       "specifications": "180g",
+     *       "unit": "米",
+     *       "purchaseQuantity": 200,
+     *       "arrivedQuantity": 0,
+     *       "unitPrice": 12.5,
+     *       "supplierName": "供应商A",
+     *       "expectedArrivalDate": "2026-03-01",
+     *       "remark": "客户首批迁移"
+     *     }
+     *   ]
+     * }
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> batchCreateMaterialPurchases(TenantApp app, String body) {
+        try {
+            Map<String, Object> request = objectMapper.readValue(body, new TypeReference<Map<String, Object>>() {});
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> purchases = (List<Map<String, Object>>) request.get("materialPurchases");
+            boolean strict = request.get("strict") != null && Boolean.TRUE.equals(request.get("strict"));
+
+            if (purchases == null || purchases.isEmpty()) {
+                throw new IllegalArgumentException("缺少必填参数: materialPurchases");
+            }
+            if (purchases.size() > 300) {
+                throw new IllegalArgumentException("单次最多上传 300 条采购记录");
+            }
+
+            List<Map<String, Object>> successRecords = new ArrayList<>();
+            List<Map<String, Object>> failedRecords = new ArrayList<>();
+
+            for (int index = 0; index < purchases.size(); index++) {
+                Map<String, Object> item = purchases.get(index);
+                try {
+                    String orderNo = String.valueOf(item.get("orderNo") == null ? "" : item.get("orderNo")).trim();
+                    String materialName = String.valueOf(item.get("materialName") == null ? "" : item.get("materialName")).trim();
+                    Integer purchaseQuantity = parseInteger(item.get("purchaseQuantity"));
+
+                    if (!StringUtils.hasText(orderNo)) {
+                        throw new IllegalArgumentException("orderNo 不能为空");
+                    }
+                    if (!StringUtils.hasText(materialName)) {
+                        throw new IllegalArgumentException("materialName 不能为空");
+                    }
+                    if (purchaseQuantity == null || purchaseQuantity <= 0) {
+                        throw new IllegalArgumentException("purchaseQuantity 必须为正整数");
+                    }
+
+                    ProductionOrder order = productionOrderService.getOne(
+                            new LambdaQueryWrapper<ProductionOrder>()
+                                    .eq(ProductionOrder::getOrderNo, orderNo)
+                                    .last("LIMIT 1")
+                    );
+                    if (order == null) {
+                        throw new IllegalArgumentException("订单不存在: " + orderNo);
+                    }
+
+                    MaterialPurchase purchase = new MaterialPurchase();
+                    purchase.setOrderId(order.getId());
+                    purchase.setOrderNo(order.getOrderNo());
+                    purchase.setStyleId(order.getStyleId());
+                    purchase.setStyleNo(order.getStyleNo());
+                    purchase.setStyleName(order.getStyleName());
+                    purchase.setColor(valueAsString(item.get("color"), order.getColor()));
+                    purchase.setSize(valueAsString(item.get("size"), order.getSize()));
+
+                    purchase.setMaterialCode(valueAsString(item.get("materialCode"), null));
+                    purchase.setMaterialName(materialName);
+                    purchase.setMaterialType(valueAsString(item.get("materialType"), "FABRIC"));
+                    purchase.setSpecifications(valueAsString(item.get("specifications"), null));
+                    purchase.setUnit(valueAsString(item.get("unit"), "米"));
+                    purchase.setPurchaseQuantity(purchaseQuantity);
+                    purchase.setArrivedQuantity(parseInteger(item.get("arrivedQuantity")) == null ? 0 : parseInteger(item.get("arrivedQuantity")));
+                    purchase.setSupplierName(valueAsString(item.get("supplierName"), app.getAppName()));
+                    purchase.setRemark(valueAsString(item.get("remark"), "[OpenAPI批量上传]"));
+                    purchase.setStatus(valueAsString(item.get("status"), "pending"));
+                    purchase.setSourceType("order");
+
+                    BigDecimal unitPrice = parseDecimal(item.get("unitPrice"));
+                    purchase.setUnitPrice(unitPrice == null ? BigDecimal.ZERO : unitPrice);
+
+                    String expectedArrivalDate = valueAsString(item.get("expectedArrivalDate"), null);
+                    if (StringUtils.hasText(expectedArrivalDate)) {
+                        try {
+                            purchase.setExpectedArrivalDate(LocalDate.parse(expectedArrivalDate).atStartOfDay());
+                        } catch (Exception ignored) {
+                            throw new IllegalArgumentException("expectedArrivalDate 格式错误，需为 yyyy-MM-dd");
+                        }
+                    }
+
+                    boolean saved = materialPurchaseService.savePurchaseAndUpdateOrder(purchase);
+                    if (!saved) {
+                        throw new RuntimeException("保存采购记录失败");
+                    }
+
+                    Map<String, Object> successItem = new LinkedHashMap<>();
+                    successItem.put("index", index + 1);
+                    successItem.put("purchaseId", purchase.getId());
+                    successItem.put("purchaseNo", purchase.getPurchaseNo());
+                    successItem.put("orderNo", purchase.getOrderNo());
+                    successItem.put("materialName", purchase.getMaterialName());
+                    successItem.put("status", purchase.getStatus());
+                    successRecords.add(successItem);
+                } catch (Exception e) {
+                    Map<String, Object> fail = new LinkedHashMap<>();
+                    fail.put("index", index + 1);
+                    fail.put("orderNo", item.get("orderNo"));
+                    fail.put("materialName", item.get("materialName"));
+                    fail.put("error", e.getMessage());
+                    failedRecords.add(fail);
+                    if (strict) {
+                        throw new IllegalArgumentException("第 " + (index + 1) + " 条失败: " + e.getMessage());
+                    }
+                }
+            }
+
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("total", purchases.size());
+            result.put("successCount", successRecords.size());
+            result.put("failedCount", failedRecords.size());
+            result.put("strict", strict);
+            result.put("successRecords", successRecords);
+            result.put("failedRecords", failedRecords);
+            result.put("message", failedRecords.isEmpty() ? "批量上传成功" : "批量上传完成，存在部分失败记录");
+            return result;
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("批量创建采购记录失败: " + e.getMessage(), e);
+        }
+    }
+
+    // ========== 数据导入 - 款式资料 (DATA_IMPORT / ORDER_SYNC) ==========
+
+    /**
+     * 批量上传款式资料
+     *
+     * 请求体:
+     * {
+     *   "strict": false,
+     *   "styles": [
+     *     {
+     *       "styleNo": "FZ2026001",
+     *       "styleName": "春季连衣裙",
+     *       "category": "连衣裙",
+     *       "price": 88.5,
+     *       "cycle": 15,
+     *       "color": "红色,蓝色",
+     *       "size": "S,M,L,XL",
+     *       "season": "春",
+     *       "year": 2026,
+     *       "month": 3,
+     *       "customer": "客户A",
+     *       "description": "2026春季新款",
+     *       "plateType": "首单",
+     *       "processes": [
+     *         { "processName": "裁剪", "processCode": "CUT", "progressStage": "裁剪", "price": 1.5, "standardTime": 120, "sortOrder": 1 },
+     *         { "processName": "车缝", "processCode": "SEW", "progressStage": "车缝", "price": 3.0, "standardTime": 300, "sortOrder": 2 }
+     *       ]
+     *     }
+     *   ]
+     * }
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> batchCreateStyles(TenantApp app, String body) {
+        try {
+            Map<String, Object> request = objectMapper.readValue(body, new TypeReference<Map<String, Object>>() {});
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> styles = (List<Map<String, Object>>) request.get("styles");
+            boolean strict = request.get("strict") != null && Boolean.TRUE.equals(request.get("strict"));
+
+            if (styles == null || styles.isEmpty()) {
+                throw new IllegalArgumentException("缺少必填参数: styles");
+            }
+            if (styles.size() > 200) {
+                throw new IllegalArgumentException("单次最多上传 200 条款式");
+            }
+
+            List<Map<String, Object>> successRecords = new ArrayList<>();
+            List<Map<String, Object>> failedRecords = new ArrayList<>();
+
+            for (int index = 0; index < styles.size(); index++) {
+                Map<String, Object> item = styles.get(index);
+                try {
+                    String styleNo = valueAsString(item.get("styleNo"), "").trim();
+                    String styleName = valueAsString(item.get("styleName"), "").trim();
+
+                    if (!StringUtils.hasText(styleNo)) {
+                        throw new IllegalArgumentException("styleNo 不能为空");
+                    }
+
+                    // 检查款号是否已存在
+                    StyleInfo existingStyle = styleInfoService.getOne(
+                            new LambdaQueryWrapper<StyleInfo>()
+                                    .eq(StyleInfo::getStyleNo, styleNo)
+                                    .last("LIMIT 1")
+                    );
+                    if (existingStyle != null) {
+                        throw new IllegalArgumentException("款号已存在: " + styleNo);
+                    }
+
+                    StyleInfo style = new StyleInfo();
+                    style.setStyleNo(styleNo);
+                    style.setStyleName(StringUtils.hasText(styleName) ? styleName : styleNo);
+                    style.setCategory(valueAsString(item.get("category"), null));
+                    style.setColor(valueAsString(item.get("color"), null));
+                    style.setSize(valueAsString(item.get("size"), null));
+                    style.setSeason(valueAsString(item.get("season"), null));
+                    style.setCustomer(valueAsString(item.get("customer"), null));
+                    style.setDescription(valueAsString(item.get("description"), "[OpenAPI批量导入]"));
+                    style.setPlateType(valueAsString(item.get("plateType"), null));
+                    style.setPatternNo(valueAsString(item.get("patternNo"), null));
+
+                    BigDecimal price = parseDecimal(item.get("price"));
+                    if (price != null) {
+                        style.setPrice(price);
+                    }
+
+                    Integer cycle = parseInteger(item.get("cycle"));
+                    if (cycle != null) {
+                        style.setCycle(cycle);
+                    }
+
+                    Integer year = parseInteger(item.get("year"));
+                    style.setYear(year != null ? year : LocalDate.now().getYear());
+
+                    Integer month = parseInteger(item.get("month"));
+                    style.setMonth(month != null ? month : LocalDate.now().getMonthValue());
+
+                    style.setStatus("ENABLED");
+                    style.setCreateTime(LocalDateTime.now());
+                    style.setUpdateTime(LocalDateTime.now());
+
+                    boolean saved = styleInfoService.save(style);
+                    if (!saved) {
+                        throw new RuntimeException("保存款式失败");
+                    }
+
+                    // 如果包含工序列表，一起保存
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> processes = (List<Map<String, Object>>) item.get("processes");
+                    int processCount = 0;
+                    if (processes != null && !processes.isEmpty()) {
+                        for (int pi = 0; pi < processes.size(); pi++) {
+                            Map<String, Object> proc = processes.get(pi);
+                            StyleProcess sp = new StyleProcess();
+                            sp.setStyleId(style.getId());
+                            sp.setProcessCode(valueAsString(proc.get("processCode"), "P" + (pi + 1)));
+                            sp.setProcessName(valueAsString(proc.get("processName"), "工序" + (pi + 1)));
+                            sp.setProgressStage(valueAsString(proc.get("progressStage"), null));
+                            sp.setMachineType(valueAsString(proc.get("machineType"), null));
+                            sp.setSortOrder(parseInteger(proc.get("sortOrder")) != null ? parseInteger(proc.get("sortOrder")) : pi + 1);
+
+                            BigDecimal processPrice = parseDecimal(proc.get("price"));
+                            if (processPrice != null) {
+                                sp.setPrice(processPrice);
+                            }
+                            Integer standardTime = parseInteger(proc.get("standardTime"));
+                            if (standardTime != null) {
+                                sp.setStandardTime(standardTime);
+                            }
+                            sp.setCreateTime(LocalDateTime.now());
+                            sp.setUpdateTime(LocalDateTime.now());
+                            styleProcessService.save(sp);
+                            processCount++;
+                        }
+                    }
+
+                    Map<String, Object> successItem = new LinkedHashMap<>();
+                    successItem.put("index", index + 1);
+                    successItem.put("styleId", style.getId());
+                    successItem.put("styleNo", style.getStyleNo());
+                    successItem.put("styleName", style.getStyleName());
+                    successItem.put("processCount", processCount);
+                    successRecords.add(successItem);
+                } catch (Exception e) {
+                    Map<String, Object> fail = new LinkedHashMap<>();
+                    fail.put("index", index + 1);
+                    fail.put("styleNo", item.get("styleNo"));
+                    fail.put("error", e.getMessage());
+                    failedRecords.add(fail);
+                    if (strict) {
+                        throw new IllegalArgumentException("第 " + (index + 1) + " 条失败: " + e.getMessage());
+                    }
+                }
+            }
+
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("total", styles.size());
+            result.put("successCount", successRecords.size());
+            result.put("failedCount", failedRecords.size());
+            result.put("strict", strict);
+            result.put("successRecords", successRecords);
+            result.put("failedRecords", failedRecords);
+            result.put("message", failedRecords.isEmpty() ? "款式批量上传成功" : "款式批量上传完成，存在部分失败记录");
+            return result;
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("批量创建款式失败: " + e.getMessage(), e);
+        }
+    }
+
+    // ========== 数据导入 - 工厂/供应商 (DATA_IMPORT) ==========
+
+    /**
+     * 批量上传工厂/供应商
+     *
+     * 请求体:
+     * {
+     *   "strict": false,
+     *   "factories": [
+     *     {
+     *       "factoryCode": "GC001",
+     *       "factoryName": "金华服装加工厂",
+     *       "contactPerson": "张三",
+     *       "contactPhone": "13800138000",
+     *       "address": "浙江省金华市义乌工业区",
+     *       "businessLicense": ""
+     *     }
+     *   ]
+     * }
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> batchCreateFactories(TenantApp app, String body) {
+        try {
+            Map<String, Object> request = objectMapper.readValue(body, new TypeReference<Map<String, Object>>() {});
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> factories = (List<Map<String, Object>>) request.get("factories");
+            boolean strict = request.get("strict") != null && Boolean.TRUE.equals(request.get("strict"));
+
+            if (factories == null || factories.isEmpty()) {
+                throw new IllegalArgumentException("缺少必填参数: factories");
+            }
+            if (factories.size() > 500) {
+                throw new IllegalArgumentException("单次最多上传 500 条工厂记录");
+            }
+
+            List<Map<String, Object>> successRecords = new ArrayList<>();
+            List<Map<String, Object>> failedRecords = new ArrayList<>();
+
+            for (int index = 0; index < factories.size(); index++) {
+                Map<String, Object> item = factories.get(index);
+                try {
+                    String factoryName = valueAsString(item.get("factoryName"), "").trim();
+                    if (!StringUtils.hasText(factoryName)) {
+                        throw new IllegalArgumentException("factoryName 不能为空");
+                    }
+
+                    // 检查工厂名称是否已存在
+                    Factory existing = factoryService.getOne(
+                            new LambdaQueryWrapper<Factory>()
+                                    .eq(Factory::getFactoryName, factoryName)
+                                    .eq(Factory::getDeleteFlag, 0)
+                                    .last("LIMIT 1")
+                    );
+                    if (existing != null) {
+                        throw new IllegalArgumentException("工厂名称已存在: " + factoryName);
+                    }
+
+                    Factory factory = new Factory();
+                    factory.setFactoryName(factoryName);
+                    factory.setFactoryCode(valueAsString(item.get("factoryCode"), null));
+                    factory.setContactPerson(valueAsString(item.get("contactPerson"), null));
+                    factory.setContactPhone(valueAsString(item.get("contactPhone"), null));
+                    factory.setAddress(valueAsString(item.get("address"), null));
+                    factory.setBusinessLicense(valueAsString(item.get("businessLicense"), null));
+                    factory.setStatus("active");
+                    factory.setDeleteFlag(0);
+                    factory.setCreateTime(LocalDateTime.now());
+                    factory.setUpdateTime(LocalDateTime.now());
+
+                    boolean saved = factoryService.save(factory);
+                    if (!saved) {
+                        throw new RuntimeException("保存工厂记录失败");
+                    }
+
+                    Map<String, Object> successItem = new LinkedHashMap<>();
+                    successItem.put("index", index + 1);
+                    successItem.put("factoryId", factory.getId());
+                    successItem.put("factoryCode", factory.getFactoryCode());
+                    successItem.put("factoryName", factory.getFactoryName());
+                    successRecords.add(successItem);
+                } catch (Exception e) {
+                    Map<String, Object> fail = new LinkedHashMap<>();
+                    fail.put("index", index + 1);
+                    fail.put("factoryName", item.get("factoryName"));
+                    fail.put("error", e.getMessage());
+                    failedRecords.add(fail);
+                    if (strict) {
+                        throw new IllegalArgumentException("第 " + (index + 1) + " 条失败: " + e.getMessage());
+                    }
+                }
+            }
+
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("total", factories.size());
+            result.put("successCount", successRecords.size());
+            result.put("failedCount", failedRecords.size());
+            result.put("strict", strict);
+            result.put("successRecords", successRecords);
+            result.put("failedRecords", failedRecords);
+            result.put("message", failedRecords.isEmpty() ? "工厂批量上传成功" : "工厂批量上传完成，存在部分失败记录");
+            return result;
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("批量创建工厂失败: " + e.getMessage(), e);
+        }
+    }
+
+    // ========== 数据导入 - 员工/工人 (DATA_IMPORT) ==========
+
+    /**
+     * 批量上传员工（工人/跟单员等）
+     *
+     * 注意：密码自动设置为 123456（客户可在系统内修改），角色默认为"普通用户"
+     *
+     * 请求体:
+     * {
+     *   "strict": false,
+     *   "employees": [
+     *     {
+     *       "username": "zhangsan",
+     *       "name": "张三",
+     *       "phone": "13800138001",
+     *       "email": "zhangsan@factory.com",
+     *       "roleName": "工人"
+     *     }
+     *   ]
+     * }
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> batchCreateEmployees(TenantApp app, String body) {
+        try {
+            Map<String, Object> request = objectMapper.readValue(body, new TypeReference<Map<String, Object>>() {});
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> employees = (List<Map<String, Object>>) request.get("employees");
+            boolean strict = request.get("strict") != null && Boolean.TRUE.equals(request.get("strict"));
+
+            if (employees == null || employees.isEmpty()) {
+                throw new IllegalArgumentException("缺少必填参数: employees");
+            }
+            if (employees.size() > 500) {
+                throw new IllegalArgumentException("单次最多上传 500 条员工记录");
+            }
+
+            List<Map<String, Object>> successRecords = new ArrayList<>();
+            List<Map<String, Object>> failedRecords = new ArrayList<>();
+
+            for (int index = 0; index < employees.size(); index++) {
+                Map<String, Object> item = employees.get(index);
+                try {
+                    String name = valueAsString(item.get("name"), "").trim();
+                    if (!StringUtils.hasText(name)) {
+                        throw new IllegalArgumentException("name (姓名) 不能为空");
+                    }
+
+                    // 自动生成用户名：如果未提供，使用 "emp_" + 时间戳 + 序号
+                    String username = valueAsString(item.get("username"), "").trim();
+                    if (!StringUtils.hasText(username)) {
+                        username = "emp_" + System.currentTimeMillis() % 100000 + "_" + (index + 1);
+                    }
+
+                    // 检查用户名是否已存在
+                    User existing = userService.getOne(
+                            new LambdaQueryWrapper<User>()
+                                    .eq(User::getUsername, username)
+                                    .last("LIMIT 1")
+                    );
+                    if (existing != null) {
+                        throw new IllegalArgumentException("用户名已存在: " + username);
+                    }
+
+                    User user = new User();
+                    user.setUsername(username);
+                    user.setName(name);
+                    user.setPassword("123456"); // 默认密码，UserService.saveUser 内部会加密
+                    user.setPhone(valueAsString(item.get("phone"), null));
+                    user.setEmail(valueAsString(item.get("email"), null));
+                    user.setRoleName(valueAsString(item.get("roleName"), "普通用户"));
+                    user.setTenantId(app.getTenantId());
+                    user.setStatus("active");
+                    user.setRegistrationStatus("ACTIVE");
+                    user.setCreateTime(LocalDateTime.now());
+                    user.setUpdateTime(LocalDateTime.now());
+
+                    boolean saved = userService.saveUser(user);
+                    if (!saved) {
+                        throw new RuntimeException("保存员工记录失败");
+                    }
+
+                    Map<String, Object> successItem = new LinkedHashMap<>();
+                    successItem.put("index", index + 1);
+                    successItem.put("userId", user.getId());
+                    successItem.put("username", user.getUsername());
+                    successItem.put("name", user.getName());
+                    successItem.put("defaultPassword", "123456");
+                    successRecords.add(successItem);
+                } catch (Exception e) {
+                    Map<String, Object> fail = new LinkedHashMap<>();
+                    fail.put("index", index + 1);
+                    fail.put("name", item.get("name"));
+                    fail.put("username", item.get("username"));
+                    fail.put("error", e.getMessage());
+                    failedRecords.add(fail);
+                    if (strict) {
+                        throw new IllegalArgumentException("第 " + (index + 1) + " 条失败: " + e.getMessage());
+                    }
+                }
+            }
+
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("total", employees.size());
+            result.put("successCount", successRecords.size());
+            result.put("failedCount", failedRecords.size());
+            result.put("strict", strict);
+            result.put("successRecords", successRecords);
+            result.put("failedRecords", failedRecords);
+            result.put("message", failedRecords.isEmpty() ? "员工批量上传成功" : "员工批量上传完成，存在部分失败记录");
+            return result;
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("批量创建员工失败: " + e.getMessage(), e);
+        }
+    }
+
+    // ========== 数据导入 - 工序模板 (DATA_IMPORT) ==========
+
+    /**
+     * 批量上传工序（按款号关联）
+     *
+     * 请求体:
+     * {
+     *   "strict": false,
+     *   "styleNo": "FZ2026001",
+     *   "processes": [
+     *     {
+     *       "processCode": "CUT",
+     *       "processName": "裁剪",
+     *       "progressStage": "裁剪",
+     *       "machineType": "裁剪机",
+     *       "standardTime": 120,
+     *       "price": 1.5,
+     *       "sortOrder": 1
+     *     }
+     *   ]
+     * }
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> batchCreateStyleProcesses(TenantApp app, String body) {
+        try {
+            Map<String, Object> request = objectMapper.readValue(body, new TypeReference<Map<String, Object>>() {});
+            String styleNo = valueAsString(request.get("styleNo"), "").trim();
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> processes = (List<Map<String, Object>>) request.get("processes");
+            boolean strict = request.get("strict") != null && Boolean.TRUE.equals(request.get("strict"));
+
+            if (!StringUtils.hasText(styleNo)) {
+                throw new IllegalArgumentException("缺少必填参数: styleNo");
+            }
+            if (processes == null || processes.isEmpty()) {
+                throw new IllegalArgumentException("缺少必填参数: processes");
+            }
+            if (processes.size() > 100) {
+                throw new IllegalArgumentException("单个款式最多上传 100 道工序");
+            }
+
+            // 查找款式
+            StyleInfo style = styleInfoService.getOne(
+                    new LambdaQueryWrapper<StyleInfo>()
+                            .eq(StyleInfo::getStyleNo, styleNo)
+                            .last("LIMIT 1")
+            );
+            if (style == null) {
+                throw new IllegalArgumentException("款号不存在: " + styleNo + "（请先上传款式资料）");
+            }
+
+            List<Map<String, Object>> successRecords = new ArrayList<>();
+            List<Map<String, Object>> failedRecords = new ArrayList<>();
+
+            for (int index = 0; index < processes.size(); index++) {
+                Map<String, Object> item = processes.get(index);
+                try {
+                    String processName = valueAsString(item.get("processName"), "").trim();
+                    if (!StringUtils.hasText(processName)) {
+                        throw new IllegalArgumentException("processName 不能为空");
+                    }
+
+                    StyleProcess sp = new StyleProcess();
+                    sp.setStyleId(style.getId());
+                    sp.setProcessCode(valueAsString(item.get("processCode"), "P" + (index + 1)));
+                    sp.setProcessName(processName);
+                    sp.setProgressStage(valueAsString(item.get("progressStage"), null));
+                    sp.setMachineType(valueAsString(item.get("machineType"), null));
+                    sp.setSortOrder(parseInteger(item.get("sortOrder")) != null ? parseInteger(item.get("sortOrder")) : index + 1);
+
+                    BigDecimal processPrice = parseDecimal(item.get("price"));
+                    if (processPrice != null) {
+                        sp.setPrice(processPrice);
+                    }
+                    Integer standardTime = parseInteger(item.get("standardTime"));
+                    if (standardTime != null) {
+                        sp.setStandardTime(standardTime);
+                    }
+                    sp.setCreateTime(LocalDateTime.now());
+                    sp.setUpdateTime(LocalDateTime.now());
+
+                    boolean saved = styleProcessService.save(sp);
+                    if (!saved) {
+                        throw new RuntimeException("保存工序记录失败");
+                    }
+
+                    Map<String, Object> successItem = new LinkedHashMap<>();
+                    successItem.put("index", index + 1);
+                    successItem.put("processId", sp.getId());
+                    successItem.put("processCode", sp.getProcessCode());
+                    successItem.put("processName", sp.getProcessName());
+                    successRecords.add(successItem);
+                } catch (Exception e) {
+                    Map<String, Object> fail = new LinkedHashMap<>();
+                    fail.put("index", index + 1);
+                    fail.put("processName", item.get("processName"));
+                    fail.put("error", e.getMessage());
+                    failedRecords.add(fail);
+                    if (strict) {
+                        throw new IllegalArgumentException("第 " + (index + 1) + " 条失败: " + e.getMessage());
+                    }
+                }
+            }
+
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("styleNo", styleNo);
+            result.put("styleId", style.getId());
+            result.put("total", processes.size());
+            result.put("successCount", successRecords.size());
+            result.put("failedCount", failedRecords.size());
+            result.put("strict", strict);
+            result.put("successRecords", successRecords);
+            result.put("failedRecords", failedRecords);
+            result.put("message", failedRecords.isEmpty() ? "工序批量上传成功" : "工序批量上传完成，存在部分失败记录");
+            return result;
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("批量创建工序失败: " + e.getMessage(), e);
+        }
+    }
+
+    private Integer parseInteger(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
+        }
+        String text = String.valueOf(value).trim();
+        if (!StringUtils.hasText(text)) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(text);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private BigDecimal parseDecimal(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof BigDecimal) {
+            return (BigDecimal) value;
+        }
+        if (value instanceof Number) {
+            return BigDecimal.valueOf(((Number) value).doubleValue());
+        }
+        String text = String.valueOf(value).trim();
+        if (!StringUtils.hasText(text)) {
+            return null;
+        }
+        try {
+            return new BigDecimal(text);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String valueAsString(Object value, String defaultValue) {
+        if (value == null) {
+            return defaultValue;
+        }
+        String text = String.valueOf(value).trim();
+        if (!StringUtils.hasText(text)) {
+            return defaultValue;
+        }
+        return text;
     }
 }

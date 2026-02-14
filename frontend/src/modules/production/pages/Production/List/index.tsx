@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Button, Card, Input, Select, Tag, App, Dropdown, Checkbox, Alert, InputNumber, Table, Modal } from 'antd';
-import { SettingOutlined, AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { Button, Card, Input, Select, Tag, App, Dropdown, Checkbox, Alert, InputNumber, Table, Modal, Popover, Badge, Tooltip } from 'antd';
+import { SettingOutlined, AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import PageStatCards from '@/components/common/PageStatCards';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
@@ -34,12 +34,20 @@ import { useLocation, useNavigate } from 'react-router-dom';
 
 import { StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
 import { formatDateTime } from '@/utils/datetime';
+import { toCategoryCn } from '@/utils/styleCategory';
 import { useSync } from '@/utils/syncManager';
 import { useViewport } from '@/utils/useViewport';
 import { useModal } from '@/hooks';
 import LiquidProgressBar from '@/components/common/LiquidProgressBar';
 import ProcessDetailModal from '@/components/production/ProcessDetailModal';
-import { getProgressColorStatus } from '@/utils/progressColor';
+import { getProgressColorStatus, getRemainingDaysDisplay } from '@/utils/progressColor';
+import { ensureBoardStatsForOrder } from '../ProgressDetail/hooks/useBoardStats';
+import {
+  defaultNodes,
+  stripWarehousingNode,
+  resolveNodesForListOrder,
+} from '../ProgressDetail/utils';
+import type { ProgressNode } from '../ProgressDetail/types';
 
 
 
@@ -88,6 +96,19 @@ const ProductionList: React.FC = () => {
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
   const [showDelayedOnly, setShowDelayedOnly] = useState(false); // 是否只显示延期订单
   const [activeStatFilter, setActiveStatFilter] = useState<'all' | 'delayed' | 'today'>('all'); // 当前激活的统计卡片筛选
+
+  // === 进度球数据（与生产进度页面共享逻辑） ===
+  const [progressNodesByStyleNo, setProgressNodesByStyleNo] = useState<Record<string, ProgressNode[]>>({});
+  const progressNodesByStyleNoRef = useRef<Record<string, ProgressNode[]>>({});
+  const [boardStatsByOrder, setBoardStatsByOrder] = useState<Record<string, Record<string, number>>>({});
+  const [boardTimesByOrder, setBoardTimesByOrder] = useState<Record<string, Record<string, string>>>({});
+  const boardStatsByOrderRef = useRef<Record<string, Record<string, number>>>({});
+  const boardStatsLoadingRef = useRef<Record<string, boolean>>({});
+
+  // 跟单员备注状态（与生产进度页面一致）
+  const [remarkPopoverId, setRemarkPopoverId] = useState<string | null>(null);
+  const [remarkText, setRemarkText] = useState('');
+  const [remarkSaving, setRemarkSaving] = useState(false);
 
   // 全局统计数据（从API获取，不受分页影响）
   const [globalStats, setGlobalStats] = useState<{
@@ -457,6 +478,90 @@ const ProductionList: React.FC = () => {
     }
   );
 
+  // === 进度球数据加载（与生产进度页面共享逻辑） ===
+  // 同步 ref
+  useEffect(() => { boardStatsByOrderRef.current = boardStatsByOrder; }, [boardStatsByOrder]);
+  useEffect(() => { progressNodesByStyleNoRef.current = progressNodesByStyleNo; }, [progressNodesByStyleNo]);
+
+  // 加载工序节点模板
+  useEffect(() => {
+    if (!productionList.length) return;
+    const styleNos = Array.from(
+      new Set(productionList.map(r => String(r.styleNo || '').trim()).filter(sn => sn && !progressNodesByStyleNoRef.current[sn]))
+    );
+    if (!styleNos.length) return;
+    void (async () => {
+      const settled = await Promise.allSettled(
+        styleNos.map(async (sn) => {
+          const res = await templateLibraryApi.progressNodeUnitPrices(sn);
+          const r = res as Record<string, unknown>;
+          const rows = Array.isArray(r?.data) ? r.data : [];
+          const normalized: ProgressNode[] = rows
+            .map((n: any) => {
+              const name = String(n?.name || '').trim();
+              const id = String(n?.id || name || '').trim() || name;
+              const p = Number(n?.unitPrice);
+              const unitPrice = Number.isFinite(p) && p >= 0 ? p : 0;
+              return { id, name, unitPrice };
+            })
+            .filter((n: ProgressNode) => n.name);
+          return { styleNo: sn, nodes: stripWarehousingNode(normalized) };
+        })
+      );
+      const next: Record<string, ProgressNode[]> = {};
+      for (const s of settled) {
+        if (s.status !== 'fulfilled') continue;
+        if (!s.value.nodes.length) continue;
+        next[s.value.styleNo] = s.value.nodes;
+      }
+      if (Object.keys(next).length) {
+        setProgressNodesByStyleNo(prev => ({ ...prev, ...next }));
+      }
+    })();
+  }, [productionList]);
+
+  // 加载每个订单的进度球统计数据
+  useEffect(() => {
+    if (!productionList.length) return;
+    const queue = productionList.slice(0, 20);
+    let cancelled = false;
+    const run = async () => {
+      for (const o of queue) {
+        if (cancelled) return;
+        const ns = stripWarehousingNode(resolveNodesForListOrder(o, progressNodesByStyleNo, defaultNodes));
+        await ensureBoardStatsForOrder({
+          order: o,
+          nodes: ns,
+          boardStatsByOrderRef,
+          boardStatsLoadingRef,
+          setBoardStatsByOrder,
+          setBoardTimesByOrder,
+        });
+      }
+    };
+    void run();
+    return () => { cancelled = true; };
+  }, [productionList, progressNodesByStyleNo]);
+
+  // 跟单员备注保存
+  const handleRemarkSave = async (orderId: string) => {
+    setRemarkSaving(true);
+    try {
+      await productionOrderApi.quickEdit({
+        id: orderId,
+        remarks: remarkText.trim(),
+      });
+      message.success('备注已保存');
+      setRemarkPopoverId(null);
+      setRemarkText('');
+      await fetchProductionList();
+    } catch (err: any) {
+      message.error(err?.response?.data?.message || '保存失败');
+    } finally {
+      setRemarkSaving(false);
+    }
+  };
+
   const formatCsvCell = (value: unknown) => {
     const v = value == null ? '' : String(value);
     const escaped = v.replace(/"/g, '""');
@@ -759,10 +864,13 @@ const ProductionList: React.FC = () => {
 
     // 加载菲号列表（从裁剪菲号表获取）
     setTransferBundlesLoading(true);
-    api.post('/production/cutting/list', {
-      orderId: (order as any).id,
-      page: 1,
-      pageSize: 999
+    api.get('/production/cutting/list', {
+      params: {
+        orderNo: (order as any).orderNo,
+        orderId: (order as any).id,
+        page: 1,
+        pageSize: 999
+      }
     })
       .then((res: any) => {
         const records = res?.data?.records || res?.records || res?.data || [];
@@ -1056,6 +1164,80 @@ const ProductionList: React.FC = () => {
     }
   };
 
+  // === 完成时间工具函数（动态从工序模板匹配，与生产进度页面一致） ===
+  const formatCompletionTime = (timeStr: string) => {
+    if (!timeStr) return '';
+    try {
+      const d = new Date(timeStr);
+      if (isNaN(d.getTime())) return '';
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mi = String(d.getMinutes()).padStart(2, '0');
+      return `${mm}-${dd} ${hh}:${mi}`;
+    } catch { return ''; }
+  };
+
+  // 动态匹配阶段完成时间：从订单实际工序节点中查找
+  const getStageCompletionTime = (record: ProductionOrder, stageKeyword: string): string => {
+    const orderId = String(record.id || '');
+    const timeMap = boardTimesByOrder[orderId] || {};
+
+    // 获取该订单的实际工序节点列表
+    const nodes = stripWarehousingNode(resolveNodesForListOrder(record, progressNodesByStyleNo, defaultNodes));
+
+    // 找到所有匹配当前阶段的节点（比如"采购"会匹配"物料采购"、"面辅料采购"等）
+    const matchingNodeNames = nodes
+      .map(n => n.name)
+      .filter(name => {
+        // 使用 canonicalStageKey 判断是否属于同一阶段
+        const nodeName = String(name || '').trim();
+        const canonical = (s: string) => {
+          const n = s.trim().replace(/\s+/g, '');
+          const map: Record<string, string> = {
+            '物料采购': '采购', '面辅料采购': '采购', '备料': '采购', '到料': '采购',
+            '裁床': '裁剪', '剪裁': '裁剪', '开裁': '裁剪',
+            '缝制': '车缝', '缝纫': '车缝', '车工': '车缝',
+            '后整': '包装', '打包': '包装', '装箱': '包装',
+            '检验': '质检', '品检': '质检', '验货': '质检',
+            '熨烫': '整烫', '大烫': '整烫',
+          };
+          return map[n] || n;
+        };
+
+        const nodeCanonical = canonical(nodeName);
+        const stageCanonical = canonical(stageKeyword);
+
+        // 精确匹配或包含匹配
+        return nodeCanonical === stageCanonical ||
+               nodeCanonical.includes(stageCanonical) ||
+               stageCanonical.includes(nodeCanonical);
+      });
+
+    // 从匹配的节点中找出最晚的完成时间（可能有多个同阶段工序）
+    let latestTime = '';
+    for (const name of matchingNodeNames) {
+      const time = timeMap[name];
+      if (time && (!latestTime || time > latestTime)) {
+        latestTime = time;
+      }
+    }
+
+    return latestTime;
+  };
+
+  const renderCompletionTimeTag = (record: ProductionOrder, stageKeyword: string, rate: number) => {
+    const t = getStageCompletionTime(record, stageKeyword);
+    const formatted = formatCompletionTime(t);
+    if (!formatted) return <div style={{ fontSize: 10, color: '#d1d5db', lineHeight: 1.2, marginBottom: 1, textAlign: 'center' }}>--</div>;
+    const isComplete = rate >= 100;
+    return (
+      <div style={{ fontSize: 10, color: isComplete ? '#10b981' : '#6b7280', fontWeight: isComplete ? 600 : 400, lineHeight: 1.2, marginBottom: 1, textAlign: 'center', whiteSpace: 'nowrap' }}>
+        {formatted}
+      </div>
+    );
+  };
+
   const allColumns = [
     {
       title: '图片',
@@ -1107,7 +1289,7 @@ const ProductionList: React.FC = () => {
       dataIndex: 'category',
       key: 'category',
       width: 100,
-      render: (v: any) => v || '-',
+      render: (v: any) => toCategoryCn(v),
     },
     {
       title: '公司',
@@ -1139,8 +1321,71 @@ const ProductionList: React.FC = () => {
       title: '跟单员',
       dataIndex: 'merchandiser',
       key: 'merchandiser',
-      width: 100,
-      render: (v: any) => v || '-',
+      width: 120,
+      render: (v: any, record: ProductionOrder) => {
+        const name = String(v || '').trim();
+        const remark = String((record as unknown as Record<string, unknown>).remarks || '').trim();
+        const orderId = String(record.id || '');
+        const isOpen = remarkPopoverId === orderId;
+
+        const remarkContent = (
+          <div style={{ width: 220 }}>
+            <div style={{ fontWeight: 600, marginBottom: 8, color: '#1f2937' }}>
+              <ExclamationCircleOutlined style={{ color: '#f59e0b', marginRight: 4 }} />
+              备注异常
+            </div>
+            <Input.TextArea
+              value={isOpen ? remarkText : remark}
+              onChange={(e) => setRemarkText(e.target.value)}
+              rows={3}
+              maxLength={200}
+              showCount
+              placeholder="请输入异常备注..."
+              style={{ marginBottom: 8 }}
+            />
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <Button size="small" onClick={() => { setRemarkPopoverId(null); setRemarkText(''); }}>取消</Button>
+              <Button type="primary" size="small" loading={remarkSaving} onClick={() => handleRemarkSave(orderId)}>保存</Button>
+            </div>
+          </div>
+        );
+
+        return (
+          <div style={{ position: 'relative', lineHeight: 1.3 }}>
+            <Popover
+              content={remarkContent}
+              trigger="click"
+              open={isOpen}
+              onOpenChange={(open) => {
+                if (open) { setRemarkPopoverId(orderId); setRemarkText(remark); }
+                else { setRemarkPopoverId(null); setRemarkText(''); }
+              }}
+              placement="bottom"
+            >
+              <Tooltip title={remark ? `备注：${remark}` : '点击添加备注'} placement="top">
+                <div style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ fontWeight: 500, color: '#1f2937' }}>{name || '-'}</span>
+                  {remark && (
+                    <Badge dot color="#ef4444" offset={[0, -2]}>
+                      <ExclamationCircleOutlined style={{ fontSize: 12, color: '#ef4444' }} />
+                    </Badge>
+                  )}
+                </div>
+              </Tooltip>
+            </Popover>
+            {remark && (
+              <Tooltip title={remark} placement="bottom">
+                <div style={{
+                  fontSize: 10, color: '#ef4444', fontWeight: 500, lineHeight: 1.2, marginTop: 2,
+                  maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer',
+                }}>
+                  {remark.length > 6 ? remark.substring(0, 6) + '...' : remark}
+                </div>
+              </Tooltip>
+            )}
+          </div>
+        );
+      },
     },
     {
       title: '纸样师',
@@ -1199,7 +1444,7 @@ const ProductionList: React.FC = () => {
       width: 110,
       align: 'center' as const,
       render: (rate: number, record: ProductionOrder) => {
-        const total = record.orderQuantity || 0;
+        const total = Number(record.cuttingQuantity || record.orderQuantity) || 0;
         const completed = Math.round((rate || 0) * total / 100);
         const colorStatus = getProgressColorStatus(record.plannedEndDate);
 
@@ -1221,6 +1466,7 @@ const ProductionList: React.FC = () => {
               e.currentTarget.style.background = 'var(--color-bg-base)';
             }}
           >
+            {renderCompletionTimeTag(record, '采购', rate || 0)}
             <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
               {completed}/{total}
             </div>
@@ -1241,7 +1487,7 @@ const ProductionList: React.FC = () => {
       width: 110,
       align: 'center' as const,
       render: (rate: number, record: ProductionOrder) => {
-        const total = record.orderQuantity || 0;
+        const total = Number(record.cuttingQuantity || record.orderQuantity) || 0;
         const completed = Math.round((rate || 0) * total / 100);
         const colorStatus = getProgressColorStatus(record.plannedEndDate);
 
@@ -1263,6 +1509,7 @@ const ProductionList: React.FC = () => {
               e.currentTarget.style.background = 'var(--color-bg-base)';
             }}
           >
+            {renderCompletionTimeTag(record, '裁剪', rate || 0)}
             <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
               {completed}/{total}
             </div>
@@ -1317,7 +1564,7 @@ const ProductionList: React.FC = () => {
         }
 
         // 有二次工艺数据：显示彩色进度条，可点击查看详情
-        const total = record.orderQuantity || 0;
+        const total = Number(record.cuttingQuantity || record.orderQuantity) || 0;
         const completed = Math.round((rate || 0) * total / 100);
         const colorStatus = getProgressColorStatus(record.plannedEndDate);
 
@@ -1339,6 +1586,7 @@ const ProductionList: React.FC = () => {
               e.currentTarget.style.background = 'var(--color-bg-base)';
             }}
           >
+            {renderCompletionTimeTag(record, '二次工艺', rate || 0)}
             <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
               {completed}/{total}
             </div>
@@ -1359,7 +1607,7 @@ const ProductionList: React.FC = () => {
       width: 110,
       align: 'center' as const,
       render: (rate: number, record: ProductionOrder) => {
-        const total = record.orderQuantity || 0;
+        const total = Number(record.cuttingQuantity || record.orderQuantity) || 0;
         const completed = Math.round((rate || 0) * total / 100);
         const colorStatus = getProgressColorStatus(record.plannedEndDate);
 
@@ -1381,6 +1629,7 @@ const ProductionList: React.FC = () => {
               e.currentTarget.style.background = 'var(--color-bg-base)';
             }}
           >
+            {renderCompletionTimeTag(record, '车缝', rate || 0)}
             <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
               {completed}/{total}
             </div>
@@ -1401,7 +1650,7 @@ const ProductionList: React.FC = () => {
       width: 110,
       align: 'center' as const,
       render: (rate: number, record: ProductionOrder) => {
-        const total = record.orderQuantity || 0;
+        const total = Number(record.cuttingQuantity || record.orderQuantity) || 0;
         const completed = Math.round((rate || 0) * total / 100);
         const colorStatus = getProgressColorStatus(record.plannedEndDate);
 
@@ -1423,6 +1672,7 @@ const ProductionList: React.FC = () => {
               e.currentTarget.style.background = 'var(--color-bg-base)';
             }}
           >
+            {renderCompletionTimeTag(record, '尾部', rate || 0)}
             <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
               {completed}/{total}
             </div>
@@ -1477,12 +1727,14 @@ const ProductionList: React.FC = () => {
           return 'var(--color-border)'; // 灰色
         };
 
+        const warehousingTime = getStageCompletionTime(record, '入库');
+        const formattedWarehousingTime = formatCompletionTime(warehousingTime);
+
         return (
           <div
             style={{
               display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
+              flexDirection: 'column',
               cursor: 'pointer',
               padding: '4px 0',
             }}
@@ -1491,6 +1743,15 @@ const ProductionList: React.FC = () => {
               openProcessDetail(record, 'warehousing');
             }}
           >
+            {/* 完成时间 */}
+            {formattedWarehousingTime ? (
+              <div style={{ fontSize: 10, color: rate >= 100 ? '#10b981' : '#6b7280', fontWeight: rate >= 100 ? 600 : 400, lineHeight: 1.2, marginBottom: 2, textAlign: 'left', whiteSpace: 'nowrap' }}>
+                {formattedWarehousingTime}
+              </div>
+            ) : (
+              <div style={{ fontSize: 10, color: '#d1d5db', lineHeight: 1.2, marginBottom: 2 }}>--</div>
+            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             {/* 进度圆环 */}
             <div style={{ position: 'relative', width: '36px', height: '36px' }}>
               <svg width="36" height="36" style={{ transform: 'rotate(-90deg)' }}>
@@ -1542,6 +1803,7 @@ const ProductionList: React.FC = () => {
               <span style={{ fontSize: '11px', color: 'var(--neutral-text-disabled)' }}>
                 {qualified > 0 ? '已入库' : '未入库'}
               </span>
+            </div>
             </div>
           </div>
         );
@@ -1910,51 +2172,80 @@ const ProductionList: React.FC = () => {
               coverField="styleCover"
               titleField="orderNo"
               subtitleField="styleNo"
-              fields={[
-                {
-                  label: '码数',
-                  key: 'size',
-                  render: (val: unknown, record: Record<string, unknown>) => {
-                    // 显示具体码数列表
-                    const sizeStr = String(val || '').trim();
-                    if (sizeStr) return sizeStr;
-                    // 降级：从 orderDetails 解析
-                    const details = record?.orderDetails;
-                    if (details) {
+              fields={[]}
+              fieldGroups={[
+                // 第一行：码数（紧凑横排）
+                [
+                  {
+                    label: '码数',
+                    key: 'orderDetails',
+                    render: (val: unknown, record: Record<string, unknown>) => {
                       try {
+                        const details = record?.orderDetails;
                         const parsed = typeof details === 'string' ? JSON.parse(details) : details;
                         const lines = parsed?.orderLines || parsed?.lines || parsed;
-                        if (Array.isArray(lines)) {
-                          const sizes = [...new Set(lines.map((l: Record<string, unknown>) => l.size).filter(Boolean))];
-                          if (sizes.length > 0) return sizes.join(', ');
+                        if (Array.isArray(lines) && lines.length > 0) {
+                          return (
+                            <div style={{ display: 'flex', gap: '2px', flexWrap: 'wrap' }}>
+                              {lines.map((l: any, idx: number) => (
+                                <span key={idx} style={{ width: '22px', textAlign: 'center', fontSize: '10px' }}>{l.size || '-'}</span>
+                              ))}
+                            </div>
+                          );
                         }
                       } catch { /* ignore */ }
+                      return String(record?.size || '').trim() || '-';
                     }
-                    return '-';
                   }
-                },
-                {
-                  label: '数量',
-                  key: 'orderQuantity',
-                  render: (val: unknown) => {
-                    const qty = Number(val) || 0;
-                    return qty > 0 ? `${qty} 件` : '-';
+                ],
+                // 第二行：数量（对齐码数 + 总数）
+                [
+                  {
+                    label: '数量',
+                    key: 'orderDetails',
+                    render: (val: unknown, record: Record<string, unknown>) => {
+                      try {
+                        const details = record?.orderDetails;
+                        const parsed = typeof details === 'string' ? JSON.parse(details) : details;
+                        const lines = parsed?.orderLines || parsed?.lines || parsed;
+                        if (Array.isArray(lines) && lines.length > 0) {
+                          const total = lines.reduce((s: number, l: any) => s + (Number(l.quantity) || 0), 0);
+                          return (
+                            <div style={{ display: 'flex', gap: '2px', alignItems: 'center', flexWrap: 'wrap' }}>
+                              {lines.map((l: any, idx: number) => (
+                                <span key={idx} style={{ width: '22px', textAlign: 'center', fontSize: '10px', color: '#1890ff', fontWeight: 600 }}>{l.quantity || 0}</span>
+                              ))}
+                              <span style={{ marginLeft: '4px', color: '#8c8c8c', fontSize: '10px', flexShrink: 0 }}>共{total}</span>
+                            </div>
+                          );
+                        }
+                      } catch { /* ignore */ }
+                      const qty = Number(record?.orderQuantity) || 0;
+                      return qty > 0 ? `${qty}件` : '-';
+                    }
                   }
-                },
-                {
-                  label: '下单日期',
-                  key: 'createTime',
-                  render: (val: unknown) => {
-                    return val ? dayjs(val as string).format('YYYY-MM-DD') : '-';
+                ],
+                // 第三行：下单 + 交期 + 剩余（三个字段一行）
+                [
+                  {
+                    label: '下单',
+                    key: 'createTime',
+                    render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-'
+                  },
+                  {
+                    label: '交期',
+                    key: 'plannedEndDate',
+                    render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-'
+                  },
+                  {
+                    label: '剩',
+                    key: 'remainingDays',
+                    render: (val: unknown, record: Record<string, unknown>) => {
+                      const { text, color } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string);
+                      return <span style={{ color, fontWeight: 600, fontSize: '10px' }}>{text}</span>;
+                    }
                   }
-                },
-                {
-                  label: '订单交期',
-                  key: 'plannedEndDate',
-                  render: (val: unknown) => {
-                    return val ? dayjs(val as string).format('YYYY-MM-DD') : '-';
-                  }
-                },
+                ]
               ]}
               progressConfig={{
                 calculate: (record: ProductionOrder) => {
@@ -2381,9 +2672,17 @@ const ProductionList: React.FC = () => {
                 rowKey="id"
                 pagination={false}
                 scroll={{ y: 200 }}
+                rowClassName={(record: any) => {
+                  const s = record?.status;
+                  if (s === 'received' || s === 'qualified' || s === 'completed') return 'transfer-bundle-row-disabled';
+                  return '';
+                }}
                 rowSelection={{
                   selectedRowKeys: transferSelectedBundleIds,
                   onChange: (keys) => setTransferSelectedBundleIds(keys as string[]),
+                  getCheckboxProps: (record: any) => ({
+                    disabled: record?.status === 'received' || record?.status === 'qualified' || record?.status === 'completed',
+                  }),
                 }}
                 columns={[
                   {
@@ -2402,7 +2701,9 @@ const ProductionList: React.FC = () => {
                     render: (v: string) => {
                       const statusMap: Record<string, string> = {
                         'created': '已创建',
+                        'received': '已领取',
                         'qualified': '已质检',
+                        'completed': '已完成',
                         'in_progress': '生产中',
                       };
                       return statusMap[v] || v || '-';
@@ -2480,6 +2781,8 @@ const ProductionList: React.FC = () => {
             setPrintingRecord(null);
           }}
           styleId={printingRecord?.styleId}
+          orderId={printingRecord?.id}
+          orderNo={printingRecord?.orderNo}
           styleNo={printingRecord?.styleNo}
           styleName={printingRecord?.styleName}
           cover={printingRecord?.styleCover}

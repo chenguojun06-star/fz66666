@@ -145,3 +145,58 @@ export function prompt({
     });
   });
 }
+
+/**
+ * 全局导航锁（防止快速重复跳转导致路由错误）
+ */
+let navigating = false;
+let navigateTimer = null;
+
+/**
+ * 安全导航（带防抖保护）
+ * 防止用户快速点击导致 "routeDone with a webviewId xxx is not found" 错误
+ * @param {Object} options - 导航参数 { url, ... }
+ * @param {string} method - 导航方式: navigateTo | switchTab | redirectTo | reLaunch
+ * @returns {Promise} - 导航结果
+ */
+export function safeNavigate(options, method = 'navigateTo') {
+  if (navigating) {
+    console.warn('[SafeNavigate] 导航进行中，忽略重复调用:', options.url);
+    return Promise.reject(new Error('导航进行中，请稍候'));
+  }
+
+  navigating = true;
+
+  // 清除旧的解锁定时器
+  if (navigateTimer) {
+    clearTimeout(navigateTimer);
+  }
+
+  const navigator = {
+    navigateTo: wx.navigateTo,
+    switchTab: wx.switchTab,
+    redirectTo: wx.redirectTo,
+    reLaunch: wx.reLaunch,
+  }[method] || wx.navigateTo;
+
+  return new Promise((resolve, reject) => {
+    navigator({
+      ...options,
+      success: (res) => {
+        // 导航成功后 500ms 解锁（等待页面完全加载）
+        navigateTimer = setTimeout(() => {
+          navigating = false;
+          navigateTimer = null;
+        }, 500);
+        resolve(res);
+      },
+      fail: (err) => {
+        // 导航失败立即解锁
+        navigating = false;
+        navigateTimer = null;
+        console.error('[SafeNavigate] 导航失败:', err);
+        reject(err);
+      },
+    });
+  });
+}

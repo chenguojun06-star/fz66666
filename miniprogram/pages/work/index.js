@@ -2,7 +2,7 @@ const api = require('../../utils/api');
 const { errorHandler } = require('../../utils/errorHandler');
 const { syncManager } = require('../../utils/syncManager');
 const { onDataRefresh, triggerDataRefresh } = require('../../utils/eventBus');
-const { toast } = require('../../utils/uiHelper');
+const { toast, safeNavigate } = require('../../utils/uiHelper');
 const { validateFields, validators } = require('../../utils/validator');
 
 // ==================== 提取的工具模块 ====================
@@ -11,9 +11,6 @@ const { normalizeText, transformOrderData } = require('./utils/orderTransform');
 // ==================== 提取的 Handler ====================
 const BatchProgressHandler = require('./handlers/BatchProgressHandler');
 const RollbackHandler = require('./handlers/RollbackHandler');
-const BundleGenerateHandler = require('./handlers/BundleGenerateHandler');
-
-const { INITIAL_BUNDLE_MODAL } = BundleGenerateHandler;
 
 Page({
   data: {
@@ -59,7 +56,6 @@ Page({
       progress: '',
       remark: '',
     },
-    bundleModal: { ...INITIAL_BUNDLE_MODAL },
   },
 
   onShow() {
@@ -160,11 +156,11 @@ Page({
 
   navTo(e) {
     const url = e.currentTarget.dataset.url;
-    wx.navigateTo({ url });
+    safeNavigate({ url }).catch(() => {});
   },
 
   goScan() {
-    wx.switchTab({ url: '/pages/scan/index' });
+    safeNavigate({ url: '/pages/scan/index' }, 'switchTab').catch(() => {});
   },
 
   onOrderNoInput(e) {
@@ -361,14 +357,6 @@ Page({
     // work页面暂不显示提醒按钮，只在home页面显示
     // 这里预留接口，未来可以在work页面也添加提醒按钮
   },
-
-  // ==================== 菲号生成（委托 BundleGenerateHandler） ====================
-  onGenerateBundle(e) { BundleGenerateHandler.onGenerateBundle(this, e); },
-  onBundleFieldInput(e) { BundleGenerateHandler.onBundleFieldInput(this, e); },
-  onAddBundleItem() { BundleGenerateHandler.onAddBundleItem(this); },
-  onRemoveBundleItem(e) { BundleGenerateHandler.onRemoveBundleItem(this, e); },
-  onCancelBundle() { BundleGenerateHandler.onCancelBundle(this); },
-  async onConfirmBundle() { return BundleGenerateHandler.onConfirmBundle(this); },
 
   onHide() {
     // 页面隐藏时停止同步（节省资源）

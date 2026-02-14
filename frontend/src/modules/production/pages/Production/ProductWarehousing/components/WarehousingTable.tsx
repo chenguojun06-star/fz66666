@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button, Tag } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
@@ -13,8 +14,6 @@ interface WarehousingTableProps {
   total: number;
   queryParams: WarehousingQueryParams;
   setQueryParams: (params: WarehousingQueryParams) => void;
-  onOpenIndependentDetail: (record: WarehousingType) => void;
-  onWarehousing: (record: WarehousingType) => void;
   isOrderFrozen: (orderId: string) => boolean;
   isMobile?: boolean;
 }
@@ -25,11 +24,20 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
   total,
   queryParams,
   setQueryParams,
-  onOpenIndependentDetail,
-  onWarehousing,
   isOrderFrozen,
   isMobile,
 }) => {
+  const navigate = useNavigate();
+
+  /** 跳转到统一质检入库内部页面 */
+  const goToDetail = (record: WarehousingType, tab = 'records') => {
+    const orderId = String((record as any)?.orderId || '').trim();
+    if (!orderId) return;
+    const warehousingNo = String(record.warehousingNo || '').trim();
+    const params = new URLSearchParams({ tab });
+    if (warehousingNo && tab === 'records') params.set('warehousingNo', warehousingNo);
+    navigate(`/production/warehousing/inspect/${orderId}?${params.toString()}`);
+  };
   const columns = [
     {
       title: '图片',
@@ -48,7 +56,7 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
         const text = String(v || '').trim();
         if (!text) return '-';
         return (
-          <Button type="link" size="small" style={{ padding: 0 }} onClick={() => onOpenIndependentDetail(record)}>
+          <Button type="link" size="small" style={{ padding: 0 }} onClick={() => goToDetail(record, 'inspect')}>
             {text}
           </Button>
         );
@@ -214,11 +222,11 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
           <RowActions
             actions={[
               {
-                key: 'detail',
-                label: '详情',
-                title: frozen ? '详情（订单已关单）' : '弹窗查看',
+                key: 'inspect',
+                label: '质检',
+                title: frozen ? '质检（订单已关单）' : '质检查看',
                 disabled: frozen,
-                onClick: () => onOpenIndependentDetail(record),
+                onClick: () => goToDetail(record, 'inspect'),
                 primary: true,
               },
               {
@@ -226,7 +234,7 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
                 label: '入库',
                 title: isWarehoused ? '已入库' : (frozen ? '入库（订单已关单）' : '入库'),
                 disabled: frozen || !orderId || isWarehoused,
-                onClick: () => onWarehousing(record),
+                onClick: () => goToDetail(record, 'warehousing'),
                 primary: true,
               },
             ]}
@@ -254,7 +262,7 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
               'a,button,input,textarea,select,option,[role="button"],[role="menuitem"],.ant-dropdown-trigger,.ant-btn'
             );
             if (interactive) return;
-            onOpenIndependentDetail(record as WarehousingType);
+            goToDetail(record as WarehousingType, 'inspect');
           },
         };
       }}

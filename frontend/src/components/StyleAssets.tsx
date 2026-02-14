@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button, Col, Row, Space, Tag, message, Tooltip, Table } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import QRCodeBox from './common/QRCodeBox';
+
 import api, { parseProductionOrderLines, sortSizeNames, toNumberSafe, ProductionOrderLine } from '../utils/api';
 import { StyleAttachment } from '../types/style';
 import ResizableModal, {
@@ -109,9 +109,7 @@ export const ProductionOrderHeader: React.FC<{
   styleName?: string;
   styleId?: IdLike;
   styleCover?: string | null;
-  qrCodeValue?: string;
   coverSize?: number;
-  qrSize?: number;
   className?: string;
   extraFields?: OrderHeaderField[];
 }> = ({
@@ -126,9 +124,7 @@ export const ProductionOrderHeader: React.FC<{
   styleName,
   styleId,
   styleCover,
-  qrCodeValue,
   coverSize = 160,
-  qrSize = 120,
   className,
   extraFields,
 }) => {
@@ -160,17 +156,6 @@ export const ProductionOrderHeader: React.FC<{
       return toNumberSafe((order as Record<string, unknown>)?.orderQuantity);
     }, [totalQuantity, computedSizeItems, order]);
 
-    const qrValue = qrCodeValue
-      ?? (String((order as Record<string, unknown>)?.qrCode || '').trim()
-        || (resolvedOrderNo
-          ? JSON.stringify({
-            type: 'order',
-            orderNo: resolvedOrderNo,
-            styleNo: resolvedStyleNo,
-            styleName: resolvedStyleName,
-          })
-          : ''));
-
     const fields: OrderHeaderField[] = [
       { label: '订单号', value: <span className="order-no-compact">{resolvedOrderNo || '-'}</span> },
       { label: '款号', value: resolvedStyleNo || '-' },
@@ -190,16 +175,6 @@ export const ProductionOrderHeader: React.FC<{
               size={coverSize}
               borderRadius={8}
             />
-            {qrValue ? (
-              <div style={{ marginTop: 12, textAlign: 'center' }}>
-                <QRCodeBox
-                  value={qrValue}
-                  label={resolvedOrderNo && resolvedOrderNo !== '-' ? `订单号: ${resolvedOrderNo}` : `款号: ${resolvedStyleNo || '-'}`}
-                  variant="primary"
-                  size={qrSize}
-                />
-              </div>
-            ) : null}
           </div>
         </Col>
         <Col xs={24} md={16} lg={18}>

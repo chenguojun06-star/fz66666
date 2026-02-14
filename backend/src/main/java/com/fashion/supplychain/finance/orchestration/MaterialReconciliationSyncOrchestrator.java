@@ -23,9 +23,6 @@ import java.util.List;
  *
  * 职责：协调production模块的入库、采购服务与finance模块的对账服务
  * 实现跨模块的数据同步和事务管理
- *
- * @author Fashion Supply Chain System
- * @since 2026-02-01
  */
 @Slf4j
 @Service

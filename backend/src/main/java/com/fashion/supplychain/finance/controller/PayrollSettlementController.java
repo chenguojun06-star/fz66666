@@ -4,6 +4,7 @@ import com.fashion.supplychain.finance.orchestration.PayrollAggregationOrchestra
 import com.fashion.supplychain.finance.orchestration.PayrollAggregationOrchestrator.PayrollOperatorProcessSummaryDTO;
 import com.fashion.supplychain.common.Result;
 import lombok.AllArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -18,6 +19,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/finance/payroll-settlement")
 @AllArgsConstructor
+@PreAuthorize("hasAnyAuthority('MENU_PAYROLL_OPERATOR_SUMMARY', 'MENU_FINANCE', 'ROLE_ADMIN', 'ROLE_1')")
 public class PayrollSettlementController {
 
     private final PayrollAggregationOrchestrator payrollAggregationOrchestrator;

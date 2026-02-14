@@ -12,9 +12,6 @@ import java.time.LocalDateTime;
 
 /**
  * 面辅料入库记录实体类
- *
- * @author Fashion Supply Chain System
- * @since 2026-01-31
  */
 @Data
 @TableName("t_material_inbound")

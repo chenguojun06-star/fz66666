@@ -41,7 +41,8 @@ public class PatternScanRecord {
     private String color;
 
     /**
-     * 操作类型：RECEIVE(领取), PLATE(车板), FOLLOW_UP(跟单), COMPLETE(完成), WAREHOUSE_IN(入库)
+     * 操作类型：RECEIVE(领取), PLATE(车板), FOLLOW_UP(跟单), COMPLETE(完成),
+     * WAREHOUSE_IN(入库), WAREHOUSE_OUT(出库), WAREHOUSE_RETURN(归还)
      */
     private String operationType;
 
@@ -64,6 +65,11 @@ public class PatternScanRecord {
      * 扫码时间
      */
     private LocalDateTime scanTime;
+
+    /**
+     * 仓位编码（样衣入库/出库）
+     */
+    private String warehouseCode;
 
     /**
      * 备注

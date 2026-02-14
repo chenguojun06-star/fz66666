@@ -19,9 +19,7 @@ import java.util.regex.Pattern;
 
 /**
  * 纸样修改记录服务实现
- *
- * @author system
- * @date 2026-01-31
+
  */
 @Service
 public class PatternRevisionServiceImpl extends ServiceImpl<PatternRevisionMapper, PatternRevision>

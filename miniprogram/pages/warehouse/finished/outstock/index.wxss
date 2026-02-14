@@ -40,8 +40,38 @@
   align-items: center;
 }
 
+.item-image {
+  width: 120rpx;
+  height: 120rpx;
+  margin-right: 16rpx;
+  border-radius: 8rpx;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.style-img {
+  width: 100%;
+  height: 100%;
+}
+
 .item-content {
   flex: 1;
+  min-width: 0;
+}
+
+.color-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx;
+  margin-top: 8rpx;
+}
+
+.color-tag {
+  font-size: 20rpx;
+  padding: 2rpx 12rpx;
+  border-radius: 16rpx;
+  background-color: #f0f0f0;
+  color: var(--color-text-secondary);
 }
 
 .item-header {
@@ -127,10 +157,13 @@
 }
 
 .modal-box {
-  width: 640rpx;
+  width: 680rpx;
+  max-height: 85vh;
   background-color: var(--color-bg-card);
   border-radius: 16rpx;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .modal-head {
@@ -139,10 +172,13 @@
   font-weight: 600;
   color: var(--color-text-primary);
   border-bottom: 1rpx solid #f0f0f0;
+  flex-shrink: 0;
 }
 
 .modal-body {
   padding: 20rpx;
+  overflow-y: auto;
+  flex: 1;
 }
 
 .modal-row {
@@ -163,9 +199,42 @@
 }
 
 .modal-input {
-  flex: 1;
-  text-align: right;
+  width: 120rpx;
+  text-align: center;
   font-size: 24rpx;
+  border: 1rpx solid var(--color-border, #e5e7eb);
+  border-radius: 8rpx;
+  padding: 8rpx 10rpx;
+}
+
+.quantity-picker {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.qty-btn {
+  min-width: 48rpx;
+  height: 48rpx;
+  line-height: 48rpx;
+  text-align: center;
+  border-radius: 8rpx;
+  border: 1rpx solid var(--color-border, #e5e7eb);
+  color: var(--color-text-primary);
+  font-size: 28rpx;
+}
+
+.qty-max-btn {
+  min-width: 72rpx;
+  height: 48rpx;
+  line-height: 48rpx;
+  text-align: center;
+  border-radius: 8rpx;
+  background-color: var(--color-primary-light, #e6f7ff);
+  color: var(--color-primary);
+  font-size: 22rpx;
 }
 
 .modal-textarea {
@@ -178,6 +247,7 @@
 .modal-actions {
   display: flex;
   border-top: 1rpx solid #f0f0f0;
+  flex-shrink: 0;
 }
 
 .btn {
@@ -198,4 +268,144 @@
 
 .btn.disabled {
   color: var(--color-text-disabled);
+}
+
+/* SKU列表样式 */
+.sku-section {
+  margin: 20rpx 0;
+  padding: 16rpx;
+  background-color: #f8f9fa;
+  border-radius: 12rpx;
+}
+
+.section-title {
+  font-size: 26rpx;
+  color: var(--color-text-primary);
+  font-weight: 600;
+  margin-bottom: 16rpx;
+}
+
+.loading-skus, .empty-skus {
+  text-align: center;
+  padding: 40rpx 0;
+  color: var(--color-text-disabled);
+  font-size: 24rpx;
+}
+
+.sku-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.sku-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--color-bg-card);
+  padding: 12rpx 16rpx;
+  border-radius: 8rpx;
+  border: 1rpx solid #e5e7eb;
+}
+
+.sku-info {
+  flex: 1;
+}
+
+.sku-header {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 6rpx;
+}
+
+.sku-color {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--color-primary);
+  background-color: #e6f7ff;
+  padding: 2rpx 12rpx;
+  border-radius: 4rpx;
+}
+
+.sku-size {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #52c41a;
+  background-color: #f6ffed;
+  padding: 2rpx 12rpx;
+  border-radius: 4rpx;
+}
+
+.sku-stock {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.stock-label {
+  font-size: 22rpx;
+  color: var(--color-text-disabled);
+}
+
+.stock-value {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: #52c41a;
+}
+
+.sku-qty-input {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.qty-input {
+  width: 100rpx;
+  height: 56rpx;
+  text-align: center;
+  font-size: 26rpx;
+  border: 2rpx solid var(--color-primary);
+  border-radius: 8rpx;
+  background-color: #fff;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.max-btn {
+  min-width: 64rpx;
+  height: 56rpx;
+  line-height: 56rpx;
+  text-align: center;
+  border-radius: 8rpx;
+  background-color: var(--color-primary);
+  color: #fff;
+  font-size: 20rpx;
+  font-weight: 600;
+}
+
+/* 汇总信息 */
+.summary-section {
+  margin: 20rpx 0;
+  padding: 16rpx;
+  background-color: #e6f7ff;
+  border-radius: 8rpx;
+  border: 1rpx solid #91d5ff;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.summary-label {
+  font-size: 26rpx;
+  color: var(--color-text-secondary);
+}
+
+.summary-value {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: var(--color-primary);
 }

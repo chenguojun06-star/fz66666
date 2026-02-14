@@ -90,6 +90,9 @@ logging:
     org.springframework.security: warn
     org.apache.ibatis: warn
     com.baomidou.mybatisplus: warn
+    # 查询类Controller日志降级（减少噪音）
+    com.fashion.supplychain.warehouse.controller: WARN
+    com.fashion.supplychain.dashboard: WARN
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [requestId:%X{requestId:-}] %logger{36} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [requestId:%X{requestId:-}] %logger{36} - %msg%n"

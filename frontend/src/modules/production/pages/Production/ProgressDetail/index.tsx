@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Card, Form, Grid, Input, InputNumber, Modal, Select, Space, Tag, Typography } from 'antd';
+import { App, Badge, Button, Card, Form, Grid, Input, InputNumber, Modal, Popover, Select, Space, Tag, Tooltip, Typography } from 'antd';
 import { UnifiedRangePicker } from '@/components/common/UnifiedDatePicker';
-import { AppstoreOutlined, UnorderedListOutlined, PrinterOutlined, ReloadOutlined } from '@ant-design/icons';
+import { AppstoreOutlined, UnorderedListOutlined, PrinterOutlined, ReloadOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useLocation } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -21,7 +21,7 @@ import api, { generateRequestId, isDuplicateScanMessage, isOrderFrozenByStatus, 
 import { isSupervisorOrAboveUser as isSupervisorOrAboveUserFn, useAuth } from '@/utils/AuthContext';
 import { useViewport } from '@/utils/useViewport';
 import { formatDateTime, formatDateTimeCompact } from '@/utils/datetime';
-import { getProgressColorStatus } from '@/utils/progressColor';
+import { getProgressColorStatus, getRemainingDaysDisplay } from '@/utils/progressColor';
 import { CuttingBundle, ProductionOrder, ProductionQueryParams, ScanRecord } from '@/types/production';
 import type { StyleProcess, TemplateLibrary } from '@/types/style';
 
@@ -141,6 +141,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
   const [dragOverNodeId, setDragOverNodeId] = useState<string | null>(null);
   const [boardStatsByOrder, setBoardStatsByOrder] = useState<Record<string, Record<string, number>>>({});
+  const [boardTimesByOrder, setBoardTimesByOrder] = useState<Record<string, Record<string, string>>>({});
   const boardStatsLoadingRef = useRef<Record<string, boolean>>({});
 
   const [progressTemplates, setProgressTemplates] = useState<TemplateLibrary[]>([]);
@@ -184,6 +185,11 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const [quickEditVisible, setQuickEditVisible] = useState(false);
   const [quickEditRecord, setQuickEditRecord] = useState<ProductionOrder | null>(null);
   const [quickEditSaving, setQuickEditSaving] = useState(false);
+
+  // 跟单员备注异常状态
+  const [remarkPopoverId, setRemarkPopoverId] = useState<string | null>(null);
+  const [remarkText, setRemarkText] = useState('');
+  const [remarkSaving, setRemarkSaving] = useState(false);
 
   // 打印功能状态
   const [printingRecord, setPrintingRecord] = useState<ProductionOrder | null>(null);
@@ -600,6 +606,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
           boardStatsByOrderRef,
           boardStatsLoadingRef,
           setBoardStatsByOrder,
+          setBoardTimesByOrder,
         });
       }
     };
@@ -1109,6 +1116,25 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     }
   };
 
+  // 跟单员备注异常保存
+  const handleRemarkSave = async (orderId: string) => {
+    setRemarkSaving(true);
+    try {
+      await productionOrderApi.quickEdit({
+        id: orderId,
+        remarks: remarkText.trim(),
+      });
+      message.success('备注已保存');
+      setRemarkPopoverId(null);
+      setRemarkText('');
+      await fetchOrders();
+    } catch (err: any) {
+      message.error(err?.response?.data?.message || '保存失败');
+    } finally {
+      setRemarkSaving(false);
+    }
+  };
+
   const handleCloseOrder = useCloseOrder({
     isSupervisorOrAbove,
     message,
@@ -1154,9 +1180,101 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       title: '跟单员',
       dataIndex: 'merchandiser',
       key: 'merchandiser',
-      width: 100,
-      ellipsis: true,
-      render: (v: unknown) => v || '-',
+      width: 120,
+      render: (v: unknown, record: ProductionOrder) => {
+        const name = String(v || '').trim();
+        const remark = String((record as Record<string, unknown>).remarks || '').trim();
+        const orderId = String(record.id || '');
+        const isOpen = remarkPopoverId === orderId;
+
+        const remarkContent = (
+          <div style={{ width: 220 }}>
+            <div style={{ fontWeight: 600, marginBottom: 8, color: '#1f2937' }}>
+              <ExclamationCircleOutlined style={{ color: '#f59e0b', marginRight: 4 }} />
+              备注异常
+            </div>
+            <Input.TextArea
+              value={isOpen ? remarkText : remark}
+              onChange={(e) => setRemarkText(e.target.value)}
+              rows={3}
+              maxLength={200}
+              showCount
+              placeholder="请输入异常备注..."
+              style={{ marginBottom: 8 }}
+            />
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <Button
+                size="small"
+                onClick={() => { setRemarkPopoverId(null); setRemarkText(''); }}
+              >
+                取消
+              </Button>
+              <Button
+                type="primary"
+                size="small"
+                loading={remarkSaving}
+                onClick={() => handleRemarkSave(orderId)}
+              >
+                保存
+              </Button>
+            </div>
+          </div>
+        );
+
+        return (
+          <div style={{ position: 'relative', lineHeight: 1.3 }}>
+            <Popover
+              content={remarkContent}
+              trigger="click"
+              open={isOpen}
+              onOpenChange={(open) => {
+                if (open) {
+                  setRemarkPopoverId(orderId);
+                  setRemarkText(remark);
+                } else {
+                  setRemarkPopoverId(null);
+                  setRemarkText('');
+                }
+              }}
+              placement="bottom"
+            >
+              <Tooltip title={remark ? `备注：${remark}` : '点击添加备注'} placement="top">
+                <div style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ fontWeight: 500, color: '#1f2937' }}>{name || '-'}</span>
+                  {remark && (
+                    <Badge
+                      dot
+                      color="#ef4444"
+                      offset={[0, -2]}
+                    >
+                      <ExclamationCircleOutlined style={{ fontSize: 12, color: '#ef4444' }} />
+                    </Badge>
+                  )}
+                </div>
+              </Tooltip>
+            </Popover>
+            {/* 备注摘要（名字下方显示） */}
+            {remark && (
+              <Tooltip title={remark} placement="bottom">
+                <div style={{
+                  fontSize: 10,
+                  color: '#ef4444',
+                  fontWeight: 500,
+                  lineHeight: 1.2,
+                  marginTop: 2,
+                  maxWidth: 100,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  cursor: 'pointer',
+                }}>
+                  {remark.length > 6 ? remark.substring(0, 6) + '...' : remark}
+                </div>
+              </Tooltip>
+            )}
+          </div>
+        );
+      },
     },
     {
       title: '下单人',
@@ -1249,8 +1367,9 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       render: (_: any, record: ProductionOrder) => {
         // 获取该订单的工序节点
         const ns = stripWarehousingNode(resolveNodesForListOrder(record, progressNodesByStyleNo, defaultNodes));
-        const totalQty = Number(record.orderQuantity) || 0;
+        const totalQty = Number(record.cuttingQuantity || record.orderQuantity) || 0;
         const nodeDoneMap = boardStatsByOrder[String(record.id || '')];
+        const nodeTimeMap = boardTimesByOrder[String(record.id || '')];
 
         // 空数据提示
         if (!ns || ns.length === 0) {
@@ -1261,11 +1380,25 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
           );
         }
 
+        // 格式化完成时间为简洁格式 MM-DD HH:mm
+        const formatCompletionTime = (timeStr: string) => {
+          if (!timeStr) return '';
+          try {
+            const d = new Date(timeStr);
+            if (isNaN(d.getTime())) return '';
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            const hh = String(d.getHours()).padStart(2, '0');
+            const mi = String(d.getMinutes()).padStart(2, '0');
+            return `${mm}-${dd} ${hh}:${mi}`;
+          } catch { return ''; }
+        };
+
         return (
           <div style={{
             display: 'flex',
             gap: 0,
-            alignItems: 'center',
+            alignItems: 'flex-start',
             justifyContent: 'space-evenly',
             padding: '12px 8px',
             width: '100%',
@@ -1279,6 +1412,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 ? Math.min(100, Math.round((completedQty / nodeQty) * 100))
                 : 0;
               const remaining = nodeQty - completedQty;
+              const completionTime = nodeTimeMap?.[nodeName] || '';
               // 将节点名称映射到节点类型
               const nodeTypeMap: Record<string, string> = {
                 '采购': 'procurement', '物料': 'procurement', '备料': 'procurement',
@@ -1299,7 +1433,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    gap: 6,
+                    gap: 2,
                     flex: 1,
                     cursor: 'pointer',
                     padding: 4,
@@ -1320,8 +1454,26 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                   )}
                   onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(59, 130, 246, 0.08)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--color-bg-base)'; }}
-                  title={`点击查看 ${nodeName} 详情`}
+                  title={completionTime ? `${nodeName} 完成时间：${completionTime}\n点击查看详情` : `点击查看 ${nodeName} 详情`}
                 >
+                  {/* 完成时间（显示在进度球上方） */}
+                  {completionTime ? (
+                    <div style={{
+                      fontSize: 10,
+                      color: percent >= 100 ? '#10b981' : '#6b7280',
+                      fontWeight: percent >= 100 ? 600 : 400,
+                      lineHeight: 1.2,
+                      textAlign: 'center',
+                      whiteSpace: 'nowrap',
+                      marginBottom: 2,
+                    }}>
+                      {formatCompletionTime(completionTime)}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 10, color: '#d1d5db', lineHeight: 1.2, marginBottom: 2 }}>
+                      --
+                    </div>
+                  )}
                   <LiquidProgressLottie
                     progress={percent}
                     size={60}
@@ -1329,30 +1481,30 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     text={`${completedQty}/${nodeQty}`}
                     color1={
                       percent >= 100
-                        ? '#9ca3af'
+                        ? '#d1d5db'
                         : (() => {
                           const shipDate = record.expectedShipDate;
-                          if (!shipDate) return 'var(--success-color)';
+                          if (!shipDate) return '#10b981';
                           const now = new Date();
                           const delivery = new Date(shipDate);
                           const diffDays = Math.ceil((delivery.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-                          if (diffDays < 0) return '#ef4444'; // 延期红色
-                          if (diffDays <= 3) return '#f59e0b'; // 预警黄色
-                          return 'var(--success-color)'; // 正常绿色
+                          if (diffDays < 0) return '#dc2626'; // 延期深红
+                          if (diffDays <= 3) return '#d97706'; // 预警橙黄
+                          return '#10b981'; // 正常翠绿
                         })()
                     }
                     color2={
                       percent >= 100
-                        ? '#d1d5db'
+                        ? '#e5e7eb'
                         : (() => {
                           const shipDate = record.expectedShipDate;
-                          if (!shipDate) return '#95de64';
+                          if (!shipDate) return '#6ee7b7';
                           const now = new Date();
                           const delivery = new Date(shipDate);
                           const diffDays = Math.ceil((delivery.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-                          if (diffDays < 0) return '#fca5a5'; // 延期红色浅色
-                          if (diffDays <= 3) return '#fbbf24'; // 预警黄色浅色
-                          return '#95de64'; // 正常绿色浅色
+                          if (diffDays < 0) return '#f87171'; // 延期浅红
+                          if (diffDays <= 3) return '#fbbf24'; // 预警浅黄
+                          return '#6ee7b7'; // 正常浅绿
                         })()
                     }
                   />
@@ -1500,26 +1652,12 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               loading={loading}
               columns={6}
               coverField="styleCover"
-              titleField="styleNo"
-              subtitleField="orderNo"
-              fields={[
-                { label: '码数', key: 'size', render: (val: unknown) => val || '-' },
-                {
-                  label: '数量', key: 'orderQuantity', render: (val: unknown) => {
-                    const qty = Number(val) || 0;
-                    return qty > 0 ? `${qty} 件` : '-';
-                  }
-                },
-                {
-                  label: '下单日期', key: 'createTime', render: (val: unknown) => {
-                    return val ? dayjs(val as string).format('YYYY-MM-DD') : '-';
-                  }
-                },
-                {
-                  label: '订单交期', key: 'plannedEndDate', render: (val: unknown) => {
-                    return val ? dayjs(val as string).format('YYYY-MM-DD') : '-';
-                  }
-                },
+              titleField="orderNo"
+              subtitleField="styleNo"
+              fields={[]}
+              fieldGroups={[
+                [{ label: '码数', key: 'size', render: (val: unknown) => val || '-' }, { label: '数量', key: 'orderQuantity', render: (val: unknown) => { const qty = Number(val) || 0; return qty > 0 ? `${qty}件` : '-'; } }],
+                [{ label: '下单', key: 'createTime', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '交期', key: 'plannedEndDate', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '剩', key: 'remainingDays', render: (val: unknown, record: Record<string, unknown>) => { const { text, color } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string); return <span style={{ color, fontWeight: 600, fontSize: '10px' }}>{text}</span>; } }]
               ]}
               progressConfig={{
                 calculate: (record: ProductionOrder) => {
@@ -1529,10 +1667,9 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 getStatus: (record: ProductionOrder) => getProgressColorStatus(record.plannedEndDate),
                 isCompleted: (record: ProductionOrder) => record.status === 'completed',
                 show: true,
-                type: 'liquid', // 液体波浪进度条
+                type: 'liquid',
               }}
               actions={(record: ProductionOrder) => [
-                // 扫码记录查看功能已移除（原详情弹窗功能）
                 {
                   key: 'print',
                   label: '打印',
@@ -1659,26 +1796,12 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               loading={loading}
               columns={6}
               coverField="styleCover"
-              titleField="styleNo"
-              subtitleField="orderNo"
-              fields={[
-                { label: '码数', key: 'size', render: (val: unknown) => val || '-' },
-                {
-                  label: '数量', key: 'orderQuantity', render: (val: unknown) => {
-                    const qty = Number(val) || 0;
-                    return qty > 0 ? `${qty} 件` : '-';
-                  }
-                },
-                {
-                  label: '下单日期', key: 'createTime', render: (val: unknown) => {
-                    return val ? dayjs(val as string).format('YYYY-MM-DD') : '-';
-                  }
-                },
-                {
-                  label: '订单交期', key: 'plannedEndDate', render: (val: unknown) => {
-                    return val ? dayjs(val as string).format('YYYY-MM-DD') : '-';
-                  }
-                },
+              titleField="orderNo"
+              subtitleField="styleNo"
+              fields={[]}
+              fieldGroups={[
+                [{ label: '码数', key: 'size', render: (val: unknown) => val || '-' }, { label: '数量', key: 'orderQuantity', render: (val: unknown) => { const qty = Number(val) || 0; return qty > 0 ? `${qty}件` : '-'; } }],
+                [{ label: '下单', key: 'createTime', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '交期', key: 'plannedEndDate', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '剩', key: 'remainingDays', render: (val: unknown, record: Record<string, unknown>) => { const { text, color } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string); return <span style={{ color, fontWeight: 600, fontSize: '10px' }}>{text}</span>; } }]
               ]}
               progressConfig={{
                 calculate: (record: ProductionOrder) => {
@@ -1688,7 +1811,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 getStatus: (record: ProductionOrder) => getProgressColorStatus(record.plannedEndDate),
                 isCompleted: (record: ProductionOrder) => record.status === 'completed',
                 show: true,
-                type: 'liquid', // 液体波浪进度条
+                type: 'liquid',
               }}
               actions={(record: ProductionOrder) => [
                 {
@@ -1869,6 +1992,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
           setPrintingRecord(null);
         }}
         styleId={printingRecord?.styleId}
+        orderId={printingRecord?.id}
+        orderNo={printingRecord?.orderNo}
         styleNo={printingRecord?.styleNo}
         styleName={printingRecord?.styleName}
         cover={printingRecord?.styleCover}

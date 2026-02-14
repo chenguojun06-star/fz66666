@@ -26,6 +26,7 @@ Page({
 
   onLoad(options) {
     const type = options.type || 'inbound';
+    const styleNo = options.styleNo || '';
     const titles = {
       inbound: '样衣入库',
       loan: '样衣借出',
@@ -33,8 +34,13 @@ Page({
     };
     this.setData({
       type,
-      title: titles[type]
+      title: titles[type],
+      'formData.styleNo': styleNo
     });
+
+    if (type === 'loan' && styleNo) {
+      this.fetchStockList(styleNo);
+    }
   },
 
   onInput(e) {

@@ -21,9 +21,6 @@ import java.util.List;
  * 3. 防止超额扫码
  *
  * 提取自 ScanRecordOrchestrator（减少约300行代码）
- *
- * @author GitHub Copilot
- * @date 2026-02-03
  */
 @Component
 @Slf4j

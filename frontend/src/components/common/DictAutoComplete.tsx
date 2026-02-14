@@ -65,7 +65,7 @@ const DictAutoComplete: React.FC<DictAutoCompleteProps> = ({
 
       setOptions(filtered);
     } catch (error) {
-      console.warn('搜索词典失败，使用空列表:', error);
+      // 搜索词典失败，使用空列表
       setOptions([]);
     } finally {
       setLoading(false);

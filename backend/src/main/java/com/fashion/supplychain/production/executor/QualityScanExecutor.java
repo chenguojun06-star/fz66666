@@ -12,12 +12,14 @@ import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.SKUService;
 import com.fashion.supplychain.production.service.ScanRecordService;
+import com.fashion.supplychain.template.service.TemplateLibraryService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,9 +33,6 @@ import java.util.Map;
  * 4. 返修处理
  *
  * 提取自 ScanRecordOrchestrator（减少约300行代码）
- *
- * @author GitHub Copilot
- * @date 2026-02-03
  */
 @Component
 @Slf4j
@@ -53,6 +52,9 @@ public class QualityScanExecutor {
 
     @Autowired
     private SKUService skuService;
+
+    @Autowired
+    private TemplateLibraryService templateLibraryService;
 
     /**
      * 执行质检扫码
@@ -87,8 +89,8 @@ public class QualityScanExecutor {
 
         inventoryValidator.validateNotExceedOrderQuantity(order, "quality", "质检", qty, bundle);
 
-        // ★ 生产前置校验：该菲号必须有至少一条生产扫码记录才能进行质检
-        validateProductionPrerequisite(order.getId(), bundle.getId());
+        // ★ 生产前置校验：车缝父节点下所有子工序都有归属人才能质检
+        validateProductionPrerequisite(order, bundle.getId());
 
         String qualityStage = parseQualityStageFromParams(params);
 
@@ -244,22 +246,58 @@ public class QualityScanExecutor {
     }
 
     /**
-     * 验证生产前置条件：该菲号必须有至少一条生产扫码记录
-     * 业务规则：生产工序（如车缝）完成后才能进入质检环节
+     * 验证生产前置条件：车缝父节点下所有子工序都有扫码记录归属人才能质检
+     * 业务规则：不管工序前后顺序，只要车缝环节里所有子工序都有归属人就可以质检
      * PC端和小程序共用此校验，确保业务逻辑一致
      */
-    private void validateProductionPrerequisite(String orderId, String bundleId) {
+    private void validateProductionPrerequisite(ProductionOrder order, String bundleId) {
+        String orderId = order == null ? null : order.getId();
         if (!hasText(orderId) || !hasText(bundleId)) {
             return;
         }
         try {
-            long productionCount = scanRecordService.count(new LambdaQueryWrapper<ScanRecord>()
-                    .eq(ScanRecord::getOrderId, orderId)
-                    .eq(ScanRecord::getCuttingBundleId, bundleId)
-                    .eq(ScanRecord::getScanType, "production")
-                    .eq(ScanRecord::getScanResult, "success"));
-            if (productionCount <= 0) {
-                throw new IllegalStateException("该菲号尚未完成生产扫码，不能进行质检。请先完成生产工序（如车缝）后再质检");
+            // 1. 从工序模板获取车缝父节点下的所有子工序
+            String styleNo = order.getStyleNo();
+            List<String> sewingSubProcesses = resolveSewingSubProcesses(styleNo);
+
+            if (sewingSubProcesses.isEmpty()) {
+                // 模板未配置或无车缝子工序，降级为至少有1条生产记录
+                long productionCount = scanRecordService.count(new LambdaQueryWrapper<ScanRecord>()
+                        .eq(ScanRecord::getOrderId, orderId)
+                        .eq(ScanRecord::getCuttingBundleId, bundleId)
+                        .eq(ScanRecord::getScanType, "production")
+                        .eq(ScanRecord::getScanResult, "success")
+                        .isNotNull(ScanRecord::getOperatorId));
+                if (productionCount <= 0) {
+                    throw new IllegalStateException("温馨提示：该菲号还未完成生产扫码哦～请先完成生产工序（如车缝）后再进行质检");
+                }
+                return;
+            }
+
+            // 2. 检查每个车缝子工序是否都有扫码记录归属人
+            List<String> missingProcesses = new ArrayList<>();
+            for (String processName : sewingSubProcesses) {
+                long count = scanRecordService.count(new LambdaQueryWrapper<ScanRecord>()
+                        .eq(ScanRecord::getOrderId, orderId)
+                        .eq(ScanRecord::getCuttingBundleId, bundleId)
+                        .eq(ScanRecord::getScanType, "production")
+                        .eq(ScanRecord::getScanResult, "success")
+                        .isNotNull(ScanRecord::getOperatorId)
+                        .and(w -> w
+                                .eq(ScanRecord::getProcessCode, processName)
+                                .or()
+                                .eq(ScanRecord::getProcessName, processName)
+                                .or()
+                                .eq(ScanRecord::getProgressStage, processName)));
+                if (count <= 0) {
+                    missingProcesses.add(processName);
+                }
+            }
+
+            if (!missingProcesses.isEmpty()) {
+                throw new IllegalStateException(
+                        "温馨提示：车缝工序还未全部完成哦～以下子工序还需要扫码：" + String.join("、", missingProcesses)
+                                + "。完成这些工序后就可以进行质检啦！");
             }
         } catch (IllegalStateException e) {
             throw e;
@@ -267,6 +305,38 @@ public class QualityScanExecutor {
             log.warn("检查生产前置条件失败: orderId={}, bundleId={}", orderId, bundleId, e);
             // 查询异常时不阻断业务，仅记录日志
         }
+    }
+
+    /**
+     * 从工序模板中解析车缝父节点下的所有子工序名称
+     * 模板JSON格式：{"steps":[{"processName":"上领","progressStage":"车缝",...}]}
+     */
+    private List<String> resolveSewingSubProcesses(String styleNo) {
+        List<String> result = new ArrayList<>();
+        if (!hasText(styleNo) || templateLibraryService == null) {
+            return result;
+        }
+        try {
+            List<Map<String, Object>> nodes = templateLibraryService.resolveProgressNodeUnitPrices(styleNo);
+            if (nodes == null || nodes.isEmpty()) {
+                return result;
+            }
+            for (Map<String, Object> node : nodes) {
+                if (node == null) continue;
+                String progressStage = node.get("progressStage") == null ? "" : node.get("progressStage").toString().trim();
+                String processName = node.get("name") == null ? "" : node.get("name").toString().trim();
+                if (!hasText(processName)) continue;
+                // 判断是否属于车缝父节点（使用同义词匹配）
+                if (templateLibraryService.progressStageNameMatches(progressStage, "车缝")
+                        || templateLibraryService.progressStageNameMatches(progressStage, "缝制")
+                        || templateLibraryService.progressStageNameMatches(progressStage, "生产")) {
+                    result.add(processName);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("解析车缝子工序失败: styleNo={}", styleNo, e);
+        }
+        return result;
     }
 
     /**

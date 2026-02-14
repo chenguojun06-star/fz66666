@@ -108,10 +108,17 @@ class ScanHandler {
    * @returns {string} 扫码模式（bundle/order/sku/pattern）
    */
   _determineScanMode(parsedData) {
-    if (parsedData.isPatternQR) {
+    const qrType = String(parsedData.qrType || '').trim().toLowerCase();
+    const hasPatternId = !!String(parsedData.patternId || '').trim();
+    const looksLikePatternCode = /^pattern[-:_#]/i.test(String(parsedData.scanCode || '').trim());
+    const hasOrderNo = !!String(parsedData.orderNo || '').trim();
+    const hasBundleNo = !!String(parsedData.bundleNo || '').trim();
+    const hasSkuMarker = !!String(parsedData.color || '').trim() && !!String(parsedData.size || '').trim();
+
+    if (parsedData.isPatternQR || qrType === 'pattern' || hasPatternId || looksLikePatternCode) {
       return this.SCAN_MODE.PATTERN;
     }
-    if (parsedData.isOrderQR) {
+    if (parsedData.isOrderQR || (hasOrderNo && !hasBundleNo && !hasSkuMarker)) {
       return this.SCAN_MODE.ORDER;
     }
     if (parsedData.isSkuQR) {
@@ -129,10 +136,50 @@ class ScanHandler {
   async _handleProcurementMode(parsedData, orderDetail) {
 
     try {
-      const materialPurchases = await this.api.production.getMaterialPurchases({
+      const rawResult = await this.api.production.getMaterialPurchases({
         orderNo: parsedData.orderNo,
       });
 
+      // 兼容：API可能返回数组或分页对象 { records: [...] }
+      let materialPurchases = Array.isArray(rawResult)
+        ? rawResult
+        : (rawResult && Array.isArray(rawResult.records) ? rawResult.records : []);
+
+      // 兜底：当采购单为空时，从BOM清单获取物料信息作为只读参考
+      let bomFallback = false;
+      if (materialPurchases.length === 0 && orderDetail) {
+        const styleId = orderDetail.styleId || orderDetail.style_id;
+        if (styleId) {
+          try {
+            // 使用构造函数注入的 this.api（包含 style 模块）
+            const bomList = await this.api.style.getBomList({ styleId });
+            if (Array.isArray(bomList) && bomList.length > 0) {
+              materialPurchases = bomList.map((item, idx) => ({
+                id: item.id || `bom_${idx}`,
+                materialName: item.materialName || '未知物料',
+                materialCode: item.materialCode || '',
+                materialType: item.materialType || '',
+                specifications: item.specification || '',
+                unit: item.unit || '米',
+                purchaseQuantity: item.usageAmount || 0,
+                arrivedQuantity: 0,
+                pendingQuantity: item.usageAmount || 0,
+                unitPrice: item.unitPrice,
+                remark: item.remark || '',
+                _fromBom: true, // 标记来源为BOM
+              }));
+              bomFallback = true;
+            }
+          } catch (_bomErr) {
+            console.warn('[ScanHandler] 获取BOM清单失败:', _bomErr);
+          }
+        }
+      }
+
+      // 计算订单总数量
+      const orderQty = parsedData.quantity
+        || orderDetail.quantity || orderDetail.totalQuantity
+        || orderDetail.totalNum || orderDetail.orderQuantity || 0;
 
       return {
         success: true,
@@ -140,11 +187,13 @@ class ScanHandler {
         scanMode: this.SCAN_MODE.ORDER,
         data: {
           ...parsedData,
-          materialPurchases: materialPurchases || [],
+          quantity: Number(orderQty) || 0,
+          materialPurchases: materialPurchases,
+          bomFallback: bomFallback,
           progressStage: '采购',
           orderDetail: orderDetail,
         },
-        message: '请确认面料采购明细',
+        message: bomFallback ? '未找到采购单，已显示BOM物料信息' : '请确认面料采购明细',
       };
     } catch (e) {
       console.error('[ScanHandler] 查询面料采购单失败:', e);
@@ -174,13 +223,22 @@ class ScanHandler {
     let materialPurchases = [];
     if (nextStage === '采购') {
       try {
-        materialPurchases = await this.api.production.getMaterialPurchases({
+        const rawResult = await this.api.production.getMaterialPurchases({
           orderNo: parsedData.orderNo,
         });
+        // 兼容：API可能返回数组或分页对象 { records: [...] }
+        materialPurchases = Array.isArray(rawResult)
+          ? rawResult
+          : (rawResult && Array.isArray(rawResult.records) ? rawResult.records : []);
       } catch (e) {
         console.error('[ScanHandler] 补获采购单失败:', e);
       }
     }
+
+    // 计算订单总数量（parsedData中可能没有quantity）
+    const orderQty = parsedData.quantity
+      || orderDetail.quantity || orderDetail.totalQuantity
+      || orderDetail.totalNum || orderDetail.orderQuantity || 0;
 
     return {
       success: true,
@@ -188,6 +246,7 @@ class ScanHandler {
       scanMode: this.SCAN_MODE.ORDER,
       data: {
         ...parsedData,
+        quantity: Number(orderQty) || 0,
         skuItems: orderDetail.items,
         progressStage: nextStage,
         materialPurchases: materialPurchases,
@@ -314,39 +373,23 @@ class ScanHandler {
       throw new Error('无法识别当前工序,请联系管理员');
     }
 
-    // ⚠️ 质检工序必须扫描菲号二维码
-    // 因为质检是按菲号（每扎）进行的，不是按整个订单
-    if (stageResult.scanType === 'quality' && scanMode === this.SCAN_MODE.ORDER) {
-      throw new Error('⚠️ 质检请扫描裁剪单上的菲号二维码');
+    // 质检类型特殊处理
+    if (this.scanType === 'quality' && scanMode === 'ORDER') {
+      throw new Error('质检请扫描菲号二维码');
     }
 
-    // ⚠️ 入库工序需要走质检入库流程（需要选择仓库）
-    // 入库必须扫描菲号二维码，并打开入库弹窗
-    if (stageResult.scanType === 'warehouse') {
-      if (scanMode === this.SCAN_MODE.ORDER) {
-        throw new Error('⚠️ 入库请扫描裁剪单上的菲号二维码');
-      }
-      // 如果已经入库完成，抛出特殊提示（不是错误）
-      if (stageResult.isCompleted) {
-        const err = new Error(stageResult.hint || '该菲号已入库完成');
-        err.isCompleted = true; // 标记为已完成状态，页面会显示成功提示
-        throw err;
-      }
-      // 抛出特殊错误，让页面打开入库弹窗
-      const err = new Error('需要入库确认');
-      err.needWarehousing = true;
-      err.warehousingData = {
+    // 入库类型特殊处理 - 触发手动入库弹窗
+    if (this.scanType === 'warehouse') {
+      // 标记需要手动入库，返回给页面处理
+      return {
+        success: true,
+        needWarehousing: true,
         orderNo: parsedData.orderNo,
-        orderId: orderDetail?.id,
         bundleNo: parsedData.bundleNo,
-        bundleId: parsedData.bundleId,
-        color: parsedData.color,
-        size: parsedData.size,
-        quantity: stageResult.quantity || parsedData.quantity || 1,
-        styleName: orderDetail?.styleName,
-        styleNo: orderDetail?.styleNo,
+        quantity: stageResult.quantity || parsedData.quantity,
+        processName: stageResult.processName,
+        stageResult,
       };
-      throw err;
     }
 
     if (stageResult.isDuplicate) {
@@ -454,6 +497,41 @@ class ScanHandler {
   }
 
   /**
+   * 归一化订单号（移除分隔符，兼容常见字段）
+   * @private
+   * @param {any} value - 原始订单号
+   * @returns {string} 标准订单号
+   */
+  _normalizeOrderNo(value) {
+    const raw = String(value || '').trim();
+    if (!raw) {
+      return '';
+    }
+    return raw.replace(/[-_]/g, '');
+  }
+
+  /**
+   * 从订单详情中提取订单号（兼容多字段）
+   * @private
+   * @param {Object} orderDetail - 订单详情
+   * @returns {string} 订单号
+   */
+  _extractOrderNoFromDetail(orderDetail) {
+    if (!orderDetail) {
+      return '';
+    }
+    return this._normalizeOrderNo(
+      orderDetail.orderNo ||
+        orderDetail.order_no ||
+        orderDetail.productionOrderNo ||
+        orderDetail.production_order_no ||
+        orderDetail.orderCode ||
+        orderDetail.order_code ||
+        '',
+    );
+  }
+
+  /**
    * 获取订单详情并处理各扫码模式的特殊逻辑
    * @private
    * @param {string} scanMode - 扫码模式
@@ -462,9 +540,24 @@ class ScanHandler {
    * @returns {Promise<Object>} 结果 { orderDetail, earlyReturn? }
    */
   async _resolveOrderAndMode(scanMode, parsedData, manualScanType) {
-    const orderDetail = await this._getOrderDetail(parsedData.orderNo);
+    const parsedOrderNo = this._normalizeOrderNo(parsedData.orderNo);
+    if (parsedOrderNo) {
+      parsedData.orderNo = parsedOrderNo;
+    }
+
+    const orderDetail = await this._getOrderDetail(parsedData.orderNo, parsedData.orderId);
     if (!orderDetail) {
       return { earlyReturn: this._errorResult('订单不存在或已删除') };
+    }
+
+    // 保证 parsedData/orderDetail 的订单号字段一致且不为空
+    const detailOrderNo = this._extractOrderNoFromDetail(orderDetail);
+    const finalOrderNo = this._normalizeOrderNo(parsedData.orderNo || detailOrderNo);
+    if (finalOrderNo) {
+      parsedData.orderNo = finalOrderNo;
+      if (!orderDetail.orderNo) {
+        orderDetail.orderNo = finalOrderNo;
+      }
     }
 
     try {
@@ -505,6 +598,12 @@ class ScanHandler {
    * @returns {Object} 确认结果
    */
   _buildConfirmResult({ scanMode, parsedData, stageResult, scanData, orderDetail }) {
+    // 订单扫码时 quantity 可能为空，从 orderDetail 中取订单总数量
+    const quantity = stageResult.quantity
+      || parsedData.quantity
+      || (orderDetail && (orderDetail.orderQuantity || orderDetail.totalQuantity || orderDetail.quantity))
+      || 0;
+
     return {
       success: true,
       needConfirmProcess: true,
@@ -513,7 +612,7 @@ class ScanHandler {
         scanMode,
         orderNo: parsedData.orderNo,
         bundleNo: parsedData.bundleNo,
-        quantity: stageResult.quantity || parsedData.quantity,
+        quantity: quantity,
         processName: stageResult.processName,
         progressStage: stageResult.progressStage,
         scanType: stageResult.scanType,
@@ -552,11 +651,29 @@ class ScanHandler {
    * 获取订单详情（带缓存）
    * @private
    * @param {string} orderNo - 订单号
-   * @returns {Promise<Object|null>} 订单详情
+   * @param {string} [orderId] - 订单ID（UUID，备用）
+   * @returns {Promise<Object|null>} 订单详情（单条记录）
    */
-  async _getOrderDetail(orderNo) {
+  async _getOrderDetail(orderNo, orderId) {
+    // 防护：两个标识都为空时直接返回 null，避免空参数调用列表 API
+    if (!orderNo && !orderId) {
+      return null;
+    }
+
     try {
-      const res = await this.api.production.orderDetailByOrderNo(orderNo);
+      let res;
+      if (orderNo) {
+        res = await this.api.production.orderDetailByOrderNo(orderNo);
+      } else {
+        // 通过 orderId (UUID) 查询
+        res = await this.api.production.orderDetail(orderId);
+      }
+
+      // 解包分页响应：orderDetailByOrderNo 实际调用 /list，返回 Page 对象
+      if (res && res.records && Array.isArray(res.records)) {
+        return res.records.length > 0 ? res.records[0] : null;
+      }
+
       return res || null;
     } catch (e) {
       console.error('[ScanHandler] 获取订单失败:', e);
@@ -573,7 +690,31 @@ class ScanHandler {
    * @returns {Promise<Object|null>} 工序检测结果
    */
   async _detectStage(scanMode, parsedData, orderDetail) {
+    const currentProcessName = String(
+      (orderDetail && (orderDetail.currentProcessName || orderDetail.current_process_name)) || '',
+    ).trim();
+    const hasBundleNo = !!String((parsedData && parsedData.bundleNo) || '').trim();
+    const hasOrderNo = !!String((parsedData && parsedData.orderNo) || '').trim();
+
     if (scanMode === this.SCAN_MODE.BUNDLE) {
+      // 防护：orderNo 为空时不应进入菲号路径
+      if (!hasOrderNo) {
+        console.warn('[ScanHandler] BUNDLE模式但orderNo为空，无法检测工序');
+        throw new Error('订单号为空，请检查二维码格式');
+      }
+      // 防回归护栏：采购/裁剪阶段不应走菲号路径
+      if (!hasBundleNo && (currentProcessName === '采购' || currentProcessName === '裁剪')) {
+        console.warn(
+          `[ScanHandler] 检测到疑似误路由: 当前阶段[${currentProcessName}]却进入BUNDLE分支, 已回退到订单工序检测`,
+          {
+            orderNo: parsedData?.orderNo,
+            scanCode: parsedData?.scanCode,
+            bundleNo: parsedData?.bundleNo,
+          },
+        );
+        return await this.stageDetector.detectNextStage(orderDetail);
+      }
+
       // 菲号模式：使用精确的扫码次数匹配
       return await this.stageDetector.detectByBundle(
         parsedData.orderNo,
@@ -644,7 +785,10 @@ class ScanHandler {
       progressStage: stageResult.progressStage,
       scanType: stageResult.scanType,
 
-      // 🔧 新增：质检子步骤（领取/验收/确认）
+      // 工序单价（从订单动态配置加载，PC端设定多少就是多少）
+      unitPrice: Number(stageResult.unitPrice || 0),
+
+      // 质检子步骤（领取/验收/确认）
       qualityStage: stageResult.qualityStage || '',
 
       // 订单信息
@@ -684,8 +828,7 @@ class ScanHandler {
       sewing: { processName: '车缝', progressStage: '车缝', scanType: 'production' },
       ironing: { processName: '整烫', progressStage: '整烫', scanType: 'production' },
       packaging: { processName: '包装', progressStage: '包装', scanType: 'production' },
-      quality: { processName: '质检', progressStage: '质检', scanType: 'quality' },
-      warehouse: { processName: '入库', progressStage: '入库', scanType: 'warehouse' },
+      // "质检"/"入库"不再特殊处理，全部按 production 计件
     };
     return map[st] || null;
   }

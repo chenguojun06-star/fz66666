@@ -38,6 +38,7 @@ export interface UniversalCardViewProps {
   titleField: string; // 标题字段名
   subtitleField?: string; // 副标题字段名
   fields: CardField[]; // 显示的字段配置
+  fieldGroups?: CardField[][]; // 自定义字段分组（二维数组），优先级高于fields
   progressConfig?: CardProgressConfig; // 进度条配置
   actions?: (record: any) => CardAction[]; // 操作按钮配置
   coverPlaceholder?: string; // 封面占位文字
@@ -52,6 +53,7 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
   titleField,
   subtitleField,
   fields,
+  fieldGroups,
   progressConfig,
   actions,
   coverPlaceholder = '暂无图片',
@@ -88,8 +90,11 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
     return `${field.prefix || ''}${value}${field.suffix || ''}`;
   };
 
-  // 分组字段（每行2个）
+  // 分组字段（默认每行2个，或使用自定义分组）
   const groupFields = (fields: CardField[]) => {
+    if (fieldGroups && fieldGroups.length > 0) {
+      return fieldGroups; // 使用自定义分组
+    }
     const groups: CardField[][] = [];
     for (let i = 0; i < fields.length; i += 2) {
       groups.push(fields.slice(i, i + 2));
@@ -139,7 +144,7 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
             >
               <div className="universal-card-body">
                 {/* 标题和副标题在同一行 */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '2px' }}>
                   <h3 className="universal-card-title" style={{ margin: 0, flex: 1, minWidth: 0 }}>
                     {record[titleField]}
                   </h3>
@@ -156,9 +161,9 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
                     {group.map((field) => (
                       <div className="universal-card-field" key={field.key}>
                         <span className="field-label">{field.label}:</span>
-                        <span className="field-value">
+                        <div className="field-value">
                           {renderFieldValue(field, record)}
-                        </span>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -167,16 +172,15 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
                 {/* 进度条作为分割线（可选） */}
                 {progressConfig?.show !== false && progressConfig && typeof progressConfig.calculate === 'function' && (
                   <div style={{
-                    marginTop: '8px',
-                    marginBottom: '4px',
-                    animation: 'progressFadeIn 0.6s ease-out'
+                    marginTop: '4px',
+                    marginBottom: '2px',
+                    animation: 'progressFadeIn 0.5s ease-out'
                   }}>
                     {progressConfig.type === 'liquid' ? (
-                      // 液体波浪进度条 - 加粗版本，百分比在内部
                       <LiquidProgressBar
                         percent={progressConfig.calculate(record)}
                         width="100%"
-                        height={20}
+                        height={10}
                         status={progressConfig.getStatus?.(record)}
                         isCompleted={progressConfig.isCompleted?.(record)}
                       />
@@ -198,12 +202,12 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
 
                 {/* 操作按钮 - 直接显示文字按钮 */}
                 {actionButtons.length > 0 && (
-                  <div className="universal-card-actions" style={{ borderTop: 'none', paddingTop: '2px', marginTop: '2px' }}>
-                    <Space size="small">
+                  <div className="universal-card-actions">
+                    <Space size={4}>
                       {actionButtons.map((action) => (
                         <Button
                           key={action.key}
-                          type={action.danger ? 'link' : 'link'}
+                          type="link"
                           danger={action.danger}
                           size="small"
                           onClick={(e) => {
@@ -211,8 +215,8 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
                             action.onClick?.(record);
                           }}
                           style={{
-                            fontSize: '13px',
-                            padding: '0 8px',
+                            fontSize: '12px',
+                            padding: '0 6px',
                             height: 'auto'
                           }}
                         >

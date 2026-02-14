@@ -1406,3 +1406,12 @@ body {
   --color-info: #1890ff;         /* 信息/进行中 */
   --color-processing: #1890ff;   /* 处理中（与 info 相同） */
 }
+
+/* === 转单弹窗：已领取/已质检菲号灰色样式 === */
+.transfer-bundle-row-disabled td {
+  color: var(--color-text-quaternary, #bfbfbf) !important;
+  background: var(--color-bg-layout, #f5f5f5) !important;
+}
+.transfer-bundle-row-disabled:hover td {
+  background: var(--color-bg-layout, #f0f0f0) !important;
+}

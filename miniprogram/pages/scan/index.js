@@ -18,10 +18,7 @@ import api from '../../utils/api';
 import { DEBUG_MODE } from '../../config';
 import { getToken, getStorageValue, getUserInfo } from '../../utils/storage';
 import { errorHandler } from '../../utils/errorHandler';
-import { toast, toastAndRedirect } from '../../utils/uiHelper';
-
-// 语音管理器
-const { voiceManager } = require('../../utils/voiceManager');
+import { toast, toastAndRedirect, safeNavigate } from '../../utils/uiHelper';
 
 // 抽取的业务 Handler（从 index.js 拆分）
 const QualityHandler = require('./handlers/QualityHandler');
@@ -126,20 +123,6 @@ Page({
     quantity: '',
     warehouse: '',
 
-    // 扫码类型选项 (与PC端保持一致)
-    scanTypeOptions: [
-      { label: '自动识别', value: 'auto' },
-      { label: '采购', value: 'procurement' },
-      { label: '裁剪', value: 'cutting' },
-      { label: '车缝', value: 'production' },
-      { label: '整烫', value: 'ironing' },
-      { label: '包装', value: 'packaging' },
-      { label: '质检', value: 'quality' },
-      { label: '入库', value: 'warehouse' },
-      { label: '查库存', value: 'stock' },
-    ],
-    scanTypeIndex: 0,
-
     // 扫码结果 (兼容 WXML)
     lastResult: null,
     scanHistory: [], // 本地历史记录
@@ -155,15 +138,9 @@ Page({
       orderNo: '',
       bundleNo: '',
       styleNo: '',
-      // 工序选择
-      processOptions: [
-        { label: '裁剪', value: '裁剪', scanType: 'cutting' },
-        { label: '车缝', value: '车缝', scanType: 'production' },
-        { label: '大烫', value: '大烫', scanType: 'production' },
-        { label: '质检', value: '质检', scanType: 'quality' },
-        { label: '包装', value: '包装', scanType: 'production' },
-        { label: '入库', value: '入库', scanType: 'warehouse' },
-      ],
+      // 工序选择（动态从后端API加载，每个订单不同）
+      processOptions: [],
+      unitPrice: 0,
       processIndex: 0,
       // 原始数据（用于提交）
       scanData: null,
@@ -210,13 +187,18 @@ Page({
       cuttingTasks: [],
     },
 
-    // 确认弹窗
+    // 确认弹窗（所有属性必须在初始 data 中声明，否则渲染层会报
+    // "Expected updated data but get first rendering data"）
     scanConfirm: {
       visible: false,
       loading: false,
       remain: 0,
       detail: null,
       skuList: [],
+      summary: {},
+      cuttingTasks: [],
+      materialPurchases: [],
+      cuttingTaskReceived: false,
       // 采购任务: 是否来自"我的任务"列表（已领取，只需提交）
       fromMyTasks: false,
     },
@@ -248,9 +230,11 @@ Page({
       styleNo: '',
       color: '',
       quantity: 0,
+      warehouseCode: '',
       status: '',
       operationType: '',
       operationLabel: '',
+      operationOptions: [],
       designer: '',
       patternDeveloper: '',
       deliveryTime: '',
@@ -509,6 +493,18 @@ Page({
   toggleSizeExpand(e) { HistoryHandler.toggleSizeExpand(this, e); },
   onHandleQuality(e) { HistoryHandler.onHandleQuality(this, e); },
 
+  // ==================== 快捷导航（历史记录 / 当月记录） ====================
+  onGoToHistory() {
+    safeNavigate({ url: '/pages/scan/history/index' }).catch(() => {
+      // 导航失败忽略（通常是重复点击）
+    });
+  },
+  onGoToMonthly() {
+    safeNavigate({ url: '/pages/scan/monthly/index' }).catch(() => {
+      // 导航失败忽略（通常是重复点击）
+    });
+  },
+
   // ==================== 退回重扫（委托 RescanHandler）====================
   onRescanRecord(e) { RescanHandler.onRescanRecord(this, e); },
   onCancelRescan() { RescanHandler.onCancelRescan(this); },
@@ -532,20 +528,6 @@ Page({
    */
   handleRemoteScanSuccess() {
     this.loadMyPanel(true);
-  },
-
-  /**
-   * 扫码类型变更
-   * @param {Object} e - 事件对象
-   * @returns {void} 无返回值
-   */
-  onScanTypeChange(e) {
-    const index = Number(e.detail.value);
-    this.setData({ scanTypeIndex: index });
-
-    // 如果选择了特定类型，可能需要更新 handler 的配置
-    // 但目前 ScanHandler 主要通过参数传递 override type，
-    // 或者在 handleScan 时动态获取当前 type
   },
 
   /**
@@ -595,9 +577,8 @@ Page({
       return;
     }
 
-    // 获取当前选中的扫码类型
-    const scanTypeOption = this.data.scanTypeOptions[this.data.scanTypeIndex];
-    const currentScanType = scanTypeOption ? scanTypeOption.value : 'auto';
+    // 扫码类型固定为自动识别
+    const currentScanType = 'auto';
 
     // 这里的逻辑主要用于点击“扫码”按钮触发摄像头
     // 如果是 PDA 设备，可能有物理按键触发，会产生键盘事件或直接输入
@@ -702,6 +683,8 @@ Page({
     // 成功后标记去重（2秒内不再处理相同码）
     if (result && result.success) {
       markRecent(codeStr, 2000);
+      // ✅ 触发成功回调（语音+振动+UI更新）
+      this.handleScanSuccess(result);
     }
   },
 
@@ -727,7 +710,7 @@ Page({
     }
 
     toast.error(e.message || '系统异常');
-    errorHandler.handle(e);
+    errorHandler.logError(e, '_handleScanException');
   },
 
   // ==================== 库存查询（委托 StockHandler）====================
@@ -837,18 +820,6 @@ Page({
       包装: 'production',
       入库: 'warehouse',
     };
-    // 如果当前选择了特定类型，优先使用
-    const currentType = this.data.scanTypeOptions[this.data.scanTypeIndex].value;
-    if (currentType !== 'auto') {
-      if (currentType === 'ironing' || currentType === 'packaging') {
-        return 'production';
-      }
-      if (currentType === 'sewing') {
-        return 'production';
-      }
-      return currentType;
-    }
-
     return map[stageName] || 'production';
   },
 
@@ -860,9 +831,6 @@ Page({
   handleScanSuccess(result) {
     // ✅ 播放成功反馈 - 轻震动（15ms）
     wx.vibrateShort({ type: 'light' });
-
-    // ✅ 播放成功语音 - 小姐姐声音："扫码成功"
-    voiceManager.play('success');
 
     // 格式化显示结果
     const formattedResult = {
@@ -901,9 +869,6 @@ Page({
     // 播放失败音效/震动
     wx.vibrateLong();
 
-    // ✅ 播放失败语音 - 小姐姐声音："扫码失败，请重试"
-    voiceManager.play('error');
-
     const errorResult = {
       success: false,
       message: error.message || '扫码失败',
@@ -930,6 +895,7 @@ Page({
   onTapHistoryItem(e) { HistoryHandler.onTapHistoryItem(this, e); },
 
   // ==================== 扫码结果确认页（委托 ScanResultHandler）====================
+  onScanResultQuantityInput(e) { ScanResultHandler.onScanResultQuantityInput(this, e); },
   onProcessPickerChange(e) { ScanResultHandler.onProcessPickerChange(this, e); },
   async onConfirmScanResult() { return ScanResultHandler.onConfirmScanResult(this); },
 
@@ -942,6 +908,9 @@ Page({
   showPatternConfirmModal(data) { PatternHandler.showPatternConfirmModal(this, data); },
   closePatternConfirm() { PatternHandler.closePatternConfirm(this); },
   onPatternOperationChange(e) { PatternHandler.onPatternOperationChange(this, e); },
+  onPatternQuantityInput(e) { PatternHandler.onPatternQuantityInput(this, e); },
+  onPatternWarehouseInput(e) { PatternHandler.onPatternWarehouseInput(this, e); },
   onPatternRemarkInput(e) { PatternHandler.onPatternRemarkInput(this, e); },
   async submitPatternScan() { await PatternHandler.submitPatternScan(this); },
+  async submitPatternScanAll() { await PatternHandler.submitPatternScanAll(this); },
 });

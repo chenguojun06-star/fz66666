@@ -3,9 +3,11 @@ package com.fashion.supplychain.common.aop;
 import com.fashion.supplychain.system.entity.OperationLog;
 import com.fashion.supplychain.system.service.OperationLogService;
 import com.fashion.supplychain.common.UserContext;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -23,6 +25,8 @@ public class SystemOperationLogAspect {
     @Resource
     private OperationLogService operationLogService;
 
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+
     @Pointcut("within(com.fashion.supplychain..controller..*) && (@annotation(org.springframework.web.bind.annotation.PostMapping) || @annotation(org.springframework.web.bind.annotation.PutMapping) || @annotation(org.springframework.web.bind.annotation.DeleteMapping))")
     public void writeEndpoints() {}
 
@@ -39,6 +43,8 @@ public class SystemOperationLogAspect {
         String ip = request == null ? null : request.getRemoteAddr();
         String userAgent = limitLength(request == null ? null : request.getHeader("User-Agent"), 200);
         String targetId = resolveTargetId(pjp.getArgs());
+        String targetName = resolveTargetName(pjp.getArgs());
+        String details = buildDetails(method, pjp.getArgs());
         LocalDateTime now = LocalDateTime.now();
         try {
             Object result = pjp.proceed();
@@ -48,6 +54,8 @@ public class SystemOperationLogAspect {
             log.setOperatorName(operatorName);
             log.setTargetType(targetType);
             log.setTargetId(targetId);
+            log.setTargetName(targetName);
+            log.setDetails(details);
             log.setIp(ip);
             log.setUserAgent(userAgent);
             log.setOperationTime(now);
@@ -61,6 +69,8 @@ public class SystemOperationLogAspect {
             log.setOperatorName(operatorName);
             log.setTargetType(targetType);
             log.setTargetId(targetId);
+            log.setTargetName(targetName);
+            log.setDetails(details);
             log.setIp(ip);
             log.setUserAgent(userAgent);
             log.setOperationTime(now);
@@ -70,6 +80,158 @@ public class SystemOperationLogAspect {
             operationLogService.save(log);
             throw e;
         }
+    }
+
+    /**
+     * 构建详细操作信息（记录修改内容）
+     */
+    private String buildDetails(String method, Object[] args) {
+        if (args == null || args.length == 0) {
+            return null;
+        }
+
+        try {
+            Map<String, Object> detailMap = new LinkedHashMap<>();
+
+            // PUT/DELETE 记录详细变更
+            if ("PUT".equalsIgnoreCase(method) || "DELETE".equalsIgnoreCase(method)) {
+                for (Object arg : args) {
+                    if (arg == null) continue;
+
+                    // 跳过基础类型
+                    if (arg instanceof String || arg instanceof Number || arg instanceof Boolean) {
+                        continue;
+                    }
+
+                    // 记录实体对象的关键字段
+                    if (arg instanceof Map) {
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> map = (Map<String, Object>) arg;
+                        extractKeyFields(detailMap, map);
+                    } else {
+                        // 使用反射提取对象字段
+                        extractObjectFields(detailMap, arg);
+                    }
+                }
+            }
+
+            // POST 只记录关键标识
+            else if ("POST".equalsIgnoreCase(method)) {
+                for (Object arg : args) {
+                    if (arg == null) continue;
+                    if (arg instanceof Map) {
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> map = (Map<String, Object>) arg;
+                        String[] keyFields = {"id", "orderNo", "styleNo", "name", "code"};
+                        for (String key : keyFields) {
+                            if (map.containsKey(key)) {
+                                detailMap.put(key, map.get(key));
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (detailMap.isEmpty()) {
+                return null;
+            }
+
+            return objectMapper.writeValueAsString(detailMap);
+        } catch (Exception e) {
+            return null; // 构建失败不影响主流程
+        }
+    }
+
+    /**
+     * 从 Map 中提取关键字段
+     */
+    private void extractKeyFields(Map<String, Object> detailMap, Map<String, Object> source) {
+        // 关键字段列表（优先记录）
+        String[] importantFields = {
+            "id", "orderNo", "styleNo", "name", "code", "status",
+            "price", "unitPrice", "quantity", "amount", "totalAmount",
+            "oldPrice", "newPrice", "oldStatus", "newStatus",
+            "reason", "remark", "approvalStatus"
+        };
+
+        for (String field : importantFields) {
+            if (source.containsKey(field)) {
+                Object value = source.get(field);
+                if (value != null) {
+                    detailMap.put(field, value);
+                }
+            }
+        }
+    }
+
+    /**
+     * 从对象中提取字段
+     */
+    private void extractObjectFields(Map<String, Object> detailMap, Object obj) {
+        try {
+            String[] getterNames = {
+                "getId", "getOrderNo", "getStyleNo", "getName", "getCode",
+                "getPrice", "getUnitPrice", "getQuantity", "getAmount",
+                "getOldPrice", "getNewPrice", "getStatus", "getReason", "getRemark"
+            };
+
+            Class<?> clazz = obj.getClass();
+            for (String methodName : getterNames) {
+                try {
+                    var method = clazz.getMethod(methodName);
+                    Object value = method.invoke(obj);
+                    if (value != null) {
+                        String fieldName = methodName.substring(3, 4).toLowerCase() + methodName.substring(4);
+                        detailMap.put(fieldName, value);
+                    }
+                } catch (NoSuchMethodException ignored) {
+                    // 方法不存在，跳过
+                }
+            }
+        } catch (Exception ignored) {
+            // 反射失败不影响主流程
+        }
+    }
+
+    /**
+     * 解析目标名称
+     */
+    private String resolveTargetName(Object[] args) {
+        if (args == null || args.length == 0) {
+            return null;
+        }
+
+        for (Object arg : args) {
+            if (arg == null) continue;
+
+            if (arg instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> map = (Map<String, Object>) arg;
+                Object name = map.get("name");
+                if (name != null) {
+                    return String.valueOf(name);
+                }
+                Object orderNo = map.get("orderNo");
+                if (orderNo != null) {
+                    return String.valueOf(orderNo);
+                }
+                Object styleNo = map.get("styleNo");
+                if (styleNo != null) {
+                    return String.valueOf(styleNo);
+                }
+            } else {
+                try {
+                    var method = arg.getClass().getMethod("getName");
+                    Object name = method.invoke(arg);
+                    if (name != null) {
+                        return String.valueOf(name);
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+        }
+
+        return null;
     }
 
     private String resolveOperator() {
@@ -165,3 +327,4 @@ public class SystemOperationLogAspect {
         return value.substring(0, max);
     }
 }
+

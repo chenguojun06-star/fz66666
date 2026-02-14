@@ -119,6 +119,33 @@ echo "  ❌ 数据不一致数量 > 0"
 echo "  ❌ 后端错误日志 > 10条/天"
 echo "  ❌ 任何服务未运行"
 echo ""
+
+echo "🔐 8. 权限漂移检查（可选）"
+if [ "${CHECK_PERMISSION_GUARD:-0}" = "1" ]; then
+  if python3 scripts/day2_permission_sample.py --mode guard > /tmp/day2_permission_guard.log 2>&1; then
+    echo "✅ 权限 guard: 通过（7/7）"
+  else
+    echo "⚠️  权限 guard: 未通过（不阻断当前脚本）"
+    echo "最近输出："
+    tail -20 /tmp/day2_permission_guard.log
+  fi
+else
+  echo "⏭️  已跳过（设置 CHECK_PERMISSION_GUARD=1 可启用）"
+fi
+
+if [ "${CHECK_PERMISSION_EXTENDED:-0}" = "1" ]; then
+  if python3 scripts/day2_permission_sample.py --mode extended > /tmp/day2_permission_extended.log 2>&1; then
+    echo "✅ 权限 extended: 通过（20/20）"
+  else
+    echo "⚠️  权限 extended: 未通过（不阻断当前脚本）"
+    echo "最近输出："
+    tail -20 /tmp/day2_permission_extended.log
+  fi
+else
+  echo "⏭️  已跳过 extended（设置 CHECK_PERMISSION_EXTENDED=1 可启用）"
+fi
+echo ""
+
 echo "可以上线的条件："
 echo "  ✅ 所有服务运行正常"
 echo "  ✅ 数据一致性良好"

@@ -30,9 +30,6 @@ import java.util.*;
  *
  * 职责：协调template模块与style模块之间的数据流转
  * 实现模板应用到款式的跨模块编排
- *
- * @author Fashion Supply Chain System
- * @since 2026-02-01
  */
 @Slf4j
 @Service
@@ -313,6 +310,9 @@ public class TemplateStyleOrchestrator {
                 bom.setStyleId(targetStyleId);
                 styleBomService.save(bom);
             }
+
+            // BOM数据变更后清理缓存，避免前端立即刷新读到旧缓存
+            styleBomService.clearBomCache(targetStyleId);
 
             return true;
         } catch (Exception e) {

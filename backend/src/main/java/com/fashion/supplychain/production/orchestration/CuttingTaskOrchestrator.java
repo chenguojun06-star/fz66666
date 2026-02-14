@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.CuttingTask;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -45,6 +46,9 @@ public class CuttingTaskOrchestrator {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
 
     public IPage<CuttingTask> queryPage(Map<String, Object> params) {
         return cuttingTaskService.queryPage(params);
@@ -220,6 +224,19 @@ public class CuttingTaskOrchestrator {
         boolean bundlesOk = cuttingBundleService.saveBatch(toSave);
         if (!bundlesOk) {
             throw new IllegalStateException("创建失败");
+        }
+
+        // 初始化工序跟踪表（修复PC端工序明细弹窗数据缺失问题）
+        try {
+            if (processTrackingOrchestrator != null) {
+                int trackingCount = processTrackingOrchestrator.initializeProcessTracking(task.getProductionOrderId());
+                log.info("裁剪完成，初始化工序跟踪：orderId={}, 菲号数={}, tracking记录数={}",
+                    task.getProductionOrderId(), toSave.size(), trackingCount);
+            } else {
+                log.warn("processTrackingOrchestrator未注入，跳过工序跟踪初始化");
+            }
+        } catch (Exception e) {
+            log.error("初始化工序跟踪失败：orderId={}", task.getProductionOrderId(), e);
         }
 
         task.setCuttingQuantity(totalQty);

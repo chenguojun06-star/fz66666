@@ -15,9 +15,6 @@ import java.util.Map;
 
 /**
  * 纸样修改记录控制器
- *
- * @author system
- * @date 2026-01-31
  */
 @RestController
 @RequestMapping("/api/pattern-revision")

@@ -161,11 +161,11 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
             }
             boolean blocked = helper.isBundleBlockedForWarehousing(bundle.getStatus());
             if (blocked && !STATUS_QUALIFIED.equalsIgnoreCase(computedQualityStatus)) {
-                throw new IllegalStateException("该菲号为次品待返修，返修完成后才可入库");
+                throw new IllegalStateException("温馨提示：该菲号是次品待返修状态，返修完成后才可以入库哦～");
             }
             if (blocked && STATUS_QUALIFIED.equalsIgnoreCase(computedQualityStatus)
                     && !StringUtils.hasText(repairRemark)) {
-                throw new IllegalStateException("该菲号为次品待返修，请填写返修备注后再质检入库");
+                throw new IllegalStateException("温馨提示：该菲号是次品待返修状态，请填写返修备注后再进行质检入库");
             }
             if (blocked && STATUS_QUALIFIED.equalsIgnoreCase(computedQualityStatus)
                     && StringUtils.hasText(repairRemark)) {
@@ -457,11 +457,11 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
 
                 boolean blocked = helper.isBundleBlockedForWarehousing(bundle.getStatus());
                 if (blocked && !STATUS_QUALIFIED.equalsIgnoreCase(computedQualityStatus)) {
-                    throw new IllegalStateException("该菲号为次品待返修，返修完成后才可入库");
+                    throw new IllegalStateException("温馨提示：该菲号是次品待返修状态，返修完成后才可以入库哦～");
                 }
                 if (blocked && STATUS_QUALIFIED.equalsIgnoreCase(computedQualityStatus)
                         && !StringUtils.hasText(repairRemark)) {
-                    throw new IllegalStateException("该菲号为次品待返修，请填写返修备注后再质检入库");
+                    throw new IllegalStateException("温馨提示：该菲号是次品待返修状态，请填写返修备注后再进行质检入库");
                 }
                 if (blocked && STATUS_QUALIFIED.equalsIgnoreCase(computedQualityStatus)
                         && StringUtils.hasText(repairRemark)) {

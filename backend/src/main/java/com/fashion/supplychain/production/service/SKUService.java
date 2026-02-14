@@ -7,21 +7,18 @@ import java.util.List;
 
 /**
  * SKU服务接口
- * 
+ *
  * 功能:
  * 1. SKU数据标准化和验证
  * 2. SKU扫码模式检测 (ORDER/BUNDLE/SKU)
  * 3. SKU进度追踪
  * 4. SKU统计和分析
- * 
- * @author GitHub Copilot
- * @date 2026-01-23
  */
 public interface SKUService {
 
     /**
      * 检测扫码模式
-     * 
+     *
      * @param scanCode 扫码结果
      * @param color 颜色
      * @param size 尺码
@@ -31,7 +28,7 @@ public interface SKUService {
 
     /**
      * 验证SKU数据
-     * 
+     *
      * @param scanRecord 扫码记录
      * @return 验证结果 (true:成功, false:失败)
      */
@@ -39,7 +36,7 @@ public interface SKUService {
 
     /**
      * 标准化SKU数据
-     * 
+     *
      * @param orderNo 订单号
      * @param styleNo 款号
      * @param color 颜色
@@ -50,7 +47,7 @@ public interface SKUService {
 
     /**
      * 获取订单的SKU列表
-     * 
+     *
      * @param orderNo 订单号
      * @return SKU列表
      */
@@ -58,7 +55,7 @@ public interface SKUService {
 
     /**
      * 获取SKU的扫码进度
-     * 
+     *
      * @param orderNo 订单号
      * @param styleNo 款号
      * @param color 颜色
@@ -69,7 +66,7 @@ public interface SKUService {
 
     /**
      * 获取订单的整体SKU进度
-     * 
+     *
      * @param orderNo 订单号
      * @return 订单级别的SKU进度
      */
@@ -77,7 +74,7 @@ public interface SKUService {
 
     /**
      * 更新SKU扫码记录
-     * 
+     *
      * @param scanRecord 扫码记录
      * @return 是否成功
      */
@@ -85,7 +82,7 @@ public interface SKUService {
 
     /**
      * 统计SKU完成情况
-     * 
+     *
      * @param params 查询参数
      * @return 分页结果
      */
@@ -93,7 +90,7 @@ public interface SKUService {
 
     /**
      * 检查SKU是否已完成
-     * 
+     *
      * @param orderNo 订单号
      * @param styleNo 款号
      * @param color 颜色
@@ -104,7 +101,7 @@ public interface SKUService {
 
     /**
      * 生成SKU报告
-     * 
+     *
      * @param orderNo 订单号
      * @return SKU报告信息
      */
@@ -112,7 +109,7 @@ public interface SKUService {
 
     /**
      * 获取订单的工序单价配置（Phase 5新增）
-     * 
+     *
      * @param orderNo 订单号
      * @return 工序单价列表 [{processName: '做领', unitPrice: 2.50}, ...]
      */
@@ -120,7 +117,7 @@ public interface SKUService {
 
     /**
      * 根据工序名称获取单价（Phase 5新增）
-     * 
+     *
      * @param orderNo 订单号
      * @param processName 工序名称 (如 '做领', '上领')
      * @return 单价 (BigDecimal)
@@ -129,7 +126,7 @@ public interface SKUService {
 
     /**
      * 为扫码记录附加工序单价信息（Phase 5新增）
-     * 
+     *
      * @param scanRecord 扫码记录
      * @return 是否成功附加
      */
@@ -137,7 +134,7 @@ public interface SKUService {
 
     /**
      * 计算订单总工价（Phase 5新增）
-     * 
+     *
      * @param orderNo 订单号
      * @return {totalUnitPrice: 单件工价合计, totalCost: 订单工价合计, quantity: 订单数量}
      */

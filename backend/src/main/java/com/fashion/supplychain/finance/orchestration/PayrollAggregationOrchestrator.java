@@ -69,8 +69,9 @@ public class PayrollAggregationOrchestrator {
             qw.le("scan_time", endTime);
         }
 
-        // 排除采购类型的扫码记录（采购不计入工资统计）
-        qw.ne("scan_type", "procurement");
+        // 工资统计只包含生产和裁剪类型的扫码记录
+        // 排除：procurement(采购)、quality(质检领取/验收/入库)、warehouse(仓储)等系统流程记录
+        qw.in("scan_type", "production", "cutting");
 
         // 应用数据权限过滤（根据角色：all=全部, team=团队, own=仅自己）
         DataPermissionHelper.applyOperatorFilter(qw, "operator_id", "operator_name");
@@ -114,15 +115,21 @@ public class PayrollAggregationOrchestrator {
                 .sum();
 
         // 优先使用 scanCost，如果为空则使用 quantity * unitPrice 计算
+        // 只统计有单价的记录到工资总额（与小程序端一致）
         BigDecimal totalAmount = records.stream()
                 .map(r -> {
+                    // 优先使用scanCost
                     if (r.getScanCost() != null && r.getScanCost().compareTo(BigDecimal.ZERO) > 0) {
                         return r.getScanCost();
                     }
                     // 如果 scanCost 为空，使用 quantity * unitPrice 计算
                     BigDecimal price = r.getUnitPrice() != null ? r.getUnitPrice() : BigDecimal.ZERO;
                     long qty = r.getQuantity() != null ? r.getQuantity() : 0;
-                    return price.multiply(BigDecimal.valueOf(qty));
+                    // 只有单价>0且数量>0才计入工资
+                    if (price.compareTo(BigDecimal.ZERO) > 0 && qty > 0) {
+                        return price.multiply(BigDecimal.valueOf(qty));
+                    }
+                    return BigDecimal.ZERO;
                 })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 

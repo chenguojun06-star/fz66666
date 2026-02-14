@@ -1579,7 +1579,8 @@ const StyleBomTab: React.FC<Props> = ({
                     columns={[
                       { title: '物料编码', dataIndex: 'materialCode', width: 140 },
                       { title: '物料名称', dataIndex: 'materialName', width: 160, ellipsis: true },
-                      { title: '类型', dataIndex: 'materialType', width: 90 },
+                      { title: '类型', dataIndex: 'materialType', width: 90,
+                        render: (v: unknown) => getMaterialTypeLabel(v) },
                       { title: '规格', dataIndex: 'specifications', width: 120, ellipsis: true },
                       { title: '单位', dataIndex: 'unit', width: 70 },
                       { title: '供应商', dataIndex: 'supplierName', width: 140, ellipsis: true },

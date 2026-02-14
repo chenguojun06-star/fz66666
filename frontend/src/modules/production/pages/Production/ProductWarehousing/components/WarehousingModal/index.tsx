@@ -12,6 +12,8 @@ interface WarehousingModalProps {
   onCancel: () => void;
   onSuccess: () => void;
   openPreview: (url: string, title: string) => void;
+  /** 从质检详情页打开时自动填充的订单号 */
+  defaultOrderNo?: string;
 }
 
 const WarehousingModal: React.FC<WarehousingModalProps> = ({
@@ -20,11 +22,12 @@ const WarehousingModal: React.FC<WarehousingModalProps> = ({
   onCancel,
   onSuccess,
   openPreview,
+  defaultOrderNo,
 }) => {
   const { modalWidth } = useViewport();
   const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
-  const hook = useWarehousingForm(visible, currentWarehousing, onCancel, onSuccess);
+  const hook = useWarehousingForm(visible, currentWarehousing, onCancel, onSuccess, defaultOrderNo);
   const { form } = hook;
 
   const ResizableModalAny = ResizableModal as any;

@@ -10,27 +10,11 @@ import {
 import ResizableModal from '@/components/common/ResizableModal';
 import PageStatCards, { StatCard } from '@/components/common/PageStatCards';
 import api from '@/utils/api';
+import { getMaterialTypeLabel } from '@/utils/materialType';
 
-/** materialType → 中文名映射 */
-const MATERIAL_TYPE_MAP: Record<string, string> = {
-  fabric: '面料',
-  fabricA: '面料A',
-  fabricB: '面料B',
-  lining: '里料',
-  liningA: '里料A',
-  liningB: '里料B',
-  liningC: '里料C',
-  accessory: '辅料',
-  accessoryA: '辅料A',
-  accessoryB: '辅料B',
-  accessoryC: '辅料C',
-  accessoryD: '辅料D',
-  accessoryE: '辅料E',
-};
-
-/** 获取物料类型中文名 */
+/** 获取物料类型中文名（委托共享工具函数） */
 const getMaterialTypeName = (type: string): string => {
-  return MATERIAL_TYPE_MAP[type] || type || '未知';
+  return getMaterialTypeLabel(type);
 };
 
 /** 获取物料类型颜色 */

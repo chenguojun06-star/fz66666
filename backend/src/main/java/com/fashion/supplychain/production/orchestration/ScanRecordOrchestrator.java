@@ -11,7 +11,9 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.helper.DuplicateScanPreventer;
 import com.fashion.supplychain.production.helper.InventoryValidator;
+import com.fashion.supplychain.production.entity.CuttingTask;
 import com.fashion.supplychain.production.service.CuttingBundleService;
+import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.SKUService;
@@ -47,8 +49,6 @@ import org.springframework.transaction.annotation.Transactional;
  * - 提取 DuplicateScanPreventer（防重复）
  * - 提取 InventoryValidator（库存验证）
  * - 从 1892 行优化到 ~1200 行
- *
- * @author GitHub Copilot
  */
 @Service
 @Slf4j
@@ -65,6 +65,9 @@ public class ScanRecordOrchestrator {
 
     @Autowired
     private CuttingBundleService cuttingBundleService;
+
+    @Autowired
+    private CuttingTaskService cuttingTaskService;
 
     @Autowired
     private ProductWarehousingService productWarehousingService;
@@ -159,19 +162,21 @@ public class ScanRecordOrchestrator {
             throw new IllegalArgumentException("scanType过长（最多20字符）");
         }
 
-        if ("warehouse".equals(scanType)) {
-            return executeWarehouseScan(safeParams, requestId, operatorId, operatorName);
-        }
-
-        if ("quality".equals(scanType)) {
-            return executeQualityScan(safeParams, requestId, operatorId, operatorName);
-        }
-
         boolean autoProcess = false;
         Integer qty = NumberUtils.toInt(safeParams.get("quantity"));
         if ("sewing".equals(scanType)) {
             scanType = "production";
             autoProcess = true;
+        }
+
+        // 质检扫码路由
+        if ("quality".equals(scanType)) {
+            return executeQualityScan(safeParams, requestId, operatorId, operatorName);
+        }
+
+        // 入库扫码路由
+        if ("warehouse".equals(scanType)) {
+            return executeWarehouseScan(safeParams, requestId, operatorId, operatorName);
         }
 
         return executeProductionScan(safeParams, requestId, operatorId, operatorName, scanType, qty, autoProcess);
@@ -348,6 +353,38 @@ public class ScanRecordOrchestrator {
                     productWarehousingOrchestrator.rollbackByBundle(body);
                 } catch (Exception e) {
                     log.warn("[rescan] 入库回滚失败，继续撤销扫码记录: recordId={}, error={}", recordId, e.getMessage());
+                }
+            }
+        }
+
+        // 判断是否为裁剪类型扫码（CUTTING_BUNDLED 记录），需要回滚裁剪菲号和任务状态
+        String reqId = hasText(target.getRequestId()) ? target.getRequestId().trim() : "";
+        boolean isCuttingBundled = reqId.startsWith("CUTTING_BUNDLED:");
+        boolean isCuttingType = "cutting".equals(scanType)
+                || "裁剪".equals(hasText(target.getProgressStage()) ? target.getProgressStage().trim() : "");
+
+        if (isCuttingBundled || isCuttingType) {
+            String oid = TextUtils.safeText(target.getOrderId());
+            if (hasText(oid)) {
+                try {
+                    // 删除该订单的所有裁剪菲号数据
+                    cuttingBundleService.remove(new LambdaQueryWrapper<CuttingBundle>()
+                            .eq(CuttingBundle::getProductionOrderId, oid));
+                    log.info("[rescan] 已删除裁剪菲号: orderId={}", oid);
+
+                    // 将裁剪任务状态从 bundled 退回到 received（保留领取人信息）
+                    CuttingTask cuttingTask = cuttingTaskService.getOne(new LambdaQueryWrapper<CuttingTask>()
+                            .eq(CuttingTask::getProductionOrderId, oid)
+                            .last("limit 1"));
+                    if (cuttingTask != null && "bundled".equalsIgnoreCase(cuttingTask.getStatus())) {
+                        cuttingTask.setStatus("received");
+                        cuttingTask.setBundledTime(null);
+                        cuttingTask.setUpdateTime(LocalDateTime.now());
+                        cuttingTaskService.updateById(cuttingTask);
+                        log.info("[rescan] 裁剪任务状态已退回到received: taskId={}, orderId={}", cuttingTask.getId(), oid);
+                    }
+                } catch (Exception e) {
+                    log.warn("[rescan] 裁剪数据回滚失败，继续撤销扫码记录: recordId={}, error={}", recordId, e.getMessage());
                 }
             }
         }
@@ -864,7 +901,62 @@ public class ScanRecordOrchestrator {
         if (hasText(name)) {
             params.put("operatorName", name.trim());
         }
-        return scanRecordService.queryPage(params);
+
+        IPage<ScanRecord> pageResult = scanRecordService.queryPage(params);
+
+        // 为裁剪类型的扫码记录填充cutting_bundle详细数据
+        List<ScanRecord> records = pageResult.getRecords();
+        if (records != null && !records.isEmpty()) {
+            for (ScanRecord record : records) {
+                if ("cutting".equals(record.getScanType()) || "\u88c1\u526a".equals(record.getProgressStage())) {
+                    enrichCuttingDetails(record);
+                }
+            }
+        }
+
+        return pageResult;
+    }
+
+    /**
+     * 为裁剪扫码记录填充cutting_bundle详细信息
+     */
+    private void enrichCuttingDetails(ScanRecord record) {
+        if (!hasText(record.getOrderId())) {
+            return;
+        }
+
+        try {
+            // 查询该订单的所有cutting_bundle
+            List<CuttingBundle> bundles = cuttingBundleService.list(
+                new LambdaQueryWrapper<CuttingBundle>()
+                    .eq(CuttingBundle::getProductionOrderId, record.getOrderId())
+                    .orderByAsc(CuttingBundle::getSize)
+            );
+
+            if (bundles != null && !bundles.isEmpty()) {
+                // 按尺码聚合数量
+                Map<String, Integer> sizeQuantityMap = new HashMap<>();
+                for (CuttingBundle bundle : bundles) {
+                    String size = bundle.getSize();
+                    Integer qty = bundle.getQuantity() != null ? bundle.getQuantity() : 0;
+                    sizeQuantityMap.put(size, sizeQuantityMap.getOrDefault(size, 0) + qty);
+                }
+
+                // 构建cuttingDetails列表
+                List<Map<String, Object>> details = new ArrayList<>();
+                for (Map.Entry<String, Integer> entry : sizeQuantityMap.entrySet()) {
+                    Map<String, Object> detail = new HashMap<>();
+                    detail.put("size", entry.getKey());
+                    detail.put("quantity", entry.getValue());
+                    details.add(detail);
+                }
+
+                record.setCuttingDetails(details);
+            }
+        } catch (Exception e) {
+            // 忽略错误，不影响主流程
+            log.warn("填充裁剪详情失败: orderId={}, error={}", record.getOrderId(), e.getMessage());
+        }
     }
 
     /**
@@ -921,19 +1013,32 @@ public class ScanRecordOrchestrator {
                 continue;
             }
 
-            // 2. 检查该菲号是否已入库（可能通过PC端入库）
+            // 2. 检查该菲号是否已全部入库（可能通过PC端入库）
             if (hasText(bundleId)) {
-                long warehousingCount = productWarehousingService.count(
-                        new LambdaQueryWrapper<ProductWarehousing>()
-                                .eq(ProductWarehousing::getCuttingBundleId, bundleId)
-                                .eq(ProductWarehousing::getDeleteFlag, 0));
-                if (warehousingCount > 0) {
-                    // 已入库，跳过
-                    continue;
+                // 获取菲号的裁剪数量
+                CuttingBundle bundle = cuttingBundleService.getById(bundleId);
+                if (bundle != null) {
+                    int cuttingQuantity = bundle.getQuantity() == null ? 0 : bundle.getQuantity();
+
+                    // 获取已入库的合格品数量（sum）
+                    List<ProductWarehousing> warehousingRecords = productWarehousingService.list(
+                            new LambdaQueryWrapper<ProductWarehousing>()
+                                    .eq(ProductWarehousing::getCuttingBundleId, bundleId)
+                                    .eq(ProductWarehousing::getDeleteFlag, 0));
+
+                    int totalWarehoused = warehousingRecords.stream()
+                            .mapToInt(w -> w.getQualifiedQuantity() == null ? 0 : w.getQualifiedQuantity())
+                            .sum();
+
+                    // 只有已入库数量 >= 裁剪数量时，才跳过（已全部入库）
+                    if (cuttingQuantity > 0 && totalWarehoused >= cuttingQuantity) {
+                        // 已全部入库，跳过
+                        continue;
+                    }
                 }
             }
 
-            // 没有确认记录且未入库，添加到待处理列表
+            // 没有确认记录且未全部入库，添加到待处理列表
             pendingTasks.add(received);
         }
 

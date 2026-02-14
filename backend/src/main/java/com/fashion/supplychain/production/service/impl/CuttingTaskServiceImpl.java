@@ -13,6 +13,7 @@ import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.mapper.CuttingBundleMapper;
 import com.fashion.supplychain.production.mapper.CuttingTaskMapper;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
+import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
 import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.SKUService;
@@ -51,6 +52,9 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
 
     @Autowired
     private SKUService skuService;
+
+    @Autowired
+    private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
 
     @Override
     public IPage<CuttingTask> queryPage(Map<String, Object> params) {
@@ -438,6 +442,9 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
                     skuService.attachProcessUnitPrice(sr);
                 }
                 scanRecordMapper.insert(sr);
+
+                // 更新工序跟踪表（修复PC端工序明细弹窗数据缺失问题）
+                updateProcessTracking(task, operatorId, operatorName, sr.getId());
             } else {
                 ScanRecord patch = new ScanRecord();
                 patch.setId(existing.getId());
@@ -457,6 +464,9 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
                 patch.setTotalAmount(computeCuttingTotalAmount(
                         cuttingUnitPrice != null ? cuttingUnitPrice : BigDecimal.ZERO, finalQty));
                 scanRecordMapper.updateById(patch);
+
+                // 更新工序跟踪表（修复PC端工序明细弹窗数据缺失问题）
+                updateProcessTracking(task, operatorId, operatorName, existing.getId());
             }
         } catch (Exception e) {
             log.warn("Failed to upsert cutting bundled scan record: taskId={}, orderId={}",
@@ -465,6 +475,57 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
                     e);
         }
         return true;
+    }
+
+    /**
+     * 更新工序跟踪表（裁剪完成时同步更新tracking表的扫码时间和操作人）
+     * 修复PC端工序明细弹窗显示空白问题
+     */
+    private void updateProcessTracking(CuttingTask task, String operatorId, String operatorName, String scanRecordId) {
+        try {
+            if (processTrackingOrchestrator == null) {
+                log.warn("processTrackingOrchestrator未注入，跳过工序跟踪更新：taskId={}", task.getId());
+                return;
+            }
+
+            // 查询该订单的所有裁剪菲号
+            List<CuttingBundle> bundles = cuttingBundleMapper.selectList(
+                new LambdaQueryWrapper<CuttingBundle>()
+                    .eq(CuttingBundle::getProductionOrderId, task.getProductionOrderId())
+                    .eq(CuttingBundle::getColor, task.getColor())
+                    .eq(CuttingBundle::getSize, task.getSize())
+            );
+
+            if (bundles == null || bundles.isEmpty()) {
+                log.warn("未找到裁剪菲号，无法更新工序跟踪：taskId={}, orderId={}, color={}, size={}",
+                    task.getId(), task.getProductionOrderId(), task.getColor(), task.getSize());
+                return;
+            }
+
+            // 为每个菲号更新工序跟踪记录（强制更新，覆盖初始化时的默认值）
+            for (CuttingBundle bundle : bundles) {
+                try {
+                    boolean updated = processTrackingOrchestrator.forcedUpdateCuttingScan(
+                        bundle.getId(),
+                        operatorId,
+                        operatorName,
+                        scanRecordId
+                    );
+                    if (!updated) {
+                        log.warn("裁剪工序跟踪更新失败：bundleId={}, operator={}",
+                            bundle.getId(), operatorName);
+                    }
+                } catch (Exception e) {
+                    log.warn("更新工序跟踪失败：bundleId={}, processName={}",
+                        bundle.getId(), CUTTING_PROCESS_NAME, e);
+                }
+            }
+
+            log.info("裁剪完成工序跟踪更新成功：taskId={}, bundleCount={}, operator={}",
+                task.getId(), bundles.size(), operatorName);
+        } catch (Exception e) {
+            log.error("更新工序跟踪失败：taskId={}", task.getId(), e);
+        }
     }
 
     @Override

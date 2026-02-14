@@ -1,0 +1,3 @@
+tenantCode,orderNo,styleNo,styleName,orderQuantity,color,size,expectedShipDate,factoryName,status
+TENANT_DEMO,PO202602140001,FZ2024001,卫衣A,500,黑色,S,M厂,pending
+TENANT_DEMO,PO202602140002,FZ2024002,T恤B,300,白色,M,N厂,pending

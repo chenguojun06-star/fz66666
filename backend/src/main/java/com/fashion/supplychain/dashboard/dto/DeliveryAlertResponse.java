@@ -6,9 +6,6 @@ import java.util.List;
 /**
  * 交期预警响应DTO
  * 包含紧急订单(1-4天)和预警订单(5-7天)两个列表
- *
- * @author Fashion Supply Chain System
- * @since 2026-01-27
  */
 @Data
 public class DeliveryAlertResponse {

@@ -30,7 +30,6 @@ const MaterialPickingList: React.FC = () => {
         setTotal(res.data.total);
       }
     } catch (error) {
-      console.error(error);
       message.error('获取领料记录失败');
     } finally {
       setLoading(false);

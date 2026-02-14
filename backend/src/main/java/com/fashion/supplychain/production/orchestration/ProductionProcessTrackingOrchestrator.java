@@ -2,9 +2,11 @@ package com.fashion.supplychain.production.orchestration;
 
 import com.fashion.supplychain.common.exception.BusinessException;
 import com.fashion.supplychain.production.entity.CuttingBundle;
+import com.fashion.supplychain.production.entity.CuttingTask;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ProductionProcessTracking;
 import com.fashion.supplychain.production.service.CuttingBundleService;
+import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ProductionProcessTrackingService;
 import com.fashion.supplychain.common.UserContext;
@@ -32,9 +34,6 @@ import java.util.Map;
  * 1. 裁剪完成时，自动生成 菲号×工序 的跟踪记录（工资结算依据）
  * 2. 扫码时，更新跟踪记录状态（防重复扫码）
  * 3. 管理员可重置记录（允许重新扫码）
- *
- * @author system
- * @since 2026-02-06
  */
 @Slf4j
 @Service
@@ -51,6 +50,9 @@ public class ProductionProcessTrackingOrchestrator {
 
     @Autowired
     private TemplateLibraryService templateLibraryService;
+
+    @Autowired
+    private CuttingTaskService cuttingTaskService;
 
     /**
      * 初始化工序跟踪记录（裁剪完成时调用）
@@ -120,7 +122,18 @@ public class ProductionProcessTrackingOrchestrator {
             log.info("订单 {} 删除老的跟踪记录 {} 条", order.getOrderNo(), deletedCount);
         }
 
-        // 4. 生成 菲号 × 工序 的跟踪记录
+        // 4. 查询裁剪任务，获取裁剪人和完成时间（用于填充裁剪工序的数据）
+        CuttingTask cuttingTask = null;
+        try {
+            cuttingTask = cuttingTaskService.getOne(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<CuttingTask>()
+                    .eq(CuttingTask::getProductionOrderId, productionOrderId)
+                    .last("limit 1"));
+        } catch (Exception e) {
+            log.warn("查询裁剪任务失败: orderId={}", productionOrderId, e);
+        }
+
+        // 5. 生成 菲号 × 工序 的跟踪记录
         List<ProductionProcessTracking> trackingRecords = new ArrayList<>();
         String currentUser = UserContext.username() != null ? UserContext.username() : "system";
 
@@ -154,12 +167,22 @@ public class ProductionProcessTrackingOrchestrator {
                 tracking.setProcessOrder(i + 1);
                 tracking.setUnitPrice(getBigDecimalValue(node, "unitPrice", BigDecimal.ZERO));
 
-                // 初始状态 - 裁剪节点自动标记为已完成
-                boolean isCuttingAutoNode = Boolean.TRUE.equals(node.get("_isCuttingAutoNode"));
-                if (isCuttingAutoNode) {
+                // ✅ 裁剪工序：直接用裁剪任务的领取人和完成时间
+                boolean isCuttingProcess = "裁剪".equals(processName)
+                    || Boolean.TRUE.equals(node.get("_isCuttingAutoNode"));
+                if (isCuttingProcess) {
                     tracking.setScanStatus("scanned");
-                    tracking.setScanTime(LocalDateTime.now());
-                    tracking.setOperatorName(currentUser);
+                    // 优先用裁剪任务的实际数据，回退到当前用户
+                    if (cuttingTask != null) {
+                        tracking.setScanTime(cuttingTask.getBundledTime() != null
+                            ? cuttingTask.getBundledTime() : LocalDateTime.now());
+                        tracking.setOperatorName(StringUtils.hasText(cuttingTask.getReceiverName())
+                            ? cuttingTask.getReceiverName() : currentUser);
+                        tracking.setOperatorId(cuttingTask.getReceiverId());
+                    } else {
+                        tracking.setScanTime(LocalDateTime.now());
+                        tracking.setOperatorName(currentUser);
+                    }
                 } else {
                     tracking.setScanStatus("pending");
                 }
@@ -170,7 +193,7 @@ public class ProductionProcessTrackingOrchestrator {
             }
         }
 
-        // 5. 批量插入
+        // 6. 批量插入
         int count = trackingService.batchInsert(trackingRecords);
         log.info("订单 {} 初始化完成：{} 个菲号 × {} 个工序 = {} 条跟踪记录",
                 order.getOrderNo(), bundles.size(), processNodes.size(), count);
@@ -241,6 +264,55 @@ public class ProductionProcessTrackingOrchestrator {
 
         log.info("工序跟踪记录更新：菲号={}, 工序={}, 操作人={}, 金额={}",
                 tracking.getBundleNo(), tracking.getProcessName(), operatorName, tracking.getSettlementAmount());
+
+        return success;
+    }
+
+    /**
+     * 强制更新裁剪工序的扫码记录（用于裁剪完成时覆盖初始化的默认值）
+     * 与updateScanRecord不同，此方法跳过防重复检查，强制更新裁剪操作人和时间
+     *
+     * @param cuttingBundleId 菲号ID
+     * @param operatorId 操作人ID
+     * @param operatorName 操作人姓名
+     * @param scanRecordId 扫码记录ID
+     * @return 更新成功返回true
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public boolean forcedUpdateCuttingScan(String cuttingBundleId, String operatorId,
+                                          String operatorName, String scanRecordId) {
+        // 查询裁剪工序的跟踪记录
+        ProductionProcessTracking tracking = trackingService.getByBundleAndProcess(cuttingBundleId, "裁剪");
+
+        if (tracking == null) {
+            // 回退：用processName查询
+            tracking = trackingService.getByBundleAndProcessName(cuttingBundleId, "裁剪");
+        }
+
+        if (tracking == null) {
+            log.warn("未找到裁剪工序跟踪记录：菲号ID={}", cuttingBundleId);
+            return false;
+        }
+
+        // 强制更新（不检查scanStatus）
+        tracking.setScanStatus("scanned");
+        tracking.setScanTime(LocalDateTime.now());
+        tracking.setScanRecordId(scanRecordId);
+        tracking.setOperatorId(operatorId);
+        tracking.setOperatorName(operatorName);
+
+        // 计算结算金额
+        if (tracking.getUnitPrice() != null && tracking.getQuantity() != null) {
+            BigDecimal amount = tracking.getUnitPrice().multiply(new BigDecimal(tracking.getQuantity()));
+            tracking.setSettlementAmount(amount);
+        }
+
+        tracking.setUpdater(UserContext.username() != null ? UserContext.username() : operatorName);
+
+        boolean success = trackingService.updateById(tracking);
+
+        log.info("裁剪工序跟踪强制更新：菲号={}, 操作人={}, 金额={}",
+                tracking.getBundleNo(), operatorName, tracking.getSettlementAmount());
 
         return success;
     }

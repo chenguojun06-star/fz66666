@@ -6,9 +6,6 @@ import java.time.LocalDateTime;
 /**
  * 交期预警订单DTO
  * 用于展示即将到期的生产订单信息
- *
- * @author Fashion Supply Chain System
- * @since 2026-01-27
  */
 @Data
 public class DeliveryAlertOrderDto {

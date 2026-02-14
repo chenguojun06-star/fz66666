@@ -30,6 +30,9 @@ const dashboard = {
   get(params) {
     return ok('/api/dashboard', 'GET', params || {});
   },
+  getTopStats(params) {
+    return ok('/api/dashboard/top-stats', 'GET', params || {});
+  },
 };
 
 const production = {
@@ -114,11 +117,13 @@ const production = {
   updateArrivedQuantity(payload) {
     return ok('/api/production/purchase/update-arrived-quantity', 'POST', payload || {});
   },
-  // 通过扫码获取关联的采购单
+  // 通过订单号获取关联的采购单
   getMaterialPurchases(params) {
     const payload = { ...(params || {}) };
-    if (!payload.scanCode) {
-      delete payload.scanCode;
+    // 确保 orderNo 作为 scanCode 传递，命中后端的 getByScanCode 精确查询路径
+    // 否则会走 listWithEnrichment 分页路径，返回结构不是数组
+    if (payload.orderNo && !payload.scanCode) {
+      payload.scanCode = payload.orderNo;
     }
     return ok('/api/production/purchase/list', 'GET', payload);
   },
@@ -164,6 +169,16 @@ const production = {
     const id = String(patternId || '').trim();
     return ok(`/api/production/pattern/${encodeURIComponent(id)}`, 'GET', {});
   },
+  // 获取样板动态工序配置（对齐大货动态工序）
+  getPatternProcessConfig(patternId) {
+    const id = String(patternId || '').trim();
+    return ok(`/api/production/pattern/${encodeURIComponent(id)}/process-config`, 'GET', {});
+  },
+  // 获取样板已扫记录
+  getPatternScanRecords(patternId) {
+    const id = String(patternId || '').trim();
+    return ok(`/api/production/pattern/${encodeURIComponent(id)}/scan-records`, 'GET', {});
+  },
   // 提交样板生产扫码
   submitPatternScan(payload) {
     return ok('/api/production/pattern/scan', 'POST', payload || {});
@@ -204,6 +219,12 @@ const stock = {
 const material = {
   listStockAlerts(params) {
     return ok('/api/production/material/stock/alerts', 'GET', params || {});
+  },
+  listBatchDetails(params) {
+    return ok('/api/production/material/stock/batches', 'GET', params || {});
+  },
+  listPurchaseRecords(params) {
+    return ok('/api/production/purchase/list', 'GET', params || {});
   },
 };
 
@@ -250,6 +271,10 @@ const style = {
   listStyles(params) {
     return ok('/api/style/info/list', 'GET', params || {});
   },
+  // 获取BOM物料清单
+  getBomList(params) {
+    return ok('/api/style/bom/list', 'GET', params || {});
+  },
   // 获取SKU库存
   getInventory(skuCode) {
     return ok(`/api/style/sku/inventory/${encodeURIComponent(skuCode)}`, 'GET', {});
@@ -258,6 +283,29 @@ const style = {
   updateInventory(payload) {
     return ok('/api/style/sku/inventory/update', 'POST', payload || {});
   }
+};
+
+const warehouse = {
+  /** 成品库存列表（与PC端一致的API） */
+  listFinishedInventory(params) {
+    return ok('/api/warehouse/finished-inventory/list', 'GET', params || {});
+  },
+  /** 获取成品库存统计 */
+  getFinishedStats() {
+    return ok('/api/warehouse/finished-inventory/stats', 'GET', {});
+  },
+  /** 获取SKU明细 */
+  getSkuDetails(styleNo, orderNo) {
+    return ok('/api/warehouse/finished-inventory/sku-details', 'POST', { styleNo, orderNo });
+  },
+  /** 成品出库 */
+  outbound(payload) {
+    return ok('/api/warehouse/finished-inventory/outbound', 'POST', payload || {});
+  },
+  /** 成品入库记录 */
+  getInboundHistory(styleNo, sku) {
+    return ok('/api/warehouse/finished-inventory/inbound-history', 'POST', { styleNo, sku });
+  },
 };
 
 const orderManagement = {
@@ -296,11 +344,12 @@ const api = {
   stock,
   material,
   style,
+  warehouse,
   orderManagement,
   wechat,
   common,
 };
 
-export { dashboard, production, system, stock, material, style, orderManagement, wechat, common };
+export { dashboard, production, system, stock, material, style, warehouse, orderManagement, wechat, common };
 
 export default api;

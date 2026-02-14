@@ -5,6 +5,7 @@ export const CuttingManagement = React.lazy(() => import('./pages/Production/Cut
 export const MaterialPurchase = React.lazy(() => import('./pages/Production/MaterialPurchase'));
 export const MaterialPurchaseDetail = React.lazy(() => import('./pages/Production/MaterialPurchaseDetail'));
 export const ProductWarehousing = React.lazy(() => import('./pages/Production/ProductWarehousing'));
+export const InspectionDetail = React.lazy(() => import('./pages/Production/ProductWarehousing/pages/InspectionDetail'));
 export const OrderTransfer = React.lazy(() => import('./pages/Production/OrderTransfer'));
 export const OrderFlow = React.lazy(() => import('./pages/Production/OrderFlow'));
 export const ProgressDetail = React.lazy(() => import('./pages/Production/ProgressDetail'));

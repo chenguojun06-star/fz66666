@@ -16,7 +16,6 @@ import { formatDateTime } from '@/utils/datetime';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
-import QRCodeBox from '@/components/common/QRCodeBox';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
 import { getMaterialTypeCategory } from '@/utils/materialType';
@@ -192,7 +191,7 @@ const OrderManagement: React.FC = () => {
               };
             }
           } catch (e) {
-            console.warn(`获取订单${order.id}的裁剪数据失败:`, e);
+            // 获取裁剪数据失败
           }
           return { ...order, cuttingBundles: [] };
         })
@@ -1380,14 +1379,10 @@ const OrderManagement: React.FC = () => {
             coverField="cover"
             titleField="styleNo"
             subtitleField="styleName"
-            fields={[
-              { label: '码数', key: 'size', render: (val) => val || '-' },
-              { label: '数量', key: 'sampleQuantity', render: (val, record) => {
-                const qty = Number(val) || Number(record?.quantity) || 0;
-                return qty > 0 ? `${qty}件` : '-';
-              }},
-              { label: '最近下单时间', key: 'latestOrderTime', render: (val) => val ? dayjs(val).format('YYYY-MM-DD') : '-' },
-              { label: '下单人', key: 'latestOrderCreator', render: (val) => val || '-' }
+            fields={[]}
+            fieldGroups={[
+              [{ label: '码数', key: 'size', render: (val) => val || '-' }, { label: '数量', key: 'sampleQuantity', render: (val, record) => { const qty = Number(val) || Number(record?.quantity) || 0; return qty > 0 ? `${qty}件` : '-'; } }],
+              [{ label: '下单', key: 'latestOrderTime', render: (val) => val ? dayjs(val).format('MM-DD') : '-' }, { label: '下单人', key: 'latestOrderCreator', render: (val) => val || '-' }],
             ]}
             progressConfig={{ show: false }}
             actions={(record) => [
@@ -1825,28 +1820,6 @@ const OrderManagement: React.FC = () => {
                   </div>
                 )
               },
-              {
-                key: 'qr',
-                label: '二维码',
-                children: (
-                  <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexDirection: isMobile ? 'column' : 'row', minWidth: 0 }}>
-                    <QRCodeBox
-                      value={createdOrder?.qrCode || ' '}
-                      label="订单扫码"
-                      variant="primary"
-                      size={220}
-                    />
-                    <div style={{ lineHeight: 1.8, minWidth: 0, maxWidth: '100%', wordBreak: 'break-all', overflowWrap: 'anywhere' }}>
-                      <div>订单号：{createdOrder?.orderNo || watchedOrderNo || '-'}</div>
-                      <div>二维码内容：{createdOrder?.qrCode || '-'}</div>
-                      <div>款号：{selectedStyle?.styleNo || '-'}</div>
-                      <div>颜色：{createdOrder?.color || (orderLineColors.length ? orderLineColors.join(',') : '-')}</div>
-                      <div>码数：{createdOrder?.size || (orderLineSizes.length ? orderLineSizes.join(',') : '-')}</div>
-                      <div>数量：{createdOrder?.orderQuantity ?? totalOrderQuantity}</div>
-                    </div>
-                  </div>
-                )
-              }
             ]}
           />
 

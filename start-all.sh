@@ -31,6 +31,10 @@ export SPRING_DATASOURCE_PASSWORD='changeme'
 export APP_AUTH_JWT_SECRET='ThisIsA_LocalJwtSecret_OnlyForDev_0123456789'
 export WECHAT_MINI_PROGRAM_MOCK_ENABLED='true'
 
+# 固定 Java 21
+export JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home
+export PATH="$JAVA_HOME/bin:$PATH"
+
 # 启动后端（后台运行）
 nohup mvn spring-boot:run -q > ../logs/backend-$(date +%Y%m%d-%H%M%S).log 2>&1 &
 BACKEND_PID=$!

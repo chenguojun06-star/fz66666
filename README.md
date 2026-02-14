@@ -4,48 +4,37 @@
 [![Test Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](backend/target/site/jacoco/index.html)
 [![Code Quality](https://img.shields.io/badge/quality-97%2F100-brightgreen.svg)](系统状态.md)
 
-*最后更新：2026-02-11*  
+*最后更新：2026-02-15*  
 *系统评分：97/100 ⭐⭐⭐⭐⭐*  
 *技术栈：React 18 + TypeScript + Spring Boot 2.7 + MyBatis-Plus + 微信小程序*
 
 > 📋 **入口**：[系统状态.md](系统状态.md) - 系统状态与文档索引  
 > 🤖 **AI指令**：[.github/copilot-instructions.md](.github/copilot-instructions.md) - GitHub Copilot 完整指南（v3.4）  
-> ✨ **今日更新**（2026-02-11）：
-> - ✅ **🎤 扫码语音功能新增** - 小姐姐温柔女声提示多种场景
-> - ✅ **小程序搜索完善** - 功能修复 + 结果跳转
-> - ✅ **Bug 修复** - 循环依赖解决 + 代码优化
-> - ✅ **代码清理** - 删除 12 个临时报告文件
-
-> - ✅ **Bug 修复** - 循环依赖解决 + 代码优化
-> - ✅ **代码清理** - 删除 12 个临时报告文件
+> ✨ **最新更新**（2026-02-15）：
+> - ✅ **卡片布局优化** - 生产进度页面订单号/款号显示顺序调整
+> - ✅ **图片显示优化** - 卡片图片高度调整为1:1方形（100%）
+> - ✅ **React警告修复** - 消除duplicate key警告
+> - ✅ **代码清理完成** - 删除临时报告文件和archive备份
 
 ---
 
-## ✨ 2026-02-11 最新更新
+## ✨ 2026-02-15 最新更新
 
-### 🎤 小程序扫码语音功能（新增）
+### 🎨 卡片布局优化（前端UI改进）
 **✅ 已完成**：
-- 小姐姐温柔女声提示 🎵
-- 3 个语音文件自动生成：
-  - `扫码成功` (12.6 KB)
-  - `扫码失败，请重试` (24.6 KB)
-  - `已被领取` (12.0 KB)
-- 与震动反馈完美搭配：
-  - ✅ 成功：轻震（15ms）+ 语音
-  - ❌ 失败：长震（400ms）+ 语音
+- **标题显示顺序调整**：生产进度页面，订单号改为主标题，款号为副标题（符合用户习惯）
+- **图片显示优化**：卡片图片高度从85%调整为100%，图片显示更加方正美观（1:1方形）
+- **React警告修复**：消除fieldGroups中duplicate key警告（remainingDays字段独立key）
 
-**💻 实现**：`miniprogram/utils/voiceManager.js` + `miniprogram/assets/audio/*.mp3`  
-**📖 使用说明**：[扫码语音功能使用说明.md](扫码语音功能使用说明.md)
+**💻 修改文件**：
+- `frontend/src/modules/production/pages/Production/ProgressDetail/index.tsx`
+- `frontend/src/components/common/UniversalCardView/style.css`
 
-### 📱 小程序搜索功能完善
-- ✅ 工作页搜索 4 个缺失函数补全
-- ✅ 搜索结果点击跳转到订单诶
-- ✅ 3 秒高亮动画 + 自动滚动定位
-
-### 🐛 代码质量改进
-- ✅ StageDetector.js 多余代码清理
-- ✅ overdueOrderLoader.js 循环依赖解决
-- ✅ voiceManager 云开发 API 优化
+### 🗑️ 代码清理完成
+- ✅ 删除archive目录下100+份历史报告文件
+- ✅ 删除根目录8个临时报告文件（代码清理报告、技术架构检查报告等）
+- ✅ 删除语音生成相关脚本和备份文件
+- ✅ 删除小程序.backup-*备份目录
 
 ---
 
@@ -146,7 +135,14 @@ docker start fashion-mysql-simple || docker run -d \
 
 ---
 
-## ✨ 最新更新（2026-02-09）
+## 📚 历史更新
+
+### 2026-02-11：小程序功能完善
+- ✅ **扫码语音功能** - 小姐姐温柔女声提示
+- ✅ **搜索功能完善** - 工作页搜索 + 结果跳转
+- ✅ **Bug修复** - 循环依赖解决 + 代码优化
+
+### 2026-02-09：超大文件拆分
 
 ### 📦 超大文件拆分完成 🎉
 - ✅ **MaterialPurchaseOrchestrator 拆分**：1171→722行 + MaterialPurchaseOrchestratorHelper（385行）

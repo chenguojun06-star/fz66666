@@ -55,7 +55,7 @@ async function handleCuttingTaskFromBell(ctx, task) {
         visible: true,
         loading: false,
         remain: 30,
-        detail: { orderId, orderNo, styleNo: task.styleNo, progressStage: '裁剪', taskId: task.id },
+        detail: { orderId, orderNo, scanCode: orderNo, styleNo: task.styleNo, progressStage: '裁剪', taskId: task.id, quantity: task.orderQuantity || 0 },
         cuttingTasks: cuttingTasks,
         cuttingTaskReceived: true,
         fromMyTasks: true,
@@ -96,17 +96,44 @@ async function _fetchCuttingSkuItems(orderNo, task) {
 
 /**
  * 将SKU列表转为裁剪任务格式
+ * 自动拆分逗号分隔的尺码（如 "S,M,L,XL,XXL"），每个尺码独立一行
  * @param {Array} skuItems - SKU条目列表
  * @returns {Array} 裁剪任务列表
  * @private
  */
 function _buildCuttingTasksFromItems(skuItems) {
-  return skuItems.map(item => ({
-    color: item.color,
-    size: item.size,
-    plannedQuantity: item.quantity || item.num || 0,
-    cuttingInput: item.quantity || item.num || 0,
-  }));
+  const result = [];
+  for (const item of skuItems) {
+    const totalQty = item.quantity || item.num || 0;
+    const sizeStr = String(item.size || '').trim();
+    const sizes = sizeStr.includes(',')
+      ? sizeStr.split(',').map(s => s.trim()).filter(Boolean)
+      : [sizeStr || '均码'];
+
+    if (sizes.length <= 1) {
+      // 单尺码，直接显示
+      result.push({
+        color: item.color,
+        size: sizes[0],
+        plannedQuantity: totalQty,
+        cuttingInput: totalQty || '',
+      });
+    } else {
+      // 多尺码拆分，每个尺码单独一行，平均分配数量
+      const perSize = Math.floor(totalQty / sizes.length);
+      const remainder = totalQty % sizes.length;
+      for (let i = 0; i < sizes.length; i++) {
+        const qty = perSize + (i < remainder ? 1 : 0);
+        result.push({
+          color: item.color,
+          size: sizes[i],
+          plannedQuantity: qty,
+          cuttingInput: qty || '',
+        });
+      }
+    }
+  }
+  return result;
 }
 
 /**
@@ -153,7 +180,7 @@ async function onHandleCutting(ctx, e) {
         visible: true,
         loading: false,
         remain: 30,
-        detail: { orderId, orderNo, styleNo: task.styleNo, progressStage: '裁剪', taskId },
+        detail: { orderId, orderNo, scanCode: orderNo, styleNo: task.styleNo, progressStage: '裁剪', taskId, quantity: task.orderQuantity || 0 },
         cuttingTasks: cuttingTasks,
         cuttingTaskReceived: true,
         fromMyTasks: true,
@@ -176,9 +203,14 @@ async function onHandleCutting(ctx, e) {
  * @returns {Promise<void>} 领取成功后刷新列表
  */
 async function receiveCuttingTask(ctx, detail, userInfo) {
-  const taskData = await api.production.getCuttingTaskByOrderId(detail.orderId);
+  // 使用 orderNo（如 PO2026...）查询裁剪任务，而非 orderId（UUID）
+  const orderNo = detail.orderNo || (detail.orderDetail && detail.orderDetail.orderNo) || '';
+  if (!orderNo) {
+    throw new Error('订单号缺失，无法查询裁剪任务');
+  }
+  const taskData = await api.production.getCuttingTaskByOrderId(orderNo);
   if (!taskData || !taskData.records || taskData.records.length === 0) {
-    throw new Error('未找到裁剪任务');
+    throw new Error('未找到裁剪任务，请确认订单已创建裁剪任务');
   }
 
   const task = taskData.records[0];
@@ -188,7 +220,7 @@ async function receiveCuttingTask(ctx, detail, userInfo) {
     userInfo.realName || userInfo.username,
   );
 
-  toast.success('裁剪任务领取成功，可在"我的裁剪任务"中生成菲号');
+  toast.success('裁剪任务领取成功，可在"我的裁剪任务"中开始裁剪');
   ctx.setData({ 'scanConfirm.visible': false, 'scanConfirm.loading': false });
   ctx.loadMyPanel(true);
   loadMyCuttingTasks(ctx);
@@ -327,10 +359,12 @@ async function onRegenerateCuttingBundles(ctx) {
     const detail = ctx.data.scanConfirm.detail;
     const cuttingTasks = ctx.data.scanConfirm.cuttingTasks;
 
-    _validateCuttingData(cuttingTasks, detail.orderId);
+    // orderId 优先取 detail.orderId，兜底从 orderDetail.id 获取
+    const orderId = detail.orderId || (detail.orderDetail && detail.orderDetail.id) || '';
+    _validateCuttingData(cuttingTasks, orderId);
     const bundleParams = _buildBundleParams(cuttingTasks);
 
-    await api.production.generateCuttingBundles(detail.orderId, bundleParams);
+    await api.production.generateCuttingBundles(orderId, bundleParams);
 
     toast.success('菲号生成成功');
 

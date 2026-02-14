@@ -116,6 +116,7 @@ function _buildQualityBasePayload(detail, qualityModal, userInfo, warehouse) {
     styleNo: detail.styleNo || '',
     cuttingBundleId: detail.bundleId || '',
     cuttingBundleNo: bundleNoNum && !isNaN(bundleNoNum) ? bundleNoNum : null,
+    cuttingBundleQrCode: detail.scanCode || '',
     warehousingQuantity: totalQty,
     qualifiedQuantity: qualifiedQty,
     unqualifiedQuantity: unqualifiedQty,

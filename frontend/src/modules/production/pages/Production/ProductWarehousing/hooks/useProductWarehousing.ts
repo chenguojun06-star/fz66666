@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Form, message } from 'antd';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import api, { useProductionOrderFrozenCache } from '@/utils/api';
 import { useSync } from '@/utils/syncManager';
 import {
@@ -30,6 +30,8 @@ export interface WarehousingStats {
   todayQuantity: number;
   pendingQcBundles: number;
   pendingQcQuantity: number;
+  pendingPackagingBundles: number;
+  pendingPackagingQuantity: number;
   pendingWarehouseBundles: number;
   pendingWarehouseQuantity: number;
 }
@@ -43,12 +45,34 @@ const defaultStats: WarehousingStats = {
   todayQuantity: 0,
   pendingQcBundles: 0,
   pendingQcQuantity: 0,
+  pendingPackagingBundles: 0,
+  pendingPackagingQuantity: 0,
   pendingWarehouseBundles: 0,
   pendingWarehouseQuantity: 0,
 };
 
+// 状态筛选类型
+export type StatusFilter = 'all' | 'pendingQc' | 'pendingPackaging' | 'pendingWarehouse' | 'completed';
+
+// 待处理菲号行数据
+export interface PendingBundleRow {
+  bundleId: string;
+  bundleNo: number;
+  qrCode: string;
+  color: string;
+  size: string;
+  quantity: number;
+  orderId: string;
+  orderNo: string;
+  styleNo: string;
+  styleName: string;
+  styleCover: string;
+  status: string;
+}
+
 export const useProductWarehousing = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [form] = Form.useForm();
 
   // State
@@ -59,6 +83,11 @@ export const useProductWarehousing = () => {
     page: 1,
     pageSize: 10,
   });
+
+  // 状态筛选
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [pendingBundles, setPendingBundles] = useState<PendingBundleRow[]>([]);
+  const [pendingBundlesLoading, setPendingBundlesLoading] = useState(false);
 
   // 统计卡片
   const [warehousingStats, setWarehousingStats] = useState<WarehousingStats>(defaultStats);
@@ -108,6 +137,43 @@ export const useProductWarehousing = () => {
       // 静默失败
     }
   }, []);
+
+  // 获取待处理菲号列表
+  const fetchPendingBundles = useCallback(async (status: string) => {
+    setPendingBundlesLoading(true);
+    try {
+      const res = await api.get<{ code: number; data: PendingBundleRow[] }>('/production/warehousing/pending-bundles', {
+        params: { status },
+      });
+      if (res.code === 200 && res.data) {
+        setPendingBundles(res.data);
+      } else {
+        setPendingBundles([]);
+      }
+    } catch {
+      setPendingBundles([]);
+    } finally {
+      setPendingBundlesLoading(false);
+    }
+  }, []);
+
+  // 切换状态筛选
+  const handleStatusFilterChange = useCallback((newFilter: StatusFilter) => {
+    setStatusFilter(newFilter);
+    if (newFilter === 'all' || newFilter === 'completed') {
+      setPendingBundles([]);
+      fetchWarehousingList();
+    } else {
+      fetchPendingBundles(newFilter);
+    }
+  }, []);
+
+  // 跳转到质检详情页
+  const navigateToInspect = useCallback((orderId: string, bundleId?: string) => {
+    const params = new URLSearchParams();
+    if (bundleId) params.set('bundleId', bundleId);
+    navigate(`/production/warehousing/inspect/${orderId}?${params.toString()}`);
+  }, [navigate]);
 
   const fetchWarehousingList = async () => {
     setLoading(true);
@@ -345,6 +411,15 @@ export const useProductWarehousing = () => {
     // Stats
     warehousingStats,
     fetchWarehousingStats,
+
+    // Status Filter
+    statusFilter,
+    setStatusFilter,
+    handleStatusFilterChange,
+    pendingBundles,
+    pendingBundlesLoading,
+    fetchPendingBundles,
+    navigateToInspect,
 
     // Modal State
     warehousingModalOpen,

@@ -16,25 +16,22 @@
     </view>
   </view>
 
-  <!-- 操作按钮栏 -->
-  <view class="action-bar">
-    <view class="action-item" bindtap="navToOperation" data-type="inbound">
-      <view class="icon-wrap bg-blue">
-        <text class="iconfont icon-inbound">入</text>
-      </view>
-      <text>入库</text>
+  <view class="summary-filter-bar">
+    <view
+      class="summary-pill {{filterType === 'all' ? 'summary-pill-active' : ''}}"
+      bindtap="onFilterTap"
+      data-type="all"
+    >
+      <text class="summary-label">总数量</text>
+      <text class="summary-value">{{totalQuantity}}</text>
     </view>
-    <view class="action-item" bindtap="navToOperation" data-type="loan">
-      <view class="icon-wrap bg-orange">
-        <text class="iconfont icon-outbound">借</text>
-      </view>
-      <text>借出</text>
-    </view>
-    <view class="action-item" bindtap="navToOperation" data-type="return">
-      <view class="icon-wrap bg-green">
-        <text class="iconfont icon-return">还</text>
-      </view>
-      <text>归还</text>
+    <view
+      class="summary-pill {{filterType === 'pending' ? 'summary-pill-active' : ''}}"
+      bindtap="onFilterTap"
+      data-type="pending"
+    >
+      <text class="summary-label">待归还</text>
+      <text class="summary-value">{{pendingReturnQuantity}}</text>
     </view>
   </view>
 
@@ -52,6 +49,20 @@
         <image wx:if="{{item.imageUrl}}" class="item-img" src="{{item.imageUrl}}" mode="aspectFill" />
         <view wx:else class="item-img-placeholder">暂无图片</view>
         <view class="item-content">
+          <view class="item-op-row">
+            <view
+              class="item-op-btn"
+              bindtap="navToOperationByItem"
+              data-type="inbound"
+              data-styleno="{{item.styleNo}}"
+            >入库</view>
+            <view
+              class="item-op-btn item-op-btn-primary"
+              bindtap="navToOperationByItem"
+              data-type="loan"
+              data-styleno="{{item.styleNo}}"
+            >借出</view>
+          </view>
           <view class="item-header">
             <text class="item-title">{{item.styleNo}}</text>
             <view class="item-tags">

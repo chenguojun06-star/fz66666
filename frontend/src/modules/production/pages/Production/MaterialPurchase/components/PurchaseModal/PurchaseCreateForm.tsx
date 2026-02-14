@@ -144,7 +144,7 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
           setStockInfo({ quantity: 0, location: '-', safetyStock: 0 });
         }
       } catch (e) {
-        console.error(e);
+        // 查询库存失败时忽略错误
       }
     };
 
