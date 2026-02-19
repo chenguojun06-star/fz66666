@@ -405,14 +405,15 @@ const DictManage: React.FC = () => {
       />
 
       <StandardModal
+        key={dictModal.visible ? 'open' : 'closed'}
         title={dictModal.data ? '编辑字典项' : '新建字典项'}
         open={dictModal.visible}
         onCancel={dictModal.close}
         onOk={handleSave}
-        destroyOnHidden
-        size="sm"
+        size="md"
+        centered
       >
-        <Form form={form} layout="vertical" style={{ marginTop: 24 }}>
+        <Form form={form} layout="vertical">
           <Form.Item
             name="dictType"
             label="字典类型"
@@ -427,24 +428,29 @@ const DictManage: React.FC = () => {
             </Select>
           </Form.Item>
 
-          <Form.Item
-            name="dictCode"
-            label="字典编码"
-            rules={[
-              { required: true, message: '请输入字典编码' },
-              { pattern: /^[A-Z0-9_]+$/, message: '编码只能包含大写字母、数字和下划线' }
-            ]}
-          >
-            <Input placeholder="请输入字典编码（大写字母、数字、下划线）" disabled={Boolean(dictModal.data)} />
-          </Form.Item>
-
-          <Form.Item
-            name="dictLabel"
-            label="字典标签"
-            rules={[{ required: true, message: '请输入字典标签' }]}
-          >
-            <Input placeholder="请输入字典标签（显示名称）" />
-          </Form.Item>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="dictCode"
+                label="字典编码"
+                rules={[
+                  { required: true, message: '请输入字典编码' },
+                  { pattern: /^[A-Z0-9_]+$/, message: '编码只能包含大写字母、数字和下划线' }
+                ]}
+              >
+                <Input placeholder="大写字母、数字、下划线" disabled={Boolean(dictModal.data)} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="dictLabel"
+                label="字典标签"
+                rules={[{ required: true, message: '请输入字典标签' }]}
+              >
+                <Input placeholder="显示名称" />
+              </Form.Item>
+            </Col>
+          </Row>
 
           <Form.Item
             name="sortOrder"
