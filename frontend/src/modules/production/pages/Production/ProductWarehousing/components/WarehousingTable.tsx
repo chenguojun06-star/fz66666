@@ -1,8 +1,37 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Tag } from 'antd';
+import { Button, Tag, message } from 'antd';
+import QRCode from 'qrcode';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
+
+/** 打印入库二维码（传入质检入库号） */
+async function printWarehousingQr(warehousingNo: string, orderNo?: string) {
+  if (!warehousingNo) { message.warning('二维码内容为空'); return; }
+  let qrDataUrl = '';
+  try {
+    qrDataUrl = await QRCode.toDataURL(warehousingNo, { width: 200, margin: 2, errorCorrectionLevel: 'M' });
+  } catch {
+    message.error('生成二维码失败');
+    return;
+  }
+  const html = `<!DOCTYPE html><html><head><title>入库二维码</title>
+    <style>
+      body { margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: sans-serif; }
+      .qr-wrap { text-align: center; border: 1px solid #ddd; padding: 16px; border-radius: 8px; width: 240px; }
+      img { display: block; }
+      .no { font-size: 13px; color: #333; margin-top: 8px; word-break: break-all; }
+      .order { font-size: 11px; color: #888; margin-top: 4px; }
+      @media print { body { min-height: unset; } }
+    </style>
+  </head><body><div class="qr-wrap">
+    <img src="${qrDataUrl}" width="200" height="200" />
+    <div class="no">${warehousingNo}</div>
+    ${orderNo ? `<div class="order">订单号：${orderNo}</div>` : ''}
+  </div><script>window.onload=()=>{ window.print(); window.close(); }<\/script></body></html>`;
+  const win = window.open('', '_blank', 'width=400,height=400');
+  if (win) { win.document.write(html); win.document.close(); }
+}
 import { StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
 import { formatDateTime } from '@/utils/datetime';
 import { ProductWarehousing as WarehousingType, WarehousingQueryParams } from '@/types/production';
@@ -237,6 +266,14 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
                 onClick: () => goToDetail(record, 'warehousing'),
                 primary: true,
               },
+              ...(isWarehoused ? [{
+                key: 'printQr',
+                label: '打印二维码',
+                onClick: () => printWarehousingQr(
+                  String(record.warehousingNo || '').trim(),
+                  String((record as any).orderNo || '').trim()
+                ),
+              }] : []),
             ]}
           />
         );

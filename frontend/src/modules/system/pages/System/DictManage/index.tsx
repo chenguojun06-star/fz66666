@@ -39,6 +39,7 @@ const DICT_TYPES = [
   { value: 'package_type', label: '包装方式', description: '包装类型：吊挂、平放、卷装等' },
   { value: 'order_status', label: '订单状态', description: '订单流程状态' },
   { value: 'payment_method', label: '结算方式', description: '付款方式：月结、现结等' },
+  { value: 'warehouse_location', label: '仓库', description: '仓库库位：A仓、B仓、成品仓、面辅料仓等，可在此维护仓库列表' },
 ];
 
 const DictManage: React.FC = () => {
@@ -214,6 +215,14 @@ const DictManage: React.FC = () => {
         { dictType: 'payment_method', dictCode: 'IMMEDIATE', dictLabel: '现结', sortOrder: 2 },
         { dictType: 'payment_method', dictCode: 'ADVANCE', dictLabel: '预付款', sortOrder: 3 },
         { dictType: 'payment_method', dictCode: 'AFTER_DELIVERY', dictLabel: '货到付款', sortOrder: 4 },
+      ],
+      warehouse_location: [
+        { dictType: 'warehouse_location', dictCode: 'WH_A', dictLabel: 'A仓', sortOrder: 1 },
+        { dictType: 'warehouse_location', dictCode: 'WH_B', dictLabel: 'B仓', sortOrder: 2 },
+        { dictType: 'warehouse_location', dictCode: 'WH_C', dictLabel: 'C仓', sortOrder: 3 },
+        { dictType: 'warehouse_location', dictCode: 'WH_FP', dictLabel: '成品仓', sortOrder: 4 },
+        { dictType: 'warehouse_location', dictCode: 'WH_MAT', dictLabel: '面辅料仓', sortOrder: 5 },
+        { dictType: 'warehouse_location', dictCode: 'WH_DEF', dictLabel: '次品仓', sortOrder: 6 },
       ],
     };
     return data[dictType] || [];

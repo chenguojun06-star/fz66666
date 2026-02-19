@@ -74,6 +74,20 @@ const InspectionDetail: React.FC = () => {
   const [warehouseValue, setWarehouseValue] = useState('');
   const [warehousingLoading, setWarehousingLoading] = useState(false);
   const [showWarehousingModal, setShowWarehousingModal] = useState(false);
+  const [warehouseOptions, setWarehouseOptions] = useState<string[]>(['A仓', 'B仓', 'C仓', '成品仓', '面辅料仓', '次品仓']);
+
+  // 动态加载字典中配置的仓库列表
+  useEffect(() => {
+    api.get<{ code: number; data: { records?: { dictLabel: string }[] } | { dictLabel: string }[] }>(
+      '/system/dict/list', { params: { dictType: 'warehouse_location', page: 1, pageSize: 100 } }
+    ).then(res => {
+      if (res.code === 200) {
+        const list = Array.isArray(res.data) ? res.data : (res.data as any)?.records || [];
+        const labels = list.map((d: any) => String(d.dictLabel || '').trim()).filter(Boolean);
+        if (labels.length) setWarehouseOptions(labels);
+      }
+    }).catch(() => { /* 静默失败，保留默认值 */ });
+  }, []);
 
   /* ---- 内联质检表单 ---- */
   const formHook = useWarehousingForm(
@@ -457,8 +471,7 @@ const InspectionDetail: React.FC = () => {
                 onChange={(v) => setWarehouseValue(String(v || '').trim())}
                 style={{ width: 200 }}
               >
-                <Option value="A仓">A仓</Option>
-                <Option value="B仓">B仓</Option>
+                {warehouseOptions.map(w => <Option key={w} value={w}>{w}</Option>)}
               </Select>
             </div>
             <Button type="primary" size="large" icon={<InboxOutlined />}

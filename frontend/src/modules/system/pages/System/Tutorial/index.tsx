@@ -32,6 +32,76 @@ import type { Dayjs } from 'dayjs';
 
 const { Title, Text, Paragraph } = Typography;
 
+/** 根据 URL 形态渲染视频播放器 */
+const VideoPlayerBlock: React.FC<{ url: string }> = ({ url }) => {
+  const u = url.trim();
+
+  // Bilibili：支持 BV 号
+  const bvMatch = u.match(/bilibili\.com\/video\/(BV[\w]+)/i);
+  if (bvMatch) {
+    return (
+      <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden' }}>
+        <iframe
+          src={`//player.bilibili.com/player.html?bvid=${bvMatch[1]}&page=1&high_quality=1&danmaku=0`}
+          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+          allowFullScreen
+          title="视频教程"
+        />
+      </div>
+    );
+  }
+
+  // YouTube
+  const ytMatch = u.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)?([\w-]{11})/);
+  if (u.includes('youtube.com') || u.includes('youtu.be')) {
+    const vid = ytMatch ? ytMatch[1] : '';
+    return (
+      <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden' }}>
+        <iframe
+          src={`https://www.youtube.com/embed/${vid}`}
+          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+          allowFullScreen
+          title="视频教程"
+        />
+      </div>
+    );
+  }
+
+  // 直链 MP4 / WebM
+  if (/\.(mp4|webm|mov)(\?.*)?$/i.test(u)) {
+    return (
+      <video
+        src={u}
+        controls
+        style={{ width: '100%', maxHeight: 480, background: '#000', display: 'block', borderRadius: 6 }}
+        preload="metadata"
+      >
+        您的浏览器不支持 video 标签，请
+        <a href={u} target="_blank" rel="noopener noreferrer">点击下载观看</a>。
+      </video>
+    );
+  }
+
+  // 其他链接：直接显示可点击链接
+  return (
+    <Space direction="vertical" style={{ width: '100%' }}>
+      <Alert
+        type="info"
+        showIcon
+        description={
+          <>
+            视频链接：
+            <a href={u} target="_blank" rel="noopener noreferrer">{u}</a>
+          </>
+        }
+      />
+      <Button type="primary" onClick={() => window.open(u, '_blank')}>
+        🎬 点击播放视频
+      </Button>
+    </Space>
+  );
+};
+
 interface TutorialStep {
   title: string;
   description: string;
@@ -1219,19 +1289,7 @@ const SystemTutorial: React.FC = () => {
                     ...(tutorial.videoUrl ? [{
                       key: 'video',
                       label: '🎬 视频教程',
-                      children: (
-                        <Alert
-                          title="视频教程"
-                          description={
-                            <Space orientation="vertical" style={{ width: '100%' }}>
-                              <Text>视频链接：{tutorial.videoUrl}</Text>
-                              <Text type="secondary">（视频播放功能开发中，敬请期待）</Text>
-                            </Space>
-                          }
-                          type="warning"
-                          showIcon
-                        />
-                      ),
+                      children: <VideoPlayerBlock url={tutorial.videoUrl} />,
                     }] : []),
                   ]}
                 />
