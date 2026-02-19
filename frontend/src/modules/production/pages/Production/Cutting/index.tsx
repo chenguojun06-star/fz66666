@@ -493,14 +493,15 @@ const CuttingManagement: React.FC = () => {
                       const frozen = tasks.isOrderFrozenById(orderNo);
                       const isPending = record.status === 'pending';
                       const isReceived = record.status === 'received';
+                      const isCompleted = record.status === 'completed';
                       return (
                         <RowActions
                           actions={[
                             {
                               key: 'edit',
                               label: '编辑',
-                              title: frozen ? '编辑（订单已关单）' : '编辑',
-                              disabled: frozen,
+                              title: isCompleted ? '已完成，不可编辑' : frozen ? '编辑（订单已关单）' : '编辑',
+                              disabled: frozen || isCompleted,
                               onClick: () => {
                                 tasks.setQuickEditRecord(record);
                                 tasks.setQuickEditVisible(true);
