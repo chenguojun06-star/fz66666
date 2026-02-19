@@ -135,7 +135,7 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
         int nextBedNo = (lastBundle != null && lastBundle.getBedNo() != null && lastBundle.getBedNo() > 0)
                         ? lastBundle.getBedNo() + 1
                         : 1;
-        log.info("自动分配床号: tenantId={}, 起始床号={}", currentTenantId, nextBedNo);
+        log.info("自动分配床号: tenantId={}, 本批床号={}, 本批扎号数={}", currentTenantId, nextBedNo, bundles.size());
 
         for (Map<String, Object> item : bundles) {
             String color = item.get("color") == null ? null : item.get("color").toString();
@@ -192,7 +192,8 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
 
             result.add(bundle);
             bundleIndex++;
-            nextBedNo++; // ✅ 床号递增
+            // ❌ 不在此递增 bedNo：同一次裁剪操作的所有扎号共用同一个床号
+            // nextBedNo 在下次调用 generateBundles 时才会 +1
         }
 
         if (!result.isEmpty()) {
