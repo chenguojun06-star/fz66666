@@ -29,13 +29,18 @@ const scanLifecycleMixin = Behavior({
    * @returns {Promise<void>} 无返回值
    */
   async onLoad() {
-    // 初始化业务处理器
-    this.scanHandler = new ScanHandler(api, {
-      onSuccess: this.handleScanSuccess.bind(this),
-      onError: this.handleScanError.bind(this),
-      getCurrentFactory: () => this.data.currentFactory,
-      getCurrentWorker: () => this.data.currentUser,
-    });
+    // 初始化业务处理器（加 try-catch，防止构造抛错导致 scanHandler 永远为 null）
+    try {
+      this.scanHandler = new ScanHandler(api, {
+        onSuccess: this.handleScanSuccess.bind(this),
+        onError: this.handleScanError.bind(this),
+        getCurrentFactory: () => this.data.currentFactory,
+        getCurrentWorker: () => this.data.currentUser,
+      });
+    } catch (e) {
+      console.error('[scanLifecycleMixin] ScanHandler 初始化失败:', e);
+      // scanHandler 保持 null，processScanCode 中会做守卫提示
+    }
 
     // 订阅全局事件
     // 修复: 使用 eventBus.on 且绑定 this

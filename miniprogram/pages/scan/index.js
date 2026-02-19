@@ -229,7 +229,8 @@ Page({
    * @returns {Promise<void>} 无返回值
    */
   async handleStockQuery(codeStr) {
-    return StockHandler.handleStockQuery(this, codeStr, this.scanHandler.qrParser);
+    const qrParser = this.scanHandler ? this.scanHandler.qrParser : null;
+    return StockHandler.handleStockQuery(this, codeStr, qrParser);
   },
 
   /**

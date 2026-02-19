@@ -267,6 +267,14 @@ const scanCoreMixin = Behavior({
         warehouse: this.data.warehouse,
       };
 
+      // 守卫：scanHandler 为 null 说明 onLoad 初始化失败，提示刷新重试
+      if (!this.scanHandler) {
+        this.setData({ loading: false });
+        toast.error('扫码模块未就绪，请退出页面重新进入');
+        console.error('[processScanCode] scanHandler 为 null，跳过扫码处理');
+        return;
+      }
+
       try {
         const result = await this.scanHandler.handleScan(codeStr, options);
         this._handleScanResult(result, codeStr, scanType);
