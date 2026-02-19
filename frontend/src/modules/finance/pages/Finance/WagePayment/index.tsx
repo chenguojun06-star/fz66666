@@ -602,7 +602,7 @@ const PaymentCenterPage: React.FC = () => {
         key: 'payee',
         width: 140,
         render: (_: unknown, r: WagePayment) => (
-          <Space direction="vertical" size={0}>
+          <Space orientation="vertical" size={0}>
             <span>{r.payeeName}</span>
             <Tag style={{ fontSize: 11 }}>{r.payeeType === 'WORKER' ? '员工' : '工厂'}</Tag>
           </Space>
@@ -979,7 +979,7 @@ const PaymentCenterPage: React.FC = () => {
                   {selectedAccount ? (
                     <div>
                       {selectedAccount.accountType === 'BANK' ? (
-                        <Space direction="vertical" size={2}>
+                        <Space orientation="vertical" size={2}>
                           <span>{accountTypeIconMap[selectedAccount.accountType]} {selectedAccount.bankName}</span>
                           <span style={{ fontFamily: 'monospace' }}>
                             {selectedAccount.accountNo?.replace(/(\d{4})(?=\d)/g, '$1 ')}

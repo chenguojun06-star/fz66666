@@ -387,7 +387,7 @@ const _FinishedInventory: React.FC = () => {
       title: '入库记录',
       width: 220,
       render: (_, record) => (
-        <Space direction="vertical" size={4} style={{ width: '100%' }}>
+        <Space orientation="vertical" size={4} style={{ width: '100%' }}>
           <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
             <span style={{ color: 'var(--neutral-text-disabled)' }}>入库时间:</span>{' '}
             <span style={{ fontWeight: 600 }}>{record.lastInboundDate ? String(record.lastInboundDate).slice(0, 16).replace('T', ' ') : '-'}</span>
