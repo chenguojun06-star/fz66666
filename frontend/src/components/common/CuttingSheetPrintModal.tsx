@@ -8,6 +8,8 @@ interface CuttingSheetPrintModalProps {
   onCancel: () => void;
   bundles: CuttingBundleRow[];
   styleImageUrl?: string;
+  /** 工厂/公司名称，用于打印单顶部显示（优先于默认值） */
+  companyName?: string;
   /** 裁剪任务信息（用于打印操作人/创建人，优先级高于bundle自带字段） */
   cuttingTask?: {
     receiverName?: string;    // 裁布人（领取人）
@@ -26,6 +28,7 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
   onCancel,
   bundles,
   styleImageUrl,
+  companyName,
   cuttingTask,
 }) => {
   const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait');
@@ -57,12 +60,12 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
       const orderBundles = groupedByOrder[orderNo];
       const firstBundle = orderBundles[0];
 
-      // 获取床号列表
+      // 获取床号：同一次裁剪的所有菲号共用同一个床号，取最小值显示
       const bedNos = orderBundles
         .map(b => b.bedNo)
         .filter((no): no is number => no !== null && no !== undefined)
         .sort((a, b) => a - b);
-      const bedNoDisplay = bedNos.length > 0 ? bedNos.join(', ') : '-';
+      const bedNoDisplay = bedNos.length > 0 ? String(bedNos[0]) : '-';
 
       // 获取操作人信息：优先用裁剪任务的receiverName/creatorName（真实姓名），其次用bundle字段
       const operatorName = cuttingTask?.receiverName || firstBundle.operatorName || firstBundle.creatorName || '-';
@@ -76,10 +79,11 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
       const sizeDisplay = sizes.length > 0 ? sizes.join(', ') : '-';
       const totalQuantity = orderBundles.reduce((sum, b) => sum + (b.quantity || 0), 0);
 
-      // 生成表格行（新格式：款号、菲号、颜色、数量）
+      // 生成表格行（格式：款号、码数、菲号、颜色、数量）
       const tableRows = orderBundles.map((bundle) => `
         <tr>
           <td style="text-align: center;">${bundle.styleNo || '-'}</td>
+          <td style="text-align: center; font-weight: 600;">${bundle.size || '-'}</td>
           <td style="text-align: center; font-weight: 600; color: #2D7FF9;">${bundle.bundleNo || '-'}</td>
           <td style="text-align: center;">${bundle.color || '-'}</td>
           <td style="text-align: center; font-weight: 600;">${bundle.quantity || 0}</td>
@@ -99,7 +103,7 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
 
             <!-- 右边：公司、订单号、款号、码数、数量、床号 -->
             <div class="header-right">
-              <div class="company-name">服装供应链管理系统</div>
+              <div class="company-name">${companyName || '服装供应链管理系统'}</div>
               <div class="info-grid">
                 <div class="info-item">
                   <span class="info-label">订单号：</span>
@@ -129,10 +133,11 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
           <table class="detail-table">
             <thead>
               <tr>
-                <th style="width: 25%;">款号</th>
-                <th style="width: 25%;">菲号</th>
+                <th style="width: 20%;">款号</th>
+                <th style="width: 15%;">码数</th>
+                <th style="width: 20%;">菲号</th>
                 <th style="width: 25%;">颜色</th>
-                <th style="width: 25%;">数量</th>
+                <th style="width: 20%;">数量</th>
               </tr>
             </thead>
             <tbody>
@@ -140,7 +145,7 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
             </tbody>
             <tfoot>
               <tr>
-                <td colspan="3" style="text-align: right; font-weight: 600;">合计：</td>
+                <td colspan="4" style="text-align: right; font-weight: 600;">合计：</td>
                 <td style="text-align: center; font-weight: 600; font-size: 16px;">${totalQuantity}</td>
               </tr>
             </tfoot>
@@ -448,9 +453,9 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
           <div style={{ fontWeight: 600, marginBottom: 8 }}>打印说明</div>
           <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--neutral-text-secondary)', lineHeight: 1.6 }}>
             • 每张A4纸打印一个订单的所有批次明细<br/>
-            • 顶部左边显示款式图片，右边显示公司、订单号、款号、码数、数量汇总、床号<br/>
-            • 表格显示：款号、菲号、颜色、数量<br/>
-            • 床号高亮显示在右上角，方便裁剪工序对照<br/>
+            • 顶部左边显示款式图片，右边显示工厂名、订单号、款号、码数、数量汇总、床号<br/>
+            • 表格显示：款号、码数、菲号、颜色、数量<br/>
+            • 床号高亮显示在右上角（同一裁剪批次共用同一床号）<br/>
             • 建议使用A4纸打印
           </div>
         </div>
