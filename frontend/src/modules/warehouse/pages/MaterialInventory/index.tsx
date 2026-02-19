@@ -32,6 +32,7 @@ import dayjs from 'dayjs';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { safePrint } from '@/utils/safePrint';
+import { getMaterialTypeLabel, getMaterialTypeCategory } from '@/utils/materialType';
 import MaterialAlertRanking, { MaterialStockAlertItem } from './components/MaterialAlertRanking';
 import './MaterialInventory.css';
 import StandardModal from '@/components/common/StandardModal';
@@ -711,10 +712,10 @@ const _MaterialInventory: React.FC = () => {
           <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)', lineHeight: '22px', height: '22px', alignItems: 'center' }}>
             <span style={{ color: 'var(--neutral-text-disabled)', width: '60px', textAlign: 'right', flexShrink: 0 }}>分类：</span>
             <Tag
-              color={record.materialType === '面料' ? 'blue' : record.materialType === '辅料' ? 'green' : 'orange'}
+              color={getMaterialTypeCategory(record.materialType) === 'fabric' ? 'blue' : getMaterialTypeCategory(record.materialType) === 'lining' ? 'cyan' : 'green'}
               style={{ fontSize: 'var(--font-size-xs)', margin: '0 0 0 8px' }}
             >
-              {record.materialType}
+              {getMaterialTypeLabel(record.materialType)}
             </Tag>
           </div>
           <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)', lineHeight: '22px', height: '22px' }}>
@@ -1048,7 +1049,7 @@ const _MaterialInventory: React.FC = () => {
               </div>
               <div style={{ fontSize: 'var(--font-size-sm)' }}>
                 <span style={{ color: 'var(--neutral-text-disabled)' }}>类型：</span>
-                <span style={{ fontWeight: 600 }}>{instructionTarget?.materialType || '-'}</span>
+                <span style={{ fontWeight: 600 }}>{getMaterialTypeLabel(instructionTarget?.materialType)}</span>
               </div>
               <div style={{ fontSize: 'var(--font-size-sm)' }}>
                 <span style={{ color: 'var(--neutral-text-disabled)' }}>供应商：</span>
@@ -1152,7 +1153,7 @@ const _MaterialInventory: React.FC = () => {
         {safetyStockTarget && (
           <div>
             <Card size="small" style={{ marginBottom: 16, background: 'var(--color-bg-subtle)' }}>
-              <div><strong>{safetyStockTarget.materialCode}</strong> <Tag color="blue">{safetyStockTarget.materialType}</Tag></div>
+              <div><strong>{safetyStockTarget.materialCode}</strong> <Tag color={getMaterialTypeCategory(safetyStockTarget.materialType) === 'fabric' ? 'blue' : getMaterialTypeCategory(safetyStockTarget.materialType) === 'lining' ? 'cyan' : 'green'}>{getMaterialTypeLabel(safetyStockTarget.materialType)}</Tag></div>
               <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', marginTop: 4 }}>{safetyStockTarget.materialName}</div>
               <div style={{ fontSize: "var(--font-size-sm)", marginTop: 4 }}>
                 当前库存: <strong>{safetyStockTarget.quantity ?? 0}</strong> {safetyStockTarget.unit}
@@ -1193,7 +1194,7 @@ const _MaterialInventory: React.FC = () => {
               <Space orientation="vertical" size={8} style={{ width: '100%' }}>
                 <div>
                   <strong style={{ fontSize: "var(--font-size-lg)" }}>{detailModal.data.materialCode}</strong>
-                  <Tag color="blue" style={{ marginLeft: 8 }}>{detailModal.data.materialType}</Tag>
+                  <Tag color={getMaterialTypeCategory(detailModal.data.materialType) === 'fabric' ? 'blue' : getMaterialTypeCategory(detailModal.data.materialType) === 'lining' ? 'cyan' : 'green'} style={{ marginLeft: 8 }}>{getMaterialTypeLabel(detailModal.data.materialType)}</Tag>
                 </div>
                 <div style={{ fontSize: "var(--font-size-base)" }}>{detailModal.data.materialName}</div>
               </Space>
@@ -1365,7 +1366,7 @@ const _MaterialInventory: React.FC = () => {
           <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => prevValues.materialType !== currentValues.materialType}>
             {({ getFieldValue }) => {
               const materialType = getFieldValue('materialType');
-              if (materialType !== '面料') return null;
+              if (getMaterialTypeCategory(materialType) !== 'fabric') return null;
               return (
                 <>
                   <div style={{
@@ -1482,7 +1483,7 @@ const _MaterialInventory: React.FC = () => {
                 </div>
                 <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)', alignItems: 'center' }}>
                   <span style={{ color: 'var(--neutral-text-disabled)', width: '80px', textAlign: 'right', flexShrink: 0 }}>物料类型：</span>
-                  <Tag color="blue" style={{ margin: '0 0 0 8px' }}>{outboundModal.data.materialType}</Tag>
+                  <Tag color={getMaterialTypeCategory(outboundModal.data.materialType) === 'fabric' ? 'blue' : getMaterialTypeCategory(outboundModal.data.materialType) === 'lining' ? 'cyan' : 'green'} style={{ margin: '0 0 0 8px' }}>{getMaterialTypeLabel(outboundModal.data.materialType)}</Tag>
                 </div>
                 <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)' }}>
                   <span style={{ color: 'var(--neutral-text-disabled)', width: '80px', textAlign: 'right', flexShrink: 0 }}>颜色：</span>
@@ -1499,7 +1500,7 @@ const _MaterialInventory: React.FC = () => {
               </Space>
 
               {/* 面料属性（仅面料显示） */}
-              {outboundModal.data.materialType === '面料' && (
+              {getMaterialTypeCategory(outboundModal.data.materialType) === 'fabric' && (
                 <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #e0e0e0' }}>
                   <div style={{
                     fontSize: 'var(--font-size-sm)',
