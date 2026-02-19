@@ -707,6 +707,7 @@
   grid-template-columns: 1fr 1fr;
   gap: 20px;
   margin-bottom: 24px;
+  align-items: start; /* 关键：禁止列互相拉伸，避免高度循环依赖 */
 }
 
 .dashboard-charts-left {
@@ -716,11 +717,12 @@
 }
 
 .dashboard-table-right {
-  height: 100%;
+  /* 不再继承100%高度，由内容自然撑高 */
 }
 
 .chart-item {
   flex: 0 0 auto;
+  min-height: 340px; /* 图表有最小高度兜底 */
 }
 
 @media (max-width: 1400px) {

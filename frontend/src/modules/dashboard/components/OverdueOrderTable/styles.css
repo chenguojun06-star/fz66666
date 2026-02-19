@@ -1,5 +1,8 @@
 .overdue-order-table-card {
-  height: 100%;
+  /* 去掉 height:100%，改为内容驱动高度，加 max-height 防止无限膨胀 */
+  min-height: 360px;
+  max-height: 820px;
+  overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   border-radius: 12px;
 }
