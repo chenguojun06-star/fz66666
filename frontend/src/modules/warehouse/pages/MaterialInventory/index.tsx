@@ -1581,14 +1581,14 @@ const _MaterialInventory: React.FC = () => {
                   return (
                     <Table.Summary fixed>
                       <Table.Summary.Row>
-                        <Table.Summary.Cell index={0} colSpan={4} align="right">
+                        <Table.Summary.Cell key="label" index={0} colSpan={4} align="right">
                           <strong>合计</strong>
                         </Table.Summary.Cell>
-                        <Table.Summary.Cell index={1} align="center">
+                        <Table.Summary.Cell key="available" index={1} align="center">
                           <strong style={{ color: 'var(--color-success)' }}>{totalAvailable}</strong>
                         </Table.Summary.Cell>
-                        <Table.Summary.Cell index={2} />
-                        <Table.Summary.Cell index={3} align="center">
+                        <Table.Summary.Cell key="locked" index={2} />
+                        <Table.Summary.Cell key="outbound" index={3} align="center">
                           <strong style={{ color: 'var(--primary-color)', fontSize: "var(--font-size-md)" }}>
                             {totalOutbound} {outboundModal.data.unit}
                           </strong>
