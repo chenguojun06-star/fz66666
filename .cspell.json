@@ -60,7 +60,11 @@
     "datasource",
     "cacheable",
     "evict",
-    "aliyun"
+    "aliyun",
+    "bindtap",
+    "bindinput",
+    "Appstore",
+    "elif"
   ],
   "ignorePaths": [
     "node_modules",

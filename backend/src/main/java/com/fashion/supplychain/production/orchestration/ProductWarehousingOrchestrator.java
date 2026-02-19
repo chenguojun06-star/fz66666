@@ -11,8 +11,6 @@ import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.CuttingBundleService;
-import com.fashion.supplychain.production.service.CuttingTaskService;
-import com.fashion.supplychain.production.entity.CuttingTask;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
@@ -29,8 +27,6 @@ import java.util.NoSuchElementException;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
-import com.fashion.supplychain.template.service.TemplateLibraryService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
@@ -59,9 +55,6 @@ public class ProductWarehousingOrchestrator {
     private CuttingBundleService cuttingBundleService;
 
     @Autowired
-    private CuttingTaskService cuttingTaskService;
-
-    @Autowired
     private ScanRecordService scanRecordService;
 
     @Autowired
@@ -75,9 +68,6 @@ public class ProductWarehousingOrchestrator {
 
     @Autowired
     private StyleBomService styleBomService;
-
-    @Autowired
-    private TemplateLibraryService templateLibraryService;
 
     public IPage<ProductWarehousing> list(Map<String, Object> params) {
         IPage<ProductWarehousing> page = productWarehousingService.queryPage(params);

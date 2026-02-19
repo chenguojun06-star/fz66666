@@ -1,6 +1,5 @@
 package com.fashion.supplychain.production.helper;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;

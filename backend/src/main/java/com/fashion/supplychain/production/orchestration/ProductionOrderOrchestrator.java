@@ -73,13 +73,6 @@ public class ProductionOrderOrchestrator {
     public static final String CLOSE_SOURCE_MY_ORDERS = "myOrders";
     public static final String CLOSE_SOURCE_PRODUCTION_PROGRESS = "productionProgress";
 
-    // 尺码排序解析用正则预编译
-    private static final java.util.regex.Pattern PATTERN_NUMERIC_SIZE = java.util.regex.Pattern
-            .compile("^\\d+(\\.\\d+)?$");
-    private static final java.util.regex.Pattern PATTERN_NUM_XL = java.util.regex.Pattern.compile("^(\\d+)XL$");
-    private static final java.util.regex.Pattern PATTERN_XS = java.util.regex.Pattern.compile("^(X{0,4})S$");
-    private static final java.util.regex.Pattern PATTERN_XL = java.util.regex.Pattern.compile("^(X{1,4})L$");
-
     @Autowired
     private ProductionOrderService productionOrderService;
 

@@ -6,11 +6,9 @@ import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import com.fashion.supplychain.style.entity.SecondaryProcess;
 import com.fashion.supplychain.style.entity.StyleBom;
-import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleProcess;
 import com.fashion.supplychain.style.service.SecondaryProcessService;
 import com.fashion.supplychain.style.service.StyleBomService;
-import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.StyleProcessService;
 import com.fashion.supplychain.style.service.StyleQuotationService;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
@@ -36,9 +34,6 @@ public class OrderPriceFillHelper {
 
     @Autowired
     private TemplateLibraryService templateLibraryService;
-
-    @Autowired
-    private StyleInfoService styleInfoService;
 
     @Autowired
     private StyleQuotationService styleQuotationService;

@@ -3,7 +3,6 @@ package com.fashion.supplychain.production.helper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.UserContext;
-import com.fashion.supplychain.common.util.TextUtils;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionOrder;

@@ -5,7 +5,6 @@ import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
-import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
 import java.time.LocalDateTime;
@@ -34,9 +33,6 @@ public class OrderProgressFillHelper {
 
     @Autowired
     private ProductionOrderScanRecordDomainService scanRecordDomainService;
-
-    @Autowired
-    private MaterialPurchaseService materialPurchaseService;
 
     public void fixProductionProgressByCompletedQuantity(List<ProductionOrder> records) {
         if (records == null || records.isEmpty()) {

@@ -51,9 +51,6 @@ public class WarehouseScanExecutor {
     @Autowired
     private SKUService skuService;
 
-    @Autowired
-    private ProductionOrderScanRecordDomainService productionOrderScanRecordDomainService;
-
     /**
      * 执行仓库入库扫码
      */
