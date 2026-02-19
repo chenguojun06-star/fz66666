@@ -25,12 +25,15 @@ import com.fashion.supplychain.style.mapper.StyleQuotationMapper;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -154,6 +157,54 @@ public class ProductionOrderFlowOrchestrationService {
     @Autowired
     private StyleQuotationMapper styleQuotationMapper;
 
+    @Autowired(required = false)
+    private JdbcTemplate jdbcTemplate;
+
+    /**
+     * 批量查询用户真实显示名（优先 name，回退 username）
+     * 用于在 Flow 展示时将 operatorId 映射到当前最新姓名，解决历史记录显示 "system" 等问题
+     */
+    private Map<String, String> batchLookupUserDisplayNames(Set<String> userIds) {
+        Map<String, String> result = new HashMap<>();
+        if (userIds == null || userIds.isEmpty() || jdbcTemplate == null) {
+            return result;
+        }
+        try {
+            List<Long> ids = new ArrayList<>();
+            for (String uid : userIds) {
+                if (!StringUtils.hasText(uid)) continue;
+                try { ids.add(Long.parseLong(uid.trim())); } catch (NumberFormatException ignored) {}
+            }
+            if (ids.isEmpty()) return result;
+            String placeholders = ids.stream().map(x -> "?").collect(java.util.stream.Collectors.joining(","));
+            String sql = "SELECT id, name, username FROM t_user WHERE id IN (" + placeholders + ")";
+            jdbcTemplate.query(sql, rs -> {
+                String uid = String.valueOf(rs.getLong("id"));
+                String name = rs.getString("name");
+                String username = rs.getString("username");
+                String displayName = StringUtils.hasText(name) ? name : username;
+                if (StringUtils.hasText(displayName)) {
+                    result.put(uid, displayName);
+                }
+            }, ids.toArray());
+        } catch (Exception e) {
+            log.warn("[OrderFlow] 批量查询用户名失败: {}", e.getMessage());
+        }
+        return result;
+    }
+
+    /** 用真实姓名替换 row 中的 operatorName 字段 */
+    private void enrichOperatorName(Map<String, Object> row, String idKey, String nameKey,
+            Map<String, String> userNames) {
+        Object idObj = row.get(idKey);
+        if (idObj == null) return;
+        String uid = String.valueOf(idObj).trim();
+        String realName = userNames.get(uid);
+        if (StringUtils.hasText(realName)) {
+            row.put(nameKey, realName);
+        }
+    }
+
     public OrderFlowResponse getOrderFlow(String orderId) {
         String oid = StringUtils.hasText(orderId) ? orderId.trim() : null;
         if (!StringUtils.hasText(oid)) {
@@ -172,11 +223,58 @@ public class ProductionOrderFlowOrchestrationService {
 
         List<Map<String, Object>> stages = buildProductionStageFlow(order, records);
 
+        // ─── 批量查 DB 将所有 operatorId 替换为用户当前真实显示名 ───────────────────
+        try {
+            Set<String> operatorIds = new HashSet<>();
+            for (Map<String, Object> row : stages) {
+                Object sid = row.get("startOperatorId");
+                Object cid = row.get("completeOperatorId");
+                Object lid = row.get("lastOperatorId");
+                if (sid != null && StringUtils.hasText(String.valueOf(sid))) operatorIds.add(String.valueOf(sid).trim());
+                if (cid != null && StringUtils.hasText(String.valueOf(cid))) operatorIds.add(String.valueOf(cid).trim());
+                if (lid != null && StringUtils.hasText(String.valueOf(lid))) operatorIds.add(String.valueOf(lid).trim());
+            }
+            if (order.getCreatedById() != null) operatorIds.add(order.getCreatedById().trim());
+
+            if (!operatorIds.isEmpty()) {
+                Map<String, String> userNames = batchLookupUserDisplayNames(operatorIds);
+                for (Map<String, Object> row : stages) {
+                    enrichOperatorName(row, "startOperatorId", "startOperatorName", userNames);
+                    enrichOperatorName(row, "completeOperatorId", "completeOperatorName", userNames);
+                    enrichOperatorName(row, "lastOperatorId", "lastOperatorName", userNames);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[OrderFlow] 操作人名称补全失败，使用原始值: {}", e.getMessage());
+        }
+        // ─────────────────────────────────────────────────────────────────────────
+
         List<MaterialPurchase> materialPurchases = materialPurchaseMapper
                 .selectList(new LambdaQueryWrapper<MaterialPurchase>()
                         .eq(MaterialPurchase::getOrderId, oid)
                         .eq(MaterialPurchase::getDeleteFlag, 0)
                         .orderByDesc(MaterialPurchase::getCreateTime));
+
+        // 批量查 DB 补全采购记录中的 creatorName/updaterName
+        try {
+            Set<String> purchaseUserIds = new HashSet<>();
+            for (MaterialPurchase mp : materialPurchases) {
+                if (StringUtils.hasText(mp.getCreatorId())) purchaseUserIds.add(mp.getCreatorId().trim());
+            }
+            if (!purchaseUserIds.isEmpty()) {
+                Map<String, String> purchaseNames = batchLookupUserDisplayNames(purchaseUserIds);
+                for (MaterialPurchase mp : materialPurchases) {
+                    if (StringUtils.hasText(mp.getCreatorId())) {
+                        String realName = purchaseNames.get(mp.getCreatorId().trim());
+                        if (StringUtils.hasText(realName)) {
+                            mp.setCreatorName(realName);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[OrderFlow] 采购操作人名称补全失败: {}", e.getMessage());
+        }
 
         List<CuttingTask> cuttingTasks = cuttingTaskService.list(new LambdaQueryWrapper<CuttingTask>()
                 .eq(CuttingTask::getProductionOrderId, oid)
@@ -333,6 +431,23 @@ public class ProductionOrderFlowOrchestrationService {
 
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("processName", pn);
+
+            // ─── 【下单】环节：直接取 order 创建人信息，不依赖 scan record ──────
+            if (templateLibraryService.progressStageNameMatches("下单", pn)) {
+                row.put("status", "completed");
+                row.put("totalQuantity", orderQty);
+                row.put("startTime", order.getCreateTime());
+                row.put("completeTime", order.getCreateTime());
+                String creatorId = order.getCreatedById() != null ? String.valueOf(order.getCreatedById()) : null;
+                String creatorName = StringUtils.hasText(order.getCreatedByName()) ? order.getCreatedByName() : null;
+                row.put("startOperatorId", creatorId);
+                row.put("startOperatorName", creatorName);
+                row.put("completeOperatorId", creatorId);
+                row.put("completeOperatorName", creatorName);
+                result.add(row);
+                continue;
+            }
+            // ──────────────────────────────────────────────────────────────────────
 
             if (list.isEmpty()) {
                 row.put("status", "not_started");

@@ -741,6 +741,7 @@ const PatternProduction: React.FC = () => {
               fields={[]}
               fieldGroups={[
                 [{ label: '码数', key: 'sizes', render: (val: string[]) => val && val.length > 0 ? val.join(',') : '-' }, { label: '数量', key: 'quantity', render: (val) => (val !== null && val !== undefined) ? `${val}件` : '-' }],
+                [{ label: '领取时间', key: 'receiveTime', render: (val: string) => val ? val.split(' ')[0] : '-' }, { label: '完成时间', key: 'completeTime', render: (val: string) => val ? val.split(' ')[0] : '-' }],
               ]}
               progressConfig={{
                 calculate: calculateProgress,
