@@ -11,6 +11,10 @@ const api = require('../../../../../utils/api');
 
 /**
  * 调用料卷扫码接口（封装，使用统一 api.js）
+ * @param {string} rollCode - 料卷码
+ * @param {string} action - 操作类型（如 issue/return）
+ * @param {object} extra - 附加参数（如 cuttingOrderNo）
+ * @returns {Promise} 接口请求 Promise
  */
 function scanRollApi(rollCode, action, extra) {
   const userInfo = getApp().globalData && getApp().globalData.userInfo;

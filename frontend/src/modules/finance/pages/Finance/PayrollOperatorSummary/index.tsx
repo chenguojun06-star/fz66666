@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Card, Input, Select, Space, Switch, Tabs, Tag, Tooltip, message } from 'antd';
 import { UnifiedRangePicker } from '@/components/common/UnifiedDatePicker';
-import { DownloadOutlined } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
