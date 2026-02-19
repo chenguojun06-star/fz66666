@@ -122,19 +122,39 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
         LocalDateTime now = LocalDateTime.now();
         int bundleIndex = 1;
 
-        // ✅ 自动分配床号：查询当前租户的最大床号，从下一个开始
+        // ✅ 自动分配床号：
+        // 优先复用同一订单已有的床号（同一订单多个尺码属于同一次裁剪），
+        // 只有当前订单尚无任何bundles时，才从全局最大床号+1（新一床）
         Long currentTenantId = UserContext.tenantId();
-        CuttingBundle lastBundle = this.baseMapper.selectOne(
+        CuttingBundle sameOrderBundle = this.baseMapper.selectOne(
             new LambdaQueryWrapper<CuttingBundle>()
                 .select(CuttingBundle::getBedNo)
-                .eq(CuttingBundle::getTenantId, currentTenantId)
+                .eq(CuttingBundle::getProductionOrderId, order.getId())
+                .isNotNull(CuttingBundle::getBedNo)
+                .gt(CuttingBundle::getBedNo, 0)
                 .orderByDesc(CuttingBundle::getBedNo)
                 .last("LIMIT 1")
         );
 
-        int nextBedNo = (lastBundle != null && lastBundle.getBedNo() != null && lastBundle.getBedNo() > 0)
+        int nextBedNo;
+        if (sameOrderBundle != null && sameOrderBundle.getBedNo() != null && sameOrderBundle.getBedNo() > 0) {
+            // 同订单已有其他尺码的bundles → 复用同一床号（同一次裁剪）
+            nextBedNo = sameOrderBundle.getBedNo();
+            log.info("复用同订单床号: orderId={}, bedNo={}", order.getId(), nextBedNo);
+        } else {
+            // 订单首次生成bundles → 取全局最大床号+1（开始新一床）
+            CuttingBundle lastBundle = this.baseMapper.selectOne(
+                new LambdaQueryWrapper<CuttingBundle>()
+                    .select(CuttingBundle::getBedNo)
+                    .eq(CuttingBundle::getTenantId, currentTenantId)
+                    .orderByDesc(CuttingBundle::getBedNo)
+                    .last("LIMIT 1")
+            );
+            nextBedNo = (lastBundle != null && lastBundle.getBedNo() != null && lastBundle.getBedNo() > 0)
                         ? lastBundle.getBedNo() + 1
                         : 1;
+            log.info("新建床号: tenantId={}, 本批床号={}, orderId={}", currentTenantId, nextBedNo, order.getId());
+        }
         log.info("自动分配床号: tenantId={}, 本批床号={}, 本批扎号数={}", currentTenantId, nextBedNo, bundles.size());
 
         for (Map<String, Object> item : bundles) {

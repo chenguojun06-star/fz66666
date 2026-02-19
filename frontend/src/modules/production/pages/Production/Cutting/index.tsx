@@ -1010,6 +1010,11 @@ const CuttingManagement: React.FC = () => {
             onCancel={() => setCuttingSheetPrintOpen(false)}
             bundles={bundles.selectedBundles}
             styleImageUrl={(activeTask as any)?.styleImageUrl}
+            cuttingTask={activeTask ? {
+              receiverName: (activeTask as any).receiverName,
+              creatorName: (activeTask as any).creatorName,
+              orderCreatorName: (activeTask as any).orderCreatorName,
+            } : undefined}
           />
 
         </Card>

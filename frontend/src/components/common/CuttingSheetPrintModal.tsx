@@ -8,6 +8,12 @@ interface CuttingSheetPrintModalProps {
   onCancel: () => void;
   bundles: CuttingBundleRow[];
   styleImageUrl?: string;
+  /** 裁剪任务信息（用于打印操作人/创建人，优先级高于bundle自带字段） */
+  cuttingTask?: {
+    receiverName?: string;    // 裁布人（领取人）
+    creatorName?: string;     // 创建人
+    orderCreatorName?: string; // 下单人
+  };
 }
 
 /**
@@ -20,6 +26,7 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
   onCancel,
   bundles,
   styleImageUrl,
+  cuttingTask,
 }) => {
   const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait');
 
@@ -57,9 +64,9 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
         .sort((a, b) => a - b);
       const bedNoDisplay = bedNos.length > 0 ? bedNos.join(', ') : '-';
 
-      // 获取操作人信息（优先显示最后操作人，否则显示创建人）
-      const operatorName = firstBundle.operatorName || firstBundle.creatorName || '-';
-      const creatorName = firstBundle.creatorName || '-';
+      // 获取操作人信息：优先用裁剪任务的receiverName/creatorName（真实姓名），其次用bundle字段
+      const operatorName = cuttingTask?.receiverName || firstBundle.operatorName || firstBundle.creatorName || '-';
+      const creatorName = cuttingTask?.orderCreatorName || cuttingTask?.creatorName || firstBundle.creatorName || '-';
 
       // 款式图片URL
       const imageUrl = styleImageUrl ? getFullAuthedFileUrl(styleImageUrl) : '';
