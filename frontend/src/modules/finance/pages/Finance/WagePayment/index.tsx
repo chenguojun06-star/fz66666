@@ -505,7 +505,7 @@ const PaymentCenterPage: React.FC = () => {
         key: 'payee',
         width: 160,
         render: (_: unknown, r: PayableItem) => (
-          <Space direction="vertical" size={0}>
+          <Space orientation="vertical" size={0}>
             <span style={{ fontWeight: 500 }}>{r.payeeName}</span>
             <Tag style={{ fontSize: 11 }}>{r.payeeType === 'WORKER' ? '员工' : '工厂/供应商'}</Tag>
           </Space>

@@ -1,12 +1,19 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import api from '@/utils/api';
 import { useAuth } from '@/utils/AuthContext';
+import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 import type { CuttingBundleRow } from './useCuttingBundles';
 
 interface StyleOption {
   id: number | string;
   styleNo: string;
   styleName?: string;
+}
+
+export interface ProcessUnitPrice {
+  processName: string;
+  unitPrice: number | null;
+  processCode?: string;
 }
 
 interface UseCuttingCreateTaskOptions {
@@ -30,6 +37,10 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
   const [createStyleNo, setCreateStyleNo] = useState<string>('');
   const [createStyleName, setCreateStyleName] = useState<string>('');
   const [createBundles, setCreateBundles] = useState<CuttingBundleRow[]>([{ color: '', size: '', quantity: 0 }]);
+
+  // 工序进度单价
+  const [createProcessPrices, setCreateProcessPrices] = useState<ProcessUnitPrice[]>([]);
+  const [processPricesLoading, setProcessPricesLoading] = useState(false);
 
   const fetchStyleInfoOptions = async (keyword?: string) => {
     setCreateStyleLoading(true);
@@ -56,11 +67,49 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
     }
   };
 
+  /** 根据款号加载工序进度单价（反推大货生产单价用） */
+  const fetchProcessUnitPrices = useCallback(async (styleNo: string) => {
+    const sn = String(styleNo || '').trim();
+    if (!sn) { setCreateProcessPrices([]); return; }
+    setProcessPricesLoading(true);
+    try {
+      const res = await templateLibraryApi.progressNodeUnitPrices(sn);
+      if (res.code === 200 && Array.isArray(res.data)) {
+        const prices: ProcessUnitPrice[] = (res.data as Array<Record<string, unknown>>)
+          .map((item) => ({
+            processName: String(item.processName || item.process_name || '').trim(),
+            unitPrice: item.unitPrice != null ? Number(item.unitPrice)
+              : item.unit_price != null ? Number(item.unit_price) : null,
+            processCode: String(item.processCode || item.process_code || '').trim() || undefined,
+          }))
+          .filter((x) => x.processName);
+        setCreateProcessPrices(prices);
+      } else {
+        setCreateProcessPrices([]);
+      }
+    } catch {
+      setCreateProcessPrices([]);
+    } finally {
+      setProcessPricesLoading(false);
+    }
+  }, []);
+
+  /** 款号选择/输入变更时同步款名并拉取工序单价 */
+  const handleStyleNoChange = (value: string) => {
+    const sn = String(value || '').trim();
+    setCreateStyleNo(sn);
+    const hit = createStyleOptions.find((x) => x.styleNo === sn);
+    setCreateStyleName(String(hit?.styleName || '').trim());
+    if (sn) fetchProcessUnitPrices(sn);
+    else setCreateProcessPrices([]);
+  };
+
   const openCreateTask = () => {
     setCreateOrderNo('');
     setCreateStyleNo('');
     setCreateStyleName('');
     setCreateBundles([{ color: '', size: '', quantity: 0 }]);
+    setCreateProcessPrices([]);
     setCreateTaskOpen(true);
     fetchStyleInfoOptions('');
   };
@@ -112,6 +161,8 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
         receiverId: user?.id,
         receiverName: (user as unknown as any)?.name,
         bundles: validItems,
+        // 附带工序进度单价，后端可反推大货生产单价
+        processUnitPrices: createProcessPrices.length > 0 ? createProcessPrices : undefined,
       });
       if (res.code === 200) {
         message.success('新建裁剪任务成功');
@@ -138,7 +189,10 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
     createStyleOptions, createStyleLoading, createStyleNo, setCreateStyleNo,
     createStyleName, setCreateStyleName,
     createBundles,
+    createProcessPrices, processPricesLoading,
     fetchStyleInfoOptions,
+    fetchProcessUnitPrices,
+    handleStyleNoChange,
     openCreateTask,
     handleCreateBundleChange, handleCreateBundleAdd, handleCreateBundleRemove,
     handleSubmitCreateTask,

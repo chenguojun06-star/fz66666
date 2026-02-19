@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Card, Checkbox, Form, Input, InputNumber, Select, Space, Tag, Tooltip, Typography } from 'antd';
+import { App, AutoComplete, Button, Card, Checkbox, Form, Input, InputNumber, Select, Space, Tag, Tooltip, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { DeleteOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
@@ -100,6 +100,11 @@ const TemplateCenter: React.FC = () => {
   const [editSaving, setEditSaving] = useState(false);
   const [editingRow, setEditingRow] = useState<TemplateLibrary | null>(null);
   const [editTableData, setEditTableData] = useState<unknown>(null);
+
+  // 按款号更新工序进度单价
+  const [syncPriceOpen, setSyncPriceOpen] = useState(false);
+  const [syncPriceStyleNo, setSyncPriceStyleNo] = useState('');
+  const [syncPriceLoading, setSyncPriceLoading] = useState(false);
 
   const sizeColumns = useMemo(() => {
     if (!editTableData) return null;
@@ -1140,6 +1145,14 @@ const TemplateCenter: React.FC = () => {
               <Button type="primary" onClick={() => fetchList({ page: 1 })}>
                 刷新
               </Button>
+              <Button
+                onClick={() => {
+                  setSyncPriceStyleNo('');
+                  setSyncPriceOpen(true);
+                }}
+              >
+                按款号更新工序单价
+              </Button>
             </div>
           </Form>
         </Card>
@@ -1810,6 +1823,52 @@ const TemplateCenter: React.FC = () => {
         initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
       >
         {renderVisualContent()}
+      </ResizableModal>
+
+      {/* 按款号批量刷新工序进度单价 */}
+      <ResizableModal
+        open={syncPriceOpen}
+        title="按款号更新工序进度单价"
+        width={400}
+        centered
+        onCancel={() => setSyncPriceOpen(false)}
+        okText="开始同步"
+        confirmLoading={syncPriceLoading}
+        onOk={async () => {
+          const sn = syncPriceStyleNo.trim();
+          if (!sn) { message.error('请输入款号'); return; }
+          setSyncPriceLoading(true);
+          try {
+            const res = await api.post<{ code: number; message: string; data?: Record<string, unknown> }>('/template-library/sync-process-prices', { styleNo: sn });
+            if (res.code === 200) {
+              const d = res.data as any;
+              message.success(`同步完成：${d?.totalOrders ?? 0}个订单，共更新 ${d?.totalSynced ?? 0} 条工序单价`);
+              setSyncPriceOpen(false);
+            } else {
+              message.error(res.message || '同步失败');
+            }
+          } catch {
+            message.error('同步失败');
+          } finally {
+            setSyncPriceLoading(false);
+          }
+        }}
+        initialHeight={260}
+      >
+        <Space direction="vertical" style={{ width: '100%', padding: '8px 0' }}>
+          <Typography.Text type="secondary">
+            输入款号，自动将模板库配置的工序单价同步到该款号下所有大货生产订单。
+          </Typography.Text>
+          <AutoComplete
+            value={syncPriceStyleNo}
+            style={{ width: '100%' }}
+            placeholder="输入或选择款号"
+            options={styleNoOptions}
+            onSearch={(v) => fetchStyleNoOptions(v)}
+            onChange={(v) => setSyncPriceStyleNo(String(v || ''))}
+            allowClear
+          />
+        </Space>
       </ResizableModal>
     </Layout>
   );

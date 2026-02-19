@@ -11,8 +11,13 @@ import com.fashion.supplychain.template.entity.TemplateOperationLog;
 import com.fashion.supplychain.template.event.TemplatePriceChangedEvent;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
 import com.fashion.supplychain.template.service.TemplateOperationLogService;
+import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
+import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.production.entity.ProductionOrder;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -43,6 +48,12 @@ public class TemplateLibraryOrchestrator {
 
     @Autowired
     private com.fashion.supplychain.production.orchestration.ProductionOrderOrchestrator productionOrderOrchestrator;
+
+    @Autowired
+    private ProductionOrderService productionOrderService;
+
+    @Autowired
+    private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
 
     @Autowired
     private ApplicationEventPublisher eventPublisher;
@@ -481,5 +492,51 @@ public class TemplateLibraryOrchestrator {
             throw new IllegalStateException("导入失败");
         }
         return true;
+    }
+
+    /**
+     * 按款号批量同步工序进度单价（反推大货生产订单）
+     *
+     * @param styleNo 款号
+     * @return 同步结果摘要
+     */
+    public Map<String, Object> syncProcessUnitPricesByStyleNo(String styleNo) {
+        String sn = StringUtils.hasText(styleNo) ? styleNo.trim() : "";
+        if (!StringUtils.hasText(sn)) {
+            throw new IllegalArgumentException("款号不能为空");
+        }
+        // 找该款号下所有未完成订单
+        List<ProductionOrder> orders = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .eq(ProductionOrder::getStyleNo, sn)
+                .isNotNull(ProductionOrder::getProgressWorkflowJson)
+                .ne(ProductionOrder::getProgressWorkflowJson, "")
+                .list();
+        int totalOrders = orders.size();
+        int successCount = 0;
+        int totalSynced = 0;
+        List<Map<String, Object>> details = new ArrayList<>();
+        for (ProductionOrder order : orders) {
+            try {
+                int synced = processTrackingOrchestrator.syncUnitPrices(order.getId());
+                if (synced > 0) {
+                    successCount++;
+                    totalSynced += synced;
+                }
+                Map<String, Object> d = new HashMap<>();
+                d.put("orderNo", order.getOrderNo());
+                d.put("syncedRecords", synced);
+                details.add(d);
+            } catch (Exception e) {
+                log.warn("订单 {} 单价同步失败: {}", order.getOrderNo(), e.getMessage());
+            }
+        }
+        Map<String, Object> result = new HashMap<>();
+        result.put("styleNo", sn);
+        result.put("totalOrders", totalOrders);
+        result.put("successOrders", successCount);
+        result.put("totalSynced", totalSynced);
+        result.put("details", details);
+        return result;
     }
 }

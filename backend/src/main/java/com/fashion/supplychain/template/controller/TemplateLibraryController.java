@@ -124,4 +124,15 @@ public class TemplateLibraryController {
     public Result<?> applyToStyle(@RequestBody Map<String, Object> body) {
         return Result.success(templateLibraryOrchestrator.applyToStyle(body));
     }
+
+    /**
+     * 按款号批量同步工序进度单价到大货生产订单
+     * 找出该款号下所有有效生产订单，自动刷新其工序单价
+     */
+    @PostMapping("/sync-process-prices")
+    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
+    public Result<?> syncProcessPrices(@RequestBody Map<String, Object> body) {
+        String styleNo = body == null ? null : (body.get("styleNo") == null ? null : String.valueOf(body.get("styleNo")).trim());
+        return Result.success(templateLibraryOrchestrator.syncProcessUnitPricesByStyleNo(styleNo));
+    }
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { App, Button, Card, Form, Input, InputNumber, Select, Space, Tag } from 'antd';
+import { App, AutoComplete, Button, Card, Divider, Form, Input, InputNumber, Select, Space, Spin, Tag, Typography } from 'antd';
 
 import Layout from '@/components/Layout';
 import PageStatCards from '@/components/common/PageStatCards';
@@ -900,29 +900,24 @@ const CuttingManagement: React.FC = () => {
             <Card size="small" style={{ marginBottom: 12 }}>
               <Space wrap>
                 <span>款号</span>
-                <Select
-                  showSearch
-                  value={createTask.createStyleNo || undefined}
-                  style={{ width: 320 }}
-                  placeholder="输入款号搜索"
-                  filterOption={false}
-                  onSearch={(v) => createTask.fetchStyleInfoOptions(v)}
-                  loading={createTask.createStyleLoading}
+                <AutoComplete
+                  value={createTask.createStyleNo}
+                  style={{ width: 260 }}
+                  placeholder="输入或搜索款号"
                   options={createTask.createStyleOptions.map((x) => ({
                     value: x.styleNo,
                     label: x.styleName ? `${x.styleNo}（${x.styleName}）` : x.styleNo,
                   }))}
-                  onChange={(v) => {
-                    const value = String(v || '').trim();
-                    createTask.setCreateStyleNo(value);
-                    const hit = createTask.createStyleOptions.find((x) => x.styleNo === value);
-                    createTask.setCreateStyleName(String(hit?.styleName || '').trim());
-                  }}
+                  onSearch={(v) => createTask.fetchStyleInfoOptions(v)}
+                  onChange={(v) => createTask.handleStyleNoChange(v)}
+                  filterOption={false}
+                  allowClear
+                  onClear={() => createTask.handleStyleNoChange('')}
                 />
                 <span>裁剪单号</span>
                 <Input
                   value={createTask.createOrderNo}
-                  style={{ width: 260 }}
+                  style={{ width: 220 }}
                   placeholder="不填自动生成"
                   onChange={(e) => createTask.setCreateOrderNo(e.target.value)}
                 />
@@ -931,6 +926,34 @@ const CuttingManagement: React.FC = () => {
                 <div style={{ marginTop: 8, color: 'rgba(0,0,0,0.65)' }}>款名：{createTask.createStyleName}</div>
               ) : null}
             </Card>
+
+            {/* 工序进度单价预览 */}
+            {(createTask.createProcessPrices.length > 0 || createTask.processPricesLoading) && (
+              <Card
+                size="small"
+                style={{ marginBottom: 12 }}
+                title={
+                  <Space>
+                    <span>工序进度单价</span>
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                      （将随订单反推至大货生产）
+                    </Typography.Text>
+                  </Space>
+                }
+              >
+                {createTask.processPricesLoading ? (
+                  <Spin size="small" />
+                ) : (
+                  <Space wrap>
+                    {createTask.createProcessPrices.map((p, i) => (
+                      <Tag key={i} color="blue">
+                        {p.processName}{p.unitPrice != null ? ` ¥${p.unitPrice}` : ' 未配置'}
+                      </Tag>
+                    ))}
+                  </Space>
+                )}
+              </Card>
+            )}
 
             <Card size="small" title="自定义裁剪单" extra={
               <Button type="dashed" onClick={createTask.handleCreateBundleAdd}>
