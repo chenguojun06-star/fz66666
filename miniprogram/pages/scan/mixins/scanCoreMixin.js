@@ -12,6 +12,7 @@ const { getToken, getUserInfo, getStorageValue } = require('../../../utils/stora
 const { toastAndRedirect, toast } = require('../../../utils/uiHelper');
 const { errorHandler } = require('../../../utils/errorHandler');
 const api = require('../../../utils/api');
+const ScanHandler = require('../handlers/ScanHandler');
 const StockHandler = require('../handlers/StockHandler');
 const UndoHandler = require('../handlers/UndoHandler');
 const HistoryHandler = require('../handlers/HistoryHandler');
@@ -87,6 +88,32 @@ function markRecent(key, ttlMs) {
  */
 const scanCoreMixin = Behavior({
   methods: {
+    // ==================== ScanHandler 惰性初始化 ====================
+
+    /**
+     * 确保 scanHandler 已初始化
+     * 兜底逻辑：如果 Behavior 的 onLoad 未运行（微信版本兼容性问题），
+     * 在首次扫码时就地初始化 ScanHandler
+     * @returns {void}
+     * @private
+     */
+    _ensureScanHandler() {
+      if (this.scanHandler) {
+        return; // 已初始化，跳过
+      }
+      try {
+        this.scanHandler = new ScanHandler(api, {
+          onSuccess: this.handleScanSuccess.bind(this),
+          onError: this.handleScanError.bind(this),
+          getCurrentFactory: () => this.data.currentFactory,
+          getCurrentWorker: () => this.data.currentUser,
+        });
+        console.log('[scanCoreMixin] scanHandler 惰性初始化成功');
+      } catch (e) {
+        console.error('[scanCoreMixin] scanHandler 惰性初始化失败:', e);
+      }
+    },
+
     // ==================== 登录检查 ====================
 
     /**
@@ -267,13 +294,8 @@ const scanCoreMixin = Behavior({
         warehouse: this.data.warehouse,
       };
 
-      // 守卫：scanHandler 为 null 说明 onLoad 初始化失败，提示刷新重试
-      if (!this.scanHandler) {
-        this.setData({ loading: false });
-        toast.error('扫码模块未就绪，请退出页面重新进入');
-        console.error('[processScanCode] scanHandler 为 null，跳过扫码处理');
-        return;
-      }
+      // 惰性初始化：如果 Behavior 的 onLoad 未跑（微信版本兼容性问题），这里补初始化
+      this._ensureScanHandler();
 
       try {
         const result = await this.scanHandler.handleScan(codeStr, options);
