@@ -16,8 +16,10 @@ import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomai
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.common.constant.MaterialConstants;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -232,34 +234,38 @@ public class MaterialPurchaseOrchestrator {
 
         List<String> explicitOrderIds = helper.coerceStringList(orderIdsRaw);
 
-        List<String> targetOrderIds;
-
         if (explicitOrderIds != null && !explicitOrderIds.isEmpty()) {
-            targetOrderIds = new ArrayList<>();
+            // 按订单创建日期分组，同一天的订单内部合并
+            // 不同天单独处理，彻底防止跨天相同面辅料被归入同一采购单
+            LinkedHashMap<LocalDate, List<String>> orderIdsByDate = new LinkedHashMap<>();
             for (String x : explicitOrderIds) {
                 String id = StringUtils.hasText(x) ? x.trim() : null;
-                if (!StringUtils.hasText(id)) {
-                    continue;
-                }
-                if (!overwriteFlag && materialPurchaseService.existsActivePurchaseForOrder(id)) {
-                    continue;
-                }
-                targetOrderIds.add(id);
+                if (!StringUtils.hasText(id)) continue;
+                if (!overwriteFlag && materialPurchaseService.existsActivePurchaseForOrder(id)) continue;
+                ProductionOrder o = productionOrderService.getDetailById(id);
+                if (o == null) continue;
+                LocalDate day = (o.getCreateTime() != null) ? o.getCreateTime().toLocalDate() : LocalDate.now();
+                orderIdsByDate.computeIfAbsent(day, k -> new ArrayList<>()).add(id);
             }
-        } else {
-            if (!StringUtils.hasText(oid)) {
-                throw new IllegalArgumentException("orderId不能为空");
+            List<Object> allGenerated = new ArrayList<>();
+            for (List<String> dateGroup : orderIdsByDate.values()) {
+                allGenerated.addAll(helper.generateBatchDemand(dateGroup, overwriteFlag));
             }
-            ProductionOrder seed = productionOrderService.getDetailById(oid);
-            if (seed == null) {
-                throw new NoSuchElementException("生产订单不存在");
-            }
-            if (!overwriteFlag && materialPurchaseService.existsActivePurchaseForOrder(oid)) {
-                throw new IllegalStateException("该订单已生成采购需求");
-            }
-            targetOrderIds = helper.resolveTargetOrderIds(seed, overwriteFlag);
+            return allGenerated;
         }
 
+        // 单订单路径：通过 seed 订单日期查找同天同款订单批量生成
+        if (!StringUtils.hasText(oid)) {
+            throw new IllegalArgumentException("orderId不能为空");
+        }
+        ProductionOrder seed = productionOrderService.getDetailById(oid);
+        if (seed == null) {
+            throw new NoSuchElementException("生产订单不存在");
+        }
+        if (!overwriteFlag && materialPurchaseService.existsActivePurchaseForOrder(oid)) {
+            throw new IllegalStateException("该订单已生成采购需求");
+        }
+        List<String> targetOrderIds = helper.resolveTargetOrderIds(seed, overwriteFlag);
         return helper.generateBatchDemand(targetOrderIds, overwriteFlag);
     }
 

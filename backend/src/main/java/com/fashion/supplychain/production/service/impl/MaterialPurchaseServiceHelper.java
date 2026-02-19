@@ -358,6 +358,7 @@ public class MaterialPurchaseServiceHelper {
                 mp.setColor(StringUtils.hasText(bomColor) ? bomColor : null);
                 mp.setSize(StringUtils.hasText(bomSize) ? bomSize : null);
                 mp.setStatus(MaterialConstants.STATUS_PENDING);
+                mp.setSourceType("order"); // 标记为生产订单驱动采购，不应写入独立进销存
                 LocalDateTime now = LocalDateTime.now();
                 mp.setCreateTime(now);
                 mp.setUpdateTime(now);

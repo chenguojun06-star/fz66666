@@ -258,10 +258,11 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         boolean saved = this.save(materialPurchase);
 
         // 如果初始保存时就有到货数量，需要同步库存
+        // 注意：sourceType="order" 的生产订单驱动采购不写入独立进销存，只有独立采购才写入
         if (saved) {
             int currentArrived = materialPurchase.getArrivedQuantity() == null ? 0
                     : materialPurchase.getArrivedQuantity();
-            if (currentArrived > 0) {
+            if (currentArrived > 0 && !isOrderDrivenPurchase(materialPurchase)) {
                 try {
                     materialStockService.increaseStock(materialPurchase, currentArrived);
                 } catch (Exception e) {
@@ -312,8 +313,8 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         // 更新物料采购记录
         boolean updated = this.updateById(materialPurchase);
 
-        // 同步库存差异
-        if (updated && oldPurchase != null) {
+        // 同步库存差异：生产订单驱动的采购（sourceType=order）不写入独立进销存
+        if (updated && oldPurchase != null && !isOrderDrivenPurchase(materialPurchase)) {
             int oldArrived = oldPurchase.getArrivedQuantity() == null ? 0 : oldPurchase.getArrivedQuantity();
             int newArrived = arrived;
             int delta = newArrived - oldArrived;
@@ -517,15 +518,12 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
             materialPurchase.setUnit("-");
         }
 
-        // 同步库存
-        if (delta != 0) {
-            // 如果是正数，增加库存；如果是负数（修正错误），减少库存
-            // updateStockQuantity 支持负数
+        // 同步库存（生产订单驱动的采购不写入独立进销存）
+        if (delta != 0 && !isOrderDrivenPurchase(materialPurchase)) {
             try {
                 materialStockService.increaseStock(materialPurchase, delta);
             } catch (Exception e) {
                 log.warn("Failed to sync material stock: purchaseId={}, delta={}, error={}", id, delta, e.getMessage());
-                // 可选择抛出异常回滚，或者仅记录日志。建议回滚以保证数据一致性
                 throw new RuntimeException("库存同步失败", e);
             }
         }
@@ -694,9 +692,9 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         patch.setRemark(remark);
         patch.setUpdateTime(LocalDateTime.now());
 
-        // 同步库存：回料确认时增加库存（delta = 新到货量 - 旧到货量）
+        // 同步库存：回料确认时增加库存，生产订单驱动的采购不写入独立进销存
         int delta = rq - arrivedQty;
-        if (delta != 0) {
+        if (delta != 0 && !isOrderDrivenPurchase(existed)) {
             try {
                 materialStockService.increaseStock(existed, delta);
                 log.info("confirmReturnPurchase: 库存同步成功, purchaseId={}, delta={}", purchaseId, delta);
@@ -748,5 +746,16 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         patch.setRemark(remark);
         patch.setUpdateTime(LocalDateTime.now());
         return this.updateById(patch);
+    }
+
+    /**
+     * 判断是否为生产订单驱动的采购（sourceType="order" 或 "sample"）
+     * 生产订单驱动的采购到货不应写入独立进销存（MaterialStock），
+     * 独立进销存只记录独立提前采购的库存。
+     */
+    private boolean isOrderDrivenPurchase(MaterialPurchase purchase) {
+        if (purchase == null) return false;
+        String sourceType = purchase.getSourceType();
+        return "order".equals(sourceType) || "sample".equals(sourceType);
     }
 }
