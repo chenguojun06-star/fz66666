@@ -292,7 +292,6 @@ public class InternalMaintenanceController {
         try {
             List<ProductionOrder> orders = productionOrderService.lambdaQuery()
                     .eq(ProductionOrder::getDeleteFlag, 0)
-                    .gt(ProductionOrder::getCuttingBundleCount, 0)
                     .list();
 
             int successCount = 0, errorCount = 0, totalRecords = 0;
