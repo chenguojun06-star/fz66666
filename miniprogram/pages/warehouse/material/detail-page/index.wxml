@@ -1,0 +1,54 @@
+<view class="container">
+  <view class="summary-card">
+    <view class="title-row">
+      <text class="title">{{materialName || materialCode || '面辅料'}}</text>
+      <text class="code">{{materialCode || '-'}}</text>
+    </view>
+    <view class="metrics">
+      <view class="metric"><text class="label">规格</text><text class="value">{{color || '-'}} / {{size || '-'}}</text></view>
+      <view class="metric"><text class="label">当前库存</text><text class="value">{{quantity}} {{unit || ''}}</text></view>
+      <view class="metric"><text class="label">建议水位</text><text class="value">{{safetyStock}}</text></view>
+      <view class="metric"><text class="label">近30天出库</text><text class="value">{{recentOutQuantity}}</text></view>
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="section-head">
+      <text class="section-title">批次明细（FIFO）</text>
+      <text class="refresh" bindtap="onRefreshTap">刷新</text>
+    </view>
+    <view wx:if="{{loading}}" class="loading">加载中...</view>
+    <view wx:elif="{{batches.length === 0}}" class="empty">暂无批次数据</view>
+    <view wx:else>
+      <view class="row" wx:for="{{batches}}" wx:key="id">
+        <view class="row-left">
+          <text class="row-title">批次：{{item.batchNo}}</text>
+          <text class="row-sub">入库：{{item.inboundTime}}</text>
+        </view>
+        <text class="row-qty">{{item.quantity}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="section-head">
+      <text class="section-title">最近下发记录</text>
+      <text class="section-sub">近20条</text>
+    </view>
+    <view wx:if="{{!loading && purchases.length === 0}}" class="empty">暂无下发记录</view>
+    <view wx:else>
+      <view class="row" wx:for="{{purchases}}" wx:key="id">
+        <view class="row-left">
+          <text class="row-title">{{item.purchaseNo}}</text>
+          <view class="row-sub-line">
+            <text class="row-sub">{{item.createTime}}</text>
+            <text class="status-tag {{item.statusClass}}">{{item.statusText}}</text>
+          </view>
+        </view>
+        <text class="row-qty">{{item.quantity}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="footer-btn" bindtap="onQuickOrderTap">返回需求页快捷下发</view>
+</view>

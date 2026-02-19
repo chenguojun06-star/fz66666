@@ -1,0 +1,121 @@
+<view class="container">
+  <!-- 通用悬浮铃铛组件 -->
+  <floating-bell />
+
+  <view class="card">
+    <view class="title-row">
+      <view class="title-left-group">
+        <view class="title">我的</view>
+        <view class="logout-btn" bindtap="onLogout">
+          <text class="logout-text">退出</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 用户信息 -->
+    <view wx:if="{{userInfo}}" class="user-profile-card">
+      <view class="profile-avatar">{{avatarLetter}}</view>
+      <view class="profile-name">{{userInfo.name || userInfo.username || '未知用户'}}</view>
+      <view class="profile-role">{{roleDisplayName || '普通用户'}}</view>
+      <view wx:if="{{showApprovalEntry}}" class="profile-online">
+        <text class="online-icon">👥</text>
+        <text>{{onlineCount}}人</text>
+      </view>
+    </view>
+
+    <!-- 修改密码入口 -->
+    <view class="action-row" bindtap="onShowChangePwd">
+      <text class="action-row-label">🔒 修改密码</text>
+      <text class="action-row-arrow">›</text>
+    </view>
+
+    <!-- 修改密码表单（展开） -->
+    <view wx:if="{{showChangePwd}}" class="change-pwd-panel">
+      <view class="change-pwd-title">修改密码</view>
+      <view class="change-pwd-field">
+        <text class="field-label">原密码</text>
+        <input class="field-input" type="safe-password" placeholder="请输入原密码" bindinput="onOldPwdInput" value="{{pwdForm.oldPassword}}" password="{{true}}" />
+      </view>
+      <view class="change-pwd-field">
+        <text class="field-label">新密码</text>
+        <input class="field-input" type="safe-password" placeholder="新密码（至少6位）" bindinput="onNewPwdInput" value="{{pwdForm.newPassword}}" password="{{true}}" />
+      </view>
+      <view class="change-pwd-field">
+        <text class="field-label">确认新密码</text>
+        <input class="field-input" type="safe-password" placeholder="请再次输入新密码" bindinput="onConfirmPwdInput" value="{{pwdForm.confirmPassword}}" password="{{true}}" />
+      </view>
+      <view class="change-pwd-btns">
+        <view class="pwd-btn-cancel" bindtap="onCancelChangePwd">取消</view>
+        <view class="pwd-btn-confirm {{savingPwd ? 'disabled' : ''}}" bindtap="onSubmitChangePwd">{{savingPwd ? '提交中...' : '确认修改'}}</view>
+      </view>
+    </view>
+
+    <!-- 邀请员工加入工厂（租户管理员专用） -->
+    <view wx:if="{{showInviteSection}}" class="invite-card">
+      <view class="invite-title">
+        <text class="invite-icon">👥</text>
+        <text>邀请员工加入</text>
+      </view>
+      <view class="invite-desc">将以下工厂码发给员工，员工在注册页输入即可申请加入</view>
+      <view class="invite-code-row">
+        <view class="invite-code">{{tenantCode || '暂无工厂码'}}</view>
+        <view class="invite-copy-btn" bindtap="onCopyTenantCode">复制工厂码</view>
+      </view>
+      <view class="invite-link-row" bindtap="onCopyInviteUrl">
+        <text class="invite-link-text">🔗 复制PC端注册链接</text>
+      </view>
+    </view>
+
+    <!-- 功能导航行 -->
+    <view class="nav-row">
+      <view class="user-info-item">
+        <text class="user-info-label">工资信息</text>
+        <text class="user-info-text">{{stats && stats.totalAmount != null ? stats.totalAmount : 0}}</text>
+      </view>
+      <view class="user-info-item {{loadingStats || loadingHistory ? 'disabled' : ''}}" bindtap="refreshAll">
+        <text class="user-info-label">刷新</text>
+      </view>
+    </view>
+
+    <!-- 工资明细面板（固定在上方） -->
+    <view class="section-title">工资明细</view>
+    <view wx:if="{{loadingStats}}" class="hint">加载中...</view>
+    <view wx:if="{{stats}}" class="stat-grid">
+      <view class="stat-card">
+        <view class="stat-value">{{stats.scanCount || 0}}</view>
+        <view class="stat-label">次数</view>
+      </view>
+      <view class="stat-card">
+        <view class="stat-value">{{stats.orderCount || 0}}</view>
+        <view class="stat-label">订单</view>
+      </view>
+      <view class="stat-card">
+        <view class="stat-value">{{stats.totalQuantity || 0}}</view>
+        <view class="stat-label">数量</view>
+      </view>
+      <view class="stat-card">
+        <view class="stat-value">{{stats.totalAmount || 0}}</view>
+        <view class="stat-label">金额</view>
+      </view>
+    </view>
+    <view wx:if="{{!stats && !loadingStats}}" class="hint">暂无统计</view>
+
+    <!-- 扫码记录列表（滚动区域） -->
+    <view class="section-title" style="margin-top: 32rpx;">扫码记录列表</view>
+    <view wx:if="{{history.list.length === 0 && !loadingHistory}}" class="hint">暂无记录</view>
+    <view wx:for="{{history.list}}" wx:key="id" class="list-item">
+      <view class="item-head">
+        <view class="item-title">{{item.orderNo || '-'}}</view>
+        <text class="tag">{{item.processName || item.progressStage || item.scanType || '-'}}</text>
+      </view>
+      <view class="item-fields">
+        <text class="item-field">颜色：{{item.color || '-'}}</text>
+        <text class="item-field">尺码：{{item.size || '-'}}</text>
+        <text class="item-field">数量：{{item.quantity || 0}}</text>
+        <text class="item-field">单价：{{item.unitPrice == null || item.unitPrice === '' ? '-' : item.unitPrice}}</text>
+        <text class="item-field">金额：{{item.amount || item.totalAmount || item.salaryAmount || 0}}</text>
+      </view>
+      <view wx:if="{{item.scanTime}}" class="item-sub">时间：{{item.scanTime}}</view>
+    </view>
+  </view>
+</view>

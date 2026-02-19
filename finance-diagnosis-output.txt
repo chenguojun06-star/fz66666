@@ -1,0 +1,92 @@
+
+[0;34m======================================[0m
+[0;34m🔍 财务模块完整诊断报告[0m
+[0;34m======================================[0m
+
+生成时间: 2026-02-17 08:33:05
+
+
+[0;34m======================================[0m
+[0;34m1. 数据库表结构检查[0m
+[0;34m======================================[0m
+
+✅ 已存在的财务相关表:
+表名	记录数	数据大小(KB)	创建时间
+t_app_payment	0	16.00	2026-02-09 11:03:28
+t_expense_reimbursement	0	16.00	2026-02-10 02:29:18
+t_finished_settlement_approval	0	16.00	2026-02-15 15:51:38
+t_material_reconciliation	8	16.00	2026-02-09 05:40:05
+t_order_reconciliation_approval	0	16.00	2026-02-09 05:40:06
+t_payment_account	0	16.00	2026-02-16 17:30:31
+t_payroll_settlement	0	16.00	2026-02-17 00:30:08
+t_payroll_settlement_item	0	16.00	2026-02-17 00:30:08
+t_shipment_reconciliation	0	16.00	2026-02-17 00:30:08
+t_wage_payment	0	16.00	2026-02-16 17:30:31
+v_finished_product_settlement	NULL	NULL	2026-02-08 01:38:30
+
+📋 表分类:
+
+【工资结算】
+  - t_payroll_settlement (工资结算主表)
+  - t_payroll_settlement_item (工资结算明细)
+
+【订单结算】
+  - t_finished_settlement_approval (成品结算审批)
+  - t_order_reconciliation_approval (订单对账审批)
+  - v_finished_product_settlement (成品结算视图)
+
+【物料对账】
+  - t_material_reconciliation (物料对账)
+  - t_shipment_reconciliation (发货对账)
+
+【费用报销】
+  - t_expense_reimbursement (费用报销)
+
+【付款管理】
+  - t_wage_payment (工资付款)
+  - t_payment_account (付款账户)
+  - t_app_payment (应用付款)
+
+
+[0;34m======================================[0m
+[0;34m2. Controller与表的映射关系[0m
+[0;34m======================================[0m
+
+| 菜单项 | 前端路由 | 后端Controller | 数据库表 | 匹配度 |
+|--------|----------|---------------|----------|--------|
+| 物料对账 | /finance/material-reconciliation | MaterialReconciliationController | t_material_reconciliation | ✅ 完全匹配 |
+| 工资结算(内) | /finance/payroll-operator-summary | ⚠️ PayrollSettlementController | t_payroll_settlement | ⚠️ 名称不一致 |
+| 订单结算(外) | /finance/center | FinishedProductSettlementController | v_finished_product_settlement | ✅ 基本匹配 |
+| 费用报销 | /finance/expense-reimbursement | ExpenseReimbursementController | t_expense_reimbursement | ✅ 完全匹配 |
+| 付款中心 | /finance/wage-payment | WagePaymentController | t_wage_payment | ✅ 完全匹配 |
+
+
+[0;34m======================================[0m
+[0;34m3. 数据质量检查[0m
+[0;34m======================================[0m
+
+🔍 检查物料对账表的数据...
+
+记录数: 8
+
+数据样本 (前3条):
+ID前缀	物料名称	数量	状态	创建日期
+0aa93ccf	??????	100	paid	2026-02-15
+2855d099	??????	100	paid	2026-02-15
+372ea886	??????	50	pending	2026-02-15
+
+⚠️ 发现问题: 物料名称显示为乱码(??????)
+   原因: 可能是字符编码问题
+   影响: 数据显示不正确
+
+
+[0;34m======================================[0m
+[0;34m4. API端点可用性测试[0m
+[0;34m======================================[0m
+
+正在登录...
+[0;32m✅ 登录成功[0m
+
+测试API端点 (使用GET方法):
+
+1. 物料对账 GET /api/finance/material-reconciliation/list: 

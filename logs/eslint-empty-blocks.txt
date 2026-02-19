@@ -1,0 +1,236 @@
+  155:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  159:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  159:30  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  169:15  warning  Empty block statement                     no-empty
+--
+
+/Users/guojunmini4/Documents/服装66666/frontend/src/components/Layout/index.tsx
+   39:49  warning  Unexpected any. Specify a different type                                                                                                                                                                                                     @typescript-eslint/no-explicit-any
+  112:13  warning  Empty block statement                                                                                                                                                                                                                        no-empty
+--
+/Users/guojunmini4/Documents/服装66666/frontend/src/components/common/ResizableModal.tsx
+   65:11  warning  Unexpected any. Specify a different type                                                                                                                       @typescript-eslint/no-explicit-any
+   92:32  warning  React Hook React.useEffect has a spread element in its dependency array. This means we can't statically verify whether you've passed the correct dependencies  react-hooks/exhaustive-deps
+  388:15  warning  Empty block statement                                                                                                                                          no-empty
+--
+   84:30  warning  Unexpected any. Specify a different type                                                                                      @typescript-eslint/no-explicit-any
+  100:28  warning  Unexpected any. Specify a different type                                                                                      @typescript-eslint/no-explicit-any
+  108:27  warning  Unexpected any. Specify a different type                                                                                      @typescript-eslint/no-explicit-any
+  140:11  warning  Empty block statement                                                                                                         no-empty
+  169:11  warning  Empty block statement                                                                                                         no-empty
+  193:24  warning  Unexpected any. Specify a different type                                                                                      @typescript-eslint/no-explicit-any
+  240:13  warning  Empty block statement                                                                                                         no-empty
+  285:13  warning  Empty block statement                                                                                                         no-empty
+--
+  513:66  warning  Unexpected any. Specify a different type                                                                                      @typescript-eslint/no-explicit-any
+  547:35  warning  Unexpected any. Specify a different type                                                                                      @typescript-eslint/no-explicit-any
+  549:21  warning  Unexpected any. Specify a different type                                                                                      @typescript-eslint/no-explicit-any
+  577:23  warning  Empty block statement                                                                                                         no-empty
+  589:23  warning  Empty block statement                                                                                                         no-empty
+--
+   45:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   54:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   54:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   63:9   warning  Empty block statement                     no-empty
+   68:9   warning  Empty block statement                     no-empty
+  139:15  warning  Empty block statement                     no-empty
+  149:15  warning  Empty block statement                     no-empty
+--
+   150:17   warning  Unexpected any. Specify a different type                                                                                    @typescript-eslint/no-explicit-any
+   162:33   warning  Unexpected any. Specify a different type                                                                                    @typescript-eslint/no-explicit-any
+   163:29   warning  Unexpected any. Specify a different type                                                                                    @typescript-eslint/no-explicit-any
+   167:13   warning  Empty block statement                                                                                                       no-empty
+--
+   752:36   warning  Unexpected any. Specify a different type                                                                                                                                                     @typescript-eslint/no-explicit-any
+   825:33   warning  Unexpected any. Specify a different type                                                                                                                                                     @typescript-eslint/no-explicit-any
+   826:29   warning  Unexpected any. Specify a different type                                                                                                                                                     @typescript-eslint/no-explicit-any
+   830:13   warning  Empty block statement                                                                                                                                                                        no-empty
+--
+   196:33   warning  Unexpected any. Specify a different type                                                                                                  @typescript-eslint/no-explicit-any
+   199:29   warning  Unexpected any. Specify a different type                                                                                                  @typescript-eslint/no-explicit-any
+   201:57   warning  Unexpected any. Specify a different type                                                                                                  @typescript-eslint/no-explicit-any
+   212:13   warning  Empty block statement                                                                                                                     no-empty
+--
+   371:22   warning  Unexpected any. Specify a different type                                                                                                  @typescript-eslint/no-explicit-any
+   371:118  warning  Unexpected any. Specify a different type                                                                                                  @typescript-eslint/no-explicit-any
+   480:61   warning  Unexpected any. Specify a different type                                                                                                  @typescript-eslint/no-explicit-any
+   544:13   warning  Empty block statement                                                                                                                     no-empty
+--
+  1213:39  warning  Unexpected any. Specify a different type                                                                                @typescript-eslint/no-explicit-any
+
+/Users/guojunmini4/Documents/服装66666/frontend/src/pages/Production/MaterialPurchase.tsx
+    45:13   warning  Empty block statement                                                                                                                                           no-empty
+--
+   125:38   warning  Unexpected any. Specify a different type                                                                                                                        @typescript-eslint/no-explicit-any
+   126:42   warning  Unexpected any. Specify a different type                                                                                                                        @typescript-eslint/no-explicit-any
+   129:23   warning  Unexpected any. Specify a different type                                                                                                                        @typescript-eslint/no-explicit-any
+   146:13   warning  Empty block statement                                                                                                                                           no-empty
+   154:13   warning  Empty block statement                                                                                                                                           no-empty
+   162:13   warning  Empty block statement                                                                                                                                           no-empty
+--
+/Users/guojunmini4/Documents/服装66666/frontend/src/pages/Production/ProductWarehousing.tsx
+    79:51   warning  Unexpected any. Specify a different type                                                                                                                                                                                                                              @typescript-eslint/no-explicit-any
+   102:32   warning  Unexpected any. Specify a different type                                                                                                                                                                                                                              @typescript-eslint/no-explicit-any
+   113:11   warning  Empty block statement                                                                                                                                                                                                                                                 no-empty
+--
+   407:33   warning  Unexpected any. Specify a different type                                                                                                                                                                                                                              @typescript-eslint/no-explicit-any
+   415:29   warning  Unexpected any. Specify a different type                                                                                                                                                                                                                              @typescript-eslint/no-explicit-any
+   417:55   warning  Unexpected any. Specify a different type                                                                                                                                                                                                                              @typescript-eslint/no-explicit-any
+   421:13   warning  Empty block statement                                                                                                                                                                                                                                                 no-empty
+--
+   884:5    warning  React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked                                                  react-hooks/exhaustive-deps
+   885:5    warning  React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked                                                  react-hooks/exhaustive-deps
+   913:31   warning  Unexpected any. Specify a different type                                                                                                                                                  @typescript-eslint/no-explicit-any
+   917:15   warning  Empty block statement                                                                                                                                                                     no-empty
+--
+  1092:39   warning  Unexpected any. Specify a different type                                                                                                                                                  @typescript-eslint/no-explicit-any
+  1096:51   warning  Unexpected any. Specify a different type                                                                                                                                                  @typescript-eslint/no-explicit-any
+  1099:43   warning  Unexpected any. Specify a different type                                                                                                                                                  @typescript-eslint/no-explicit-any
+  1109:13   warning  Empty block statement                                                                                                                                                                     no-empty
+  1130:6    warning  React Hook useEffect has a missing dependency: 'resolveNodesForListOrder'. Either include it or remove the dependency array                                                               react-hooks/exhaustive-deps
+  1155:29   warning  Unexpected any. Specify a different type                                                                                                                                                  @typescript-eslint/no-explicit-any
+  1159:20   warning  Unexpected any. Specify a different type                                                                                                                                                  @typescript-eslint/no-explicit-any
+  1174:13   warning  Empty block statement                                                                                                                                                                     no-empty
+--
+  1190:70   warning  Unexpected any. Specify a different type                                                                                                                                                  @typescript-eslint/no-explicit-any
+  1191:44   warning  Unexpected any. Specify a different type                                                                                                                                                  @typescript-eslint/no-explicit-any
+  1191:70   warning  Unexpected any. Specify a different type                                                                                                                                                  @typescript-eslint/no-explicit-any
+  1202:13   warning  Empty block statement                                                                                                                                                                     no-empty
+--
+  1221:70   warning  Unexpected any. Specify a different type                                                                                                                                                  @typescript-eslint/no-explicit-any
+  1222:44   warning  Unexpected any. Specify a different type                                                                                                                                                  @typescript-eslint/no-explicit-any
+  1222:70   warning  Unexpected any. Specify a different type                                                                                                                                                  @typescript-eslint/no-explicit-any
+  1232:13   warning  Empty block statement                                                                                                                                                                     no-empty
+--
+  1925:53   warning  Unexpected any. Specify a different type                                                                                                                                                  @typescript-eslint/no-explicit-any
+  1931:36   warning  Unexpected any. Specify a different type                                                                                                                                                  @typescript-eslint/no-explicit-any
+  1932:35   warning  Unexpected any. Specify a different type                                                                                                                                                  @typescript-eslint/no-explicit-any
+  1936:19   warning  Empty block statement                                                                                                                                                                     no-empty
+--
+    97:33  warning  Unexpected any. Specify a different type                                                                                                 @typescript-eslint/no-explicit-any
+   104:29  warning  Unexpected any. Specify a different type                                                                                                 @typescript-eslint/no-explicit-any
+   107:61  warning  Unexpected any. Specify a different type                                                                                                 @typescript-eslint/no-explicit-any
+   113:13  warning  Empty block statement                                                                                                                    no-empty
+   132:33  warning  Unexpected any. Specify a different type                                                                                                 @typescript-eslint/no-explicit-any
+   141:29  warning  Unexpected any. Specify a different type                                                                                                 @typescript-eslint/no-explicit-any
+   147:13  warning  Empty block statement                                                                                                                    no-empty
+   153:33  warning  Unexpected any. Specify a different type                                                                                                 @typescript-eslint/no-explicit-any
+   154:29  warning  Unexpected any. Specify a different type                                                                                                 @typescript-eslint/no-explicit-any
+   158:13  warning  Empty block statement                                                                                                                    no-empty
+--
+   256:29  warning  Unexpected any. Specify a different type                                                                                                 @typescript-eslint/no-explicit-any
+   269:33  warning  Unexpected any. Specify a different type                                                                                                 @typescript-eslint/no-explicit-any
+   270:29  warning  Unexpected any. Specify a different type                                                                                                 @typescript-eslint/no-explicit-any
+   292:13  warning  Empty block statement                                                                                                                    no-empty
+   296:35  warning  Unexpected any. Specify a different type                                                                                                 @typescript-eslint/no-explicit-any
+   359:33  warning  Unexpected any. Specify a different type                                                                                                 @typescript-eslint/no-explicit-any
+   367:29  warning  Unexpected any. Specify a different type                                                                                                 @typescript-eslint/no-explicit-any
+   374:13  warning  Empty block statement                                                                                                                    no-empty
+--
+   530:19  warning  'id' is assigned a value but never used. Allowed unused vars must match /^_/u                                                            @typescript-eslint/no-unused-vars
+   537:31  warning  Unexpected any. Specify a different type                                                                                                 @typescript-eslint/no-explicit-any
+   546:23  warning  Unexpected any. Specify a different type                                                                                                 @typescript-eslint/no-explicit-any
+   554:17  warning  Empty block statement                                                                                                                    no-empty
+--
+   637:33  warning  Unexpected any. Specify a different type                                                                                                 @typescript-eslint/no-explicit-any
+   644:33  warning  Unexpected any. Specify a different type                                                                                                 @typescript-eslint/no-explicit-any
+   655:23  warning  Unexpected any. Specify a different type                                                                                                 @typescript-eslint/no-explicit-any
+   663:17  warning  Empty block statement                                                                                                                    no-empty
+   720:17  warning  Empty block statement                                                                                                                    no-empty
+   726:31  warning  Unexpected any. Specify a different type                                                                                                 @typescript-eslint/no-explicit-any
+   733:21  warning  Empty block statement                                                                                                                    no-empty
+--
+   45:33  warning  Unexpected any. Specify a different type                                                                         @typescript-eslint/no-explicit-any
+   52:29  warning  Unexpected any. Specify a different type                                                                         @typescript-eslint/no-explicit-any
+   55:61  warning  Unexpected any. Specify a different type                                                                         @typescript-eslint/no-explicit-any
+   61:13  warning  Empty block statement                                                                                            no-empty
+   80:33  warning  Unexpected any. Specify a different type                                                                         @typescript-eslint/no-explicit-any
+   89:29  warning  Unexpected any. Specify a different type                                                                         @typescript-eslint/no-explicit-any
+   95:13  warning  Empty block statement                                                                                            no-empty
+  101:33  warning  Unexpected any. Specify a different type                                                                         @typescript-eslint/no-explicit-any
+  102:29  warning  Unexpected any. Specify a different type                                                                         @typescript-eslint/no-explicit-any
+  106:13  warning  Empty block statement                                                                                            no-empty
+--
+   69:33  warning  Unexpected any. Specify a different type                                                                                                    @typescript-eslint/no-explicit-any
+   76:29  warning  Unexpected any. Specify a different type                                                                                                    @typescript-eslint/no-explicit-any
+   79:61  warning  Unexpected any. Specify a different type                                                                                                    @typescript-eslint/no-explicit-any
+   85:13  warning  Empty block statement                                                                                                                       no-empty
+  104:33  warning  Unexpected any. Specify a different type                                                                                                    @typescript-eslint/no-explicit-any
+  113:29  warning  Unexpected any. Specify a different type                                                                                                    @typescript-eslint/no-explicit-any
+  119:13  warning  Empty block statement                                                                                                                       no-empty
+  125:33  warning  Unexpected any. Specify a different type                                                                                                    @typescript-eslint/no-explicit-any
+  126:29  warning  Unexpected any. Specify a different type                                                                                                    @typescript-eslint/no-explicit-any
+  130:13  warning  Empty block statement                                                                                                                       no-empty
+--
+   83:21   warning  Unexpected any. Specify a different type                                                                                                                          @typescript-eslint/no-explicit-any
+   98:33   warning  Unexpected any. Specify a different type                                                                                                                          @typescript-eslint/no-explicit-any
+  101:8    warning  React Hook useEffect has missing dependencies: 'form', 'initialRoleName', 'loadProfile', 'theme', and 'user'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  114:17   warning  Empty block statement                                                                                                                                             no-empty
+--
+   551:38  warning  Unexpected any. Specify a different type                                                                                                      @typescript-eslint/no-explicit-any
+   572:21  warning  Unexpected any. Specify a different type                                                                                                      @typescript-eslint/no-explicit-any
+   573:38  warning  Unexpected any. Specify a different type                                                                                                      @typescript-eslint/no-explicit-any
+   578:15  warning  Empty block statement                                                                                                                         no-empty
+--
+   223:39   warning  Unexpected any. Specify a different type                                                                                       @typescript-eslint/no-explicit-any
+   224:35   warning  Unexpected any. Specify a different type                                                                                       @typescript-eslint/no-explicit-any
+   226:48   warning  Unexpected any. Specify a different type                                                                                       @typescript-eslint/no-explicit-any
+   228:19   warning  Empty block statement                                                                                                          no-empty
+--
+   247:41   warning  Unexpected any. Specify a different type                                                                                       @typescript-eslint/no-explicit-any
+   249:52   warning  Unexpected any. Specify a different type                                                                                       @typescript-eslint/no-explicit-any
+   253:28   warning  Unexpected any. Specify a different type                                                                                       @typescript-eslint/no-explicit-any
+   256:15   warning  Empty block statement                                                                                                          no-empty
+--
+   318:35   warning  Unexpected any. Specify a different type                                                                                       @typescript-eslint/no-explicit-any
+   319:31   warning  Unexpected any. Specify a different type                                                                                       @typescript-eslint/no-explicit-any
+   321:44   warning  Unexpected any. Specify a different type                                                                                       @typescript-eslint/no-explicit-any
+   323:15   warning  Empty block statement                                                                                                          no-empty
+--
+   551:17   warning  Unexpected any. Specify a different type                                                                                       @typescript-eslint/no-explicit-any
+   564:35   warning  Unexpected any. Specify a different type                                                                                       @typescript-eslint/no-explicit-any
+   565:31   warning  Unexpected any. Specify a different type                                                                                       @typescript-eslint/no-explicit-any
+   569:15   warning  Empty block statement                                                                                                          no-empty
+   589:35   warning  Unexpected any. Specify a different type                                                                                       @typescript-eslint/no-explicit-any
+   590:31   warning  Unexpected any. Specify a different type                                                                                       @typescript-eslint/no-explicit-any
+   592:44   warning  Unexpected any. Specify a different type                                                                                       @typescript-eslint/no-explicit-any
+   594:15   warning  Empty block statement                                                                                                          no-empty
+--
+   722:33   warning  Unexpected any. Specify a different type                                                                                       @typescript-eslint/no-explicit-any
+   729:29   warning  Unexpected any. Specify a different type                                                                                       @typescript-eslint/no-explicit-any
+   732:61   warning  Unexpected any. Specify a different type                                                                                       @typescript-eslint/no-explicit-any
+   738:13   warning  Empty block statement                                                                                                          no-empty
+--
+  1236:38   warning  Unexpected any. Specify a different type                                                                                       @typescript-eslint/no-explicit-any
+  1475:59   warning  Unexpected any. Specify a different type                                                                                       @typescript-eslint/no-explicit-any
+  1523:53   warning  Unexpected any. Specify a different type                                                                                       @typescript-eslint/no-explicit-any
+  1713:41   warning  Empty block statement                                                                                                          no-empty
+--
+   12:28   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   16:33   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   27:66   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   31:11   warning  Empty block statement                     no-empty
+--
+  439:20   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  441:41   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  454:38   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  468:13   warning  Empty block statement                     no-empty
+--
+  478:39   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  487:50   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  489:22   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  528:15   warning  Empty block statement                     no-empty
+  537:15   warning  Empty block statement                     no-empty
+--
+  65:6  warning  React Hook useCallback has a missing dependency: 'hideMessage'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/guojunmini4/Documents/服装66666/frontend/src/utils/authContext.tsx
+  117:19  warning  Empty block statement                     no-empty
+  128:19  warning  Empty block statement                     no-empty
+  133:22  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  181:88  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  218:17  warning  Empty block statement                     no-empty
+  224:25  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  231:17  warning  Empty block statement                     no-empty
+  249:15  warning  Empty block statement                     no-empty
+  272:13  warning  Empty block statement                     no-empty

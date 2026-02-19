@@ -1,0 +1,268 @@
+.login-page {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 24px;
+  background: #0b2d5c;
+  overflow: hidden;
+}
+
+.login-bg {
+  /* 禁用星空装饰效果 */
+  display: none;
+}
+
+.login-constellation {
+  position: absolute;
+  right: 8%;
+  bottom: 12%;
+  width: 340px;
+  height: 240px;
+  pointer-events: none;
+  animation: constellation-breathe 3.8s ease-in-out infinite;
+}
+
+.constellation-line {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 340 240'%3E%3Cpolyline points='41,43 82,86 116,125 156,106 197,134 231,168 265,149 292,187 313,206' fill='none' stroke='%23d2e8ff' stroke-opacity='0.55' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.constellation-glow {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  opacity: 0.45;
+  filter: blur(0.6px);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 340 240'%3E%3Cpolyline points='41,43 82,86 116,125 156,106 197,134 231,168 265,149 292,187 313,206' fill='none' stroke='%232d7ff9' stroke-opacity='0.30' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.constellation-dot {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: #d2e8ff;
+  border-radius: 50%;
+  box-shadow: 0 0 6px 2px rgba(210, 232, 255, 0.6);
+  animation: dot-twinkle 2.4s ease-in-out infinite;
+}
+
+.constellation-dot:nth-child(3) { animation-delay: 0s; }
+.constellation-dot:nth-child(4) { animation-delay: 0.3s; }
+.constellation-dot:nth-child(5) { animation-delay: 0.6s; }
+.constellation-dot:nth-child(6) { animation-delay: 0.9s; }
+.constellation-dot:nth-child(7) { animation-delay: 1.2s; }
+.constellation-dot:nth-child(8) { animation-delay: 1.5s; }
+.constellation-dot:nth-child(9) { animation-delay: 1.8s; }
+.constellation-dot:nth-child(10) { animation-delay: 2.1s; }
+.constellation-dot:nth-child(11) { animation-delay: 0.15s; }
+
+@keyframes constellation-breathe {
+  0%,
+  100% {
+    opacity: 0.18;
+    filter: drop-shadow(0 0 10px rgba(210, 232, 255, 0.08));
+  }
+
+  50% {
+    opacity: 0.48;
+    filter: drop-shadow(0 0 18px rgba(210, 232, 255, 0.16));
+  }
+}
+
+@keyframes dot-twinkle {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(2);
+  }
+}
+
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: #0b2d5c;
+  box-shadow: 0 26px 70px rgba(0, 0, 0, 0.46);
+  position: relative;
+  overflow: hidden;
+  z-index: 10;
+  pointer-events: auto;
+}
+
+
+
+.login-card.ant-card > .ant-card-body {
+  padding: 22px 22px 18px;
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.login-title {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+  color: rgba(255, 255, 255, 0.96);
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.10),
+    0 2px 0 rgba(0, 0, 0, 0.26),
+    0 10px 26px rgba(0, 0, 0, 0.55);
+}
+
+.login-card .login-title.ant-typography {
+  color: rgba(255, 255, 255, 0.96) !important;
+}
+
+
+
+.login-form {
+  width: 100%;
+}
+
+.login-card .ant-form-item {
+  margin-bottom: 14px;
+}
+
+.login-card .ant-form-item-label > label {
+  color: rgba(255, 255, 255, 0.82);
+  font-weight: 700;
+}
+
+.login-card .ant-input-affix-wrapper,
+.login-card .ant-input,
+.login-card .ant-input-password {
+  border-radius: 14px;
+}
+
+.login-card .ant-auto-complete .ant-input-affix-wrapper {
+  border-radius: 14px !important;
+  height: 48px !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  background: #f6f8ff !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.login-card .ant-auto-complete .ant-input-affix-wrapper input {
+  height: 46px !important;
+  text-align: left !important;
+}
+
+.login-card .ant-auto-complete .ant-input-affix-wrapper-focused {
+  border-color: rgba(45, 127, 249, 0.55) !important;
+  box-shadow: 0 0 0 3px rgba(45, 127, 249, 0.22) !important;
+}
+
+.login-card .ant-auto-complete .ant-input-affix-wrapper:hover {
+  border-color: rgba(255, 255, 255, 0.24) !important;
+}
+
+.login-card .ant-input-affix-wrapper {
+  height: 48px;
+  border-color: rgba(255, 255, 255, 0.14);
+  background: #f6f8ff;
+  display: flex;
+  align-items: center;
+}
+
+.login-card .ant-input-affix-wrapper input {
+  height: 46px;
+  line-height: 46px;
+  text-align: center;
+}
+
+@supports ((-webkit-backdrop-filter: blur(12px)) or (backdrop-filter: blur(12px))) {
+  .login-card .ant-input-affix-wrapper {
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    backdrop-filter: blur(12px) saturate(160%);
+  }
+}
+
+.login-card .ant-input-affix-wrapper:hover {
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+.login-card .ant-input-affix-wrapper-focused,
+.login-card .ant-input-affix-wrapper:focus,
+.login-card .ant-input-affix-wrapper:focus-within {
+  border-color: rgba(45, 127, 249, 0.55);
+  box-shadow: 0 0 0 3px rgba(45, 127, 249, 0.22);
+}
+
+.login-card .ant-input {
+  color: rgba(17, 24, 39, 0.92);
+}
+
+.login-card .ant-input::placeholder {
+  color: rgba(17, 24, 39, 0.50);
+}
+
+.login-button {
+  width: 100%;
+  height: 42px;
+  border-radius: 999px;
+}
+
+.site-form-item-icon {
+  color: rgba(11, 45, 92, 0.55);
+}
+
+.login-card .ant-btn-primary:not(:disabled) {
+  background: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+  color: #fff !important;
+  box-shadow: 0 14px 30px rgba(45, 127, 249, 0.34) !important;
+}
+
+.login-card .ant-btn-primary:not(:disabled):hover {
+  background: #f0f9ff !important;
+  border-color: #1890ff !important;
+  color: #1890ff !important;
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.25) !important;
+}
+
+.login-card .ant-btn-primary:not(:disabled):active {
+  background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%) !important;
+  border-color: #1890ff !important;
+}
+
+.login-footer {
+  margin-top: 6px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.50);
+  font-size: 12px;
+}
+
+@media (max-width: 480px) {
+  .login-page {
+    padding: 16px;
+  }
+
+  .login-card.ant-card > .ant-card-body {
+    padding: 18px 16px 14px;
+  }
+}

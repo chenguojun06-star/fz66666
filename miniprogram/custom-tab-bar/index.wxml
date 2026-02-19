@@ -1,0 +1,7 @@
+<cover-view class="tab-bar">
+  <cover-view class="tab-bar-inner">
+    <cover-view wx:for="{{list}}" wx:key="pagePath" class="tab-item {{selected === index ? 'tab-item-active' : ''}}" data-index="{{index}}" bindtap="onTap">
+      <cover-view class="tab-text">{{item.text}}</cover-view>
+    </cover-view>
+  </cover-view>
+</cover-view>

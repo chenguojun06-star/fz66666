@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:fashion_supplychain;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  flyway:
+    enabled: false
+
+fashion:
+  db:
+    initializer-enabled: false
+
+app:
+  auth:
+    jwt-secret: ThisIsA_LocalJwtSecret_OnlyForDev_0123456789
+

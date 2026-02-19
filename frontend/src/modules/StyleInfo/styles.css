@@ -1,0 +1,19 @@
+.style-info-modal {
+  max-width: 100%;
+}
+
+.style-info-modal .ant-col {
+  min-width: 0;
+}
+
+.style-info-modal .ant-tabs-content {
+  max-width: 100%;
+}
+
+.style-info-modal .ant-form {
+  max-width: 100%;
+}
+
+.style-info-modal .ant-row {
+  max-width: 100%;
+}

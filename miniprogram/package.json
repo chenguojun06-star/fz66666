@@ -1,0 +1,91 @@
+{
+  "name": "fashion-supplychain-scan",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "检查": "eslint \"**/*.js\" --ignore-pattern miniprogram_npm/**",
+    "修复": "eslint \"**/*.js\" --ignore-pattern miniprogram_npm/** --fix",
+    "类型检查": "tsc -p tsconfig.json",
+    "测试": "node --test",
+    "全面检查": "npm run 检查 && npm run 类型检查",
+    "格式化": "prettier --write \"**/*.{js,json,wxml,wxss}\"",
+    "检查格式": "prettier --check \"**/*.{js,json,wxml,wxss}\"",
+    "检测重复": "jsinspect pages/ -t 30 || echo '需安装: npm install -g jsinspect'",
+    "检测循环依赖": "madge --circular pages/ || echo '需安装: npm install -g madge'",
+    "完整检查": "npm run 检查 && npm run 类型检查 && npm run 检查格式"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "eslint": "^8.57.0",
+    "miniprogram-api-typings": "^3.12.0",
+    "prettier": "^3.8.1",
+    "typescript": "^5.5.4"
+  },
+  "eslintConfig": {
+    "root": true,
+    "env": {
+      "es2021": true,
+      "node": true
+    },
+    "globals": {
+      "wx": "readonly",
+      "App": "readonly",
+      "Page": "readonly",
+      "Component": "readonly",
+      "getApp": "readonly",
+      "getCurrentPages": "readonly"
+    },
+    "parserOptions": {
+      "ecmaVersion": 2021,
+      "sourceType": "module"
+    },
+    "rules": {
+      "no-unused-vars": [
+        "warn",
+        {
+          "argsIgnorePattern": "^_",
+          "varsIgnorePattern": "^_"
+        }
+      ],
+      "no-console": "off",
+      "no-debugger": "warn",
+      "no-empty": "warn",
+      "no-unreachable": "warn",
+      "no-undef": "error",
+      "eqeqeq": [
+        "warn",
+        "always"
+      ],
+      "curly": [
+        "warn",
+        "all"
+      ],
+      "no-var": "warn",
+      "complexity": [
+        "warn",
+        15
+      ],
+      "max-depth": [
+        "warn",
+        4
+      ],
+      "max-lines-per-function": [
+        "warn",
+        {
+          "max": 150,
+          "skipBlankLines": true,
+          "skipComments": true
+        }
+      ],
+      "max-params": [
+        "warn",
+        5
+      ],
+      "max-nested-callbacks": [
+        "warn",
+        3
+      ],
+      "prefer-const": "warn"
+    }
+  }
+}

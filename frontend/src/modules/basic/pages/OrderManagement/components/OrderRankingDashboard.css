@@ -1,0 +1,216 @@
+/* 下单排行网格数据看板 */
+
+.order-ranking-grid {
+  margin-bottom: 12px;
+  border-radius: 12px;
+}
+
+.order-ranking-grid .ant-card-body {
+  padding: 12px 16px;
+}
+
+/* 头部 */
+.ranking-grid-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--table-border-color, #f0f0f0);
+}
+
+.ranking-icon {
+  font-size: 16px;
+  color: #faad14;
+}
+
+.ranking-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--neutral-text, #262626);
+  margin-right: auto;
+}
+
+.ranking-stats {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--neutral-text-light, #8c8c8c);
+}
+
+.ranking-stats b {
+  color: var(--neutral-text, #262626);
+  font-weight: 600;
+}
+
+/* 网格容器 - 5列布局，最大高度 */
+.ranking-grid-container {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  max-height: 320px; /* 约10行的高度 */
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* 自定义滚动条 */
+.ranking-grid-container::-webkit-scrollbar {
+  width: 4px;
+}
+
+.ranking-grid-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ranking-grid-container::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 2px;
+}
+
+.ranking-grid-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* 网格项 */
+.ranking-grid-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: var(--table-row-hover-bg, #fafafa);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 0;
+}
+
+.ranking-grid-item:hover {
+  background: #e6f7ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.rank-number {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.ranking-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  overflow: hidden;
+  flex: 1;
+}
+
+.style-no {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--neutral-text, #262626);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ranking-info .ant-tag {
+  font-size: 10px;
+  padding: 0 3px;
+  line-height: 14px;
+  width: fit-content;
+}
+
+.ranking-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: var(--neutral-text-light, #8c8c8c);
+  font-size: 12px;
+  padding: 24px;
+}
+
+/* Tooltip样式 */
+.ranking-tooltip-overlay .ant-tooltip-inner {
+  padding: 12px;
+  min-width: 200px;
+}
+
+.ranking-tooltip {
+  font-size: 13px;
+}
+
+.ranking-tooltip .tooltip-title {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+
+.ranking-tooltip .tooltip-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0;
+  color: rgba(255,255,255,0.9);
+}
+
+.ranking-tooltip .tooltip-item .anticon {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.ranking-tooltip .tooltip-hint {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,0.2);
+  font-size: 12px;
+  color: #52c41a;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 响应式 - 平板4列 */
+@media (max-width: 1024px) {
+  .ranking-grid-container {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* 响应式 - 移动端3列 */
+@media (max-width: 768px) {
+  .ranking-grid-container {
+    grid-template-columns: repeat(3, 1fr);
+    max-height: 240px;
+  }
+  
+  .ranking-stats {
+    gap: 8px;
+    font-size: 11px;
+  }
+  
+  .ranking-stats span:nth-child(3) {
+    display: none;
+  }
+  
+  .style-no {
+    font-size: 11px;
+  }
+}
+
+/* 暗色主题 */
+[data-theme='dark'] .ranking-grid-item {
+  background: var(--table-row-hover-bg, #2a2a2a);
+}
+
+[data-theme='dark'] .ranking-grid-item:hover {
+  background: #1a3a5c;
+}

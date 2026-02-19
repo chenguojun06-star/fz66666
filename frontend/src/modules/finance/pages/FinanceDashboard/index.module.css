@@ -1,0 +1,225 @@
+.statCards {
+  margin-bottom: 24px;
+}
+
+.statCard {
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.statCard :global(.ant-card-body) {
+  padding: 20px 24px;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.cardTitle {
+  font-size: 14px;
+  color: #8c8c8c;
+}
+
+.infoIcon {
+  margin-left: 4px;
+  font-size: 12px;
+  color: #bfbfbf;
+  cursor: pointer;
+}
+
+.cardFooter {
+  margin-top: 12px;
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+.subLabel {
+  margin-right: 8px;
+}
+
+.changeUp {
+  color: #f5222d;
+}
+
+.changeDown {
+  color: #52c41a;
+}
+
+.dailyInfo {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.dailyLabel {
+  font-size: 12px;
+  color: #8c8c8c;
+  margin-right: 8px;
+}
+
+.dailyValue {
+  font-size: 14px;
+  color: #262626;
+  font-weight: 500;
+}
+
+.tinyChart {
+  height: 46px;
+  margin-top: 8px;
+}
+
+.miniAreaChart {
+  height: 100%;
+  background: var(--primary-bg-light);
+  border-radius: 8px;
+}
+
+.miniBarChart {
+  height: 100%;
+  background: #d9d9d9;
+  border-radius: 8px;
+}
+
+.progressBar {
+  height: 8px;
+  background: #f0f0f0;
+  border-radius: 8px;
+  margin-top: 12px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--info-color);
+  border-radius: 8px;
+  transition: width 0.3s ease;
+}
+
+.chartCard {
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.chartCard :global(.ant-card-body) {
+  padding: 0;
+}
+
+.chartHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 24px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.tabs :global(.ant-tabs-nav) {
+  margin-bottom: 0;
+}
+
+.tabs :global(.ant-tabs-tab) {
+  padding: 16px 0;
+  font-size: 14px;
+}
+
+.tabs :global(.ant-tabs-tab-active .ant-tabs-tab-btn) {
+  color: #1890ff;
+  font-weight: 500;
+}
+
+.tabs :global(.ant-tabs-ink-bar) {
+  background: #1890ff;
+}
+
+.timeSelector {
+  display: flex;
+  align-items: center;
+}
+
+.timeOption {
+  padding: 4px 12px;
+  font-size: 14px;
+  color: #595959;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.timeOption:hover {
+  color: #1890ff;
+}
+
+.timeOption.active {
+  color: #1890ff;
+  font-weight: 500;
+}
+
+.trendSection {
+  padding: 24px 24px 24px 0;
+}
+
+.rankSection {
+  padding: 24px 24px 24px 0;
+  border-left: 1px solid #f0f0f0;
+  height: 100%;
+}
+
+.sectionTitle {
+  font-size: 14px;
+  font-weight: 500;
+  color: #262626;
+  margin-bottom: 16px;
+}
+
+.rankList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.rankItem {
+  display: flex;
+  align-items: center;
+}
+
+.rankNum {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: #8c8c8c;
+  margin-right: 12px;
+}
+
+.rankNum.topRank {
+  background: #314659;
+  color: #fff;
+  border-radius: 50%;
+}
+
+.rankItem:nth-child(1) .rankNum.topRank {
+  background: #314659;
+}
+
+.rankItem:nth-child(2) .rankNum.topRank {
+  background: #314659;
+}
+
+.rankItem:nth-child(3) .rankNum.topRank {
+  background: #314659;
+}
+
+.rankName {
+  flex: 1;
+  font-size: 14px;
+  color: #262626;
+}
+
+.rankValue {
+  font-size: 14px;
+  color: #262626;
+  font-weight: 500;
+}

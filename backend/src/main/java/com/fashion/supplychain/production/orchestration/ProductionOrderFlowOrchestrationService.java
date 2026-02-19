@@ -1,0 +1,406 @@
+package com.fashion.supplychain.production.orchestration;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.finance.entity.MaterialReconciliation;
+import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
+import com.fashion.supplychain.finance.service.MaterialReconciliationService;
+import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
+import com.fashion.supplychain.production.entity.CuttingBundle;
+import com.fashion.supplychain.production.entity.CuttingTask;
+import com.fashion.supplychain.production.entity.MaterialPurchase;
+import com.fashion.supplychain.production.entity.ProductOutstock;
+import com.fashion.supplychain.production.entity.ProductWarehousing;
+import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.entity.ScanRecord;
+import com.fashion.supplychain.production.mapper.CuttingBundleMapper;
+import com.fashion.supplychain.production.mapper.MaterialPurchaseMapper;
+import com.fashion.supplychain.production.mapper.ScanRecordMapper;
+import com.fashion.supplychain.production.service.CuttingTaskService;
+import com.fashion.supplychain.production.service.ProductOutstockService;
+import com.fashion.supplychain.production.service.ProductWarehousingService;
+import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.template.service.TemplateLibraryService;
+import com.fashion.supplychain.style.entity.StyleQuotation;
+import com.fashion.supplychain.style.mapper.StyleQuotationMapper;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
+@Service
+@Slf4j
+public class ProductionOrderFlowOrchestrationService {
+
+    public static class OrderFlowResponse {
+        private final ProductionOrder order;
+        private final List<Map<String, Object>> stages;
+        private final List<ScanRecord> records;
+        private final List<MaterialPurchase> materialPurchases;
+        private final List<CuttingTask> cuttingTasks;
+        private final List<CuttingBundle> cuttingBundles;
+        private final List<ProductWarehousing> warehousings;
+        private final List<ProductOutstock> outstocks;
+        private final List<ShipmentReconciliation> shipmentReconciliations;
+        private final List<MaterialReconciliation> materialReconciliations;
+        private final StyleQuotation styleQuotation;
+
+        public OrderFlowResponse(
+                ProductionOrder order,
+                List<Map<String, Object>> stages,
+                List<ScanRecord> records,
+                List<MaterialPurchase> materialPurchases,
+                List<CuttingTask> cuttingTasks,
+                List<CuttingBundle> cuttingBundles,
+                List<ProductWarehousing> warehousings,
+                List<ProductOutstock> outstocks,
+                List<ShipmentReconciliation> shipmentReconciliations,
+                List<MaterialReconciliation> materialReconciliations,
+                StyleQuotation styleQuotation) {
+            this.order = order;
+            this.stages = stages;
+            this.records = records;
+            this.materialPurchases = materialPurchases;
+            this.cuttingTasks = cuttingTasks;
+            this.cuttingBundles = cuttingBundles;
+            this.warehousings = warehousings;
+            this.outstocks = outstocks;
+            this.shipmentReconciliations = shipmentReconciliations;
+            this.materialReconciliations = materialReconciliations;
+            this.styleQuotation = styleQuotation;
+        }
+
+        public ProductionOrder getOrder() {
+            return order;
+        }
+
+        public List<Map<String, Object>> getStages() {
+            return stages;
+        }
+
+        public List<ScanRecord> getRecords() {
+            return records;
+        }
+
+        public List<MaterialPurchase> getMaterialPurchases() {
+            return materialPurchases;
+        }
+
+        public List<CuttingTask> getCuttingTasks() {
+            return cuttingTasks;
+        }
+
+        public List<CuttingBundle> getCuttingBundles() {
+            return cuttingBundles;
+        }
+
+        public List<ProductWarehousing> getWarehousings() {
+            return warehousings;
+        }
+
+        public List<ProductOutstock> getOutstocks() {
+            return outstocks;
+        }
+
+        public List<ShipmentReconciliation> getShipmentReconciliations() {
+            return shipmentReconciliations;
+        }
+
+        public List<MaterialReconciliation> getMaterialReconciliations() {
+            return materialReconciliations;
+        }
+
+        public StyleQuotation getStyleQuotation() {
+            return styleQuotation;
+        }
+    }
+
+    @Autowired
+    private ProductionOrderService productionOrderService;
+
+    @Autowired
+    private ScanRecordMapper scanRecordMapper;
+
+    @Autowired
+    private MaterialPurchaseMapper materialPurchaseMapper;
+
+    @Autowired
+    private CuttingTaskService cuttingTaskService;
+
+    @Autowired
+    private CuttingBundleMapper cuttingBundleMapper;
+
+    @Autowired
+    private ProductWarehousingService productWarehousingService;
+
+    @Autowired
+    private ProductOutstockService productOutstockService;
+
+    @Autowired
+    private ShipmentReconciliationService shipmentReconciliationService;
+
+    @Autowired
+    private MaterialReconciliationService materialReconciliationService;
+
+    @Autowired
+    private TemplateLibraryService templateLibraryService;
+
+    @Autowired
+    private StyleQuotationMapper styleQuotationMapper;
+
+    public OrderFlowResponse getOrderFlow(String orderId) {
+        String oid = StringUtils.hasText(orderId) ? orderId.trim() : null;
+        if (!StringUtils.hasText(oid)) {
+            throw new IllegalArgumentException("参数错误");
+        }
+
+        ProductionOrder order = productionOrderService.getDetailById(oid);
+        if (order == null) {
+            throw new NoSuchElementException("生产订单不存在");
+        }
+
+        List<ScanRecord> records = scanRecordMapper.selectList(new LambdaQueryWrapper<ScanRecord>()
+                .eq(ScanRecord::getOrderId, oid)
+                .orderByAsc(ScanRecord::getScanTime)
+                .orderByAsc(ScanRecord::getCreateTime));
+
+        List<Map<String, Object>> stages = buildProductionStageFlow(order, records);
+
+        List<MaterialPurchase> materialPurchases = materialPurchaseMapper
+                .selectList(new LambdaQueryWrapper<MaterialPurchase>()
+                        .eq(MaterialPurchase::getOrderId, oid)
+                        .eq(MaterialPurchase::getDeleteFlag, 0)
+                        .orderByDesc(MaterialPurchase::getCreateTime));
+
+        List<CuttingTask> cuttingTasks = cuttingTaskService.list(new LambdaQueryWrapper<CuttingTask>()
+                .eq(CuttingTask::getProductionOrderId, oid)
+                .orderByDesc(CuttingTask::getCreateTime));
+
+        List<CuttingBundle> cuttingBundles = cuttingBundleMapper.selectList(new LambdaQueryWrapper<CuttingBundle>()
+                .eq(CuttingBundle::getProductionOrderId, oid)
+                .orderByAsc(CuttingBundle::getBundleNo)
+                .orderByAsc(CuttingBundle::getCreateTime));
+
+        List<ProductWarehousing> warehousings = productWarehousingService
+                .list(new LambdaQueryWrapper<ProductWarehousing>()
+                        .eq(ProductWarehousing::getOrderId, oid)
+                        .eq(ProductWarehousing::getDeleteFlag, 0)
+                        .orderByDesc(ProductWarehousing::getCreateTime));
+
+        List<ProductOutstock> outstocks = productOutstockService.list(new LambdaQueryWrapper<ProductOutstock>()
+                .eq(ProductOutstock::getOrderId, oid)
+                .eq(ProductOutstock::getDeleteFlag, 0)
+                .orderByDesc(ProductOutstock::getCreateTime));
+
+        List<ShipmentReconciliation> shipmentReconciliations = shipmentReconciliationService.lambdaQuery()
+                .eq(ShipmentReconciliation::getOrderId, oid)
+                .orderByDesc(ShipmentReconciliation::getCreateTime)
+                .list();
+
+        List<MaterialReconciliation> materialReconciliations = materialReconciliationService.lambdaQuery()
+                .eq(MaterialReconciliation::getOrderId, oid)
+                .eq(MaterialReconciliation::getDeleteFlag, 0)
+                .orderByDesc(MaterialReconciliation::getCreateTime)
+                .list();
+
+        // 查询款号报价单
+        StyleQuotation styleQuotation = null;
+        if (order.getStyleId() != null) {
+            try {
+                styleQuotation = styleQuotationMapper.selectOne(
+                    new LambdaQueryWrapper<StyleQuotation>()
+                        .eq(StyleQuotation::getStyleId, Long.valueOf(order.getStyleId()))
+                );
+            } catch (Exception e) {
+                log.warn("Failed to load style quotation: orderId={}, styleId={}", oid, order.getStyleId(), e);
+            }
+        }
+
+        return new OrderFlowResponse(
+                order,
+                stages,
+                records,
+                materialPurchases,
+                cuttingTasks,
+                cuttingBundles,
+                warehousings,
+                outstocks,
+                shipmentReconciliations,
+                materialReconciliations,
+                styleQuotation);
+    }
+
+    private List<Map<String, Object>> buildProductionStageFlow(ProductionOrder order, List<ScanRecord> records) {
+        if (order == null) {
+            return new ArrayList<>();
+        }
+
+        int orderQty = order.getOrderQuantity() == null ? 0 : order.getOrderQuantity();
+
+        List<String> processOrder = new ArrayList<>();
+        try {
+            templateLibraryService.loadProgressWeights(order.getStyleNo(), new LinkedHashMap<>(), processOrder);
+        } catch (Exception e) {
+            log.warn("Failed to load progress weights from template: orderId={}, styleNo={}", order.getId(),
+                    order.getStyleNo(), e);
+        }
+
+        Map<String, List<ScanRecord>> byProcess = new HashMap<>();
+        if (records != null) {
+            for (ScanRecord r : records) {
+                if (r == null) {
+                    continue;
+                }
+                if (!"success".equals(r.getScanResult())) {
+                    continue;
+                }
+                String pn = r.getProgressStage() == null ? "" : r.getProgressStage().trim();
+                if (!StringUtils.hasText(pn)) {
+                    pn = r.getProcessName() == null ? "" : r.getProcessName().trim();
+                }
+                String pc = r.getProcessCode() == null ? "" : r.getProcessCode().trim();
+                if ("quality_warehousing".equals(pc)) {
+                    pn = "质检";
+                }
+                if (!StringUtils.hasText(pn)) {
+                    continue;
+                }
+                byProcess.computeIfAbsent(pn, k -> new ArrayList<>()).add(r);
+            }
+        }
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        List<String> processes = processOrder.isEmpty() ? new ArrayList<>(byProcess.keySet())
+                : new ArrayList<>(processOrder);
+        if (!processOrder.isEmpty()) {
+            for (String pn : byProcess.keySet()) {
+                if (!StringUtils.hasText(pn)) {
+                    continue;
+                }
+                boolean matched = false;
+                for (String tpl : processes) {
+                    if (templateLibraryService.progressStageNameMatches(tpl, pn)) {
+                        matched = true;
+                        break;
+                    }
+                }
+                if (!matched && !processes.contains(pn)) {
+                    processes.add(pn);
+                }
+            }
+        }
+
+        for (String name : processes) {
+            String pn = name == null ? "" : name.trim();
+            if (!StringUtils.hasText(pn)) {
+                continue;
+            }
+
+            List<ScanRecord> list = new ArrayList<>();
+            for (Map.Entry<String, List<ScanRecord>> e : byProcess.entrySet()) {
+                if (e == null) {
+                    continue;
+                }
+                String k = e.getKey();
+                if (!templateLibraryService.progressStageNameMatches(pn, k)) {
+                    continue;
+                }
+                List<ScanRecord> v = e.getValue();
+                if (v != null && !v.isEmpty()) {
+                    list.addAll(v);
+                }
+            }
+            list.sort((a, b) -> {
+                LocalDateTime ta = a == null ? null : a.getScanTime();
+                LocalDateTime tb = b == null ? null : b.getScanTime();
+                if (ta == null && tb == null) {
+                    return 0;
+                }
+                if (ta == null) {
+                    return -1;
+                }
+                if (tb == null) {
+                    return 1;
+                }
+                return ta.compareTo(tb);
+            });
+
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("processName", pn);
+
+            if (list.isEmpty()) {
+                row.put("status", "not_started");
+                row.put("totalQuantity", 0);
+                result.add(row);
+                continue;
+            }
+
+            ScanRecord first = list.get(0);
+            ScanRecord last = list.get(list.size() - 1);
+
+            row.put("startTime", first == null ? null : first.getScanTime());
+            row.put("startOperatorId", first == null ? null : first.getOperatorId());
+            row.put("startOperatorName", first == null ? null : first.getOperatorName());
+
+            long sum = 0;
+            LocalDateTime doneTime = null;
+            String doneOpId = null;
+            String doneOpName = null;
+            Map<String, Integer> maxByBundle = new HashMap<>();
+            for (ScanRecord r : list) {
+                if (r == null) {
+                    continue;
+                }
+                int q = r.getQuantity() == null ? 0 : r.getQuantity();
+                if (q <= 0) {
+                    continue;
+                }
+                String bundleId = r.getCuttingBundleId() == null ? null : r.getCuttingBundleId().trim();
+                if (StringUtils.hasText(bundleId)) {
+                    int prev = maxByBundle.getOrDefault(bundleId, 0);
+                    int next = Math.max(prev, q);
+                    int delta = Math.max(0, next - prev);
+                    if (delta > 0) {
+                        sum += delta;
+                        maxByBundle.put(bundleId, next);
+                    }
+                } else {
+                    sum += q;
+                }
+                if (orderQty > 0 && doneTime == null && sum >= orderQty) {
+                    doneTime = r.getScanTime();
+                    doneOpId = r.getOperatorId();
+                    doneOpName = r.getOperatorName();
+                    break;
+                }
+            }
+
+            row.put("totalQuantity", (int) Math.min((long) Integer.MAX_VALUE, Math.max(0L, sum)));
+
+            if (doneTime != null) {
+                row.put("completeTime", doneTime);
+                row.put("completeOperatorId", doneOpId);
+                row.put("completeOperatorName", doneOpName);
+                row.put("status", "completed");
+            } else {
+                row.put("completeTime", null);
+                row.put("completeOperatorId", null);
+                row.put("completeOperatorName", null);
+                row.put("status", "in_progress");
+                row.put("lastTime", last == null ? null : last.getScanTime());
+                row.put("lastOperatorId", last == null ? null : last.getOperatorId());
+                row.put("lastOperatorName", last == null ? null : last.getOperatorName());
+            }
+
+            result.add(row);
+        }
+
+        return result;
+    }
+}

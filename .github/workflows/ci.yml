@@ -1,0 +1,74 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  backend-test:
+    name: 后端测试
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+
+    - name: 设置 JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+        cache: 'maven'
+
+    - name: 运行后端单元测试（纯Mock，无需数据库）
+      working-directory: ./backend
+      run: |
+        mvn clean test \
+          -Dtest="ProductionOrderOrchestratorTest,MaterialReconciliationOrchestratorTest*,ProductWarehousingOrchestratorTest*" \
+          -Dspring.profiles.active=test \
+          -DfailIfNoTests=false
+
+  frontend-build:
+    name: 前端构建
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+
+    - name: 设置 Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: 'frontend/package-lock.json'
+
+    - name: 安装依赖
+      working-directory: ./frontend
+      run: npm install --legacy-peer-deps
+
+    - name: 运行构建
+      working-directory: ./frontend
+      run: npm run build
+
+    - name: 上传构建产物
+      uses: actions/upload-artifact@v4
+      with:
+        name: frontend-dist
+        path: frontend/dist
+        retention-days: 7
+
+  notify:
+    name: 通知结果
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-build]
+    if: always()
+
+    steps:
+    - name: 发送通知
+      run: |
+        echo "CI/CD Pipeline 完成"
+        echo "后端测试: ${{ needs.backend-test.result }}"
+        echo "前端构建: ${{ needs.frontend-build.result }}"

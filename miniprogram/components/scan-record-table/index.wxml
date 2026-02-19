@@ -1,0 +1,27 @@
+<scroll-view scroll-x class="srt-table-wrap" wx:if="{{records.length > 0}}">
+  <view class="srt-table-inner">
+    <view class="srt-table-header">
+      <text class="srt-th srt-th-worker">领取人</text>
+      <text class="srt-th srt-th-order">订单号</text>
+      <text class="srt-th srt-th-bundle">菲号</text>
+      <text class="srt-th srt-th-process">工序</text>
+      <text class="srt-th srt-th-price">单价</text>
+      <text class="srt-th srt-th-qty">数量</text>
+      <text wx:if="{{showAmount}}" class="srt-th srt-th-amount">金额</text>
+      <text class="srt-th srt-th-bed">床号</text>
+      <text class="srt-th srt-th-time">日期</text>
+    </view>
+
+    <view wx:for="{{records}}" wx:key="id" class="srt-table-row">
+      <text class="srt-td srt-td-worker">{{item.displayWorker}}</text>
+      <text class="srt-td srt-td-order">{{item.displayOrderNo}}</text>
+      <text class="srt-td srt-td-bundle">{{item.displayBundleNo}}</text>
+      <text class="srt-td srt-td-process">{{item.displayProcess}}</text>
+      <text class="srt-td srt-td-price">{{item.displayUnitPrice}}</text>
+      <text class="srt-td srt-td-qty">{{item.displayQuantity}}</text>
+      <text wx:if="{{showAmount}}" class="srt-td srt-td-amount">{{item.displayLineAmount}}</text>
+      <text class="srt-td srt-td-bed">{{item.displayBedNo}}</text>
+      <text class="srt-td srt-td-time">{{item.displayTime}}</text>
+    </view>
+  </view>
+</scroll-view>

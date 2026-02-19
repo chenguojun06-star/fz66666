@@ -1,0 +1,46 @@
+.qr-scanner {
+  padding: 20rpx;
+}
+
+.scan-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40rpx;
+  background: var(--gradient-primary);
+  border-radius: 20rpx;
+  box-shadow: 0 10rpx 40rpx rgba(224, 242, 254, 0.4);
+  transition: all 0.3s ease;
+}
+
+.scan-button.scanning {
+  opacity: 0.7;
+  transform: scale(0.95);
+}
+
+.scan-icon {
+  width: 120rpx;
+  height: 120rpx;
+  margin-bottom: 20rpx;
+}
+
+.scan-button.scanning .scan-icon {
+  animation: scan-pulse 1.5s ease-in-out infinite;
+}
+
+.scan-text {
+  color: #ffffff;
+  font-size: 32rpx;
+  font-weight: 500;
+}
+
+@keyframes scan-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}

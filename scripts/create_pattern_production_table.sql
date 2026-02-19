@@ -1,0 +1,26 @@
+-- 样板生产表
+CREATE TABLE IF NOT EXISTS `t_pattern_production` (
+  `id` VARCHAR(64) NOT NULL COMMENT '主键ID',
+  `style_id` VARCHAR(64) NOT NULL COMMENT '款号ID',
+  `style_no` VARCHAR(100) NOT NULL COMMENT '款号',
+  `color` VARCHAR(50) DEFAULT NULL COMMENT '颜色',
+  `quantity` INT DEFAULT 1 COMMENT '数量（样板件数）',
+  `release_time` DATETIME DEFAULT NULL COMMENT '下板时间',
+  `delivery_time` DATETIME DEFAULT NULL COMMENT '交板时间（预计）',
+  `receiver` VARCHAR(100) DEFAULT NULL COMMENT '领取人',
+  `receive_time` DATETIME DEFAULT NULL COMMENT '领取时间',
+  `complete_time` DATETIME DEFAULT NULL COMMENT '完成时间',
+  `pattern_maker` VARCHAR(100) DEFAULT NULL COMMENT '纸样师傅',
+  `progress_nodes` TEXT COMMENT '工序进度JSON',
+  `status` VARCHAR(20) DEFAULT 'PENDING' COMMENT '状态：PENDING待领取/IN_PROGRESS制作中/COMPLETED已完成',
+  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `create_by` VARCHAR(100) DEFAULT NULL COMMENT '创建人',
+  `update_by` VARCHAR(100) DEFAULT NULL COMMENT '更新人',
+  `delete_flag` TINYINT DEFAULT 0 COMMENT '删除标记（0=未删除，1=已删除）',
+  PRIMARY KEY (`id`),
+  KEY `idx_style_id` (`style_id`),
+  KEY `idx_style_no` (`style_no`),
+  KEY `idx_status` (`status`),
+  KEY `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='样板生产表';

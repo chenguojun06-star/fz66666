@@ -1,0 +1,77 @@
+/* 订单汇总内容样式 */
+.orderNo {
+  font-weight: 600;
+  color: var(--neutral-text, #1f2937);
+}
+
+.verifyModal {
+  padding: 16px 0;
+}
+
+.modalField {
+  margin-bottom: 16px;
+}
+
+.modalFieldLabel {
+  color: var(--neutral-text-light, #666);
+  margin-bottom: 8px;
+}
+
+.modalFieldValue {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--neutral-text, #000);
+}
+
+.modalFieldValueSmall {
+  font-weight: 500;
+  color: var(--neutral-text, #000);
+}
+
+.modalFieldGrid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.modalFieldGrid3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.costValue {
+  font-weight: 500;
+  color: #ff4d4f;
+}
+
+.profitValue {
+  font-weight: 500;
+}
+
+.profitPositive {
+  color: #52c41a;
+}
+
+.profitNegative {
+  color: #ff4d4f;
+}
+
+.modalNote {
+  background: var(--color-bg-gray, #f5f5f5);
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.modalNoteTitle {
+  color: var(--neutral-text-light, #666);
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.modalNoteText {
+  font-size: 13px;
+  color: var(--neutral-text, #000);
+}

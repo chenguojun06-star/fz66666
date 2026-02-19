@@ -1,0 +1,134 @@
+.quality-form {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+}
+
+.form-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.form-container {
+  position: absolute;
+  left: 40rpx;
+  right: 40rpx;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--color-bg-card);
+  border-radius: 20rpx;
+  overflow: hidden;
+  box-shadow: 0 10rpx 40rpx rgba(0, 0, 0, 0.2);
+}
+
+.form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 30rpx 40rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.form-title {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.close-btn {
+  font-size: 60rpx;
+  color: var(--color-text-disabled);
+  line-height: 1;
+}
+
+.form-body {
+  padding: 40rpx;
+  max-height: 800rpx;
+  overflow-y: auto;
+}
+
+.order-info {
+  background: #f8f9fa;
+  padding: 20rpx;
+  border-radius: 10rpx;
+  margin-bottom: 30rpx;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10rpx;
+}
+
+.info-item:last-child {
+  margin-bottom: 0;
+}
+
+.info-item .label {
+  color: var(--color-text-secondary);
+  font-size: 28rpx;
+}
+
+.info-item .value {
+  color: var(--color-text-primary);
+  font-size: 28rpx;
+  font-weight: 500;
+}
+
+.form-item {
+  margin-bottom: 30rpx;
+}
+
+.form-label {
+  font-size: 28rpx;
+  color: var(--color-text-primary);
+  margin-bottom: 16rpx;
+  font-weight: 500;
+}
+
+.form-input,
+.form-textarea {
+  width: 100%;
+  padding: 20rpx;
+  border: 1rpx solid #e0e0e0;
+  border-radius: 10rpx;
+  font-size: 28rpx;
+  box-sizing: border-box;
+}
+
+.form-textarea {
+  min-height: 120rpx;
+}
+
+.form-footer {
+  display: flex;
+  gap: 20rpx;
+  padding: 30rpx 40rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.cancel-btn,
+.submit-btn {
+  flex: 1;
+  padding: 24rpx;
+  border-radius: 10rpx;
+  font-size: 32rpx;
+  font-weight: 500;
+}
+
+.cancel-btn {
+  background: var(--color-bg-gray);
+  color: var(--color-text-secondary);
+}
+
+.submit-btn {
+  background: linear-gradient(135deg, var(--color-primary) 0%, #764ba2 100%);
+  color: #ffffff;
+}

@@ -1,0 +1,79 @@
+# MySQL数据库配置说明
+
+## 当前使用的数据库
+
+- **容器名称**: fashion-mysql-simple
+- **端口**: 3308 (主机) -> 3306 (容器)
+- **数据库名**: fashion_supplychain
+- **用户名**: root
+- **密码**: changeme
+- **数据卷**: mysql-fashion-data (持久化存储)
+
+## 启动数据库
+
+```bash
+cd deployment
+docker-compose -f docker-compose-simple.yml up -d
+```
+
+## 停止数据库
+
+```bash
+cd deployment
+docker-compose -f docker-compose-simple.yml down
+```
+
+## 备份数据库
+
+```bash
+# 导出整个数据库
+docker exec fashion-mysql-simple mysqldump -uroot -pchangeme fashion_supplychain > backup_$(date +%Y%m%d_%H%M%S).sql
+
+# 导出到指定文件
+docker exec fashion-mysql-simple mysqldump -uroot -pchangeme fashion_supplychain > backup.sql
+```
+
+## 恢复数据库
+
+```bash
+# 从备份文件恢复
+docker exec -i fashion-mysql-simple mysql -uroot -pchangeme fashion_supplychain < backup.sql
+```
+
+## 查看数据库状态
+
+```bash
+# 查看容器状态
+docker ps | grep mysql
+
+# 查看数据库表
+docker exec fashion-mysql-simple mysql -uroot -pchangeme fashion_supplychain -e "SHOW TABLES;"
+
+# 查看订单数量
+docker exec fashion-mysql-simple mysql -uroot -pchangeme fashion_supplychain -e "SELECT COUNT(*) FROM t_production_order;"
+```
+
+## 数据卷管理
+
+```bash
+# 查看数据卷
+docker volume ls | grep mysql
+
+# 查看数据卷详情
+docker volume inspect mysql-fashion-data
+
+# 备份数据卷（推荐定期执行）
+docker run --rm -v mysql-fashion-data:/data -v $(pwd):/backup alpine tar czf /backup/mysql-data-backup-$(date +%Y%m%d).tar.gz /data
+```
+
+## 重要提醒
+
+⚠️ **数据安全**
+- 数据存储在Docker volume `mysql-fashion-data` 中
+- 删除容器不会删除数据（只要不用 `docker volume rm`）
+- 建议定期备份数据库
+
+⚠️ **配置同步**
+- 后端配置文件：`backend/src/main/resources/application.yml`
+- 数据库连接：`jdbc:mysql://127.0.0.1:3308/fashion_supplychain`
+- 端口必须保持 3308 与此配置一致

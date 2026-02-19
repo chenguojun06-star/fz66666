@@ -1,0 +1,14 @@
+# Grafana 仪表盘配置
+# 自动加载仪表盘
+
+apiVersion: 1
+
+providers:
+  - name: 'default'
+    orgId: 1
+    folder: ''
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /etc/grafana/provisioning/dashboards

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fashion.supplychain.finance.mapper.DeductionItemMapper">
+    
+    <!-- 根据对账ID查询扣款项列表 -->
+    <select id="selectByReconciliationId" resultType="com.fashion.supplychain.finance.entity.DeductionItem">
+        SELECT 
+            id,
+            reconciliation_id AS reconciliationId,
+            deduction_type AS deductionType,
+            deduction_amount AS deductionAmount,
+            description
+        FROM t_deduction_item
+        WHERE reconciliation_id = #{reconciliationId}
+        ORDER BY id
+    </select>
+    
+</mapper>

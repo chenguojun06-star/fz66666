@@ -1,0 +1,56 @@
+.style-info-modal {
+  max-width: 100%;
+}
+
+.style-info-modal .ant-col {
+  min-width: 0;
+}
+
+.style-info-modal .ant-tabs-content {
+  max-width: 100%;
+}
+
+.style-info-modal .ant-form {
+  max-width: 100%;
+}
+
+.style-info-modal .ant-row {
+  max-width: 100%;
+}
+
+/* 样衣开发筛选区：查询按钮紧贴搜索输入 */
+.style-filter-group {
+  display: inline-flex;
+  align-items: center;
+}
+
+.style-filter-group .ant-input-affix-wrapper,
+.style-filter-group .ant-input {
+  height: 32px;
+}
+
+.style-filter-group .ant-input-affix-wrapper,
+.style-filter-group .ant-input {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.style-filter-group .ant-btn {
+  height: 32px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.style-filter-group .ant-input-affix-wrapper,
+.style-filter-group .ant-btn {
+  margin-left: 0;
+}
+
+.style-filter-date {
+  height: 32px;
+}
+
+.style-filter-status {
+  height: 32px;
+  width: 200px;
+}

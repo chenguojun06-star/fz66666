@@ -1,0 +1,849 @@
+/* ============= Awwwards 风格升级 ============= */
+/* 整体页面容器 */
+.dashboard-container {
+  animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 页面标题优化 */
+.dashboard-container .page-header {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 24px;
+  animation: slideInDown 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* 搜索框玻璃拟态效果 - 仅限仪表盘页面 */
+.dashboard-page .filter-card {
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.6) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.9) !important;
+  position: relative;
+  z-index: 1;
+  animation: slideInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s backwards;
+}
+
+/* 搜索框输入框样式 - 仅限仪表盘页面 */
+.dashboard-page .filter-card .ant-input-affix-wrapper {
+  border-radius: 999px 0 0 999px !important;
+  border-color: #e5e7eb !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dashboard-page .filter-card .ant-input-affix-wrapper:focus,
+.dashboard-page .filter-card .ant-input-affix-wrapper-focused {
+  border-color: #2D7FF9 !important;
+  box-shadow: 0 0 0 2px rgba(45, 127, 249, 0.1) !important;
+}
+
+/* 仪表盘搜索条横向对齐优化 */
+.dashboard-search-inline .standard-search-bar {
+  width: auto;
+  margin-bottom: 0;
+}
+
+.dashboard-search-inline .standard-search-row {
+  width: auto;
+  column-gap: 0;
+  row-gap: 0;
+}
+
+.dashboard-search-inline .ant-input-affix-wrapper {
+  height: 40px;
+  display: flex;
+  align-items: center;
+}
+
+.dashboard-search-inline .ant-input {
+  height: 38px;
+}
+
+/* AutoComplete 搜索框胶囊形 */
+.dashboard-search-inline .ant-select {
+  width: 100%;
+}
+
+.dashboard-search-inline .ant-select-selector {
+  height: 40px !important;
+  border-radius: 999px !important;
+  align-items: center !important;
+  border-color: var(--neutral-border) !important;
+  background: var(--neutral-white) !important;
+}
+
+.dashboard-search-inline .ant-select-selection-search-input {
+  height: 38px !important;
+}
+
+/* 搜索按钮增强（胶囊形右半边 - 镂空设计）- 仅限仪表盘页面 */
+.dashboard-page .filter-card .ant-btn-primary {
+  height: 32px !important;
+  font-weight: 600 !important;
+  border-radius: 0 999px 999px 0 !important;
+  background: #ffffff !important;
+  border: 2px solid #40a9ff !important;
+  color: #40a9ff !important;
+  box-shadow: 0 2px 8px rgba(64, 169, 255, 0.15) !important;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+  padding: 0 32px !important;
+}
+
+.dashboard-page .filter-card .ant-btn-primary:hover {
+  transform: translateY(-2px) !important;
+  background: #f0f9ff !important;
+  border-color: #1890ff !important;
+  color: #1890ff !important;
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.25) !important;
+}
+
+/* 深色主题搜索按钮 - 仅限仪表盘页面 */
+[data-theme="dark"] .dashboard-page .filter-card .ant-btn-primary {
+  background: rgba(26, 32, 39, 0.8) !important;
+  border-color: #69b1ff !important;
+  color: #69b1ff !important;
+  box-shadow: 0 2px 8px rgba(105, 177, 255, 0.15) !important;
+}
+
+[data-theme="dark"] .dashboard-page .filter-card .ant-btn-primary:hover {
+  background: rgba(64, 169, 255, 0.1) !important;
+  border-color: #91d5ff !important;
+  color: #91d5ff !important;
+  box-shadow: 0 4px 12px rgba(105, 177, 255, 0.25) !important;
+}
+
+.page-card {
+  background: #f8fafc;
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 统计卡片网格 */
+.stats-section {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 32px;
+  position: relative;
+  z-index: 1;
+  animation: slideInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 1100px) {
+  .stats-section {
+    grid-template-columns: repeat(2, minmax(200px, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .stats-section {
+    grid-template-columns: 1fr;
+  }
+}
+
+.stat-card {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06),
+              0 1px 4px rgba(0, 0, 0, 0.04),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.8);
+  position: relative;
+  overflow: hidden;
+}
+
+/* 卡片光泽效果 */
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.3);
+  transition: left 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.stat-card:hover::before {
+  left: 100%;
+}
+
+.stat-card:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1),
+              0 4px 12px rgba(0, 0, 0, 0.06),
+              inset 0 0 0 1px rgba(255, 255, 255, 1);
+  border-color: rgba(255, 255, 255, 0.8);
+}
+
+/* 新的8个统计卡片样式 */
+.stat-card--sample {
+  border-color: #1677ff;
+  background: #f0f7ff;
+}
+
+.stat-card--production {
+  border-color: #13c2c2;
+  background: #e6fffb;
+}
+
+.stat-card--quantity {
+  border-color: #52c41a;
+  background: #f6ffed;
+}
+
+.stat-card--overdue {
+  border-color: #ff4d4f;
+  background: #fff1f0;
+}
+
+.stat-card--today-warehousing {
+  border-color: #faad14;
+  background: #fffbe6;
+}
+
+.stat-card--total-warehousing {
+  border-color: #722ed1;
+  background: #f9f0ff;
+}
+
+.stat-card--defective {
+  border-color: #fa541c;
+  background: #fff7e6;
+}
+
+.stat-card--payment {
+  border-color: #2f54eb;
+  background: #f0f5ff;
+}
+
+/* 旧样式保留以兼容 */
+.stat-card--style {
+  border-color: #1677ff;
+}
+
+.stat-card--finance {
+  border-color: #faad14;
+}
+
+.stat-card--scan {
+  border-color: #722ed1;
+}
+
+.stat-card--warehousing {
+  border-color: #52c41a;
+}
+
+.stat-card--unqualified {
+  border-color: #ff4d4f;
+}
+
+.stat-card--urgent {
+  border-color: #fa541c;
+}
+
+.stat-icon {
+  font-size: 24px;
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 12px;
+  color: #595959;
+  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08),
+              inset 0 -2px 8px rgba(0, 0, 0, 0.05);
+  position: relative;
+}
+
+/* 图标内部光泽 */
+.stat-icon::after {
+  /* 禁用顶部渐变高光效果 */
+  display: none;
+}
+
+.stat-card:hover .stat-icon {
+  transform: translateY(-4px) scale(1.15) rotateZ(-5deg);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12),
+              inset 0 -2px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* 新的8个图标样式 */
+.stat-icon--sample {
+  color: #1677ff;
+  background: #e6f4ff;
+}
+
+.stat-icon--production {
+  color: #13c2c2;
+  background: #e6fffb;
+}
+
+.stat-icon--quantity {
+  color: #52c41a;
+  background: #d9f7be;
+}
+
+.stat-icon--overdue {
+  color: #ff4d4f;
+  background: #ffccc7;
+}
+
+.stat-icon--today-warehousing {
+  color: #faad14;
+  background: #ffe7ba;
+}
+
+.stat-icon--total-warehousing {
+  color: #722ed1;
+  background: #efdbff;
+}
+
+.stat-icon--defective {
+  color: #fa541c;
+  background: #ffd8bf;
+}
+
+.stat-icon--payment {
+  color: #2f54eb;
+  background: #d6e4ff;
+}
+
+/* 旧样式保留以兼容 */
+.stat-icon--style {
+  color: #1677ff;
+  background: #e6f4ff;
+}
+
+.stat-icon--finance {
+  color: #faad14;
+  background: #fffbe6;
+}
+
+.stat-icon--scan {
+  color: #722ed1;
+  background: #f9f0ff;
+}
+
+.stat-icon--warehousing {
+  color: #52c41a;
+  background: #f6ffed;
+}
+
+.stat-icon--unqualified {
+  color: #ff4d4f;
+  background: #fff1f0;
+}
+
+.stat-icon--urgent {
+  color: #fa541c;
+  background: #fff7e6;
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-value {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: #1a1a1a;
+  line-height: 1.2;
+}
+
+.stat-label {
+  font-size: var(--font-size-base);
+  color: #8c8c8c;
+  margin-top: 4px;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  position: relative;
+  z-index: 1;
+  animation: slideInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s backwards;
+}
+
+.dashboard-card {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.9);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12),
+              inset 0 0 0 1px rgba(255, 255, 255, 1);
+}
+
+.card-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.card-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0;
+  position: relative;
+  padding-left: 12px;
+}
+
+/* 标题装饰线 */
+.card-title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 20px;
+  background: var(--primary-color);
+  border-radius: 2px;
+}
+
+.card-content {
+  padding: 20px;
+}
+
+.activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.activity-item {
+  display: flex;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+}
+
+.activity-item:hover {
+  padding-left: 8px;
+  background: rgba(45, 127, 249, 0.04);
+  border-radius: 8px;
+  transform: translateX(4px);
+}
+
+.activity-item:last-child {
+  border-bottom: none;
+}
+
+.activity-icon {
+  font-size: 18px;
+  margin-right: 14px;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #f5f5f5;
+  color: #595959;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.activity-item:hover .activity-icon {
+  transform: scale(1.1) rotateZ(-5deg);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.activity-icon--production {
+  color: #13c2c2;
+  background: #e6fffb;
+}
+
+.activity-icon--reconciliation {
+  color: #faad14;
+  background: #fffbe6;
+}
+
+.activity-icon--scan {
+  color: #722ed1;
+  background: #f9f0ff;
+}
+
+.activity-icon--style {
+  color: #1677ff;
+  background: #e6f4ff;
+}
+
+.activity-icon--material {
+  color: #52c41a;
+  background: #f6ffed;
+}
+
+.activity-content {
+  flex: 1;
+  font-size: var(--font-size-base);
+  color: #1a1a1a;
+}
+
+.activity-time {
+  font-size: var(--font-size-sm);
+  color: #8c8c8c;
+}
+
+.quick-entry-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.quick-entry-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: var(--neutral-bg);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
+  text-decoration: none;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+  position: relative;
+  overflow: hidden;
+}
+
+
+
+.quick-entry-item:hover {
+  transform: translateY(-6px) scale(1.03);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12),
+              inset 0 0 0 1px rgba(255, 255, 255, 1);
+  background: var(--neutral-bg);
+}
+
+.quick-entry-item--style {
+  border-color: #1677ff;
+}
+
+.quick-entry-item--production {
+  border-color: #13c2c2;
+}
+
+.quick-entry-item--scan {
+  border-color: #722ed1;
+}
+
+.quick-entry-item--finance {
+  border-color: #faad14;
+}
+
+.quick-entry-item--material {
+  border-color: #52c41a;
+}
+
+.quick-entry-item--warehousing {
+  border-color: #13c2c2;
+}
+
+.quick-entry-item--report {
+  border-color: #1677ff;
+}
+
+.quick-entry-item--factory {
+  border-color: #595959;
+}
+
+.quick-entry-item--order {
+  border-color: #2f54eb;
+}
+
+.quick-entry-item--cutting {
+  border-color: #fa8c16;
+}
+
+.quick-entry-item--factory-recon {
+  border-color: #eb2f96;
+}
+
+.quick-entry-item--shipment {
+  border-color: #722ed1;
+}
+
+.entry-icon {
+  font-size: var(--font-size-xl);
+  margin-bottom: 8px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  color: #595959;
+}
+
+.entry-icon--style {
+  color: #1677ff;
+  background: #e6f4ff;
+}
+
+.entry-icon--production {
+  color: #13c2c2;
+  background: #e6fffb;
+}
+
+.entry-icon--scan {
+  color: #722ed1;
+  background: #f9f0ff;
+}
+
+.entry-icon--finance {
+  color: #faad14;
+  background: #fffbe6;
+}
+
+.entry-icon--material {
+  color: #52c41a;
+  background: #f6ffed;
+}
+
+.entry-icon--warehousing {
+  color: #13c2c2;
+  background: #e6fffb;
+}
+
+.entry-icon--report {
+  color: #1677ff;
+  background: #e6f4ff;
+}
+
+.entry-icon--factory {
+  color: #595959;
+  background: #f5f5f5;
+}
+
+.entry-icon--order {
+  color: #2f54eb;
+  background: #f0f5ff;
+}
+
+.entry-icon--cutting {
+  color: #fa8c16;
+  background: #fff7e6;
+}
+
+.entry-icon--factory-recon {
+  color: #eb2f96;
+  background: #fff0f6;
+}
+
+.entry-icon--shipment {
+  color: #722ed1;
+  background: #f9f0ff;
+}
+
+.entry-label {
+  font-size: var(--font-size-sm);
+  color: #1a1a1a;
+}
+
+/* 数据分析区域布局 */
+.dashboard-analysis-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.dashboard-charts-left {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.dashboard-table-right {
+  height: 100%;
+}
+
+.chart-item {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 1400px) {
+  .dashboard-analysis-section {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-table-right {
+    min-height: 500px;
+  }
+}
+
+/* ============= 深色主题覆盖规则 ============= */
+:root[data-theme="dark"] .page-title {
+  color: var(--neutral-text);
+}
+
+:root[data-theme="dark"] .dashboard-page .filter-card {
+  background: rgba(26, 29, 36, 0.85) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.05) !important;
+}
+
+:root[data-theme="dark"] .stat-card {
+  background: rgba(26, 29, 36, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3),
+              0 1px 4px rgba(0, 0, 0, 0.2),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+:root[data-theme="dark"] .stat-card:hover {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5),
+              0 4px 12px rgba(0, 0, 0, 0.3),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+:root[data-theme="dark"] .stat-card::before {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* 深色主题下的统计卡片背景 */
+:root[data-theme="dark"] .stat-card--sample {
+  background: rgba(22, 119, 255, 0.1);
+  border-color: rgba(22, 119, 255, 0.3);
+}
+
+:root[data-theme="dark"] .stat-card--production {
+  background: rgba(19, 194, 194, 0.1);
+  border-color: rgba(19, 194, 194, 0.3);
+}
+
+:root[data-theme="dark"] .stat-card--quantity {
+  background: rgba(82, 196, 26, 0.1);
+  border-color: rgba(82, 196, 26, 0.3);
+}
+
+:root[data-theme="dark"] .stat-card--overdue {
+  background: rgba(255, 77, 79, 0.1);
+  border-color: rgba(255, 77, 79, 0.3);
+}
+
+:root[data-theme="dark"] .stat-card--today-warehousing {
+  background: rgba(250, 173, 20, 0.1);
+  border-color: rgba(250, 173, 20, 0.3);
+}
+
+:root[data-theme="dark"] .stat-card--total-warehousing {
+  background: rgba(114, 46, 209, 0.1);
+  border-color: rgba(114, 46, 209, 0.3);
+}
+
+:root[data-theme="dark"] .stat-card--defective {
+  background: rgba(250, 84, 28, 0.1);
+  border-color: rgba(250, 84, 28, 0.3);
+}
+
+:root[data-theme="dark"] .stat-card--payment {
+  background: rgba(47, 84, 235, 0.1);
+  border-color: rgba(47, 84, 235, 0.3);
+}
+
+:root[data-theme="dark"] .stat-icon {
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3),
+              inset 0 -2px 8px rgba(0, 0, 0, 0.2);
+}
+
+:root[data-theme="dark"] .stat-icon::after {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+:root[data-theme="dark"] .stat-value {
+  color: var(--neutral-text);
+}
+
+:root[data-theme="dark"] .stat-label {
+  color: var(--neutral-text-light);
+}
+
+:root[data-theme="dark"] .dashboard-card {
+  background: rgba(26, 29, 36, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+:root[data-theme="dark"] .dashboard-card:hover {
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+:root[data-theme="dark"] .card-header {
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+:root[data-theme="dark"] .card-title {
+  color: var(--neutral-text);
+}
+
+:root[data-theme="dark"] .entry-label {
+  color: var(--neutral-text);
+}

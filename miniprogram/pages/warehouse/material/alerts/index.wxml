@@ -1,0 +1,93 @@
+<view class="container">
+  <view class="header">
+    <text class="title">面辅料需求排行</text>
+    <text class="subtitle">按近{{days}}天出库频率计算</text>
+  </view>
+
+  <view class="toolbar">
+    <view class="days-tabs">
+      <view class="tab {{days === 7 ? 'active' : ''}}" data-days="7" bindtap="onChangeDays">7天</view>
+      <view class="tab {{days === 30 ? 'active' : ''}}" data-days="30" bindtap="onChangeDays">30天</view>
+      <view class="tab {{days === 60 ? 'active' : ''}}" data-days="60" bindtap="onChangeDays">60天</view>
+    </view>
+    <view class="need-switch {{onlyNeed ? 'on' : ''}}" bindtap="onToggleNeedOnly">
+      {{onlyNeed ? '仅缺料' : '全部'}}
+    </view>
+  </view>
+
+  <view wx:if="{{loading}}" class="loading">加载中...</view>
+
+  <view wx:if="{{!loading && list.length === 0}}" class="empty">
+    <image class="empty-img" src="/assets/icons/empty.svg" mode="widthFix" />
+    <text>暂无库存预警</text>
+  </view>
+
+  <view class="ranking-list">
+    <view
+      wx:for="{{list}}"
+      wx:key="stockId"
+      class="ranking-item"
+      bindtap="onItemTap"
+      data-item="{{item}}"
+    >
+      <view class="item-head">
+        <view class="rank-badge">{{index + 1}}</view>
+        <view class="rank-info">
+          <text class="rank-title">{{item.materialName || item.materialCode || '物料'}}</text>
+          <text class="rank-sub">编码：{{item.materialCode || '-'}} · 类型：{{item.materialTypeText || '-'}}</text>
+        </view>
+        <view class="rank-count {{item.shortage > 0 ? 'warn' : 'ok'}}">
+          {{item.shortage > 0 ? ('缺 ' + item.shortage) : '充足'}}
+        </view>
+      </view>
+      <view class="item-metrics">
+        <view class="metric"><text class="m-label">规格</text><text class="m-value">{{item.specText}}</text></view>
+        <view class="metric"><text class="m-label">库存</text><text class="m-value">{{item.quantity || 0}} {{item.unit || ''}}</text></view>
+        <view class="metric"><text class="m-label">建议水位</text><text class="m-value">{{item.suggestedSafetyStock || item.safetyStock || 0}}</text></view>
+        <view class="metric"><text class="m-label">近{{days}}天出库</text><text class="m-value">{{item.recentOutQuantity || 0}}</text></view>
+      </view>
+      <view class="item-actions">
+        <view class="action secondary" catchtap="onViewDetailTap" data-item="{{item}}">查看明细</view>
+        <view class="action primary" catchtap="onQuickOrderTap" data-item="{{item}}">快捷下发</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="btn" bindtap="goScan">去扫码</view>
+
+  <view wx:if="{{orderModal.visible}}" class="modal">
+    <view class="modal-box">
+      <view class="modal-head">下发采购指令</view>
+      <view class="modal-body">
+        <view class="modal-info">
+          <text class="modal-title">{{orderModal.item.materialName || orderModal.item.materialCode}}</text>
+          <text class="modal-sub">编码：{{orderModal.item.materialCode || '-'}}</text>
+          <text class="modal-sub">规格：{{orderModal.item.specText || '-'}}</text>
+          <text class="modal-sub">库存：{{orderModal.item.quantity || 0}} {{orderModal.item.unit || ''}} / 建议：{{orderModal.item.safetyStock || 0}}</text>
+          <text class="modal-sub">缺口：{{orderModal.shortage || 0}}</text>
+          <text class="modal-sub">单件用量：{{orderModal.item.perPieceUsage || '-'}}</text>
+          <text class="modal-sub">最少可生产：{{orderModal.item.minProductionQty || '-'}} / 最大可生产：{{orderModal.item.maxProductionQty || '-'}}</text>
+        </view>
+        <view class="modal-field">
+          <text class="field-label">采购数量</text>
+          <view class="qty-picker">
+            <view class="qty-btn" data-delta="-1" bindtap="onQtyStep">-</view>
+            <input class="field-input" type="number" value="{{orderModal.quantity}}" bindinput="onQtyInput" />
+            <view class="qty-btn" data-delta="1" bindtap="onQtyStep">+</view>
+            <view class="qty-shortage" bindtap="onUseShortageQty">按缺口</view>
+          </view>
+        </view>
+        <view class="modal-field">
+          <text class="field-label">备注</text>
+          <textarea class="field-textarea" value="{{orderModal.remark}}" bindinput="onRemarkInput" placeholder="可选" />
+        </view>
+      </view>
+      <view class="modal-actions">
+        <view class="btn-secondary" bindtap="onCancelOrder">取消</view>
+        <view class="btn-primary" bindtap="onConfirmOrder">
+          {{orderModal.submitting ? '提交中...' : '下发'}}
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

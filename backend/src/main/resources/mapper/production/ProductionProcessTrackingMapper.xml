@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fashion.supplychain.production.mapper.ProductionProcessTrackingMapper">
+
+    <!-- 批量插入 -->
+    <insert id="batchInsert" parameterType="java.util.List">
+        INSERT INTO t_production_process_tracking (
+            id,
+            production_order_id, production_order_no, cutting_bundle_id, bundle_no,
+            sku, color, size, quantity,
+            process_code, process_name, process_order, unit_price,
+            scan_status, creator, created_at, tenant_id
+        ) VALUES
+        <foreach collection="records" item="item" separator=",">
+            (
+                #{item.id},
+                #{item.productionOrderId}, #{item.productionOrderNo}, #{item.cuttingBundleId}, #{item.bundleNo},
+                #{item.sku}, #{item.color}, #{item.size}, #{item.quantity},
+                #{item.processCode}, #{item.processName}, #{item.processOrder}, #{item.unitPrice},
+                #{item.scanStatus}, #{item.creator}, NOW(), #{item.tenantId}
+            )
+        </foreach>
+    </insert>
+
+    <!-- 查询订单的所有跟踪记录 -->
+    <select id="selectByOrderId" resultType="com.fashion.supplychain.production.entity.ProductionProcessTracking">
+        SELECT * FROM t_production_process_tracking
+        WHERE production_order_id = #{productionOrderId}
+        ORDER BY bundle_no, process_order
+    </select>
+
+    <!-- 查询菲号的所有工序记录 -->
+    <select id="selectByBundleId" resultType="com.fashion.supplychain.production.entity.ProductionProcessTracking">
+        SELECT * FROM t_production_process_tracking
+        WHERE cutting_bundle_id = #{cuttingBundleId}
+        ORDER BY process_order
+    </select>
+
+    <!-- 检查菲号+工序是否已存在 -->
+    <select id="selectByBundleAndProcess" resultType="com.fashion.supplychain.production.entity.ProductionProcessTracking">
+        SELECT * FROM t_production_process_tracking
+        WHERE cutting_bundle_id = #{cuttingBundleId}
+          AND process_code = #{processCode}
+        LIMIT 1
+    </select>
+
+    <!-- 按菲号+工序名称查询（processCode不匹配时的fallback） -->
+    <select id="selectByBundleAndProcessName" resultType="com.fashion.supplychain.production.entity.ProductionProcessTracking">
+        SELECT * FROM t_production_process_tracking
+        WHERE cutting_bundle_id = #{cuttingBundleId}
+          AND process_name = #{processName}
+        LIMIT 1
+    </select>
+
+    <!-- 删除订单的所有跟踪记录（重新初始化时使用） -->
+    <delete id="deleteByOrderId">
+        DELETE FROM t_production_process_tracking
+        WHERE production_order_id = #{productionOrderId}
+    </delete>
+
+</mapper>

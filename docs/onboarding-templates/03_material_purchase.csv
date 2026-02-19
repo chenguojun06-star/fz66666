@@ -1,0 +1,3 @@
+tenantCode,orderNo,materialCode,materialName,materialType,color,size,purchaseQuantity,unit,status
+TENANT_DEMO,PO202602140001,MAT001,面料A,FABRIC,黑色,S,200,米,PENDING
+TENANT_DEMO,PO202602140002,ACC001,拉链B,ACCESSORY,白色,M,300,条,PENDING

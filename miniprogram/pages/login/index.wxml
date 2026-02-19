@@ -1,0 +1,122 @@
+<view class="login-page">
+  <!-- 天蝎座星座呼吸灯装饰 -->
+  <view class="login-constellation" aria-hidden="true">
+    <view class="constellation-line"></view>
+    <view class="constellation-glow"></view>
+    <view class="constellation-dot" style="left:48rpx;top:50rpx;"></view>
+    <view class="constellation-dot" style="left:96rpx;top:100rpx;"></view>
+    <view class="constellation-dot" style="left:136rpx;top:146rpx;"></view>
+    <view class="constellation-dot" style="left:182rpx;top:124rpx;"></view>
+    <view class="constellation-dot" style="left:230rpx;top:156rpx;"></view>
+    <view class="constellation-dot" style="left:270rpx;top:196rpx;"></view>
+    <view class="constellation-dot" style="left:310rpx;top:174rpx;"></view>
+    <view class="constellation-dot" style="left:342rpx;top:218rpx;"></view>
+    <view class="constellation-dot" style="left:366rpx;top:240rpx;"></view>
+  </view>
+
+  <view class="login-content">
+    <!-- 顶部工厂名称（居中大字） -->
+    <view class="login-header">
+      <text class="login-title">{{selectedTenantName || '云裳智链'}}</text>
+    </view>
+
+    <!-- 公司搜索 -->
+    <view class="login-field">
+      <view class="login-label"><text class="login-label-required">*</text> 公司</view>
+      <view class="login-input-wrap">
+        <text class="login-input-icon">🔍</text>
+        <input
+          class="login-input"
+          placeholder="{{tenantsLoading ? '加载中...' : '输入公司名称搜索'}}"
+          value="{{tenantSearchText}}"
+          bindinput="onTenantSearch"
+          bindfocus="onTenantSearchFocus"
+          disabled="{{loading || tenantsLoading}}"
+        />
+        <text wx:if="{{selectedTenantName}}" class="login-input-clear" bindtap="onClearTenant">✕</text>
+      </view>
+      <view wx:if="{{selectedTenantName}}" class="tenant-selected-tag">✓ 已选择：{{selectedTenantName}}</view>
+      <!-- 搜索结果下拉 -->
+      <view wx:if="{{showTenantResults && filteredTenants.length > 0}}" class="tenant-results">
+        <view
+          wx:for="{{filteredTenants}}"
+          wx:key="id"
+          class="tenant-result-item"
+          data-index="{{index}}"
+          bindtap="onTenantSelect"
+        >{{item.tenantName}}</view>
+      </view>
+      <view wx:if="{{showTenantResults && filteredTenants.length === 0 && tenantSearchText}}" class="tenant-results">
+        <view class="tenant-result-empty">未找到匹配的公司</view>
+      </view>
+    </view>
+
+    <!-- 用户名 -->
+    <view class="login-field">
+      <view class="login-label"><text class="login-label-required">*</text> 用户名</view>
+      <view class="login-input-wrap">
+        <text class="login-input-icon">👤</text>
+        <input
+          class="login-input"
+          placeholder="请输入用户名"
+          value="{{username}}"
+          bindinput="onUsernameInput"
+          disabled="{{loading}}"
+        />
+      </view>
+    </view>
+
+    <!-- 密码 -->
+    <view class="login-field">
+      <view class="login-label"><text class="login-label-required">*</text> 密码</view>
+      <view class="login-input-wrap">
+        <text class="login-input-icon">🔒</text>
+        <input
+          class="login-input"
+          placeholder="请输入密码"
+          password="{{!showPassword}}"
+          value="{{password}}"
+          bindinput="onPasswordInput"
+          disabled="{{loading}}"
+        />
+        <text class="login-input-eye" bindtap="togglePassword">{{showPassword ? '🙈' : '👁'}}</text>
+      </view>
+    </view>
+
+    <!-- 登录按钮 -->
+    <view class="login-btn-wrap">
+      <view class="login-btn {{loading || !selectedTenantId ? 'login-btn-disabled' : ''}}" bindtap="onLogin">
+        {{loading ? '登录中...' : '登 录'}}
+      </view>
+    </view>
+
+    <!-- 微信一键登录 -->
+    <view class="login-btn-wrap" wx:if="{{!showDevFields}}">
+      <view class="login-btn-wechat {{loading || !selectedTenantId ? 'login-btn-disabled' : ''}}" bindtap="onWechatLogin">
+        {{loading ? '登录中...' : '微信一键登录'}}
+      </view>
+    </view>
+
+    <!-- 开发模式：服务器地址 -->
+    <view wx:if="{{showDevFields}}" class="login-field login-field-dev">
+      <view class="login-label">服务器地址</view>
+      <view class="login-input-wrap">
+        <text class="login-input-icon">🌐</text>
+        <input
+          class="login-input"
+          placeholder="例如：http://192.168.1.10:8088"
+          value="{{apiBaseUrl}}"
+          bindinput="onApiBaseUrlInput"
+        />
+      </view>
+    </view>
+
+    <!-- 注册入口 -->
+    <view class="login-register-section">
+      <view class="login-register-link" bindtap="onManualRegister">还没有账号？立即注册</view>
+    </view>
+
+    <!-- 底部版权 -->
+    <view class="login-footer">© 2026 云裳智链</view>
+  </view>
+</view>

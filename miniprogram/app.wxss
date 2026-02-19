@@ -1,0 +1,508 @@
+/**
+ * 全局样式 - 服装供应链系统小程序
+ * @version 2.0
+ * @date 2026-01-24
+ */
+
+/* 引入设计 Token */
+@import './styles/design-tokens.wxss';
+
+page {
+  background: var(--color-bg-page);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base); /* 统一基础字体为14px */
+  line-height: 1.5;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', Arial, sans-serif;
+}
+
+/* 隐藏微信开发者工具的真机调试浮层 */
+wx-vconsole,
+.wx-vconsole,
+.vconsole-switch,
+#__vconsole {
+  display: none !important;
+}
+
+.container {
+  padding: 12px 12px calc(12px + 40px + env(safe-area-inset-bottom));
+}
+
+.card {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  box-shadow: none;
+}
+
+/* 一级标题 - 页面主标题 */
+.title {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: var(--color-text-primary);
+}
+
+/* 二级标题 - 区块标题 */
+.section-title {
+  margin-top: 10px;
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+/* 三级标题 - 小标题 */
+.sub-title {
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.field {
+  margin-bottom: 10px;
+}
+
+/* 标签文字 */
+.label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: 6px;
+}
+
+.input {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  padding: 8px 12px;
+  background: var(--color-bg-card);
+  font-size: var(--font-size-base); /* 统一为正文字体14px */
+}
+
+.row {
+  display: flex;
+  gap: 10px;
+}
+
+.col {
+  flex: 1;
+}
+
+.btn {
+  margin-top: 10px;
+}
+
+/* 主要按钮 */
+.btn-primary {
+  background: var(--gradient-primary-alpha);
+  color: var(--color-text-primary);
+  border: 1px solid rgba(147, 197, 253, 0.5);
+  border-radius: var(--radius-full);
+  padding: 10px 18px;
+  text-align: center;
+  font-size: var(--font-size-base); /* 统一为按钮字体14px */
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  box-shadow:
+    0 4px 12px rgba(59, 130, 246, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.btn-primary:active {
+  opacity: 0.8;
+  transform: scale(0.98);
+}
+
+/* 次要按钮 */
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  padding: 10px 18px;
+  text-align: center;
+  font-size: var(--font-size-base); /* 统一为按钮字体14px */
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  box-shadow:
+    0 4px 8px rgba(15, 23, 42, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.btn-secondary:active {
+  opacity: 0.8;
+  transform: scale(0.98);
+}
+
+.btn-disabled {
+  opacity: 0.6;
+}
+
+/* 提示文字 */
+.hint {
+  margin-top: 8px;
+  font-size: var(--font-size-xs); /* 保持备注文字11px */
+  color: var(--color-text-disabled);
+}
+
+/* 结果文字 */
+.result {
+  margin-top: 10px;
+  font-size: var(--font-size-base); /* 统一为正文字体14px */
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+/* 标签 */
+.tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs); /* 保持标签文字11px */
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--color-success);
+}
+
+.tag-ok {
+  background: rgba(52, 199, 89, 0.12);
+  color: var(--color-success);
+}
+
+.tag-bad {
+  background: rgba(255, 59, 48, 0.12);
+  color: var(--color-error);
+}
+
+/* 列表项 */
+.list-item {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-bg-card);
+  margin-top: 10px;
+}
+
+/* 进度条 */
+.progress-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 6px;
+  background: rgba(224, 242, 254, 0.8);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--gradient-progress);
+  border-radius: var(--radius-full);
+  transition: width 0.3s ease;
+}
+
+.progress-completed .progress-fill {
+  background: var(--color-text-disabled);
+}
+
+.progress-text {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  min-width: 36px;
+  text-align: right;
+}
+
+/* ============================================================================= */
+/* 全局通用组件样式 - 从各页面提取统一                                             */
+/* ============================================================================= */
+
+/* ============ 全局搜索栏（home/work 通用） ============ */
+.global-search {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+  padding: 3px 6px;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.06);
+}
+
+.global-search .search-box {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding: 3px 10px;
+  background: rgba(224, 242, 254, 0.3);
+  border: 1px solid rgba(224, 242, 254, 0.5);
+  border-radius: var(--radius-full);
+}
+
+.global-search .search-icon {
+  font-size: var(--font-size-sm);
+  margin-right: 4px;
+}
+
+.global-search .search-input {
+  flex: 1;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-primary);
+}
+
+.global-search .search-btn {
+  padding: 3px 18px;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-primary);
+  background: rgba(224, 242, 254, 0.8);
+  border: 1px solid rgba(224, 242, 254, 0.9);
+  border-radius: var(--radius-full);
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.15);
+  white-space: nowrap;
+}
+
+.global-search .clear-btn {
+  padding: 3px 18px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  background: rgba(224, 242, 254, 0.3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
+/* ============ 全局搜索结果 ============ */
+.global-results {
+  margin-bottom: 12px;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);
+}
+
+.results-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: rgba(224, 242, 254, 0.5);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.results-title {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.close-results {
+  font-size: var(--font-size-xl);
+  color: var(--color-text-disabled);
+  padding: 0 6px;
+}
+
+.results-list {
+  max-height: 400px;
+}
+
+.result-item {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+/* ============ 空状态 ============ */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: var(--color-text-disabled);
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+.empty-text {
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+}
+
+/* ============ 加载状态 ============ */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(224, 242, 254, 0.8);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-text {
+  margin-top: 12px;
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+}
+
+/* ============ 通用弹窗样式 ============ */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.modal-wrap {
+  width: auto;
+  max-width: 90vw;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-modal);
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-border);
+  background: linear-gradient(180deg, rgba(224, 242, 254, 0.3) 0%, #ffffff 100%);
+}
+
+.modal-title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.modal-close {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: rgba(0, 0, 0, 0.04);
+  font-size: var(--font-size-xl);
+  color: var(--color-text-secondary);
+}
+
+.modal-close:active {
+  opacity: 0.6;
+  transform: scale(0.9);
+}
+
+.modal-body {
+  padding: 20px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--color-border);
+  background: rgba(224, 242, 254, 0.2);
+}
+
+.modal-btn {
+  flex: 1;
+  height: 40px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-base);
+  border: none;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-btn.cancel {
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.modal-btn.cancel:active {
+  opacity: 0.8;
+  transform: scale(0.98);
+}
+
+.modal-btn.confirm {
+  background: var(--gradient-primary-alpha);
+  color: var(--color-text-primary);
+  border: 1px solid rgba(147, 197, 253, 0.5);
+  box-shadow: var(--shadow-lg);
+}
+
+.modal-btn.confirm:active {
+  opacity: 0.8;
+  transform: scale(0.98);
+}
+
+.modal-btn.danger {
+  background: linear-gradient(135deg, var(--color-error) 0%, var(--color-error) 100%);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(255, 77, 79, 0.25);
+}
+
+.modal-btn.danger:active {
+  opacity: 0.8;
+  transform: scale(0.98);
+}

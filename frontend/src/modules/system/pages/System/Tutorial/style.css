@@ -1,0 +1,96 @@
+.system-tutorial-container {
+  padding: 24px;
+  background: var(--bg-secondary);
+  min-height: 100vh;
+}
+
+.tutorial-page-header {
+  background: var(--card-bg);
+  padding: 32px 24px;
+  border-radius: 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px var(--shadow-sm);
+  border: 1px solid var(--border-color);
+}
+
+.header-content {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.tutorial-title-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: var(--text-primary);
+}
+
+.tutorial-header-icon {
+  font-size: 48px;
+  color: var(--primary-color);
+}
+
+.tutorial-page-title {
+  color: var(--text-primary) !important;
+  margin: 0 !important;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.tutorial-card {
+  transition: all 0.3s ease;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.tutorial-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.tutorial-card .ant-card-head {
+  background: var(--neutral-bg);
+  border-bottom: 2px solid var(--border-color);
+}
+
+.tutorial-card .ant-steps-item-finish .ant-steps-item-icon {
+  background-color: #52c41a;
+  border-color: #52c41a;
+}
+
+.tutorial-card .ant-steps-item-finish .ant-steps-item-icon > .ant-steps-icon {
+  color: #fff;
+}
+
+.tutorial-card .ant-alert {
+  border-radius: 12px;
+  margin-top: 8px;
+}
+
+.tutorial-card ul {
+  margin-bottom: 0;
+}
+
+.tutorial-card ul li {
+  line-height: 1.8;
+  color: var(--text-primary);
+}
+
+/* 响应式优化 */
+@media (max-width: 768px) {
+  .system-tutorial-container {
+    padding: 16px;
+  }
+
+  .tutorial-page-header {
+    padding: 24px 16px;
+  }
+
+  .tutorial-page-title {
+    font-size: 22px;
+  }
+
+  .tutorial-header-icon {
+    font-size: 36px;
+  }
+}

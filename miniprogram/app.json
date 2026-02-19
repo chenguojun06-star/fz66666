@@ -1,0 +1,58 @@
+{
+  "pages": [
+    "pages/login/index",
+    "pages/register/index",
+    "pages/home/index",
+    "pages/work/index",
+    "pages/scan/index",
+    "pages/scan/history/index",
+    "pages/scan/monthly/index",
+    "pages/payroll/payroll",
+    "pages/admin/index",
+    "pages/admin/notification/index",
+    "pages/admin/production-detail/index",
+    "pages/admin/user-approval/index",
+    "pages/warehouse/sample/list/index",
+    "pages/warehouse/finished/list/index",
+    "pages/warehouse/material/alerts/index",
+    "pages/warehouse/material/detail-page/index",
+    "pages/warehouse/order-ranking/index"
+  ],
+  "usingComponents": {
+    "floating-bell": "/components/floating-bell/index"
+  },
+  "tabBar": {
+    "custom": true,
+    "color": "#8e8e93",
+    "selectedColor": "#475569",
+    "backgroundColor": "#f2f2f7",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/home/index",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/work/index",
+        "text": "生产"
+      },
+      {
+        "pagePath": "pages/scan/index",
+        "text": "扫码"
+      },
+      {
+        "pagePath": "pages/admin/index",
+        "text": "我的"
+      }
+    ]
+  },
+  "window": {
+    "navigationBarTitleText": "生产管理",
+    "navigationBarBackgroundColor": "#f3f5f9",
+    "navigationBarTextStyle": "black",
+    "backgroundTextStyle": "light"
+  },
+  "lazyCodeLoading": "requiredComponents",
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

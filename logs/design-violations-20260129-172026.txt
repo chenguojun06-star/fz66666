@@ -1,0 +1,151 @@
+设计规范违规检查报告
+检查时间: 2026-01-29 17:20:26
+===============================================
+
+❌ 硬编码颜色: 610 处
+frontend/src/main.tsx:80:  colorPrimary: '#6ba3ff',
+frontend/src/main.tsx:85:  colorPrimaryHover: '#85b8ff',
+frontend/src/main.tsx:86:  colorPrimaryActive: '#5a9cff',
+frontend/src/main.tsx:87:  colorBgContainer: '#1a1d24',
+frontend/src/main.tsx:88:  colorBgElevated: '#1a1d24',
+frontend/src/main.tsx:89:  colorBgLayout: '#0f1115',
+frontend/src/main.tsx:90:  colorBgSpotlight: '#23272f',
+frontend/src/main.tsx:93:  colorText: '#f0f2f5',
+frontend/src/main.tsx:94:  colorTextSecondary: '#b8bdc6',
+frontend/src/main.tsx:95:  colorTextTertiary: '#8b92a0',
+frontend/src/main.tsx:102:  colorSuccess: '#63d97a',
+frontend/src/main.tsx:103:  colorWarning: '#ffc247',
+frontend/src/main.tsx:104:  colorError: '#ff5f5f',
+frontend/src/main.tsx:105:  colorInfo: '#6ba3ff',
+frontend/src/main.tsx:112:  colorPrimary: '#2D7FF9',
+frontend/src/main.tsx:113:  colorBgContainer: '#ffffff',
+frontend/src/main.tsx:114:  colorBgElevated: '#ffffff',
+frontend/src/main.tsx:115:  colorBgLayout: '#eaf1ff',
+frontend/src/main.tsx:118:  colorText: '#0b2d5c',
+frontend/src/main.tsx:125:  colorPrimary: '#3b82f6',
+
+💡 建议：将颜色替换为CSS变量
+   #2D7FF9 → var(--primary-color)
+   #52C41A → var(--success-color)
+
+❌ 渐变使用: 64 处
+frontend/src/styles/button-override.css:9:  background: linear-gradient(135deg, #69b1ff 0%, #40a9ff 100%) !important;
+frontend/src/styles/button-override.css:20:  background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%) !important;
+frontend/src/styles/button-override.css:139:  background: linear-gradient(135deg, #69b1ff 0%, #40a9ff 100%) !important;
+frontend/src/styles/button-override.css:146:  background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%) !important;
+frontend/src/components/common/LiquidProgressLottie.tsx:56:            background: `linear-gradient(180deg, ${color2} 0%, ${color1} 50%, ${color2} 100%)`,
+frontend/src/components/common/LiquidProgressLottie.tsx:73:            background: `linear-gradient(180deg, ${color1} 0%, ${color2} 50%, ${color1} 100%)`,
+frontend/src/components/common/UniversalCardView/style.css:150:  background: linear-gradient(135deg, #95de64 0%, #73d13d 100%);
+frontend/src/components/common/UniversalCardView/style.css:160:  background: linear-gradient(135deg, #ffd666 0%, #ffc53d 100%);
+frontend/src/components/common/UniversalCardView/style.css:170:  background: linear-gradient(135deg, #ff9c9c 0%, #ff7875 100%);
+frontend/src/components/common/UniversalCardView/style.css:180:  background: linear-gradient(135deg, #e8e8e8 0%, #d9d9d9 100%);
+
+💡 建议：使用纯色背景
+   background: linear-gradient(...) → background: var(--primary-color)
+
+❌ Modal尺寸问题: 39 处
+   未使用ResizableModal: 39 处
+frontend/src/components/common/QuickEditModal.tsx:60:    <Modal
+frontend/src/modules/basic/pages/StyleInfo/components/StyleBomTab.tsx:1209:      <Modal
+frontend/src/modules/basic/pages/StyleInfo/components/StyleBomTab.tsx:1246:      <Modal
+frontend/src/modules/dashboard/pages/Dashboard/index.tsx:448:      <Modal
+frontend/src/modules/system/pages/System/UserApproval/index.tsx:290:        <Modal
+frontend/src/modules/system/pages/System/UserApproval/index.tsx:340:        <Modal
+frontend/src/modules/system/pages/System/DictManage/index.tsx:406:      <Modal
+frontend/src/modules/production/pages/Production/PatternProduction/index.tsx:684:        <Modal
+frontend/src/modules/production/pages/Production/PatternProduction/index.tsx:893:        <Modal
+frontend/src/modules/production/pages/Production/PatternProduction/index.tsx:941:        <Modal
+
+💡 建议：使用三级尺寸体系
+   大窗口：defaultWidth='60vw' defaultHeight='60vh'
+   中窗口：defaultWidth='40vw' defaultHeight='50vh'
+   小窗口：defaultWidth='30vw' defaultHeight='40vh'
+
+⚠️  自定义字体: 5 处
+frontend/src/modules/basic/pages/DataCenter/index.tsx:155:    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif; color: #111; }
+frontend/src/modules/production/pages/Production/MaterialPurchase/index.tsx:930:          body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;margin:20px;color:#111}
+frontend/src/modules/production/pages/Production/MaterialPurchase/index.tsx:949:          .ant-btn{font-family:inherit}
+frontend/src/modules/production/pages/Production/Cutting/index.tsx:443:      body { font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Arial, sans-serif; color: #111; }
+frontend/src/modules/warehouse/pages/MaterialInventory/index.tsx:304:          body { font-family: SimHei, Arial; padding: 40px; }
+
+💡 建议：移除font-family，使用全局字体
+   打印页面可添加豁免注释：// @design-system-exempt: 打印专用
+
+⚠️  非标准间距: 51 处
+frontend/src/components/Layout/index.tsx:376:                    <div style={{ padding: '20px 0', textAlign: 'center', color: '#999' }}>
+frontend/src/components/common/DashboardCard/index.tsx:64:        <div style={{ textAlign: 'center', padding: '40px 0' }}>
+frontend/src/components/common/NodeDetailModal.tsx:510:        padding: '10px 12px',
+frontend/src/components/common/NodeDetailModal.tsx:546:          padding: '8px 10px',
+frontend/src/components/common/NodeDetailModal.tsx:729:        <div style={{ marginTop: 6, padding: '6px 10px', background: '#f5f5f5', borderRadius: 4 }}>
+frontend/src/modules/basic/pages/DataCenter/index.tsx:157:    .header { display: grid; grid-template-columns: 220px 1fr; gap: 16px; align-items: start; }
+frontend/src/modules/basic/pages/DataCenter/index.tsx:181:    <div class="no-print" style="display:flex; gap:8px; justify-content:flex-end; margin-bottom:10px;">
+frontend/src/modules/basic/pages/StyleInfo/index.tsx:1730:                  <div style={{ padding: '40px 20px', textAlign: 'center', color: '#999' }}>
+frontend/src/modules/basic/pages/StyleInfo/index.tsx:1750:                  <div style={{ padding: '40px 20px', textAlign: 'center', color: '#999' }}>
+frontend/src/modules/basic/pages/StyleInfo/index.tsx:1768:                  <div style={{ padding: '40px 20px', textAlign: 'center', color: '#999' }}>
+
+💡 建议：使用8的倍数
+   10px → 8px/12px
+   15px → 12px/16px
+   20px → 16px/24px
+
+⚠️  非表格内small按钮: 235 处
+frontend/src/components/Layout/index.tsx:344:                        size="small"
+frontend/src/components/Layout/index.tsx:356:                        size="small"
+frontend/src/components/Layout/index.tsx:415:              <Badge count={urgentEvents.length} offset={[-2, 2]} size="small">
+frontend/src/components/common/DashboardCard/index.tsx:28: *   extra={<Button size="small">查看详情</Button>}
+frontend/src/components/common/NodeDetailModal.tsx:590:              size="small"
+frontend/src/components/common/NodeDetailModal.tsx:751:        size="small"
+frontend/src/components/common/NodeDetailModal.tsx:773:          size="small"
+frontend/src/components/common/NodeDetailModal.tsx:794:        size="small"
+frontend/src/components/common/NodeDetailModal.tsx:917:          size="small"
+frontend/src/components/common/UniversalCardView/index.tsx:169:                    <Space size="small">
+
+💡 建议：默认使用middle（32px）
+   small仅用于表格行内操作（type='link' size='small'）
+
+⚠️  Modal未使用标准布局: 24 个
+frontend/src/App.tsx
+frontend/src/components/common/ResizableModal.tsx
+frontend/src/components/common/NodeDetailModal.tsx
+frontend/src/components/StyleAssets.tsx
+frontend/src/modules/basic/pages/StyleInfo/index.tsx
+frontend/src/modules/basic/pages/StyleInfo/components/StyleSizeTab.tsx
+frontend/src/modules/basic/pages/StyleInfo/components/StyleSampleTab.tsx
+frontend/src/modules/basic/pages/StyleInfo/components/StyleSecondaryProcessTab.tsx
+frontend/src/modules/basic/pages/TemplateCenter/index.tsx
+frontend/src/modules/basic/pages/OrderManagement/index.tsx
+
+💡 建议：使用ModalContentLayout组件
+   - ModalHeaderCard: 头部灰色卡片
+   - ModalField/ModalFieldRow: 字段布局
+
+================================================
+📊 检查汇总
+================================================
+
+总问题数: 1028
+已修复数: 0
+待修复数: 1028
+
+详细分类统计：
+- 硬编码颜色: 610 处 (🔴 P0)
+- 渐变使用: 64 处 (🔴 P0)
+- Modal尺寸: 39 处 (🔴 P0)
+- 非表格small按钮: 235 处 (🟡 P1)
+- 非标准间距: 51 处 (🟡 P1)
+- Modal布局: 24 处 (🟡 P2)
+- 自定义字体: 5 处 (🟢 P3)
+
+[1;33m⚠️  发现 1028 处违规，请按照优先级修复[0m
+
+修复优先级：
+  🔴 P0（立即修复）: 硬编码颜色、渐变、Modal尺寸
+  🟡 P1（本周修复）: 按钮尺寸、间距规范
+  🟢 P2-P3（下周）: Modal布局、自定义字体
+
+📄 详细报告: logs/design-violations-20260129-172026.txt
+
+📚 参考文档:
+   - 设计系统完整规范-2026.md
+   - 开发指南.md（设计系统规范章节）
+

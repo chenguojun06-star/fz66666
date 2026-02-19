@@ -1,0 +1,20 @@
+.standard-search-bar {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.standard-search-row {
+  width: 100%;
+}
+
+.standard-search-input {
+  width: 260px;
+}
+
+.standard-search-date {
+  width: 260px;
+}
+
+.standard-search-status {
+  width: 120px;
+}

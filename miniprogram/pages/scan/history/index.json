@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "历史记录",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "scan-record-table": "../../../components/scan-record-table"
+  }
+}

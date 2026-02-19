@@ -1,0 +1,469 @@
+const { getToken, setToken, setUserInfo } = require('../../utils/storage');
+const { DEFAULT_BASE_URL, setBaseUrl, normalizeBaseUrl } = require('../../config');
+const api = require('../../utils/api');
+const { validateByRule } = require('../../utils/validationRules');
+const { toast, safeNavigate } = require('../../utils/uiHelper');
+
+let autoWechatTried = false;
+
+/** 租户列表缓存 */
+let cachedTenants = [];
+
+/**
+ * 验证用户名（3-20位，仅允许字母数字下划线短横线）
+ * @param {string} username - 用户名
+ * @returns {string} 错误信息，空字符串表示验证通过
+ */
+function validateUsername(username) {
+  return (
+    validateByRule(username, {
+      name: '账号',
+      required: true,
+      minLength: 3,
+      maxLength: 20,
+      pattern: /^[a-zA-Z0-9_-]+$/,
+    }) || ''
+  );
+}
+
+/**
+ * 验证密码（6-20位）
+ * @param {string} password - 密码
+ * @returns {string} 错误信息，空字符串表示验证通过
+ */
+function validatePassword(password) {
+  return (
+    validateByRule(password, { name: '密码', required: true, minLength: 6, maxLength: 20 }) || ''
+  );
+}
+
+/**
+ * 验证 API 基地址格式（可选）
+ * @param {string} url - API 地址
+ * @returns {string} 错误信息，空字符串表示验证通过
+ */
+function validateApiBaseUrl(url) {
+  const v = String(url || '').trim();
+  if (!v) {
+    return '';
+  } // 可选字段
+  const error = validateByRule(v, { name: 'API 地址', required: false, pattern: /^https?:\/\// });
+  if (error) {
+    return error;
+  }
+  return '';
+}
+
+/**
+ * 获取小程序 AppID
+ * @returns {string} AppID 或空字符串
+ */
+function resolveAppId() {
+  try {
+    if (wx && typeof wx.getAccountInfoSync === 'function') {
+      const info = wx.getAccountInfoSync();
+      const mp = info && info.miniProgram;
+      return mp && mp.appId ? String(mp.appId) : '';
+    }
+  } catch (_e) {
+    // 忽略 AppID 获取失败
+  }
+  return '';
+}
+
+/**
+ * 获取微信登录 code
+ * @returns {Promise<string>} 登录 code
+ */
+async function resolveLoginCode() {
+  const appId = resolveAppId();
+  const envVersion = resolveEnvVersion();
+
+  // 开发环境或无效 AppID，使用 Mock 模式（跳过微信登录）
+  if (!appId || appId === 'touristappid' || envVersion === 'develop') {
+    console.log('[Login] 开发环境，使用 Mock 模式跳过微信登录');
+    return 'mock_dev';
+  }
+
+  // 生产环境才调用真实 wx.login()
+  try {
+    const loginRes = await new Promise((resolve, reject) => {
+      wx.login({
+        success: resolve,
+        fail: reject,
+        timeout: 5000, // 5秒超时
+      });
+    });
+    return loginRes && loginRes.code ? String(loginRes.code) : '';
+  } catch (err) {
+    console.error('[Login] wx.login() 失败:', err);
+    // 如果微信登录失败，降级到 Mock 模式
+    return 'mock_dev';
+  }
+}
+
+/**
+ * 获取小程序环境版本（develop/trial/release）
+ * @returns {string} 环境版本
+ */
+function resolveEnvVersion() {
+  try {
+    if (wx && typeof wx.getAccountInfoSync === 'function') {
+      const info = wx.getAccountInfoSync();
+      const mp = info && info.miniProgram;
+      const v = mp && mp.envVersion ? String(mp.envVersion) : '';
+      return v || 'develop';
+    }
+  } catch (_e) {
+    // 忽略环境版本获取失败
+  }
+  return 'develop';
+}
+
+/**
+ * 执行登录（通用函数 - 消除重复代码）
+ * @param {Object} params - 登录参数 { code, username?, password? }
+ * @returns {Promise<boolean>} 是否成功
+ */
+async function executeLogin(params) {
+  try {
+    const resp = await api.wechat.miniProgramLogin(params);
+
+    if (resp && resp.code === 200 && resp.data && resp.data.token) {
+      // ✅ 登录前清除旧用户的业务缓存，防止跨租户数据泄漏
+      const OLD_DATA_KEYS = [
+        'pending_cutting_task',
+        'pending_procurement_task',
+        'pending_quality_task',
+        'pending_order_hint',
+        'highlight_order_no',
+        'mp_scan_type_index',
+        'work_active_tab',
+        'scan_history_v2',
+        'pending_reminders',
+      ];
+      OLD_DATA_KEYS.forEach(key => {
+        try { wx.removeStorageSync(key); } catch (_) { /* ignore */ }
+      });
+
+      setToken(resp.data.token);
+      // 保存用户信息（包含角色）
+      if (resp.data.user) {
+        setUserInfo(resp.data.user);
+      }
+      safeNavigate({ url: '/pages/home/index' }, 'switchTab').catch(() => {});
+      return true;
+    }
+    toast.error((resp && resp.message) || '登录失败');
+    return false;
+  } catch (e) {
+    const app = getApp();
+    if (app && typeof app.toastError === 'function') {
+      app.toastError(e, '网络异常');
+    } else {
+      toast.error('网络异常');
+    }
+    return false;
+  }
+}
+
+/**
+ * 验证并设置 API 地址（通用函数）
+ * @param {string} apiBaseUrl - API 地址
+ * @returns {string|null} 错误信息或 null
+ */
+function validateAndSetBaseUrl(apiBaseUrl) {
+  if (apiBaseUrl) {
+    const err = validateApiBaseUrl(apiBaseUrl);
+    if (err) {
+      return err;
+    }
+    setBaseUrl(apiBaseUrl);
+  }
+  return null;
+}
+
+Page({
+  data: {
+    username: '',
+    password: '',
+    apiBaseUrl: '',
+    loading: false,
+    envVersion: '',
+    showDevFields: false,
+    // 租户搜索
+    tenants: [],
+    tenantSearchText: '',
+    filteredTenants: [],
+    showTenantResults: false,
+    selectedTenantId: null,
+    selectedTenantName: '',
+    tenantsLoading: true,
+    showPassword: false,
+  },
+
+  onShow() {
+    const token = getToken();
+    if (token) {
+      safeNavigate({ url: '/pages/home/index' }, 'switchTab').catch(() => {});
+      return;
+    }
+
+    const envVersion = resolveEnvVersion();
+    const showDevFields = envVersion !== 'release';
+
+    let apiBaseUrl = DEFAULT_BASE_URL;
+    if (showDevFields) {
+      try {
+        const saved = wx.getStorageSync('api_base_url');
+        apiBaseUrl = normalizeBaseUrl(saved) || DEFAULT_BASE_URL;
+      } catch (e) {
+        apiBaseUrl = DEFAULT_BASE_URL;
+      }
+    }
+    setBaseUrl(apiBaseUrl);
+    this.setData({ envVersion, showDevFields, apiBaseUrl });
+
+    // 加载租户列表
+    this.loadTenants();
+
+    const shouldAutoWechat = envVersion === 'trial' || envVersion === 'release';
+    if (shouldAutoWechat && !autoWechatTried) {
+      autoWechatTried = true;
+      // 延迟微信登录，等租户加载完成
+      // 微信一键登录模式下，如果只有一个租户会自动选中
+    }
+  },
+
+  /**
+   * 加载可用租户列表
+   */
+  async loadTenants() {
+    this.setData({ tenantsLoading: true });
+    try {
+      const resp = await api.tenant.publicList();
+      if (resp && resp.code === 200 && Array.isArray(resp.data)) {
+        cachedTenants = resp.data;
+        let selectedTenantId = null;
+        let selectedTenantName = '';
+        let tenantSearchText = '';
+
+        // 如果只有一个租户，自动选中
+        if (resp.data.length === 1) {
+          selectedTenantId = resp.data[0].id;
+          selectedTenantName = resp.data[0].tenantName || '';
+          tenantSearchText = selectedTenantName;
+        } else {
+          // 尝试恢复上次选择的租户
+          try {
+            const lastId = wx.getStorageSync('lastTenantId');
+            if (lastId) {
+              const found = resp.data.find(t => String(t.id) === String(lastId));
+              if (found) {
+                selectedTenantId = found.id;
+                selectedTenantName = found.tenantName || '';
+                tenantSearchText = selectedTenantName;
+              }
+            }
+          } catch (_) { /* ignore */ }
+        }
+
+        this.setData({
+          tenants: resp.data,
+          selectedTenantId,
+          selectedTenantName,
+          tenantSearchText,
+          tenantsLoading: false,
+          showTenantResults: false,
+          filteredTenants: [],
+        });
+
+        // 如果是发布/体验版且租户已选中，自动触发微信登录
+        const shouldAutoWechat = this.data.envVersion === 'trial' || this.data.envVersion === 'release';
+        if (shouldAutoWechat && !autoWechatTried && selectedTenantId) {
+          autoWechatTried = true;
+          this.onWechatLogin();
+        }
+      } else {
+        this.setData({ tenantsLoading: false });
+      }
+    } catch (_e) {
+      console.error('[Login] 加载租户列表失败:', _e);
+      this.setData({ tenantsLoading: false });
+    }
+  },
+
+  /**
+   * 公司搜索输入
+   */
+  onTenantSearch(e) {
+    const text = (e && e.detail && e.detail.value) || '';
+    // 如果用户修改了文本，清除已选中状态
+    if (this.data.selectedTenantName && text !== this.data.selectedTenantName) {
+      this.setData({ selectedTenantId: null, selectedTenantName: '' });
+    }
+    const keyword = text.toLowerCase();
+    const filtered = keyword
+      ? cachedTenants.filter(t => (t.tenantName || '').toLowerCase().indexOf(keyword) !== -1)
+      : cachedTenants;
+    this.setData({
+      tenantSearchText: text,
+      filteredTenants: filtered,
+      showTenantResults: true,
+    });
+  },
+
+  /**
+   * 搜索框获得焦点 - 显示列表
+   */
+  onTenantSearchFocus() {
+    const text = this.data.tenantSearchText || '';
+    const keyword = text.toLowerCase();
+    const filtered = keyword
+      ? cachedTenants.filter(t => (t.tenantName || '').toLowerCase().indexOf(keyword) !== -1)
+      : cachedTenants;
+    this.setData({ filteredTenants: filtered, showTenantResults: true });
+  },
+
+  /**
+   * 选择搜索结果中的公司
+   */
+  onTenantSelect(e) {
+    const index = e.currentTarget.dataset.index;
+    const tenant = this.data.filteredTenants[index];
+    if (tenant) {
+      this.setData({
+        selectedTenantId: tenant.id,
+        selectedTenantName: tenant.tenantName || '',
+        tenantSearchText: tenant.tenantName || '',
+        showTenantResults: false,
+      });
+      // 记住选择
+      try {
+        wx.setStorageSync('lastTenantId', String(tenant.id));
+        wx.setStorageSync('lastTenantName', tenant.tenantName || '');
+      } catch (_) { /* ignore */ }
+    }
+  },
+
+  /**
+   * 获取当前选中的租户ID
+   * @returns {number|null}
+   */
+  getSelectedTenantId() {
+    return this.data.selectedTenantId || null;
+  },
+
+  onUsernameInput(e) {
+    this.setData({ username: (e && e.detail && e.detail.value) || '' });
+  },
+
+  onPasswordInput(e) {
+    this.setData({ password: (e && e.detail && e.detail.value) || '' });
+  },
+
+  onApiBaseUrlInput(e) {
+    this.setData({ apiBaseUrl: (e && e.detail && e.detail.value) || '' });
+  },
+
+  /**
+   * 切换密码显示/隐藏
+   */
+  togglePassword() {
+    this.setData({ showPassword: !this.data.showPassword });
+  },
+
+  /**
+   * 清除已选公司
+   */
+  onClearTenant() {
+    this.setData({
+      selectedTenantId: null,
+      selectedTenantName: '',
+      tenantSearchText: '',
+      showTenantResults: false,
+      filteredTenants: [],
+    });
+  },
+
+  /**
+   * 统一登录（开发环境用账号密码，生产环境用微信）
+   */
+  async onLogin() {
+    if (this.data.loading) return;
+
+    const tenantId = this.getSelectedTenantId();
+    if (!tenantId) {
+      toast.error('请先选择公司');
+      return;
+    }
+
+    const username = (this.data.username || '').trim();
+    const password = (this.data.password || '').trim();
+
+    // 验证账号密码
+    let err = validateUsername(username);
+    if (err) { toast.error(err); return; }
+    err = validatePassword(password);
+    if (err) { toast.error(err); return; }
+
+    // 开发模式下设置 API 地址
+    const apiBaseUrl = (this.data.apiBaseUrl || '').trim();
+    if (this.data.showDevFields && apiBaseUrl) {
+      err = validateAndSetBaseUrl(apiBaseUrl);
+      if (err) { toast.error(err); return; }
+    }
+
+    this.setData({ loading: true });
+    try {
+      const code = await resolveLoginCode();
+      if (!code) { toast.error('获取登录code失败'); return; }
+      await executeLogin({ code, username, password, tenantId });
+    } finally {
+      this.setData({ loading: false });
+    }
+  },
+
+  async onWechatLogin() {
+    if (this.data.loading) {
+      return;
+    }
+
+    // 检查是否已选择公司
+    const tenantId = this.getSelectedTenantId();
+    if (!tenantId) {
+      toast.error('请先选择公司');
+      return;
+    }
+
+    // 验证并设置 API 地址
+    const apiBaseUrl = (this.data.apiBaseUrl || '').trim();
+    if (this.data.showDevFields && apiBaseUrl) {
+      const err = validateAndSetBaseUrl(apiBaseUrl);
+      if (err) {
+        toast.error(err);
+        return;
+      }
+    }
+
+    this.setData({ loading: true });
+    try {
+      const code = await resolveLoginCode();
+      if (!code) {
+        toast.error('获取登录code失败');
+        return;
+      }
+
+      await executeLogin({ code, tenantId });
+    } finally {
+      this.setData({ loading: false });
+    }
+  },
+
+  /**
+   * 手动注册 —— 直接跳转注册页
+   */
+  onManualRegister() {
+    safeNavigate({ url: '/pages/register/index' }, 'navigateTo').catch(() => {});
+  },
+});

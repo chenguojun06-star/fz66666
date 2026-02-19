@@ -1,0 +1,21 @@
+.system-logs-page .filter-card {
+  background-color: #fafafa;
+  margin-bottom: 16px;
+}
+
+.system-logs-page .mb-sm {
+  margin-bottom: 16px;
+}
+
+.system-logs-page .page-card {
+  min-height: calc(100vh - 64px - 32px);
+}
+
+.system-logs-page .page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+

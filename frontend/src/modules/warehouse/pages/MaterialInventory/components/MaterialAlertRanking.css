@@ -1,0 +1,11 @@
+@import '../../../../basic/pages/OrderManagement/components/OrderRankingDashboard.css';
+
+.rank-number--primary {
+  background-color: var(--primary-color);
+}
+
+.ranking-tag {
+  font-size: 10px;
+  line-height: 14px;
+  padding: 0 3px;
+}

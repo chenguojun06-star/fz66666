@@ -1,0 +1,140 @@
+<view class="container">
+  <view class="notification-header">
+    <view class="notification-icon">🔔</view>
+    <view class="notification-title">用户审批通知</view>
+    <view class="notification-count" wx:if="{{total > 0}}">{{total}}</view>
+  </view>
+
+  <view wx:if="{{loading && pendingUsers.length === 0}}" class="loading">加载中...</view>
+
+  <view wx:if="{{!loading && pendingUsers.length === 0}}" class="empty">
+    <view class="empty-icon">✅</view>
+    <view class="empty-text">暂无待审批用户</view>
+  </view>
+
+  <view class="user-list">
+    <view wx:for="{{pendingUsers}}" wx:key="id" class="user-card">
+      <view class="user-header">
+        <view class="user-avatar">👤</view>
+        <view class="user-info">
+          <view class="user-name">{{item.name || item.username}}</view>
+          <view class="user-meta">{{item.username}}</view>
+        </view>
+        <view class="user-badge">新用户</view>
+      </view>
+
+      <view class="user-details">
+        <view class="detail-item" wx:if="{{item.roleName}}">
+          <view class="detail-label">角色</view>
+          <view class="detail-value">{{item.roleName}}</view>
+        </view>
+        <view class="detail-item" wx:if="{{item.phone}}">
+          <view class="detail-label">手机</view>
+          <view class="detail-value">{{item.phone}}</view>
+        </view>
+        <view class="detail-item" wx:if="{{item.email}}">
+          <view class="detail-label">邮箱</view>
+          <view class="detail-value">{{item.email}}</view>
+        </view>
+        <view class="detail-item" wx:if="{{item.createTime}}">
+          <view class="detail-label">注册时间</view>
+          <view class="detail-value">{{item.createTime}}</view>
+        </view>
+      </view>
+
+      <view class="user-actions">
+        <view 
+          class="action-btn reject-btn" 
+          data-user="{{item}}" 
+          bindtap="onRejectUser">
+          拒绝
+        </view>
+        <view 
+          class="action-btn approve-btn" 
+          data-user="{{item}}" 
+          bindtap="onApproveUser">
+          批准
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{hasMore && !loading}}" class="load-more" bindtap="onLoadMore">
+    加载更多
+  </view>
+  <view wx:if="{{loading && pendingUsers.length > 0}}" class="load-more">
+    加载中...
+  </view>
+  <view wx:if="{{!hasMore && pendingUsers.length > 0}}" class="load-more disabled">
+    没有更多了
+  </view>
+
+  <!-- 批准弹窗 -->
+  <view class="modal {{showApprovalModal ? 'show' : ''}}" catchtouchmove="preventMove">
+    <view class="modal-mask" bindtap="cancelApprove"></view>
+    <view class="modal-content">
+      <view class="modal-header">
+        <view class="modal-title">批准用户</view>
+        <view class="modal-close" bindtap="cancelApprove">✕</view>
+      </view>
+      <view class="modal-body">
+        <view class="modal-text">
+          批准用户 <text class="highlight">{{currentUser.name || currentUser.username}}</text>
+        </view>
+        <view class="modal-hint">批准后该用户可以正常登录系统</view>
+        
+        <view class="form-item">
+          <view class="form-label">选择角色 <text class="required">*</text></view>
+          <picker 
+            mode="selector" 
+            range="{{roleOptions}}" 
+            range-key="roleName"
+            bindchange="onRoleChange">
+            <view class="picker">
+              <block wx:for="{{roleOptions}}" wx:key="id">
+                <block wx:if="{{String(item.id) === selectedRoleId}}">{{item.roleName}}</block>
+              </block>
+              <block wx:if="{{!selectedRoleId}}">请选择角色</block>
+            </view>
+          </picker>
+        </view>
+      </view>
+      <view class="modal-footer">
+        <view class="modal-btn cancel" bindtap="cancelApprove">取消</view>
+        <view class="modal-btn confirm" bindtap="confirmApprove">批准并分配角色</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 拒绝弹窗 -->
+  <view class="modal {{showRejectModal ? 'show' : ''}}" catchtouchmove="preventMove">
+    <view class="modal-mask" bindtap="cancelReject"></view>
+    <view class="modal-content">
+      <view class="modal-header">
+        <view class="modal-title">拒绝用户</view>
+        <view class="modal-close" bindtap="cancelReject">✕</view>
+      </view>
+      <view class="modal-body">
+        <view class="modal-text">
+          确定拒绝用户 <text class="highlight">{{currentUser.name || currentUser.username}}</text> 吗？
+        </view>
+        <view class="modal-hint danger">拒绝后该用户将无法登录系统</view>
+        
+        <view class="form-item">
+          <view class="form-label">拒绝原因 <text class="required">*</text></view>
+          <textarea 
+            class="textarea" 
+            placeholder="请输入拒绝原因"
+            value="{{rejectReason}}"
+            bindinput="onRejectReasonInput"
+            maxlength="200"
+          />
+        </view>
+      </view>
+      <view class="modal-footer">
+        <view class="modal-btn cancel" bindtap="cancelReject">取消</view>
+        <view class="modal-btn confirm danger" bindtap="confirmReject">确定拒绝</view>
+      </view>
+    </view>
+  </view>
+</view>

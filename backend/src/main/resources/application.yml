@@ -1,0 +1,190 @@
+server:
+  address: 0.0.0.0
+  port: ${PORT:8088}
+  servlet:
+    context-path: /
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+  shutdown: graceful
+
+spring:
+  main:
+    allow-circular-references: true
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 100MB
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3308/fashion_supplychain?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:changeme}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      initialization-fail-timeout: 0
+      connection-timeout: 5000
+      maximum-pool-size: ${HIKARI_MAX_POOL_SIZE:30}
+      minimum-idle: ${HIKARI_MIN_IDLE:10}
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      connection-test-query: SELECT 1
+      pool-name: FashionHikariPool
+      leak-detection-threshold: 60000
+      # 全局事务隔离级别：READ_COMMITTED（减少锁竞争，避免并发死锁）
+      transaction-isolation: TRANSACTION_READ_COMMITTED
+
+  # Redis 缓存配置（分布式锁、缓存、会话）
+  redis:
+    host: ${SPRING_REDIS_HOST:127.0.0.1}
+    port: ${SPRING_REDIS_PORT:6379}
+    password: ${SPRING_REDIS_PASSWORD:}
+    database: ${SPRING_REDIS_DATABASE:0}
+    timeout: 3000ms
+    lettuce:
+      pool:
+        max-active: ${REDIS_POOL_MAX_ACTIVE:16}
+        max-idle: ${REDIS_POOL_MAX_IDLE:8}
+        min-idle: ${REDIS_POOL_MIN_IDLE:2}
+        max-wait: 3000ms
+      shutdown-timeout: 200ms
+
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+    default-property-inclusion: non_null
+    serialization:
+      WRITE_DATES_AS_TIMESTAMPS: false
+    generator:
+      # 禁用非ASCII字符的Unicode转义，直接输出UTF-8中文
+      escape-non-ascii: false
+
+  http:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+  flyway:
+    enabled: ${FLYWAY_ENABLED:false}
+    baseline-on-migrate: true
+    baseline-version: 1
+    validate-on-migrate: false
+    locations: classpath:db/migration
+
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*.xml
+  type-aliases-package: com.fashion.supplychain.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+
+logging:
+  level:
+    com.fashion.supplychain: debug
+    org.springframework: info
+    org.springframework.web: warn
+    org.springframework.security: warn
+    org.apache.ibatis: warn
+    com.baomidou.mybatisplus: warn
+    # 查询类Controller日志降级（减少噪音）
+    com.fashion.supplychain.warehouse.controller: WARN
+    com.fashion.supplychain.dashboard: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [requestId:%X{requestId:-}] %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [requestId:%X{requestId:-}] %logger{36} - %msg%n"
+  file:
+    name: ./logs/fashion-supplychain.log
+    max-size: 500MB      # 单文件最大500MB（优化：原100MB）
+    max-history: 30      # 保留30天日志（优化：原7天）
+    total-size-cap: 5GB  # 总容量5GB（优化：原1GB）
+  logback:
+    rollingpolicy:
+      clean-history-on-start: false
+      file-name-pattern: ./logs/fashion-supplychain.log.%d{yyyy-MM-dd}.%i.gz
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when-authorized
+      show-components: when-authorized
+    metrics:
+      enabled: true
+  metrics:
+      export:
+        prometheus:
+          enabled: true
+      distribution:
+        percentiles-histogram:
+          http.server.requests: true
+      tags:
+        application: ${spring.application.name:supplychain}
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+    redis:
+      enabled: true
+    defaults:
+      enabled: true
+
+fashion:
+  upload-path: ${user.dir}/../.run/uploads/
+  db:
+    initializer-enabled: ${FASHION_DB_INITIALIZER_ENABLED:true}
+  template:
+    # 模板价格自动同步配置（2026-02-08 新增）
+    auto-sync-price-enabled: ${FASHION_TEMPLATE_AUTO_SYNC_PRICE_ENABLED:true}  # 是否启用自动同步（默认：true）
+    auto-sync-timeout: ${FASHION_TEMPLATE_AUTO_SYNC_TIMEOUT:30}  # 同步超时时间（秒，默认：30）
+
+app:
+  auth:
+    jwt-secret: ${APP_AUTH_JWT_SECRET:fashion-supply-chain-jwt-secret-key-2026}
+    header-auth-enabled: ${APP_AUTH_HEADER_AUTH_ENABLED:false}
+  security:
+    trusted-ips:
+      - "127.0.0.1"
+      - "::1"
+      - "0:0:0:0:0:0:0:1"
+    trusted-ip-prefixes:
+      - "127."
+      - "10."
+      - "192.168."
+      - "172.16."
+      - "172.17."
+      - "172.18."
+      - "172.19."
+      - "172.20."
+      - "172.21."
+      - "172.22."
+      - "172.23."
+      - "172.24."
+      - "172.25."
+      - "172.26."
+      - "172.27."
+      - "172.28."
+      - "172.29."
+      - "172.30."
+      - "172.31."
+  cors:
+    allowed-origin-patterns: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:*,http://127.0.0.1:*,http://192.168.*.*:*,http://10.*.*.*:*,http://172.16.*.*:*,http://172.17.*.*:*,http://172.18.*.*:*,http://172.19.*.*:*,http://172.20.*.*:*,http://172.21.*.*:*,http://172.22.*.*:*,http://172.23.*.*:*,http://172.24.*.*:*,http://172.25.*.*:*,http://172.26.*.*:*,http://172.27.*.*:*,http://172.28.*.*:*,http://172.29.*.*:*,http://172.30.*.*:*,http://172.31.*.*:*,https://*.vercel.app,https://*.trycloudflare.com}
+    allow-credentials: ${APP_CORS_ALLOW_CREDENTIALS:true}
+  qrcode:
+    hmac-secret: ${APP_QRCODE_HMAC_SECRET:}
+
+wechat:
+  mini-program:
+    appid: ${WECHAT_MP_APPID:}
+    secret: ${WECHAT_MP_SECRET:}
+    mock-enabled: true

@@ -1,0 +1,135 @@
+/* 顶部统计看板容器 */
+.top-stats-container {
+  margin-bottom: 16px;
+}
+
+/* 统计卡片网格 - 一行4个 */
+.top-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 1200px) {
+  .top-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .top-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 单个统计项 - 紧凑设计 */
+.top-stat-item {
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1.5px solid;
+  background: transparent;
+  transition: all 0.3s ease;
+}
+
+.top-stat-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* 卡片内容 */
+.stat-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 头部：图标 + 标签 + 汇总数量 排一行 */
+.stat-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stat-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.stat-label {
+  font-size: 14px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* 汇总数量 - 推到右边 */
+.stat-total {
+  margin-left: auto;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* 底部标签行：日/周/月/年 文字与数量同行 */
+.stat-tags-row {
+  display: flex;
+  gap: 6px;
+}
+
+.stat-tag {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 3px 0;
+  border-radius: 6px;
+  border: 1px solid;
+}
+
+.stat-tag-label {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.stat-tag-value {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* 深色主题适配 */
+@media (prefers-color-scheme: dark) {
+  .top-stat-item {
+    border-color: currentColor;
+  }
+
+  .top-stat-item:hover {
+    box-shadow: 0 3px 8px rgba(255, 255, 255, 0.08);
+  }
+}
+
+/* 深色主题覆盖规则 */
+:root[data-theme="dark"] .top-stat-item {
+  background: transparent;
+  border-width: 1.5px;
+}
+
+:root[data-theme="dark"] .top-stat-item:hover {
+  background: transparent;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+}
+
+:root[data-theme="dark"] .stat-label {
+  color: var(--neutral-text-light);
+}
+
+:root[data-theme="dark"] .stat-total {
+  color: var(--neutral-text);
+}
+
+:root[data-theme="dark"] .stat-tag-label {
+  color: var(--neutral-text-lighter);
+}
+
+:root[data-theme="dark"] .stat-tag-value {
+  color: var(--neutral-text);
+}

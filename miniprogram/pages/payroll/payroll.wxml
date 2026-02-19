@@ -1,0 +1,98 @@
+<!-- pages/payroll/payroll.wxml -->
+<view class="page">
+  <!-- 通用悬浮铃铛组件 -->
+  <floating-bell />
+
+  <!-- 顶部统计卡片 -->
+  <view class="summary-card">
+    <view class="summary-title">📱 我的工资</view>
+    <view class="summary-row">
+      <view class="summary-item">
+        <view class="summary-label">本月总金额</view>
+        <view class="summary-value primary">¥{{totalAmount}}</view>
+      </view>
+      <view class="summary-item">
+        <view class="summary-label">本月数量</view>
+        <view class="summary-value">{{totalQuantity}} 件</view>
+      </view>
+    </view>
+    <view class="summary-row">
+      <view class="summary-item">
+        <view class="summary-label">扫码次数</view>
+        <view class="summary-value">{{recordCount}} 次</view>
+      </view>
+      <view class="summary-item">
+        <view class="summary-label">参与订单</view>
+        <view class="summary-value">{{orderCount}} 个</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 筛选器 -->
+  <view class="filter-bar">
+    <view class="filter-tabs">
+      <view class="filter-tab {{timeFilter === 'week' ? 'active' : ''}}" bindtap="onFilterChange" data-filter="week">
+        本周
+      </view>
+      <view class="filter-tab {{timeFilter === 'month' ? 'active' : ''}}" bindtap="onFilterChange" data-filter="month">
+        本月
+      </view>
+      <view class="filter-tab {{timeFilter === 'custom' ? 'active' : ''}}" bindtap="onFilterChange" data-filter="custom">
+        自定义
+      </view>
+    </view>
+  </view>
+
+  <!-- 自定义时间选择 -->
+  <view class="custom-date" wx:if="{{timeFilter === 'custom'}}">
+    <picker mode="date" value="{{startDate}}" end="{{endDate}}" bindchange="onStartDateChange">
+      <view class="date-picker">开始：{{startDate}}</view>
+    </picker>
+    <picker mode="date" value="{{endDate}}" start="{{startDate}}" bindchange="onEndDateChange">
+      <view class="date-picker">结束：{{endDate}}</view>
+    </picker>
+  </view>
+
+  <!-- 工序明细列表 -->
+  <view class="detail-section">
+    <view class="section-header">
+      <view class="section-title">【工序明细】</view>
+      <view class="sort-btn" bindtap="toggleSort">
+        <text class="sort-text">按金额</text>
+        <text class="sort-icon">{{sortOrder === 'desc' ? '▼' : '▲'}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{records.length === 0}}" class="empty-state">
+      <text class="empty-icon">📋</text>
+      <text class="empty-text">暂无工序记录</text>
+    </view>
+
+    <view wx:for="{{records}}" wx:key="index" class="record-item">
+      <view class="record-header">
+        <text class="order-info">订单 {{item.orderNo}}</text>
+        <text class="style-info">款号 {{item.styleNo}}</text>
+      </view>
+      <view class="record-detail">
+        <text class="color-size">{{item.color}} {{item.size}}</text>
+        <text class="process">{{item.processName}}</text>
+      </view>
+      <view class="record-footer">
+        <view class="calculation">
+          <text class="quantity">{{item.quantity}}件</text>
+          <text class="multiply">×</text>
+          <text class="unit-price">¥{{item.unitPrice}}</text>
+          <text class="equals">=</text>
+          <text class="amount">¥{{item.totalAmount}}</text>
+        </view>
+        <text class="time">{{item.scanTime}}</text>
+      </view>
+    </view>
+
+    <!-- 底部统计 -->
+    <view wx:if="{{records.length > 0}}" class="bottom-summary">
+      <text class="bottom-label">当前筛选总计：</text>
+      <text class="bottom-amount">¥{{filteredTotalAmount}}</text>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,210 @@
+.material-summary-bar {
+  margin-bottom: var(--spacing-lg);
+}
+
+.material-summary-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-lg);
+  font-size: var(--font-label);
+  color: var(--neutral-text);
+}
+
+.material-summary-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  white-space: nowrap;
+}
+
+.material-summary-value {
+  font-weight: 600;
+  font-size: var(--font-base);
+}
+
+.material-alerts-section {
+  margin-bottom: var(--spacing-lg);
+}
+
+.material-alerts-title {
+  font-size: var(--font-label);
+  color: var(--neutral-text-light);
+}
+
+/* ============ 物料信息容器 ============ */
+.material-info-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.material-info-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+/* 物料信息分组 */
+.material-info-section {
+  background: #fafafa;
+  border-radius: 6px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--primary-color);
+}
+
+.material-info-section-title {
+  font-size: 12px;
+  color: var(--primary-color);
+  font-weight: 600;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.material-info-section-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.material-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--font-size-sm);
+}
+
+.material-info-label {
+  color: var(--neutral-text-disabled);
+  font-weight: 500;
+  min-width: 60px;
+}
+
+.material-info-value {
+  color: var(--neutral-text);
+  font-weight: 600;
+  flex: 1;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ============ 面料属性卡片 ============ */
+.fabric-properties-card {
+  background: linear-gradient(135deg, #e6f4ff 0%, #f0f9ff 100%);
+  border: 1px solid #91caff;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.fabric-properties-title {
+  font-size: 13px;
+  color: var(--primary-color);
+  font-weight: 700;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.fabric-properties-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fabric-property-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.06);
+}
+
+.fabric-property-item:last-child {
+  border-bottom: none;
+}
+
+.fabric-property-label {
+  color: var(--primary-color);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.fabric-property-value {
+  color: #0958d9;
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fabric-properties-empty {
+  text-align: center;
+  padding: 20px 0;
+  color: var(--neutral-text-disabled);
+  font-size: var(--font-size-xs);
+}
+
+/* ============ 通用物料信息网格（用于模态框等） ============ */
+.material-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 16px;
+  margin-top: 8px;
+}
+
+.material-info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--font-size-sm);
+  padding: 6px 8px;
+  background: #fafafa;
+  border-radius: 4px;
+}
+
+.stock-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.stock-label {
+  font-size: var(--font-label);
+  color: var(--neutral-text-light);
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.stock-value {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.stock-value--ok {
+  color: var(--color-success);
+}
+
+.stock-value--warn {
+  color: var(--color-danger);
+}
+
+.stock-value--info {
+  color: var(--primary-color);
+}
+
+.stock-value--lock {
+  color: var(--color-warning);
+}
+
+.stock-unit {
+  font-size: var(--font-label);
+  color: var(--neutral-text-light);
+  margin-top: 2px;
+}

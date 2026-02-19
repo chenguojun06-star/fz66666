@@ -1,0 +1,322 @@
+<view class="container">
+  <!-- 搜索栏 -->
+  <view class="search-bar">
+    <view class="search-input-wrap">
+      <icon type="search" size="14" color="#999" />
+      <input
+        class="search-input"
+        placeholder="搜索款号"
+        value="{{keyword}}"
+        bindinput="onKeywordInput"
+        bindconfirm="onSearch"
+      />
+      <view class="scan-icon" bindtap="handleScan">
+        <image src="/assets/icons/scan.svg" mode="aspectFit" style="width: 20px; height: 20px;" />
+      </view>
+    </view>
+  </view>
+
+  <view class="summary-filter-bar">
+    <view
+      class="summary-pill {{filterType === 'all' ? 'summary-pill-active' : ''}}"
+      bindtap="onFilterTap"
+      data-type="all"
+    >
+      <text class="summary-label">总数量</text>
+      <text class="summary-value">{{totalQuantity}}</text>
+    </view>
+    <view
+      class="summary-pill {{filterType === 'pending' ? 'summary-pill-active' : ''}}"
+      bindtap="onFilterTap"
+      data-type="pending"
+    >
+      <text class="summary-label">待归还</text>
+      <text class="summary-value">{{pendingReturnQuantity}}</text>
+    </view>
+  </view>
+
+  <!-- 列表内容 -->
+  <scroll-view
+    scroll-y
+    class="list-container"
+    bindscrolltolower="onLoadMore"
+    refresher-enabled
+    refresher-triggered="{{isRefreshing}}"
+    bindrefresherrefresh="onRefresh"
+  >
+    <block wx:if="{{list.length > 0}}">
+      <view class="list-item" wx:for="{{list}}" wx:key="id">
+        <image wx:if="{{item.imageUrl}}" class="item-img" src="{{item.imageUrl}}" mode="aspectFill" />
+        <view wx:else class="item-img-placeholder">暂无图片</view>
+        <view class="item-content">
+          <view class="item-op-row">
+            <view
+              class="item-op-btn"
+              bindtap="openOperationModal"
+              data-type="inbound"
+              data-styleno="{{item.styleNo}}"
+            >入库</view>
+            <view
+              class="item-op-btn item-op-btn-primary"
+              bindtap="openOperationModal"
+              data-type="loan"
+              data-styleno="{{item.styleNo}}"
+            >借出</view>
+          </view>
+          <view class="item-header">
+            <text class="item-title">{{item.styleNo}}</text>
+            <view class="item-tags">
+              <text class="tag">{{item.sampleType}}</text>
+            </view>
+          </view>
+          <view class="item-desc">{{item.styleName || '未命名款式'}}</view>
+          <view class="item-spec">
+            <text>颜色: {{item.color}}</text>
+            <text class="ml-10">尺码: {{item.size}}</text>
+          </view>
+          <view class="item-stock">
+            <view class="stock-info">
+              <text class="label">在库:</text>
+              <text class="value green">{{item.quantity - item.loanedQuantity}}</text>
+            </view>
+            <view class="stock-info ml-20">
+              <text class="label">借出:</text>
+              <text class="value orange">{{item.loanedQuantity}}</text>
+            </view>
+          </view>
+          <view class="item-actions">
+            <view class="action-link" bindtap="openLoanModal" data-id="{{item.id}}" data-styleno="{{item.styleNo}}">
+              借调记录
+            </view>
+          </view>
+        </view>
+      </view>
+    </block>
+
+    <!-- 空状态 -->
+    <view wx:else class="empty-state">
+      <image src="/assets/icons/empty.svg" mode="widthFix" class="empty-img" />
+      <text>暂无样衣库存数据</text>
+    </view>
+
+    <!-- 加载更多 -->
+    <view class="loading-more" wx:if="{{loading}}">
+      <text>加载中...</text>
+    </view>
+    <view class="no-more" wx:if="{{!hasMore && list.length > 0}}">
+      <text>没有更多了</text>
+    </view>
+  </scroll-view>
+
+  <!-- 操作弹窗（入库/借出/归还） -->
+  <view wx:if="{{operationModal.visible}}" class="modal">
+    <view class="modal-box large-modal">
+      <view class="modal-head">
+        {{operationModal.title}}
+        <view class="close-btn" bindtap="closeOperationModal">✕</view>
+      </view>
+      <view class="modal-body">
+        <!-- 款号输入（归还模式不显示） -->
+        <view class="form-item" wx:if="{{operationModal.type !== 'return'}}">
+          <text class="label">款号</text>
+          <view class="input-wrap">
+            <input
+              value="{{operationModal.formData.styleNo}}"
+              placeholder="请输入款号"
+              bindinput="onOperationInput"
+              data-field="styleNo"
+            />
+            <view class="scan-btn" bindtap="handleScanStyle">
+              <image src="/assets/icons/scan.svg" mode="aspectFit" style="width: 36rpx; height: 36rpx;" />
+            </view>
+          </view>
+        </view>
+
+        <!-- 入库专用字段 -->
+        <block wx:if="{{operationModal.type === 'inbound'}}">
+          <view class="form-item">
+            <text class="label">款式名称</text>
+            <input
+              value="{{operationModal.formData.styleName}}"
+              placeholder="选填"
+              bindinput="onOperationInput"
+              data-field="styleName"
+            />
+          </view>
+          <view class="form-item">
+            <text class="label">样衣类型</text>
+            <picker
+              range="{{operationModal.sampleTypes}}"
+              range-key="label"
+              value="{{operationModal.typeIndex}}"
+              bindchange="onTypeChange"
+            >
+              <view class="picker">
+                {{operationModal.sampleTypes[operationModal.typeIndex].label}}
+              </view>
+            </picker>
+          </view>
+          <view class="form-row">
+            <view class="form-item flex-1">
+              <text class="label">颜色</text>
+              <input
+                value="{{operationModal.formData.color}}"
+                placeholder="如: 红色"
+                bindinput="onOperationInput"
+                data-field="color"
+              />
+            </view>
+            <view class="form-item flex-1 ml-20">
+              <text class="label">尺码</text>
+              <input
+                value="{{operationModal.formData.size}}"
+                placeholder="如: M"
+                bindinput="onOperationInput"
+                data-field="size"
+              />
+            </view>
+          </view>
+          <view class="form-item">
+            <text class="label">存放位置</text>
+            <input
+              value="{{operationModal.formData.location}}"
+              placeholder="选填"
+              bindinput="onOperationInput"
+              data-field="location"
+            />
+          </view>
+        </block>
+
+        <!-- 借出专用字段 -->
+        <block wx:if="{{operationModal.type === 'loan'}}">
+          <view class="stock-selection" wx:if="{{operationModal.stockList.length > 0}}">
+            <text class="section-label">请选择借出规格：</text>
+            <view
+              class="stock-item {{operationModal.selectedStockId === item.id ? 'active' : ''}}"
+              wx:for="{{operationModal.stockList}}"
+              wx:key="id"
+              bindtap="onSelectStock"
+              data-id="{{item.id}}"
+            >
+              <view class="stock-info">
+                <text class="stock-spec">{{item.color}} / {{item.size}}</text>
+                <text class="stock-type">{{item.sampleType}}</text>
+              </view>
+              <view class="stock-qty">可用: {{item.quantity - item.loanedQuantity}}</view>
+            </view>
+          </view>
+          <view class="loading-stock" wx:if="{{operationModal.stockLoading}}">查询库存中...</view>
+
+          <view class="form-item">
+            <text class="label">借用人</text>
+            <input
+              value="{{operationModal.formData.borrower}}"
+              placeholder="请输入姓名"
+              bindinput="onOperationInput"
+              data-field="borrower"
+            />
+          </view>
+          <view class="form-item">
+            <text class="label">预计归还时间</text>
+            <picker mode="date" value="{{operationModal.returnDate}}" bindchange="onDateChange">
+              <view class="picker">
+                {{operationModal.returnDate || '请选择日期'}}
+              </view>
+            </picker>
+          </view>
+        </block>
+
+        <!-- 归还专用字段 -->
+        <block wx:if="{{operationModal.type === 'return'}}">
+          <view class="form-item">
+            <text class="label">借出单号</text>
+            <view class="input-wrap">
+              <input
+                value="{{operationModal.formData.loanId}}"
+                placeholder="请输入借出记录ID"
+                bindinput="onOperationInput"
+                data-field="loanId"
+              />
+              <view class="scan-btn" bindtap="handleScanLoan">
+                <image src="/assets/icons/scan.svg" mode="aspectFit" style="width: 36rpx; height: 36rpx;" />
+              </view>
+            </view>
+          </view>
+        </block>
+
+        <!-- 数量 -->
+        <view class="form-item">
+          <text class="label">数量</text>
+          <input
+            type="number"
+            value="{{operationModal.formData.quantity}}"
+            bindinput="onOperationInput"
+            data-field="quantity"
+          />
+        </view>
+
+        <!-- 备注 -->
+        <view class="form-item">
+          <text class="label">备注</text>
+          <textarea
+            value="{{operationModal.formData.remark}}"
+            placeholder="选填"
+            bindinput="onOperationInput"
+            data-field="remark"
+            style="height: 100rpx;"
+          />
+        </view>
+      </view>
+      <view class="modal-actions">
+        <view class="btn cancel" bindtap="closeOperationModal">取消</view>
+        <view
+          class="btn ok {{operationModal.submitting ? 'disabled' : ''}}"
+          bindtap="onSubmitOperation"
+        >
+          {{operationModal.submitting ? '提交中...' : '确认'}}
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 借出记录弹窗 -->
+  <view wx:if="{{loanModal.visible}}" class="modal">
+    <view class="modal-box">
+      <view class="modal-head">
+        借调记录 - {{loanModal.styleNo}}
+        <view class="close-btn" bindtap="closeLoanModal">✕</view>
+      </view>
+      <view class="modal-body">
+        <view wx:if="{{loanModal.loading}}" class="loading-state">加载中...</view>
+        <view wx:elif="{{loanModal.list.length > 0}}" class="loan-list">
+          <view class="loan-item" wx:for="{{loanModal.list}}" wx:key="id">
+            <view class="loan-header">
+              <text class="loan-borrower">{{item.borrower}}</text>
+              <text class="loan-status {{item.status}}">{{item.statusText}}</text>
+            </view>
+            <view class="loan-info">
+              <text class="loan-label">数量:</text>
+              <text class="loan-value">{{item.quantity}}</text>
+            </view>
+            <view class="loan-info">
+              <text class="loan-label">借出时间:</text>
+              <text class="loan-value">{{item.loanDate}}</text>
+            </view>
+            <view class="loan-info" wx:if="{{item.expectedReturnDate}}">
+              <text class="loan-label">预计归还:</text>
+              <text class="loan-value">{{item.expectedReturnDate}}</text>
+            </view>
+            <view class="loan-info" wx:if="{{item.returnDate}}">
+              <text class="loan-label">归还时间:</text>
+              <text class="loan-value">{{item.returnDate}}</text>
+            </view>
+          </view>
+        </view>
+        <view wx:else class="empty-state">暂无借调记录</view>
+      </view>
+      <view class="modal-actions">
+        <view class="btn cancel full-width" bindtap="closeLoanModal">关闭</view>
+      </view>
+    </view>
+  </view>
+</view>

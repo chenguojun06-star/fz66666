@@ -1,0 +1,78 @@
+<view class="container">
+  <view class="header">
+    <view class="title">用户审批</view>
+    <view class="count">待审批：{{activeTab === 'tenant' ? tenantTotal : total}}人</view>
+  </view>
+
+  <!-- Tab切换（仅租户主显示） -->
+  <view wx:if="{{isTenantOwner}}" class="tab-bar">
+    <view class="tab-item {{activeTab === 'tenant' ? 'tab-active' : ''}}" bindtap="onTabChange" data-tab="tenant">
+      工人注册 ({{tenantTotal}})
+    </view>
+    <view class="tab-item {{activeTab === 'system' ? 'tab-active' : ''}}" bindtap="onTabChange" data-tab="system">
+      系统注册 ({{total}})
+    </view>
+  </view>
+
+  <!-- 系统待审批列表 -->
+  <view wx:if="{{activeTab === 'system'}}">
+    <view wx:if="{{loading && pendingUsers.length === 0}}" class="loading">
+      <view class="loading-text">加载中...</view>
+    </view>
+
+    <view wx:elif="{{pendingUsers.length === 0}}" class="empty">
+      <image class="empty-icon" src="/assets/icons/empty.svg" mode="aspectFit" />
+      <view class="empty-text">暂无待审批用户</view>
+    </view>
+
+    <view wx:else class="user-list">
+      <view wx:for="{{pendingUsers}}" wx:key="id" class="user-card">
+        <view class="user-info">
+          <view class="user-name">{{item.name || item.username}}</view>
+          <view class="user-meta">
+            <view wx:if="{{item.roleName}}" class="meta-item">角色：{{item.roleName}}</view>
+            <view wx:if="{{item.phone}}" class="meta-item">手机：{{item.phone}}</view>
+            <view wx:if="{{item.email}}" class="meta-item">邮箱：{{item.email}}</view>
+            <view class="meta-item">注册时间：{{item.createTime}}</view>
+          </view>
+        </view>
+        <view class="user-actions">
+          <button class="btn-approve" size="mini" bindtap="onApprove" data-user="{{item}}">批准</button>
+          <button class="btn-reject" size="mini" bindtap="onReject" data-user="{{item}}">拒绝</button>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{loading && pendingUsers.length > 0}}" class="loading-more">加载更多...</view>
+  </view>
+
+  <!-- 租户工人注册列表 -->
+  <view wx:if="{{activeTab === 'tenant'}}">
+    <view wx:if="{{tenantRegistrations.length === 0}}" class="empty">
+      <image class="empty-icon" src="/assets/icons/empty.svg" mode="aspectFit" />
+      <view class="empty-text">暂无工人注册申请</view>
+      <view class="empty-hint">分享工厂注册二维码给员工，员工扫码即可提交注册申请</view>
+    </view>
+
+    <view wx:else class="user-list">
+      <view wx:for="{{tenantRegistrations}}" wx:key="id" class="user-card">
+        <view class="user-info">
+          <view class="user-name">
+            {{item.name || item.username}}
+            <text class="badge-tag">工人注册</text>
+          </view>
+          <view class="user-meta">
+            <view class="meta-item">用户名：{{item.username}}</view>
+            <view wx:if="{{item.phone}}" class="meta-item">手机：{{item.phone}}</view>
+            <view wx:if="{{item.roleName}}" class="meta-item">角色：{{item.roleName}}</view>
+            <view class="meta-item">注册时间：{{item.createTime}}</view>
+          </view>
+        </view>
+        <view class="user-actions">
+          <button class="btn-approve" size="mini" bindtap="onTenantApprove" data-user="{{item}}">批准</button>
+          <button class="btn-reject" size="mini" bindtap="onTenantReject" data-user="{{item}}">拒绝</button>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,176 @@
+/* ===== 通用卡片视图样式 - 全站统一 ===== */
+.universal-card {
+  border-radius: 8px;
+  transition: all 0.25s ease;
+  overflow: hidden;
+  cursor: default;
+}
+
+.universal-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.universal-card .ant-card-body {
+  padding: 8px 10px;
+}
+
+/* 卡片封面图片 */
+.universal-card-cover {
+  position: relative;
+  width: 100%;
+  padding-top: 100%;
+  background: #f5f5f5;
+  overflow: hidden;
+}
+
+.universal-card-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.universal-card-cover-placeholder {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #bfbfbf;
+  font-size: 13px;
+}
+
+/* 卡片主体 - 紧凑布局 */
+.universal-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.universal-card-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f1f1f;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.universal-card-subtitle {
+  font-size: 11px;
+  color: #999;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.universal-card-row {
+  display: flex;
+  justify-content: flex-start;
+  gap: 4px;
+  line-height: 1.4;
+}
+
+.universal-card-field {
+  display: flex;
+  gap: 2px;
+  font-size: 11px;
+  line-height: 1.4;
+  min-width: 0;
+  flex: 1;
+  align-items: baseline;
+}
+
+.universal-card-field .field-label {
+  color: #999;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-size: 11px;
+}
+
+.universal-card-field .field-value {
+  color: #333;
+  font-weight: 500;
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
+}
+
+/* 胶囊进度条 */
+.universal-card-progress-line {
+  height: 14px;
+  min-width: 50px;
+  max-width: 100%;
+  margin: 4px 0;
+  border-radius: 999px;
+  transition: all 0.4s ease;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.universal-card-progress-text {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 700;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.12);
+  white-space: nowrap;
+}
+
+.universal-card-progress-success {
+  background: linear-gradient(135deg, #52c41a, #389e0d);
+}
+.universal-card-progress-warning {
+  background: linear-gradient(135deg, #faad14, #d48806);
+}
+.universal-card-progress-danger {
+  background: linear-gradient(135deg, #ff4d4f, #cf1322);
+}
+.universal-card-progress-default {
+  background: linear-gradient(135deg, #bfbfbf, #8c8c8c);
+}
+.universal-card-progress-default .universal-card-progress-text {
+  color: rgba(0, 0, 0, 0.55);
+}
+
+/* 操作按钮 */
+.universal-card-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.universal-card-actions .ant-space {
+  width: 100%;
+  justify-content: center;
+}
+
+.universal-card-actions .ant-btn-link {
+  font-size: 12px;
+  padding: 0 6px;
+  height: auto;
+}
+
+/* 进度条动画 */
+@keyframes progressFadeIn {
+  from { opacity: 0; transform: scaleX(0.9); }
+  to { opacity: 1; transform: scaleX(1); }
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .universal-card-title { font-size: 12px; }
+  .universal-card-field { font-size: 10px; }
+  .universal-card .ant-card-body { padding: 6px 8px; }
+}

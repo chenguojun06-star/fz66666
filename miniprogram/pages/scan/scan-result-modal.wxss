@@ -1,0 +1,116 @@
+/* 🆕 扫码结果确认弹窗样式（2026-02-06 混合模式） */
+.scan-result-modal .modal-box {
+  width: 85%;
+  max-width: 400px;
+}
+
+.scan-result-info {
+  padding: 6px 0;
+}
+
+.result-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  margin-bottom: 4px;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+
+.result-item.process-selector {
+  background: linear-gradient(135deg, var(--color-primary) 0%, #764ba2 100%);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.result-item.process-selector .item-label {
+  color: #fff;
+  font-weight: 600;
+}
+
+.item-label {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.item-value {
+  font-size: var(--font-size-sm);
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.item-value.highlight {
+  color: #2563eb;
+}
+
+.result-qty-input {
+  width: 100px;
+  height: 28px;
+  padding: 0 8px;
+  text-align: right;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: #fff;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  box-sizing: border-box;
+}
+
+.process-picker {
+  flex: 1;
+  text-align: right;
+}
+
+.picker-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.picker-value {
+  font-size: 13px;
+  color: #1e293b;
+  font-weight: 700;
+}
+
+.picker-arrow {
+  font-size: 10px;
+  color: #64748b;
+}
+
+.result-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  margin: 6px 0 0 0;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-radius: 6px;
+  border-left: 4px solid #f59e0b;
+}
+
+.hint-icon {
+  font-size: var(--font-size-lg);
+}
+
+.hint-text {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  color: #92400e;
+  line-height: 1.5;
+}
+
+.modal-btn.ok {
+  background: linear-gradient(135deg, #10b981 0%, var(--color-success) 100%);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.modal-btn.ok.loading {
+  background: #9ca3af;
+  pointer-events: none;
+}

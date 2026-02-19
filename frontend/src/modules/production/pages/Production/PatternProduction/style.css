@@ -1,0 +1,485 @@
+.pattern-production-page {
+  /* 使用全局样式，无需额外定义 */
+}
+
+/* 表头工序节点样式 */
+.pattern-node-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.pattern-node-icon {
+  font-size: 16px;
+}
+
+/* 圆形进度球体 */
+.pattern-circle-progress {
+  position: relative;
+  width: 70px;
+  height: 70px;
+  margin: 8px auto;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.30);
+  backdrop-filter: blur(10px) saturate(160%);
+  -webkit-backdrop-filter: blur(10px) saturate(160%);
+  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.10);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 进度填充（从下往上，S形波浪效果 + 左右晃动） */
+.pattern-circle-fill {
+  position: absolute;
+  left: -5%;
+  bottom: 0;
+  right: -5%;
+  width: 110%;
+  height: calc(var(--progress, 0%) + 8px);
+  background: var(--color-success);
+  background-size: 100% 400%;
+  animation: patternWaveFlow 8s ease-in-out infinite,
+             patternLiquidSway 6s ease-in-out infinite;
+  transition: height 1.8s cubic-bezier(0.4, 0, 0.2, 1);
+  filter: saturate(110%) brightness(0.96);
+  will-change: transform;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2),
+    inset 0 -15px 25px rgba(255, 255, 255, 0.15),
+    inset 0 15px 20px rgba(0, 0, 0, 0.08);
+  border-radius: 50%;
+  transform-origin: center bottom;
+  /* S形波浪遮罩 */
+  -webkit-mask-image: radial-gradient(ellipse 200% 100% at 50% 100%, black 50%, transparent 50%);
+  mask-image: radial-gradient(ellipse 200% 100% at 50% 100%, black 50%, transparent 50%);
+}
+
+/* 气体波浪层1 - 轻盈飘逸 */
+.pattern-circle-fill::before {
+  content: '';
+  position: absolute;
+  top: -22px;
+  left: -3%;
+  width: 106%;
+  height: 44px;
+  background: inherit;
+  filter: brightness(1.25) blur(1.5px);
+  opacity: 0.5;
+  border-radius: 50%;
+  clip-path: path('M 0 16 Q 12 28, 24 20 Q 36 12, 48 22 Q 60 32, 72 18 Q 84 8, 96 20 Q 108 28, 120 16 L 120 44 L 0 44 Z');
+  animation: patternGasWave2 5s cubic-bezier(0.37, 0, 0.63, 1) infinite 1.25s,
+             patternGasDrift 5s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite 2.5s reverse;
+}
+
+/* 100%完成时显示满的状态 */
+.pattern-circle-fill[data-complete="true"] {
+  height: 100%;
+  animation: none;
+  filter: saturate(108%) brightness(0.92);
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+/* 100%完成时波纹也不动 */
+.pattern-circle-fill[data-complete="true"]::before,
+.pattern-circle-fill[data-complete="true"]::after {
+  animation: none;
+}
+
+/* 百分比文字 */
+.pattern-circle-text {
+  position: relative;
+  z-index: 1;
+  color: rgba(15, 23, 42, 0.88);
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+/* 液体流动动画 - 渐变色平滑循环 */
+@keyframes patternWaveFlow {
+  0% {
+    background-position: 50% 0%;
+  }
+  25% {
+    background-position: 50% 33%;
+  }
+  50% {
+    background-position: 50% 66%;
+  }
+  75% {
+    background-position: 50% 100%;
+  }
+  100% {
+    background-position: 50% 0%;
+  }
+}
+
+/* 液体晃动 - 平滑流畅 */
+@keyframes patternLiquidSway {
+  0% {
+    transform: skewX(0deg);
+  }
+  15% {
+    transform: skewX(-1.2deg);
+  }
+  30% {
+    transform: skewX(-0.6deg);
+  }
+  45% {
+    transform: skewX(0deg);
+  }
+  60% {
+    transform: skewX(1.2deg);
+  }
+  75% {
+    transform: skewX(0.6deg);
+  }
+  90% {
+    transform: skewX(0deg);
+  }
+  100% {
+    transform: skewX(0deg);
+  }
+}
+
+/* 气体波浪1 - 复杂波形变化 */
+@keyframes patternGasWave1 {
+  0%, 100% {
+    clip-path: path('M 0 22 Q 12 10, 24 18 Q 36 26, 48 16 Q 60 6, 72 18 Q 84 30, 96 20 Q 108 10, 120 22 L 120 44 L 0 44 Z');
+  }
+  20% {
+    clip-path: path('M 0 18 Q 12 28, 24 20 Q 36 12, 48 24 Q 60 32, 72 20 Q 84 8, 96 22 Q 108 30, 120 18 L 120 44 L 0 44 Z');
+  }
+  40% {
+    clip-path: path('M 0 20 Q 12 8, 24 22 Q 36 32, 48 18 Q 60 8, 72 24 Q 84 34, 96 18 Q 108 6, 120 20 L 120 44 L 0 44 Z');
+  }
+  60% {
+    clip-path: path('M 0 24 Q 12 32, 24 18 Q 36 8, 48 22 Q 60 30, 72 16 Q 84 6, 96 24 Q 108 32, 120 20 L 120 44 L 0 44 Z');
+  }
+  80% {
+    clip-path: path('M 0 20 Q 12 12, 24 24 Q 36 30, 48 20 Q 60 10, 72 22 Q 84 28, 96 16 Q 108 8, 120 22 L 120 44 L 0 44 Z');
+  }
+}
+
+/* 气体波浪2 - 反向波形 */
+@keyframes patternGasWave2 {
+  0%, 100% {
+    clip-path: path('M 0 16 Q 12 28, 24 20 Q 36 12, 48 22 Q 60 32, 72 18 Q 84 8, 96 20 Q 108 28, 120 16 L 120 44 L 0 44 Z');
+  }
+  25% {
+    clip-path: path('M 0 22 Q 12 10, 24 18 Q 36 26, 48 16 Q 60 8, 72 22 Q 84 32, 96 18 Q 108 10, 120 22 L 120 44 L 0 44 Z');
+  }
+  50% {
+    clip-path: path('M 0 18 Q 12 30, 24 22 Q 36 10, 48 20 Q 60 28, 72 16 Q 84 6, 96 22 Q 108 32, 120 18 L 120 44 L 0 44 Z');
+  }
+  75% {
+    clip-path: path('M 0 20 Q 12 8, 24 16 Q 36 28, 48 18 Q 60 10, 72 24 Q 84 30, 96 16 Q 108 8, 120 20 L 120 44 L 0 44 Z');
+  }
+}
+
+/* 气体飘移 - 轻微横向漂移 */
+@keyframes patternGasDrift {
+  0%, 100% {
+    transform: translateX(0) translateY(0) scaleX(1);
+  }
+  20% {
+    transform: translateX(-1.5px) translateY(-0.5px) scaleX(0.99);
+  }
+  40% {
+    transform: translateX(0) translateY(0.5px) scaleX(1.01);
+  }
+  60% {
+    transform: translateX(1.5px) translateY(-0.5px) scaleX(0.99);
+  }
+  80% {
+    transform: translateX(0) translateY(0.5px) scaleX(1.01);
+  }
+}
+
+/* ============= 表格灵动动画 ============= */
+/* 原则：轻量不干扰、辅助交互、200-400ms、柔和缓动 */
+
+/* 行 hover 微动效果 */
+.ant-table-tbody > tr {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ant-table-tbody > tr:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* 行选中状态 */
+.ant-table-tbody > tr.ant-table-row-selected {
+  background-color: rgba(34, 197, 94, 0.04) !important;
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ant-table-tbody > tr.ant-table-row-selected:hover {
+  background-color: rgba(34, 197, 94, 0.06) !important;
+}
+
+/* 单元格数据更新闪烁提示 */
+@keyframes cellDataUpdate {
+  0% { background-color: rgba(34, 197, 94, 0.15); }
+  100% { background-color: transparent; }
+}
+
+.ant-table-cell-updated {
+  animation: cellDataUpdate 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 可编辑单元格 hover */
+.ant-table-cell-editable:hover {
+  background-color: rgba(34, 197, 94, 0.03);
+  cursor: pointer;
+  transition: background-color 0.2s ease-out;
+}
+
+/* 展开行动画 */
+.ant-table-expanded-row {
+  animation: expandRow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes expandRow {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 加载骨架屏微动 */
+.ant-skeleton-element {
+  animation: skeletonPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* 操作按钮微缩放 */
+.ant-table-cell .ant-btn,
+.ant-table-cell .ant-space-item button {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ant-table-cell .ant-btn:hover,
+.ant-table-cell .ant-space-item button:hover {
+  transform: scale(1.05);
+}
+
+.ant-table-cell .ant-btn:active,
+.ant-table-cell .ant-space-item button:active {
+  transform: scale(0.97);
+}
+
+/* 表格滚动平滑 */
+.ant-table-body {
+  scroll-behavior: smooth;
+}
+
+/* 排序列头部微动 */
+.ant-table-column-sorter {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ant-table-column-has-sorters:hover .ant-table-column-sorter {
+  transform: translateY(-1px);
+  opacity: 1;
+}
+
+/* 图片加载渐显 */
+.pattern-card-image,
+.ant-image-img {
+  animation: fadeInImage 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fadeInImage {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 卡片 hover 轻微上浮 */
+.pattern-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.pattern-card:hover {
+  transform: translateY(-2px);
+}
+
+/* 响应式调整 */
+@media (max-width: 1400px) {
+  .pattern-circle-progress {
+    width: 60px;
+    height: 60px;
+  }
+
+  .pattern-circle-text {
+    font-size: 12px;
+  }
+}
+
+/* 卡片视图样式 */
+.pattern-card {
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.pattern-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.pattern-card .ant-card-body {
+  padding: 12px;
+}
+
+/* 卡片封面图片 */
+.pattern-card-cover {
+  position: relative;
+  width: 100%;
+  padding-top: 100%; /* 1:1 正方形比例 */
+  background: #f5f5f5;
+  overflow: hidden;
+}
+
+.pattern-card-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pattern-card-cover-placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #bfbfbf;
+  font-size: 14px;
+}
+
+/* 卡片主体 */
+.pattern-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pattern-card-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1f1f1f;
+  line-height: 1.4;
+}
+
+.pattern-card-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pattern-card-field {
+  display: flex;
+  gap: 4px;
+  font-size: 13px;
+  line-height: 1.4;
+  min-width: 0;
+}
+
+.pattern-card-field .field-label {
+  color: #8c8c8c;
+  white-space: nowrap;
+}
+
+.pattern-card-field .field-value {
+  color: #1f1f1f;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pattern-card-divider {
+  height: 1px;
+  background: #f0f0f0;
+  margin: 8px 0;
+}
+
+/* 彩色进度线 */
+.pattern-card-progress-line {
+  height: 3px;
+  min-width: 10%;
+  max-width: 100%;
+  margin: 8px 0;
+  transition: width 0.5s ease;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 4px;
+}
+
+.pattern-card-progress-text {
+  font-size: 10px;
+  color: rgba(0, 0, 0, 0.85);
+  font-weight: 700;
+  text-shadow:
+    -1px -1px 0 #fff,
+    1px -1px 0 #fff,
+    -1px 1px 0 #fff,
+    1px 1px 0 #fff,
+    0 1px 2px rgba(255, 255, 255, 0.8);
+  white-space: nowrap;
+}
+
+.pattern-card-progress-success {
+  background: #52c41a;
+  box-shadow: 0 1px 4px rgba(82, 196, 26, 0.3);
+}
+
+.pattern-card-progress-warning {
+  background: #faad14;
+  box-shadow: 0 1px 4px rgba(250, 173, 20, 0.3);
+}
+
+.pattern-card-progress-danger {
+  background: #ff4d4f;
+  box-shadow: 0 1px 4px rgba(255, 77, 79, 0.3);
+}
+
+.pattern-card-actions {
+  display: flex;
+  justify-content: flex-start;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.pattern-card-actions .ant-btn-link {
+  padding: 4px 8px;
+  height: auto;
+  font-size: 13px;
+}

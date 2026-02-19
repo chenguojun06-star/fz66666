@@ -1,0 +1,4 @@
+**/*.wxml
+miniprogram_npm/
+node_modules/
+.cloudbase/

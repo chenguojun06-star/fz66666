@@ -1,0 +1,415 @@
+.stats-section {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 1100px) {
+  .stats-section {
+    grid-template-columns: repeat(2, minmax(200px, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .stats-section {
+    grid-template-columns: 1fr;
+  }
+}
+
+.stat-card {
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 20px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border-width: 2px;
+}
+
+/* 新的8个统计卡片样式 */
+.stat-card--sample {
+  border-color: #1677ff;
+  background: var(--neutral-bg);
+}
+
+.stat-card--production {
+  border-color: #13c2c2;
+  background: var(--neutral-bg);
+}
+
+.stat-card--quantity {
+  border-color: #52c41a;
+  background: var(--neutral-bg);
+}
+
+.stat-card--overdue {
+  border-color: #ff4d4f;
+  background: var(--neutral-bg);
+}
+
+.stat-card--today-warehousing {
+  border-color: #faad14;
+  background: var(--neutral-bg);
+}
+
+.stat-card--total-warehousing {
+  border-color: #722ed1;
+  background: var(--neutral-bg);
+}
+
+.stat-card--defective {
+  border-color: #fa541c;
+  background: var(--neutral-bg);
+}
+
+.stat-card--payment {
+  border-color: #2f54eb;
+  background: var(--neutral-bg);
+}
+
+/* 旧样式保留以兼容 */
+.stat-card--style {
+  border-color: #1677ff;
+}
+
+.stat-card--finance {
+  border-color: #faad14;
+}
+
+.stat-card--scan {
+  border-color: #722ed1;
+}
+
+.stat-card--warehousing {
+  border-color: #52c41a;
+}
+
+.stat-card--unqualified {
+  border-color: #ff4d4f;
+}
+
+.stat-card--urgent {
+  border-color: #fa541c;
+}
+
+.stat-icon {
+  font-size: var(--font-size-xl);
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  border-radius: 12px;
+  color: #595959;
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover .stat-icon {
+  transform: scale(1.1);
+}
+
+/* 新的8个图标样式 */
+.stat-icon--sample {
+  color: #1677ff;
+  background: #e6f4ff;
+}
+
+.stat-icon--production {
+  color: #13c2c2;
+  background: #e6fffb;
+}
+
+.stat-icon--quantity {
+  color: #52c41a;
+  background: #d9f7be;
+}
+
+.stat-icon--overdue {
+  color: #ff4d4f;
+  background: #ffccc7;
+}
+
+.stat-icon--today-warehousing {
+  color: #faad14;
+  background: #ffe7ba;
+}
+
+.stat-icon--total-warehousing {
+  color: #722ed1;
+  background: #efdbff;
+}
+
+.stat-icon--defective {
+  color: #fa541c;
+  background: #ffd8bf;
+}
+
+.stat-icon--payment {
+  color: #2f54eb;
+  background: #d6e4ff;
+}
+
+/* 旧样式保留以兼容 */
+.stat-icon--style {
+  color: #1677ff;
+  background: #e6f4ff;
+}
+
+.stat-icon--finance {
+  color: #faad14;
+  background: #fffbe6;
+}
+
+.stat-icon--scan {
+  color: #722ed1;
+  background: #f9f0ff;
+}
+
+.stat-icon--warehousing {
+  color: #52c41a;
+  background: #f6ffed;
+}
+
+.stat-icon--unqualified {
+  color: #ff4d4f;
+  background: #fff1f0;
+}
+
+.stat-icon--urgent {
+  color: #fa541c;
+  background: #fff7e6;
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-value {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: #1a1a1a;
+  line-height: 1.2;
+}
+
+.stat-label {
+  font-size: var(--font-size-base);
+  color: #8c8c8c;
+  margin-top: 4px;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.dashboard-card {
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 20px;
+}
+
+.card-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.card-title {
+  font-size: var(--font-size-lg);
+  font-weight: 500;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.card-content {
+  padding: 20px;
+}
+
+.activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.activity-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.activity-item:last-child {
+  border-bottom: none;
+}
+
+.activity-icon {
+  font-size: var(--font-size-xl);
+  margin-right: 12px;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: #f5f5f5;
+  color: #595959;
+}
+
+.activity-icon--production {
+  color: #13c2c2;
+  background: #e6fffb;
+}
+
+.activity-icon--reconciliation {
+  color: #faad14;
+  background: #fffbe6;
+}
+
+.activity-icon--scan {
+  color: #722ed1;
+  background: #f9f0ff;
+}
+
+.activity-icon--style {
+  color: #1677ff;
+  background: #e6f4ff;
+}
+
+.activity-icon--material {
+  color: #52c41a;
+  background: #f6ffed;
+}
+
+.activity-content {
+  flex: 1;
+  font-size: var(--font-size-base);
+  color: #1a1a1a;
+}
+
+.activity-time {
+  font-size: var(--font-size-sm);
+  color: #8c8c8c;
+}
+
+.quick-entry-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.quick-entry-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px;
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 20px;
+  text-decoration: none;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.quick-entry-item:hover {
+  background: #fff;
+}
+
+.quick-entry-item--style {
+  border-color: #1677ff;
+}
+
+.quick-entry-item--production {
+  border-color: #13c2c2;
+}
+
+.quick-entry-item--scan {
+  border-color: #722ed1;
+}
+
+.quick-entry-item--finance {
+  border-color: #faad14;
+}
+
+.quick-entry-item--material {
+  border-color: #52c41a;
+}
+
+.quick-entry-item--warehousing {
+  border-color: #13c2c2;
+}
+
+.quick-entry-item--report {
+  border-color: #1677ff;
+}
+
+.quick-entry-item--factory {
+  border-color: #595959;
+}
+
+.entry-icon {
+  font-size: var(--font-size-xl);
+  margin-bottom: 8px;
+  width: 36px;
+  height: 36px;
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  color: #595959;
+}
+
+.entry-icon--style {
+  color: #1677ff;
+  background: #e6f4ff;
+}
+
+.entry-icon--production {
+  color: #13c2c2;
+  background: #e6fffb;
+}
+
+.entry-icon--scan {
+  color: #722ed1;
+  background: #f9f0ff;
+}
+
+.entry-icon--finance {
+  color: #faad14;
+  background: #fffbe6;
+}
+
+.entry-icon--material {
+  color: #52c41a;
+  background: #f6ffed;
+}
+
+.entry-icon--warehousing {
+  color: #13c2c2;
+  background: #e6fffb;
+}
+
+.entry-icon--report {
+  color: #1677ff;
+  background: #e6f4ff;
+}
+
+.entry-icon--factory {
+  color: #595959;
+  background: #f5f5f5;
+}
+
+.entry-label {
+  font-size: var(--font-size-sm);
+  color: #1a1a1a;
+}

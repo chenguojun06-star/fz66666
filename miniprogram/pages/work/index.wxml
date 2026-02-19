@@ -1,0 +1,139 @@
+<view class="container">
+  <!-- 通用悬浮铃铛组件 -->
+  <floating-bell />
+
+  <!-- 仓库管理卡片 -->
+  <view class="card">
+    <view class="title">仓库</view>
+    <view class="grid-menu">
+      <view class="grid-item" bindtap="navTo" data-url="/pages/warehouse/sample/list/index">
+        <view class="icon-box bg-soft-blue">
+          <text class="iconfont">🧥</text>
+        </view>
+        <text class="menu-name">样衣库存</text>
+      </view>
+      <view class="grid-item" bindtap="navTo" data-url="/pages/warehouse/finished/list/index">
+        <view class="icon-box bg-soft-indigo">
+          <text class="iconfont">�</text>
+        </view>
+        <text class="menu-name">成品管理</text>
+      </view>
+      <view class="grid-item" bindtap="navTo" data-url="/pages/warehouse/order-ranking/index">
+        <view class="icon-box bg-soft-amber">
+          <text class="iconfont">🏷️</text>
+        </view>
+        <text class="menu-name">下单排行</text>
+      </view>
+      <view class="grid-item" bindtap="navTo" data-url="/pages/warehouse/material/alerts/index">
+        <view class="icon-box bg-soft-green">
+          <text class="iconfont">🧵</text>
+        </view>
+        <text class="menu-name">面辅料排行</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="title-row">
+      <view class="title">生产</view>
+      <view class="title-stats">
+        <text>订单</text>
+        <text class="title-stat-value title-stat-primary">{{orderStats.orderCount}}</text>
+        <text class="title-stat-sep">｜</text>
+        <text>总量</text>
+        <text class="title-stat-value title-stat-accent">{{orderStats.totalQuantity}}</text>
+      </view>
+    </view>
+
+    <!-- 搜索组件放在最上面 -->
+    <global-search
+      keyword="{{globalSearch.keyword}}"
+      results="{{globalSearch.results}}"
+      has-searched="{{globalSearch.hasSearched}}"
+      bind:input="onGlobalSearchInput"
+      bind:search="doGlobalSearch"
+      bind:clear="clearGlobalSearch"
+      bind:close="closeGlobalSearch"
+      bind:itemtap="onResultItemTap"
+    />
+
+    <!-- 标签栏在搜索栏下面 -->
+    <view class="tabbar">
+      <view class="tab {{activeTab === 'all' ? 'tab-active' : ''}}" data-tab="all" bindtap="onTab">全部</view>
+      <view class="tab {{activeTab === 'procurement' ? 'tab-active' : ''}}" data-tab="procurement" bindtap="onTab">采购</view>
+      <view class="tab {{activeTab === 'cutting' ? 'tab-active' : ''}}" data-tab="cutting" bindtap="onTab">裁剪</view>
+      <view class="tab {{activeTab === 'sewing' ? 'tab-active' : ''}}" data-tab="sewing" bindtap="onTab">车缝</view>
+      <view class="tab {{activeTab === 'warehousing' ? 'tab-active' : ''}}" data-tab="warehousing" bindtap="onTab">入库</view>
+    </view>
+
+    <!-- 订单列表 -->
+    <view>
+
+      <view wx:if="{{orders.list.length === 0 && !orders.loading}}" class="hint">暂无数据</view>
+        <view wx:for="{{orders.list}}" wx:key="id" class="list-item {{item.isClosed ? 'list-item-closed' : ''}} {{highlightOrderNo && item.orderNo === highlightOrderNo ? 'list-item-highlight' : ''}} {{item.remainDaysClass === 'days-overdue' ? 'list-item-overdue' : ''}}">
+          <view class="item-body">
+            <!-- 左侧款式图片 -->
+            <view class="item-cover-box">
+              <image wx:if="{{item.styleCoverUrl}}" class="item-cover" src="{{item.styleCoverUrl}}" mode="aspectFill" lazy-load />
+              <view wx:else class="item-cover-empty">暂无\n图片</view>
+            </view>
+            <!-- 右侧信息区 -->
+            <view class="item-info">
+              <view class="item-head">
+                <view class="item-title {{item.isClosed ? 'item-title-closed' : ''}}">
+                  {{item.orderNo || '-'}}
+                  <text wx:if="{{item.remainDaysClass === 'days-overdue'}}" class="overdue-indicator">⏰延期</text>
+                </view>
+                <view class="item-tags">
+                  <!-- 已完成显示"已完成"标签，否则显示当前工序 -->
+                  <text wx:if="{{item.isClosed}}" class="tag tag-completed">已完成</text>
+                  <text wx:elif="{{item.currentProcessName}}" class="tag {{item.currentProcessName === '裁剪' ? 'tag-process' : ''}}">{{item.currentProcessName}}</text>
+                </view>
+              </view>
+              <view class="item-meta">
+                <text class="meta-label">款号</text>
+                <text class="meta-value">{{item.styleNo || '-'}}</text>
+                <text class="meta-sep">｜</text>
+                <text class="meta-label">工厂</text>
+                <text class="meta-value">{{item.factoryName || '-'}}</text>
+              </view>
+              <view class="item-qty-row">
+                <text class="meta-label">数量</text>
+                <text class="meta-value meta-value-bold">{{item.sizeTotal ? item.sizeTotal : (item.orderQuantity || 0)}}</text>
+                <text class="meta-sep">｜</text>
+                <text class="meta-label">完成</text>
+                <text class="meta-value meta-value-bold">{{item.completedQuantity || 0}}</text>
+              </view>
+              <view class="progress-wrapper">
+                <view class="progress-bar {{item.isClosed ? 'progress-completed' : ''}}">
+                  <view class="progress-fill" style="width: {{item.productionProgress || 0}}%"></view>
+                </view>
+                <text class="progress-text progress-percent">{{item.productionProgress || 0}}%</text>
+              </view>
+            </view>
+          </view>
+          <!-- 底部信息区（码数明细 + 交期） -->
+          <view wx:if="{{item.sizeList && item.sizeList.length}}" class="size-plain">
+            <view class="size-plain-row">
+              <text class="size-plain-label">码数</text>
+              <text wx:for="{{item.sizeList}}" wx:key="*this" class="size-plain-cell">{{item}}</text>
+            </view>
+            <view class="size-plain-row">
+              <text class="size-plain-label">数量</text>
+              <text wx:for="{{item.sizeQtyList}}" wx:key="index" class="size-plain-cell">{{item}}</text>
+            </view>
+          </view>
+          <!-- 交期信息 -->
+          <view wx:if="{{item.deliveryDateStr}}" class="delivery-row">
+            <text class="delivery-label">交期：{{item.deliveryDateStr}}</text>
+            <text class="delivery-days {{item.remainDaysClass}}">{{item.remainDaysText}}</text>
+          </view>
+        </view>
+
+      <view class="btn">
+        <view class="btn-secondary {{orders.loading || !orders.hasMore ? 'btn-disabled' : ''}}" bindtap="loadMoreActive">{{orders.loading ? '加载中...' : (orders.hasMore ? '加载更多' : '没有更多了')}}</view>
+      </view>
+    </view>
+  </view>
+
+</view>

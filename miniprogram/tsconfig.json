@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ES2019",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "noImplicitAny": false,
+    "types": ["miniprogram-api-typings", "node"]
+  },
+  "include": ["**/*.js"],
+  "exclude": ["node_modules", "miniprogram_npm"]
+}

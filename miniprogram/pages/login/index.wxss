@@ -1,0 +1,299 @@
+/* ==========================================
+ * 登录页样式 - 一体式深蓝设计 + 天蝎座呼吸灯
+ * ========================================== */
+
+page {
+  background: #0b2d5c;
+}
+
+/* 整体页面 - 一体式全屏深蓝 */
+.login-page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 80rpx 48rpx 40rpx;
+  box-sizing: border-box;
+  overflow: hidden;
+  background: #0b2d5c;
+}
+
+/* ===== 天蝎座星座呼吸灯 ===== */
+.login-constellation {
+  position: fixed;
+  right: 6%;
+  bottom: 10%;
+  width: 400rpx;
+  height: 280rpx;
+  pointer-events: none;
+  z-index: 1;
+  animation: constellation-breathe 3.8s ease-in-out infinite;
+}
+
+/* 星座连线 */
+.constellation-line {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 280'%3E%3Cpolyline points='48,50 96,100 136,146 182,124 230,156 270,196 310,174 342,218 366,240' fill='none' stroke='%23d2e8ff' stroke-opacity='0.45' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+/* 星座光晕 */
+.constellation-glow {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  opacity: 0.35;
+  filter: blur(1px);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 280'%3E%3Cpolyline points='48,50 96,100 136,146 182,124 230,156 270,196 310,174 342,218 366,240' fill='none' stroke='%232d7ff9' stroke-opacity='0.30' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+/* 星座节点亮点 */
+.constellation-dot {
+  position: absolute;
+  width: 6rpx;
+  height: 6rpx;
+  background: #d2e8ff;
+  border-radius: 50%;
+  box-shadow: 0 0 8rpx 3rpx rgba(210, 232, 255, 0.6);
+  animation: dot-twinkle 2.4s ease-in-out infinite;
+}
+
+.constellation-dot:nth-child(4) { animation-delay: 0.3s; }
+.constellation-dot:nth-child(5) { animation-delay: 0.6s; }
+.constellation-dot:nth-child(6) { animation-delay: 0.9s; }
+.constellation-dot:nth-child(7) { animation-delay: 1.2s; }
+.constellation-dot:nth-child(8) { animation-delay: 1.5s; }
+.constellation-dot:nth-child(9) { animation-delay: 1.8s; }
+.constellation-dot:nth-child(10) { animation-delay: 2.1s; }
+.constellation-dot:nth-child(11) { animation-delay: 0.15s; }
+
+@keyframes constellation-breathe {
+  0%, 100% {
+    opacity: 0.18;
+    filter: drop-shadow(0 0 10rpx rgba(210, 232, 255, 0.08));
+  }
+  50% {
+    opacity: 0.48;
+    filter: drop-shadow(0 0 18rpx rgba(210, 232, 255, 0.16));
+  }
+}
+
+@keyframes dot-twinkle {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.8);
+  }
+}
+
+/* 内容区域 - 无卡片边框，一体融合 */
+.login-content {
+  width: 100%;
+  max-width: 620rpx;
+  position: relative;
+  z-index: 10;
+}
+
+/* ===== 顶部工厂名称（居中大字） ===== */
+.login-header {
+  text-align: center;
+  margin-bottom: 40rpx;
+}
+
+.login-title {
+  display: block;
+  font-size: 48rpx;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.96);
+  letter-spacing: 2rpx;
+  text-shadow:
+    0 2rpx 0 rgba(255, 255, 255, 0.10),
+    0 4rpx 0 rgba(0, 0, 0, 0.26),
+    0 20rpx 52rpx rgba(0, 0, 0, 0.55);
+}
+
+/* ===== 表单字段 ===== */
+.login-field {
+  margin-bottom: 28rpx;
+  position: relative;
+}
+
+.login-field-dev {
+  margin-top: 16rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx solid rgba(255, 255, 255, 0.08);
+}
+
+.login-label {
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.82);
+  font-weight: 700;
+  margin-bottom: 12rpx;
+}
+
+.login-label-required {
+  color: #ff4d4f;
+  margin-right: 4rpx;
+}
+
+/* 输入框容器（半透明融合深蓝背景） */
+.login-input-wrap {
+  display: flex;
+  align-items: center;
+  height: 88rpx;
+  background: rgba(246, 248, 255, 0.95);
+  border: 1rpx solid rgba(255, 255, 255, 0.14);
+  border-radius: 28rpx;
+  padding: 0 24rpx;
+}
+
+.login-input-icon {
+  font-size: 32rpx;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+
+.login-input {
+  flex: 1;
+  height: 86rpx;
+  font-size: 28rpx;
+  color: rgba(17, 24, 39, 0.92);
+  background: transparent;
+  border: none;
+  text-align: center;
+}
+
+.login-input-clear {
+  font-size: 28rpx;
+  color: rgba(17, 24, 39, 0.35);
+  padding: 8rpx;
+  flex-shrink: 0;
+}
+
+.login-input-eye {
+  font-size: 32rpx;
+  padding: 8rpx;
+  flex-shrink: 0;
+}
+
+/* 已选择提示 */
+.tenant-selected-tag {
+  font-size: 22rpx;
+  color: #52c41a;
+  margin-top: 8rpx;
+  padding-left: 4rpx;
+}
+
+/* 搜索结果下拉 */
+.tenant-results {
+  background: #fff;
+  border: 1rpx solid rgba(0, 0, 0, 0.08);
+  border-radius: 16rpx;
+  margin-top: 12rpx;
+  max-height: 320rpx;
+  overflow-y: auto;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.12);
+}
+
+.tenant-result-item {
+  padding: 24rpx 28rpx;
+  font-size: 28rpx;
+  color: #1d1d1f;
+  border-bottom: 1rpx solid rgba(0, 0, 0, 0.04);
+}
+
+.tenant-result-item:last-child {
+  border-bottom: none;
+}
+
+.tenant-result-item:active {
+  background: rgba(45, 127, 249, 0.08);
+}
+
+.tenant-result-empty {
+  padding: 24rpx 28rpx;
+  font-size: 26rpx;
+  color: #c0c0c0;
+  text-align: center;
+}
+
+/* ===== 登录按钮 ===== */
+.login-btn-wrap {
+  margin-top: 20rpx;
+}
+
+.login-btn {
+  width: 100%;
+  height: 84rpx;
+  line-height: 84rpx;
+  text-align: center;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, #2d7ff9 0%, #1890ff 100%);
+  border-radius: 999rpx;
+  box-shadow: 0 14rpx 30rpx rgba(45, 127, 249, 0.34);
+  letter-spacing: 8rpx;
+}
+
+.login-btn:active {
+  opacity: 0.85;
+  transform: scale(0.98);
+}
+
+.login-btn-wechat {
+  width: 100%;
+  height: 84rpx;
+  line-height: 84rpx;
+  text-align: center;
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #fff;
+  background: #07c160;
+  border-radius: 999rpx;
+  box-shadow: 0 10rpx 24rpx rgba(7, 193, 96, 0.3);
+}
+
+.login-btn-wechat:active {
+  opacity: 0.85;
+  transform: scale(0.98);
+}
+
+.login-btn-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* ===== 注册入口 ===== */
+.login-register-section {
+  margin-top: 28rpx;
+  text-align: center;
+}
+
+.login-register-link {
+  font-size: 26rpx;
+  color: rgba(45, 127, 249, 0.85);
+  font-weight: 500;
+}
+
+.login-register-link:active {
+  color: rgba(45, 127, 249, 1);
+}
+
+/* ===== 底部版权 ===== */
+.login-footer {
+  margin-top: 16rpx;
+  text-align: center;
+  font-size: 22rpx;
+  color: rgba(255, 255, 255, 0.50);
+}

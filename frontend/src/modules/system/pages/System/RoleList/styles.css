@@ -1,0 +1,74 @@
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+}
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #f0f0f0;
+  border-top: 3px solid #2D7FF9;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 12px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-container p {
+  font-size: 14px;
+  color: #8c8c8c;
+  margin: 0;
+}
+
+/* 空状态样式 */
+.empty-state {
+  text-align: center;
+  padding: 40px 0;
+  color: #8c8c8c;
+  font-size: 14px;
+}
+
+.user-perm-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.user-perm-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.user-perm-role {
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.user-perm-tree {
+  border: 1px solid #f0f0f0;
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--neutral-white);
+}
+
+.user-perm-loading {
+  padding: 24px 0;
+  display: flex;
+  justify-content: center;
+}
+
+.permission-tree {
+  border: 1px solid #f0f0f0;
+  padding: 12px;
+  background: var(--neutral-white);
+  max-height: 300px;
+  overflow-y: auto;
+}

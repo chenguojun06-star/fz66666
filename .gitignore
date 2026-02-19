@@ -1,0 +1,74 @@
+.DS_Store
+
+# Backend (Maven)
+backend/target/
+
+# Frontend (Vite)
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.eslintcache
+
+# Miniprogram (WeChat)
+miniprogram/node_modules/
+
+# Env / local run files
+.env
+.env.*
+.run/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Logs
+*.log
+backend/logs/
+
+# Deployment / platform
+.vercel/
+
+# 临时文件和备份文件
+*.bak
+*~
+*.tmp
+*.swp
+.DS_Store
+backups/*.tar.gz
+backups/*.zip
+
+# 超大压缩文件（不提交到Git）
+project_source_code.zip
+*.zip
+
+# 一次性修复和分析脚本（不提交）
+fix-*.sh
+analyze*.py
+remove*.py
+*_analysis*.py
+
+# 临时SQL迁移脚本（执行后归档）
+add-*.sql
+create-*.sql
+migrate-*.sh
+init-*.sh
+
+# 已归档的清理脚本（不提交）
+cleanup-*.sh
+archive-*.sh
+!check-system-status.sh
+!clean-system.sh
+!clean-dev-logs.sh
+!clean-console-logs.sh
+!clean-old-data.sh
+
+# 临时测试和工具文件
+verify-*.sh
+nohup.out
+*.class
+backup_*.sql
+clear-cache*.html
+*_code_review_*.zip
+.cleanup-reminder.txt
+backend/src/main/resources/application-dev.yml

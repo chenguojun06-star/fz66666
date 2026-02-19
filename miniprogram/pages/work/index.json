@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "生产",
+  "usingComponents": {
+    "global-search": "/components/common/global-search/index"
+  }
+}

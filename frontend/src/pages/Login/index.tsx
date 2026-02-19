@@ -1,0 +1,245 @@
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Form, Input, Button, Card, Typography, App, AutoComplete } from 'antd';
+import { UserOutlined, LockOutlined, SearchOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../utils/AuthContext';
+import api from '../../utils/api';
+import './styles.css';
+
+const { Title } = Typography;
+
+interface TenantOption {
+  id: number;
+  tenantName: string;
+}
+
+const Login: React.FC = () => {
+  const navigate = useNavigate();
+  const [form] = Form.useForm();
+  const { login } = useAuth();
+  const [submitting, setSubmitting] = useState(false);
+  const { message } = App.useApp();
+
+  const year = useMemo(() => new Date().getFullYear(), []);
+
+  // 租户列表
+  const [tenantsLoading, setTenantsLoading] = useState(true);
+  // 当前选中的租户（搜索选中后锁定）
+  const [selectedTenant, setSelectedTenant] = useState<TenantOption | null>(null);
+  const tenantsRef = useRef<TenantOption[]>([]);
+
+  // 加载租户列表
+  const loadTenants = useCallback(async () => {
+    setTenantsLoading(true);
+    try {
+      const res = await api.get('/system/tenant/public-list') as { code?: number; data?: TenantOption[] };
+      if (res?.code === 200 && Array.isArray(res.data)) {
+        tenantsRef.current = res.data;
+        // 如果只有一个租户，自动选中
+        if (res.data.length === 1) {
+          setSelectedTenant(res.data[0]);
+          form.setFieldsValue({ companySearch: res.data[0].tenantName, tenantId: res.data[0].id });
+        } else {
+          // 尝试恢复上次选择的租户
+          const lastTenantId = localStorage.getItem('lastTenantId');
+          if (lastTenantId) {
+            const numId = Number(lastTenantId);
+            const found = res.data.find(t => t.id === numId);
+            if (found) {
+              setSelectedTenant(found);
+              form.setFieldsValue({ companySearch: found.tenantName, tenantId: found.id });
+            }
+          }
+        }
+      }
+    } catch {
+      // 加载失败静默处理
+    } finally {
+      setTenantsLoading(false);
+    }
+  }, [form]);
+
+  useEffect(() => {
+    loadTenants();
+  }, [loadTenants]);
+
+  // AutoComplete 搜索过滤
+  const [searchOptions, setSearchOptions] = useState<{ value: string; label: React.ReactNode; key: number }[]>([]);
+
+  const handleSearch = useCallback((text: string) => {
+    // 如果用户正在编辑已选中的公司名，清除选中状态
+    if (selectedTenant && text !== selectedTenant.tenantName) {
+      setSelectedTenant(null);
+      form.setFieldsValue({ tenantId: undefined });
+    }
+    if (!text) {
+      // 空输入显示全部
+      setSearchOptions(tenantsRef.current.map(t => ({ value: t.tenantName, label: t.tenantName, key: t.id })));
+      return;
+    }
+    const keyword = text.toLowerCase();
+    const filtered = tenantsRef.current.filter(t => t.tenantName.toLowerCase().includes(keyword));
+    setSearchOptions(filtered.map(t => ({ value: t.tenantName, label: t.tenantName, key: t.id })));
+  }, [selectedTenant, form]);
+
+  const handleSelect = useCallback((value: string) => {
+    const tenant = tenantsRef.current.find(t => t.tenantName === value);
+    if (tenant) {
+      setSelectedTenant(tenant);
+      form.setFieldsValue({ tenantId: tenant.id, companySearch: tenant.tenantName });
+      // 记住选择
+      localStorage.setItem('lastTenantId', String(tenant.id));
+      localStorage.setItem('lastTenantName', tenant.tenantName);
+    }
+  }, [form]);
+
+  // 登录表单提交处理
+  const handleLogin = async (values: { tenantId: number; companySearch: string; username: string; password: string }) => {
+    if (submitting) return;
+    if (!selectedTenant) {
+      message.error('请搜索并选择公司');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const success = await login(values.username, values.password, selectedTenant.id);
+      if (success) {
+        message.success('登录成功');
+        navigate('/dashboard');
+      } else {
+        message.error('登录失败，请检查公司、用户名和密码');
+      }
+    } catch (error) {
+      message.error('登录失败,请检查公司、用户名和密码');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="login-page">
+      <div className="login-bg" aria-hidden="true" />
+      <div className="login-constellation" aria-hidden="true">
+        <div className="constellation-line" />
+        <div className="constellation-glow" />
+        <span className="constellation-dot" style={{ left: 41, top: 43 }} />
+        <span className="constellation-dot" style={{ left: 82, top: 86 }} />
+        <span className="constellation-dot" style={{ left: 116, top: 125 }} />
+        <span className="constellation-dot" style={{ left: 156, top: 106 }} />
+        <span className="constellation-dot" style={{ left: 197, top: 134 }} />
+        <span className="constellation-dot" style={{ left: 231, top: 168 }} />
+        <span className="constellation-dot" style={{ left: 265, top: 149 }} />
+        <span className="constellation-dot" style={{ left: 292, top: 187 }} />
+        <span className="constellation-dot" style={{ left: 313, top: 206 }} />
+      </div>
+      <Card className="login-card" variant="borderless">
+        <div className="login-header">
+          <Title level={2} className="login-title">
+            {selectedTenant?.tenantName || '云裳智链'}
+          </Title>
+        </div>
+        <Form
+          form={form}
+          name="login"
+          onFinish={handleLogin}
+          className="login-form"
+          layout="vertical"
+        >
+          {/* 隐藏字段存储实际tenantId */}
+          <Form.Item name="tenantId" hidden><Input /></Form.Item>
+          <Form.Item
+            name="companySearch"
+            rules={[
+              { required: true, message: '请搜索并选择公司' },
+              {
+                validator: (_, value) => {
+                  if (value && !selectedTenant) {
+                    return Promise.reject('请从搜索结果中选择公司');
+                  }
+                  return Promise.resolve();
+                },
+              },
+            ]}
+            label="公司"
+            extra={selectedTenant ? <span style={{ color: '#52c41a', fontSize: 12 }}>✓ 已选择：{selectedTenant.tenantName}</span> : null}
+          >
+            <AutoComplete
+              options={searchOptions}
+              onSearch={handleSearch}
+              onSelect={handleSelect}
+              onFocus={() => handleSearch(form.getFieldValue('companySearch') || '')}
+              placeholder={tenantsLoading ? '加载中...' : '输入公司名称搜索'}
+              disabled={submitting || tenantsLoading}
+              size="large"
+            >
+              <Input
+                prefix={<SearchOutlined className="site-form-item-icon" />}
+                allowClear
+                onClear={() => {
+                  setSelectedTenant(null);
+                  form.setFieldsValue({ tenantId: undefined });
+                }}
+              />
+            </AutoComplete>
+          </Form.Item>
+          <Form.Item
+            name="username"
+            rules={[{ required: true, message: '请输入用户名' }]}
+            label="用户名"
+            htmlFor="login_username"
+          >
+            <Input
+              id="login_username"
+              prefix={<UserOutlined className="site-form-item-icon" />}
+              placeholder="请输入用户名"
+              size="large"
+              autoFocus
+              allowClear
+              disabled={submitting}
+              autoComplete="username"
+            />
+          </Form.Item>
+          <Form.Item
+            name="password"
+            rules={[{ required: true, message: '请输入密码' }]}
+            label="密码"
+            htmlFor="login_password"
+          >
+            <Input.Password
+              id="login_password"
+              prefix={<LockOutlined className="site-form-item-icon" />}
+              placeholder="请输入密码"
+              size="large"
+              disabled={submitting}
+              autoComplete="current-password"
+            />
+          </Form.Item>
+          <Form.Item>
+            <Button
+              type="primary"
+              htmlType="submit"
+              className="login-button"
+              size="large"
+              loading={submitting}
+            >
+              登录
+            </Button>
+          </Form.Item>
+          <Form.Item style={{ marginBottom: 0 }}>
+            <Button
+              type="link"
+              onClick={() => navigate('/register')}
+              style={{ width: '100%', padding: 0 }}
+              disabled={submitting}
+            >
+              还没有账号？立即注册
+            </Button>
+          </Form.Item>
+        </Form>
+        <div className="login-footer">© {year} 云裳智链</div>
+      </Card>
+    </div>
+  );
+};
+
+export default Login;

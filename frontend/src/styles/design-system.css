@@ -1,0 +1,506 @@
+/* ============================================
+   服装供应链管理系统 - 全局设计系统 v1.0
+   创建日期：2026-01-28
+   原则：统一、简洁、舒适、高性能
+   ============================================ */
+
+/* ========== 1. 颜色系统 ========== */
+:root {
+  /* 主色调 - 蓝色系（统一主题） */
+  --color-primary: #2D7FF9;
+  --color-primary-light: #5B9CFA;
+  --color-primary-dark: #1E6FE8;
+  --color-primary-darker: #1558D6;
+
+  /* 辅助色 - 使用 Ant Design 默认值保持视觉一致 */
+  --color-secondary: #3b82f6;
+  --color-warning: #faad14; /* Ant Design 默认 warning */
+  --color-danger: #ff4d4f;  /* Ant Design 默认 error */
+  --color-success: #52c41a; /* Ant Design 默认 success */
+  --color-info: #1890ff;    /* Ant Design 默认 info */
+
+  /* 中性色（文字、背景） */
+  --color-text-primary: #1a1a1a;
+  --color-text-secondary: #6b7280;
+  --color-text-tertiary: #9ca3af;
+  --color-bg-base: #ffffff;
+  --color-bg-container: #fafafa;
+  --color-bg-subtle: #f5f5f5;
+  --color-border: #e5e7eb;
+  --color-border-light: #f0f0f0;
+
+  /* 背景色 */
+  --color-bg-page: #f8fafc;
+  --color-bg-card: #ffffff;
+
+  /* 玻璃拟态 */
+  --glass-bg: rgba(255, 255, 255, 0.75);
+  --glass-border: rgba(255, 255, 255, 0.5);
+  --glass-blur: blur(20px) saturate(180%);
+
+  /* 阴影系统 */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-base: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.15);
+
+  /* 间距系统（8px基准） */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-base: 16px;
+  --spacing-md: 24px;
+  --spacing-lg: 32px;
+  --spacing-xl: 48px;
+
+  /* 圆角系统 */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-base: 12px;
+  --radius-md: 16px;
+  --radius-lg: 20px;
+  --radius-pill: 999px; /* 胶囊形 */
+
+  /* 动画时长 */
+  --duration-fast: 0.2s;
+  --duration-base: 0.3s;
+  --duration-slow: 0.4s;
+
+  /* 缓动函数 */
+  --ease-smooth: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out: cubic-bezier(0.33, 1, 0.68, 1);
+
+  /* 字体大小系统（2026-02-03 补充） */
+  --font-size-xs: 12px;      /* 辅助文字 */
+  --font-size-sm: 13px;      /* 次要文字 */
+  --font-size-base: 14px;    /* 正文（基准） */
+  --font-size-lg: 16px;      /* 二级标题 */
+  --font-size-xl: 18px;      /* 一级标题 */
+  --font-size-xxl: 20px;     /* 数值强调 */
+}
+
+/* ========== 深色模式 Dark Mode ========== */
+/* OS 自动应用（macOS Big Sur 风格） */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* 文本颜色 - 深色模式 */
+    --color-text-primary: #f5f5f5;
+    --color-text-secondary: #a8a8a8;
+    --color-text-tertiary: #707070;
+
+    /* 背景颜色 - 深色模式 */
+    --color-bg-base: #1a1a1a;
+    --color-bg-container: #262626;
+    --color-bg-subtle: #303030;
+    --color-bg-page: #161616;
+    --color-bg-card: #1f1f1f;
+
+    /* 边框 - 深色模式 */
+    --color-border: #404040;
+    --color-border-light: #2a2a2a;
+
+    /* 主色调适配 - 深色模式下更亮 */
+    --color-primary: #5B9CFA;
+    --color-primary-light: #7CB3FB;
+    --color-primary-dark: #4A8BE9;
+
+    /* 功能色适配 - 深色模式下提高亮度 */
+    --color-success: #22c55e;
+    --color-warning: #eab308;
+    --color-danger: #ef4444;
+    --color-info: #06b6d4;
+
+    /* 玻璃拟态 - 深色模式 */
+    --glass-bg: rgba(26, 26, 26, 0.75);
+    --glass-border: rgba(255, 255, 255, 0.1);
+
+    /* 阴影系统 - 深色模式（更柔和） */
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.4);
+    --shadow-base: 0 4px 12px rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.6);
+    --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.7);
+    --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.8);
+  }
+}
+
+/* 用户手动切换深色模式 */
+html.dark-mode {
+  --color-text-primary: #f5f5f5;
+  --color-text-secondary: #a8a8a8;
+  --color-text-tertiary: #707070;
+  --color-bg-base: #1a1a1a;
+  --color-bg-container: #262626;
+  --color-bg-subtle: #303030;
+  --color-bg-page: #161616;
+  --color-bg-card: #1f1f1f;
+  --color-border: #404040;
+  --color-border-light: #2a2a2a;
+  --color-primary: #5B9CFA;
+  --color-primary-light: #7CB3FB;
+  --color-primary-dark: #4A8BE9;
+  --color-success: #22c55e;
+  --color-warning: #eab308;
+  --color-danger: #ef4444;
+  --color-info: #06b6d4;
+  --glass-bg: rgba(26, 26, 26, 0.75);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.4);
+  --shadow-base: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.7);
+  --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.8);
+}
+
+/* ========== 2. 按钮系统（胶囊形统一规范） ========== */
+.btn-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--duration-base) var(--ease-smooth);
+  white-space: nowrap;
+  outline: none;
+}
+
+/* 主按钮 - 蓝色胶囊 */
+.btn-pill-primary {
+  background: var(--color-primary);
+  color: white;
+  box-shadow: 0 4px 12px rgba(45, 127, 249, 0.3);
+}
+
+.btn-pill-primary:hover {
+  background: var(--color-primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(45, 127, 249, 0.4);
+}
+
+.btn-pill-primary:active {
+  transform: translateY(0);
+}
+
+/* 次要按钮 */
+.btn-pill-secondary {
+  background: var(--color-bg-base);
+  color: var(--color-text-primary);
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-pill-secondary:hover {
+  background: var(--color-bg-subtle);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-base);
+}
+
+/* 幽灵按钮 */
+.btn-pill-ghost {
+  background: transparent;
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.btn-pill-ghost:hover {
+  background: rgba(34, 197, 94, 0.06);
+  border-color: var(--color-primary-dark);
+}
+
+/* 尺寸变体 */
+.btn-pill-sm {
+  padding: 6px 16px;
+  font-size: 13px;
+}
+
+.btn-pill-lg {
+  padding: 14px 32px;
+  font-size: 16px;
+}
+
+/* ========== 3. 卡片系统（玻璃拟态统一规范） ========== */
+.card-glass {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-base), inset 0 0 0 1px rgba(255, 255, 255, 0.9);
+  transition: all var(--duration-slow) var(--ease-smooth);
+}
+
+.card-glass:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg), inset 0 0 0 1px rgba(255, 255, 255, 1);
+}
+
+/* 卡片头部 */
+.card-header-glass {
+  padding: var(--spacing-base) var(--spacing-md);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* 卡片标题 */
+.card-title-glass {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+  position: relative;
+  padding-left: 12px;
+}
+
+.card-title-glass::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 20px;
+  background: var(--color-primary);
+  border-radius: 2px;
+}
+
+/* 卡片内容 */
+.card-body-glass {
+  padding: var(--spacing-md);
+}
+
+/* ========== 4. 表单输入（统一圆角） ========== */
+.input-glass {
+  padding: 10px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-base);
+  font-size: 14px;
+  transition: all var(--duration-base) var(--ease-smooth);
+}
+
+.input-glass:focus {
+  border-color: var(--color-primary);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+}
+
+/* ========== 5. 表格交互（轻量级） ========== */
+.table-row-interactive {
+  transition: all 0.25s var(--ease-smooth);
+}
+
+.table-row-interactive:hover {
+  transform: translateY(-1px);
+  background: rgba(34, 197, 94, 0.02);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ========== 6. 进度指示器（统一样式） ========== */
+.progress-circle-glass {
+  position: relative;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.30);
+  backdrop-filter: blur(10px) saturate(160%);
+  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.10);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 进度填充 */
+.progress-fill-liquid {
+  position: absolute;
+  left: -5%;
+  bottom: 0;
+  right: -5%;
+  width: 110%;
+  height: calc(var(--progress, 0%) + 8px);
+  background: var(--color-primary);
+  animation: liquidFlow 5s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite,
+             liquidSway 4.5s cubic-bezier(0.37, 0, 0.63, 1) infinite;
+  filter: saturate(108%) brightness(0.92);
+  border-radius: 50%;
+  transform-origin: center bottom;
+}
+
+@keyframes liquidFlow {
+  0%, 100% { background-position: 50% 0%; }
+  33% { background-position: 50% 50%; }
+  66% { background-position: 50% 100%; }
+}
+
+@keyframes liquidSway {
+  0%, 100% { transform: skewX(0deg); }
+  25% { transform: skewX(-1.8deg); }
+  50% { transform: skewX(0deg); }
+  75% { transform: skewX(1.8deg); }
+}
+
+/* ========== 7. 页面级动画（统一进入效果） ========== */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 页面容器 */
+.page-container-glass {
+  background: var(--gradient-page);
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+  animation: fadeIn 0.8s var(--ease-smooth);
+}
+
+/* 背景装饰球（动态） */
+/* @design-system: 删除渐变背景装饰，保持简洁纯色设计 */
+.page-container-glass::before,
+.page-container-glass::after {
+  display: none; /* 禁用渐变背景装饰 */
+}
+
+@keyframes floatBg {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -30px) scale(1.05); }
+  66% { transform: translate(-20px, 20px) scale(0.95); }
+}
+
+/* ========== 8. 图标按钮（3D效果） ========== */
+.icon-button-glass {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: var(--radius-base);
+  transition: all 0.5s var(--ease-bounce);
+  box-shadow: var(--shadow-base), inset 0 -2px 8px rgba(0, 0, 0, 0.05);
+  position: relative;
+}
+
+/* @design-system: 删除渐变高光，使用纯色设计 */
+.icon-button-glass::after {
+  display: none; /* 禁用渐变高光效果 */
+}
+
+.icon-button-glass:hover {
+  transform: translateY(-4px) scale(1.1) rotateZ(-5deg);
+  box-shadow: var(--shadow-md), inset 0 -2px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* ========== 9. 工具类 ========== */
+/* 间距 */
+.mt-xs { margin-top: var(--spacing-xs); }
+.mt-sm { margin-top: var(--spacing-sm); }
+.mt-base { margin-top: var(--spacing-base); }
+.mt-md { margin-top: var(--spacing-md); }
+.mt-lg { margin-top: var(--spacing-lg); }
+
+.mb-xs { margin-bottom: var(--spacing-xs); }
+.mb-sm { margin-bottom: var(--spacing-sm); }
+.mb-base { margin-bottom: var(--spacing-base); }
+.mb-md { margin-bottom: var(--spacing-md); }
+.mb-lg { margin-bottom: var(--spacing-lg); }
+
+.p-xs { padding: var(--spacing-xs); }
+.p-sm { padding: var(--spacing-sm); }
+.p-base { padding: var(--spacing-base); }
+.p-md { padding: var(--spacing-md); }
+.p-lg { padding: var(--spacing-lg); }
+
+/* 动画延迟 */
+.animate-delay-1 { animation-delay: 0.1s; }
+.animate-delay-2 { animation-delay: 0.2s; }
+.animate-delay-3 { animation-delay: 0.3s; }
+
+/* 渐变文字 */
+.text-gradient-primary {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ========== 10. 响应式断点 ========== */
+@media (max-width: 1400px) {
+  :root {
+    --spacing-base: 14px;
+    --spacing-md: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --spacing-base: 12px;
+    --spacing-md: 16px;
+  }
+
+  .btn-pill {
+    padding: 8px 20px;
+    font-size: 13px;
+  }
+}
+
+/* ========== 使用说明 ========== */
+/*
+1. 按钮使用：
+   <button class="btn-pill btn-pill-primary">保存</button>
+   <button class="btn-pill btn-pill-secondary">取消</button>
+
+2. 卡片使用：
+   <div class="card-glass">
+     <div class="card-header-glass">
+       <h3 class="card-title-glass">标题</h3>
+     </div>
+     <div class="card-body-glass">内容</div>
+   </div>
+
+3. 页面容器：
+   <div class="page-container-glass">页面内容</div>
+
+4. 进度球：
+   <div class="progress-circle-glass">
+     <div class="progress-fill-liquid" style="--progress: 75%;"></div>
+   </div>
+
+5. 颜色变量：
+   background: var(--color-primary);
+   color: var(--color-text-primary);
+
+6. 动画：
+   animation: slideInUp 0.6s var(--ease-smooth);
+*/
