@@ -9,7 +9,10 @@
             production_order_id, production_order_no, cutting_bundle_id, bundle_no,
             sku, color, size, quantity,
             process_code, process_name, process_order, unit_price,
-            scan_status, creator, created_at, tenant_id
+            scan_status, scan_time, scan_record_id,
+            operator_id, operator_name,
+            settlement_amount, is_settled,
+            creator, created_at, tenant_id
         ) VALUES
         <foreach collection="records" item="item" separator=",">
             (
@@ -17,7 +20,10 @@
                 #{item.productionOrderId}, #{item.productionOrderNo}, #{item.cuttingBundleId}, #{item.bundleNo},
                 #{item.sku}, #{item.color}, #{item.size}, #{item.quantity},
                 #{item.processCode}, #{item.processName}, #{item.processOrder}, #{item.unitPrice},
-                #{item.scanStatus}, #{item.creator}, NOW(), #{item.tenantId}
+                #{item.scanStatus}, #{item.scanTime}, #{item.scanRecordId},
+                #{item.operatorId}, #{item.operatorName},
+                #{item.settlementAmount}, #{item.isSettled},
+                #{item.creator}, NOW(), #{item.tenantId}
             )
         </foreach>
     </insert>

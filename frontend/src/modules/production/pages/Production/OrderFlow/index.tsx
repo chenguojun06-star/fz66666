@@ -688,23 +688,23 @@ const OrderFlow: React.FC = () => {
                                 render: (v: any) => v || '-'
                               },
                               {
-                                title: '需求数量',
-                                dataIndex: 'requiredQuantity',
-                                key: 'requiredQuantity',
+                                title: '采购数量',
+                                dataIndex: 'purchaseQuantity',
+                                key: 'purchaseQuantity',
                                 width: 120,
                                 align: 'right',
                                 render: (v: any, record: any) => `${Number(v || 0).toFixed(2)} ${record.unit || ''}`
                               },
                               {
-                                title: '已采购',
-                                dataIndex: 'purchasedQuantity',
-                                key: 'purchasedQuantity',
+                                title: '已到货',
+                                dataIndex: 'arrivedQuantity',
+                                key: 'arrivedQuantity',
                                 width: 120,
                                 align: 'right',
                                 render: (v: any, record: any) => {
                                   const val = Number(v || 0);
-                                  const required = Number(record.requiredQuantity || 0);
-                                  const color = val >= required ? 'var(--color-success)' : 'var(--color-warning)';
+                                  const ordered = Number(record.purchaseQuantity || 0);
+                                  const color = val >= ordered && ordered > 0 ? 'var(--color-success)' : 'var(--color-warning)';
                                   return <span style={{ color }}>{val.toFixed(2)} {record.unit || ''}</span>;
                                 }
                               },
@@ -764,7 +764,7 @@ const OrderFlow: React.FC = () => {
                             scroll={{ x: 'max-content' }}
                             summary={(pageData) => {
                               const totalAmount = pageData.reduce((sum, record: any) => {
-                                const amount = Number(record.totalAmount || 0) || (Number(record.purchasedQuantity || 0) * Number(record.unitPrice || 0));
+                                const amount = Number(record.totalAmount || 0) || (Number(record.arrivedQuantity || 0) * Number(record.unitPrice || 0));
                                 return sum + amount;
                               }, 0);
 

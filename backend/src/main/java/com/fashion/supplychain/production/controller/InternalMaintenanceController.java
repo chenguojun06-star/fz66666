@@ -239,4 +239,85 @@ public class InternalMaintenanceController {
             return Result.fail("刷新失败: " + e.getMessage());
         }
     }
+
+    /**
+     * 重新初始化工序跟踪记录（修复 scan_time/operator_name 为空的存量数据）
+     *
+     * 原因：旧版 batchInsert SQL 缺少 scan_time/operator_name 等字段，导致裁剪工序的
+     * 扫码时间和操作人未写入 DB。此接口删除并重新生成所有订单的跟踪记录。
+     *
+     * 使用方法（修复所有订单）：
+     * curl -X POST http://localhost:8088/api/internal/maintenance/reinit-process-tracking \
+     *   -H "Authorization: Bearer {token}" \
+     *   -H "Content-Type: application/json" \
+     *   -d '{}'
+     *
+     * 使用方法（修复单个订单）：
+     * curl -X POST http://localhost:8088/api/internal/maintenance/reinit-process-tracking \
+     *   -H "Authorization: Bearer {token}" \
+     *   -H "Content-Type: application/json" \
+     *   -d '{"orderId": "xxx"}'
+     *
+     * ⚠️ 注意：仅重新初始化裁剪工序的扫码时间/操作人；其他工序的扫码记录（来自小程序扫码）将被保留。
+     */
+    @PostMapping("/reinit-process-tracking")
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
+    public Result<?> reinitProcessTracking(@RequestBody(required = false) Map<String, Object> payload) {
+        String orderId = payload != null ? (String) payload.get("orderId") : null;
+        String orderNo = payload != null ? (String) payload.get("orderNo") : null;
+
+        log.warn("开始重新初始化工序跟踪记录（管理员维护操作）orderId={}, orderNo={}", orderId, orderNo);
+
+        // 单订单模式
+        if (StringUtils.hasText(orderId) || StringUtils.hasText(orderNo)) {
+            if (!StringUtils.hasText(orderId) && StringUtils.hasText(orderNo)) {
+                ProductionOrder o = productionOrderService.lambdaQuery()
+                        .eq(ProductionOrder::getOrderNo, orderNo.trim())
+                        .last("LIMIT 1").one();
+                if (o != null) orderId = o.getId();
+            }
+            if (!StringUtils.hasText(orderId)) {
+                return Result.fail("未找到订单：" + orderNo);
+            }
+            try {
+                int count = processTrackingOrchestrator.initializeProcessTracking(orderId);
+                return Result.success("重新初始化完成，生成 " + count + " 条跟踪记录");
+            } catch (Exception e) {
+                log.error("重新初始化失败: orderId={}", orderId, e);
+                return Result.fail("重新初始化失败：" + e.getMessage());
+            }
+        }
+
+        // 批量模式：处理所有有菲号的订单
+        try {
+            List<ProductionOrder> orders = productionOrderService.lambdaQuery()
+                    .eq(ProductionOrder::getDeleteFlag, 0)
+                    .gt(ProductionOrder::getCuttingBundleCount, 0)
+                    .list();
+
+            int successCount = 0, errorCount = 0, totalRecords = 0;
+            for (ProductionOrder order : orders) {
+                try {
+                    int count = processTrackingOrchestrator.initializeProcessTracking(order.getId());
+                    totalRecords += count;
+                    successCount++;
+                } catch (Exception e) {
+                    errorCount++;
+                    log.warn("订单 {} 重新初始化失败: {}", order.getOrderNo(), e.getMessage());
+                }
+            }
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("totalOrders", orders.size());
+            result.put("successCount", successCount);
+            result.put("errorCount", errorCount);
+            result.put("totalTrackingRecords", totalRecords);
+            log.warn("工序跟踪重新初始化完成：{} 个订单，生成 {} 条记录，失败 {} 个", successCount, totalRecords, errorCount);
+            return Result.success(result);
+        } catch (Exception e) {
+            log.error("批量重新初始化失败", e);
+            return Result.fail("批量初始化失败：" + e.getMessage());
+        }
+    }
 }
+

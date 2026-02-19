@@ -122,13 +122,25 @@ public class ProductionProcessTrackingOrchestrator {
             log.info("订单 {} 删除老的跟踪记录 {} 条", order.getOrderNo(), deletedCount);
         }
 
-        // 4. 查询裁剪任务，获取裁剪人和完成时间（用于填充裁剪工序的数据）
-        CuttingTask cuttingTask = null;
+        // 4. 查询该订单的所有裁剪任务，按 color+size 建索引（精确匹配当前菲号对应的任务）
+        Map<String, CuttingTask> taskBySizeKey = new HashMap<>();
+        CuttingTask anyReceivedTask = null; // 兜底：任意一个已领取任务
         try {
-            cuttingTask = cuttingTaskService.getOne(
-                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<CuttingTask>()
-                    .eq(CuttingTask::getProductionOrderId, productionOrderId)
-                    .last("limit 1"));
+            List<CuttingTask> allTasks = cuttingTaskService.lambdaQuery()
+                .eq(CuttingTask::getProductionOrderId, productionOrderId)
+                .list();
+            for (CuttingTask t : allTasks) {
+                String key = (t.getColor() == null ? "" : t.getColor().trim())
+                    + "|" + (t.getSize() == null ? "" : t.getSize().trim());
+                // 优先保留已领取（receiverName不为空）的任务
+                if (!taskBySizeKey.containsKey(key)
+                        || StringUtils.hasText(t.getReceiverName())) {
+                    taskBySizeKey.put(key, t);
+                }
+                if (StringUtils.hasText(t.getReceiverName()) && anyReceivedTask == null) {
+                    anyReceivedTask = t;
+                }
+            }
         } catch (Exception e) {
             log.warn("查询裁剪任务失败: orderId={}", productionOrderId, e);
         }
@@ -138,6 +150,11 @@ public class ProductionProcessTrackingOrchestrator {
         String currentUser = UserContext.username() != null ? UserContext.username() : "system";
 
         for (CuttingBundle bundle : bundles) {
+            // 按 color+size 查找对应裁剪任务，找不到则用任意已领取任务兜底
+            String bundleKey = (bundle.getColor() == null ? "" : bundle.getColor().trim())
+                + "|" + (bundle.getSize() == null ? "" : bundle.getSize().trim());
+            CuttingTask matchedTask = taskBySizeKey.getOrDefault(bundleKey, anyReceivedTask);
+
             for (int i = 0; i < processNodes.size(); i++) {
                 Map<String, Object> node = processNodes.get(i);
 
@@ -167,21 +184,26 @@ public class ProductionProcessTrackingOrchestrator {
                 tracking.setProcessOrder(i + 1);
                 tracking.setUnitPrice(getBigDecimalValue(node, "unitPrice", BigDecimal.ZERO));
 
-                // ✅ 裁剪工序：直接用裁剪任务的领取人和完成时间
+                // ✅ 裁剪工序：直接用与该菲号color+size匹配的裁剪任务的领取人和完成时间
                 boolean isCuttingProcess = "裁剪".equals(processName)
                     || Boolean.TRUE.equals(node.get("_isCuttingAutoNode"));
                 if (isCuttingProcess) {
                     tracking.setScanStatus("scanned");
-                    // 优先用裁剪任务的实际数据，回退到当前用户
-                    if (cuttingTask != null) {
-                        tracking.setScanTime(cuttingTask.getBundledTime() != null
-                            ? cuttingTask.getBundledTime() : LocalDateTime.now());
-                        tracking.setOperatorName(StringUtils.hasText(cuttingTask.getReceiverName())
-                            ? cuttingTask.getReceiverName() : currentUser);
-                        tracking.setOperatorId(cuttingTask.getReceiverId());
+                    if (matchedTask != null) {
+                        tracking.setScanTime(matchedTask.getBundledTime() != null
+                            ? matchedTask.getBundledTime() : LocalDateTime.now());
+                        tracking.setOperatorName(StringUtils.hasText(matchedTask.getReceiverName())
+                            ? matchedTask.getReceiverName() : currentUser);
+                        tracking.setOperatorId(matchedTask.getReceiverId());
                     } else {
                         tracking.setScanTime(LocalDateTime.now());
                         tracking.setOperatorName(currentUser);
+                    }
+                    // 计算裁剪结算金额
+                    if (tracking.getUnitPrice() != null && tracking.getQuantity() != null
+                            && tracking.getUnitPrice().compareTo(BigDecimal.ZERO) > 0) {
+                        tracking.setSettlementAmount(
+                            tracking.getUnitPrice().multiply(new BigDecimal(tracking.getQuantity())));
                     }
                 } else {
                     tracking.setScanStatus("pending");
