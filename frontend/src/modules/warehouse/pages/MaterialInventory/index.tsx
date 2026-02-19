@@ -1281,155 +1281,82 @@ const _MaterialInventory: React.FC = () => {
         onOk={handleInboundConfirm}
         size="md"
       >
-        <Form
-          form={inboundForm}
-          layout="vertical"
-          style={{ marginTop: 16 }}
-        >
+        <Form form={inboundForm} layout="vertical" style={{ marginTop: 8 }}>
+          {/* 第一行：扫码编号（全宽） */}
           <Form.Item
             label="面料编号"
             name="materialCode"
             rules={[{ required: true, message: '请输入或扫码面料编号' }]}
           >
-            <Input
-              placeholder="请扫码或手动输入面料编号"
-              prefix={<ScanOutlined />}
-              size="large"
-            />
+            <Input placeholder="请扫码或手动输入面料编号" prefix={<ScanOutlined />} size="large" />
           </Form.Item>
 
-          <Form.Item
-            label="面料名称"
-            name="materialName"
-          >
-            <Input disabled />
-          </Form.Item>
-
-          <Form.Item
-            label="物料类型"
-            name="materialType"
-          >
-            <Select disabled placeholder="请选择物料类型">
-              <Option value="面料">面料</Option>
-              <Option value="辅料">辅料</Option>
-              <Option value="配件">配件</Option>
-            </Select>
-          </Form.Item>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                label="颜色"
-                name="color"
-              >
+          {/* 第二行：名称 + 类型 + 颜色 + 规格（四欄） */}
+          <Row gutter={12}>
+            <Col span={9}>
+              <Form.Item label="面料名称" name="materialName">
+                <Input disabled placeholder="扫码后自动填充" />
+              </Form.Item>
+            </Col>
+            <Col span={5}>
+              <Form.Item label="物料类型" name="materialType">
+                <Select disabled placeholder="自动识别">
+                  <Option value="fabricA">面料A</Option>
+                  <Option value="fabricB">面料B</Option>
+                  <Option value="liningA">里料A</Option>
+                  <Option value="accessoryA">辅料A</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={5}>
+              <Form.Item label="颜色" name="color">
                 <Input placeholder="如: 蓝色" />
               </Form.Item>
             </Col>
-            <Col span={12}>
-              <Form.Item
-                label="规格"
-                name="specification"
-              >
-                <Input placeholder="如: 45cm×50m" />
+            <Col span={5}>
+              <Form.Item label="规格" name="specification">
+                <Input placeholder="如: 150cm" />
               </Form.Item>
             </Col>
           </Row>
 
-          <Form.Item name="supplierId" hidden>
-            <Input />
-          </Form.Item>
-          <Form.Item name="supplierContactPerson" hidden>
-            <Input />
-          </Form.Item>
-          <Form.Item name="supplierContactPhone" hidden>
-            <Input />
-          </Form.Item>
-          <Form.Item
-            label="供应商"
-            name="supplierName"
-          >
-            <SupplierSelect
-              placeholder="选择供应商"
-              onChange={(value, option) => {
-                if (option) {
-                  inboundForm.setFieldsValue({
-                    supplierId: option.id,
-                    supplierContactPerson: option.supplierContactPerson,
-                    supplierContactPhone: option.supplierContactPhone,
-                  });
-                }
-              }}
-            />
-          </Form.Item>
-
-          {/* 面料属性（仅面料显示） */}
-          <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => prevValues.materialType !== currentValues.materialType}>
-            {({ getFieldValue }) => {
-              const materialType = getFieldValue('materialType');
-              if (getMaterialTypeCategory(materialType) !== 'fabric') return null;
-              return (
-                <>
-                  <div style={{
-                    fontSize: 'var(--font-size-base)',
-                    fontWeight: 600,
-                    margin: '16px 0 8px',
-                    color: 'var(--primary-color)'
-                  }}>
-                    🧵 面料属性
-                  </div>
-                  <Row gutter={16}>
-                    <Col span={8}>
-                      <Form.Item
-                        label="幅宽"
-                        name="fabricWidth"
-                      >
-                        <Input placeholder="如: 150cm" />
-                      </Form.Item>
-                    </Col>
-                    <Col span={8}>
-                      <Form.Item
-                        label="克重"
-                        name="fabricWeight"
-                      >
-                        <Input placeholder="如: 200g/m²" />
-                      </Form.Item>
-                    </Col>
-                    <Col span={8}>
-                      <Form.Item
-                        label="成分"
-                        name="fabricComposition"
-                      >
-                        <Input placeholder="如: 100%棉" />
-                      </Form.Item>
-                    </Col>
-                  </Row>
-                </>
-              );
-            }}
-          </Form.Item>
-
-          <Row gutter={16}>
-            <Col span={12}>
+          {/* 第三行：供应商 + 入库数量 + 仓库库位（三欄） */}
+          <Form.Item name="supplierId" hidden><Input /></Form.Item>
+          <Form.Item name="supplierContactPerson" hidden><Input /></Form.Item>
+          <Form.Item name="supplierContactPhone" hidden><Input /></Form.Item>
+          <Row gutter={12}>
+            <Col span={10}>
+              <Form.Item label="供应商" name="supplierName">
+                <SupplierSelect
+                  placeholder="选择供应商"
+                  onChange={(value, option) => {
+                    if (option) {
+                      inboundForm.setFieldsValue({
+                        supplierId: option.id,
+                        supplierContactPerson: option.supplierContactPerson,
+                        supplierContactPhone: option.supplierContactPhone,
+                      });
+                    }
+                  }}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={7}>
               <Form.Item
                 label="入库数量"
                 name="quantity"
                 rules={[{ required: true, message: '请输入入库数量' }]}
               >
-                <InputNumber
-                  min={1}
-                  style={{ width: '100%' }}
-                  placeholder="请输入数量"
-                  size="large"
-                />
+                <InputNumber min={1} style={{ width: '100%' }} placeholder="数量" />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col span={7}>
               <Form.Item
                 label="仓库库位"
                 name="warehouseLocation"
                 rules={[{ required: true, message: '请选择仓库库位' }]}
               >
-                <Select size="large" placeholder="请选择库位">
+                <Select placeholder="选择库位">
                   <Option value="A-01-01">A-01-01</Option>
                   <Option value="A-01-02">A-01-02</Option>
                   <Option value="A-02-01">A-02-01</Option>
@@ -1440,11 +1367,38 @@ const _MaterialInventory: React.FC = () => {
             </Col>
           </Row>
 
-          <Form.Item
-            label="备注"
-            name="remark"
-          >
-            <Input.TextArea rows={3} placeholder="请输入备注信息" />
+          {/* 面料属性（三欄，仅面料显示） */}
+          <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => prevValues.materialType !== currentValues.materialType}>
+            {({ getFieldValue }) => {
+              const materialType = getFieldValue('materialType');
+              if (getMaterialTypeCategory(materialType) !== 'fabric') return null;
+              return (
+                <Row gutter={12} style={{ background: '#f0f7ff', borderRadius: 6, padding: '8px 6px 0', marginBottom: 12 }}>
+                  <Col span={24} style={{ marginBottom: 6 }}>
+                    <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--primary-color)' }}>🧵 面料属性</span>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item label="幅宽" name="fabricWidth">
+                      <Input placeholder="如: 150cm" />
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item label="克重" name="fabricWeight">
+                      <Input placeholder="如: 200g/m²" />
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item label="成分" name="fabricComposition">
+                      <Input placeholder="如: 100%棉" />
+                    </Form.Item>
+                  </Col>
+                </Row>
+              );
+            }}
+          </Form.Item>
+
+          <Form.Item label="备注" name="remark">
+            <Input.TextArea rows={2} placeholder="请输入备注信息" />
           </Form.Item>
         </Form>
       </StandardModal>
@@ -1469,67 +1423,68 @@ const _MaterialInventory: React.FC = () => {
         cancelText="取消"
       >
         {outboundModal.data && (
-          <Space orientation="vertical" style={{ width: '100%' }} size="large">
-            {/* 基础信息卡片 */}
+          <Space direction="vertical" style={{ width: '100%' }} size={12}>
+            {/* 基础信息卡片 - 左右两栏 */}
             <Card size="small" style={{ background: 'var(--color-bg-subtle)' }}>
-              <Space orientation="vertical" size={8} style={{ width: '100%' }}>
-                <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)' }}>
-                  <span style={{ color: 'var(--neutral-text-disabled)', width: '80px', textAlign: 'right', flexShrink: 0 }}>物料编号：</span>
-                  <span style={{ fontWeight: 600, marginLeft: '8px' }}>{outboundModal.data.materialCode}</span>
-                </div>
-                <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)' }}>
-                  <span style={{ color: 'var(--neutral-text-disabled)', width: '80px', textAlign: 'right', flexShrink: 0 }}>物料名称：</span>
-                  <span style={{ fontWeight: 600, marginLeft: '8px' }}>{outboundModal.data.materialName}</span>
-                </div>
-                <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)', alignItems: 'center' }}>
-                  <span style={{ color: 'var(--neutral-text-disabled)', width: '80px', textAlign: 'right', flexShrink: 0 }}>物料类型：</span>
-                  <Tag color={getMaterialTypeCategory(outboundModal.data.materialType) === 'fabric' ? 'blue' : getMaterialTypeCategory(outboundModal.data.materialType) === 'lining' ? 'cyan' : 'green'} style={{ margin: '0 0 0 8px' }}>{getMaterialTypeLabel(outboundModal.data.materialType)}</Tag>
-                </div>
-                <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)' }}>
-                  <span style={{ color: 'var(--neutral-text-disabled)', width: '80px', textAlign: 'right', flexShrink: 0 }}>颜色：</span>
-                  <span style={{ fontWeight: 600, marginLeft: '8px' }}>{outboundModal.data.color || '-'}</span>
-                </div>
-                <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)' }}>
-                  <span style={{ color: 'var(--neutral-text-disabled)', width: '80px', textAlign: 'right', flexShrink: 0 }}>规格：</span>
-                  <span style={{ fontWeight: 600, marginLeft: '8px' }}>{outboundModal.data.specification || '-'}</span>
-                </div>
-                <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)' }}>
-                  <span style={{ color: 'var(--neutral-text-disabled)', width: '80px', textAlign: 'right', flexShrink: 0 }}>供应商：</span>
-                  <span style={{ fontWeight: 600, marginLeft: '8px' }}>{outboundModal.data.supplierName || '-'}</span>
-                </div>
-              </Space>
-
-              {/* 面料属性（仅面料显示） */}
-              {getMaterialTypeCategory(outboundModal.data.materialType) === 'fabric' && (
-                <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #e0e0e0' }}>
-                  <div style={{
-                    fontSize: 'var(--font-size-sm)',
-                    fontWeight: 600,
-                    marginBottom: 8,
-                    color: 'var(--primary-color)'
-                  }}>
-                    🧵 面料属性
+              <Row gutter={0}>
+                {/* 左栏：基本信息 */}
+                <Col
+                  span={getMaterialTypeCategory(outboundModal.data.materialType) === 'fabric' ? 13 : 24}
+                  style={getMaterialTypeCategory(outboundModal.data.materialType) === 'fabric' ? { borderRight: '1px solid #e8e8e8', paddingRight: 16 } : {}}
+                >
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px', alignItems: 'start' }}>
+                    <div style={{ fontSize: 'var(--font-size-sm)', gridColumn: '1 / -1' }}>
+                      <span style={{ color: 'var(--neutral-text-disabled)' }}>物料名称：</span>
+                      <span style={{ fontWeight: 600 }}>{outboundModal.data.materialName}</span>
+                    </div>
+                    <div style={{ fontSize: 'var(--font-size-sm)' }}>
+                      <span style={{ color: 'var(--neutral-text-disabled)' }}>物料编号：</span>
+                      <span style={{ fontWeight: 600 }}>{outboundModal.data.materialCode}</span>
+                    </div>
+                    <div style={{ fontSize: 'var(--font-size-sm)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ color: 'var(--neutral-text-disabled)' }}>类型：</span>
+                      <Tag color={getMaterialTypeCategory(outboundModal.data.materialType) === 'fabric' ? 'blue' : getMaterialTypeCategory(outboundModal.data.materialType) === 'lining' ? 'cyan' : 'green'} style={{ margin: 0 }}>{getMaterialTypeLabel(outboundModal.data.materialType)}</Tag>
+                    </div>
+                    <div style={{ fontSize: 'var(--font-size-sm)' }}>
+                      <span style={{ color: 'var(--neutral-text-disabled)' }}>颜色：</span>
+                      <span style={{ fontWeight: 600 }}>{outboundModal.data.color || '-'}</span>
+                    </div>
+                    <div style={{ fontSize: 'var(--font-size-sm)' }}>
+                      <span style={{ color: 'var(--neutral-text-disabled)' }}>规格：</span>
+                      <span style={{ fontWeight: 600 }}>{outboundModal.data.specification || '-'}</span>
+                    </div>
+                    <div style={{ fontSize: 'var(--font-size-sm)', gridColumn: '1 / -1' }}>
+                      <span style={{ color: 'var(--neutral-text-disabled)' }}>供应商：</span>
+                      <span style={{ fontWeight: 600 }}>{outboundModal.data.supplierName || '-'}</span>
+                    </div>
                   </div>
-                  <Space orientation="vertical" size={8} style={{ width: '100%' }}>
-                    <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)' }}>
-                      <span style={{ color: 'var(--neutral-text-disabled)', width: '80px', textAlign: 'right', flexShrink: 0 }}>幅宽：</span>
-                      <span style={{ fontWeight: 600, marginLeft: '8px', color: 'var(--primary-color)' }}>{outboundModal.data.fabricWidth || '-'}</span>
+                </Col>
+
+                {/* 右栏：面料属性（仅面料显示） */}
+                {getMaterialTypeCategory(outboundModal.data.materialType) === 'fabric' && (
+                  <Col span={11} style={{ paddingLeft: 16 }}>
+                    <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--primary-color)', marginBottom: 10 }}>🧵 面料属性</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px' }}>
+                      <div style={{ fontSize: 'var(--font-size-sm)' }}>
+                        <span style={{ color: 'var(--neutral-text-disabled)' }}>幅宽：</span>
+                        <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{outboundModal.data.fabricWidth || '-'}</span>
+                      </div>
+                      <div style={{ fontSize: 'var(--font-size-sm)' }}>
+                        <span style={{ color: 'var(--neutral-text-disabled)' }}>克重：</span>
+                        <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{outboundModal.data.fabricWeight || '-'}</span>
+                      </div>
+                      <div style={{ fontSize: 'var(--font-size-sm)' }}>
+                        <span style={{ color: 'var(--neutral-text-disabled)' }}>成分：</span>
+                        <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{outboundModal.data.fabricComposition || '-'}</span>
+                      </div>
+                      <div style={{ fontSize: 'var(--font-size-sm)' }}>
+                        <span style={{ color: 'var(--neutral-text-disabled)' }}>单位：</span>
+                        <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{outboundModal.data.unit || '-'}</span>
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)' }}>
-                      <span style={{ color: 'var(--neutral-text-disabled)', width: '80px', textAlign: 'right', flexShrink: 0 }}>克重：</span>
-                      <span style={{ fontWeight: 600, marginLeft: '8px', color: 'var(--primary-color)' }}>{outboundModal.data.fabricWeight || '-'}</span>
-                    </div>
-                    <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)' }}>
-                      <span style={{ color: 'var(--neutral-text-disabled)', width: '80px', textAlign: 'right', flexShrink: 0 }}>成分：</span>
-                      <span style={{ fontWeight: 600, marginLeft: '8px', color: 'var(--primary-color)' }}>{outboundModal.data.fabricComposition || '-'}</span>
-                    </div>
-                    <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)' }}>
-                      <span style={{ color: 'var(--neutral-text-disabled)', width: '80px', textAlign: 'right', flexShrink: 0 }}>单位：</span>
-                      <span style={{ fontWeight: 600, marginLeft: '8px', color: 'var(--primary-color)' }}>{outboundModal.data.unit || '-'}</span>
-                    </div>
-                  </Space>
-                </div>
-              )}
+                  </Col>
+                )}
+              </Row>
             </Card>
 
             {/* 批次明细表格 */}
