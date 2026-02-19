@@ -117,6 +117,13 @@ public class ProductionOrderQueryService {
         // flowStageFillHelper.fillFlowStageFields(resultPage.getRecords());
         // 改用轻量级完成率填充：直接从已填充字段（materialArrivalRate/cuttingQuantity/warehousingQualifiedQuantity）计算
         flowStageFillHelper.fillCompletionRatesLight(resultPage.getRecords());
+        // 轻量填充下单人：fillFlowStageFields 已注释，createdByName 是数据库直接字段，直接复用即可
+        resultPage.getRecords().forEach(o -> {
+            if (o != null && (!org.springframework.util.StringUtils.hasText(o.getOrderOperatorName()))
+                    && org.springframework.util.StringUtils.hasText(o.getCreatedByName())) {
+                o.setOrderOperatorName(o.getCreatedByName());
+            }
+        });
         orderQualityFillService.fillQualityStats(resultPage.getRecords());
         progressFillHelper.fixProductionProgressByCompletedQuantity(resultPage.getRecords());
         priceFillHelper.fillFactoryUnitPrice(resultPage.getRecords());

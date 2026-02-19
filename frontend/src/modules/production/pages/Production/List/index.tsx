@@ -266,8 +266,8 @@ const ProductionList: React.FC = () => {
     },
     {
       title: '公司',
-      dataIndex: 'companyName',
-      key: 'companyName',
+      dataIndex: 'company',
+      key: 'company',
       width: 120,
       ellipsis: true,
       render: (v: any) => v || '-',
