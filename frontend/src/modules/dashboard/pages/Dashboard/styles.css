@@ -718,6 +718,8 @@
 
 .dashboard-table-right {
   /* 不再继承100%高度，由内容自然撑高 */
+  min-width: 0; /* 关键：grid子项默认min-width=auto会溢出 */
+  overflow: hidden; /* 防止表格溢出容器 */
 }
 
 .chart-item {

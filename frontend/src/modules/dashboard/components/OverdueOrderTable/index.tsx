@@ -181,6 +181,7 @@ const OverdueOrderTable: React.FC = () => {
           columns={columns}
           dataSource={dataSource}
           rowKey="id"
+          scroll={{ x: '100%' }}
           pagination={{
             pageSize: 10,
             showSizeChanger: false,
