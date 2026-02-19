@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { App, AutoComplete, Button, Card, Checkbox, Form, Input, InputNumber, Select, Space, Tag, Tooltip, Typography } from 'antd';
+import { App, AutoComplete, Button, Card, Checkbox, Form, Image, Input, InputNumber, Select, Space, Tag, Tooltip, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { DeleteOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
@@ -981,6 +981,40 @@ const TemplateCenter: React.FC = () => {
   };
 
   const columns: ColumnsType<TemplateLibraryRecord> = [
+    {
+      title: '图片',
+      dataIndex: 'styleCoverUrl',
+      key: 'styleCoverUrl',
+      width: 72,
+      align: 'center' as const,
+      render: (url: string) =>
+        url ? (
+          <Image
+            src={url}
+            width={50}
+            height={50}
+            style={{ objectFit: 'cover', borderRadius: 4 }}
+            preview={{ src: url }}
+          />
+        ) : (
+          <div
+            style={{
+              width: 50,
+              height: 50,
+              margin: '0 auto',
+              background: '#f5f5f5',
+              borderRadius: 4,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#bbb',
+              fontSize: 11,
+            }}
+          >
+            无图
+          </div>
+        ),
+    },
     {
       title: '名称',
       dataIndex: 'templateName',

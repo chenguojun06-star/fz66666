@@ -59,7 +59,31 @@ public class TemplateLibraryOrchestrator {
     private ApplicationEventPublisher eventPublisher;
 
     public IPage<TemplateLibrary> list(Map<String, Object> params) {
-        return templateLibraryService.queryPage(params);
+        IPage<TemplateLibrary> pageResult = templateLibraryService.queryPage(params);
+        // 补充来源款式封面图
+        List<String> styleNos = pageResult.getRecords().stream()
+            .map(TemplateLibrary::getSourceStyleNo)
+            .filter(sn -> sn != null && !sn.isBlank())
+            .distinct()
+            .collect(java.util.stream.Collectors.toList());
+        if (!styleNos.isEmpty()) {
+            List<StyleInfo> styles = styleInfoService.list(
+                new LambdaQueryWrapper<StyleInfo>().in(StyleInfo::getStyleNo, styleNos)
+            );
+            Map<String, String> coverMap = styles.stream()
+                .filter(s -> StringUtils.hasText(s.getStyleNo()))
+                .collect(java.util.stream.Collectors.toMap(
+                    StyleInfo::getStyleNo,
+                    s -> s.getCover() != null ? s.getCover() : "",
+                    (a, b) -> a));
+            pageResult.getRecords().forEach(r -> {
+                if (StringUtils.hasText(r.getSourceStyleNo())) {
+                    String cover = coverMap.get(r.getSourceStyleNo());
+                    r.setStyleCoverUrl(StringUtils.hasText(cover) ? cover : null);
+                }
+            });
+        }
+        return pageResult;
     }
 
     public List<TemplateLibrary> listByType(String templateType) {

@@ -162,4 +162,5 @@ export interface TemplateLibrary {
   createTime?: string;
   updateTime?: string;
   operatorName?: string;
+  styleCoverUrl?: string | null;
 }

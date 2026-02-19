@@ -41,4 +41,8 @@ public class TemplateLibrary {
 
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
+
+    /** 来源款式封面图（非DB字段，列表查询时动态填充）*/
+    @TableField(exist = false)
+    private String styleCoverUrl;
 }
