@@ -1,0 +1,112 @@
+<view class="container">
+
+  <!-- 顶部标题 -->
+  <view class="header">
+    <text class="header-title">面辅料料卷发料/退回</text>
+    <text class="header-sub">扫描箱/卷上的 MR 开头二维码</text>
+  </view>
+
+  <!-- 扫码按钮（首次进入没有 rollCode 时显示） -->
+  <view wx:if="{{!rollCode}}" class="scan-btn-wrap">
+    <view class="scan-btn" bindtap="onScanTap">
+      <text class="scan-icon">📷</text>
+      <text class="scan-label">点击扫码</text>
+    </view>
+    <text class="scan-hint">请扫料卷/箱上的 MR 开头二维码</text>
+  </view>
+
+  <!-- 已有rollCode的情况 -->
+  <view wx:else>
+
+    <!-- 料卷编号 -->
+    <view class="roll-code-bar">
+      <text class="roll-code-label">料卷编号</text>
+      <text class="roll-code-value">{{rollCode}}</text>
+      <view class="btn-rescan" bindtap="onScanTap">重新扫码</view>
+    </view>
+
+    <!-- 加载中 -->
+    <view wx:if="{{loading}}" class="loading-wrap">
+      <text class="loading-text">查询中...</text>
+    </view>
+
+    <!-- 错误信息 -->
+    <view wx:elif="{{errorMsg}}" class="error-card">
+      <text class="error-icon">⚠️</text>
+      <text class="error-msg">{{errorMsg}}</text>
+      <view class="btn-retry" bindtap="onScanTap">重新扫码</view>
+    </view>
+
+    <!-- 成功信息 -->
+    <view wx:if="{{successMsg}}" class="success-banner">
+      <text class="success-icon">✅</text>
+      <text class="success-text">{{successMsg}}</text>
+    </view>
+
+    <!-- 料卷信息卡片 -->
+    <view wx:if="{{rollInfo}}" class="info-card">
+      <view class="info-row">
+        <text class="info-label">物料</text>
+        <text class="info-value">{{rollInfo.materialName}}</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">编码</text>
+        <text class="info-value">{{rollInfo.materialCode}}</text>
+      </view>
+      <view wx:if="{{rollInfo.color}}" class="info-row">
+        <text class="info-label">颜色</text>
+        <text class="info-value">{{rollInfo.color}}</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">数量</text>
+        <text class="info-value bold">{{rollInfo.quantity}} {{rollInfo.unit}}</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">库位</text>
+        <text class="info-value">{{rollInfo.warehouseLocation}}</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">入库单</text>
+        <text class="info-value">{{rollInfo.inboundNo || '-'}}</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">当前状态</text>
+        <view class="status-tag {{rollInfo.currentStatus === 'IN_STOCK' ? 'tag-green' : 'tag-orange'}}">
+          {{rollInfo.currentStatus === 'IN_STOCK' ? '在库' : (rollInfo.currentStatus === 'ISSUED' ? '已发料' : rollInfo.currentStatus)}}
+        </view>
+      </view>
+    </view>
+
+    <!-- 操作区（仅在查到料卷信息后显示） -->
+    <view wx:if="{{rollInfo && !successMsg}}" class="action-area">
+
+      <!-- 关联裁剪单号（可选） -->
+      <view wx:if="{{rollInfo.currentStatus === 'IN_STOCK'}}" class="input-row">
+        <text class="input-label">关联裁剪单（可选）</text>
+        <input
+          class="input-field"
+          placeholder="输入裁剪单号，如 CO20260219001"
+          value="{{cuttingOrderNo}}"
+          bindinput="onCuttingOrderInput"
+        />
+      </view>
+
+      <!-- 按钮 -->
+      <view wx:if="{{rollInfo.currentStatus === 'IN_STOCK'}}" class="btn-issue {{submitting ? 'btn-disabled' : ''}}" bindtap="onIssueTap">
+        {{submitting ? '处理中...' : '✅ 确认发料出库'}}
+      </view>
+
+      <view wx:elif="{{rollInfo.currentStatus === 'ISSUED'}}" class="btn-return {{submitting ? 'btn-disabled' : ''}}" bindtap="onReturnTap">
+        {{submitting ? '处理中...' : '↩️ 退回入库'}}
+      </view>
+
+    </view>
+
+    <!-- 扫下一个 -->
+    <view wx:if="{{rollInfo}}" class="btn-next" bindtap="onScanNextTap">
+      扫下一个料卷
+    </view>
+
+  </view>
+
+</view>

@@ -140,6 +140,28 @@ class QRCodeParser {
       return { success: true, message: '解析成功 (URL)', data: urlResult };
     }
 
+    // 2.5 面辅料料卷/箱二维码 MR + YYYYMMDD + 5位序号（共15字符）
+    if (/^MR\d{13}$/.test(parseTarget)) {
+      return {
+        success: true,
+        message: '解析成功 (面辅料料卷)',
+        data: {
+          scanCode: rawScanCode,
+          type: 'material_roll',
+          rollCode: parseTarget,
+          orderNo: '',
+          styleNo: '',
+          color: '',
+          size: '',
+          quantity: 0,
+          bundleNo: '',
+          skuNo: '',
+          isOrderQR: false,
+          isMaterialRoll: true,
+        },
+      };
+    }
+
     // 3. 菲号格式（🔧 修复：使用原始完整扫码内容作为 scanCode）
     const bundleResult = BundleCodeParser.parse(parseTarget);
     if (bundleResult) {

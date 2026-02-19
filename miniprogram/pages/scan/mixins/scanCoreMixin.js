@@ -281,7 +281,16 @@ const scanCoreMixin = Behavior({
 
       this.setData({ loading: true });
 
-      // 2. 特殊模式处理：库存查询
+      // 2. 特殊模式处理：面辅料料卷（MR开头）→ 跳转料卷扫码页
+      if (/^MR\d{13}$/.test(codeStr)) {
+        this.setData({ loading: false });
+        wx.navigateTo({
+          url: `/pages/warehouse/material/scan/index?rollCode=${encodeURIComponent(codeStr)}`,
+        });
+        return;
+      }
+
+      // 3. 特殊模式处理：库存查询
       if (scanType === 'stock') {
         await this.handleStockQuery(codeStr);
         return;

@@ -1,0 +1,109 @@
+.container {
+  padding: 24rpx;
+  background: #f5f7fa;
+  min-height: 100vh;
+}
+
+/* 顶部标题 */
+.header { margin-bottom: 24rpx; }
+.header-title { font-size: 36rpx; font-weight: bold; color: #222; display: block; }
+.header-sub { font-size: 26rpx; color: #888; margin-top: 6rpx; display: block; }
+
+/* 扫码按钮（首次进入没有rollCode时） */
+.scan-btn-wrap { display: flex; flex-direction: column; align-items: center; margin-top: 80rpx; }
+.scan-btn {
+  width: 240rpx; height: 240rpx;
+  background: #fff; border-radius: 50%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.12);
+  border: 4rpx solid #1677ff;
+}
+.scan-icon { font-size: 80rpx; }
+.scan-label { font-size: 28rpx; color: #1677ff; margin-top: 8rpx; font-weight: bold; }
+.scan-hint { margin-top: 24rpx; font-size: 24rpx; color: #aaa; }
+
+/* 料卷编号栏 */
+.roll-code-bar {
+  background: #fff; border-radius: 16rpx; padding: 20rpx 24rpx;
+  display: flex; align-items: center; margin-bottom: 16rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.06);
+}
+.roll-code-label { font-size: 24rpx; color: #888; margin-right: 12rpx; white-space: nowrap; }
+.roll-code-value { font-size: 28rpx; font-weight: bold; color: #222; flex: 1; font-family: monospace; }
+.btn-rescan {
+  font-size: 24rpx; color: #1677ff;
+  border: 1rpx solid #1677ff; border-radius: 20rpx;
+  padding: 6rpx 18rpx; white-space: nowrap;
+}
+
+/* 加载中 */
+.loading-wrap { padding: 40rpx; text-align: center; }
+.loading-text { color: #888; font-size: 28rpx; }
+
+/* 错误 */
+.error-card {
+  background: #fff1f0; border: 1rpx solid #ffa39e; border-radius: 16rpx;
+  padding: 24rpx; display: flex; flex-direction: column; align-items: center;
+  margin-bottom: 16rpx;
+}
+.error-icon { font-size: 48rpx; }
+.error-msg { font-size: 28rpx; color: #cf1322; margin-top: 8rpx; text-align: center; }
+.btn-retry {
+  margin-top: 16rpx; padding: 10rpx 32rpx; background: #ff4d4f; color: #fff;
+  border-radius: 20rpx; font-size: 26rpx;
+}
+
+/* 成功横幅 */
+.success-banner {
+  background: #f6ffed; border: 1rpx solid #b7eb8f; border-radius: 16rpx;
+  padding: 20rpx; display: flex; align-items: center; margin-bottom: 16rpx;
+}
+.success-icon { font-size: 40rpx; margin-right: 12rpx; }
+.success-text { font-size: 28rpx; color: #389e0d; flex: 1; }
+
+/* 料卷信息卡片 */
+.info-card {
+  background: #fff; border-radius: 16rpx; padding: 24rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.06); margin-bottom: 20rpx;
+}
+.info-row { display: flex; align-items: center; padding: 12rpx 0; border-bottom: 1rpx solid #f5f5f5; }
+.info-row:last-child { border-bottom: none; }
+.info-label { font-size: 26rpx; color: #888; width: 120rpx; flex-shrink: 0; }
+.info-value { font-size: 28rpx; color: #333; flex: 1; }
+.info-value.bold { font-weight: bold; color: #1677ff; font-size: 32rpx; }
+
+/* 状态标签 */
+.status-tag { padding: 4rpx 16rpx; border-radius: 20rpx; font-size: 24rpx; }
+.tag-green { background: #f6ffed; color: #389e0d; border: 1rpx solid #b7eb8f; }
+.tag-orange { background: #fff7e6; color: #d46b08; border: 1rpx solid #ffd591; }
+
+/* 操作区 */
+.action-area { margin-bottom: 20rpx; }
+
+/* 裁剪单输入 */
+.input-row { margin-bottom: 16rpx; }
+.input-label { font-size: 26rpx; color: #666; display: block; margin-bottom: 8rpx; }
+.input-field {
+  background: #fff; border: 1rpx solid #d9d9d9; border-radius: 12rpx;
+  padding: 16rpx 20rpx; font-size: 28rpx; width: 100%; box-sizing: border-box;
+}
+
+/* 发料按钮 */
+.btn-issue {
+  background: #1677ff; color: #fff; border-radius: 16rpx;
+  padding: 28rpx; text-align: center; font-size: 32rpx; font-weight: bold;
+  box-shadow: 0 4rpx 12rpx rgba(22,119,255,0.3);
+}
+.btn-return {
+  background: #fa8c16; color: #fff; border-radius: 16rpx;
+  padding: 28rpx; text-align: center; font-size: 32rpx; font-weight: bold;
+  box-shadow: 0 4rpx 12rpx rgba(250,140,22,0.3);
+}
+.btn-disabled { opacity: 0.6; }
+
+/* 扫下一个 */
+.btn-next {
+  background: #fff; border: 1rpx solid #d9d9d9; border-radius: 16rpx;
+  padding: 24rpx; text-align: center; font-size: 28rpx; color: #666;
+  margin-top: 12rpx;
+}

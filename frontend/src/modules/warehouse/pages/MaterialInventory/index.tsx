@@ -37,6 +37,7 @@ import './MaterialInventory.css';
 import StandardModal from '@/components/common/StandardModal';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
+import QRCode from 'qrcode';
 
 const { Option } = Select;
 
@@ -103,6 +104,9 @@ const _MaterialInventory: React.FC = () => {
 
   const [inboundForm] = Form.useForm();
   const [outboundForm] = Form.useForm();
+  const [rollForm] = Form.useForm();
+  const rollModal = useModal<{ inboundId: string; materialCode: string; materialName: string }>();
+  const [generatingRolls, setGeneratingRolls] = useState(false);
   const [batchDetails, setBatchDetails] = useState<MaterialBatchDetail[]>([]);
 
   const [alertLoading, setAlertLoading] = useState(false);
@@ -447,16 +451,80 @@ const _MaterialInventory: React.FC = () => {
       });
 
       if (response.data.code === 200) {
-        message.success(`入库成功！入库单号：${response.data.data.inboundNo}`);
+        const { inboundNo, inboundId } = response.data.data;
         inboundModal.close();
         inboundForm.resetFields();
         // 刷新库存列表
         fetchData();
+        // 提示是否立即生成料卷标签
+        const mat = inboundModal.data;
+        rollForm.setFieldsValue({ rollCount: 1, quantityPerRoll: values.quantity, unit: '件' });
+        rollModal.open({ inboundId: inboundId || '', materialCode: mat?.materialCode || values.materialCode || '', materialName: mat?.materialName || values.materialName || '' });
+        message.success(`入库成功！单号：${inboundNo}，请在弹窗中生成料卷标签`);
       } else {
         message.error(response.data.message || '入库失败');
       }
     } catch (error: any) {
       message.error(error.response?.data?.message || error.message || '入库操作失败，请重试');
+    }
+  };
+
+  // ---- 料卷标签 ----
+  const printRollQrLabels = async (rolls: any[]) => {
+    const items = await Promise.all(
+      rolls.map(async (r) => {
+        const qrUrl = await QRCode.toDataURL(r.rollCode, { width: 200, margin: 1 });
+        return { ...r, qrUrl };
+      })
+    );
+    const html = `<!DOCTYPE html><html><head><title>料卷二维码标签</title><style>
+      body{font-family:sans-serif;padding:10px}
+      .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+      .card{border:1px solid #ddd;border-radius:6px;padding:8px;text-align:center;break-inside:avoid}
+      .code{font-size:11px;color:#666;margin:2px 0}
+      .name{font-size:12px;font-weight:bold;margin:2px 0}
+      .qty{font-size:12px;color:#333;margin:2px 0}
+      img{width:140px;height:140px}
+      @media print{body{padding:0}.grid{gap:8px}}
+    </style></head><body>
+      <h2 style="text-align:center;margin-bottom:12px">面辅料料卷二维码标签</h2>
+      <div class="grid">${items.map(r => `
+        <div class="card">
+          <img src="${r.qrUrl}" />
+          <div class="code">${r.rollCode}</div>
+          <div class="name">${r.materialName}</div>
+          <div class="qty">${r.quantity} ${r.unit}</div>
+          <div class="code">${r.warehouseLocation}</div>
+        </div>`).join('')}
+      </div>
+    </body></html>`;
+    const w = window.open('', '_blank', 'width=900,height=700');
+    if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 600); }
+  };
+
+  const handleGenerateRollLabels = async () => {
+    try {
+      setGeneratingRolls(true);
+      const values = await rollForm.validateFields();
+      const { inboundId, materialCode, materialName } = rollModal.data!;
+      const res = await api.post('/production/material/roll/generate', {
+        inboundId: inboundId || undefined,
+        rollCount: values.rollCount,
+        quantityPerRoll: values.quantityPerRoll,
+        unit: values.unit,
+      });
+      if (res?.code === 200 && Array.isArray(res.data)) {
+        rollModal.close();
+        rollForm.resetFields();
+        void printRollQrLabels(res.data);
+        message.success(`已生成 ${values.rollCount} 张料卷标签！`);
+      } else {
+        message.error(res?.message || '生成失败');
+      }
+    } catch (e: any) {
+      message.error(e.message || '操作失败');
+    } finally {
+      setGeneratingRolls(false);
     }
   };
 
@@ -829,6 +897,14 @@ const _MaterialInventory: React.FC = () => {
               label: '入库',
               primary: true,
               onClick: () => handleInbound(record)
+            },
+            {
+              key: 'rollLabel',
+              label: '料卷标签',
+              onClick: () => {
+                rollForm.setFieldsValue({ rollCount: 1, quantityPerRoll: undefined, unit: '件' });
+                rollModal.open({ inboundId: '', materialCode: record.materialCode, materialName: record.materialName });
+              }
             },
             {
               key: 'outbound',
@@ -1579,6 +1655,62 @@ const _MaterialInventory: React.FC = () => {
               💡 提示：请在"出库数量"列输入需要出库的数量，系统将自动汇总。出库数量不能超过可用库存。
             </div>
           </Space>
+        )}
+      </StandardModal>
+
+      {/* 料卷/箱标签生成弹窗 */}
+      <StandardModal
+        title="生成料卷/箱二维码标签"
+        open={rollModal.visible}
+        onCancel={rollModal.close}
+        size="sm"
+        footer={[
+          <Button key="cancel" onClick={rollModal.close}>取消</Button>,
+          <Button
+            key="ok"
+            type="primary"
+            loading={generatingRolls}
+            onClick={handleGenerateRollLabels}
+          >
+            生成并打印
+          </Button>,
+        ]}
+      >
+        {rollModal.data && (
+          <div style={{ padding: '8px 0' }}>
+            <p style={{ marginBottom: 16, color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)' }}>
+              物料：<strong>{rollModal.data.materialName}</strong>（{rollModal.data.materialCode}）
+            </p>
+            <Form form={rollForm} layout="vertical">
+              <Form.Item
+                name="rollCount"
+                label="共几卷/箱（张标签数）"
+                rules={[{ required: true, message: '请填写卷数' }]}
+              >
+                <InputNumber min={1} max={200} style={{ width: '100%' }} placeholder="例如：5" />
+              </Form.Item>
+              <Form.Item
+                name="quantityPerRoll"
+                label="每卷/箱数量"
+                rules={[{ required: true, message: '请填写每卷数量' }]}
+              >
+                <InputNumber min={0.01} style={{ width: '100%' }} placeholder="例如：30" />
+              </Form.Item>
+              <Form.Item name="unit" label="单位" initialValue="件">
+                <Select>
+                  <Select.Option value="件">件</Select.Option>
+                  <Select.Option value="米">米</Select.Option>
+                  <Select.Option value="kg">kg</Select.Option>
+                  <Select.Option value="码">码</Select.Option>
+                  <Select.Option value="卷">卷</Select.Option>
+                  <Select.Option value="箱">箱</Select.Option>
+                </Select>
+              </Form.Item>
+            </Form>
+            <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginTop: 8 }}>
+              生成后会弹出打印窗口，每张标签含二维码。仓管扫码（MR开头）即可确认发料。
+            </p>
+          </div>
         )}
       </StandardModal>
     </Layout>

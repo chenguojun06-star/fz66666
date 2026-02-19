@@ -16,6 +16,7 @@
     "pages/warehouse/finished/list/index",
     "pages/warehouse/material/alerts/index",
     "pages/warehouse/material/detail-page/index",
+    "pages/warehouse/material/scan/index",
     "pages/warehouse/order-ranking/index"
   ],
   "usingComponents": {

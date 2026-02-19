@@ -309,12 +309,36 @@ const common = {
   },
 };
 
+// 面辅料料卷 API
+const materialRoll = {
+  /**
+   * 扫码处理（查询/发料/退回）
+   * action: 'query' | 'issue' | 'return'
+   */
+  scan(rollCode, action, extra) {
+    return ok('/api/production/material/roll/scan', 'POST', {
+      rollCode,
+      action: action || 'query',
+      cuttingOrderNo: (extra && extra.cuttingOrderNo) || undefined,
+      operatorId: (extra && extra.operatorId) || undefined,
+      operatorName: (extra && extra.operatorName) || undefined,
+    });
+  },
+  /**
+   * 查询入库单下所有料卷
+   */
+  listByInbound(inboundId) {
+    return ok(`/api/production/material/roll/by-inbound/${encodeURIComponent(inboundId)}`, 'GET', {});
+  },
+};
+
 const api = {
   dashboard,
   production,
   system,
   stock,
   material,
+  materialRoll,
   style,
   warehouse,
   orderManagement,
@@ -329,9 +353,11 @@ module.exports.production = production;
 module.exports.system = system;
 module.exports.stock = stock;
 module.exports.material = material;
+module.exports.materialRoll = materialRoll;
 module.exports.style = style;
 module.exports.warehouse = warehouse;
 module.exports.orderManagement = orderManagement;
 module.exports.tenant = tenant;
 module.exports.wechat = wechat;
 module.exports.common = common;
+
