@@ -1056,10 +1056,19 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       render: (v: any) => v ? formatDateTime(v) : '-',
     },
     {
-      title: '订单交期',
+      title: <SortableColumnTitle title="订单交期" fieldName="plannedEndDate" onSort={handleOrderSort} sortField={orderSortField} sortOrder={orderSortOrder} />,
       key: 'shipTime',
       width: 170,
-      render: (_: any, record: ProductionOrder) => formatTime(getOrderShipTime(record)),
+      render: (_: any, record: ProductionOrder) => {
+        const dateStr = formatTime(getOrderShipTime(record));
+        const { text, color } = getRemainingDaysDisplay(record.plannedEndDate, record.createTime);
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span style={{ fontSize: 12 }}>{dateStr}</span>
+            <span style={{ fontSize: 11, fontWeight: 600, color }}>{text}</span>
+          </div>
+        );
+      },
     },
     {
       title: '状态',

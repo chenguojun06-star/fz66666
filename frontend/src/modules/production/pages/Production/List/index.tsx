@@ -689,11 +689,20 @@ const ProductionList: React.FC = () => {
       },
     },
     {
-      title: '订单交期',
+      title: <SortableColumnTitle title="订单交期" fieldName="plannedEndDate" onSort={handleSort} sortField={sortField} sortOrder={sortOrder} />,
       dataIndex: 'plannedEndDate',
       key: 'plannedEndDate',
-      width: 120,
-      render: (value: unknown) => formatDateTime(value),
+      width: 155,
+      render: (value: unknown, record: ProductionOrder) => {
+        const dateStr = value ? formatDateTime(value as string) : '-';
+        const { text, color } = getRemainingDaysDisplay(value as string, record.createTime);
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span style={{ fontSize: 12 }}>{dateStr}</span>
+            <span style={{ fontSize: 11, fontWeight: 600, color }}>{text}</span>
+          </div>
+        );
+      },
     },
     {
       title: '操作',
