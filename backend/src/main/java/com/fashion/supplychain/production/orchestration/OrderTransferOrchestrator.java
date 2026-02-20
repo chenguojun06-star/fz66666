@@ -8,6 +8,8 @@ import com.fashion.supplychain.system.entity.User;
 import com.fashion.supplychain.system.service.FactoryService;
 import com.fashion.supplychain.system.service.UserService;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.Arrays;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -56,7 +58,7 @@ public class OrderTransferOrchestrator {
                     .like(User::getUsername, keyword));
         }
 
-        queryWrapper.in("status", "active", "ENABLED")
+        queryWrapper.in(User::getStatus, Arrays.asList("active", "ENABLED"))
                 .orderByAsc(User::getName);
 
         Page<User> userPage = userService.page(new Page<>(page, pageSize), queryWrapper);
