@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { App, Badge, Button, Card, Form, Grid, Input, Modal, Popover, Space, Tag, Tooltip } from 'antd';
+import { App, Badge, Button, Card, Form, Grid, Input, Modal, Space, Tag, Tooltip } from 'antd';
 import type { InputRef } from 'antd';
 import { AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -826,13 +826,15 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     }
   };
 
-  // 跟单员备注异常保存
+  // 跟单员备注异常保存（自动前置时间戳）
   const handleRemarkSave = async (orderId: string) => {
     setRemarkSaving(true);
     try {
+      const ts = dayjs().format('MM-DD HH:mm');
+      const finalText = remarkText.trim() ? `[${ts}] ${remarkText.trim()}` : '';
       await productionOrderApi.quickEdit({
         id: orderId,
-        remarks: remarkText.trim(),
+        remarks: finalText,
       });
       message.success('备注已保存');
       setRemarkPopoverId(null);
@@ -895,90 +897,37 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         const name = String(v || '').trim();
         const remark = String((record as Record<string, unknown>).remarks || '').trim();
         const orderId = String(record.id || '');
-        const isOpen = remarkPopoverId === orderId;
-
-        const remarkContent = (
-          <div style={{ width: 220 }}>
-            <div style={{ fontWeight: 600, marginBottom: 8, color: '#1f2937' }}>
-              <ExclamationCircleOutlined style={{ color: '#f59e0b', marginRight: 4 }} />
-              备注异常
-            </div>
-            <Input.TextArea
-              value={isOpen ? remarkText : remark}
-              onChange={(e) => setRemarkText(e.target.value)}
-              rows={3}
-              maxLength={200}
-              showCount
-              placeholder="请输入异常备注..."
-              style={{ marginBottom: 8 }}
-            />
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <Button
-                size="small"
-                onClick={() => { setRemarkPopoverId(null); setRemarkText(''); }}
-              >
-                取消
-              </Button>
-              <Button
-                type="primary"
-                size="small"
-                loading={remarkSaving}
-                onClick={() => handleRemarkSave(orderId)}
-              >
-                保存
-              </Button>
-            </div>
-          </div>
-        );
+        const tsMatch = remark.match(/^\[(\d{2}-\d{2} \d{2}:\d{2})\]\s*/);
+        const remarkTime = tsMatch ? tsMatch[1] : '';
+        const remarkBody = tsMatch ? remark.slice(tsMatch[0].length) : remark;
 
         return (
-          <div style={{ position: 'relative', lineHeight: 1.3 }}>
-            <Popover
-              content={remarkContent}
-              trigger="click"
-              open={isOpen}
-              onOpenChange={(open) => {
-                if (open) {
-                  setRemarkPopoverId(orderId);
-                  setRemarkText(remark);
-                } else {
-                  setRemarkPopoverId(null);
-                  setRemarkText('');
-                }
-              }}
-              placement="bottom"
-            >
-              <Tooltip title={remark ? `备注：${remark}` : '点击添加备注'} placement="top">
-                <div style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  <span style={{ fontWeight: 500, color: '#1f2937' }}>{name || '-'}</span>
-                  {remark && (
-                    <Badge
-                      dot
-                      color="#ef4444"
-                      offset={[0, -2]}
-                    >
-                      <ExclamationCircleOutlined style={{ fontSize: 12, color: '#ef4444' }} />
-                    </Badge>
-                  )}
-                </div>
-              </Tooltip>
-            </Popover>
-            {/* 备注摘要（名字下方显示） */}
-            {remark && (
-              <Tooltip title={remark} placement="bottom">
+          <div
+            style={{ position: 'relative', lineHeight: 1.3, cursor: 'pointer' }}
+            onClick={() => { setRemarkPopoverId(orderId); setRemarkText(remarkBody); }}
+          >
+            {remarkTime && (
+              <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', marginBottom: 2 }}>
+                {remarkTime}
+              </div>
+            )}
+            <Tooltip title={remark ? `备注：${remark}` : '点击添加备注'} placement="top">
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ fontWeight: 500, color: '#1f2937' }}>{name || '-'}</span>
+                {remark && (
+                  <Badge dot color="#ef4444" offset={[0, -2]}>
+                    <ExclamationCircleOutlined style={{ fontSize: 12, color: '#ef4444' }} />
+                  </Badge>
+                )}
+              </div>
+            </Tooltip>
+            {remarkBody && (
+              <Tooltip title={remarkBody} placement="bottom">
                 <div style={{
-                  fontSize: 10,
-                  color: '#ef4444',
-                  fontWeight: 500,
-                  lineHeight: 1.2,
-                  marginTop: 2,
-                  maxWidth: 100,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  cursor: 'pointer',
+                  fontSize: 10, color: '#ef4444', fontWeight: 500, lineHeight: 1.2, marginTop: 2,
+                  maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>
-                  {remark.length > 6 ? remark.substring(0, 6) + '...' : remark}
+                  {remarkBody.length > 6 ? remarkBody.substring(0, 6) + '...' : remarkBody}
                 </div>
               </Tooltip>
             )}
@@ -1555,6 +1504,29 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         onCancel={() => closeScanConfirm()}
         onSubmit={submitConfirmedScan}
       />
+
+      {/* 备注异常 Modal */}
+      <Modal
+        title={<><ExclamationCircleOutlined style={{ color: '#f59e0b', marginRight: 8 }} />备注异常</>}
+        open={remarkPopoverId !== null}
+        onCancel={() => { setRemarkPopoverId(null); setRemarkText(''); }}
+        onOk={() => { if (remarkPopoverId) handleRemarkSave(remarkPopoverId); }}
+        okText="保存"
+        cancelText="取消"
+        confirmLoading={remarkSaving}
+        width={500}
+        destroyOnClose
+      >
+        <Input.TextArea
+          value={remarkText}
+          onChange={(e) => setRemarkText(e.target.value)}
+          rows={6}
+          maxLength={200}
+          showCount
+          placeholder="请输入异常备注..."
+          style={{ marginTop: 8 }}
+        />
+      </Modal>
 
       {/* 快速编辑弹窗 */}
       <QuickEditModal

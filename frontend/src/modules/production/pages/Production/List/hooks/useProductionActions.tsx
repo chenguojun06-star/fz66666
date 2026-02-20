@@ -31,13 +31,15 @@ export function useProductionActions({
   const [remarkText, setRemarkText] = useState('');
   const [remarkSaving, setRemarkSaving] = useState(false);
 
-  /** 保存跟单员备注 */
+  /** 保存跟单员备注（自动前置时间戳）*/
   const handleRemarkSave = async (orderId: string) => {
     setRemarkSaving(true);
     try {
+      const ts = dayjs().format('MM-DD HH:mm');
+      const finalText = remarkText.trim() ? `[${ts}] ${remarkText.trim()}` : '';
       await productionOrderApi.quickEdit({
         id: orderId,
-        remarks: remarkText.trim(),
+        remarks: finalText,
       });
       message.success('备注已保存');
       setRemarkPopoverId(null);

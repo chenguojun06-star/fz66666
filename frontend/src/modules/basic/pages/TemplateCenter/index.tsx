@@ -371,6 +371,7 @@ const TemplateCenter: React.FC = () => {
     let reason = '';
     modal.confirm({
       title: '退回该模板为可编辑？',
+      width: 500,
       content: (
         <div>
           <div style={{ marginBottom: 8 }}>{String(row.templateName || '')}</div>
