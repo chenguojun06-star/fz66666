@@ -140,7 +140,7 @@ Page({
             ? ((Number(item.unitPrice) || 0) * (Number(item.quantity) || 0)).toFixed(2)
             : '-',
         isPayable: (Number(item.unitPrice) || 0) > 0 && (Number(item.quantity) || 0) > 0,
-        displayBedNo: item.bedNo || item.batchNo || '-',
+        displayBedNo: item.bedNo || item.batchNo || (item.cuttingBundleNo != null ? String(item.cuttingBundleNo) : '') || '-',
       }));
 
       const prevList = reset ? [] : this.data.records;

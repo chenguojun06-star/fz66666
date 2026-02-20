@@ -69,7 +69,7 @@
     <!-- 功能导航行 -->
     <view class="nav-row">
       <view class="user-info-item">
-        <text class="user-info-label">工资信息</text>
+        <text class="user-info-label">当月工资</text>
         <text class="user-info-text">{{stats && stats.totalAmount != null ? stats.totalAmount : 0}}</text>
       </view>
       <view class="user-info-item {{loadingStats || loadingHistory ? 'disabled' : ''}}" bindtap="refreshAll">
@@ -78,7 +78,7 @@
     </view>
 
     <!-- 工资明细面板（固定在上方） -->
-    <view class="section-title">工资明细</view>
+    <view class="section-title">工资明细（本月）</view>
     <view wx:if="{{loadingStats}}" class="hint">加载中...</view>
     <view wx:if="{{stats}}" class="stat-grid">
       <view class="stat-card">

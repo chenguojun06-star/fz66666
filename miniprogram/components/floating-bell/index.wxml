@@ -118,7 +118,10 @@
           <view class="task-main">
             <view class="task-title">{{item.orderNo}}</view>
             <view class="task-desc">{{item.color || '-'}} · {{item.size || '-'}} · 数量: {{item.quantity}}</view>
+            <view class="task-desc" wx:if="{{item.bundleNo || item.cuttingBundleNo}}">菲号: {{item.bundleNo || item.cuttingBundleNo}}</view>
+            <view class="task-desc quality-remark" wx:if="{{item.remark}}">问题: {{item.remark}}</view>
             <view class="task-time">领取于 {{item.receivedTimeText}}</view>
+            <view class="task-hint">⚠️ 请联系质检人员领取返修件</view>
           </view>
           <view class="task-action">
             <text class="action-text">录入结果</text>

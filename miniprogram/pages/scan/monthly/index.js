@@ -138,7 +138,7 @@ Page({
       displayProcess: item.processName || item.progressStage || item.scanType || '-',
       displayWorker: item.workerName || item.operatorName || '-',
       displayOrderNo: item.orderNo || '-',
-      displayBundleNo: item.bundleNo || item.cuttingBundleNo || item.cuttingBundleQrCode || '-',
+      displayBundleNo: item.bundleNo || (item.cuttingBundleNo != null ? String(item.cuttingBundleNo) : '') || item.cuttingBundleQrCode || '-',
       displayQuantity: item.quantity || 0,
       displayUnitPrice: item.unitPrice == null || item.unitPrice === '' ? '-' : Number(item.unitPrice).toFixed(2),
       lineAmount: (Number(item.unitPrice) || 0) * (Number(item.quantity) || 0),
@@ -147,7 +147,7 @@ Page({
           ? ((Number(item.unitPrice) || 0) * (Number(item.quantity) || 0)).toFixed(2)
           : '-',
       isPayable: (Number(item.unitPrice) || 0) > 0 && (Number(item.quantity) || 0) > 0,
-      displayBedNo: item.bedNo || item.batchNo || '-',
+      displayBedNo: item.bedNo || item.batchNo || (item.cuttingBundleNo != null ? String(item.cuttingBundleNo) : '') || '-',
     }));
   },
 

@@ -263,6 +263,17 @@
   margin-top: 6rpx;
 }
 
+.task-hint {
+  font-size: 22rpx;
+  color: var(--color-warning, #fa8c16);
+  margin-top: 6rpx;
+}
+
+.quality-remark {
+  color: var(--color-danger, #ff4d4f) !important;
+  white-space: normal;
+}
+
 .task-action {
   display: flex;
   align-items: center;
