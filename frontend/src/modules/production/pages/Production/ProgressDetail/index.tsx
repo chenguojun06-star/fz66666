@@ -46,9 +46,7 @@ import {
   getCurrentWorkflowNodeForOrder,
 } from './utils';
 import { ProgressNode } from './types';
-import ScanEntryModal from './components/ScanEntryModal';
 import ScanConfirmModal from './components/ScanConfirmModal';
-import RollbackModal from './components/RollbackModal';
 import { ensureBoardStatsForOrder } from './hooks/useBoardStats';
 import { useScanBundles } from './hooks/useScanBundles';
 import { useScanConfirm } from './hooks/useScanConfirm';
@@ -163,15 +161,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
 
   const [scanBundlesExpanded, setScanBundlesExpanded] = useState(false);
   const [bundleSelectedQr, setBundleSelectedQr] = useState('');
-
-  const [rollbackOpen, setRollbackOpen] = useState(false);
-  const [rollbackMode, setRollbackMode] = useState<'step' | 'bundle'>('step');
-  const [rollbackOrder, setRollbackOrder] = useState<ProductionOrder | null>(null);
-  const [rollbackStepMeta, setRollbackStepMeta] = useState<{ nextProgress: number; nextProcessName: string } | null>(null);
-  const [rollbackSubmitting, setRollbackSubmitting] = useState(false);
-  const [rollbackBundlesLoading, setRollbackBundlesLoading] = useState(false);
-  const [rollbackBundles, setRollbackBundles] = useState<CuttingBundle[]>([]);
-  const [rollbackForm] = Form.useForm();
 
   const [quickEditVisible, setQuickEditVisible] = useState(false);
   const [quickEditRecord, setQuickEditRecord] = useState<ProductionOrder | null>(null);
@@ -690,74 +679,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     setCuttingBundles([]);
     setScanBundlesExpanded(false);
     setBundleSelectedQr('');
-  };
-
-  const closeRollback = () => {
-    setRollbackOpen(false);
-    setRollbackMode('step');
-    setRollbackOrder(null);
-    setRollbackStepMeta(null);
-    setRollbackSubmitting(false);
-    rollbackForm.resetFields();
-    setRollbackBundles([]);
-  };
-
-  const loadRollbackBundles = async (order: ProductionOrder) => {
-    if (!order?.id) return;
-    setRollbackBundlesLoading(true);
-    try {
-      const res = await productionCuttingApi.list({
-        page: 1,
-        pageSize: 10000,
-        orderNo: String(order.orderNo || '').trim() || undefined,
-        orderId: String(order.id || '').trim() || undefined,
-      });
-      const result = res as Record<string, unknown>;
-      if (result.code === 200) {
-        const records = Array.isArray((result.data as any)?.records) ? ((result.data as any).records as CuttingBundle[]) : [];
-        records.sort((a, b) => (Number(a?.bundleNo) || 0) - (Number(b?.bundleNo) || 0));
-        setRollbackBundles(records);
-      } else {
-        setRollbackBundles([]);
-      }
-    } catch {
-      // Intentionally empty
-      // 忽略错误
-      setRollbackBundles([]);
-    } finally {
-      setRollbackBundlesLoading(false);
-    }
-  };
-
-  const handleRollbackModeChange = useCallback((next: 'step' | 'bundle') => {
-    setRollbackMode(next);
-    rollbackForm.resetFields();
-    if (next === 'bundle' && rollbackOrder) {
-      void loadRollbackBundles(rollbackOrder);
-    }
-  }, [rollbackOrder, rollbackForm]);
-
-  const openRollback = (order: ProductionOrder) => {
-    if (!isSupervisorOrAbove) {
-      message.error('无权限回流');
-      return;
-    }
-    const effectiveNodes = stripWarehousingNode(resolveNodesForListOrder(order, progressNodesByStyleNo, defaultNodes));
-    const idx = getNodeIndexFromProgress(effectiveNodes, Number(order.productionProgress) || 0);
-    if (idx <= 0) {
-      message.info('当前已是第一步');
-      return;
-    }
-    const nextIdx = idx - 1;
-    const nextProgress = getProgressFromNodeIndex(effectiveNodes, nextIdx);
-    const nextProcessName = String(effectiveNodes[nextIdx]?.name || '上一步').trim() || '上一步';
-
-    setRollbackOrder(order);
-    setRollbackStepMeta({ nextProgress, nextProcessName });
-    setRollbackMode('step');
-    setRollbackOpen(true);
-    setRollbackBundles([]);
-    rollbackForm.resetFields();
   };
 
   const watchScanCode = Form.useWatch('scanCode', scanForm);
@@ -1341,14 +1262,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                   setQuickEditVisible(true);
                 },
               },
-              {
-                key: 'register',
-                label: '登记',
-                title: frozen ? '登记（已完成）' : '登记',
-                disabled: frozen,
-                onClick: () => void openScan(record),
-                primary: true,
-              },
               ...(isSupervisorOrAbove
                 ? [
                   {
@@ -1356,17 +1269,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     label: '关单',
                     disabled: frozen,
                     onClick: () => handleCloseOrder(record),
-                  },
-                ]
-                : []),
-              ...(isSupervisorOrAbove
-                ? [
-                  {
-                    key: 'reflow',
-                    label: '回流',
-                    title: frozen ? '回流（订单已关单）' : '回流',
-                    disabled: frozen,
-                    onClick: () => void openRollback(record),
                   },
                 ]
                 : []),
@@ -1636,36 +1538,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         </Card>
       )}
 
-      {/* ===== 详情弹窗已删除 ===== */}
-
-      <ScanEntryModal
-        open={scanOpen}
-        onCancel={closeScan}
-        onOk={submitScan}
-        confirmLoading={scanSubmitting}
-        modalWidth={modalWidth}
-        modalInitialHeight={modalInitialHeight}
-        scanForm={scanForm}
-        userName={String(user?.name || '-')}
-        scanInputRef={scanInputRef}
-        scanBundlesExpanded={scanBundlesExpanded}
-        onBundlesExpandedChange={setScanBundlesExpanded}
-        cuttingBundles={cuttingBundles}
-        cuttingBundlesLoading={cuttingBundlesLoading}
-        bundleSummary={bundleSummary}
-        matchedBundle={matchedBundle}
-        screens={screens}
-        setBundleSelectedQr={setBundleSelectedQr}
-        isBundleCompletedForSelectedNode={isBundleCompletedForSelectedNode}
-        bundleDoneByQrForSelectedNode={bundleDoneByQrForSelectedNode}
-        bundleMetaByQrForSelectedNode={bundleMetaByQrForSelectedNode}
-        formatTimeCompact={formatTimeCompact}
-        nodes={nodes}
-        currentNodeIdx={currentNodeIdx}
-        pricingProcessLoading={pricingProcessLoading}
-        pricingProcesses={pricingProcesses}
-      />
-
       <ScanConfirmModal
         open={scanConfirmState.visible}
         loading={scanConfirmState.loading}
@@ -1673,97 +1545,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         detail={scanConfirmState.detail}
         onCancel={() => closeScanConfirm()}
         onSubmit={submitConfirmedScan}
-      />
-
-      <RollbackModal
-        open={rollbackOpen}
-        confirmLoading={rollbackSubmitting}
-        modalWidth={modalWidth}
-        rollbackForm={rollbackForm}
-        rollbackMode={rollbackMode}
-        rollbackStepMeta={rollbackStepMeta}
-        rollbackBundlesLoading={rollbackBundlesLoading}
-        rollbackBundles={rollbackBundles}
-        onCancel={closeRollback}
-        onModeChange={handleRollbackModeChange}
-        onOk={async () => {
-          if (!rollbackOrder?.id) return;
-          if (rollbackSubmitting) return;
-          setRollbackSubmitting(true);
-          try {
-            if (rollbackMode === 'step') {
-              const remark = String(rollbackForm.getFieldValue('stepRemark') || '').trim();
-              if (!remark) {
-                message.error('请填写问题点');
-                return;
-              }
-              if (!rollbackStepMeta) {
-                message.error('回流目标异常');
-                return;
-              }
-              await updateOrderProgress(rollbackOrder, rollbackStepMeta.nextProgress, {
-                rollbackRemark: remark,
-                rollbackToProcessName: rollbackStepMeta.nextProcessName,
-              });
-              closeRollback();
-              return;
-            }
-
-            const values = await rollbackForm.validateFields(['selectedQr', 'scannedQr', 'rollbackQuantity', 'remark']);
-            const selectedQr = String(values.selectedQr || '').trim();
-            const scannedQr = String(values.scannedQr || '').trim();
-            const remark = String(values.remark || '').trim();
-            const qty = Number(values.rollbackQuantity) || 0;
-
-            if (!selectedQr) {
-              message.error('请选择扎号');
-              return;
-            }
-            if (!scannedQr) {
-              message.error('请扫码对应扎号二维码');
-              return;
-            }
-            if (selectedQr !== scannedQr) {
-              message.error('扫码扎号与选择扎号不一致');
-              return;
-            }
-            if (qty <= 0) {
-              message.error('扎号数量异常，无法回流');
-              return;
-            }
-            if (!remark) {
-              message.error('请填写问题点');
-              return;
-            }
-
-            const res = await productionWarehousingApi.rollbackByBundle({
-              orderId: rollbackOrder.id,
-              cuttingBundleQrCode: scannedQr,
-              rollbackQuantity: qty,
-              rollbackRemark: remark,
-            });
-            const result = res as Record<string, unknown>;
-            if (result.code === 200) {
-              message.success('回流成功');
-              closeRollback();
-              await fetchOrders();
-              if (activeOrder?.id === rollbackOrder.id) {
-                await fetchScanHistory(rollbackOrder);
-              }
-            } else {
-              message.error(String(result.message || '回流失败'));
-            }
-          } catch (e: any) {
-            if (e?.errorFields) {
-              const firstError = e.errorFields?.[0];
-              message.error(firstError?.errors?.[0] || '表单验证失败');
-            } else {
-              message.error(e?.message || '回流失败');
-            }
-          } finally {
-            setRollbackSubmitting(false);
-          }
-        }}
       />
 
       {/* 快速编辑弹窗 */}

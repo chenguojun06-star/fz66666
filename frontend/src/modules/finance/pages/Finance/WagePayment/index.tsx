@@ -90,7 +90,7 @@ const PaymentCenterPage: React.FC = () => {
 
   // ---- 待付款列表 ----
   const [payables, setPayables] = useState<PayableItem[]>([]);
-  const [payablesLoading, setPayablesLoading] = useState(false);
+  const [payablesLoading, setPayablesLoading] = useState(true);
   const [payableBizType, setPayableBizType] = useState<string>('');
 
   // ---- 支付记录列表 ----
