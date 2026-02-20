@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Button, Card, Input, Select, Tag, App, Dropdown, Checkbox, Alert, InputNumber, Modal, Popover, Badge, Tooltip } from 'antd';
+import { Button, Card, Input, Select, Tag, App, Dropdown, Checkbox, Alert, InputNumber, Modal, Popover, Badge, Tooltip, Tabs } from 'antd';
 import { SettingOutlined, AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -119,9 +119,13 @@ const ProductionList: React.FC = () => {
   } = useProductionActions({ message, modal, isSupervisorOrAbove, fetchProductionList });
 
   const {
-    transferModalVisible, transferRecord, transferUserId, setTransferUserId,
+    transferModalVisible, transferRecord,
+    transferType, setTransferType,
+    transferUserId, setTransferUserId,
     transferMessage, setTransferMessage, transferUsers, transferSearching,
-    transferSubmitting, submitTransfer, searchTransferUsers, handleTransferOrder,
+    transferFactoryId, setTransferFactoryId,
+    transferFactoryMessage, setTransferFactoryMessage, transferFactories, transferFactorySearching,
+    transferSubmitting, submitTransfer, searchTransferUsers, searchTransferFactories, handleTransferOrder,
     transferBundles, transferBundlesLoading, transferSelectedBundleIds, setTransferSelectedBundleIds,
     transferProcesses, transferProcessesLoading, transferSelectedProcessCodes, setTransferSelectedProcessCodes,
     closeTransferModal,
@@ -1285,28 +1289,65 @@ const ProductionList: React.FC = () => {
           onCancel={closeTransferModal}
           onOk={submitTransfer}
           confirmLoading={transferSubmitting}
-          okText="确认转单"
+          okText={transferType === 'factory' ? '确认转工厂' : '确认转人员'}
           cancelText="取消"
           width="60vw"
           destroyOnHidden
         >
           <div style={{ padding: '8px 0' }}>
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ marginBottom: 6, fontWeight: 500 }}>转给谁：</div>
-              <Select
-                showSearch placeholder="输入姓名搜索系统用户" value={transferUserId}
-                onChange={(val) => setTransferUserId(val)} onSearch={searchTransferUsers}
-                filterOption={false} loading={transferSearching}
-                notFoundContent={transferSearching ? '搜索中...' : '输入姓名搜索'}
-                style={{ width: '100%' }} allowClear
-              >
-                {transferUsers.map(u => (
-                  <Option key={u.id} value={u.id}>
-                    {u.name}{u.username ? ` (${u.username})` : ''}
-                  </Option>
-                ))}
-              </Select>
-            </div>
+            {/* 转单类型 Tab */}
+            <Tabs
+              activeKey={transferType}
+              onChange={(key) => setTransferType(key as 'user' | 'factory')}
+              style={{ marginBottom: 16 }}
+              items={[
+                { key: 'user', label: '转人员（系统内部）' },
+                { key: 'factory', label: '转工厂（系统内部）' },
+              ]}
+            />
+
+            {/* 转人员 */}
+            {transferType === 'user' && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ marginBottom: 6, fontWeight: 500 }}>转给谁：</div>
+                <Select
+                  showSearch placeholder="输入姓名搜索系统用户（仅限本系统内部）" value={transferUserId}
+                  onChange={(val) => setTransferUserId(val)} onSearch={searchTransferUsers}
+                  filterOption={false} loading={transferSearching}
+                  notFoundContent={transferSearching ? '搜索中...' : '输入姓名搜索'}
+                  style={{ width: '100%' }} allowClear
+                >
+                  {transferUsers.map(u => (
+                    <Option key={u.id} value={u.id}>
+                      {u.name}{u.username ? ` (${u.username})` : ''}
+                    </Option>
+                  ))}
+                </Select>
+              </div>
+            )}
+
+            {/* 转工厂 */}
+            {transferType === 'factory' && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ marginBottom: 6, fontWeight: 500 }}>转给哪个工厂：</div>
+                <Select
+                  showSearch placeholder="输入工厂名称搜索（仅限本系统内部工厂）" value={transferFactoryId}
+                  onChange={(val) => setTransferFactoryId(val)} onSearch={searchTransferFactories}
+                  filterOption={false} loading={transferFactorySearching}
+                  notFoundContent={transferFactorySearching ? '搜索中...' : '输入工厂名称搜索'}
+                  style={{ width: '100%' }} allowClear
+                >
+                  {transferFactories.map(f => (
+                    <Option key={f.id} value={f.id}>
+                      {f.factoryName}{f.factoryCode ? ` (${f.factoryCode})` : ''}
+                      {f.contactPerson ? ` · ${f.contactPerson}` : ''}
+                    </Option>
+                  ))}
+                </Select>
+              </div>
+            )}
+
+            {/* 菲号选择（共用） */}
             <div style={{ marginBottom: 16 }}>
               <div style={{ marginBottom: 6, fontWeight: 500 }}>
                 选择菲号（可选）：
@@ -1351,6 +1392,8 @@ const ProductionList: React.FC = () => {
                 locale={{ emptyText: transferBundlesLoading ? '加载中...' : '暂无菲号数据' }}
               />
             </div>
+
+            {/* 工序选择（共用） */}
             <div style={{ marginBottom: 16 }}>
               <div style={{ marginBottom: 6, fontWeight: 500 }}>
                 选择工序（可选）：
@@ -1389,11 +1432,22 @@ const ProductionList: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* 备注（时间戳由后端自动植入，格式 [2026-02-19 14:30] 备注内容） */}
             <div>
-              <div style={{ marginBottom: 6, fontWeight: 500 }}>备注（可选）：</div>
+              <div style={{ marginBottom: 6, fontWeight: 500 }}>
+                备注（可选）：
+                <span style={{ fontWeight: 400, color: 'var(--color-text-tertiary)', fontSize: '12px', marginLeft: 6 }}>
+                  系统将自动记录备注时间
+                </span>
+              </div>
               <Input.TextArea
-                placeholder="请输入转单备注" value={transferMessage}
-                onChange={(e) => setTransferMessage(e.target.value)}
+                placeholder="请输入转单备注"
+                value={transferType === 'factory' ? transferFactoryMessage : transferMessage}
+                onChange={(e) => transferType === 'factory'
+                  ? setTransferFactoryMessage(e.target.value)
+                  : setTransferMessage(e.target.value)
+                }
                 autoSize={{ minRows: 2, maxRows: 4 }} maxLength={200} showCount
               />
             </div>

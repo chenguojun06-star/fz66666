@@ -16,8 +16,11 @@ interface OrderTransfer {
   orderNo: string;
   fromUserId: number;
   fromUserName: string;
+  transferType: string; // 'user' | 'factory'
   toUserId: number;
   toUserName: string;
+  toFactoryId?: string;
+  toFactoryName?: string;
   status: string;
   message: string;
   rejectReason?: string;
@@ -156,6 +159,28 @@ const OrderTransferPage: React.FC = () => {
       dataIndex: 'fromUserName',
       key: 'fromUserName',
       width: 100,
+    },
+    {
+      title: '转移类型',
+      dataIndex: 'transferType',
+      key: 'transferType',
+      width: 100,
+      render: (type: string) => (
+        <Tag color={type === 'factory' ? 'blue' : 'default'}>
+          {type === 'factory' ? '转工厂' : '转人员'}
+        </Tag>
+      ),
+    },
+    {
+      title: '转移目标',
+      key: 'transferTarget',
+      width: 130,
+      render: (_: any, record: OrderTransfer) => {
+        if (record.transferType === 'factory') {
+          return record.toFactoryName || record.toFactoryId || '-';
+        }
+        return record.toUserName || '-';
+      },
     },
     {
       title: '转移留言',

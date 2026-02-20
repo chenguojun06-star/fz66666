@@ -214,4 +214,51 @@ public class OrderTransferController {
             return Result.fail(e.getMessage());
         }
     }
+
+    /**
+     * 搜索可转移工厂（仅限同租户系统内部工厂）
+     */
+    @PreAuthorize("hasAuthority('MENU_PRODUCTION_ORDER_VIEW')")
+    @GetMapping("/search-factories")
+    public Result<?> searchFactories(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "1") Long page,
+            @RequestParam(defaultValue = "20") Long pageSize) {
+        try {
+            Map<String, Object> result = orderTransferOrchestrator.searchTransferableFactories(keyword, page, pageSize);
+            return Result.success(result);
+        } catch (Exception e) {
+            log.error("搜索工厂失败", e);
+            return Result.fail(e.getMessage());
+        }
+    }
+
+    /**
+     * 创建转工厂请求（仅限同租户系统内部工厂）
+     */
+    @PreAuthorize("hasAuthority('MENU_PRODUCTION_ORDER_MANAGE')")
+    @PostMapping("/create-to-factory")
+    public Result<?> createTransferToFactory(@RequestBody Map<String, Object> params) {
+        try {
+            String orderId = (String) params.get("orderId");
+            String toFactoryId = (String) params.get("toFactoryId");
+            String message = (String) params.get("message");
+            String bundleIds = (String) params.get("bundleIds");
+            String processCodes = (String) params.get("processCodes");
+
+            if (!StringUtils.hasText(orderId)) {
+                return Result.fail("订单ID不能为空");
+            }
+            if (!StringUtils.hasText(toFactoryId)) {
+                return Result.fail("目标工厂不能为空");
+            }
+
+            OrderTransfer transfer = orderTransferService.createTransferToFactory(
+                    orderId, toFactoryId, message, bundleIds, processCodes);
+            return Result.success(transfer);
+        } catch (Exception e) {
+            log.error("创建转工厂请求失败", e);
+            return Result.fail(e.getMessage());
+        }
+    }
 }

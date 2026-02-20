@@ -24,6 +24,19 @@ public interface OrderTransferService extends IService<OrderTransfer> {
     OrderTransfer createTransfer(String orderId, Long toUserId, String message, String bundleIds, String processCodes);
 
     /**
+     * 发起订单转工厂请求（仅限同租户系统内部工厂）
+     *
+     * @param orderId      订单ID
+     * @param toFactoryId  目标工厂ID
+     * @param message      转移留言
+     * @param bundleIds    菲号ID列表（逗号分隔）
+     * @param processCodes 工序编码列表（逗号分隔）
+     * @return 转移记录
+     */
+    OrderTransfer createTransferToFactory(String orderId, String toFactoryId, String message,
+            String bundleIds, String processCodes);
+
+    /**
      * 查询待处理的转移请求(分页)
      *
      * @param params 查询参数

@@ -41,7 +41,13 @@ public class OrderTransfer {
     private String fromUserName;
 
     /**
-     * 接收人ID
+     * 转移类型: user=转人员（默认），factory=转工厂
+     */
+    @TableField("transfer_type")
+    private String transferType;
+
+    /**
+     * 接收人ID（transfer_type=user 时使用）
      */
     @TableField("to_user_id")
     private Long toUserId;
@@ -51,6 +57,18 @@ public class OrderTransfer {
      */
     @TableField(exist = false)
     private String toUserName;
+
+    /**
+     * 目标工厂ID（transfer_type=factory 时使用）
+     */
+    @TableField("to_factory_id")
+    private String toFactoryId;
+
+    /**
+     * 目标工厂名称（DB冗余字段，transfer_type=factory 时使用）
+     */
+    @TableField("to_factory_name")
+    private String toFactoryName;
 
     /**
      * 转移状态: pending-待处理, accepted-已接受, rejected-已拒绝
