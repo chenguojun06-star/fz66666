@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Card, Input, Select, Space, Switch, Tabs, Tag, Tooltip, message } from 'antd';
+import { App, Button, Card, Input, Select, Space, Switch, Tabs, Tag, Tooltip } from 'antd';
 import { UnifiedRangePicker } from '@/components/common/UnifiedDatePicker';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -60,6 +60,7 @@ const createSortableTimeColumn = (
 });
 
 const PayrollOperatorSummary: React.FC = () => {
+    const { message } = App.useApp();
     const [searchParams] = useSearchParams();
     const [activeTab, setActiveTab] = useState('detail');
     const [orderNo, setOrderNo] = useState('');

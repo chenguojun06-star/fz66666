@@ -39,6 +39,12 @@ public class Factory {
     /** 营业执照图片URL */
     private String businessLicense;
 
+    /**
+     * 工厂类型: INTERNAL=本厂内部(按人员工资结算), EXTERNAL=外部工厂(按工厂名订单结算)
+     * 默认 EXTERNAL；本厂需手动设置为 INTERNAL
+     */
+    private String factoryType;
+
     @TableField(exist = false)
     private String operationRemark;
 

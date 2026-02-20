@@ -8,6 +8,8 @@ import com.fashion.supplychain.finance.orchestration.WagePaymentOrchestrator.Wag
 import com.fashion.supplychain.finance.orchestration.WagePaymentOrchestrator.WagePaymentQuery;
 import com.fashion.supplychain.finance.orchestration.WagePaymentOrchestrator.WagePaymentRequest;
 import com.fashion.supplychain.finance.orchestration.WagePaymentOrchestrator.PayableItemDTO;
+import com.fashion.supplychain.system.entity.Factory;
+import com.fashion.supplychain.system.service.FactoryService;
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -33,6 +35,9 @@ public class WagePaymentController {
 
     @Autowired
     private WagePaymentOrchestrator wagePaymentOrchestrator;
+
+    @Autowired
+    private FactoryService factoryService;
 
     // ============================================================
     // 一、收款账户管理
@@ -281,6 +286,17 @@ public class WagePaymentController {
         }
         if (request.getAmount() == null || request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
             return Result.fail("金额必须大于0");
+        }
+
+        // 内部工厂防重复结算：INTERNAL工厂按人员工资结算，不允许在订单结算中重复创建付款
+        if ("ORDER_SETTLEMENT".equals(request.getBizType())) {
+            String factoryId = request.getBizId();
+            if (factoryId != null) {
+                Factory factory = factoryService.getById(factoryId);
+                if (factory != null && "INTERNAL".equals(factory.getFactoryType())) {
+                    return Result.fail("本厂属于内部工厂，工人工资已通过工资结算模块按人员审核，请勿在订单结算中重复发起付款");
+                }
+            }
         }
 
         WagePaymentRequest paymentRequest = WagePaymentRequest.builder()

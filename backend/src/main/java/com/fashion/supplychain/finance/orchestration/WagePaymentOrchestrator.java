@@ -560,6 +560,7 @@ public class WagePaymentOrchestrator {
         payment.setOperatorName(UserContext.username());
         payment.setTenantId(tenantId);
         payment.setStatus("pending");
+        payment.setPaymentMethod("OFFLINE"); // 默认线下支付，后续在付款中心可变更
         payment.setNotifyStatus("none");
         payment.setCreateTime(LocalDateTime.now());
         payment.setUpdateTime(LocalDateTime.now());
