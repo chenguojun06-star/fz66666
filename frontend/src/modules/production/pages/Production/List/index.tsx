@@ -263,8 +263,8 @@ const ProductionList: React.FC = () => {
     },
     {
       title: '品类',
-      dataIndex: 'category',
-      key: 'category',
+      dataIndex: 'productCategory',
+      key: 'productCategory',
       width: 100,
       render: (v: any) => toCategoryCn(v),
     },

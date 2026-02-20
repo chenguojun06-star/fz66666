@@ -56,7 +56,7 @@ public class OrderTransferOrchestrator {
                     .like(User::getUsername, keyword));
         }
 
-        queryWrapper.eq(User::getStatus, 1)
+        queryWrapper.in("status", "active", "ENABLED")
                 .orderByAsc(User::getName);
 
         Page<User> userPage = userService.page(new Page<>(page, pageSize), queryWrapper);

@@ -1174,8 +1174,8 @@ const OrderManagement: React.FC = () => {
     { title: '款名', dataIndex: 'styleName', key: 'styleName', ellipsis: true },
     {
       title: '品类',
-      dataIndex: 'category',
-      key: 'category',
+      dataIndex: 'productCategory',
+      key: 'productCategory',
       width: 120,
       render: (v: unknown) => toCategoryCn(v),
     },
@@ -1525,7 +1525,17 @@ const OrderManagement: React.FC = () => {
                       <Row gutter={16}>
                         <Col xs={24} sm={12}>
                           <Form.Item name="productCategory" label="品类">
-                            <Input placeholder="请输入品类（选填）" allowClear />
+                            <Select
+                              placeholder="请选择品类（选填）"
+                              allowClear
+                              options={[
+                                { value: 'WOMAN', label: '女装' },
+                                { value: 'MAN', label: '男装' },
+                                { value: 'KID', label: '童装' },
+                                { value: 'WCMAN', label: '女童装' },
+                                { value: 'UNISEX', label: '男女同款' },
+                              ]}
+                            />
                           </Form.Item>
                         </Col>
                         <Col xs={24} sm={12}>
