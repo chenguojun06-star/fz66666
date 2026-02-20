@@ -667,6 +667,7 @@ GET /api/production/orders/by-order-no/{o `.run/backend.env` 环境变量
 6. **扫码重复提交**：理解防重复算法，不要随意修改时间间隔
 7. **跨端验证不一致**：修改 validationRules 时必须同步 PC 端和小程序
 8. **权限注解缺失**：所有 Controller 方法必须添加 `@PreAuthorize`（部分 TODO 标记除外）
+9. **MySQL时区 vs JVM时区**：Docker MySQL 默认 UTC，JVM 默认 CST(+8)。`LocalDateTime.now()` 与 DB 的 `NOW()` 相差 8 小时。`1小时撤回等时间校验会对手动插入测试数据失效`。生产数据无问题（Spring Boot 写入时用 CST），但写测试数据时须用 `CONVERT_TZ(NOW(),'+00:00','+08:00')` 生成 CST 时间。
 
 // ❌ 禁止：分散的状态流转
 POST /api/style-info/{id}/pattern-start
@@ -796,6 +797,7 @@ SKU = styleNo + color + size
 7. **扫码重复提交**：理解防重复算法，不要随意修改时间间隔
 8. **跨端验证不一致**：修改 validationRules 时必须同步 PC 端和小程序
 9. **权限注解缺失**：所有 Controller 方法必须添加 `@PreAuthorize`（部分 TODO 标记除外）
+10. **MySQL时区 vs JVM时区**：Docker MySQL 默认 UTC，JVM 默认 CST(+8)。写测试数据时须用 `CONVERT_TZ(NOW(),'+00:00','+08:00')` 而非 `NOW()`，否则时间型校验（如1小时撤回）会因 8 小时差导致误判。生产运行时无此问题（Spring Boot 本身用 `LocalDateTime.now()` CST 写入）。
 
 ---
 
