@@ -275,7 +275,9 @@ public class UserOrchestrator {
             try {
                 String v = stringRedisTemplate.opsForValue().get(PWD_VER_KEY_PREFIX + user.getId());
                 if (v != null) pwdVersion = Long.parseLong(v);
-            } catch (Exception e) { /* fail-safe */ }
+            } catch (Exception e) {
+                log.debug("[登录] 读取 pwdVersion 失败（Redis 不可用），使用默认值 0");
+            }
         }
         subject.setPwdVersion(pwdVersion);
 
@@ -412,7 +414,7 @@ public class UserOrchestrator {
             try {
                 stringRedisTemplate.opsForValue().increment(PWD_VER_KEY_PREFIX + current.getId());
             } catch (Exception e) {
-                log.warn("[改密] 更新密码版本号失败 userId={}", current.getId(), e);
+                log.warn("[改密] 更新密码版本号失败（Redis 不可用），旧 token 不会立即失效 userId={}", current.getId());
             }
         }
         saveOperationLog("user", String.valueOf(current.getId()), current.getUsername(), "CHANGE_PASSWORD", "用户修改密码");
@@ -437,7 +439,7 @@ public class UserOrchestrator {
             try {
                 stringRedisTemplate.opsForValue().increment(PWD_VER_KEY_PREFIX + owner.getId());
             } catch (Exception e) {
-                log.warn("[超管重置密码] 更新密码版本号失败 userId={}", owner.getId(), e);
+                log.warn("[超管重置密码] 更新密码版本号失败（Redis 不可用），旧 token 不会立即失效 userId={}", owner.getId());
             }
         }
         saveOperationLog("user", String.valueOf(owner.getId()), owner.getUsername(), "RESET_PASSWORD",

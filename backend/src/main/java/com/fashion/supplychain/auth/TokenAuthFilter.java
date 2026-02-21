@@ -18,6 +18,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * JWT令牌认证过滤器
@@ -32,6 +33,10 @@ public class TokenAuthFilter extends OncePerRequestFilter {
     public static final String TOKEN_SUBJECT_ATTR = "TOKEN_SUBJECT";
     /** Redis key 前缀：pwd:ver:{userId} */
     private static final String PWD_VER_KEY_PREFIX = "pwd:ver:";
+    /** Redis 熔断：连接失败后跳过检查的毫秒数 */
+    private static final long REDIS_CIRCUIT_BREAK_MS = 60_000L;
+    /** 上次 Redis 连接失败的时间戳（0 = 正常） */
+    private final AtomicLong redisFailedSince = new AtomicLong(0L);
 
     private final AuthTokenService authTokenService;
     private final PermissionCalculationEngine permissionEngine;
@@ -70,17 +75,24 @@ public class TokenAuthFilter extends OncePerRequestFilter {
             TokenSubject subject = authTokenService == null ? null : authTokenService.verifyAndParse(token);
             // 校验密码版本号：改密后旧 token 立即失效
             if (subject != null && StringUtils.hasText(subject.getUserId()) && stringRedisTemplate != null) {
-                try {
-                    String storedVer = stringRedisTemplate.opsForValue().get(PWD_VER_KEY_PREFIX + subject.getUserId());
-                    long expected = storedVer == null ? 0L : Long.parseLong(storedVer);
-                    Long tokenVer = subject.getPwdVersion();
-                    if (tokenVer == null || tokenVer < expected) {
-                        log.debug("[TokenAuthFilter] token已失效（密码已更改），userId={}", subject.getUserId());
-                        subject = null; // token 已失效，视作未认证
+                long failTs = redisFailedSince.get();
+                boolean skip = failTs > 0 && (System.currentTimeMillis() - failTs) < REDIS_CIRCUIT_BREAK_MS;
+                if (!skip) {
+                    try {
+                        String storedVer = stringRedisTemplate.opsForValue().get(PWD_VER_KEY_PREFIX + subject.getUserId());
+                        long expected = storedVer == null ? 0L : Long.parseLong(storedVer);
+                        Long tokenVer = subject.getPwdVersion();
+                        if (tokenVer == null || tokenVer < expected) {
+                            log.debug("[TokenAuthFilter] token已失效（密码已更改），userId={}", subject.getUserId());
+                            subject = null; // token 已失效，视作未认证
+                        }
+                        redisFailedSince.set(0L); // 连接恢复，重置熔断
+                    } catch (Exception e) {
+                        // Redis 不可用时熔断 60s，避免每个请求都尝试连接
+                        if (redisFailedSince.compareAndSet(0L, System.currentTimeMillis())) {
+                            log.warn("[TokenAuthFilter] Redis 不可用，pwdVersion 校验已熔断 {}s", REDIS_CIRCUIT_BREAK_MS / 1000);
+                        }
                     }
-                } catch (Exception e) {
-                    // Redis 异常时 fail-open，不中断正常请求
-                    log.warn("[TokenAuthFilter] Redis 校验 pwdVersion 失败，fail-open", e);
                 }
             }
             if (subject != null && StringUtils.hasText(subject.getUsername())) {

@@ -135,7 +135,9 @@ public class WeChatMiniProgramAuthOrchestrator {
             try {
                 String v = stringRedisTemplate.opsForValue().get(PWD_VER_KEY_PREFIX + user.getId());
                 if (v != null) pwdVersion = Long.parseLong(v);
-            } catch (Exception e) { /* fail-safe */ }
+            } catch (Exception e) {
+                log.debug("[WxLogin] 读取 pwdVersion 失败（Redis 不可用），使用默认值 0");
+            }
         }
         subject.setPwdVersion(pwdVersion);
 
