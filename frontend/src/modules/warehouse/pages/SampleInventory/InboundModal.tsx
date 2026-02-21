@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { Modal, Form, Input, InputNumber, Select, message, InputRef } from 'antd';
+import { Modal, Form, Input, InputNumber, Select, message, Row, Col } from 'antd';
+import type { InputRef } from 'antd';
 import { SampleTypeMap } from './types';
 import api from '@/utils/api';
 
@@ -54,85 +55,101 @@ const InboundModal: React.FC<InboundModalProps> = ({ visible, onCancel, onSucces
       onCancel={onCancel}
       onOk={handleOk}
       confirmLoading={loading}
+      width="60vw"
     >
       <Form form={form} layout="vertical">
-        <Form.Item
-          name="styleNo"
-          label="款号"
-          rules={[{ required: true, message: '请输入款号' }]}
-          help="光标在此处时，使用扫码枪可直接录入"
-        >
-          <Input
-            ref={styleNoRef}
-            placeholder="请输入款号 / 扫码"
-            onPressEnter={(e) => {
-              e.preventDefault();
-              colorRef.current?.focus();
-            }}
-          />
-        </Form.Item>
-        <Form.Item
-          name="styleName"
-          label="款式名称"
-        >
-          <Input placeholder="请输入款式名称" />
-        </Form.Item>
-        <Form.Item
-          name="sampleType"
-          label="样衣类型"
-          rules={[{ required: true, message: '请选择样衣类型' }]}
-          initialValue="development"
-        >
-          <Select>
-            {Object.entries(SampleTypeMap).map(([key, label]) => (
-              <Option key={key} value={key}>{label}</Option>
-            ))}
-          </Select>
-        </Form.Item>
-        <Form.Item
-          name="color"
-          label="颜色"
-          rules={[{ required: true, message: '请输入颜色' }]}
-        >
-          <Input
-            ref={colorRef}
-            placeholder="请输入颜色"
-            onPressEnter={(e) => {
-              e.preventDefault();
-              sizeRef.current?.focus();
-            }}
-          />
-        </Form.Item>
-        <Form.Item
-          name="size"
-          label="尺码"
-          rules={[{ required: true, message: '请输入尺码' }]}
-        >
-          <Input
-            ref={sizeRef}
-            placeholder="请输入尺码"
-          />
-        </Form.Item>
-        <Form.Item
-          name="quantity"
-          label="入库数量"
-          rules={[{ required: true, message: '请输入数量' }]}
-          initialValue={1}
-        >
-          <InputNumber min={1} style={{ width: '100%' }} />
-        </Form.Item>
-        <Form.Item
-          name="location"
-          label="存放位置"
-        >
-          <Input placeholder="例如: A-01-02" />
-        </Form.Item>
-        <Form.Item
-          name="remark"
-          label="备注"
-        >
-          <Input.TextArea rows={2} />
-        </Form.Item>
+        {/* 第一行：款号、款式名称、样衣类型 */}
+        <Row gutter={16}>
+          <Col span={8}>
+            <Form.Item
+              name="styleNo"
+              label="款号"
+              rules={[{ required: true, message: '请输入款号' }]}
+              help="扫码枪可直接录入"
+            >
+              <Input
+                ref={styleNoRef}
+                placeholder="请输入款号 / 扫码"
+                onPressEnter={(e) => {
+                  e.preventDefault();
+                  colorRef.current?.focus();
+                }}
+              />
+            </Form.Item>
+          </Col>
+          <Col span={8}>
+            <Form.Item name="styleName" label="款式名称">
+              <Input placeholder="请输入款式名称" />
+            </Form.Item>
+          </Col>
+          <Col span={8}>
+            <Form.Item
+              name="sampleType"
+              label="样衣类型"
+              rules={[{ required: true, message: '请选择样衣类型' }]}
+              initialValue="development"
+            >
+              <Select>
+                {Object.entries(SampleTypeMap).map(([key, label]) => (
+                  <Option key={key} value={key}>{label}</Option>
+                ))}
+              </Select>
+            </Form.Item>
+          </Col>
+        </Row>
+
+        {/* 第二行：颜色、尺码、入库数量 */}
+        <Row gutter={16}>
+          <Col span={8}>
+            <Form.Item
+              name="color"
+              label="颜色"
+              rules={[{ required: true, message: '请输入颜色' }]}
+            >
+              <Input
+                ref={colorRef}
+                placeholder="请输入颜色"
+                onPressEnter={(e) => {
+                  e.preventDefault();
+                  sizeRef.current?.focus();
+                }}
+              />
+            </Form.Item>
+          </Col>
+          <Col span={8}>
+            <Form.Item
+              name="size"
+              label="尺码"
+              rules={[{ required: true, message: '请输入尺码' }]}
+            >
+              <Input ref={sizeRef} placeholder="请输入尺码" />
+            </Form.Item>
+          </Col>
+          <Col span={8}>
+            <Form.Item
+              name="quantity"
+              label="入库数量"
+              rules={[{ required: true, message: '请输入数量' }]}
+              initialValue={1}
+            >
+              <InputNumber min={1} style={{ width: '100%' }} />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        {/* 第三行：存放位置、备注 */}
+        <Row gutter={16}>
+          <Col span={8}>
+            <Form.Item name="location" label="存放位置">
+              <Input placeholder="例如: A-01-02" />
+            </Form.Item>
+          </Col>
+          <Col span={16}>
+            <Form.Item name="remark" label="备注">
+              <Input.TextArea rows={2} />
+            </Form.Item>
+          </Col>
+        </Row>
       </Form>
     </Modal>
   );

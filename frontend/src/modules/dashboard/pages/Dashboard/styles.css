@@ -131,7 +131,7 @@
   box-shadow: 0 4px 12px rgba(105, 177, 255, 0.25) !important;
 }
 
-.page-card {
+.dashboard-page .page-card {
   background: #f8fafc;
   min-height: 100vh;
   position: relative;
