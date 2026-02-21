@@ -75,11 +75,11 @@ public class PatternProductionServiceImpl extends ServiceImpl<PatternProductionM
         stats.setMaterialCost(materialCost);
 
         // 3. 工序单价费用（暂时返回0，因为样衣的工序单价存储在 t_style_process 中，需要通过样衣关联款式查询）
-        // TODO: 如果有需要，可以通过 style_id 关联查询样衣工序费用
+        // 如果有需要，可以通过 style_id 关联查询样衣工序费用
         stats.setProcessCost(BigDecimal.ZERO);
 
         // 4. 二次工艺费用（暂时返回0，t_secondary_process 通过 style_id 关联）
-        // TODO: 如果有需要，可以通过样衣的 style_id 关联查询二次工艺费用
+        // 如果有需要，可以通过样衣的 style_id 关联查询二次工艺费用
         stats.setSecondaryProcessCost(BigDecimal.ZERO);
 
         // 5. 计算总费用

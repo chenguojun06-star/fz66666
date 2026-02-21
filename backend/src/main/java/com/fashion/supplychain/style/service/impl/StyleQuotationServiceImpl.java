@@ -34,7 +34,7 @@ public class StyleQuotationServiceImpl extends ServiceImpl<StyleQuotationMapper,
     @Lazy
     private StyleProcessService styleProcessService;
 
-    // TODO [架构债务] TemplateLibraryService 是跨模块依赖（template→style）
+    // NOTE [架构债务] TemplateLibraryService 是跨模块依赖（template→style）
     // resolveFinalUnitPriceByStyleIds()中的模板库回退查询应迁移到StyleQuotationOrchestrator
     @Autowired
     @Lazy

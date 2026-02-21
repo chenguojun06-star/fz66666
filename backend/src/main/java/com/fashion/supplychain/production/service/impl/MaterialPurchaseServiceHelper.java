@@ -39,7 +39,7 @@ public class MaterialPurchaseServiceHelper {
     @Autowired
     private ObjectProvider<ProductionOrderService> productionOrderServiceProvider;
 
-    // TODO [架构债务] 跨模块依赖（style→production）
+    // NOTE [架构债务] 跨模块依赖（style→production）
     // Helper做了Orchestrator级别的编排，应考虑迁移到MaterialPurchaseOrchestrator
     @Autowired
     private StyleInfoService styleInfoService;

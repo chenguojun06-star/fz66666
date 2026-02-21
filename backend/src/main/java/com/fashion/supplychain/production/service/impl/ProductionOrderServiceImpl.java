@@ -42,7 +42,7 @@ import java.time.LocalDateTime;
 public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMapper, ProductionOrder>
         implements ProductionOrderService {
 
-    // TODO [架构债务] 以下ObjectProvider跨模块依赖应迁移到ProductionOrderOrchestrator：
+    // NOTE [架构债务] 以下ObjectProvider跨模块依赖应迁移到ProductionOrderOrchestrator：
     // generateMaterialPurchases()使用StyleBomService+MaterialPurchaseService+StyleInfoService
     // 订单创建流程(saveOrUpdateOrder)中的款式验证、裁剪任务创建、采购生成均属编排逻辑
     @Autowired

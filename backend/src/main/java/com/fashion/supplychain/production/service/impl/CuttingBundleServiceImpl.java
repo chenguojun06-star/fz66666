@@ -41,7 +41,7 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
     @Autowired
     private CuttingTaskService cuttingTaskService;
 
-    // TODO [架构债务] Service不应调用Orchestrator
+    // NOTE [架构债务] Service不应调用Orchestrator
     // generateBundles()中的processTrackingOrchestrator调用+订单状态更新应迁移到CuttingBundleOrchestrator
     @Autowired
     @Lazy

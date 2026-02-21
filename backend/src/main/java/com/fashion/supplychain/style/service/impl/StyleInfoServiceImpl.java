@@ -39,7 +39,7 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
     @Autowired
     private StyleOperationLogService styleOperationLogService;
 
-    // TODO [架构债务] ProductionOrderService 是跨模块依赖（production→style）
+    // NOTE [架构债务] ProductionOrderService 是跨模块依赖（production→style）
     // queryPage中的订单统计、附加统计量逻辑应迁移到StyleInfoOrchestrator
     @Autowired
     private ObjectProvider<ProductionOrderService> productionOrderServiceProvider;

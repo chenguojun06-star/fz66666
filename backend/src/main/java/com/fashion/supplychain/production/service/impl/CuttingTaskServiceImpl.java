@@ -47,7 +47,7 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
     @Autowired
     private ProductionOrderService productionOrderService;
 
-    // TODO [架构债务] TemplateLibraryService 是跨模块依赖（template→production）
+    // NOTE [架构债务] TemplateLibraryService 是跨模块依赖（template→production）
     // 应迁移 resolveCuttingUnitPrice() 到 CuttingBundleOrchestrator，
     // 通过参数传递价格给 markBundledByOrderId()，需同时修改2个接口+3个实现
     @Autowired
