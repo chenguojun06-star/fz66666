@@ -1125,9 +1125,85 @@ const RoleTemplateTab: React.FC = () => {
 };
 
 // ========== 注册审批 Tab ==========
-// 说明：超级管理员审批新租户的注册申请，每个租户主账号只能看到自己租户内的成员注册
+// 说明：统一展示工厂入驻申请 + 员工注册申请
 const RegistrationTab: React.FC = () => {
   const { isSuperAdmin, isTenantOwner } = useAuth();
+
+  // ---- 工厂入驻申请（Tenant status=pending_review）----
+  const [tenantApps, setTenantApps] = useState<TenantInfo[]>([]);
+  const [tenantAppsLoading, setTenantAppsLoading] = useState(false);
+
+  const fetchTenantApps = useCallback(async () => {
+    if (!isSuperAdmin) { setTenantApps([]); return; }
+    setTenantAppsLoading(true);
+    try {
+      const res: any = await tenantService.listTenants({ page: 1, pageSize: 100, status: 'pending_review' });
+      const d = res?.data || res;
+      setTenantApps(d?.records || []);
+    } catch { /* ignore */ }
+    finally { setTenantAppsLoading(false); }
+  }, [isSuperAdmin]);
+
+  const handleApproveTenant = async (record: TenantInfo) => {
+    Modal.confirm({
+      title: `确认审批通过「${record.tenantName}」`,
+      content: `将创建主账号「${record.applyUsername || ''}」，并激活该工厂账户。`,
+      okText: '确认审批',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await tenantService.approveApplication(record.id);
+          message.success('审批通过，工厂账户已激活');
+          fetchTenantApps();
+        } catch (e: any) {
+          message.error(e?.message || '审批失败');
+        }
+      },
+    });
+  };
+
+  const handleRejectTenant = async (record: TenantInfo) => {
+    Modal.confirm({
+      title: `拒绝「${record.tenantName}」的入驻申请`,
+      content: <Input.TextArea placeholder="请输入拒绝原因" id="reject-tenant-reason" />,
+      okText: '确认拒绝',
+      cancelText: '取消',
+      onOk: async () => {
+        const reason = (document.getElementById('reject-tenant-reason') as HTMLTextAreaElement)?.value || '不符合要求';
+        try {
+          await tenantService.rejectApplication(record.id, reason);
+          message.success('已拒绝');
+          fetchTenantApps();
+        } catch (e: any) {
+          message.error(e?.message || '操作失败');
+        }
+      },
+    });
+  };
+
+  const tenantAppColumns: ColumnsType<TenantInfo> = [
+    { title: '工厂名称', dataIndex: 'tenantName', width: 160 },
+    { title: '申请账号', dataIndex: 'applyUsername', width: 120 },
+    { title: '联系人', dataIndex: 'contactName', width: 100 },
+    { title: '联系电话', dataIndex: 'contactPhone', width: 130 },
+    {
+      title: '状态', dataIndex: 'status', width: 90, align: 'center',
+      render: () => <Tag color="orange">待审核</Tag>,
+    },
+    { title: '申请时间', dataIndex: 'createTime', width: 160 },
+    {
+      title: '操作', key: 'actions', width: 160,
+      render: (_: unknown, record: TenantInfo) => {
+        const actions: RowAction[] = [
+          { key: 'approve', label: '通过', primary: true, onClick: () => handleApproveTenant(record) },
+          { key: 'reject', label: '拒绝', danger: true, onClick: () => handleRejectTenant(record) },
+        ];
+        return <RowActions actions={actions} />;
+      },
+    },
+  ];
+
+  // ---- 员工注册申请（User registrationStatus=PENDING）----
   const [data, setData] = useState<TenantUser[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -1152,7 +1228,7 @@ const RegistrationTab: React.FC = () => {
     }
   }, [page, isSuperAdmin, isTenantOwner]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { fetchTenantApps(); fetchData(); }, [fetchTenantApps, fetchData]);
 
   const handleApprove = async (userId: number) => {
     try {
@@ -1214,20 +1290,51 @@ const RegistrationTab: React.FC = () => {
     <div>
       <Alert
         message="功能说明"
-        description="用户通过租户码注册新租户后，需要超级管理员审批通过才能正式创建租户。租户主账号只能看到自己租户内的成员注册申请。"
+        description="此页面汇总所有待审批的注册信息：① 工厂入驻申请（新工厂注册）② 成员注册申请（员工通过工厂编码注册）。审批通过后方可登录使用。"
         type="info"
         showIcon
         style={{ marginBottom: 16 }}
       />
-      <ResizableTable
-        storageKey="tenant-registration-audit"
-        rowKey="id"
-        columns={columns}
-        dataSource={data}
-        loading={loading}
-        pagination={{ current: page, pageSize: 20, total, onChange: setPage }}
-        size="small"
-      />
+
+      {/* 工厂入驻申请 */}
+      {isSuperAdmin && (
+        <div style={{ marginBottom: 24 }}>
+          <Typography.Title level={5} style={{ marginBottom: 12 }}>
+            🏭 工厂入驻申请 {tenantApps.length > 0 && <Badge count={tenantApps.length} style={{ marginLeft: 8 }} />}
+          </Typography.Title>
+          {tenantApps.length > 0 ? (
+            <ResizableTable
+              storageKey="tenant-application-audit"
+              rowKey="id"
+              columns={tenantAppColumns}
+              dataSource={tenantApps}
+              loading={tenantAppsLoading}
+              pagination={false}
+              size="small"
+            />
+          ) : (
+            <Card size="small" style={{ textAlign: 'center', color: '#999' }}>
+              {tenantAppsLoading ? '加载中...' : '暂无待审核的工厂入驻申请'}
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* 成员注册申请 */}
+      <div>
+        <Typography.Title level={5} style={{ marginBottom: 12 }}>
+          👤 成员注册申请 {total > 0 && <Badge count={total} style={{ marginLeft: 8 }} />}
+        </Typography.Title>
+        <ResizableTable
+          storageKey="tenant-registration-audit"
+          rowKey="id"
+          columns={columns}
+          dataSource={data}
+          loading={loading}
+          pagination={{ current: page, pageSize: 20, total, onChange: setPage }}
+          size="small"
+        />
+      </div>
     </div>
   );
 };
