@@ -27,22 +27,25 @@ export default defineConfig({
         manualChunks(id) {
           if (id.indexOf('node_modules') < 0) return
 
-          if (id.indexOf('/node_modules/react-dom/') >= 0 || id.indexOf('/node_modules/react/') >= 0) {
+          // ⚠️ React 核心 + 所有直接依赖 React 的基础包必须在同一个 chunk
+          // 以确保 rc-util 初始化时 React 已经就绪
+          if (
+            id.indexOf('/node_modules/react/') >= 0 ||
+            id.indexOf('/node_modules/react-dom/') >= 0 ||
+            id.indexOf('/node_modules/scheduler/') >= 0 ||
+            id.indexOf('/node_modules/react-router') >= 0 ||
+            id.indexOf('/node_modules/@remix-run/router/') >= 0 ||
+            id.indexOf('/node_modules/rc-util/') >= 0 ||
+            id.indexOf('/node_modules/rc-motion/') >= 0 ||
+            id.indexOf('/node_modules/rc-resize-observer/') >= 0 ||
+            id.indexOf('/node_modules/@rc-component/') >= 0
+          ) {
             return 'vendor-react'
           }
 
-          if (id.indexOf('/node_modules/react-router/') >= 0 || id.indexOf('/node_modules/react-router-dom/') >= 0) {
-            return 'vendor-router'
-          }
-          if (id.indexOf('/node_modules/@remix-run/router/') >= 0) {
-            return 'vendor-router'
-          }
-
+          // 独立的大体积库：与 React 无强耦合
           if (id.indexOf('/node_modules/echarts/') >= 0 || id.indexOf('/node_modules/zrender/') >= 0 || id.indexOf('/node_modules/echarts-for-react/') >= 0) {
             return 'vendor-echarts'
-          }
-          if (id.indexOf('/node_modules/xlsx/') >= 0) {
-            return 'vendor-xlsx'
           }
           if (id.indexOf('/node_modules/@ant-design/charts/') >= 0 || id.indexOf('/node_modules/@antv/') >= 0) {
             return 'vendor-antv'
@@ -50,49 +53,19 @@ export default defineConfig({
           if (id.indexOf('/node_modules/three/') >= 0 || id.indexOf('/node_modules/@react-three/') >= 0) {
             return 'vendor-three'
           }
+          if (id.indexOf('/node_modules/xlsx/') >= 0) {
+            return 'vendor-xlsx'
+          }
 
-          if (id.indexOf('/node_modules/antd/') >= 0) {
-            const m = id.match(/\/node_modules\/antd\/(?:es|lib)\/([^/]+)/)
-            if (m && m[1]) {
-              return `antd-${m[1]}`
-            }
+          // antd 组件库（依赖 vendor-react，但 Rollup 会自动处理加载顺序）
+          if (id.indexOf('/node_modules/antd/') >= 0 ||
+              id.indexOf('/node_modules/@ant-design/') >= 0 ||
+              id.indexOf('/node_modules/rc-') >= 0) {
             return 'vendor-antd'
           }
-          if (id.indexOf('/node_modules/@ant-design/icons-svg/') >= 0) return 'vendor-antd-icons'
-          if (id.indexOf('/node_modules/@ant-design/icons/') >= 0) return 'vendor-antd-icons'
-          if (id.indexOf('/node_modules/dayjs/') >= 0) return 'vendor-dayjs'
-          if (id.indexOf('/node_modules/@ant-design/cssinjs/') >= 0) return 'vendor-antd-style'
-          if (id.indexOf('/node_modules/@ant-design/cssinjs-utils/') >= 0) return 'vendor-antd-style'
-          if (id.indexOf('/node_modules/@ant-design/fast-color/') >= 0) return 'vendor-antd-style'
-          if (id.indexOf('/node_modules/@ant-design/colors/') >= 0) return 'vendor-antd-colors'
-          if (id.indexOf('/node_modules/@ant-design/react-slick/') >= 0) return 'vendor-antd-slick'
-          if (id.indexOf('/node_modules/@ctrl/tinycolor/') >= 0) return 'vendor-tinycolor'
-          if (id.indexOf('/node_modules/@floating-ui/') >= 0) return 'vendor-floating-ui'
-
-          if (id.indexOf('/node_modules/rc-util/') >= 0) return 'vendor-antd'
-          if (id.indexOf('/node_modules/rc-motion/') >= 0) return 'vendor-rc-motion'
-          if (id.indexOf('/node_modules/rc-field-form/') >= 0) return 'vendor-rc-field-form'
-          if (id.indexOf('/node_modules/rc-trigger/') >= 0) return 'vendor-rc-trigger'
-          if (id.indexOf('/node_modules/rc-dialog/') >= 0) return 'vendor-rc-dialog'
-          if (id.indexOf('/node_modules/rc-dropdown/') >= 0) return 'vendor-rc-dropdown'
-          if (id.indexOf('/node_modules/rc-menu/') >= 0) return 'vendor-rc-menu'
-          if (id.indexOf('/node_modules/rc-picker/') >= 0) return 'vendor-rc-picker'
-          if (id.indexOf('/node_modules/rc-table/') >= 0) return 'vendor-rc-table'
-          if (id.indexOf('/node_modules/rc-resize-observer/') >= 0) return 'vendor-rc-resize'
-          if (id.indexOf('/node_modules/rc-overflow/') >= 0) return 'vendor-rc-overflow'
-
-          if (id.indexOf('/node_modules/@rc-component/') >= 0) {
-            const m = id.match(/\/node_modules\/@rc-component\/([^/]+)/)
-            if (m && m[1]) {
-              return `rc-${m[1]}`
-            }
-            return 'vendor-rc-component'
-          }
-          if (id.indexOf('/node_modules/@ant-design/') >= 0) return 'vendor-antd'
-          if (id.indexOf('/node_modules/rc-') >= 0) return 'vendor-antd'
 
           if (id.indexOf('/node_modules/axios/') >= 0) return 'vendor-axios'
-          if (id.indexOf('/node_modules/qrcode.react/') >= 0) return 'vendor-qrcode'
+          if (id.indexOf('/node_modules/dayjs/') >= 0) return 'vendor-dayjs'
 
           return 'vendor'
         }
