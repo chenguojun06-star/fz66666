@@ -44,9 +44,9 @@ export function useWebSocket(options: UseWebSocketOptions) {
     userId,
     clientType = 'pc',
     enabled = true,
-    reconnectInterval = 5000,
+    reconnectInterval = 10000,  // 初始10s，减少噪音（微信云托管偶发断连属正常）
     heartbeatInterval = 18000, // 微信云托管负载均衡器60s超时，18s心跳确保不被切断
-    maxReconnectAttempts = 10,
+    maxReconnectAttempts = 5,  // 最多5次，避免控制台刷满错误
   } = options;
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -133,12 +133,16 @@ export function useWebSocket(options: UseWebSocketOptions) {
         setConnected(false);
         stopHeartbeat();
         wsRef.current = null;
-        // 自动重连
+        // 页面隐藏时不重连（避免后台刷 failed 错误）
+        if (document.hidden) return;
+        // 自动重连（指数退避，封顶 60s）
         if (enabled && reconnectCountRef.current < maxReconnectAttempts) {
           reconnectCountRef.current++;
-          const delay = reconnectInterval * Math.min(reconnectCountRef.current, 6);
-          console.log(`[WebSocket] ${delay / 1000}s 后重连 (第${reconnectCountRef.current}次)`);
+          const delay = Math.min(reconnectInterval * Math.pow(2, reconnectCountRef.current - 1), 60000);
+          console.log(`[WebSocket] ${delay / 1000}s 后重连 (第${reconnectCountRef.current}次/${maxReconnectAttempts}次)`);
           reconnectTimerRef.current = setTimeout(connect, delay);
+        } else if (reconnectCountRef.current >= maxReconnectAttempts) {
+          console.warn('[WebSocket] 已达重连上限，停止重连。实时推送暂不可用，不影响正常业务。');
         }
       };
 
