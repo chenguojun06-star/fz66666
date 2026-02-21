@@ -31,6 +31,10 @@ RUN apk add --no-cache gettext
 # 复制 Nginx 配置模板（含 ${BACKEND_URL} 占位符）
 COPY nginx.conf.template /etc/nginx/templates/app.conf.template
 
+# 复制启动脚本
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
 # 复制构建产物
 COPY --from=builder /app/dist /usr/share/nginx/html
 
@@ -38,17 +42,6 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 EXPOSE 80
 
 # 环境变量默认值（可在微信云托管控制台覆盖）
-# BACKEND_URL: 后端 Spring Boot 服务的内网地址
 ENV BACKEND_URL=http://backend:8088
 
-# 启动流程：
-# 1. 从 /etc/resolv.conf 提取容器 DNS 地址（兼容 Docker/K8s/云托管）
-# 2. envsubst 替换 BACKEND_URL 和 RESOLVER 到 nginx 配置
-# 3. 打印最终配置到日志（方便在云托管控制台查看）
-# 4. 启动 nginx
-CMD ["/bin/sh", "-c", "\
-  export RESOLVER=$(awk '/^nameserver/{print $2; exit}' /etc/resolv.conf 2>/dev/null || echo '127.0.0.11') && \
-  echo \"[startup] RESOLVER=$RESOLVER  BACKEND_URL=$BACKEND_URL\" && \
-  envsubst '${BACKEND_URL} ${RESOLVER}' < /etc/nginx/templates/app.conf.template > /etc/nginx/conf.d/app.conf && \
-  echo '--- Generated nginx config ---' && cat /etc/nginx/conf.d/app.conf && echo '---' && \
-  nginx -g 'daemon off;'"]
+CMD ["/docker-entrypoint.sh"]
