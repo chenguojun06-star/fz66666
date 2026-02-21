@@ -361,17 +361,9 @@ public class UserOrchestrator {
             throw new NoSuchElementException("用户不存在");
         }
 
-        String name = patch == null ? null : safeTrim(patch.getName());
+        // 个人中心仅允许修改手机号，其他字段（姓名/邮箱等）需管理员通过人员管理页面操作
         String phone = patch == null ? null : safeTrim(patch.getPhone());
-        String email = patch == null ? null : safeTrim(patch.getEmail());
-
-        if (!StringUtils.hasText(name)) {
-            throw new IllegalArgumentException("姓名不能为空");
-        }
-
-        current.setName(name);
         current.setPhone(phone);
-        current.setEmail(email);
 
         boolean success = userService.updateById(current);
         if (!success) {

@@ -107,6 +107,11 @@ public class TokenAuthFilter extends OncePerRequestFilter {
                     authorities.add(new SimpleGrantedAuthority("ROLE_tenant_owner"));
                 }
 
+                // 平台超级管理员：添加 ROLE_SUPER_ADMIN 权限
+                if (subject.isSuperAdmin()) {
+                    authorities.add(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"));
+                }
+
                 // 🔑 关键修复：注入权限代码作为authorities
                 // 使 @PreAuthorize("hasAuthority('MENU_XXX')") 正确工作
                 loadPermissionAuthorities(authorities, subject);

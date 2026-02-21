@@ -236,6 +236,7 @@ public class UserController {
      * @return 待审批用户列表
      */
     @GetMapping("/pending")
+    @PreAuthorize("hasAuthority('MENU_SYSTEM_USER_MANAGE')")
     public Result<?> getPendingUsers(
             @RequestParam(defaultValue = "1") Long page,
             @RequestParam(defaultValue = "10") Long pageSize) {
@@ -252,6 +253,7 @@ public class UserController {
      * @return 操作结果
      */
     @PostMapping("/{id}/approval-action")
+    @PreAuthorize("hasAuthority('MENU_SYSTEM_USER_MANAGE')")
     public Result<?> approvalAction(
             @PathVariable Long id,
             @RequestParam String action,

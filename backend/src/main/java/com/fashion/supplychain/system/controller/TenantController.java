@@ -58,6 +58,7 @@ public class TenantController {
      * 创建新租户（含主账号）
      */
     @PostMapping("/create")
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     public Result<Map<String, Object>> createTenant(@RequestBody Map<String, Object> params) {
         String tenantName = (String) params.get("tenantName");
         String tenantCode = (String) params.get("tenantCode");
@@ -78,6 +79,7 @@ public class TenantController {
      * 查询租户列表
      */
     @PostMapping("/list")
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     public Result<Page<Tenant>> listTenants(@RequestBody(required = false) Map<String, Object> params) {
         Long page = params != null && params.get("page") != null ? Long.valueOf(params.get("page").toString()) : 1L;
         Long pageSize = params != null && params.get("pageSize") != null ? Long.valueOf(params.get("pageSize").toString()) : 20L;
@@ -90,6 +92,7 @@ public class TenantController {
      * 更新租户信息
      */
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     public Result<Boolean> updateTenant(@PathVariable Long id, @RequestBody Tenant tenant) {
         tenant.setId(id);
         return Result.success(tenantOrchestrator.updateTenant(tenant));
@@ -99,6 +102,7 @@ public class TenantController {
      * 切换租户状态
      */
     @PostMapping("/{id}/toggle-status")
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     public Result<Boolean> toggleTenantStatus(@PathVariable Long id, @RequestBody Map<String, String> params) {
         String status = params.get("status");
         return Result.success(tenantOrchestrator.toggleTenantStatus(id, status));
@@ -200,6 +204,7 @@ public class TenantController {
      */
     @SuppressWarnings("unchecked")
     @PostMapping("/roles/{roleId}/permissions")
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     public Result<Boolean> updateTenantRolePermissions(@PathVariable Long roleId,
                                                         @RequestBody Map<String, Object> params) {
         List<Number> permIds = (List<Number>) params.get("permissionIds");
@@ -215,6 +220,7 @@ public class TenantController {
      * 获取租户权限天花板配置
      */
     @GetMapping("/ceiling/{tenantId}")
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     public Result<Map<String, Object>> getTenantCeiling(@PathVariable Long tenantId) {
         return Result.success(tenantOrchestrator.getTenantCeiling(tenantId));
     }
@@ -224,6 +230,7 @@ public class TenantController {
      */
     @SuppressWarnings("unchecked")
     @PostMapping("/ceiling/{tenantId}")
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     public Result<Boolean> setTenantCeiling(@PathVariable Long tenantId,
                                              @RequestBody Map<String, Object> params) {
         List<Number> grantedIds = (List<Number>) params.get("grantedPermissionIds");
@@ -254,6 +261,7 @@ public class TenantController {
      * 审批通过入驻申请（超级管理员）
      */
     @PostMapping("/{id}/approve-application")
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     public Result<Map<String, Object>> approveApplication(@PathVariable Long id) {
         return Result.success(tenantOrchestrator.approveApplication(id));
     }
@@ -262,6 +270,7 @@ public class TenantController {
      * 修改入驻申请信息（超级管理员，审批前允许修改账号等）
      */
     @PostMapping("/{id}/update-application")
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     public Result<Boolean> updateApplication(@PathVariable Long id, @RequestBody Map<String, String> params) {
         return Result.success(tenantOrchestrator.updateApplication(id, params));
     }
@@ -270,6 +279,7 @@ public class TenantController {
      * 拒绝入驻申请（超级管理员）
      */
     @PostMapping("/{id}/reject-application")
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     public Result<Boolean> rejectApplication(@PathVariable Long id, @RequestBody(required = false) Map<String, String> params) {
         String reason = params != null ? params.get("reason") : null;
         return Result.success(tenantOrchestrator.rejectApplication(id, reason));
@@ -279,6 +289,7 @@ public class TenantController {
      * 标记租户付费状态（超级管理员）
      */
     @PostMapping("/{id}/mark-paid")
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     public Result<Boolean> markTenantPaid(@PathVariable Long id, @RequestBody Map<String, String> params) {
         String paidStatus = params.getOrDefault("paidStatus", "PAID");
         return Result.success(tenantOrchestrator.markTenantPaid(id, paidStatus));
@@ -298,6 +309,7 @@ public class TenantController {
      * 设置租户套餐（超管）
      */
     @PostMapping("/{id}/plan")
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     public Result<Tenant> updateTenantPlan(@PathVariable Long id, @RequestBody Map<String, Object> params) {
         String planType = (String) params.get("planType");
         java.math.BigDecimal monthlyFee = params.get("monthlyFee") != null
@@ -315,6 +327,7 @@ public class TenantController {
      * 获取租户存储与计费概览
      */
     @GetMapping("/{id}/billing-overview")
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     public Result<Map<String, Object>> getTenantBillingOverview(@PathVariable Long id) {
         return Result.success(tenantOrchestrator.getTenantBillingOverview(id));
     }
@@ -323,6 +336,7 @@ public class TenantController {
      * 生成月度账单
      */
     @PostMapping("/{id}/generate-bill")
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     public Result<TenantBillingRecord> generateMonthlyBill(@PathVariable Long id,
             @RequestBody(required = false) Map<String, String> params) {
         String billingMonth = params != null ? params.get("billingMonth") : null;
@@ -333,6 +347,7 @@ public class TenantController {
      * 查询账单列表（可按租户ID筛选）
      */
     @PostMapping("/billing-records")
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     public Result<Page<TenantBillingRecord>> listBillingRecords(@RequestBody Map<String, Object> params) {
         Long tenantId = params.get("tenantId") != null ? Long.valueOf(params.get("tenantId").toString()) : null;
         Long page = params.get("page") != null ? Long.valueOf(params.get("page").toString()) : 1L;
@@ -345,6 +360,7 @@ public class TenantController {
      * 标记账单已支付
      */
     @PostMapping("/billing/{billId}/mark-paid")
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     public Result<Boolean> markBillPaid(@PathVariable Long billId) {
         return Result.success(tenantOrchestrator.markBillPaid(billId));
     }
@@ -353,6 +369,7 @@ public class TenantController {
      * 减免账单
      */
     @PostMapping("/billing/{billId}/waive")
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     public Result<Boolean> waiveBill(@PathVariable Long billId, @RequestBody(required = false) Map<String, String> params) {
         String remark = params != null ? params.get("remark") : null;
         return Result.success(tenantOrchestrator.waiveBill(billId, remark));
@@ -419,6 +436,7 @@ public class TenantController {
      */
     @SuppressWarnings("unchecked")
     @PostMapping("/user-overrides/{userId}")
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     public Result<Boolean> setUserPermissionOverrides(@PathVariable Long userId,
                                                        @RequestBody Map<String, Object> params) {
         List<Number> grantNums = (List<Number>) params.get("grantPermissionIds");

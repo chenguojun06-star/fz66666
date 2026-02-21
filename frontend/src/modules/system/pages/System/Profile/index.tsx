@@ -193,10 +193,7 @@ const Profile: React.FC = () => {
             const values = await form.validateFields();
             setSaving(true);
             const payload = {
-                name: values.name,
                 phone: values.phone,
-                email: values.email,
-                avatarUrl: values.avatarUrl,
             };
             const res: any = await api.put('/system/user/me', payload);
             if (res?.code === 200 && res?.data) {
@@ -248,13 +245,16 @@ const Profile: React.FC = () => {
         <Layout>
             <Card className="page-card">
                 <div className="page-header">
-                    <h2 className="page-title">个人中心</h2>
+                    <div>
+                        <h2 className="page-title" style={{ marginBottom: 4 }}>个人中心</h2>
+                        <Typography.Text type="secondary" style={{ fontSize: 12 }}>仅手机号和密码可自助修改，其他信息需管理员操作</Typography.Text>
+                    </div>
                     <Space>
                         <Button onClick={loadProfile} disabled={loading || saving}>
                             刷新
                         </Button>
                         <Button type="primary" onClick={saveProfile} loading={saving}>
-                            保存
+                            保存手机号
                         </Button>
                     </Space>
                 </div>
@@ -268,11 +268,7 @@ const Profile: React.FC = () => {
                             >
                                 {(initialName || 'U').slice(0, 1).toUpperCase()}
                             </Avatar>
-                            <Upload showUploadList={false} beforeUpload={uploadAvatar}>
-                                <Button loading={avatarUploading} disabled={avatarUploading}>
-                                    上传头像
-                                </Button>
-                            </Upload>
+
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             <span style={{ fontWeight: 700 }}>主题</span>
@@ -305,8 +301,8 @@ const Profile: React.FC = () => {
                         <Form.Item label="角色" name="roleName">
                             <Input disabled />
                         </Form.Item>
-                        <Form.Item label="姓名" name="name" rules={[{ required: true, message: '请输入姓名' }]}>
-                            <Input placeholder="请输入姓名" autoComplete="name" />
+                        <Form.Item label="姓名" name="name">
+                            <Input disabled />
                         </Form.Item>
                         <Form.Item
                             label="手机号"
@@ -325,8 +321,8 @@ const Profile: React.FC = () => {
                         >
                             <Input placeholder="请输入手机号" autoComplete="tel" />
                         </Form.Item>
-                        <Form.Item label="邮箱" name="email" rules={[{ type: 'email', message: '邮箱格式不正确' }]}>
-                            <Input placeholder="请输入邮箱" autoComplete="email" />
+                        <Form.Item label="邮箱" name="email">
+                            <Input disabled />
                         </Form.Item>
                     </Form>
                 </Spin>
@@ -364,54 +360,17 @@ const Profile: React.FC = () => {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
                             <TeamOutlined style={{ color: 'var(--primary-color)' }} />
                             <span style={{ fontWeight: 600, fontSize: 15 }}>工厂信息</span>
-                            <Typography.Text type="secondary" style={{ fontSize: 12 }}>（修改后页面标题也会更新）</Typography.Text>
+                            <Typography.Text type="secondary" style={{ fontSize: 12 }}>（如需修改请联系管理员）</Typography.Text>
                         </div>
-                        <Form
-                            form={tenantForm}
-                            layout="vertical"
-                            requiredMark={false}
-                            onFinish={async (vals) => {
-                                setSavingTenant(true);
-                                try {
-                                    const res = await import('@/services/tenantService').then(m => m.default.updateMyTenantInfo({
-                                        tenantName: vals.tenantName,
-                                        contactName: vals.contactName,
-                                        contactPhone: vals.contactPhone,
-                                    }));
-                                    if ((res as any)?.code === 200) {
-                                        const newName = String(vals.tenantName || '').trim();
-                                        setTenantInfo(prev => prev ? { ...prev, tenantName: newName, contactName: vals.contactName, contactPhone: vals.contactPhone } : prev);
-                                        // 更新 Auth Context，让 Header 即时显示新工厂名
-                                        updateUser({ tenantName: newName } as Parameters<typeof updateUser>[0]);
-                                        message.success('工厂信息已保存');
-                                    } else {
-                                        message.error((res as any)?.message as string || '保存失败');
-                                    }
-                                } catch (e: any) {
-                                    message.error((e as Error)?.message || '保存失败');
-                                } finally {
-                                    setSavingTenant(false);
-                                }
-                            }}
-                        >
-                            <Form.Item
-                                label="工厂名称"
-                                name="tenantName"
-                                rules={[{ required: true, message: '工厂名称不能为空' }, { max: 30, message: '最多30个字符' }]}
-                                help="修改后页面左上角标题将即时更新"
-                            >
-                                <Input placeholder="请输入工厂名称" />
+                        <Form form={tenantForm} layout="vertical" requiredMark={false}>
+                            <Form.Item label="工厂名称" name="tenantName">
+                                <Input disabled />
                             </Form.Item>
                             <Form.Item label="联系人" name="contactName">
-                                <Input placeholder="请输入联系人姓名" />
+                                <Input disabled />
                             </Form.Item>
                             <Form.Item label="联系电话" name="contactPhone">
-                                <Input placeholder="请输入联系电话" />
-                            </Form.Item>
-                            <Form.Item>
-                                <Button type="primary" htmlType="submit" loading={savingTenant} icon={<TeamOutlined />}>
-                                    保存工厂信息
-                                </Button>
+                                <Input disabled />
                             </Form.Item>
                         </Form>
                         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
