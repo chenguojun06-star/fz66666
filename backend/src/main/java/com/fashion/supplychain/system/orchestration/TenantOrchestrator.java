@@ -187,12 +187,13 @@ public class TenantOrchestrator {
 
         log.info("[申请入驻] 工厂={} 申请账号={} 已提交，等待超管审批", tenantName, applyUsername);
 
-        // 通知所有超级管理员有新的工厂入驻申请
+        // 通知平台超级管理员（tenantId 为空）有新的工厂入驻申请
         try {
             if (webSocketService != null) {
                 LambdaQueryWrapper<User> adminQuery = new LambdaQueryWrapper<>();
                 adminQuery.eq(User::getIsSuperAdmin, true)
-                          .eq(User::getStatus, "active");
+                          .eq(User::getStatus, "active")
+                          .isNull(User::getTenantId);
                 List<User> superAdmins = userService.list(adminQuery);
                 for (User sa : superAdmins) {
                     webSocketService.notifyTenantApplicationPending(
