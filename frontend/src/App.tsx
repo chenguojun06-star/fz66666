@@ -7,6 +7,7 @@ import ResizableModal from './components/common/ResizableModal';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { paths } from './routeConfig';
 import { useViewport } from './utils/useViewport';
+import WebSocketNotification from './components/common/WebSocketNotification';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import { StyleInfo, StyleInfoList, OrderManagement, DataCenter, TemplateCenter, PatternRevisionManagement } from './modules/basic';
@@ -231,6 +232,7 @@ const AppRoutes: React.FC = () => {
 
   return (
     <>
+      <WebSocketNotification />
       <Routes location={backgroundLocation || location}>
         <Route path="/" element={<RootRedirect />} />
         <Route path={paths.login} element={<LoginGate />} />

@@ -25,8 +25,9 @@ public class WebSocketConfig implements WebSocketConfigurer {
                     "http://localhost:*",
                     "http://127.0.0.1:*",
                     "http://192.168.*:*",  // 内网
-                    "http://10.*:*"        // 内网
-                    // 生产环境在 application-prod.yml 中配置具体域名
+                    "http://10.*:*",       // 内网
+                    "https://*.tcloudbase.com",  // 微信云托管
+                    "https://*.sh.run.tcloudbase.com"  // 微信云托管
                 );
     }
 }

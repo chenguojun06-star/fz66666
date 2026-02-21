@@ -51,6 +51,11 @@ export default defineConfig({
         target: 'http://localhost:8088',  // 【固定】后端地址
         changeOrigin: true,
         rewrite: (path) => path
+      },
+      '/ws': {
+        target: 'http://localhost:8088',  // WebSocket 代理
+        changeOrigin: true,
+        ws: true,
       }
     }
   },
