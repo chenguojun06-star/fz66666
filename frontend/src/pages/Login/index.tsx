@@ -109,8 +109,9 @@ const Login: React.FC = () => {
       } else {
         message.error('登录失败，请检查公司、用户名和密码');
       }
-    } catch (error) {
-      message.error('登录失败,请检查公司、用户名和密码');
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : '登录失败，请检查公司、用户名和密码';
+      message.error(msg);
     } finally {
       setSubmitting(false);
     }

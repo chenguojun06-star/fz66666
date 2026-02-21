@@ -308,10 +308,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return true;
       }
       return false;
-    } catch {
-      // Intentionally empty
-      // 忽略错误
-      return false;
+    } catch (e: unknown) {
+      // 把后端真实错误消息作为 Error 抛出，让调用方展示
+      const msg = (e instanceof Error ? e.message : String((e as any)?.message || '')) || '登录失败，请检查用户名和密码';
+      throw new Error(msg);
     }
   };
 
