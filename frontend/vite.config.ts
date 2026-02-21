@@ -10,7 +10,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src')
-    }
+    },
+    dedupe: ['react', 'react-dom']
   },
   build: {
     chunkSizeWarningLimit: 500,
@@ -68,7 +69,7 @@ export default defineConfig({
           if (id.indexOf('/node_modules/@ctrl/tinycolor/') >= 0) return 'vendor-tinycolor'
           if (id.indexOf('/node_modules/@floating-ui/') >= 0) return 'vendor-floating-ui'
 
-          if (id.indexOf('/node_modules/rc-util/') >= 0) return 'vendor-rc-util'
+          if (id.indexOf('/node_modules/rc-util/') >= 0) return 'vendor-antd'
           if (id.indexOf('/node_modules/rc-motion/') >= 0) return 'vendor-rc-motion'
           if (id.indexOf('/node_modules/rc-field-form/') >= 0) return 'vendor-rc-field-form'
           if (id.indexOf('/node_modules/rc-trigger/') >= 0) return 'vendor-rc-trigger'
