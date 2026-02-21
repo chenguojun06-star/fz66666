@@ -677,7 +677,13 @@ public class TenantOrchestrator {
         }
 
         // 5. 最终验证：确保角色和权限都正确持久化
-        Role verified = roleService.getById(cloned.getId());
+        // ⚠️ 不使用 getById —— t_role 是混合表，拦截器会加 tenant_id 过滤，
+        //    当前登录用户的 tenantId 与新建角色的 tenantId 可能不同（如超管代理审批），
+        //    必须明确指定目标 tenantId 查询，绕开拦截器干扰。
+        LambdaQueryWrapper<Role> verifyQuery = new LambdaQueryWrapper<>();
+        verifyQuery.eq(Role::getId, cloned.getId())
+                   .eq(Role::getTenantId, tenantId);
+        Role verified = roleService.getOne(verifyQuery);
         if (verified == null) {
             throw new IllegalStateException(
                     "[数据完整性] 角色创建后无法读取，可能存在数据库异常，roleId=" + cloned.getId());

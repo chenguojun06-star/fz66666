@@ -235,11 +235,6 @@ public class TenantInterceptor implements InnerInterceptor {
             log.warn("[TenantInterceptor] UserContext is NULL - no tenant filtering");
             return null;
         }
-        // 超级管理员绕过所有租户过滤（可跨租户操作）
-        if (ctx.getSuperAdmin()) {
-            log.debug("[TenantInterceptor] SuperAdmin bypass: userId={}", ctx.getUserId());
-            return null;
-        }
         Long tenantId = ctx.getTenantId();
         log.debug("[TenantInterceptor] Current tenantId={}, userId={}", tenantId, ctx.getUserId());
         return tenantId;
