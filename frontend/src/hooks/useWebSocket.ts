@@ -45,7 +45,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
     clientType = 'pc',
     enabled = true,
     reconnectInterval = 5000,
-    heartbeatInterval = 30000,
+    heartbeatInterval = 18000, // 微信云托管负载均衡器60s超时，18s心跳确保不被切断
     maxReconnectAttempts = 10,
   } = options;
 
@@ -107,6 +107,8 @@ export function useWebSocket(options: UseWebSocketOptions) {
       ws.onmessage = (event) => {
         try {
           const msg: WsMessage = JSON.parse(event.data);
+          // 服务端主动推的 ping 直接忽略（心跳保活，无需业务处理）
+          if (msg.type === 'ping') return;
           // 分发给对应 type 的监听器
           const handlers = listenersRef.current.get(msg.type);
           if (handlers) {
