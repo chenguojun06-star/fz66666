@@ -108,7 +108,6 @@ const scanCoreMixin = Behavior({
           getCurrentFactory: () => this.data.currentFactory,
           getCurrentWorker: () => this.data.currentUser,
         });
-        console.log('[scanCoreMixin] scanHandler 惰性初始化成功');
       } catch (e) {
         console.error('[scanCoreMixin] scanHandler 惰性初始化失败:', e);
       }

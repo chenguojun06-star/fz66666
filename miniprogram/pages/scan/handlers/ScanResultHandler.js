@@ -60,11 +60,6 @@ function showScanResultConfirm(ctx, data) {
     return;
   }
 
-  console.log(
-    `[ScanResultHandler] 订单[${orderNo}] 已扫工序: [${[...scannedSet].join(',')}]，` +
-      `可选工序: [${processOptions.map(o => `${o.value}(¥${o.unitPrice})`).join(',')}]`,
-  );
-
   let processIndex = processOptions.findIndex(
     opt => opt.value === processName || opt.value === progressStage,
   );

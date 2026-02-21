@@ -271,12 +271,6 @@ class StageDetector {
       p => !scannedProcessNames.has(p.processName)
     );
 
-    console.log(
-      `[StageDetector] 菲号[${bundleNo}] 已扫工序: [${[...scannedProcessNames].join(',')}]，` +
-        `剩余${remainingProcesses.length}/${countableProcesses.length}个: ` +
-        remainingProcesses.map(p => `${p.processName}(¥${p.price || 0})`).join(' → ')
-    );
-
     // === 步骤4：根据已扫工序过滤，返回第一个未完成的工序 ===
     if (remainingProcesses.length > 0) {
       const nextProcess = remainingProcesses[0];
