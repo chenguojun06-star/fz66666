@@ -5,6 +5,7 @@ import {
   AppstoreOutlined,
   BookOutlined,
   BuildOutlined,
+  CrownOutlined,
   DashboardOutlined,
   DatabaseOutlined,
   DollarOutlined,
@@ -72,6 +73,7 @@ export const paths = {
   dict: '/system/dict',
   tutorial: '/system/tutorial',
   tenantManagement: '/system/tenant',
+  customerManagement: '/system/customer',
   appStore: '/system/app-store',
 } as const;
 
@@ -112,6 +114,7 @@ export const permissionCodes = {
   dict: 'MENU_DICT',
   tutorial: 'MENU_TUTORIAL',
   tenantManagement: 'MENU_TENANT',
+  customerManagement: 'MENU_CUSTOMER',
   appStore: 'MENU_APP_STORE_VIEW',
 } as const;
 
@@ -205,6 +208,12 @@ export const menuConfig: MenuSection[] = [
     path: paths.appStore,
   },
   {
+    title: '客户管理',
+    key: 'customer',
+    icon: React.createElement(CrownOutlined),
+    path: paths.customerManagement,
+  },
+  {
     title: '客户应用管理',
     key: 'tenant',
     icon: React.createElement(SafetyCertificateOutlined),
@@ -247,6 +256,7 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.dict]: permissionCodes.dict,
   [paths.tutorial]: permissionCodes.tutorial,
   [paths.tenantManagement]: permissionCodes.tenantManagement,
+  [paths.customerManagement]: permissionCodes.customerManagement,
   [paths.appStore]: permissionCodes.appStore,
 };
 
