@@ -1,6 +1,7 @@
 {
   "navigationBarTitleText": "首页",
   "usingComponents": {
-    "global-search": "/components/common/global-search/index"
+    "global-search": "/components/common/global-search/index",
+    "floating-bell": "/components/floating-bell/index"
   }
 }

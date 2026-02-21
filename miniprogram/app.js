@@ -249,7 +249,21 @@ App({
    * 全局错误捕获 - 捕获页面脚本错误
    */
   onError(msg) {
-    console.error('[App] 全局错误:', msg);
+    // 防御性处理：框架初始化期间 console 可能未就绪，避免二次崩溃
+    try {
+      // 静默忽略微信框架内部 setInterval 时序报错（开发工具环境特有，生产不出现）
+      if (typeof msg === 'string' && (
+        msg.indexOf('__subPageFrameEndTime__') !== -1 ||
+        msg.indexOf('__appServiceEngine__') !== -1 ||
+        msg.indexOf('__global') !== -1
+      )) {
+        return;
+      }
+      // eslint-disable-next-line no-console
+      console.error('[App] 全局错误:', msg);
+    } catch (_) {
+      // 框架初始化阶段 console 未就绪，静默失败
+    }
   },
 
   /**

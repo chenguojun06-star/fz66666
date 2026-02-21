@@ -1,3 +1,6 @@
 {
-  "navigationBarTitleText": "扫码"
+  "navigationBarTitleText": "扫码",
+  "usingComponents": {
+    "floating-bell": "/components/floating-bell/index"
+  }
 }

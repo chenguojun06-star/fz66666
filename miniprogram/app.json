@@ -19,9 +19,7 @@
     "pages/warehouse/material/scan/index",
     "pages/warehouse/order-ranking/index"
   ],
-  "usingComponents": {
-    "floating-bell": "/components/floating-bell/index"
-  },
+  "usingComponents": {},
   "tabBar": {
     "custom": true,
     "color": "#8e8e93",
