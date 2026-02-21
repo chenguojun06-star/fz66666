@@ -17,7 +17,7 @@
  * - 在登录页手动输入本机地址（如 http://192.168.x.x:8088）
  */
 // ⚠️ 上线前替换为实际的微信云托管后端地址（必须 HTTPS）
-const DEFAULT_BASE_URL = 'https://YOUR_CLOUD_BACKEND_DOMAIN';  // TODO: 替换为微信云托管后端地址
+const DEFAULT_BASE_URL = 'https://backend-226678-6-1405390085.sh.run.tcloudbase.com';  // TODO: 替换为微信云托管后端地址
 const FALLBACK_BASE_URL = 'http://192.168.1.17:8088';         // 本地开发备用（内网 IP）
 
 /**
