@@ -257,7 +257,6 @@ const OrderTransferPage: React.FC = () => {
 
   return (
     <Layout>
-      <div className="page-container">
         <div className="page-header">
           <h2 className="page-title">订单转移管理</h2>
           <Button onClick={fetchTransfers}>刷新</Button>
@@ -306,7 +305,6 @@ const OrderTransferPage: React.FC = () => {
             />
           </div>
         </Modal>
-      </div>
     </Layout>
   );
 };

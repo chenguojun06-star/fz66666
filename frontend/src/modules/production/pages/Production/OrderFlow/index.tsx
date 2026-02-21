@@ -326,7 +326,6 @@ const OrderFlow: React.FC = () => {
 
   return (
     <Layout>
-      <div className="production-list-page">
         <Card className="page-card">
           <div className="page-header">
             <h2 className="page-title">订单全流程记录</h2>
@@ -819,7 +818,6 @@ const OrderFlow: React.FC = () => {
             />
           </Card>
         </Card>
-      </div>
     </Layout>
   );
 };

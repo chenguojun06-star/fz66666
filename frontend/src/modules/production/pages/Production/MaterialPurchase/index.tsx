@@ -1225,7 +1225,6 @@ const MaterialPurchase: React.FC = () => {
       {contextHolder}
       <Form form={form} component={false} />
       <Form form={materialDatabaseForm} component={false} />
-      <div>
         <Card className="page-card">
           <Tabs
             activeKey="purchase"
@@ -1548,7 +1547,6 @@ const MaterialPurchase: React.FC = () => {
           userId={String(user?.id || '').trim()}
           userName={String(user?.name || user?.username || '').trim()}
         />
-      </div>
     </Layout>
   );
 };

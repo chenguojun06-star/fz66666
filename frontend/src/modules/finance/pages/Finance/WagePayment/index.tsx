@@ -728,7 +728,6 @@ const PaymentCenterPage: React.FC = () => {
   // ============================================================
   return (
     <Layout>
-      <>
         {/* 页头 */}
         <Card className="page-card" style={{ marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1252,7 +1251,6 @@ const PaymentCenterPage: React.FC = () => {
             </Form>
           </div>
         </ResizableModal>
-      </>
     </Layout>
   );
 };

@@ -13,7 +13,7 @@
   border: 1px solid var(--border-color);
 }
 
-.header-content {
+.system-tutorial-container .header-content {
   max-width: 1400px;
   margin: 0 auto;
 }

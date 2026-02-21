@@ -464,7 +464,6 @@ const MaterialDatabasePage: React.FC = () => {
   return (
     <Layout>
       {contextHolder}
-      <div style={{ padding: '16px 24px' }}>
         <Card>
           {/* 页面标题 */}
           <div style={{ marginBottom: 16 }}>
@@ -783,7 +782,6 @@ const MaterialDatabasePage: React.FC = () => {
             </Row>
           </Form>
         </StandardModal>
-      </div>
     </Layout>
   );
 };

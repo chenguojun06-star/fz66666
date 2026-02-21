@@ -161,7 +161,6 @@ const SampleInventory: React.FC = () => {
 
   return (
     <Layout>
-      <div style={{ padding: '16px 24px' }}>
         <Card>
           <div style={{ marginBottom: 16 }}>
             <StandardToolbar
@@ -232,7 +231,6 @@ const SampleInventory: React.FC = () => {
           onClose={historyDrawer.close}
           onRefresh={loadData}
         />
-      </div>
     </Layout>
   );
 };

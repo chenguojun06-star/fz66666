@@ -82,9 +82,4 @@
   <view wx:if="{{!loading && hasMore && records.length > 0}}" class="load-more" bindtap="onLoadMore">
     <text>加载更多</text>
   </view>
-
-  <!-- 加载状态 -->
-  <view wx:if="{{loading}}" class="loading-row">
-    <text class="loading-text">加载中...</text>
-  </view>
 </view>

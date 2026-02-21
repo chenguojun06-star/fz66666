@@ -521,7 +521,6 @@ const _FinishedInventory: React.FC = () => {
 
   return (
     <Layout>
-      <div style={{ padding: '16px 24px' }}>
         <StatsGrid
           items={[
             { key: 'total', title: '成品总数', value: rawDataSource.reduce((s, r) => s + (r.availableQty ?? 0) + (r.defectQty ?? 0), 0), suffix: '件' },
@@ -802,7 +801,6 @@ const _FinishedInventory: React.FC = () => {
             </Space>
           )}
         </StandardModal>
-      </div>
     </Layout>
   );
 };

@@ -541,7 +541,6 @@ const RoleList: React.FC = () => {
 
   return (
     <Layout>
-      <div className="role-page">
         <Card className="page-card">
           <div className="page-header">
             <h2 className="page-title">角色管理</h2>
@@ -604,7 +603,6 @@ const RoleList: React.FC = () => {
             />
           </div>
         </Card>
-      </div>
 
       <ResizableModal
         open={roleModal.visible}

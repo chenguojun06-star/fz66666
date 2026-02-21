@@ -935,7 +935,6 @@ const _MaterialInventory: React.FC = () => {
 
   return (
     <Layout>
-      <div style={{ padding: '16px 24px' }}>
         <Card size="small" className="material-summary-bar">
           <div className="material-summary-content">
             <div className="material-summary-item">
@@ -1007,7 +1006,6 @@ const _MaterialInventory: React.FC = () => {
             pagination={pagination.pagination}
           />
         </Card>
-      </div>
 
       <StandardModal
         title="下发采购指令"

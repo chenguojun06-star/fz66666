@@ -434,7 +434,7 @@
   background: rgba(255, 255, 255, 0.5);
 }
 
-.card-title {
+.dashboard-page .card-title {
   font-size: 18px;
   font-weight: 600;
   color: #1a1a1a;
@@ -444,7 +444,7 @@
 }
 
 /* 标题装饰线 */
-.card-title::before {
+.dashboard-page .card-title::before {
   content: '';
   position: absolute;
   left: 0;
@@ -456,17 +456,17 @@
   border-radius: 2px;
 }
 
-.card-content {
+.dashboard-page .card-content {
   padding: 20px;
 }
 
-.activity-list {
+.dashboard-page .activity-list {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-.activity-item {
+.dashboard-page .activity-item {
   display: flex;
   align-items: center;
   padding: 14px 0;
@@ -475,14 +475,14 @@
   cursor: pointer;
 }
 
-.activity-item:hover {
+.dashboard-page .activity-item:hover {
   padding-left: 8px;
   background: rgba(45, 127, 249, 0.04);
   border-radius: 8px;
   transform: translateX(4px);
 }
 
-.activity-item:last-child {
+.dashboard-page .activity-item:last-child {
   border-bottom: none;
 }
 
@@ -501,7 +501,7 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
 }
 
-.activity-item:hover .activity-icon {
+.dashboard-page .activity-item:hover .activity-icon {
   transform: scale(1.1) rotateZ(-5deg);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }

@@ -602,7 +602,6 @@ const DataCenter: React.FC = () => {
 
   return (
     <Layout>
-      <div style={{ padding: '16px 24px' }}>
         <div className="page-header" style={{ marginBottom: 16 }}>
           <h2 className="page-title">资料中心</h2>
         </div>
@@ -661,7 +660,6 @@ const DataCenter: React.FC = () => {
             onChange: (page, pageSize) => setQueryParams(prev => ({ ...prev, page, pageSize })),
           }}
         />
-      </div>
 
       {/* 通用打印弹窗 */}
       <StylePrintModal

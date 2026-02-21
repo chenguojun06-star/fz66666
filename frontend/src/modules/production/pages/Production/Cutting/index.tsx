@@ -285,7 +285,6 @@ const CuttingManagement: React.FC = () => {
   // ─── JSX ─────────────────────────────────────────────────
   return (
     <Layout>
-      <div className="production-list-page">
         <Card className="page-card">
           {isEntryPage ? (
             <div className="cutting-entry-nav">
@@ -1020,7 +1019,6 @@ const CuttingManagement: React.FC = () => {
           />
 
         </Card>
-      </div>
     </Layout>
   );
 };

@@ -211,7 +211,6 @@ const WarehouseDashboard: React.FC = () => {
 
   return (
     <Layout>
-      <div style={{ padding: '16px 24px' }}>
         {/* 顶部统计卡片 */}
         <DashboardStats
           columns={6}
@@ -375,7 +374,6 @@ const WarehouseDashboard: React.FC = () => {
             </Col>
           </Row>
         </DashboardCard>
-      </div>
     </Layout>
   );
 };

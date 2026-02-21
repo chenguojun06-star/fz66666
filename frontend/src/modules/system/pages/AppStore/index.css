@@ -4,19 +4,19 @@
   min-height: calc(100vh - 64px);
 }
 
-.page-header {
+.app-store-container .page-header {
   margin-bottom: 32px;
   text-align: center;
 }
 
-.page-header h2 {
+.app-store-container .page-header h2 {
   font-size: 28px;
   font-weight: 600;
   margin-bottom: 8px;
   color: var(--text-primary);
 }
 
-.page-header p {
+.app-store-container .page-header p {
   font-size: 14px;
   color: var(--text-secondary);
 }

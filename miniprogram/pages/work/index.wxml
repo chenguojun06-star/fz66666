@@ -67,7 +67,6 @@
     </view>
 
     <!-- 订单列表 -->
-    <view>
 
       <view wx:if="{{orders.list.length === 0 && !orders.loading}}" class="hint">暂无数据</view>
         <view wx:for="{{orders.list}}" wx:key="id" class="list-item {{item.isClosed ? 'list-item-closed' : ''}} {{highlightOrderNo && item.orderNo === highlightOrderNo ? 'list-item-highlight' : ''}} {{item.remainDaysClass === 'days-overdue' ? 'list-item-overdue' : ''}}">
@@ -133,7 +132,6 @@
       <view class="btn">
         <view class="btn-secondary {{orders.loading || !orders.hasMore ? 'btn-disabled' : ''}}" bindtap="loadMoreActive">{{orders.loading ? '加载中...' : (orders.hasMore ? '加载更多' : '没有更多了')}}</view>
       </view>
-    </view>
   </view>
 
 </view>

@@ -881,7 +881,6 @@ const UserList: React.FC = () => {
 
   return (
     <Layout>
-      <div>
         <Card className="page-card">
           {/* 页面标题和操作区 */}
           <div className="page-header">
@@ -1209,7 +1208,6 @@ const UserList: React.FC = () => {
           ownerName={accountUser.name}
           onClose={() => setAccountModalOpen(false)}
         />
-      </div>
     </Layout>
   );
 };

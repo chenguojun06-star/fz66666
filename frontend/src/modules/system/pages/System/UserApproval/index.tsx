@@ -229,7 +229,6 @@ const UserApproval: React.FC = () => {
 
   return (
     <Layout>
-      <div className="page-container">
         <Card>
           <div className="page-header">
             <div>
@@ -361,7 +360,6 @@ const UserApproval: React.FC = () => {
             showCount
           />
         </Modal>
-      </div>
     </Layout>
   );
 };

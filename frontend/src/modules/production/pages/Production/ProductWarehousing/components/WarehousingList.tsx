@@ -101,7 +101,6 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
 
   return (
     <Layout>
-      <div className="production-list-page">
         <Card className="page-card">
           <div className="page-header">
             <h2 className="page-title">质检入库</h2>
@@ -184,7 +183,6 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
             </>
           )}
         </Card>
-      </div>
 
       {/* New/Edit Modal */}
       <WarehousingModal

@@ -666,7 +666,6 @@ const MaterialReconciliation: React.FC = () => {
 
   return (
     <Layout>
-      <div>
         <Card className="page-card">
           {/* 页面标题和操作区 */}
           <div className="page-header">
@@ -807,7 +806,6 @@ const MaterialReconciliation: React.FC = () => {
             }}
           />
         </ResizableModal>
-      </div>
     </Layout>
   );
 };

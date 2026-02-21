@@ -741,7 +741,6 @@ const InspectionDetail: React.FC = () => {
 
   return (
     <Layout>
-      <div style={{ padding: 0 }}>
         {/* 顶部导航栏 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
           <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/production/warehousing')}>返回</Button>
@@ -931,7 +930,6 @@ const InspectionDetail: React.FC = () => {
         >
           {renderWarehousingAction()}
         </Modal>
-      </div>
     </Layout>
   );
 };

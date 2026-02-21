@@ -784,7 +784,6 @@ const ProductionList: React.FC = () => {
 
   return (
     <Layout>
-      <div className="production-list-page">
         <Card className="page-card">
           <div className="page-header">
             <h2 className="page-title">我的订单</h2>
@@ -1486,7 +1485,6 @@ const ProductionList: React.FC = () => {
           }}
           sizeDetails={printingRecord ? parseProductionOrderLines(printingRecord) : []}
         />
-      </div>
     </Layout>
   );
 };
