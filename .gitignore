@@ -24,6 +24,8 @@ miniprogram/node_modules/
 
 # Logs
 *.log
+*.txt.bak
+logs/
 backend/logs/
 
 # Deployment / platform
@@ -72,3 +74,28 @@ clear-cache*.html
 *_code_review_*.zip
 .cleanup-reminder.txt
 backend/src/main/resources/application-dev.yml
+
+# 废弃的手工SQL归档目录（所有内容已纳入Flyway迁移）
+backend/sql/
+
+# 根目录一次性诊断/探针/压测Python脚本
+probe_*.py
+check_*.py
+audit_*.py
+full_system_test*.py
+test_api.py
+test_final_pressure.py
+test_maintenance.py
+test_scan_*.py
+reset_test_user.py
+
+# 根目录诊断输出文件
+*-diagnosis-output.txt
+test-finance-results.txt
+*-results.txt
+
+# frontend 一次性修复脚本
+frontend/fix_*.py
+
+# 数据库备份大文件（不提交）
+backend/sql/backup_*.sql
