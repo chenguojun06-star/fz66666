@@ -1203,94 +1203,13 @@ const RegistrationTab: React.FC = () => {
     },
   ];
 
-  // ---- 员工注册申请（User registrationStatus=PENDING）----
-  const [data, setData] = useState<TenantUser[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(1);
-
-  const fetchData = useCallback(async () => {
-    if (!isSuperAdmin && !isTenantOwner) {
-      setData([]);
-      setTotal(0);
-      return;
-    }
-    setLoading(true);
-    try {
-      const res: any = await tenantService.listPendingRegistrations({ page, pageSize: 20 });
-      const d = res?.data || res;
-      setData(d?.records || []);
-      setTotal(d?.total || 0);
-    } catch {
-      message.error('加载注册列表失败');
-    } finally {
-      setLoading(false);
-    }
-  }, [page, isSuperAdmin, isTenantOwner]);
-
-  useEffect(() => { fetchTenantApps(); fetchData(); }, [fetchTenantApps, fetchData]);
-
-  const handleApprove = async (userId: number) => {
-    try {
-      await tenantService.approveRegistration(userId);
-      message.success('审批通过');
-      fetchData();
-    } catch {
-      message.error('操作失败');
-    }
-  };
-
-  const handleReject = async (userId: number) => {
-    Modal.confirm({
-      title: '拒绝注册',
-      content: <Input.TextArea placeholder="请输入拒绝原因" id="reject-reason" />,
-      onOk: async () => {
-        const reason = (document.getElementById('reject-reason') as HTMLTextAreaElement)?.value || '不符合要求';
-        try {
-          await tenantService.rejectRegistration(userId, reason);
-          message.success('已拒绝');
-          fetchData();
-        } catch {
-          message.error('操作失败');
-        }
-      },
-    });
-  };
-
-  const columns: ColumnsType<TenantUser> = [
-    { title: '用户名', dataIndex: 'username', width: 120 },
-    { title: '角色', dataIndex: 'roleName', width: 100 },
-    {
-      title: '注册状态', dataIndex: 'registrationStatus', width: 100, align: 'center',
-      render: (s: string) => {
-        const map: Record<string, { color: string; text: string }> = {
-          PENDING: { color: 'orange', text: '待审批' },
-          ACTIVE: { color: 'green', text: '已通过' },
-          REJECTED: { color: 'red', text: '已拒绝' },
-        };
-        const item = map[s] || { color: 'default', text: s };
-        return <Tag color={item.color}>{item.text}</Tag>;
-      },
-    },
-    { title: '注册时间', dataIndex: 'createTime', width: 160 },
-    {
-      title: '操作', key: 'actions', width: 160,
-      render: (_: unknown, record: TenantUser) => {
-        if (record.registrationStatus !== 'PENDING') return null;
-        const actions: RowAction[] = [
-          { key: 'approve', label: '通过', primary: true, onClick: () => handleApprove(record.id) },
-          { key: 'reject', label: '拒绝', danger: true, onClick: () => handleReject(record.id) },
-        ];
-        return <RowActions actions={actions} />;
-      },
-    },
-  ];
+  useEffect(() => { fetchTenantApps(); }, [fetchTenantApps]);
 
   return (
     <div>
       <Alert
         message="功能说明"
-        description="此页面汇总所有待审批的注册信息：① 工厂入驻申请（新工厂注册）② 成员注册申请（员工通过工厂编码注册）。审批通过后方可登录使用。"
+        description="此页面用于审批新工厂的入驻申请。审批通过后工厂主账号将自动创建，工厂即可登录使用。员工注册审批由各工厂在“人员管理”中自行处理。"
         type="info"
         showIcon
         style={{ marginBottom: 16 }}
@@ -1320,21 +1239,6 @@ const RegistrationTab: React.FC = () => {
         </div>
       )}
 
-      {/* 成员注册申请 */}
-      <div>
-        <Typography.Title level={5} style={{ marginBottom: 12 }}>
-          👤 成员注册申请 {total > 0 && <Badge count={total} style={{ marginLeft: 8 }} />}
-        </Typography.Title>
-        <ResizableTable
-          storageKey="tenant-registration-audit"
-          rowKey="id"
-          columns={columns}
-          dataSource={data}
-          loading={loading}
-          pagination={{ current: page, pageSize: 20, total, onChange: setPage }}
-          size="small"
-        />
-      </div>
     </div>
   );
 };
