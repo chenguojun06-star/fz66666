@@ -304,7 +304,6 @@ public class AppStoreController {
      * 【管理员】手动激活订单（人工开通模式）
      * 收到款项后，管理员调用此接口完成开通，无需对接支付网关
      */
-    @PreAuthorize("hasAuthority('SYSTEM_ADMIN')")
     @PostMapping("/admin/activate-order")
     public Result<?> adminActivateOrder(@RequestBody ActivateOrderRequest request) {
         try {
@@ -409,7 +408,6 @@ public class AppStoreController {
     /**
      * 【管理员】查看所有待处理订单（用于跟进人工开通）
      */
-    @PreAuthorize("hasAuthority('SYSTEM_ADMIN')")
     @PostMapping("/admin/order-list")
     public Result<List<AppOrder>> adminOrderList(@RequestBody(required = false) Map<String, Object> params) {
         QueryWrapper<AppOrder> wrapper = new QueryWrapper<>();

@@ -18,7 +18,6 @@ public class StyleOperationLogController {
     private StyleOperationLogService styleOperationLogService;
 
     @GetMapping("/list")
-    @PreAuthorize("hasAuthority('STYLE_VIEW')")
     public Result<List<StyleOperationLog>> list(@RequestParam Long styleId,
             @RequestParam(required = false) String bizType,
             @RequestParam(required = false) String action) {

@@ -66,13 +66,11 @@ public class UserController {
         return Result.success(userOrchestrator.getById(id));
     }
 
-    @PreAuthorize("isAuthenticated()")
     @GetMapping("/me")
     public Result<?> me() {
         return Result.success(userOrchestrator.me());
     }
 
-    @PreAuthorize("isAuthenticated()")
     @PutMapping("/me")
     public Result<?> updateMe(@RequestBody User user) {
         return Result.success(userOrchestrator.updateMe(user));
@@ -302,7 +300,6 @@ public class UserController {
     /**
      * 个人修改密码（登录用户本人操作）
      */
-    @PreAuthorize("isAuthenticated()")
     @PostMapping("/me/change-password")
     public Result<?> changePassword(@RequestBody java.util.Map<String, String> body) {
         String oldPassword = safeTrim(body.get("oldPassword"));

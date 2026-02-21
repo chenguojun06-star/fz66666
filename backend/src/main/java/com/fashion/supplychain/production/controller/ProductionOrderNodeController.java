@@ -31,7 +31,6 @@ public class ProductionOrderNodeController {
      * 获取订单的节点操作记录
      */
     @GetMapping("/node-operations/{id}")
-    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_VIEW')")
     public Result<?> getNodeOperations(@PathVariable String id) {
         ProductionOrder order = productionOrderService.getById(id);
         if (order == null) {
@@ -45,7 +44,6 @@ public class ProductionOrderNodeController {
      * 返回采购完成率、操作人、完成时间等信息
      */
     @GetMapping("/procurement-status/{orderId}")
-    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_VIEW')")
     public Result<?> getProcurementStatus(@PathVariable String orderId) {
         Map<String, Object> status = productionOrderOrchestrator.getProcurementStatus(orderId);
         return Result.success(status);
@@ -56,7 +54,6 @@ public class ProductionOrderNodeController {
      * 用于工序明细显示完成数量、剩余数量、操作人等信息
      */
     @GetMapping("/process-status/{orderId}")
-    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_VIEW')")
     public Result<?> getAllProcessStatus(@PathVariable String orderId) {
         Map<String, Map<String, Object>> status = productionOrderOrchestrator.getAllProcessStatus(orderId);
         return Result.success(status);
@@ -66,7 +63,6 @@ public class ProductionOrderNodeController {
      * 保存节点操作记录（委派、指定、备注等）
      */
     @PostMapping("/node-operations")
-    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_UPDATE')")
     public Result<?> saveNodeOperations(@Valid @RequestBody SaveNodeOperationsRequest body) {
         ProductionOrder order = productionOrderService.getById(body.getId());
         if (order == null) {

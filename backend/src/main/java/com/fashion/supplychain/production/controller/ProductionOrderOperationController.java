@@ -27,7 +27,6 @@ public class ProductionOrderOperationController {
      * 报废订单
      */
     @PostMapping("/scrap")
-    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_SCRAP')")
     public Result<?> scrap(@Valid @RequestBody ScrapOrderRequest body) {
         productionOrderOrchestrator.scrapOrder(body.getId(), body.getRemark());
         return Result.successMessage("报废成功");
@@ -37,7 +36,6 @@ public class ProductionOrderOperationController {
      * 完成生产
      */
     @PostMapping("/complete")
-    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_COMPLETE')")
     public Result<?> complete(@Valid @RequestBody CompleteProductionRequest body) {
         productionOrderOrchestrator.completeProduction(body.getId(), body.getTolerancePercent());
         ProductionOrder detail = productionOrderOrchestrator.getDetailById(body.getId());
@@ -48,7 +46,6 @@ public class ProductionOrderOperationController {
      * 关闭订单
      */
     @PostMapping("/close")
-    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_CLOSE')")
     public Result<?> close(@Valid @RequestBody CloseOrderRequest body) {
         ProductionOrder updated = productionOrderOrchestrator.closeOrder(body.getId(), body.getSourceModule(), body.getRemark());
         return Result.success(updated);
@@ -58,7 +55,6 @@ public class ProductionOrderOperationController {
      * 工序委派 - 将特定工序委派给工厂，并设置单价
      */
     @PostMapping("/delegate-process")
-    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_DELEGATE')")
     public Result<?> delegateProcess(@Valid @RequestBody DelegateProcessRequest body) {
         try {
             productionOrderOrchestrator.delegateProcess(

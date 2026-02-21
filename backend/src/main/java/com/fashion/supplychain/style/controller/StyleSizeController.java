@@ -17,25 +17,25 @@ public class StyleSizeController {
   private StyleSizeOrchestrator styleSizeOrchestrator;
 
   @GetMapping("/list")
-  @PreAuthorize("hasAuthority('STYLE_VIEW')")
+  @PreAuthorize("isAuthenticated()")
   public Result<List<StyleSize>> listByStyleId(@RequestParam Long styleId) {
     return Result.success(styleSizeOrchestrator.listByStyleId(styleId));
   }
 
   @PostMapping
-  @PreAuthorize("hasAuthority('STYLE_UPDATE')")
+  @PreAuthorize("isAuthenticated()")
   public Result<Boolean> save(@RequestBody StyleSize styleSize) {
     return Result.success(styleSizeOrchestrator.save(styleSize));
   }
 
   @PutMapping
-  @PreAuthorize("hasAuthority('STYLE_UPDATE')")
+  @PreAuthorize("isAuthenticated()")
   public Result<Boolean> update(@RequestBody StyleSize styleSize) {
     return Result.success(styleSizeOrchestrator.update(styleSize));
   }
 
   @DeleteMapping("/{id}")
-  @PreAuthorize("hasAuthority('STYLE_UPDATE')")
+  @PreAuthorize("isAuthenticated()")
   public Result<Boolean> delete(@PathVariable String id) {
     return Result.success(styleSizeOrchestrator.delete(id));
   }

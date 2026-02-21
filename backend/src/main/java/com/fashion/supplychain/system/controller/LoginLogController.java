@@ -55,7 +55,6 @@ public class LoginLogController {
     /**
      * 记录操作日志
      */
-    @PreAuthorize("isAuthenticated()")
     @PostMapping("/operation")
     public Result<?> recordOperation(
             @RequestParam String bizType,

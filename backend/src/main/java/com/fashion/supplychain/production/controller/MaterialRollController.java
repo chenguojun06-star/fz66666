@@ -34,7 +34,6 @@ public class MaterialRollController {
      * Body: { "inboundId": "xxx", "rollCount": 5, "quantityPerRoll": 30.5, "unit": "米" }
      */
     @PostMapping("/generate")
-    @PreAuthorize("hasAuthority('material:inbound:create')")
     public Result<?> generateRolls(@RequestBody Map<String, Object> params) {
         try {
             String inboundId = (String) params.get("inboundId");
@@ -55,7 +54,6 @@ public class MaterialRollController {
      * 查询入库单下所有料卷
      */
     @GetMapping("/by-inbound/{inboundId}")
-    @PreAuthorize("hasAuthority('material:inbound:query')")
     public Result<?> listByInbound(@PathVariable String inboundId) {
         List<MaterialRoll> rolls = materialRollOrchestrator.listRollsByInbound(inboundId);
         return Result.success(rolls);

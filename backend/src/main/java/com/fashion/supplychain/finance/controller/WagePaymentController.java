@@ -156,7 +156,6 @@ public class WagePaymentController {
      * 收款方确认收到
      * POST /api/finance/wage-payments/{id}/confirm-received
      */
-    @PreAuthorize("isAuthenticated()")
     @PostMapping("/wage-payments/{id}/confirm-received")
     public Result<WagePayment> confirmReceived(@PathVariable String id) {
         WagePayment payment = wagePaymentOrchestrator.confirmReceived(id);
@@ -278,7 +277,6 @@ public class WagePaymentController {
      * 创建待付款记录（工厂订单结算审核后调用）
      * POST /api/finance/wage-payment/create-payable
      */
-    @PreAuthorize("hasAuthority('FINANCE_SETTLEMENT_APPROVE')")
     @PostMapping("/wage-payment/create-payable")
     public Result<WagePayment> createPayable(@RequestBody CreatePayableRequest request) {
         if (request.getPayeeName() == null || request.getPayeeName().trim().isEmpty()) {

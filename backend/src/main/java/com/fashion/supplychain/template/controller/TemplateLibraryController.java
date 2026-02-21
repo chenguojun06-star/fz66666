@@ -25,7 +25,6 @@ public class TemplateLibraryController {
      * @since 2026-02-01 优化版本
      */
     @GetMapping("/list")
-    @PreAuthorize("hasAuthority('STYLE_VIEW')")
     public Result<?> list(@RequestParam Map<String, Object> params) {
         // 智能路由：按类型查询（仅当templateType非空时）
         if (params.containsKey("templateType")) {
@@ -47,31 +46,26 @@ public class TemplateLibraryController {
      */
     @Deprecated
     @GetMapping("/type/{templateType}")
-    @PreAuthorize("hasAuthority('STYLE_VIEW')")
     public Result<?> listByType(@PathVariable String templateType) {
         return Result.success(templateLibraryOrchestrator.listByType(templateType));
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('STYLE_VIEW')")
     public Result<?> detail(@PathVariable String id) {
         return Result.success(templateLibraryOrchestrator.detail(id));
     }
 
     @GetMapping("/process-unit-prices")
-    @PreAuthorize("hasAuthority('STYLE_VIEW')")
     public Result<?> processUnitPrices(@RequestParam String styleNo) {
         return Result.success(templateLibraryOrchestrator.resolveProcessUnitPrices(styleNo));
     }
 
     @GetMapping("/progress-node-unit-prices")
-    @PreAuthorize("hasAuthority('STYLE_VIEW')")
     public Result<?> progressNodeUnitPrices(@RequestParam String styleNo) {
         return Result.success(templateLibraryOrchestrator.resolveProgressNodeUnitPrices(styleNo));
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<?> create(@RequestBody TemplateLibrary tpl) {
         return Result.success(templateLibraryOrchestrator.create(tpl));
     }
@@ -82,26 +76,22 @@ public class TemplateLibraryController {
      */
     @Deprecated
     @PostMapping("/save")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<?> save(@RequestBody TemplateLibrary tpl) {
         return Result.success(templateLibraryOrchestrator.save(tpl));
     }
 
     @PutMapping
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<?> update(@RequestBody TemplateLibrary tpl) {
         return Result.success(templateLibraryOrchestrator.update(tpl));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<?> updateById(@PathVariable String id, @RequestBody TemplateLibrary tpl) {
         tpl.setId(id);
         return Result.success(templateLibraryOrchestrator.update(tpl));
     }
 
     @PostMapping("/{id}/rollback")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<?> rollback(@PathVariable String id, @RequestBody Map<String, Object> body) {
         String reason = body == null ? null : String.valueOf(body.getOrDefault("reason", "")).trim();
         return Result.success(templateLibraryOrchestrator.rollback(id, reason));
@@ -114,13 +104,11 @@ public class TemplateLibraryController {
     }
 
     @PostMapping("/create-from-style")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<?> createFromStyle(@RequestBody Map<String, Object> body) {
         return Result.success(templateLibraryOrchestrator.createFromStyle(body));
     }
 
     @PostMapping("/apply-to-style")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<?> applyToStyle(@RequestBody Map<String, Object> body) {
         return Result.success(templateLibraryOrchestrator.applyToStyle(body));
     }
@@ -130,7 +118,6 @@ public class TemplateLibraryController {
      * 找出该款号下所有有效生产订单，自动刷新其工序单价
      */
     @PostMapping("/sync-process-prices")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<?> syncProcessPrices(@RequestBody Map<String, Object> body) {
         String styleNo = body == null ? null : (body.get("styleNo") == null ? null : String.valueOf(body.get("styleNo")).trim());
         return Result.success(templateLibraryOrchestrator.syncProcessUnitPricesByStyleNo(styleNo));

@@ -28,7 +28,6 @@ public class PatternRevisionController {
      * 分页查询
      */
     @GetMapping("/list")
-    @PreAuthorize("hasAuthority('PATTERN_REVISION_VIEW')")
     public Result<?> list(@RequestParam Map<String, Object> params) {
         int page = Integer.parseInt(String.valueOf(params.getOrDefault("page", 1)));
         int pageSize = Integer.parseInt(String.valueOf(params.getOrDefault("pageSize", 10)));
@@ -53,7 +52,6 @@ public class PatternRevisionController {
      * 查询详情
      */
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('PATTERN_REVISION_VIEW')")
     public Result<?> detail(@PathVariable String id) {
         PatternRevision revision = patternRevisionService.getById(id);
         if (revision == null) {
@@ -66,7 +64,6 @@ public class PatternRevisionController {
      * 创建记录
      */
     @PostMapping
-    @PreAuthorize("hasAuthority('PATTERN_REVISION_CREATE')")
     public Result<?> create(@RequestBody PatternRevision revision) {
         // 自动生成版本号
         if (!StringUtils.hasText(revision.getRevisionNo()) && StringUtils.hasText(revision.getStyleNo())) {
@@ -90,7 +87,6 @@ public class PatternRevisionController {
      * 更新记录
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('PATTERN_REVISION_UPDATE')")
     public Result<?> update(@PathVariable String id, @RequestBody PatternRevision revision) {
         PatternRevision existing = patternRevisionService.getById(id);
         if (existing == null) {
@@ -114,7 +110,6 @@ public class PatternRevisionController {
      * 删除记录
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('PATTERN_REVISION_DELETE')")
     public Result<?> delete(@PathVariable String id) {
         PatternRevision existing = patternRevisionService.getById(id);
         if (existing == null) {
@@ -142,7 +137,6 @@ public class PatternRevisionController {
      * @return 操作结果
      */
     @PostMapping("/{id}/workflow")
-    @PreAuthorize("hasAnyAuthority('PATTERN_REVISION_SUBMIT', 'PATTERN_REVISION_APPROVE', 'PATTERN_REVISION_REJECT', 'PATTERN_REVISION_COMPLETE')")
     public Result<?> workflow(
             @PathVariable String id,
             @RequestParam String action,
@@ -186,7 +180,6 @@ public class PatternRevisionController {
      */
     @Deprecated
     @PostMapping("/{id}/submit")
-    @PreAuthorize("hasAuthority('PATTERN_REVISION_SUBMIT')")
     public Result<?> submit(@PathVariable String id) {
         return workflow(id, "submit", null);
     }
@@ -197,7 +190,6 @@ public class PatternRevisionController {
      */
     @Deprecated
     @PostMapping("/{id}/approve")
-    @PreAuthorize("hasAuthority('PATTERN_REVISION_APPROVE')")
     public Result<?> approve(@PathVariable String id, @RequestBody Map<String, String> params) {
         return workflow(id, "approve", params);
     }
@@ -208,7 +200,6 @@ public class PatternRevisionController {
      */
     @Deprecated
     @PostMapping("/{id}/reject")
-    @PreAuthorize("hasAuthority('PATTERN_REVISION_REJECT')")
     public Result<?> reject(@PathVariable String id, @RequestBody Map<String, String> params) {
         return workflow(id, "reject", params);
     }
@@ -219,7 +210,6 @@ public class PatternRevisionController {
      */
     @Deprecated
     @PostMapping("/{id}/complete")
-    @PreAuthorize("hasAuthority('PATTERN_REVISION_COMPLETE')")
     public Result<?> complete(@PathVariable String id) {
         return workflow(id, "complete", null);
     }
@@ -228,7 +218,6 @@ public class PatternRevisionController {
      * 获取下一个版本号
      */
     @GetMapping("/next-version")
-    @PreAuthorize("hasAuthority('PATTERN_REVISION_VIEW')")
     public Result<?> getNextVersion(@RequestParam String styleNo) {
         if (!StringUtils.hasText(styleNo)) {
             return Result.fail("款号不能为空");

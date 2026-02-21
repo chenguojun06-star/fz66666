@@ -17,7 +17,6 @@ public class SerialController {
     @Autowired
     private SerialOrchestrator serialOrchestrator;
 
-    @PreAuthorize("isAuthenticated()")
     @GetMapping("/generate")
     public Result<String> generate(@RequestParam(required = false) String ruleCode) {
         return Result.success(serialOrchestrator.generate(ruleCode));

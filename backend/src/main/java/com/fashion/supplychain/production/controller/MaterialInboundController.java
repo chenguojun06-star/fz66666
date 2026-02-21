@@ -34,7 +34,6 @@ public class MaterialInboundController {
      * 分页查询入库记录
      */
     @GetMapping("/list")
-    @PreAuthorize("hasAuthority('material:inbound:query')")
     public Result<?> list(
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
@@ -52,7 +51,6 @@ public class MaterialInboundController {
      * 完整流程：采购到货 → 生成入库单 → 更新库存 → 关联采购单
      */
     @PostMapping("/confirm-arrival")
-    @PreAuthorize("hasAuthority('material:inbound:create')")
     public Result<?> confirmArrival(@RequestBody Map<String, Object> params) {
         try {
             String purchaseId = (String) params.get("purchaseId");
@@ -78,7 +76,6 @@ public class MaterialInboundController {
      * 用于：退货入库、其他来源入库
      */
     @PostMapping("/manual")
-    @PreAuthorize("hasAuthority('material:inbound:create')")
     public Result<?> manualInbound(@RequestBody Map<String, Object> params) {
         try {
             String materialCode = (String) params.get("materialCode");
@@ -111,7 +108,6 @@ public class MaterialInboundController {
      */
     @Deprecated
     @GetMapping("/by-purchase/{purchaseId}")
-    @PreAuthorize("hasAuthority('material:inbound:query')")
     public Result<?> listByPurchaseId(@PathVariable String purchaseId) {
         List<MaterialInbound> list = materialInboundService.listByPurchaseId(purchaseId);
         return Result.success(list);
@@ -121,7 +117,6 @@ public class MaterialInboundController {
      * 查询入库记录详情
      */
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('material:inbound:query')")
     public Result<?> getById(@PathVariable String id) {
         MaterialInbound inbound = materialInboundService.getById(id);
         if (inbound == null) {
@@ -135,7 +130,6 @@ public class MaterialInboundController {
      * 生成入库单号（仅供测试）
      */
     @GetMapping("/generate-no")
-    @PreAuthorize("hasAuthority('material:inbound:query')")
     public Result<?> generateInboundNo() {
         String inboundNo = materialInboundService.generateInboundNo();
         return Result.success(Map.of("inboundNo", inboundNo));

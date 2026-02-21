@@ -48,7 +48,6 @@ public class FinishedProductSettlementController {
 
     @Operation(summary = "分页查询成品结算列表")
     @GetMapping("/list")
-    @PreAuthorize("hasAuthority('FINANCE_SETTLEMENT_VIEW')")
     public Result<Page<FinishedProductSettlement>> page(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "20") Integer pageSize,
@@ -98,7 +97,6 @@ public class FinishedProductSettlementController {
 
     @Operation(summary = "根据订单号获取结算详情")
     @GetMapping("/detail/{orderNo}")
-    @PreAuthorize("hasAuthority('FINANCE_SETTLEMENT_VIEW')")
     public Result<FinishedProductSettlement> getByOrderNo(@PathVariable String orderNo) {
         LambdaQueryWrapper<FinishedProductSettlement> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(FinishedProductSettlement::getOrderNo, orderNo);
@@ -113,7 +111,6 @@ public class FinishedProductSettlementController {
 
     @Operation(summary = "导出成品结算数据")
     @GetMapping("/export")
-    @PreAuthorize("hasAuthority('FINANCE_SETTLEMENT_VIEW')")
     public ResponseEntity<byte[]> export(
             @RequestParam(required = false) String orderNo,
             @RequestParam(required = false) String styleNo,
@@ -168,7 +165,6 @@ public class FinishedProductSettlementController {
 
     @Operation(summary = "审批核实成品结算")
     @PostMapping("/approve")
-    @PreAuthorize("hasAuthority('FINANCE_SETTLEMENT_APPROVE')")
     public Result<?> approve(@RequestBody Map<String, String> params) {
         String id = params.get("id");
 
@@ -200,7 +196,6 @@ public class FinishedProductSettlementController {
 
     @Operation(summary = "获取审批状态")
     @GetMapping("/approval-status/{id}")
-    @PreAuthorize("hasAuthority('FINANCE_SETTLEMENT_VIEW')")
     public Result<Map<String, Object>> getApprovalStatus(@PathVariable String id) {
         Long tenantId = UserContext.tenantId();
         String status = approvalStatusService.getApprovalStatus(id, tenantId);
@@ -216,7 +211,6 @@ public class FinishedProductSettlementController {
      */
     @Operation(summary = "工厂订单汇总")
     @GetMapping("/factory-summary")
-    @PreAuthorize("hasAuthority('FINANCE_SETTLEMENT_VIEW')")
     public Result<List<Map<String, Object>>> factorySummary(
             @RequestParam(required = false) String factoryName,
             @RequestParam(required = false) String status,

@@ -36,7 +36,6 @@ public class ProductionOrderProgressController {
      * 更新生产进度
      */
     @PostMapping("/update-progress")
-    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_UPDATE_PROGRESS')")
     public Result<?> updateProgress(@Valid @RequestBody UpdateProgressRequest body) {
         productionOrderOrchestrator.updateProductionProgress(
                 body.getId(),
@@ -50,7 +49,6 @@ public class ProductionOrderProgressController {
      * 更新物料到位率
      */
     @PostMapping("/update-material-rate")
-    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_UPDATE_MATERIAL')")
     public Result<?> updateMaterialRate(@Valid @RequestBody UpdateMaterialRateRequest body) {
         productionOrderOrchestrator.updateMaterialArrivalRate(body.getId(), body.getRate());
         return Result.successMessage("更新成功");
@@ -60,7 +58,6 @@ public class ProductionOrderProgressController {
      * 锁定进度工作流
      */
     @PostMapping("/progress-workflow/lock")
-    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_LOCK_WORKFLOW')")
     public Result<?> lockProgressWorkflow(@Valid @RequestBody LockProgressWorkflowRequest body) {
         ProductionOrder updated = productionOrderOrchestrator.lockProgressWorkflow(body.getId(),
                 body.getWorkflowJson());
@@ -71,7 +68,6 @@ public class ProductionOrderProgressController {
      * 回退进度工作流
      */
     @PostMapping("/progress-workflow/rollback")
-    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_ROLLBACK_WORKFLOW')")
     public Result<?> rollbackProgressWorkflow(@Valid @RequestBody RollbackProgressWorkflowRequest body) {
         ProductionOrder updated = productionOrderOrchestrator.rollbackProgressWorkflow(body.getId(), body.getReason());
         return Result.success(updated);
@@ -82,7 +78,6 @@ public class ProductionOrderProgressController {
      * 适用场景：物料到货率在50%-99%之间，需要人工确认后才能进入下一阶段
      */
     @PostMapping("/confirm-procurement")
-    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_CONFIRM_PROCUREMENT')")
     public Result<?> confirmProcurement(@Valid @RequestBody ConfirmProcurementRequest body) {
         ProductionOrder updated = productionOrderOrchestrator.confirmProcurement(body.getId(), body.getRemark());
         return Result.success(updated);
@@ -93,7 +88,6 @@ public class ProductionOrderProgressController {
      * 用于修复进度不同步的问题
      */
     @PostMapping("/recompute-progress")
-    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_RECOMPUTE_PROGRESS')")
     public Result<?> recomputeProgress(@RequestBody Map<String, Object> payload) {
         String id = (String) payload.get("id");
         String orderNo = (String) payload.get("orderNo");

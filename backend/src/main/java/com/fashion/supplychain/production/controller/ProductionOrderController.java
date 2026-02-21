@@ -57,7 +57,6 @@ public class ProductionOrderController {
      * @since 2026-02-01 优化版本
      */
     @GetMapping("/list")
-    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_VIEW')")
     public Result<?> list(@RequestParam Map<String, Object> params) {
         // 如果指定了id参数，直接返回单条详情（优化：减少前端判断）
         if (params.containsKey("id") && params.get("id") != null) {
@@ -111,7 +110,6 @@ public class ProductionOrderController {
      * @since 2026-02-09 增加当天下单统计
      */
     @GetMapping("/stats")
-    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_VIEW')")
     public Result<?> getStats(@RequestParam(required = false) Map<String, Object> params) {
         return Result.success(productionOrderOrchestrator.getGlobalStats(params));
     }
@@ -121,7 +119,6 @@ public class ProductionOrderController {
      * 推荐使用：GET /list?id={id} （统一查询接口）
      */
     @GetMapping("/detail/{id}")
-    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_VIEW')")
     public Result<?> detail(@PathVariable String id) {
         ProductionOrder productionOrder = productionOrderOrchestrator.getDetailById(id);
         return Result.success(productionOrder);
@@ -135,7 +132,6 @@ public class ProductionOrderController {
      */
     @Deprecated
     @GetMapping("/by-order-no/{orderNo}")
-    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_VIEW')")
     public Result<?> getByOrderNo(@PathVariable String orderNo) {
         // 内部转发到新接口
         java.util.Map<String, Object> params = new java.util.HashMap<>();
@@ -151,7 +147,6 @@ public class ProductionOrderController {
      */
     @Deprecated
     @GetMapping("/detail-dto/{id}")
-    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_VIEW')")
     public Result<ProductionOrderDTO> detailDTO(@PathVariable String id) {
         ProductionOrder productionOrder = productionOrderOrchestrator.getDetailById(id);
         ProductionOrderDTO dto = productionOrderDtoConverter.toDTO(productionOrder);
@@ -162,7 +157,6 @@ public class ProductionOrderController {
      * 获取订单流程信息
      */
     @GetMapping("/flow/{id}")
-    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_VIEW')")
     public Result<?> flow(@PathVariable String id) {
         return Result.success(productionOrderOrchestrator.getOrderFlow(id));
     }
@@ -171,7 +165,6 @@ public class ProductionOrderController {
      * 保存或更新生产订单
      */
     @PostMapping
-    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_CREATE')")
     public Result<?> add(@RequestBody ProductionOrder productionOrder) {
         // ✅ 添加接收数据日志，便于排查字段丢失问题
         log.info("Creating order - received fields: merchandiser={}, company={}, category={}, patternMaker={}, orderDetails={}, workflow={}",
@@ -188,7 +181,6 @@ public class ProductionOrderController {
      * 更新生产订单
      */
     @PutMapping
-    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_UPDATE')")
     public Result<?> update(@RequestBody ProductionOrder productionOrder) {
         return upsert(productionOrder);
     }
@@ -201,7 +193,6 @@ public class ProductionOrderController {
      */
     @Deprecated
     @PostMapping("/save")
-    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_CREATE') or hasAuthority('PRODUCTION_ORDER_UPDATE')")
     public Result<?> save(@RequestBody ProductionOrder productionOrder) {
         return upsert(productionOrder);
     }
@@ -210,7 +201,6 @@ public class ProductionOrderController {
      * 根据ID删除生产订单（RESTful标准）
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_DELETE')")
     public Result<?> deleteById(@PathVariable String id) {
         productionOrderOrchestrator.deleteById(id);
         return Result.successMessage("删除成功");
@@ -224,7 +214,6 @@ public class ProductionOrderController {
      */
     @Deprecated
     @DeleteMapping("/delete/{id}")
-    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_DELETE')")
     public Result<?> delete(@PathVariable String id) {
         return deleteById(id);
     }
@@ -233,7 +222,6 @@ public class ProductionOrderController {
      * 快速编辑订单（备注、预计出货日期、工序数据等）
      */
     @PutMapping("/quick-edit")
-    @PreAuthorize("hasAuthority('PRODUCTION_ORDER_UPDATE')")
     public Result<?> quickEdit(@RequestBody Map<String, Object> payload) {
         String id = (String) payload.get("id");
         if (id == null || id.trim().isEmpty()) {

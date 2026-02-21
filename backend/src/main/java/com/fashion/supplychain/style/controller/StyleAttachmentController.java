@@ -19,7 +19,6 @@ public class StyleAttachmentController {
     private StyleAttachmentOrchestrator styleAttachmentOrchestrator;
 
     @GetMapping("/list")
-    @PreAuthorize("hasAuthority('STYLE_VIEW')")
     public Result<List<StyleAttachment>> list(@RequestParam(required = false) String styleId,
             @RequestParam(required = false) String styleNo,
             @RequestParam(required = false) String bizType) {
@@ -27,7 +26,6 @@ public class StyleAttachmentController {
     }
 
     @PostMapping("/upload")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<StyleAttachment> upload(@RequestParam("file") MultipartFile file,
             @RequestParam("styleId") String styleId,
             @RequestParam(value = "bizType", required = false) String bizType) {
@@ -38,7 +36,6 @@ public class StyleAttachmentController {
      * 上传纸样文件（支持版本管理）
      */
     @PostMapping("/pattern/upload")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<StyleAttachment> uploadPattern(@RequestParam("file") MultipartFile file,
             @RequestParam("styleId") String styleId,
             @RequestParam(value = "bizType", defaultValue = "pattern") String bizType,
@@ -50,7 +47,6 @@ public class StyleAttachmentController {
      * 获取纸样版本历史
      */
     @GetMapping("/pattern/versions")
-    @PreAuthorize("hasAuthority('STYLE_VIEW')")
     public Result<List<StyleAttachment>> patternVersions(@RequestParam String styleId,
             @RequestParam(value = "bizType", defaultValue = "pattern") String bizType) {
         return Result.success(styleAttachmentOrchestrator.listPatternVersions(styleId, bizType));
@@ -60,7 +56,6 @@ public class StyleAttachmentController {
      * 检查纸样是否齐全
      */
     @GetMapping("/pattern/check")
-    @PreAuthorize("hasAuthority('STYLE_VIEW')")
     public Result<Map<String, Object>> checkPattern(@RequestParam String styleId) {
         return Result.success(styleAttachmentOrchestrator.checkPatternComplete(styleId));
     }
@@ -69,7 +64,6 @@ public class StyleAttachmentController {
      * 资料中心纸样上传（替换原有纸样文件）
      */
     @PostMapping("/upload-pattern")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<StyleAttachment> uploadPatternForDataCenter(
             @RequestParam("file") MultipartFile file,
             @RequestParam("styleId") String styleId,
@@ -82,13 +76,11 @@ public class StyleAttachmentController {
      * 纸样资料流回资料中心
      */
     @PostMapping("/pattern/flow-to-center")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<Boolean> flowPatternToCenter(@RequestParam String styleId) {
         return Result.success(styleAttachmentOrchestrator.flowPatternToDataCenter(styleId));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<Boolean> delete(@PathVariable String id) {
         return Result.success(styleAttachmentOrchestrator.delete(id));
     }

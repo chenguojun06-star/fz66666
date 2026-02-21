@@ -63,7 +63,6 @@ public class MaterialStockController {
      * 更新安全库存
      */
     @PostMapping("/update-safety-stock")
-    @PreAuthorize("isAuthenticated()")
     public Result<Boolean> updateSafetyStock(@RequestBody java.util.Map<String, Object> params) {
         String stockId = params.get("stockId") == null ? null : String.valueOf(params.get("stockId"));
         Integer safetyStock = params.get("safetyStock") == null ? null

@@ -24,7 +24,6 @@ public class StyleInfoController {
      * 分页查询款号资料列表
      */
     @GetMapping("/list")
-    @PreAuthorize("hasAuthority('STYLE_VIEW')")
     public Result<?> list(@RequestParam Map<String, Object> params) {
         IPage<StyleInfo> page = styleInfoOrchestrator.list(params);
         return Result.success(page);
@@ -34,7 +33,6 @@ public class StyleInfoController {
      * 获取样衣开发费用统计
      */
     @GetMapping("/development-stats")
-    @PreAuthorize("hasAuthority('STYLE_VIEW')")
     public Result<?> getDevelopmentStats(@RequestParam(defaultValue = "day") String rangeType) {
         return Result.success(styleInfoOrchestrator.getDevelopmentStats(rangeType));
     }
@@ -43,7 +41,6 @@ public class StyleInfoController {
      * 根据ID查询款号资料详情
      */
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('STYLE_VIEW')")
     public Result<?> detail(@PathVariable Long id) {
         return Result.success(styleInfoOrchestrator.detail(id));
     }
@@ -62,21 +59,18 @@ public class StyleInfoController {
      * 更新款号资料
      */
     @PutMapping
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<?> update(@RequestBody StyleInfo styleInfo) {
         styleInfoOrchestrator.update(styleInfo);
         return Result.successMessage("操作成功");
     }
 
     @PutMapping("/{id}/production-requirements")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<?> updateProductionRequirements(@PathVariable Long id,
             @RequestBody(required = false) Map<String, Object> body) {
         return Result.success(styleInfoOrchestrator.updateProductionRequirements(id, body));
     }
 
     @PostMapping("/{id}/production-requirements/rollback")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<?> rollbackProductionRequirements(@PathVariable Long id,
             @RequestBody(required = false) Map<String, Object> body) {
         return Result.success(styleInfoOrchestrator.rollbackProductionRequirements(id, body));
@@ -92,7 +86,6 @@ public class StyleInfoController {
      * @return 操作结果
      */
     @PostMapping("/{id}/stage-action")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<?> stageAction(
             @PathVariable Long id,
             @RequestParam String stage,
@@ -169,7 +162,6 @@ public class StyleInfoController {
      */
     @Deprecated
     @PostMapping("/{id}/pattern/start")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<?> startPattern(@PathVariable Long id) {
         return stageAction(id, "pattern", "start", null);
     }
@@ -180,7 +172,6 @@ public class StyleInfoController {
      */
     @Deprecated
     @PostMapping("/{id}/pattern/complete")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<?> completePattern(@PathVariable Long id) {
         return stageAction(id, "pattern", "complete", null);
     }
@@ -191,7 +182,6 @@ public class StyleInfoController {
      */
     @Deprecated
     @PostMapping("/{id}/pattern/reset")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<?> resetPattern(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
         return stageAction(id, "pattern", "reset", body);
     }
@@ -202,7 +192,6 @@ public class StyleInfoController {
      */
     @Deprecated
     @PostMapping("/{id}/sample/start")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<?> startSample(@PathVariable Long id) {
         return stageAction(id, "sample", "start", null);
     }
@@ -213,7 +202,6 @@ public class StyleInfoController {
      */
     @Deprecated
     @PostMapping("/{id}/sample/progress")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<?> updateSampleProgress(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         return stageAction(id, "sample", "progress", body);
     }
@@ -224,7 +212,6 @@ public class StyleInfoController {
      */
     @Deprecated
     @PostMapping("/{id}/sample/complete")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<?> completeSample(@PathVariable Long id) {
         return stageAction(id, "sample", "complete", null);
     }
@@ -235,7 +222,6 @@ public class StyleInfoController {
      */
     @Deprecated
     @PostMapping("/{id}/sample/reset")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<?> resetSample(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
         return stageAction(id, "sample", "reset", body);
     }
@@ -246,7 +232,6 @@ public class StyleInfoController {
      */
     @Deprecated
     @PostMapping("/{id}/bom/start")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<?> startBom(@PathVariable Long id) {
         return stageAction(id, "bom", "start", null);
     }
@@ -257,7 +242,6 @@ public class StyleInfoController {
      */
     @Deprecated
     @PostMapping("/{id}/bom/complete")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<?> completeBom(@PathVariable Long id) {
         return stageAction(id, "bom", "complete", null);
     }
@@ -269,7 +253,6 @@ public class StyleInfoController {
      */
     @Deprecated
     @PostMapping("/{id}/size/start")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<?> startSize(@PathVariable Long id) {
         return stageAction(id, "size", "start", null);
     }
@@ -281,7 +264,6 @@ public class StyleInfoController {
      */
     @Deprecated
     @PostMapping("/{id}/size/complete")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<?> completeSize(@PathVariable Long id) {
         return stageAction(id, "size", "complete", null);
     }
@@ -292,7 +274,6 @@ public class StyleInfoController {
      */
     @Deprecated
     @PostMapping("/{id}/process/start")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<?> startProcess(@PathVariable Long id) {
         return stageAction(id, "process", "start", null);
     }
@@ -303,7 +284,6 @@ public class StyleInfoController {
      */
     @Deprecated
     @PostMapping("/{id}/process/complete")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<?> completeProcess(@PathVariable Long id) {
         return stageAction(id, "process", "complete", null);
     }
@@ -314,7 +294,6 @@ public class StyleInfoController {
      */
     @Deprecated
     @PostMapping("/{id}/secondary/start")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<?> startSecondary(@PathVariable Long id) {
         return stageAction(id, "secondary", "start", null);
     }
@@ -325,7 +304,6 @@ public class StyleInfoController {
      */
     @Deprecated
     @PostMapping("/{id}/secondary/complete")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<?> completeSecondary(@PathVariable Long id) {
         return stageAction(id, "secondary", "complete", null);
     }
@@ -336,7 +314,6 @@ public class StyleInfoController {
      */
     @Deprecated
     @PostMapping("/{id}/secondary/skip")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<?> skipSecondary(@PathVariable Long id) {
         return stageAction(id, "secondary", "skip", null);
     }
@@ -345,7 +322,6 @@ public class StyleInfoController {
      * 检查生产要求是否被锁定（是否被订单引用）
      */
     @GetMapping("/{id}/production-req/lock")
-    @PreAuthorize("hasAuthority('STYLE_VIEW')")
     public Result<?> checkProductionReqLock(@PathVariable Long id) {
         boolean locked = styleInfoOrchestrator.isProductionReqLocked(id);
         return Result.success(Map.of("locked", locked));
@@ -353,28 +329,24 @@ public class StyleInfoController {
 
     /** 工序单价退回维护（主管权限） */
     @PostMapping("/{id}/process/reset")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<?> resetProcess(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
         return stageAction(id, "process", "reset", body);
     }
 
     /** 码数单价开始 */
     @PostMapping("/{id}/size-price/start")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<?> startSizePrice(@PathVariable Long id) {
         return stageAction(id, "size-price", "start", null);
     }
 
     /** 码数单价完成 */
     @PostMapping("/{id}/size-price/complete")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<?> completeSizePrice(@PathVariable Long id) {
         return stageAction(id, "size-price", "complete", null);
     }
 
     /** 码数单价退回维护（主管权限） */
     @PostMapping("/{id}/size-price/reset")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<?> resetSizePrice(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
         return stageAction(id, "size-price", "reset", body);
     }

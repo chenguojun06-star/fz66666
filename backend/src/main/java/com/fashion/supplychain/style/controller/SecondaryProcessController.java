@@ -30,7 +30,6 @@ public class SecondaryProcessController {
 
     @Operation(summary = "根据款号ID查询二次工艺列表")
     @GetMapping("/list")
-    @PreAuthorize("hasAuthority('STYLE_VIEW')")
     public Result<List<SecondaryProcess>> listByStyleId(@RequestParam Long styleId) {
         List<SecondaryProcess> list = secondaryProcessService.listByStyleId(styleId);
         return Result.success(list);
@@ -38,7 +37,6 @@ public class SecondaryProcessController {
 
     @Operation(summary = "根据ID查询二次工艺")
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('STYLE_VIEW')")
     public Result<SecondaryProcess> getById(@PathVariable Long id) {
         SecondaryProcess process = secondaryProcessService.getById(id);
         if (process == null) {
@@ -50,7 +48,6 @@ public class SecondaryProcessController {
 
     @Operation(summary = "新建二次工艺")
     @PostMapping
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<SecondaryProcess> create(@RequestBody SecondaryProcess process) {
         secondaryProcessService.save(process);
         // 二次工艺变更后自动重算报价单
@@ -64,7 +61,6 @@ public class SecondaryProcessController {
 
     @Operation(summary = "更新二次工艺")
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<SecondaryProcess> update(@PathVariable Long id, @RequestBody SecondaryProcess process) {
         process.setId(id);
         secondaryProcessService.updateById(process);
@@ -86,7 +82,6 @@ public class SecondaryProcessController {
 
     @Operation(summary = "删除二次工艺")
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('STYLE_UPDATE')")
     public Result<Void> delete(@PathVariable Long id) {
         // 先获取 styleId 再删除，以便重算报价
         SecondaryProcess existing = secondaryProcessService.getById(id);
