@@ -73,13 +73,28 @@ public class TenantInterceptor implements InnerInterceptor {
     @Override
     public void beforeQuery(Executor executor, MappedStatement ms, Object parameter,
                             RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) throws SQLException {
-        Long tenantId = getCurrentTenantId();
-        if (tenantId == null) {
-            // 超级管理员或未登录，不过滤
+        UserContext ctx = UserContext.get();
+        if (ctx == null) {
+            // 无登录上下文（系统任务），不过滤
             return;
         }
 
+        Long tenantId = ctx.getTenantId();
         String originalSql = boundSql.getSql();
+
+        if (tenantId == null) {
+            // 超级管理员：系统管理表（EXCLUDED_TABLES）不过滤，业务表强制返回空
+            // 安全规则：超管不允许浏览任何租户的业务数据（生产订单/款式/财务等）
+            if (shouldSkipSql(originalSql)) {
+                return; // 系统管理表（无 tenant_id 列）：正常放行
+            }
+            // 业务表：追加 tenant_id IS NULL，所有业务记录都有 tenant_id，返回0行
+            String blockedSql = addTenantIsNullFilter(originalSql);
+            setFieldValue(boundSql, "sql", blockedSql);
+            log.debug("[TenantInterceptor] 超管业务表查询已隔离（tenant_id IS NULL）");
+            return;
+        }
+
         if (shouldSkipSql(originalSql)) {
             return;
         }
@@ -228,6 +243,33 @@ public class TenantInterceptor implements InnerInterceptor {
             }
         }
         return lastFound;
+    }
+
+    /**
+     * 超管业务表隔离：追加 WHERE tenant_id IS NULL
+     * 业务数据全部有 tenant_id 值，IS NULL 过滤后有效返回 0 行，
+     * 拒绝超管浏览任何租户的生产/款式/财务等业务数据。
+     */
+    private String addTenantIsNullFilter(String sql) {
+        String condition = " AND tenant_id IS NULL";
+
+        int orderByIdx = findFirstAtDepthZero(sql, " ORDER BY ");
+        int groupByIdx = findFirstAtDepthZero(sql, " GROUP BY ");
+        int havingIdx  = findFirstAtDepthZero(sql, " HAVING ");
+        int limitIdx   = findFirstAtDepthZero(sql, " LIMIT ");
+
+        int insertPos = sql.length();
+        if (orderByIdx > 0) insertPos = Math.min(insertPos, orderByIdx);
+        if (groupByIdx > 0) insertPos = Math.min(insertPos, groupByIdx);
+        if (havingIdx  > 0) insertPos = Math.min(insertPos, havingIdx);
+        if (limitIdx   > 0) insertPos = Math.min(insertPos, limitIdx);
+
+        int whereIdx = findLastAtDepthZero(sql, " WHERE ");
+        if (whereIdx >= 0 && whereIdx < insertPos) {
+            return sql.substring(0, insertPos) + condition + sql.substring(insertPos);
+        } else {
+            return sql.substring(0, insertPos) + " WHERE tenant_id IS NULL" + sql.substring(insertPos);
+        }
     }
 
     private Long getCurrentTenantId() {
