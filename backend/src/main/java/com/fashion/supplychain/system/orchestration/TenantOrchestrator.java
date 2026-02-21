@@ -185,7 +185,25 @@ public class TenantOrchestrator {
         tenant.setUpdateTime(LocalDateTime.now());
         tenantService.save(tenant);
 
-        log.info("[申请入驻] 工厂=${} 申请账号=${} 已提交，等待超管审批", tenantName, applyUsername);
+        log.info("[申请入驻] 工厂={} 申请账号={} 已提交，等待超管审批", tenantName, applyUsername);
+
+        // 通知所有超级管理员有新的工厂入驻申请
+        try {
+            if (webSocketService != null) {
+                LambdaQueryWrapper<User> adminQuery = new LambdaQueryWrapper<>();
+                adminQuery.eq(User::getIsSuperAdmin, true)
+                          .eq(User::getStatus, "active");
+                List<User> superAdmins = userService.list(adminQuery);
+                for (User sa : superAdmins) {
+                    webSocketService.notifyTenantApplicationPending(
+                        String.valueOf(sa.getId()), tenantName);
+                }
+                log.info("[入驻通知] 已推送给 {} 位超管, 工厂={}", superAdmins.size(), tenantName);
+            }
+        } catch (Exception e) {
+            log.warn("通知超管WebSocket失败，不影响申请流程: {}", e.getMessage());
+        }
+
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
         result.put("message", "申请已提交，请等待管理员审核通过后使用账号登录");
@@ -201,8 +219,16 @@ public class TenantOrchestrator {
         assertSuperAdmin();
         Tenant tenant = tenantService.getById(tenantId);
         if (tenant == null) throw new IllegalArgumentException("租户申请不存在");
-        if (!"pending_review".equals(tenant.getStatus())) throw new IllegalStateException("該申请不是待审核状态");
+        if (!"pending_review".equals(tenant.getStatus())) throw new IllegalStateException("该申请不是待审核状态");
         if (!StringUtils.hasText(tenant.getApplyUsername())) throw new IllegalStateException("申请账号信息缺失");
+        if (!StringUtils.hasText(tenant.getApplyPassword())) throw new IllegalStateException("申请密码信息缺失，请联系工厂重新提交申请");
+
+        // 检查账号唯一性（防止重复审批或账号已被占用）
+        QueryWrapper<User> userCheck = new QueryWrapper<>();
+        userCheck.eq("username", tenant.getApplyUsername());
+        if (userService.count(userCheck) > 0) {
+            throw new IllegalArgumentException("账号「" + tenant.getApplyUsername() + "」已存在，无法创建。请通知工厂更换账号后重新申请");
+        }
 
         // 自动生成租户编码
         String tenantCode = "T" + String.format("%04d", tenantId);
@@ -210,7 +236,7 @@ public class TenantOrchestrator {
         // 为新租户创建管理员角色
         Role tenantAdminRole = createTenantAdminRole(tenant.getId(), tenant.getTenantName());
         if (tenantAdminRole == null || tenantAdminRole.getId() == null) {
-            throw new IllegalStateException("租户管理员角色创建失败");
+            throw new IllegalStateException("租户管理员角色创建失败，请检查 full_admin 角色模板是否存在");
         }
 
         // 创建租户主账号

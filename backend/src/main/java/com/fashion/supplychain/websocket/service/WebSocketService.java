@@ -221,6 +221,25 @@ public class WebSocketService {
     }
 
     /**
+     * 通知超级管理员有新的工厂入驻申请
+     *
+     * @param superAdminId 超管 userId（字符串形式）
+     * @param tenantName   申请工厂名称
+     */
+    public void notifyTenantApplicationPending(String superAdminId, String tenantName) {
+        WebSocketMessage<Map<String, Object>> message = WebSocketMessage.create(
+            WebSocketMessageType.TENANT_APPLICATION_PENDING,
+            Map.of(
+                "tenantName", tenantName,
+                "message", "新工厂入驻申请待审批：" + tenantName,
+                "timestamp", System.currentTimeMillis()
+            )
+        );
+        webSocketHandler.sendToUser(superAdminId, message);
+        log.info("[WebSocket] 通知超管新工厂入驻申请: adminId={}, tenantName={}", superAdminId, tenantName);
+    }
+
+    /**
      * 广播刷新所有数据
      */
     public void broadcastRefreshAll(String reason) {
