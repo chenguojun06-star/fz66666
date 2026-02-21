@@ -19,6 +19,9 @@ public class TokenSubject {
     /** 是否为平台超级管理员（跨租户全局权限） */
     private boolean superAdmin;
 
+    /** 密码版本号：改密后旧 token 自动失效（与 Redis pwd:ver:{userId} 对比） */
+    private Long pwdVersion;
+
     public String getUserId() {
         return userId;
     }
@@ -89,5 +92,13 @@ public class TokenSubject {
 
     public void setSuperAdmin(boolean superAdmin) {
         this.superAdmin = superAdmin;
+    }
+
+    public Long getPwdVersion() {
+        return pwdVersion;
+    }
+
+    public void setPwdVersion(Long pwdVersion) {
+        this.pwdVersion = pwdVersion;
     }
 }

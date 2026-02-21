@@ -17,6 +17,7 @@ import com.fashion.supplychain.system.service.RoleService;
 import com.fashion.supplychain.system.service.TenantService;
 import com.fashion.supplychain.system.service.UserService;
 import com.fashion.supplychain.service.RedisService;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -38,6 +39,9 @@ import org.springframework.security.access.AccessDeniedException;
 @Service
 @Slf4j
 public class UserOrchestrator {
+
+    /** Redis key 前缀：pwd:ver:{userId}，用于改密后废止旧令牌 */
+    private static final String PWD_VER_KEY_PREFIX = "pwd:ver:";
 
     private static final long LOGIN_WINDOW_MS = Duration.ofMinutes(10).toMillis();
     private static final int LOGIN_MAX_FAILURES = 10;
@@ -71,6 +75,9 @@ public class UserOrchestrator {
 
     @Autowired(required = false)
     private TenantService tenantService;
+
+    @Autowired(required = false)
+    private StringRedisTemplate stringRedisTemplate;
 
     /** 权限缓存前缀（保留兼容，实际计算已委托给PermissionCalculationEngine） */
     private static final String PERM_CACHE_PREFIX = "user:permissions:role:";
@@ -262,6 +269,15 @@ public class UserOrchestrator {
         subject.setTenantId(user.getTenantId());
         subject.setTenantOwner(Boolean.TRUE.equals(user.getIsTenantOwner()));
         subject.setSuperAdmin(Boolean.TRUE.equals(user.getIsSuperAdmin()));
+        // 读取当前密码版本号，嵌入 JWT（尤如改密则旧令牌失效）
+        long pwdVersion = 0L;
+        if (stringRedisTemplate != null && user.getId() != null) {
+            try {
+                String v = stringRedisTemplate.opsForValue().get(PWD_VER_KEY_PREFIX + user.getId());
+                if (v != null) pwdVersion = Long.parseLong(v);
+            } catch (Exception e) { /* fail-safe */ }
+        }
+        subject.setPwdVersion(pwdVersion);
 
         String token = authTokenService == null ? null : authTokenService.issueToken(subject, Duration.ofHours(12));
         if (!StringUtils.hasText(token)) {
@@ -391,6 +407,14 @@ public class UserOrchestrator {
         }
         current.setPassword(encoder.encode(newPassword));
         userService.updateById(current);
+        // 递增密码版本号，强制全部旧 token 失效
+        if (stringRedisTemplate != null && current.getId() != null) {
+            try {
+                stringRedisTemplate.opsForValue().increment(PWD_VER_KEY_PREFIX + current.getId());
+            } catch (Exception e) {
+                log.warn("[改密] 更新密码版本号失败 userId={}", current.getId(), e);
+            }
+        }
         saveOperationLog("user", String.valueOf(current.getId()), current.getUsername(), "CHANGE_PASSWORD", "用户修改密码");
     }
 
@@ -408,6 +432,14 @@ public class UserOrchestrator {
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
         owner.setPassword(encoder.encode(newPassword));
         userService.updateById(owner);
+        // 递增密码版本号，强制旧 token 失效
+        if (stringRedisTemplate != null && owner.getId() != null) {
+            try {
+                stringRedisTemplate.opsForValue().increment(PWD_VER_KEY_PREFIX + owner.getId());
+            } catch (Exception e) {
+                log.warn("[超管重置密码] 更新密码版本号失败 userId={}", owner.getId(), e);
+            }
+        }
         saveOperationLog("user", String.valueOf(owner.getId()), owner.getUsername(), "RESET_PASSWORD",
                 "超管重置租户主账号密码: tenantId=" + tenantId);
     }

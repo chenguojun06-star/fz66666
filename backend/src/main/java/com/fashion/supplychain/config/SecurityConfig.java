@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
@@ -63,6 +64,9 @@ public class SecurityConfig implements WebMvcConfigurer {
     /** 修复：旧 JWT 不含 tenantId 时，从 DB 自动补全 《 userId → tenantId》的简单内存缓存 */
     @Autowired(required = false)
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired(required = false)
+    private StringRedisTemplate stringRedisTemplate;
     private final ConcurrentHashMap<String, String> tenantInfoCache = new ConcurrentHashMap<>();
 
     @Bean
@@ -145,7 +149,7 @@ public class SecurityConfig implements WebMvcConfigurer {
                         .antMatchers("/api/**").authenticated()
                         .anyRequest().denyAll());
 
-        http.addFilterBefore(new TokenAuthFilter(authTokenService, permissionEngine), UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(new TokenAuthFilter(authTokenService, permissionEngine, stringRedisTemplate), UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(new RequestIdFilter(), TokenAuthFilter.class);
         http.addFilterAfter(new HeaderAuthFilter(), TokenAuthFilter.class);
 

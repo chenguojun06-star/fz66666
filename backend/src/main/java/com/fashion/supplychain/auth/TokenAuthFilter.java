@@ -1,6 +1,8 @@
 package com.fashion.supplychain.auth;
 
 import com.fashion.supplychain.system.orchestration.PermissionCalculationEngine;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -23,17 +25,23 @@ import java.util.List;
  * 同时加载用户权限代码作为Spring Security authorities，
  * 使得 @PreAuthorize("hasAuthority('MENU_XXX')") 能正确工作
  */
+@Slf4j
 public class TokenAuthFilter extends OncePerRequestFilter {
 
     /** Request Attribute Key: 存储解析后的TokenSubject */
     public static final String TOKEN_SUBJECT_ATTR = "TOKEN_SUBJECT";
+    /** Redis key 前缀：pwd:ver:{userId} */
+    private static final String PWD_VER_KEY_PREFIX = "pwd:ver:";
 
     private final AuthTokenService authTokenService;
     private final PermissionCalculationEngine permissionEngine;
+    private final StringRedisTemplate stringRedisTemplate;
 
-    public TokenAuthFilter(AuthTokenService authTokenService, PermissionCalculationEngine permissionEngine) {
+    public TokenAuthFilter(AuthTokenService authTokenService, PermissionCalculationEngine permissionEngine,
+                           StringRedisTemplate stringRedisTemplate) {
         this.authTokenService = authTokenService;
         this.permissionEngine = permissionEngine;
+        this.stringRedisTemplate = stringRedisTemplate;
     }
 
     @Override
@@ -60,6 +68,21 @@ public class TokenAuthFilter extends OncePerRequestFilter {
             }
 
             TokenSubject subject = authTokenService == null ? null : authTokenService.verifyAndParse(token);
+            // 校验密码版本号：改密后旧 token 立即失效
+            if (subject != null && StringUtils.hasText(subject.getUserId()) && stringRedisTemplate != null) {
+                try {
+                    String storedVer = stringRedisTemplate.opsForValue().get(PWD_VER_KEY_PREFIX + subject.getUserId());
+                    long expected = storedVer == null ? 0L : Long.parseLong(storedVer);
+                    Long tokenVer = subject.getPwdVersion();
+                    if (tokenVer == null || tokenVer < expected) {
+                        log.debug("[TokenAuthFilter] token已失效（密码已更改），userId={}", subject.getUserId());
+                        subject = null; // token 已失效，视作未认证
+                    }
+                } catch (Exception e) {
+                    // Redis 异常时 fail-open，不中断正常请求
+                    log.warn("[TokenAuthFilter] Redis 校验 pwdVersion 失败，fail-open", e);
+                }
+            }
             if (subject != null && StringUtils.hasText(subject.getUsername())) {
                 List<GrantedAuthority> authorities = new ArrayList<>();
 

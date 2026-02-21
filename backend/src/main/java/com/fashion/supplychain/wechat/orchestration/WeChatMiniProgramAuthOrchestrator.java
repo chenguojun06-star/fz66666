@@ -8,6 +8,8 @@ import com.fashion.supplychain.system.service.LoginLogService;
 import com.fashion.supplychain.system.service.UserService;
 import com.fashion.supplychain.wechat.client.WeChatMiniProgramClient;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -24,6 +26,12 @@ public class WeChatMiniProgramAuthOrchestrator {
     private final UserService userService;
     private final AuthTokenService authTokenService;
     private final LoginLogService loginLogService;
+
+    /** Redis key 前缀：pwd:ver:{userId} */
+    private static final String PWD_VER_KEY_PREFIX = "pwd:ver:";
+
+    @Autowired(required = false)
+    private StringRedisTemplate stringRedisTemplate;
 
     public WeChatMiniProgramAuthOrchestrator(
             WeChatMiniProgramClient weChatMiniProgramClient,
@@ -121,6 +129,15 @@ public class WeChatMiniProgramAuthOrchestrator {
         // 设置租户信息
         subject.setTenantId(user.getTenantId());
         subject.setTenantOwner(Boolean.TRUE.equals(user.getIsTenantOwner()));
+        // 读取密码版本号，嵌入 JWT
+        long pwdVersion = 0L;
+        if (stringRedisTemplate != null && user.getId() != null) {
+            try {
+                String v = stringRedisTemplate.opsForValue().get(PWD_VER_KEY_PREFIX + user.getId());
+                if (v != null) pwdVersion = Long.parseLong(v);
+            } catch (Exception e) { /* fail-safe */ }
+        }
+        subject.setPwdVersion(pwdVersion);
 
         String token = authTokenService.issueToken(subject, Duration.ofHours(12));
         if (!StringUtils.hasText(token)) {
