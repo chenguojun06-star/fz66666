@@ -29,12 +29,13 @@ server {
     # ---- API 反向代理 ----
     # 把 /api/* 转发到后端 Spring Boot 服务
     # BACKEND_URL 在容器启动时通过 envsubst 替换为实际地址
-    # 例：http://后端服务名:8088 或 微信云托管内网地址
-    # 注意：必须使用 resolver + 变量，避免 nginx 启动时解析失败
+    # 例：http://backend:8088（微信云托管内网服务名）
+    # 注意：proxy_pass 使用变量时不剥离 location 前缀，所以直接用 $backend
+    #      请求路径 /api/xxx 会完整转发为 http://backend:8088/api/xxx
     location /api/ {
         resolver 127.0.0.11 valid=30s ipv6=off;
         set $backend "${BACKEND_URL}";
-        proxy_pass $backend/api/;
+        proxy_pass $backend;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
