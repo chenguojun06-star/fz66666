@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantInterceptor;
 import com.fashion.supplychain.system.entity.*;
 import com.fashion.supplychain.system.service.*;
 import lombok.extern.slf4j.Slf4j;
@@ -76,7 +77,20 @@ public class TenantOrchestrator {
                                              String ownerUsername, String ownerPassword,
                                              String ownerName, Integer maxUsers) {
         assertSuperAdmin();
+        // 超管跨租户操作：绕过 TenantInterceptor，否则 t_user/t_role 查询被拦截
+        TenantInterceptor.enableBypass();
+        try {
+            return doCreateTenant(tenantName, tenantCode, contactName, contactPhone,
+                                  ownerUsername, ownerPassword, ownerName, maxUsers);
+        } finally {
+            TenantInterceptor.disableBypass();
+        }
+    }
 
+    private Map<String, Object> doCreateTenant(String tenantName, String tenantCode,
+                                                String contactName, String contactPhone,
+                                                String ownerUsername, String ownerPassword,
+                                                String ownerName, Integer maxUsers) {
         // 验证租户编码唯一
         if (tenantService.findByTenantCode(tenantCode) != null) {
             throw new IllegalArgumentException("租户编码已存在: " + tenantCode);
@@ -218,6 +232,16 @@ public class TenantOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> approveApplication(Long tenantId) {
         assertSuperAdmin();
+        // 超管跨租户操作：绕过 TenantInterceptor，否则创建角色/用户后验证查询被拦截
+        TenantInterceptor.enableBypass();
+        try {
+            return doApproveApplication(tenantId);
+        } finally {
+            TenantInterceptor.disableBypass();
+        }
+    }
+
+    private Map<String, Object> doApproveApplication(Long tenantId) {
         Tenant tenant = tenantService.getById(tenantId);
         if (tenant == null) throw new IllegalArgumentException("租户申请不存在");
         if (!"pending_review".equals(tenant.getStatus())) throw new IllegalStateException("该申请不是待审核状态");
@@ -320,6 +344,16 @@ public class TenantOrchestrator {
      */
     public Page<Tenant> listTenants(Long page, Long pageSize, String tenantName, String status) {
         assertSuperAdmin();
+        // 超管跨租户操作：需要查询 t_user 填充主账号用户名，绕过 TenantInterceptor
+        TenantInterceptor.enableBypass();
+        try {
+            return doListTenants(page, pageSize, tenantName, status);
+        } finally {
+            TenantInterceptor.disableBypass();
+        }
+    }
+
+    private Page<Tenant> doListTenants(Long page, Long pageSize, String tenantName, String status) {
         QueryWrapper<Tenant> query = new QueryWrapper<>();
         if (StringUtils.hasText(tenantName)) {
             query.like("tenant_name", tenantName);

@@ -30,11 +30,22 @@ import java.util.regex.Pattern;
 @Slf4j
 public class TenantInterceptor implements InnerInterceptor {
 
-    /** 不需要租户隔离的系统表 */
+    /** 不需要租户隔离的系统表（无 tenant_id 列） */
     private static final Set<String> EXCLUDED_TABLES = new HashSet<>();
 
     /** 需要混合查询的表（租户数据 + 系统共享数据，用 tenant_id = X OR tenant_id IS NULL） */
     private static final Set<String> SHARED_TENANT_TABLES = new HashSet<>();
+
+    /**
+     * 超管可管理的表（有 tenant_id 列，但超管需要跨租户操作）。
+     * 超管（tenantId=null）查询这些表时不追加 tenant_id IS NULL——
+     * 否则审批入驻、创建账号等操作会因 IS NULL 过滤而无法读取新创建的记录。
+     * 普通租户用户对这些表仍然按 tenant_id 隔离。
+     *
+     * 安全保障：超管只能通过"客户应用管理"模块操作这些表，
+     * 不会看到生产订单/款式/财务等业务数据。
+     */
+    private static final Set<String> SUPERADMIN_MANAGED_TABLES = new HashSet<>();
 
     /** 匹配 FROM/JOIN/UPDATE/DELETE FROM 后表名的正则 */
     private static final Pattern TABLE_PATTERN = Pattern.compile(
@@ -49,30 +60,27 @@ public class TenantInterceptor implements InnerInterceptor {
         EXCLUDED_TABLES.add("t_dict");
         EXCLUDED_TABLES.add("t_param_config");
         EXCLUDED_TABLES.add("t_serial_rule");
-        EXCLUDED_TABLES.add("t_app_store");             // 应用商店（无 tenant_id 列）
-        // ⚠️ t_pattern_scan_record 已从排除列表移除 — 该表有 tenant_id 列，必须租户隔离
-        // EXCLUDED_TABLES.add("t_pattern_scan_record");  // 版型扫码记录（有 tenant_id 列，不能排除）
+        EXCLUDED_TABLES.add("t_app_store");
 
         // === 权限相关表（跨租户共享权限定义）===
         EXCLUDED_TABLES.add("t_tenant_permission_ceiling");
         EXCLUDED_TABLES.add("t_user_permission_override");
 
-        // ⚠️ v_production_order_* 视图已添加 tenant_id 列，由拦截器自动过滤，不再排除
-        // ⚠️ v_finished_product_settlement 已移除排除列表：该视图有 tenant_id 列，必须租户隔离
-        // EXCLUDED_TABLES.add("v_finished_product_settlement");
-
-        // ⚠️ t_role 已从排除列表移除 — 角色需要租户隔离（租户角色有 tenant_id）
-        // ⚠️ t_user 已从排除列表移除 — 用户需要租户隔离
-
         // === 混合表（租户自有数据 + 系统共享数据）===
         SHARED_TENANT_TABLES.add("t_role");              // 系统模板角色(tenant_id=NULL) + 租户自有角色
         SHARED_TENANT_TABLES.add("t_template_library");  // 系统工序模板(NULL) + 租户自定义模板
         SHARED_TENANT_TABLES.add("t_template_operation_log"); // 模板操作日志
+
+        // === 超管可管理的表（超管审批/创建账号时需要跨租户操作）===
+        SUPERADMIN_MANAGED_TABLES.add("t_user");         // 超管审批入驻、创建租户主账号
+        // t_role 已在 SHARED_TENANT_TABLES，超管可正常访问模板角色
     }
 
     @Override
     public void beforeQuery(Executor executor, MappedStatement ms, Object parameter,
                             RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) throws SQLException {
+        if (isBypassed()) return; // 超管跨租户操作旁路
+
         UserContext ctx = UserContext.get();
         if (ctx == null) {
             // 无登录上下文（系统任务），不过滤
@@ -110,6 +118,8 @@ public class TenantInterceptor implements InnerInterceptor {
 
     @Override
     public void beforeUpdate(Executor executor, MappedStatement ms, Object parameter) throws SQLException {
+        if (isBypassed()) return; // 超管跨租户操作旁路
+
         Long tenantId = getCurrentTenantId();
         if (tenantId == null) {
             return;
