@@ -112,7 +112,7 @@ Controller → Orchestrator → Service → Mapper
   - 示例：`ProductionOrderOrchestrator`, `ScanRecordOrchestrator`, `MaterialStockOrchestrator`, `ReconciliationStatusOrchestrator`
 - ❌ **Service 禁止互调**：单领域 CRUD 操作，不允许直接调用其他 Service
 - ❌ **Controller 禁止直调多 Service**：复杂逻辑必须委托给 Orchestrator
-- ✅ **权限控制**：使用 `@PreAuthorize("hasAuthority('MENU_XXX')")` 或 `@PreAuthorize("hasAuthority('STYLE_VIEW')")`
+- ✅ **权限控制**：Controller **class 级别**添加 `@PreAuthorize("isAuthenticated()")`；超管专属端点使用 `@PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")`
 - ✅ **事务边界**：在 Orchestrator 层使用 `@Transactional(rollbackFor = Exception.class)`
 
 **常见错误示例**（禁止）：
@@ -144,7 +144,7 @@ public class OrderController {
 - ✅ 列表查询：`POST /list`（支持过滤参数，旧 `GET/POST /page` 已废弃）
 - ✅ 状态流转：`POST /{id}/stage-action`（如 `/approve`, `/submit`, `/reject`）
 - ✅ 统一响应：`Result<T>` 包装（`code: 200=成功`, `message`, `data`, `requestId`）
-- ✅ 权限注解：必须添加 `@PreAuthorize` 到 Controller 方法
+- ✅ 权限注解：**class 级别**添加 `@PreAuthorize("isAuthenticated()")`，**方法级别不需要重复添加**（已删除全系统142处冗余注解）
 
 **Result<T> 标准响应格式**：
 ```java
@@ -521,31 +521,43 @@ open target/site/jacoco/index.html
 ## 📋 关键开发模式与约束
 
 ### 权限控制模式（强制）
-**所有 Controller 方法必须添加权限注解**：
+
+**当前架构：`@EnableGlobalMethodSecurity(prePostEnabled = true)` 已激活，所有 `@PreAuthorize` 全面生效**
+
 ```java
+// ✅ 正确：class 级别统一鉴权，方法级别不添加（防止冗余）
 @RestController
 @RequestMapping("/api/production/orders")
+@PreAuthorize("isAuthenticated()")  // 放在 class 上，覆盖所有方法
 public class ProductionOrderController {
-    
-    // ✅ 强制使用权限注解
-    @PreAuthorize("hasAuthority('MENU_PRODUCTION_ORDER_VIEW')")
-    @PostMapping("/list")
-    public Result<Page<ProductionOrder>> list(@RequestBody QueryRequest req) {
-        // ...
-    }
-    
-    // ❌ 错误：无权限注解
-    @PostMapping("/export")
-    public void export() {
-        // ...
-    }
+    @PostMapping("/list")     // 不需要再加 @PreAuthorize
+    public Result<Page<ProductionOrder>> list(...) { ... }
 }
+
+// ✅ 特例：超管专属端点
+@PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
+@PostMapping("/approve-application")
+public Result<Void> approveApplication(...) { ... }
+
+// ❌ 禁止：在方法上引用数据库中不存在的权限码（导致全员 403）
+// 以下权限码 t_permission 表中根本不存在！
+@PreAuthorize("hasAuthority('PRODUCTION_ORDER_VIEW')")  // ❌ 不存在
+@PreAuthorize("hasAuthority('STYLE_VIEW')")             // ❌ 不存在
+@PreAuthorize("hasAuthority('FINANCE_SETTLEMENT_VIEW')")// ❌ 不存在
 ```
 
+**`t_permission` 表中实际存在的权限码**：
+- `MENU_*` （菜单权限，20+个）：`MENU_PRODUCTION`、`MENU_FINANCE`、`MENU_SYSTEM` 等  
+- `STYLE_CREATE` / `STYLE_DELETE`（按鈕权限）
+- `PAYMENT_APPROVE`（工资付款审批）
+- `MATERIAL_RECON_CREATE` / `SHIPMENT_RECON_AUDIT`（对账权限）
+
 **权限分类**：
-- `MENU_*` - 菜单访问权限（如 `MENU_PRODUCTION_ORDER_VIEW`）
-- `STYLE_*` - 款式数据权限（如 `STYLE_VIEW`, `STYLE_EDIT`）
-- `REPORT_*` - 报表权限（如 `REPORT_FINANCE_SETTLE`）
+- `ROLE_SUPER_ADMIN` — 超级管理员（TenantController 18个端点专用）
+- `ROLE_tenant_owner` — 租户主账号
+- `ROLE_${roleName}` — 常规角色
+- `MENU_*` — 菜单访问权限
+- 其他按鈕/操作级 — 仅少数实际存在的
 
 ### 事务边界管理
 **原则**：事务控制仅在 Orchestrator 层
@@ -666,7 +678,7 @@ GET /api/production/orders/by-order-no/{o `.run/backend.env` 环境变量
 5. **Service 互调**：必须通过 Orchestrator，否则无法进行事务管理
 6. **扫码重复提交**：理解防重复算法，不要随意修改时间间隔
 7. **跨端验证不一致**：修改 validationRules 时必须同步 PC 端和小程序
-8. **权限注解缺失**：所有 Controller 方法必须添加 `@PreAuthorize`（部分 TODO 标记除外）
+8. **权限错误**：Controller 方法上不要添加实际不存在的权限码（导致全员 403）；class 级别已有 `isAuthenticated()`，方法级别不需要重复添加
 9. **MySQL时区 vs JVM时区**：Docker MySQL 默认 UTC，JVM 默认 CST(+8)。`LocalDateTime.now()` 与 DB 的 `NOW()` 相差 8 小时。`1小时撤回等时间校验会对手动插入测试数据失效`。生产数据无问题（Spring Boot 写入时用 CST），但写测试数据时须用 `CONVERT_TZ(NOW(),'+00:00','+08:00')` 生成 CST 时间。
 
 // ❌ 禁止：分散的状态流转
@@ -796,7 +808,7 @@ SKU = styleNo + color + size
 6. **Service 互调**：必须通过 Orchestrator，否则无法进行事务管理
 7. **扫码重复提交**：理解防重复算法，不要随意修改时间间隔
 8. **跨端验证不一致**：修改 validationRules 时必须同步 PC 端和小程序
-9. **权限注解缺失**：所有 Controller 方法必须添加 `@PreAuthorize`（部分 TODO 标记除外）
+9. **权限错误**：Controller 方法上不要添加实际不存在的权限码（导致全员 403）；class 级别已有 `isAuthenticated()`，方法级别不需要重复添加
 10. **MySQL时区 vs JVM时区**：Docker MySQL 默认 UTC，JVM 默认 CST(+8)。写测试数据时须用 `CONVERT_TZ(NOW(),'+00:00','+08:00')` 而非 `NOW()`，否则时间型校验（如1小时撤回）会因 8 小时差导致误判。生产运行时无此问题（Spring Boot 本身用 `LocalDateTime.now()` CST 写入）。
 
 ---
@@ -1191,12 +1203,12 @@ ls -1 test-*.sh           # 列出所有测试脚本
 ### 让 AI 生成代码时
 1. **指定架构层**：明确是 Controller/Orchestrator/Service
 2. **引用现有代码**：`参考 ProductionOrderOrchestrator 的模式`
-3. **说明约束**：`必须使用 @PreAuthorize 权限注解`
+3. **说明约束**：`Controller class 级别添加 @PreAuthorize("isAuthenticated()")，方法级别不重复`
 4. **要求测试**：`需要包含单元测试`
 
 ### AI 代码审查重点
 - [ ] 是否遵循 Orchestrator 模式？
-- [ ] 是否添加了权限注解？
+- [ ] Controller class 级别是否有 `@PreAuthorize("isAuthenticated()")` ？（方法级别不需要）
 - [ ] 是否使用了标准组件（ResizableModal/ModalContentLayout）？
 - [ ] 是否更新了跨端验证规则？
 - [ ] 是否编写了测试？
