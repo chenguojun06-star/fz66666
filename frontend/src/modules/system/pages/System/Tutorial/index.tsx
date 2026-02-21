@@ -148,7 +148,7 @@ const SystemTutorial: React.FC = () => {
         {
           title: '点击新建订单',
           description: '点击页面右上角的「+ 新建订单」按钮，打开订单创建弹窗。',
-          tips: ['弹窗为80vw × 85vh标准尺寸，可调整大小'],
+          tips: ['弹窗为标准尺寸（大60vw/中40vw/小30vw），可拖拽调整大小'],
         },
         {
           title: '选择款式',
