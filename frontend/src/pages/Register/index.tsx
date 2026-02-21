@@ -39,7 +39,7 @@ const Register: React.FC = () => {
   // 加载工厂列表（公开接口，无需登录）
   useEffect(() => {
     if (isApplyMode || urlTenantCode) return;
-    api.get('/api/system/tenant/public-list').then((res: any) => {
+    api.get('/system/tenant/public-list').then((res: any) => {
       const list: any[] = res?.data || res || [];
       setTenantOptions(
         list

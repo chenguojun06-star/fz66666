@@ -172,6 +172,8 @@ public class TenantOrchestrator {
 
         Tenant tenant = new Tenant();
         tenant.setTenantName(tenantName);
+        // 申请阶段生成临时租户编码（审批通过后替换为正式编码 T0001 等）
+        tenant.setTenantCode("PENDING_" + System.currentTimeMillis());
         tenant.setContactName(contactName);
         tenant.setContactPhone(contactPhone);
         tenant.setApplyUsername(applyUsername);
@@ -281,7 +283,7 @@ public class TenantOrchestrator {
     public List<Tenant> listActiveTenants() {
         QueryWrapper<Tenant> query = new QueryWrapper<>();
         query.eq("status", "active")
-             .select("id", "tenant_name")
+             .select("id", "tenant_name", "tenant_code")
              .orderByAsc("id");
         return tenantService.list(query);
     }
