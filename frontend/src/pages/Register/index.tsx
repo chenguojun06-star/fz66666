@@ -1,8 +1,9 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { Form, Input, Button, Card, Typography, App, Segmented, Alert } from 'antd';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import { Form, Input, Button, Card, Typography, App, Segmented, Alert, AutoComplete } from 'antd';
 import { UserOutlined, LockOutlined, PhoneOutlined, ShopOutlined, IdcardOutlined, BankOutlined } from '@ant-design/icons';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import tenantService from '../../services/tenantService';
+import api from '../../utils/api';
 import '../Login/styles.css';
 
 const { Title } = Typography;
@@ -22,6 +23,9 @@ const Register: React.FC = () => {
 
   const [mode, setMode] = useState<RegisterMode>('工厂员工注册');
   const isApplyMode = mode === '工厂入驻申请';
+  // 工厂列表（用于员工注册时搜索）
+  const [tenantOptions, setTenantOptions] = useState<{ value: string; label: string; tenantCode: string }[]>([]);
+  const [filteredOptions, setFilteredOptions] = useState<{ value: string; label: string }[]>([]);
 
   const year = useMemo(() => new Date().getFullYear(), []);
 
@@ -31,6 +35,41 @@ const Register: React.FC = () => {
       form.setFieldsValue({ tenantCode: urlTenantCode });
     }
   }, [urlTenantCode, form]);
+
+  // 加载工厂列表（公开接口，无需登录）
+  useEffect(() => {
+    if (isApplyMode || urlTenantCode) return;
+    api.get('/api/system/tenant/public-list').then((res: any) => {
+      const list: any[] = res?.data || res || [];
+      setTenantOptions(
+        list
+          .filter((t: any) => t.tenantCode)
+          .map((t: any) => ({ value: t.tenantName, label: t.tenantName, tenantCode: t.tenantCode }))
+      );
+    }).catch(() => {});
+  }, [isApplyMode, urlTenantCode]);
+
+  // 搜索工厂名
+  const handleTenantSearch = useCallback((keyword: string) => {
+    const kw = keyword.trim().toLowerCase();
+    if (!kw) {
+      setFilteredOptions(tenantOptions.map(o => ({ value: o.value, label: o.label })));
+      return;
+    }
+    setFilteredOptions(
+      tenantOptions
+        .filter(o => o.label.toLowerCase().includes(kw))
+        .map(o => ({ value: o.value, label: o.label }))
+    );
+  }, [tenantOptions]);
+
+  // 选中工厂名后自动回填租户码
+  const handleTenantSelect = useCallback((tenantName: string) => {
+    const found = tenantOptions.find(o => o.value === tenantName);
+    if (found) {
+      form.setFieldsValue({ tenantCode: found.tenantCode });
+    }
+  }, [tenantOptions, form]);
 
   // 工厂员工注册
   const handleFactoryRegister = async (values: any) => {
@@ -123,84 +162,106 @@ const Register: React.FC = () => {
           form={form}
           name="register"
           onFinish={handleSubmit}
+          onFinishFailed={({ errorFields }) => {
+            const first = errorFields?.[0]?.errors?.[0];
+            if (first) message.error(first);
+          }}
           className="login-form"
           layout="vertical"
         >
-          {/* 工厂入驻申请内容 */}
+          {/* 入驻申请字段（始终渲染，hidden 控制显隐，彻底避免 preserve 时序问题） */}
+          <Form.Item
+            name="tenantName"
+            rules={isApplyMode ? [{ required: true, message: '请输入工厂名称' }] : []}
+            label="工厂名称"
+            hidden={!isApplyMode}
+          >
+            <Input
+              prefix={<BankOutlined className="site-form-item-icon" />}
+              placeholder="请输入工厂 / 公司名称"
+              size="large"
+              allowClear
+              disabled={submitting}
+            />
+          </Form.Item>
+          <Form.Item
+            name="contactName"
+            rules={isApplyMode ? [{ required: true, message: '请输入联系人姓名' }] : []}
+            label="联系人"
+            hidden={!isApplyMode}
+          >
+            <Input
+              prefix={<IdcardOutlined className="site-form-item-icon" />}
+              placeholder="请输入联系人姓名"
+              size="large"
+              allowClear
+              disabled={submitting}
+            />
+          </Form.Item>
+          <Form.Item
+            name="contactPhone"
+            rules={isApplyMode
+              ? [{ required: true, message: '请输入联系电话' }, { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号' }]
+              : []
+            }
+            label="联系电话"
+            hidden={!isApplyMode}
+          >
+            <Input
+              prefix={<PhoneOutlined className="site-form-item-icon" />}
+              placeholder="请输入手机号"
+              size="large"
+              allowClear
+              disabled={submitting}
+            />
+          </Form.Item>
           {isApplyMode && (
-            <>
-              <Form.Item
-                name="tenantName"
-                rules={[{ required: true, message: '请输入工厂名称' }]}
-                label="工厂名称"
-              >
-                <Input
-                  prefix={<BankOutlined className="site-form-item-icon" />}
-                  placeholder="请输入工厂 / 公司名称"
-                  size="large"
-                  allowClear
-                  disabled={submitting}
-                />
-              </Form.Item>
-              <Form.Item
-                name="contactName"
-                rules={[{ required: true, message: '请输入联系人姓名' }]}
-                label="联系人"
-              >
-                <Input
-                  prefix={<IdcardOutlined className="site-form-item-icon" />}
-                  placeholder="请输入联系人姓名"
-                  size="large"
-                  allowClear
-                  disabled={submitting}
-                />
-              </Form.Item>
-              <Form.Item
-                name="contactPhone"
-                rules={[
-                  { required: true, message: '请输入联系电话' },
-                  { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号' },
-                ]}
-                label="联系电话"
-              >
-                <Input
-                  prefix={<PhoneOutlined className="site-form-item-icon" />}
-                  placeholder="请输入手机号"
-                  size="large"
-                  allowClear
-                  disabled={submitting}
-                />
-              </Form.Item>
-              <Alert
-                message="以下账号信息用于审批通过后登录系统"
-                type="info"
-                showIcon
-                style={{ marginBottom: 16, borderRadius: 8 }}
-              />
-            </>
+            <Alert
+              message="以下账号信息用于审批通过后登录系统"
+              type="info"
+              showIcon
+              style={{ marginBottom: 16, borderRadius: 8 }}
+            />
           )}
 
-          {/* 工厂编码（员工注册且非URL自动填入时显示） */}
+          {/* 工厂搜索（员工注册且非URL自动填入时显示，纯UI无表单绑定） */}
           {!isApplyMode && !urlTenantCode && (
             <Form.Item
-              name="tenantCode"
-              rules={[{ required: true, message: '请输入工厂编码' }]}
-              label="工厂编码"
+              label="所属工厂"
+              required
+              style={{ marginBottom: 8 }}
             >
-              <Input
-                prefix={<ShopOutlined className="site-form-item-icon" />}
-                placeholder="请输入工厂编码（向工厂管理员获取）"
+              <AutoComplete
+                options={filteredOptions.length ? filteredOptions : tenantOptions.map(o => ({ value: o.value, label: o.label }))}
+                onSearch={handleTenantSearch}
+                onSelect={handleTenantSelect}
+                placeholder="输入工厂名称搜索"
                 size="large"
-                allowClear
                 disabled={submitting}
+                allowClear
+                filterOption={false}
+                style={{ width: '100%' }}
               />
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>
+                选择工厂后工厂编码自动填入
+              </div>
             </Form.Item>
           )}
-          {!isApplyMode && urlTenantCode && (
-            <Form.Item name="tenantCode" hidden initialValue={urlTenantCode}>
-              <Input />
-            </Form.Item>
-          )}
+          {/* 工厂编码（始终渲染，入驻模式或URL扫码时隐藏） */}
+          <Form.Item
+            name="tenantCode"
+            rules={!isApplyMode ? [{ required: true, message: '请输入或选择工厂编码' }] : []}
+            label="工厂编码"
+            hidden={isApplyMode || !!urlTenantCode}
+          >
+            <Input
+              prefix={<ShopOutlined className="site-form-item-icon" />}
+              placeholder="选择工厂后自动填入，或手动输入编码"
+              size="large"
+              allowClear
+              disabled={submitting}
+            />
+          </Form.Item>
 
           <Form.Item
             name="username"
@@ -223,22 +284,21 @@ const Register: React.FC = () => {
             />
           </Form.Item>
 
-          {/* 员工注册需要填真实姓名 */}
-          {!isApplyMode && (
-            <Form.Item
-              name="name"
-              rules={[{ required: true, message: '请输入真实姓名' }]}
-              label="真实姓名"
-            >
-              <Input
-                prefix={<IdcardOutlined className="site-form-item-icon" />}
-                placeholder="请输入真实姓名"
-                size="large"
-                allowClear
-                disabled={submitting}
-              />
-            </Form.Item>
-          )}
+          {/* 员工注册需要填真实姓名（用 hidden 而非条件渲染，避免 Ant Design preserve 规则残留） */}
+          <Form.Item
+            name="name"
+            rules={!isApplyMode ? [{ required: true, message: '请输入真实姓名' }] : []}
+            label="真实姓名"
+            hidden={isApplyMode}
+          >
+            <Input
+              prefix={<IdcardOutlined className="site-form-item-icon" />}
+              placeholder="请输入真实姓名"
+              size="large"
+              allowClear
+              disabled={submitting}
+            />
+          </Form.Item>
 
           <Form.Item
             name="password"
@@ -280,10 +340,10 @@ const Register: React.FC = () => {
           </Form.Item>
           <Form.Item
             name="phone"
-            rules={[
-              { required: true, message: '请输入手机号' },
-              { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号' },
-            ]}
+            rules={!isApplyMode
+              ? [{ required: true, message: '请输入手机号' }, { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号' }]
+              : []
+            }
             label="手机号"
             hidden={isApplyMode}
           >
