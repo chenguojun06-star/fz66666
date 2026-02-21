@@ -72,6 +72,8 @@ public class LoginLogServiceImpl extends ServiceImpl<LoginLogMapper, LoginLog> i
         log.setRemark(remark);
         log.setLoginTime(LocalDateTime.now());
         log.setLoginStatus("SUCCESS"); // 操作日志默认成功
+        // 多租户隔离：记录当前租户ID，防止跨租户数据泄漏
+        log.setTenantId(UserContext.tenantId());
         save(log);
 
         // 同步记录到统一的 t_operation_log，供操作日志页面展示
@@ -100,6 +102,13 @@ public class LoginLogServiceImpl extends ServiceImpl<LoginLogMapper, LoginLog> i
     public List<LoginLog> listOperationLogs(String bizType, String bizId, String action) {
         LambdaQueryWrapper<LoginLog> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(LoginLog::getLogType, "OPERATION");
+
+        // 多租户隔离：非超管只能查本租户操作日志
+        Long currentTenantId = UserContext.tenantId();
+        boolean isSuperAdmin = UserContext.isSuperAdmin();
+        if (!isSuperAdmin && currentTenantId != null) {
+            wrapper.eq(LoginLog::getTenantId, currentTenantId);
+        }
 
         if (StringUtils.hasText(bizType)) {
             wrapper.eq(LoginLog::getBizType, bizType);

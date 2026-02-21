@@ -228,6 +228,17 @@ public class WeChatMiniProgramAuthOrchestrator {
             log.setLoginStatus(safeTrim(status));
             log.setMessage(safeTrim(message));
             log.setUserAgent(limitLength(safeTrim(userAgent), 200));
+            // 多租户隔离：尝试通过 UserContext 或用户名查找租户ID
+            Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+            if (tenantId == null && username != null && !username.isBlank()) {
+                try {
+                    User found = userService.getOne(
+                        new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<User>()
+                            .eq(User::getUsername, safeTrim(username)).last("LIMIT 1"), false);
+                    if (found != null) tenantId = found.getTenantId();
+                } catch (Exception ignored) { }
+            }
+            log.setTenantId(tenantId);
             if (log.getUsername() != null && !log.getUsername().isBlank()) {
                 loginLogService.save(log);
             }

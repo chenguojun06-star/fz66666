@@ -50,7 +50,8 @@ public class TenantInterceptor implements InnerInterceptor {
         EXCLUDED_TABLES.add("t_param_config");
         EXCLUDED_TABLES.add("t_serial_rule");
         EXCLUDED_TABLES.add("t_app_store");             // 应用商店（无 tenant_id 列）
-        EXCLUDED_TABLES.add("t_pattern_scan_record");    // 版型扫码记录（无 tenant_id 列）
+        // ⚠️ t_pattern_scan_record 已从排除列表移除 — 该表有 tenant_id 列，必须租户隔离
+        // EXCLUDED_TABLES.add("t_pattern_scan_record");  // 版型扫码记录（有 tenant_id 列，不能排除）
 
         // === 权限相关表（跨租户共享权限定义）===
         EXCLUDED_TABLES.add("t_tenant_permission_ceiling");
