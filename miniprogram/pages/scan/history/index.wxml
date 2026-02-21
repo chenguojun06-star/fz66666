@@ -21,8 +21,8 @@
         <text class="search-icon">🔍</text>
         <input class="search-input" placeholder="订单号 / 菲号 / 工序" value="{{searchKeyword}}" bindinput="onKeywordInput" confirm-type="search" bindconfirm="onSearch" />
       </view>
-      <view class="search-btn" bindtap="onSearch">搜索</view>
-      <view class="clear-btn" wx:if="{{searchKeyword}}" bindtap="onClearSearch">重置</view>
+      <view class="search-btn" bindtap="onSearch" hover-class="search-btn-hover" hover-stay-time="50">搜索</view>
+      <view class="clear-btn" wx:if="{{searchKeyword}}" bindtap="onClearSearch" hover-class="clear-btn-hover" hover-stay-time="50">重置</view>
     </view>
   </view>
 
@@ -36,7 +36,7 @@
       <text class="summary-num">{{summary.recordCount || 0}}</text>
       <text class="summary-label">记录数</text>
     </view>
-    <view class="summary-item summary-hl summary-payable {{showOnlyPayable ? 'summary-payable-active' : ''}}" bindtap="onTogglePayableFilter">
+    <view class="summary-item summary-hl summary-payable {{showOnlyPayable ? 'summary-payable-active' : ''}}" bindtap="onTogglePayableFilter" hover-class="summary-payable-hover" hover-stay-time="50">
       <text class="summary-num">¥{{summary.totalWage || '0.00'}}</text>
       <text class="summary-label">工资汇总（{{summary.payableRecordCount || 0}}条）</text>
     </view>
@@ -60,7 +60,7 @@
   <view wx:if="{{loading}}" class="loading-row">
     <text class="loading-text">加载中...</text>
   </view>
-  <view wx:if="{{!loading && hasMore && displayRecords.length > 0}}" class="load-more" bindtap="onLoadMore">
+  <view wx:if="{{!loading && hasMore && displayRecords.length > 0}}" class="load-more" bindtap="onLoadMore" hover-class="load-more-hover" hover-stay-time="50">
     <text>加载更多</text>
   </view>
   <view wx:if="{{!loading && !hasMore && displayRecords.length > 0}}" class="load-more no-more-row">

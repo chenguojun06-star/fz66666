@@ -40,7 +40,8 @@
   border-bottom: none;
 }
 
-.srt-table-row:active {
+/* hover-class="srt-table-row-hover" 替代 :active */
+.srt-table-row-hover {
   background: rgba(224, 242, 254, 0.2);
 }
 

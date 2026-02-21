@@ -51,6 +51,8 @@
           class="tenant-result-item"
           data-index="{{index}}"
           bindtap="onTenantSelect"
+          hover-class="tenant-result-item-hover"
+          hover-stay-time="50"
         >{{item.tenantName}}</view>
       </view>
       <view wx:if="{{showTenantResults && filteredTenants.length === 0 && tenantSearchText}}" class="tenant-results">
@@ -92,14 +94,14 @@
 
     <!-- 登录按钮 -->
     <view class="login-btn-wrap">
-      <view class="login-btn {{loading || !selectedTenantId ? 'login-btn-disabled' : ''}}" bindtap="onLogin">
+      <view class="login-btn {{loading || !selectedTenantId ? 'login-btn-disabled' : ''}}" bindtap="onLogin" hover-class="login-btn-hover" hover-stay-time="50">
         {{loading ? '登录中...' : '登 录'}}
       </view>
     </view>
 
     <!-- 微信一键登录 -->
     <view class="login-btn-wrap" wx:if="{{!showDevFields}}">
-      <view class="login-btn-wechat {{loading || !selectedTenantId ? 'login-btn-disabled' : ''}}" bindtap="onWechatLogin">
+      <view class="login-btn-wechat {{loading || !selectedTenantId ? 'login-btn-disabled' : ''}}" bindtap="onWechatLogin" hover-class="login-btn-wechat-hover" hover-stay-time="50">
         {{loading ? '登录中...' : '微信一键登录'}}
       </view>
     </view>
@@ -120,7 +122,7 @@
 
     <!-- 注册入口 -->
     <view class="login-register-section">
-      <view class="login-register-link" bindtap="onManualRegister">还没有账号？立即注册</view>
+      <view class="login-register-link" bindtap="onManualRegister" hover-class="login-register-link-hover" hover-stay-time="50">还没有账号？立即注册</view>
     </view>
 
     <!-- 底部版权 -->

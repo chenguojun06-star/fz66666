@@ -24,7 +24,8 @@
   pointer-events: auto;
 }
 
-.floating-bell:active {
+/* hover-class="floating-bell-hover" 替代 :active */
+.floating-bell-hover {
   background: rgba(0, 0, 0, 0.05);
   transform: scale(0.95);
 }
@@ -113,7 +114,8 @@
   background: rgba(59, 130, 246, 0.1);
 }
 
-.refresh-btn-mini:active {
+/* hover-class="refresh-btn-mini-hover" 替代 :active */
+.refresh-btn-mini-hover {
   background: rgba(59, 130, 246, 0.2);
 }
 
@@ -129,7 +131,8 @@
   background: rgba(0, 0, 0, 0.05);
 }
 
-.panel-close:active {
+/* hover-class="panel-close-hover" 替代 :active */
+.panel-close-hover {
   background: rgba(0, 0, 0, 0.1);
 }
 
@@ -164,6 +167,7 @@
 .panel-content {
   flex: 1;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding-bottom: env(safe-area-inset-bottom);
 }
 
@@ -219,7 +223,8 @@
   transition: all 0.2s;
 }
 
-.task-item:active {
+/* hover-class="task-item-hover" 替代 :active */
+.task-item-hover {
   background: var(--color-bg-gray);
   transform: scale(0.98);
 }
@@ -330,7 +335,8 @@
   border: 1rpx solid rgba(22, 163, 74, 0.2);
 }
 
-.approve-btn:active {
+/* hover-class="approve-btn-hover" 替代 :active */
+.approve-btn-hover {
   background: #bbf7d0;
 }
 
@@ -340,7 +346,8 @@
   border: 1rpx solid rgba(220, 38, 38, 0.2);
 }
 
-.reject-btn:active {
+/* hover-class="reject-btn-hover" 替代 :active */
+.reject-btn-hover {
   background: #fecaca;
 }
 
@@ -391,7 +398,8 @@
   font-weight: 500;
 }
 
-.refresh-btn:active {
+/* hover-class="refresh-btn-hover" 替代 :active */
+.refresh-btn-hover {
   opacity: 0.8;
 }
 

@@ -12,7 +12,7 @@
       <text class="srt-th srt-th-time">日期</text>
     </view>
 
-    <view wx:for="{{records}}" wx:key="id" class="srt-table-row">
+    <view wx:for="{{records}}" wx:key="id" class="srt-table-row" hover-class="srt-table-row-hover" hover-stay-time="50">
       <text class="srt-td srt-td-worker">{{item.displayWorker}}</text>
       <text class="srt-td srt-td-order">{{item.displayOrderNo}}</text>
       <text class="srt-td srt-td-bundle">{{item.displayBundleNo}}</text>

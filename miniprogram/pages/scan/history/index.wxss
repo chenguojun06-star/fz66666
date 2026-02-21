@@ -82,7 +82,8 @@ page {
   border-radius: var(--radius-full);
   flex-shrink: 0;
 }
-.search-btn:active { opacity: 0.7; transform: scale(0.96); }
+/* hover-class="search-btn-hover" 替代 :active */
+.search-btn-hover { opacity: 0.7; transform: scale(0.96); }
 .clear-btn {
   padding: 5px 12px;
   font-size: var(--font-size-sm);
@@ -92,7 +93,8 @@ page {
   border-radius: var(--radius-full);
   flex-shrink: 0;
 }
-.clear-btn:active { opacity: 0.7; }
+/* hover-class="clear-btn-hover" 替代 :active */
+.clear-btn-hover { opacity: 0.7; }
 
 /* ===== 汇总卡片 ===== */
 .summary-card {
@@ -117,7 +119,8 @@ page {
 .summary-item.summary-payable {
   transition: all 0.2s ease;
 }
-.summary-item.summary-payable:active {
+/* hover-class="summary-payable-hover" 替代 :active */
+.summary-payable-hover {
   transform: scale(0.98);
   opacity: 0.8;
 }
@@ -148,6 +151,7 @@ page {
   background: var(--color-bg-card);
   max-height: calc(100vh - 340px);
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   white-space: nowrap;
 }
 .table-inner {
@@ -178,7 +182,8 @@ page {
   border-bottom: 1px solid var(--color-border-light, rgba(226,232,240,0.5));
 }
 .table-row:last-child { border-bottom: none; }
-.table-row:active { background: rgba(224, 242, 254, 0.2); }
+/* hover-class="table-row-hover" 替代 :active */
+.table-row-hover { background: rgba(224, 242, 254, 0.2); }
 .td {
   font-size: var(--font-size-xs);
   color: var(--color-text-primary);
@@ -226,6 +231,7 @@ page {
   color: var(--color-primary);
   font-weight: 500;
 }
-.load-more:active { opacity: 0.7; }
+/* hover-class="load-more-hover" 替代 :active */
+.load-more-hover { opacity: 0.7; }
 .no-more-row { border: none; background: transparent; }
 .no-more-text { color: var(--color-text-disabled); font-weight: 400; }

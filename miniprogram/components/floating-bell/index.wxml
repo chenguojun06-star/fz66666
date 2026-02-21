@@ -1,7 +1,7 @@
 <!-- 悬浮铃铛组件 - 显示待处理任务和紧急事件 -->
 <view class="floating-bell-container">
   <!-- 悬浮铃铛按钮 -->
-  <view class="floating-bell {{expanded ? 'expanded' : ''}}" bindtap="togglePanel" catchtouchmove="preventMove">
+  <view class="floating-bell {{expanded ? 'expanded' : ''}}" bindtap="togglePanel" catchtouchmove="preventMove" hover-class="floating-bell-hover" hover-stay-time="50">
     <image class="bell-icon" src="/assets/icons/bell.svg" mode="aspectFit" />
     <view wx:if="{{totalCount > 0}}" class="bell-badge">{{totalCount > 99 ? '99+' : totalCount}}</view>
   </view>
@@ -11,8 +11,8 @@
     <view class="panel-header">
       <view class="panel-title">📋 待处理任务</view>
       <view class="panel-header-actions">
-        <view class="refresh-btn-mini" bindtap="refreshTasks">🔄</view>
-        <view class="panel-close" bindtap="closePanel">✕</view>
+        <view class="refresh-btn-mini" bindtap="refreshTasks" hover-class="refresh-btn-mini-hover" hover-stay-time="50">🔄</view>
+        <view class="panel-close" bindtap="closePanel" hover-class="panel-close-hover" hover-stay-time="50">✕</view>
       </view>
     </view>
 
@@ -37,6 +37,8 @@
           bindtap="onTaskClick"
           data-task="{{item}}"
           data-type="urgent"
+          hover-class="task-item-hover"
+          hover-stay-time="50"
         >
           <view class="task-main">
             <view class="task-title">{{item.title || '紧急事件'}}</view>
@@ -62,6 +64,8 @@
           bindtap="onTaskClick"
           data-task="{{item}}"
           data-type="cutting"
+          hover-class="task-item-hover"
+          hover-stay-time="50"
         >
           <view class="task-main">
             <view class="task-title">{{item.productionOrderNo || item.orderNo}}</view>
@@ -88,6 +92,8 @@
           bindtap="onTaskClick"
           data-task="{{item}}"
           data-type="procurement"
+          hover-class="task-item-hover"
+          hover-stay-time="50"
         >
           <view class="task-main">
             <view class="task-title">{{item.orderNo}}</view>
@@ -114,6 +120,8 @@
           bindtap="onTaskClick"
           data-task="{{item}}"
           data-type="quality"
+          hover-class="task-item-hover"
+          hover-stay-time="50"
         >
           <view class="task-main">
             <view class="task-title">{{item.orderNo}}</view>
@@ -159,6 +167,8 @@
           bindtap="onTaskClick"
           data-task="{{item}}"
           data-type="overdue"
+          hover-class="task-item-hover"
+          hover-stay-time="50"
         >
           <view class="task-main">
             <view class="task-header">
@@ -201,6 +211,8 @@
           bindtap="onTaskClick"
           data-task="{{item}}"
           data-type="reminder"
+          hover-class="task-item-hover"
+          hover-stay-time="50"
         >
           <view class="task-main">
             <view class="task-title">{{item.type}} - {{item.orderNo}}</view>
@@ -229,10 +241,10 @@
             <view class="task-desc">{{item.phone || '无手机号'}} · {{item.timeText}}</view>
           </view>
           <view class="task-actions">
-            <view class="action-btn approve-btn" catchtap="onApproveUser" data-user-id="{{item.id}}" data-action="approve">
+            <view class="action-btn approve-btn" catchtap="onApproveUser" data-user-id="{{item.id}}" data-action="approve" hover-class="approve-btn-hover" hover-stay-time="50">
               <text>✓ 通过</text>
             </view>
-            <view class="action-btn reject-btn" catchtap="onApproveUser" data-user-id="{{item.id}}" data-action="reject">
+            <view class="action-btn reject-btn" catchtap="onApproveUser" data-user-id="{{item.id}}" data-action="reject" hover-class="reject-btn-hover" hover-stay-time="50">
               <text>✗ 拒绝</text>
             </view>
           </view>
@@ -255,10 +267,10 @@
             <view class="task-desc">{{item.phone || '无手机号'}} · {{item.timeText}}</view>
           </view>
           <view class="task-actions">
-            <view class="action-btn approve-btn" catchtap="onApproveRegistration" data-user-id="{{item.id}}" data-action="approve">
+            <view class="action-btn approve-btn" catchtap="onApproveRegistration" data-user-id="{{item.id}}" data-action="approve" hover-class="approve-btn-hover" hover-stay-time="50">
               <text>✓ 通过</text>
             </view>
-            <view class="action-btn reject-btn" catchtap="onApproveRegistration" data-user-id="{{item.id}}" data-action="reject">
+            <view class="action-btn reject-btn" catchtap="onApproveRegistration" data-user-id="{{item.id}}" data-action="reject" hover-class="reject-btn-hover" hover-stay-time="50">
               <text>✗ 拒绝</text>
             </view>
           </view>
