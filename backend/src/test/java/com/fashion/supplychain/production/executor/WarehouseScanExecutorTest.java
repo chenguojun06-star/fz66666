@@ -1,12 +1,15 @@
 package com.fashion.supplychain.production.executor;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
 import com.fashion.supplychain.production.entity.*;
 import com.fashion.supplychain.production.helper.InventoryValidator;
 import com.fashion.supplychain.production.service.*;
+import org.springframework.dao.DuplicateKeyException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Answers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -47,6 +50,14 @@ class WarehouseScanExecutorTest {
 
     @Mock
     private ProductionOrderScanRecordDomainService scanRecordDomainService;
+
+    @SuppressWarnings("rawtypes")
+    @Mock(answer = Answers.RETURNS_SELF)
+    private LambdaQueryChainWrapper warehousingChain;
+
+    @SuppressWarnings("rawtypes")
+    @Mock(answer = Answers.RETURNS_SELF)
+    private LambdaQueryChainWrapper scanChain;
 
     @InjectMocks
     private WarehouseScanExecutor executor;
@@ -142,42 +153,65 @@ class WarehouseScanExecutorTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     void testExecute_WarehouseScan_BundleHasDefect() {
-        // Given: 菲号有次品状态（待返修）
-        mockBundle.setStatus("unqualified");
+        // Given: 菲号最后一条记录是 unqualified+返修 — 应阻止入库
+        baseParams.put("quantity", "50");
+        when(cuttingBundleService.getByQrCode("BUNDLE-001")).thenReturn(mockBundle);
 
-        // TODO: Mock isBundleBlockedForWarehousingStatus() 返回true
+        // Mock isBundleBlockedForWarehousingStatus 的 lambdaQuery 链式调用
+        ProductWarehousing blockedRecord = new ProductWarehousing();
+        blockedRecord.setQualityStatus("unqualified");
+        blockedRecord.setUnqualifiedQuantity(5);
+        blockedRecord.setDefectRemark("返修");
+        doReturn(warehousingChain).when(productWarehousingService).lambdaQuery();
+        when(warehousingChain.list()).thenReturn(java.util.Collections.singletonList(blockedRecord));
 
-        // When & Then: 应阻止入库
-        // RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-        //     executor.execute(baseParams, "req-003", "operator-001", "李四", mockOrder, colorResolver, sizeResolver);
-        // });
-        // assertTrue(exception.getMessage().contains("次品"));
+        // When & Then: 应阻止入库，提示返修信息
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                executor.execute(baseParams, "req-003", "operator-001", "李四",
+                        mockOrder, colorResolver, sizeResolver));
+        assertTrue(ex.getMessage().contains("次品") || ex.getMessage().contains("返修"),
+                "次品阻止时应提示返修，实际: " + ex.getMessage());
     }
 
     @Test
     void testExecute_WarehouseScan_ExceedOrderQuantity() {
-        // Given: 入库数量超过订单数量
-        mockBundle.setQuantity(200); // 订单只有100
-
-        // TODO: Mock inventoryValidator.validateNotExceedOrderQuantity() 抛出异常
+        // Given: inventoryValidator 拒绝超过订单数量
+        baseParams.put("quantity", "50");
+        when(cuttingBundleService.getByQrCode("BUNDLE-001")).thenReturn(mockBundle);
+        doThrow(new IllegalArgumentException("入库数量超过订单数量限制"))
+                .when(inventoryValidator).validateNotExceedOrderQuantity(
+                        any(ProductionOrder.class), anyString(), anyString(), anyInt(), any(CuttingBundle.class));
 
         // When & Then: 应抛出异常
-        // assertThrows(RuntimeException.class, () -> {
-        //     executor.execute(baseParams, "req-004", "operator-001", "李四", mockOrder, colorResolver, sizeResolver);
-        // });
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+                executor.execute(baseParams, "req-004", "operator-001", "李四",
+                        mockOrder, colorResolver, sizeResolver));
+        assertTrue(ex.getMessage().contains("超过"),
+                "超量时应提示超过，实际: " + ex.getMessage());
     }
 
     @Test
     void testExecute_WarehouseScan_DuplicateHandling() {
-        // Given: 重复扫码
-        // TODO: Mock scanRecordService.save() 抛出DuplicateKeyException
+        // Given: saveWarehousingAndUpdateOrder 抛出 DuplicateKeyException
+        baseParams.put("quantity", "50");
+        when(cuttingBundleService.getByQrCode("BUNDLE-001")).thenReturn(mockBundle);
+        doNothing().when(inventoryValidator).validateNotExceedOrderQuantity(
+                any(ProductionOrder.class), anyString(), anyString(), anyInt(), any(CuttingBundle.class));
+        doThrow(new DuplicateKeyException("重复扫码"))
+                .when(productWarehousingService).saveWarehousingAndUpdateOrder(any(ProductWarehousing.class));
+        when(productionOrderService.recomputeProgressFromRecords(anyString())).thenReturn(mockOrder);
+        when(scanRecordService.saveScanRecord(any(ScanRecord.class))).thenReturn(true);
 
-        // When: 执行入库
-        // Map<String, Object> result = executor.execute(...);
+        // When: 执行入库操作
+        Map<String, Object> result = executor.execute(
+                baseParams, "req-dup-001", "operator-001", "李四",
+                mockOrder, colorResolver, sizeResolver);
 
-        // Then: 应忽略重复，返回成功
-        // assertEquals("success", result.get("status"));
+        // Then: 重复扫码应被忽略，返回成功
+        assertNotNull(result);
+        assertTrue((Boolean) result.get("success"), "重复入库应忽略并返回成功");
     }
 
     @Test
@@ -201,15 +235,40 @@ class WarehouseScanExecutorTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     void testFindWarehousingGeneratedRecord_Exists() {
-        // Given: 存在入库记录
-        // TODO: Mock scanRecordService.getOne() 返回记录
+        // Given: 入库后已生成扫码记录，通过 lambdaQuery 链式查询到
+        baseParams.put("quantity", "50");
+        when(cuttingBundleService.getByQrCode("BUNDLE-001")).thenReturn(mockBundle);
+        doNothing().when(inventoryValidator).validateNotExceedOrderQuantity(
+                any(ProductionOrder.class), anyString(), anyString(), anyInt(), any(CuttingBundle.class));
 
-        // When: 查找记录
-        // ScanRecord record = executor.findWarehousingGeneratedRecord("order-001", "bundle-001");
+        // Mock saveWarehousingAndUpdateOrder 并设置 ID（使 findWarehousingGeneratedRecord 可执行）
+        doAnswer(inv -> {
+            ProductWarehousing w = inv.getArgument(0);
+            w.setId("warehousing-found-001");
+            return true;
+        }).when(productWarehousingService).saveWarehousingAndUpdateOrder(any(ProductWarehousing.class));
+        when(productionOrderService.recomputeProgressFromRecords(anyString())).thenReturn(mockOrder);
 
-        // Then: 应找到
-        // assertNotNull(record);
+        // Mock scanRecordService.lambdaQuery() 链式 返回已存在的扫码记录
+        ScanRecord existingRecord = new ScanRecord();
+        existingRecord.setId("sr-existing-001");
+        doReturn(scanChain).when(scanRecordService).lambdaQuery();
+        when(scanChain.one()).thenReturn(existingRecord);
+
+        // When: 执行入库
+        Map<String, Object> result = executor.execute(
+                baseParams, "req-find-001", "operator-001", "李四",
+                mockOrder, colorResolver, sizeResolver);
+
+        // Then: 找到已生成的扫码记录，不再新建
+        assertNotNull(result);
+        assertTrue((Boolean) result.get("success"));
+        ScanRecord returnedRecord = (ScanRecord) result.get("scanRecord");
+        assertNotNull(returnedRecord);
+        assertEquals("sr-existing-001", returnedRecord.getId(), "应返回已存在的扫码记录");
+        verify(scanRecordService, never()).saveScanRecord(any(ScanRecord.class));
     }
 
     @Test

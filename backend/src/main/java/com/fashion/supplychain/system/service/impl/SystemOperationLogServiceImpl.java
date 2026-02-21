@@ -19,6 +19,7 @@ public class SystemOperationLogServiceImpl extends ServiceImpl<LoginLogMapper, L
         implements SystemOperationLogService {
 
     @Override
+    @Deprecated
     public List<LoginLog> listByBiz(String bizType, String bizId, String action) {
         LambdaQueryWrapper<LoginLog> wrapper = new LambdaQueryWrapper<LoginLog>()
                 .eq(LoginLog::getLogType, "OPERATION")

@@ -10,5 +10,6 @@ import java.util.List;
  */
 @Deprecated
 public interface SystemOperationLogService extends IService<LoginLog> {
+    @Deprecated
     List<LoginLog> listByBiz(String bizType, String bizId, String action);
 }

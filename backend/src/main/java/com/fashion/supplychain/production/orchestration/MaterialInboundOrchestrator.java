@@ -250,7 +250,12 @@ public class MaterialInboundOrchestrator {
         if (purchaseId != null && !purchaseId.trim().isEmpty()) {
             return materialInboundService.listByPurchaseId(purchaseId);
         }
-        // TODO: 添加更多查询条件
+        if (materialCode != null && !materialCode.trim().isEmpty()) {
+            return materialInboundService.list(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialInbound>()
+                    .eq(MaterialInbound::getMaterialCode, materialCode.trim())
+                    .orderByDesc(MaterialInbound::getInboundTime));
+        }
         return materialInboundService.list();
     }
 }
