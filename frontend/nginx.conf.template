@@ -1,7 +1,7 @@
 # ===================================================
 # Nginx 配置 - 用于微信云托管 PC端前端托管
 # 功能：SPA路由支持 + /api 反向代理到后端服务
-# 后端地址通过环境变量 BACKEND_URL 注入（启动时替换）
+# BACKEND_URL / RESOLVER 在容器启动时通过 envsubst 注入
 # ===================================================
 
 server {
@@ -12,28 +12,32 @@ server {
     index index.html;
 
     # ---- 静态资源缓存策略 ----
-    # JS/CSS/图片等带 hash 的文件：长期缓存
     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
         expires 30d;
         add_header Cache-Control "public, immutable";
         try_files $uri =404;
     }
 
-    # index.html 不缓存（保证有新版本时浏览器立即刷新）
+    # index.html 不缓存
     location = /index.html {
         add_header Cache-Control "no-store, no-cache, must-revalidate";
         add_header Pragma "no-cache";
         add_header Expires "0";
     }
 
+    # ---- 健康检查 / 调试 ----
+    # 访问 /nginx-health 可查看 resolver 和 backend 配置是否正确
+    location = /nginx-health {
+        default_type application/json;
+        return 200 '{"nginx":"ok","resolver":"${RESOLVER}","backend":"${BACKEND_URL}"}';
+    }
+
     # ---- API 反向代理 ----
-    # 把 /api/* 转发到后端 Spring Boot 服务
-    # BACKEND_URL 在容器启动时通过 envsubst 替换为实际地址
-    # 例：http://backend:8088（微信云托管内网服务名）
-    # 注意：proxy_pass 使用变量时不剥离 location 前缀，所以直接用 $backend
-    #      请求路径 /api/xxx 会完整转发为 http://backend:8088/api/xxx
+    # RESOLVER 从容器 /etc/resolv.conf 自动提取（兼容各种容器运行时）
+    # proxy_pass 使用变量：nginx 不剥离 location 前缀，直接拼接原始 URI
+    # /api/system/tenant/public-list → http://backend:8088/api/system/tenant/public-list
     location /api/ {
-        resolver 127.0.0.11 valid=30s ipv6=off;
+        resolver ${RESOLVER} valid=30s ipv6=off;
         set $backend "${BACKEND_URL}";
         proxy_pass $backend;
         proxy_http_version 1.1;
@@ -45,7 +49,7 @@ server {
         proxy_read_timeout 60s;
         proxy_send_timeout 60s;
 
-        # 允许跨域（前后端同服务则可省略）
+        # 跨域头
         add_header Access-Control-Allow-Origin *;
         add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS";
         add_header Access-Control-Allow-Headers "Authorization, Content-Type";
@@ -55,7 +59,6 @@ server {
     }
 
     # ---- SPA 路由支持 ----
-    # React Router 客户端路由：所有路径都返回 index.html
     location / {
         try_files $uri $uri/ /index.html;
     }
@@ -66,6 +69,7 @@ server {
     add_header Referrer-Policy "strict-origin-when-cross-origin";
 
     # ---- 错误页 ----
+    # 仅 404 返回 SPA 页面（支持 React Router 客户端路由）
+    # 500/502/503/504 不拦截：让 /api/ 代理错误原样返回，便于调试
     error_page 404 /index.html;
-    error_page 500 502 503 504 /index.html;
 }

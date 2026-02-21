@@ -41,5 +41,14 @@ EXPOSE 80
 # BACKEND_URL: 后端 Spring Boot 服务的内网地址
 ENV BACKEND_URL=http://backend:8088
 
-# 启动时：先用 envsubst 生成最终 nginx.conf，再启动 Nginx
-CMD ["/bin/sh", "-c", "envsubst '${BACKEND_URL}' < /etc/nginx/templates/app.conf.template > /etc/nginx/conf.d/app.conf && nginx -g 'daemon off;'"]
+# 启动流程：
+# 1. 从 /etc/resolv.conf 提取容器 DNS 地址（兼容 Docker/K8s/云托管）
+# 2. envsubst 替换 BACKEND_URL 和 RESOLVER 到 nginx 配置
+# 3. 打印最终配置到日志（方便在云托管控制台查看）
+# 4. 启动 nginx
+CMD ["/bin/sh", "-c", "\
+  export RESOLVER=$(awk '/^nameserver/{print $2; exit}' /etc/resolv.conf 2>/dev/null || echo '127.0.0.11') && \
+  echo \"[startup] RESOLVER=$RESOLVER  BACKEND_URL=$BACKEND_URL\" && \
+  envsubst '${BACKEND_URL} ${RESOLVER}' < /etc/nginx/templates/app.conf.template > /etc/nginx/conf.d/app.conf && \
+  echo '--- Generated nginx config ---' && cat /etc/nginx/conf.d/app.conf && echo '---' && \
+  nginx -g 'daemon off;'"]
