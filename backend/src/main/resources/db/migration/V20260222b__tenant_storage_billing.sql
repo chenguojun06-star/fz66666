@@ -1,13 +1,23 @@
 -- ==================================================================
--- 租户存储与收费管理
+-- 租户存储与收费管理（幂等：跳过已存在的列/表）
 -- ==================================================================
 
--- 1. 给 t_tenant 增加套餐与存储字段
-ALTER TABLE t_tenant
-    ADD COLUMN plan_type VARCHAR(20) NOT NULL DEFAULT 'TRIAL' COMMENT '套餐类型: TRIAL/BASIC/PRO/ENTERPRISE' AFTER paid_status,
-    ADD COLUMN monthly_fee DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT '月费(元)' AFTER plan_type,
-    ADD COLUMN storage_quota_mb BIGINT NOT NULL DEFAULT 1024 COMMENT '存储配额(MB)，默认1GB' AFTER monthly_fee,
-    ADD COLUMN storage_used_mb BIGINT NOT NULL DEFAULT 0 COMMENT '已用存储(MB)' AFTER storage_quota_mb;
+-- 1. 给 t_tenant 增加套餐与存储字段（逐列添加，已存在则忽略）
+SET @col = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_tenant' AND COLUMN_NAME='plan_type');
+SET @sql = IF(@col>0, 'SELECT 1', 'ALTER TABLE t_tenant ADD COLUMN plan_type VARCHAR(20) NOT NULL DEFAULT ''TRIAL'' COMMENT ''套餐类型: TRIAL/BASIC/PRO/ENTERPRISE'' AFTER paid_status');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_tenant' AND COLUMN_NAME='monthly_fee');
+SET @sql = IF(@col>0, 'SELECT 1', 'ALTER TABLE t_tenant ADD COLUMN monthly_fee DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT ''月费(元)'' AFTER plan_type');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_tenant' AND COLUMN_NAME='storage_quota_mb');
+SET @sql = IF(@col>0, 'SELECT 1', 'ALTER TABLE t_tenant ADD COLUMN storage_quota_mb BIGINT NOT NULL DEFAULT 1024 COMMENT ''存储配额(MB)，默认1GB'' AFTER monthly_fee');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_tenant' AND COLUMN_NAME='storage_used_mb');
+SET @sql = IF(@col>0, 'SELECT 1', 'ALTER TABLE t_tenant ADD COLUMN storage_used_mb BIGINT NOT NULL DEFAULT 0 COMMENT ''已用存储(MB)'' AFTER storage_quota_mb');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 -- 2. 创建计费记录表
 CREATE TABLE IF NOT EXISTS t_tenant_billing_record (

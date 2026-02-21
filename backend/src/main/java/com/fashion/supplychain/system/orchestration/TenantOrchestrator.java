@@ -255,12 +255,8 @@ public class TenantOrchestrator {
         if (!StringUtils.hasText(tenant.getApplyUsername())) throw new IllegalStateException("申请账号信息缺失");
         if (!StringUtils.hasText(tenant.getApplyPassword())) throw new IllegalStateException("申请密码信息缺失，请联系工厂重新提交申请");
 
-        // 检查账号唯一性（防止重复审批或账号已被占用）
-        QueryWrapper<User> userCheck = new QueryWrapper<>();
-        userCheck.eq("username", tenant.getApplyUsername());
-        if (userService.count(userCheck) > 0) {
-            throw new IllegalArgumentException("账号「" + tenant.getApplyUsername() + "」已存在，无法创建。请通知工厂更换账号后重新申请");
-        }
+        // 检查账号唯一性，若冲突则自动生成唯一用户名
+        String finalUsername = resolveUniqueUsername(tenant.getApplyUsername());
 
         // 自动生成租户编码
         String tenantCode = "T" + String.format("%04d", tenantId);
@@ -273,9 +269,9 @@ public class TenantOrchestrator {
 
         // 创建租户主账号
         User owner = new User();
-        owner.setUsername(tenant.getApplyUsername());
+        owner.setUsername(finalUsername);
         owner.setPassword(tenant.getApplyPassword()); // 已BCrypt
-        owner.setName(StringUtils.hasText(tenant.getContactName()) ? tenant.getContactName() : tenant.getApplyUsername());
+        owner.setName(StringUtils.hasText(tenant.getContactName()) ? tenant.getContactName() : finalUsername);
         owner.setTenantId(tenant.getId());
         owner.setIsTenantOwner(true);
         owner.setRoleId(tenantAdminRole.getId());
@@ -292,13 +288,18 @@ public class TenantOrchestrator {
         tenant.setOwnerUserId(owner.getId());
         tenant.setStatus("active");
         tenant.setApplyPassword(null); // 激活后清空申请密码
+        // 如果用户名发生了变更，同步更新申请记录
+        if (!finalUsername.equals(tenant.getApplyUsername())) {
+            log.info("[用户名冲突自动解决] 原始={} → 最终={}", tenant.getApplyUsername(), finalUsername);
+            tenant.setApplyUsername(finalUsername);
+        }
         tenant.setUpdateTime(LocalDateTime.now());
         tenantService.updateById(tenant);
 
-        log.info("[申请通过] tenantId={} 工厂={} 账号={} 已激活", tenantId, tenant.getTenantName(), tenant.getApplyUsername());
+        log.info("[申请通过] tenantId={} 工厂={} 账号={} 已激活", tenantId, tenant.getTenantName(), finalUsername);
         Map<String, Object> result = new HashMap<>();
         result.put("tenant", tenant);
-        result.put("ownerUsername", tenant.getApplyUsername());
+        result.put("ownerUsername", finalUsername);
         return result;
     }
 
@@ -885,6 +886,27 @@ public class TenantOrchestrator {
         if (UserContext.isTenantOwner()) return;
         if (UserContext.isTopAdmin()) return;
         throw new AccessDeniedException("无权限操作");
+    }
+
+    /**
+     * 解决用户名冲突：若 baseUsername 已存在，自动追加后缀 _2, _3 ...
+     * 最多尝试 100 次，避免死循环。
+     */
+    private String resolveUniqueUsername(String baseUsername) {
+        QueryWrapper<User> check = new QueryWrapper<>();
+        check.eq("username", baseUsername);
+        if (userService.count(check) == 0) {
+            return baseUsername; // 无冲突，直接使用
+        }
+        for (int i = 2; i <= 100; i++) {
+            String candidate = baseUsername + "_" + i;
+            QueryWrapper<User> q = new QueryWrapper<>();
+            q.eq("username", candidate);
+            if (userService.count(q) == 0) {
+                return candidate;
+            }
+        }
+        throw new IllegalStateException("无法为账号「" + baseUsername + "」生成唯一用户名，请手动修改申请信息");
     }
 
     /**
