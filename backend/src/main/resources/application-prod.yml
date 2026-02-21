@@ -10,17 +10,19 @@ spring:
       idle-timeout: 600000
       max-lifetime: 1800000
 
-  # Redis 生产配置
+  # Redis 生产配置（可选，不可用时降级为单机模式）
   redis:
-    host: ${SPRING_REDIS_HOST:redis}
+    host: ${SPRING_REDIS_HOST:127.0.0.1}
     port: ${SPRING_REDIS_PORT:6379}
     password: ${SPRING_REDIS_PASSWORD:}
-    timeout: 3000ms
+    timeout: 500ms
+    connect-timeout: 500ms
     lettuce:
+      shutdown-timeout: 100ms
       pool:
-        max-active: 16
-        max-idle: 8
-        min-idle: 2
+        max-active: 8
+        max-idle: 4
+        min-idle: 0
 
   # 生产环境启用 Flyway 进行数据库迁移管理
   flyway:
