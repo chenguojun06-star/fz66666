@@ -1,7 +1,7 @@
 /**
  * 历史记录页面
  * 展示全部扫码记录 - 支持日期筛选、搜索、汇总
- * 表头：领取人, 订单号, 菲号, 工序, 单价, 数量, 床号, 日期
+ * 表头：领取人, 订单号, 菲号, 工序, 单价, 数量, 扎号, 日期
  */
 const api = require('../../../utils/api');
 
@@ -140,7 +140,7 @@ Page({
             ? ((Number(item.unitPrice) || 0) * (Number(item.quantity) || 0)).toFixed(2)
             : '-',
         isPayable: (Number(item.unitPrice) || 0) > 0 && (Number(item.quantity) || 0) > 0,
-        displayBedNo: item.bedNo || item.batchNo || (item.cuttingBundleNo != null ? String(item.cuttingBundleNo) : '') || '-',
+        displayBedNo: item.bedNo != null ? String(item.bedNo) : '-',
       }));
 
       const prevList = reset ? [] : this.data.records;

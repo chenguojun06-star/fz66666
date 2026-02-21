@@ -551,7 +551,34 @@ public class ScanRecordOrchestrator {
     }
 
     public IPage<ScanRecord> list(Map<String, Object> params) {
-        return scanRecordQueryHelper.list(params);
+        IPage<ScanRecord> page = scanRecordQueryHelper.list(params);
+        enrichBedNo(page.getRecords());
+        return page;
+    }
+
+    /**
+     * 批量填充床号：从 t_cutting_bundle 查询 bedNo 并写入扫码记录
+     */
+    private void enrichBedNo(List<ScanRecord> records) {
+        if (records == null || records.isEmpty()) return;
+        List<String> bundleIds = records.stream()
+                .map(ScanRecord::getCuttingBundleId)
+                .filter(id -> id != null && !id.isEmpty())
+                .distinct()
+                .collect(java.util.stream.Collectors.toList());
+        if (bundleIds.isEmpty()) return;
+        Map<String, Integer> bedNoMap = cuttingBundleService.listByIds(bundleIds)
+                .stream()
+                .filter(b -> b.getBedNo() != null)
+                .collect(java.util.stream.Collectors.toMap(
+                        CuttingBundle::getId,
+                        CuttingBundle::getBedNo,
+                        (a, b) -> a));
+        records.forEach(r -> {
+            if (r.getCuttingBundleId() != null) {
+                r.setBedNo(bedNoMap.get(r.getCuttingBundleId()));
+            }
+        });
     }
 
     public IPage<ScanRecord> getByOrderId(String orderId, int page, int pageSize) {

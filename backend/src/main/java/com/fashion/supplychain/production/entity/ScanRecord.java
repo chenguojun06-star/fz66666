@@ -169,6 +169,12 @@ public class ScanRecord {
     private List<Map<String, Object>> cuttingDetails;
 
     /**
+     * 床号（裁剪批次编号，非数据库字段，关联自 t_cutting_bundle.bed_no）
+     */
+    @TableField(exist = false)
+    private Integer bedNo;
+
+    /**
      * 创建时间
      */
     private LocalDateTime createTime;
