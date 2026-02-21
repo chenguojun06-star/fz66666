@@ -130,6 +130,7 @@ export type MenuSection = {
   icon?: ReactNode;
   items?: MenuItem[];
   path?: string;
+  superAdminOnly?: boolean;
 };
 
 export const menuConfig: MenuSection[] = [
@@ -212,12 +213,14 @@ export const menuConfig: MenuSection[] = [
     key: 'customer',
     icon: React.createElement(CrownOutlined),
     path: paths.customerManagement,
+    superAdminOnly: true,
   },
   {
     title: '客户应用管理',
     key: 'tenant',
     icon: React.createElement(SafetyCertificateOutlined),
     path: paths.tenantManagement,
+    superAdminOnly: true,
   },
 ];
 
@@ -259,6 +262,11 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.customerManagement]: permissionCodes.customerManagement,
   [paths.appStore]: permissionCodes.appStore,
 };
+
+/** 仅超级管理员可见/可访问的路径集合 */
+export const superAdminOnlyPaths = new Set(
+  menuConfig.filter((s) => s.superAdminOnly).map((s) => s.path).filter(Boolean) as string[]
+);
 
 const normalizePath = (p: string) => String(p || '').split('?')[0];
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { Spin } from 'antd';
 import { isAdminUser as isAdminUserFn, useAuth } from '../../utils/AuthContext';
-import { paths, resolvePermissionCode } from '../../routeConfig';
+import { paths, resolvePermissionCode, superAdminOnlyPaths } from '../../routeConfig';
 
 const PrivateRoute: React.FC = () => {
   const { isAuthenticated, loading, user } = useAuth();
@@ -18,6 +18,12 @@ const PrivateRoute: React.FC = () => {
 
   if (!isAuthenticated) {
     return <Navigate to={paths.login} replace />;
+  }
+
+  // 超管专属路由：非超管直接拦截
+  const currentPath = location.pathname.split('?')[0];
+  if (superAdminOnlyPaths.has(currentPath) && !user?.isSuperAdmin) {
+    return <Navigate to={paths.dashboard} replace />;
   }
 
   const required = resolvePermissionCode(location.pathname);

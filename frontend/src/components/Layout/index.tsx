@@ -164,6 +164,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   const isAdmin = useMemo(() => isAdminUserFn(user), [user]);
+  const isSuperAdmin = user?.isSuperAdmin === true;
 
   const hasPermissionForPath = (path: string) => {
     if (isAdmin) return true;
@@ -176,6 +177,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const menuItems = useMemo(() => {
     return menuConfig
       .filter((section) => {
+        // 超管专属菜单：非超管不可见
+        if (section.superAdminOnly && !isSuperAdmin) return false;
         if (section.items) {
           return section.items.some((item) => hasPermissionForPath(item.path));
         }
