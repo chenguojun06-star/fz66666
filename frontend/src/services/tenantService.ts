@@ -22,6 +22,7 @@ export interface TenantInfo {
   status: string;
   paidStatus: string;
   planType: string;
+  billingCycle: string;
   monthlyFee: number;
   storageQuotaMb: number;
   storageUsedMb: number;
@@ -38,6 +39,7 @@ export interface PlanDefinition {
   code: string;
   label: string;
   monthlyFee: number;
+  yearlyFee: number;
   storageQuotaMb: number;
   maxUsers: number;
 }
@@ -49,6 +51,7 @@ export interface BillingRecord {
   tenantName: string;
   billingMonth: string;
   planType: string;
+  billingCycle: string;
   baseFee: number;
   storageFee: number;
   userFee: number;
@@ -99,6 +102,7 @@ const tenantService = {
   /** 设置租户套餐 */
   updateTenantPlan: (id: number, data: {
     planType: string;
+    billingCycle?: string;
     monthlyFee?: number;
     storageQuotaMb?: number;
     maxUsers?: number;

@@ -62,6 +62,9 @@ public class Tenant {
     /** 已用存储(MB) */
     private Long storageUsedMb = 0L;
 
+    /** 计费周期: MONTHLY=月付, YEARLY=年付 */
+    private String billingCycle = "MONTHLY";
+
     /** 申请账号名（仅申请入驻流程使用，审批通过后创建账号） */
     private String applyUsername;
 

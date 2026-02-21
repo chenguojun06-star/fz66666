@@ -71,13 +71,14 @@ public class TenantOrchestrator {
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     // ========== 套餐定义常量 ==========
+    // yearlyFee = monthlyFee × 10（年付打8.3折，等于买10个月送2个月）
     public static final Map<String, Map<String, Object>> PLAN_DEFINITIONS;
     static {
         Map<String, Map<String, Object>> plans = new LinkedHashMap<>();
-        plans.put("TRIAL",      Map.of("label", "免费试用", "monthlyFee", BigDecimal.ZERO,          "storageQuotaMb", 1024L,    "maxUsers", 5));
-        plans.put("BASIC",      Map.of("label", "基础版",   "monthlyFee", new BigDecimal("199"),    "storageQuotaMb", 5120L,    "maxUsers", 20));
-        plans.put("PRO",        Map.of("label", "专业版",   "monthlyFee", new BigDecimal("499"),    "storageQuotaMb", 20480L,   "maxUsers", 50));
-        plans.put("ENTERPRISE", Map.of("label", "企业版",   "monthlyFee", new BigDecimal("999"),    "storageQuotaMb", 102400L,  "maxUsers", 200));
+        plans.put("TRIAL",      Map.of("label", "免费试用", "monthlyFee", BigDecimal.ZERO,          "yearlyFee", BigDecimal.ZERO,          "storageQuotaMb", 1024L,    "maxUsers", 5));
+        plans.put("BASIC",      Map.of("label", "基础版",   "monthlyFee", new BigDecimal("199"),    "yearlyFee", new BigDecimal("1990"),    "storageQuotaMb", 5120L,    "maxUsers", 20));
+        plans.put("PRO",        Map.of("label", "专业版",   "monthlyFee", new BigDecimal("499"),    "yearlyFee", new BigDecimal("4990"),    "storageQuotaMb", 20480L,   "maxUsers", 50));
+        plans.put("ENTERPRISE", Map.of("label", "企业版",   "monthlyFee", new BigDecimal("999"),    "yearlyFee", new BigDecimal("9990"),    "storageQuotaMb", 102400L,  "maxUsers", 200));
         PLAN_DEFINITIONS = Collections.unmodifiableMap(plans);
     }
 
@@ -385,13 +386,19 @@ public class TenantOrchestrator {
     /**
      * 设置租户套餐（超级管理员专用）
      * 可自定义价格和配额，也可使用预设方案
+     * @param billingCycle MONTHLY=月付, YEARLY=年付（年付自动设置12个月有效期）
      */
     @Transactional(rollbackFor = Exception.class)
     public Tenant updateTenantPlan(Long tenantId, String planType, BigDecimal monthlyFee,
-                                    Long storageQuotaMb, Integer maxUsers) {
+                                    Long storageQuotaMb, Integer maxUsers, String billingCycle) {
         assertSuperAdmin();
         Tenant tenant = tenantService.getById(tenantId);
         if (tenant == null) throw new IllegalArgumentException("租户不存在");
+
+        // 标准化计费周期
+        if (billingCycle == null || (!"MONTHLY".equals(billingCycle) && !"YEARLY".equals(billingCycle))) {
+            billingCycle = "MONTHLY";
+        }
 
         // 如果选择预设方案且没有自定义值，使用预设默认值
         Map<String, Object> planDef = PLAN_DEFINITIONS.get(planType);
@@ -410,14 +417,21 @@ public class TenantOrchestrator {
         tenant.setMonthlyFee(monthlyFee);
         tenant.setStorageQuotaMb(storageQuotaMb);
         tenant.setMaxUsers(maxUsers);
+        tenant.setBillingCycle(billingCycle);
         // 非试用方案自动标记为已付费
         if (!"TRIAL".equals(planType)) {
             tenant.setPaidStatus("PAID");
         }
+        // 年付设置12个月有效期，月付设置1个月（从当前时间起算）
+        if ("YEARLY".equals(billingCycle) && !"TRIAL".equals(planType)) {
+            tenant.setExpireTime(LocalDateTime.now().plusMonths(12));
+        } else if ("MONTHLY".equals(billingCycle) && !"TRIAL".equals(planType)) {
+            tenant.setExpireTime(LocalDateTime.now().plusMonths(1));
+        }
         tenant.setUpdateTime(LocalDateTime.now());
         tenantService.updateById(tenant);
-        log.info("租户[{}]套餐更新为 {}，月费={}，存储配额={}MB，最大用户={}",
-                tenantId, planType, monthlyFee, storageQuotaMb, maxUsers);
+        log.info("租户[{}]套餐更新为 {}（{}），月费={}，存储配额={}MB，最大用户={}",
+                tenantId, planType, billingCycle, monthlyFee, storageQuotaMb, maxUsers);
         return tenant;
     }
 
@@ -446,6 +460,7 @@ public class TenantOrchestrator {
         overview.put("tenantId", tenant.getId());
         overview.put("tenantName", tenant.getTenantName());
         overview.put("planType", tenant.getPlanType());
+        overview.put("billingCycle", tenant.getBillingCycle());
         overview.put("monthlyFee", tenant.getMonthlyFee());
         overview.put("storageQuotaMb", tenant.getStorageQuotaMb());
         overview.put("storageUsedMb", tenant.getStorageUsedMb());
@@ -465,22 +480,49 @@ public class TenantOrchestrator {
     }
 
     /**
-     * 生成月度账单（超级管理员手动触发或定时任务）
+     * 生成账单（超级管理员手动触发或定时任务）
+     * 月付：生成当月账单（baseFee = monthlyFee）
+     * 年付：生成年度账单（baseFee = yearlyFee，账期格式 2026-YEAR）
      */
     @Transactional(rollbackFor = Exception.class)
     public com.fashion.supplychain.system.entity.TenantBillingRecord generateMonthlyBill(Long tenantId, String billingMonth) {
         assertSuperAdmin();
         Tenant tenant = tenantService.getById(tenantId);
         if (tenant == null) throw new IllegalArgumentException("租户不存在");
+
+        String cycle = tenant.getBillingCycle() != null ? tenant.getBillingCycle() : "MONTHLY";
+        boolean yearly = "YEARLY".equals(cycle);
+
+        // 确定账期标识
         if (billingMonth == null) {
-            billingMonth = YearMonth.now().format(DateTimeFormatter.ofPattern("yyyy-MM"));
+            if (yearly) {
+                billingMonth = String.valueOf(java.time.Year.now().getValue()) + "-YEAR";
+            } else {
+                billingMonth = YearMonth.now().format(DateTimeFormatter.ofPattern("yyyy-MM"));
+            }
         }
 
-        // 检查是否已有该月账单
+        // 检查是否已有该期账单
         QueryWrapper<com.fashion.supplychain.system.entity.TenantBillingRecord> check = new QueryWrapper<>();
         check.eq("tenant_id", tenantId).eq("billing_month", billingMonth);
         if (billingRecordService.count(check) > 0) {
-            throw new IllegalStateException("该租户本月账单已存在");
+            throw new IllegalStateException(yearly ? "该租户本年度账单已存在" : "该租户本月账单已存在");
+        }
+
+        // 计算基础费用
+        BigDecimal baseFee;
+        if (yearly) {
+            Map<String, Object> planDef = PLAN_DEFINITIONS.get(tenant.getPlanType());
+            baseFee = planDef != null ? (BigDecimal) planDef.get("yearlyFee") : BigDecimal.ZERO;
+            // 如果有自定义月费，年付 = 月费 × 10
+            if (tenant.getMonthlyFee() != null && tenant.getMonthlyFee().compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal defaultMonthly = planDef != null ? (BigDecimal) planDef.get("monthlyFee") : BigDecimal.ZERO;
+                if (tenant.getMonthlyFee().compareTo(defaultMonthly) != 0) {
+                    baseFee = tenant.getMonthlyFee().multiply(new BigDecimal("10"));
+                }
+            }
+        } else {
+            baseFee = tenant.getMonthlyFee() != null ? tenant.getMonthlyFee() : BigDecimal.ZERO;
         }
 
         com.fashion.supplychain.system.entity.TenantBillingRecord bill = new com.fashion.supplychain.system.entity.TenantBillingRecord();
@@ -489,7 +531,8 @@ public class TenantOrchestrator {
         bill.setTenantName(tenant.getTenantName());
         bill.setBillingMonth(billingMonth);
         bill.setPlanType(tenant.getPlanType());
-        bill.setBaseFee(tenant.getMonthlyFee() != null ? tenant.getMonthlyFee() : BigDecimal.ZERO);
+        bill.setBillingCycle(cycle);
+        bill.setBaseFee(baseFee);
         bill.setStorageFee(BigDecimal.ZERO); // 超额存储费后续计算
         bill.setUserFee(BigDecimal.ZERO);    // 超额用户费后续计算
         bill.setTotalAmount(bill.getBaseFee().add(bill.getStorageFee()).add(bill.getUserFee()));
@@ -497,7 +540,7 @@ public class TenantOrchestrator {
         bill.setCreatedBy(UserContext.username());
         billingRecordService.save(bill);
 
-        log.info("生成租户[{}]{}月账单，金额={}", tenantId, billingMonth, bill.getTotalAmount());
+        log.info("生成租户[{}]{}账单（{}），金额={}", tenantId, billingMonth, cycle, bill.getTotalAmount());
         return bill;
     }
 

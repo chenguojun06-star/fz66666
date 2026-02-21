@@ -33,6 +33,9 @@ public class TenantBillingRecord {
     /** 套餐类型 */
     private String planType;
 
+    /** 计费周期: MONTHLY/YEARLY */
+    private String billingCycle;
+
     /** 套餐基础费 */
     private BigDecimal baseFee;
 

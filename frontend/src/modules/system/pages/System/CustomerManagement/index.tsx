@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Tabs, Button, Tag, Space, message, Form, Input, InputNumber, Modal, Select, Card, Typography, Badge, Alert, QRCode, Row, Col, Progress, Descriptions, Divider } from 'antd';
+import { Tabs, Button, Tag, Space, message, Form, Input, InputNumber, Modal, Select, Card, Typography, Badge, Alert, QRCode, Row, Col, Progress, Descriptions, Divider, Radio } from 'antd';
 import { PlusOutlined, CrownOutlined, TeamOutlined, CopyOutlined, QrcodeOutlined, DollarOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import { useSearchParams } from 'react-router-dom';
@@ -634,6 +634,11 @@ const BILL_STATUS: Record<string, { label: string; color: string }> = {
   WAIVED: { label: '已减免', color: 'default' },
 };
 
+const CYCLE_LABELS: Record<string, string> = {
+  MONTHLY: '月付',
+  YEARLY: '年付',
+};
+
 const formatStorageSize = (mb: number): string => {
   if (mb >= 1024) return `${(mb / 1024).toFixed(1)} GB`;
   return `${mb} MB`;
@@ -693,6 +698,7 @@ const BillingTab: React.FC = () => {
   const handleOpenPlanModal = (record: TenantInfo) => {
     planForm.setFieldsValue({
       planType: record.planType || 'TRIAL',
+      billingCycle: record.billingCycle || 'MONTHLY',
       monthlyFee: record.monthlyFee || 0,
       storageQuotaMb: record.storageQuotaMb || 1024,
       maxUsers: record.maxUsers || 50,
@@ -708,6 +714,15 @@ const BillingTab: React.FC = () => {
         storageQuotaMb: plan.storageQuotaMb,
         maxUsers: plan.maxUsers,
       });
+    }
+  };
+
+  const handleBillingCycleChange = () => {
+    // 切换月付/年付时，重新填充预设费用
+    const currentPlan = planForm.getFieldValue('planType');
+    const plan = plans.find(p => p.code === currentPlan);
+    if (plan) {
+      planForm.setFieldsValue({ monthlyFee: plan.monthlyFee });
     }
   };
 
@@ -744,9 +759,14 @@ const BillingTab: React.FC = () => {
   };
 
   const handleGenerateBill = async (record: TenantInfo) => {
+    const isYearly = record.billingCycle === 'YEARLY';
+    const plan = plans.find(p => p.code === record.planType);
+    const feeLabel = isYearly
+      ? `¥${plan?.yearlyFee || record.monthlyFee * 10}/年`
+      : `¥${record.monthlyFee || 0}/月`;
     Modal.confirm({
-      title: `为「${record.tenantName}」生成本月账单`,
-      content: `将根据当前套餐配置（${PLAN_LABELS[record.planType]?.label || record.planType}，¥${record.monthlyFee || 0}/月）生成账单。`,
+      title: `为「${record.tenantName}」生成${isYearly ? '年度' : '本月'}账单`,
+      content: `将根据当前套餐配置（${PLAN_LABELS[record.planType]?.label || record.planType}，${feeLabel}，${isYearly ? '年付' : '月付'}）生成账单。`,
       okText: '确认生成',
       cancelText: '取消',
       onOk: async () => {
@@ -811,6 +831,13 @@ const BillingTab: React.FC = () => {
       render: (v: number) => v > 0 ? `¥${v}` : <span style={{ color: '#999' }}>免费</span>,
     },
     {
+      title: '计费', dataIndex: 'billingCycle', width: 70, align: 'center',
+      render: (v: string) => {
+        if (v === 'YEARLY') return <Tag color="blue">年付</Tag>;
+        return <Tag>月付</Tag>;
+      },
+    },
+    {
       title: '存储配额', width: 140,
       render: (_: unknown, r: TenantInfo) => {
         const used = r.storageUsedMb || 0;
@@ -849,10 +876,14 @@ const BillingTab: React.FC = () => {
   const billColumns: ColumnsType<BillingRecord> = [
     { title: '账单编号', dataIndex: 'billingNo', width: 150 },
     { title: '租户', dataIndex: 'tenantName', width: 130 },
-    { title: '账期', dataIndex: 'billingMonth', width: 90, align: 'center' },
+    { title: '账期', dataIndex: 'billingMonth', width: 100, align: 'center' },
     {
       title: '套餐', dataIndex: 'planType', width: 90, align: 'center',
       render: (v: string) => PLAN_LABELS[v]?.label || v,
+    },
+    {
+      title: '周期', dataIndex: 'billingCycle', width: 60, align: 'center',
+      render: (v: string) => CYCLE_LABELS[v] || v || '月付',
     },
     { title: '基础费', dataIndex: 'baseFee', width: 90, align: 'right', render: (v: number) => `¥${v}` },
     { title: '合计', dataIndex: 'totalAmount', width: 90, align: 'right',
@@ -943,19 +974,31 @@ const BillingTab: React.FC = () => {
         }
       >
         <Alert
-          message="选择预设套餐会自动填充默认配置，也可手动调整各项参数。"
+          message="选择预设套餐会自动填充默认配置，也可手动调整各项参数。年付享8.3折优惠（买10个月送2个月）。"
           type="info"
           showIcon
           style={{ marginBottom: 16 }}
         />
         <Form form={planForm} layout="vertical">
+          <Form.Item label="计费周期" name="billingCycle" rules={[{ required: true }]}>
+            <Radio.Group onChange={handleBillingCycleChange}>
+              <Radio.Button value="MONTHLY">月付</Radio.Button>
+              <Radio.Button value="YEARLY">年付（8.3折）</Radio.Button>
+            </Radio.Group>
+          </Form.Item>
           <Form.Item label="套餐类型" name="planType" rules={[{ required: true }]}>
             <Select onChange={handlePlanTypeChange}>
-              {plans.map(p => (
-                <Select.Option key={p.code} value={p.code}>
-                  {p.label}（¥{p.monthlyFee}/月，{formatStorageSize(p.storageQuotaMb)}，{p.maxUsers}用户）
-                </Select.Option>
-              ))}
+              {plans.map(p => {
+                const cycle = planForm.getFieldValue('billingCycle');
+                const priceLabel = cycle === 'YEARLY'
+                  ? `¥${p.yearlyFee}/年（省¥${p.monthlyFee * 12 - p.yearlyFee}）`
+                  : `¥${p.monthlyFee}/月`;
+                return (
+                  <Select.Option key={p.code} value={p.code}>
+                    {p.label}（{priceLabel}，{formatStorageSize(p.storageQuotaMb)}，{p.maxUsers}用户）
+                  </Select.Option>
+                );
+              })}
             </Select>
           </Form.Item>
           <Row gutter={16}>
@@ -994,6 +1037,11 @@ const BillingTab: React.FC = () => {
               <Descriptions.Item label="套餐类型">
                 <Tag color={PLAN_LABELS[overview.planType]?.color || 'default'}>
                   {PLAN_LABELS[overview.planType]?.label || overview.planType}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="计费周期">
+                <Tag color={overview.billingCycle === 'YEARLY' ? 'blue' : 'default'}>
+                  {CYCLE_LABELS[overview.billingCycle] || '月付'}
                 </Tag>
               </Descriptions.Item>
               <Descriptions.Item label="月费">¥{overview.monthlyFee || 0}</Descriptions.Item>

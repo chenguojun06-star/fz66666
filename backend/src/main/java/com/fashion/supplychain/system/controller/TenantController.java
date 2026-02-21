@@ -306,7 +306,9 @@ public class TenantController {
                 ? Long.valueOf(params.get("storageQuotaMb").toString()) : null;
         Integer maxUsers = params.get("maxUsers") != null
                 ? Integer.valueOf(params.get("maxUsers").toString()) : null;
-        return Result.success(tenantOrchestrator.updateTenantPlan(id, planType, monthlyFee, storageQuotaMb, maxUsers));
+        String billingCycle = params.get("billingCycle") != null
+                ? params.get("billingCycle").toString() : "MONTHLY";
+        return Result.success(tenantOrchestrator.updateTenantPlan(id, planType, monthlyFee, storageQuotaMb, maxUsers, billingCycle));
     }
 
     /**
