@@ -345,24 +345,26 @@ Page({
     const keyword = text.toLowerCase();
     const filtered = keyword
       ? cachedTenants.filter(t => (t.tenantName || '').toLowerCase().indexOf(keyword) !== -1)
-      : cachedTenants;
+      : [];
     this.setData({
       tenantSearchText: text,
       filteredTenants: filtered,
-      showTenantResults: true,
+      showTenantResults: filtered.length > 0,
     });
   },
 
   /**
-   * 搜索框获得焦点 - 显示列表
+   * 搜索框获得焦点 - 仅当已有输入内容时才显示列表
    */
   onTenantSearchFocus() {
     const text = this.data.tenantSearchText || '';
     const keyword = text.toLowerCase();
-    const filtered = keyword
-      ? cachedTenants.filter(t => (t.tenantName || '').toLowerCase().indexOf(keyword) !== -1)
-      : cachedTenants;
-    this.setData({ filteredTenants: filtered, showTenantResults: true });
+    if (!keyword) {
+      // 空输入时不展开列表，等用户输入后再搜索
+      return;
+    }
+    const filtered = cachedTenants.filter(t => (t.tenantName || '').toLowerCase().indexOf(keyword) !== -1);
+    this.setData({ filteredTenants: filtered, showTenantResults: filtered.length > 0 });
   },
 
   /**

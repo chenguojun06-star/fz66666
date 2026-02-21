@@ -52,8 +52,10 @@ export function getFullAuthedFileUrl(fileUrl: string | undefined | null): string
   // 内网访问需要直连后端
   const authedUrl = getAuthedFileUrl(url);
 
-  // 如果当前不是通过 localhost 访问，需要拼接后端地址
-  if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+  // 只有内网 IP（192.168.x.x / 10.x.x.x / 172.16-31.x.x）才需要直连后端 8088
+  // 云托管公网域名和 localhost 均通过 nginx/Vite proxy 转发，使用相对路径即可
+  const isPrivateIp = /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(window.location.hostname);
+  if (isPrivateIp) {
     return `${window.location.protocol}//${window.location.hostname}:8088${authedUrl}`;
   }
 

@@ -68,8 +68,7 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
       setLoading(true);
       try {
         const response = await factoryApi.list({
-          pageSize: 1000,
-          status: 1  // 只加载启用状态的供应商（1=启用,0=禁用）
+          pageSize: 1000
         });
         if (mounted && response?.data?.records) {
           setSuppliers(response.data.records);

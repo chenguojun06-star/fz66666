@@ -216,7 +216,7 @@
             <text class="hdi-time">{{record.createdAt || record.scanTime || record.time}}</text>
             <view wx:if="{{record.isProcurement && !record.procurementCompleted}}" class="hdi-action" bindtap="onHandleProcurement" data-group-id="{{item.id}}" data-record-idx="{{recordIdx}}">处理</view>
             <view wx:if="{{record.isQualityReceive}}" class="hdi-action" bindtap="onHandleQuality" data-group-id="{{item.id}}" data-record-idx="{{recordIdx}}">处理</view>
-            <view wx:if="{{record.scanResult === 'success' || record.scanResult === 'qualified'}}" class="hdi-action rescan-btn" catchtap="onRescanRecord" data-group-id="{{item.id}}" data-record-idx="{{recordIdx}}" data-record="{{record}}">退回重扫</view>
+            <view wx:if="{{(record.scanResult === 'success' || record.scanResult === 'qualified') && record.canRescan}}" class="hdi-action rescan-btn" catchtap="onRescanRecord" data-group-id="{{item.id}}" data-record-idx="{{recordIdx}}" data-record="{{record}}">退回重扫</view>
           </view>
         </view>
       </view>

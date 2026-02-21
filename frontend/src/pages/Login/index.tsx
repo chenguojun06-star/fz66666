@@ -72,9 +72,9 @@ const Login: React.FC = () => {
       setSelectedTenant(null);
       form.setFieldsValue({ tenantId: undefined });
     }
-    if (!text) {
-      // 空输入显示全部
-      setSearchOptions(tenantsRef.current.map(t => ({ value: t.tenantName, label: t.tenantName, key: t.id })));
+    if (!text || !text.trim()) {
+      // 空输入不显示任何选项，避免默认展开全部
+      setSearchOptions([]);
       return;
     }
     const keyword = text.toLowerCase();
@@ -167,7 +167,7 @@ const Login: React.FC = () => {
               options={searchOptions}
               onSearch={handleSearch}
               onSelect={handleSelect}
-              onFocus={() => handleSearch(form.getFieldValue('companySearch') || '')}
+              onFocus={() => { /* 不自动展开，等用户输入后再搜索 */ }}
               placeholder={tenantsLoading ? '加载中...' : '输入公司名称搜索'}
               disabled={submitting || tenantsLoading}
               size="large"

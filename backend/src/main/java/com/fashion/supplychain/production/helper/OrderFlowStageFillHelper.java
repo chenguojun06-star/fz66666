@@ -211,6 +211,14 @@ public class OrderFlowStageFillHelper {
                         : toLocalDateTime(ParamUtils.getIgnoreCase(flow, "packagingEndTime"));
                 String packagingOperator = flow == null ? null
                         : ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(flow, "packagingOperatorName"));
+                int carSewingQty = flow == null ? 0
+                        : ParamUtils.toIntSafe(ParamUtils.getIgnoreCase(flow, "carSewingQuantity"));
+                int ironingQty = flow == null ? 0
+                        : ParamUtils.toIntSafe(ParamUtils.getIgnoreCase(flow, "ironingQuantity"));
+                int secondaryProcessQty = flow == null ? 0
+                        : ParamUtils.toIntSafe(ParamUtils.getIgnoreCase(flow, "secondaryProcessQuantity"));
+                int packagingQty = flow == null ? 0
+                        : ParamUtils.toIntSafe(ParamUtils.getIgnoreCase(flow, "packagingQuantity"));
 
                 LocalDateTime qualityStart = flow == null ? null
                         : toLocalDateTime(ParamUtils.getIgnoreCase(flow, "qualityStartTime"));
@@ -310,7 +318,7 @@ public class OrderFlowStageFillHelper {
                 o.setCarSewingOperatorName(carSewingOperator);
                 Integer carSewingRate = baseQtyForRate <= 0 ? 0
                         : scanRecordDomainService.clampPercent(
-                                (int) Math.round(Math.max(0, wareQtyForRate) * 100.0 / baseQtyForRate));
+                                (int) Math.round(Math.max(0, carSewingQty) * 100.0 / baseQtyForRate));
                 o.setCarSewingCompletionRate(carSewingRate);
 
                 // 设置大烫环节（新增）
@@ -319,7 +327,7 @@ public class OrderFlowStageFillHelper {
                 o.setIroningOperatorName(ironingOperator);
                 Integer ironingRate = baseQtyForRate <= 0 ? 0
                         : scanRecordDomainService.clampPercent(
-                                (int) Math.round(Math.max(0, wareQtyForRate) * 100.0 / baseQtyForRate));
+                                (int) Math.round(Math.max(0, ironingQty) * 100.0 / baseQtyForRate));
                 o.setIroningCompletionRate(ironingRate);
 
                 // 设置二次工艺环节（新增）
@@ -328,7 +336,7 @@ public class OrderFlowStageFillHelper {
                 o.setSecondaryProcessOperatorName(secondaryProcessOperator);
                 Integer secondaryProcessRate = baseQtyForRate <= 0 ? 0
                         : scanRecordDomainService.clampPercent(
-                                (int) Math.round(Math.max(0, wareQtyForRate) * 100.0 / baseQtyForRate));
+                                (int) Math.round(Math.max(0, secondaryProcessQty) * 100.0 / baseQtyForRate));
                 o.setSecondaryProcessCompletionRate(secondaryProcessRate);
 
                 // 设置包装环节（新增）
@@ -337,7 +345,7 @@ public class OrderFlowStageFillHelper {
                 o.setPackagingOperatorName(packagingOperator);
                 Integer packagingRate = baseQtyForRate <= 0 ? 0
                         : scanRecordDomainService.clampPercent(
-                                (int) Math.round(Math.max(0, wareQtyForRate) * 100.0 / baseQtyForRate));
+                                (int) Math.round(Math.max(0, packagingQty) * 100.0 / baseQtyForRate));
                 o.setPackagingCompletionRate(packagingRate);
 
                 o.setQualityStartTime(qualityStart);
@@ -439,15 +447,19 @@ public class OrderFlowStageFillHelper {
 
             LocalDateTime carSewingStart = null, carSewingEnd = null;
             String carSewingOperator = null;
+            int carSewingQty = 0;
 
             LocalDateTime ironingStart = null, ironingEnd = null;
             String ironingOperator = null;
+            int ironingQty = 0;
 
             LocalDateTime secondaryProcessStart = null, secondaryProcessEnd = null;
             String secondaryProcessOperator = null;
+            int secondaryProcessQty = 0;
 
             LocalDateTime packagingStart = null, packagingEnd = null;
             String packagingOperator = null;
+            int packagingQty = 0;
 
             LocalDateTime qualityStart = null, qualityEnd = null;
             String qualityOperator = null;
@@ -506,30 +518,34 @@ public class OrderFlowStageFillHelper {
                     cuttingEnd = t;
                     cuttingOperator = op;
                     cuttingQty += Math.max(0, q);
-                } else if ("production".equals(st) && "车缝".equals(pn)) {
+                } else if ("production".equals(st) && pn.contains("车缝")) {
                     if (carSewingStart == null) {
                         carSewingStart = t;
                     }
                     carSewingEnd = t;
                     carSewingOperator = op;
-                } else if ("production".equals(st) && "大烫".equals(pn)) {
+                    carSewingQty += Math.max(0, q);
+                } else if ("production".equals(st) && (pn.contains("大烫") || pn.contains("整烫") || pn.contains("烫"))) {
                     if (ironingStart == null) {
                         ironingStart = t;
                     }
                     ironingEnd = t;
                     ironingOperator = op;
-                } else if ("production".equals(st) && "二次工艺".equals(pn)) {
+                    ironingQty += Math.max(0, q);
+                } else if ("production".equals(st) && ("二次工艺".equals(pn) || pn.contains("绣花") || pn.contains("印花") || pn.contains("二次"))) {
                     if (secondaryProcessStart == null) {
                         secondaryProcessStart = t;
                     }
                     secondaryProcessEnd = t;
                     secondaryProcessOperator = op;
-                } else if ("production".equals(st) && "包装".equals(pn)) {
+                    secondaryProcessQty += Math.max(0, q);
+                } else if ("production".equals(st) && pn.contains("包装")) {
                     if (packagingStart == null) {
                         packagingStart = t;
                     }
                     packagingEnd = t;
                     packagingOperator = op;
+                    packagingQty += Math.max(0, q);
                 } else if ("production".equals(st)
                         && !isBaseStageName(pn)
                         && !"quality_warehousing".equals(pc)
@@ -677,7 +693,7 @@ public class OrderFlowStageFillHelper {
             o.setCarSewingOperatorName(carSewingOperator);
             Integer carSewingRate = (o.getOrderQuantity() == null || o.getOrderQuantity() <= 0) ? 0
                     : scanRecordDomainService.clampPercent(
-                            (int) Math.round(Math.max(0, wareQtyForRate) * 100.0 / o.getOrderQuantity()));
+                            (int) Math.round(Math.max(0, carSewingQty) * 100.0 / o.getOrderQuantity()));
             o.setCarSewingCompletionRate(carSewingRate);
 
             // 设置大烫环节（新增 - 兜底分支）
@@ -686,7 +702,7 @@ public class OrderFlowStageFillHelper {
             o.setIroningOperatorName(ironingOperator);
             Integer ironingRate = (o.getOrderQuantity() == null || o.getOrderQuantity() <= 0) ? 0
                     : scanRecordDomainService.clampPercent(
-                            (int) Math.round(Math.max(0, wareQtyForRate) * 100.0 / o.getOrderQuantity()));
+                            (int) Math.round(Math.max(0, ironingQty) * 100.0 / o.getOrderQuantity()));
             o.setIroningCompletionRate(ironingRate);
 
             // 设置二次工艺环节（新增 - 兜底分支）
@@ -695,7 +711,7 @@ public class OrderFlowStageFillHelper {
             o.setSecondaryProcessOperatorName(secondaryProcessOperator);
             Integer secondaryProcessRate = (o.getOrderQuantity() == null || o.getOrderQuantity() <= 0) ? 0
                     : scanRecordDomainService.clampPercent(
-                            (int) Math.round(Math.max(0, wareQtyForRate) * 100.0 / o.getOrderQuantity()));
+                            (int) Math.round(Math.max(0, secondaryProcessQty) * 100.0 / o.getOrderQuantity()));
             o.setSecondaryProcessCompletionRate(secondaryProcessRate);
 
             // 设置包装环节（新增 - 兜底分支）
@@ -704,7 +720,7 @@ public class OrderFlowStageFillHelper {
             o.setPackagingOperatorName(packagingOperator);
             Integer packagingRate = (o.getOrderQuantity() == null || o.getOrderQuantity() <= 0) ? 0
                     : scanRecordDomainService.clampPercent(
-                            (int) Math.round(Math.max(0, wareQtyForRate) * 100.0 / o.getOrderQuantity()));
+                            (int) Math.round(Math.max(0, packagingQty) * 100.0 / o.getOrderQuantity()));
             o.setPackagingCompletionRate(packagingRate);
 
             o.setQualityStartTime(qualityStart);

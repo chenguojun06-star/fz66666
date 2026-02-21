@@ -11,6 +11,7 @@ import RowActions from '@/components/common/RowActions';
 import { StatsGrid } from '@/components/common/StatsGrid';
 import { useModal, useTablePagination } from '@/hooks';
 import api from '@/utils/api';
+import { getAuthedFileUrl } from '@/utils/fileUrl';
 import type { Dayjs } from 'dayjs';
 
 
@@ -260,9 +261,7 @@ const _FinishedInventory: React.FC = () => {
       fixed: 'left',
       align: 'center',
       render: (_, record) => {
-        const imgSrc = record.styleImage
-          ? (record.styleImage.startsWith('http') ? record.styleImage : `http://localhost:8088${record.styleImage}`)
-          : undefined;
+        const imgSrc = record.styleImage ? getAuthedFileUrl(record.styleImage) : undefined;
         return (
           <Image
             src={imgSrc}

@@ -94,8 +94,9 @@ public class ScanRecordQueryHelper {
             params.put("operatorName", name.trim());
         }
 
-        // 排除已关闭/取消/完成/归档订单的扫码记录
-        params.put("excludeClosedOrders", "true");
+        // 注意：工人个人历史不过滤已完成/关闭订单。
+        // excludeClosedOrders 只适用于管理员视图，这里不设置，
+        // 否则工人当天扫的「已完成」订单记录会从「今日记录」中消失。
 
         IPage<ScanRecord> pageResult = scanRecordService.queryPage(params);
 

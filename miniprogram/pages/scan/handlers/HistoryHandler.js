@@ -153,6 +153,13 @@ function _addRecordToGroup(group, record) {
     qtyArr = [totalQty];
   }
 
+  // 是否在1小时内（用于控制「退回重扫」按钮是否显示）
+  let canRescan = false;
+  if (record.scanTime) {
+    const scanTimeMs = new Date(String(record.scanTime).replace(' ', 'T')).getTime();
+    canRescan = !isNaN(scanTimeMs) && (Date.now() - scanTimeMs < 3600 * 1000);
+  }
+
   group.items.push({
     id: record.id,
     orderNo: record.orderNo || '',
@@ -167,6 +174,7 @@ function _addRecordToGroup(group, record) {
     scanType: record.scanType,
     scanResult: record.scanResult,
     scanCode: record.scanCode || '',
+    canRescan: canRescan,
   });
 }
 

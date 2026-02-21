@@ -168,6 +168,9 @@ public class ViewMigrator {
                       THEN CONCAT(LPAD(UNIX_TIMESTAMP(sr.scan_time), 20, '0'), LPAD(UNIX_TIMESTAMP(sr.create_time), 20, '0'), '|', IFNULL(sr.operator_name, '')) END),
                     '|', -1
                   ) AS car_sewing_operator_name,
+                  SUM(CASE WHEN sr.scan_type = 'production'
+                        AND COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%车缝%'
+                      THEN IFNULL(sr.quantity, 0) ELSE 0 END) AS car_sewing_quantity,
                   MIN(CASE WHEN sr.scan_type = 'production'
                         AND (COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%大烫%'
                              OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%整烫%'
@@ -186,6 +189,38 @@ public class ViewMigrator {
                       THEN CONCAT(LPAD(UNIX_TIMESTAMP(sr.scan_time), 20, '0'), LPAD(UNIX_TIMESTAMP(sr.create_time), 20, '0'), '|', IFNULL(sr.operator_name, '')) END),
                     '|', -1
                   ) AS ironing_operator_name,
+                  SUM(CASE WHEN sr.scan_type = 'production'
+                        AND (COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%大烫%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%整烫%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%烫%')
+                      THEN IFNULL(sr.quantity, 0) ELSE 0 END) AS ironing_quantity,
+                  MIN(CASE WHEN sr.scan_type = 'production'
+                        AND (COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) = '二次工艺'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%绣花%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%印花%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%二次%')
+                      THEN sr.scan_time END) AS secondary_process_start_time,
+                  MAX(CASE WHEN sr.scan_type = 'production'
+                        AND (COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) = '二次工艺'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%绣花%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%印花%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%二次%')
+                      THEN sr.scan_time END) AS secondary_process_end_time,
+                  SUBSTRING_INDEX(
+                    MAX(CASE WHEN sr.scan_type = 'production'
+                        AND (COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) = '二次工艺'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%绣花%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%印花%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%二次%')
+                      THEN CONCAT(LPAD(UNIX_TIMESTAMP(sr.scan_time), 20, '0'), LPAD(UNIX_TIMESTAMP(sr.create_time), 20, '0'), '|', IFNULL(sr.operator_name, '')) END),
+                    '|', -1
+                  ) AS secondary_process_operator_name,
+                  SUM(CASE WHEN sr.scan_type = 'production'
+                        AND (COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) = '二次工艺'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%绣花%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%印花%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%二次%')
+                      THEN IFNULL(sr.quantity, 0) ELSE 0 END) AS secondary_process_quantity,
                   MIN(CASE WHEN sr.scan_type = 'production'
                         AND COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%包装%'
                       THEN sr.scan_time END) AS packaging_start_time,
@@ -198,6 +233,9 @@ public class ViewMigrator {
                       THEN CONCAT(LPAD(UNIX_TIMESTAMP(sr.scan_time), 20, '0'), LPAD(UNIX_TIMESTAMP(sr.create_time), 20, '0'), '|', IFNULL(sr.operator_name, '')) END),
                     '|', -1
                   ) AS packaging_operator_name,
+                  SUM(CASE WHEN sr.scan_type = 'production'
+                        AND COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%包装%'
+                      THEN IFNULL(sr.quantity, 0) ELSE 0 END) AS packaging_quantity,
                   MIN(CASE WHEN (sr.scan_type = 'quality'
                         OR IFNULL(sr.process_code, '') = 'quality_warehousing'
                         OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%质检%'
