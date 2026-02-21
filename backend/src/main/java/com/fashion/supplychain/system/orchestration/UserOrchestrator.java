@@ -484,9 +484,13 @@ public class UserOrchestrator {
             throw new AccessDeniedException("无权限操作");
         }
         QueryWrapper<User> wrapper = new QueryWrapper<>();
-        wrapper.eq("approval_status", "pending")
+        wrapper.and(w -> w
+               .eq("approval_status", "pending")
                .or()
-               .isNull("approval_status");
+               .isNull("approval_status")
+               .or()
+               .eq("registration_status", "PENDING")
+        );
         wrapper.orderByDesc("create_time");
 
         Page<User> userPage = userService.page(new Page<>(page, pageSize), wrapper);
@@ -521,6 +525,10 @@ public class UserOrchestrator {
         user.setApprovalTime(LocalDateTime.now());
         user.setApprovalRemark(normalized);
         user.setStatus("active"); // 同时激活用户
+        // 同步更新 registrationStatus（兼容小程序注册流程）
+        if ("PENDING".equals(user.getRegistrationStatus())) {
+            user.setRegistrationStatus("ACTIVE");
+        }
 
         boolean success = userService.updateById(user);
         if (!success) {
@@ -551,6 +559,10 @@ public class UserOrchestrator {
         user.setApprovalTime(LocalDateTime.now());
         user.setApprovalRemark(normalized);
         user.setStatus("inactive"); // 同时停用用户
+        // 同步更新 registrationStatus（兼容小程序注册流程）
+        if ("PENDING".equals(user.getRegistrationStatus())) {
+            user.setRegistrationStatus("REJECTED");
+        }
 
         boolean success = userService.updateById(user);
         if (!success) {

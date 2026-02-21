@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Alert, App, Button, Card, Checkbox, Empty, Input, Select, Space, Spin, Tabs, Tag, Form, Row, Col } from 'antd';
 import type { MenuProps } from 'antd';
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
@@ -22,6 +23,7 @@ const { Option } = Select;
 const UserList: React.FC = () => {
   const { message, modal } = App.useApp();
   const { user, isSuperAdmin, isTenantOwner } = useAuth();
+  const navigate = useNavigate();
   const [form] = Form.useForm();
   const canManageUsers = isSuperAdmin || isTenantOwner;
   // 状态管理
@@ -150,7 +152,7 @@ const UserList: React.FC = () => {
             content: `有 ${count - pendingUserCount} 个新用户待审批`,
             duration: 5,
             onClick: () => {
-              window.location.href = '/system/user-approval';
+              navigate('/system/user-approval');
             }
           });
         }
@@ -899,7 +901,7 @@ const UserList: React.FC = () => {
                   size="small"
                   type="primary"
                   onClick={() => {
-                    window.location.href = isSuperAdmin ? '/system/user-approval' : '/system/tenant';
+                    navigate(isSuperAdmin ? '/system/user-approval' : '/system/tenant?tab=registrations');
                   }}
                 >
                   立即审批
