@@ -60,10 +60,48 @@ jobs:
         path: frontend/dist
         retention-days: 7
 
+  deploy:
+    name: 部署到微信云托管
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-build]
+    # 仅 push 到 main 分支时部署（PR 不部署）
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+
+    - name: 设置 Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: 安装 CloudBase CLI
+      run: npm install -g @cloudbase/cli@latest
+
+    - name: 替换 cloudbaserc.json 中的占位符
+      run: |
+        sed -i "s/{{ENV_ID}}/${{ secrets.CLOUDBASE_ENV_ID }}/g" cloudbaserc.json
+        sed -i "s|{{MYSQL_HOST}}|${{ secrets.MYSQL_HOST }}|g" cloudbaserc.json
+        sed -i "s/{{MYSQL_USER}}/${{ secrets.MYSQL_USER }}/g" cloudbaserc.json
+        sed -i "s/{{MYSQL_PASSWORD}}/${{ secrets.MYSQL_PASSWORD }}/g" cloudbaserc.json
+        sed -i "s/{{REDIS_HOST}}/${{ secrets.REDIS_HOST }}/g" cloudbaserc.json
+        sed -i "s/{{JWT_SECRET}}/${{ secrets.JWT_SECRET }}/g" cloudbaserc.json
+        sed -i "s/{{WECHAT_APPID}}/${{ secrets.WECHAT_APPID }}/g" cloudbaserc.json
+        sed -i "s/{{WECHAT_SECRET}}/${{ secrets.WECHAT_SECRET }}/g" cloudbaserc.json
+
+    - name: 部署后端 + 前端到微信云托管
+      run: |
+        tcb framework deploy \
+          --envId ${{ secrets.CLOUDBASE_ENV_ID }} \
+          --secretId ${{ secrets.CLOUDBASE_SECRET_ID }} \
+          --secretKey ${{ secrets.CLOUDBASE_SECRET_KEY }} \
+          --verbose
+
   notify:
     name: 通知结果
     runs-on: ubuntu-latest
-    needs: [backend-test, frontend-build]
+    needs: [backend-test, frontend-build, deploy]
     if: always()
 
     steps:
@@ -72,3 +110,4 @@ jobs:
         echo "CI/CD Pipeline 完成"
         echo "后端测试: ${{ needs.backend-test.result }}"
         echo "前端构建: ${{ needs.frontend-build.result }}"
+        echo "部署结果: ${{ needs.deploy.result }}"
