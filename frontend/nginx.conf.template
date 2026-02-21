@@ -33,15 +33,16 @@ server {
     }
 
     # ---- API 反向代理 ----
-    # RESOLVER 从容器 /etc/resolv.conf 自动提取（兼容各种容器运行时）
-    # proxy_pass 使用变量：nginx 不剥离 location 前缀，直接拼接原始 URI
-    # /api/system/tenant/public-list → http://backend:8088/api/system/tenant/public-list
+    # RESOLVER 从容器 /etc/resolv.conf 自动提取
+    # BACKEND_URL 使用后端公网域名（内网服务名 DNS 不可靠）
     location /api/ {
         resolver ${RESOLVER} valid=30s ipv6=off;
         set $backend "${BACKEND_URL}";
         proxy_pass $backend;
+        proxy_ssl_server_name on;
+        proxy_ssl_verify off;
         proxy_http_version 1.1;
-        proxy_set_header Host $host;
+        proxy_set_header Host $proxy_host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;

@@ -42,6 +42,6 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 EXPOSE 80
 
 # 环境变量默认值（可在微信云托管控制台覆盖）
-ENV BACKEND_URL=http://backend:8088
+ENV BACKEND_URL=https://backend-226678-6-1405390085.sh.run.tcloudbase.com
 
 CMD ["/docker-entrypoint.sh"]
