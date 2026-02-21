@@ -140,6 +140,7 @@ public class UserController {
      * @return 登录结果
      */
     @PostMapping("/login")
+    @PreAuthorize("permitAll()")
     public Result<?> login(@RequestBody User loginData, HttpServletRequest request) {
         String username = loginData == null ? null : loginData.getUsername();
         String ip = resolveClientIp(request);
