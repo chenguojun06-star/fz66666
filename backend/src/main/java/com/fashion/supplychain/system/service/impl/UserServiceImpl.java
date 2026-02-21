@@ -125,18 +125,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         queryWrapper.last("limit 1");
 
         User user = userMapper.selectOne(queryWrapper);
-
-        // 如果按 tenantId 没找到，尝试不带 tenantId 查找超级管理员
-        // 超级管理员（is_super_admin=1）可以从任意公司入口登录，不受 tenant 归属限制
-        if (user == null && tenantId != null) {
-            QueryWrapper<User> superAdminQuery = new QueryWrapper<User>()
-                    .eq("username", u)
-                    .in("status", "active", "ENABLED")
-                    .eq("is_super_admin", true)
-                    .last("limit 1");
-            user = userMapper.selectOne(superAdminQuery);
-        }
-
         if (user == null) {
             return null;
         }
