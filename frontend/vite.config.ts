@@ -23,53 +23,6 @@ export default defineConfig({
       }
     },
     rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.indexOf('node_modules') < 0) return
-
-          // ⚠️ React 核心 + 所有直接依赖 React 的基础包必须在同一个 chunk
-          // 以确保 rc-util 初始化时 React 已经就绪
-          if (
-            id.indexOf('/node_modules/react/') >= 0 ||
-            id.indexOf('/node_modules/react-dom/') >= 0 ||
-            id.indexOf('/node_modules/scheduler/') >= 0 ||
-            id.indexOf('/node_modules/react-router') >= 0 ||
-            id.indexOf('/node_modules/@remix-run/router/') >= 0 ||
-            id.indexOf('/node_modules/rc-util/') >= 0 ||
-            id.indexOf('/node_modules/rc-motion/') >= 0 ||
-            id.indexOf('/node_modules/rc-resize-observer/') >= 0 ||
-            id.indexOf('/node_modules/@rc-component/') >= 0
-          ) {
-            return 'vendor-react'
-          }
-
-          // 独立的大体积库：与 React 无强耦合
-          if (id.indexOf('/node_modules/echarts/') >= 0 || id.indexOf('/node_modules/zrender/') >= 0 || id.indexOf('/node_modules/echarts-for-react/') >= 0) {
-            return 'vendor-echarts'
-          }
-          if (id.indexOf('/node_modules/@ant-design/charts/') >= 0 || id.indexOf('/node_modules/@antv/') >= 0) {
-            return 'vendor-antv'
-          }
-          if (id.indexOf('/node_modules/three/') >= 0 || id.indexOf('/node_modules/@react-three/') >= 0) {
-            return 'vendor-three'
-          }
-          if (id.indexOf('/node_modules/xlsx/') >= 0) {
-            return 'vendor-xlsx'
-          }
-
-          // antd 组件库（依赖 vendor-react，但 Rollup 会自动处理加载顺序）
-          if (id.indexOf('/node_modules/antd/') >= 0 ||
-              id.indexOf('/node_modules/@ant-design/') >= 0 ||
-              id.indexOf('/node_modules/rc-') >= 0) {
-            return 'vendor-antd'
-          }
-
-          if (id.indexOf('/node_modules/axios/') >= 0) return 'vendor-axios'
-          if (id.indexOf('/node_modules/dayjs/') >= 0) return 'vendor-dayjs'
-
-          return 'vendor'
-        }
-      }
     }
   },
   server: {
