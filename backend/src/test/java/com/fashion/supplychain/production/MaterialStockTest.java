@@ -1,12 +1,10 @@
 package com.fashion.supplychain.production;
 
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.MaterialStock;
 import com.fashion.supplychain.production.mapper.MaterialPurchaseMapper;
 import com.fashion.supplychain.production.mapper.MaterialStockMapper;
-import com.fashion.supplychain.production.service.MaterialStockService;
 import com.fashion.supplychain.production.service.impl.MaterialPurchaseServiceImpl;
 import com.fashion.supplychain.production.service.impl.MaterialStockServiceImpl;
 import org.junit.jupiter.api.Test;

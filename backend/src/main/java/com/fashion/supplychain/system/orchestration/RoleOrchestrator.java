@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.util.TextUtils;
 import com.fashion.supplychain.system.entity.Role;
-import com.fashion.supplychain.system.entity.SystemOperationLog;
 import com.fashion.supplychain.system.service.RolePermissionService;
 import com.fashion.supplychain.system.service.RoleService;
 import com.fashion.supplychain.system.service.LoginLogService;
