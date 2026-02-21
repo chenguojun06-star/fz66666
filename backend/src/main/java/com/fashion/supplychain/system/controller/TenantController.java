@@ -35,7 +35,7 @@ public class TenantController {
 
     /**
      * 公开接口：获取活跃租户列表（登录页选择公司用）
-     * 仅返回 {id, tenantName}，不暴露敏感信息
+     * 返回 {id, tenantName, tenantCode}，供员工注册时按名称搜索工厂
      */
     @GetMapping("/public-list")
     @PreAuthorize("permitAll()")
@@ -45,6 +45,7 @@ public class TenantController {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("id", t.getId());
             m.put("tenantName", t.getTenantName());
+            m.put("tenantCode", t.getTenantCode());
             return m;
         }).collect(Collectors.toList());
         return Result.success(result);

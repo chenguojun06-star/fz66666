@@ -313,7 +313,6 @@ Page({
         }
 
         this.setData({
-          tenants: resp.data,
           selectedTenantId,
           selectedTenantName,
           tenantSearchText,

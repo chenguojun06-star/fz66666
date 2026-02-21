@@ -41,8 +41,6 @@ Page({
     statsLoaded: false,
     keyword: '',
     showReminderPanel: false,
-    reminderCount: 0,
-    reminders: [],
     globalSearch: {
       keyword: '',
       hasSearched: false,
@@ -210,10 +208,9 @@ Page({
       };
     });
 
-    this.setData({
-      reminders,
-      reminderCount: reminders.length,
-    });
+    // 提醒数据僅内存，不写入 setData
+    this._reminders = reminders;
+    this._reminderCount = reminders.length;
   },
 
   toggleReminderPanel() {

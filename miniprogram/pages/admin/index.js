@@ -12,14 +12,11 @@ Page({
   data: {
     loadingStats: false,
     loadingHistory: false,
-    loadingSystemInfo: false,
     stats: null,
     history: { page: 1, pageSize: 10, hasMore: true, list: [] },
     userInfo: null,
     roleDisplayName: '',
     onlineCount: 0,
-    permissions: [],
-    pendingUserCount: 0,
     showApprovalEntry: false,
     _unsubscribeRefresh: null, // 保存取消订阅函数
     // 修改密码
@@ -95,10 +92,10 @@ Page({
   },
 
   async loadSystemInfo() {
-    if (this.data.loadingSystemInfo) {
+    if (this._loadingSystemInfo) {
       return;
     }
-    this.setData({ loadingSystemInfo: true });
+    this._loadingSystemInfo = true;
     try {
       // 加载在线人数
       const onlineCount = await api.system.getOnlineCount();
@@ -136,16 +133,11 @@ Page({
 
       this.setData({
         onlineCount: Number(onlineCount) || 0,
-        permissions,
-        pendingUserCount,
       });
     } catch (e) {
       console.error('加载系统信息失败', e);
-      // 即使在线人数加载失败，也显示本地权限
-      const permissions = getRolePermissions();
-      this.setData({ permissions });
     } finally {
-      this.setData({ loadingSystemInfo: false });
+      this._loadingSystemInfo = false;
     }
   },
 

@@ -1,5 +1,6 @@
 package com.fashion.supplychain.dashboard.service.impl;
 
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.dashboard.service.DashboardQueryService;
 import com.fashion.supplychain.finance.entity.MaterialReconciliation;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
@@ -73,11 +74,21 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         this.redisService = redisService;
     }
 
+    /**
+     * 构建租户隔离的缓存 key。
+     * 超级管理员（tenantId=null）使用 "superadmin:" 前缀，避免污染任何租户的缓存。
+     */
+    private String tenantCacheKey(String key) {
+        Long tenantId = UserContext.tenantId();
+        String prefix = tenantId != null ? "t" + tenantId + ":" : "superadmin:";
+        return CACHE_PREFIX + prefix + key;
+    }
+
     /** 从缓存获取，命中则直接返回；未命中返回null */
     @SuppressWarnings("unchecked")
     private <T> T getFromCache(String key) {
         try {
-            return redisService.get(CACHE_PREFIX + key);
+            return redisService.get(tenantCacheKey(key));
         } catch (Exception e) {
             log.debug("Redis cache miss or error for key: {}", key);
             return null;
@@ -87,7 +98,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
     /** 写入缓存 */
     private void putToCache(String key, Object value) {
         try {
-            redisService.set(CACHE_PREFIX + key, value, CACHE_TTL_MINUTES, TimeUnit.MINUTES);
+            redisService.set(tenantCacheKey(key), value, CACHE_TTL_MINUTES, TimeUnit.MINUTES);
         } catch (Exception e) {
             log.debug("Redis cache put error for key: {}", key);
         }
@@ -216,7 +227,12 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
 
     @Override
     public List<StyleInfo> listRecentStyles(int limit) {
+        // 超级管理员无归属租户，不展示任何租户的业务数据
+        if (UserContext.tenantId() == null) {
+            return java.util.Collections.emptyList();
+        }
         int lim = Math.max(1, limit);
+        // TenantInterceptor 已自动追加 tenant_id 条件
         return styleInfoService.lambdaQuery()
                 .eq(StyleInfo::getStatus, "ENABLED")
                 .orderByDesc(StyleInfo::getCreateTime)
@@ -226,6 +242,9 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
 
     @Override
     public List<ProductionOrder> listRecentOrders(int limit) {
+        if (UserContext.tenantId() == null) {
+            return java.util.Collections.emptyList();
+        }
         int lim = Math.max(1, limit);
         return productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
@@ -236,8 +255,11 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
 
     @Override
     public List<ScanRecord> listRecentScans(int limit) {
+        if (UserContext.tenantId() == null) {
+            return java.util.Collections.emptyList();
+        }
         int lim = Math.max(1, limit);
-        // 仅显示真实扫码操作，排除系统自动创建的记录
+        // 仅显示真实扫码操作，排除系统自动创建的记录；TenantInterceptor 追加 tenant_id 条件
         return scanRecordService.lambdaQuery()
                 .ne(ScanRecord::getOperatorName, "system")
                 .isNotNull(ScanRecord::getOperatorId)
@@ -248,6 +270,9 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
 
     @Override
     public List<MaterialPurchase> listRecentPurchases(int limit) {
+        if (UserContext.tenantId() == null) {
+            return java.util.Collections.emptyList();
+        }
         int lim = Math.max(1, limit);
         return materialPurchaseService.lambdaQuery()
                 .eq(MaterialPurchase::getDeleteFlag, 0)
