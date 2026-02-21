@@ -1,14 +1,13 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Form, Input, Button, Card, Typography, App, Segmented, Alert } from 'antd';
-import { UserOutlined, LockOutlined, PhoneOutlined, MailOutlined, ShopOutlined, IdcardOutlined, BankOutlined } from '@ant-design/icons';
+import { UserOutlined, LockOutlined, PhoneOutlined, ShopOutlined, IdcardOutlined, BankOutlined } from '@ant-design/icons';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import api from '../../utils/api';
 import tenantService from '../../services/tenantService';
 import '../Login/styles.css';
 
 const { Title } = Typography;
 
-type RegisterMode = '通用注册' | '工厂员工注册' | '工厂入驻申请';
+type RegisterMode = '工厂员工注册' | '工厂入驻申请';
 
 const Register: React.FC = () => {
   const navigate = useNavigate();
@@ -21,9 +20,7 @@ const Register: React.FC = () => {
   const urlTenantCode = searchParams.get('tenantCode') || '';
   const urlTenantName = searchParams.get('tenantName') || '';
 
-  // 如果 URL 带了 tenantCode，默认选择工厂模式
-  const [mode, setMode] = useState<RegisterMode>(urlTenantCode ? '工厂员工注册' : '通用注册');
-  const isFactoryMode = mode === '工厂员工注册';
+  const [mode, setMode] = useState<RegisterMode>('工厂员工注册');
   const isApplyMode = mode === '工厂入驻申请';
 
   const year = useMemo(() => new Date().getFullYear(), []);
@@ -35,81 +32,52 @@ const Register: React.FC = () => {
     }
   }, [urlTenantCode, form]);
 
-  // 通用注册
-  const handleGeneralRegister = async (values: any) => {
-    try {
-      const response = await api.post('/auth/register', {
-        username: values.username,
-        password: values.password,
-        phone: values.phone,
-        email: values.email,
-      });
-      if (response && (response as any).code === 200) {
-        message.success('注册成功！请等待管理员审批后登录');
-        setTimeout(() => navigate('/login'), 2000);
-      } else {
-        message.error(String((response as any)?.message || '注册失败'));
-      }
-    } catch (error: any) {
-      message.error(error?.response?.data?.message || '注册失败，请稍后重试');
-    }
-  };
-
   // 工厂员工注册
   const handleFactoryRegister = async (values: any) => {
-    try {
-      const res: any = await tenantService.workerRegister({
-        username: values.username,
-        password: values.password,
-        name: values.name,
-        phone: values.phone,
-        tenantCode: values.tenantCode,
-      });
-      const data = res?.data || res;
-      if (data?.status === 'PENDING' || (res?.code === 200)) {
-        message.success(data?.message || '注册申请已提交，请等待工厂管理员审批');
-        setTimeout(() => navigate('/login'), 2000);
-      } else {
-        message.error(data?.message || '注册失败');
-      }
-    } catch (error: any) {
-      const msg = error?.response?.data?.message || error?.message || '注册失败，请稍后重试';
-      message.error(msg);
+    const res: any = await tenantService.workerRegister({
+      username: values.username,
+      password: values.password,
+      name: values.name,
+      phone: values.phone,
+      tenantCode: values.tenantCode,
+    });
+    const data = res?.data || res;
+    if (data?.status === 'PENDING' || res?.code === 200) {
+      message.success(data?.message || '注册申请已提交，请等待工厂管理员审批');
+      setTimeout(() => navigate('/login'), 2000);
+    } else {
+      message.error(data?.message || '注册失败');
     }
   };
 
   // 工厂入驻申请
   const handleApplyTenant = async (values: any) => {
-    try {
-      const res: any = await tenantService.applyForTenant({
-        tenantName: values.tenantName,
-        contactName: values.contactName,
-        contactPhone: values.contactPhone,
-        applyUsername: values.username,
-        applyPassword: values.password,
-      });
-      if (res?.code === 200 || res?.data) {
-        message.success('入驻申请已提交，请等待平台审核，审核通过后可登录使用');
-        setTimeout(() => navigate('/login'), 2500);
-      } else {
-        message.error(res?.message || '申请失败');
-      }
-    } catch (error: any) {
-      message.error(error?.response?.data?.message || error?.message || '申请失败，请稍候重试');
+    const res: any = await tenantService.applyForTenant({
+      tenantName: values.tenantName,
+      contactName: values.contactName,
+      contactPhone: values.contactPhone,
+      applyUsername: values.username,
+      applyPassword: values.password,
+    });
+    if (res?.code === 200 || res?.data) {
+      message.success('入驻申请已提交，请等待平台审核，审核通过后可登录使用');
+      setTimeout(() => navigate('/login'), 2500);
+    } else {
+      message.error(res?.message || '申请失败');
     }
   };
 
-  const handleRegister = async (values: any) => {
+  const handleSubmit = async (values: any) => {
     if (submitting) return;
     setSubmitting(true);
     try {
       if (isApplyMode) {
         await handleApplyTenant(values);
-      } else if (isFactoryMode) {
-        await handleFactoryRegister(values);
       } else {
-        await handleGeneralRegister(values);
+        await handleFactoryRegister(values);
       }
+    } catch (error: any) {
+      message.error(error?.response?.data?.message || error?.message || '操作失败，请稍后重试');
     } finally {
       setSubmitting(false);
     }
@@ -125,7 +93,7 @@ const Register: React.FC = () => {
             云裳智链
           </Title>
           <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.7)', marginTop: 8 }}>
-            {isApplyMode ? '工厂入驻申请' : isFactoryMode ? '工厂员工注册' : '用户注册'}
+            {isApplyMode ? '工厂入驻申请' : '工厂员工注册'}
           </p>
         </div>
 
@@ -133,7 +101,7 @@ const Register: React.FC = () => {
         {!urlTenantCode && (
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
             <Segmented
-              options={['通用注册', '工厂员工注册', '工厂入驻申请']}
+              options={['工厂员工注册', '工厂入驻申请']}
               value={mode}
               onChange={(v) => { setMode(v as RegisterMode); form.resetFields(); }}
               style={{ background: 'rgba(255,255,255,0.12)' }}
@@ -154,7 +122,7 @@ const Register: React.FC = () => {
         <Form
           form={form}
           name="register"
-          onFinish={handleRegister}
+          onFinish={handleSubmit}
           className="login-form"
           layout="vertical"
         >
@@ -212,8 +180,8 @@ const Register: React.FC = () => {
             </>
           )}
 
-          {/* 工厂编码（工厂模式 + 非URL自动填入时显示） */}
-          {isFactoryMode && !urlTenantCode && (
+          {/* 工厂编码（员工注册且非URL自动填入时显示） */}
+          {!isApplyMode && !urlTenantCode && (
             <Form.Item
               name="tenantCode"
               rules={[{ required: true, message: '请输入工厂编码' }]}
@@ -228,8 +196,7 @@ const Register: React.FC = () => {
               />
             </Form.Item>
           )}
-          {/* URL带入的工厂编码（隐藏字段） */}
-          {isFactoryMode && urlTenantCode && (
+          {!isApplyMode && urlTenantCode && (
             <Form.Item name="tenantCode" hidden initialValue={urlTenantCode}>
               <Input />
             </Form.Item>
@@ -256,8 +223,8 @@ const Register: React.FC = () => {
             />
           </Form.Item>
 
-          {/* 工厂模式需要填真实姓名 */}
-          {isFactoryMode && !isApplyMode && (
+          {/* 员工注册需要填真实姓名 */}
+          {!isApplyMode && (
             <Form.Item
               name="name"
               rules={[{ required: true, message: '请输入真实姓名' }]}
@@ -314,10 +281,10 @@ const Register: React.FC = () => {
           <Form.Item
             name="phone"
             rules={[
+              { required: true, message: '请输入手机号' },
               { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号' },
-              ...(isFactoryMode ? [{ required: true, message: '请输入手机号' } as const] : []),
             ]}
-            label={isFactoryMode ? '手机号' : '手机号（选填）'}
+            label="手机号"
             hidden={isApplyMode}
           >
             <Input
@@ -330,24 +297,6 @@ const Register: React.FC = () => {
             />
           </Form.Item>
 
-          {/* 通用模式有邮箱 */}
-          {!isFactoryMode && !isApplyMode && (
-            <Form.Item
-              name="email"
-              rules={[{ type: 'email', message: '请输入正确的邮箱地址' }]}
-              label="邮箱（选填）"
-            >
-              <Input
-                prefix={<MailOutlined className="site-form-item-icon" />}
-                placeholder="请输入邮箱"
-                size="large"
-                allowClear
-                disabled={submitting}
-                autoComplete="email"
-              />
-            </Form.Item>
-          )}
-
           <Form.Item>
             <Button
               type="primary"
@@ -356,7 +305,7 @@ const Register: React.FC = () => {
               size="large"
               loading={submitting}
             >
-              {isApplyMode ? '提交入驻申请' : isFactoryMode ? '提交注册申请' : '注册'}
+              {isApplyMode ? '提交入驻申请' : '提交注册申请'}
             </Button>
           </Form.Item>
           <Form.Item style={{ marginBottom: 0 }}>
