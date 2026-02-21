@@ -448,6 +448,9 @@ const RegistrationTab: React.FC = () => {
   const { isSuperAdmin } = useAuth();
   const [tenantApps, setTenantApps] = useState<TenantInfo[]>([]);
   const [tenantAppsLoading, setTenantAppsLoading] = useState(false);
+  const editModal = useModal<TenantInfo>();
+  const [editForm] = Form.useForm();
+  const [editSaving, setEditSaving] = useState(false);
 
   const fetchTenantApps = useCallback(async () => {
     if (!isSuperAdmin) { setTenantApps([]); return; }
@@ -497,6 +500,34 @@ const RegistrationTab: React.FC = () => {
     });
   };
 
+  const handleEditApplication = (record: TenantInfo) => {
+    editForm.setFieldsValue({
+      applyUsername: record.applyUsername,
+      contactName: record.contactName,
+      contactPhone: record.contactPhone,
+    });
+    editModal.open(record);
+  };
+
+  const handleSaveApplication = async () => {
+    const record = editModal.data;
+    if (!record) return;
+    try {
+      const values = await editForm.validateFields();
+      setEditSaving(true);
+      await tenantService.updateApplication(record.id, values);
+      message.success('申请信息已更新');
+      editModal.close();
+      editForm.resetFields();
+      fetchTenantApps();
+    } catch (e: any) {
+      if (e?.errorFields?.length) return;
+      message.error(e?.message || '修改失败');
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
   const tenantAppColumns: ColumnsType<TenantInfo> = [
     { title: '工厂名称', dataIndex: 'tenantName', width: 160 },
     { title: '申请账号', dataIndex: 'applyUsername', width: 120 },
@@ -508,10 +539,11 @@ const RegistrationTab: React.FC = () => {
     },
     { title: '申请时间', dataIndex: 'createTime', width: 160 },
     {
-      title: '操作', key: 'actions', width: 160,
+      title: '操作', key: 'actions', width: 200,
       render: (_: unknown, record: TenantInfo) => {
         const actions: RowAction[] = [
           { key: 'approve', label: '通过', primary: true, onClick: () => handleApproveTenant(record) },
+          { key: 'edit', label: '编辑', onClick: () => handleEditApplication(record) },
           { key: 'reject', label: '拒绝', danger: true, onClick: () => handleRejectTenant(record) },
         ];
         return <RowActions actions={actions} />;
@@ -551,6 +583,38 @@ const RegistrationTab: React.FC = () => {
           </Card>
         )}
       </div>
+
+      {/* 编辑申请信息弹窗 */}
+      <ResizableModal
+        open={editModal.visible}
+        title={`编辑申请信息 - ${editModal.data?.tenantName || ''}`}
+        onCancel={() => { editModal.close(); editForm.resetFields(); }}
+        width="30vw"
+        footer={
+          <Space>
+            <Button onClick={() => { editModal.close(); editForm.resetFields(); }}>取消</Button>
+            <Button type="primary" loading={editSaving} onClick={handleSaveApplication}>保存</Button>
+          </Space>
+        }
+      >
+        <Alert
+          message="如果申请账号已被其他工厂占用，可以在此修改后再审批通过。"
+          type="warning"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+        <Form form={editForm} layout="vertical">
+          <Form.Item label="申请账号" name="applyUsername" rules={[{ required: true, message: '账号不能为空' }]}>
+            <Input placeholder="修改后将用此账号创建主账号" />
+          </Form.Item>
+          <Form.Item label="联系人" name="contactName">
+            <Input />
+          </Form.Item>
+          <Form.Item label="联系电话" name="contactPhone">
+            <Input />
+          </Form.Item>
+        </Form>
+      </ResizableModal>
     </div>
   );
 };

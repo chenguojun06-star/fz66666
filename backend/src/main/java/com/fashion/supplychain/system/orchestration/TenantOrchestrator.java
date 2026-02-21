@@ -285,6 +285,40 @@ public class TenantOrchestrator {
     }
 
     /**
+     * 修改入驻申请信息（超级管理员专用，审批前可改账号/联系人等）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public boolean updateApplication(Long tenantId, Map<String, String> params) {
+        assertSuperAdmin();
+        Tenant tenant = tenantService.getById(tenantId);
+        if (tenant == null) throw new IllegalArgumentException("租户申请不存在");
+        if (!"pending_review".equals(tenant.getStatus())) throw new IllegalStateException("仅待审核状态可修改");
+
+        String newUsername = params.get("applyUsername");
+        if (StringUtils.hasText(newUsername)) {
+            // 检查新账号唯一性
+            QueryWrapper<User> userCheck = new QueryWrapper<>();
+            userCheck.eq("username", newUsername);
+            if (userService.count(userCheck) > 0) {
+                throw new IllegalArgumentException("账号「" + newUsername + "」已存在，请使用其他账号");
+            }
+            tenant.setApplyUsername(newUsername.trim());
+        }
+        String contactName = params.get("contactName");
+        if (StringUtils.hasText(contactName)) {
+            tenant.setContactName(contactName.trim());
+        }
+        String contactPhone = params.get("contactPhone");
+        if (StringUtils.hasText(contactPhone)) {
+            tenant.setContactPhone(contactPhone.trim());
+        }
+        tenant.setUpdateTime(LocalDateTime.now());
+        tenantService.updateById(tenant);
+        log.info("[申请信息修改] tenantId={} 工厂={}", tenantId, tenant.getTenantName());
+        return true;
+    }
+
+    /**
      * 拒绝入驻申请（超级管理员专用）
      */
     @Transactional(rollbackFor = Exception.class)

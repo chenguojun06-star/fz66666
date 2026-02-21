@@ -59,6 +59,8 @@ const tenantService = {
   toggleTenantStatus: (id: number, status: string) => api.post(`${BASE}/${id}/toggle-status`, { status }),
   approveApplication: (id: number) => api.post(`${BASE}/${id}/approve-application`, {}),
   rejectApplication: (id: number, reason?: string) => api.post(`${BASE}/${id}/reject-application`, { reason }),
+  updateApplication: (id: number, data: { applyUsername?: string; contactName?: string; contactPhone?: string }) =>
+    api.post(`${BASE}/${id}/update-application`, data),
   markTenantPaid: (id: number, paidStatus: string) => api.post(`${BASE}/${id}/mark-paid`, { paidStatus }),
 
   // ========== 子账号管理 ==========

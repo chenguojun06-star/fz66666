@@ -258,6 +258,14 @@ public class TenantController {
     }
 
     /**
+     * 修改入驻申请信息（超级管理员，审批前允许修改账号等）
+     */
+    @PostMapping("/{id}/update-application")
+    public Result<Boolean> updateApplication(@PathVariable Long id, @RequestBody Map<String, String> params) {
+        return Result.success(tenantOrchestrator.updateApplication(id, params));
+    }
+
+    /**
      * 拒绝入驻申请（超级管理员）
      */
     @PostMapping("/{id}/reject-application")
