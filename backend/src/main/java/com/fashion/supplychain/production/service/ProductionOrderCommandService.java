@@ -26,16 +26,13 @@ import java.util.NoSuchElementException;
 public class ProductionOrderCommandService {
 
     private final ProductionOrderService productionOrderService;
-    private final ProductionOrderQueryService productionOrderQueryService;
     private final StyleInfoService styleInfoService;
 
     @Autowired
     public ProductionOrderCommandService(
             ProductionOrderService productionOrderService,
-            ProductionOrderQueryService productionOrderQueryService,
             StyleInfoService styleInfoService) {
         this.productionOrderService = productionOrderService;
-        this.productionOrderQueryService = productionOrderQueryService;
         this.styleInfoService = styleInfoService;
     }
 

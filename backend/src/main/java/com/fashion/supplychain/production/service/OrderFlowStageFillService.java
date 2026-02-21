@@ -1,13 +1,8 @@
 package com.fashion.supplychain.production.service;
 
 import com.fashion.supplychain.production.entity.ProductionOrder;
-import com.fashion.supplychain.production.entity.ScanRecord;
-import com.fashion.supplychain.production.mapper.MaterialPurchaseMapper;
-import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.*;
 
@@ -18,17 +13,6 @@ import java.util.*;
 @Service
 @Slf4j
 public class OrderFlowStageFillService {
-
-    private final ScanRecordMapper scanRecordMapper;
-    private final MaterialPurchaseMapper materialPurchaseMapper;
-
-    @Autowired
-    public OrderFlowStageFillService(
-            ScanRecordMapper scanRecordMapper,
-            MaterialPurchaseMapper materialPurchaseMapper) {
-        this.scanRecordMapper = scanRecordMapper;
-        this.materialPurchaseMapper = materialPurchaseMapper;
-    }
 
     /**
      * 填充流程阶段字段

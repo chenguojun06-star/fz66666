@@ -135,7 +135,7 @@ public class WagePaymentOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public void removeAccount(String accountId) {
         TenantAssert.assertTenantContext();
-        Long tenantId = TenantAssert.requireTenantId();
+        TenantAssert.requireTenantId();
 
         PaymentAccount account = paymentAccountService.getById(accountId);
         if (account == null) {

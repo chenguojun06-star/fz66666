@@ -1,10 +1,7 @@
 package com.fashion.supplychain.production.service;
 
 import com.fashion.supplychain.production.entity.ProductionOrder;
-import com.fashion.supplychain.production.mapper.ScanRecordMapper;
-import com.fashion.supplychain.template.service.TemplateLibraryService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -17,17 +14,6 @@ import java.util.*;
 @Service
 @Slf4j
 public class OrderProcessQueryService {
-
-    private final ScanRecordMapper scanRecordMapper;
-    private final TemplateLibraryService templateLibraryService;
-
-    @Autowired
-    public OrderProcessQueryService(
-            ScanRecordMapper scanRecordMapper,
-            TemplateLibraryService templateLibraryService) {
-        this.scanRecordMapper = scanRecordMapper;
-        this.templateLibraryService = templateLibraryService;
-    }
 
     /**
      * 填充当前工序名称

@@ -59,12 +59,6 @@ spring:
       # 禁用非ASCII字符的Unicode转义，直接输出UTF-8中文
       escape-non-ascii: false
 
-  http:
-    encoding:
-      charset: UTF-8
-      enabled: true
-      force: true
-
   lifecycle:
     timeout-per-shutdown-phase: 30s
 

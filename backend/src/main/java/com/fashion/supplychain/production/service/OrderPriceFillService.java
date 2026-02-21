@@ -1,10 +1,8 @@
 package com.fashion.supplychain.production.service;
 
 import com.fashion.supplychain.production.entity.ProductionOrder;
-import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleInfoService;
-import com.fashion.supplychain.template.service.TemplateLibraryService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -21,19 +19,8 @@ import java.util.List;
 @Slf4j
 public class OrderPriceFillService {
 
-    private final ScanRecordMapper scanRecordMapper;
-    private final TemplateLibraryService templateLibraryService;
-    private final StyleInfoService styleInfoService;
-
     @Autowired
-    public OrderPriceFillService(
-            ScanRecordMapper scanRecordMapper,
-            TemplateLibraryService templateLibraryService,
-            StyleInfoService styleInfoService) {
-        this.scanRecordMapper = scanRecordMapper;
-        this.templateLibraryService = templateLibraryService;
-        this.styleInfoService = styleInfoService;
-    }
+    private StyleInfoService styleInfoService;
 
     /**
      * 填充工厂单价
