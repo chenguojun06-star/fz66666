@@ -10,6 +10,18 @@ spring:
       idle-timeout: 600000
       max-lifetime: 1800000
 
+  # Redis 生产配置
+  redis:
+    host: ${SPRING_REDIS_HOST:redis}
+    port: ${SPRING_REDIS_PORT:6379}
+    password: ${SPRING_REDIS_PASSWORD:}
+    timeout: 3000ms
+    lettuce:
+      pool:
+        max-active: 16
+        max-idle: 8
+        min-idle: 2
+
   # 生产环境启用 Flyway 进行数据库迁移管理
   flyway:
     enabled: ${FLYWAY_ENABLED:true}
@@ -34,6 +46,12 @@ fashion:
   db:
     initializer-enabled: false
   upload-path: /uploads/
+
+# 生产环境 CORS（允许微信云托管默认域名和自定义域名）
+app:
+  cors:
+    allowed-origin-patterns: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:https://*.tcloudbase.com,https://*.ap-shanghai.service.tcloudbase.com}
+    allow-credentials: true
 
 # 生产环境隐藏健康检查详情
 management:

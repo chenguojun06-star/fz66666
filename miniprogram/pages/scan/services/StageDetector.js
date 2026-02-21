@@ -123,6 +123,20 @@ class StageDetector {
       return null;
     }
 
+    // === 步骤0：检查订单完成状态（后端 status='completed' 或 productionProgress>=100）===
+    const orderStatus = String(orderDetail.status || orderDetail.orderStatus || '').trim().toLowerCase();
+    const progressPct = Number(orderDetail.productionProgress || orderDetail.progress || 0);
+    if (orderStatus === 'completed' || progressPct >= 100) {
+      const lastProcess = orderDetail.currentProcessName || orderDetail.currentProgress || '已完成';
+      return {
+        processName: lastProcess,
+        progressStage: lastProcess,
+        scanType: this._inferScanType(lastProcess),
+        hint: '进度节点已完成',
+        isCompleted: true,
+      };
+    }
+
     const orderNo = String(
       orderDetail.orderNo ||
       orderDetail.order_no ||
@@ -150,6 +164,19 @@ class StageDetector {
         scanType: first.scanType,
         unitPrice: Number(first.price || 0),
         hint: `订单开始: ${first.processName}`,
+        isCompleted: false,
+      };
+    }
+
+    // 完成态关键词（如后端设置 currentProcessName 为 '已完成'）
+    if (currentProgress === '已完成' || currentProgress === '完成' || currentProgress === 'completed') {
+      const last = config[config.length - 1];
+      return {
+        processName: last ? last.processName : currentProgress,
+        progressStage: last ? (last.progressStage || last.processName) : currentProgress,
+        scanType: last ? last.scanType : this._inferScanType(currentProgress),
+        hint: '进度节点已完成',
+        isCompleted: true,
       };
     }
 
@@ -167,6 +194,7 @@ class StageDetector {
         progressStage: currentProgress,
         scanType: this._inferScanType(currentProgress),
         hint: `当前工序: ${currentProgress}`,
+        isCompleted: false,
       };
     }
 
@@ -276,7 +304,7 @@ class StageDetector {
       processName: lastProcess.processName,
       progressStage: lastProcess.progressStage || lastProcess.processName,
       scanType: lastProcess.scanType,
-      hint: '所有工序已完成',
+      hint: '进度节点已完成',
       isDuplicate: false,
       quantity: accurateQuantity,
       isCompleted: true,

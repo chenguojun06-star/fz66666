@@ -77,4 +77,7 @@ public class User {
     private LocalDateTime lastLoginTime;
 
     private String lastLoginIp;
+
+    /** 微信小程序 openid（用于一键登录，首次手动绑定后自动登录） */
+    private String openid;
 }

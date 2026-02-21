@@ -179,6 +179,29 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         return findByName(name) != null;
     }
 
+    @Override
+    public User findByOpenid(String openid) {
+        if (!StringUtils.hasText(openid)) {
+            return null;
+        }
+        return lambdaQuery()
+                .eq(User::getOpenid, openid)
+                .in(User::getStatus, "active", "ENABLED")
+                .last("LIMIT 1")
+                .one();
+    }
+
+    @Override
+    public boolean bindOpenid(Long userId, String openid) {
+        if (userId == null || !StringUtils.hasText(openid)) {
+            return false;
+        }
+        return lambdaUpdate()
+                .eq(User::getId, userId)
+                .set(User::getOpenid, openid)
+                .update();
+    }
+
     private static boolean isBcryptHash(String s) {
         if (!StringUtils.hasText(s)) {
             return false;

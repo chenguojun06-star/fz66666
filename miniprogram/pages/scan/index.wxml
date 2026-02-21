@@ -300,21 +300,35 @@
             />
           </view>
 
-          <!-- 工序选择器（动态从后端API加载，每个订单子工序和单价不同） -->
-          <view class="result-item process-selector">
-            <text class="item-label">识别工序</text>
-            <picker
-              class="process-picker"
-              mode="selector"
-              range="{{scanResultConfirm.processOptions}}"
-              range-key="label"
-              value="{{scanResultConfirm.processIndex}}"
-              bindchange="onProcessPickerChange">
-              <view class="picker-display">
-                <text class="picker-value">{{scanResultConfirm.processOptions[scanResultConfirm.processIndex].label}}</text>
-                <text class="picker-arrow">▼</text>
+          <!-- 工序选择器（内联滚动选择，点击切换工序） -->
+          <view class="inline-selector process-scroll-selector">
+            <view class="process-scroll-header">
+              <text class="process-scroll-title">选择工序</text>
+              <text class="process-scroll-hint">上下滑动选择</text>
+            </view>
+            <scroll-view
+              class="process-scroll-list"
+              scroll-y="{{true}}"
+              scroll-into-view="process-item-{{scanResultConfirm.processIndex}}"
+              scroll-with-animation="{{true}}"
+              enhanced="{{true}}"
+              show-scrollbar="{{false}}">
+              <view
+                wx:for="{{scanResultConfirm.processOptions}}"
+                wx:key="value"
+                id="process-item-{{index}}"
+                class="inline-selector-item {{scanResultConfirm.processIndex === index ? 'active' : ''}}"
+                data-index="{{index}}"
+                bindtap="onProcessScrollSelect">
+                <view class="inline-selector-left">
+                  <view class="inline-selector-radio {{scanResultConfirm.processIndex === index ? 'checked' : ''}}">
+                    <view wx:if="{{scanResultConfirm.processIndex === index}}" class="inline-selector-radio-dot"></view>
+                  </view>
+                  <text class="inline-selector-label">{{item.value}}</text>
+                </view>
+                <text class="process-item-price">¥{{item.unitPrice}}</text>
               </view>
-            </picker>
+            </scroll-view>
           </view>
 
           <view class="result-hint">
@@ -641,23 +655,47 @@
         <!-- 缺陷分类 -->
         <view class="qm-field">
           <text class="qm-field-label">缺陷分类 <text style="color: #ef4444;">*</text></text>
-          <picker mode="selector" range="{{defectCategories}}" value="{{qualityModal.defectCategory}}" bindchange="onDefectTypesChange">
-            <view class="qm-picker">
-              <text class="qm-picker-value">{{defectCategories[qualityModal.defectCategory] || '请选择缺陷分类'}}</text>
-              <text class="qm-picker-arrow">›</text>
-            </view>
-          </picker>
+          <view class="inline-selector">
+            <scroll-view class="inline-selector-list" scroll-y="{{true}}" enhanced="{{true}}" show-scrollbar="{{false}}">
+              <view
+                wx:for="{{defectCategories}}"
+                wx:key="index"
+                class="inline-selector-item {{qualityModal.defectCategory == index ? 'active' : ''}}"
+                data-index="{{index}}"
+                data-field="defectCategory"
+                bindtap="onQmSelectorTap">
+                <view class="inline-selector-left">
+                  <view class="inline-selector-radio {{qualityModal.defectCategory == index ? 'checked' : ''}}">
+                    <view wx:if="{{qualityModal.defectCategory == index}}" class="inline-selector-radio-dot"></view>
+                  </view>
+                  <text class="inline-selector-label">{{item}}</text>
+                </view>
+              </view>
+            </scroll-view>
+          </view>
         </view>
 
         <!-- 处理方式 -->
         <view class="qm-field">
           <text class="qm-field-label">处理方式 <text style="color: #ef4444;">*</text></text>
-          <picker mode="selector" range="{{handleMethods}}" value="{{qualityModal.handleMethod}}" bindchange="onHandleMethodChange">
-            <view class="qm-picker">
-              <text class="qm-picker-value">{{handleMethods[qualityModal.handleMethod] || '请选择处理方式'}}</text>
-              <text class="qm-picker-arrow">›</text>
-            </view>
-          </picker>
+          <view class="inline-selector">
+            <scroll-view class="inline-selector-list" scroll-y="{{true}}" enhanced="{{true}}" show-scrollbar="{{false}}">
+              <view
+                wx:for="{{handleMethods}}"
+                wx:key="index"
+                class="inline-selector-item {{qualityModal.handleMethod == index ? 'active' : ''}}"
+                data-index="{{index}}"
+                data-field="handleMethod"
+                bindtap="onQmSelectorTap">
+                <view class="inline-selector-left">
+                  <view class="inline-selector-radio {{qualityModal.handleMethod == index ? 'checked' : ''}}">
+                    <view wx:if="{{qualityModal.handleMethod == index}}" class="inline-selector-radio-dot"></view>
+                  </view>
+                  <text class="inline-selector-label">{{item}}</text>
+                </view>
+              </view>
+            </scroll-view>
+          </view>
         </view>
 
         <!-- 备注 -->
@@ -685,12 +723,24 @@
       <!-- 选择仓库（合格时才显示入库仓库选择） -->
       <view wx:if="{{qualityModal.result === 'qualified'}}" class="qm-section">
         <text class="qm-section-title">入库仓库 <text style="color: #ef4444;">*</text></text>
-        <picker mode="selector" range="{{warehouseOptions}}" value="{{qualityModal.warehouseIndex}}" bindchange="onWarehouseChange">
-          <view class="qm-picker">
-            <text class="qm-picker-value">{{warehouseOptions[qualityModal.warehouseIndex] || '请选择仓库'}}</text>
-            <text class="qm-picker-arrow">›</text>
-          </view>
-        </picker>
+        <view class="inline-selector">
+          <scroll-view class="inline-selector-list" scroll-y="{{true}}" enhanced="{{true}}" show-scrollbar="{{false}}">
+            <view
+              wx:for="{{warehouseOptions}}"
+              wx:key="index"
+              class="inline-selector-item {{qualityModal.warehouseIndex == index ? 'active' : ''}}"
+              data-index="{{index}}"
+              data-field="warehouseIndex"
+              bindtap="onQmSelectorTap">
+              <view class="inline-selector-left">
+                <view class="inline-selector-radio {{qualityModal.warehouseIndex == index ? 'checked' : ''}}">
+                  <view wx:if="{{qualityModal.warehouseIndex == index}}" class="inline-selector-radio-dot"></view>
+                </view>
+                <text class="inline-selector-label">{{item}}</text>
+              </view>
+            </view>
+          </scroll-view>
+        </view>
       </view>
     </view>
 

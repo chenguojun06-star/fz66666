@@ -1,5 +1,5 @@
 const { getToken, setToken, setUserInfo } = require('../../utils/storage');
-const { DEFAULT_BASE_URL, setBaseUrl, normalizeBaseUrl } = require('../../config');
+const { DEFAULT_BASE_URL, getBaseUrl, setBaseUrl, normalizeBaseUrl } = require('../../config');
 const api = require('../../utils/api');
 const { validateByRule } = require('../../utils/validationRules');
 const { toast, safeNavigate } = require('../../utils/uiHelper');
@@ -8,6 +8,32 @@ let autoWechatTried = false;
 
 /** 租户列表缓存 */
 let cachedTenants = [];
+
+/**
+ * 静默尝试微信一键登录（无需选公司）
+ * 如果 openid 已绑定：直接登录跳转首页
+ * 如果 openid 未绑定：返回 false，展示公司+账号表单
+ * @returns {Promise<boolean>} 是否登录成功
+ */
+async function tryAutoWechatLogin() {
+  const envVersion = resolveEnvVersion();
+  if (envVersion === 'develop') return false;
+  try {
+    const code = await resolveLoginCode();
+    if (!code || code.startsWith('mock_')) return false;
+    const resp = await api.wechat.miniProgramLogin({ code });
+    if (resp && resp.code === 200 && resp.data && resp.data.token) {
+      setToken(resp.data.token);
+      if (resp.data.user) setUserInfo(resp.data.user);
+      safeNavigate({ url: '/pages/home/index' }, 'switchTab').catch(() => {});
+      return true;
+    }
+    // needBind=true 是预期内结果，不是错误
+    return false;
+  } catch (_) {
+    return false;
+  }
+}
 
 /**
  * 验证用户名（3-20位，仅允许字母数字下划线短横线）
@@ -123,14 +149,17 @@ function resolveEnvVersion() {
 /**
  * 执行登录（通用函数 - 消除重复代码）
  * @param {Object} params - 登录参数 { code, username?, password? }
- * @returns {Promise<boolean>} 是否成功
+ * @param {Object} options - 选项 { silent: bool }  silent=true 时 needBind 不弹错误
+ * @returns {Promise<{success:bool, needBind?:bool}>}
  */
-async function executeLogin(params) {
+async function executeLogin(params, options = {}) {
+  const silent = options.silent === true;
   try {
     const resp = await api.wechat.miniProgramLogin(params);
 
+    // ✅ openid 已绑定 → 拿到 token，直接登录
     if (resp && resp.code === 200 && resp.data && resp.data.token) {
-      // ✅ 登录前清除旧用户的业务缓存，防止跨租户数据泄漏
+      // 登录前清除旧用户的业务缓存，防止跨租户数据泄漏
       const OLD_DATA_KEYS = [
         'pending_cutting_task',
         'pending_procurement_task',
@@ -147,15 +176,24 @@ async function executeLogin(params) {
       });
 
       setToken(resp.data.token);
-      // 保存用户信息（包含角色）
       if (resp.data.user) {
         setUserInfo(resp.data.user);
       }
       safeNavigate({ url: '/pages/home/index' }, 'switchTab').catch(() => {});
-      return true;
+      return { success: true };
     }
+
+    // ✅ openid 未绑定 → 需要用户输入账号密码绑定（首次）
+    if (resp && resp.code === 200 && resp.data && resp.data.needBind) {
+      if (!silent) {
+        toast.info('请输入账号密码完成首次绑定，之后即可一键登录');
+      }
+      return { success: false, needBind: true };
+    }
+
+    // ❌ 真正的错误（账号密码错误、网络异常等）
     toast.error((resp && resp.message) || '登录失败');
-    return false;
+    return { success: false };
   } catch (e) {
     const app = getApp();
     if (app && typeof app.toastError === 'function') {
@@ -163,7 +201,7 @@ async function executeLogin(params) {
     } else {
       toast.error('网络异常');
     }
-    return false;
+    return { success: false };
   }
 }
 
@@ -200,9 +238,11 @@ Page({
     selectedTenantName: '',
     tenantsLoading: true,
     showPassword: false,
+    // 是否正在尝试微信快速登录（验证 openid 绑定状态中）
+    wechatChecking: false,
   },
 
-  onShow() {
+  async onShow() {
     const token = getToken();
     if (token) {
       safeNavigate({ url: '/pages/home/index' }, 'switchTab').catch(() => {});
@@ -212,27 +252,31 @@ Page({
     const envVersion = resolveEnvVersion();
     const showDevFields = envVersion !== 'release';
 
-    let apiBaseUrl = DEFAULT_BASE_URL;
+    let apiBaseUrl = getBaseUrl();  // 已自动处理占位符→内网地址降级
     if (showDevFields) {
       try {
         const saved = wx.getStorageSync('api_base_url');
-        apiBaseUrl = normalizeBaseUrl(saved) || DEFAULT_BASE_URL;
+        apiBaseUrl = normalizeBaseUrl(saved) || getBaseUrl();
       } catch (e) {
-        apiBaseUrl = DEFAULT_BASE_URL;
+        apiBaseUrl = getBaseUrl();
       }
     }
     setBaseUrl(apiBaseUrl);
     this.setData({ envVersion, showDevFields, apiBaseUrl });
 
-    // 加载租户列表
-    this.loadTenants();
-
+    // 正式/体验版：先静默尝试 openid 一键登录（已绑定则无需选公司）
     const shouldAutoWechat = envVersion === 'trial' || envVersion === 'release';
     if (shouldAutoWechat && !autoWechatTried) {
       autoWechatTried = true;
-      // 延迟微信登录，等租户加载完成
-      // 微信一键登录模式下，如果只有一个租户会自动选中
+      this.setData({ wechatChecking: true });
+      const loggedIn = await tryAutoWechatLogin();
+      this.setData({ wechatChecking: false });
+      if (loggedIn) return; // 登录成功，页面已跳转，无需继续
+      // openid 未绑定 → 加载租户列表展示表单
     }
+
+    // 加载租户列表（正弸登录流程 / openid 未绑定首次绑定）
+    this.loadTenants();
   },
 
   /**
@@ -277,13 +321,9 @@ Page({
           showTenantResults: false,
           filteredTenants: [],
         });
-
-        // 如果是发布/体验版且租户已选中，自动触发微信登录
-        const shouldAutoWechat = this.data.envVersion === 'trial' || this.data.envVersion === 'release';
-        if (shouldAutoWechat && !autoWechatTried && selectedTenantId) {
-          autoWechatTried = true;
-          this.onWechatLogin();
-        }
+        // 注意：此处不再自动触发 onWechatLogin
+        // tryAutoWechatLogin 已经在 onShow 中尝试过（openid 未绑定才会走到这里）
+        // 用户需手动选择公司并输入账号密码完成首次绑定
       } else {
         this.setData({ tenantsLoading: false });
       }
@@ -454,7 +494,8 @@ Page({
         return;
       }
 
-      await executeLogin({ code, tenantId });
+      // 静默尝试：openid 已绑定则直接登录，未绑定则不弹错误提示，用户填写表单就可以
+      await executeLogin({ code, tenantId }, { silent: true });
     } finally {
       this.setData({ loading: false });
     }

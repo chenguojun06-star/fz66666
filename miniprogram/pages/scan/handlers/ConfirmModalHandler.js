@@ -258,6 +258,7 @@ async function processSKUSubmit(ctx, { detail, skuList }) {
     detail.orderNo,
     detail.styleNo,
     detail.progressStage,
+    { scanCode: detail.scanCode || detail.orderNo || '' },
   );
 
   const tasks = requests.map(req =>

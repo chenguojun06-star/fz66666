@@ -114,13 +114,16 @@ function handle403Error({ statusCode, body, token, serverMessage, skipAuthRedire
   }
 
   // 有token但403，判断是否为token过期
-  const isTokenExpired =
+  // 检查服务端消息或客户端JWT解析
+  const { isTokenExpired: checkExpired } = require('./storage');
+  const isExpiredByMessage =
     serverMessage &&
     (serverMessage.includes('过期') ||
       serverMessage.includes('expired') ||
       serverMessage.includes('invalid token'));
+  const isExpiredByJwt = typeof checkExpired === 'function' && checkExpired();
 
-  if (isTokenExpired) {
+  if (isExpiredByMessage || isExpiredByJwt) {
     clearToken();
     if (!skipAuthRedirect) {
       triggerLoginRedirect();

@@ -1,0 +1,56 @@
+{
+  "envId": "{{ENV_ID}}",
+  "framework": {
+    "name": "fashion-supplychain",
+    "plugins": {
+      "backend": {
+        "use": "@cloudbase/framework-plugin-container",
+        "inputs": {
+          "serviceName": "backend",
+          "servicePath": "/backend",
+          "localPath": "./backend",
+          "containerPort": 8088,
+          "cpu": 2,
+          "mem": 4,
+          "minNum": 1,
+          "maxNum": 4,
+          "policyType": "cpu",
+          "policyThreshold": 60,
+          "envVariables": {
+            "PORT": "8088",
+            "SPRING_DATASOURCE_URL": "jdbc:mysql://{{MYSQL_HOST}}:3306/fashion_supplychain?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true",
+            "SPRING_DATASOURCE_USERNAME": "{{MYSQL_USER}}",
+            "SPRING_DATASOURCE_PASSWORD": "{{MYSQL_PASSWORD}}",
+            "SPRING_REDIS_HOST": "{{REDIS_HOST}}",
+            "SPRING_REDIS_PORT": "6379",
+            "APP_AUTH_JWT_SECRET": "{{JWT_SECRET}}",
+            "WECHAT_MP_APPID": "{{WECHAT_APPID}}",
+            "WECHAT_MP_SECRET": "{{WECHAT_SECRET}}",
+            "WECHAT_MINI_PROGRAM_MOCK_ENABLED": "false",
+            "FLYWAY_ENABLED": "true",
+            "FASHION_DB_INITIALIZER_ENABLED": "false",
+            "APP_CORS_ALLOWED_ORIGIN_PATTERNS": "https://*.tcloudbase.com,https://*.service.tcloudbase.com,https://*.ap-shanghai.service.tcloudbase.com"
+          },
+          "customLogs": "stdout",
+          "healthPath": "/actuator/health"
+        }
+      },
+      "frontend": {
+        "use": "@cloudbase/framework-plugin-container",
+        "inputs": {
+          "serviceName": "frontend",
+          "servicePath": "/",
+          "localPath": "./frontend",
+          "containerPort": 80,
+          "cpu": 0.5,
+          "mem": 1,
+          "minNum": 1,
+          "maxNum": 2,
+          "envVariables": {
+            "BACKEND_URL": "http://backend:8088"
+          }
+        }
+      }
+    }
+  }
+}

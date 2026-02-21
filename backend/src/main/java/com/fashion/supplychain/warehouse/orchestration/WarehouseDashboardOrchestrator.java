@@ -1,7 +1,6 @@
 package com.fashion.supplychain.warehouse.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.fashion.supplychain.production.entity.MaterialDatabase;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.MaterialStock;
@@ -240,7 +239,23 @@ public class WarehouseDashboardOrchestrator {
             }
         }
 
-        Map<Integer, Integer> outboundByHour = new HashMap<>(); // TODO: 待实现出库表
+        Map<Integer, Integer> outboundByHour = new HashMap<>();
+        try {
+            List<Map<String, Object>> outboundList = productOutstockMapper.selectMaps(
+                new QueryWrapper<ProductOutstock>()
+                    .select("HOUR(create_time) as hour, COUNT(*) as count")
+                    .apply("DATE(create_time) = {0}", today)
+                    .apply("(delete_flag IS NULL OR delete_flag = 0)")
+                    .groupBy("HOUR(create_time)")
+            );
+            for (Map<String, Object> row : outboundList) {
+                Integer hour = ((Number) row.get("hour")).intValue();
+                Integer count = ((Number) row.get("count")).intValue();
+                outboundByHour.put(hour, count);
+            }
+        } catch (Exception e) {
+            log.warn("查询日出库趋势失败: {}", e.getMessage());
+        }
 
         for (int hour = 0; hour < 24; hour++) {
             // 入库数据点
@@ -290,7 +305,23 @@ public class WarehouseDashboardOrchestrator {
             }
         }
 
-        Map<LocalDate, Integer> outboundByDate = new HashMap<>(); // TODO: 待实现
+        Map<LocalDate, Integer> outboundByDate = new HashMap<>();
+        try {
+            List<Map<String, Object>> outboundList = productOutstockMapper.selectMaps(
+                new QueryWrapper<ProductOutstock>()
+                    .select("DATE(create_time) as date, COUNT(*) as count")
+                    .apply("DATE(create_time) BETWEEN {0} AND {1}", startDate, today)
+                    .apply("(delete_flag IS NULL OR delete_flag = 0)")
+                    .groupBy("DATE(create_time)")
+            );
+            for (Map<String, Object> row : outboundList) {
+                LocalDate date = LocalDate.parse(row.get("date").toString());
+                Integer count = ((Number) row.get("count")).intValue();
+                outboundByDate.put(date, count);
+            }
+        } catch (Exception e) {
+            log.warn("查询周出库趋势失败: {}", e.getMessage());
+        }
 
         for (int i = 6; i >= 0; i--) {
             LocalDate date = today.minusDays(i);
@@ -342,7 +373,23 @@ public class WarehouseDashboardOrchestrator {
             }
         }
 
-        Map<Integer, Integer> outboundByDay = new HashMap<>(); // TODO: 待实现
+        Map<Integer, Integer> outboundByDay = new HashMap<>();
+        try {
+            List<Map<String, Object>> outboundList = productOutstockMapper.selectMaps(
+                new QueryWrapper<ProductOutstock>()
+                    .select("DAY(create_time) as day, COUNT(*) as count")
+                    .apply("DATE(create_time) BETWEEN {0} AND {1}", startDate, today)
+                    .apply("(delete_flag IS NULL OR delete_flag = 0)")
+                    .groupBy("DAY(create_time)")
+            );
+            for (Map<String, Object> row : outboundList) {
+                Integer day = ((Number) row.get("day")).intValue();
+                Integer count = ((Number) row.get("count")).intValue();
+                outboundByDay.put(day, count);
+            }
+        } catch (Exception e) {
+            log.warn("查询月出库趋势失败: {}", e.getMessage());
+        }
 
         for (int day = 1; day <= 30; day++) {
             // 入库
@@ -390,7 +437,23 @@ public class WarehouseDashboardOrchestrator {
             }
         }
 
-        Map<Integer, Integer> outboundByMonth = new HashMap<>(); // TODO: 待实现
+        Map<Integer, Integer> outboundByMonth = new HashMap<>();
+        try {
+            List<Map<String, Object>> outboundList = productOutstockMapper.selectMaps(
+                new QueryWrapper<ProductOutstock>()
+                    .select("MONTH(create_time) as month, COUNT(*) as count")
+                    .apply("YEAR(create_time) = {0}", currentYear)
+                    .apply("(delete_flag IS NULL OR delete_flag = 0)")
+                    .groupBy("MONTH(create_time)")
+            );
+            for (Map<String, Object> row : outboundList) {
+                Integer month = ((Number) row.get("month")).intValue();
+                Integer count = ((Number) row.get("count")).intValue();
+                outboundByMonth.put(month, count);
+            }
+        } catch (Exception e) {
+            log.warn("查询年出库趋势失败: {}", e.getMessage());
+        }
 
         for (int month = 1; month <= 12; month++) {
             // 入库
@@ -419,15 +482,5 @@ public class WarehouseDashboardOrchestrator {
             return LocalDateTime.now().format(DateTimeFormatter.ofPattern("MM-dd HH:mm"));
         }
         return dateTime.format(DateTimeFormatter.ofPattern("MM-dd HH:mm"));
-    }
-
-    /**
-     * 格式化日期为 MM-dd HH:mm
-     */
-    private String formatTime(LocalDate date) {
-        if (date == null) {
-            return LocalDate.now().format(DateTimeFormatter.ofPattern("MM-dd")) + " 00:00";
-        }
-        return date.format(DateTimeFormatter.ofPattern("MM-dd")) + " 10:00"; // 默认时间
     }
 }

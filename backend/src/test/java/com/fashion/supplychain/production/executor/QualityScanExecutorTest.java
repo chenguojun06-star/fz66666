@@ -24,6 +24,7 @@ import static org.mockito.Mockito.*;
  * 测试范围：质检领取 → 验收 → 确认完整流程
  */
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("unchecked")
 class QualityScanExecutorTest {
 
     @Mock
@@ -62,6 +63,9 @@ class QualityScanExecutorTest {
         mockOrder.setId("order-001");
         mockOrder.setOrderNo("PO-2024-001");
         mockOrder.setStyleId("style-001");
+
+        // Mock 模拟生产前置条件检查（已有生产扫码记录）
+        lenient().when(scanRecordService.count(any())).thenReturn(1L);
 
         // 解析器
         colorResolver = (unused) -> "红色";
@@ -278,5 +282,24 @@ class QualityScanExecutorTest {
 
         // Then: 应默认返回confirm
         // assertEquals("confirm", stage);
+    }
+
+    @Test
+    void testExecute_CompletedOrder_ThrowsError() {
+        // Given: 订单已完成
+        mockOrder.setStatus("completed");
+        baseParams.put("quantity", "10");
+
+        CuttingBundle bundle = new CuttingBundle();
+        bundle.setId("bundle-001");
+        bundle.setProductionOrderId("order-001");
+        when(cuttingBundleService.getByQrCode(anyString())).thenReturn(bundle);
+
+        // When & Then: 应拒绝质检，提示“进度节点已完成”
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                executor.execute(baseParams, "req-cmp-001", "op-001", "李四",
+                        mockOrder, colorResolver, sizeResolver));
+        assertTrue(ex.getMessage().contains("进度节点已完成"),
+                "完成订单应提示进度节点已完成，实际: " + ex.getMessage());
     }
 }

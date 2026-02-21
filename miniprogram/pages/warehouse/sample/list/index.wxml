@@ -145,16 +145,23 @@
           </view>
           <view class="form-item">
             <text class="label">样衣类型</text>
-            <picker
-              range="{{operationModal.sampleTypes}}"
-              range-key="label"
-              value="{{operationModal.typeIndex}}"
-              bindchange="onTypeChange"
-            >
-              <view class="picker">
-                {{operationModal.sampleTypes[operationModal.typeIndex].label}}
-              </view>
-            </picker>
+            <view class="inline-selector">
+              <scroll-view class="inline-selector-list" scroll-y="{{true}}" enhanced="{{true}}" show-scrollbar="{{false}}">
+                <view
+                  wx:for="{{operationModal.sampleTypes}}"
+                  wx:key="key"
+                  class="inline-selector-item {{operationModal.typeIndex == index ? 'active' : ''}}"
+                  data-index="{{index}}"
+                  bindtap="onTypeSelect">
+                  <view class="inline-selector-left">
+                    <view class="inline-selector-radio {{operationModal.typeIndex == index ? 'checked' : ''}}">
+                      <view wx:if="{{operationModal.typeIndex == index}}" class="inline-selector-radio-dot"></view>
+                    </view>
+                    <text class="inline-selector-label">{{item.label}}</text>
+                  </view>
+                </view>
+              </scroll-view>
+            </view>
           </view>
           <view class="form-row">
             <view class="form-item flex-1">

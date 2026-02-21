@@ -113,12 +113,9 @@ Page({
     });
   },
 
-  onRoleChange(e) {
-    const index = e.detail.value;
-    const role = this.data.roleOptions[index];
-    if (role) {
-      this.setData({ selectedRoleId: String(role.id) });
-    }
+  onRoleSelect(e) {
+    const id = e.currentTarget.dataset.id;
+    this.setData({ selectedRoleId: String(id) });
   },
 
   onRejectReasonInput(e) {

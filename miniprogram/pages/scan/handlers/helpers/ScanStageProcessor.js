@@ -99,6 +99,13 @@ class ScanStageProcessor {
       throw new Error('质检请扫描菲号二维码');
     }
 
+    // 所有工序已完成 → 抛出完成提示，阻止继续扫码（必须在入库判断之前）
+    if (stageResult.isCompleted) {
+      const err = new Error(stageResult.hint || '进度节点已完成');
+      err.isCompleted = true;
+      throw err;
+    }
+
     // 入库类型特殊处理 - 触发手动入库弹窗
     if (scanType === 'warehouse') {
       // 标记需要手动入库，返回给页面处理

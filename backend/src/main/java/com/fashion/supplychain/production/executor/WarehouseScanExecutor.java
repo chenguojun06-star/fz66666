@@ -82,6 +82,12 @@ public class WarehouseScanExecutor {
             throw new IllegalStateException("未匹配到订单");
         }
 
+        // ★ 订单完成状态检查：所有环节统一拦截
+        String orderStatus = order.getStatus() == null ? "" : order.getStatus().trim();
+        if ("completed".equalsIgnoreCase(orderStatus)) {
+            throw new IllegalStateException("进度节点已完成，该订单已结束入库");
+        }
+
         // 检查是否有次品待返修（只检查最后一条记录状态）
         if (isBundleBlockedForWarehousingStatus(order.getId(), bundle.getId())) {
             throw new IllegalStateException("温馨提示：该菲号存在待返修的产品，返修完成后才能入库哦～");
@@ -226,16 +232,21 @@ public class WarehouseScanExecutor {
 
         int bundleQty = bundle.getQuantity();
 
-        // 获取该菲号已入库的合格数量（不含返修）
-        Integer bundleWarehoused = productWarehousingService.lambdaQuery()
-                .select(ProductWarehousing::getQualifiedQuantity)
-                .eq(ProductWarehousing::getDeleteFlag, 0)
-                .eq(ProductWarehousing::getCuttingBundleId, bundle.getId())
-                .eq(ProductWarehousing::getQualityStatus, "qualified")
-                .list()
-                .stream()
-                .mapToInt(w -> w.getQualifiedQuantity() != null ? w.getQualifiedQuantity() : 0)
-                .sum();
+        int bundleWarehoused;
+        try {
+            bundleWarehoused = productWarehousingService.list(
+                    new LambdaQueryWrapper<ProductWarehousing>()
+                            .select(ProductWarehousing::getQualifiedQuantity)
+                            .eq(ProductWarehousing::getDeleteFlag, 0)
+                            .eq(ProductWarehousing::getCuttingBundleId, bundle.getId())
+                            .eq(ProductWarehousing::getQualityStatus, "qualified"))
+                    .stream()
+                    .mapToInt(w -> w.getQualifiedQuantity() != null ? w.getQualifiedQuantity() : 0)
+                    .sum();
+        } catch (Exception e) {
+            log.warn("查询菲号已入库数量失败: bundleId={}", bundle.getId(), e);
+            return; // 查询失败时跳过验证，不阻塞业务
+        }
 
         int totalAfterScan = bundleWarehoused + incomingQty;
 

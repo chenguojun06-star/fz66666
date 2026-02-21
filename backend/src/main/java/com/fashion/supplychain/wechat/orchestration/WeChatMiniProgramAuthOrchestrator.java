@@ -57,9 +57,20 @@ public class WeChatMiniProgramAuthOrchestrator {
         String openid = session.getOpenid();
         result.put("openid", openid);
 
+        // ✅ 方案A：优先检查 openid 是否已绑定账号（一键登录，无需密码）
+        if (StringUtils.hasText(openid) && !openid.startsWith("mock_")) {
+            User boundUser = userService.findByOpenid(openid);
+            if (boundUser != null) {
+                log.info("[WxLogin] openid 已绑定用户 userId={}, 直接登录", boundUser.getId());
+                return buildLoginSuccess(result, boundUser, openid);
+            }
+        }
+
+        // openid 未绑定 → 检查是否携带账号密码（首次绑定）
         String u = username == null ? "" : username.trim();
         String p = password == null ? "" : password.trim();
         if (!StringUtils.hasText(u) || !StringUtils.hasText(p)) {
+            // 未绑定且无账号密码 → 要求用户输入账号绑定
             result.put("success", true);
             result.put("needBind", true);
             return result;
@@ -72,6 +83,24 @@ public class WeChatMiniProgramAuthOrchestrator {
             return result;
         }
 
+        // 首次绑定：将 openid 存入用户记录
+        if (StringUtils.hasText(openid) && !openid.startsWith("mock_")) {
+            try {
+                userService.bindOpenid(user.getId(), openid);
+                log.info("[WxLogin] openid 首次绑定成功 userId={}", user.getId());
+            } catch (Exception e) {
+                log.warn("[WxLogin] openid 绑定失败 userId={}, openid={}", user.getId(), openid, e);
+                // 绑定失败不影响本次登录
+            }
+        }
+
+        return buildLoginSuccess(result, user, openid);
+    }
+
+    /**
+     * 构建登录成功响应（抽取公共逻辑）
+     */
+    private Map<String, Object> buildLoginSuccess(Map<String, Object> result, User user, String openid) {
         TokenSubject subject = new TokenSubject();
         subject.setUserId(user.getId() == null ? null : String.valueOf(user.getId()));
         subject.setUsername(StringUtils.hasText(user.getName()) ? user.getName() : user.getUsername());

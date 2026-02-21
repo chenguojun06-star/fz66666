@@ -1,5 +1,6 @@
 /* 极简紧凑风格 */
 @import './scan-result-modal.wxss';
+@import '/styles/inline-selector.wxss';
 
 page {
   background: var(--color-bg-page);
@@ -1734,28 +1735,7 @@ page {
   background: var(--color-bg-card);
 }
 
-.qm-picker {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 32px;
-  padding: 0 8px;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  background: var(--color-bg-card);
-}
-
-.qm-picker-value {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
-  flex: 1;
-}
-
-.qm-picker-arrow {
-  font-size: var(--font-size-lg);
-  color: var(--color-text-disabled);
-  transform: rotate(90deg);
-}
+/* 旧 qm-picker 样式已废弃，改用 inline-selector 通用组件 */
 
 .qm-textarea {
   width: 100%;

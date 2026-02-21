@@ -100,6 +100,32 @@ function setStorageValue(key, value) {
   }
 }
 
+/**
+ * 检查 JWT token 是否已过期
+ * 解码 JWT payload（base64），读取 exp 字段
+ * @returns {boolean} true=已过期或无法解析，false=未过期
+ */
+function isTokenExpired() {
+  try {
+    const token = getToken();
+    if (!token) return true;
+    const parts = token.split('.');
+    if (parts.length !== 3) return true;
+    // base64url → base64 → decode
+    let payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    // 补齐 padding
+    while (payload.length % 4 !== 0) payload += '=';
+    const decoded = JSON.parse(decodeURIComponent(escape(atob(payload))));
+    if (!decoded.exp) return false; // 无过期时间视为永不过期
+    const nowSec = Math.floor(Date.now() / 1000);
+    // 提前5分钟视为过期，避免请求途中过期
+    return decoded.exp < (nowSec + 300);
+  } catch (e) {
+    console.warn('[isTokenExpired] 解析token失败:', e.message);
+    return false; // 解析失败不强制过期，由后端判断
+  }
+}
+
 module.exports = {
   getToken,
   setToken,
@@ -114,4 +140,5 @@ module.exports = {
   isSuperAdmin,
   getStorageValue,
   setStorageValue,
+  isTokenExpired,
 };

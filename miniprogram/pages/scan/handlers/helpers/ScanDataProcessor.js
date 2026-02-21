@@ -102,13 +102,27 @@ class ScanDataProcessor {
   async handleOrderWithItems(parsedData, orderDetail, detectStageFn, scanMode) {
     // 预判工序
     let nextStage = '未知';
+    let stageCompleted = false;
     try {
       const stageRes = await detectStageFn(scanMode, parsedData, orderDetail);
       if (stageRes) {
         nextStage = stageRes.progressStage;
+        stageCompleted = !!stageRes.isCompleted;
       }
     } catch (e) {
-      // 忽略预判错误
+      // 如果是工序已完成的错误，向上传播而不是吞掉
+      if (e.isCompleted) {
+        throw e;
+      }
+      // 其他预判错误静默忽略
+      console.warn('[ScanDataProcessor] 工序预判失败:', e.message);
+    }
+
+    // 所有工序已完成 → 阻止弹窗
+    if (stageCompleted) {
+      const err = new Error('进度节点已完成');
+      err.isCompleted = true;
+      throw err;
     }
 
     // 补救措施：如果预判是采购工序，补查采购单

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.production.entity.*;
 import com.fashion.supplychain.production.helper.*;
 import com.fashion.supplychain.production.service.*;
+import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,6 +26,7 @@ import static org.mockito.Mockito.*;
  * 测试范围：裁剪/车缝/大烫等生产工序扫码
  */
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("unchecked")
 class ProductionScanExecutorTest {
 
     @Mock
@@ -53,6 +55,9 @@ class ProductionScanExecutorTest {
 
     @Mock
     private com.fashion.supplychain.style.service.StyleAttachmentService styleAttachmentService;
+
+    @Mock
+    private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
 
     @InjectMocks
     private ProductionScanExecutor executor;
@@ -97,7 +102,7 @@ class ProductionScanExecutorTest {
         lenient().when(productionOrderService.getById(anyString())).thenReturn(mockOrder);
         lenient().when(productionOrderService.getOne(any(LambdaQueryWrapper.class))).thenReturn(mockOrder);
         lenient().doNothing().when(inventoryValidator).validateNotExceedOrderQuantity(
-                any(ProductionOrder.class), anyString(), anyString(), anyInt(), any(CuttingBundle.class));
+                any(ProductionOrder.class), anyString(), anyString(), anyInt(), nullable(CuttingBundle.class));
 
         // Mock process detection (lenient)
         lenient().when(processStageDetector.resolveAutoProcessName(any(ProductionOrder.class))).thenReturn("车缝");
@@ -107,6 +112,9 @@ class ProductionScanExecutorTest {
 
         // Mock style attachment (lenient)
         lenient().when(styleAttachmentService.checkPatternComplete(anyString())).thenReturn(true);
+        lenient().when(styleAttachmentService.list(any(LambdaQueryWrapper.class))).thenReturn(
+                java.util.Collections.singletonList(
+                        new com.fashion.supplychain.style.entity.StyleAttachment()));
 
         // Mock material purchase (lenient)
         lenient().when(materialPurchaseService.list(any(LambdaQueryWrapper.class))).thenReturn(java.util.Collections.emptyList());
@@ -319,5 +327,66 @@ class ProductionScanExecutorTest {
 
         // Then: 应记录警告日志（不阻止扫码）
         // TODO: 验证日志输出
+    }
+
+    @Test
+    void testExecute_OrderModeWithoutBundle_Success() {
+        // Given: ORDER 模式 —— 通过 orderNo+color+size 提交，无菲号（无 scanCode，不会调用 getByQrCode）
+        Map<String, Object> orderParams = new HashMap<>();
+        orderParams.put("orderNo", "PO-2024-001");
+        orderParams.put("color", "红色");
+        orderParams.put("size", "XL");
+        orderParams.put("processName", "车缝");
+
+        // Mock: orderNo+color+size 查不到菲号 → 走 ORDER 模式
+        lenient().when(cuttingBundleService.getOne(any(LambdaQueryWrapper.class))).thenReturn(null);
+
+        // When: 执行 ORDER 模式扫码
+        Map<String, Object> result = executor.execute(
+                orderParams,
+                "req-order-001",
+                "operator-001",
+                "王五",
+                "production",
+                50,
+                false,
+                colorResolver,
+                sizeResolver
+        );
+
+        // Then: 应该成功（不需要菲号）
+        assertNotNull(result);
+        assertTrue((Boolean) result.get("success"), "ORDER模式无菲号应扫码成功");
+
+        // 验证扫码记录已保存
+        verify(scanRecordService, times(1)).saveScanRecord(any(ScanRecord.class));
+
+        // 验证工序跟踪未调用（无菲号时不更新工序跟踪）
+        verify(processTrackingOrchestrator, never()).updateScanRecord(anyString(), anyString(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void testExecute_OrderModeWithoutBundle_NoOrderNo_ThrowsError() {
+        // Given: 既无菲号也无订单号（无 scanCode）
+        Map<String, Object> emptyParams = new HashMap<>();
+        emptyParams.put("processName", "车缝");
+
+        // When & Then: 应抛出参数错误
+        assertThrows(IllegalArgumentException.class, () ->
+                executor.execute(emptyParams, "req-err-001", "op-001", "王五",
+                        "production", 50, false, colorResolver, sizeResolver));
+    }
+
+    @Test
+    void testExecute_CompletedOrder_ThrowsError() {
+        // Given: 订单已完成
+        mockOrder.setStatus("completed");
+
+        // When & Then: 应拒绝扫码，提示“进度节点已完成”
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                executor.execute(baseParams, "req-cmp-001", "op-001", "王五",
+                        "production", 50, false, colorResolver, sizeResolver));
+        assertTrue(ex.getMessage().contains("进度节点已完成"),
+                "完成订单应提示进度节点已完成，实际: " + ex.getMessage());
     }
 }

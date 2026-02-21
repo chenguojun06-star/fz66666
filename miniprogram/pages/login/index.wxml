@@ -20,7 +20,14 @@
       <text class="login-title">{{selectedTenantName || '云裳智链'}}</text>
     </view>
 
-    <!-- 公司搜索 -->
+    <!-- 正在验证微信身份（openid check loading） -->
+    <view wx:if="{{wechatChecking}}" class="wechat-checking">
+      <view class="wechat-checking-icon">微信</view>
+      <text class="wechat-checking-text">正在验证微信身份...</text>
+    </view>
+
+    <!-- 登录表单（openid 未绑定时 / 开发环境） -->
+    <block wx:if="{{!wechatChecking}}">
     <view class="login-field">
       <view class="login-label"><text class="login-label-required">*</text> 公司</view>
       <view class="login-input-wrap">
@@ -118,5 +125,6 @@
 
     <!-- 底部版权 -->
     <view class="login-footer">© 2026 云裳智链</view>
+    </block><!-- /!wechatChecking -->
   </view>
 </view>

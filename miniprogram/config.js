@@ -3,21 +3,35 @@
  *
  * 回退策略（按优先级）：
  * 1. Storage 中保存的地址（api_base_url）
- * 2. DEFAULT_BASE_URL（当前局域网IP，支持内网访问）
- * 3. FALLBACK_BASE_URL（localhost:8088，本机备选）
+ * 2. DEFAULT_BASE_URL（生产 HTTPS 域名）
+ * 3. FALLBACK_BASE_URL（开发备用）
  *
- * 使用说明：
- * - 默认使用局域网 IP，支持内网多设备访问
- * - 如需修改地址，在登录页手动输入
- * - 生产环境请修改为实际域名，如 https://api.your-domain.com
+ * 上线前必须修改：
+ * - 将 DEFAULT_BASE_URL 改为微信云托管后端 HTTPS 地址
+ *   格式示例：https://xxxxx-xxxxxx.ap-shanghai.service.tcloudbase.com
+ *   或绑定自定义域名：https://api.your-domain.com
+ * - 该域名必须在微信公众平台「开发→开发管理→服务器域名」中添加为 request 合法域名
+ *
+ * 本地开发：
+ * - 在「微信开发者工具→详情→本地设置」中勾选「不校验合法域名」
+ * - 在登录页手动输入本机地址（如 http://192.168.x.x:8088）
  */
-const DEFAULT_BASE_URL = 'http://192.168.1.17:8088';  // 当前机器局域网 IP（内网可访问）
-const FALLBACK_BASE_URL = 'http://localhost:8088';     // 回退地址（仅本机）
+// ⚠️ 上线前替换为实际的微信云托管后端地址（必须 HTTPS）
+const DEFAULT_BASE_URL = 'https://YOUR_CLOUD_BACKEND_DOMAIN';  // TODO: 替换为微信云托管后端地址
+const FALLBACK_BASE_URL = 'http://192.168.1.17:8088';         // 本地开发备用（内网 IP）
 
 /**
  * 是否启用调试日志（生产环境请设为 false）
  */
 const DEBUG_MODE = false;
+
+/**
+ * 判断当前是否为本地开发环境
+ * 开发者工具中 envVersion = 'develop'，且 DEFAULT_BASE_URL 还是占位符时，自动用 FALLBACK
+ */
+function isPlaceholderUrl(url) {
+  return !url || url.includes('YOUR_CLOUD_BACKEND_DOMAIN') || url === 'https://YOUR_CLOUD_BACKEND_DOMAIN';
+}
 
 /**
  * 规范化 API 基址（去空格、补协议、去末尾斜杠）
@@ -63,11 +77,17 @@ function getBaseUrl() {
         // 如果 Storage 中的地址不是当前 DEFAULT_BASE_URL 且不是 FALLBACK，
         // 且是一个内网 IP 地址，则认为已过期，用 DEFAULT_BASE_URL 替换
         if (v && v !== DEFAULT_BASE_URL && v !== FALLBACK_BASE_URL) {
+          // 1. Storage 里存的是占位符（未上线时曾写入）→ 清除，降级到 FALLBACK
+          if (isPlaceholderUrl(v)) {
+            try { wx.removeStorageSync('api_base_url'); } catch (_) { /* ignore */ }
+            return isPlaceholderUrl(DEFAULT_BASE_URL) ? FALLBACK_BASE_URL : DEFAULT_BASE_URL;
+          }
+          // 2. Storage 里存的是旧的内网 IP → 也清除，用当前地址替代
           const isOldLanIp = /^https?:\/\/192\.168\.\d+\.\d+:\d+/i.test(v);
           if (isOldLanIp) {
-            // 旧的内网 IP 已过期，自动更新为当前地址
-            try { wx.setStorageSync('api_base_url', DEFAULT_BASE_URL); } catch (_) { /* ignore */ }
-            return DEFAULT_BASE_URL;
+            const fresh = isPlaceholderUrl(DEFAULT_BASE_URL) ? FALLBACK_BASE_URL : DEFAULT_BASE_URL;
+            try { wx.setStorageSync('api_base_url', fresh); } catch (_) { /* ignore */ }
+            return fresh;
           }
         }
         if (v) {
@@ -78,7 +98,11 @@ function getBaseUrl() {
   } catch (_e) {
     // 忽略 Storage 读取失败
   }
-  // 优先使用局域网 IP（支持内网访问），如连接失败请在登录页手动输入 localhost:8088
+  // 使用默认生产地址（开发时请在登录页手动输入本机地址）
+  // 如果 DEFAULT_BASE_URL 还是占位符（未配置正式域名），自动降级到 FALLBACK（内网地址）
+  if (isPlaceholderUrl(DEFAULT_BASE_URL)) {
+    return FALLBACK_BASE_URL;
+  }
   return DEFAULT_BASE_URL;
 }
 

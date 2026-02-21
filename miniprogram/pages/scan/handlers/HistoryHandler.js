@@ -156,7 +156,7 @@ function _addRecordToGroup(group, record) {
   group.items.push({
     id: record.id,
     orderNo: record.orderNo || '',
-    bundleNo: record.bundleNo || '',
+    bundleNo: record.cuttingBundleNo || record.bundleNo || '',
     color: record.color,
     size: record.size,
     sizeArr: sizeArr,
@@ -357,10 +357,9 @@ async function loadMyHistory(page, refresh = false) {
       // eslint-disable-next-line no-console
     }
   } catch (e) {
-    console.error('[loadMyHistory] 加载失败:', e);
-    if (DEBUG_MODE) {
-      wx.showToast({ title: '加载历史失败', icon: 'none' });
-    }
+    console.error('[loadMyHistory] 加载失败:', e.message || e);
+    // 始终提示用户加载失败，便于排查"重新打开后记录消失"问题
+    wx.showToast({ title: '加载记录失败，请下拉刷新', icon: 'none', duration: 2500 });
   } finally {
     page.setData({ 'my.loadingHistory': false });
   }
@@ -431,7 +430,7 @@ function onHandleQuality(page, e) {
   // 委托到 QualityHandler（通过 page 实例调用）
   page.showQualityModal({
     orderNo: group.orderNo,
-    bundleNo: record.bundleNo || '',
+    bundleNo: record.bundleNo || record.cuttingBundleNo || '',
     styleNo: group.styleNo || '',
     color: record.color || '',
     size: record.size || '',

@@ -113,14 +113,15 @@ function closeScanResultConfirm(ctx) {
 }
 
 /**
- * 工序选择器变化
+ * 工序滚动选择器 - 点击选中
  * @param {Object} ctx - Page 上下文
  * @param {Object} e - 事件对象
  * @returns {void}
  */
-function onProcessPickerChange(ctx, e) {
-  const index = e.detail.value;
+function onProcessScrollSelect(ctx, e) {
+  const index = e.currentTarget.dataset.index;
   const option = ctx.data.scanResultConfirm.processOptions[index];
+  if (!option) return;
 
   ctx.setData({
     'scanResultConfirm.processIndex': index,
@@ -197,6 +198,6 @@ module.exports = {
   showScanResultConfirm,
   closeScanResultConfirm,
   onScanResultQuantityInput,
-  onProcessPickerChange,
+  onProcessScrollSelect,
   onConfirmScanResult,
 };

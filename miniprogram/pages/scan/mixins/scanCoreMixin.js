@@ -8,7 +8,7 @@
  * @description 管理扫码流程、成功/失败处理、数据加载
  */
 
-const { getToken, getUserInfo, getStorageValue } = require('../../../utils/storage');
+const { getToken, getUserInfo, getStorageValue, isTokenExpired, clearToken } = require('../../../utils/storage');
 const { toastAndRedirect, toast } = require('../../../utils/uiHelper');
 const { errorHandler } = require('../../../utils/errorHandler');
 const api = require('../../../utils/api');
@@ -130,6 +130,14 @@ const scanCoreMixin = Behavior({
         return false;
       }
 
+      // 检查 JWT token 是否已过期（提前5分钟判定）
+      if (isTokenExpired()) {
+        console.warn('[checkLoginStatus] token已过期，清除并跳转登录');
+        clearToken();
+        toastAndRedirect('登录已过期，请重新登录', '/pages/login/index');
+        return false;
+      }
+
       // 更新数据
       const updates = {};
       if (JSON.stringify(user) !== JSON.stringify(this.data.currentUser)) {
@@ -173,16 +181,17 @@ const scanCoreMixin = Behavior({
         const res = await api.production.personalScanStats();
         this.setData({
           'my.stats': {
-            scanCount: res.todayCount || 0,
+            scanCount: res.scanCount || 0,
             orderCount: res.orderCount || 0,
             totalQuantity: res.totalQuantity || 0,
             totalAmount: res.totalAmount || 0,
           },
         });
       } catch (e) {
-        // 统计数据加载失败不影响主流程
+        // 统计数据加载失败：记录错误并提示用户
+        console.error('[loadMyPanel] 加载统计数据失败:', e.message || e);
         if (DEBUG_MODE) {
-          console.warn('[加载统计数据] 失败:', e.message);
+          wx.showToast({ title: '统计加载失败', icon: 'none' });
         }
       } finally {
         this.setData({ 'my.loadingStats': false });
@@ -378,9 +387,9 @@ const scanCoreMixin = Behavior({
         return;
       }
 
-      // 已入库完成：显示成功提示
+      // 已完成：显示完成提示
       if (e.isCompleted) {
-        toast.success(e.message || '该菲号已入库完成');
+        toast.success(e.message || '进度节点已完成');
         this.setData({ loading: false });
         return;
       }

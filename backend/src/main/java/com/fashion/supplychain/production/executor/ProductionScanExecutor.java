@@ -82,18 +82,75 @@ public class ProductionScanExecutor {
                                        java.util.function.Function<String, String> colorResolver,
                                        java.util.function.Function<String, String> sizeResolver) {
         String scanCode = TextUtils.safeText(params.get("scanCode"));
-        if (!hasText(scanCode)) {
-            throw new IllegalArgumentException("扫码内容不能为空");
+        String orderNo = TextUtils.safeText(params.get("orderNo"));
+        String paramColor = TextUtils.safeText(params.get("color"));
+        String paramSize = TextUtils.safeText(params.get("size"));
+
+        CuttingBundle bundle = null;
+        ProductionOrder order = null;
+
+        // 优先通过 scanCode（二维码内容）查找菲号
+        if (hasText(scanCode)) {
+            bundle = cuttingBundleService.getByQrCode(scanCode);
         }
 
-        CuttingBundle bundle = cuttingBundleService.getByQrCode(scanCode);
+        // 如果 scanCode 未匹配到菲号，尝试通过 orderNo + color + size 查找
+        if ((bundle == null || !hasText(bundle.getId())) && hasText(orderNo) && hasText(paramColor) && hasText(paramSize)) {
+            order = resolveOrder(null, orderNo);
+            if (order != null) {
+                try {
+                    bundle = cuttingBundleService.getOne(new LambdaQueryWrapper<CuttingBundle>()
+                            .eq(CuttingBundle::getProductionOrderId, order.getId())
+                            .eq(CuttingBundle::getColor, paramColor)
+                            .eq(CuttingBundle::getSize, paramSize)
+                            .last("limit 1"));
+                } catch (Exception e) {
+                    log.warn("通过orderNo+color+size查找菲号失败: orderNo={}, color={}, size={}", orderNo, paramColor, paramSize, e);
+                }
+            }
+        }
+
+        // 无菲号时：允许 ORDER 模式扫码（SKU 批量提交路径，不要求 CuttingBundle）
         if (bundle == null || !hasText(bundle.getId())) {
-            throw new IllegalStateException("未匹配到菲号");
+            bundle = null; // 显式置空，后续流程统一判断
+            if (!hasText(orderNo)) {
+                if (!hasText(scanCode)) {
+                    throw new IllegalArgumentException("扫码内容不能为空");
+                }
+                throw new IllegalStateException("未匹配到菲号");
+            }
+            // 有 orderNo：走 ORDER 模式，不强制要求菲号
+            if (order == null) {
+                order = resolveOrder(null, orderNo);
+            }
+            if (order == null) {
+                throw new IllegalStateException("未匹配到订单");
+            }
+            if (!hasText(scanCode)) {
+                scanCode = orderNo;
+            }
+            log.info("ORDER模式扫码（无菲号）: orderNo={}, color={}, size={}", orderNo, paramColor, paramSize);
+        } else {
+            // 有菲号：正常流程
+            if (order == null) {
+                order = resolveOrder(bundle.getProductionOrderId(), null);
+            }
+            if (order == null) {
+                throw new IllegalStateException("未匹配到订单");
+            }
+            // 如果 scanCode 为空，使用菲号自身的QR码
+            if (!hasText(scanCode) && hasText(bundle.getQrCode())) {
+                scanCode = bundle.getQrCode();
+            }
+            if (!hasText(scanCode)) {
+                scanCode = orderNo;
+            }
         }
 
-        ProductionOrder order = resolveOrder(bundle.getProductionOrderId(), null);
-        if (order == null) {
-            throw new IllegalStateException("未匹配到订单");
+        // ★ 订单完成状态检查：所有环节统一拦截（与质检一致）
+        String orderStatus = order.getStatus() == null ? "" : order.getStatus().trim();
+        if ("completed".equalsIgnoreCase(orderStatus)) {
+            throw new IllegalStateException("进度节点已完成，该订单已结束生产");
         }
 
         String progressStage;
@@ -167,18 +224,20 @@ public class ProductionScanExecutor {
             validateScanRecordForSave(sr);
             scanRecordService.saveScanRecord(sr);
 
-            // ✅ 扫码成功后，更新工序跟踪记录（用于工资结算）
-            try {
-                processTrackingOrchestrator.updateScanRecord(
-                    bundle.getId(),           // String类型ID，不需要转换
-                    processCode,
-                    operatorId,
-                    operatorName,
-                    sr.getId()               // String类型ID，不需要转换
-                );
-                log.info("工序跟踪记录更新成功: bundleId={}, processCode={}", bundle.getId(), processCode);
-            } catch (Exception e) {
-                log.warn("工序跟踪记录更新失败: bundleId={}, processCode={}", bundle.getId(), processCode, e);
+            // ✅ 扫码成功后，更新工序跟踪记录（用于工资结算）—— 仅在有菲号时才更新
+            if (bundle != null && hasText(bundle.getId())) {
+                try {
+                    processTrackingOrchestrator.updateScanRecord(
+                        bundle.getId(),
+                        processCode,
+                        operatorId,
+                        operatorName,
+                        sr.getId()
+                    );
+                    log.info("工序跟踪记录更新成功: bundleId={}, processCode={}", bundle.getId(), processCode);
+                } catch (Exception e) {
+                    log.warn("工序跟踪记录更新失败: bundleId={}, processCode={}", bundle.getId(), processCode, e);
+                }
             }
         } catch (DuplicateKeyException dke) {
             log.info("生产扫码记录重复: requestId={}, scanCode={}", requestId, scanCode, dke);
@@ -371,13 +430,18 @@ public class ProductionScanExecutor {
         log.debug("检查版型文件: styleId={}", order.getStyleId());
 
         // 查询该款式的版型文件
-        List<StyleAttachment> patterns =
-            styleAttachmentService.lambdaQuery()
-                .eq(StyleAttachment::getStyleId, order.getStyleId())
-                .in(StyleAttachment::getBizType,
-                    "pattern", "pattern_grading", "pattern_final")
-                .eq(StyleAttachment::getStatus, "active")
-                .list();
+        List<StyleAttachment> patterns;
+        try {
+            patterns = styleAttachmentService.list(
+                new LambdaQueryWrapper<StyleAttachment>()
+                    .eq(StyleAttachment::getStyleId, order.getStyleId())
+                    .in(StyleAttachment::getBizType,
+                        "pattern", "pattern_grading", "pattern_final")
+                    .eq(StyleAttachment::getStatus, "active"));
+        } catch (Exception e) {
+            log.warn("查询版型文件失败，跳过版型校验: styleId={}", order.getStyleId(), e);
+            return;
+        }
 
         // 如果没有版型文件，抛出异常阻止裁剪
         if (patterns == null || patterns.isEmpty()) {
@@ -509,9 +573,12 @@ public class ProductionScanExecutor {
         sr.setScanType(scanType);
         sr.setScanResult("success");
         sr.setRemark(remark);
-        sr.setCuttingBundleId(bundle.getId());
-        sr.setCuttingBundleNo(bundle.getBundleNo());
-        sr.setCuttingBundleQrCode(bundle.getQrCode());
+        // 菲号可能为 null（ORDER 模式无菲号）
+        if (bundle != null) {
+            sr.setCuttingBundleId(bundle.getId());
+            sr.setCuttingBundleNo(bundle.getBundleNo());
+            sr.setCuttingBundleQrCode(bundle.getQrCode());
+        }
 
         if (skuService != null) {
             skuService.attachProcessUnitPrice(sr);

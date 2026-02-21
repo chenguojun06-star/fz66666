@@ -43,15 +43,15 @@
       </view>
 
       <view class="user-actions">
-        <view 
-          class="action-btn reject-btn" 
-          data-user="{{item}}" 
+        <view
+          class="action-btn reject-btn"
+          data-user="{{item}}"
           bindtap="onRejectUser">
           拒绝
         </view>
-        <view 
-          class="action-btn approve-btn" 
-          data-user="{{item}}" 
+        <view
+          class="action-btn approve-btn"
+          data-user="{{item}}"
           bindtap="onApproveUser">
           批准
         </view>
@@ -82,21 +82,26 @@
           批准用户 <text class="highlight">{{currentUser.name || currentUser.username}}</text>
         </view>
         <view class="modal-hint">批准后该用户可以正常登录系统</view>
-        
+
         <view class="form-item">
           <view class="form-label">选择角色 <text class="required">*</text></view>
-          <picker 
-            mode="selector" 
-            range="{{roleOptions}}" 
-            range-key="roleName"
-            bindchange="onRoleChange">
-            <view class="picker">
-              <block wx:for="{{roleOptions}}" wx:key="id">
-                <block wx:if="{{String(item.id) === selectedRoleId}}">{{item.roleName}}</block>
-              </block>
-              <block wx:if="{{!selectedRoleId}}">请选择角色</block>
-            </view>
-          </picker>
+          <view class="inline-selector">
+            <scroll-view class="inline-selector-list" scroll-y="{{true}}" enhanced="{{true}}" show-scrollbar="{{false}}">
+              <view
+                wx:for="{{roleOptions}}"
+                wx:key="id"
+                class="inline-selector-item {{selectedRoleId === String(item.id) ? 'active' : ''}}"
+                data-id="{{item.id}}"
+                bindtap="onRoleSelect">
+                <view class="inline-selector-left">
+                  <view class="inline-selector-radio {{selectedRoleId === String(item.id) ? 'checked' : ''}}">
+                    <view wx:if="{{selectedRoleId === String(item.id)}}" class="inline-selector-radio-dot"></view>
+                  </view>
+                  <text class="inline-selector-label">{{item.roleName}}</text>
+                </view>
+              </view>
+            </scroll-view>
+          </view>
         </view>
       </view>
       <view class="modal-footer">
@@ -119,11 +124,11 @@
           确定拒绝用户 <text class="highlight">{{currentUser.name || currentUser.username}}</text> 吗？
         </view>
         <view class="modal-hint danger">拒绝后该用户将无法登录系统</view>
-        
+
         <view class="form-item">
           <view class="form-label">拒绝原因 <text class="required">*</text></view>
-          <textarea 
-            class="textarea" 
+          <textarea
+            class="textarea"
             placeholder="请输入拒绝原因"
             value="{{rejectReason}}"
             bindinput="onRejectReasonInput"

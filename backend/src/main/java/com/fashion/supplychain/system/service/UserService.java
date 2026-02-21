@@ -80,4 +80,19 @@ public interface UserService extends IService<User> {
      * @return 是否存在
      */
     boolean existsByName(String name);
+
+    /**
+     * 根据微信 openid 查找已绑定的用户
+     * @param openid 微信小程序 openid
+     * @return 用户信息，未绑定则返回 null
+     */
+    User findByOpenid(String openid);
+
+    /**
+     * 将微信 openid 绑定到指定用户（首次登录时调用）
+     * @param userId 用户ID
+     * @param openid 微信小程序 openid
+     * @return 是否成功
+     */
+    boolean bindOpenid(Long userId, String openid);
 }

@@ -1,44 +1,33 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { App, Badge, Button, Card, Form, Grid, Input, Modal, Space, Tag, Tooltip } from 'antd';
+import { App, Button, Card, Form, Input, Modal, Space } from 'antd';
 import type { InputRef } from 'antd';
 import { AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { useLocation } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import PageStatCards from '@/components/common/PageStatCards';
 import UniversalCardView from '@/components/common/UniversalCardView';
-import LiquidProgressLottie from '@/components/common/LiquidProgressLottie';
 import ResizableTable from '@/components/common/ResizableTable';
-import RowActions from '@/components/common/RowActions';
-import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import QuickEditModal from '@/components/common/QuickEditModal';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import NodeDetailModal from '@/components/common/NodeDetailModal';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
-import { StyleCoverThumb } from '@/components/StyleAssets';
-import api, { generateRequestId, isDuplicateScanMessage, isOrderFrozenByStatus, parseProductionOrderLines, isApiSuccess } from '@/utils/api';
+import api, { generateRequestId, isDuplicateScanMessage, parseProductionOrderLines, isApiSuccess } from '@/utils/api';
 import { isSupervisorOrAboveUser as isSupervisorOrAboveUserFn, useAuth } from '@/utils/AuthContext';
-import { useViewport } from '@/utils/useViewport';
-import { formatDateTime, formatDateTimeCompact } from '@/utils/datetime';
+import { formatDateTimeCompact } from '@/utils/datetime';
 import { getProgressColorStatus, getRemainingDaysDisplay } from '@/utils/progressColor';
-import { CuttingBundle, ProductionOrder, ProductionQueryParams, ScanRecord } from '@/types/production';
-import type { StyleProcess, TemplateLibrary } from '@/types/style';
+import { CuttingBundle, ProductionOrder, ScanRecord } from '@/types/production';
+import type { TemplateLibrary } from '@/types/style';
 
-import { productionCuttingApi, productionOrderApi, productionScanApi, productionWarehousingApi, type ProductionOrderListParams } from '@/services/production/productionApi';
+import { productionCuttingApi, productionOrderApi, productionScanApi, type ProductionOrderListParams } from '@/services/production/productionApi';
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 
 import {
   defaultNodes,
   stripWarehousingNode,
-  formatTime,
-  getOrderShipTime,
   getNodeIndexFromProgress,
   parseProgressNodes,
   findPricingProcessForStage,
-  getProgressFromNodeIndex,
-  formatTimeCompact,
-  getQuotationUnitPriceForOrder,
   getCloseMinRequired,
   calculateProgressFromBundles,
   resolveNodesForOrder,
@@ -58,6 +47,12 @@ import { useInlineNodeOps } from './hooks/useInlineNodeOps';
 import { useOpenScan } from './hooks/useOpenScan';
 import { useOrderProgress } from './hooks/useOrderProgress';
 import { useCloseOrder } from './hooks/useCloseOrder';
+import { useNodeDetail } from './hooks/useNodeDetail';
+import { usePrintFlow } from './hooks/usePrintFlow';
+import { useRemarkModal } from './hooks/useRemarkModal';
+import { useQuickEdit } from './hooks/useQuickEdit';
+import { useProgressFilters } from './hooks/useProgressFilters';
+import { useProgressColumns } from './hooks/useProgressColumns';
 import {
   fetchScanHistory as fetchScanHistoryHelper,
   fetchCuttingBundles as fetchCuttingBundlesHelper,
@@ -65,93 +60,64 @@ import {
 } from './helpers/fetchers';
 import { fetchNodeOperations } from './helpers/nodeOperations';
 
-const { useBreakpoint } = Grid;
-
-
-
-
-
-
-
-/**
- * 生产进度详情组件属性
- */
 type ProgressDetailProps = {
-  /** 是否内嵌显示 */
   embedded?: boolean;
 };
 
-/**
- * 生产进度详情组件
- * 用于展示和管理生产订单的详细进度信息，包括扫码记录、裁剪扎号、进度节点等
- */
 const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const { message } = App.useApp();
   const { user } = useAuth();
-  const { modalWidth } = useViewport();
   const isSupervisorOrAbove = useMemo(() => isSupervisorOrAboveUserFn(user), [user]);
-  const location = useLocation();
-  const screens = useBreakpoint();
-  const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
-  const [queryParams, setQueryParams] = useState<ProductionQueryParams>({ page: 1, pageSize: 10, keyword: '' });
-  const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
-  const [_showDelayedOnly, setShowDelayedOnly] = useState(false); // 是否只显示延期订单
-  const [activeStatFilter, setActiveStatFilter] = useState<'all' | 'delayed' | 'today'>('all'); // 当前激活的统计卡片筛选
 
+  // ── 筛选 / 排序 / 统计卡片 ──────────────────────────────────────
+  const {
+    queryParams, setQueryParams,
+    dateRange, setDateRange,
+    viewMode, setViewMode,
+    activeStatFilter,
+    orderSortField, orderSortOrder,
+    statusOptions,
+    handleOrderSort, handleStatClick,
+  } = useProgressFilters();
+
+  // ── 订单数据 ──────────────────────────────────────────────────
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [orders, setOrders] = useState<ProductionOrder[]>([]);
-
-  // 全局统计数据（从API获取，不受分页影响）
-  const [globalStats, setGlobalStats] = useState<{
-    totalOrders: number;
-    totalQuantity: number;
-    delayedOrders: number;
-    delayedQuantity: number;
-    todayOrders: number;
-    todayQuantity: number;
-  }>({ totalOrders: 0, totalQuantity: 0, delayedOrders: 0, delayedQuantity: 0, todayOrders: 0, todayQuantity: 0 });
-
-  // ===== 详情弹窗相关状态已删除 =====
-  // detailOpen 已移除，activeOrder和scanHistory保留用于快速编辑和进度统计
+  const [globalStats, setGlobalStats] = useState({
+    totalOrders: 0, totalQuantity: 0,
+    delayedOrders: 0, delayedQuantity: 0,
+    todayOrders: 0, todayQuantity: 0,
+  });
   const [activeOrder, setActiveOrder] = useState<ProductionOrder | null>(null);
   const [scanHistory, setScanHistory] = useState<ScanRecord[]>([]);
-
   const [cuttingBundlesLoading, setCuttingBundlesLoading] = useState(false);
   const [cuttingBundles, setCuttingBundles] = useState<CuttingBundle[]>([]);
   const [nodeOps, setNodeOps] = useState<Record<string, any>>({});
-  const [_inlineSaving, setInlineSaving] = useState(false);
 
+
+  // ── 工序节点 Workflow ─────────────────────────────────────────
   const [nodes, setNodes] = useState<ProgressNode[]>(defaultNodes);
   const [progressNodesByStyleNo, setProgressNodesByStyleNo] = useState<Record<string, ProgressNode[]>>({});
   const progressNodesByStyleNoRef = useRef<Record<string, ProgressNode[]>>({});
   const [nodeWorkflowLocked, setNodeWorkflowLocked] = useState(false);
-  const [nodeWorkflowSaving, setNodeWorkflowSaving] = useState(false);
-  const [_nodeWorkflowDirty, setNodeWorkflowDirty] = useState(false);
+  const [, setNodeWorkflowDirty] = useState(false);
   const [boardStatsByOrder, setBoardStatsByOrder] = useState<Record<string, Record<string, number>>>({});
   const [boardTimesByOrder, setBoardTimesByOrder] = useState<Record<string, Record<string, string>>>({});
   const boardStatsLoadingRef = useRef<Record<string, boolean>>({});
 
-  const [_progressTemplates, setProgressTemplates] = useState<TemplateLibrary[]>([]);
-  const [progressTemplateId, setProgressTemplateId] = useState<string | undefined>(undefined);
-  const [_templateApplying, setTemplateApplying] = useState(false);
-
-  const [_processPriceTemplates, setProcessPriceTemplates] = useState<TemplateLibrary[]>([]);
-  const [processPriceTemplateId, setProcessPriceTemplateId] = useState<string | undefined>(undefined);
-  const [_processPriceApplying, setProcessPriceApplying] = useState(false);
-
-  const [pricingProcesses, setPricingProcesses] = useState<StyleProcess[]>([]);
-  const [pricingProcessLoading, setPricingProcessLoading] = useState(false);
-
+  // ── 扫码弹窗 ──────────────────────────────────────────────────
   const [scanOpen, setScanOpen] = useState(false);
-  const [scanSubmitting, setScanSubmitting] = useState(false);
+  const [_scanSubmitting, setScanSubmitting] = useState(false);
   const [scanForm] = Form.useForm();
   const scanInputRef = useRef<InputRef>(null);
   const scanSubmittingRef = useRef(false);
   const orderSyncingRef = useRef(false);
   const activeOrderRef = useRef<ProductionOrder | null>(null);
   const lastFailedRequestRef = useRef<{ key: string; requestId: string } | null>(null);
+  const [_scanBundlesExpanded, setScanBundlesExpanded] = useState(false);
+  const [bundleSelectedQr, setBundleSelectedQr] = useState('');
+
   const {
     state: scanConfirmState,
     openConfirm: openScanConfirm,
@@ -159,98 +125,29 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     setLoading: setScanConfirmLoading,
   } = useScanConfirm();
 
-  const [scanBundlesExpanded, setScanBundlesExpanded] = useState(false);
-  const [bundleSelectedQr, setBundleSelectedQr] = useState('');
-
-  const [quickEditVisible, setQuickEditVisible] = useState(false);
-  const [quickEditRecord, setQuickEditRecord] = useState<ProductionOrder | null>(null);
-  const [quickEditSaving, setQuickEditSaving] = useState(false);
-
-  // 跟单员备注异常状态
-  const [remarkPopoverId, setRemarkPopoverId] = useState<string | null>(null);
-  const [remarkText, setRemarkText] = useState('');
-  const [remarkSaving, setRemarkSaving] = useState(false);
-
-  // 打印功能状态
-  const [printingRecord, setPrintingRecord] = useState<ProductionOrder | null>(null);
-  const [printModalVisible, setPrintModalVisible] = useState(false);
-
-  // 监听 printingRecord 变化，打开打印弹窗
-  useEffect(() => {
-    if (printingRecord) {
-      setPrintModalVisible(true);
-    }
-  }, [printingRecord]);
-
-  // 节点详情弹窗状态
-  const [nodeDetailVisible, setNodeDetailVisible] = useState(false);
-  const [nodeDetailOrder, setNodeDetailOrder] = useState<ProductionOrder | null>(null);
-  const [nodeDetailType, setNodeDetailType] = useState<string>('');
-  const [nodeDetailName, setNodeDetailName] = useState<string>('');
-  const [nodeDetailStats, setNodeDetailStats] = useState<{ done: number; total: number; percent: number; remaining: number } | undefined>(undefined);
-  const [nodeDetailUnitPrice, setNodeDetailUnitPrice] = useState<number | undefined>(undefined);
-  const [nodeDetailProcessList, setNodeDetailProcessList] = useState<{ id?: string; processCode?: string; code?: string; name: string; unitPrice?: number }[]>([]);
-
-  const [orderSortField, setOrderSortField] = useState<string>('createTime');
-  const [orderSortOrder, setOrderSortOrder] = useState<'asc' | 'desc'>('desc');
-
-  const statusOptions = useMemo(() => ([
-    { label: '全部', value: '' },
-    { label: '待生产', value: 'pending' },
-    { label: '生产中', value: 'production' },
-    { label: '已完成', value: 'completed' },
-    { label: '已逾期', value: 'delayed' },
-    { label: '已取消', value: 'cancelled' },
-  ]), []);
-
-  const handleOrderSort = (field: string, order: 'asc' | 'desc') => {
-    setOrderSortField(field);
-    setOrderSortOrder(order);
-  };
-
-  // 处理统计卡片点击
-  const handleStatClick = (type: 'all' | 'delayed' | 'today') => {
-    setActiveStatFilter(type);
-    if (type === 'all') {
-      setShowDelayedOnly(false);
-      setQueryParams((prev) => ({ ...prev, status: '', delayedOnly: undefined, todayOnly: undefined, page: 1 } as any));
-    } else if (type === 'delayed') {
-      setShowDelayedOnly(true);
-      setQueryParams((prev) => ({ ...prev, status: '', delayedOnly: 'true', todayOnly: undefined, page: 1 } as any));
-    } else if (type === 'today') {
-      setShowDelayedOnly(false);
-      setQueryParams((prev) => ({ ...prev, status: '', delayedOnly: undefined, todayOnly: 'true', page: 1 } as any));
-    }
-  };
-
-  // 打开节点详情弹窗
-  const openNodeDetail = useCallback((
-    order: ProductionOrder,
-    nodeType: string,
-    nodeName: string,
-    stats?: { done: number; total: number; percent: number; remaining: number },
-    unitPrice?: number,
-    processList?: { id?: string; processCode?: string; code?: string; name: string; unitPrice?: number }[]
-  ) => {
-    setNodeDetailOrder(order);
-    setNodeDetailType(nodeType);
-    setNodeDetailName(nodeName);
-    setNodeDetailStats(stats);
-    setNodeDetailUnitPrice(unitPrice);
-    setNodeDetailProcessList(processList || []);
-    setNodeDetailVisible(true);
-  }, []);
+  // ── 子模块 Hooks ──────────────────────────────────────────────
+  const {
+    openNodeDetail, closeNodeDetail,
+    nodeDetailVisible, nodeDetailOrder, nodeDetailType,
+    nodeDetailName, nodeDetailStats, nodeDetailUnitPrice, nodeDetailProcessList,
+  } = useNodeDetail();
+  const { printingRecord, printModalVisible, setPrintingRecord, closePrintModal } = usePrintFlow();
+  const {
+    remarkPopoverId, remarkText, remarkSaving,
+    setRemarkPopoverId, setRemarkText, handleRemarkSave,
+  } = useRemarkModal({ message, fetchOrders: () => fetchOrders() });
+  const {
+    quickEditVisible, quickEditRecord, quickEditSaving,
+    setQuickEditVisible, setQuickEditRecord,
+    handleQuickEdit, handleQuickEditSave,
+  } = useQuickEdit({ message, fetchOrders: () => fetchOrders() });
 
   const queryParamsRef = useRef(queryParams);
   const dateRangeRef = useRef(dateRange);
-
-  useEffect(() => {
-    queryParamsRef.current = queryParams;
-  }, [queryParams]);
-
-  useEffect(() => {
-    dateRangeRef.current = dateRange;
-  }, [dateRange]);
+  useEffect(() => { queryParamsRef.current = queryParams; }, [queryParams]);
+  useEffect(() => { dateRangeRef.current = dateRange; }, [dateRange]);
+  useEffect(() => { progressNodesByStyleNoRef.current = progressNodesByStyleNo; }, [progressNodesByStyleNo]);
+  useEffect(() => { activeOrderRef.current = activeOrder; }, [activeOrder]);
 
 
   const fetchOrders = useCallback(async (options?: { silent?: boolean }) => {
@@ -473,60 +370,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     dateRange?.[1]?.valueOf() ?? 'null-end'
   ]);
 
-  useEffect(() => {
-    progressNodesByStyleNoRef.current = progressNodesByStyleNo;
-  }, [progressNodesByStyleNo]);
 
-  useEffect(() => {
-    activeOrderRef.current = activeOrder;
-  }, [activeOrder]);
-
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const styleNo = String(params.get('styleNo') || '').trim();
-    const orderNo = String(params.get('orderNo') || '').trim();
-    if (!styleNo && !orderNo) return;
-    const keyword = orderNo || styleNo;
-    setQueryParams((prev) => ({
-      ...prev,
-      page: 1,
-      keyword,
-      orderNo: undefined,
-      styleNo: undefined,
-      factoryName: undefined,
-    }));
-  }, [location.search]);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await templateLibraryApi.listByType('progress');
-        const result = res as Record<string, unknown>;
-        if (result.code === 200) {
-          setProgressTemplates(Array.isArray(result.data) ? result.data : []);
-        }
-      } catch {
-        // Intentionally empty
-        // 忽略错误
-      }
-    })();
-  }, []);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await templateLibraryApi.listByType('process_price');
-        const result = res as Record<string, unknown>;
-        if (result.code === 200) {
-          setProcessPriceTemplates(Array.isArray(result.data) ? result.data : []);
-        }
-      } catch {
-        // Intentionally empty
-        // 忽略错误
-      }
-    })();
-  }, []);
-
+  // ── 模板函数 ─────────────────────────────────────────────────────
   const fetchTemplateNodes = async (templateId: string): Promise<ProgressNode[]> => {
     const tid = String(templateId || '').trim();
     if (!tid) return [];
@@ -558,12 +403,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       // Silently ignore template loading errors
     }
   };
-
-  const lockNodeWorkflow = () => {
-    setNodeWorkflowLocked(true);
-    setNodeWorkflowDirty(false);
-  };
-
 
   const boardStatsByOrderRef = useRef<Record<string, Record<string, number>>>({});
   useEffect(() => {
@@ -606,7 +445,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     fetchCuttingBundlesHelper({ order, setCuttingBundles, setCuttingBundlesLoading, message });
 
   const fetchPricingProcesses = (order: ProductionOrder) =>
-    fetchPricingProcessesHelper({ order, setPricingProcesses, setPricingProcessLoading });
+    fetchPricingProcessesHelper({ order, setPricingProcesses: () => {}, setPricingProcessLoading: () => {} });
 
   const currentInlineNode = useMemo(() => {
     return getCurrentWorkflowNodeForOrder(activeOrder, progressNodesByStyleNo, nodes, defaultNodes);
@@ -617,7 +456,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     currentInlineNode,
     nodeOps,
     setNodeOps,
-    setInlineSaving,
+    setInlineSaving: () => {},
     user,
     productionOrderApi,
     message,
@@ -648,7 +487,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   };
 
   const openScan = useOpenScan({
-    isOrderFrozenByStatus,
+    isOrderFrozenByStatus: (o: ProductionOrder) => (o.status as string) === 'cancelled' || o.status === 'completed',
     message,
     fetchOrderDetail,
     setActiveOrder,
@@ -669,7 +508,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     scanInputRef,
   });
 
-  const closeScan = () => {
+  const _closeScan = () => {
     closeScanConfirm(true);
     setScanOpen(false);
     setScanSubmitting(false);
@@ -720,9 +559,9 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
 
   const {
     matchedBundle,
-    bundleDoneByQrForSelectedNode,
-    bundleMetaByQrForSelectedNode,
-    bundleSummary,
+    bundleDoneByQrForSelectedNode: _bundleDoneByQrForSelectedNode,
+    bundleMetaByQrForSelectedNode: _bundleMetaByQrForSelectedNode,
+    bundleSummary: _bundleSummary,
     isBundleCompletedForSelectedNode,
   } = useScanBundles({
     scanOpen,
@@ -736,7 +575,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     setBundleSelectedQr,
   });
 
-  const submitScan = useSubmitScan({
+  const _submitScan = useSubmitScan({
     activeOrder,
     user,
     scanForm,
@@ -757,10 +596,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   });
 
   useNodeStats({ scanHistory, activeOrder, cuttingBundles, nodes });
-
-  const currentNodeIdx = useMemo(() => {
-    return getNodeIndexFromProgress(nodes, Number(activeOrder?.productionProgress) || 0);
-  }, [nodes, activeOrder?.productionProgress]);
 
   useNodeWorkflowActions({
     activeOrderId: activeOrder?.id,
@@ -799,54 +634,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
 
 
 
-  // ===== handleViewScanHistory 和 handleViewDetail 函数已删除 =====
-
-  // 快速编辑
-  const handleQuickEdit = (order: ProductionOrder) => {
-    setQuickEditRecord(order);
-    setQuickEditVisible(true);
-  };
-
-  const handleQuickEditSave = async (values: { remarks: string; expectedShipDate: string | null }) => {
-    setQuickEditSaving(true);
-    try {
-      await productionOrderApi.quickEdit({
-        id: quickEditRecord?.id,
-        ...values,
-      });
-      message.success('编辑成功');
-      setQuickEditVisible(false);
-      setQuickEditRecord(null);
-      await fetchOrders();
-    } catch (err: any) {
-      message.error(err?.response?.data?.message || '编辑失败');
-      throw err;
-    } finally {
-      setQuickEditSaving(false);
-    }
-  };
-
-  // 跟单员备注异常保存（自动前置时间戳）
-  const handleRemarkSave = async (orderId: string) => {
-    setRemarkSaving(true);
-    try {
-      const ts = dayjs().format('MM-DD HH:mm');
-      const finalText = remarkText.trim() ? `[${ts}] ${remarkText.trim()}` : '';
-      await productionOrderApi.quickEdit({
-        id: orderId,
-        remarks: finalText,
-      });
-      message.success('备注已保存');
-      setRemarkPopoverId(null);
-      setRemarkText('');
-      await fetchOrders();
-    } catch (err: any) {
-      message.error(err?.response?.data?.message || '保存失败');
-    } finally {
-      setRemarkSaving(false);
-    }
-  };
-
   const handleCloseOrder = useCloseOrder({
     isSupervisorOrAbove,
     message,
@@ -859,392 +646,16 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     getCloseMinRequired,
   });
 
-  const columns: any[] = [
-    {
-      title: '图片',
-      key: 'cover',
-      width: 72,
-      render: (_: any, record: ProductionOrder) => (
-        <StyleCoverThumb
-          styleId={record.styleId}
-          styleNo={record.styleNo}
-          src={(record as any).styleCover || null}
-          size={48}
-          borderRadius={6}
-        />
-      ),
-    },
-    {
-      title: '订单号',
-      dataIndex: 'orderNo',
-      key: 'orderNo',
-      width: 160,
-      render: (v: any) => <span className="order-no-wrap">{String(v || '').trim() || '-'}</span>,
-    },
-    {
-      title: '款号',
-      dataIndex: 'styleNo',
-      key: 'styleNo',
-      width: 140,
-      render: (v: any) => <span className="order-no-wrap">{String(v || '').trim() || '-'}</span>,
-    },
-    {
-      title: '跟单员',
-      dataIndex: 'merchandiser',
-      key: 'merchandiser',
-      width: 120,
-      render: (v: any, record: ProductionOrder) => {
-        const name = String(v || '').trim();
-        const remark = String((record as Record<string, unknown>).remarks || '').trim();
-        const orderId = String(record.id || '');
-        const tsMatch = remark.match(/^\[(\d{2}-\d{2} \d{2}:\d{2})\]\s*/);
-        const remarkTime = tsMatch ? tsMatch[1] : '';
-        const remarkBody = tsMatch ? remark.slice(tsMatch[0].length) : remark;
+  // ── 表格列定义 ─────────────────────────────────────────────────────
+  const { columns } = useProgressColumns({
+    orderSortField, orderSortOrder, handleOrderSort,
+    boardStatsByOrder, boardTimesByOrder, progressNodesByStyleNo,
+    openNodeDetail, isSupervisorOrAbove, handleCloseOrder,
+    setPrintingRecord, setQuickEditRecord, setQuickEditVisible,
+    setRemarkPopoverId, setRemarkText,
+    openScan,
+  });
 
-        return (
-          <div
-            style={{ position: 'relative', lineHeight: 1.3, cursor: 'pointer' }}
-            onClick={() => { setRemarkPopoverId(orderId); setRemarkText(remarkBody); }}
-          >
-            {remarkTime && (
-              <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', marginBottom: 2 }}>
-                {remarkTime}
-              </div>
-            )}
-            <Tooltip title={remark ? `备注：${remark}` : '点击添加备注'} placement="top">
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ fontWeight: 500, color: '#1f2937' }}>{name || '-'}</span>
-                {remark && (
-                  <Badge dot color="#ef4444" offset={[0, -2]}>
-                    <ExclamationCircleOutlined style={{ fontSize: 12, color: '#ef4444' }} />
-                  </Badge>
-                )}
-              </div>
-            </Tooltip>
-            {remarkBody && (
-              <Tooltip title={remarkBody} placement="bottom">
-                <div style={{
-                  fontSize: 10, color: '#ef4444', fontWeight: 500, lineHeight: 1.2, marginTop: 2,
-                  maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>
-                  {remarkBody.length > 6 ? remarkBody.substring(0, 6) + '...' : remarkBody}
-                </div>
-              </Tooltip>
-            )}
-          </div>
-        );
-      },
-    },
-    {
-      title: '下单人',
-      dataIndex: 'createdByName',
-      key: 'createdByName',
-      width: 100,
-      ellipsis: true,
-      render: (v: any) => v || '-',
-    },
-    {
-      title: '工厂',
-      dataIndex: 'factoryName',
-      key: 'factoryName',
-      width: 120,
-      ellipsis: true,
-      render: (v: any) => v || '-',
-    },
-    {
-      title: (
-        <Tooltip title="款式报价单单价（BOM+工序成本合计含利润）">
-          <span>单价</span>
-        </Tooltip>
-      ),
-      key: 'quotationUnitPrice',
-      width: 100,
-      align: 'right' as const,
-      render: (_: any, record: ProductionOrder) => {
-        const v = getQuotationUnitPriceForOrder(record);
-        return v > 0 ? (
-          <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>¥{v.toFixed(2)}</span>
-        ) : (
-          <span style={{ color: 'var(--neutral-text-secondary)' }}>未报价</span>
-        );
-      },
-    },
-    {
-      title: '入库数量',
-      key: 'warehousingQualifiedQuantity',
-      width: 110,
-      align: 'right' as const,
-      render: (_: any, record: ProductionOrder) => Number((record as Record<string, unknown>).warehousingQualifiedQuantity) || 0,
-    },
-    {
-      title: '款名',
-      dataIndex: 'styleName',
-      key: 'styleName',
-      width: 200,
-      ellipsis: true,
-    },
-    {
-      title: '下单时间',
-      key: 'createTime',
-      width: 170,
-      render: (_: any, record: ProductionOrder) => formatTime(record.createTime),
-    },
-    {
-      title: '备注',
-      dataIndex: 'remarks',
-      key: 'remarks',
-      width: 150,
-      ellipsis: true,
-      render: (v: any) => v || '-',
-    },
-    {
-      title: <SortableColumnTitle title="预计出货" fieldName="expectedShipDate" onSort={handleOrderSort} sortField={orderSortField} sortOrder={orderSortOrder} />,
-      dataIndex: 'expectedShipDate',
-      key: 'expectedShipDate',
-      width: 120,
-      render: (v: any) => v ? formatDateTime(v) : '-',
-    },
-    {
-      title: <SortableColumnTitle title="订单交期" fieldName="plannedEndDate" onSort={handleOrderSort} sortField={orderSortField} sortOrder={orderSortOrder} />,
-      key: 'shipTime',
-      width: 170,
-      render: (_: any, record: ProductionOrder) => {
-        const dateStr = formatTime(getOrderShipTime(record));
-        const { text, color } = getRemainingDaysDisplay(record.plannedEndDate, record.createTime);
-        return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span style={{ fontSize: 12 }}>{dateStr}</span>
-            <span style={{ fontSize: 11, fontWeight: 600, color }}>{text}</span>
-          </div>
-        );
-      },
-    },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
-      width: 110,
-      render: (value: ProductionOrder['status']) => {
-        const map: any = {
-          pending: { color: 'default', label: '待开始' },
-          production: { color: 'success', label: '生产中' },
-          completed: { color: 'default', label: '已完成' },
-          delayed: { color: 'warning', label: '延期' },
-        };
-        const t = map[value] || { color: 'default', label: value };
-        return <Tag color={t.color}>{t.label}</Tag>;
-      },
-    },
-    {
-      title: '生产进度',
-      key: 'progressNodes',
-      width: 900,
-      align: 'center' as const,
-      render: (_: any, record: ProductionOrder) => {
-        // 获取该订单的工序节点
-        const ns = stripWarehousingNode(resolveNodesForListOrder(record, progressNodesByStyleNo, defaultNodes));
-        const totalQty = Number(record.cuttingQuantity || record.orderQuantity) || 0;
-        const nodeDoneMap = boardStatsByOrder[String(record.id || '')];
-        const nodeTimeMap = boardTimesByOrder[String(record.id || '')];
-
-        // 空数据提示
-        if (!ns || ns.length === 0) {
-          return (
-            <div style={{ color: 'var(--neutral-text-disabled)', fontSize: "var(--font-size-base)", padding: '20px 0' }}>
-              暂无工序进度数据
-            </div>
-          );
-        }
-
-        // 格式化完成时间为简洁格式 MM-DD HH:mm
-        const formatCompletionTime = (timeStr: string) => {
-          if (!timeStr) return '';
-          try {
-            const d = new Date(timeStr);
-            if (isNaN(d.getTime())) return '';
-            const mm = String(d.getMonth() + 1).padStart(2, '0');
-            const dd = String(d.getDate()).padStart(2, '0');
-            const hh = String(d.getHours()).padStart(2, '0');
-            const mi = String(d.getMinutes()).padStart(2, '0');
-            return `${mm}-${dd} ${hh}:${mi}`;
-          } catch { return ''; }
-        };
-
-        return (
-          <div style={{
-            display: 'flex',
-            gap: 0,
-            alignItems: 'flex-start',
-            justifyContent: 'space-evenly',
-            padding: '12px 8px',
-            width: '100%',
-          }}>
-            {ns.map((node: ProgressNode, index: number) => {
-              const nodeName = node.name || '-';
-              const nodeQty = totalQty;
-              const completedQty = nodeDoneMap?.[nodeName] || 0;
-              // 修复：添加100%上限，避免超过100%的情况
-              const percent = nodeQty > 0
-                ? Math.min(100, Math.round((completedQty / nodeQty) * 100))
-                : 0;
-              const remaining = nodeQty - completedQty;
-              const completionTime = nodeTimeMap?.[nodeName] || '';
-              // 将节点名称映射到节点类型
-              const nodeTypeMap: Record<string, string> = {
-                '采购': 'procurement', '物料': 'procurement', '备料': 'procurement',
-                '裁剪': 'cutting', '裁床': 'cutting', '剪裁': 'cutting', '开裁': 'cutting',
-                '缝制': 'sewing', '车缝': 'sewing', '缝纫': 'sewing', '车工': 'sewing',
-                '整烫': 'ironing', '熨烫': 'ironing', '大烫': 'ironing',
-                '质检': 'quality', '检验': 'quality', '品检': 'quality', '验货': 'quality',
-                '包装': 'packaging', '后整': 'packaging', '打包': 'packaging', '装箱': 'packaging',
-                '二次工艺': 'secondaryProcess', '绣花': 'secondaryProcess', '印花': 'secondaryProcess',
-                '入库': 'warehousing', '仓库': 'warehousing',
-              };
-              const nodeType = nodeTypeMap[nodeName] || nodeName.toLowerCase();
-
-              return (
-                <div
-                  key={node.id || index}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 2,
-                    flex: 1,
-                    cursor: 'pointer',
-                    padding: 4,
-                    transition: 'background 0.2s',
-                  }}
-                  onClick={() => openNodeDetail(
-                    record,
-                    nodeType,
-                    nodeName,
-                    { done: completedQty, total: nodeQty, percent, remaining },
-                    node.unitPrice,
-                    ns.map(n => ({
-                      id: String(n.id || '').trim() || undefined,
-                      processCode: String(n.id || '').trim() || undefined,
-                      name: n.name,
-                      unitPrice: n.unitPrice,
-                    }))
-                  )}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(59, 130, 246, 0.08)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--color-bg-base)'; }}
-                  title={completionTime ? `${nodeName} 完成时间：${completionTime}\n点击查看详情` : `点击查看 ${nodeName} 详情`}
-                >
-                  {/* 完成时间（显示在进度球上方） */}
-                  {completionTime ? (
-                    <div style={{
-                      fontSize: 10,
-                      color: percent >= 100 ? '#10b981' : '#6b7280',
-                      fontWeight: percent >= 100 ? 600 : 400,
-                      lineHeight: 1.2,
-                      textAlign: 'center',
-                      whiteSpace: 'nowrap',
-                      marginBottom: 2,
-                    }}>
-                      {formatCompletionTime(completionTime)}
-                    </div>
-                  ) : (
-                    <div style={{ fontSize: 10, color: '#d1d5db', lineHeight: 1.2, marginBottom: 2 }}>
-                      --
-                    </div>
-                  )}
-                  <LiquidProgressLottie
-                    progress={percent}
-                    size={60}
-                    nodeName={nodeName}
-                    text={`${completedQty}/${nodeQty}`}
-                    color1={
-                      percent >= 100
-                        ? '#d1d5db'
-                        : (() => {
-                          const shipDate = record.expectedShipDate;
-                          if (!shipDate) return '#10b981';
-                          const now = new Date();
-                          const delivery = new Date(shipDate as string);
-                          const diffDays = Math.ceil((delivery.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-                          if (diffDays < 0) return '#dc2626'; // 延期深红
-                          if (diffDays <= 3) return '#d97706'; // 预警橙黄
-                          return '#10b981'; // 正常翠绿
-                        })()
-                    }
-                    color2={
-                      percent >= 100
-                        ? '#e5e7eb'
-                        : (() => {
-                          const shipDate = record.expectedShipDate;
-                          if (!shipDate) return '#6ee7b7';
-                          const now = new Date();
-                          const delivery = new Date(shipDate as string);
-                          const diffDays = Math.ceil((delivery.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-                          if (diffDays < 0) return '#f87171'; // 延期浅红
-                          if (diffDays <= 3) return '#fbbf24'; // 预警浅黄
-                          return '#6ee7b7'; // 正常浅绿
-                        })()
-                    }
-                  />
-                </div>
-              );
-            })}
-          </div>
-        );
-      },
-    },
-    {
-      title: '操作',
-      key: 'action',
-      fixed: 'right' as const,
-      width: 140,
-      render: (_: any, record: ProductionOrder) => {
-        const frozen = isOrderFrozenByStatus(record);
-        return (
-          <RowActions
-            actions={[
-              // 明细按钮已删除（详情弹窗功能）
-              {
-                key: 'print',
-                label: '打印',
-                title: frozen ? '打印（订单已关单）' : '打印',
-                disabled: frozen,
-                onClick: () => setPrintingRecord(record),
-                primary: true,
-              },
-              {
-                key: 'edit',
-                label: '编辑',
-                title: frozen ? '编辑（订单已关单）' : '编辑',
-                disabled: frozen,
-                onClick: () => {
-                  setQuickEditRecord(record);
-                  setQuickEditVisible(true);
-                },
-              },
-              ...(isSupervisorOrAbove
-                ? [
-                  {
-                    key: 'close',
-                    label: '关单',
-                    disabled: frozen,
-                    onClick: () => handleCloseOrder(record),
-                  },
-                ]
-                : []),
-            ]}
-          />
-        );
-      },
-    },
-  ];
-
-  // ===== detailNodeCards (useMemo) 已删除 =====
-  // ===== 自动打开详情弹窗的逻辑已删除 =====
-  // autoOpenDetailOnceRef 和 useEffect 已移除（详情弹窗功能）
-
-  // 根据API筛选结果显示订单（筛选已在后端完成）
-  const displayOrders = useMemo(() => {
-    return orders;
-  }, [orders]);
 
   const pageContent = (
     <div className="production-progress-detail-page">
@@ -1291,7 +702,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               rowKey={(r: ProductionOrder) => String(r.id || r.orderNo)}
               loading={loading}
               columns={columns}
-              dataSource={displayOrders}
+              dataSource={orders}
               pagination={{
                 current: queryParams.page,
                 pageSize: queryParams.pageSize,
@@ -1305,7 +716,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             />
           ) : (
             <UniversalCardView
-              dataSource={displayOrders}
+              dataSource={orders}
               loading={loading}
               columns={6}
               coverField="styleCover"
@@ -1435,7 +846,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               rowKey={(r: ProductionOrder) => String(r.id || r.orderNo)}
               loading={loading}
               columns={columns}
-              dataSource={displayOrders}
+              dataSource={orders}
               pagination={{
                 current: queryParams.page,
                 pageSize: queryParams.pageSize,
@@ -1449,7 +860,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             />
           ) : (
             <UniversalCardView
-              dataSource={displayOrders}
+              dataSource={orders}
               loading={loading}
               columns={6}
               coverField="styleCover"
@@ -1546,10 +957,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       {/* 打印预览弹窗 - 使用通用打印组件 */}
       <StylePrintModal
         visible={printModalVisible}
-        onClose={() => {
-          setPrintModalVisible(false);
-          setPrintingRecord(null);
-        }}
+        onClose={closePrintModal}
         styleId={printingRecord?.styleId}
         orderId={printingRecord?.id}
         orderNo={printingRecord?.orderNo}
@@ -1573,10 +981,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       {/* 节点详情弹窗 - 水晶球生产节点看板 */}
       <NodeDetailModal
         visible={nodeDetailVisible}
-        onClose={() => {
-          setNodeDetailVisible(false);
-          setNodeDetailOrder(null);
-        }}
+        onClose={closeNodeDetail}
         orderId={nodeDetailOrder?.id}
         orderNo={nodeDetailOrder?.orderNo}
         nodeType={nodeDetailType}

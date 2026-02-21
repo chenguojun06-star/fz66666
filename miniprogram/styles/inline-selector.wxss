@@ -1,0 +1,125 @@
+/**
+ * 内联滚动选择器 - 通用样式
+ * 替代原生 <picker mode="selector"> 底部弹窗
+ * 支持点击选中 + 上下滑动浏览
+ *
+ * 使用方式：在页面 wxss 中 @import './styles/inline-selector.wxss';
+ *
+ * @version 1.0
+ * @date 2026-02-21
+ */
+
+/* === 选择器容器 === */
+.inline-selector {
+  background: var(--color-bg-gray, #f8f9fa);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* === 标题行 === */
+.inline-selector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px 4px;
+}
+
+.inline-selector-title {
+  font-size: 12px;
+  color: var(--color-text-secondary, #64748b);
+  font-weight: 600;
+}
+
+.inline-selector-hint {
+  font-size: 10px;
+  color: var(--color-text-disabled, #94a3b8);
+}
+
+/* === 滚动列表 === */
+.inline-selector-list {
+  max-height: 160px;
+  padding: 0 6px 6px;
+}
+
+/* === 单个选项 === */
+.inline-selector-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  margin-bottom: 4px;
+  border-radius: 8px;
+  background: var(--color-bg-card, #fff);
+  border: 2px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.inline-selector-item:last-child {
+  margin-bottom: 0;
+}
+
+.inline-selector-item.active {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+  border-color: var(--color-primary, #667eea);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+}
+
+/* === 左侧：radio + 文字 === */
+.inline-selector-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.inline-selector-radio {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--color-border, #cbd5e1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.inline-selector-radio.checked {
+  border-color: var(--color-primary, #667eea);
+  background: var(--color-primary, #667eea);
+}
+
+.inline-selector-radio-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.inline-selector-label {
+  font-size: 14px;
+  color: var(--color-text-primary, #1e293b);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inline-selector-item.active .inline-selector-label {
+  color: var(--color-primary, #667eea);
+}
+
+/* === 右侧：副文本（可选） === */
+.inline-selector-extra {
+  font-size: 13px;
+  color: var(--color-text-secondary, #64748b);
+  font-weight: 500;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.inline-selector-item.active .inline-selector-extra {
+  color: var(--color-primary, #667eea);
+  font-weight: 600;
+}

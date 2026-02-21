@@ -193,10 +193,12 @@ const SKUProcessor = {
    * @param {Object[]} skuInputList - SKU输入列表
    * @param {string} orderNo - 订单号
    * @param {string} styleNo - 款号
-   * @param {string} processNode - 工序名
+   * @param {string} processName - 工序名
+   * @param {Object} [options] - 额外选项
+   * @param {string} [options.scanCode] - 扫码内容（二维码原始值）
    * @returns {Object[]} 扫码请求列表
    */
-  generateScanRequests(skuInputList, orderNo, styleNo, processNode) {
+  generateScanRequests(skuInputList, orderNo, styleNo, processName, options = {}) {
     return skuInputList
       .filter(input => Number(input.inputQuantity) > 0)
       .map(input => ({
@@ -205,7 +207,9 @@ const SKUProcessor = {
         color: input.color,
         size: input.size,
         quantity: Number(input.inputQuantity),
-        processNode: processNode,
+        processName: processName,
+        progressStage: processName,
+        scanCode: options.scanCode || orderNo || '',
         action: 'scan',
       }));
   },

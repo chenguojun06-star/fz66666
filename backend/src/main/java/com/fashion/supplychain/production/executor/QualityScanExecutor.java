@@ -84,7 +84,7 @@ public class QualityScanExecutor {
 
         String st = order.getStatus() == null ? "" : order.getStatus().trim();
         if ("completed".equalsIgnoreCase(st)) {
-            throw new IllegalStateException("订单已完成，已停止质检");
+            throw new IllegalStateException("进度节点已完成，该订单已结束质检");
         }
 
         inventoryValidator.validateNotExceedOrderQuantity(order, "quality", "质检", qty, bundle);
@@ -251,10 +251,10 @@ public class QualityScanExecutor {
      * PC端和小程序共用此校验，确保业务逻辑一致
      */
     private void validateProductionPrerequisite(ProductionOrder order, String bundleId) {
-        String orderId = order == null ? null : order.getId();
-        if (!hasText(orderId) || !hasText(bundleId)) {
+        if (order == null || !hasText(order.getId()) || !hasText(bundleId)) {
             return;
         }
+        String orderId = order.getId();
         try {
             // 1. 从工序模板获取车缝父节点下的所有子工序
             String styleNo = order.getStyleNo();
@@ -461,8 +461,32 @@ public class QualityScanExecutor {
      * 计算剩余返修数量
      */
     private int computeRemainingRepairQuantity(String orderId, String bundleId, String excludeId) {
-        // TODO: 实现返修数量计算逻辑
-        return Integer.MAX_VALUE; // 暂时返回最大值
+        try {
+            // 1. 获取菲号原始裁剪数量
+            CuttingBundle bundle = cuttingBundleService.getById(bundleId);
+            if (bundle == null) {
+                return 0;
+            }
+            int totalQty = bundle.getQuantity() != null ? bundle.getQuantity() : 0;
+            if (totalQty <= 0) {
+                return 0;
+            }
+            // 2. 统计该菲号已入库数量（排除指定记录，避免重复计算当前操作）
+            LambdaQueryWrapper<ProductWarehousing> query = new LambdaQueryWrapper<ProductWarehousing>()
+                    .eq(ProductWarehousing::getOrderId, orderId)
+                    .eq(ProductWarehousing::getCuttingBundleId, bundleId);
+            if (hasText(excludeId)) {
+                query.ne(ProductWarehousing::getId, excludeId);
+            }
+            List<ProductWarehousing> warehousingList = productWarehousingService.list(query);
+            int warehoused = warehousingList.stream()
+                    .mapToInt(w -> w.getQualifiedQuantity() != null ? w.getQualifiedQuantity() : 0)
+                    .sum();
+            return Math.max(0, totalQty - warehoused);
+        } catch (Exception e) {
+            log.warn("计算剩余返修数量失败: orderId={}, bundleId={}", orderId, bundleId, e);
+            return Integer.MAX_VALUE;
+        }
     }
 
     /**

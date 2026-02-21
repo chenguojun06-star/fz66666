@@ -272,12 +272,12 @@ Page({
   },
 
   /**
-   * 扫码结果页 - 工序选择变更
+   * 扫码结果页 - 工序滚动选择
    * @param {Object} e - 事件对象
    * @returns {void} 无返回值
    */
-  onProcessPickerChange(e) {
-    ScanResultHandler.onProcessPickerChange(this, e);
+  onProcessScrollSelect(e) {
+    ScanResultHandler.onProcessScrollSelect(this, e);
   },
 
   /**
@@ -489,15 +489,6 @@ Page({
   },
 
   /**
-   * 仓库选择变更
-   * @param {Object} e - 事件对象
-   * @returns {void} 无返回值
-   */
-  onWarehouseChange(e) {
-    QualityHandler.onWarehouseChange(this, e);
-  },
-
-  /**
    * 选择质检结果
    * @param {Object} e - 事件对象
    * @returns {void} 无返回值
@@ -516,21 +507,12 @@ Page({
   },
 
   /**
-   * 缺陷类型变更
+   * 质检弹窗 - 内联选择器点击（缺陷分类/处理方式/仓库）
    * @param {Object} e - 事件对象
    * @returns {void} 无返回值
    */
-  onDefectTypesChange(e) {
-    QualityHandler.onDefectTypesChange(this, e);
-  },
-
-  /**
-   * 处理方式变更
-   * @param {Object} e - 事件对象
-   * @returns {void} 无返回值
-   */
-  onHandleMethodChange(e) {
-    QualityHandler.onHandleMethodChange(this, e);
+  onQmSelectorTap(e) {
+    QualityHandler.onQmSelectorTap(this, e);
   },
 
   /**

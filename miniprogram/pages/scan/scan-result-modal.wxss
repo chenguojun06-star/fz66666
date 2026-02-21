@@ -18,14 +18,43 @@
   border-radius: 6px;
 }
 
-.result-item.process-selector {
-  background: linear-gradient(135deg, var(--color-primary) 0%, #764ba2 100%);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+/* === 工序滚动选择器（基于 inline-selector 通用样式 + 价格扩展） === */
+.process-scroll-selector {
+  margin-top: 6px;
 }
 
-.result-item.process-selector .item-label {
-  color: #fff;
+.process-scroll-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px 4px;
+}
+
+.process-scroll-title {
+  font-size: 12px;
+  color: #64748b;
   font-weight: 600;
+}
+
+.process-scroll-hint {
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+.process-scroll-list {
+  max-height: 180px;
+  padding: 0 6px 6px;
+}
+
+/* 价格标签（工序选择器专有） */
+.process-item-price {
+  font-size: 14px;
+  color: #10b981;
+  font-weight: 700;
+}
+
+.inline-selector-item.active .process-item-price {
+  color: #059669;
 }
 
 .item-label {
@@ -57,31 +86,7 @@
   box-sizing: border-box;
 }
 
-.process-picker {
-  flex: 1;
-  text-align: right;
-}
-
-.picker-display {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 6px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.picker-value {
-  font-size: 13px;
-  color: #1e293b;
-  font-weight: 700;
-}
-
-.picker-arrow {
-  font-size: 10px;
-  color: #64748b;
-}
+/* 旧 picker 样式已移除，改用内联滚动选择器 */
 
 .result-hint {
   display: flex;

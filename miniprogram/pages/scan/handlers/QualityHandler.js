@@ -27,8 +27,16 @@ function closeQualityModal(page) {
   page.setData({ 'qualityModal.show': false });
 }
 
-function onWarehouseChange(page, e) {
-  page.setData({ 'qualityModal.warehouseIndex': e.detail.value });
+/**
+ * 通用内联选择器点击处理（替代原生 picker）
+ * @param {Object} page - Page 上下文
+ * @param {Object} e - 事件对象，包含 data-index 和 data-field
+ */
+function onQmSelectorTap(page, e) {
+  const { index, field } = e.currentTarget.dataset;
+  if (field && index !== undefined) {
+    page.setData({ [`qualityModal.${field}`]: Number(index) });
+  }
 }
 
 function onSelectQualityResult(page, e) {
@@ -37,14 +45,6 @@ function onSelectQualityResult(page, e) {
 
 function onDefectiveQuantityInput(page, e) {
   page.setData({ 'qualityModal.unqualifiedQuantity': e.detail.value });
-}
-
-function onDefectTypesChange(page, e) {
-  page.setData({ 'qualityModal.defectCategory': e.detail.value });
-}
-
-function onHandleMethodChange(page, e) {
-  page.setData({ 'qualityModal.handleMethod': e.detail.value });
 }
 
 function onRemarkInput(page, e) {
@@ -201,11 +201,9 @@ async function submitQualityResult(page) {
 module.exports = {
   showQualityModal,
   closeQualityModal,
-  onWarehouseChange,
+  onQmSelectorTap,
   onSelectQualityResult,
   onDefectiveQuantityInput,
-  onDefectTypesChange,
-  onHandleMethodChange,
   onRemarkInput,
   onUploadQualityImage,
   onDeleteQualityImage,

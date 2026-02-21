@@ -225,8 +225,9 @@ Page({
     }
   },
 
-  onTypeChange(e) {
-    this.setData({ 'operationModal.typeIndex': e.detail.value });
+  onTypeSelect(e) {
+    const index = e.currentTarget.dataset.index;
+    this.setData({ 'operationModal.typeIndex': Number(index) });
   },
 
   onDateChange(e) {

@@ -1,3 +1,5 @@
+@import '/styles/inline-selector.wxss';
+
 .container {
   min-height: 100vh;
   background: #f3f5f9;
@@ -267,13 +269,7 @@
   color: var(--color-error);
 }
 
-.picker {
-  background: var(--color-bg-gray);
-  padding: 20rpx;
-  border-radius: 8rpx;
-  font-size: 28rpx;
-  color: var(--color-text-primary);
-}
+/* 旧 .picker 样式已废弃，改用 inline-selector 通用组件 */
 
 .textarea {
   width: 100%;
