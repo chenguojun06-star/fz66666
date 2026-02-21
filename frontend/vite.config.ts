@@ -34,6 +34,12 @@ export default defineConfig({
     host: '0.0.0.0',  // 【固定】监听所有网络接口
     port: 5173,       // 【固定】开发端口
     strictPort: false,
+    headers: {
+      // CSP: unsafe-eval 供 ECharts v6 / Three.js (new Function) 使用
+      // unsafe-inline 供 Ant Design 内联样式使用
+      'Content-Security-Policy':
+        "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' ws: wss: http: https:; font-src 'self' data:; worker-src blob: 'self'; media-src 'self' blob:;",
+    },
     hmr: {
       protocol: 'ws',
       host: '192.168.1.17',  // 【固定】HMR 必须使用此内网 IP（已更新为当前机器IP）
