@@ -21,13 +21,6 @@ public class WebSocketConfig implements WebSocketConfigurer {
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(realTimeWebSocketHandler, "/ws/realtime")
-                .setAllowedOriginPatterns(
-                    "http://localhost:*",
-                    "http://127.0.0.1:*",
-                    "http://192.168.*:*",  // 内网
-                    "http://10.*:*",       // 内网
-                    "https://*.tcloudbase.com",  // 微信云托管
-                    "https://*.sh.run.tcloudbase.com"  // 微信云托管
-                );
+                .setAllowedOrigins("*"); // WebSocket 无需限制 Origin，认证由 JWT token 控制
     }
 }

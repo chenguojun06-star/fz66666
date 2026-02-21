@@ -764,10 +764,10 @@ const PaymentCenterPage: React.FC = () => {
                   <>
                     {/* 统计行 */}
                     <div style={{ display: 'flex', gap: 24, marginBottom: 16, flexWrap: 'wrap' }}>
-                      <Statistic title="待付款总额" value={pendingStats.totalAmount} precision={2} prefix="¥" styles={{ content: { color: '#cf1322' } }} />
-                      <Statistic title="工厂对账" value={pendingStats.reconCount} suffix="笔" />
-                      <Statistic title="费用报销" value={pendingStats.reimbCount} suffix="笔" />
-                      <Statistic title="员工工资" value={pendingStats.payrollCount} suffix="笔" />
+                      <Statistic title="待付款总额" value={pendingStats.totalAmount} precision={2} prefix="¥" valueStyle={{ fontSize: 18, color: '#cf1322' }} />
+                      <Statistic title="工厂对账" value={pendingStats.reconCount} suffix="笔" valueStyle={{ fontSize: 18 }} />
+                      <Statistic title="费用报销" value={pendingStats.reimbCount} suffix="笔" valueStyle={{ fontSize: 18 }} />
+                      <Statistic title="员工工资" value={pendingStats.payrollCount} suffix="笔" valueStyle={{ fontSize: 18 }} />
                     </div>
 
                     {/* 过滤 */}
