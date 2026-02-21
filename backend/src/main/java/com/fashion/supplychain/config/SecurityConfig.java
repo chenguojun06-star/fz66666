@@ -95,6 +95,7 @@ public class SecurityConfig implements WebMvcConfigurer {
                 )
                 .authorizeHttpRequests(authz -> authz
                         .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .antMatchers("/ws/**").permitAll()  // WebSocket握手是HTTP升级请求，自行鉴权(userId query param)
                         .antMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .antMatchers("/api/system/tenant/apply").permitAll()
                         .antMatchers("/api/system/tenant/public-list").permitAll()
