@@ -32,8 +32,8 @@ public class RealTimeWebSocketHandler extends TextWebSocketHandler {
     // 心跳检测：sessionId -> lastPingTime
     private final Map<String, Long> lastPingTime = new ConcurrentHashMap<>();
 
-    // 心跳超时时间（毫秒）
-    private static final long HEARTBEAT_TIMEOUT = 60000; // 60秒
+    // 心跳超时时间（毫秒） — 如需启用心跳超时检测可恢复
+    // private static final long HEARTBEAT_TIMEOUT = 60000;
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -112,7 +112,6 @@ public class RealTimeWebSocketHandler extends TextWebSocketHandler {
      */
     private void handleBusinessMessage(WebSocketSession session, WebSocketMessage<?> message) {
         String type = message.getType();
-        String userId = sessionManager.getUserIdBySession(session.getId());
 
         // 根据消息类型处理
         WebSocketMessageType msgType = WebSocketMessageType.fromCode(type);

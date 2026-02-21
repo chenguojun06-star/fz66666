@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -48,6 +49,18 @@ public class Tenant {
 
     /** 付费状态: TRIAL=免费试用, PAID=已付费 */
     private String paidStatus = "TRIAL";
+
+    /** 套餐类型: TRIAL/BASIC/PRO/ENTERPRISE */
+    private String planType = "TRIAL";
+
+    /** 月费(元) */
+    private BigDecimal monthlyFee = BigDecimal.ZERO;
+
+    /** 存储配额(MB)，默认1GB */
+    private Long storageQuotaMb = 1024L;
+
+    /** 已用存储(MB) */
+    private Long storageUsedMb = 0L;
 
     /** 申请账号名（仅申请入驻流程使用，审批通过后创建账号） */
     private String applyUsername;

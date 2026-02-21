@@ -5,11 +5,9 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.style.entity.StyleAttachment;
 import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.entity.StyleInfo;
-import com.fashion.supplychain.style.entity.StyleOperationLog;
 import com.fashion.supplychain.style.service.StyleAttachmentService;
 import com.fashion.supplychain.style.service.StyleBomService;
 import com.fashion.supplychain.style.service.StyleInfoService;
-import com.fashion.supplychain.style.service.StyleOperationLogService;
 import com.fashion.supplychain.template.orchestration.TemplateLibraryOrchestrator;
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -41,9 +39,6 @@ public class StyleStageHelper {
 
     @Autowired
     private StyleBomService styleBomService;
-
-    @Autowired
-    private StyleOperationLogService styleOperationLogService;
 
     @Autowired
     private TemplateLibraryOrchestrator templateLibraryOrchestrator;
@@ -162,32 +157,6 @@ public class StyleStageHelper {
         styleLogHelper.saveMaintenanceLog(id, "PRODUCTION_RESET", reason);
         log.info("生产制单已退回维护: styleId={}, reason={}", id, reason);
         return true;
-    }
-
-    private boolean isProductionRequirementsLocked(Long styleId) {
-        if (styleId == null) {
-            return false;
-        }
-
-        StyleOperationLog saved = styleOperationLogService.lambdaQuery()
-                .eq(StyleOperationLog::getStyleId, styleId)
-                .eq(StyleOperationLog::getAction, "PRODUCTION_REQUIREMENTS_SAVE")
-                .orderByDesc(StyleOperationLog::getCreateTime)
-                .last("limit 1")
-                .one();
-        if (saved == null || saved.getCreateTime() == null) {
-            return false;
-        }
-
-        StyleOperationLog rollback = styleOperationLogService.lambdaQuery()
-                .eq(StyleOperationLog::getStyleId, styleId)
-                .eq(StyleOperationLog::getAction, "PRODUCTION_REQUIREMENTS_ROLLBACK")
-                .orderByDesc(StyleOperationLog::getCreateTime)
-                .last("limit 1")
-                .one();
-
-        return rollback == null || rollback.getCreateTime() == null
-                || rollback.getCreateTime().isBefore(saved.getCreateTime());
     }
 
     // ==================== Pattern Stage ====================

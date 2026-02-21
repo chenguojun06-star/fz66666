@@ -21,10 +21,40 @@ export interface TenantInfo {
   contactPhone: string;
   status: string;
   paidStatus: string;
+  planType: string;
+  monthlyFee: number;
+  storageQuotaMb: number;
+  storageUsedMb: number;
   maxUsers: number;
   ownerUserId: number;
   ownerUsername?: string;
   applyUsername?: string;
+  expireTime?: string;
+  remark?: string;
+  createTime: string;
+}
+
+export interface PlanDefinition {
+  code: string;
+  label: string;
+  monthlyFee: number;
+  storageQuotaMb: number;
+  maxUsers: number;
+}
+
+export interface BillingRecord {
+  id: number;
+  billingNo: string;
+  tenantId: number;
+  tenantName: string;
+  billingMonth: string;
+  planType: string;
+  baseFee: number;
+  storageFee: number;
+  userFee: number;
+  totalAmount: number;
+  status: string;
+  paidTime?: string;
   remark?: string;
   createTime: string;
 }
@@ -62,6 +92,30 @@ const tenantService = {
   updateApplication: (id: number, data: { applyUsername?: string; contactName?: string; contactPhone?: string }) =>
     api.post(`${BASE}/${id}/update-application`, data),
   markTenantPaid: (id: number, paidStatus: string) => api.post(`${BASE}/${id}/mark-paid`, { paidStatus }),
+
+  // ========== 套餐与收费管理 ==========
+  /** 获取预设套餐方案 */
+  getPlanDefinitions: () => api.get(`${BASE}/plans`),
+  /** 设置租户套餐 */
+  updateTenantPlan: (id: number, data: {
+    planType: string;
+    monthlyFee?: number;
+    storageQuotaMb?: number;
+    maxUsers?: number;
+  }) => api.post(`${BASE}/${id}/plan`, data),
+  /** 获取租户计费概览 */
+  getTenantBillingOverview: (id: number) => api.get(`${BASE}/${id}/billing-overview`),
+  /** 生成月度账单 */
+  generateMonthlyBill: (id: number, billingMonth?: string) =>
+    api.post(`${BASE}/${id}/generate-bill`, billingMonth ? { billingMonth } : {}),
+  /** 查询账单列表 */
+  listBillingRecords: (params: { tenantId?: number; page?: number; pageSize?: number; status?: string }) =>
+    api.post(`${BASE}/billing-records`, params),
+  /** 标记账单已支付 */
+  markBillPaid: (billId: number) => api.post(`${BASE}/billing/${billId}/mark-paid`, {}),
+  /** 减免账单 */
+  waiveBill: (billId: number, remark?: string) =>
+    api.post(`${BASE}/billing/${billId}/waive`, remark ? { remark } : {}),
 
   // ========== 子账号管理 ==========
   addSubAccount: (data: Record<string, unknown>) => api.post(`${BASE}/sub/add`, data),

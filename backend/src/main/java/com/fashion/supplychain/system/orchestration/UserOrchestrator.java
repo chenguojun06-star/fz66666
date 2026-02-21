@@ -11,12 +11,9 @@ import com.fashion.supplychain.system.entity.Role;
 import com.fashion.supplychain.system.entity.User;
 import com.fashion.supplychain.system.entity.Tenant;
 import com.fashion.supplychain.system.service.LoginLogService;
-import com.fashion.supplychain.system.service.PermissionService;
-import com.fashion.supplychain.system.service.RolePermissionService;
 import com.fashion.supplychain.system.service.RoleService;
 import com.fashion.supplychain.system.service.TenantService;
 import com.fashion.supplychain.system.service.UserService;
-import com.fashion.supplychain.service.RedisService;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -28,9 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.util.StringUtils;
@@ -56,19 +51,10 @@ public class UserOrchestrator {
     private RoleService roleService;
 
     @Autowired
-    private RolePermissionService rolePermissionService;
-
-    @Autowired
-    private PermissionService permissionService;
-
-    @Autowired
     private LoginLogService loginLogService;
 
     @Autowired
     private AuthTokenService authTokenService;
-
-    @Autowired
-    private RedisService redisService;
 
     @Autowired
     private PermissionCalculationEngine permissionEngine;
@@ -78,11 +64,6 @@ public class UserOrchestrator {
 
     @Autowired(required = false)
     private StringRedisTemplate stringRedisTemplate;
-
-    /** 权限缓存前缀（保留兼容，实际计算已委托给PermissionCalculationEngine） */
-    private static final String PERM_CACHE_PREFIX = "user:permissions:role:";
-    /** 权限缓存30分钟 */
-    private static final long PERM_CACHE_TTL_MINUTES = 30;
 
     public Page<User> list(Long page, Long pageSize, String username, String name, String roleName, String status) {
         Long tenantId = UserContext.tenantId();
@@ -149,7 +130,10 @@ public class UserOrchestrator {
         if (!UserContext.isTopAdmin()) {
             throw new AccessDeniedException("无权限操作");
         }
-        String remark = TextUtils.safeText(user == null ? null : user.getOperationRemark());
+        if (user == null) {
+            throw new IllegalArgumentException("用户信息不能为空");
+        }
+        String remark = TextUtils.safeText(user.getOperationRemark());
         if (!StringUtils.hasText(remark)) {
             throw new IllegalArgumentException("操作原因不能为空");
         }
@@ -587,17 +571,6 @@ public class UserOrchestrator {
             return permissionEngine.calculatePermissions(user.getId(), rid, user.getTenantId());
         }
         return permissionEngine.getRolePermissionCodes(rid);
-    }
-
-    /**
-     * 内部方法：根据角色ID获取权限代码列表（带Redis缓存）
-     * 保留兼容性，委托给PermissionCalculationEngine
-     */
-    private List<String> getPermissionCodesByRoleId(Long roleId) {
-        if (roleId == null) {
-            return List.of();
-        }
-        return permissionEngine.getRolePermissionCodes(roleId);
     }
 
     private void sanitizeUser(User user) {

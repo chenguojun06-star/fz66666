@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.system.entity.Role;
 import com.fashion.supplychain.system.entity.Tenant;
+import com.fashion.supplychain.system.entity.TenantBillingRecord;
 import com.fashion.supplychain.system.entity.User;
 import com.fashion.supplychain.system.orchestration.TenantOrchestrator;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -281,6 +282,78 @@ public class TenantController {
     public Result<Boolean> markTenantPaid(@PathVariable Long id, @RequestBody Map<String, String> params) {
         String paidStatus = params.getOrDefault("paidStatus", "PAID");
         return Result.success(tenantOrchestrator.markTenantPaid(id, paidStatus));
+    }
+
+    // ========== 套餐与收费管理 ==========
+
+    /**
+     * 获取套餐方案列表
+     */
+    @GetMapping("/plans")
+    public Result<List<Map<String, Object>>> getPlanDefinitions() {
+        return Result.success(tenantOrchestrator.getPlanDefinitions());
+    }
+
+    /**
+     * 设置租户套餐（超管）
+     */
+    @PostMapping("/{id}/plan")
+    public Result<Tenant> updateTenantPlan(@PathVariable Long id, @RequestBody Map<String, Object> params) {
+        String planType = (String) params.get("planType");
+        java.math.BigDecimal monthlyFee = params.get("monthlyFee") != null
+                ? new java.math.BigDecimal(params.get("monthlyFee").toString()) : null;
+        Long storageQuotaMb = params.get("storageQuotaMb") != null
+                ? Long.valueOf(params.get("storageQuotaMb").toString()) : null;
+        Integer maxUsers = params.get("maxUsers") != null
+                ? Integer.valueOf(params.get("maxUsers").toString()) : null;
+        return Result.success(tenantOrchestrator.updateTenantPlan(id, planType, monthlyFee, storageQuotaMb, maxUsers));
+    }
+
+    /**
+     * 获取租户存储与计费概览
+     */
+    @GetMapping("/{id}/billing-overview")
+    public Result<Map<String, Object>> getTenantBillingOverview(@PathVariable Long id) {
+        return Result.success(tenantOrchestrator.getTenantBillingOverview(id));
+    }
+
+    /**
+     * 生成月度账单
+     */
+    @PostMapping("/{id}/generate-bill")
+    public Result<TenantBillingRecord> generateMonthlyBill(@PathVariable Long id,
+            @RequestBody(required = false) Map<String, String> params) {
+        String billingMonth = params != null ? params.get("billingMonth") : null;
+        return Result.success(tenantOrchestrator.generateMonthlyBill(id, billingMonth));
+    }
+
+    /**
+     * 查询账单列表（可按租户ID筛选）
+     */
+    @PostMapping("/billing-records")
+    public Result<Page<TenantBillingRecord>> listBillingRecords(@RequestBody Map<String, Object> params) {
+        Long tenantId = params.get("tenantId") != null ? Long.valueOf(params.get("tenantId").toString()) : null;
+        Long page = params.get("page") != null ? Long.valueOf(params.get("page").toString()) : 1L;
+        Long pageSize = params.get("pageSize") != null ? Long.valueOf(params.get("pageSize").toString()) : 20L;
+        String status = params.get("status") != null ? params.get("status").toString() : null;
+        return Result.success(tenantOrchestrator.listBillingRecords(tenantId, page, pageSize, status));
+    }
+
+    /**
+     * 标记账单已支付
+     */
+    @PostMapping("/billing/{billId}/mark-paid")
+    public Result<Boolean> markBillPaid(@PathVariable Long billId) {
+        return Result.success(tenantOrchestrator.markBillPaid(billId));
+    }
+
+    /**
+     * 减免账单
+     */
+    @PostMapping("/billing/{billId}/waive")
+    public Result<Boolean> waiveBill(@PathVariable Long billId, @RequestBody(required = false) Map<String, String> params) {
+        String remark = params != null ? params.get("remark") : null;
+        return Result.success(tenantOrchestrator.waiveBill(billId, remark));
     }
 
     // ========== 工人注册与审批 ==========

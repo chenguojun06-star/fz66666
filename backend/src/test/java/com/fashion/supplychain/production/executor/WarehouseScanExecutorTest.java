@@ -153,7 +153,6 @@ class WarehouseScanExecutorTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void testExecute_WarehouseScan_BundleHasDefect() {
         // Given: 菲号最后一条记录是 unqualified+返修 — 应阻止入库
         baseParams.put("quantity", "50");
@@ -235,7 +234,6 @@ class WarehouseScanExecutorTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void testFindWarehousingGeneratedRecord_Exists() {
         // Given: 入库后已生成扫码记录，通过 lambdaQuery 链式查询到
         baseParams.put("quantity", "50");
