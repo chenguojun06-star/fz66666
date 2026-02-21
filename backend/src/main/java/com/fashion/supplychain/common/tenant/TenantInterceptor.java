@@ -79,11 +79,8 @@ public class TenantInterceptor implements InnerInterceptor {
     @Override
     public void beforeQuery(Executor executor, MappedStatement ms, Object parameter,
                             RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) throws SQLException {
-        if (isBypassed()) return; // 超管跨租户操作旁路
-
         UserContext ctx = UserContext.get();
         if (ctx == null) {
-            // 无登录上下文（系统任务），不过滤
             return;
         }
 
@@ -91,12 +88,15 @@ public class TenantInterceptor implements InnerInterceptor {
         String originalSql = boundSql.getSql();
 
         if (tenantId == null) {
-            // 超级管理员：系统管理表（EXCLUDED_TABLES）不过滤，业务表强制返回空
-            // 安全规则：超管不允许浏览任何租户的业务数据（生产订单/款式/财务等）
+            // 超级管理员分支
             if (shouldSkipSql(originalSql)) {
-                return; // 系统管理表（无 tenant_id 列）：正常放行
+                return; // 系统共享表（EXCLUDED_TABLES）：放行
             }
-            // 业务表：追加 tenant_id IS NULL，所有业务记录都有 tenant_id，返回0行
+            // 超管可管理的表（t_user/t_role 等）：放行——审批、创建账号需要跨租户操作
+            if (involvesOnlySuperAdminTables(originalSql)) {
+                return;
+            }
+            // 纯业务表（生产、款式、财务等）：追加 tenant_id IS NULL → 返回 0 行
             String blockedSql = addTenantIsNullFilter(originalSql);
             setFieldValue(boundSql, "sql", blockedSql);
             log.debug("[TenantInterceptor] 超管业务表查询已隔离（tenant_id IS NULL）");
@@ -118,8 +118,6 @@ public class TenantInterceptor implements InnerInterceptor {
 
     @Override
     public void beforeUpdate(Executor executor, MappedStatement ms, Object parameter) throws SQLException {
-        if (isBypassed()) return; // 超管跨租户操作旁路
-
         Long tenantId = getCurrentTenantId();
         if (tenantId == null) {
             return;
@@ -175,6 +173,26 @@ public class TenantInterceptor implements InnerInterceptor {
             }
         }
         return false;
+    }
+
+    /**
+     * 判断 SQL 涉及的所有表是否都属于超管可管理范围
+     * （SUPERADMIN_MANAGED_TABLES + SHARED_TENANT_TABLES + EXCLUDED_TABLES）。
+     * 如果 SQL 涉及任何纯业务表（生产、款式、财务等），返回 false。
+     */
+    private boolean involvesOnlySuperAdminTables(String sql) {
+        Matcher matcher = TABLE_PATTERN.matcher(sql);
+        boolean hasTable = false;
+        while (matcher.find()) {
+            String tableName = matcher.group(1).replace("`", "").trim().toLowerCase();
+            hasTable = true;
+            if (!SUPERADMIN_MANAGED_TABLES.contains(tableName)
+                    && !SHARED_TENANT_TABLES.contains(tableName)
+                    && !EXCLUDED_TABLES.contains(tableName)) {
+                return false; // 涉及业务表，不能放行
+            }
+        }
+        return hasTable; // 所有表都在超管可管理范围内
     }
 
     /**

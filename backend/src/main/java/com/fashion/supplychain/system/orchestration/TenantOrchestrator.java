@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.UserContext;
-import com.fashion.supplychain.common.tenant.TenantInterceptor;
 import com.fashion.supplychain.system.entity.*;
 import com.fashion.supplychain.system.service.*;
 import lombok.extern.slf4j.Slf4j;
@@ -77,14 +76,9 @@ public class TenantOrchestrator {
                                              String ownerUsername, String ownerPassword,
                                              String ownerName, Integer maxUsers) {
         assertSuperAdmin();
-        // 超管跨租户操作：绕过 TenantInterceptor，否则 t_user/t_role 查询被拦截
-        TenantInterceptor.enableBypass();
-        try {
-            return doCreateTenant(tenantName, tenantCode, contactName, contactPhone,
-                                  ownerUsername, ownerPassword, ownerName, maxUsers);
-        } finally {
-            TenantInterceptor.disableBypass();
-        }
+        // TenantInterceptor 已通过 SUPERADMIN_MANAGED_TABLES 精确放行 t_user/t_role
+        return doCreateTenant(tenantName, tenantCode, contactName, contactPhone,
+                              ownerUsername, ownerPassword, ownerName, maxUsers);
     }
 
     private Map<String, Object> doCreateTenant(String tenantName, String tenantCode,
@@ -232,13 +226,8 @@ public class TenantOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> approveApplication(Long tenantId) {
         assertSuperAdmin();
-        // 超管跨租户操作：绕过 TenantInterceptor，否则创建角色/用户后验证查询被拦截
-        TenantInterceptor.enableBypass();
-        try {
-            return doApproveApplication(tenantId);
-        } finally {
-            TenantInterceptor.disableBypass();
-        }
+        // TenantInterceptor 已通过 SUPERADMIN_MANAGED_TABLES 精确放行 t_user/t_role
+        return doApproveApplication(tenantId);
     }
 
     private Map<String, Object> doApproveApplication(Long tenantId) {
@@ -344,13 +333,8 @@ public class TenantOrchestrator {
      */
     public Page<Tenant> listTenants(Long page, Long pageSize, String tenantName, String status) {
         assertSuperAdmin();
-        // 超管跨租户操作：需要查询 t_user 填充主账号用户名，绕过 TenantInterceptor
-        TenantInterceptor.enableBypass();
-        try {
-            return doListTenants(page, pageSize, tenantName, status);
-        } finally {
-            TenantInterceptor.disableBypass();
-        }
+        // TenantInterceptor 已通过 SUPERADMIN_MANAGED_TABLES 精确放行 t_user/t_role
+        return doListTenants(page, pageSize, tenantName, status);
     }
 
     private Page<Tenant> doListTenants(Long page, Long pageSize, String tenantName, String status) {
