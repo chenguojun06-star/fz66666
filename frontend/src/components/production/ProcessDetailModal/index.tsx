@@ -874,11 +874,6 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
             label: '工序委派',
             children: delegationContent,
           }] : []),
-          ...(scanRecordContent ? [{
-            key: 'scanRecords',
-            label: '操作记录',
-            children: scanRecordContent,
-          }] : []),
           {
             key: 'processTracking',
             label: '工序跟踪',

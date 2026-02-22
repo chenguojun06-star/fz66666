@@ -338,6 +338,7 @@ public class OrderFlowStageFillHelper {
                         : scanRecordDomainService.clampPercent(
                                 (int) Math.round(Math.max(0, secondaryProcessQty) * 100.0 / baseQtyForRate));
                 o.setSecondaryProcessCompletionRate(secondaryProcessRate);
+                o.setSecondaryProcessRate(secondaryProcessRate); // 前端 alias
 
                 // 设置包装环节（新增）
                 o.setPackagingStartTime(packagingStart);
@@ -713,6 +714,7 @@ public class OrderFlowStageFillHelper {
                     : scanRecordDomainService.clampPercent(
                             (int) Math.round(Math.max(0, secondaryProcessQty) * 100.0 / o.getOrderQuantity()));
             o.setSecondaryProcessCompletionRate(secondaryProcessRate);
+            o.setSecondaryProcessRate(secondaryProcessRate); // 前端 alias
 
             // 设置包装环节（新增 - 兜底分支）
             o.setPackagingStartTime(packagingStart);

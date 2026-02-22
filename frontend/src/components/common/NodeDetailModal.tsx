@@ -1226,12 +1226,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
                 label: <span><FileTextOutlined /> 设置</span>,
                 children: renderSettingsTab(),
               },
-              // 样板生产显示专用的扫码记录Tab
-              isPatternProduction && {
-                key: 'patternScanRecords',
-                label: <span><HistoryOutlined /> 操作记录 ({patternScanRecords.length})</span>,
-                children: renderPatternScanRecordsTab(),
-              },
+              // 样板生产扫码记录Tab已移除（需要时可在工序跟踪查看）
               // 大货生产显示菲号明细、操作员 tab（扫码记录已合并到操作历史）
               showProductionTabs && {
                 key: 'bundles',
@@ -1256,11 +1251,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
                   />
                 ),
               },
-              {
-                key: 'history',
-                label: <span><ClockCircleOutlined /> 操作历史 ({historyTableRows.length})</span>,
-                children: renderHistoryTab(),
-              },
+
             ].filter(Boolean);
           })()}
         />
