@@ -430,26 +430,35 @@ const AppStore: React.FC = () => {
 
         {wizardStep === 0 && (
           <div>
-            <Alert type="success" showIcon icon={<CheckCircleOutlined />}
-              message="API凭证已自动生成！" description="系统已为您自动创建API密钥并配置好所有内部接口端点。"
-              style={{ marginBottom: 16 }} />
-            <div style={{ background: '#f6f8fa', padding: 16, borderRadius: 8, marginBottom: 16 }}>
-              <div style={{ marginBottom: 8 }}>
-                <Text type="secondary" style={{ fontSize: 12 }}>AppKey</Text>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Text code style={{ fontSize: 13, fontWeight: 600 }}>{wizardData.appKey}</Text>
-                  <CopyOutlined style={{ cursor: 'pointer', color: 'var(--color-primary)' }} onClick={() => copyToClipboard(wizardData.appKey || '')} />
+            {wizardData.appKey && wizardData.appSecret ? (
+              <>
+                <Alert type="success" showIcon icon={<CheckCircleOutlined />}
+                  message="API凭证已自动生成！" description="系统已为您自动创建API密钥并配置好所有内部接口端点。"
+                  style={{ marginBottom: 16 }} />
+                <div style={{ background: '#f6f8fa', padding: 16, borderRadius: 8, marginBottom: 16 }}>
+                  <div style={{ marginBottom: 8 }}>
+                    <Text type="secondary" style={{ fontSize: 12 }}>AppKey</Text>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Text code style={{ fontSize: 13, fontWeight: 600 }}>{wizardData.appKey}</Text>
+                      <CopyOutlined style={{ cursor: 'pointer', color: 'var(--color-primary)' }} onClick={() => copyToClipboard(wizardData.appKey || '')} />
+                    </div>
+                  </div>
+                  <div>
+                    <Text type="secondary" style={{ fontSize: 12 }}>AppSecret</Text>
+                    <Alert type="warning" showIcon style={{ padding: '4px 8px', fontSize: 11, marginBottom: 4 }} message="⚠️ 密钥仅显示一次，请立即保存！" />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Text code style={{ fontSize: 13, fontWeight: 600, color: '#cf1322' }}>{wizardData.appSecret}</Text>
+                      <CopyOutlined style={{ cursor: 'pointer', color: 'var(--color-primary)' }} onClick={() => copyToClipboard(wizardData.appSecret || '')} />
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div>
-                <Text type="secondary" style={{ fontSize: 12 }}>AppSecret</Text>
-                <Alert type="warning" showIcon style={{ padding: '4px 8px', fontSize: 11, marginBottom: 4 }} message="⚠️ 密钥仅显示一次，请立即保存！" />
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Text code style={{ fontSize: 13, fontWeight: 600, color: '#cf1322' }}>{wizardData.appSecret}</Text>
-                  <CopyOutlined style={{ cursor: 'pointer', color: 'var(--color-primary)' }} onClick={() => copyToClipboard(wizardData.appSecret || '')} />
-                </div>
-              </div>
-            </div>
+              </>
+            ) : (
+              <Alert type="error" showIcon
+                message="API凭证生成失败"
+                description="试用已开通但API凭证创建失败，请前往「API对接管理」手动创建凭证，或联系管理员处理。"
+                style={{ marginBottom: 16 }} />
+            )}
             {wizardData.apiEndpoints && wizardData.apiEndpoints.length > 0 && (
               <div style={{ marginBottom: 16 }}>
                 <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 13 }}>✅ 已自动匹配的API端点：</div>
@@ -466,7 +475,10 @@ const AppStore: React.FC = () => {
             )}
             <div style={{ textAlign: 'right', marginTop: 16 }}>
               <Button style={{ marginRight: 8 }} onClick={handleSetupSkip}>稍后配置</Button>
-              <Button type="primary" icon={<SettingOutlined />} onClick={() => setWizardStep(1)}>下一步：填写您的接口地址</Button>
+              <Button type="primary" icon={<SettingOutlined />} onClick={() => setWizardStep(1)}
+                disabled={!wizardData.tenantAppId}>
+                {wizardData.tenantAppId ? '下一步：填写您的接口地址' : '凭证未就绪，请稍后在管理页配置'}
+              </Button>
             </div>
           </div>
         )}

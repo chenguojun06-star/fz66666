@@ -52,6 +52,9 @@ public class CosService {
     @Value("${fashion.cos.bucket:}")
     private String bucket;
 
+    @Value("${fashion.upload-path:./uploads/}")
+    private String uploadPath;
+
     /** 预签名 URL 有效期：2 小时 */
     private static final long PRESIGNED_EXPIRE_MS = 2 * 3600_000L;
 
@@ -64,8 +67,34 @@ public class CosService {
             ClientConfig clientConfig = new ClientConfig(new Region(region));
             cosClient = new COSClient(credentials, clientConfig);
             log.info("[COS] 已启用腾讯云 COS 文件存储: bucket={}, region={}", bucket, region);
+            // 启动时验证 COS 连接（尝试 list 根目录）
+            try {
+                cosClient.listObjects(bucket, "tenants/");
+                log.info("[COS] COS 连接验证成功 ✅");
+            } catch (Exception e) {
+                log.error("[COS] ⚠️⚠️⚠️ COS 连接验证失败！bucket={}, region={}, 错误: {}。" +
+                        "文件上传/下载将会失败！请检查 COS_SECRET_ID、COS_SECRET_KEY、COS_BUCKET 环境变量是否正确。",
+                        bucket, region, e.getMessage());
+            }
         } else {
-            log.info("[COS] 未配置 COS，使用本地文件存储（开发模式）");
+            // 检测是否在生产环境（容器内无 .run/backend.env 文件）
+            boolean isProduction = System.getenv("SPRING_PROFILES_ACTIVE") != null
+                    && System.getenv("SPRING_PROFILES_ACTIVE").contains("prod");
+            if (isProduction || "/uploads/".equals(uploadPath) || "/uploads".equals(uploadPath)) {
+                log.error("\n" +
+                    "╔══════════════════════════════════════════════════════════════════╗\n" +
+                    "║  ⛔ COS 未配置！生产环境文件将存储在容器本地磁盘！              ║\n" +
+                    "║  容器重启/缩扩容后所有上传的文件将永久丢失！                    ║\n" +
+                    "║                                                                ║\n" +
+                    "║  请在云托管环境变量中配置：                                    ║\n" +
+                    "║    COS_SECRET_ID  = <你的腾讯云 API SecretId>                  ║\n" +
+                    "║    COS_SECRET_KEY = <你的腾讯云 API SecretKey>                 ║\n" +
+                    "║    COS_BUCKET     = <存储桶名-AppId>                           ║\n" +
+                    "║    COS_REGION     = ap-shanghai                                ║\n" +
+                    "╚══════════════════════════════════════════════════════════════════╝");
+            } else {
+                log.info("[COS] 未配置 COS，使用本地文件存储（开发模式）");
+            }
         }
     }
 

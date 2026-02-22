@@ -1,0 +1,87 @@
+#!/bin/bash
+# ============================================================
+# COS（腾讯云对象存储）配置向导
+#
+# 用途：帮助你在微信云托管中配置文件持久化存储
+# 一旦配置，图片上传后不会因容器重启丢失
+# ============================================================
+
+set -e
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+echo ""
+echo "╔══════════════════════════════════════════════════════════════╗"
+echo "║          腾讯云 COS 文件存储配置向导                        ║"
+echo "╚══════════════════════════════════════════════════════════════╝"
+echo ""
+echo -e "${RED}【问题】你的图片全部 404 是因为：${NC}"
+echo ""
+echo "  1. COS 未配置 → 文件存到容器本地 /uploads/"
+echo "  2. 容器重启/扩缩容 → /uploads/ 被清空"
+echo "  3. 之前上传的图片全部永久丢失 → 404"
+echo ""
+echo -e "${GREEN}【解决方案】配置腾讯云 COS 对象存储：${NC}"
+echo ""
+echo "════════════════════════════════════════════════════════════════"
+echo ""
+echo -e "${CYAN}步骤 1：创建 COS 存储桶${NC}"
+echo ""
+echo "  1. 登录腾讯云控制台：https://console.cloud.tencent.com/cos"
+echo "  2. 点击【创建存储桶】"
+echo "  3. 配置："
+echo "     - 名称：fashion-supplychain-files（随意，记住它）"
+echo "     - 地域：ap-shanghai（必须和云托管同地域）"
+echo "     - 访问权限：私有读写"
+echo "  4. 创建后，记下存储桶名称（含 AppId）"
+echo "     格式：fashion-supplychain-files-1250000000"
+echo ""
+echo -e "${CYAN}步骤 2：获取 API 密钥${NC}"
+echo ""
+echo "  1. 访问：https://console.cloud.tencent.com/cam/capi"
+echo "  2. 创建或获取已有密钥"
+echo "  3. 记下 SecretId 和 SecretKey"
+echo ""
+echo -e "${CYAN}步骤 3：在微信云托管设置环境变量${NC}"
+echo ""
+echo "  1. 登录微信云托管控制台"
+echo "  2. 找到 backend 服务 → 【服务设置】→【环境变量】"
+echo "  3. 添加以下 4 个变量："
+echo ""
+echo -e "     ${YELLOW}COS_SECRET_ID${NC}  = AKIDxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+echo -e "     ${YELLOW}COS_SECRET_KEY${NC} = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+echo -e "     ${YELLOW}COS_BUCKET${NC}     = fashion-supplychain-files-1250000000"
+echo -e "     ${YELLOW}COS_REGION${NC}     = ap-shanghai"
+echo ""
+echo "  4. 保存后，重新部署 backend 服务"
+echo ""
+echo -e "${CYAN}步骤 4：验证配置${NC}"
+echo ""
+echo "  部署完成后，检查后端启动日志，应当看到："
+echo ""
+echo -e "  ${GREEN}[COS] 已启用腾讯云 COS 文件存储: bucket=..., region=...${NC}"
+echo -e "  ${GREEN}[COS] COS 连接验证成功 ✅${NC}"
+echo ""
+echo "  如果看到以下错误，说明配置有误："
+echo ""
+echo -e "  ${RED}⛔ COS 未配置！生产环境文件将存储在容器本地磁盘！${NC}"
+echo ""
+echo -e "${CYAN}步骤 5：调用诊断端点确认${NC}"
+echo ""
+echo "  使用超管账号调用："
+echo ""
+echo "  curl -H 'Authorization: Bearer <token>' \\"
+echo "    https://你的域名/api/file/storage-status"
+echo ""
+echo "  返回 cosEnabled=true 表示配置成功"
+echo ""
+echo "════════════════════════════════════════════════════════════════"
+echo ""
+echo -e "${YELLOW}⚠️ 注意：COS 配置后，之前丢失的图片无法恢复。${NC}"
+echo -e "${YELLOW}   需要用户重新上传图片。${NC}"
+echo -e "${YELLOW}   配置 COS 后，新上传的图片将永久保存。${NC}"
+echo ""

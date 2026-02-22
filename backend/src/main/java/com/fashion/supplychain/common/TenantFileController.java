@@ -6,11 +6,15 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.MalformedURLException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * 租户隔离文件访问控制器
@@ -28,6 +32,7 @@ import java.nio.file.Path;
 @RestController
 @RequestMapping("/api/file")
 @Slf4j
+@PreAuthorize("isAuthenticated()")
 public class TenantFileController {
 
     @Value("${fashion.upload-path}")
@@ -96,5 +101,44 @@ public class TenantFileController {
         } catch (MalformedURLException e) {
             return ResponseEntity.notFound().build();
         }
+    }
+
+    /**
+     * 文件存储诊断端点（超管专用）
+     * 快速检查 COS 是否启用、本地文件数量等
+     */
+    @GetMapping("/storage-status")
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
+    public Result<Map<String, Object>> storageStatus() {
+        Map<String, Object> status = new LinkedHashMap<>();
+        status.put("cosEnabled", cosService.isEnabled());
+        status.put("uploadPath", uploadPath);
+
+        if (cosService.isEnabled()) {
+            status.put("storageType", "腾讯云 COS（持久化）");
+            status.put("healthy", true);
+            status.put("message", "COS 已启用，文件不会因容器重启而丢失");
+        } else {
+            // 检查本地目录
+            Path localDir = Path.of(uploadPath).toAbsolutePath().normalize();
+            Path tenantsDir = localDir.resolve("tenants");
+            boolean dirExists = Files.exists(tenantsDir);
+            long fileCount = 0;
+            if (dirExists) {
+                try (var stream = Files.walk(tenantsDir)) {
+                    fileCount = stream.filter(Files::isRegularFile).count();
+                } catch (Exception e) {
+                    // ignore
+                }
+            }
+            status.put("storageType", "本地磁盘（⚠️ 容器重启会丢失！）");
+            status.put("localDirExists", dirExists);
+            status.put("localFileCount", fileCount);
+            status.put("healthy", false);
+            status.put("message", "⚠️ COS 未配置！生产环境文件存储在容器本地磁盘，重启/缩扩容会永久丢失所有文件。" +
+                    "请配置环境变量：COS_SECRET_ID、COS_SECRET_KEY、COS_BUCKET、COS_REGION");
+        }
+
+        return Result.success(status);
     }
 }

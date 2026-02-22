@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * 租户订阅Service
@@ -17,11 +18,12 @@ import java.time.format.DateTimeFormatter;
 public class TenantSubscriptionService extends ServiceImpl<TenantSubscriptionMapper, TenantSubscription> {
 
     /**
-     * 生成订阅编号：SUB20260210001
+     * 生成订阅编号：SUB20260210XXXXX
+     * 使用时间戳+随机数避免并发冲突（count()+1 不是原子操作）
      */
     public String generateSubscriptionNo() {
-        String dateStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        long count = count() + 1;
-        return String.format("SUB%s%03d", dateStr, count);
+        String dateStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        int random = ThreadLocalRandom.current().nextInt(10000, 99999);
+        return String.format("SUB%s%05d", dateStr, random);
     }
 }

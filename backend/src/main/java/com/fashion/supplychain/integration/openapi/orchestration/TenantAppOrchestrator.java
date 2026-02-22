@@ -472,8 +472,16 @@ public class TenantAppOrchestrator {
                     "# 确认付款：\n" +
                     "curl -X POST %s/payment/confirm \\\n" +
                     "  -d '{\"reconciliationId\":\"xxx\",\"paymentMethod\":\"bank_transfer\",\"paymentRef\":\"TXN123\"}'",
-                    baseUrl, app.getAppKey(), baseUrl);
-            default:
+                    baseUrl, app.getAppKey(), baseUrl);            case "MATERIAL_SUPPLY":
+                return String.format(
+                    "# 推送采购订单到供应商：\n" +
+                    "curl -X POST %s/material/purchase-order \\\n" +
+                    "  -H 'X-App-Key: %s' \\\n" +
+                    "  -H 'X-Timestamp: $(date +%%s)' \\\n" +
+                    "  -H 'X-Signature: <HMAC-SHA256>' \\\n" +
+                    "  -H 'Content-Type: application/json' \\\n" +
+                    "  -d '{\"materialCode\":\"F001\",\"materialName\":\"涤纶面料\",\"quantity\":500,\"unit\":\"米\"}'" ,
+                    baseUrl, app.getAppKey());            default:
                 return "";
         }
     }
@@ -505,6 +513,7 @@ public class TenantAppOrchestrator {
             case "QUALITY_FEEDBACK": prefix = "qc"; break;
             case "LOGISTICS_SYNC": prefix = "lgs"; break;
             case "PAYMENT_SYNC": prefix = "pay"; break;
+            case "MATERIAL_SUPPLY": prefix = "mat"; break;
             default: prefix = "app"; break;
         }
         return prefix + "_" + UUID.randomUUID().toString().replace("-", "").substring(0, 24);
