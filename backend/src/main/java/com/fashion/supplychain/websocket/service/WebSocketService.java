@@ -240,6 +240,30 @@ public class WebSocketService {
     }
 
     /**
+     * 通知超级管理员有新的应用商店购买订单
+     *
+     * @param superAdminId 超管 userId（字符串形式）
+     * @param tenantName   下单客户名称
+     * @param appName      应用名称
+     * @param orderNo      订单号
+     */
+    public void notifyAppOrderPending(String superAdminId, String tenantName, String appName, String orderNo) {
+        WebSocketMessage<Map<String, Object>> message = WebSocketMessage.create(
+            WebSocketMessageType.APP_ORDER_PENDING,
+            Map.of(
+                "tenantName", tenantName,
+                "appName", appName,
+                "orderNo", orderNo,
+                "message", "新购买订单：" + tenantName + " 购买 " + appName,
+                "timestamp", System.currentTimeMillis()
+            )
+        );
+        webSocketHandler.sendToUser(superAdminId, message);
+        log.info("[WebSocket] 通知超管新应用订单: adminId={}, tenant={}, app={}, orderNo={}",
+                superAdminId, tenantName, appName, orderNo);
+    }
+
+    /**
      * 广播刷新所有数据
      */
     public void broadcastRefreshAll(String reason) {

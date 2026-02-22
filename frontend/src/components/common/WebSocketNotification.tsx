@@ -14,6 +14,7 @@ import { paths } from '@/routeConfig';
  * 当前支持的消息类型：
  * - tenant:application:pending — 新工厂入驻申请（仅超管可见）
  * - worker:registration:pending — 新员工注册申请
+ * - app:order:pending — 应用商店新购买订单（仅超管可见）
  */
 const WebSocketNotification: React.FC = () => {
   const { notification } = App.useApp();
@@ -62,6 +63,25 @@ const WebSocketNotification: React.FC = () => {
       });
     });
   }, [subscribe, user?.isTenantOwner, notification, navigate]);
+
+  // 应用商店新购买订单通知（超管专属）
+  useEffect(() => {
+    if (!user?.isSuperAdmin) return;
+    return subscribe('app:order:pending', (msg) => {
+      const payload = msg.payload as { tenantName?: string; appName?: string; orderNo?: string; message?: string };
+      notification.warning({
+        message: '🛒 新应用购买订单',
+        description: payload?.message || `${payload?.tenantName || '客户'} 购买了 ${payload?.appName || '应用'}，订单号：${payload?.orderNo || '-'}`,
+        placement: 'topRight',
+        duration: 0,
+        onClick: () => {
+          navigate(paths.customerManagement + '?tab=app-orders');
+          notification.destroy();
+        },
+        style: { cursor: 'pointer' },
+      });
+    });
+  }, [subscribe, user?.isSuperAdmin, notification, navigate]);
 
   // 不渲染任何 DOM
   return null;

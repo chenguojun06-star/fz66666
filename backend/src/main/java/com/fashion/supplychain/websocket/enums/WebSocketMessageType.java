@@ -41,6 +41,9 @@ public enum WebSocketMessageType {
     WORKER_REGISTRATION_PENDING("worker:registration:pending", "工人注册待审批"),
     TENANT_APPLICATION_PENDING("tenant:application:pending", "工厂入驻申请待审批"),
 
+    // 应用商店
+    APP_ORDER_PENDING("app:order:pending", "应用商店新订单"),
+
     // 系统消息
     PING("ping", "心跳"),
     PONG("pong", "心跳响应"),
