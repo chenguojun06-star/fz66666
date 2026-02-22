@@ -89,7 +89,7 @@ server {
     add_header Referrer-Policy "strict-origin-when-cross-origin";
     # CSP: unsafe-eval 必须开放（ECharts v6 、Three.js 内部使用 new Function()）
     # unsafe-inline 必须开放（Ant Design 、内联样式）
-    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' ws: wss: http: https:; font-src 'self' data:; worker-src blob: 'self'; media-src 'self' blob:;" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' ws: wss: http: https:; font-src 'self' data:; worker-src blob: 'self'; media-src 'self' blob: https:;" always;
 
     # ---- 错误页 ----
     # 仅 404 返回 SPA 页面（支持 React Router 客户端路由）
