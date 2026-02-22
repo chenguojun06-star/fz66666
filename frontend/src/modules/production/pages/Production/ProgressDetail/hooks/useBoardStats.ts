@@ -39,12 +39,16 @@ export const ensureBoardStatsForOrder = async ({
     const valid = records
       .filter((r) => String((r as any)?.scanResult || '').trim() === 'success')
       .filter((r) => (Number((r as any)?.quantity) || 0) > 0);
+    // 匹配扫码记录到节点：同时检查 progressStage（父节点）和 processName（子工序名）
+    const recordMatchesNode = (nodeName: string, r: Record<string, unknown>) =>
+      stageNameMatches(nodeName, getRecordStageName(r)) ||
+      stageNameMatches(nodeName, String((r as any)?.processName || '').trim());
     const stats: Record<string, number> = {};
     for (const n of nodes || []) {
       const nodeName = String((n as any)?.name || '').trim();
       if (!nodeName) continue;
       const done = valid
-        .filter((r) => stageNameMatches(nodeName, getRecordStageName(r)))
+        .filter((r) => recordMatchesNode(nodeName, r))
         .reduce((acc, r) => acc + (Number((r as any)?.quantity) || 0), 0);
       stats[nodeName] = done;
     }
@@ -135,7 +139,7 @@ export const ensureBoardStatsForOrder = async ({
         const nodeName = String((n as any)?.name || '').trim();
         if (!nodeName) continue;
         const matchingRecords = valid
-          .filter((r) => stageNameMatches(nodeName, getRecordStageName(r)));
+          .filter((r) => recordMatchesNode(nodeName, r));
         // 找到最大的 scanTime（即最后一次扫码时间 = 完成时间）
         let maxTime = '';
         for (const r of matchingRecords) {
