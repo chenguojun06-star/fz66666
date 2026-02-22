@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Tabs, Button, Tag, Space, message, Form, Input, InputNumber, Modal, Select, Card, Typography, Badge, Alert, QRCode, Row, Col, Progress, Descriptions, Divider, Radio, Statistic } from 'antd';
-import { PlusOutlined, CrownOutlined, TeamOutlined, CopyOutlined, QrcodeOutlined, DollarOutlined, ExclamationCircleOutlined, MessageOutlined, DashboardOutlined } from '@ant-design/icons';
+import { PlusOutlined, CrownOutlined, TeamOutlined, CopyOutlined, QrcodeOutlined, DollarOutlined, ExclamationCircleOutlined, MessageOutlined, DashboardOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -15,6 +15,7 @@ import feedbackService from '@/services/feedbackService';
 import type { UserFeedback, FeedbackStats } from '@/services/feedbackService';
 import systemStatusService from '@/services/systemStatusService';
 import type { SystemStatusOverview } from '@/services/systemStatusService';
+import AppOrderTab from './AppOrderTab';
 import type { ColumnsType } from 'antd/es/table';
 
 const { Text } = Typography;
@@ -1651,6 +1652,11 @@ const CustomerManagement: React.FC = () => {
             key: 'billing',
             label: <span><DollarOutlined /> 套餐与收费</span>,
             children: <BillingTab />,
+          },
+          {
+            key: 'app-orders',
+            label: <span><ShoppingCartOutlined /> 应用订单</span>,
+            children: <AppOrderTab />,
           },
           {
             key: 'feedback',

@@ -166,4 +166,22 @@ export const appStoreService = {
   getTrialStatus: (appId: number): Promise<{ hasTried: boolean; canTrial: boolean; isExpired?: boolean; endTime?: string }> => {
     return request.get(`/system/app-store/trial-status/${appId}`);
   },
+
+  // ========== 管理员接口（SUPER_ADMIN） ==========
+
+  // 获取所有订单列表（管理员）
+  adminOrderList: (params?: { status?: string }): Promise<AppOrder[]> => {
+    return request.post('/system/app-store/admin/order-list', params);
+  },
+
+  // 手动激活订单（管理员）
+  adminActivateOrder: (data: { orderId: number; remark?: string }): Promise<{
+    subscription: any;
+    orderNo: string;
+    activatedAt: string;
+    expireAt: string;
+    apiCredentials: { appKey: string; appSecret: string };
+  }> => {
+    return request.post('/system/app-store/admin/activate-order', data);
+  },
 };
