@@ -545,10 +545,11 @@ public class TenantOrchestrator {
         overview.put("planType", tenant.getPlanType());
         overview.put("billingCycle", tenant.getBillingCycle());
         overview.put("monthlyFee", tenant.getMonthlyFee());
-        overview.put("storageQuotaMb", tenant.getStorageQuotaMb());
-        overview.put("storageUsedMb", tenant.getStorageUsedMb());
-        overview.put("storageUsedPercent", tenant.getStorageQuotaMb() > 0
-                ? Math.round(tenant.getStorageUsedMb() * 100.0 / tenant.getStorageQuotaMb()) : 0);
+        long quotaMb = tenant.getStorageQuotaMb() != null ? tenant.getStorageQuotaMb() : 0L;
+        long usedMb = tenant.getStorageUsedMb() != null ? tenant.getStorageUsedMb() : 0L;
+        overview.put("storageQuotaMb", quotaMb);
+        overview.put("storageUsedMb", usedMb);
+        overview.put("storageUsedPercent", quotaMb > 0 ? Math.round(usedMb * 100.0 / quotaMb) : 0);
         overview.put("maxUsers", tenant.getMaxUsers());
         overview.put("currentUsers", userCount);
         overview.put("paidStatus", tenant.getPaidStatus());
@@ -694,10 +695,11 @@ public class TenantOrchestrator {
         overview.put("monthlyFee", tenant.getMonthlyFee());
         overview.put("paidStatus", tenant.getPaidStatus());
         overview.put("expireTime", tenant.getExpireTime());
-        overview.put("storageQuotaMb", tenant.getStorageQuotaMb());
-        overview.put("storageUsedMb", tenant.getStorageUsedMb());
-        overview.put("storageUsedPercent", tenant.getStorageQuotaMb() > 0
-                ? Math.round(tenant.getStorageUsedMb() * 100.0 / tenant.getStorageQuotaMb()) : 0);
+        long quotaMb2 = tenant.getStorageQuotaMb() != null ? tenant.getStorageQuotaMb() : 0L;
+        long usedMb2 = tenant.getStorageUsedMb() != null ? tenant.getStorageUsedMb() : 0L;
+        overview.put("storageQuotaMb", quotaMb2);
+        overview.put("storageUsedMb", usedMb2);
+        overview.put("storageUsedPercent", quotaMb2 > 0 ? Math.round(usedMb2 * 100.0 / quotaMb2) : 0);
         overview.put("maxUsers", tenant.getMaxUsers());
         overview.put("currentUsers", userCount);
 
