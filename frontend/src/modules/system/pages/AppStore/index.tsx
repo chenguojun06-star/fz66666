@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/utils/AuthContext';
 import { Card, Row, Col, Tag, Button, Modal, Form, Input, Select, InputNumber, App, Spin, Badge, Alert, Steps, Divider, Typography } from 'antd';
 import { ShoppingCartOutlined, CheckCircleOutlined, FireOutlined, RocketOutlined, GiftOutlined, BookOutlined, SettingOutlined, ApiOutlined, CopyOutlined, LinkOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
@@ -72,6 +73,7 @@ const AppStore: React.FC = () => {
   const [form] = Form.useForm<OrderForm>();
   const navigate = useNavigate();
   const { message } = App.useApp();
+  const { user } = useAuth();
 
   // 一键开通向导状态
   const [wizardVisible, setWizardVisible] = useState(false);
@@ -114,7 +116,21 @@ const AppStore: React.FC = () => {
   };
 
   const handleAppClick = (app: AppStoreItem) => { setSelectedApp(app); setDetailVisible(true); };
-  const handleBuyClick = () => { setDetailVisible(false); setOrderVisible(true); form.resetFields(); };
+  const handleBuyClick = () => {
+    setDetailVisible(false);
+    setOrderVisible(true);
+    form.resetFields();
+    // 自动预填租户/用户信息
+    form.setFieldsValue({
+      contactName: user?.name || '',
+      contactPhone: user?.phone || '',
+      contactEmail: user?.email || '',
+      companyName: user?.tenantName || '',
+      userCount: 1,
+      subscriptionType: 'MONTHLY',
+      invoiceRequired: false,
+    });
+  };
 
   // 一键开通试用（核心改进：开通 → 向导配置 → 完成）
   const handleTrialClick = async () => {
