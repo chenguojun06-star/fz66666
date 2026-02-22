@@ -31,7 +31,7 @@ public interface ScanRecordService extends IService<ScanRecord> {
      */
     IPage<ScanRecord> queryByStyleNo(String styleNo, int page, int pageSize);
 
-    Map<String, Object> getPersonalStats(String operatorId, String scanType);
+    Map<String, Object> getPersonalStats(String operatorId, String scanType, String period);
 
     /**
      * 根据订单ID删除扫码记录

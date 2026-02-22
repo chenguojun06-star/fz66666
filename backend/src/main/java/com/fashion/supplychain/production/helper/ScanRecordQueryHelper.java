@@ -246,7 +246,7 @@ public class ScanRecordQueryHelper {
         }
     }
 
-    public Map<String, Object> getPersonalStats(String scanType) {
+    public Map<String, Object> getPersonalStats(String scanType, String period) {
         UserContext ctx = UserContext.get();
         String operatorId = ctx == null ? null : ctx.getUserId();
         String operatorName = ctx == null ? null : ctx.getUsername();
@@ -255,7 +255,8 @@ public class ScanRecordQueryHelper {
         }
 
         String st = hasText(scanType) ? scanType.trim() : null;
-        Map<String, Object> agg = scanRecordService.getPersonalStats(operatorId, st);
+        String pd = hasText(period) ? period.trim() : null;
+        Map<String, Object> agg = scanRecordService.getPersonalStats(operatorId, st, pd);
         Map<String, Object> resp = new LinkedHashMap<>();
         resp.put("operatorId", operatorId);
         String safeOperatorName = operatorName == null ? null : operatorName.trim();

@@ -86,7 +86,14 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                         "WHERE operator_id = #{operatorId}",
                         "  AND scan_result = 'success'",
                         "  AND quantity &gt; 0",
-                        "  AND DATE(scan_time) = CURDATE()",
+                        "<choose>",
+                        "  <when test='period != null and period == \"month\"'>",
+                        "    AND YEAR(scan_time) = YEAR(CURDATE()) AND MONTH(scan_time) = MONTH(CURDATE())",
+                        "  </when>",
+                        "  <otherwise>",
+                        "    AND DATE(scan_time) = CURDATE()",
+                        "  </otherwise>",
+                        "</choose>",
                         "  AND order_id NOT IN (SELECT id FROM t_production_order WHERE status = 'cancelled' OR delete_flag = 1)",
                         "<if test='scanType != null and scanType != \"\"'>",
                         "  AND scan_type = #{scanType}",
@@ -94,7 +101,8 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                         "</script>"
         })
         Map<String, Object> selectPersonalStats(@Param("operatorId") String operatorId,
-                        @Param("scanType") String scanType);
+                        @Param("scanType") String scanType,
+                        @Param("period") String period);
 
         @Select({
                         "<script>",

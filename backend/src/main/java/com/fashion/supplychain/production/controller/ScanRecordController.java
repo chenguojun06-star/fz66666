@@ -167,8 +167,9 @@ public class ScanRecordController {
     }
 
     @GetMapping("/personal-stats")
-    public Result<?> personalStats(@RequestParam(required = false) String scanType) {
-        return Result.success(scanRecordOrchestrator.getPersonalStats(scanType));
+    public Result<?> personalStats(@RequestParam(required = false) String scanType,
+            @RequestParam(required = false) String period) {
+        return Result.success(scanRecordOrchestrator.getPersonalStats(scanType, period));
     }
 
     @PostMapping("/cleanup")

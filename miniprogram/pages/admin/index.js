@@ -162,7 +162,7 @@ Page({
     }
     this.setData({ loadingStats: true });
     try {
-      const stats = await api.production.personalScanStats({});
+      const stats = await api.production.personalScanStats({ period: 'month' });
       this.setData({ stats: stats || null });
     } catch (e) {
       if (e && e.type === 'auth') {

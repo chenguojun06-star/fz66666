@@ -630,7 +630,11 @@ public class ScanRecordOrchestrator {
     }
 
     public Map<String, Object> getPersonalStats(String scanType) {
-        return scanRecordQueryHelper.getPersonalStats(scanType);
+        return getPersonalStats(scanType, null);
+    }
+
+    public Map<String, Object> getPersonalStats(String scanType, String period) {
+        return scanRecordQueryHelper.getPersonalStats(scanType, period);
     }
 
     public Map<String, Object> cleanup(String from) {
