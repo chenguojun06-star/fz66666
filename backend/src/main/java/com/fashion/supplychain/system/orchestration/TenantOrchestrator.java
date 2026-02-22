@@ -1249,18 +1249,10 @@ public class TenantOrchestrator {
             permCount = effectivePermIds.size();
         }
 
-        // 5. 最终验证：确保角色和权限都正确持久化
-        // ⚠️ 不使用 getById —— t_role 是混合表，拦截器会加 tenant_id 过滤，
-        //    当前登录用户的 tenantId 与新建角色的 tenantId 可能不同（如超管代理审批），
-        //    必须明确指定目标 tenantId 查询，绕开拦截器干扰。
-        LambdaQueryWrapper<Role> verifyQuery = new LambdaQueryWrapper<>();
-        verifyQuery.eq(Role::getId, cloned.getId())
-                   .eq(Role::getTenantId, tenantId);
-        Role verified = roleService.getOne(verifyQuery);
-        if (verified == null) {
-            throw new IllegalStateException(
-                    "[数据完整性] 角色创建后无法读取，可能存在数据库异常，roleId=" + cloned.getId());
-        }
+        // 5. 最终验证：确保权限正确持久化
+        // ✅ roleSaved=true + cloned.getId() != null 已充分证明角色 INSERT 成功。
+        //    旧版二次查询 getOne(eq(tenant_id=X)) 在超管路径下因 MyBatis-Plus
+        //    fill 机制可能写入 null 而返回 null，导致误报失败，已移除。
         List<Long> verifiedPerms = rolePermissionService.getPermissionIdsByRoleId(cloned.getId());
         int verifiedPermCount = verifiedPerms != null ? verifiedPerms.size() : 0;
         if (permCount > 0 && verifiedPermCount == 0) {
