@@ -11,6 +11,37 @@ interface PreviewModalProps {
 }
 
 const PreviewModal: React.FC<PreviewModalProps> = ({ open, url, title, onClose }) => {
+  const [modalSize, setModalSize] = React.useState<{ width: number; height: number }>({ width: 600, height: 600 });
+
+  const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    const naturalWidth = img.naturalWidth;
+    const naturalHeight = img.naturalHeight;
+    if (!naturalWidth || !naturalHeight) return;
+
+    const maxWidth = window.innerWidth * 0.88;
+    const maxHeight = window.innerHeight * 0.88;
+    const minSize = 300;
+
+    let w = naturalWidth;
+    let h = naturalHeight;
+
+    if (w > maxWidth || h > maxHeight) {
+      const ratio = Math.min(maxWidth / w, maxHeight / h);
+      w = Math.round(w * ratio);
+      h = Math.round(h * ratio);
+    }
+
+    w = Math.max(w, minSize);
+    h = Math.max(h, minSize);
+
+    setModalSize({ width: w, height: h });
+  };
+
+  React.useEffect(() => {
+    if (!open) setModalSize({ width: 600, height: 600 });
+  }, [open]);
+
   return (
     <ResizableModal
       open={open}
@@ -21,11 +52,13 @@ const PreviewModal: React.FC<PreviewModalProps> = ({ open, url, title, onClose }
         </div>
       }
       onCancel={onClose}
-      width={600}
-      minWidth={600}
-      minHeight={600}
-      initialHeight={600}
+      width={modalSize.width}
+      minWidth={300}
+      minHeight={300}
+      initialHeight={modalSize.height}
+      contentPadding={0}
       autoFontSize={false}
+      destroyOnHidden
     >
       {url ? (
         <div
@@ -35,15 +68,18 @@ const PreviewModal: React.FC<PreviewModalProps> = ({ open, url, title, onClose }
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
+            background: '#f0f0f0',
           }}
         >
           <img
             src={getFullAuthedFileUrl(url)}
             alt=""
+            onLoad={handleImageLoad}
             style={{
               maxWidth: '100%',
               maxHeight: '100%',
               objectFit: 'contain',
+              display: 'block',
             }}
           />
         </div>

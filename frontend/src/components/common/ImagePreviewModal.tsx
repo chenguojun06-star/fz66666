@@ -12,6 +12,7 @@ interface ImagePreviewModalProps {
 
 /**
  * 图片预览弹窗（公共组件）
+ * 自动根据图片实际宽高比计算弹窗尺寸，横图宽一点、竖图高一点。
  *
  * 使用位置：
  * - 成品入库详情
@@ -24,6 +25,38 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
   title = '图片预览',
   onClose,
 }) => {
+  const [modalSize, setModalSize] = React.useState<{ width: number; height: number }>({ width: 600, height: 600 });
+
+  const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    const naturalWidth = img.naturalWidth;
+    const naturalHeight = img.naturalHeight;
+    if (!naturalWidth || !naturalHeight) return;
+
+    const maxWidth = window.innerWidth * 0.88;
+    const maxHeight = window.innerHeight * 0.88;
+    const minSize = 300;
+
+    let w = naturalWidth;
+    let h = naturalHeight;
+
+    if (w > maxWidth || h > maxHeight) {
+      const ratio = Math.min(maxWidth / w, maxHeight / h);
+      w = Math.round(w * ratio);
+      h = Math.round(h * ratio);
+    }
+
+    w = Math.max(w, minSize);
+    h = Math.max(h, minSize);
+
+    setModalSize({ width: w, height: h });
+  };
+
+  // 关闭时重置尺寸，避免下次打开闪烁
+  React.useEffect(() => {
+    if (!open) setModalSize({ width: 600, height: 600 });
+  }, [open]);
+
   return (
     <ResizableModal
       open={open}
@@ -34,10 +67,12 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
         </div>
       }
       onCancel={onClose}
-      width={600}
-      minWidth={600}
-      minHeight={600}
-      initialHeight={600}
+      width={modalSize.width}
+      minWidth={300}
+      minHeight={300}
+      initialHeight={modalSize.height}
+      contentPadding={0}
+      destroyOnHidden
     >
       {imageUrl ? (
         <div
@@ -47,15 +82,18 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
+            background: '#f0f0f0',
           }}
         >
           <img
             src={getFullAuthedFileUrl(imageUrl)}
             alt={title}
+            onLoad={handleImageLoad}
             style={{
               maxWidth: '100%',
               maxHeight: '100%',
               objectFit: 'contain',
+              display: 'block',
             }}
           />
         </div>
