@@ -100,3 +100,7 @@ frontend/fix_*.py
 # 数据库备份大文件（不提交）
 backend/sql/backup_*.sql
 fix-phantom-permissions.py
+
+# RAG 索引
+rag/index.json
+rag/tokens.json
