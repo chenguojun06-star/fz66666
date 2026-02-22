@@ -9,6 +9,7 @@ import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.SKUService;
 import com.fashion.supplychain.production.service.ScanRecordService;
+import com.fashion.supplychain.template.service.TemplateLibraryService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -39,6 +40,9 @@ public class SKUServiceImpl implements SKUService {
 
     @Autowired
     private ProductionOrderService productionOrderService;
+
+    @Autowired(required = false)
+    private TemplateLibraryService templateLibraryService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -657,9 +661,11 @@ public class SKUServiceImpl implements SKUService {
                 String processId = String.valueOf(node.getOrDefault("id", "")).trim();
                 String processName = String.valueOf(node.getOrDefault("name", "")).trim();
                 Object unitPriceObj = node.get("unitPrice");
+                // ★ 读取 progressStage（父进度节点映射）
+                String progressStage = String.valueOf(node.getOrDefault("progressStage", "")).trim();
 
-                log.info("[SKUService] 处理工序 - id: {}, name: {}, unitPrice: {}, nodeKeys: {}",
-                        processId, processName, unitPriceObj, node.keySet());
+                log.info("[SKUService] 处理工序 - id: {}, name: {}, unitPrice: {}, progressStage: {}, nodeKeys: {}",
+                        processId, processName, unitPriceObj, progressStage, node.keySet());
 
                 if (unitPriceObj != null) {
                     Map<String, Object> priceInfo = new HashMap<>();
@@ -671,6 +677,10 @@ public class SKUServiceImpl implements SKUService {
                     if (StringUtils.hasText(processName)) {
                         priceInfo.put("name", processName);
                         priceInfo.put("processName", processName);
+                    }
+                    // ★ 附加父进度节点映射（供小程序扫码时设置正确的 progressStage）
+                    if (StringUtils.hasText(progressStage)) {
+                        priceInfo.put("progressStage", progressStage);
                     }
 
                     try {
@@ -693,6 +703,33 @@ public class SKUServiceImpl implements SKUService {
             }
 
             log.debug("[SKUService] 获取工序单价配置完成 - orderNo: {}, 成功解析: {} 个", orderNo, result.size());
+
+            // ★ 合并父进度节点映射（从 process 模板中读取 progressStage）
+            if (templateLibraryService != null && order.getStyleNo() != null) {
+                try {
+                    List<Map<String, Object>> templateNodes = templateLibraryService.resolveProgressNodeUnitPrices(order.getStyleNo().trim());
+                    if (templateNodes != null && !templateNodes.isEmpty()) {
+                        Map<String, String> stageMap = new HashMap<>();
+                        for (Map<String, Object> tn : templateNodes) {
+                            String tnName = tn.get("name") != null ? tn.get("name").toString().trim() : "";
+                            String tnStage = tn.get("progressStage") != null ? tn.get("progressStage").toString().trim() : "";
+                            if (StringUtils.hasText(tnName) && StringUtils.hasText(tnStage)) {
+                                stageMap.put(tnName, tnStage);
+                            }
+                        }
+                        for (Map<String, Object> r : result) {
+                            String pn = r.get("processName") != null ? r.get("processName").toString() : "";
+                            if (StringUtils.hasText(pn) && stageMap.containsKey(pn) && !r.containsKey("progressStage")) {
+                                r.put("progressStage", stageMap.get(pn));
+                            }
+                        }
+                        log.info("[SKUService] 合并progressStage映射完成 - 共{}个映射", stageMap.size());
+                    }
+                } catch (Exception e) {
+                    log.warn("[SKUService] 合并progressStage映射失败: {}", e.getMessage());
+                }
+            }
+
             return result;
 
         } catch (Exception e) {

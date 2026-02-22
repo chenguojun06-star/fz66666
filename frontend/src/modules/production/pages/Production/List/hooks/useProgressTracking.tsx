@@ -6,6 +6,8 @@ import {
   defaultNodes,
   stripWarehousingNode,
   resolveNodesForListOrder,
+  getProcessesByNodeFromOrder,
+  canonicalStageKey,
 } from '../../ProgressDetail/utils';
 import type { ProgressNode } from '../../ProgressDetail/types';
 import { formatCompletionTime } from '../utils';
@@ -46,7 +48,8 @@ export function useProgressTracking(productionList: ProductionOrder[]) {
               const id = String(n?.id || name || '').trim() || name;
               const p = Number(n?.unitPrice);
               const unitPrice = Number.isFinite(p) && p >= 0 ? p : 0;
-              return { id, name, unitPrice };
+              const progressStage = String(n?.progressStage || '').trim() || undefined;
+              return { id, name, unitPrice, progressStage };
             })
             .filter((n: ProgressNode) => n.name);
           return { styleNo: sn, nodes: stripWarehousingNode(normalized) };
@@ -88,43 +91,44 @@ export function useProgressTracking(productionList: ProductionOrder[]) {
   }, [productionList, progressNodesByStyleNo]);
 
   /**
-   * 动态匹配阶段完成时间：从订单实际工序节点中查找
+   * 父节点完成时间 = 该父下所有子工序全部完成后，取最晚的时间。
+   * 每个父独立计算，任一子未完成则该父无完成时间。
+   *
+   * 匹配规则：
+   * 1. 子节点的 progressStage 与 stageKeyword 匹配 → 属于该父
+   * 2. 子节点 name 本身就与 stageKeyword 匹配 → 也属于该父（兼容 name=采购 progressStage=采购 的情况）
    */
   const getStageCompletionTime = (record: ProductionOrder, stageKeyword: string): string => {
     const orderId = String(record.id || '');
     const timeMap = boardTimesByOrder[orderId] || {};
+    const keyword = String(stageKeyword || '').trim();
+    if (!keyword) return '';
 
     const nodes = stripWarehousingNode(resolveNodesForListOrder(record, progressNodesByStyleNo, defaultNodes));
 
-    const matchingNodeNames = nodes
-      .map(n => n.name)
-      .filter(name => {
-        const nodeName = String(name || '').trim();
-        const canonical = (s: string) => {
-          const n = s.trim().replace(/\s+/g, '');
-          const map: Record<string, string> = {
-            '物料采购': '采购', '面辅料采购': '采购', '备料': '采购', '到料': '采购',
-            '裁床': '裁剪', '剪裁': '裁剪', '开裁': '裁剪',
-            '缝制': '车缝', '缝纫': '车缝', '车工': '车缝',
-            '后整': '包装', '打包': '包装', '装箱': '包装',
-            '检验': '质检', '品检': '质检', '验货': '质检',
-            '熨烫': '整烫', '大烫': '整烫',
-          };
-          return map[n] || n;
-        };
+    // 找到属于该父节点的所有子工序
+    const childNames = nodes
+      .filter(n => {
+        const name = String(n.name || '').trim();
+        const stage = String(n.progressStage || '').trim();
+        if (!name) return false;
+        // 子节点的 progressStage 匹配父名称
+        if (stage && stage === keyword) return true;
+        // 子节点 name 本身就是父名称（如 name='采购' progressStage='采购'）
+        if (name === keyword) return true;
+        return false;
+      })
+      .map(n => String(n.name || '').trim());
 
-        const nodeCanonical = canonical(nodeName);
-        const stageCanonical = canonical(stageKeyword);
+    if (childNames.length === 0) return '';
 
-        return nodeCanonical === stageCanonical ||
-               nodeCanonical.includes(stageCanonical) ||
-               stageCanonical.includes(nodeCanonical);
-      });
-
+    // 所有子都有完成时间 → 父完成，取最晚时间
+    // 任一子没有完成时间 → 父未完成
     let latestTime = '';
-    for (const name of matchingNodeNames) {
+    for (const name of childNames) {
       const time = timeMap[name];
-      if (time && (!latestTime || time > latestTime)) {
+      if (!time) return '';  // 有子工序未完成，父节点就没完成
+      if (!latestTime || time > latestTime) {
         latestTime = time;
       }
     }

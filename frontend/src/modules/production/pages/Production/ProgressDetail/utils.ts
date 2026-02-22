@@ -354,7 +354,8 @@ export const parseProgressNodes = (raw: string): ProgressNode[] => {
         const p = Number(n?.unitPrice);
         const unitPrice = Number.isFinite(p) && p >= 0 ? p : 0;
         const id = String(n?.id || n?.processCode || name || '');
-        return { id, name, unitPrice };
+        const progressStage = String(n?.progressStage || '').trim() || undefined;
+        return { id, name, unitPrice, progressStage };
       })
       .filter((n: ProgressNode) => n.name);
     return stripWarehousingNode(normalized);
@@ -381,19 +382,24 @@ export const resolveNodesForOrder = (
     const styleNo = String((order as any)?.styleNo || '').trim();
     const styleNodes = styleNo && progressNodesByStyleNo[styleNo] ? progressNodesByStyleNo[styleNo] : [];
     if (styleNodes.length > 0) {
-      // 始终使用模板库的最新单价覆盖订单快照中的旧单价
+      // 始终使用模板库的最新单价和progressStage覆盖订单快照中的旧数据
       const priceMap = new Map<string, number>();
+      const stageMap = new Map<string, string>();
       const orderMap = new Map<string, number>();
       styleNodes.forEach((sn, i) => {
         const price = Number(sn.unitPrice) || 0;
         if (price > 0) {
           priceMap.set(sn.name, price);
         }
+        if (sn.progressStage) {
+          stageMap.set(sn.name, sn.progressStage);
+        }
         orderMap.set(sn.name, i);
       });
       return orderNodes.map(n => ({
         ...n,
-        unitPrice: priceMap.get(n.name) ?? (Number(n.unitPrice) || 0)
+        unitPrice: priceMap.get(n.name) ?? (Number(n.unitPrice) || 0),
+        progressStage: n.progressStage || stageMap.get(n.name) || undefined,
       })).sort((a, b) => {
         const ia = orderMap.has(a.name) ? orderMap.get(a.name)! : 999;
         const ib = orderMap.has(b.name) ? orderMap.get(b.name)! : 999;
@@ -421,17 +427,22 @@ export const resolveNodesForListOrder = (
     const styleNodes = sn && progressNodesByStyleNo[sn] ? progressNodesByStyleNo[sn] : [];
     if (styleNodes.length > 0) {
       const priceMap = new Map<string, number>();
+      const stageMap = new Map<string, string>();
       const orderMap = new Map<string, number>();
       styleNodes.forEach((n, i) => {
         const price = Number(n.unitPrice) || 0;
         if (price > 0) {
           priceMap.set(n.name, price);
         }
+        if (n.progressStage) {
+          stageMap.set(n.name, n.progressStage);
+        }
         orderMap.set(n.name, i);
       });
       return orderNodes.map(n => ({
         ...n,
-        unitPrice: priceMap.get(n.name) ?? (Number(n.unitPrice) || 0)
+        unitPrice: priceMap.get(n.name) ?? (Number(n.unitPrice) || 0),
+        progressStage: n.progressStage || stageMap.get(n.name) || undefined,
       })).sort((a, b) => {
         const ia = orderMap.has(a.name) ? orderMap.get(a.name)! : 999;
         const ib = orderMap.has(b.name) ? orderMap.get(b.name)! : 999;
