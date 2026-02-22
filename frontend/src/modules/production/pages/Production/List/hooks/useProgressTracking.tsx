@@ -91,12 +91,8 @@ export function useProgressTracking(productionList: ProductionOrder[]) {
   }, [productionList, progressNodesByStyleNo]);
 
   /**
-   * 父节点完成时间 = 该父下所有子工序全部完成后，取最晚的时间。
-   * 每个父独立计算，任一子未完成则该父无完成时间。
-   *
-   * 匹配规则：
-   * 1. 子节点的 progressStage 与 stageKeyword 匹配 → 属于该父
-   * 2. 子节点 name 本身就与 stageKeyword 匹配 → 也属于该父（兼容 name=采购 progressStage=采购 的情况）
+   * 父进度完成时间 = 它所有子工序全部完成时的最晚时间
+   * 每个父独立核算，不跨父混用子工序
    */
   const getStageCompletionTime = (record: ProductionOrder, stageKeyword: string): string => {
     const orderId = String(record.id || '');
@@ -104,35 +100,63 @@ export function useProgressTracking(productionList: ProductionOrder[]) {
     const keyword = String(stageKeyword || '').trim();
     if (!keyword) return '';
 
-    const nodes = stripWarehousingNode(resolveNodesForListOrder(record, progressNodesByStyleNo, defaultNodes));
+    // ★ 核心：从 progressWorkflowJson 获取父→子映射
+    // byParent 示例: { "车缝": [{name:"上领"}, {name:"埋夹"}], "尾部": [{name:"大烫"}, {name:"剪线"}, {name:"包装"}] }
+    const byParent = getProcessesByNodeFromOrder(record);
 
-    // 找到属于该父节点的所有子工序
-    const childNames = nodes
-      .filter(n => {
-        const name = String(n.name || '').trim();
-        const stage = String(n.progressStage || '').trim();
-        if (!name) return false;
-        // 子节点的 progressStage 匹配父名称
-        if (stage && stage === keyword) return true;
-        // 子节点 name 本身就是父名称（如 name='采购' progressStage='采购'）
-        if (name === keyword) return true;
-        return false;
-      })
-      .map(n => String(n.name || '').trim());
+    if (Object.keys(byParent).length > 0) {
+      const keywordCanonical = canonicalStageKey(keyword);
 
-    if (childNames.length === 0) return '';
+      // 找到匹配的父阶段
+      const matchKey = Object.keys(byParent).find(parentName => {
+        const pc = canonicalStageKey(parentName);
+        return pc === keywordCanonical
+          || pc.includes(keywordCanonical)
+          || keywordCanonical.includes(pc);
+      });
 
-    // 所有子都有完成时间 → 父完成，取最晚时间
-    // 任一子没有完成时间 → 父未完成
-    let latestTime = '';
-    for (const name of childNames) {
-      const time = timeMap[name];
-      if (!time) return '';  // 有子工序未完成，父节点就没完成
-      if (!latestTime || time > latestTime) {
-        latestTime = time;
+      if (matchKey && byParent[matchKey]?.length > 0) {
+        const children = byParent[matchKey];
+        let allHaveTime = true;
+        let latestTime = '';
+
+        for (const child of children) {
+          const t = timeMap[child.name] || '';
+          if (!t) {
+            allHaveTime = false;
+            break;
+          }
+          if (!latestTime || t > latestTime) {
+            latestTime = t;
+          }
+        }
+
+        // 所有子工序都完成 → 返回最晚时间 = 父完成时间
+        if (allHaveTime && latestTime) return latestTime;
+        // 还有子工序没完成 → 父未完成
+        return '';
       }
     }
 
+    // 回退：无 progressWorkflowJson 时直接匹配节点名（兼容旧数据）
+    const nodes = stripWarehousingNode(resolveNodesForListOrder(record, progressNodesByStyleNo, defaultNodes));
+    const keywordCanonical = canonicalStageKey(keyword);
+    const matchingNodeNames = nodes
+      .map(n => n.name)
+      .filter(name => {
+        const nc = canonicalStageKey(name);
+        return nc === keywordCanonical
+          || nc.includes(keywordCanonical)
+          || keywordCanonical.includes(nc);
+      });
+
+    let latestTime = '';
+    for (const name of matchingNodeNames) {
+      const time = timeMap[name];
+      if (time && (!latestTime || time > latestTime)) {
+        latestTime = time;
+      }
+    }
     return latestTime;
   };
 
