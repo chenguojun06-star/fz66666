@@ -38,8 +38,12 @@ import java.util.Map;
 @Slf4j
 public class ProductionScanExecutor {
 
+    /**
+     * 6个父进度节点（固定）：采购 → 裁剪 → 二次工艺 → 车缝 → 尾部 → 入库
+     * "大烫/质检/剪线/包装"等均为"尾部"的子工序，不是独立父节点
+     */
     private static final String[] FIXED_PRODUCTION_NODES = {
-            "采购", "裁剪", "车缝", "大烫", "质检", "二次工艺", "包装", "入库"
+            "采购", "裁剪", "二次工艺", "车缝", "尾部", "入库"
     };
 
     @Autowired
@@ -169,6 +173,15 @@ public class ProductionScanExecutor {
 
         progressStage = normalizeFixedProductionNodeName(progressStage);
 
+        // ★ 子工序→父进度节点映射（关键：确保子工序数据聚合到正确的父节点）
+        // 例如："上领"→"车缝", "上袖"→"车缝", "绣花"→"二次工艺"
+        String childProcessName = progressStage; // 保留原始子工序名
+        String parentStage = resolveParentProgressStage(order.getStyleNo(), childProcessName);
+        if (parentStage != null) {
+            log.info("子工序 '{}' 映射到父进度节点 '{}' (styleNo={})", childProcessName, parentStage, order.getStyleNo());
+            progressStage = parentStage; // progressStage 存储父节点名（用于聚合）
+        }
+
         // 判断是否裁剪
         boolean isCutting = "cutting".equalsIgnoreCase(scanType) ||
                             "裁剪".equals(progressStage.trim());
@@ -178,19 +191,23 @@ public class ProductionScanExecutor {
             checkPatternForCutting(order);
         }
 
-        // 验证数量不超过订单数量
-        inventoryValidator.validateNotExceedOrderQuantity(order, scanType, progressStage, quantity, bundle);
+        // 验证数量不超过订单数量（用子工序名匹配，避免同父节点所有子工序量累加）
+        inventoryValidator.validateNotExceedOrderQuantity(order, scanType, childProcessName, quantity, bundle);
 
-        // 解析单价
-        BigDecimal unitPrice = resolveUnitPriceFromTemplate(order.getStyleNo(), progressStage);
+        // 解析单价（优先用子工序名精确匹配，匹配不上再用父节点名模糊匹配）
+        BigDecimal unitPrice = resolveUnitPriceFromTemplate(order.getStyleNo(), childProcessName);
+        if ((unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) && !childProcessName.equals(progressStage)) {
+            unitPrice = resolveUnitPriceFromTemplate(order.getStyleNo(), progressStage);
+        }
         if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
-            log.warn("未找到工序单价: styleNo={}, processName={}", order.getStyleNo(), progressStage);
+            log.warn("未找到工序单价: styleNo={}, processName={}, progressStage={}", order.getStyleNo(), childProcessName, progressStage);
             unitPrice = BigDecimal.ZERO;
         }
 
+        // processCode 使用子工序名（用于去重和工序跟踪）
         String processCode = hasText(TextUtils.safeText(params.get("processCode")))
                              ? TextUtils.safeText(params.get("processCode"))
-                             : progressStage;
+                             : childProcessName;
 
         String color = colorResolver.apply(null);
         String size = sizeResolver.apply(null);
@@ -300,7 +317,7 @@ public class ProductionScanExecutor {
                     .eq(ScanRecord::getScanType, scanType)
                     .eq(ScanRecord::getScanResult, "success")
                     .gt(ScanRecord::getQuantity, 0)
-                    .eq(ScanRecord::getProgressStage, progressStage)
+                    .eq(ScanRecord::getProcessCode, processCode)  // 用子工序名匹配（非父节点）
                     .last("limit 1"));
 
             if (existing == null || !hasText(existing.getId())) {
@@ -319,7 +336,7 @@ public class ProductionScanExecutor {
 
             if (!isSameOperator) {
                 String otherName = hasText(existingOperatorName) ? existingOperatorName : "他人";
-                throw new IllegalStateException("该菲号「" + progressStage + "」环节已被「" + otherName + "」领取，无法重复操作");
+                throw new IllegalStateException("该菲号「" + processCode + "」环节已被「" + otherName + "」领取，无法重复操作");
             }
 
             int existedQty = existing.getQuantity() == null ? 0 : existing.getQuantity();
@@ -338,8 +355,8 @@ public class ProductionScanExecutor {
             patch.setUnitPrice(unitPrice);
             patch.setTotalAmount(computeTotalAmount(unitPrice, nextQty));
             patch.setProcessCode(processCode);
-            patch.setProgressStage(progressStage);
-            patch.setProcessName(progressStage);
+            patch.setProgressStage(progressStage);   // 父节点
+            patch.setProcessName(processCode);        // 子工序名
             patch.setOperatorId(operatorId);
             patch.setOperatorName(operatorName);
             patch.setScanTime(LocalDateTime.now());
@@ -378,8 +395,8 @@ public class ProductionScanExecutor {
             returned.setUnitPrice(unitPrice);
             returned.setTotalAmount(computeTotalAmount(unitPrice, nextQty));
             returned.setProcessCode(processCode);
-            returned.setProgressStage(progressStage);
-            returned.setProcessName(progressStage);
+            returned.setProgressStage(progressStage);   // 父节点
+            returned.setProcessName(processCode);        // 子工序名
             returned.setOperatorId(operatorId);
             returned.setOperatorName(operatorName);
             returned.setScanTime(LocalDateTime.now());
@@ -416,6 +433,72 @@ public class ProductionScanExecutor {
             }
         }
         return n;
+    }
+
+    /**
+     * 判断名称是否为固定节点之一
+     */
+    private boolean isFixedNode(String name) {
+        if (!hasText(name)) return false;
+        String n = name.trim();
+        for (String node : FIXED_PRODUCTION_NODES) {
+            if (node.equals(n)) return true;
+        }
+        return false;
+    }
+
+    /**
+     * 从模板解析子工序对应的父进度节点
+     * 例如：上领 → 车缝, 上袖 → 车缝, 大烫 → 尾部, 质检 → 尾部, 绣花 → 二次工艺
+     * 模板 JSON 中通过 steps[].progressStage 字段定义父子关系
+     *
+     * 6个父进度节点：采购, 裁剪, 二次工艺, 车缝, 尾部, 入库
+     */
+    private String resolveParentProgressStage(String styleNo, String processName) {
+        if (!hasText(styleNo) || !hasText(processName)) {
+            return null;
+        }
+        // 已经是固定父节点，无需映射
+        if (isFixedNode(processName)) {
+            return null;
+        }
+        try {
+            List<Map<String, Object>> nodes = templateLibraryService.resolveProgressNodeUnitPrices(styleNo.trim());
+            if (nodes == null || nodes.isEmpty()) {
+                return null;
+            }
+            for (Map<String, Object> item : nodes) {
+                String name = item.get("name") != null ? item.get("name").toString().trim() : "";
+                String pStage = item.get("progressStage") != null ? item.get("progressStage").toString().trim() : "";
+                // 子工序名匹配，且 progressStage 指向不同的父节点
+                if (hasText(name) && name.equals(processName.trim()) && hasText(pStage) && !pStage.equals(name)) {
+                    // 验证父节点是已知的6个固定节点
+                    String normalizedParent = normalizeFixedProductionNodeName(pStage);
+                    if (normalizedParent != null && isFixedNode(normalizedParent)) {
+                        return normalizedParent;
+                    }
+                    // 模板中的 progressStage 可能用了别名，尝试映射到6个标准父节点
+                    if (templateLibraryService.progressStageNameMatches("车缝", pStage)) {
+                        return "车缝";
+                    }
+                    if (templateLibraryService.progressStageNameMatches("二次工艺", pStage)) {
+                        return "二次工艺";
+                    }
+                    // 尾部的子工序（大烫/质检/包装/剪线/整烫等）→ 父节点"尾部"
+                    if (templateLibraryService.progressStageNameMatches("尾部", pStage)
+                            || templateLibraryService.progressStageNameMatches("大烫", pStage)
+                            || templateLibraryService.progressStageNameMatches("包装", pStage)
+                            || templateLibraryService.isProgressQualityStageName(pStage)) {
+                        return "尾部";
+                    }
+                    // 直接使用模板中的值（信任模板配置）
+                    return pStage;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("解析父进度节点失败: styleNo={}, processName={}", styleNo, processName, e);
+        }
+        return null;
     }
 
     /**
@@ -563,8 +646,8 @@ public class ProductionScanExecutor {
         sr.setUnitPrice(unitPrice);
         sr.setTotalAmount(computeTotalAmount(unitPrice, quantity));
         sr.setProcessCode(processCode);
-        sr.setProgressStage(progressStage);
-        sr.setProcessName(progressStage);
+        sr.setProgressStage(progressStage);    // 父进度节点（如"车缝"），用于进度聚合
+        sr.setProcessName(processCode);           // 子工序名（如"上领"），用于显示和识别
         sr.setOperatorId(operatorId);
         sr.setOperatorName(operatorName);
         sr.setScanTime(LocalDateTime.now());

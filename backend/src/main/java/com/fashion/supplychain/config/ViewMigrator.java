@@ -155,100 +155,130 @@ public class ViewMigrator {
                     '|', -1
                   ) AS sewing_operator_name,
                   MIN(CASE WHEN sr.scan_type = 'production'
-                        AND (sr.progress_stage IN ('carSewing', 'car_sewing')
+                        AND (sr.progress_stage IN ('carSewing', 'car_sewing', '车缝')
                              OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%车缝%')
                       THEN sr.scan_time END) AS car_sewing_start_time,
                   MAX(CASE WHEN sr.scan_type = 'production'
-                        AND (sr.progress_stage IN ('carSewing', 'car_sewing')
+                        AND (sr.progress_stage IN ('carSewing', 'car_sewing', '车缝')
                              OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%车缝%')
                       THEN sr.scan_time END) AS car_sewing_end_time,
                   SUBSTRING_INDEX(
                     MAX(CASE WHEN sr.scan_type = 'production'
-                        AND (sr.progress_stage IN ('carSewing', 'car_sewing')
+                        AND (sr.progress_stage IN ('carSewing', 'car_sewing', '车缝')
                              OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%车缝%')
                       THEN CONCAT(LPAD(UNIX_TIMESTAMP(sr.scan_time), 20, '0'), LPAD(UNIX_TIMESTAMP(sr.create_time), 20, '0'), '|', IFNULL(sr.operator_name, '')) END),
                     '|', -1
                   ) AS car_sewing_operator_name,
                   SUM(CASE WHEN sr.scan_type = 'production'
-                        AND (sr.progress_stage IN ('carSewing', 'car_sewing')
+                        AND (sr.progress_stage IN ('carSewing', 'car_sewing', '车缝')
                              OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%车缝%')
                       THEN IFNULL(sr.quantity, 0) ELSE 0 END) AS car_sewing_quantity,
+                  -- ★ ironing_* 列实际存「尾部」父节点聚合（大烫/整烫/剪线/质检/包装均归尾部）
                   MIN(CASE WHEN sr.scan_type = 'production'
-                        AND (sr.progress_stage IN ('ironing')
+                        AND (sr.progress_stage IN ('尾部', 'ironing', 'packaging', 'tailProcess', 'tail_process')
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%尾部%'
                              OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%大烫%'
                              OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%整烫%'
-                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%烫%')
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%包装%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%剪线%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%尾工%')
                       THEN sr.scan_time END) AS ironing_start_time,
                   MAX(CASE WHEN sr.scan_type = 'production'
-                        AND (sr.progress_stage IN ('ironing')
+                        AND (sr.progress_stage IN ('尾部', 'ironing', 'packaging', 'tailProcess', 'tail_process')
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%尾部%'
                              OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%大烫%'
                              OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%整烫%'
-                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%烫%')
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%包装%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%剪线%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%尾工%')
                       THEN sr.scan_time END) AS ironing_end_time,
                   SUBSTRING_INDEX(
                     MAX(CASE WHEN sr.scan_type = 'production'
-                        AND (sr.progress_stage IN ('ironing')
+                        AND (sr.progress_stage IN ('尾部', 'ironing', 'packaging', 'tailProcess', 'tail_process')
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%尾部%'
                              OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%大烫%'
                              OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%整烫%'
-                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%烫%')
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%包装%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%剪线%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%尾工%')
                       THEN CONCAT(LPAD(UNIX_TIMESTAMP(sr.scan_time), 20, '0'), LPAD(UNIX_TIMESTAMP(sr.create_time), 20, '0'), '|', IFNULL(sr.operator_name, '')) END),
                     '|', -1
                   ) AS ironing_operator_name,
                   SUM(CASE WHEN sr.scan_type = 'production'
-                        AND (sr.progress_stage IN ('ironing')
+                        AND (sr.progress_stage IN ('尾部', 'ironing', 'packaging', 'tailProcess', 'tail_process')
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%尾部%'
                              OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%大烫%'
                              OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%整烫%'
-                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%烫%')
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%包装%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%剪线%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%尾工%')
                       THEN IFNULL(sr.quantity, 0) ELSE 0 END) AS ironing_quantity,
                   MIN(CASE WHEN sr.scan_type = 'production'
-                        AND (sr.progress_stage IN ('secondaryProcess', 'secondary_process')
-                             OR TRIM(sr.process_name) = '二次工艺'
+                        AND (sr.progress_stage IN ('secondaryProcess', 'secondary_process', '二次工艺')
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%二次%'
                              OR TRIM(sr.process_name) LIKE '%绣花%'
-                             OR TRIM(sr.process_name) LIKE '%印花%'
-                             OR TRIM(sr.process_name) LIKE '%二次%')
+                             OR TRIM(sr.process_name) LIKE '%印花%')
                       THEN sr.scan_time END) AS secondary_process_start_time,
                   MAX(CASE WHEN sr.scan_type = 'production'
-                        AND (sr.progress_stage IN ('secondaryProcess', 'secondary_process')
-                             OR TRIM(sr.process_name) = '二次工艺'
+                        AND (sr.progress_stage IN ('secondaryProcess', 'secondary_process', '二次工艺')
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%二次%'
                              OR TRIM(sr.process_name) LIKE '%绣花%'
-                             OR TRIM(sr.process_name) LIKE '%印花%'
-                             OR TRIM(sr.process_name) LIKE '%二次%')
+                             OR TRIM(sr.process_name) LIKE '%印花%')
                       THEN sr.scan_time END) AS secondary_process_end_time,
                   SUBSTRING_INDEX(
                     MAX(CASE WHEN sr.scan_type = 'production'
-                        AND (sr.progress_stage IN ('secondaryProcess', 'secondary_process')
-                             OR TRIM(sr.process_name) = '二次工艺'
+                        AND (sr.progress_stage IN ('secondaryProcess', 'secondary_process', '二次工艺')
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%二次%'
                              OR TRIM(sr.process_name) LIKE '%绣花%'
-                             OR TRIM(sr.process_name) LIKE '%印花%'
-                             OR TRIM(sr.process_name) LIKE '%二次%')
+                             OR TRIM(sr.process_name) LIKE '%印花%')
                       THEN CONCAT(LPAD(UNIX_TIMESTAMP(sr.scan_time), 20, '0'), LPAD(UNIX_TIMESTAMP(sr.create_time), 20, '0'), '|', IFNULL(sr.operator_name, '')) END),
                     '|', -1
                   ) AS secondary_process_operator_name,
                   SUM(CASE WHEN sr.scan_type = 'production'
-                        AND (sr.progress_stage IN ('secondaryProcess', 'secondary_process')
-                             OR TRIM(sr.process_name) = '二次工艺'
+                        AND (sr.progress_stage IN ('secondaryProcess', 'secondary_process', '二次工艺')
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%二次%'
                              OR TRIM(sr.process_name) LIKE '%绣花%'
-                             OR TRIM(sr.process_name) LIKE '%印花%'
-                             OR TRIM(sr.process_name) LIKE '%二次%')
+                             OR TRIM(sr.process_name) LIKE '%印花%')
                       THEN IFNULL(sr.quantity, 0) ELSE 0 END) AS secondary_process_quantity,
+                  -- ★ packaging_* 列实际存「尾部」父节点聚合（与 ironing_* 值相同）
                   MIN(CASE WHEN sr.scan_type = 'production'
-                        AND (sr.progress_stage IN ('packaging', 'tailProcess', 'tail_process')
-                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%包装%')
+                        AND (sr.progress_stage IN ('尾部', 'ironing', 'packaging', 'tailProcess', 'tail_process')
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%尾部%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%大烫%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%整烫%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%包装%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%剪线%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%尾工%')
                       THEN sr.scan_time END) AS packaging_start_time,
                   MAX(CASE WHEN sr.scan_type = 'production'
-                        AND (sr.progress_stage IN ('packaging', 'tailProcess', 'tail_process')
-                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%包装%')
+                        AND (sr.progress_stage IN ('尾部', 'ironing', 'packaging', 'tailProcess', 'tail_process')
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%尾部%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%大烫%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%整烫%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%包装%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%剪线%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%尾工%')
                       THEN sr.scan_time END) AS packaging_end_time,
                   SUBSTRING_INDEX(
                     MAX(CASE WHEN sr.scan_type = 'production'
-                        AND (sr.progress_stage IN ('packaging', 'tailProcess', 'tail_process')
-                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%包装%')
+                        AND (sr.progress_stage IN ('尾部', 'ironing', 'packaging', 'tailProcess', 'tail_process')
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%尾部%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%大烫%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%整烫%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%包装%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%剪线%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%尾工%')
                       THEN CONCAT(LPAD(UNIX_TIMESTAMP(sr.scan_time), 20, '0'), LPAD(UNIX_TIMESTAMP(sr.create_time), 20, '0'), '|', IFNULL(sr.operator_name, '')) END),
                     '|', -1
                   ) AS packaging_operator_name,
                   SUM(CASE WHEN sr.scan_type = 'production'
-                        AND (sr.progress_stage IN ('packaging', 'tailProcess', 'tail_process')
-                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%包装%')
+                        AND (sr.progress_stage IN ('尾部', 'ironing', 'packaging', 'tailProcess', 'tail_process')
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%尾部%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%大烫%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%整烫%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%包装%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%剪线%'
+                             OR COALESCE(NULLIF(TRIM(sr.progress_stage), ''), NULLIF(TRIM(sr.process_name), '')) LIKE '%尾工%')
                       THEN IFNULL(sr.quantity, 0) ELSE 0 END) AS packaging_quantity,
                   MIN(CASE WHEN (sr.scan_type = 'quality'
                         OR IFNULL(sr.process_code, '') = 'quality_warehousing'

@@ -453,17 +453,14 @@ public class OrderFlowStageFillHelper {
             String carSewingOperator = null;
             int carSewingQty = 0;
 
-            LocalDateTime ironingStart = null, ironingEnd = null;
-            String ironingOperator = null;
-            int ironingQty = 0;
+            // 尾部（合并：大烫/整烫/剪线/质检/包装等，凡模板中 progressStage=尾部 的子工序均归此桶）
+            LocalDateTime tailStart = null, tailEnd = null;
+            String tailOperator = null;
+            int tailQty = 0;
 
             LocalDateTime secondaryProcessStart = null, secondaryProcessEnd = null;
             String secondaryProcessOperator = null;
             int secondaryProcessQty = 0;
-
-            LocalDateTime packagingStart = null, packagingEnd = null;
-            String packagingOperator = null;
-            int packagingQty = 0;
 
             LocalDateTime qualityStart = null, qualityEnd = null;
             String qualityOperator = null;
@@ -522,42 +519,47 @@ public class OrderFlowStageFillHelper {
                     cuttingEnd = t;
                     cuttingOperator = op;
                     cuttingQty += Math.max(0, q);
-                } else if ("production".equals(st) && ("carSewing".equals(pn) || "car_sewing".equals(pn) || pn.contains("车缝"))) {
+                } else if ("production".equals(st)
+                        && ("carSewing".equals(pn) || "car_sewing".equals(pn) || "车缝".equals(pn))) {
+                    // ★ 父进度节点「车缝」：包含所有 progressStage=车缝 的子工序（上领/埋夹/做领等）
                     if (carSewingStart == null) {
                         carSewingStart = t;
                     }
                     carSewingEnd = t;
                     carSewingOperator = op;
                     carSewingQty += Math.max(0, q);
-                } else if ("production".equals(st) && ("ironing".equals(pn) || pn.contains("大熨") || pn.contains("整熨") || pn.contains("熨"))) {
-                    if (ironingStart == null) {
-                        ironingStart = t;
+                } else if ("production".equals(st)
+                        && ("尾部".equals(pn) || "tailProcess".equals(pn) || "tail_process".equals(pn)
+                            || "packaging".equals(pn) || "ironing".equals(pn)
+                            || pn.contains("尾部") || pn.contains("尾工")
+                            || pn.contains("包装") || pn.contains("大烫")
+                            || pn.contains("整烫") || pn.contains("剪线"))) {
+                    // ★ 父进度节点「尾部」：包含所有 progressStage=尾部 的子工序（大烫/整烫/质检/剪线/包装等）
+                    if (tailStart == null) {
+                        tailStart = t;
                     }
-                    ironingEnd = t;
-                    ironingOperator = op;
-                    ironingQty += Math.max(0, q);
-                } else if ("production".equals(st) && ("secondaryProcess".equals(pn) || "secondary_process".equals(pn) || "二次工艺".equals(pn) || pn.contains("绣花") || pn.contains("印花") || pn.contains("二次"))) {
+                    tailEnd = t;
+                    tailOperator = op;
+                    tailQty += Math.max(0, q);
+                } else if ("production".equals(st)
+                        && ("secondaryProcess".equals(pn) || "secondary_process".equals(pn)
+                            || "二次工艺".equals(pn) || pn.contains("二次"))) {
+                    // ★ 父进度节点「二次工艺」：包含所有 progressStage=二次工艺 的子工序（绣花/印花等）
                     if (secondaryProcessStart == null) {
                         secondaryProcessStart = t;
                     }
                     secondaryProcessEnd = t;
                     secondaryProcessOperator = op;
                     secondaryProcessQty += Math.max(0, q);
-                } else if ("production".equals(st) && ("packaging".equals(pn) || "tailProcess".equals(pn) || "tail_process".equals(pn) || pn.contains("包装"))) {
-                    if (packagingStart == null) {
-                        packagingStart = t;
-                    }
-                    packagingEnd = t;
-                    packagingOperator = op;
-                    packagingQty += Math.max(0, q);
                 } else if ("production".equals(st)
                         && !isBaseStageName(pn)
                         && !"quality_warehousing".equals(pc)
                         && !templateLibraryService.isProgressQualityStageName(pn)
-                        && !"车缝".equals(pn) && !"carSewing".equals(pn)
-                        && !"大烫".equals(pn) && !"ironing".equals(pn)
+                        && !"车缝".equals(pn) && !"carSewing".equals(pn) && !"car_sewing".equals(pn)
                         && !"二次工艺".equals(pn) && !"secondaryProcess".equals(pn) && !"secondary_process".equals(pn)
-                        && !"包装".equals(pn) && !"packaging".equals(pn)) {
+                        && !"尾部".equals(pn) && !"tailProcess".equals(pn) && !"tail_process".equals(pn)
+                        && !"packaging".equals(pn) && !"ironing".equals(pn)) {
+                    // 兜底：未归类的生产扫码记录（sewing fallback）
                     if (sewingStart == null) {
                         sewingStart = t;
                     }
@@ -703,14 +705,14 @@ public class OrderFlowStageFillHelper {
                             (int) Math.round(Math.max(0, carSewingQty) * 100.0 / o.getOrderQuantity()));
             o.setCarSewingCompletionRate(carSewingRate);
 
-            // 设置大烫环节（新增 - 兜底分支）
-            o.setIroningStartTime(ironingStart);
-            o.setIroningEndTime(ironingEnd);
-            o.setIroningOperatorName(ironingOperator);
-            Integer ironingRate = (o.getOrderQuantity() == null || o.getOrderQuantity() <= 0) ? 0
+            // 设置大烫环节 → 实际写入「尾部」聚合数据（向前兼容 ironing 字段名）
+            o.setIroningStartTime(tailStart);
+            o.setIroningEndTime(tailEnd);
+            o.setIroningOperatorName(tailOperator);
+            Integer tailRate = (o.getOrderQuantity() == null || o.getOrderQuantity() <= 0) ? 0
                     : scanRecordDomainService.clampPercent(
-                            (int) Math.round(Math.max(0, ironingQty) * 100.0 / o.getOrderQuantity()));
-            o.setIroningCompletionRate(ironingRate);
+                            (int) Math.round(Math.max(0, tailQty) * 100.0 / o.getOrderQuantity()));
+            o.setIroningCompletionRate(tailRate);
 
             // 设置二次工艺环节（新增 - 兜底分支）
             o.setSecondaryProcessStartTime(secondaryProcessStart);
@@ -722,14 +724,12 @@ public class OrderFlowStageFillHelper {
             o.setSecondaryProcessCompletionRate(secondaryProcessRate);
             o.setSecondaryProcessRate(secondaryProcessRate); // 前端 alias
 
-            // 设置包装环节（新增 - 兜底分支）
-            o.setPackagingStartTime(packagingStart);
-            o.setPackagingEndTime(packagingEnd);
-            o.setPackagingOperatorName(packagingOperator);
-            Integer packagingRate = (o.getOrderQuantity() == null || o.getOrderQuantity() <= 0) ? 0
-                    : scanRecordDomainService.clampPercent(
-                            (int) Math.round(Math.max(0, packagingQty) * 100.0 / o.getOrderQuantity()));
-            o.setPackagingCompletionRate(packagingRate);
+            // 设置包装环节 → 实际写入「尾部」聚合数据（向前兼容 packaging 字段名）
+            o.setPackagingStartTime(tailStart);
+            o.setPackagingEndTime(tailEnd);
+            o.setPackagingOperatorName(tailOperator);
+            o.setPackagingCompletionRate(tailRate);
+            o.setTailProcessRate(tailRate);  // 前端 tailProcessRate 别名
 
             o.setQualityStartTime(qualityStart);
             o.setQualityEndTime(qualityEnd);
