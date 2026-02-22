@@ -7,6 +7,7 @@ import com.fashion.supplychain.integration.openapi.service.WebhookPushService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.production.service.ProductOutstockService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.style.service.ProductSkuService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
@@ -36,6 +37,9 @@ public class ProductOutstockOrchestrator {
     @Autowired(required = false)
     private WebhookPushService webhookPushService;
 
+    @Autowired
+    private ProductSkuService productSkuService;
+
     public IPage<ProductOutstock> list(Map<String, Object> params) {
         return productOutstockService.queryPage(params);
     }
@@ -52,6 +56,7 @@ public class ProductOutstockOrchestrator {
         return outstock;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean save(ProductOutstock outstock) {
         if (outstock == null) {
             throw new IllegalArgumentException("参数错误");
@@ -81,7 +86,6 @@ public class ProductOutstockOrchestrator {
         return true;
     }
 
-    @Transactional(rollbackFor = Exception.class)
     private boolean saveAndSync(ProductOutstock outstock) {
         boolean ok = productOutstockService.saveOutstockAndValidate(outstock);
         if (!ok) {
@@ -153,6 +157,22 @@ public class ProductOutstockOrchestrator {
         }
 
         String orderId = StringUtils.hasText(current.getOrderId()) ? current.getOrderId().trim() : null;
+
+        // 恢复SKU库存（出库时扣减了，删除时要加回来）
+        int qty = current.getOutstockQuantity() != null ? current.getOutstockQuantity() : 0;
+        if (qty > 0 && StringUtils.hasText(orderId)) {
+            ProductionOrder order = productionOrderService.getById(orderId);
+            if (order != null) {
+                String styleNo = StringUtils.hasText(current.getStyleNo()) ? current.getStyleNo() : order.getStyleNo();
+                String color = order.getColor();
+                String size = order.getSize();
+                if (StringUtils.hasText(styleNo) && StringUtils.hasText(color) && StringUtils.hasText(size)) {
+                    String skuCode = String.format("%s-%s-%s", styleNo.trim(), color.trim(), size.trim());
+                    productSkuService.updateStock(skuCode, qty);
+                    log.info("Restored SKU stock after outstock delete: skuCode={}, qty={}", skuCode, qty);
+                }
+            }
+        }
 
         ProductOutstock patch = new ProductOutstock();
         patch.setId(key);

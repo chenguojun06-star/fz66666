@@ -1,6 +1,7 @@
 package com.fashion.supplychain.style.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.entity.StyleInfo;
@@ -75,19 +76,15 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
         if (!StringUtils.hasText(skuCode)) {
             return;
         }
-        ProductSku sku = this.getOne(new LambdaQueryWrapper<ProductSku>()
-                .eq(ProductSku::getSkuCode, skuCode));
-        if (sku != null) {
-            int current = sku.getStockQuantity() == null ? 0 : sku.getStockQuantity();
-            int next = current + quantity;
-            if (next < 0) {
-                next = 0; // Prevent negative stock
-            }
-            sku.setStockQuantity(next);
-            this.updateById(sku);
-            log.info("Updated stock for SKU {}: {} -> {}", skuCode, current, next);
-        } else {
-            // SKU不存在时自动创建（入库场景）
+        // 原子更新：单条 SQL 防止并发丢失更新
+        boolean updated = this.update(null, new LambdaUpdateWrapper<ProductSku>()
+                .eq(ProductSku::getSkuCode, skuCode)
+                .setSql("stock_quantity = GREATEST(COALESCE(stock_quantity, 0) + (" + quantity + "), 0)"));
+        if (updated) {
+            log.info("Atomically updated stock for SKU {}: delta={}", skuCode, quantity);
+            return;
+        }
+        // SKU不存在时自动创建（入库场景）
             if (quantity > 0) {
                 try {
                     // skuCode 格式: styleNo-color-size

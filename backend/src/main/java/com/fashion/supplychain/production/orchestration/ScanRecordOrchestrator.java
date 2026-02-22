@@ -275,6 +275,20 @@ public class ScanRecordOrchestrator {
             body.put("rollbackQuantity", qty);
             body.put("rollbackRemark", "撤销扫码");
             boolean ok = productWarehousingOrchestrator.rollbackByBundle(body);
+
+            // 标记扫码记录为已撤销
+            ScanRecord patch = new ScanRecord();
+            patch.setId(target.getId());
+            patch.setScanResult("failure");
+            patch.setRemark("已撤销");
+            patch.setUpdateTime(LocalDateTime.now());
+            scanRecordService.updateById(patch);
+
+            String oid = TextUtils.safeText(target.getOrderId());
+            if (hasText(oid)) {
+                productionOrderService.recomputeProgressAsync(oid);
+            }
+
             Map<String, Object> resp = new HashMap<>();
             resp.put("success", ok);
             resp.put("message", "已撤销");
@@ -332,6 +346,11 @@ public class ScanRecordOrchestrator {
             throw new IllegalStateException("只能退回成功的扫码记录");
         }
 
+        // 工资已结算的扫码记录禁止退回重扫
+        if (StringUtils.hasText(target.getPayrollSettlementId())) {
+            throw new IllegalStateException("该扫码记录已参与工资结算，无法退回重扫");
+        }
+
         // 校验1小时时间限制
         LocalDateTime scanTime = target.getScanTime() != null ? target.getScanTime() : target.getCreateTime();
         if (scanTime != null && scanTime.plusHours(1).isBefore(LocalDateTime.now())) {
@@ -357,7 +376,8 @@ public class ScanRecordOrchestrator {
                     body.put("rollbackRemark", "退回重扫");
                     productWarehousingOrchestrator.rollbackByBundle(body);
                 } catch (Exception e) {
-                    log.warn("[rescan] 入库回滚失败，继续撤销扫码记录: recordId={}, error={}", recordId, e.getMessage());
+                    log.error("[rescan] 入库回滚失败: recordId={}", recordId, e);
+                    throw new IllegalStateException("入库回滚失败，无法退回重扫: " + e.getMessage(), e);
                 }
             }
         }

@@ -481,26 +481,21 @@ public class ProductWarehousingHelper {
         if (deltaQuantity == 0) {
             return;
         }
-        try {
-            String styleNo = w.getStyleNo();
-            String color = null;
-            String size = null;
+        String styleNo = w.getStyleNo();
+        String color = null;
+        String size = null;
 
-            if (bundle != null) {
-                color = bundle.getColor();
-                size = bundle.getSize();
-            } else if (order != null) {
-                color = order.getColor();
-                size = order.getSize();
-            }
+        if (bundle != null) {
+            color = bundle.getColor();
+            size = bundle.getSize();
+        } else if (order != null) {
+            color = order.getColor();
+            size = order.getSize();
+        }
 
-            if (StringUtils.hasText(styleNo) && StringUtils.hasText(color) && StringUtils.hasText(size)) {
-                String skuCode = String.format("%s-%s-%s", styleNo.trim(), color.trim(), size.trim());
-                productSkuService.updateStock(skuCode, deltaQuantity);
-            }
-        } catch (Exception e) {
-            log.warn("Failed to update SKU stock: warehousingId={}, delta={}, error={}", w.getId(), deltaQuantity,
-                    e.getMessage());
+        if (StringUtils.hasText(styleNo) && StringUtils.hasText(color) && StringUtils.hasText(size)) {
+            String skuCode = String.format("%s-%s-%s", styleNo.trim(), color.trim(), size.trim());
+            productSkuService.updateStock(skuCode, deltaQuantity);
         }
     }
 
