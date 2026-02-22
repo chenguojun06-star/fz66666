@@ -65,20 +65,19 @@ public class TenantFileController {
                 }
             }
 
-            // 本地文件存储（开发环境 / 未配置 COS）
-            // ✅ COS 已启用：302 重定向到预签名 URL
+            // ✅ COS 已启用：优先从 COS 获取，找不到则回退本地存储
             if (cosService.isEnabled()) {
-                if (!cosService.exists(tenantId, fileName)) {
-                    log.debug("[COS] 文件不存在: tenantId={}, fileName={}", tenantId, fileName);
-                    return ResponseEntity.notFound().build();
+                if (cosService.exists(tenantId, fileName)) {
+                    String presignedUrl = cosService.getPresignedUrl(tenantId, fileName);
+                    return ResponseEntity.status(302)
+                            .header(HttpHeaders.LOCATION, presignedUrl)
+                            .build();
                 }
-                String presignedUrl = cosService.getPresignedUrl(tenantId, fileName);
-                return ResponseEntity.status(302)
-                        .header(HttpHeaders.LOCATION, presignedUrl)
-                        .build();
+                // COS 中不存在，尝试回退到本地文件（兼容 COS 启用前的旧数据）
+                log.info("[COS] 文件不在COS中，尝试本地回退: tenantId={}, fileName={}", tenantId, fileName);
             }
 
-            // 本地文件存储（开发环境 / 未配置 COS）
+            // 本地文件存储（开发环境 / 未配置 COS / COS 回退）
             Path baseDir = Path.of(uploadPath).toAbsolutePath().normalize();
             Path filePath = baseDir.resolve("tenants")
                     .resolve(String.valueOf(tenantId))
@@ -93,7 +92,7 @@ public class TenantFileController {
 
             Resource resource = new UrlResource(filePath.toUri());
             if (!resource.exists()) {
-                log.debug("[租户文件] 文件不存在: tenantId={}, fileName={}", tenantId, fileName);
+                log.debug("[租户文件] 文件不存在（COS和本地均无）: tenantId={}, fileName={}", tenantId, fileName);
                 return ResponseEntity.notFound().build();
             }
 
