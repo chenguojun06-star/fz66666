@@ -355,11 +355,15 @@ const ProductionList: React.FC = () => {
     },
     {
       title: '单价',
-      dataIndex: 'factoryUnitPrice',
-      key: 'factoryUnitPrice',
+      key: 'quotationUnitPrice',
       width: 90,
       align: 'right' as const,
-      render: (v: any) => v != null ? <span style={{ color: '#1677ff', fontWeight: 500 }}>¥{Number(v).toFixed(2)}</span> : <span style={{ color: '#bfbfbf' }}>-</span>,
+      render: (_: any, record: any) => {
+        const v = Number(record?.quotationUnitPrice);
+        return (Number.isFinite(v) && v > 0)
+          ? <span style={{ color: '#1677ff', fontWeight: 500 }}>¥{v.toFixed(2)}</span>
+          : <span style={{ color: '#bfbfbf' }}>-</span>;
+      },
     },
     {
       title: '下单人',
