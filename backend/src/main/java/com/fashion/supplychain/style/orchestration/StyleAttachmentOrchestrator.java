@@ -33,6 +33,9 @@ public class StyleAttachmentOrchestrator {
     @Autowired
     private StyleInfoService styleInfoService;
 
+    @Autowired
+    private com.fashion.supplychain.common.CosService cosService;
+
     @Value("${fashion.upload-path}")
     private String uploadPath;
 
@@ -109,9 +112,13 @@ public class StyleAttachmentOrchestrator {
             }
 
             String newFilename = UUID.randomUUID().toString() + extension;
-            // ✅ 文件存储到 tenants/{tenantId}/ 子目录
-            File dest = TenantFilePathResolver.resolveStoragePath(uploadPath, newFilename);
-            file.transferTo(dest);
+            // ✅ 存储文件：COS 优先，本地降级
+            if (cosService.isEnabled()) {
+                cosService.upload(com.fashion.supplychain.common.UserContext.tenantId(), newFilename, file);
+            } else {
+                File dest = TenantFilePathResolver.resolveStoragePath(uploadPath, newFilename);
+                file.transferTo(dest);
+            }
 
             // 获取当前版本号
             StyleAttachment latest = styleAttachmentService.getLatestPattern(styleId, type);
@@ -187,9 +194,15 @@ public class StyleAttachmentOrchestrator {
             TenantAssert.assertTenantContext();
 
             String newFilename = UUID.randomUUID().toString() + extension;
-            // ✅ 文件存储到 tenants/{tenantId}/ 子目录
-            File dest = TenantFilePathResolver.resolveStoragePath(uploadPath, newFilename);
-            Files.write(dest.toPath(), content);
+            // ✅ 存储文件：COS 优先，本地降级
+            Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+            if (cosService.isEnabled()) {
+                String ct = StringUtils.hasText(contentType) ? contentType.trim() : "application/octet-stream";
+                cosService.upload(tenantId, newFilename, content, ct);
+            } else {
+                File dest = TenantFilePathResolver.resolveStoragePath(uploadPath, newFilename);
+                Files.write(dest.toPath(), content);
+            }
 
             StyleAttachment attachment = new StyleAttachment();
             attachment.setStyleId(styleId);
@@ -290,10 +303,14 @@ public class StyleAttachmentOrchestrator {
             String extension = dot >= 0 ? safeOriginal.substring(dot) : "";
 
             String newFilename = UUID.randomUUID().toString() + extension;
-            File dest = TenantFilePathResolver.resolveStoragePath(uploadPath, newFilename);
-            log.info("目标文件路径: {}", dest.getAbsolutePath());
-
-            file.transferTo(dest);
+            // ✅ 存储文件：COS 优先，本地降级
+            if (cosService.isEnabled()) {
+                cosService.upload(com.fashion.supplychain.common.UserContext.tenantId(), newFilename, file);
+            } else {
+                File dest = TenantFilePathResolver.resolveStoragePath(uploadPath, newFilename);
+                log.info("目标文件路径: {}", dest.getAbsolutePath());
+                file.transferTo(dest);
+            }
             log.info("文件保存成功");
 
             // 3. 创建新记录

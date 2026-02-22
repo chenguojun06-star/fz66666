@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Tabs, Button, Tag, Space, message, Form, Input, InputNumber, Modal, Select, Card, Typography, Badge, Alert, QRCode, Row, Col, Progress, Descriptions, Divider, Radio } from 'antd';
-import { PlusOutlined, CrownOutlined, TeamOutlined, CopyOutlined, QrcodeOutlined, DollarOutlined } from '@ant-design/icons';
+import { PlusOutlined, CrownOutlined, TeamOutlined, CopyOutlined, QrcodeOutlined, DollarOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -31,6 +31,22 @@ const TenantListTab: React.FC = () => {
   const [rejectReasonForm] = Form.useForm();
   const [resettingPwd, setResettingPwd] = useState(false);
   const [processingId, setProcessingId] = useState<number | null>(null);
+  const approveModal = useModal<TenantInfo>();
+  const [approveForm] = Form.useForm();
+
+  const PLAN_OPTIONS = [
+    { value: 'TRIAL', label: '免费试用', description: '5用户 / 1GB存储' },
+    { value: 'BASIC', label: '基础版 ¥199/月', description: '20用户 / 5GB存储' },
+    { value: 'PRO', label: '专业版 ¥499/月', description: '50用户 / 20GB存储' },
+    { value: 'ENTERPRISE', label: '企业版 ¥999/月', description: '200用户 / 100GB存储' },
+  ];
+
+  const TRIAL_OPTIONS = [
+    { value: 15, label: '15天' },
+    { value: 30, label: '30天' },
+    { value: 90, label: '90天' },
+    { value: 0, label: '永久免费' },
+  ];
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -99,22 +115,51 @@ const TenantListTab: React.FC = () => {
     }
   };
 
-  const handleApproveApplication = async (record: TenantInfo) => {
+  const handleApproveApplication = (record: TenantInfo) => {
+    approveForm.setFieldsValue({ planType: 'TRIAL', trialDays: 30 });
+    approveModal.open(record);
+  };
+
+  const handleConfirmApprove = async () => {
+    const record = approveModal.data;
+    if (!record) return;
+    try {
+      const values = await approveForm.validateFields();
+      setProcessingId(record.id);
+      await tenantService.approveApplication(record.id, {
+        planType: values.planType,
+        trialDays: values.planType === 'TRIAL' ? values.trialDays : undefined,
+      });
+      message.success('审批通过，工厂账户已激活');
+      approveModal.close();
+      approveForm.resetFields();
+      fetchData();
+    } catch (e: any) {
+      if (e?.errorFields?.length) return;
+      message.error(e?.message || '审批失败');
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleDeleteTenant = (record: TenantInfo) => {
+    const statusLabel = record.status === 'pending_review' ? '待审核' : record.status === 'active' ? '正常' : record.status;
     Modal.confirm({
-      title: `确认审批通过「${record.tenantName}」`,
-      content: `将创建主账号「${record.applyUsername || ''}」，并激活该工厂账户。`,
-      okText: '确认审批',
+      title: `确认删除「${record.tenantName}」`,
+      icon: <ExclamationCircleOutlined />,
+      content: record.status === 'active' || record.status === 'disabled'
+        ? `该租户状态为「${statusLabel}」，删除后将同时清除其所有用户、角色、账单数据，此操作不可恢复！`
+        : `将删除该${statusLabel}的入驻申请。`,
+      okText: '确认删除',
+      okType: 'danger',
       cancelText: '取消',
       onOk: async () => {
-        setProcessingId(record.id);
         try {
-          await tenantService.approveApplication(record.id);
-          message.success('审批通过，工厂账户已激活');
+          await tenantService.deleteTenant(record.id);
+          message.success('已删除');
           fetchData();
         } catch (e: any) {
-          message.error(e?.message || '审批失败');
-        } finally {
-          setProcessingId(null);
+          message.error(e?.message || '删除失败');
         }
       },
     });
@@ -199,6 +244,11 @@ const TenantListTab: React.FC = () => {
               danger: true,
               onClick: () => { rejectReasonForm.resetFields(); rejectModal.open(record); },
             },
+            {
+              key: 'delete', label: '删除',
+              danger: true,
+              onClick: () => handleDeleteTenant(record),
+            },
           ];
           return <RowActions actions={actions} />;
         }
@@ -220,6 +270,11 @@ const TenantListTab: React.FC = () => {
             key: 'toggle', label: record.status === 'active' ? '停用' : '启用',
             danger: record.status === 'active',
             onClick: () => handleToggleStatus(record),
+          },
+          {
+            key: 'delete', label: '删除',
+            danger: true,
+            onClick: () => handleDeleteTenant(record),
           },
         ];
         return <RowActions actions={actions} />;
@@ -439,12 +494,61 @@ const TenantListTab: React.FC = () => {
           </Form.Item>
         </Form>
       </ResizableModal>
+
+      {/* 审批通过弹窗（含套餐选择） */}
+      <ResizableModal
+        open={approveModal.visible}
+        title={`审批通过 - ${approveModal.data?.tenantName || ''}`}
+        onCancel={() => { approveModal.close(); approveForm.resetFields(); }}
+        width="40vw"
+        footer={
+          <Space>
+            <Button onClick={() => { approveModal.close(); approveForm.resetFields(); }}>取消</Button>
+            <Button type="primary" loading={processingId === approveModal.data?.id} onClick={handleConfirmApprove}>确认审批</Button>
+          </Space>
+        }
+      >
+        <Alert
+          message={`将为「${approveModal.data?.tenantName || ''}」创建主账号「${approveModal.data?.applyUsername || ''}」并激活工厂账户`}
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+        <Form form={approveForm} layout="vertical" initialValues={{ planType: 'TRIAL', trialDays: 30 }}>
+          <Form.Item label="选择套餐" name="planType" rules={[{ required: true, message: '请选择套餐' }]}>
+            <Select>
+              {PLAN_OPTIONS.map(p => (
+                <Select.Option key={p.value} value={p.value}>
+                  {p.label}（{p.description}）
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+          <Form.Item noStyle shouldUpdate={(prev, cur) => prev.planType !== cur.planType}>
+            {({ getFieldValue }) => getFieldValue('planType') === 'TRIAL' ? (
+              <Form.Item label="免费试用期" name="trialDays" rules={[{ required: true, message: '请选择试用期' }]}>
+                <Radio.Group>
+                  {TRIAL_OPTIONS.map(t => (
+                    <Radio.Button key={t.value} value={t.value}>{t.label}</Radio.Button>
+                  ))}
+                </Radio.Group>
+              </Form.Item>
+            ) : (
+              <Alert
+                message="付费套餐将在审批通过后立即生效，可在「套餐与收费」中随时调整"
+                type="warning"
+                showIcon
+                style={{ marginBottom: 16 }}
+              />
+            )}
+          </Form.Item>
+        </Form>
+      </ResizableModal>
     </div>
   );
 };
 
-// ========== 注册审批 Tab ==========
-const RegistrationTab: React.FC = () => {
+// ========== 注册审批 Tab ==========: React.FC = () => {
   const { isSuperAdmin } = useAuth();
   const [tenantApps, setTenantApps] = useState<TenantInfo[]>([]);
   const [tenantAppsLoading, setTenantAppsLoading] = useState(false);

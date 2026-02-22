@@ -258,12 +258,27 @@ public class TenantController {
     }
 
     /**
+     * 删除租户（超级管理员）
+     * 待审核/已拒绝的租户直接删除；已激活的租户会级联清理用户、角色、账单
+     */
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
+    public Result<Boolean> deleteTenant(@PathVariable Long id) {
+        return Result.success(tenantOrchestrator.deleteTenant(id));
+    }
+
+    /**
      * 审批通过入驻申请（超级管理员）
+     * 可选指定套餐和免费试用期
      */
     @PostMapping("/{id}/approve-application")
     @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
-    public Result<Map<String, Object>> approveApplication(@PathVariable Long id) {
-        return Result.success(tenantOrchestrator.approveApplication(id));
+    public Result<Map<String, Object>> approveApplication(@PathVariable Long id,
+                                                           @RequestBody(required = false) Map<String, Object> params) {
+        String planType = params != null ? (String) params.get("planType") : null;
+        Integer trialDays = params != null && params.get("trialDays") != null
+                ? Integer.valueOf(params.get("trialDays").toString()) : null;
+        return Result.success(tenantOrchestrator.approveApplication(id, planType, trialDays));
     }
 
     /**

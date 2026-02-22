@@ -238,14 +238,96 @@ public class TenantOrchestrator {
     }
 
     /**
-     * 审批通过入驻申请（超级管理员专用）
-     * 自动生成租户编码，创建主账号，激活租户
+     * 删除租户（超级管理员专用）
+     * - 待审核/已拒绝：直接删除（无关联用户）
+     * - 已激活/已停用：删除关联用户和角色，再删除租户
      */
     @Transactional(rollbackFor = Exception.class)
-    public Map<String, Object> approveApplication(Long tenantId) {
+    public boolean deleteTenant(Long tenantId) {
+        assertSuperAdmin();
+        Tenant tenant = tenantService.getById(tenantId);
+        if (tenant == null) throw new IllegalArgumentException("租户不存在");
+
+        String status = tenant.getStatus();
+        if ("active".equals(status) || "inactive".equals(status) || "disabled".equals(status)) {
+            // 删除该租户下所有用户
+            QueryWrapper<User> userQuery = new QueryWrapper<>();
+            userQuery.eq("tenant_id", tenantId);
+            userService.remove(userQuery);
+
+            // 删除该租户下所有角色及角色权限
+            QueryWrapper<Role> roleQuery = new QueryWrapper<>();
+            roleQuery.eq("tenant_id", tenantId);
+            List<Role> roles = roleService.list(roleQuery);
+            for (Role role : roles) {
+                QueryWrapper<com.fashion.supplychain.system.entity.RolePermission> rpQuery = new QueryWrapper<>();
+                rpQuery.eq("role_id", role.getId());
+                rolePermissionService.remove(rpQuery);
+            }
+            roleService.remove(roleQuery);
+
+            // 删除权限天花板配置
+            QueryWrapper<com.fashion.supplychain.system.entity.TenantPermissionCeiling> ceilQuery = new QueryWrapper<>();
+            ceilQuery.eq("tenant_id", tenantId);
+            ceilingService.remove(ceilQuery);
+
+            // 删除账单记录
+            QueryWrapper<TenantBillingRecord> billQuery = new QueryWrapper<>();
+            billQuery.eq("tenant_id", tenantId);
+            billingRecordService.remove(billQuery);
+
+            log.info("[租户删除] tenantId={} 工厂={} 已清理关联用户/角色/权限/账单", tenantId, tenant.getTenantName());
+        }
+
+        tenantService.removeById(tenantId);
+        log.info("[租户删除] tenantId={} 工厂={} 状态={} 已删除", tenantId, tenant.getTenantName(), status);
+        return true;
+    }
+
+    /**
+     * 审批通过入驻申请（超级管理员专用）
+     * 自动生成租户编码，创建主账号，激活租户
+     * @param planType 套餐类型（可选，默认 TRIAL）
+     * @param trialDays 免费试用天数（可选，默认 30，0 表示永不过期）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> approveApplication(Long tenantId, String planType, Integer trialDays) {
         assertSuperAdmin();
         // TenantInterceptor 已通过 SUPERADMIN_MANAGED_TABLES 精确放行 t_user/t_role
-        return doApproveApplication(tenantId);
+        Map<String, Object> result = doApproveApplication(tenantId);
+
+        // 审批通过后设置套餐和试用期
+        Tenant tenant = tenantService.getById(tenantId);
+        if (tenant != null) {
+            String plan = (planType != null && PLAN_DEFINITIONS.containsKey(planType)) ? planType : "TRIAL";
+            Map<String, Object> planDef = PLAN_DEFINITIONS.get(plan);
+            if (planDef != null) {
+                tenant.setPlanType(plan);
+                tenant.setMonthlyFee((java.math.BigDecimal) planDef.get("monthlyFee"));
+                tenant.setStorageQuotaMb((Long) planDef.get("storageQuotaMb"));
+                tenant.setMaxUsers((Integer) planDef.get("maxUsers"));
+            }
+            // 设置试用/有效期
+            if ("TRIAL".equals(plan)) {
+                tenant.setPaidStatus("TRIAL");
+                if (trialDays != null && trialDays > 0) {
+                    tenant.setExpireTime(LocalDateTime.now().plusDays(trialDays));
+                } else if (trialDays == null) {
+                    // 默认 30 天免费试用
+                    tenant.setExpireTime(LocalDateTime.now().plusDays(30));
+                }
+                // trialDays == 0 表示永不过期，不设置 expireTime
+            } else {
+                tenant.setPaidStatus("PAID");
+                tenant.setBillingCycle("MONTHLY");
+                tenant.setExpireTime(LocalDateTime.now().plusMonths(1));
+            }
+            tenant.setUpdateTime(LocalDateTime.now());
+            tenantService.updateById(tenant);
+            log.info("[审批套餐] tenantId={} 套餐={} 试用天数={}", tenantId, plan, trialDays);
+        }
+
+        return result;
     }
 
     private Map<String, Object> doApproveApplication(Long tenantId) {

@@ -1,8 +1,10 @@
 package com.fashion.supplychain.common;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +23,7 @@ import java.nio.file.Path;
  * - 校验当前用户的 tenantId 与文件所属 tenantId 一致
  * - 文件名为 UUID 格式，不可猜测
  * - 文件存储在 tenants/{tenantId}/ 子目录中，物理隔离
+ * - 开启 COS 时：302 重定向到预签名 URL；禁用时：本地文件流
  */
 @RestController
 @RequestMapping("/api/file")
@@ -29,6 +32,9 @@ public class TenantFileController {
 
     @Value("${fashion.upload-path}")
     private String uploadPath;
+
+    @Autowired
+    private CosService cosService;
 
     /**
      * 租户隔离文件下载/预览
@@ -54,7 +60,20 @@ public class TenantFileController {
                 }
             }
 
-            // 构建文件的磁盘路径：{uploadPath}/tenants/{tenantId}/{fileName}
+            // 本地文件存储（开发环境 / 未配置 COS）
+            // ✅ COS 已启用：302 重定向到预签名 URL
+            if (cosService.isEnabled()) {
+                if (!cosService.exists(tenantId, fileName)) {
+                    log.debug("[COS] 文件不存在: tenantId={}, fileName={}", tenantId, fileName);
+                    return ResponseEntity.notFound().build();
+                }
+                String presignedUrl = cosService.getPresignedUrl(tenantId, fileName);
+                return ResponseEntity.status(302)
+                        .header(HttpHeaders.LOCATION, presignedUrl)
+                        .build();
+            }
+
+            // 本地文件存储（开发环境 / 未配置 COS）
             Path baseDir = Path.of(uploadPath).toAbsolutePath().normalize();
             Path filePath = baseDir.resolve("tenants")
                     .resolve(String.valueOf(tenantId))

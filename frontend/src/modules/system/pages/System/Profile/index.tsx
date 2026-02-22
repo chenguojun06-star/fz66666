@@ -364,15 +364,17 @@ const Profile: React.FC = () => {
                             <Typography.Text type="secondary" style={{ fontSize: 12 }}>（如需修改请联系管理员）</Typography.Text>
                         </div>
                         <Form form={tenantForm} layout="vertical" requiredMark={false}>
-                            <Form.Item label="工厂名称" name="tenantName">
-                                <Input disabled autoComplete="organization" />
-                            </Form.Item>
-                            <Form.Item label="联系人" name="contactName">
-                                <Input disabled autoComplete="name" />
-                            </Form.Item>
-                            <Form.Item label="联系电话" name="contactPhone">
-                                <Input disabled autoComplete="tel" />
-                            </Form.Item>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0 16px' }}>
+                                <Form.Item label="工厂名称" name="tenantName">
+                                    <Input disabled autoComplete="organization" />
+                                </Form.Item>
+                                <Form.Item label="联系人" name="contactName">
+                                    <Input disabled autoComplete="name" />
+                                </Form.Item>
+                                <Form.Item label="联系电话" name="contactPhone">
+                                    <Input disabled autoComplete="tel" />
+                                </Form.Item>
+                            </div>
                         </Form>
                         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
                             工厂码：<Typography.Text code copyable>{tenantInfo.tenantCode}</Typography.Text>（不可修改）
@@ -391,16 +393,16 @@ const Profile: React.FC = () => {
                                 <span style={{ fontWeight: 600, fontSize: 15 }}>员工招募</span>
                             </div>
                             <Card size="small" style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
-                                <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                                <div style={{ textAlign: 'center', marginBottom: 12 }}>
                                     <QRCode value={registerUrl} size={160} />
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, justifyContent: 'center' }}>
                                     <span style={{ color: '#888', fontSize: 13, whiteSpace: 'nowrap' }}>工厂码</span>
                                     <Typography.Text code copyable={{ text: tenantInfo.tenantCode }} style={{ fontSize: 18, fontWeight: 700 }}>
                                         {tenantInfo.tenantCode}
                                     </Typography.Text>
                                 </div>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
                                     <Button
                                         size="small"
                                         icon={<LinkOutlined />}
@@ -422,7 +424,7 @@ const Profile: React.FC = () => {
                                         复制工厂码
                                     </Button>
                                 </div>
-                                <Typography.Text type="secondary" style={{ fontSize: 11, marginTop: 10, display: 'block', wordBreak: 'break-all' }}>
+                                <Typography.Text type="secondary" style={{ fontSize: 11, marginTop: 10, display: 'block', wordBreak: 'break-all', textAlign: 'center' }}>
                                     员工扫码二维码或输入工厂码即可申请加入，审批通过后可登录
                                 </Typography.Text>
                             </Card>

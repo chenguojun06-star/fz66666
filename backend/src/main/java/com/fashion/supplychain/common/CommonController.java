@@ -2,6 +2,7 @@ package com.fashion.supplychain.common;
 
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.common.tenant.TenantFilePathResolver;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -29,6 +30,9 @@ public class CommonController {
     @Value("${fashion.upload-path}")
     private String uploadPath;
 
+    @Autowired
+    private CosService cosService;
+
     /**
      * 通用文件上传（租户隔离版本）
      * 文件自动存储到 tenants/{tenantId}/ 子目录
@@ -50,8 +54,14 @@ public class CommonController {
             String newFilename = UUID.randomUUID().toString() + extension;
 
             // ✅ 文件存储到 tenants/{tenantId}/ 子目录
-            File dest = TenantFilePathResolver.resolveStoragePath(uploadPath, newFilename);
-            file.transferTo(dest);
+            // ✅ 存储文件：COS 优先，本地降级
+            if (cosService.isEnabled()) {
+                Long tenantId = UserContext.tenantId();
+                cosService.upload(tenantId, newFilename, file);
+            } else {
+                File dest = TenantFilePathResolver.resolveStoragePath(uploadPath, newFilename);
+                file.transferTo(dest);
+            }
 
             // ✅ 返回租户隔离的 URL
             String url = TenantFilePathResolver.buildDownloadUrl(newFilename);

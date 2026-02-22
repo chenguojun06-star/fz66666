@@ -89,8 +89,10 @@ const tenantService = {
   createTenant: (data: Record<string, unknown>) => api.post(`${BASE}/create`, data),
   listTenants: (params: Record<string, unknown>) => api.post(`${BASE}/list`, params),
   updateTenant: (id: number, data: Record<string, unknown>) => api.put(`${BASE}/${id}`, data),
+  deleteTenant: (id: number) => api.delete(`${BASE}/${id}`),
   toggleTenantStatus: (id: number, status: string) => api.post(`${BASE}/${id}/toggle-status`, { status }),
-  approveApplication: (id: number) => api.post(`${BASE}/${id}/approve-application`, {}),
+  approveApplication: (id: number, params?: { planType?: string; trialDays?: number }) =>
+    api.post(`${BASE}/${id}/approve-application`, params || {}),
   rejectApplication: (id: number, reason?: string) => api.post(`${BASE}/${id}/reject-application`, { reason }),
   updateApplication: (id: number, data: { applyUsername?: string; contactName?: string; contactPhone?: string }) =>
     api.post(`${BASE}/${id}/update-application`, data),

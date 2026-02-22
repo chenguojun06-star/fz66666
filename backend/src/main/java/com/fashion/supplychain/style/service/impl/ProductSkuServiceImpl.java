@@ -122,7 +122,6 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
             } else {
                 log.warn("SKU not found for stock update: {}", skuCode);
             }
-        }
     }
 
     private void createOrUpdateSku(StyleInfo style, String color, String size) {
