@@ -311,7 +311,7 @@ const common = {
       filePath,
       name: 'file',
       formData,
-      url: '/api/common/upload/image',
+      url: '/api/common/upload',
     });
   },
 };
