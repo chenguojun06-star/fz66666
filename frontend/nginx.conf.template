@@ -36,9 +36,9 @@ server {
     }
 
     # ---- API 反向代理 ----
-    # RESOLVER 从容器 /etc/resolv.conf 自动提取
-    # BACKEND_URL 使用后端公网域名（内网服务名 DNS 不可靠）
-    location /api/ {
+    # ^~ 修饰符：确保 /api/ 前缀匹配优先于静态资源正则
+    # 否则 /api/file/.../xxx.png 会被 ~* \.(png|jpg)$ 截走 → 返回404
+    location ^~ /api/ {
         resolver ${RESOLVER} valid=30s ipv6=off;
         set $backend "${BACKEND_URL}";
         proxy_pass $backend;
@@ -63,7 +63,7 @@ server {
     }
 
     # ---- WebSocket 反向代理 ----
-    location /ws/ {
+    location ^~ /ws/ {
         resolver ${RESOLVER} valid=30s ipv6=off;
         set $backend "${BACKEND_URL}";
         proxy_pass $backend;
