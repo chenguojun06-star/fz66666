@@ -184,6 +184,7 @@ public class ScanRecordOrchestrator {
     public Map<String, Object> undo(Map<String, Object> params) {
         TenantAssert.assertTenantContext(); // 撤销扫码必须有租户上下文
         Map<String, Object> safeParams = params == null ? new HashMap<>() : new HashMap<>(params);
+        String recordId = TextUtils.safeText(safeParams.get("recordId"));
         String requestId = TextUtils.safeText(safeParams.get("requestId"));
         String scanCode = TextUtils.safeText(safeParams.get("scanCode"));
         String scanType = TextUtils.safeText(safeParams.get("scanType"));
@@ -191,12 +192,16 @@ public class ScanRecordOrchestrator {
         String processCode = TextUtils.safeText(safeParams.get("processCode"));
         Integer qtyParam = NumberUtils.toInt(safeParams.get("quantity"));
 
-        if (!hasText(requestId) && !hasText(scanCode)) {
+        if (!hasText(recordId) && !hasText(requestId) && !hasText(scanCode)) {
             throw new IllegalArgumentException("参数错误");
         }
 
         ScanRecord target = null;
-        if (hasText(requestId)) {
+        // 优先通过 recordId 直接查找（小程序即时撤销 / PC端撤回）
+        if (hasText(recordId)) {
+            target = scanRecordService.getById(recordId);
+        }
+        if (target == null && hasText(requestId)) {
             target = duplicateScanPreventer.findByRequestId(requestId);
         }
         if (target == null && hasText(scanCode)) {
@@ -231,8 +236,17 @@ public class ScanRecordOrchestrator {
             String st = hasText(scanType) ? scanType.trim().toLowerCase() : "";
             if (("warehouse".equals(st) || "quality".equals(st)) && hasText(scanCode)
                     && qtyParam != null && qtyParam > 0) {
+                // 检查订单是否已完成
+                String fallbackOrderId = TextUtils.safeText(safeParams.get("orderId"));
+                if (hasText(fallbackOrderId)) {
+                    ProductionOrder fallbackOrder = productionOrderService.getById(fallbackOrderId);
+                    if (fallbackOrder != null && "completed".equalsIgnoreCase(
+                            fallbackOrder.getStatus() == null ? "" : fallbackOrder.getStatus().trim())) {
+                        throw new IllegalStateException("订单已完成，无法撤回扫码记录");
+                    }
+                }
                 Map<String, Object> body = new HashMap<>();
-                body.put("orderId", TextUtils.safeText(safeParams.get("orderId")));
+                body.put("orderId", fallbackOrderId);
                 body.put("cuttingBundleQrCode", scanCode);
                 body.put("rollbackQuantity", qtyParam);
                 body.put("rollbackRemark", "撤销扫码");
@@ -252,6 +266,22 @@ public class ScanRecordOrchestrator {
         // 工资已结算的扫码记录禁止撤回
         if (StringUtils.hasText(target.getPayrollSettlementId())) {
             throw new IllegalStateException("该扫码记录已参与工资结算，无法撤回");
+        }
+
+        // 1小时时间限制
+        LocalDateTime scanTime = target.getScanTime() != null ? target.getScanTime() : target.getCreateTime();
+        if (scanTime != null && scanTime.plusHours(1).isBefore(LocalDateTime.now())) {
+            throw new IllegalStateException("只能撤回1小时内的扫码记录");
+        }
+
+        // 已完成订单禁止撤回
+        String orderId = TextUtils.safeText(target.getOrderId());
+        if (hasText(orderId)) {
+            ProductionOrder order = productionOrderService.getById(orderId);
+            if (order != null && "completed".equalsIgnoreCase(
+                    order.getStatus() == null ? "" : order.getStatus().trim())) {
+                throw new IllegalStateException("订单已完成，无法撤回扫码记录");
+            }
         }
 
         String targetType = hasText(target.getScanType()) ? target.getScanType().trim().toLowerCase()
@@ -355,6 +385,16 @@ public class ScanRecordOrchestrator {
         LocalDateTime scanTime = target.getScanTime() != null ? target.getScanTime() : target.getCreateTime();
         if (scanTime != null && scanTime.plusHours(1).isBefore(LocalDateTime.now())) {
             throw new IllegalStateException("只能退回1小时内的扫码记录");
+        }
+
+        // 已完成订单禁止退回重扫
+        String rescanOrderId = TextUtils.safeText(target.getOrderId());
+        if (hasText(rescanOrderId)) {
+            ProductionOrder rescanOrder = productionOrderService.getById(rescanOrderId);
+            if (rescanOrder != null && "completed".equalsIgnoreCase(
+                    rescanOrder.getStatus() == null ? "" : rescanOrder.getStatus().trim())) {
+                throw new IllegalStateException("订单已完成，无法退回重扫");
+            }
         }
 
         // 判断是否为入库类型扫码，需要同时回滚入库记录

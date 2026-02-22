@@ -85,6 +85,13 @@ const production = {
     return ok('/api/production/scan/execute', 'POST', payload || {});
   },
   /**
+   * 撤销扫码 - 仅允许1小时内、未结算、订单未完成的扫码记录
+   * @param {Object} payload - { recordId: string, scanCode?: string, scanType?: string }
+   */
+  undoScan(payload) {
+    return ok('/api/production/scan/undo', 'POST', payload || {});
+  },
+  /**
    * 退回重扫 - 仅允许1小时内的扫码记录
    * @param {Object} payload - { recordId: string }
    */

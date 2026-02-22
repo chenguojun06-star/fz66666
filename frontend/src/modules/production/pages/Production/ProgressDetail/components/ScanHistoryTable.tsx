@@ -1,20 +1,65 @@
 /**
  * ScanHistoryTable - 扫码记录表格组件
- * 功能：显示订单的扫码历史记录
+ * 功能：显示订单的扫码历史记录，支持撤回操作
  */
-import React from 'react';
-import { Tag } from 'antd';
+import React, { useCallback, useMemo } from 'react';
+import { Tag, App } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
+import RowActions from '@/components/common/RowActions';
+import type { RowAction } from '@/components/common/RowActions';
 import { ScanRecord } from '@/types/production';
 import { formatDateTime } from '@/utils/datetime';
+import { productionScanApi } from '@/services/production/productionApi';
 
 interface ScanHistoryTableProps {
   data: ScanRecord[];
   loading?: boolean;
+  /** 订单状态（completed 时禁止撤回） */
+  orderStatus?: string;
+  /** 撤回成功后的回调（用于刷新数据） */
+  onUndoSuccess?: () => void;
 }
 
-const ScanHistoryTable: React.FC<ScanHistoryTableProps> = ({ data, loading }) => {
-  const columns = [
+/** 判断扫码记录是否可撤回 */
+function canUndoRecord(record: ScanRecord, orderStatus?: string): boolean {
+  // 非成功记录不可撤回
+  if (record.scanResult !== 'success') return false;
+  // 已参与工资结算不可撤回
+  if (record.payrollSettlementId) return false;
+  // 订单已完成不可撤回
+  if (orderStatus && orderStatus.toLowerCase() === 'completed') return false;
+  // 超过1小时不可撤回
+  const scanTime = record.scanTime || record.createTime;
+  if (scanTime) {
+    const scanMs = new Date(String(scanTime).replace(' ', 'T')).getTime();
+    if (!isNaN(scanMs) && Date.now() - scanMs >= 3600 * 1000) return false;
+  }
+  return true;
+}
+
+const ScanHistoryTable: React.FC<ScanHistoryTableProps> = ({ data, loading, orderStatus, onUndoSuccess }) => {
+  const { message, modal } = App.useApp();
+
+  const handleUndo = useCallback(async (record: ScanRecord) => {
+    modal.confirm({
+      title: '确认撤回',
+      content: `确定撤回此扫码记录？\n工序: ${record.progressStage || record.processName || '-'}\n扎号: ${record.cuttingBundleNo || '-'}\n数量: ${record.quantity || 0}件`,
+      okText: '确认撤回',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await productionScanApi.undo({ recordId: record.id! });
+          message.success('撤回成功');
+          onUndoSuccess?.();
+        } catch (e: any) {
+          message.error(e?.response?.data?.message || e?.message || '撤回失败');
+        }
+      },
+    });
+  }, [message, modal, onUndoSuccess]);
+
+  const columns = useMemo(() => [
     {
       title: '扫码时间',
       dataIndex: 'scanTime',
@@ -76,9 +121,26 @@ const ScanHistoryTable: React.FC<ScanHistoryTableProps> = ({ data, loading }) =>
       title: '备注',
       dataIndex: 'remark',
       key: 'remark',
-      render: (val: any) => val || '-',
     },
-  ];
+    {
+      title: '操作',
+      key: 'actions',
+      width: 100,
+      render: (_: any, record: ScanRecord) => {
+        if (!canUndoRecord(record, orderStatus)) return null;
+        const actions: RowAction[] = [
+          {
+            key: 'undo',
+            label: '撤回',
+            danger: true,
+            primary: true,
+            onClick: () => handleUndo(record),
+          },
+        ];
+        return <RowActions actions={actions} />;
+      },
+    },
+  ], [orderStatus, handleUndo]);
 
   return (
     <ResizableTable

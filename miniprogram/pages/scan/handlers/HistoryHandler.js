@@ -153,12 +153,15 @@ function _addRecordToGroup(group, record) {
     qtyArr = [totalQty];
   }
 
-  // 是否在1小时内（用于控制「退回重扫」按钮是否显示）
+  // 是否在1小时内（用于控制「退回重扫」和「撤回」按钮是否显示）
   let canRescan = false;
   if (record.scanTime) {
     const scanTimeMs = new Date(String(record.scanTime).replace(' ', 'T')).getTime();
     canRescan = !isNaN(scanTimeMs) && (Date.now() - scanTimeMs < 3600 * 1000);
   }
+
+  // 是否已参与工资结算（已结算禁止撤回/退回）
+  const payrollSettled = !!(record.payrollSettlementId);
 
   group.items.push({
     id: record.id,
@@ -174,7 +177,9 @@ function _addRecordToGroup(group, record) {
     scanType: record.scanType,
     scanResult: record.scanResult,
     scanCode: record.scanCode || '',
-    canRescan: canRescan,
+    canRescan: canRescan && !payrollSettled,
+    canUndo: canRescan && !payrollSettled,
+    payrollSettled: payrollSettled,
   });
 }
 

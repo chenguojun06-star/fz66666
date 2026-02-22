@@ -74,8 +74,7 @@ async function handleUndo(page) {
   wx.showLoading({ title: '正在撤销...', mask: true });
 
   try {
-    await api.production.executeScan({
-      action: 'delete',
+    await api.production.undoScan({
       recordId: recordId,
     });
 

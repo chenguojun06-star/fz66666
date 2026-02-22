@@ -138,6 +138,8 @@ export interface ScanRecord extends Record<string, unknown> {
   assignmentId?: number;
   /** 指派操作员名称 */
   assignedOperatorName?: string;
+  /** 工资结算ID（非空表示已结算，不可撤回） */
+  payrollSettlementId?: string;
 }
 
 export interface CuttingBundle extends Record<string, unknown> {
