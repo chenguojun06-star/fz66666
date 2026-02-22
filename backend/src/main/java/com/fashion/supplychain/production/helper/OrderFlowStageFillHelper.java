@@ -519,28 +519,28 @@ public class OrderFlowStageFillHelper {
                     cuttingEnd = t;
                     cuttingOperator = op;
                     cuttingQty += Math.max(0, q);
-                } else if ("production".equals(st) && pn.contains("车缝")) {
+                } else if ("production".equals(st) && ("carSewing".equals(pn) || "car_sewing".equals(pn) || pn.contains("车缝"))) {
                     if (carSewingStart == null) {
                         carSewingStart = t;
                     }
                     carSewingEnd = t;
                     carSewingOperator = op;
                     carSewingQty += Math.max(0, q);
-                } else if ("production".equals(st) && (pn.contains("大烫") || pn.contains("整烫") || pn.contains("烫"))) {
+                } else if ("production".equals(st) && ("ironing".equals(pn) || pn.contains("大熨") || pn.contains("整熨") || pn.contains("熨"))) {
                     if (ironingStart == null) {
                         ironingStart = t;
                     }
                     ironingEnd = t;
                     ironingOperator = op;
                     ironingQty += Math.max(0, q);
-                } else if ("production".equals(st) && ("二次工艺".equals(pn) || pn.contains("绣花") || pn.contains("印花") || pn.contains("二次"))) {
+                } else if ("production".equals(st) && ("secondaryProcess".equals(pn) || "secondary_process".equals(pn) || "二次工艺".equals(pn) || pn.contains("绣花") || pn.contains("印花") || pn.contains("二次"))) {
                     if (secondaryProcessStart == null) {
                         secondaryProcessStart = t;
                     }
                     secondaryProcessEnd = t;
                     secondaryProcessOperator = op;
                     secondaryProcessQty += Math.max(0, q);
-                } else if ("production".equals(st) && pn.contains("包装")) {
+                } else if ("production".equals(st) && ("packaging".equals(pn) || pn.contains("包装"))) {
                     if (packagingStart == null) {
                         packagingStart = t;
                     }
@@ -551,7 +551,10 @@ public class OrderFlowStageFillHelper {
                         && !isBaseStageName(pn)
                         && !"quality_warehousing".equals(pc)
                         && !templateLibraryService.isProgressQualityStageName(pn)
-                        && !"车缝".equals(pn) && !"大烫".equals(pn) && !"二次工艺".equals(pn) && !"包装".equals(pn)) {
+                        && !"车缝".equals(pn) && !"carSewing".equals(pn)
+                        && !"大烫".equals(pn) && !"ironing".equals(pn)
+                        && !"二次工艺".equals(pn) && !"secondaryProcess".equals(pn) && !"secondary_process".equals(pn)
+                        && !"包装".equals(pn) && !"packaging".equals(pn)) {
                     if (sewingStart == null) {
                         sewingStart = t;
                     }
